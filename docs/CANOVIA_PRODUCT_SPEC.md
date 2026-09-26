@@ -1,6 +1,6 @@
 # Canovia Product Specification
 
-更新基準: 2026-09-26 / V41.13 Action & Inbox Reframe 完了
+更新基準: 2026-09-27 / V41.14 Step 1 Goal Context Foundation
 
 V41.8〜V41.12のNative AI Practice / Adaptive Learning Flow / Recall基盤を維持しつつ、V41.13ではTaskごとのPrimary Actionを1つに整理し、旧「今日」をメインナビから退役させてCanovia Inboxを追加する。Home=Now、Inbox=Input、Roadmap=Future、Timeline=Pastとして主要導線の責務を分離する。詳細は [V41.12仕様](V41.12_RECALL_CANDIDATE_IMPORT.md)、[V41.13仕様](V41.13_ACTION_INBOX_REFRAME.md) を参照。
 
@@ -60,6 +60,9 @@ Canoviaは「完璧な計画を守らせる」より、現実の行動・発見�
 - Inbox Intelligence（destination suggestion → Human Review → Future Memo / Career / Recall / Evidence / Resource）
 - AIはInboxでPlan / Task IDを決定せず、名前hintだけを返す境界
 - Canovia Guide v2（Home / Inbox / Timer fallback / AI演習 / Recall / Resource / Collaboration）
+- Goal Context Foundation（Desired State / Current State / Known / Unknown / Signal / Constraint / Driver）
+- Goal Context Factのconfirmed / candidate / unknown分離とdeterministic Readiness
+- Initial Plan AIへGoal Contextを注入し、UnknownをMeasurement Taskへ変換するPolicy
 - WorkSession / Timer / WorkLog / Continuity
 - Calendar / Availability
 - AI JSON外部往復によるTask生成・計画更新
@@ -110,6 +113,12 @@ Canoviaは「完璧な計画を守らせる」より、現実の行動・発見�
 ### Next
 
 iOS正式公開準備や、現行基盤を実運用へ接続する近い将来。
+
+V41.14の次段階:
+- Adaptive Goal Discovery + Live Preview
+- input patternに応じたQuick Question / conversational input適応
+- Guided Execution + Reflection Evidence
+- Goal Pattern Demand / 専用Tool需要観測
 
 - iOSアプリ化とApp Store Review運用
 - server-backed Feature Flag保存とAdmin操作
