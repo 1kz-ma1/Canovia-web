@@ -196,8 +196,8 @@ class GoalContextService
             'success_signal' => $facts->contains(fn (GoalContextFact $fact) => $fact->type === 'signal'),
             'constraints' => $facts->contains(fn (GoalContextFact $fact) => $fact->type === 'constraint'),
             'drivers_or_measurement' => $facts->contains(
-                fn (GoalContextFact $fact) => in_array($fact->type, ['driver', 'signal'], true)
-                    && ($fact->key ?? '') !== 'goal_title'
+                fn (GoalContextFact $fact) => $fact->type === 'driver'
+                    || ($fact->type === 'signal' && (bool) data_get($fact->metadata, 'measurement', false))
             ),
         ];
 
@@ -284,8 +284,8 @@ class GoalContextService
             'success_signal' => $confirmed->contains(fn (GoalContextFact $fact) => $fact->type === 'signal'),
             'constraints' => $confirmed->contains(fn (GoalContextFact $fact) => $fact->type === 'constraint'),
             'drivers_or_measurement' => $confirmed->contains(
-                fn (GoalContextFact $fact) => in_array($fact->type, ['driver', 'signal'], true)
-                    && ($fact->key ?? '') !== 'goal_title'
+                fn (GoalContextFact $fact) => $fact->type === 'driver'
+                    || ($fact->type === 'signal' && (bool) data_get($fact->metadata, 'measurement', false))
             ),
         ];
     }
