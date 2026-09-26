@@ -82,6 +82,11 @@ class Plan extends Model
         return $this->hasMany(Task::class);
     }
 
+    public function goalContext()
+    {
+        return $this->hasOne(GoalContext::class);
+    }
+
     public function resources()
     {
         return $this->hasMany(PlanResource::class);
