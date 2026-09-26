@@ -31,6 +31,43 @@
             </div>
         </section>
 
+        <section class="page-card p-5 sm:p-6" data-goal-context-preview>
+            <div class="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-[0.14em] text-emerald-300">GOAL CONTEXT</p>
+                    <h2 class="mt-1 text-lg font-black text-slate-100">Canoviaが今わかっていること</h2>
+                    <p class="mt-1 text-xs leading-5 text-slate-400">この把握度はAIの自己評価ではなく、現在地・成功Signal・制約など確認済み情報のCoverageから計算しています。</p>
+                </div>
+                <span class="badge {{ $goalContext->readiness_state === 'high' ? 'badge-green' : ($goalContext->readiness_state === 'medium' ? 'badge-amber' : 'badge-slate') }}">
+                    現在地の把握 {{ $goalContext->readiness_score }}%
+                </span>
+            </div>
+
+            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                <div class="rounded-2xl border border-emerald-300/10 bg-emerald-300/[0.025] p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-emerald-300">DESIRED STATE</p>
+                    <p class="mt-2 text-sm font-bold text-slate-200">{{ $goalContext->desired_state }}</p>
+                    @if ($goalContext->current_state_summary)
+                        <p class="mt-3 text-[10px] font-black uppercase tracking-[.12em] text-slate-500">CURRENT STATE</p>
+                        <p class="mt-1 text-xs leading-5 text-slate-400">{{ $goalContext->current_state_summary }}</p>
+                    @else
+                        <p class="mt-3 text-xs leading-5 text-slate-500">現在地はまだ十分に確認できていません。</p>
+                    @endif
+                </div>
+
+                <div class="rounded-2xl border border-slate-700/70 bg-slate-950/25 p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-500">CONTEXT STATUS</p>
+                    @php
+                        $confirmedGoalFacts = collect(data_get($goalContextSnapshot, 'confirmed_facts', []));
+                        $unknownGoalFacts = collect(data_get($goalContextSnapshot, 'known_unknowns', []));
+                    @endphp
+                    <p class="mt-2 text-xs text-slate-300">確認済み {{ $confirmedGoalFacts->count() }}件</p>
+                    <p class="mt-1 text-xs text-slate-400">Known Unknown {{ $unknownGoalFacts->count() }}件</p>
+                    <p class="mt-3 text-[11px] leading-5 text-slate-500">情報が少なくても仮Planは作れます。重要なUnknownは、AIが想像で埋めず「まず測るTask」に変えます。</p>
+                </div>
+            </div>
+        </section>
+
         <section class="page-card p-5 sm:p-6">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -91,6 +128,7 @@
                         <summary class="cursor-pointer text-xs font-semibold text-slate-300">この相談文に含まれる情報</summary>
                         <ul class="mt-3 space-y-2 text-xs leading-5 text-slate-500">
                             <li>・対象PlanのID・目標・説明・期限などの基本情報</li>
+                            <li>・Goal Contextの確認済み事実・未確認Hint・Known Unknown</li>
                             <li>・AI共有がONになっている未来メモ</li>
                             <li>・Taskへ分解するときの時間・優先度・順序のルール</li>
                             <li>・Canoviaへ戻すJSON形式と対象Planを変えない安全条件</li>
