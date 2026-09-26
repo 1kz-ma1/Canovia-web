@@ -1,0 +1,45 @@
+name: V41.14 Step1 Verify
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, sqlite, pdo_sqlite
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Build frontend
+        run: |
+          npm ci
+          npm run build
+      - name: Syntax and Blade
+        run: |
+          php -l app/Models/GoalContext.php
+          php -l app/Models/GoalContextFact.php
+          php -l app/Services/GoalContextService.php
+          php -l app/Http/Controllers/PlanController.php
+          php -l app/Http/Controllers/AiTaskAssistantController.php
+          php -l tests/Feature/GoalContextFoundationV4114Test.php
+          php artisan view:cache
+      - name: Focused regression
+        run: |
+          php artisan test \
+            tests/Feature/GoalContextFoundationV4114Test.php \
+            tests/Feature/MutationIdempotencyV390Test.php \
+            tests/Feature/PlanVisualPreferencesTest.php \
+            tests/Feature/InitialPlanJsonReliabilityV387Test.php \
+            tests/Feature/AiPlanFunnelTelemetryV388Test.php \
+            tests/Feature/InboxIntelligenceGuideV4113Test.php
