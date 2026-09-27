@@ -3430,3 +3430,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.body?.dataset.focusMode === '1') return;
     mountCanoviaInstantNavigation();
 });
+
+
+// V41.23: guidance cards are a natural drill-down surface. Keep explicit
+// actions, forms and disclosure controls authoritative; card background opens
+// the owning Plan without requiring a separate "details" affordance.
+document.addEventListener('click', (event) => {
+    const card = event.target.closest?.('[data-plan-card-url]');
+    if (!card || event.defaultPrevented) return;
+    if (event.target.closest?.('a, button, form, input, select, textarea, label, summary, details')) return;
+
+    const url = card.dataset.planCardUrl;
+    if (url) window.location.assign(url);
+});
