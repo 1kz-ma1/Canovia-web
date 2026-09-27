@@ -19,6 +19,7 @@ use App\Services\RoadmapService;
 use App\Services\UserBehaviorService;
 use App\Services\UserStateService;
 use App\Services\FutureMemoService;
+use App\Services\GoalContextService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -34,8 +35,12 @@ class PlanController extends Controller
         return view('plans.create', compact('prefill', 'futureMemos'));
     }
 
-    public function store(Request $request, PlanCollaborationService $collaboration)
-    {
+    public function store(
+        Request $request,
+        PlanCollaborationService $collaboration,
+        BehaviorIdentityService $identity,
+        GoalContextService $goalContexts,
+    ) {
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -99,6 +104,12 @@ class PlanController extends Controller
                 cookie()->queue('pace_keeper_owner_token_' . $plan->id, $plan->owner_token, 60 * 24 * 365, '/', null, app()->environment('production') || $request->isSecure(), true, false, 'lax');
             }
 
+            $goalContexts->ensureForPlan(
+                $plan,
+                $request->user()?->id,
+                $request->user() ? null : $identity->resolve($request),
+            );
+
             return redirect()->route('plans.ai_task_assistant.show', $plan)
                 ->with('status', 'この計画はすでに作成済みです。重複を作らず、続きから開きました。');
         }
@@ -114,6 +125,12 @@ class PlanController extends Controller
         if (! $request->user()) {
             cookie()->queue('pace_keeper_owner_token_' . $plan->id, $ownerToken, 60 * 24 * 365, '/', null, app()->environment('production') || $request->isSecure(), true, false, 'lax');
         }
+
+        $goalContexts->ensureForPlan(
+            $plan,
+            $request->user()?->id,
+            $request->user() ? null : $identity->resolve($request),
+        );
 
         return redirect()->route('plans.ai_task_assistant.show', $plan)
             ->with('status', '計画の基本情報を作成しました。続けてAIで初期タスクを生成できます。');
@@ -232,8 +249,13 @@ class PlanController extends Controller
         return view('plans.edit', compact('plan', 'priorityEvaluation'));
     }
 
-    public function update(Request $request, Plan $plan, PlanOwnershipService $ownership, PlanActivityService $activity)
-    {
+    public function update(
+        Request $request,
+        Plan $plan,
+        PlanOwnershipService $ownership,
+        PlanActivityService $activity,
+        GoalContextService $goalContexts,
+    ) {
         $ownership->authorizePlan($request, $plan);
 
         $validated = $request->validate([
@@ -261,6 +283,7 @@ class PlanController extends Controller
         }
 
         $before = $plan->only(['title', 'description', 'category', 'priority', 'priority_mode', 'start_date', 'deadline', 'is_public']);
+        $previousTitle = (string) $plan->title;
 
         $plan->update([
             'title' => $validated['title'],
@@ -284,6 +307,10 @@ class PlanController extends Controller
         $activity->record($plan, $request->user(), 'plan_updated', 'plan', (int) $plan->id, [
             'changed_fields' => $changedFields,
         ]);
+
+        if ((string) $plan->title !== $previousTitle) {
+            $goalContexts->syncPlanTitle($plan, $previousTitle);
+        }
 
         return redirect()->route('plans.show', $plan)->with('success', '計画を更新しました。');
     }

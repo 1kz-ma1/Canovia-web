@@ -57,6 +57,22 @@ class TrackAiPlanFunnel
             /** @var Response $response */
             $response = $next($request);
 
+            // Laravel may convert a ValidationException into a redirect response
+            // outside this route middleware. In that case no Throwable reaches
+            // this catch block, so detect only validation errors freshly flashed
+            // by the current request before recording a false success.
+            if (($definition['failure'] ?? null) && $this->hasFreshValidationErrors($request)) {
+                $this->logger->recordSafely(
+                    $actorToken,
+                    $definition['failure'],
+                    $request,
+                    $plan,
+                    metadata: array_merge($baseMetadata, $this->sessionFailureMetadata($request)),
+                );
+
+                return $response;
+            }
+
             if ($definition['success'] ?? null) {
                 if ($definition['once'] ?? false) {
                     $this->logger->recordOnceSafely(
@@ -142,6 +158,42 @@ class TrackAiPlanFunnel
             'surface' => $surface,
             'device' => $device,
             'route_name' => (string) ($request->route()?->getName() ?? ''),
+        ];
+    }
+
+    private function hasFreshValidationErrors(Request $request): bool
+    {
+        if (! $request->hasSession()) {
+            return false;
+        }
+
+        $fresh = (array) $request->session()->get('_flash.new', []);
+
+        return in_array('errors', $fresh, true)
+            && $request->session()->has('errors');
+    }
+
+    private function sessionFailureMetadata(Request $request): array
+    {
+        $errors = $request->session()->get('errors');
+
+        if (! $errors || ! method_exists($errors, 'getBag')) {
+            return [
+                'failure_code' => 'validation_unknown',
+                'validation_fields' => [],
+            ];
+        }
+
+        $messages = $errors->getBag('default')->getMessages();
+        $fields = array_values(array_slice(array_keys($messages), 0, 8));
+        $firstMessage = collect($messages)->flatten()->first();
+
+        return [
+            'failure_code' => $this->classifyValidationFailure(
+                $fields,
+                is_string($firstMessage) ? $firstMessage : '',
+            ),
+            'validation_fields' => $fields,
         ];
     }
 

@@ -2,6 +2,21 @@
 
 return [
     [
+        'version' => 'v41.14',
+        'date' => '2026-09-27',
+        'title' => '計画を作る前に、Canoviaが現在地を理解する',
+        'summary' => '未知の目標でもAIが不足情報を想像で埋めないよう、Goal Context基盤を追加しました。目標・現在地・Signal・制約・Driver・Unknownを事実と候補に分けて保持し、理解できている範囲から仮PlanやMeasurement Taskを作れる土台を整えました。',
+        'highlights' => [
+            'Plan作成時にGoal Contextを自動生成し、既存Planも必要になった時点で安全にlazy生成します。',
+            'Goal Context Factはconfirmed / candidate / unknown / supersededを分離し、Native AIの推測をそのまま事実扱いしません。',
+            '現在地の把握度はAIの自己評価ではなく、Desired State・Current State・Signal・Constraint・Driver / MeasurementのCoverageから決定論的に計算します。',
+            'AI Plan BuilderへConfirmed Facts・Unconfirmed Hints・Known Unknownsを渡し、確認済み情報の聞き直しとUnknownの推測補完を避けます。',
+            '現在地不足が重要な場合、長期計画を無理に作らず、測る・観察する・記録するMeasurement Taskを初期Planへ入れられる方針にしました。',
+            'Plan BuilderではCanoviaが現在どこまで理解できているかをPreviewできます。',
+        ],
+        'tip' => '情報が少なくても計画作成を止めません。分からないことは「推測する情報」ではなく「次に確認する対象」として扱います。',
+    ],
+    [
         'version' => 'v41.13',
         'date' => '2026-09-26',
         'title' => '次の行動は1つに。新しい情報はInboxへ',

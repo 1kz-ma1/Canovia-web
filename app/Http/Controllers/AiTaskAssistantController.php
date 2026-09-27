@@ -10,6 +10,8 @@ use App\Services\PlanGenerationJsonCompatibilityService;
 use App\Services\PlanProgressService;
 use App\Services\PlanOwnershipService;
 use App\Services\FutureMemoService;
+use App\Services\BehaviorIdentityService;
+use App\Services\GoalContextService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,8 +19,13 @@ use Illuminate\Validation\ValidationException;
 
 class AiTaskAssistantController extends Controller
 {
-    public function show(Request $request, Plan $plan, FutureMemoService $futureMemoService)
-    {
+    public function show(
+        Request $request,
+        Plan $plan,
+        FutureMemoService $futureMemoService,
+        BehaviorIdentityService $identity,
+        GoalContextService $goalContexts,
+    ) {
         $this->authorizePlanOwner($plan);
 
         $plan->load(['tasks' => fn ($query) => $query->orderBy('sort_order')->orderBy('id')]);
@@ -27,10 +34,27 @@ class AiTaskAssistantController extends Controller
         $deadline = $plan->deadline?->format('Y-m-d') ?? '未設定';
         $futureMemos = $futureMemoService->all($request, true);
         $futureMemoContext = $futureMemoService->promptContext($request);
+        $goalContext = $goalContexts->ensureForPlan(
+            $plan,
+            $request->user()?->id,
+            $request->user() ? null : $identity->resolve($request),
+        );
+        $goalContextSnapshot = $goalContexts->snapshot($goalContext);
+        $goalContextPrompt = $goalContexts->promptContext($goalContext);
 
         $prompt = <<<PROMPT
 あなたはCanoviaの計画生成アシスタントです。目標を実行可能なタスクへ分解してください。
-不足情報があればJSONを出す前にユーザーへ質問し、期限、使える時間、現在地、完成条件を確認してください。
+
+最重要ルール:
+- GOAL CONTEXTのCONFIRMED FACTSは確認済みなので、同じ質問を繰り返さない
+- UNCONFIRMED HINTSは事実として断定しない
+- KNOWN UNKNOWNSや重要な不足情報を推測で埋めない
+- 追加確認が必要なら、一度に質問を並べず「計画への影響が最も大きい質問」を1つずつ優先する
+- 現在地が不足したままでも、仮の進め方を示すことはできる
+- 現在地を知らないと次の方針を決められない場合は、無理に長期Taskを作らず「測る・観察する・記録する」Measurement Taskを初期Taskに含める
+- 時間を使った事実そのものをProgressの証拠にしない
+
+{$goalContextPrompt}
 
 対象計画:
 - ID: {$plan->id}
@@ -42,6 +66,8 @@ class AiTaskAssistantController extends Controller
 {$futureMemoContext}
 
 未来メモは本人の希望・価値観・制約を理解するための参考情報です。目標や優先順位を勝手に決めつけず、今回の計画と関係する内容だけをパーソナライズに使ってください。
+
+Goal ContextのReadinessがLOW/MEDIUMでも、確認できている範囲から仮Planを作れます。重要なUnknownが残る場合は、AIの想像で長期計画を埋めるのではなく、そのUnknownを解消するMeasurement Taskを優先してください。
 
 最終回答は説明やMarkdownを付けず、次のJSON 2.0だけにしてください。
 {
@@ -75,7 +101,7 @@ class AiTaskAssistantController extends Controller
   ]
 }
 
-期限が未設定なら、タスク生成前にユーザーへ希望時期・使える時間・現在地を質問してください。会話で期限が決まった場合だけupdate_planを含め、まだ決めない場合はupdate_planを省略してください。
+期限が未設定でも、それだけを理由に計画生成を止めないでください。期限が計画構造を大きく変える場合だけ優先質問にできます。会話で期限が決まった場合だけupdate_planを含め、まだ決めない場合はupdate_planを省略してください。
 進捗率は最新の完成条件に対する絶対値、remaining_minutesは今後実際に必要な時間として別々に判断してください。
 priorityは必ず1～5で、1が最優先、5が低優先です。6以上を実行順の番号として使わないでください。実行順はreorder_tasksのitemsで表現してください。
 activation_costは1～5で、難易度ではなく「そのTaskを始めるまでの心理的・準備的な重さ」を推定してください。1はすぐ始められ、5はかなり準備や集中が必要です。
@@ -91,7 +117,13 @@ activation_costは1～5で、難易度ではなく「そのTaskを始めるま�
 8. 説明文・Markdown・コードフェンス・コメント・末尾カンマを付けず、有効なJSONだけを返しているか
 PROMPT;
 
-        return view('plans.ai_task_assistant', compact('plan', 'prompt', 'futureMemos'));
+        return view('plans.ai_task_assistant', compact(
+            'plan',
+            'prompt',
+            'futureMemos',
+            'goalContext',
+            'goalContextSnapshot',
+        ));
     }
 
     public function import(Request $request, Plan $plan, PlanProgressService $progressService)
