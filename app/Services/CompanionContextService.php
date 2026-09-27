@@ -7,6 +7,7 @@ use App\Models\Plan;
 use App\Models\Task;
 use App\Models\TaskEvidence;
 use App\Models\User;
+use Illuminate\Support\Str;
 
 class CompanionContextService
 {
@@ -17,16 +18,22 @@ class CompanionContextService
     /**
      * Compact context only. Companion is not a full database dump.
      *
+     * @param array<string,mixed>|null $entryContext
      * @return array<string,mixed>
      */
-    public function snapshot(User $user, ?Plan $plan = null, ?Task $task = null): array
-    {
+    public function snapshot(
+        User $user,
+        ?Plan $plan = null,
+        ?Task $task = null,
+        ?array $entryContext = null,
+    ): array {
         if ($task && (! $plan || (int) $task->plan_id !== (int) $plan->id)) {
             $task = null;
         }
 
         $snapshot = [
             'scope' => $task ? 'task' : ($plan ? 'plan' : 'global'),
+            'entry' => $this->entrySnapshot($user, $plan, $task, $entryContext),
             'plan' => null,
             'task' => null,
             'goal_context' => null,
@@ -129,6 +136,13 @@ class CompanionContextService
             ->values()
             ->all();
 
+        if (
+            data_get($snapshot, 'entry.type') === 'guided_execution'
+            && is_array($snapshot['entry'])
+        ) {
+            $snapshot['entry']['latest_evidence'] = $snapshot['recent_evidence'][0] ?? null;
+        }
+
         return $snapshot;
     }
 
@@ -138,5 +152,66 @@ class CompanionContextService
             $snapshot,
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT,
         ) ?: '{}';
+    }
+
+    /**
+     * @param array<string,mixed>|null $entryContext
+     * @return array<string,mixed>|null
+     */
+    private function entrySnapshot(
+        User $user,
+        ?Plan $plan,
+        ?Task $task,
+        ?array $entryContext,
+    ): ?array {
+        $entryType = trim((string) data_get($entryContext, 'entry_type', ''));
+        if ($entryType === '') {
+            return null;
+        }
+
+        $entry = [
+            'type' => $entryType,
+            'source_path' => data_get($entryContext, 'source_path'),
+            'source_route' => data_get($entryContext, 'source_route'),
+            'label' => match ($entryType) {
+                'guided_execution' => $task ? '実行・振り返り · '.$task->title : '実行・振り返り',
+                'task' => $task ? 'Task · '.$task->title : 'Task',
+                'plan' => $plan ? 'Plan · '.$plan->title : 'Plan',
+                'inbox_item' => 'Inbox item',
+                default => 'Canovia全体',
+            },
+        ];
+
+        if ($entryType !== 'inbox_item') {
+            return $entry;
+        }
+
+        $inboxItemId = (int) data_get($entryContext, 'inbox_item_id', 0);
+        if ($inboxItemId <= 0) {
+            return $entry;
+        }
+
+        $item = InboxItem::query()
+            ->whereKey($inboxItemId)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (! $item) {
+            return $entry;
+        }
+
+        $entry['label'] = 'Inbox · '.$item->displayTitle();
+        $entry['inbox_item'] = [
+            'id' => (int) $item->id,
+            'plan_id' => $item->plan_id ? (int) $item->plan_id : null,
+            'source_type' => $item->source_type,
+            'status' => $item->status,
+            'title' => $item->displayTitle(),
+            'content' => $item->content ? Str::limit($item->content, 4000, '…') : null,
+            'source_url' => $item->source_url,
+            'created_at' => $item->created_at?->toIso8601String(),
+        ];
+
+        return $entry;
     }
 }

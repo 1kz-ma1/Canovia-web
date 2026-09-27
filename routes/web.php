@@ -135,6 +135,7 @@ Route::get('/join/{token}', [PlanCollaborationController::class, 'joinByToken'])
 
 Route::middleware('auth')->group(function () {
     Route::get('/companion', [CompanionController::class, 'index'])->name('companion.index');
+    Route::post('/companion/entry', [CompanionController::class, 'entry'])->name('companion.entry');
     Route::post('/companion/threads', [CompanionController::class, 'storeThread'])->name('companion.threads.store');
     Route::get('/companion/threads/{companionThread}', [CompanionController::class, 'show'])->name('companion.show');
     Route::post('/companion/threads/{companionThread}/messages', [CompanionController::class, 'send'])

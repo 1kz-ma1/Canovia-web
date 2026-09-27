@@ -72,8 +72,15 @@ class CompanionConversationService
             ]);
         }
 
-        $contextSnapshot = $this->context->snapshot($user, $plan, $task);
-        $contextSnapshot['current_screen'] = filled($sourcePath) ? $sourcePath : null;
+        $contextSnapshot = $this->context->snapshot(
+            $user,
+            $plan,
+            $task,
+            is_array($thread->context_scope) ? $thread->context_scope : null,
+        );
+        $contextSnapshot['current_screen'] = filled($sourcePath)
+            ? $sourcePath
+            : data_get($thread->context_scope, 'source_path');
 
         $history = $thread->messages()
             ->where('id', '<=', $userMessage->id)

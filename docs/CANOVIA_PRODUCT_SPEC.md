@@ -1,6 +1,6 @@
 # Canovia Product Specification
 
-更新基準: 2026-09-27 / V41.15 Step 2 Human-confirmed Mutation Apply
+更新基準: 2026-09-27 / V41.15 Step 3 Contextual Companion Entry
 
 V41.8〜V41.12のNative AI Practice / Adaptive Learning Flow / Recall基盤を維持しつつ、V41.13ではTaskごとのPrimary Actionを1つに整理し、旧「今日」をメインナビから退役させてCanovia Inboxを追加する。Home=Now、Inbox=Input、Roadmap=Future、Timeline=Pastとして主要導線の責務を分離する。詳細は [V41.12仕様](V41.12_RECALL_CANDIDATE_IMPORT.md)、[V41.13仕様](V41.13_ACTION_INBOX_REFRAME.md) を参照。
 
@@ -77,6 +77,12 @@ Canoviaは「完璧な計画を守らせる」より、現実の行動・発見�
 - Human-confirmed Mutation Applyはtype別allowlist / server-side validation / ownership check / transaction / auditを通す
 - Companion経由ではTask Progress・done/cancelled・Plan公開/共同設定を変更せず、Evidenceと計画変更を分離
 - Companion applyはapply_request_idとrow lockで二重mutationを防ぎ、before / after / blocked fields / applied targetを監査保存
+- Contextual Companion EntryはCurrent ScreenからPlan / Task scopeをserver-sideで確定し、通常導線ではContext選択を要求しない
+- Task / Guided Executionは同じTask conversationを再利用し、Guided Executionでは最新Task Evidenceもentry contextとして引き継ぐ
+- Plan / Roadmapはselected Plan、InboxはItem単位の固有ContextからCompanionへ入り、linked Planが同じでもInbox conversationをgeneric Plan threadと混同しない
+- Companion entryは元画面のsource path / routeをThreadに保持し、会話画面へ遷移した後もCurrent Screen contextを失わない
+- Step 1で作成済みのglobal / Plan / Task Threadは同じscopeなら再利用し、Contextual Entry導入でConversationを不要に増やさない
+- `/companion` の手動Context selectorは、別対象やglobal相談を明示選択するfallbackとして維持する
 - Companion messageはrequest_idで再送を吸収し、Native AI失敗後も同じ送信を安全に再試行可能
 - Companionは `canovia_companion` と `automatic_ai_execution` を別Capabilityとして扱い、Premium Coreから利用権を供給
 - WorkSession / Timer / WorkLog / Continuity
@@ -132,8 +138,6 @@ Canoviaは「完璧な計画を守らせる」より、現実の行動・発見�
 iOS正式公開準備や、現行基盤を実運用へ接続する近い将来。
 
 V41.15の次段階:
-- Current ScreenからPlan / Task scopeを自動で引き継ぐContextual Companion Entry
-- Guided Execution / Inbox / Roadmap等からCompanionへ文脈付きで入る導線
 - Conversation Continuity（pending Candidate / Known Unknown / Evidence後follow-up）の設計
 
 - iOSアプリ化とApp Store Review運用

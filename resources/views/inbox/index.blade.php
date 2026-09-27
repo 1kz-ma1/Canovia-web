@@ -81,7 +81,7 @@
 
                 <div class="mt-4 space-y-3">
                     @forelse ($items as $inboxItem)
-                        <article class="rounded-2xl border border-white/8 bg-white/[0.025] p-4">
+                        <article id="inbox-item-{{ $inboxItem->id }}" class="rounded-2xl border border-white/8 bg-white/[0.025] p-4">
                             <div class="flex flex-wrap items-start justify-between gap-3">
                                 <div class="min-w-0">
                                     <div class="flex flex-wrap items-center gap-2">
@@ -127,6 +127,19 @@
 
                             <div class="mt-3 border-t border-white/6 pt-3">
                                 <div class="flex flex-wrap items-center gap-2">
+                                    @auth
+                                        <form method="POST" action="{{ route('companion.entry') }}" data-mutation-once>
+                                            @csrf
+                                            <input type="hidden" name="entry_type" value="inbox_item">
+                                            <input type="hidden" name="inbox_item_id" value="{{ $inboxItem->id }}">
+                                            @if ($inboxItem->plan_id)
+                                                <input type="hidden" name="plan_id" value="{{ $inboxItem->plan_id }}">
+                                            @endif
+                                            <input type="hidden" name="source_path" value="{{ request()->getRequestUri() }}#inbox-item-{{ $inboxItem->id }}">
+                                            <input type="hidden" name="source_route" value="{{ request()->route()?->getName() }}">
+                                            <button type="submit" class="btn-secondary px-3 py-2 text-xs">✦ Companionで整理</button>
+                                        </form>
+                                    @endauth
                                     @if ($canUseInboxAi)
                                         <form method="POST" action="{{ route('inbox.suggest', $inboxItem) }}" data-mutation-once>
                                             @csrf
