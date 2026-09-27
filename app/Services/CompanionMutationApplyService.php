@@ -60,7 +60,7 @@ class CompanionMutationApplyService
                 'title', 'content',
             ],
             default => [],
-        ];
+        };
 
         $changes = array_intersect_key($raw, array_flip($allowed));
 
