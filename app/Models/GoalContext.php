@@ -15,6 +15,7 @@ class GoalContext extends Model
         'plan_id',
         'desired_state',
         'current_state_summary',
+        'interaction_profile',
         'readiness_score',
         'readiness_state',
         'status',
@@ -24,6 +25,7 @@ class GoalContext extends Model
     protected function casts(): array
     {
         return [
+            'interaction_profile' => 'array',
             'readiness_score' => 'integer',
             'last_assessed_at' => 'datetime',
         ];

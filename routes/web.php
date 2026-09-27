@@ -6,6 +6,7 @@ use App\Http\Controllers\WorkLogController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PlanController;
+use App\Http\Controllers\GoalDiscoveryController;
 use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\AdminTemplateController;
 use App\Http\Controllers\PublicPlanController;
@@ -192,7 +193,11 @@ Route::get('/public-plans', [PublicPlanController::class, 'index'])->name('publi
 Route::get('/p/{publicSlug}', [PublicPlanController::class, 'show'])->name('public_plans.show');
 
 // 計画
-Route::get('/plans/create', [PlanController::class, 'create'])->name('plans.create');
+Route::get('/plans/create', [GoalDiscoveryController::class, 'create'])->name('plans.create');
+Route::post('/goal-discovery', [GoalDiscoveryController::class, 'store'])->name('goal_discovery.store');
+Route::get('/goal-discovery/{goalContext}', [GoalDiscoveryController::class, 'show'])->name('goal_discovery.show');
+Route::post('/goal-discovery/{goalContext}/answer', [GoalDiscoveryController::class, 'answer'])->name('goal_discovery.answer');
+Route::get('/plans/create/manual', [PlanController::class, 'create'])->name('plans.create.manual');
 Route::post('/plans', [PlanController::class, 'store'])->name('plans.store');
 Route::get('/plans/{plan}', [PlanController::class, 'show'])->name('plans.show');
 Route::get('/plans/{plan}/edit', [PlanController::class, 'edit'])->name('plans.edit');

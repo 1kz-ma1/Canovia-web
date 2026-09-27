@@ -13,19 +13,24 @@ class PublicBetaPolishV16Test extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_plan_create_uses_correct_exam_name_and_japanese_accent_labels(): void
+    public function test_plan_create_uses_goal_discovery_and_manual_fallback_keeps_visual_preferences(): void
     {
         $this->get(route('plans.create'))
             ->assertOk()
+            ->assertSee('どんな未来にしたい？')
             ->assertSee('応用情報技術者試験 合格')
             ->assertDontSee('応用情報処理技術者試験')
+            ->assertSee('手動で細かくPlanを作る')
+            ->assertDontSee('Personalize');
+
+        $this->get(route('plans.create.manual'))
+            ->assertOk()
             ->assertSee('まず、目標の名前だけ決めよう。')
             ->assertSee('AIで具体化')
             ->assertSee('計画を作ってAIへ進む')
             ->assertSee('>青<', false)
             ->assertSee('>緑<', false)
-            ->assertSee('>紫<', false)
-            ->assertDontSee('Personalize');
+            ->assertSee('>紫<', false);
     }
 
     public function test_first_run_ui_contains_a_short_product_intro_before_the_spotlight_tutorial(): void

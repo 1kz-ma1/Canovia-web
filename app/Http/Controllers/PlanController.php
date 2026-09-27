@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Storage;
 use App\Models\Plan;
+use App\Models\GoalContext;
 use App\Services\BehaviorIdentityService;
 use App\Services\ContinuityService;
 use App\Services\ExecutionActionPolicyService;
@@ -20,6 +21,7 @@ use App\Services\UserBehaviorService;
 use App\Services\UserStateService;
 use App\Services\FutureMemoService;
 use App\Services\GoalContextService;
+use App\Services\GoalContextAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -40,6 +42,7 @@ class PlanController extends Controller
         PlanCollaborationService $collaboration,
         BehaviorIdentityService $identity,
         GoalContextService $goalContexts,
+        GoalContextAccessService $goalContextAccess,
     ) {
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -55,7 +58,27 @@ class PlanController extends Controller
             'is_public' => ['nullable'],
             'is_collaborative' => ['nullable'],
             'create_request_id' => ['nullable', 'uuid'],
+            'goal_context_id' => ['nullable', 'integer'],
         ]);
+
+        $goalContext = null;
+        if (! empty($validated['goal_context_id'])) {
+            $goalContext = GoalContext::query()->findOrFail((int) $validated['goal_context_id']);
+            $goalContext = $goalContextAccess->authorize($request, $goalContext, $identity);
+
+            if ($goalContext->plan_id !== null) {
+                $existingPlan = Plan::query()->find((int) $goalContext->plan_id);
+                if ($existingPlan) {
+                    return redirect()
+                        ->route('plans.ai_task_assistant.show', $existingPlan)
+                        ->with('status', 'この目標はすでにPlanへ接続済みです。続きから開きました。');
+                }
+            }
+
+            // Goal Context is the source of truth for a discovery-created Plan.
+            // Never trust a client-side hidden title to rewrite the desired state.
+            $validated['title'] = trim((string) $goalContext->desired_state);
+        }
 
         $startDate = $validated['start_date'] ?? now()->toDateString();
         $deadline = $validated['deadline'] ?? null;
@@ -104,11 +127,15 @@ class PlanController extends Controller
                 cookie()->queue('pace_keeper_owner_token_' . $plan->id, $plan->owner_token, 60 * 24 * 365, '/', null, app()->environment('production') || $request->isSecure(), true, false, 'lax');
             }
 
-            $goalContexts->ensureForPlan(
-                $plan,
-                $request->user()?->id,
-                $request->user() ? null : $identity->resolve($request),
-            );
+            if ($goalContext) {
+                $goalContexts->attachPlan($goalContext, $plan);
+            } else {
+                $goalContexts->ensureForPlan(
+                    $plan,
+                    $request->user()?->id,
+                    $request->user() ? null : $identity->resolve($request),
+                );
+            }
 
             return redirect()->route('plans.ai_task_assistant.show', $plan)
                 ->with('status', 'この計画はすでに作成済みです。重複を作らず、続きから開きました。');
@@ -126,11 +153,15 @@ class PlanController extends Controller
             cookie()->queue('pace_keeper_owner_token_' . $plan->id, $ownerToken, 60 * 24 * 365, '/', null, app()->environment('production') || $request->isSecure(), true, false, 'lax');
         }
 
-        $goalContexts->ensureForPlan(
-            $plan,
-            $request->user()?->id,
-            $request->user() ? null : $identity->resolve($request),
-        );
+        if ($goalContext) {
+            $goalContexts->attachPlan($goalContext, $plan);
+        } else {
+            $goalContexts->ensureForPlan(
+                $plan,
+                $request->user()?->id,
+                $request->user() ? null : $identity->resolve($request),
+            );
+        }
 
         return redirect()->route('plans.ai_task_assistant.show', $plan)
             ->with('status', '計画の基本情報を作成しました。続けてAIで初期タスクを生成できます。');
