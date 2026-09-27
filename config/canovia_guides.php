@@ -42,9 +42,9 @@ return [
     'guides' => [
         'first_plan' => [
             'category' => 'start',
-            'title' => '最初の計画を作る',
-            'description' => '目標をCanoviaへ登録し、進める土台を作ります。',
-            'keywords' => ['計画', 'Plan', '作成', '最初', '目標'],
+            'title' => '目標から仮Planを作る',
+            'description' => '未来を一言で渡し、現在地を必要な分だけ確認して仮Planへ進みます。',
+            'keywords' => ['計画', 'Plan', '作成', '最初', '目標', '現在地', 'Goal Context'],
             'start_path' => '/',
             'steps' => [
                 [
@@ -57,8 +57,8 @@ return [
                 [
                     'path' => '/plans/create',
                     'target' => 'plan-form',
-                    'title' => '最初はざっくりで大丈夫',
-                    'copy' => 'タイトルを中心に入力します。期限や細かい条件は決まっている分だけで構いません。',
+                    'title' => '未来を一言だけ渡します',
+                    'copy' => '最初は目標だけで大丈夫です。次の画面でCurrent Stateを1問ずつ確認し、途中でも仮Planへ進めます。',
                     'advance' => 'next',
                 ],
             ],
