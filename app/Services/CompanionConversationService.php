@@ -301,6 +301,8 @@ class CompanionConversationService
 - continuityのnew_evidenceは前回の会話後に増えたEvidence。必要なら見直しを提案するが、EvidenceだけでProgressや完了を決めない
 - continuityのknown_unknownは未確認事項。推測で埋めず、確認方法や観測方法を整理する
 - continuityのnext_action_clarificationは次のActionが未整理な状態。必要ならupdate_task Candidateとして提案できる
+- entry.type が map の場合、entry.map_context.selected_node はユーザーが今Focusしている対象、surrounding_nodes はその1-hopの直接関係、primary_action はMap全体の現在Action。選択Nodeを主語にしつつ、周辺Contextを必要な範囲だけ使う
+- Map Contextに表示されていないNodeや関係を、見えているものとして補完しない
 - 返答は日本語で簡潔に、次に動きやすい内容にする
 
 【許可されたCandidate type / payload】

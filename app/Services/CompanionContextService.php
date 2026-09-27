@@ -189,9 +189,30 @@ class CompanionContextService
                 'task' => $task ? 'Task · '.$task->title : 'Task',
                 'plan' => $plan ? 'Plan · '.$plan->title : 'Plan',
                 'inbox_item' => 'Inbox item',
+                'map' => filled(data_get($entryContext, 'map_context.selected_node.label'))
+                    ? 'Map · '.data_get($entryContext, 'map_context.selected_node.label')
+                    : 'Canovia Map',
                 default => 'Canovia全体',
             },
         ];
+
+        if ($entryType === 'map') {
+            $mapContext = data_get($entryContext, 'map_context');
+
+            if (is_array($mapContext)) {
+                $entry['map_context'] = [
+                    'projection_key' => data_get($mapContext, 'projection_key'),
+                    'selected_node' => data_get($mapContext, 'selected_node'),
+                    'surrounding_nodes' => collect(data_get($mapContext, 'surrounding_nodes', []))
+                        ->take(8)
+                        ->values()
+                        ->all(),
+                    'primary_action' => data_get($mapContext, 'primary_action'),
+                ];
+            }
+
+            return $entry;
+        }
 
         if ($entryType !== 'inbox_item') {
             return $entry;

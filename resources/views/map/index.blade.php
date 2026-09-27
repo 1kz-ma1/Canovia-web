@@ -160,6 +160,26 @@
                                     >{{ $action['label'] }}</a>
                                 @endforeach
                             </div>
+                            @auth
+                                @if ((bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
+                                    <div class="canovia-map-companion-entry">
+                                        <div>
+                                            <p class="canovia-map-companion-kicker">COMPANION</p>
+                                            <p class="canovia-map-companion-copy">このNodeと直接つながるContextを引き継いで相談します。</p>
+                                        </div>
+                                        <form method="POST" action="{{ route('companion.entry') }}" data-mutation-once>
+                                            @csrf
+                                            <input type="hidden" name="entry_type" value="map">
+                                            <input type="hidden" name="map_node_id" value="{{ $node['id'] }}">
+                                            <input type="hidden" name="source_path" value="{{ route('map.index') }}#focus={{ rawurlencode($node['id']) }}">
+                                            <input type="hidden" name="source_route" value="map.index">
+                                            <button type="submit" class="btn-secondary w-full justify-center" data-map-classic-action>
+                                                ✦ このContextについて相談
+                                            </button>
+                                        </form>
+                                    </div>
+                                @endif
+                            @endauth
                         </section>
                     </template>
                 @endif

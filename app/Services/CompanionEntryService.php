@@ -17,10 +17,12 @@ class CompanionEntryService
         'task',
         'guided_execution',
         'inbox_item',
+        'map',
     ];
 
     public function __construct(
         private readonly PlanOwnershipService $ownership,
+        private readonly MapProjectionService $maps,
     ) {}
 
     /**
@@ -40,13 +42,32 @@ class CompanionEntryService
             ]);
         }
 
-        [$plan, $task, $inboxItem] = $this->resolveTargets($request, $entryType, $input);
+        $mapContext = null;
+        if ($entryType === 'map') {
+            $mapContext = $this->maps->companionContext(
+                $request,
+                trim((string) ($input['map_node_id'] ?? '')),
+            );
+
+            if (! $mapContext) {
+                throw ValidationException::withMessages([
+                    'map_node_id' => 'Mapの選択Contextを最新状態で確認できませんでした。',
+                ]);
+            }
+        }
+
+        [$plan, $task, $inboxItem] = $this->resolveTargets($request, $entryType, $input, $mapContext);
 
         $scope = $task ? 'task' : ($plan ? 'plan' : 'global');
         $entryKey = match ($entryType) {
             'inbox_item' => 'inbox:'.(int) $inboxItem->id,
             'task', 'guided_execution' => 'task:'.(int) $task->id,
             'plan' => 'plan:'.(int) $plan->id,
+            'map' => $inboxItem
+                ? 'inbox:'.(int) $inboxItem->id
+                : ($task
+                    ? 'task:'.(int) $task->id
+                    : ($plan ? 'plan:'.(int) $plan->id : 'global')),
             default => 'global',
         };
 
@@ -57,6 +78,8 @@ class CompanionEntryService
             'source_path' => $this->nullableTrim($input['source_path'] ?? null),
             'source_route' => $this->nullableTrim($input['source_route'] ?? null),
             'inbox_item_id' => $inboxItem?->id,
+            'map_node_id' => $entryType === 'map' ? $this->nullableTrim($input['map_node_id'] ?? null) : null,
+            'map_context' => $entryType === 'map' ? $mapContext : null,
         ], fn ($value) => $value !== null && $value !== '');
 
         $thread = $this->findReusableThread(
@@ -65,7 +88,7 @@ class CompanionEntryService
             taskId: $task?->id,
             entryKey: $entryKey,
             scope: $scope,
-            allowLegacyScopeReuse: $entryType !== 'inbox_item',
+            allowLegacyScopeReuse: ! in_array($entryType, ['inbox_item'], true),
         );
 
         if ($thread) {
@@ -85,10 +108,16 @@ class CompanionEntryService
 
     /**
      * @param array<string,mixed> $input
+     * @param array<string,mixed>|null $mapContext
      * @return array{0:?Plan,1:?Task,2:?InboxItem}
      */
-    private function resolveTargets(Request $request, string $entryType, array $input): array
+    private function resolveTargets(Request $request, string $entryType, array $input, ?array $mapContext = null): array
     {
+
+        if ($entryType === 'map') {
+            return $this->resolveMapTargets($request, $mapContext ?? []);
+        }
+
         if ($entryType === 'global') {
             return [null, null, null];
         }
@@ -128,6 +157,54 @@ class CompanionEntryService
         }
 
         return [$plan, null, $inboxItem];
+    }
+
+
+    /**
+     * @param array<string,mixed> $mapContext
+     * @return array{0:?Plan,1:?Task,2:?InboxItem}
+     */
+    private function resolveMapTargets(Request $request, array $mapContext): array
+    {
+        $inboxItemId = (int) data_get($mapContext, 'target.inbox_item_id', 0);
+        if ($inboxItemId > 0) {
+            $item = InboxItem::query()->with('plan')->findOrFail($inboxItemId);
+
+            abort_unless(
+                $request->user()
+                && (int) $item->user_id === (int) $request->user()->id,
+                404,
+            );
+
+            if ($item->plan) {
+                $this->ownership->authorizeEdit($request, $item->plan);
+            }
+
+            return [$item->plan, null, $item];
+        }
+
+        $taskId = (int) data_get($mapContext, 'target.task_id', 0);
+        if ($taskId > 0) {
+            $task = Task::query()->with('plan')->findOrFail($taskId);
+            $this->ownership->authorizeTask($request, $task);
+
+            $planId = (int) data_get($mapContext, 'target.plan_id', 0);
+            if ($planId > 0) {
+                abort_unless($planId === (int) $task->plan_id, 404);
+            }
+
+            return [$task->plan, $task, null];
+        }
+
+        $planId = (int) data_get($mapContext, 'target.plan_id', 0);
+        if ($planId > 0) {
+            $plan = Plan::query()->findOrFail($planId);
+            $this->ownership->authorizeEdit($request, $plan);
+
+            return [$plan, null, null];
+        }
+
+        return [null, null, null];
     }
 
     private function findReusableThread(
