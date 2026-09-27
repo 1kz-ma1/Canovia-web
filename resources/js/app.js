@@ -2051,8 +2051,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'plan-form': {
             selector: '[data-onboarding-target="plan-form"]',
             number: 2,
-            title: '最初はざっくりでOK',
-            copy: 'まずはタイトルだけで作成できます。期限は決まっていれば入力し、まだなら空欄のままで大丈夫です。細かいタスクは次にAIと整えます。',
+            title: '最初は未来を一言だけ',
+            copy: 'まず「どうなりたいか」だけ渡します。現在地や成功基準は、Canoviaが必要な分だけ1問ずつ確認します。途中でも仮Planへ進めます。',
             next: 'ai-copy',
             largeTarget: true,
         },
