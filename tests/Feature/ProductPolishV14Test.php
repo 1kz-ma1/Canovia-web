@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Feedback;
 use App\Models\Plan;
 use App\Models\User;
+use App\Services\FirstRunService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -38,7 +39,7 @@ class ProductPolishV14Test extends TestCase
 
     public function test_home_surfaces_new_plan_action_without_public_plan_discovery_link(): void
     {
-        $response = $this->get(route('home'));
+        $response = $this->withCookie(FirstRunService::COOKIE, '1')->get(route('home'));
 
         $response->assertOk();
         $response->assertSee('新しい計画');
