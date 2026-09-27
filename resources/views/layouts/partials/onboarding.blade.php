@@ -8,6 +8,7 @@
                     <p class="onboarding-kicker">はじめに</p>
                 </div>
                 <h2 id="onboarding-intro-title" class="mt-2 max-w-md text-2xl font-black text-slate-50">Canoviaは、話しながら次の一歩を作るアプリです</h2>
+                <p class="mt-1 text-xs text-slate-500">Canoviaは、次の一歩を決めやすくするアプリです。</p>
             </div>
             <button type="button" class="feedback-close" data-onboarding-intro-skip aria-label="案内をスキップ">×</button>
         </div>
@@ -20,7 +21,7 @@
         <div class="relative z-10 onboarding-intro-points mt-5">
             <article>
                 <span aria-hidden="true">🤝</span>
-                <div><strong>まずCanoviaに話す</strong><small>入力方法を選ばず、今の目標や状況をそのまま伝えられます。</small></div>
+                <div><strong>まずCanoviaに話す</strong><small>入力方法を選ばず、そのまま伝えられます。必要なら、いつものAIで相談するFree handoffも使えます。</small></div>
             </article>
             <article>
                 <span aria-hidden="true">🗺️</span>
