@@ -102,6 +102,11 @@ class Plan extends Model
         return $this->hasMany(WorkLog::class);
     }
 
+    public function guidedExecutions()
+    {
+        return $this->hasMany(GuidedExecution::class)->latest('prepared_at')->latest('id');
+    }
+
     public function adjustments()
     {
         return $this->hasMany(PlanAdjustment::class);
