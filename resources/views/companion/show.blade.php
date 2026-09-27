@@ -62,6 +62,23 @@
             </div>
         </header>
 
+        @if (data_get($contextSnapshot, 'entry.label'))
+            <section class="rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.035] px-4 py-3">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-[10px] font-black uppercase tracking-[.14em] text-cyan-300">CONTEXT INHERITED</p>
+                        <p class="mt-1 break-words text-sm font-black text-slate-100">{{ data_get($contextSnapshot, 'entry.label') }}</p>
+                        @if (data_get($contextSnapshot, 'entry.inbox_item.content'))
+                            <p class="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">{{ data_get($contextSnapshot, 'entry.inbox_item.content') }}</p>
+                        @elseif (data_get($contextSnapshot, 'entry.type') === 'guided_execution' && data_get($contextSnapshot, 'entry.latest_evidence.summary'))
+                            <p class="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">最新Evidence: {{ data_get($contextSnapshot, 'entry.latest_evidence.summary') }}</p>
+                        @endif
+                    </div>
+                    <span class="badge badge-slate">自動選択</span>
+                </div>
+            </section>
+        @endif
+
         @if (session('status'))
             <div class="assistant-notice assistant-notice-info">{{ session('status') }}</div>
         @endif
@@ -201,7 +218,7 @@
                 <form method="POST" action="{{ route('companion.messages.store', $thread) }}" class="flex items-end gap-2" data-mutation-once>
                     @csrf
                     <input type="hidden" name="request_id" value="{{ old('request_id', $messageRequestId) }}">
-                    <input type="hidden" name="source_path" value="{{ request()->path() }}">
+                    <input type="hidden" name="source_path" value="{{ $companionSourcePath }}">
                     <textarea name="content" rows="2" required maxlength="6000" class="form-control min-h-[3.2rem] flex-1 resize-y" placeholder="Canoviaに相談する…">{{ old('content') }}</textarea>
                     <button type="submit" class="btn-primary shrink-0">送信</button>
                 </form>
