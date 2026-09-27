@@ -5,7 +5,7 @@ return [
         'version' => 'v41.14',
         'date' => '2026-09-27',
         'title' => '計画を作る前に、Canoviaが現在地を理解する',
-        'summary' => 'Goal ContextとAdaptive Goal Discoveryに加え、Canovia外で行う現実のTaskを「方針を決める → 実行 → 振り返る → Evidence」に接続するGuided Executionを追加しました。Timerで時間を測らなくても実行結果を残せます。',
+        'summary' => 'Goal Context・Adaptive Goal Discovery・Guided Executionに加え、未知Goalの実利用から専用Tool候補を観測するGoal Pattern Demandを追加しました。新しい入力を求めず、既存の現在地・Unknown・実行・振り返りから需要を読み取ります。',
         'highlights' => [
             'Plan作成時にGoal Contextを自動生成し、既存Planも必要になった時点で安全にlazy生成します。',
             'Goal Context Factはconfirmed / candidate / unknown / supersededを分離し、Native AIの推測をそのまま事実扱いしません。',
@@ -23,8 +23,13 @@ return [
             '実行後のReflectionを確定した時だけTask Evidenceを保存し、自己申告の構造化度に応じてconfidence 0.55〜0.70を付けます。',
             'Guided ReflectionだけでTask Progressは自動変更せず、Timerも自動開始しません。',
             '実装・調査・読書など集中作業では従来どおりTimer fallbackを維持し、専用Toolがある場合は必ずそちらを優先します。',
+            'Goal ContextとGuided Executionを別のDemand Logへ複製せず、既存データをSource of TruthとしてGoal Pattern Demandを集計します。',
+            '営業・スポーツ・運動・キャリア・学習・開発などのGoal領域ごとに、利用Identity数・Guided Execution回数・反復Task・Measurement Unknownを確認できます。',
+            'Opportunity Scoreはcross-user demandを最も重くし、1人の反復利用だけで専用Tool候補を過大評価しない設計です。',
+            'Current State・Success Signal・Constraint・Measurement・入力スタイルも構造化された種類だけを集計し、自由記述本文はTool需要画面へ表示しません。',
+            'Goal Pattern Demandは観測専用で、AIやScoreが新Tool・課金Feature・Entitlementを自動作成または公開することはありません。',
         ],
-        'tip' => 'Canoviaの外でやる行動も、時間を測る必要はありません。始める前に「今回見ること」を決め、終わったら起きたことを振り返ればEvidenceとして次へつなげられます。',
+        'tip' => '未知の目標はまず汎用伴走で支援し、同じ需要が複数人・複数回で現れた領域だけを専用Tool候補として観測します。Tool化は実データを見て人が判断します。',
     ],
     [
         'version' => 'v41.13',

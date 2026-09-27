@@ -12,7 +12,7 @@
                 <div>
                     <h1 class="text-2xl font-black tracking-tight text-slate-50 sm:text-3xl">運営ダッシュボード</h1>
                     <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                        ユーザーの声、計画作成・更新の動作状況、演習問題の需要と供給をここから確認できます。
+                        ユーザーの声、計画作成・更新の動作状況、演習問題の需要、未知Goalから見えるTool需要をここから確認できます。
                     </p>
                 </div>
                 <a href="{{ route('home') }}" class="btn-secondary shrink-0">Canoviaへ戻る</a>
@@ -102,6 +102,31 @@
                     <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
                         <p class="text-[10px] leading-4 text-slate-500">確認待ち<br>Candidate</p>
                         <p class="mt-1 text-xl font-black text-cyan-100">{{ $pendingQuestionCandidateCount }}</p>
+                    </div>
+                </div>
+            </a>
+
+            <a href="{{ route('admin.goal_pattern_demand.index') }}" class="group page-card block p-5 transition hover:-translate-y-0.5 hover:border-cyan-300/35 sm:p-6">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <span class="inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2.5 py-1 text-[10px] font-black tracking-[.12em] text-cyan-200">TOOL DISCOVERY</span>
+                        <h2 class="mt-3 text-xl font-black text-slate-50">Goal Pattern Demand</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-400">未知GoalとGuided Executionの実利用から、専用Tool化を検討する領域を観測します。</p>
+                    </div>
+                    <span class="text-2xl text-slate-600 transition group-hover:translate-x-1 group-hover:text-cyan-200" aria-hidden="true">→</span>
+                </div>
+                <div class="mt-5 grid grid-cols-3 gap-2">
+                    <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+                        <p class="text-[10px] leading-4 text-slate-500">30日<br>Goal</p>
+                        <p class="mt-1 text-xl font-black text-slate-100">{{ $goalContext30d }}</p>
+                    </div>
+                    <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+                        <p class="text-[10px] leading-4 text-slate-500">Guided<br>Execution</p>
+                        <p class="mt-1 text-xl font-black text-amber-100">{{ $guidedExecution30d }}</p>
+                    </div>
+                    <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+                        <p class="text-[10px] leading-4 text-slate-500">Reflection<br>完了</p>
+                        <p class="mt-1 text-xl font-black text-emerald-100">{{ $guidedReflection30d }}</p>
                     </div>
                 </div>
             </a>

@@ -28,6 +28,7 @@ use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminTelemetryController;
 use App\Http\Controllers\AdminQuestionPackController;
 use App\Http\Controllers\AdminPracticeDemandController;
+use App\Http\Controllers\AdminGoalPatternDemandController;
 use App\Http\Controllers\AdminEconomyController;
 use App\Http\Controllers\AdminPreviewController;
 use App\Http\Controllers\CalendarController;
@@ -106,6 +107,7 @@ Route::middleware('admin.access')->group(function () {
     Route::get('/admin/telemetry', [AdminTelemetryController::class, 'index'])->name('admin.telemetry.index');
     Route::get('/admin/question-packs', [AdminQuestionPackController::class, 'index'])->name('admin.question_packs.index');
     Route::get('/admin/practice-demand', [AdminPracticeDemandController::class, 'index'])->name('admin.practice_demand.index');
+    Route::get('/admin/goal-pattern-demand', [AdminGoalPatternDemandController::class, 'index'])->name('admin.goal_pattern_demand.index');
     Route::get('/admin/practice-demand/candidates/{candidate}', [AdminPracticeDemandController::class, 'showCandidate'])->name('admin.practice_demand.candidates.show');
     Route::post('/admin/practice-demand/candidates/{candidate}/promote', [AdminPracticeDemandController::class, 'promoteCandidate'])->name('admin.practice_demand.candidates.promote');
     Route::post('/admin/practice-demand/candidates/{candidate}/reject', [AdminPracticeDemandController::class, 'rejectCandidate'])->name('admin.practice_demand.candidates.reject');
