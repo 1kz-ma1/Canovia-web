@@ -152,11 +152,14 @@ class GoalPatternDemandService
         return collect($stats)
             ->map(function (array $stat) {
                 $uniqueIdentities = count($stat['identities']);
+                // Cross-user demand is intentionally the strongest signal.
+                // Repeated use by one person supports the case, but must not
+                // outweigh the same need appearing across multiple identities.
                 $opportunityScore =
-                    min(45, $uniqueIdentities * 15)
-                    + min(25, $stat['guided_executions'] * 5)
-                    + min(20, $stat['repeat_tasks'] * 10)
-                    + min(10, $stat['measurement_unknowns'] * 5);
+                    min(50, $uniqueIdentities * 25)
+                    + min(20, $stat['guided_executions'] * 3)
+                    + min(15, $stat['repeat_tasks'] * 5)
+                    + min(15, $stat['measurement_unknowns'] * 5);
 
                 $stat['unique_identities'] = $uniqueIdentities;
                 $stat['opportunity_score'] = min(100, $opportunityScore);
