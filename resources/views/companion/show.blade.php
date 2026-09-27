@@ -12,6 +12,34 @@
             'create_future_memo' => '未来メモ候補',
             'create_inbox_item' => 'Inbox候補',
         ];
+        $candidateStatusLabels = [
+            'pending' => '確認待ち',
+            'applied' => '反映済み',
+            'dismissed' => '見送り',
+        ];
+        $fieldLabels = [
+            'title' => 'タイトル',
+            'description' => '説明',
+            'estimated_minutes' => '見積時間',
+            'remaining_minutes' => '残り時間',
+            'priority' => '優先度',
+            'activation_cost' => '着手コスト',
+            'next_action_note' => '次のAction',
+            'status' => '状態',
+            'category' => 'カテゴリ',
+            'priority_mode' => '優先度モード',
+            'start_date' => '開始日',
+            'deadline' => '期限',
+            'type' => 'Fact種別',
+            'key' => 'Fact Key',
+            'label' => 'ラベル',
+            'value' => '内容',
+            'measurement' => 'Measurement',
+            'importance' => '重要度',
+            'kind' => '種類',
+            'content' => '本文',
+            'use_for_ai' => 'AI Contextで使う',
+        ];
     @endphp
 
     <div class="mx-auto max-w-5xl space-y-4 pb-36 md:pb-8">
@@ -80,29 +108,80 @@
                         <div class="mt-4 space-y-2 border-t border-white/8 pt-4">
                             <p class="text-[10px] font-black uppercase tracking-[.12em] text-amber-300">MUTATION CANDIDATES · 未反映</p>
                             @foreach ($message->mutationCandidates as $candidate)
-                                <div class="rounded-xl border {{ $candidate->status === 'pending' ? 'border-amber-300/15 bg-amber-300/[0.025]' : 'border-slate-800 bg-slate-950/20' }} p-3">
+                                @php
+                                    $preview = $candidatePreviews[$candidate->id] ?? ['changes' => [], 'blocked_fields' => [], 'target_label' => 'Canovia'];
+                                    $previewChanges = $preview['changes'] ?? [];
+                                    $blockedFields = $preview['blocked_fields'] ?? [];
+                                @endphp
+                                <div class="rounded-xl border {{ $candidate->status === 'pending' ? 'border-amber-300/15 bg-amber-300/[0.025]' : ($candidate->status === 'applied' ? 'border-emerald-300/15 bg-emerald-300/[0.025]' : 'border-slate-800 bg-slate-950/20') }} p-3">
                                     <div class="flex flex-wrap items-start justify-between gap-3">
-                                        <div>
-                                            <span class="badge {{ $candidate->status === 'pending' ? 'badge-slate' : 'badge-slate' }}">{{ $candidate->status === 'pending' ? '未反映' : '見送り' }}</span>
+                                        <div class="min-w-0 flex-1">
+                                            <span class="badge {{ $candidate->status === 'applied' ? 'badge-green' : 'badge-slate' }}">{{ $candidateStatusLabels[$candidate->status] ?? $candidate->status }}</span>
                                             <p class="mt-2 text-sm font-bold text-slate-200">{{ $candidate->title }}</p>
                                             <p class="mt-1 text-xs leading-5 text-slate-400">{{ $candidate->summary }}</p>
-                                            <p class="mt-2 text-[10px] font-bold text-slate-600">{{ $candidateLabels[$candidate->type] ?? $candidate->type }}</p>
+                                            <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-bold text-slate-600">
+                                                <span>{{ $candidateLabels[$candidate->type] ?? $candidate->type }}</span>
+                                                <span>{{ $preview['target_label'] ?? 'Canovia' }}</span>
+                                            </div>
                                         </div>
-                                        @if ($candidate->status === 'pending')
+                                    </div>
+
+                                    @if (! empty($previewChanges))
+                                        <div class="mt-3 rounded-xl border border-white/8 bg-slate-950/35 p-3">
+                                            <p class="text-[10px] font-black uppercase tracking-[.12em] text-cyan-300">反映される内容</p>
+                                            <dl class="mt-2 space-y-2">
+                                                @foreach ($previewChanges as $key => $value)
+                                                    <div class="grid gap-1 sm:grid-cols-[9rem_minmax(0,1fr)]">
+                                                        <dt class="text-[11px] font-bold text-slate-500">{{ $fieldLabels[$key] ?? $key }}</dt>
+                                                        <dd class="break-words text-xs text-slate-200">
+                                                            @if (is_array($value))
+                                                                {{ json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}
+                                                            @elseif (is_bool($value))
+                                                                {{ $value ? 'はい' : 'いいえ' }}
+                                                            @elseif ($value === null)
+                                                                未設定
+                                                            @else
+                                                                {{ $value }}
+                                                            @endif
+                                                        </dd>
+                                                    </div>
+                                                @endforeach
+                                            </dl>
+                                        </div>
+                                    @endif
+
+                                    @if (! empty($blockedFields))
+                                        <div class="mt-2 rounded-xl border border-slate-800 bg-slate-950/25 p-3">
+                                            <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-500">反映しない項目</p>
+                                            <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                                                {{ collect($blockedFields)->map(fn ($field) => $fieldLabels[$field] ?? $field)->implode(' / ') }}
+                                            </p>
+                                            <p class="mt-1 text-[10px] leading-4 text-slate-600">進捗・完了などEvidence側で決める項目や、Companionに許可していない項目は無視されます。</p>
+                                        </div>
+                                    @endif
+
+                                    @if ($candidate->status === 'pending')
+                                        <div class="mt-3 flex flex-wrap gap-2">
+                                            @if ($canApplyCompanionCandidates && ! empty($previewChanges))
+                                                <form method="POST" action="{{ route('companion.candidates.apply', [$thread, $candidate]) }}" data-mutation-once>
+                                                    @csrf
+                                                    <input type="hidden" name="apply_request_id" value="{{ $candidateApplyRequestIds[$candidate->id] ?? '' }}">
+                                                    <button type="submit" class="btn-primary px-3 py-2 text-xs">この内容を反映する</button>
+                                                </form>
+                                            @endif
                                             <form method="POST" action="{{ route('companion.candidates.dismiss', [$thread, $candidate]) }}">
                                                 @csrf
                                                 <button type="submit" class="btn-secondary px-3 py-2 text-xs">見送る</button>
                                             </form>
-                                        @endif
-                                    </div>
-                                    @if (! empty($candidate->payload))
-                                        <details class="mt-3">
-                                            <summary class="cursor-pointer text-[11px] font-semibold text-slate-500">変更内容を見る</summary>
-                                            <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded-lg bg-slate-950/50 p-3 text-[10px] leading-5 text-slate-400">{{ json_encode($candidate->payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) }}</pre>
-                                        </details>
-                                    @endif
-                                    @if ($candidate->status === 'pending')
-                                        <p class="mt-3 text-[10px] leading-4 text-amber-200/70">Step 1では候補を保存するだけで、Canoviaのデータは変更されません。</p>
+                                        </div>
+                                        <p class="mt-3 text-[10px] leading-4 text-amber-200/70">「反映する」を押すまでCanoviaのデータは変更されません。</p>
+                                    @elseif ($candidate->status === 'applied')
+                                        <p class="mt-3 text-[10px] leading-4 text-emerald-200/70">
+                                            人の確認後に反映済みです。
+                                            @if ($candidate->applied_target_type && $candidate->applied_target_id)
+                                                {{ $candidate->applied_target_type }} #{{ $candidate->applied_target_id }}
+                                            @endif
+                                        </p>
                                     @endif
                                 </div>
                             @endforeach
