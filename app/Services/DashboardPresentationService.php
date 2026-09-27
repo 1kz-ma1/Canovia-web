@@ -6,6 +6,7 @@ use App\Data\UserBehaviorBaselineData;
 use App\Data\UserStateData;
 use App\Enums\BehaviorEventType;
 use App\Enums\UserBehaviorState;
+use App\Models\TaskEvidence;
 use App\Models\User;
 use App\Models\UserStateSnapshot;
 use App\Models\WorkSession;
@@ -52,7 +53,60 @@ class DashboardPresentationService
             $editablePlanIds->keys()->all(),
             $actor,
         );
-        $planTabs = $plans->map(function ($plan) use ($previousSessions, $editablePlanIds, $guidanceDeck, $actor) {
+
+        $currentTasksByPlan = $plans->mapWithKeys(function ($plan) use ($guidanceDeck) {
+            $planGuidance = $guidanceDeck->first(
+                fn (array $guidance) => (int) $guidance['plan']->id === (int) $plan->id
+            );
+            $currentTask = data_get($planGuidance, 'task');
+
+            if (! $currentTask) {
+                $currentTask = $plan->tasks
+                    ->filter(fn ($task) => ! in_array($task->status, ['done', 'cancelled'], true)
+                        && (int) $task->progress_percent < 100)
+                    ->sort(function ($left, $right) {
+                        $doing = ($left->status === 'doing' ? 0 : 1) <=> ($right->status === 'doing' ? 0 : 1);
+                        if ($doing !== 0) {
+                            return $doing;
+                        }
+
+                        $priority = (int) $left->priority <=> (int) $right->priority;
+                        if ($priority !== 0) {
+                            return $priority;
+                        }
+
+                        return (int) ($left->sort_order ?? PHP_INT_MAX) <=> (int) ($right->sort_order ?? PHP_INT_MAX);
+                    })
+                    ->first();
+            }
+
+            return [(int) $plan->id => $currentTask];
+        });
+
+        $currentTaskIds = $currentTasksByPlan
+            ->filter()
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $evidenceByTask = $currentTaskIds->isEmpty()
+            ? collect()
+            : TaskEvidence::query()
+                ->whereIn('task_id', $currentTaskIds->all())
+                ->latest('occurred_at')
+                ->latest('id')
+                ->get()
+                ->groupBy('task_id');
+
+        $planTabs = $plans->map(function ($plan) use (
+            $previousSessions,
+            $editablePlanIds,
+            $guidanceDeck,
+            $actor,
+            $currentTasksByPlan,
+            $evidenceByTask,
+        ) {
             $progress = $this->progressService->calculate($plan);
             $todayMinutes = (int) $plan->workLogs
                 ->filter(fn ($log) => $log->worked_on?->isToday())
@@ -69,25 +123,7 @@ class DashboardPresentationService
                 $previousSession?->task_id,
             );
 
-            $currentTask = data_get($planGuidance, 'task');
-            if (! $currentTask) {
-                $currentTask = $plan->tasks
-                    ->filter(fn ($task) => ! in_array($task->status, ['done', 'cancelled'], true) && (int) $task->progress_percent < 100)
-                    ->sort(function ($left, $right) {
-                        $doing = ($left->status === 'doing' ? 0 : 1) <=> ($right->status === 'doing' ? 0 : 1);
-                        if ($doing !== 0) {
-                            return $doing;
-                        }
-
-                        $priority = (int) $left->priority <=> (int) $right->priority;
-                        if ($priority !== 0) {
-                            return $priority;
-                        }
-
-                        return (int) ($left->sort_order ?? PHP_INT_MAX) <=> (int) ($right->sort_order ?? PHP_INT_MAX);
-                    })
-                    ->first();
-            }
+            $currentTask = $currentTasksByPlan->get((int) $plan->id);
 
             $hubTasks = $plan->tasks
                 ->filter(fn ($task) => ! in_array($task->status, ['done', 'cancelled'], true)
@@ -121,7 +157,7 @@ class DashboardPresentationService
             $primaryExecutionTool = $this->executionActions->primary($executionTools);
 
             $recentEvidenceModels = $currentTask
-                ? $currentTask->evidences()->take(8)->get()
+                ? collect($evidenceByTask->get((int) $currentTask->id, collect()))->take(8)->values()
                 : collect();
 
             $recentEvidence = $recentEvidenceModels
