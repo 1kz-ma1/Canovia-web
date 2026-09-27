@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use App\Http\Middleware\EnsureAdminAccess;
 use App\Http\Middleware\EnsureFeatureAccess;
+use App\Http\Middleware\MeasurePagePerformance;
 use App\Http\Middleware\NormalizeAiJsonInput;
 use App\Http\Middleware\RedirectLegacyCanoviaHost;
 use App\Http\Middleware\TrackAiPlanFunnel;
@@ -17,6 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Measure before the web middleware group so database-backed session
+        // reads/writes are included in the request total.
+        $middleware->prepend(MeasurePagePerformance::class);
         $middleware->redirectGuestsTo(fn (Request $request) => route('auth.login.form'));
         $middleware->redirectUsersTo(fn (Request $request) => route('home'));
         $middleware->alias([

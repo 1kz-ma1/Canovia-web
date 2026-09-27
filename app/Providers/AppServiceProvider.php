@@ -9,6 +9,8 @@ use App\Services\Entitlements\SponsorProductGrantEntitlementResolver;
 use App\Services\AdminAccessService;
 use App\Services\AdminPreviewContext;
 use App\Services\FeatureAccessService;
+use App\Support\RequestPerformance;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -42,6 +44,19 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        if ((bool) config('performance.enabled', false)) {
+            DB::listen(function (\Illuminate\Database\Events\QueryExecuted $event): void {
+                if (! app()->bound('request')) {
+                    return;
+                }
+
+                $metrics = request()->attributes->get(RequestPerformance::ATTRIBUTE);
+                if ($metrics instanceof RequestPerformance) {
+                    $metrics->add($event);
+                }
+            });
+        }
+
         if (! app()->environment('production')) {
             return;
         }
