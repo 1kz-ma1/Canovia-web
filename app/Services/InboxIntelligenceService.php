@@ -88,12 +88,6 @@ class InboxIntelligenceService
             'confidence' => max(0, min(100, (int) ($data['confidence'] ?? 50))),
             'suggested_plan_title' => mb_substr(trim((string) ($data['suggested_plan_title'] ?? '')), 0, 255) ?: null,
             'suggested_task_title' => mb_substr(trim((string) ($data['suggested_task_title'] ?? '')), 0, 255) ?: null,
-            'future_memo_kind' => in_array(($data['future_memo_kind'] ?? null), ['want_to_do', 'future_self', 'interest', 'concern', 'value'], true)
-                ? $data['future_memo_kind']
-                : 'interest',
-            'future_memo_category' => in_array(($data['future_memo_category'] ?? null), ['career', 'study', 'creation', 'life', 'health', 'money', 'hobby', 'other'], true)
-                ? $data['future_memo_category']
-                : 'other',
             'run_id' => (int) $result['run_id'],
             'provider' => $result['provider'],
             'model' => $result['model'],
@@ -111,8 +105,6 @@ class InboxIntelligenceService
                 'confidence',
                 'suggested_plan_title',
                 'suggested_task_title',
-                'future_memo_kind',
-                'future_memo_category',
             ],
             'properties' => [
                 'destination' => [
@@ -123,14 +115,6 @@ class InboxIntelligenceService
                 'confidence' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 100],
                 'suggested_plan_title' => ['type' => ['string', 'null']],
                 'suggested_task_title' => ['type' => ['string', 'null']],
-                'future_memo_kind' => [
-                    'type' => 'string',
-                    'enum' => ['want_to_do', 'future_self', 'interest', 'concern', 'value'],
-                ],
-                'future_memo_category' => [
-                    'type' => 'string',
-                    'enum' => ['career', 'study', 'creation', 'life', 'health', 'money', 'hobby', 'other'],
-                ],
             ],
         ];
     }
