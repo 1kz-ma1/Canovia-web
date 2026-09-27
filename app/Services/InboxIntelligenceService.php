@@ -16,6 +16,14 @@ class InboxIntelligenceService
         'keep_inbox' => 'Inboxに残す',
     ];
 
+    public const PUBLIC_DESTINATIONS = [
+        'career_capture' => 'Career Capture',
+        'recall_material' => 'Recall教材',
+        'task_evidence' => 'Task Evidence',
+        'plan_resource' => 'Plan Resource',
+        'keep_inbox' => 'Inboxに残す',
+    ];
+
     public function __construct(
         private readonly NativeAiGateway $nativeAi,
     ) {}
@@ -37,7 +45,6 @@ class InboxIntelligenceService
             '- reasonは短く具体的にする',
             '',
             'destinationの意味:',
-            '- future_memo: アイデア、将来やりたいこと、関心、懸念',
             '- career_capture: 求人、企業応募、選考に関する外部情報',
             '- recall_material: 単語、用語、参考書ページなど暗記・想起用教材',
             '- task_evidence: 既存Taskで実際に行った作業・成果・確認できる事実',
@@ -71,7 +78,7 @@ class InboxIntelligenceService
 
         $data = $result['data'];
         $destination = (string) ($data['destination'] ?? 'keep_inbox');
-        if (! array_key_exists($destination, self::DESTINATIONS)) {
+        if (! array_key_exists($destination, self::PUBLIC_DESTINATIONS)) {
             $destination = 'keep_inbox';
         }
 
@@ -110,7 +117,7 @@ class InboxIntelligenceService
             'properties' => [
                 'destination' => [
                     'type' => 'string',
-                    'enum' => array_keys(self::DESTINATIONS),
+                    'enum' => array_keys(self::PUBLIC_DESTINATIONS),
                 ],
                 'reason' => ['type' => 'string'],
                 'confidence' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 100],
