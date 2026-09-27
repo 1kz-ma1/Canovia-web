@@ -6,6 +6,7 @@ use App\Enums\EvidenceSource;
 use App\Models\GuidedExecution;
 use App\Models\Task;
 use App\Models\TaskEvidence;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Str;
 
@@ -76,79 +77,87 @@ class GuidedExecutionService
         ?int $userId,
         string $actorToken,
     ): GuidedExecution {
-        $this->assertIdentity($execution, $userId, $actorToken);
         $requestId = (string) ($data['reflection_request_id'] ?? Str::uuid());
 
-        if ($execution->status === GuidedExecution::STATUS_COMPLETED) {
-            if ($execution->reflection_request_id === $requestId || $execution->task_evidence_id) {
-                return $execution;
+        return DB::transaction(function () use ($execution, $data, $userId, $actorToken, $requestId) {
+            $execution = GuidedExecution::query()
+                ->whereKey($execution->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $this->assertIdentity($execution, $userId, $actorToken);
+
+            if ($execution->status === GuidedExecution::STATUS_COMPLETED) {
+                if ($execution->reflection_request_id === $requestId || $execution->task_evidence_id) {
+                    return $execution->fresh(['evidence', 'task', 'plan']);
+                }
+
+                throw ValidationException::withMessages([
+                    'reflection' => 'この実行はすでに振り返り済みです。',
+                ]);
             }
 
-            throw ValidationException::withMessages([
-                'reflection' => 'この実行はすでに振り返り済みです。',
-            ]);
-        }
+            if ($execution->status !== GuidedExecution::STATUS_PREPARED) {
+                throw ValidationException::withMessages([
+                    'reflection' => 'この実行は振り返りできる状態ではありません。',
+                ]);
+            }
 
-        if ($execution->status !== GuidedExecution::STATUS_PREPARED) {
-            throw ValidationException::withMessages([
-                'reflection' => 'この実行は振り返りできる状態ではありません。',
-            ]);
-        }
+            $execution->loadMissing('task');
 
-        $execution->loadMissing('task');
+            $actualOutcome = trim((string) $data['actual_outcome']);
+            $observations = $this->nullableText($data['observations'] ?? null);
+            $discoveries = $this->nullableText($data['discoveries'] ?? null);
+            $nextAdjustment = $this->nullableText($data['next_adjustment'] ?? null);
 
-        $actualOutcome = trim((string) $data['actual_outcome']);
-        $observations = $this->nullableText($data['observations'] ?? null);
-        $discoveries = $this->nullableText($data['discoveries'] ?? null);
-        $nextAdjustment = $this->nullableText($data['next_adjustment'] ?? null);
+            $structuredCount = collect([$observations, $discoveries, $nextAdjustment])
+                ->filter(fn ($value) => filled($value))
+                ->count();
 
-        $structuredCount = collect([$observations, $discoveries, $nextAdjustment])
-            ->filter(fn ($value) => filled($value))
-            ->count();
+            // Structured self-reflection is useful Evidence, but remains weaker than
+            // an artifact/external metric and never drives progress automatically.
+            $confidence = $structuredCount >= 2 ? 0.70 : ($structuredCount >= 1 ? 0.65 : 0.55);
 
-        // Structured self-reflection is useful Evidence, but remains weaker than
-        // an artifact/external metric and never drives progress automatically.
-        $confidence = $structuredCount >= 2 ? 0.70 : ($structuredCount >= 1 ? 0.65 : 0.55);
+            $evidence = $this->evidence->record(
+                $execution->task,
+                EvidenceSource::Native,
+                'guided_execution_reflected',
+                [
+                    'guided_execution_id' => (int) $execution->id,
+                    'intent' => $execution->intent,
+                    'focus_points' => $execution->focus_points ?? [],
+                    'observation_points' => $execution->observation_points ?? [],
+                    'success_signal' => $execution->success_signal,
+                    'outcome_rating' => (string) $data['outcome_rating'],
+                    'actual_outcome' => $actualOutcome,
+                    'observations' => $observations,
+                    'discoveries' => $discoveries,
+                    'next_adjustment' => $nextAdjustment,
+                    'evidence_strength' => $structuredCount >= 1
+                        ? 'structured_self_reflection'
+                        : 'self_report',
+                ],
+                confidence: $confidence,
+                externalKey: 'guided-execution:'.$execution->id.':reflection',
+                userId: $userId,
+                actorToken: $userId ? null : $actorToken,
+                occurredAt: now(),
+            );
 
-        $evidence = $this->evidence->record(
-            $execution->task,
-            EvidenceSource::Native,
-            'guided_execution_reflected',
-            [
-                'guided_execution_id' => (int) $execution->id,
-                'intent' => $execution->intent,
-                'focus_points' => $execution->focus_points ?? [],
-                'observation_points' => $execution->observation_points ?? [],
-                'success_signal' => $execution->success_signal,
+            $execution->update([
+                'task_evidence_id' => $evidence->id,
+                'status' => GuidedExecution::STATUS_COMPLETED,
+                'reflection_request_id' => $requestId,
                 'outcome_rating' => (string) $data['outcome_rating'],
                 'actual_outcome' => $actualOutcome,
                 'observations' => $observations,
                 'discoveries' => $discoveries,
                 'next_adjustment' => $nextAdjustment,
-                'evidence_strength' => $structuredCount >= 1
-                    ? 'structured_self_reflection'
-                    : 'self_report',
-            ],
-            confidence: $confidence,
-            externalKey: 'guided-execution:'.$execution->id.':reflection',
-            userId: $userId,
-            actorToken: $userId ? null : $actorToken,
-            occurredAt: now(),
-        );
+                'reflected_at' => now(),
+            ]);
 
-        $execution->update([
-            'task_evidence_id' => $evidence->id,
-            'status' => GuidedExecution::STATUS_COMPLETED,
-            'reflection_request_id' => $requestId,
-            'outcome_rating' => (string) $data['outcome_rating'],
-            'actual_outcome' => $actualOutcome,
-            'observations' => $observations,
-            'discoveries' => $discoveries,
-            'next_adjustment' => $nextAdjustment,
-            'reflected_at' => now(),
-        ]);
-
-        return $execution->fresh(['evidence', 'task', 'plan']);
+            return $execution->fresh(['evidence', 'task', 'plan']);
+        });
     }
 
     public function cancel(GuidedExecution $execution, ?int $userId, string $actorToken): GuidedExecution
@@ -173,6 +182,7 @@ class GuidedExecutionService
     public function latestCompletedFor(Task $task, ?int $userId, string $actorToken): ?GuidedExecution
     {
         return $this->ownQuery($task, $userId, $actorToken)
+            ->with('evidence')
             ->where('status', GuidedExecution::STATUS_COMPLETED)
             ->latest('reflected_at')
             ->first();
@@ -186,12 +196,18 @@ class GuidedExecutionService
             return;
         }
 
-        abort_unless(
-            is_string($execution->actor_token)
+        $matchesActor = is_string($execution->actor_token)
             && $execution->actor_token !== ''
-            && hash_equals($execution->actor_token, $actorToken),
-            404,
-        );
+            && hash_equals($execution->actor_token, $actorToken);
+
+        abort_unless($matchesActor, 404);
+
+        if ($userId !== null) {
+            $execution->update([
+                'user_id' => $userId,
+                'actor_token' => null,
+            ]);
+        }
     }
 
     private function ownQuery(Task $task, ?int $userId, string $actorToken)
@@ -200,7 +216,12 @@ class GuidedExecutionService
             ->where('task_id', $task->id)
             ->where(function ($query) use ($userId, $actorToken) {
                 if ($userId !== null) {
-                    $query->where('user_id', $userId);
+                    $query->where(function ($owned) use ($userId, $actorToken) {
+                        $owned->where('user_id', $userId)
+                            ->orWhere(function ($guest) use ($actorToken) {
+                                $guest->whereNull('user_id')->where('actor_token', $actorToken);
+                            });
+                    });
 
                     return;
                 }
