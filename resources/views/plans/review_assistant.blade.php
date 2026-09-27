@@ -73,10 +73,9 @@
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <p class="text-[10px] font-black tracking-[.14em] text-cyan-300">PERSONALIZED CONTEXT</p>
-                    <h2 class="mt-1 text-sm font-black text-slate-100">未来メモも計画更新の参考にします</h2>
-                    <p class="mt-1 text-xs leading-5 text-slate-400">AI共有ONの未来メモ {{ ($futureMemos ?? collect())->count() }}件を、本人の希望・制約としてプロンプトへ含めます。</p>
+                    <h2 class="mt-1 text-sm font-black text-slate-100">Canovia Memoryも計画更新の参考にします</h2>
+                    <p class="mt-1 text-xs leading-5 text-slate-400">会話などで本人が明示したMemory {{ ($futureMemos ?? collect())->count() }}件を、関係する範囲だけプロンプトへ含めます。</p>
                 </div>
-                <a href="{{ route('future_memos.index') }}" class="btn-secondary px-3 py-2 text-xs">未来メモを確認</a>
             </div>
         </section>
 
