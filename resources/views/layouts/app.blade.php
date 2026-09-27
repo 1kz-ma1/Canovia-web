@@ -227,6 +227,7 @@
         </div>
 
         @yield('content')
+        @yield('offline_snapshot')
         </div>
     </main>
 
@@ -274,8 +275,6 @@
             @include('layouts.partials.mobile-nav')
         </div>
     @endunless
-
-    @yield('offline_snapshot')
 
     <div class="route-loading-overlay" data-route-loading aria-hidden="true">
         <div class="route-loading-card">
