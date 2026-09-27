@@ -6,10 +6,10 @@ use App\Data\UserBehaviorBaselineData;
 use App\Data\UserStateData;
 use App\Enums\BehaviorEventType;
 use App\Enums\UserBehaviorState;
-use App\Models\TaskEvidence;
 use App\Models\User;
 use App\Models\UserStateSnapshot;
 use App\Models\WorkSession;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 
 class DashboardPresentationService
@@ -83,21 +83,11 @@ class DashboardPresentationService
             return [(int) $plan->id => $currentTask];
         });
 
-        $currentTaskIds = $currentTasksByPlan
-            ->filter()
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->values();
-
-        $evidenceByTask = $currentTaskIds->isEmpty()
-            ? collect()
-            : TaskEvidence::query()
-                ->whereIn('task_id', $currentTaskIds->all())
-                ->latest('occurred_at')
-                ->latest('id')
-                ->get()
-                ->groupBy('task_id');
+        $currentTasks = $currentTasksByPlan->filter()->values();
+        if ($currentTasks->isNotEmpty()) {
+            (new EloquentCollection($currentTasks->all()))
+                ->load(['evidences' => fn ($query) => $query->limit(8)]);
+        }
 
         $planTabs = $plans->map(function ($plan) use (
             $previousSessions,
@@ -105,7 +95,6 @@ class DashboardPresentationService
             $guidanceDeck,
             $actor,
             $currentTasksByPlan,
-            $evidenceByTask,
         ) {
             $progress = $this->progressService->calculate($plan);
             $todayMinutes = (int) $plan->workLogs
@@ -157,7 +146,7 @@ class DashboardPresentationService
             $primaryExecutionTool = $this->executionActions->primary($executionTools);
 
             $recentEvidenceModels = $currentTask
-                ? collect($evidenceByTask->get((int) $currentTask->id, collect()))->take(8)->values()
+                ? $currentTask->getRelation('evidences')
                 : collect();
 
             $recentEvidence = $recentEvidenceModels
