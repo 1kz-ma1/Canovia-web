@@ -2067,7 +2067,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const skipButton = root?.querySelector('[data-onboarding-skip]');
     const introDialog = document.querySelector('[data-onboarding-intro]');
     const introStart = introDialog?.querySelector('[data-onboarding-intro-start]');
-    const introSkips = introDialog ? [...introDialog.querySelectorAll('[data-onboarding-intro-skip]')] : [];
 
     const version = Number(body?.dataset.onboardingVersion || 1);
     const stateKey = `pacekeeper.onboarding.v${version}`;
@@ -2339,7 +2338,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setStage('home-create');
         window.setTimeout(() => showStep('home-create'), 80);
     });
-    introSkips.forEach((button) => button.addEventListener('click', skipOnboarding));
+    introDialog?.addEventListener('cancel', (event) => event.preventDefault());
     skipButton?.addEventListener('click', skipOnboarding);
     window.addEventListener('resize', placeOverlay);
     window.addEventListener('scroll', placeOverlay, { passive: true });
