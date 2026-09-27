@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\BehaviorEventType;
 use App\Models\BehaviorEvent;
 use App\Models\WorkSession;
 use Illuminate\Support\Collection;
@@ -31,6 +32,19 @@ final class RequestBehaviorHistory
                 'items' => BehaviorEvent::query()
                     ->select(['id', 'event_type', 'plan_id', 'task_id', 'occurred_at', 'metadata'])
                     ->where('actor_token', $actorToken)
+                    ->whereIn('event_type', [
+                        BehaviorEventType::WorkStarted->value,
+                        BehaviorEventType::NavigationCompleted->value,
+                        BehaviorEventType::PlanTabViewed->value,
+                        BehaviorEventType::TaskViewed->value,
+                        BehaviorEventType::AlternativeRequested->value,
+                        BehaviorEventType::RecommendationRejected->value,
+                        BehaviorEventType::DashboardIdle->value,
+                        BehaviorEventType::NavigationStarted->value,
+                        BehaviorEventType::RecommendationShown->value,
+                        BehaviorEventType::RecommendationAccepted->value,
+                        BehaviorEventType::WorkCompleted->value,
+                    ])
                     ->where('occurred_at', '>=', now()->subDays($loadedDays))
                     ->orderBy('occurred_at')
                     ->get()
