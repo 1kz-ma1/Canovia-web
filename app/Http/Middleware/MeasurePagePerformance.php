@@ -30,6 +30,10 @@ final class MeasurePagePerformance
             try {
                 $dbMs = round($metrics->queryMs, 2);
                 $elapsedRounded = round($elapsedMs, 2);
+                $responseContent = $response && method_exists($response, 'getContent')
+                    ? $response->getContent()
+                    : null;
+                $responseBytes = is_string($responseContent) ? strlen($responseContent) : null;
 
                 Log::info('canovia.performance', [
                     'path' => $request->getPathInfo(),
@@ -63,6 +67,9 @@ final class MeasurePagePerformance
                     ) ? $request->header('X-Canovia-Instant-Navigation') : null,
                     'session_driver' => (string) config('session.driver'),
                     'db_connection' => (string) config('database.default'),
+                    'response_bytes' => $responseBytes,
+                    'instant_fragment' => is_string($responseContent)
+                        && str_contains($responseContent, 'id="canovia-instant-meta"'),
                 ]);
             } catch (\Throwable) {
                 // Performance diagnosis must never make a normal request fail.
