@@ -75,7 +75,6 @@ class CompanionContextService
                 'status' => $task->status,
                 'progress_percent' => (int) $task->progress_percent,
                 'next_action_note' => $task->next_action_note,
-                'deadline' => $task->deadline?->toDateString(),
             ];
         }
 
