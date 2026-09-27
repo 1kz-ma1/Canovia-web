@@ -46,7 +46,12 @@ class AuthController extends Controller
         $request->session()->regenerate();
         $claimed = $claimService->claim($request, $request->user());
         $claimedMemos = $futureMemos->claimGuestMemos($request, $request->user());
-        $firstRun->markPassed($request);
+
+        // Existing accounts are backfilled as already introduced. If an
+        // unfinished new account logs in later, keep its persisted gate intact.
+        if ($firstRun->hasBrowserPass($request)) {
+            $firstRun->markPassed($request);
+        }
 
         $claimMessages = [];
         if ($claimed > 0) $claimMessages[] = "{$claimed}件のGuest計画";
@@ -90,9 +95,9 @@ class AuthController extends Controller
         if ($claimed > 0) $claimMessages[] = "{$claimed}件のGuest計画";
         if ($claimedMemos > 0) $claimMessages[] = "{$claimedMemos}件の保存情報";
 
-        if ($claimed > 0) {
+        if ($claimed > 0 || $firstRun->hasBrowserPass($request)) {
             $firstRun->markPassed($request);
-            $defaultRoute = route('home');
+            $defaultRoute = $claimed > 0 ? route('home') : route('plans.create');
         } else {
             $firstRun->requireForNewAccount($request);
             $defaultRoute = route('first_run.show');
