@@ -43,6 +43,10 @@ return [
             // provider execution is a Premium Core capability.
             'free' => false,
         ],
+        FeatureKey::CanoviaCompanion->value => [
+            'label' => 'Canovia Companion',
+            'free' => false,
+        ],
         FeatureKey::StudyLongTermWeaknessProfile->value => [
             'label' => 'Study Long-term Weakness Profile',
             'free' => false,
