@@ -6,6 +6,13 @@ const DEFAULT_CORE_PATHS = new Set([
     '/calendar',
 ]);
 
+const CORE_BUNDLE_SURFACES = new Map([
+    ['/', 'home'],
+    ['/roadmap', 'roadmap'],
+    ['/timeline', 'timeline'],
+    ['/calendar', 'calendar'],
+]);
+
 function normalizedUrl(value, windowRef) {
     const url = new URL(value, windowRef.location.href);
     for (const key of ['_pk_network', '_canovia_network', '_canovia_update', '_canovia_stable']) {
@@ -122,6 +129,7 @@ export function mountCanoviaInstantNavigation({
 
     const cache = new Map();
     const inflight = new Map();
+    const bundleInflight = new Map();
     let disposed = false;
     let navigationSerial = 0;
     let prefetchTimer = null;
@@ -186,6 +194,83 @@ export function mountCanoviaInstantNavigation({
         });
 
         inflight.set(inflightKey, request);
+        return request;
+    };
+
+    const prefetchBundle = async (values) => {
+        const urls = values
+            .map((value) => normalizedUrl(value, windowRef))
+            .filter((url) => (
+                url.origin === windowRef.location.origin
+                && CORE_BUNDLE_SURFACES.has(url.pathname)
+                && !cache.has(cacheKey(url))
+            ));
+
+        if (urls.length === 0) return new Map();
+
+        const surfaces = [...new Set(urls.map((url) => CORE_BUNDLE_SURFACES.get(url.pathname)))];
+        const bundleUrl = new URL('/instant/core-bundle', windowRef.location.origin);
+        bundleUrl.searchParams.set('surfaces', surfaces.join(','));
+
+        const roadmap = urls.find((url) => url.pathname === '/roadmap');
+        if (roadmap?.searchParams.get('plan_id')) {
+            bundleUrl.searchParams.set('roadmap_plan_id', roadmap.searchParams.get('plan_id'));
+        }
+
+        const calendar = urls.find((url) => url.pathname === '/calendar');
+        if (calendar) {
+            const mapping = {
+                view: 'calendar_view',
+                date: 'calendar_date',
+                selected: 'calendar_selected',
+            };
+            Object.entries(mapping).forEach(([source, target]) => {
+                const value = calendar.searchParams.get(source);
+                if (value) bundleUrl.searchParams.set(target, value);
+            });
+        }
+
+        const bundleKey = bundleUrl.pathname + bundleUrl.search;
+        if (inflight.has(bundleKey)) return inflight.get(bundleKey);
+
+        const request = fetchRef(bundleKey, {
+            method: 'GET',
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: {
+                Accept: 'application/json',
+                'X-Canovia-Instant-Navigation': 'prefetch',
+            },
+        }).then(async (response) => {
+            if (!response.ok) throw new Error('instant-core-bundle-unavailable');
+
+            const body = await response.json();
+            if (!body?.fragments || typeof body.fragments !== 'object') {
+                throw new Error('instant-core-bundle-invalid');
+            }
+
+            const loaded = new Map();
+            Object.entries(body.fragments).forEach(([path, html]) => {
+                if (typeof html !== 'string') return;
+                const targetUrl = normalizedUrl(path, windowRef);
+                const payload = parsePayload(html, targetUrl);
+                if (!payload) return;
+                cache.set(cacheKey(targetUrl), payload);
+                loaded.set(cacheKey(targetUrl), payload);
+            });
+
+            return loaded;
+        }).finally(() => {
+            inflight.delete(bundleKey);
+            urls.forEach((url) => bundleInflight.delete(cacheKey(url)));
+        });
+
+        inflight.set(bundleKey, request);
+        urls.forEach((url) => {
+            const key = cacheKey(url);
+            bundleInflight.set(key, request.then(() => cache.get(key) || null));
+        });
+
         return request;
     };
 
@@ -274,7 +359,7 @@ export function mountCanoviaInstantNavigation({
             return true;
         }
 
-        const prefetched = inflight.get(`prefetch:${key}`);
+        const prefetched = inflight.get(`prefetch:${key}`) || bundleInflight.get(key);
         try {
             const payload = await withUncachedFeedback(() => (
                 prefetched
@@ -300,6 +385,7 @@ export function mountCanoviaInstantNavigation({
         const key = cacheKey(url);
         if (key === cacheKey(normalizedUrl(windowRef.location.href, windowRef))) return Promise.resolve(cache.get(key) || null);
         if (cache.has(key)) return Promise.resolve(cache.get(key));
+        if (bundleInflight.has(key)) return bundleInflight.get(key);
 
         return fetchPayload(url, 'prefetch').catch(() => null);
     };
@@ -356,16 +442,33 @@ export function mountCanoviaInstantNavigation({
             .map((link) => link.href)
             .filter((href, index, all) => isCoreUrl(href) && all.indexOf(href) === index);
 
-        let index = 0;
-        const next = () => {
-            if (disposed || index >= urls.length) return;
-            void prefetch(urls[index++]).finally(() => {
-                prefetchTimer = windowRef.setTimeout(next, 180);
-            });
+        const currentKey = cacheKey(normalizedUrl(windowRef.location.href, windowRef));
+        const pending = urls.filter((href) => cacheKey(normalizedUrl(href, windowRef)) !== currentKey);
+        const bundled = pending.filter((href) => CORE_BUNDLE_SURFACES.has(normalizedUrl(href, windowRef).pathname));
+        const individual = pending.filter((href) => !CORE_BUNDLE_SURFACES.has(normalizedUrl(href, windowRef).pathname));
+
+        const warm = async () => {
+            if (disposed) return;
+
+            if (bundled.length > 0) {
+                try {
+                    await prefetchBundle(bundled);
+                } catch (_) {
+                    for (const href of bundled) {
+                        if (disposed) return;
+                        await prefetch(href);
+                    }
+                }
+            }
+
+            for (const href of individual) {
+                if (disposed) return;
+                await prefetch(href);
+            }
         };
 
         const idle = windowRef.requestIdleCallback || ((callback) => windowRef.setTimeout(callback, 650));
-        idle(next, { timeout: 1400 });
+        idle(() => { void warm(); }, { timeout: 1400 });
     };
 
     scheduleIdlePrefetch();
@@ -373,6 +476,7 @@ export function mountCanoviaInstantNavigation({
     const api = {
         navigate,
         prefetch,
+        prefetchBundle,
         cache,
         dispose() {
             disposed = true;
