@@ -10,6 +10,7 @@
         request()->routeIs('calendar.*') => 'カレンダー',
         request()->routeIs('future_memos.*') => '未来メモ',
         request()->routeIs('feedback.*') => 'Canovia Future',
+        request()->routeIs('companion.*') => 'Companion',
         request()->routeIs('chat.*'), request()->routeIs('achievements.*'), request()->routeIs('plans.review_assistant.*') => '計画を更新',
         request()->routeIs('public_plans.*') => '共有プラン',
         request()->routeIs('plans.*'), request()->routeIs('tasks.*'), request()->routeIs('my_plans.*') => '計画',
@@ -205,6 +206,20 @@
 
         @yield('content')
     </main>
+
+    @auth
+        @if (! $focusMode && ! request()->routeIs('companion.*') && (bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
+            <a
+                href="{{ route('companion.index') }}"
+                class="fixed bottom-24 right-4 z-40 inline-flex items-center gap-2 rounded-full border border-violet-300/25 bg-slate-950/95 px-4 py-3 text-xs font-black text-violet-100 shadow-[0_16px_45px_rgba(15,23,42,.55)] backdrop-blur-xl transition hover:border-violet-300/45 hover:bg-violet-300/10 md:bottom-6 md:right-6"
+                aria-label="Canovia Companionを開く"
+                title="Companion"
+            >
+                <span aria-hidden="true">✦</span>
+                <span class="hidden sm:inline">Companion</span>
+            </a>
+        @endif
+    @endauth
 
     @unless ($focusMode)
         <footer class="mt-12 hidden border-t border-slate-800 bg-slate-950/70 md:block">

@@ -48,6 +48,7 @@ use App\Http\Controllers\FutureMemoController;
 use App\Http\Controllers\CareerWorkspaceController;
 use App\Http\Controllers\InterviewReviewController;
 use App\Http\Controllers\GuidedExecutionController;
+use App\Http\Controllers\CompanionController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
@@ -133,6 +134,15 @@ Route::middleware('admin.access')->group(function () {
 Route::get('/join/{token}', [PlanCollaborationController::class, 'joinByToken'])->middleware('throttle:30,1')->name('collaboration.join.token');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/companion', [CompanionController::class, 'index'])->name('companion.index');
+    Route::post('/companion/threads', [CompanionController::class, 'storeThread'])->name('companion.threads.store');
+    Route::get('/companion/threads/{companionThread}', [CompanionController::class, 'show'])->name('companion.show');
+    Route::post('/companion/threads/{companionThread}/messages', [CompanionController::class, 'send'])
+        ->middleware('throttle:20,1')
+        ->name('companion.messages.store');
+    Route::post('/companion/threads/{companionThread}/candidates/{candidate}/dismiss', [CompanionController::class, 'dismissCandidate'])
+        ->name('companion.candidates.dismiss');
+
     Route::get('/collaboration/join', [PlanCollaborationController::class, 'joinForm'])->name('collaboration.join.form');
     Route::post('/collaboration/join', [PlanCollaborationController::class, 'joinByCode'])->middleware('throttle:12,1')->name('collaboration.join.code');
     Route::get('/plans/{plan}/collaboration', [PlanCollaborationController::class, 'settings'])->name('plans.collaboration.settings');

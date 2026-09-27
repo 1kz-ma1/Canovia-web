@@ -54,6 +54,7 @@ class NativeAiGateway
         string $capacityTier = 'standard',
         array $metadata = [],
         array $inputParts = [],
+        ?FeatureKey $featureKey = null,
     ): array {
         if (! $this->isConfigured()) {
             throw new NativeAiExecutionException(
@@ -76,7 +77,7 @@ class NativeAiGateway
             'plan_id' => $plan?->id,
             'task_id' => $task?->id,
             'study_practice_session_id' => $studyPracticeSessionId,
-            'feature_key' => FeatureKey::AutomaticAiExecution->value,
+            'feature_key' => ($featureKey ?? FeatureKey::AutomaticAiExecution)->value,
             'purpose' => $purpose,
             'provider' => $driver,
             'model' => $model,
