@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\FeatureKey;
 use App\Enums\ProductKey;
+use App\Models\CompanionMessage;
 use App\Models\CompanionMutationCandidate;
 use App\Models\CompanionThread;
 use App\Models\FutureMemo;
@@ -411,8 +412,15 @@ class CanoviaCompanionMutationApplyV4115Test extends TestCase
         string $type,
         array $payload,
     ): CompanionMutationCandidate {
+        $message = CompanionMessage::query()->create([
+            'companion_thread_id' => $thread->id,
+            'role' => 'assistant',
+            'content' => '変更候補を確認してください。',
+        ]);
+
         return CompanionMutationCandidate::query()->create([
             'companion_thread_id' => $thread->id,
+            'companion_message_id' => $message->id,
             'user_id' => $user->id,
             'plan_id' => $plan?->id,
             'task_id' => $task?->id,
