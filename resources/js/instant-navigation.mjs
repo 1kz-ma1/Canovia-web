@@ -92,6 +92,9 @@ export function mountCanoviaInstantNavigation({
     if (!documentRef || !windowRef || typeof fetchRef !== 'function') return null;
     if (!documentRef.querySelector('[data-canovia-page]')) return null;
 
+    const initialUrl = normalizedUrl(windowRef.location.href, windowRef);
+    if (!corePaths.has(initialUrl.pathname)) return null;
+
     const cache = new Map();
     const inflight = new Map();
     let disposed = false;
