@@ -200,11 +200,14 @@ export function mountCanoviaInstantNavigation({
     const prefetchBundle = async (values) => {
         const urls = values
             .map((value) => normalizedUrl(value, windowRef))
-            .filter((url) => (
-                url.origin === windowRef.location.origin
-                && CORE_BUNDLE_SURFACES.has(url.pathname)
-                && !cache.has(cacheKey(url))
-            ));
+            .filter((url) => {
+                const key = cacheKey(url);
+                return url.origin === windowRef.location.origin
+                    && CORE_BUNDLE_SURFACES.has(url.pathname)
+                    && !cache.has(key)
+                    && !inflight.has(`prefetch:${key}`)
+                    && !bundleInflight.has(key);
+            });
 
         if (urls.length === 0) return new Map();
 
