@@ -58,6 +58,7 @@ class NativeEvidenceSignalsV411Test extends TestCase
 
         $session = WorkSession::create([
             'actor_token' => Str::random(64),
+            'browser_session_id' => 'native-evidence-test',
             'plan_id' => $plan->id,
             'task_id' => $task->id,
             'status' => 'completed',
