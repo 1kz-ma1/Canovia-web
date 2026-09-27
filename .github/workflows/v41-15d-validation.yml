@@ -47,15 +47,5 @@ jobs:
       - name: Companion routes
         run: php artisan route:list --name=companion
 
-      - name: Focused regression
-        run: |
-          php artisan test \
-            tests/Feature/CanoviaCompanionContinuityV4115Test.php \
-            tests/Feature/CanoviaCompanionContextualEntryV4115Test.php \
-            tests/Feature/CanoviaCompanionMutationApplyV4115Test.php \
-            tests/Feature/CanoviaCompanionV4115Test.php \
-            tests/Feature/GuidedExecutionV4114Test.php \
-            tests/Feature/GoalContextFoundationV4114Test.php \
-            tests/Feature/AdaptiveGoalDiscoveryV4114Test.php \
-            tests/Feature/InboxFoundationV4113Test.php \
-            tests/Feature/EconomyFoundationV415Test.php
+      - name: Full regression
+        run: php artisan test
