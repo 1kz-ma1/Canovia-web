@@ -86,6 +86,14 @@ export function buildFocusLayout(nodes, edges, selectedId) {
     return { selectedId, visibleIds, positions };
 }
 
+export function mapHistoryDirection(currentDepth, targetDepth) {
+    const current = Math.max(0, Number(currentDepth || 0));
+    const target = Math.max(0, Number(targetDepth || 0));
+    if (target < current) return 'back';
+    if (target > current) return 'forward';
+    return 'same';
+}
+
 export function mapReturnDecision({
     persisted = false,
     currentProjectionKey = '',
@@ -201,6 +209,7 @@ export function mountLivingGoalMap({
     }
 
     let activeFocusId = null;
+    let focusHistoryDepth = Math.max(0, Number(windowRef.history.state?.canoviaMapFocusDepth || 0));
     let revalidationPromise = null;
     let updateTimer = null;
     let disposed = false;
@@ -285,7 +294,11 @@ export function mountLivingGoalMap({
 
     const removeInvalidFocusHash = () => {
         if (!focusIdFromLocation(windowRef)) return;
-        windowRef.history.replaceState(windowRef.history.state, '', mapUrlWithoutFocus(windowRef));
+        const nextState = { ...(windowRef.history.state || {}) };
+        delete nextState.canoviaMapFocus;
+        delete nextState.canoviaMapFocusDepth;
+        focusHistoryDepth = 0;
+        windowRef.history.replaceState(nextState, '', mapUrlWithoutFocus(windowRef));
     };
 
     const openFocus = (nodeId, { historyMode = 'push' } = {}) => {
@@ -315,7 +328,11 @@ export function mountLivingGoalMap({
         renderSurface(nodeId);
 
         if (historyMode === 'push' && windowRef.location.hash !== focusHash(nodeId)) {
-            windowRef.history.pushState({ canoviaMapFocus: nodeId }, '', focusHash(nodeId));
+            focusHistoryDepth += 1;
+            windowRef.history.pushState({
+                canoviaMapFocus: nodeId,
+                canoviaMapFocusDepth: focusHistoryDepth,
+            }, '', focusHash(nodeId));
         }
 
         return true;
@@ -467,8 +484,13 @@ export function mountLivingGoalMap({
         if (event.key === 'Escape' && activeFocusId) closeFocus();
     }
 
-    function onPopState() {
-        trackTelemetry('map_back_used', {}, true);
+    function onPopState(event) {
+        const targetDepth = Math.max(0, Number(event?.state?.canoviaMapFocusDepth || 0));
+        if (mapHistoryDirection(focusHistoryDepth, targetDepth) === 'back') {
+            trackTelemetry('map_back_used', {}, true);
+        }
+        focusHistoryDepth = targetDepth;
+
         const nodeId = focusIdFromLocation(windowRef);
         if (!nodeId) {
             clearFocus();
