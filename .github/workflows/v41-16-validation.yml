@@ -25,16 +25,5 @@ jobs:
       - run: find app tests database/migrations -name '*.php' -print0 | xargs -0 -n1 php -l
       - run: php artisan view:cache
       - run: php artisan route:list --name=goal_discovery
-      - name: Focused regression
-        run: |
-          php artisan test \
-            tests/Feature/ConversationalOnboardingV4116Test.php \
-            tests/Feature/AdaptiveGoalDiscoveryV4114Test.php \
-            tests/Feature/CanoviaCompanionV4115Test.php \
-            tests/Feature/CanoviaCompanionContinuityV4115Test.php \
-            tests/Feature/CanoviaCompanionContextualEntryV4115Test.php \
-            tests/Feature/CanoviaCompanionMutationApplyV4115Test.php \
-            tests/Feature/EconomyFoundationV415Test.php \
-            tests/Feature/FeatureAccessV406Test.php \
-            tests/Feature/LivingRoadmapAccountTest.php \
-            tests/Feature/InboxIntelligenceGuideV4113Test.php
+      - name: Full regression
+        run: php artisan test
