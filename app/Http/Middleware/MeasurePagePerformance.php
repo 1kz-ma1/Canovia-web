@@ -56,6 +56,11 @@ final class MeasurePagePerformance
                         strtolower($request->header('Sec-Purpose', '').' '.$request->header('Purpose', '')),
                         'prefetch',
                     ),
+                    'instant_navigation' => in_array(
+                        $request->header('X-Canovia-Instant-Navigation'),
+                        ['prefetch', 'navigate'],
+                        true,
+                    ) ? $request->header('X-Canovia-Instant-Navigation') : null,
                     'session_driver' => (string) config('session.driver'),
                     'db_connection' => (string) config('database.default'),
                 ]);
