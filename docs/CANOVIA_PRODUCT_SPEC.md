@@ -1,6 +1,6 @@
 # Canovia Product Specification
 
-更新基準: 2026-09-27 / V41.14 Step 2 Adaptive Goal Discovery
+更新基準: 2026-09-27 / V41.14 Step 3 Guided Execution
 
 V41.8〜V41.12のNative AI Practice / Adaptive Learning Flow / Recall基盤を維持しつつ、V41.13ではTaskごとのPrimary Actionを1つに整理し、旧「今日」をメインナビから退役させてCanovia Inboxを追加する。Home=Now、Inbox=Input、Roadmap=Future、Timeline=Pastとして主要導線の責務を分離する。詳細は [V41.12仕様](V41.12_RECALL_CANDIDATE_IMPORT.md)、[V41.13仕様](V41.13_ACTION_INBOX_REFRAME.md) を参照。
 
@@ -21,9 +21,9 @@ Task / Roadmap
   ↓
 Home / Primary Execution Action
   ↓
-実行 / WorkSession / Study Activity / External Tool
+実行 / Specialized Tool / Guided Execution / Timer fallback
   ↓
-振り返り / WorkLog
+振り返り / Evidence / WorkLog
   ↓
 AI支援 / 計画更新 / 学習
   ↓
@@ -55,7 +55,7 @@ Canoviaは「完璧な計画を守らせる」より、現実の行動・発見�
 
 - Guest / Account、所有権、共同計画
 - Plan / Task / Roadmap / Recommendation
-- Action Hierarchy（専用Execution Tool優先 / Timer fallback）
+- Action Hierarchy（専用Execution Tool → Guided Execution → Timer fallback）
 - Canovia Inbox（text / URL / image / PDF capture、private file、pending横断表示）
 - Inbox Intelligence（destination suggestion → Human Review → Future Memo / Career / Recall / Evidence / Resource）
 - AIはInboxでPlan / Task IDを決定せず、名前hintだけを返す境界
@@ -66,6 +66,8 @@ Canoviaは「完璧な計画を守らせる」より、現実の行動・発見�
 - Provisional PlanへReadiness途中でも進める導線
 - HIGH ReadinessはDesired State + Current State + Success Signalを必須化
 - Initial Plan AIへGoal Contextを注入し、UnknownをMeasurement Taskへ変換するPolicy
+- Guided Execution（Before Action → real-world execution → Reflection → Task Evidence）
+- Guided Reflectionはself-report強度を保持し、Task Progressを自動変更しない
 - WorkSession / Timer / WorkLog / Continuity
 - Calendar / Availability
 - AI JSON外部往復によるTask生成・計画更新
@@ -119,7 +121,6 @@ iOS正式公開準備や、現行基盤を実運用へ接続する近い将来�
 
 V41.14の次段階:
 - input patternに応じたQuick Question / conversational input適応
-- Guided Execution + Reflection Evidence
 - Goal Pattern Demand / 専用Tool需要観測
 
 - iOSアプリ化とApp Store Review運用
