@@ -65,7 +65,10 @@ class PlanOwnershipService
     public function role(Request $request, Plan $plan): ?string
     {
         $planId = (int) $plan->id;
-        $cacheKey = ($request->user()?->id ? 'user:'.$request->user()->id : 'guest').':plan:'.$planId;
+        $actorKey = $request->user()?->id
+            ? 'user:'.$request->user()->id
+            : 'guest:'.substr(hash('sha256', (string) $request->cookie('pace_keeper_owner_token_'.$planId)), 0, 16);
+        $cacheKey = $actorKey.':plan:'.$planId;
         if (array_key_exists($cacheKey, $this->roleCache)) {
             return $this->roleCache[$cacheKey];
         }
