@@ -53,7 +53,7 @@ class CanoviaCompanionV4115Test extends TestCase
         $this->actingAs($user)
             ->get(route('companion.index'))
             ->assertOk()
-            ->assertSee('Canovia Companion')
+            ->assertSee('CANOVIA COMPANION')
             ->assertSee('Premium Core')
             ->assertSee('FreeでもGoal Discovery')
             ->assertDontSee(route('companion.threads.store'), false);
