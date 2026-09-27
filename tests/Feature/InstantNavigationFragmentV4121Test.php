@@ -127,7 +127,7 @@ class InstantNavigationFragmentV4121Test extends TestCase
         $response->assertSee('"mobileSection":"カレンダー"', false);
         $response->assertSee('"desktop-home"', false);
         $response->assertSee('"mobile-home"', false);
-        $response->assertSee('"is-active"', false);
+        $response->assertSee('mobile-tabbar-link is-active', false);
         $response->assertDontSee('mobile-app-header', false);
     }
 
