@@ -12,6 +12,7 @@ return [
             'requires' => [],
             'feature_keys' => [
                 FeatureKey::AutomaticAiExecution->value,
+                FeatureKey::CanoviaCompanion->value,
             ],
         ],
         ProductKey::StudyPack->value => [
