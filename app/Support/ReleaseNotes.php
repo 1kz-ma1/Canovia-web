@@ -4,7 +4,6 @@ namespace App\Support;
 
 use App\Models\ReleaseNote;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Schema;
 
 class ReleaseNotes
 {
@@ -30,10 +29,6 @@ class ReleaseNotes
             });
 
         try {
-            if (! Schema::hasTable('release_notes')) {
-                return self::sorted($configured);
-            }
-
             $database = ReleaseNote::query()
                 ->published()
                 ->latest('published_at')
