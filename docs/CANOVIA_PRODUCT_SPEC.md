@@ -1,6 +1,6 @@
 # Canovia Product Specification
 
-更新基準: 2026-09-27 / V41.15 Step 4 Companion Continuity
+更新基準: 2026-09-27 / V41.16 Conversational Onboarding / Invisible Memory
 
 V41.8〜V41.12のNative AI Practice / Adaptive Learning Flow / Recall基盤を維持しつつ、V41.13ではTaskごとのPrimary Actionを1つに整理し、旧「今日」をメインナビから退役させてCanovia Inboxを追加する。Home=Now、Inbox=Input、Roadmap=Future、Timeline=Pastとして主要導線の責務を分離する。詳細は [V41.12仕様](V41.12_RECALL_CANDIDATE_IMPORT.md)、[V41.13仕様](V41.13_ACTION_INBOX_REFRAME.md) を参照。
 
@@ -46,6 +46,8 @@ Canoviaは「完璧な計画を守らせる」より、現実の行動・発見�
 10. **将来機能のために現在のUXを複雑にしない。**
 11. **時間の経過そのものをProgressの証拠にしない。** 時間はTask負荷・期限・今日の実行可能性を判断する目安として使い、進捗はTask状態・Milestone・Evidenceを優先する。
 12. **実行環境をすべて内蔵しない。** Canoviaは外部ツールを置き換えるのではなく、Execution ActionとEvidenceを通じて現実の作業とPlanを接続する。
+13. **管理のための管理を減らす。** ユーザーが別画面でContextを整理しなくても、会話・Inbox・Evidenceから必要な情報を安全に構造化して再利用する。
+14. **最初の価値を課金前に体験できるようにする。** First Companion ConversationはFree Goal Pathに含め、継続的な摩擦削減をPremium価値とする。
 
 ## 3. Now / Next / Future
 
@@ -63,6 +65,14 @@ Canoviaは「完璧な計画を守らせる」より、現実の行動・発見�
 - Goal Context Foundation（Desired State / Current State / Known / Unknown / Signal / Constraint / Driver）
 - Goal Context Factのconfirmed / candidate / unknown分離とdeterministic Readiness
 - Adaptive Goal Discovery（Goalだけ先に保存 / 1問ずつ / quick・text・skip適応 / Live Preview）
+- Conversational Onboarding（新規Userの最初の入口をPlanフォームではなくFirst Companion Conversationへ変更）
+- `conversational_onboarding` はFree CapabilityとしてNative AIを利用でき、provider停止時はdeterministic Goal Discoveryへfallback
+- Goal Discovery ConversationはNative AIが会話表現を担当し、質問順・confirmed / unknown・Readinessは既存Goal Context PolicyをSource of Truthとして維持
+- 新規AccountにGuest Planがない場合は登録直後にFirst Companionへ入り、Guest Planをclaimした場合は既存作業を優先してHomeへ戻す
+- Future Memoは通常UXから退役し、既存table / serviceをCanovia Memoryの互換ストレージとして維持
+- Invisible Memoryは直近User Inputに実在するliteral source quoteをserver-sideで確認した場合だけ自動保存し、推測・診断・属性推定を保存しない
+- Premium Companionも同じMemory capture boundaryを使い、保存済みMemoryを最大8件だけContextとして再利用
+- Manual Plan Formとlegacy Future Memo routeはcompatibility / control fallbackとして残し、通常導線では管理を要求しない
 - Provisional PlanへReadiness途中でも進める導線
 - HIGH ReadinessはDesired State + Current State + Success Signalを必須化
 - Initial Plan AIへGoal Contextを注入し、UnknownをMeasurement Taskへ変換するPolicy
@@ -106,7 +116,7 @@ Canoviaは「完璧な計画を守らせる」より、現実の行動・発見�
 - Artifact / Focus Timerのnative Evidence自動記録
 - Home Plan HubでCURRENT TASKのRecent Evidenceを表示
 - Resource / Project Artifact
-- Future Memo
+- Canovia Memory（旧Future Memo互換ストレージ。通常の手動管理導線は退役）
 - Achievement / Timeline / Release Notes
 - PWA / Offline / Safe Update
 - Feedback自由記述 / Admin Feedback
@@ -142,8 +152,10 @@ Canoviaは「完璧な計画を守らせる」より、現実の行動・発見�
 
 iOS正式公開準備や、現行基盤を実運用へ接続する近い将来。
 
-V41.15はStep 4まで実装済み。次の大きな検討:
-- Companion実利用データを見た上で、Proactive notification / follow-up通知を別バージョンで判断
+V41.16まで実装済み。次の大きな検討:
+- First Companion → Provisional Plan後のNative task generationをFree/Premium境界込みでどこまで自動化するか
+- Companion / Invisible Memory実利用データを見た上で、Proactive notification / follow-up通知を別バージョンで判断
+- Memoryの確認・削除・AI利用停止をSettings内の最小Controlへ集約するかを実利用を見て判断
 
 - iOSアプリ化とApp Store Review運用
 - server-backed Feature Flag保存とAdmin操作
@@ -235,6 +247,8 @@ Product Grant resolvers
 ```
 
 AI Practice本体、Question Bank、外部AI Handoff等の核となるFree経路は維持する。V41.8では `automatic_ai_execution` をPremium Coreの実CapabilityとしてFree=falseへ切り替え、Canovia自身がAI Providerを呼ぶ自動実行だけをPremium価値とする。Pack向けCapability-level FeatureKeyはFree=falseで予約し、実際のCapabilityを実装したときに既存アクセス境界へ接続する。
+
+V41.16では例外ではなく独立Capabilityとして `conversational_onboarding` をFree=trueで追加する。これは最初の伴走価値を体験させる限定されたNative AI経路であり、`automatic_ai_execution` や継続 `canovia_companion` のPremium境界をFree化しない。
 
 AI Capacityは `AiCapacityService` で独立判定する。All AccessはPurpose Packを包含するがAI Capacity Boostを包含しない。
 
