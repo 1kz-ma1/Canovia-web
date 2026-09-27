@@ -3,13 +3,14 @@
 namespace App\Services;
 
 use App\Enums\BehaviorEventType;
-use App\Models\BehaviorEvent;
 use App\Models\Task;
 use Illuminate\Support\Collection;
 
 class RecommendationPersonalizationService
 {
     private array $profiles = [];
+
+    public function __construct(private readonly RequestBehaviorHistory $history) {}
 
     public function profile(?string $actorToken): array
     {
@@ -21,18 +22,15 @@ class RecommendationPersonalizationService
             return $this->profiles[$actorToken];
         }
 
-        $since = now()->subDays((int) config('recommendations.personalization_days', 90));
-        $events = BehaviorEvent::query()
-            ->where('actor_token', $actorToken)
-            ->where('occurred_at', '>=', $since)
+        $events = $this->history
+            ->events($actorToken, (int) config('recommendations.personalization_days', 90))
             ->whereIn('event_type', [
-                BehaviorEventType::RecommendationAccepted->value,
-                BehaviorEventType::RecommendationRejected->value,
-                BehaviorEventType::WorkStarted->value,
-                BehaviorEventType::WorkCompleted->value,
+                BehaviorEventType::RecommendationAccepted,
+                BehaviorEventType::RecommendationRejected,
+                BehaviorEventType::WorkStarted,
+                BehaviorEventType::WorkCompleted,
             ])
-            ->get()
-            ->toBase();
+            ->values();
 
         $taskScores = [];
         $planScores = [];
