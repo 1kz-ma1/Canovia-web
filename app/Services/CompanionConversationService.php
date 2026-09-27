@@ -9,6 +9,7 @@ use App\Models\CompanionThread;
 use App\Models\Plan;
 use App\Models\Task;
 use App\Models\User;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -208,6 +209,21 @@ class CompanionConversationService
             $payload['task_id'],
             $payload['owner_token'],
         );
+
+        $normalizedPayload = Arr::sortRecursive($payload);
+        $duplicatePending = CompanionMutationCandidate::query()
+            ->where('companion_thread_id', $thread->id)
+            ->where('status', CompanionMutationCandidate::STATUS_PENDING)
+            ->where('type', $type)
+            ->get()
+            ->first(fn (CompanionMutationCandidate $existing) => (
+                Arr::sortRecursive(is_array($existing->payload) ? $existing->payload : [])
+                === $normalizedPayload
+            ));
+
+        if ($duplicatePending) {
+            return null;
+        }
 
         return CompanionMutationCandidate::query()->create([
             'companion_thread_id' => $thread->id,
