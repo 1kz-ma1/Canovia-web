@@ -50,6 +50,7 @@ class ExecutionActionPolicyService
             'career_workspace' => 2,
             'artifacts' => 3,
             'resources' => 4,
+            'guided_execution' => 5,
             default => 50,
         };
     }
