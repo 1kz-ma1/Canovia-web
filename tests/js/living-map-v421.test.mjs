@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
     buildFocusLayout,
+    mapHistoryDirection,
     mapReturnDecision,
     oneHopNodeIds,
 } from '../../resources/js/living-map.mjs';
@@ -74,4 +75,11 @@ test('BFCache return revalidates while a fresh page only reports an already chan
         currentProjectionKey: 'same',
         previousProjectionKey: '',
     }), 'none');
+});
+
+
+test('browser forward is not counted as Map back navigation', () => {
+    assert.equal(mapHistoryDirection(2, 1), 'back');
+    assert.equal(mapHistoryDirection(1, 2), 'forward');
+    assert.equal(mapHistoryDirection(1, 1), 'same');
 });
