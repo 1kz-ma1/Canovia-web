@@ -140,6 +140,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/companion/threads/{companionThread}/messages', [CompanionController::class, 'send'])
         ->middleware('throttle:20,1')
         ->name('companion.messages.store');
+    Route::post('/companion/threads/{companionThread}/candidates/{candidate}/apply', [CompanionController::class, 'applyCandidate'])
+        ->name('companion.candidates.apply');
     Route::post('/companion/threads/{companionThread}/candidates/{candidate}/dismiss', [CompanionController::class, 'dismissCandidate'])
         ->name('companion.candidates.dismiss');
 
