@@ -130,7 +130,7 @@ class CompanionMutationApplyService
 
             $usedBy = CompanionMutationCandidate::query()
                 ->where('apply_request_id', $requestId)
-                ->whereKeyNot($locked->id)
+                ->where('id', '!=', $locked->id)
                 ->first();
 
             if ($usedBy) {
