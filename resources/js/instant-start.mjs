@@ -27,6 +27,11 @@ export async function mountInstantStartServiceWorker({ navigatorRef = globalThis
             updateViaCache: 'none',
         });
 
+        // Repair registrations created by older workers that enabled Navigation
+        // Preload. Disabling from the page context takes effect without waiting
+        // for the newly installed worker to become active.
+        await registration.navigationPreload?.disable?.().catch(() => {});
+
         if (registration.waiting) {
             postWorkerMessage(registration.waiting, { type: 'SKIP_WAITING' });
         }
