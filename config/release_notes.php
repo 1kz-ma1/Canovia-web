@@ -18,6 +18,7 @@ return [
             '同じMemoryは正規化した本文で重複を防ぎ、source / source context / captured_atを保持します。',
             'Premium Companionでも同じMemory境界を利用し、保存済みMemoryは最大8件だけContextへ渡します。',
             'AI Task Builder / Plan Reviewでは旧Future Memoを入力させるのではなく、Canovia Memoryをread-only Contextとして参照します。',
+            'Inboxの通常の整理先とAI routing schemaからFuture Memoを外し、ユーザーにMemory分類を要求しないようにしました。',
             '詳細Plan Formとlegacy Future Memo routeは互換・control fallbackとして残し、既存ユーザーのデータやFree経路を破壊しません。',
         ],
         'tip' => '最初にCanoviaの使い方を覚える必要はありません。まず今の目標や状況を話すと、Canoviaが必要なことだけ確認し、最初のPlanと次の一歩へつなげます。',
