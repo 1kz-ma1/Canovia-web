@@ -1,6 +1,7 @@
 import { normalizeAiJsonText, buildAiJsonRepairPrompt } from './ai-json.mjs';
 import { mountInstantStartServiceWorker } from './instant-start.mjs';
 import { mountCanoviaInstantNavigation } from './instant-navigation.mjs';
+import { mountLivingGoalMap } from './living-map.mjs';
 
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
@@ -3421,6 +3422,7 @@ function initializeInstantCorePage() {
 
     initializeInstantDashboardPage();
     initializeInstantRoadmapPage();
+    mountLivingGoalMap();
     void captureInstantOfflineSnapshot();
 }
 
@@ -3429,6 +3431,7 @@ document.addEventListener('canovia:page-ready', initializeInstantCorePage);
 document.addEventListener('DOMContentLoaded', () => {
     if (document.body?.dataset.focusMode === '1') return;
     mountCanoviaInstantNavigation();
+    mountLivingGoalMap();
 });
 
 
