@@ -44,11 +44,19 @@ function payloadFromDocument(documentRef, url) {
         };
     });
 
+    const pageSnapshot = page.cloneNode(true);
+    pageSnapshot.querySelectorAll('[data-canovia-instant-initialized]').forEach((element) => {
+        element.removeAttribute('data-canovia-instant-initialized');
+    });
+    pageSnapshot.querySelectorAll('.is-leaving-left, .is-leaving-right').forEach((element) => {
+        element.classList.remove('is-leaving-left', 'is-leaving-right');
+    });
+
     return {
         url: cacheKey(url),
         title: documentRef.title,
         routeName: documentRef.body?.dataset.routeName || '',
-        pageHtml: page.innerHTML,
+        pageHtml: pageSnapshot.innerHTML,
         companionHtml: documentRef.querySelector('[data-canovia-companion-slot]')?.innerHTML || '',
         mobileSection: documentRef.querySelector('[data-mobile-section-label]')?.textContent || '',
         nav,
