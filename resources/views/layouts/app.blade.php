@@ -126,14 +126,14 @@
                 </a>
 
                 <nav class="pk-desktop-nav flex flex-wrap items-center gap-1 rounded-2xl border border-slate-800 bg-slate-900/75 p-1 text-sm shadow-lg shadow-slate-950/20" aria-label="メインナビゲーション">
-                    <a href="{{ route('home') }}" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('home') || request()->routeIs('calendar.*') || request()->routeIs('my_plans.*') || request()->routeIs('plans.show') || request()->routeIs('plans.edit') || request()->routeIs('tasks.*') || request()->routeIs('work_sessions.*') || request()->routeIs('navigation.*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6.8 15.7c-1.8 1.7-2.7 3.4-2.5 4.9 1.5.2 3.2-.7 4.9-2.5M14.5 4.2c2.8-.9 5.2-.9 5.3-.8.1.1.1 2.5-.8 5.3-1 3.2-3.5 6.1-7.2 7.8L7.9 12.6c1.7-3.7 4.6-6.2 6.6-8.4Z"/><path d="m9.1 15 4 4M7.4 12.1l-2.7.6-1.5 2.6 4.2.8M14.8 16.3l.8 4.2 2.6-1.5.6-2.7"/><circle cx="15.2" cy="8.8" r="1.6"/></svg><i></i></span><span>ホーム</span></a>
-                    <a href="{{ route('inbox.index') }}" data-onboarding-target="inbox-nav" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('inbox.*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4V5Z"/><path d="M4 14h4l2 2h4l2-2h4"/></svg><i></i></span><span>Inbox</span></a>
-                    <a href="{{ route('roadmap.index') }}" data-onboarding-target="roadmap-nav" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('roadmap.*') || request()->routeIs('chat.*') || request()->routeIs('plans.review_assistant.*') || request()->routeIs('achievements.*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5 9 3l6 2.5L20 3v15.5L15 21l-6-2.5L4 21V5.5Zm5-2.5v15.5M15 5.5V21"/></svg><i></i></span><span>ロードマップ</span></a>
-                    <a href="{{ route('timeline.index') }}" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('timeline.*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon pk-nav-icon-timeline" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="M10 7v3.5l2.4 1.5M14.8 15.5h4.4a1.8 1.8 0 0 1 1.8 1.8v1.8a1.8 1.8 0 0 1-1.8 1.8h-1.7l-1.8 1.4.2-1.4h-1.1a1.8 1.8 0 0 1-1.8-1.8v-1.8"/></svg><i></i></span><span>タイムライン</span></a>
+                    <a href="{{ route('home') }}" data-canovia-nav-key="desktop-home" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('home') || request()->routeIs('calendar.*') || request()->routeIs('my_plans.*') || request()->routeIs('plans.show') || request()->routeIs('plans.edit') || request()->routeIs('tasks.*') || request()->routeIs('work_sessions.*') || request()->routeIs('navigation.*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6.8 15.7c-1.8 1.7-2.7 3.4-2.5 4.9 1.5.2 3.2-.7 4.9-2.5M14.5 4.2c2.8-.9 5.2-.9 5.3-.8.1.1.1 2.5-.8 5.3-1 3.2-3.5 6.1-7.2 7.8L7.9 12.6c1.7-3.7 4.6-6.2 6.6-8.4Z"/><path d="m9.1 15 4 4M7.4 12.1l-2.7.6-1.5 2.6 4.2.8M14.8 16.3l.8 4.2 2.6-1.5.6-2.7"/><circle cx="15.2" cy="8.8" r="1.6"/></svg><i></i></span><span>ホーム</span></a>
+                    <a href="{{ route('inbox.index') }}" data-canovia-nav-key="desktop-inbox" data-onboarding-target="inbox-nav" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('inbox.*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4V5Z"/><path d="M4 14h4l2 2h4l2-2h4"/></svg><i></i></span><span>Inbox</span></a>
+                    <a href="{{ route('roadmap.index') }}" data-canovia-nav-key="desktop-roadmap" data-onboarding-target="roadmap-nav" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('roadmap.*') || request()->routeIs('chat.*') || request()->routeIs('plans.review_assistant.*') || request()->routeIs('achievements.*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5 9 3l6 2.5L20 3v15.5L15 21l-6-2.5L4 21V5.5Zm5-2.5v15.5M15 5.5V21"/></svg><i></i></span><span>ロードマップ</span></a>
+                    <a href="{{ route('timeline.index') }}" data-canovia-nav-key="desktop-timeline" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('timeline.*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon pk-nav-icon-timeline" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="M10 7v3.5l2.4 1.5M14.8 15.5h4.4a1.8 1.8 0 0 1 1.8 1.8v1.8a1.8 1.8 0 0 1-1.8 1.8h-1.7l-1.8 1.4.2-1.4h-1.1a1.8 1.8 0 0 1-1.8-1.8v-1.8"/></svg><i></i></span><span>タイムライン</span></a>
                 </nav>
 
                 <div class="hidden items-center gap-2 lg:flex">
-                    <a href="{{ route('calendar.index') }}" class="header-secondary-link">カレンダー</a>
+                    <a href="{{ route('calendar.index') }}" data-canovia-nav-key="desktop-calendar" class="header-secondary-link">カレンダー</a>
                     <button type="button" class="header-secondary-link canovia-guide-desktop-trigger" data-guide-open aria-label="Canovia Guideを開く">ガイド</button>
                     <button type="button" class="header-secondary-link release-notes-desktop-trigger" data-release-notes-open aria-label="Canoviaの更新情報を見る">更新情報<span class="release-notes-new-dot" data-release-notes-new aria-hidden="true"></span></button>
                     <button type="button" class="ui-settings-trigger" data-ui-settings-open aria-label="設定を開く">設定</button>
@@ -162,7 +162,7 @@
                 @endunless
                 <div class="min-w-0 flex-1">
                     <p class="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-300">CANOVIA</p>
-                    <p class="truncate text-sm font-bold text-slate-50">{{ $mobileSection }}</p>
+                    <p class="truncate text-sm font-bold text-slate-50" data-mobile-section-label>{{ $mobileSection }}</p>
                 </div>
                 <button type="button" class="mobile-guide-action" data-guide-open aria-label="Canovia Guideを開く" title="ガイド">
                     <span class="mobile-guide-icon" aria-hidden="true">
@@ -207,7 +207,8 @@
         </header>
     @endunless
 
-    <main class="app-main mx-auto min-h-[calc(100vh-120px)] max-w-7xl px-4 py-5 sm:px-5 md:px-6 md:py-10 {{ $focusMode ? 'focus-main' : '' }}">
+    <main class="app-main mx-auto min-h-[calc(100vh-120px)] max-w-7xl px-4 py-5 sm:px-5 md:px-6 md:py-10 {{ $focusMode ? 'focus-main' : '' }}" data-canovia-main>
+        <div data-canovia-page data-canovia-route="{{ request()->route()?->getName() }}">
         @if (session('status'))
             <div class="assistant-notice assistant-notice-info mb-6" data-auto-toast>{{ session('status') }}</div>
         @endif
@@ -226,8 +227,10 @@
         </div>
 
         @yield('content')
+        </div>
     </main>
 
+    <div data-canovia-companion-slot>
     @auth
         @if (! $focusMode && ! request()->routeIs('companion.*') && (bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
             <form
@@ -258,6 +261,7 @@
             </form>
         @endif
     @endauth
+    </div>
 
     @unless ($focusMode)
         <footer class="mt-12 hidden border-t border-slate-800 bg-slate-950/70 md:block">
