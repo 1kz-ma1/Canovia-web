@@ -59,6 +59,11 @@ class Task extends Model
         return $this->hasMany(WorkLog::class);
     }
 
+    public function guidedExecutions()
+    {
+        return $this->hasMany(GuidedExecution::class)->latest('prepared_at')->latest('id');
+    }
+
     public function studyPracticeAttempts()
     {
         return $this->hasMany(StudyPracticeAttempt::class);
