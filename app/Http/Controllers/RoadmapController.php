@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\BehaviorIdentityService;
 use App\Services\ContinuityService;
+use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\RecommendationService;
 use App\Services\RoadmapService;
