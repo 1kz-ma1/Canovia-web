@@ -78,7 +78,12 @@
                                     @endif
                                 </p>
                             </div>
-                            <span class="shrink-0 text-[11px] text-slate-600">{{ $thread->last_message_at?->format('m/d H:i') ?: $thread->created_at?->format('m/d H:i') }}</span>
+                            <div class="flex shrink-0 items-center gap-2">
+                                @if (($thread->pending_mutation_candidates_count ?? 0) > 0)
+                                    <span class="badge badge-slate">確認待ち {{ $thread->pending_mutation_candidates_count }}</span>
+                                @endif
+                                <span class="text-[11px] text-slate-600">{{ $thread->last_message_at?->format('m/d H:i') ?: $thread->created_at?->format('m/d H:i') }}</span>
+                            </div>
                         </div>
                     </a>
                 @empty
