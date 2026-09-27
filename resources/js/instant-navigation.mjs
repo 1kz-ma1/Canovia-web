@@ -208,6 +208,22 @@ export function mountCanoviaInstantNavigation({
         void fetchPayload(url, 'navigate').catch(() => {});
     };
 
+    const withUncachedFeedback = async (callback) => {
+        const overlay = documentRef.querySelector('[data-route-loading]');
+        const timer = windowRef.setTimeout(() => {
+            overlay?.classList.add('is-visible');
+            overlay?.setAttribute('aria-hidden', 'false');
+        }, 120);
+
+        try {
+            return await callback();
+        } finally {
+            windowRef.clearTimeout(timer);
+            overlay?.classList.remove('is-visible');
+            overlay?.setAttribute('aria-hidden', 'true');
+        }
+    };
+
     const navigate = async (value, {
         historyMode = 'push',
         scroll = true,
@@ -232,9 +248,11 @@ export function mountCanoviaInstantNavigation({
 
         const prefetched = inflight.get(`prefetch:${key}`);
         try {
-            const payload = prefetched
-                ? await prefetched
-                : await fetchPayload(url, 'navigate');
+            const payload = await withUncachedFeedback(() => (
+                prefetched
+                    ? prefetched
+                    : fetchPayload(url, 'navigate')
+            ));
 
             if (serial !== navigationSerial || disposed) return false;
             render(payload, { historyMode, scroll });
