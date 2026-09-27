@@ -1,5 +1,6 @@
 import { normalizeAiJsonText, buildAiJsonRepairPrompt } from './ai-json.mjs';
 import { mountInstantStartServiceWorker } from './instant-start.mjs';
+import { mountCanoviaInstantNavigation } from './instant-navigation.mjs';
 
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
@@ -620,10 +621,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let workStarted = root.dataset.workStarted === '1';
     let idleNudgeShown = false;
     const enteredAt = Date.now();
-    let activeTarget = 'overall';
     const viewedTaskIds = new Set();
     const tabs = [...root.querySelectorAll('[data-dashboard-tab]')];
     const panels = [...root.querySelectorAll('[data-dashboard-panel]')];
+    let activeTarget = tabs.find((tab) => tab.getAttribute('aria-selected') === 'true')?.dataset.dashboardTab || 'overall';
 
     function updateNavigationContext(planId = null) {
         const baseUrl = root.dataset.navigationUrl;
@@ -675,13 +676,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    updateNavigationContext(null);
+    const initialTab = tabs.find((tab) => tab.dataset.dashboardTab === activeTarget);
+    updateNavigationContext(initialTab?.dataset.planId ? Number(initialTab.dataset.planId) : null);
     tabs.forEach((tab) => tab.addEventListener('click', () => activateTab(tab.dataset.dashboardTab)));
     root.querySelectorAll('[data-open-dashboard-tab]').forEach((button) => button.addEventListener('click', () => activateTab(button.dataset.openDashboardTab)));
     root.querySelectorAll('[data-task-view]').forEach((element) => element.addEventListener('click', () => recordTaskView(element)));
     document.querySelectorAll('[data-work-start-form]').forEach((form) => form.addEventListener('submit', () => { workStarted = true; }));
 
-    window.setInterval(() => {
+    const dashboardIdleInterval = window.setInterval(() => {
+        if (!root.isConnected) {
+            window.clearInterval(dashboardIdleInterval);
+            return;
+        }
+
         const elapsedSeconds = Math.floor((Date.now() - enteredAt) / 1000);
         if (document.visibilityState !== 'visible' || workStarted || elapsedSeconds < 90 || planSwitches + taskViews < 2) return;
         if (!idleNudgeShown) {
@@ -2533,6 +2540,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return clone;
         });
         const applyRoadmapDensity = () => {
+            if (!roadmapPage.isConnected) {
+                window.removeEventListener('resize', applyRoadmapDensity);
+                return;
+            }
             const mobile = window.matchMedia('(max-width: 767px)').matches;
             supportingLinks.forEach((link) => link.classList.toggle('hidden', mobile));
             clones.forEach((link) => link.classList.toggle('hidden', !mobile));
@@ -3118,4 +3129,305 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden') flushBeforeLeave();
     });
+});
+
+
+// -----------------------------------------------------------------------------
+// V41.20 Canovia Instant Navigation dynamic-page lifecycle.
+//
+// The global shell keeps its original listeners. Only the swapped core-page
+// region is re-initialized after a soft navigation.
+// -----------------------------------------------------------------------------
+function initializeInstantDashboardPage() {
+    const root = document.getElementById('behaviorDashboard');
+    if (!root || root.dataset.canoviaInstantInitialized === '1') return;
+    root.dataset.canoviaInstantInitialized = '1';
+
+    const hero = root.querySelector('.pk-v22-hero-stage');
+    const active = root.querySelector('.pk-v18-active-session');
+    const recommendation = root.querySelector('.pk-v18-recommendation');
+    let anchor = hero;
+    if (anchor && active) {
+        anchor.after(active);
+        anchor = active;
+    }
+    if (anchor && recommendation) anchor.after(recommendation);
+
+    let planSwitches = 0;
+    let taskViews = 0;
+    let workStarted = root.dataset.workStarted === '1';
+    let idleNudgeShown = false;
+    const enteredAt = Date.now();
+    const viewedTaskIds = new Set();
+    const tabs = [...root.querySelectorAll('[data-dashboard-tab]')];
+    const panels = [...root.querySelectorAll('[data-dashboard-panel]')];
+    let activeTarget = tabs.find((tab) => tab.getAttribute('aria-selected') === 'true')?.dataset.dashboardTab || 'overall';
+
+    const updateNavigationContext = (planId = null) => {
+        const baseUrl = root.dataset.navigationUrl;
+        if (!baseUrl) return;
+
+        const url = new URL(baseUrl, window.location.origin);
+        if (planId) url.searchParams.set('plan_id', String(planId));
+        else url.searchParams.delete('plan_id');
+
+        document.querySelectorAll('[data-navigation-link]').forEach((link) => {
+            link.href = url.pathname + url.search;
+        });
+    };
+
+    const recordTaskView = (details) => {
+        const taskId = Number(details?.dataset.taskId);
+        if (!taskId || viewedTaskIds.has(taskId)) return;
+        viewedTaskIds.add(taskId);
+        taskViews = viewedTaskIds.size;
+        recordBehavior(root, 'task_viewed', {
+            plan_id: Number(details.dataset.planId),
+            task_id: taskId,
+            metadata: { task_views: taskViews },
+        });
+    };
+
+    const activateTab = (target) => {
+        if (!target || target === activeTarget) return;
+        activeTarget = target;
+        tabs.forEach((tab) => {
+            const activeTab = tab.dataset.dashboardTab === target;
+            tab.classList.toggle('nav-link-active', activeTab);
+            tab.setAttribute('aria-selected', activeTab ? 'true' : 'false');
+        });
+        panels.forEach((panel) => panel.classList.toggle('hidden', panel.dataset.dashboardPanel !== target));
+
+        const tab = tabs.find((item) => item.dataset.dashboardTab === target);
+        const contextPlanId = tab?.dataset.planId ? Number(tab.dataset.planId) : null;
+        updateNavigationContext(contextPlanId);
+
+        if (contextPlanId) {
+            planSwitches += 1;
+            recordBehavior(root, 'plan_tab_viewed', {
+                plan_id: contextPlanId,
+                metadata: { plan_switches: planSwitches },
+            });
+            const panel = panels.find((item) => item.dataset.dashboardPanel === target);
+            recordTaskView(panel?.querySelector('[data-task-view]'));
+        }
+    };
+
+    const initialTab = tabs.find((tab) => tab.dataset.dashboardTab === activeTarget);
+    updateNavigationContext(initialTab?.dataset.planId ? Number(initialTab.dataset.planId) : null);
+    tabs.forEach((tab) => tab.addEventListener('click', () => activateTab(tab.dataset.dashboardTab)));
+    root.querySelectorAll('[data-open-dashboard-tab]').forEach((button) => {
+        button.addEventListener('click', () => activateTab(button.dataset.openDashboardTab));
+    });
+    root.querySelectorAll('[data-task-view]').forEach((element) => {
+        element.addEventListener('click', () => recordTaskView(element));
+    });
+    root.querySelectorAll('[data-work-start-form]').forEach((form) => {
+        form.addEventListener('submit', () => { workStarted = true; });
+    });
+
+    const idleInterval = window.setInterval(() => {
+        if (!root.isConnected) {
+            window.clearInterval(idleInterval);
+            return;
+        }
+
+        const elapsedSeconds = Math.floor((Date.now() - enteredAt) / 1000);
+        if (document.visibilityState !== 'visible' || workStarted || elapsedSeconds < 90 || planSwitches + taskViews < 2) return;
+        if (!idleNudgeShown) {
+            root.querySelector('[data-idle-nudge]')?.classList.remove('hidden');
+            idleNudgeShown = true;
+        }
+        recordBehavior(root, 'dashboard_idle', {
+            metadata: {
+                elapsed_seconds: elapsedSeconds,
+                plan_switches: planSwitches,
+                task_views: taskViews,
+                page_visible: true,
+                work_started: false,
+            },
+        });
+    }, 15000);
+}
+
+function initializeInstantRoadmapPage() {
+    const page = document.querySelector('.pk-v19-roadmap-page');
+    if (!page || page.dataset.canoviaInstantInitialized === '1') return;
+    page.dataset.canoviaInstantInitialized = '1';
+
+    applyUiPreferences();
+
+    page.querySelectorAll('[data-roadmap-view-root]').forEach((root) => {
+        setRoadmapView(root, resolveRoadmapView(root), false);
+        root.querySelectorAll('[data-roadmap-view-button]').forEach((button) => {
+            button.addEventListener('click', () => setRoadmapView(root, button.dataset.roadmapViewButton));
+        });
+    });
+
+    const roadmapDetailTimers = new WeakMap();
+    const clearDetailTimer = (stop) => {
+        const timer = roadmapDetailTimers.get(stop);
+        if (timer) window.clearTimeout(timer);
+        roadmapDetailTimers.delete(stop);
+    };
+    const scheduleDetailClose = (stop) => {
+        clearDetailTimer(stop);
+        if (!stop.open) return;
+        const viewRoot = stop.closest('[data-roadmap-view-root]');
+        if (viewRoot?.dataset.roadmapPlanId === 'preview') return;
+        roadmapDetailTimers.set(stop, window.setTimeout(() => {
+            if (stop.isConnected && stop.open) stop.removeAttribute('open');
+            roadmapDetailTimers.delete(stop);
+        }, 4000));
+    };
+
+    page.querySelectorAll('[data-map-stop]').forEach((stop) => {
+        stop.addEventListener('toggle', () => {
+            if (!stop.open) {
+                clearDetailTimer(stop);
+                return;
+            }
+            const root = stop.closest('[data-roadmap-map]');
+            root?.querySelectorAll('[data-map-stop][open]').forEach((other) => {
+                if (other !== stop) {
+                    clearDetailTimer(other);
+                    other.removeAttribute('open');
+                }
+            });
+            scheduleDetailClose(stop);
+        });
+        stop.addEventListener('pointerdown', () => clearDetailTimer(stop));
+        stop.addEventListener('focusin', () => clearDetailTimer(stop));
+        stop.addEventListener('pointerleave', () => scheduleDetailClose(stop));
+        stop.addEventListener('focusout', (event) => {
+            if (!stop.contains(event.relatedTarget)) scheduleDetailClose(stop);
+        });
+    });
+
+    page.querySelectorAll('[data-roadmap-overview]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const root = button.closest('[data-roadmap-view-root]');
+            if (!root) return;
+            setRoadmapView(root, 'map');
+            root.querySelectorAll('[data-map-stop][open]').forEach((stop) => stop.removeAttribute('open'));
+            root.querySelector('[data-roadmap-map]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+    });
+
+    page.querySelectorAll('[data-roadmap-plan-pager]').forEach((pager) => {
+        let startX = 0;
+        let startY = 0;
+        let tracking = false;
+
+        const navigate = (url, direction) => {
+            if (!url) return;
+            pager.classList.add(direction === 'next' ? 'is-leaving-left' : 'is-leaving-right');
+            window.setTimeout(() => {
+                if (window.CanoviaInstantNavigation?.navigate) {
+                    void window.CanoviaInstantNavigation.navigate(url);
+                } else {
+                    window.location.assign(url);
+                }
+            }, 110);
+        };
+
+        pager.addEventListener('touchstart', (event) => {
+            const touch = event.touches?.[0];
+            if (!touch || event.target.closest('button, a, input, select, textarea, [data-roadmap-plan-tabs]')) return;
+            startX = touch.clientX;
+            startY = touch.clientY;
+            tracking = true;
+        }, { passive: true });
+
+        pager.addEventListener('touchend', (event) => {
+            if (!tracking) return;
+            tracking = false;
+            const touch = event.changedTouches?.[0];
+            if (!touch) return;
+            const dx = touch.clientX - startX;
+            const dy = touch.clientY - startY;
+            if (Math.abs(dx) < 58 || Math.abs(dx) < Math.abs(dy) * 1.25) return;
+            if (dx < 0) navigate(pager.dataset.nextUrl, 'next');
+            else navigate(pager.dataset.prevUrl, 'prev');
+        }, { passive: true });
+
+        pager.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowRight' && pager.dataset.nextUrl) {
+                event.preventDefault();
+                navigate(pager.dataset.nextUrl, 'next');
+            }
+            if (event.key === 'ArrowLeft' && pager.dataset.prevUrl) {
+                event.preventDefault();
+                navigate(pager.dataset.prevUrl, 'prev');
+            }
+        });
+    });
+
+    const roadmapMenuSummary = page.querySelector('summary[aria-label="計画メニュー"]');
+    const roadmapMenu = roadmapMenuSummary?.parentElement?.querySelector(':scope > div');
+    if (roadmapMenu) {
+        const existingMenuHrefs = new Set([...roadmapMenu.querySelectorAll('a[href]')].map((link) => link.href));
+        const supportingLinks = [...page.querySelectorAll('a[href]')].filter((link) =>
+            !roadmapMenu.contains(link)
+            && !existingMenuHrefs.has(link.href)
+            && (link.href.includes('/resources') || link.href.includes('/collaboration'))
+        );
+        const clones = supportingLinks.map((link) => {
+            const clone = link.cloneNode(true);
+            clone.className = 'block rounded-xl px-3 py-2 text-sm text-slate-200 hover:bg-slate-800';
+            clone.dataset.v37MobileRoadmapLink = '1';
+            roadmapMenu.prepend(clone);
+            return clone;
+        });
+        const applyDensity = () => {
+            if (!page.isConnected) {
+                window.removeEventListener('resize', applyDensity);
+                return;
+            }
+            const mobile = window.matchMedia('(max-width: 767px)').matches;
+            supportingLinks.forEach((link) => link.classList.toggle('hidden', mobile));
+            clones.forEach((link) => link.classList.toggle('hidden', !mobile));
+        };
+        applyDensity();
+        window.addEventListener('resize', applyDensity, { passive: true });
+    }
+
+    const activePlanTab = page.querySelector('[data-roadmap-plan-tabs] .pk-v19-plan-card.is-active, [data-roadmap-plan-tabs] .roadmap-plan-tab.is-active');
+    activePlanTab?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+}
+
+async function captureInstantOfflineSnapshot() {
+    const snapshotElement = document.getElementById('pacekeeper-offline-snapshot');
+    if (!snapshotElement || !('indexedDB' in window)) return;
+
+    try {
+        const snapshot = JSON.parse(snapshotElement.textContent || '{}');
+        if (!snapshot || typeof snapshot !== 'object') return;
+        snapshot.last_path = window.location.pathname + window.location.search;
+        snapshot.last_title = document.title;
+        snapshot.client_captured_at = new Date().toISOString();
+        await writeOfflineState('latest_snapshot', snapshot);
+    } catch (_) {}
+}
+
+function initializeInstantCorePage() {
+    document.querySelectorAll('[data-auto-toast]').forEach((toast) => {
+        window.setTimeout(() => {
+            if (!toast.isConnected) return;
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(0.5rem)';
+            window.setTimeout(() => toast.remove(), 220);
+        }, 3600);
+    });
+
+    initializeInstantDashboardPage();
+    initializeInstantRoadmapPage();
+    void captureInstantOfflineSnapshot();
+}
+
+document.addEventListener('canovia:page-ready', initializeInstantCorePage);
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.body?.dataset.focusMode === '1') return;
+    mountCanoviaInstantNavigation();
 });

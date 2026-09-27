@@ -30,6 +30,8 @@ class HomeController extends Controller
         CalendarPresentationService $calendarService,
     ) {
         $actorToken = $identity->resolve($request);
+        $instantPrefetch = $request->header('X-Canovia-Instant-Navigation') === 'prefetch';
+
         $plans = $ownership->ownedPlans($request, [
             'tasks' => fn ($query) => $query->with(['prerequisite', 'resources', 'artifacts'])->orderBy('sort_order')->orderBy('id'),
             'resources',
@@ -41,12 +43,14 @@ class HomeController extends Controller
             'workLogs' => fn ($query) => $query->with('task')->latest('worked_on')->latest('id'),
             'memberships',
         ]);
-        $eventLogger->recordOnce(
-            $actorToken,
-            BehaviorEventType::DashboardViewed,
-            $request,
-            metadata: ['owned_plan_count' => $plans->count()],
-        );
+        if (! $instantPrefetch) {
+            $eventLogger->recordOnce(
+                $actorToken,
+                BehaviorEventType::DashboardViewed,
+                $request,
+                metadata: ['owned_plan_count' => $plans->count()],
+            );
+        }
         $editablePlans = $plans->filter(fn ($plan) => $ownership->canEdit($request, $plan))->values();
         $collaborationPlans = $plans
             ->filter(fn ($plan) => (bool) $plan->is_collaborative)
@@ -58,7 +62,9 @@ class HomeController extends Controller
             ->values();
         $baseline = $behaviorService->baseline($actorToken);
         $state = $stateService->calculate($actorToken, $baseline, $editablePlans);
-        $stateService->captureDaily($actorToken, $state);
+        if (! $instantPrefetch) {
+            $stateService->captureDaily($actorToken, $state);
+        }
         $dashboard = $dashboardService->build(
             $plans,
             $actorToken,
@@ -75,7 +81,7 @@ class HomeController extends Controller
 
         $primaryGuidance = $dashboard['guidance_deck']->first();
 
-        if ($primaryGuidance) {
+        if ($primaryGuidance && ! $instantPrefetch) {
             $adaptive = $primaryGuidance['adaptive'];
             $eventLogger->recordOnce(
                 $actorToken,
