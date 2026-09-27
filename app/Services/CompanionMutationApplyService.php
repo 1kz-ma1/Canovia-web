@@ -210,6 +210,10 @@ class CompanionMutationApplyService
             'next_action_note' => ['nullable', 'string', 'max:1000'],
         ])->validate();
 
+        if (trim((string) $data['title']) === '') {
+            throw ValidationException::withMessages(['candidate' => 'Taskタイトルを空にはできません。']);
+        }
+
         $estimated = (int) ($data['estimated_minutes'] ?? 0);
         $sortOrder = ((int) $plan->tasks()->max('sort_order')) + 1;
 
@@ -265,6 +269,10 @@ class CompanionMutationApplyService
             'next_action_note' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'status' => ['sometimes', Rule::in(['todo', 'doing'])],
         ])->validate();
+
+        if (array_key_exists('title', $data) && trim((string) $data['title']) === '') {
+            throw ValidationException::withMessages(['candidate' => 'Taskタイトルを空にはできません。']);
+        }
 
         $before = $this->taskSnapshot($task);
         $changes = [];
@@ -326,6 +334,10 @@ class CompanionMutationApplyService
             'start_date' => ['sometimes', 'nullable', 'date'],
             'deadline' => ['sometimes', 'nullable', 'date'],
         ])->validate();
+
+        if (array_key_exists('title', $data) && trim((string) $data['title']) === '') {
+            throw ValidationException::withMessages(['candidate' => 'Planタイトルを空にはできません。']);
+        }
 
         $startDate = array_key_exists('start_date', $data)
             ? $data['start_date']
@@ -404,6 +416,13 @@ class CompanionMutationApplyService
             'importance' => ['nullable', 'integer', 'min:1', 'max:5'],
         ])->validate();
 
+        if (trim((string) $data['label']) === '') {
+            throw ValidationException::withMessages(['candidate' => 'Goal Context Factのラベルを空にはできません。']);
+        }
+        if ($this->factText($data['value']) === '' && ! is_array($data['value'])) {
+            throw ValidationException::withMessages(['candidate' => 'Goal Context Factの内容を確認してください。']);
+        }
+
         $context = $plan->goalContext ?: $this->goalContexts->ensureForPlan($plan, $plan->user_id);
         $before = $this->goalContextSnapshot($context);
 
@@ -460,6 +479,10 @@ class CompanionMutationApplyService
             'use_for_ai' => ['nullable', 'boolean'],
         ])->validate();
 
+        if (trim((string) $data['content']) === '') {
+            throw ValidationException::withMessages(['candidate' => '未来メモの本文を空にはできません。']);
+        }
+
         $memo = $this->futureMemos->create($request, [
             'kind' => $data['kind'] ?? 'interest',
             'category' => $data['category'] ?? 'other',
@@ -502,6 +525,10 @@ class CompanionMutationApplyService
         }
 
         $content = trim((string) $data['content']);
+        if ($content === '') {
+            throw ValidationException::withMessages(['candidate' => 'Inboxへ追加する本文を空にはできません。']);
+        }
+
         $title = trim((string) ($data['title'] ?? ''));
         if ($title === '') {
             $title = mb_substr(Str::squish($content), 0, 80);
