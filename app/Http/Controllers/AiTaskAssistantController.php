@@ -62,10 +62,10 @@ class AiTaskAssistantController extends Controller
 - 概要: {$plan->description}
 - 期間: {$plan->start_date->format('Y-m-d')} ～ {$deadline}
 
-【本人がCanoviaに残した未来メモ】
+【CANOVIA MEMORY：本人が明示した将来意図・関心・価値】
 {$futureMemoContext}
 
-未来メモは本人の希望・価値観・制約を理解するための参考情報です。目標や優先順位を勝手に決めつけず、今回の計画と関係する内容だけをパーソナライズに使ってください。
+Memoryは本人が明示した内容だけを保持した参考Contextです。目標や優先順位を勝手に決めつけず、今回の計画と関係する内容だけを使ってください。
 
 Goal ContextのReadinessがLOW/MEDIUMでも、確認できている範囲から仮Planを作れます。重要なUnknownが残る場合は、AIの想像で長期計画を埋めるのではなく、そのUnknownを解消するMeasurement Taskを優先してください。
 

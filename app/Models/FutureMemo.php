@@ -33,6 +33,10 @@ class FutureMemo extends Model
         'content',
         'use_for_ai',
         'sort_order',
+        'source',
+        'source_context_type',
+        'source_context_id',
+        'captured_at',
     ];
 
     protected $hidden = ['guest_token_hash'];
@@ -42,6 +46,8 @@ class FutureMemo extends Model
         return [
             'use_for_ai' => 'boolean',
             'sort_order' => 'integer',
+            'source_context_id' => 'integer',
+            'captured_at' => 'datetime',
         ];
     }
 

@@ -106,9 +106,7 @@ class InboxController extends Controller
                 + $pendingPlanUpdates->count(),
             'canUseInboxAi' => $nativeAi->isConfigured()
                 && $featureAccess->canUse($request->user(), FeatureKey::AutomaticAiExecution),
-            'routingDestinations' => InboxIntelligenceService::DESTINATIONS,
-            'futureMemoKinds' => FutureMemo::KINDS,
-            'futureMemoCategories' => FutureMemo::CATEGORIES,
+            'routingDestinations' => InboxIntelligenceService::PUBLIC_DESTINATIONS,
         ]);
     }
 

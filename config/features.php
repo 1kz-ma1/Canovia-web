@@ -20,6 +20,12 @@ return [
             'platform' => 'all',
             'minimum_app_version' => null,
         ],
+        FeatureKey::ConversationalOnboarding->value => [
+            'enabled' => $canoviaAi,
+            'environment' => null,
+            'platform' => 'all',
+            'minimum_app_version' => null,
+        ],
     ],
 
     // Legacy internal keys kept for backwards compatibility with older deployments.

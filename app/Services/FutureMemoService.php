@@ -33,6 +33,17 @@ class FutureMemoService
         return $query->orderBy('sort_order')->latest('updated_at')->latest('id')->get();
     }
 
+    public function forUser(User $user, bool $onlyAiEnabled = false, int $limit = 20): Collection
+    {
+        return FutureMemo::query()
+            ->where('user_id', $user->id)
+            ->when($onlyAiEnabled, fn ($query) => $query->where('use_for_ai', true))
+            ->latest('updated_at')
+            ->latest('id')
+            ->limit(max(1, min(100, $limit)))
+            ->get();
+    }
+
     public function create(Request $request, array $attributes): FutureMemo
     {
         $attributes['user_id'] = $request->user()?->id;
@@ -52,6 +63,102 @@ class FutureMemoService
             ->max('sort_order')) + 1;
 
         return FutureMemo::create($attributes);
+    }
+
+    public function captureExplicitMemory(
+        Request $request,
+        string $kind,
+        ?string $category,
+        string $content,
+        string $sourceContextType,
+        ?int $sourceContextId = null,
+    ): ?FutureMemo {
+        $content = trim($content);
+        if ($content === '' || ! array_key_exists($kind, FutureMemo::KINDS)) {
+            return null;
+        }
+
+        $category = $category && array_key_exists($category, FutureMemo::CATEGORIES)
+            ? $category
+            : 'other';
+
+        $query = FutureMemo::query();
+        if ($request->user()) {
+            $query->where('user_id', $request->user()->id);
+        } else {
+            $token = $this->guestToken($request, create: true);
+            $query->whereNull('user_id')->where('guest_token_hash', hash('sha256', $token));
+        }
+
+        $normalized = mb_strtolower(preg_replace('/\s+/u', ' ', $content) ?: $content);
+        $duplicate = $query->get()->first(function (FutureMemo $memo) use ($normalized) {
+            $existing = mb_strtolower(preg_replace('/\s+/u', ' ', trim((string) $memo->content)) ?: trim((string) $memo->content));
+
+            return $existing === $normalized;
+        });
+
+        if ($duplicate) {
+            return $duplicate;
+        }
+
+        return $this->create($request, [
+            'kind' => $kind,
+            'category' => $category,
+            'content' => mb_substr($content, 0, 2000),
+            'use_for_ai' => true,
+            'source' => 'ai_explicit_capture',
+            'source_context_type' => mb_substr($sourceContextType, 0, 40),
+            'source_context_id' => $sourceContextId,
+            'captured_at' => now(),
+        ]);
+    }
+
+    public function captureExplicitMemoryForUser(
+        User $user,
+        string $kind,
+        ?string $category,
+        string $content,
+        string $sourceContextType,
+        ?int $sourceContextId = null,
+    ): ?FutureMemo {
+        $content = trim($content);
+        if ($content === '' || ! array_key_exists($kind, FutureMemo::KINDS)) {
+            return null;
+        }
+
+        $category = $category && array_key_exists($category, FutureMemo::CATEGORIES)
+            ? $category
+            : 'other';
+
+        $normalized = mb_strtolower(preg_replace('/\s+/u', ' ', $content) ?: $content);
+        $duplicate = FutureMemo::query()
+            ->where('user_id', $user->id)
+            ->get()
+            ->first(function (FutureMemo $memo) use ($normalized) {
+                $existing = mb_strtolower(preg_replace('/\s+/u', ' ', trim((string) $memo->content)) ?: trim((string) $memo->content));
+
+                return $existing === $normalized;
+            });
+
+        if ($duplicate) {
+            return $duplicate;
+        }
+
+        $sortOrder = (int) FutureMemo::query()->where('user_id', $user->id)->max('sort_order') + 1;
+
+        return FutureMemo::query()->create([
+            'user_id' => $user->id,
+            'guest_token_hash' => null,
+            'kind' => $kind,
+            'category' => $category,
+            'content' => mb_substr($content, 0, 2000),
+            'use_for_ai' => true,
+            'sort_order' => $sortOrder,
+            'source' => 'ai_explicit_capture',
+            'source_context_type' => mb_substr($sourceContextType, 0, 40),
+            'source_context_id' => $sourceContextId,
+            'captured_at' => now(),
+        ]);
     }
 
     public function authorize(Request $request, FutureMemo $memo): void

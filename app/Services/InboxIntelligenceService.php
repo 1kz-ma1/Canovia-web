@@ -16,6 +16,14 @@ class InboxIntelligenceService
         'keep_inbox' => 'Inboxに残す',
     ];
 
+    public const PUBLIC_DESTINATIONS = [
+        'career_capture' => 'Career Capture',
+        'recall_material' => 'Recall教材',
+        'task_evidence' => 'Task Evidence',
+        'plan_resource' => 'Plan Resource',
+        'keep_inbox' => 'Inboxに残す',
+    ];
+
     public function __construct(
         private readonly NativeAiGateway $nativeAi,
     ) {}
@@ -37,7 +45,6 @@ class InboxIntelligenceService
             '- reasonは短く具体的にする',
             '',
             'destinationの意味:',
-            '- future_memo: アイデア、将来やりたいこと、関心、懸念',
             '- career_capture: 求人、企業応募、選考に関する外部情報',
             '- recall_material: 単語、用語、参考書ページなど暗記・想起用教材',
             '- task_evidence: 既存Taskで実際に行った作業・成果・確認できる事実',
@@ -71,7 +78,7 @@ class InboxIntelligenceService
 
         $data = $result['data'];
         $destination = (string) ($data['destination'] ?? 'keep_inbox');
-        if (! array_key_exists($destination, self::DESTINATIONS)) {
+        if (! array_key_exists($destination, self::PUBLIC_DESTINATIONS)) {
             $destination = 'keep_inbox';
         }
 
@@ -81,12 +88,6 @@ class InboxIntelligenceService
             'confidence' => max(0, min(100, (int) ($data['confidence'] ?? 50))),
             'suggested_plan_title' => mb_substr(trim((string) ($data['suggested_plan_title'] ?? '')), 0, 255) ?: null,
             'suggested_task_title' => mb_substr(trim((string) ($data['suggested_task_title'] ?? '')), 0, 255) ?: null,
-            'future_memo_kind' => in_array(($data['future_memo_kind'] ?? null), ['want_to_do', 'future_self', 'interest', 'concern', 'value'], true)
-                ? $data['future_memo_kind']
-                : 'interest',
-            'future_memo_category' => in_array(($data['future_memo_category'] ?? null), ['career', 'study', 'creation', 'life', 'health', 'money', 'hobby', 'other'], true)
-                ? $data['future_memo_category']
-                : 'other',
             'run_id' => (int) $result['run_id'],
             'provider' => $result['provider'],
             'model' => $result['model'],
@@ -104,26 +105,16 @@ class InboxIntelligenceService
                 'confidence',
                 'suggested_plan_title',
                 'suggested_task_title',
-                'future_memo_kind',
-                'future_memo_category',
             ],
             'properties' => [
                 'destination' => [
                     'type' => 'string',
-                    'enum' => array_keys(self::DESTINATIONS),
+                    'enum' => array_keys(self::PUBLIC_DESTINATIONS),
                 ],
                 'reason' => ['type' => 'string'],
                 'confidence' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 100],
                 'suggested_plan_title' => ['type' => ['string', 'null']],
                 'suggested_task_title' => ['type' => ['string', 'null']],
-                'future_memo_kind' => [
-                    'type' => 'string',
-                    'enum' => ['want_to_do', 'future_self', 'interest', 'concern', 'value'],
-                ],
-                'future_memo_category' => [
-                    'type' => 'string',
-                    'enum' => ['career', 'study', 'creation', 'life', 'health', 'money', 'hobby', 'other'],
-                ],
             ],
         ];
     }

@@ -195,25 +195,6 @@
             </section>
 
             <aside class="space-y-4 lg:sticky lg:top-24">
-                @if (($futureMemos ?? collect())->isEmpty())
-                    <section class="page-card border-cyan-300/20 p-4" data-future-memo-plan-hint>
-                        <p class="text-[10px] font-black tracking-[.14em] text-cyan-300">PERSONALIZE</p>
-                        <h2 class="mt-2 text-sm font-black leading-6 text-slate-100">未来メモがあるとAIの計画精度が上がります</h2>
-                        <p class="mt-2 text-xs leading-5 text-slate-500">
-                            必須ではありません。この計画を先に作って、あとから追加しても大丈夫です。
-                        </p>
-                        <a href="{{ route('future_memos.index') }}" class="btn-secondary mt-4 w-full justify-center px-3 py-2 text-xs">未来メモを作る</a>
-                    </section>
-                @else
-                    <section class="page-card border-cyan-300/15 p-4">
-                        <p class="text-[10px] font-black tracking-[.14em] text-cyan-300">PERSONALIZED</p>
-                        <p class="mt-2 text-xs leading-5 text-slate-300">
-                            共有ONの未来メモ {{ $futureMemos->count() }}件を、次のAI相談で参考情報として使います。
-                        </p>
-                        <a href="{{ route('future_memos.index') }}" class="mt-3 inline-flex text-xs font-black text-cyan-300">確認・編集 →</a>
-                    </section>
-                @endif
-
                 <section class="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
                     <p class="text-xs font-black text-slate-200">このあと</p>
                     <div class="mt-3 space-y-3">

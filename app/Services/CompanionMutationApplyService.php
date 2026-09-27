@@ -84,7 +84,7 @@ class CompanionMutationApplyService
                 'create_task' => $candidate->plan?->title ? 'Plan: '.$candidate->plan->title : 'Plan未選択',
                 'update_task' => $candidate->task?->title ? 'Task: '.$candidate->task->title : 'Task未選択',
                 'update_plan', 'record_goal_fact' => $candidate->plan?->title ? 'Plan: '.$candidate->plan->title : 'Plan未選択',
-                'create_future_memo' => '未来メモ',
+                'create_future_memo' => 'Canovia Memory',
                 'create_inbox_item' => $candidate->plan?->title ? 'Inbox / '.$candidate->plan->title : 'Inbox',
                 default => 'Canovia',
             },
@@ -479,7 +479,7 @@ class CompanionMutationApplyService
         ])->validate();
 
         if (trim((string) $data['content']) === '') {
-            throw ValidationException::withMessages(['candidate' => '未来メモの本文を空にはできません。']);
+            throw ValidationException::withMessages(['candidate' => 'Memoryの本文を空にはできません。']);
         }
 
         $memo = $this->futureMemos->create($request, [
@@ -487,10 +487,14 @@ class CompanionMutationApplyService
             'category' => $data['category'] ?? 'other',
             'content' => trim((string) $data['content']),
             'use_for_ai' => (bool) ($data['use_for_ai'] ?? true),
+            'source' => 'companion_candidate',
+            'source_context_type' => 'companion_thread',
+            'source_context_id' => (int) $candidate->companion_thread_id,
+            'captured_at' => now(),
         ]);
 
         return [
-            'message' => '未来メモへ追加しました。',
+            'message' => 'Canovia Memoryへ保存しました。',
             'target_type' => 'future_memo',
             'target_id' => (int) $memo->id,
             'before' => null,

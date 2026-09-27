@@ -210,9 +210,9 @@ Route::get('/p/{publicSlug}', [PublicPlanController::class, 'show'])->name('publ
 
 // 計画
 Route::get('/plans/create', [GoalDiscoveryController::class, 'create'])->name('plans.create');
-Route::post('/goal-discovery', [GoalDiscoveryController::class, 'store'])->name('goal_discovery.store');
+Route::post('/goal-discovery', [GoalDiscoveryController::class, 'store'])->middleware('throttle:12,1')->name('goal_discovery.store');
 Route::get('/goal-discovery/{goalContext}', [GoalDiscoveryController::class, 'show'])->name('goal_discovery.show');
-Route::post('/goal-discovery/{goalContext}/answer', [GoalDiscoveryController::class, 'answer'])->name('goal_discovery.answer');
+Route::post('/goal-discovery/{goalContext}/answer', [GoalDiscoveryController::class, 'answer'])->middleware('throttle:30,1')->name('goal_discovery.answer');
 Route::get('/plans/create/manual', [PlanController::class, 'create'])->name('plans.create.manual');
 Route::post('/plans', [PlanController::class, 'store'])->name('plans.store');
 Route::get('/plans/{plan}', [PlanController::class, 'show'])->name('plans.show');

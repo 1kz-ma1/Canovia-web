@@ -9,7 +9,7 @@
             'update_task' => 'Task変更候補',
             'update_plan' => 'Plan変更候補',
             'record_goal_fact' => 'Goal Context更新候補',
-            'create_future_memo' => '未来メモ候補',
+            'create_future_memo' => 'Memory保存候補',
             'create_inbox_item' => 'Inbox候補',
         ];
         $candidateStatusLabels = [

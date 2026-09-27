@@ -34,6 +34,7 @@ class EconomyFoundationV415Test extends TestCase
             FeatureKey::AdvancedAnalytics,
             FeatureKey::QuestionPack,
             FeatureKey::ProjectArtifact,
+            FeatureKey::ConversationalOnboarding,
         ] as $feature) {
             $decision = $access->resolveAccess($user, $feature);
             $this->assertTrue($decision->allowed, $feature->value);

@@ -6,6 +6,7 @@ use App\Enums\FeatureKey;
 use App\Models\CompanionMessage;
 use App\Models\CompanionMutationCandidate;
 use App\Models\CompanionThread;
+use App\Models\FutureMemo;
 use App\Models\Plan;
 use App\Models\Task;
 use App\Models\User;
@@ -20,6 +21,7 @@ class CompanionConversationService
         private readonly CompanionContextService $context,
         private readonly CompanionContinuityService $continuity,
         private readonly AiCapacityService $capacity,
+        private readonly FutureMemoService $memories,
     ) {}
 
     /**
@@ -136,6 +138,13 @@ class CompanionConversationService
             }
 
             $data = $result['data'];
+            $memoryCount = $this->captureMemories(
+                $user,
+                $thread,
+                $userMessage->content,
+                is_array($data['memories'] ?? null) ? $data['memories'] : [],
+            );
+
             $assistant = $thread->messages()->create([
                 'native_ai_run_id' => $result['run_id'],
                 'role' => 'assistant',
@@ -145,6 +154,7 @@ class CompanionConversationService
                     'context_scope' => $contextSnapshot['scope'] ?? 'global',
                     'candidate_count' => count($data['candidates'] ?? []),
                     'continuity_signal_count' => count($contextSnapshot['continuity'] ?? []),
+                    'memory_capture_count' => $memoryCount,
                 ],
             ]);
 
@@ -281,6 +291,10 @@ class CompanionConversationService
 - ユーザーの意図を尊重し、勝手にPlan/Taskを変更したと断言しない
 - DB変更は一切できない。必要ならMutation Candidateを提案するだけ
 - CandidateへPlan ID / Task ID / User IDを書かない。対象はCanovia側が選択中Contextから決める
+- ユーザーが明示した将来意図・関心・困りごと・価値はmemoriesへ最大2件まで出せる
+- memoriesのsource_quoteは直近USER発言に実際に含まれる連続した原文だけにする。推測した属性・事情・意図は保存候補にしない
+- 現在のPlan/TaskそのものをMemoryへ重複保存しない
+- incidentalなMemoryはMutation Candidateではなく内部Context用。create_future_memo Candidateは明示的に「メモとして残して」と頼まれた互換経路に限る
 - 単なる相談ならCandidateは0件でよい
 - 一度に候補を増やしすぎず、最大3件
 - CONTEXTのcontinuityにpending_candidateがある場合、同じ変更候補を重複生成しない
@@ -326,6 +340,26 @@ PROMPT;
             'additionalProperties' => false,
             'properties' => [
                 'reply' => ['type' => 'string'],
+                'memories' => [
+                    'type' => 'array',
+                    'maxItems' => 2,
+                    'items' => [
+                        'type' => 'object',
+                        'additionalProperties' => false,
+                        'properties' => [
+                            'kind' => [
+                                'type' => 'string',
+                                'enum' => array_keys(FutureMemo::KINDS),
+                            ],
+                            'category' => [
+                                'type' => 'string',
+                                'enum' => array_keys(FutureMemo::CATEGORIES),
+                            ],
+                            'source_quote' => ['type' => 'string'],
+                        ],
+                        'required' => ['kind', 'category', 'source_quote'],
+                    ],
+                ],
                 'candidates' => [
                     'type' => 'array',
                     'maxItems' => 3,
@@ -345,7 +379,52 @@ PROMPT;
                     ],
                 ],
             ],
-            'required' => ['reply', 'candidates'],
+            'required' => ['reply', 'memories', 'candidates'],
         ];
+    }
+
+    private function captureMemories(
+        User $user,
+        CompanionThread $thread,
+        string $latestUserText,
+        array $candidates,
+    ): int {
+        $captured = 0;
+
+        foreach (array_slice($candidates, 0, 2) as $candidate) {
+            if (! is_array($candidate)) {
+                continue;
+            }
+
+            $kind = trim((string) ($candidate['kind'] ?? ''));
+            $category = trim((string) ($candidate['category'] ?? ''));
+            $quote = trim((string) ($candidate['source_quote'] ?? ''));
+
+            if (
+                $quote === ''
+                || mb_strlen($quote) < 4
+                || mb_strpos($latestUserText, $quote) === false
+                || ! array_key_exists($kind, FutureMemo::KINDS)
+            ) {
+                continue;
+            }
+
+            $before = FutureMemo::query()->where('user_id', $user->id)->count();
+
+            $this->memories->captureExplicitMemoryForUser(
+                $user,
+                $kind,
+                array_key_exists($category, FutureMemo::CATEGORIES) ? $category : 'other',
+                $quote,
+                'companion_thread',
+                (int) $thread->id,
+            );
+
+            if (FutureMemo::query()->where('user_id', $user->id)->count() > $before) {
+                $captured++;
+            }
+        }
+
+        return $captured;
     }
 }
