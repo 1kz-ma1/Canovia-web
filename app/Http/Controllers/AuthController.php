@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Services\GuestPlanClaimService;
 use App\Services\FutureMemoService;
+use App\Services\FirstRunService;
 use Illuminate\Http\Request;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Auth;
@@ -21,8 +22,12 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
-    public function login(Request $request, GuestPlanClaimService $claimService, FutureMemoService $futureMemos)
-    {
+    public function login(
+        Request $request,
+        GuestPlanClaimService $claimService,
+        FutureMemoService $futureMemos,
+        FirstRunService $firstRun,
+    ) {
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
@@ -41,6 +46,7 @@ class AuthController extends Controller
         $request->session()->regenerate();
         $claimed = $claimService->claim($request, $request->user());
         $claimedMemos = $futureMemos->claimGuestMemos($request, $request->user());
+        $firstRun->markPassed($request);
 
         $claimMessages = [];
         if ($claimed > 0) $claimMessages[] = "{$claimed}件のGuest計画";
@@ -59,8 +65,12 @@ class AuthController extends Controller
         return view('auth.register');
     }
 
-    public function register(Request $request, GuestPlanClaimService $claimService, FutureMemoService $futureMemos)
-    {
+    public function register(
+        Request $request,
+        GuestPlanClaimService $claimService,
+        FutureMemoService $futureMemos,
+        FirstRunService $firstRun,
+    ) {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:80'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
@@ -80,7 +90,13 @@ class AuthController extends Controller
         if ($claimed > 0) $claimMessages[] = "{$claimed}件のGuest計画";
         if ($claimedMemos > 0) $claimMessages[] = "{$claimedMemos}件の保存情報";
 
-        $defaultRoute = $claimed > 0 ? route('home') : route('plans.create');
+        if ($claimed > 0) {
+            $firstRun->markPassed($request);
+            $defaultRoute = route('home');
+        } else {
+            $firstRun->requireForNewAccount($request);
+            $defaultRoute = route('first_run.show');
+        }
 
         return redirect()->intended($defaultRoute)->with(
             'status',
