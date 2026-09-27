@@ -3149,10 +3149,10 @@ function initializeInstantDashboardPage() {
     let workStarted = root.dataset.workStarted === '1';
     let idleNudgeShown = false;
     const enteredAt = Date.now();
-    let activeTarget = 'overall';
     const viewedTaskIds = new Set();
     const tabs = [...root.querySelectorAll('[data-dashboard-tab]')];
     const panels = [...root.querySelectorAll('[data-dashboard-panel]')];
+    let activeTarget = tabs.find((tab) => tab.getAttribute('aria-selected') === 'true')?.dataset.dashboardTab || 'overall';
 
     const updateNavigationContext = (planId = null) => {
         const baseUrl = root.dataset.navigationUrl;
@@ -3204,7 +3204,8 @@ function initializeInstantDashboardPage() {
         }
     };
 
-    updateNavigationContext(null);
+    const initialTab = tabs.find((tab) => tab.dataset.dashboardTab === activeTarget);
+    updateNavigationContext(initialTab?.dataset.planId ? Number(initialTab.dataset.planId) : null);
     tabs.forEach((tab) => tab.addEventListener('click', () => activateTab(tab.dataset.dashboardTab)));
     root.querySelectorAll('[data-open-dashboard-tab]').forEach((button) => {
         button.addEventListener('click', () => activateTab(button.dataset.openDashboardTab));
