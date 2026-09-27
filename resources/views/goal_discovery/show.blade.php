@@ -66,7 +66,7 @@
                         <input type="hidden" name="question_id" value="{{ $question['id'] }}">
                         <input type="hidden" name="answer_mode" value="text">
                         <textarea name="answer_text" rows="3" maxlength="2000" class="form-control min-h-[7rem]" placeholder="{{ $question['placeholder'] }}">{{ old('answer_text') }}</textarea>
-                        <button type="submit" class="btn-primary mt-3">送る</button>
+                        <button type="submit" class="btn-primary mt-3">これで更新</button>
                     </form>
                 @endif
 
