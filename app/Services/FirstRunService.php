@@ -11,30 +11,42 @@ final class FirstRunService
     public function requiresGate(Request $request): bool
     {
         if ($request->user()) {
-            return (bool) $request->session()->get('canovia.first_run.required', false);
+            return $request->user()->first_run_completed_at === null;
         }
 
-        if ((bool) $request->session()->get('canovia.first_run.passed', false)) {
-            return false;
-        }
-
-        if ($request->cookie(self::COOKIE) === '1') {
+        if ($this->hasBrowserPass($request)) {
             return false;
         }
 
         return ! $this->hasGuestPlanCookie($request);
     }
 
+    public function hasBrowserPass(Request $request): bool
+    {
+        return (bool) $request->session()->get('canovia.first_run.passed', false)
+            || $request->cookie(self::COOKIE) === '1';
+    }
+
     public function requireForNewAccount(Request $request): void
     {
         $request->session()->forget('canovia.first_run.passed');
         $request->session()->put('canovia.first_run.required', true);
+
+        $user = $request->user();
+        if ($user && $user->first_run_completed_at !== null) {
+            $user->forceFill(['first_run_completed_at' => null])->save();
+        }
     }
 
     public function markPassed(Request $request): void
     {
         $request->session()->forget('canovia.first_run.required');
         $request->session()->put('canovia.first_run.passed', true);
+
+        $user = $request->user();
+        if ($user && $user->first_run_completed_at === null) {
+            $user->forceFill(['first_run_completed_at' => now()])->save();
+        }
 
         cookie()->queue(
             self::COOKIE,
