@@ -5,7 +5,7 @@ return [
         'version' => 'v41.14',
         'date' => '2026-09-27',
         'title' => '計画を作る前に、Canoviaが現在地を理解する',
-        'summary' => '未知の目標でもAIが不足情報を想像で埋めないよう、Goal Context基盤を追加しました。目標・現在地・Signal・制約・Driver・Unknownを事実と候補に分けて保持し、理解できている範囲から仮PlanやMeasurement Taskを作れる土台を整えました。',
+        'summary' => '未知の目標でもAIが不足情報を想像で埋めないGoal Context基盤に加え、目標を一言だけ渡してCurrent Stateを1問ずつ確認するAdaptive Goal Discoveryを追加しました。質問途中でも仮Planへ進めます。',
         'highlights' => [
             'Plan作成時にGoal Contextを自動生成し、既存Planも必要になった時点で安全にlazy生成します。',
             'Goal Context Factはconfirmed / candidate / unknown / supersededを分離し、Native AIの推測をそのまま事実扱いしません。',
@@ -13,8 +13,13 @@ return [
             'AI Plan BuilderへConfirmed Facts・Unconfirmed Hints・Known Unknownsを渡し、確認済み情報の聞き直しとUnknownの推測補完を避けます。',
             '現在地不足が重要な場合、長期計画を無理に作らず、測る・観察する・記録するMeasurement Taskを初期Planへ入れられる方針にしました。',
             'Plan BuilderではCanoviaが現在どこまで理解できているかをPreviewできます。',
+            'Plan作成の初手は詳細フォームではなく「どうなりたい？」だけにし、Planを作る前からGoal Contextを育てます。',
+            '回答方法は先に選ばせず、タップ回答・文章回答・スキップの使われ方からQuick / conversational / compact表示へ自然に適応します。',
+            '質問を飛ばすユーザーには仮Planを前へ出し、分からない部分を無理に入力させません。',
+            'Readinessが70点以上でも、Desired State・Current State・Success Signalが揃わなければHIGHにしません。',
+            '従来の詳細Planフォームはmanual fallbackとして残しています。',
         ],
-        'tip' => '情報が少なくても計画作成を止めません。分からないことは「推測する情報」ではなく「次に確認する対象」として扱います。',
+        'tip' => 'まず未来を一言だけ渡せば大丈夫です。答えやすい質問だけ進め、面倒なら途中で仮Planへ進めます。Unknownは後からInboxやEvidenceで更新できます。',
     ],
     [
         'version' => 'v41.13',
