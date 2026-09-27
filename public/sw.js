@@ -1,15 +1,16 @@
-const CACHE_VERSION = 'canovia-shell-v39-1';
+const CACHE_VERSION = 'canovia-shell-v41-16-1';
 const META_CACHE = 'canovia-instant-meta-v2';
 const LAST_NETWORK_KEY = '/__canovia_last_network_success__';
 const LIKELY_SLEEP_AFTER_MS = 12 * 60 * 1000;
 const RECENT_NETWORK_TIMEOUT_MS = 8000;
 
-// Instant Start is intentionally limited to the three read-only shell surfaces.
+// Instant Start is intentionally limited to the four core shell surfaces.
 // Everything else, especially AI/import/auth/PWA-handoff/admin flows, stays on
 // the browser's normal network path.
 const INSTANT_START_PATHS = new Set([
     '/',
     '/navigate',
+    '/inbox',
     '/roadmap',
 ]);
 

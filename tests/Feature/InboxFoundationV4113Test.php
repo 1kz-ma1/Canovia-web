@@ -179,12 +179,17 @@ class InboxFoundationV4113Test extends TestCase
 
         $mobile = file_get_contents(resource_path('views/layouts/partials/mobile-nav.blade.php'));
         $layout = file_get_contents(resource_path('views/layouts/app.blade.php'));
+        $offline = file_get_contents(public_path('offline.html'));
 
         $this->assertStringContainsString("route('inbox.index')", $mobile);
         $this->assertStringContainsString('<span>Inbox</span>', $mobile);
         $this->assertStringNotContainsString("route('navigation.index')", $mobile);
         $this->assertStringContainsString("route('inbox.index')", $layout);
         $this->assertStringContainsString('<span>Inbox</span>', $layout);
+        $this->assertStringContainsString('data-shell-view="inbox">Inbox</button>', $offline);
+        $this->assertStringContainsString("if(view==='inbox')desiredPath='/inbox'", $offline);
+        $this->assertStringNotContainsString('data-shell-view="today">今日</button>', $offline);
+        $this->assertStringNotContainsString('data-shell-panel="today"', $offline);
 
         $this->actingAs($user)
             ->get(route('navigation.index'))
