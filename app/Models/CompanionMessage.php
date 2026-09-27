@@ -12,6 +12,7 @@ class CompanionMessage extends Model
         'companion_thread_id',
         'user_id',
         'native_ai_run_id',
+        'request_id',
         'role',
         'content',
         'metadata',
