@@ -31,6 +31,9 @@ class WorkSessionController extends Controller
             'intended_minutes' => ['nullable', 'integer', 'min:5', 'max:480'],
             'source' => ['required', 'in:dashboard,navigation,plan,roadmap'],
             'start_request_id' => ['nullable', 'uuid'],
+            'map_flow_id' => ['nullable', 'uuid'],
+            'map_flow_elapsed_ms' => ['nullable', 'integer', 'min:0', 'max:3600000'],
+            'map_flow_step_count' => ['nullable', 'integer', 'min:0', 'max:100'],
         ]);
         $task = Task::with('plan')->findOrFail($validated['task_id']);
         $ownership->authorizeTask($request, $task);
@@ -123,6 +126,22 @@ class WorkSessionController extends Controller
                 'start_latency_seconds' => $startLatency,
                 'work_session_id' => $session->id,
             ]);
+
+            if (filled($validated['map_flow_id'] ?? null)) {
+                $logger->recordSafely(
+                    $actorToken,
+                    BehaviorEventType::MapExecutionStarted,
+                    $request,
+                    $task->plan,
+                    $task,
+                    [
+                        'flow_id' => (string) $validated['map_flow_id'],
+                        'elapsed_ms' => (int) ($validated['map_flow_elapsed_ms'] ?? 0),
+                        'step_count' => (int) ($validated['map_flow_step_count'] ?? 0),
+                        'source' => $validated['source'],
+                    ],
+                );
+            }
 
             return ['session' => $session, 'reason' => 'created'];
         });

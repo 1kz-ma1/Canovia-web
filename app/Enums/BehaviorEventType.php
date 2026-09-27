@@ -19,6 +19,16 @@ enum BehaviorEventType: string
     case NavigationStarted = 'navigation_started';
     case NavigationCompleted = 'navigation_completed';
 
+    // V42.4 Living Map validation telemetry.
+    case MapViewed = 'map_viewed';
+    case MapNodeFocused = 'map_node_focused';
+    case MapBackUsed = 'map_back_used';
+    case MapClassicActionOpened = 'map_classic_action_opened';
+    case MapCompanionOpened = 'map_companion_opened';
+    case MapClassicHomeOpened = 'map_classic_home_opened';
+    case MapReprojected = 'map_reprojected';
+    case MapExecutionStarted = 'map_execution_started';
+
     // AI-assisted plan funnel. These events intentionally contain no prompt or
     // pasted JSON body; they exist to diagnose where users stop or fail.
     case PlanGenerationOpened = 'plan_generation_opened';
@@ -43,6 +53,13 @@ enum BehaviorEventType: string
             self::DashboardIdle->value,
             self::PlanTabViewed->value,
             self::TaskViewed->value,
+            self::MapViewed->value,
+            self::MapNodeFocused->value,
+            self::MapBackUsed->value,
+            self::MapClassicActionOpened->value,
+            self::MapCompanionOpened->value,
+            self::MapClassicHomeOpened->value,
+            self::MapReprojected->value,
             self::PlanGenerationPromptCopyClicked->value,
             self::PlanUpdatePromptCopyClicked->value,
         ];

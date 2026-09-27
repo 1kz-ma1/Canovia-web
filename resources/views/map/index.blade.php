@@ -14,6 +14,7 @@
         class="canovia-map-page"
         data-canovia-map-page
         data-map-projection-key="{{ $graph['projection_key'] ?? '' }}"
+        data-event-url="{{ route('behavior_events.store') }}"
     >
         <div class="canovia-map-hero">
             <div class="canovia-map-hero-copy">
@@ -26,7 +27,7 @@
             </div>
             <div class="canovia-map-hero-actions">
                 <button type="button" class="btn-secondary hidden" data-map-focus-reset>全体を見る</button>
-                <a href="{{ route('home') }}" class="btn-secondary">Classic Home</a>
+                <a href="{{ route('home') }}" class="btn-secondary" data-map-home-fallback>Classic Home</a>
                 <a href="{{ route('roadmap.index') }}" class="btn-secondary">Roadmap</a>
             </div>
         </div>
@@ -88,6 +89,7 @@
                             data-map-node-id="{{ $node['id'] }}"
                             data-map-node-type="{{ $node['type'] }}"
                             data-map-position-role="{{ $node['position_role'] }}"
+                            data-map-is-primary="{{ $isPrimary ? '1' : '0' }}"
                             data-map-x="{{ data_get($node, 'position.x', 50) }}"
                             data-map-y="{{ data_get($node, 'position.y', 50) }}"
                             @if ($isPrimary) aria-current="true" @endif
@@ -157,6 +159,7 @@
                                         href="{{ $action['url'] }}"
                                         class="{{ ($action['primary'] ?? false) ? 'btn-primary' : 'btn-secondary' }} w-full justify-center"
                                         data-map-classic-action
+                                        data-map-action-role="{{ ($action['primary'] ?? false) ? 'primary' : 'secondary' }}"
                                     >{{ $action['label'] }}</a>
                                 @endforeach
                             </div>
@@ -167,7 +170,7 @@
                                             <p class="canovia-map-companion-kicker">COMPANION</p>
                                             <p class="canovia-map-companion-copy">このNodeと直接つながるContextを引き継いで相談します。</p>
                                         </div>
-                                        <form method="POST" action="{{ route('companion.entry') }}" data-mutation-once>
+                                        <form method="POST" action="{{ route('companion.entry') }}" data-mutation-once data-map-companion-form>
                                             @csrf
                                             <input type="hidden" name="entry_type" value="map">
                                             <input type="hidden" name="map_node_id" value="{{ $node['id'] }}">

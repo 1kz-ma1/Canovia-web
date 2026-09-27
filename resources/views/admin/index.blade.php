@@ -143,6 +143,87 @@
             </a>
         </section>
 
+        <section class="rounded-[1.6rem] border border-cyan-300/15 bg-slate-950/45 p-5 sm:p-6" data-map-validation-telemetry>
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <p class="text-[10px] font-black uppercase tracking-[.16em] text-cyan-300">LIVING MAP VALIDATION</p>
+                    <h2 class="mt-2 text-xl font-black text-slate-50">MapをPrimary Home候補として検証</h2>
+                    <p class="mt-2 max-w-3xl text-xs leading-6 text-slate-500">
+                        Flow単位でFocus・Classic遷移・Companion・実際のWork開始を追います。
+                        Homeの開始時間は既存dashboard起点WorkStartedとの参考比較で、A/Bテストではありません。
+                    </p>
+                </div>
+                <div class="rounded-full border border-slate-800 bg-slate-950/55 px-3 py-1.5 text-[10px] font-bold text-slate-500">
+                    30日Flow {{ $mapTelemetry30d['views'] }}
+                </div>
+            </div>
+
+            @foreach ([7 => $mapTelemetry7d, 30 => $mapTelemetry30d] as $days => $metrics)
+                <div class="mt-5">
+                    <p class="text-xs font-black text-slate-300">{{ $days }}日</p>
+                    <div class="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+                        <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+                            <p class="text-[10px] text-slate-500">Map Flow</p>
+                            <p class="mt-1 text-xl font-black text-slate-100">{{ $metrics['views'] }}</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+                            <p class="text-[10px] text-slate-500">Node Focus率</p>
+                            <p class="mt-1 text-xl font-black text-cyan-100">{{ number_format($metrics['focus_rate'], 1) }}%</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+                            <p class="text-[10px] text-slate-500">Focus→Classic</p>
+                            <p class="mt-1 text-xl font-black text-sky-100">{{ number_format($metrics['classic_action_rate'], 1) }}%</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+                            <p class="text-[10px] text-slate-500">Companion利用</p>
+                            <p class="mt-1 text-xl font-black text-violet-100">{{ number_format($metrics['companion_rate'], 1) }}%</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+                            <p class="text-[10px] text-slate-500">Classic Home fallback</p>
+                            <p class="mt-1 text-xl font-black text-amber-100">{{ number_format($metrics['home_fallback_rate'], 1) }}%</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+                            <p class="text-[10px] text-slate-500">Work開始率</p>
+                            <p class="mt-1 text-xl font-black text-emerald-100">{{ number_format($metrics['execution_rate'], 1) }}%</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                        <div class="rounded-xl border border-slate-800 bg-slate-950/25 p-3">
+                            <p class="text-[10px] text-slate-500">Primary Focus中央値</p>
+                            <p class="mt-1 text-sm font-black text-slate-200">
+                                {{ $metrics['median_primary_focus_ms'] === null ? '—' : number_format($metrics['median_primary_focus_ms'] / 1000, 1).'秒' }}
+                            </p>
+                        </div>
+                        <div class="rounded-xl border border-slate-800 bg-slate-950/25 p-3">
+                            <p class="text-[10px] text-slate-500">Map→Work開始中央値</p>
+                            <p class="mt-1 text-sm font-black text-slate-200">
+                                {{ $metrics['median_execution_ms'] === null ? '—' : number_format($metrics['median_execution_ms'] / 1000, 1).'秒' }}
+                                @if ($metrics['median_execution_steps'] !== null)
+                                    <span class="text-slate-500">/ {{ $metrics['median_execution_steps'] }} steps</span>
+                                @endif
+                            </p>
+                        </div>
+                        <div class="rounded-xl border border-slate-800 bg-slate-950/25 p-3">
+                            <p class="text-[10px] text-slate-500">Back / Flow</p>
+                            <p class="mt-1 text-sm font-black text-slate-200">{{ number_format($metrics['back_per_flow'], 2) }}</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-800 bg-slate-950/25 p-3">
+                            <p class="text-[10px] text-slate-500">Classic Home→Work参考値</p>
+                            <p class="mt-1 text-sm font-black text-slate-200">
+                                {{ $metrics['home_median_start_latency_ms'] === null ? '—' : number_format($metrics['home_median_start_latency_ms'] / 1000, 1).'秒' }}
+                                <span class="text-slate-500">({{ $metrics['home_start_count'] }} starts)</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+
+            <p class="mt-4 text-[10px] leading-5 text-slate-600">
+                Primary Homeへの昇格は自動化しません。十分なFlow数と実利用を確認し、到達時間・fallback・Back・Work開始を合わせて判断します。
+            </p>
+        </section>
+
         <section class="rounded-2xl border border-slate-800/90 bg-slate-950/35 p-4 text-xs leading-6 text-slate-500">
             管理機能が増えた場合も、この画面を入口として追加していく想定です。個別URLを覚える必要はありません。
         </section>
