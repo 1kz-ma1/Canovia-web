@@ -10,6 +10,9 @@ use Illuminate\Support\Collection;
 
 class PlanOwnershipService
 {
+    /** @var array<string,string|null> */
+    private array $roleCache = [];
+
     /**
      * Historical method name kept for compatibility. It now returns every plan
      * the current actor may view: owned plans plus logged-in collaborative plans.
@@ -61,16 +64,31 @@ class PlanOwnershipService
 
     public function role(Request $request, Plan $plan): ?string
     {
+        $planId = (int) $plan->id;
+        $actorKey = $request->user()?->id
+            ? 'user:'.$request->user()->id
+            : 'guest:'.substr(hash('sha256', (string) $request->cookie('pace_keeper_owner_token_'.$planId)), 0, 16);
+        $cacheKey = $actorKey.':plan:'.$planId;
+        if (array_key_exists($cacheKey, $this->roleCache)) {
+            return $this->roleCache[$cacheKey];
+        }
+
         if ($this->owns($request, $plan)) {
-            return 'owner';
+            return $this->roleCache[$cacheKey] = 'owner';
         }
 
         $user = $request->user();
         if (! $user || ! $plan->is_collaborative) {
-            return null;
+            return $this->roleCache[$cacheKey] = null;
         }
 
-        return PlanMember::query()
+        if ($plan->relationLoaded('memberships')) {
+            $membership = $plan->memberships->firstWhere('user_id', $user->id);
+
+            return $this->roleCache[$cacheKey] = $membership?->role;
+        }
+
+        return $this->roleCache[$cacheKey] = PlanMember::query()
             ->where('plan_id', $plan->id)
             ->where('user_id', $user->id)
             ->value('role');

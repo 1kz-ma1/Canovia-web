@@ -2,106 +2,24 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\BehaviorEventType;
 use App\Models\Plan;
 use App\Models\WorkLog;
-use App\Services\BehaviorEventLogger;
-use App\Services\BehaviorIdentityService;
-use App\Services\DashboardPresentationService;
-use App\Services\ContinuityService;
-use App\Services\CalendarPresentationService;
+use App\Services\HomePageDataService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanProgressService;
-use App\Services\UserBehaviorService;
-use App\Services\UserStateService;
 use Illuminate\Http\Request;
 
 class HomeController extends Controller
 {
-    public function index(
-        Request $request,
-        BehaviorIdentityService $identity,
-        BehaviorEventLogger $eventLogger,
-        PlanOwnershipService $ownership,
-        UserBehaviorService $behaviorService,
-        UserStateService $stateService,
-        DashboardPresentationService $dashboardService,
-        ContinuityService $continuityService,
-        CalendarPresentationService $calendarService,
-    ) {
-        $actorToken = $identity->resolve($request);
-        $instantPrefetch = $request->header('X-Canovia-Instant-Navigation') === 'prefetch';
-
-        $plans = $ownership->ownedPlans($request, [
-            'tasks' => fn ($query) => $query->with(['prerequisite', 'resources', 'artifacts'])->orderBy('sort_order')->orderBy('id'),
-            'resources',
-            'artifacts',
-            'careerApplications.selectionEvents.interviewReview',
-            'careerCaptures',
-            'availabilityRules',
-            'availabilityOverrides',
-            'workLogs' => fn ($query) => $query->with('task')->latest('worked_on')->latest('id'),
-            'memberships',
-        ]);
-        if (! $instantPrefetch) {
-            $eventLogger->recordOnce(
-                $actorToken,
-                BehaviorEventType::DashboardViewed,
+    public function index(Request $request, HomePageDataService $page)
+    {
+        return view(
+            'dashboard.index',
+            $page->build(
                 $request,
-                metadata: ['owned_plan_count' => $plans->count()],
-            );
-        }
-        $editablePlans = $plans->filter(fn ($plan) => $ownership->canEdit($request, $plan))->values();
-        $collaborationPlans = $plans
-            ->filter(fn ($plan) => (bool) $plan->is_collaborative)
-            ->map(fn ($plan) => [
-                'plan' => $plan,
-                'role' => $ownership->role($request, $plan),
-                'member_count' => 1 + $plan->memberships->count(),
-            ])
-            ->values();
-        $baseline = $behaviorService->baseline($actorToken);
-        $state = $stateService->calculate($actorToken, $baseline, $editablePlans);
-        if (! $instantPrefetch) {
-            $stateService->captureDaily($actorToken, $state);
-        }
-        $dashboard = $dashboardService->build(
-            $plans,
-            $actorToken,
-            $baseline,
-            $state,
-            $request->session()->get('dashboard.recommendation_excluded', []),
-            $editablePlans->pluck('id')->all(),
-            $request->user(),
+                prefetch: $request->header('X-Canovia-Instant-Navigation') === 'prefetch',
+            ),
         );
-
-        $continuity = $continuityService->forPlans($editablePlans, $actorToken);
-        $dashboard['continuity'] = $continuity;
-        $dashboard['calendar_week'] = $calendarService->weekSummary($plans);
-
-        $primaryGuidance = $dashboard['guidance_deck']->first();
-
-        if ($primaryGuidance && ! $instantPrefetch) {
-            $adaptive = $primaryGuidance['adaptive'];
-            $eventLogger->recordOnce(
-                $actorToken,
-                BehaviorEventType::RecommendationShown,
-                $request,
-                $primaryGuidance['plan'],
-                $primaryGuidance['task'],
-                [
-                    'source' => 'dashboard_guidance',
-                    'selection' => 'objective_priority',
-                    'plan_priority' => (int) data_get($primaryGuidance, 'priority_evaluation.priority', 3),
-                    'plan_priority_mode' => (string) data_get($primaryGuidance, 'priority_evaluation.mode', 'auto'),
-                    'task_priority' => (int) $primaryGuidance['task']->priority,
-                    'priority_score' => $adaptive?->priorityScore,
-                ],
-                withinMinutes: 2,
-            );
-        }
-
-        return view('dashboard.index', compact('dashboard', 'collaborationPlans'));
     }
 
     public function legacy(Request $request, PlanProgressService $progressService, PlanOwnershipService $ownership)

@@ -16,5 +16,6 @@ return [
         '/timeline',
         '/navigate',
         '/calendar',
+        '/instant/core-bundle',
     ],
 ];

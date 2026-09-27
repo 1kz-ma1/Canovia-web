@@ -1,22 +1,37 @@
 @php
-    $routeName = request()->route()?->getName();
-    $mobileSection = match (true) {
-        request()->routeIs('inbox.*') => 'Inbox',
-        request()->routeIs('roadmap.*') => 'ロードマップ',
-        request()->routeIs('timeline.*') => 'タイムライン',
-        request()->routeIs('calendar.*') => 'カレンダー',
+    $surface = $instantSurface ?? match (true) {
+        request()->routeIs('inbox.*') => 'inbox',
+        request()->routeIs('roadmap.*') => 'roadmap',
+        request()->routeIs('timeline.*') => 'timeline',
+        request()->routeIs('calendar.*') => 'calendar',
+        default => 'home',
+    };
+
+    $routeName = match ($surface) {
+        'inbox' => 'inbox.index',
+        'roadmap' => 'roadmap.index',
+        'timeline' => 'timeline.index',
+        'calendar' => 'calendar.index',
+        default => 'home',
+    };
+
+    $mobileSection = match ($surface) {
+        'inbox' => 'Inbox',
+        'roadmap' => 'ロードマップ',
+        'timeline' => 'タイムライン',
+        'calendar' => 'カレンダー',
         default => 'ホーム',
     };
 
-    $desktopHomeActive = request()->routeIs('home') || request()->routeIs('calendar.*');
-    $desktopInboxActive = request()->routeIs('inbox.*');
-    $desktopRoadmapActive = request()->routeIs('roadmap.*');
-    $desktopTimelineActive = request()->routeIs('timeline.*');
+    $desktopHomeActive = in_array($surface, ['home', 'calendar'], true);
+    $desktopInboxActive = $surface === 'inbox';
+    $desktopRoadmapActive = $surface === 'roadmap';
+    $desktopTimelineActive = $surface === 'timeline';
 
-    $mobileHomeActive = request()->routeIs('home') || request()->routeIs('calendar.*');
-    $mobileInboxActive = request()->routeIs('inbox.*');
-    $mobileRoadmapActive = request()->routeIs('roadmap.*');
-    $mobileTimelineActive = request()->routeIs('timeline.*');
+    $mobileHomeActive = in_array($surface, ['home', 'calendar'], true);
+    $mobileInboxActive = $surface === 'inbox';
+    $mobileRoadmapActive = $surface === 'roadmap';
+    $mobileTimelineActive = $surface === 'timeline';
 
     $feedbackPlan = request()->route('plan');
     $feedbackTask = request()->route('task');
@@ -30,7 +45,7 @@
 
     $companionRoutePlan = request()->route('plan');
     $companionRouteTask = request()->route('task');
-    $companionRoadmapPlan = request()->routeIs('roadmap.*') && (($plan ?? null) instanceof \App\Models\Plan)
+    $companionRoadmapPlan = $surface === 'roadmap' && (($plan ?? null) instanceof \App\Models\Plan)
         ? $plan
         : null;
     $companionEntryPlan = $companionRoutePlan instanceof \App\Models\Plan
@@ -45,7 +60,8 @@
         default => 'global',
     };
     $companionSourceRoute = $routeName;
-    $companionSourcePath = request()->getRequestUri();
+    $companionSourcePath = $instantPath ?? request()->getRequestUri();
+    $feedbackPath = ltrim(parse_url($instantPath ?? request()->getRequestUri(), PHP_URL_PATH) ?: '/', '/');
 
     $instantMeta = [
         'mobileSection' => $mobileSection,
@@ -88,7 +104,7 @@
             ],
         ],
         'feedbackContext' => [
-            'page' => request()->path(),
+            'page' => $feedbackPath,
             'planId' => $feedbackPlanId ? (string) $feedbackPlanId : '',
             'taskId' => $feedbackTaskId ? (string) $feedbackTaskId : '',
         ],
@@ -109,7 +125,7 @@
         @endif
 
         @guest
-            @if (request()->routeIs('home'))
+            @if ($surface === 'home')
                 <div class="guest-protection-banner mb-4">
                     <span><strong>Guestデータを保護しておくと安心です</strong>。ホーム画面版には専用の引き継ぎを使えますが、アカウントを作れば端末変更やCookie削除にも強くなります。</span>
                     <a href="{{ route('auth.register.form') }}">データを保護する</a>
