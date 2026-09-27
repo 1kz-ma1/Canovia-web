@@ -100,6 +100,15 @@ final class MapProjectionService
                     x: 50,
                     y: 9,
                     action: route('goal_discovery.show', $goal),
+                    classicSurface: $this->surface(
+                        'Goal Context',
+                        (string) $goal->desired_state,
+                        'このPlanが目指している状態と、そこへ向かう前提をClassic画面で確認します。',
+                        [
+                            $this->action('目標Contextを開く', route('goal_discovery.show', $goal), true),
+                            $this->action('Planを開く', route('plans.show', $plan)),
+                        ],
+                    ),
                 ));
             }
 
@@ -119,6 +128,21 @@ final class MapProjectionService
                 x: 32,
                 y: 25,
                 action: route('plans.show', $plan),
+                classicSurface: $this->surface(
+                    'Plan',
+                    (string) $plan->title,
+                    filled($plan->description)
+                        ? Str::limit((string) $plan->description, 180)
+                        : 'このPlanの詳細・Task・ToolsをClassic画面で確認します。',
+                    [
+                        $this->action('Planを開く', route('plans.show', $plan), true),
+                        $this->action('Roadmapで見る', route('roadmap.index', ['plan_id' => $plan->id])),
+                    ],
+                    array_values(array_filter([
+                        $plan->category ?: null,
+                        filled($plan->deadline) ? '期限 '.$plan->deadline->format('Y/m/d') : null,
+                    ])),
+                ),
             ));
 
             if ($goal && filled($goal->desired_state)) {
@@ -130,6 +154,25 @@ final class MapProjectionService
 
         if ($plan instanceof Plan && $currentTask instanceof Task) {
             $primaryNodeId = 'task:'.$currentTask->id;
+            $toolId = is_array($primaryTool) ? (string) ($primaryTool['id'] ?? '') : '';
+            $primaryToolUrl = $toolId !== ''
+                ? $this->toolUrl($toolId, $plan, $currentTask)
+                : null;
+            $taskActions = [];
+
+            if ($primaryToolUrl) {
+                $taskActions[] = $this->action(
+                    (string) ($primaryTool['name'] ?? '実行方法').'で進める',
+                    $primaryToolUrl,
+                    true,
+                );
+            } else {
+                $taskActions[] = $this->action('Planを開いて進める', route('plans.show', $plan), true);
+            }
+
+            $taskActions[] = $this->action('Taskを編集', route('tasks.edit', $currentTask));
+            $taskActions[] = $this->action('Plan全体を見る', route('plans.show', $plan));
+
             $nodes->push($this->node(
                 id: $primaryNodeId,
                 type: 'task',
@@ -146,6 +189,19 @@ final class MapProjectionService
                 x: 50,
                 y: 50,
                 action: route('plans.show', $plan),
+                classicSurface: $this->surface(
+                    'Current Task',
+                    (string) $currentTask->title,
+                    filled($currentTask->next_action_note)
+                        ? (string) $currentTask->next_action_note
+                        : ((string) ($currentTask->description ?: 'このTaskを進めます。')),
+                    $taskActions,
+                    [
+                        '進捗 '.max(0, min(100, (int) $currentTask->progress_percent)).'%',
+                        $currentTask->status === 'doing' ? '進行中' : '未着手',
+                        (string) $plan->title,
+                    ],
+                ),
             ));
             $edges->push($this->edge('plan:'.$plan->id, $primaryNodeId, 'current_action', 1.0));
 
@@ -164,12 +220,26 @@ final class MapProjectionService
                     x: 68,
                     y: 25,
                     action: route('plans.show', $plan),
+                    classicSurface: $this->surface(
+                        'Next Task',
+                        (string) $nextTask->title,
+                        filled($nextTask->description)
+                            ? Str::limit((string) $nextTask->description, 180)
+                            : '現在Actionの次に取り組む候補です。',
+                        [
+                            $this->action('Planで確認', route('plans.show', $plan), true),
+                            $this->action('Taskを編集', route('tasks.edit', $nextTask)),
+                        ],
+                        [
+                            '進捗 '.max(0, min(100, (int) $nextTask->progress_percent)).'%',
+                            (string) $plan->title,
+                        ],
+                    ),
                 ));
                 $edges->push($this->edge($primaryNodeId, 'task:'.$nextTask->id, 'next', 0.72));
             }
 
-            if (is_array($primaryTool) && filled($primaryTool['id'] ?? null)) {
-                $toolId = (string) $primaryTool['id'];
+            if ($toolId !== '') {
                 $nodes->push($this->node(
                     id: 'tool:'.$toolId,
                     type: 'tool',
@@ -183,7 +253,20 @@ final class MapProjectionService
                     sizeWeight: 0.82,
                     x: 82,
                     y: 51,
-                    action: $this->toolUrl($toolId, $plan, $currentTask),
+                    action: $primaryToolUrl,
+                    classicSurface: $this->surface(
+                        'Execution Tool',
+                        (string) ($primaryTool['name'] ?? 'Tool'),
+                        (string) ($primaryTool['description'] ?? 'このTaskを進めるための実行手段です。'),
+                        [
+                            $this->action('このToolを開く', $primaryToolUrl, true),
+                            $this->action('TaskのPlanへ戻る', route('plans.show', $plan)),
+                        ],
+                        array_values(array_filter([
+                            filled($primaryTool['badge'] ?? null) ? (string) $primaryTool['badge'] : null,
+                            (string) $currentTask->title,
+                        ])),
+                    ),
                 ));
                 $edges->push($this->edge($primaryNodeId, 'tool:'.$toolId, 'executed_with', 0.86));
             }
@@ -207,6 +290,19 @@ final class MapProjectionService
                     x: 50,
                     y: 79,
                     action: route('timeline.index'),
+                    classicSurface: $this->surface(
+                        'Evidence',
+                        $evidence->typeLabel(),
+                        $evidence->summary(),
+                        [
+                            $this->action('Timelineで確認', route('timeline.index'), true),
+                            $this->action('TaskのPlanを開く', route('plans.show', $plan)),
+                        ],
+                        array_values(array_filter([
+                            $evidence->sourceLabel(),
+                            $evidence->occurred_at?->format('Y/m/d H:i'),
+                        ])),
+                    ),
                 ));
                 $edges->push($this->edge($primaryNodeId, 'evidence:'.$evidence->id, 'produced_evidence', 0.62));
             }
@@ -231,6 +327,17 @@ final class MapProjectionService
                 x: 18,
                 y: 52,
                 action: route('inbox.index'),
+                classicSurface: $this->surface(
+                    'Inbox',
+                    $pendingInboxCount > 1 ? '未整理の入力 '.$pendingInboxCount.'件' : $latestInbox->displayTitle(),
+                    $pendingInboxCount > 1
+                        ? '最新: '.$latestInbox->displayTitle()
+                        : 'まだ整理先が決まっていない入力です。',
+                    [
+                        $this->action('Inboxで整理', route('inbox.index'), true),
+                    ],
+                    [$latestInbox->sourceLabel()],
+                ),
             ));
 
             if ($plan instanceof Plan && $latestInbox->plan_id && (int) $latestInbox->plan_id === (int) $plan->id) {
@@ -309,6 +416,7 @@ final class MapProjectionService
     }
 
     /**
+     * @param array<string,mixed> $classicSurface
      * @return array<string,mixed>
      */
     private function node(
@@ -325,6 +433,7 @@ final class MapProjectionService
         float $x,
         float $y,
         ?string $action,
+        array $classicSurface = [],
     ): array {
         return [
             'id' => $id,
@@ -339,6 +448,7 @@ final class MapProjectionService
             'size_weight' => $sizeWeight,
             'position' => ['x' => $x, 'y' => $y],
             'available_action' => $action,
+            'classic_surface' => $classicSurface,
         ];
     }
 
@@ -358,6 +468,39 @@ final class MapProjectionService
             'relation' => $relation,
             'strength' => $strength,
             'secondary' => $secondary,
+        ];
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $actions
+     * @param array<int,string> $meta
+     * @return array<string,mixed>
+     */
+    private function surface(
+        string $kind,
+        string $title,
+        string $summary,
+        array $actions,
+        array $meta = [],
+    ): array {
+        return [
+            'kind' => $kind,
+            'title' => $title,
+            'summary' => $summary,
+            'actions' => $actions,
+            'meta' => $meta,
+        ];
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function action(string $label, string $url, bool $primary = false): array
+    {
+        return [
+            'label' => $label,
+            'url' => $url,
+            'primary' => $primary,
         ];
     }
 
