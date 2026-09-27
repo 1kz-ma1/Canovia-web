@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Enums\BehaviorEventType;
 use App\Models\BehaviorEvent;
 use App\Models\Feedback;
+use App\Models\GoalContext;
+use App\Models\GuidedExecution;
 use App\Models\PracticeQuestionCandidate;
 use App\Models\PracticeQuestionDemand;
 use App\Models\QuestionPack;
@@ -60,6 +62,18 @@ class AdminDashboardController extends Controller
             ->where('status', PracticeQuestionCandidate::STATUS_PENDING)
             ->count();
 
+        $goalDemandSince = now()->subDays(30);
+        $goalContext30d = GoalContext::query()
+            ->where('created_at', '>=', $goalDemandSince)
+            ->count();
+        $guidedExecution30d = GuidedExecution::query()
+            ->where('prepared_at', '>=', $goalDemandSince)
+            ->count();
+        $guidedReflection30d = GuidedExecution::query()
+            ->where('prepared_at', '>=', $goalDemandSince)
+            ->where('status', GuidedExecution::STATUS_COMPLETED)
+            ->count();
+
         return view('admin.index', compact(
             'feedbackNew',
             'generationAttempts',
@@ -70,6 +84,9 @@ class AdminDashboardController extends Controller
             'practiceDemand30d',
             'practiceGapQuestions30d',
             'pendingQuestionCandidateCount',
+            'goalContext30d',
+            'guidedExecution30d',
+            'guidedReflection30d',
         ));
     }
 }
