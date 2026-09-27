@@ -97,10 +97,14 @@
                                 $adaptive = $guidance['adaptive'];
                                 $tool = $guidance['recommended_tool'];
                             @endphp
-                            <article class="pk-v395-guidance-card plan-identity-shell" data-plan-accent="{{ $guidancePlan->accentKey() }}">
+                            <article
+                                class="pk-v395-guidance-card plan-identity-shell cursor-pointer transition hover:border-sky-300/25"
+                                data-plan-accent="{{ $guidancePlan->accentKey() }}"
+                                data-plan-card-url="{{ route('plans.show', $guidancePlan) }}"
+                            >
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="min-w-0">
-                                        <p class="plan-identity-chip text-[11px]"><span aria-hidden="true">{{ $guidancePlan->displayIcon() }}</span>{{ $guidancePlan->title }}</p>
+                                        <a href="{{ route('plans.show', $guidancePlan) }}" class="plan-identity-chip text-[11px] hover:text-sky-200"><span aria-hidden="true">{{ $guidancePlan->displayIcon() }}</span>{{ $guidancePlan->title }}</a>
                                         <h3 class="mt-2 text-base font-black leading-6 text-white">{{ $guidanceTask->title }}</h3>
                                     </div>
                                     <span class="badge {{ $guidanceIndex === 0 ? 'badge-green' : 'badge-slate' }}">{{ $guidanceIndex === 0 ? '最優先' : 'Plan '.($guidanceIndex + 1) }}</span>

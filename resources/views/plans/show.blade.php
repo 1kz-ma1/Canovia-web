@@ -68,36 +68,36 @@
             </div>
 
             <div class="w-full md:w-auto">
-                <div class="flex flex-wrap gap-2">
+                <div class="grid grid-cols-2 gap-2 md:flex md:flex-wrap">
                     @if ($toolFocusTask && ($primaryPlanAction['id'] ?? null) === 'study_activity')
-                        <a href="{{ route('plans.tasks.study_activity.show', [$plan, $toolFocusTask]) }}" class="btn-primary flex-1 md:flex-none">{{ $primaryPlanAction['icon'] ?? '◉' }} {{ data_get($primaryPlanAction, 'activity.action_label', '学習方法で進める') }}</a>
+                        <a href="{{ route('plans.tasks.study_activity.show', [$plan, $toolFocusTask]) }}" class="btn-primary col-span-2 min-h-12 w-full justify-center md:w-auto md:flex-none">{{ $primaryPlanAction['icon'] ?? '◉' }} {{ data_get($primaryPlanAction, 'activity.action_label', '学習方法で進める') }}</a>
                     @elseif ($toolFocusTask && ($primaryPlanAction['id'] ?? null) === 'ai_practice')
-                        <a href="{{ route('plans.tasks.study_practice.show', [$plan, $toolFocusTask]) }}" class="btn-primary flex-1 md:flex-none" data-guide-target="study-practice">✦ AI演習で進める</a>
+                        <a href="{{ route('plans.tasks.study_practice.show', [$plan, $toolFocusTask]) }}" class="btn-primary col-span-2 min-h-12 w-full justify-center md:w-auto md:flex-none" data-guide-target="study-practice">✦ AI演習で進める</a>
                     @elseif ($toolFocusTask && ($primaryPlanAction['id'] ?? null) === 'career_workspace')
-                        <a href="{{ route('plans.career.index', $plan) }}" class="btn-primary flex-1 md:flex-none">◆ Careerで進める</a>
+                        <a href="{{ route('plans.career.index', $plan) }}" class="btn-primary col-span-2 min-h-12 w-full justify-center md:w-auto md:flex-none">◆ Careerで進める</a>
                     @elseif ($toolFocusTask && ($primaryPlanAction['id'] ?? null) === 'artifacts')
-                        <a href="{{ route('plans.artifacts.index', $plan) }}" class="btn-primary flex-1 md:flex-none">◇ 制作ファイルを開く</a>
+                        <a href="{{ route('plans.artifacts.index', $plan) }}" class="btn-primary col-span-2 min-h-12 w-full justify-center md:w-auto md:flex-none">◇ 制作ファイルを開く</a>
                     @elseif ($toolFocusTask && ($primaryPlanAction['id'] ?? null) === 'resources')
-                        <a href="{{ route('plans.resources.index', $plan) }}" class="btn-primary flex-1 md:flex-none">⌘ 関連資料を開く</a>
+                        <a href="{{ route('plans.resources.index', $plan) }}" class="btn-primary col-span-2 min-h-12 w-full justify-center md:w-auto md:flex-none">⌘ 関連資料を開く</a>
                     @elseif ($toolFocusTask && ($primaryPlanAction['id'] ?? null) === 'guided_execution')
-                        <a href="{{ route('plans.tasks.guided_execution.show', [$plan, $toolFocusTask]) }}" class="btn-primary flex-1 md:flex-none">◎ 方針を決めて実行する</a>
+                        <a href="{{ route('plans.tasks.guided_execution.show', [$plan, $toolFocusTask]) }}" class="btn-primary col-span-2 min-h-12 w-full justify-center md:w-auto md:flex-none">◎ 方針を決めて実行する</a>
                     @elseif ($toolFocusTask && ($primaryPlanAction['id'] ?? null) === 'timer')
-                        <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form class="flex-1 md:flex-none">
+                        <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form class="col-span-2 w-full md:w-auto md:flex-none">
                             @csrf
                             <input type="hidden" name="task_id" value="{{ $toolFocusTask->id }}">
                             <input type="hidden" name="source" value="plan">
-                            <button type="submit" class="btn-primary w-full">◷ 集中タイマーで進める</button>
+                            <button type="submit" class="btn-primary min-h-12 w-full justify-center">◷ 集中タイマーで進める</button>
                         </form>
                     @endif
                     @if (! empty($planTools))
-                        <a href="#canovia-tools" class="btn-secondary flex-1 md:flex-none">Tools</a>
+                        <a href="#canovia-tools" class="btn-secondary min-h-11 w-full justify-center md:w-auto md:flex-none">Tools</a>
                     @endif
                     @if ($canManage ?? false)
-                        <a href="{{ route('plans.review_assistant.show', $plan) }}" class="{{ $needsPlanUpdate ? 'btn-primary' : 'btn-secondary' }} flex-1 md:flex-none">計画を更新</a>
+                        <a href="{{ route('plans.review_assistant.show', $plan) }}" class="{{ $needsPlanUpdate ? 'btn-primary' : 'btn-secondary' }} min-h-11 w-full justify-center md:w-auto md:flex-none">計画を更新</a>
                     @endif
-                    <a href="{{ route('plans.resources.index', $plan) }}" class="btn-secondary flex-1 md:flex-none">関連資料{{ $plan->resources->isNotEmpty() ? ' · '.$plan->resources->count() : '' }}</a>
+                    <a href="{{ route('plans.resources.index', $plan) }}" class="btn-secondary min-h-11 w-full justify-center md:w-auto md:flex-none">関連資料{{ $plan->resources->isNotEmpty() ? ' · '.$plan->resources->count() : '' }}</a>
                     @if ($showArtifactEntry)
-                        <a href="{{ route('plans.artifacts.index', $plan) }}" class="btn-secondary flex-1 md:flex-none">制作ファイル{{ $plan->artifacts->isNotEmpty() ? ' · '.$plan->artifacts->count() : '' }}</a>
+                        <a href="{{ route('plans.artifacts.index', $plan) }}" class="btn-secondary min-h-11 w-full justify-center md:w-auto md:flex-none">制作ファイル{{ $plan->artifacts->isNotEmpty() ? ' · '.$plan->artifacts->count() : '' }}</a>
                     @endif
                 </div>
                 @if ($canManage ?? false)

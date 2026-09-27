@@ -1,7 +1,7 @@
 <dialog class="onboarding-intro-dialog" data-onboarding-intro aria-labelledby="onboarding-intro-title">
     <section class="onboarding-intro-card pk-onboarding-intro-card">
         <img src="/brand/mascot-guide.webp" alt="" class="pk-onboarding-mascot" aria-hidden="true">
-        <div class="relative z-10 flex items-start justify-between gap-4">
+        <div class="relative z-10">
             <div>
                 <div class="flex items-center gap-2">
                     <img src="/brand/logo-mark.svg" alt="" class="h-8 w-8" width="32" height="32">
@@ -10,7 +10,6 @@
                 <h2 id="onboarding-intro-title" class="mt-2 max-w-md text-2xl font-black text-slate-50">Canoviaは、話しながら次の一歩を作るアプリです</h2>
                 <p class="mt-1 text-xs text-slate-500">Canoviaは、次の一歩を決めやすくするアプリです。</p>
             </div>
-            <button type="button" class="feedback-close" data-onboarding-intro-skip aria-label="案内をスキップ">×</button>
         </div>
 
         <p class="relative z-10 mt-4 max-w-lg text-sm leading-7 text-slate-300">
@@ -33,9 +32,11 @@
             </article>
         </div>
 
-        <div class="relative z-10 mt-6 flex flex-col gap-2 sm:flex-row">
-            <button type="button" class="btn-primary flex-1 justify-center" data-onboarding-intro-start>Canoviaと始める</button>
-            <button type="button" class="btn-secondary flex-1 justify-center" data-onboarding-intro-skip>今はスキップ</button>
+        <div class="relative z-10 mt-6">
+            <button type="button" class="btn-primary w-full justify-center" data-onboarding-intro-start>Canoviaと始める</button>
+            @guest
+                <p class="mt-3 text-center text-xs text-slate-500">すでにアカウントをお持ちなら <a href="{{ route('auth.login.form') }}" class="font-bold text-sky-300 hover:text-sky-200">ログイン</a></p>
+            @endguest
         </div>
     </section>
 </dialog>

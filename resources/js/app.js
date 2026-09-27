@@ -2067,7 +2067,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const skipButton = root?.querySelector('[data-onboarding-skip]');
     const introDialog = document.querySelector('[data-onboarding-intro]');
     const introStart = introDialog?.querySelector('[data-onboarding-intro-start]');
-    const introSkips = introDialog ? [...introDialog.querySelectorAll('[data-onboarding-intro-skip]')] : [];
 
     const version = Number(body?.dataset.onboardingVersion || 1);
     const stateKey = `pacekeeper.onboarding.v${version}`;
@@ -2339,7 +2338,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setStage('home-create');
         window.setTimeout(() => showStep('home-create'), 80);
     });
-    introSkips.forEach((button) => button.addEventListener('click', skipOnboarding));
+    introDialog?.addEventListener('cancel', (event) => event.preventDefault());
     skipButton?.addEventListener('click', skipOnboarding);
     window.addEventListener('resize', placeOverlay);
     window.addEventListener('scroll', placeOverlay, { passive: true });
@@ -3430,4 +3429,17 @@ document.addEventListener('canovia:page-ready', initializeInstantCorePage);
 document.addEventListener('DOMContentLoaded', () => {
     if (document.body?.dataset.focusMode === '1') return;
     mountCanoviaInstantNavigation();
+});
+
+
+// V41.23: guidance cards are a natural drill-down surface. Keep explicit
+// actions, forms and disclosure controls authoritative; card background opens
+// the owning Plan without requiring a separate "details" affordance.
+document.addEventListener('click', (event) => {
+    const card = event.target.closest?.('[data-plan-card-url]');
+    if (!card || event.defaultPrevented) return;
+    if (event.target.closest?.('a, button, form, input, select, textarea, label, summary, details')) return;
+
+    const url = card.dataset.planCardUrl;
+    if (url) window.location.assign(url);
 });

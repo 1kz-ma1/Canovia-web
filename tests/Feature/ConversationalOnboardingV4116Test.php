@@ -56,8 +56,16 @@ class ConversationalOnboardingV4116Test extends TestCase
             'password' => 'password123',
             'password_confirmation' => 'password123',
         ])
-            ->assertRedirect(route('plans.create'))
+            ->assertRedirect(route('first_run.show'))
             ->assertSessionHas('status', 'アカウントを作成しました。まずCanoviaに、今進めたいことをそのまま話してみてください。');
+
+        $this->get(route('first_run.show'))
+            ->assertOk()
+            ->assertSee('はじめまして')
+            ->assertDontSee('今はスキップ');
+
+        $this->post(route('first_run.start'))
+            ->assertRedirect(route('plans.create'));
 
         $this->get(route('plans.create'))
             ->assertOk()

@@ -7,6 +7,7 @@ use App\Models\GoalContextFact;
 use App\Models\Plan;
 use App\Models\User;
 use App\Services\GoalContextService;
+use App\Services\FirstRunService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -23,7 +24,7 @@ class AdaptiveGoalDiscoveryV4114Test extends TestCase
 
     public function test_plan_create_opens_goal_discovery_without_forcing_input_mode_selection(): void
     {
-        $this->get(route('plans.create'))
+        $this->withCookie(FirstRunService::COOKIE, '1')->get(route('plans.create'))
             ->assertOk()
             ->assertSee('どんな未来にしたい？')
             ->assertSee('サッカーが上手くなりたい')
@@ -279,7 +280,7 @@ class AdaptiveGoalDiscoveryV4114Test extends TestCase
 
     public function test_manual_plan_form_remains_available_as_fallback(): void
     {
-        $this->get(route('plans.create.manual'))
+        $this->withCookie(FirstRunService::COOKIE, '1')->get(route('plans.create.manual'))
             ->assertOk()
             ->assertSee('まず、目標の名前だけ決めよう。')
             ->assertSee('計画を作ってAIへ進む')

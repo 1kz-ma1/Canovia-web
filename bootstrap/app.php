@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use App\Http\Middleware\EnsureAdminAccess;
 use App\Http\Middleware\EnsureFeatureAccess;
+use App\Http\Middleware\EnsureFirstRunStarted;
 use App\Http\Middleware\MeasurePagePerformance;
 use App\Http\Middleware\NormalizeAiJsonInput;
 use App\Http\Middleware\RedirectLegacyCanoviaHost;
@@ -32,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // failures are visible in diagnostics.
         $middleware->appendToGroup('web', TrackAiPlanFunnel::class);
         $middleware->appendToGroup('web', NormalizeAiJsonInput::class);
+        $middleware->appendToGroup('web', EnsureFirstRunStarted::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
