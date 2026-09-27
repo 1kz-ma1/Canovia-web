@@ -44,7 +44,7 @@ class AuthController extends Controller
 
         $claimMessages = [];
         if ($claimed > 0) $claimMessages[] = "{$claimed}件のGuest計画";
-        if ($claimedMemos > 0) $claimMessages[] = "{$claimedMemos}件の未来メモ";
+        if ($claimedMemos > 0) $claimMessages[] = "{$claimedMemos}件の保存情報";
 
         return redirect()->intended(route('home'))->with(
             'status',
@@ -78,13 +78,15 @@ class AuthController extends Controller
 
         $claimMessages = [];
         if ($claimed > 0) $claimMessages[] = "{$claimed}件のGuest計画";
-        if ($claimedMemos > 0) $claimMessages[] = "{$claimedMemos}件の未来メモ";
+        if ($claimedMemos > 0) $claimMessages[] = "{$claimedMemos}件の保存情報";
 
-        return redirect()->intended(route('home'))->with(
+        $defaultRoute = $claimed > 0 ? route('home') : route('plans.create');
+
+        return redirect()->intended($defaultRoute)->with(
             'status',
             $claimMessages !== []
                 ? 'アカウントを作成し、' . implode('と', $claimMessages) . 'を保護しました。'
-                : 'アカウントを作成しました。これから作る計画と未来メモはこのアカウントに保存されます。'
+                : 'アカウントを作成しました。まずCanoviaに、今進めたいことをそのまま話してみてください。'
         );
     }
 
