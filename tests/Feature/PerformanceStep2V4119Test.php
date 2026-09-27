@@ -27,11 +27,13 @@ class PerformanceStep2V4119Test extends TestCase
     public function test_service_worker_forces_new_activation_and_disables_navigation_preload_early(): void
     {
         $source = file_get_contents(public_path('sw.js'));
+        $registrationSource = file_get_contents(resource_path('js/instant-start.mjs'));
 
         $this->assertStringContainsString("canovia-shell-v41-19-1", $source);
         $this->assertGreaterThanOrEqual(2, substr_count($source, 'navigationPreload.disable()'));
         $this->assertStringContainsString("self.addEventListener('install'", $source);
         $this->assertStringContainsString("self.addEventListener('activate'", $source);
+        $this->assertStringContainsString("registration.navigationPreload?.disable?.()", $registrationSource);
     }
 
     public function test_home_batches_current_task_evidence_into_one_query(): void
