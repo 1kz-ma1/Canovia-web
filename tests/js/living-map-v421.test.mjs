@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildFocusLayout, oneHopNodeIds } from '../../resources/js/living-map.mjs';
+import {
+    buildFocusLayout,
+    mapReturnDecision,
+    oneHopNodeIds,
+} from '../../resources/js/living-map.mjs';
 
 const nodes = [
     { id: 'goal:1', positionRole: 'future-goal' },
@@ -44,4 +48,30 @@ test('tool focus moves its current task to the left instead of overlapping cente
 
     assert.deepEqual(layout.positions.get('tool:ai'), { x: 50, y: 50 });
     assert.ok(layout.positions.get('task:1').x < 50);
+});
+
+test('BFCache return revalidates while a fresh page only reports an already changed projection', () => {
+    assert.equal(mapReturnDecision({
+        persisted: true,
+        currentProjectionKey: 'before',
+        previousProjectionKey: 'before',
+    }), 'revalidate');
+
+    assert.equal(mapReturnDecision({
+        persisted: false,
+        currentProjectionKey: 'after',
+        previousProjectionKey: 'before',
+    }), 'updated');
+
+    assert.equal(mapReturnDecision({
+        persisted: false,
+        currentProjectionKey: 'same',
+        previousProjectionKey: 'same',
+    }), 'clear');
+
+    assert.equal(mapReturnDecision({
+        persisted: true,
+        currentProjectionKey: 'same',
+        previousProjectionKey: '',
+    }), 'none');
 });

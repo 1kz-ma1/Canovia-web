@@ -10,7 +10,11 @@
         $primaryNodeId = $graph['primary_node_id'] ?? null;
     @endphp
 
-    <section class="canovia-map-page" data-canovia-map-page>
+    <section
+        class="canovia-map-page"
+        data-canovia-map-page
+        data-map-projection-key="{{ $graph['projection_key'] ?? '' }}"
+    >
         <div class="canovia-map-hero">
             <div class="canovia-map-hero-copy">
                 <p class="canovia-map-kicker">Experimental · Living Goal Map</p>
@@ -25,6 +29,11 @@
                 <a href="{{ route('home') }}" class="btn-secondary">Classic Home</a>
                 <a href="{{ route('roadmap.index') }}" class="btn-secondary">Roadmap</a>
             </div>
+        </div>
+
+        <div class="canovia-map-update-status hidden" data-map-update-status role="status" aria-live="polite">
+            <span class="canovia-map-update-status-mark" aria-hidden="true">✦</span>
+            <span>Mapを最新の状態へ更新しました</span>
         </div>
 
         <div class="canovia-map-workspace" data-map-workspace>
@@ -158,8 +167,8 @@
         </div>
 
         <p class="canovia-map-note">
-            Focus中もMap自体はContextの理解に専念します。編集・入力・実行はClassic Surfaceから既存画面へ入り、
-            既存のController・権限・validationをそのまま利用します。
+            Focus中もMap自体はContextの理解に専念します。Classic Surfaceから実行画面へ移動したあとは、
+            Mapへ戻った時だけ最新状態を確認し、Primary ActionやEvidenceなどに意味のある差がある場合だけ静かに再配置します。
         </p>
     </section>
 @endsection

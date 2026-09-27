@@ -30,7 +30,8 @@ final class MapProjectionService
      *     nodes: Collection<int,array<string,mixed>>,
      *     edges: Collection<int,array<string,mixed>>,
      *     primary_node_id:?string,
-     *     has_primary_action:bool
+     *     has_primary_action:bool,
+     *     projection_key:string
      * }
      */
     public function build(Request $request): array
@@ -345,11 +346,15 @@ final class MapProjectionService
             }
         }
 
+        $nodes = $nodes->values();
+        $edges = $edges->values();
+
         return [
-            'nodes' => $nodes->values(),
-            'edges' => $edges->values(),
+            'nodes' => $nodes,
+            'edges' => $edges,
             'primary_node_id' => $primaryNodeId,
             'has_primary_action' => $primaryNodeId !== null,
+            'projection_key' => $this->projectionKey($nodes, $edges, $primaryNodeId),
         ];
     }
 
@@ -502,6 +507,20 @@ final class MapProjectionService
             'url' => $url,
             'primary' => $primary,
         ];
+    }
+
+    private function projectionKey(Collection $nodes, Collection $edges, ?string $primaryNodeId): string
+    {
+        $payload = [
+            'primary_node_id' => $primaryNodeId,
+            'nodes' => $nodes->all(),
+            'edges' => $edges->all(),
+        ];
+
+        return hash(
+            'sha256',
+            (string) json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        );
     }
 
     private function toolUrl(string $toolId, Plan $plan, Task $task): string
