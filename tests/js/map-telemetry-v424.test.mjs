@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
     advanceMapTelemetryFlow,
+    advanceMapTelemetryForClassicNavigation,
     attachMapTelemetryToWorkStartForm,
     ensureMapTelemetryFlow,
     mapTelemetryMetadata,
@@ -62,4 +63,20 @@ test('work start form receives and consumes one pending Map flow', () => {
     assert.equal(inputs.get('map_flow_elapsed_ms').value, '3000');
     assert.equal(inputs.get('map_flow_step_count').value, '1');
     assert.equal(readMapTelemetryFlow(windowRef, 4000), null);
+});
+
+test('classic Home navigation ends a pending Map flow instead of misattributing later work', () => {
+    const windowRef = fakeWindow();
+    windowRef.location.pathname = '/plans/1';
+    windowRef.location.href = 'https://example.test/plans/1';
+    ensureMapTelemetryFlow(windowRef, 1000);
+
+    const result = advanceMapTelemetryForClassicNavigation(
+        { href: 'https://example.test/' },
+        windowRef,
+        2000,
+    );
+
+    assert.equal(result, null);
+    assert.equal(readMapTelemetryFlow(windowRef, 2000), null);
 });
