@@ -213,6 +213,8 @@ class CompanionConversationService
             ->map(fn (array $message) => strtoupper((string) $message['role']).': '.trim((string) $message['content']))
             ->implode("\n");
 
+        $contextText = $this->context->prompt($context);
+
         return <<<PROMPT
 あなたはCanovia Companionです。
 汎用雑談AIではなく、ユーザーが目標へ進むためにCanoviaが既に持つ文脈を使って伴走してください。
@@ -240,7 +242,7 @@ payload_jsonはJSONオブジェクトを文字列化して返す。
 Candidateはまだ未反映であり、返答内でも「変更した」と表現しない。
 
 【CANOVIA CONTEXT】
-{$this->context->prompt($context)}
+{$contextText}
 
 【RECENT CONVERSATION】
 {$historyText}
