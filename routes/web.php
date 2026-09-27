@@ -49,8 +49,10 @@ use App\Http\Controllers\CareerWorkspaceController;
 use App\Http\Controllers\InterviewReviewController;
 use App\Http\Controllers\GuidedExecutionController;
 use App\Http\Controllers\CompanionController;
+use App\Http\Controllers\CoreFragmentBundleController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/instant/core-bundle', CoreFragmentBundleController::class)->middleware('throttle:60,1')->name('instant.core_bundle');
 
 // 未来メモ / goal discovery
 Route::get('/future-memos', [FutureMemoController::class, 'index'])->name('future_memos.index');
