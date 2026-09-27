@@ -47,6 +47,12 @@ return [
             'label' => 'Canovia Companion',
             'free' => false,
         ],
+        FeatureKey::ConversationalOnboarding->value => [
+            'label' => 'Conversational Onboarding',
+            // The first companion experience is part of the Free goal path.
+            // Ongoing Companion conversation remains Premium.
+            'free' => true,
+        ],
         FeatureKey::StudyLongTermWeaknessProfile->value => [
             'label' => 'Study Long-term Weakness Profile',
             'free' => false,
