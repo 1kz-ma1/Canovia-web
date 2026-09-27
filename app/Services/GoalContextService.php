@@ -204,8 +204,12 @@ class GoalContextService
         $score = collect(self::READINESS_WEIGHTS)
             ->sum(fn (int $weight, string $dimension) => ($coverage[$dimension] ?? false) ? $weight : 0);
 
+        $essentialReady = ($coverage['desired_state'] ?? false)
+            && ($coverage['current_state'] ?? false)
+            && ($coverage['success_signal'] ?? false);
+
         $state = match (true) {
-            $score >= 70 => 'high',
+            $score >= 70 && $essentialReady => 'high',
             $score >= 40 => 'medium',
             default => 'low',
         };
@@ -218,6 +222,21 @@ class GoalContextService
         ])->save();
 
         return $context->fresh(['facts']);
+    }
+
+    public function attachPlan(GoalContext $context, Plan $plan): GoalContext
+    {
+        if ($context->plan_id !== null && (int) $context->plan_id !== (int) $plan->id) {
+            throw new InvalidArgumentException('Goal Context is already linked to another plan.');
+        }
+
+        $context->update([
+            'plan_id' => (int) $plan->id,
+            'user_id' => $plan->user_id ?? $context->user_id,
+            'actor_token' => $plan->user_id ? null : $context->actor_token,
+        ]);
+
+        return $this->recalculate($context);
     }
 
     /**
