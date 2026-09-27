@@ -110,7 +110,7 @@
                     @csrf
                     <input type="hidden" name="goal_context_id" value="{{ $goalContext->id }}">
                     <input type="hidden" name="title" value="{{ $goalContext->desired_state }}">
-                    <input type="hidden" name="create_request_id" value="{{ (string) IlluminateSupportStr::uuid() }}">
+                    <input type="hidden" name="create_request_id" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
                     <button type="submit" class="btn-primary">この情報で仮Planへ進む</button>
                 </form>
             </section>
@@ -194,7 +194,7 @@
                         @csrf
                         <input type="hidden" name="goal_context_id" value="{{ $goalContext->id }}">
                         <input type="hidden" name="title" value="{{ $goalContext->desired_state }}">
-                        <input type="hidden" name="create_request_id" value="{{ (string) IlluminateSupportStr::uuid() }}">
+                        <input type="hidden" name="create_request_id" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
                         <button type="submit" class="{{ $planButtonPrimary ? 'btn-primary' : 'btn-secondary' }}">仮Planへ進む</button>
                     </form>
                 </div>
