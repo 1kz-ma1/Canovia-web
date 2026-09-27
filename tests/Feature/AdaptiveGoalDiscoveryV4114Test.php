@@ -224,7 +224,7 @@ class AdaptiveGoalDiscoveryV4114Test extends TestCase
         $this->actingAs($user)
             ->post(route('plans.store'), [
                 'goal_context_id' => $context->id,
-                'title' => $context->desired_state,
+                'title' => 'client-side tampered title',
                 'create_request_id' => (string) Str::uuid(),
             ])
             ->assertSessionHasNoErrors();
@@ -232,6 +232,7 @@ class AdaptiveGoalDiscoveryV4114Test extends TestCase
         $plan = Plan::firstOrFail();
 
         $this->assertSame($plan->id, $context->fresh()->plan_id);
+        $this->assertSame($context->desired_state, $plan->title);
         $this->assertSame(25, $context->fresh()->readiness_score);
 
         $this->actingAs($user)
