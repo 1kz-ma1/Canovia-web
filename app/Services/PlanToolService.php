@@ -12,6 +12,7 @@ class PlanToolService
     public function __construct(
         private readonly FeatureAccessService $featureAccess,
         private readonly StudyActivityPolicyService $studyActivities,
+        private readonly GuidedExecutionPolicyService $guidedExecutions,
     ) {}
 
     /**
@@ -126,6 +127,23 @@ class PlanToolService
                 'icon' => '◇',
                 'recommended' => $artifactCount > 0 || $this->projectWorkFriendly($task),
                 'badge' => $artifactCount > 0 ? "{$artifactCount}件" : '制作',
+            ];
+        }
+
+        $hasSpecializedRecommended = collect($tools)->contains(
+            fn (array $tool) => ($tool['id'] ?? null) !== 'timer' && (bool) ($tool['recommended'] ?? false)
+        );
+
+        if (! $hasSpecializedRecommended) {
+            $guided = $this->guidedExecutions->assess($plan, $task);
+            $tools[] = [
+                'id' => 'guided_execution',
+                'name' => '実行前後を一緒に整理',
+                'description' => $guided['reason'],
+                'icon' => '◎',
+                'recommended' => (bool) $guided['recommended'],
+                'badge' => $guided['recommended'] ? 'おすすめ' : '振り返り',
+                'fit_score' => (int) $guided['score'],
             ];
         }
 
