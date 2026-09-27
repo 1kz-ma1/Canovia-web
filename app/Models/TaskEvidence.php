@@ -67,6 +67,7 @@ class TaskEvidence extends Model
             'artifact_state_observed' => '制作ファイル',
             'focus_session_completed' => '集中作業',
             'focus_session_interrupted' => '集中作業を中断',
+            'guided_execution_reflected' => '実行振り返り',
             'interview_review_completed' => '面接振り返り',
             'interview_result_recorded' => '選考結果',
             default => '活動',
@@ -107,6 +108,14 @@ class TaskEvidence extends Model
             'focus_session_interrupted' => sprintf(
                 '集中タイマーを%d分で中断しました。取り組んだ事実だけを記録しています。',
                 (int) data_get($this->metadata, 'actual_minutes', 0),
+            ),
+            'guided_execution_reflected' => sprintf(
+                '「%s」を実行。%s%s',
+                trim((string) data_get($this->metadata, 'intent')) ?: '今回のAction',
+                trim((string) data_get($this->metadata, 'actual_outcome')) ?: '振り返りを記録しました。',
+                filled(data_get($this->metadata, 'next_adjustment'))
+                    ? ' 次: '.trim((string) data_get($this->metadata, 'next_adjustment'))
+                    : '',
             ),
             'interview_review_completed' => sprintf(
                 '%sの面接振り返りを完了。次に意識すること: %s',
