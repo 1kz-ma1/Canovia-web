@@ -27,4 +27,4 @@ jobs:
       - run: php -l bootstrap/app.php
       - run: php -l config/performance.php
       - run: php artisan migrate:fresh --force
-      - run: php artisan test tests/Feature/PerformanceObservabilityV4117Test.php tests/Feature/InboxFoundationV4113Test.php tests/Feature/BehaviorTrackingTest.php
+      - run: php artisan test tests/Feature/PerformanceObservabilityV4117Test.php tests/Feature/InboxFoundationV4113Test.php tests/Feature/ConversationalOnboardingV4116Test.php
