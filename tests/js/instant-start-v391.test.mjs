@@ -80,7 +80,7 @@ async function testOnlineFallbackSafety() {
 function testWorkerBoundaries() {
     assert.match(swSource, /request\.method !== 'GET'/);
     assert.match(swSource, /url\.origin !== self\.location\.origin/);
-    assert.match(swSource, /INSTANT_START_PATHS = new Set\(\[\s*'\/'\s*,\s*'\/navigate'\s*,\s*'\/roadmap'/s);
+    assert.match(swSource, /INSTANT_START_PATHS = new Set\(\[\s*'\/'\s*,\s*'\/navigate'\s*,\s*'\/inbox'\s*,\s*'\/roadmap'/s);
     assert.match(swSource, /_canovia_network/);
     assert.match(swSource, /navigationNetworkResponse/);
     assert.match(swSource, /STATIC_ASSETS\.includes\(url\.pathname\)/);
