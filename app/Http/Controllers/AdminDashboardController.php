@@ -11,6 +11,7 @@ use App\Models\PracticeQuestionCandidate;
 use App\Models\PracticeQuestionDemand;
 use App\Models\QuestionPack;
 use App\Services\AdminAccessService;
+use App\Services\MapTelemetryService;
 use Illuminate\Http\Request;
 
 class AdminDashboardController extends Controller
@@ -19,7 +20,7 @@ class AdminDashboardController extends Controller
     {
     }
 
-    public function index(Request $request)
+    public function index(Request $request, MapTelemetryService $mapTelemetry)
     {
         if (! $this->access->authorized($request)) {
             return redirect()->route('admin.login');
@@ -74,6 +75,9 @@ class AdminDashboardController extends Controller
             ->where('status', GuidedExecution::STATUS_COMPLETED)
             ->count();
 
+        $mapTelemetry7d = $mapTelemetry->summary(7);
+        $mapTelemetry30d = $mapTelemetry->summary(30);
+
         return view('admin.index', compact(
             'feedbackNew',
             'generationAttempts',
@@ -87,6 +91,8 @@ class AdminDashboardController extends Controller
             'goalContext30d',
             'guidedExecution30d',
             'guidedReflection30d',
+            'mapTelemetry7d',
+            'mapTelemetry30d',
         ));
     }
 }

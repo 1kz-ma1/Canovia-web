@@ -1,3 +1,12 @@
+import {
+    advanceMapTelemetryFlow,
+    clearMapTelemetryFlow,
+    ensureMapTelemetryFlow,
+    mapClientDevice,
+    mapClientSurface,
+    mapTelemetryMetadata,
+} from './map-telemetry.mjs';
+
 const PENDING_REEVALUATION_KEY = 'canovia.map.pending-reevaluation.v1';
 
 function roleGroup(role = '') {
@@ -77,6 +86,14 @@ export function buildFocusLayout(nodes, edges, selectedId) {
     return { selectedId, visibleIds, positions };
 }
 
+export function mapHistoryDirection(currentDepth, targetDepth) {
+    const current = Math.max(0, Number(currentDepth || 0));
+    const target = Math.max(0, Number(targetDepth || 0));
+    if (target < current) return 'back';
+    if (target > current) return 'forward';
+    return 'same';
+}
+
 export function mapReturnDecision({
     persisted = false,
     currentProjectionKey = '',
@@ -134,6 +151,7 @@ export function mountLivingGoalMap({
     documentRef = globalThis.document,
     windowRef = globalThis.window,
     fetchRef = globalThis.fetch,
+    recordBehaviorRef = null,
 } = {}) {
     const page = documentRef?.querySelector?.('[data-canovia-map-page]');
     if (!page || !windowRef) return null;
@@ -153,7 +171,9 @@ export function mountLivingGoalMap({
 
     const nodes = nodeElements.map((element) => ({
         id: element.dataset.mapNodeId,
+        nodeType: element.dataset.mapNodeType || '',
         positionRole: element.dataset.mapPositionRole || '',
+        isPrimary: element.dataset.mapIsPrimary === '1',
         x: Number(element.dataset.mapX || 50),
         y: Number(element.dataset.mapY || 50),
     }));
@@ -166,7 +186,30 @@ export function mountLivingGoalMap({
     }));
 
     const nodeElementById = new Map(nodeElements.map((element) => [element.dataset.mapNodeId, element]));
+    const telemetryStart = ensureMapTelemetryFlow(windowRef);
+    const trackTelemetry = (eventType, extra = {}, advanceStep = false) => {
+        if (typeof recordBehaviorRef !== 'function') return;
+
+        const nowMs = Date.now();
+        const flow = advanceStep
+            ? advanceMapTelemetryFlow(windowRef, nowMs, 1)
+            : ensureMapTelemetryFlow(windowRef, nowMs).flow;
+
+        recordBehaviorRef(page, eventType, {
+            metadata: mapTelemetryMetadata(flow, {
+                surface: mapClientSurface(windowRef),
+                device: mapClientDevice(windowRef),
+                ...extra,
+            }, nowMs),
+        });
+    };
+
+    if (telemetryStart.isNew) {
+        trackTelemetry('map_viewed');
+    }
+
     let activeFocusId = null;
+    let focusHistoryDepth = Math.max(0, Number(windowRef.history.state?.canoviaMapFocusDepth || 0));
     let revalidationPromise = null;
     let updateTimer = null;
     let disposed = false;
@@ -251,7 +294,11 @@ export function mountLivingGoalMap({
 
     const removeInvalidFocusHash = () => {
         if (!focusIdFromLocation(windowRef)) return;
-        windowRef.history.replaceState(windowRef.history.state, '', mapUrlWithoutFocus(windowRef));
+        const nextState = { ...(windowRef.history.state || {}) };
+        delete nextState.canoviaMapFocus;
+        delete nextState.canoviaMapFocusDepth;
+        focusHistoryDepth = 0;
+        windowRef.history.replaceState(nextState, '', mapUrlWithoutFocus(windowRef));
     };
 
     const openFocus = (nodeId, { historyMode = 'push' } = {}) => {
@@ -281,7 +328,11 @@ export function mountLivingGoalMap({
         renderSurface(nodeId);
 
         if (historyMode === 'push' && windowRef.location.hash !== focusHash(nodeId)) {
-            windowRef.history.pushState({ canoviaMapFocus: nodeId }, '', focusHash(nodeId));
+            focusHistoryDepth += 1;
+            windowRef.history.pushState({
+                canoviaMapFocus: nodeId,
+                canoviaMapFocusDepth: focusHistoryDepth,
+            }, '', focusHash(nodeId));
         }
 
         return true;
@@ -310,6 +361,7 @@ export function mountLivingGoalMap({
         disposed = true;
         windowRef.clearTimeout(updateTimer);
         page.removeEventListener('click', onPageClick);
+        page.removeEventListener('submit', onPageSubmit);
         resetButton?.removeEventListener('click', closeFocus);
         closeButton?.removeEventListener('click', closeFocus);
         documentRef.removeEventListener('keydown', onKeyDown);
@@ -327,7 +379,7 @@ export function mountLivingGoalMap({
         destroy();
         page.replaceWith(imported);
 
-        return mountLivingGoalMap({ documentRef, windowRef, fetchRef });
+        return mountLivingGoalMap({ documentRef, windowRef, fetchRef, recordBehaviorRef });
     };
 
     const revalidateProjection = async () => {
@@ -372,9 +424,26 @@ export function mountLivingGoalMap({
     };
 
     function onPageClick(event) {
+        const fallback = event.target.closest?.('[data-map-home-fallback]');
+        if (fallback && page.contains(fallback)) {
+            trackTelemetry('map_classic_home_opened', { action_role: 'home' }, true);
+            clearMapTelemetryFlow(windowRef);
+            return;
+        }
+
         const classicAction = event.target.closest?.('[data-map-classic-action]');
         if (classicAction && page.contains(classicAction)) {
             markPendingReevaluation();
+
+            if (classicAction instanceof windowRef.HTMLAnchorElement) {
+                const focusedNode = activeFocusId ? nodeElementById.get(activeFocusId) : null;
+                trackTelemetry('map_classic_action_opened', {
+                    action_role: classicAction.dataset.mapActionRole || 'secondary',
+                    node_type: focusedNode?.dataset.mapNodeType || null,
+                    position_role: focusedNode?.dataset.mapPositionRole || null,
+                    is_primary: focusedNode?.dataset.mapIsPrimary === '1',
+                }, true);
+            }
             return;
         }
 
@@ -389,14 +458,39 @@ export function mountLivingGoalMap({
         if (!nodeId) return;
 
         event.preventDefault();
+        trackTelemetry('map_node_focused', {
+            node_type: node.dataset.mapNodeType || null,
+            position_role: node.dataset.mapPositionRole || null,
+            is_primary: node.dataset.mapIsPrimary === '1',
+        }, true);
         openFocus(nodeId);
+    }
+
+    function onPageSubmit(event) {
+        const form = event.target?.closest?.('form[data-map-companion-form]');
+        if (!form || !page.contains(form)) return;
+
+        const focusedNode = activeFocusId ? nodeElementById.get(activeFocusId) : null;
+        markPendingReevaluation();
+        trackTelemetry('map_companion_opened', {
+            action_role: 'companion',
+            node_type: focusedNode?.dataset.mapNodeType || null,
+            position_role: focusedNode?.dataset.mapPositionRole || null,
+            is_primary: focusedNode?.dataset.mapIsPrimary === '1',
+        }, true);
     }
 
     function onKeyDown(event) {
         if (event.key === 'Escape' && activeFocusId) closeFocus();
     }
 
-    function onPopState() {
+    function onPopState(event) {
+        const targetDepth = Math.max(0, Number(event?.state?.canoviaMapFocusDepth || 0));
+        if (mapHistoryDirection(focusHistoryDepth, targetDepth) === 'back') {
+            trackTelemetry('map_back_used', {}, true);
+        }
+        focusHistoryDepth = targetDepth;
+
         const nodeId = focusIdFromLocation(windowRef);
         if (!nodeId) {
             clearFocus();
@@ -429,6 +523,7 @@ export function mountLivingGoalMap({
     }
 
     page.addEventListener('click', onPageClick);
+    page.addEventListener('submit', onPageSubmit);
     resetButton?.addEventListener('click', closeFocus);
     closeButton?.addEventListener('click', closeFocus);
     documentRef.addEventListener('keydown', onKeyDown);
@@ -449,6 +544,7 @@ export function mountLivingGoalMap({
         delete page.dataset.mapReprojected;
         clearPending(windowRef);
         showUpdatedStatus();
+        trackTelemetry('map_reprojected');
     }
 
     return {

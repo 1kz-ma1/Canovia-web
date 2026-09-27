@@ -82,6 +82,69 @@ class BehaviorEventController extends Controller
             }
         }
 
+        $mapClientTypes = [
+            BehaviorEventType::MapViewed,
+            BehaviorEventType::MapNodeFocused,
+            BehaviorEventType::MapBackUsed,
+            BehaviorEventType::MapClassicActionOpened,
+            BehaviorEventType::MapCompanionOpened,
+            BehaviorEventType::MapClassicHomeOpened,
+            BehaviorEventType::MapReprojected,
+        ];
+
+        if (in_array($type, $mapClientTypes, true)) {
+            $flowId = is_string($metadata['flow_id'] ?? null)
+                && preg_match('/^[0-9a-f-]{36}$/i', (string) $metadata['flow_id'])
+                    ? strtolower((string) $metadata['flow_id'])
+                    : null;
+            if (! $flowId) {
+                throw ValidationException::withMessages(['metadata.flow_id' => 'Map flowを確認してください。']);
+            }
+
+            $nodeTypes = ['goal', 'plan', 'task', 'tool', 'evidence', 'inbox'];
+            $positionRoles = ['future-goal', 'future-plan', 'future-next', 'now', 'action-tool', 'past-evidence', 'input-inbox'];
+            $actionRoles = ['primary', 'secondary', 'companion', 'home'];
+
+            $safeMetadata = array_filter([
+                'flow_id' => $flowId,
+                'surface' => in_array(($metadata['surface'] ?? null), ['web', 'pwa'], true)
+                    ? $metadata['surface']
+                    : 'unknown',
+                'device' => in_array(($metadata['device'] ?? null), ['mobile', 'desktop'], true)
+                    ? $metadata['device']
+                    : 'unknown',
+                'node_type' => in_array(($metadata['node_type'] ?? null), $nodeTypes, true)
+                    ? $metadata['node_type']
+                    : null,
+                'position_role' => in_array(($metadata['position_role'] ?? null), $positionRoles, true)
+                    ? $metadata['position_role']
+                    : null,
+                'action_role' => in_array(($metadata['action_role'] ?? null), $actionRoles, true)
+                    ? $metadata['action_role']
+                    : null,
+                'is_primary' => isset($metadata['is_primary'])
+                    ? filter_var($metadata['is_primary'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)
+                    : null,
+                'elapsed_ms' => isset($metadata['elapsed_ms'])
+                    ? max(0, min(3600000, (int) $metadata['elapsed_ms']))
+                    : null,
+                'step_count' => isset($metadata['step_count'])
+                    ? max(0, min(100, (int) $metadata['step_count']))
+                    : null,
+            ], fn ($value) => $value !== null);
+
+            $logger->recordSafely(
+                $actorToken,
+                $type,
+                $request,
+                $plan,
+                $task,
+                $safeMetadata,
+            );
+
+            return response()->noContent();
+        }
+
         $funnelClientTypes = [
             BehaviorEventType::PlanGenerationPromptCopyClicked,
             BehaviorEventType::PlanUpdatePromptCopyClicked,

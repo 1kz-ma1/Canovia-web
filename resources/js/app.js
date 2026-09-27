@@ -2,6 +2,10 @@ import { normalizeAiJsonText, buildAiJsonRepairPrompt } from './ai-json.mjs';
 import { mountInstantStartServiceWorker } from './instant-start.mjs';
 import { mountCanoviaInstantNavigation } from './instant-navigation.mjs';
 import { mountLivingGoalMap } from './living-map.mjs';
+import {
+    advanceMapTelemetryForClassicNavigation,
+    attachMapTelemetryToWorkStartForm,
+} from './map-telemetry.mjs';
 
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
@@ -841,6 +845,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const form = event.target;
         if (!(form instanceof HTMLFormElement) || form.target === '_blank') return;
 
+        attachMapTelemetryToWorkStartForm(form);
         ensureWorkStartRequestId(form);
         if (!lockMutationForm(form, event)) return;
 
@@ -873,6 +878,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = new URL(link.href, window.location.href);
         if (url.origin !== window.location.origin) return;
         if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) return;
+
+        advanceMapTelemetryForClassicNavigation(link);
 
         if (navigationLocked) {
             event.preventDefault();
@@ -3422,7 +3429,7 @@ function initializeInstantCorePage() {
 
     initializeInstantDashboardPage();
     initializeInstantRoadmapPage();
-    mountLivingGoalMap();
+    mountLivingGoalMap({ recordBehaviorRef: recordBehavior });
     void captureInstantOfflineSnapshot();
 }
 
@@ -3431,7 +3438,7 @@ document.addEventListener('canovia:page-ready', initializeInstantCorePage);
 document.addEventListener('DOMContentLoaded', () => {
     if (document.body?.dataset.focusMode === '1') return;
     mountCanoviaInstantNavigation();
-    mountLivingGoalMap();
+    mountLivingGoalMap({ recordBehaviorRef: recordBehavior });
 });
 
 
