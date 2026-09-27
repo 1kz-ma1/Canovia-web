@@ -74,21 +74,38 @@ final class CoreContextService
             return;
         }
 
-        match ($feature) {
-            'tasks' => $this->loadTasks(),
-            'task_dependencies' => $this->loadTaskDependencies(),
-            'task_artifacts' => $this->loadTaskArtifacts(),
-            'work_logs' => $this->loadWorkLogs(),
-            'availability' => $this->loadPlanRelations(['availabilityRules', 'availabilityOverrides']),
-            'plan_resources' => $this->loadPlanRelations(['resources']),
-            'plan_artifacts' => $this->loadPlanRelations(['artifacts']),
-            'career' => $this->loadPlanRelations([
-                'careerApplications.selectionEvents.interviewReview',
-                'careerCaptures',
-            ]),
-            'memberships' => $this->loadPlanRelations(['memberships']),
-            default => null,
-        };
+        switch ($feature) {
+            case 'tasks':
+                $this->loadTasks();
+                break;
+            case 'task_dependencies':
+                $this->loadTaskDependencies();
+                break;
+            case 'task_artifacts':
+                $this->loadTaskArtifacts();
+                break;
+            case 'work_logs':
+                $this->loadWorkLogs();
+                break;
+            case 'availability':
+                $this->loadPlanRelations(['availabilityRules', 'availabilityOverrides']);
+                break;
+            case 'plan_resources':
+                $this->loadPlanRelations(['resources']);
+                break;
+            case 'plan_artifacts':
+                $this->loadPlanRelations(['artifacts']);
+                break;
+            case 'career':
+                $this->loadPlanRelations([
+                    'careerApplications.selectionEvents.interviewReview',
+                    'careerCaptures',
+                ]);
+                break;
+            case 'memberships':
+                $this->loadPlanRelations(['memberships']);
+                break;
+        }
 
         $this->loaded[$feature] = true;
     }
