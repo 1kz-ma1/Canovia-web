@@ -22,7 +22,7 @@ class ProductPolishV14Test extends TestCase
     public function test_rating_only_feedback_can_be_saved(): void
     {
         $user = User::factory()->create();
-        config(['pacekeeper.version' => 'v14-test']);
+        config(['canovia.version' => 'v14-test']);
 
         $this->actingAs($user)->post(route('feedback.store'), [
             'type' => 'positive',
