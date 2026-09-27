@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\CompanionMutationCandidate;
 use App\Models\FutureMemo;
-use App\Models\GoalContextFact;
 use App\Models\InboxItem;
 use App\Models\Plan;
 use App\Models\Task;
