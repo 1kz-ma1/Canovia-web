@@ -157,9 +157,9 @@ class CanoviaCompanionV4115Test extends TestCase
             ->assertOk()
             ->assertSee('MUTATION CANDIDATES', false)
             ->assertSee('未反映')
-            ->assertSee('Step 1では候補を保存するだけ');
+            ->assertSee('「反映する」を押すまでCanoviaのデータは変更されません。');
 
-        $this->assertFalse(Route::has('companion.candidates.apply'));
+        $this->assertTrue(Route::has('companion.candidates.apply'));
         Http::assertSentCount(1);
     }
 
