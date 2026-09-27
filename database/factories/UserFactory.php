@@ -30,6 +30,8 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            // Factory users represent established accounts unless a test opts into first-run explicitly.
+            'first_run_completed_at' => now(),
         ];
     }
 
