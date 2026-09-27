@@ -125,6 +125,8 @@
                                         <a href="{{ route('plans.artifacts.index', $guidancePlan) }}" class="btn-primary flex-1 px-3 py-2 text-xs">制作ファイルを開く</a>
                                     @elseif (($tool['id'] ?? null) === 'resources')
                                         <a href="{{ route('plans.resources.index', $guidancePlan) }}" class="btn-primary flex-1 px-3 py-2 text-xs">関連資料を開く</a>
+                                    @elseif (($tool['id'] ?? null) === 'guided_execution')
+                                        <a href="{{ route('plans.tasks.guided_execution.show', [$guidancePlan, $guidanceTask]) }}" class="btn-primary flex-1 px-3 py-2 text-xs">◎ 方針を決めて実行する</a>
                                     @elseif (($tool['id'] ?? null) === 'timer')
                                         <form method="POST" action="{{ route('work_sessions.start') }}" class="flex-1" data-work-start-form>
                                             @csrf
@@ -155,7 +157,7 @@
                                         </p>
                                     @endif
 
-                                    @if ($adaptive)
+                                    @if ($adaptive && ($tool['id'] ?? null) === 'timer')
                                         <div class="pk-v395-adaptive-note">
                                             <span class="text-cyan-200">Canoviaの提案</span>
                                             <strong>◷ {{ $adaptive->recommendedMinutes }}分</strong>
