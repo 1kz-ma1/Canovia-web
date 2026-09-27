@@ -7,6 +7,7 @@ use App\Enums\ProductKey;
 use App\Models\CompanionThread;
 use App\Models\FutureMemo;
 use App\Models\GoalContext;
+use App\Models\InboxItem;
 use App\Models\NativeAiRun;
 use App\Models\User;
 use App\Models\UserProductGrant;
@@ -271,6 +272,21 @@ class ConversationalOnboardingV4116Test extends TestCase
             ->assertOk()
             ->assertSee('Canoviaと始める')
             ->assertDontSee('目標を一緒に探す');
+
+        InboxItem::query()->create([
+            'user_id' => $user->id,
+            'source_type' => 'text',
+            'status' => 'new',
+            'title' => '将来やりたいこと',
+            'content' => 'いつか別のサービスも作りたい',
+            'metadata' => [],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('inbox.index'))
+            ->assertOk()
+            ->assertDontSee('Future Memo種別')
+            ->assertDontSee('value="future_memo"', false);
     }
 
     private function grantPremium(User $user): void
