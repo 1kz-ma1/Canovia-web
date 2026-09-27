@@ -262,7 +262,7 @@ class GuidedExecutionV4114Test extends TestCase
 
         $this->actingAs($other)
             ->get(route('plans.tasks.guided_execution.show', [$plan, $task]))
-            ->assertNotFound();
+            ->assertForbidden();
 
         $this->actingAs($other)
             ->post(route('plans.tasks.guided_execution.reflect', [$plan, $task, $execution]), [
