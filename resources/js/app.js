@@ -683,7 +683,12 @@ document.addEventListener('DOMContentLoaded', () => {
     root.querySelectorAll('[data-task-view]').forEach((element) => element.addEventListener('click', () => recordTaskView(element)));
     document.querySelectorAll('[data-work-start-form]').forEach((form) => form.addEventListener('submit', () => { workStarted = true; }));
 
-    window.setInterval(() => {
+    const dashboardIdleInterval = window.setInterval(() => {
+        if (!root.isConnected) {
+            window.clearInterval(dashboardIdleInterval);
+            return;
+        }
+
         const elapsedSeconds = Math.floor((Date.now() - enteredAt) / 1000);
         if (document.visibilityState !== 'visible' || workStarted || elapsedSeconds < 90 || planSwitches + taskViews < 2) return;
         if (!idleNudgeShown) {
