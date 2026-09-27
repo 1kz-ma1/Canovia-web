@@ -74,6 +74,10 @@ class PlanController extends Controller
                         ->with('status', 'この目標はすでにPlanへ接続済みです。続きから開きました。');
                 }
             }
+
+            // Goal Context is the source of truth for a discovery-created Plan.
+            // Never trust a client-side hidden title to rewrite the desired state.
+            $validated['title'] = trim((string) $goalContext->desired_state);
         }
 
         $startDate = $validated['start_date'] ?? now()->toDateString();
