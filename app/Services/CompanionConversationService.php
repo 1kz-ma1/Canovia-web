@@ -11,6 +11,7 @@ use App\Models\Task;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class CompanionConversationService
 {
@@ -34,10 +35,17 @@ class CompanionConversationService
     ): array {
         $existingUserMessage = CompanionMessage::query()
             ->where('request_id', $requestId)
-            ->where('user_id', $user->id)
             ->first();
 
         if ($existingUserMessage) {
+            if (
+                (int) $existingUserMessage->companion_thread_id !== (int) $thread->id
+                || (int) $existingUserMessage->user_id !== (int) $user->id
+            ) {
+                throw ValidationException::withMessages([
+                    'content' => 'この送信識別子は別の会話ですでに使用されています。',
+                ]);
+            }
             $existingAssistant = CompanionMessage::query()
                 ->where('companion_thread_id', $thread->id)
                 ->where('role', 'assistant')
@@ -65,6 +73,8 @@ class CompanionConversationService
         }
 
         $contextSnapshot = $this->context->snapshot($user, $plan, $task);
+        $contextSnapshot['current_screen'] = filled($sourcePath) ? $sourcePath : null;
+
         $history = $thread->messages()
             ->where('id', '<=', $userMessage->id)
             ->latest('id')
