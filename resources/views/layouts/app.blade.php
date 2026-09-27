@@ -26,6 +26,27 @@
     $feedbackTaskId = $feedbackTask instanceof \App\Models\Task
         ? $feedbackTask->id
         : (($feedbackWorkSession instanceof \App\Models\WorkSession) ? $feedbackWorkSession->task_id : null);
+
+    $companionRoutePlan = request()->route('plan');
+    $companionRouteTask = request()->route('task');
+    $companionRoadmapPlan = request()->routeIs('roadmap.*') && (($plan ?? null) instanceof \App\Models\Plan)
+        ? $plan
+        : null;
+    $companionEntryPlan = $companionRoutePlan instanceof \App\Models\Plan
+        ? $companionRoutePlan
+        : $companionRoadmapPlan;
+    $companionEntryTask = $companionRouteTask instanceof \App\Models\Task
+        ? $companionRouteTask
+        : null;
+    $companionEntryType = match (true) {
+        $companionEntryTask && request()->routeIs('plans.tasks.guided_execution.*') => 'guided_execution',
+        $companionEntryTask !== null => 'task',
+        $companionEntryPlan !== null => 'plan',
+        default => 'global',
+    };
+    $companionSourceRoute = request()->route()?->getName();
+    $companionSourcePath = request()->getRequestUri();
+
     $onboardingVersion = (int) config('canovia.onboarding_version', 1);
     $onboardingAuto = ! $focusMode && (! auth()->check() || (int) auth()->user()->onboarding_version < $onboardingVersion);
     $releaseNotes = \App\Support\ReleaseNotes::all();
@@ -209,15 +230,32 @@
 
     @auth
         @if (! $focusMode && ! request()->routeIs('companion.*') && (bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
-            <a
-                href="{{ route('companion.index') }}"
-                class="fixed bottom-24 right-4 z-40 inline-flex items-center gap-2 rounded-full border border-violet-300/25 bg-slate-950/95 px-4 py-3 text-xs font-black text-violet-100 shadow-[0_16px_45px_rgba(15,23,42,.55)] backdrop-blur-xl transition hover:border-violet-300/45 hover:bg-violet-300/10 md:bottom-6 md:right-6"
-                aria-label="Canovia Companionを開く"
-                title="Companion"
+            <form
+                method="POST"
+                action="{{ route('companion.entry') }}"
+                class="fixed bottom-24 right-4 z-40 md:bottom-6 md:right-6"
+                data-mutation-once
             >
-                <span aria-hidden="true">✦</span>
-                <span class="hidden sm:inline">Companion</span>
-            </a>
+                @csrf
+                <input type="hidden" name="entry_type" value="{{ $companionEntryType }}">
+                @if ($companionEntryPlan)
+                    <input type="hidden" name="plan_id" value="{{ $companionEntryPlan->id }}">
+                @endif
+                @if ($companionEntryTask)
+                    <input type="hidden" name="task_id" value="{{ $companionEntryTask->id }}">
+                @endif
+                <input type="hidden" name="source_path" value="{{ $companionSourcePath }}">
+                <input type="hidden" name="source_route" value="{{ $companionSourceRoute }}">
+                <button
+                    type="submit"
+                    class="inline-flex items-center gap-2 rounded-full border border-violet-300/25 bg-slate-950/95 px-4 py-3 text-xs font-black text-violet-100 shadow-[0_16px_45px_rgba(15,23,42,.55)] backdrop-blur-xl transition hover:border-violet-300/45 hover:bg-violet-300/10"
+                    aria-label="Canovia Companionを現在の文脈で開く"
+                    title="Companion"
+                >
+                    <span aria-hidden="true">✦</span>
+                    <span class="hidden sm:inline">Companion</span>
+                </button>
+            </form>
         @endif
     @endauth
 
