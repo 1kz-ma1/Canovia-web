@@ -18,6 +18,10 @@
             </div>
         </header>
 
+        @if (session('status'))
+            <div class="assistant-notice assistant-notice-info">{{ session('status') }}</div>
+        @endif
+
         @if ($errors->any())
             <div class="assistant-notice assistant-notice-error">
                 <p class="font-bold">入力内容を確認してください。</p>
