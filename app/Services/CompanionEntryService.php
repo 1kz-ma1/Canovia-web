@@ -88,7 +88,7 @@ class CompanionEntryService
             taskId: $task?->id,
             entryKey: $entryKey,
             scope: $scope,
-            allowLegacyScopeReuse: ! in_array($entryType, ['inbox_item'], true),
+            allowLegacyScopeReuse: $inboxItem === null && $entryType !== 'inbox_item',
         );
 
         if ($thread) {
