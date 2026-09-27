@@ -10,6 +10,7 @@ use App\Models\Plan;
 use App\Models\Task;
 use App\Services\CompanionContextService;
 use App\Services\CompanionConversationService;
+use App\Services\CompanionMutationApplyService;
 use App\Services\FeatureAccessService;
 use App\Services\FeatureFlagService;
 use App\Services\NativeAiGateway;
@@ -82,6 +83,7 @@ class CompanionController extends Controller
         CompanionThread $companionThread,
         PlanOwnershipService $ownership,
         CompanionContextService $context,
+        CompanionMutationApplyService $mutationApply,
         FeatureFlagService $flags,
         FeatureAccessService $access,
         NativeAiGateway $nativeAi,
@@ -104,10 +106,25 @@ class CompanionController extends Controller
             'task',
         ]);
 
+        $candidatePreviews = $companionThread->mutationCandidates
+            ->mapWithKeys(fn (CompanionMutationCandidate $candidate) => [
+                (int) $candidate->id => $mutationApply->reviewPreview($candidate),
+            ])
+            ->all();
+
+        $candidateApplyRequestIds = $companionThread->mutationCandidates
+            ->where('status', CompanionMutationCandidate::STATUS_PENDING)
+            ->mapWithKeys(fn (CompanionMutationCandidate $candidate) => [
+                (int) $candidate->id => (string) Str::uuid(),
+            ])
+            ->all();
+
         return view('companion.show', [
             'thread' => $companionThread,
             'contextSnapshot' => $context->snapshot($request->user(), $plan, $task),
             'messageRequestId' => (string) Str::uuid(),
+            'candidatePreviews' => $candidatePreviews,
+            'candidateApplyRequestIds' => $candidateApplyRequestIds,
             ...$this->availability($request->user(), $flags, $access, $nativeAi),
         ]);
     }
@@ -161,17 +178,39 @@ class CompanionController extends Controller
             ->with('status', 'CompanionがCanoviaの文脈を使って整理しました。');
     }
 
+    public function applyCandidate(
+        Request $request,
+        CompanionThread $companionThread,
+        CompanionMutationCandidate $candidate,
+        FeatureAccessService $access,
+        CompanionMutationApplyService $mutationApply,
+    ) {
+        $this->authorizeThread($request, $companionThread);
+        $this->authorizeCandidate($request, $companionThread, $candidate);
+        $access->authorizeUse($request->user(), FeatureKey::CanoviaCompanion);
+
+        $validated = $request->validate([
+            'apply_request_id' => ['required', 'uuid'],
+        ]);
+
+        $result = $mutationApply->apply(
+            $request,
+            $candidate,
+            (string) $validated['apply_request_id'],
+        );
+
+        return redirect()
+            ->route('companion.show', $companionThread)
+            ->with('status', $result['message']);
+    }
+
     public function dismissCandidate(
         Request $request,
         CompanionThread $companionThread,
         CompanionMutationCandidate $candidate,
     ) {
         $this->authorizeThread($request, $companionThread);
-        abort_unless(
-            (int) $candidate->companion_thread_id === (int) $companionThread->id
-            && (int) $candidate->user_id === (int) $request->user()->id,
-            404,
-        );
+        $this->authorizeCandidate($request, $companionThread, $candidate);
 
         if ($candidate->status === CompanionMutationCandidate::STATUS_PENDING) {
             $candidate->update([
@@ -190,6 +229,19 @@ class CompanionController extends Controller
         abort_unless(
             $request->user()
             && (int) $thread->user_id === (int) $request->user()->id,
+            404,
+        );
+    }
+
+    private function authorizeCandidate(
+        Request $request,
+        CompanionThread $thread,
+        CompanionMutationCandidate $candidate,
+    ): void {
+        abort_unless(
+            (int) $candidate->companion_thread_id === (int) $thread->id
+            && $request->user()
+            && (int) $candidate->user_id === (int) $request->user()->id,
             404,
         );
     }
@@ -220,11 +272,16 @@ class CompanionController extends Controller
         $entitled = $access->canUse($user, FeatureKey::CanoviaCompanion)
             && $access->canUse($user, FeatureKey::AutomaticAiExecution);
 
+        $featureEntitled = $access->canUse($user, FeatureKey::CanoviaCompanion);
+        $nativeEntitled = $access->canUse($user, FeatureKey::AutomaticAiExecution);
+
         return [
             'companionPublished' => $published,
             'companionConfigured' => $configured,
-            'companionEntitled' => $entitled,
-            'canUseCompanion' => $published && $configured && $entitled,
+            'companionFeatureEntitled' => $featureEntitled,
+            'companionEntitled' => $featureEntitled && $nativeEntitled,
+            'canUseCompanion' => $published && $configured && $featureEntitled && $nativeEntitled,
+            'canApplyCompanionCandidates' => $published && $featureEntitled,
         ];
     }
 
