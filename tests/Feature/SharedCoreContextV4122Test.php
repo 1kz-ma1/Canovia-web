@@ -2,9 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Enums\BehaviorEventType;
+use App\Models\BehaviorEvent;
 use App\Models\Plan;
 use App\Models\Task;
 use App\Models\User;
+use App\Models\UserStateSnapshot;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -50,6 +53,35 @@ class SharedCoreContextV4122Test extends TestCase
             $this->assertStringContainsString('data-canovia-page', $html);
             $this->assertStringNotContainsString('desktop-app-header', $html);
         }
+    }
+
+
+    public function test_home_inside_bundle_remains_a_side_effect_free_prefetch(): void
+    {
+        $this->withoutVite();
+        config()->set('session.driver', 'array');
+
+        $user = User::factory()->create();
+        $this->createPlan($user);
+
+        $response = $this->actingAs($user)
+            ->withHeader('X-Canovia-Instant-Navigation', 'prefetch')
+            ->get('/instant/core-bundle?surfaces=home');
+
+        $response->assertOk()
+            ->assertJsonStructure(['fragments' => ['/']]);
+
+        $this->assertFalse(
+            BehaviorEvent::query()
+                ->where('event_type', BehaviorEventType::DashboardViewed->value)
+                ->exists()
+        );
+        $this->assertFalse(
+            BehaviorEvent::query()
+                ->where('event_type', BehaviorEventType::RecommendationShown->value)
+                ->exists()
+        );
+        $this->assertSame(0, UserStateSnapshot::query()->count());
     }
 
     public function test_bundle_reuses_plan_and_work_log_queries_across_planning_surfaces(): void
