@@ -154,5 +154,10 @@ export function advanceMapTelemetryForClassicNavigation(link, windowRef = global
     if (url.origin !== windowRef.location.origin) return null;
     if (!readMapTelemetryFlow(windowRef, nowMs)) return null;
 
+    if (url.pathname === '/') {
+        clearMapTelemetryFlow(windowRef);
+        return null;
+    }
+
     return advanceMapTelemetryFlow(windowRef, nowMs, 1);
 }
