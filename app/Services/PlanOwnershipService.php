@@ -10,6 +10,9 @@ use Illuminate\Support\Collection;
 
 class PlanOwnershipService
 {
+    /** @var array<int,string|null> */
+    private array $roleCache = [];
+
     /**
      * Historical method name kept for compatibility. It now returns every plan
      * the current actor may view: owned plans plus logged-in collaborative plans.
@@ -61,16 +64,27 @@ class PlanOwnershipService
 
     public function role(Request $request, Plan $plan): ?string
     {
+        $planId = (int) $plan->id;
+        if (array_key_exists($planId, $this->roleCache)) {
+            return $this->roleCache[$planId];
+        }
+
         if ($this->owns($request, $plan)) {
-            return 'owner';
+            return $this->roleCache[$planId] = 'owner';
         }
 
         $user = $request->user();
         if (! $user || ! $plan->is_collaborative) {
-            return null;
+            return $this->roleCache[$planId] = null;
         }
 
-        return PlanMember::query()
+        if ($plan->relationLoaded('memberships')) {
+            $membership = $plan->memberships->firstWhere('user_id', $user->id);
+
+            return $this->roleCache[$planId] = $membership?->role;
+        }
+
+        return $this->roleCache[$planId] = PlanMember::query()
             ->where('plan_id', $plan->id)
             ->where('user_id', $user->id)
             ->value('role');
