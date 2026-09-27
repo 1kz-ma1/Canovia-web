@@ -32,7 +32,8 @@
                 <div class="mb-3"><span class="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-[10px] font-black tracking-[.12em] text-cyan-300">最初はこれだけ</span></div>
                 <div class="mr-auto max-w-[88%] rounded-2xl rounded-tl-md border border-violet-300/15 bg-violet-300/[0.04] p-4">
                     <p class="text-[10px] font-black uppercase tracking-[.14em] text-violet-300">CANOVIA</p>
-                    <p class="mt-2 text-sm leading-7 text-slate-200">
+                    <p class="mt-2 text-sm font-bold text-slate-100">どんな未来にしたい？</p>
+                    <p class="mt-1 text-sm leading-7 text-slate-300">
                         今、進めたいことはある？ 目標がまだ言葉になっていなくても、そのまま話してくれれば大丈夫です。
                     </p>
                 </div>
