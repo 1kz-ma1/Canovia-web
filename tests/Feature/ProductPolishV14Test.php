@@ -22,7 +22,7 @@ class ProductPolishV14Test extends TestCase
     public function test_rating_only_feedback_can_be_saved(): void
     {
         $user = User::factory()->create();
-        config(['canovia.version' => 'v14-test']);
+        $expectedVersion = (string) config('canovia.version');
 
         $this->actingAs($user)->post(route('feedback.store'), [
             'type' => 'positive',
@@ -34,7 +34,7 @@ class ProductPolishV14Test extends TestCase
         $feedback = Feedback::firstOrFail();
         $this->assertSame(5, $feedback->rating);
         $this->assertSame('', $feedback->message);
-        $this->assertSame('v14-test', $feedback->app_version);
+        $this->assertSame($expectedVersion, $feedback->app_version);
     }
 
     public function test_home_surfaces_new_plan_action_without_public_plan_discovery_link(): void
