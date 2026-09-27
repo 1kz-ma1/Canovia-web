@@ -121,7 +121,7 @@
             <section class="sticky bottom-20 z-30 rounded-2xl border border-violet-300/15 bg-slate-950/95 p-3 shadow-[0_-18px_50px_rgba(2,6,23,.45)] backdrop-blur-xl md:bottom-4">
                 <form method="POST" action="{{ route('companion.messages.store', $thread) }}" class="flex items-end gap-2" data-mutation-once>
                     @csrf
-                    <input type="hidden" name="request_id" value="{{ $messageRequestId }}">
+                    <input type="hidden" name="request_id" value="{{ old('request_id', $messageRequestId) }}">
                     <input type="hidden" name="source_path" value="{{ request()->path() }}">
                     <textarea name="content" rows="2" required maxlength="6000" class="form-control min-h-[3.2rem] flex-1 resize-y" placeholder="Canoviaに相談する…">{{ old('content') }}</textarea>
                     <button type="submit" class="btn-primary shrink-0">送信</button>
