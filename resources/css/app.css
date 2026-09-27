@@ -5369,3 +5369,31 @@ body.canovia-guide-active { overflow: hidden; }
         }
     }
 }
+
+
+/* --------------------------------------------------------------------------
+ * V42.3 Contextual Companion
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .canovia-map-companion-entry {
+        display: grid;
+        gap: 0.65rem;
+        margin-top: 0.9rem;
+        border-top: 1px solid rgb(71 85 105 / 0.52);
+        padding-top: 0.9rem;
+    }
+
+    .canovia-map-companion-kicker {
+        color: rgb(196 181 253);
+        font-size: 0.6rem;
+        font-weight: 900;
+        letter-spacing: 0.16em;
+    }
+
+    .canovia-map-companion-copy {
+        margin-top: 0.2rem;
+        color: rgb(100 116 139);
+        font-size: 0.66rem;
+        line-height: 1.55;
+    }
+}

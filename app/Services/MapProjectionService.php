@@ -358,6 +358,85 @@ final class MapProjectionService
         ];
     }
 
+
+    /**
+     * Build the server-authoritative Companion context for one currently projected Map node.
+     *
+     * The client submits only map_node_id. Labels, neighbors and target IDs are rebuilt
+     * from the latest projection so stale/tampered browser payloads never become AI context.
+     *
+     * @return array<string,mixed>|null
+     */
+    public function companionContext(Request $request, string $nodeId): ?array
+    {
+        $nodeId = trim($nodeId);
+        if ($nodeId === '') {
+            return null;
+        }
+
+        $graph = $this->build($request);
+        $nodes = collect($graph['nodes'] ?? [])->keyBy('id');
+        $edges = collect($graph['edges'] ?? []);
+        $selected = $nodes->get($nodeId);
+
+        if (! is_array($selected)) {
+            return null;
+        }
+
+        $relations = $edges
+            ->filter(fn (array $edge) => ($edge['source'] ?? null) === $nodeId || ($edge['target'] ?? null) === $nodeId)
+            ->map(function (array $edge) use ($nodeId, $nodes) {
+                $outgoing = ($edge['source'] ?? null) === $nodeId;
+                $neighborId = $outgoing ? ($edge['target'] ?? null) : ($edge['source'] ?? null);
+                $neighbor = is_string($neighborId) ? $nodes->get($neighborId) : null;
+
+                if (! is_array($neighbor)) {
+                    return null;
+                }
+
+                return [
+                    'relation' => (string) ($edge['relation'] ?? ''),
+                    'direction' => $outgoing ? 'outgoing' : 'incoming',
+                    'node' => $this->companionNode($neighbor),
+                ];
+            })
+            ->filter()
+            ->take(8)
+            ->values();
+
+        $primary = $nodes->get((string) ($graph['primary_node_id'] ?? ''));
+        $planNode = $nodes->first(fn ($node) => is_array($node) && ($node['type'] ?? null) === 'plan');
+
+        $selectedType = (string) ($selected['type'] ?? '');
+        $selectedEntityId = (int) ($selected['entity_id'] ?? 0);
+        $primaryTaskId = is_array($primary) && ($primary['type'] ?? null) === 'task'
+            ? (int) ($primary['entity_id'] ?? 0)
+            : 0;
+        $planId = is_array($planNode) ? (int) ($planNode['entity_id'] ?? 0) : 0;
+
+        $taskId = match ($selectedType) {
+            'task' => $selectedEntityId,
+            'tool', 'evidence' => $primaryTaskId,
+            default => 0,
+        };
+
+        return [
+            'projection_key' => (string) ($graph['projection_key'] ?? ''),
+            'selected_node' => $this->companionNode($selected),
+            'surrounding_nodes' => $relations->all(),
+            'primary_action' => is_array($primary) ? $this->companionNode($primary) : null,
+            'target' => [
+                'plan_id' => in_array($selectedType, ['goal', 'plan', 'task', 'tool', 'evidence'], true) && $planId > 0
+                    ? $planId
+                    : null,
+                'task_id' => $taskId > 0 ? $taskId : null,
+                'inbox_item_id' => $selectedType === 'inbox' && $selectedEntityId > 0
+                    ? $selectedEntityId
+                    : null,
+            ],
+        ];
+    }
+
     private function nextTask(Plan $plan, Task $currentTask): ?Task
     {
         $currentOrder = (int) ($currentTask->sort_order ?? PHP_INT_MAX);
@@ -506,6 +585,25 @@ final class MapProjectionService
             'label' => $label,
             'url' => $url,
             'primary' => $primary,
+        ];
+    }
+
+
+    /**
+     * @param array<string,mixed> $node
+     * @return array<string,mixed>
+     */
+    private function companionNode(array $node): array
+    {
+        return [
+            'id' => (string) ($node['id'] ?? ''),
+            'type' => (string) ($node['type'] ?? ''),
+            'entity_id' => isset($node['entity_id']) ? (int) $node['entity_id'] : null,
+            'label' => Str::limit((string) ($node['label'] ?? ''), 180),
+            'subtitle' => Str::limit((string) ($node['subtitle'] ?? ''), 260),
+            'state' => (string) ($node['state'] ?? ''),
+            'position_role' => (string) ($node['position_role'] ?? ''),
+            'importance' => (float) ($node['importance'] ?? 0),
         ];
     }
 

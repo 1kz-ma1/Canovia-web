@@ -69,6 +69,7 @@ class CompanionController extends Controller
             'plan_id' => ['nullable', 'integer', 'min:1'],
             'task_id' => ['nullable', 'integer', 'min:1'],
             'inbox_item_id' => ['nullable', 'integer', 'min:1'],
+            'map_node_id' => ['nullable', 'string', 'max:160', 'regex:/^[A-Za-z0-9:_-]+$/'],
             'source_path' => ['nullable', 'string', 'max:500'],
             'source_route' => ['nullable', 'string', 'max:150'],
         ]);

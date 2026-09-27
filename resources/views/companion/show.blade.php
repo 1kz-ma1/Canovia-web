@@ -78,6 +78,19 @@
                             <p class="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">{{ data_get($contextSnapshot, 'entry.inbox_item.content') }}</p>
                         @elseif (data_get($contextSnapshot, 'entry.type') === 'guided_execution' && data_get($contextSnapshot, 'entry.latest_evidence.summary'))
                             <p class="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">最新Evidence: {{ data_get($contextSnapshot, 'entry.latest_evidence.summary') }}</p>
+                        @elseif (data_get($contextSnapshot, 'entry.type') === 'map')
+                            @if (data_get($contextSnapshot, 'entry.map_context.selected_node.subtitle'))
+                                <p class="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">{{ data_get($contextSnapshot, 'entry.map_context.selected_node.subtitle') }}</p>
+                            @endif
+                            @if (count((array) data_get($contextSnapshot, 'entry.map_context.surrounding_nodes', [])) > 0)
+                                <div class="mt-2 flex flex-wrap gap-1.5">
+                                    @foreach ((array) data_get($contextSnapshot, 'entry.map_context.surrounding_nodes', []) as $relation)
+                                        @if (data_get($relation, 'node.label'))
+                                            <span class="badge badge-slate">{{ data_get($relation, 'node.label') }}</span>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            @endif
                         @endif
                     </div>
                     <span class="badge badge-slate">自動選択</span>

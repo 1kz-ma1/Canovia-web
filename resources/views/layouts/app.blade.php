@@ -235,7 +235,7 @@
 
     <div data-canovia-companion-slot>
     @auth
-        @if (! $focusMode && ! request()->routeIs('companion.*') && (bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
+        @if (! $focusMode && ! request()->routeIs('companion.*') && ! request()->routeIs('map.*') && (bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
             <form
                 method="POST"
                 action="{{ route('companion.entry') }}"
