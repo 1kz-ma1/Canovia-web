@@ -1,6 +1,6 @@
 # Canovia Product Specification
 
-更新基準: 2026-09-27 / V41.14 Step 4 Goal Pattern Demand
+更新基準: 2026-09-27 / V41.15 Step 1 Canovia Companion Foundation
 
 V41.8〜V41.12のNative AI Practice / Adaptive Learning Flow / Recall基盤を維持しつつ、V41.13ではTaskごとのPrimary Actionを1つに整理し、旧「今日」をメインナビから退役させてCanovia Inboxを追加する。Home=Now、Inbox=Input、Roadmap=Future、Timeline=Pastとして主要導線の責務を分離する。詳細は [V41.12仕様](V41.12_RECALL_CANDIDATE_IMPORT.md)、[V41.13仕様](V41.13_ACTION_INBOX_REFRAME.md) を参照。
 
@@ -70,6 +70,12 @@ Canoviaは「完璧な計画を守らせる」より、現実の行動・発見�
 - Guided Reflectionはself-report強度を保持し、Task Progressを自動変更しない
 - Goal Pattern Demand / Tool Discovery（Goal Context・Guided Executionの実利用をread-only集計）
 - Tool需要はcross-user demandを最優先Signalとし、AIが自動で新Toolを公開しない
+- Canovia Companion Premium Foundation（global / Plan / Task scoped conversation）
+- CompanionはGoal Context / selected Plan・Task / Recent Evidence / Inbox件数 / Current Screenを必要範囲だけ参照
+- CompanionのAI提案はMutation Candidateとして隔離し、Step 1ではDBへ直接反映しない
+- Companion CandidateのPlan / Task / User IDはAI出力を信用せず、selected Canovia contextからserver-sideで確定
+- Companion messageはrequest_idで再送を吸収し、Native AI失敗後も同じ送信を安全に再試行可能
+- Companionは `canovia_companion` と `automatic_ai_execution` を別Capabilityとして扱い、Premium Coreから利用権を供給
 - WorkSession / Timer / WorkLog / Continuity
 - Calendar / Availability
 - AI JSON外部往復によるTask生成・計画更新
@@ -99,6 +105,7 @@ Canoviaは「完璧な計画を守らせる」より、現実の行動・発見�
 - 決定論的Economy RecommendationとAdmin Economy Inspector
 - 単一アカウントSuper Admin、Settings Hub、Complimentary Premium、Admin Free/Premium Preview
 - Premium CoreのNative AI Practice（問題生成 / 回答評価 / manual fallback）
+- Premium CoreのCanovia Companion（文脈整理 / 会話 / Mutation Candidate。直接mutationなし）
 - Hybrid Question Assembly（Question Bank優先、不足分だけNative AI補完）
 - Practice Question Demand履歴（要求数 / Bank供給数 / 生成不足 / focus / coverage）
 - Practice Demand Admin集計（exam profile / focus topic / Bank供給 / AI補完不足）
@@ -121,8 +128,11 @@ Canoviaは「完璧な計画を守らせる」より、現実の行動・発見�
 
 iOS正式公開準備や、現行基盤を実運用へ接続する近い将来。
 
-V41.14の次段階:
-- input patternに応じたQuick Question / conversational input適応
+V41.15の次段階:
+- Companion Mutation CandidateのHuman-confirmed Apply
+- Candidate typeごとのserver-side Validator / Applier
+- apply時のbefore / after auditとrequest idempotency
+- Current ScreenからPlan / Task scopeを自動で引き継ぐContextual Companion Entry
 
 - iOSアプリ化とApp Store Review運用
 - server-backed Feature Flag保存とAdmin操作
