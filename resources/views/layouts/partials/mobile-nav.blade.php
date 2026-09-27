@@ -1,5 +1,5 @@
 <nav class="mobile-tabbar pk-mobile-tabbar" aria-label="モバイルナビゲーション">
-    <a href="{{ route('home') }}"
+    <a href="{{ route('home') }}" data-canovia-nav-key="mobile-home"
        class="mobile-tabbar-link {{ request()->routeIs('home') || request()->routeIs('calendar.*') || request()->routeIs('my_plans.*') || request()->routeIs('plans.show') || request()->routeIs('plans.edit') || request()->routeIs('tasks.*') || request()->routeIs('work_sessions.*') || request()->routeIs('navigation.*') ? 'is-active' : '' }}"
        aria-current="{{ request()->routeIs('home') || request()->routeIs('calendar.*') || request()->routeIs('my_plans.*') || request()->routeIs('plans.show') || request()->routeIs('plans.edit') || request()->routeIs('tasks.*') || request()->routeIs('work_sessions.*') ? 'page' : 'false' }}">
         <span class="pk-tab-icon pk-tab-icon-home" aria-hidden="true">
@@ -9,7 +9,7 @@
         <span>ホーム</span>
     </a>
 
-    <a href="{{ route('inbox.index') }}"
+    <a href="{{ route('inbox.index') }}" data-canovia-nav-key="mobile-inbox"
        data-onboarding-target="inbox-nav"
        class="mobile-tabbar-link mobile-tabbar-primary {{ request()->routeIs('inbox.*') ? 'is-active' : '' }}"
        aria-current="{{ request()->routeIs('inbox.*') ? 'page' : 'false' }}">
@@ -20,7 +20,7 @@
         <span>Inbox</span>
     </a>
 
-    <a href="{{ route('roadmap.index') }}"
+    <a href="{{ route('roadmap.index') }}" data-canovia-nav-key="mobile-roadmap"
        data-onboarding-target="roadmap-nav"
        class="mobile-tabbar-link {{ request()->routeIs('roadmap.*') || request()->routeIs('chat.*') || request()->routeIs('achievements.*') || request()->routeIs('plans.review_assistant.*') ? 'is-active' : '' }}"
        aria-current="{{ request()->routeIs('roadmap.*') || request()->routeIs('chat.*') || request()->routeIs('achievements.*') || request()->routeIs('plans.review_assistant.*') ? 'page' : 'false' }}">
@@ -31,7 +31,7 @@
         <span>ロードマップ</span>
     </a>
 
-    <a href="{{ route('timeline.index') }}"
+    <a href="{{ route('timeline.index') }}" data-canovia-nav-key="mobile-timeline"
        class="mobile-tabbar-link {{ request()->routeIs('timeline.*') ? 'is-active' : '' }}"
        aria-current="{{ request()->routeIs('timeline.*') ? 'page' : 'false' }}">
         <span class="pk-tab-icon pk-tab-icon-timeline" aria-hidden="true">
