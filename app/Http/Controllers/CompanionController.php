@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FeatureKey;
+use App\Exceptions\NativeAiExecutionException;
 use App\Models\CompanionMutationCandidate;
 use App\Models\CompanionThread;
 use App\Models\Plan;
@@ -139,15 +140,21 @@ class CompanionController extends Controller
             abort_unless($plan && (int) $task->plan_id === (int) $plan->id, 404);
         }
 
-        $conversation->send(
-            thread: $companionThread,
-            user: $request->user(),
-            content: $validated['content'],
-            requestId: $validated['request_id'],
-            plan: $plan,
-            task: $task,
-            sourcePath: $validated['source_path'] ?? null,
-        );
+        try {
+            $conversation->send(
+                thread: $companionThread,
+                user: $request->user(),
+                content: $validated['content'],
+                requestId: $validated['request_id'],
+                plan: $plan,
+                task: $task,
+                sourcePath: $validated['source_path'] ?? null,
+            );
+        } catch (NativeAiExecutionException $exception) {
+            return back()
+                ->withErrors(['content' => $exception->getMessage()])
+                ->withInput();
+        }
 
         return redirect()
             ->route('companion.show', $companionThread)
