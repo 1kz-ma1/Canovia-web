@@ -10,7 +10,7 @@ use Illuminate\Support\Collection;
 
 class PlanOwnershipService
 {
-    /** @var array<int,string|null> */
+    /** @var array<string,string|null> */
     private array $roleCache = [];
 
     /**
@@ -65,26 +65,27 @@ class PlanOwnershipService
     public function role(Request $request, Plan $plan): ?string
     {
         $planId = (int) $plan->id;
-        if (array_key_exists($planId, $this->roleCache)) {
-            return $this->roleCache[$planId];
+        $cacheKey = ($request->user()?->id ? 'user:'.$request->user()->id : 'guest').':plan:'.$planId;
+        if (array_key_exists($cacheKey, $this->roleCache)) {
+            return $this->roleCache[$cacheKey];
         }
 
         if ($this->owns($request, $plan)) {
-            return $this->roleCache[$planId] = 'owner';
+            return $this->roleCache[$cacheKey] = 'owner';
         }
 
         $user = $request->user();
         if (! $user || ! $plan->is_collaborative) {
-            return $this->roleCache[$planId] = null;
+            return $this->roleCache[$cacheKey] = null;
         }
 
         if ($plan->relationLoaded('memberships')) {
             $membership = $plan->memberships->firstWhere('user_id', $user->id);
 
-            return $this->roleCache[$planId] = $membership?->role;
+            return $this->roleCache[$cacheKey] = $membership?->role;
         }
 
-        return $this->roleCache[$planId] = PlanMember::query()
+        return $this->roleCache[$cacheKey] = PlanMember::query()
             ->where('plan_id', $plan->id)
             ->where('user_id', $user->id)
             ->value('role');
