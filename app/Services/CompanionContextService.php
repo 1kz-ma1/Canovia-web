@@ -13,6 +13,7 @@ class CompanionContextService
 {
     public function __construct(
         private readonly GoalContextService $goalContexts,
+        private readonly FutureMemoService $memories,
     ) {}
 
     /**
@@ -38,6 +39,16 @@ class CompanionContextService
             'task' => null,
             'goal_context' => null,
             'recent_evidence' => [],
+            'memory' => $this->memories->forUser($user, true, 8)
+                ->map(fn ($memo) => [
+                    'kind' => $memo->kind,
+                    'category' => $memo->category,
+                    'content' => Str::limit(trim((string) $memo->content), 500, '…'),
+                    'source' => $memo->source,
+                    'captured_at' => $memo->captured_at?->toIso8601String(),
+                ])
+                ->values()
+                ->all(),
             'inbox' => [
                 'pending_count' => InboxItem::query()
                     ->where('user_id', $user->id)
