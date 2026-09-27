@@ -57,6 +57,8 @@ class FirstRunUxV4123Test extends TestCase
         $this->get(route('plans.create'))
             ->assertOk()
             ->assertSee('FIRST COMPANION', false);
+
+        $this->assertNotNull($this->app['auth']->user()?->fresh()->first_run_completed_at);
     }
 
     public function test_existing_guest_plan_bypasses_first_run_gate(): void
@@ -74,6 +76,32 @@ class FirstRunUxV4123Test extends TestCase
         $this->withCookie('pace_keeper_owner_token_'.$plan->id, $plan->owner_token)
             ->get(route('home'))
             ->assertOk();
+    }
+
+    public function test_unfinished_new_account_returns_to_welcome_after_logout_and_login(): void
+    {
+        $this->post(route('auth.register'), [
+            'name' => 'Interrupted New User',
+            'email' => 'interrupted@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertRedirect(route('first_run.show'));
+
+        $user = User::query()->where('email', 'interrupted@example.com')->firstOrFail();
+        $this->assertNull($user->first_run_completed_at);
+
+        $this->post(route('auth.logout'))->assertRedirect(route('home'));
+
+        $this->post(route('auth.login'), [
+            'email' => $user->email,
+            'password' => 'password123',
+            'remember' => '1',
+        ])->assertRedirect(route('home'));
+
+        $this->get(route('home'))
+            ->assertRedirect(route('first_run.show'));
+
+        $this->assertNull($user->fresh()->first_run_completed_at);
     }
 
     public function test_existing_account_can_log_in_from_welcome_without_being_forced_back_to_first_run(): void
