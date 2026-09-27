@@ -16,6 +16,8 @@ jobs:
           php-version: '8.4'
           coverage: none
       - run: composer install --no-interaction --prefer-dist
+      - run: npm ci
+      - run: npm run build
       - run: cp .env.example .env
       - run: touch database/database.sqlite
       - run: php artisan key:generate
