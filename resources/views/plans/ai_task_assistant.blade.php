@@ -71,13 +71,12 @@
         <section class="page-card p-5 sm:p-6">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <p class="text-xs font-bold uppercase tracking-[0.14em] text-violet-300">FUTURE CONTEXT</p>
-                    <h2 class="mt-1 text-lg font-black text-slate-100">今回AIに共有する未来メモ</h2>
+                    <p class="text-xs font-bold uppercase tracking-[0.14em] text-violet-300">CANOVIA MEMORY</p>
+                    <h2 class="mt-1 text-lg font-black text-slate-100">Canoviaが会話から覚えていること</h2>
                     <p class="mt-1 text-xs leading-5 text-slate-400">
-                        「AIへの参考情報として使う」がONの内容だけを、本人理解のために相談文へ追加します。
+                        ユーザーが明示した希望・関心などだけを内部Memoryとして参照します。入力のために別画面で管理する必要はありません。
                     </p>
                 </div>
-                <a href="{{ route('future_memos.index') }}" class="btn-secondary px-3 py-2 text-xs">未来メモを編集</a>
             </div>
 
             @if (($futureMemos ?? collect())->isNotEmpty())
@@ -91,8 +90,8 @@
                 </div>
             @else
                 <div class="mt-4 rounded-2xl border border-dashed border-slate-700 bg-slate-950/20 p-4">
-                    <p class="text-sm font-bold text-slate-200">未来メモはまだありません</p>
-                    <p class="mt-1 text-xs leading-5 text-slate-500">なくても計画作成は進められます。必要なら後から追加できます。</p>
+                    <p class="text-sm font-bold text-slate-200">追加のMemoryはまだありません</p>
+                    <p class="mt-1 text-xs leading-5 text-slate-500">なくても計画作成は進められます。会話の中で明示された内容が必要に応じて蓄積されます。</p>
                 </div>
             @endif
         </section>
