@@ -1,0 +1,38 @@
+name: V41.15 Step 4 Final Validation
+
+on:
+  push:
+    branches:
+      - feature/v41-15d-companion-continuity
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: npm ci
+      - run: npm run build
+      - run: find app tests -name '*.php' -print0 | xargs -0 -n1 php -l
+      - run: php artisan view:cache
+      - name: Focused regression
+        run: |
+          php artisan test \
+            tests/Feature/CanoviaCompanionContinuityV4115Test.php \
+            tests/Feature/CanoviaCompanionContextualEntryV4115Test.php \
+            tests/Feature/CanoviaCompanionMutationApplyV4115Test.php \
+            tests/Feature/CanoviaCompanionV4115Test.php \
+            tests/Feature/GuidedExecutionV4114Test.php \
+            tests/Feature/GoalContextFoundationV4114Test.php \
+            tests/Feature/AdaptiveGoalDiscoveryV4114Test.php \
+            tests/Feature/InboxFoundationV4113Test.php \
+            tests/Feature/EconomyFoundationV415Test.php
