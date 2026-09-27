@@ -1,0 +1,32 @@
+name: V41.23 final validation
+
+on:
+  push:
+    branches:
+      - feature/v41-23-first-run-mobile-actions
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist
+      - run: npm ci
+      - run: npm run build
+      - run: cp .env.example .env
+      - run: touch database/database.sqlite
+      - run: php artisan key:generate
+      - run: php artisan migrate:fresh --force
+      - run: php -l app/Services/FirstRunService.php
+      - run: php -l app/Http/Middleware/EnsureFirstRunStarted.php
+      - run: php -l app/Http/Controllers/FirstRunController.php
+      - run: php -l app/Http/Controllers/AuthController.php
+      - run: php -l bootstrap/app.php
+      - run: php artisan view:cache
+      - run: php artisan test tests/Feature/FirstRunUxV4123Test.php tests/Feature/ConversationalOnboardingV4116Test.php tests/Feature/AdaptiveGoalDiscoveryV4114Test.php tests/Feature/PublicBetaPolishV16Test.php tests/Feature/ProductPolishV14Test.php tests/Feature/OnboardingWelcomeV15Test.php tests/Feature/ActionHierarchyV4113Test.php tests/Feature/SharedCoreContextV4122Test.php tests/Feature/InstantNavigationFragmentV4121Test.php tests/Feature/InstantNavigationV4120Test.php
+      - run: node --test tests/js/instant-start-v391.test.mjs
