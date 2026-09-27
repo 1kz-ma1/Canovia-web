@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(in_array(request()->header('X-Canovia-Instant-Navigation'), ['prefetch', 'navigate'], true) ? 'layouts.instant' : 'layouts.app')
 
 @section('title', 'Inbox | Canovia')
 
