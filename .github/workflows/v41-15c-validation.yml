@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - feature/v41-15c-contextual-companion-entry
+  pull_request:
+    branches:
+      - main
 
 jobs:
   validate:
