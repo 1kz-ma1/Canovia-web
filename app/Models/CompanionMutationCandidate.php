@@ -26,12 +26,15 @@ class CompanionMutationCandidate extends Model
         'plan_id',
         'task_id',
         'candidate_key',
+        'apply_request_id',
         'type',
         'status',
         'title',
         'summary',
         'payload',
         'metadata',
+        'applied_target_type',
+        'applied_target_id',
         'reviewed_at',
         'applied_at',
     ];
@@ -41,6 +44,7 @@ class CompanionMutationCandidate extends Model
         return [
             'payload' => 'array',
             'metadata' => 'array',
+            'applied_target_id' => 'integer',
             'reviewed_at' => 'datetime',
             'applied_at' => 'datetime',
         ];
