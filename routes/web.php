@@ -5,6 +5,7 @@ use App\Enums\FeatureKey;
 use App\Http\Controllers\WorkLogController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\CanoviaMapController;
 use App\Http\Controllers\FirstRunController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\GoalDiscoveryController;
@@ -55,6 +56,7 @@ use App\Http\Controllers\CoreFragmentBundleController;
 Route::get('/welcome', [FirstRunController::class, 'show'])->name('first_run.show');
 Route::post('/welcome/start', [FirstRunController::class, 'start'])->name('first_run.start');
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/map', [CanoviaMapController::class, 'index'])->name('map.index');
 Route::get('/instant/core-bundle', CoreFragmentBundleController::class)->name('instant.core_bundle');
 
 // 未来メモ / goal discovery

@@ -9,6 +9,16 @@
         <span>ホーム</span>
     </a>
 
+    <a href="{{ route('map.index') }}" data-canovia-nav-key="mobile-map"
+       class="mobile-tabbar-link {{ request()->routeIs('map.*') ? 'is-active' : '' }}"
+       aria-current="{{ request()->routeIs('map.*') ? 'page' : 'false' }}">
+        <span class="pk-tab-icon" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="3"/><circle cx="7" cy="16" r="2.2"/><circle cx="25" cy="10" r="2.2"/><circle cx="22" cy="25" r="2.2"/><path d="M9.5 16h3.5M18.7 14.3l4.2-2.7M18 18.5l2.6 4"/></svg>
+            <i></i><b></b>
+        </span>
+        <span>Map</span>
+    </a>
+
     <a href="{{ route('inbox.index') }}" data-canovia-nav-key="mobile-inbox"
        data-onboarding-target="inbox-nav"
        class="mobile-tabbar-link mobile-tabbar-primary {{ request()->routeIs('inbox.*') ? 'is-active' : '' }}"

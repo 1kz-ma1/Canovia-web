@@ -34,6 +34,7 @@ final class EnsureFirstRunStarted
     {
         return Str::is([
             'home',
+            'map.*',
             'inbox.*',
             'roadmap.*',
             'timeline.*',
