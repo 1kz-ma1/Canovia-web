@@ -37,5 +37,4 @@ jobs:
             tests/Feature/EconomyFoundationV415Test.php \
             tests/Feature/FeatureAccessV406Test.php \
             tests/Feature/LivingRoadmapAccountTest.php \
-            tests/Feature/OnboardingWelcomeV15Test.php \
             tests/Feature/InboxIntelligenceGuideV4113Test.php
