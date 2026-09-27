@@ -1,0 +1,34 @@
+name: V41.18 navigation performance validation
+
+on:
+  push:
+    branches:
+      - feature/v41-18-navigation-performance
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist
+      - run: npm ci
+      - run: npm run build
+      - run: cp .env.example .env
+      - run: touch database/database.sqlite
+      - run: php artisan key:generate
+      - run: php -l app/Services/RequestBehaviorHistory.php
+      - run: php -l app/Services/UserBehaviorService.php
+      - run: php -l app/Services/UserStateService.php
+      - run: php -l app/Services/RecommendationPersonalizationService.php
+      - run: php -l app/Services/RecommendationService.php
+      - run: php -l app/Services/DashboardPresentationService.php
+      - run: php -l app/Support/ReleaseNotes.php
+      - run: php -l app/Models/ReleaseNote.php
+      - run: php artisan migrate:fresh --force
+      - run: php artisan test tests/Feature/NavigationPerformanceV4118Test.php tests/Feature/RecommendationServiceTest.php tests/Feature/PerformanceObservabilityV4117Test.php tests/Feature/InboxFoundationV4113Test.php tests/Feature/ConversationalOnboardingV4116Test.php
+      - run: node --test tests/js/instant-start-v391.test.mjs
