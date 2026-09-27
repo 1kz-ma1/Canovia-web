@@ -183,10 +183,12 @@ class CompanionController extends Controller
         CompanionThread $companionThread,
         CompanionMutationCandidate $candidate,
         FeatureAccessService $access,
+        FeatureFlagService $flags,
         CompanionMutationApplyService $mutationApply,
     ) {
         $this->authorizeThread($request, $companionThread);
         $this->authorizeCandidate($request, $companionThread, $candidate);
+        abort_unless($flags->isEnabled(FeatureKey::CanoviaCompanion), 404);
         $access->authorizeUse($request->user(), FeatureKey::CanoviaCompanion);
 
         $validated = $request->validate([
@@ -269,9 +271,6 @@ class CompanionController extends Controller
     ): array {
         $published = $flags->isEnabled(FeatureKey::CanoviaCompanion);
         $configured = $nativeAi->isConfigured();
-        $entitled = $access->canUse($user, FeatureKey::CanoviaCompanion)
-            && $access->canUse($user, FeatureKey::AutomaticAiExecution);
-
         $featureEntitled = $access->canUse($user, FeatureKey::CanoviaCompanion);
         $nativeEntitled = $access->canUse($user, FeatureKey::AutomaticAiExecution);
 
