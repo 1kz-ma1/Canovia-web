@@ -7,20 +7,20 @@
                     <img src="/brand/logo-mark.svg" alt="" class="h-8 w-8" width="32" height="32">
                     <p class="onboarding-kicker">はじめに</p>
                 </div>
-                <h2 id="onboarding-intro-title" class="mt-2 max-w-md text-2xl font-black text-slate-50">Canoviaは、次の一歩を決めやすくするアプリです</h2>
+                <h2 id="onboarding-intro-title" class="mt-2 max-w-md text-2xl font-black text-slate-50">Canoviaは、話しながら次の一歩を作るアプリです</h2>
             </div>
             <button type="button" class="feedback-close" data-onboarding-intro-skip aria-label="案内をスキップ">×</button>
         </div>
 
         <p class="relative z-10 mt-4 max-w-lg text-sm leading-7 text-slate-300">
-            資格勉強、制作、個人開発など、進めたいことはあるのに「今日は何をしよう」で止まりやすい人向けです。
-            計画・作業実績・普段使っているAIをつないで、次にやることを見つけやすくします。
+            目標がまだ曖昧でも大丈夫。最初にCanoviaへ話すと、会話から現在地を理解し、最初のPlanと次の一歩へつなげます。
+            その後は実行・Evidence・Inboxを同じContextとして引き継ぎます。
         </p>
 
         <div class="relative z-10 onboarding-intro-points mt-5">
             <article>
                 <span aria-hidden="true">🤝</span>
-                <div><strong>いつものAIで相談</strong><small>ChatGPTなど、普段のAIをそのまま使えます。</small></div>
+                <div><strong>まずCanoviaに話す</strong><small>入力方法を選ばず、今の目標や状況をそのまま伝えられます。</small></div>
             </article>
             <article>
                 <span aria-hidden="true">🗺️</span>
@@ -33,7 +33,7 @@
         </div>
 
         <div class="relative z-10 mt-6 flex flex-col gap-2 sm:flex-row">
-            <button type="button" class="btn-primary flex-1 justify-center" data-onboarding-intro-start>使い方を見てみる</button>
+            <button type="button" class="btn-primary flex-1 justify-center" data-onboarding-intro-start>Canoviaと始める</button>
             <button type="button" class="btn-secondary flex-1 justify-center" data-onboarding-intro-skip>今はスキップ</button>
         </div>
     </section>
