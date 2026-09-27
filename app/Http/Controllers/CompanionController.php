@@ -9,6 +9,7 @@ use App\Models\CompanionThread;
 use App\Models\Plan;
 use App\Models\Task;
 use App\Services\CompanionContextService;
+use App\Services\CompanionContinuityService;
 use App\Services\CompanionConversationService;
 use App\Services\CompanionEntryService;
 use App\Services\CompanionMutationApplyService;
@@ -33,6 +34,10 @@ class CompanionController extends Controller
         $plans = $this->editablePlans($request, $ownership);
         $threads = CompanionThread::query()
             ->with(['plan', 'task'])
+            ->withCount([
+                'mutationCandidates as pending_mutation_candidates_count' => fn ($query) => $query
+                    ->where('status', CompanionMutationCandidate::STATUS_PENDING),
+            ])
             ->where('user_id', $user->id)
             ->where('status', CompanionThread::STATUS_ACTIVE)
             ->latest('last_message_at')
@@ -110,6 +115,7 @@ class CompanionController extends Controller
         CompanionThread $companionThread,
         PlanOwnershipService $ownership,
         CompanionContextService $context,
+        CompanionContinuityService $continuity,
         CompanionMutationApplyService $mutationApply,
         FeatureFlagService $flags,
         FeatureAccessService $access,
@@ -146,14 +152,27 @@ class CompanionController extends Controller
             ])
             ->all();
 
+        $contextSnapshot = $context->snapshot(
+            $request->user(),
+            $plan,
+            $task,
+            is_array($companionThread->context_scope) ? $companionThread->context_scope : null,
+        );
+        $continuitySignals = $continuity->signals($companionThread, $contextSnapshot);
+        $contextSnapshot['continuity'] = $continuity->promptContext($continuitySignals);
+
+        $continuityRequestIds = collect($continuitySignals)
+            ->where('action', 'ask')
+            ->mapWithKeys(fn (array $signal) => [
+                (string) $signal['key'] => (string) Str::uuid(),
+            ])
+            ->all();
+
         return view('companion.show', [
             'thread' => $companionThread,
-            'contextSnapshot' => $context->snapshot(
-                $request->user(),
-                $plan,
-                $task,
-                is_array($companionThread->context_scope) ? $companionThread->context_scope : null,
-            ),
+            'contextSnapshot' => $contextSnapshot,
+            'continuitySignals' => $continuitySignals,
+            'continuityRequestIds' => $continuityRequestIds,
             'messageRequestId' => (string) Str::uuid(),
             'companionSourcePath' => data_get($companionThread->context_scope, 'source_path') ?: request()->path(),
             'candidatePreviews' => $candidatePreviews,
