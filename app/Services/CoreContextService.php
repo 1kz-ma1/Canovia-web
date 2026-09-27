@@ -17,6 +17,8 @@ final class CoreContextService
 
     private ?string $actorToken = null;
 
+    private ?Request $activeRequest = null;
+
     public function __construct(
         private readonly PlanOwnershipService $ownership,
         private readonly BehaviorIdentityService $identity,
@@ -28,6 +30,8 @@ final class CoreContextService
      */
     public function plans(Request $request, array $features = []): Collection
     {
+        $this->bindRequest($request);
+
         if ($this->plans === null) {
             $this->plans = $this->ownership->ownedPlans($request);
         }
@@ -49,22 +53,42 @@ final class CoreContextService
 
     public function actorToken(Request $request): string
     {
+        $this->bindRequest($request);
+
         return $this->actorToken ??= $this->identity->resolve($request);
     }
 
     public function role(Request $request, Plan $plan): ?string
     {
+        $this->bindRequest($request);
+
         return $this->ownership->role($request, $plan);
     }
 
     public function canEdit(Request $request, Plan $plan): bool
     {
+        $this->bindRequest($request);
+
         return $this->ownership->canEdit($request, $plan);
     }
 
     public function owns(Request $request, Plan $plan): bool
     {
+        $this->bindRequest($request);
+
         return $this->ownership->owns($request, $plan);
+    }
+
+    private function bindRequest(Request $request): void
+    {
+        if ($this->activeRequest === $request) {
+            return;
+        }
+
+        $this->activeRequest = $request;
+        $this->plans = null;
+        $this->loaded = [];
+        $this->actorToken = null;
     }
 
     private function ensure(string $feature): void
