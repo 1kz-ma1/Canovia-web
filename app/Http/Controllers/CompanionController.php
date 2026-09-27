@@ -10,6 +10,7 @@ use App\Models\Plan;
 use App\Models\Task;
 use App\Services\CompanionContextService;
 use App\Services\CompanionConversationService;
+use App\Services\CompanionEntryService;
 use App\Services\CompanionMutationApplyService;
 use App\Services\FeatureAccessService;
 use App\Services\FeatureFlagService;
@@ -44,6 +45,32 @@ class CompanionController extends Controller
             'threads' => $threads,
             ...$this->availability($user, $flags, $access, $nativeAi),
         ]);
+    }
+
+    public function entry(
+        Request $request,
+        CompanionEntryService $entry,
+        FeatureFlagService $flags,
+        FeatureAccessService $access,
+        NativeAiGateway $nativeAi,
+    ) {
+        $availability = $this->availability($request->user(), $flags, $access, $nativeAi);
+        if (! $availability['canUseCompanion']) {
+            return redirect()->route('companion.index');
+        }
+
+        $validated = $request->validate([
+            'entry_type' => ['required', 'string', 'in:'.implode(',', CompanionEntryService::ENTRY_TYPES)],
+            'plan_id' => ['nullable', 'integer', 'min:1'],
+            'task_id' => ['nullable', 'integer', 'min:1'],
+            'inbox_item_id' => ['nullable', 'integer', 'min:1'],
+            'source_path' => ['nullable', 'string', 'max:500'],
+            'source_route' => ['nullable', 'string', 'max:150'],
+        ]);
+
+        $thread = $entry->open($request, $validated);
+
+        return redirect()->route('companion.show', $thread);
     }
 
     public function storeThread(
@@ -121,8 +148,14 @@ class CompanionController extends Controller
 
         return view('companion.show', [
             'thread' => $companionThread,
-            'contextSnapshot' => $context->snapshot($request->user(), $plan, $task),
+            'contextSnapshot' => $context->snapshot(
+                $request->user(),
+                $plan,
+                $task,
+                is_array($companionThread->context_scope) ? $companionThread->context_scope : null,
+            ),
             'messageRequestId' => (string) Str::uuid(),
+            'companionSourcePath' => data_get($companionThread->context_scope, 'source_path') ?: request()->path(),
             'candidatePreviews' => $candidatePreviews,
             'candidateApplyRequestIds' => $candidateApplyRequestIds,
             ...$this->availability($request->user(), $flags, $access, $nativeAi),
