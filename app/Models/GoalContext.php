@@ -45,4 +45,9 @@ class GoalContext extends Model
     {
         return $this->hasMany(GoalContextFact::class);
     }
+
+    public function discoveryMessages()
+    {
+        return $this->hasMany(GoalDiscoveryMessage::class)->orderBy('id');
+    }
 }
