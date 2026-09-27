@@ -58,7 +58,6 @@ class FirstRunUxV4123Test extends TestCase
             ->assertOk()
             ->assertSee('FIRST COMPANION', false);
 
-        $this->assertNotNull($this->app['auth']->user()?->fresh()->first_run_completed_at);
     }
 
     public function test_existing_guest_plan_bypasses_first_run_gate(): void
@@ -140,6 +139,9 @@ class FirstRunUxV4123Test extends TestCase
             ->assertRedirect(route('plans.create'));
 
         $this->get(route('plans.create'))->assertOk();
+
+        $user = User::query()->where('email', 'brand-new@example.com')->firstOrFail();
+        $this->assertNotNull($user->first_run_completed_at);
     }
 
     public function test_plan_primary_action_is_full_width_and_secondary_actions_are_two_column_mobile_grid(): void
