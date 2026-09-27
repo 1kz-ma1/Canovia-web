@@ -213,7 +213,8 @@ class GoalPatternDemandV4114Test extends TestCase
 
         $this->assertSame(1, $sports['unique_identities']);
         $this->assertSame(2, $sales['unique_identities']);
-        $this->assertGreaterThanOrEqual(30, $sales['opportunity_score']);
+        $this->assertGreaterThanOrEqual(50, $sales['opportunity_score']);
+        $this->assertGreaterThan($sports['opportunity_score'], $sales['opportunity_score']);
         $this->assertLessThanOrEqual(100, $sports['opportunity_score']);
         $this->assertLessThanOrEqual(100, $sales['opportunity_score']);
     }
