@@ -2540,6 +2540,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return clone;
         });
         const applyRoadmapDensity = () => {
+            if (!roadmapPage.isConnected) {
+                window.removeEventListener('resize', applyRoadmapDensity);
+                return;
+            }
             const mobile = window.matchMedia('(max-width: 767px)').matches;
             supportingLinks.forEach((link) => link.classList.toggle('hidden', mobile));
             clones.forEach((link) => link.classList.toggle('hidden', !mobile));
@@ -3376,13 +3380,16 @@ function initializeInstantRoadmapPage() {
             return clone;
         });
         const applyDensity = () => {
-            if (!page.isConnected) return;
+            if (!page.isConnected) {
+                window.removeEventListener('resize', applyDensity);
+                return;
+            }
             const mobile = window.matchMedia('(max-width: 767px)').matches;
             supportingLinks.forEach((link) => link.classList.toggle('hidden', mobile));
             clones.forEach((link) => link.classList.toggle('hidden', !mobile));
         };
         applyDensity();
-        window.addEventListener('resize', applyDensity, { passive: true, once: false });
+        window.addEventListener('resize', applyDensity, { passive: true });
     }
 
     const activePlanTab = page.querySelector('[data-roadmap-plan-tabs] .pk-v19-plan-card.is-active, [data-roadmap-plan-tabs] .roadmap-plan-tab.is-active');
