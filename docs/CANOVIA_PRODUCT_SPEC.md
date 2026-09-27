@@ -73,6 +73,7 @@ Canoviaは「完璧な計画を守らせる」より、現実の行動・発見�
 - Invisible Memoryは直近User Inputに実在するliteral source quoteをserver-sideで確認した場合だけ自動保存し、推測・診断・属性推定を保存しない
 - Premium Companionも同じMemory capture boundaryを使い、保存済みMemoryを最大8件だけContextとして再利用
 - Manual Plan Formとlegacy Future Memo routeはcompatibility / control fallbackとして残し、通常導線では管理を要求しない
+- Inboxの公開routing destination / AI routing schemaからFuture Memoを外し、legacy POST互換だけserver-sideに残す
 - Provisional PlanへReadiness途中でも進める導線
 - HIGH ReadinessはDesired State + Current State + Success Signalを必須化
 - Initial Plan AIへGoal Contextを注入し、UnknownをMeasurement Taskへ変換するPolicy
