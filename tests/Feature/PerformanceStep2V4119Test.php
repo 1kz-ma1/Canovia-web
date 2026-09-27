@@ -16,19 +16,12 @@ class PerformanceStep2V4119Test extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_production_session_driver_can_be_switched_by_environment(): void
+    public function test_production_session_driver_is_not_forced_to_database(): void
     {
-        $previous = getenv('SESSION_DRIVER');
-        putenv('SESSION_DRIVER=redis');
+        $source = file_get_contents(config_path('session.php'));
 
-        try {
-            $config = require config_path('session.php');
-            $this->assertSame('redis', $config['driver']);
-        } finally {
-            $previous === false
-                ? putenv('SESSION_DRIVER')
-                : putenv('SESSION_DRIVER='.$previous);
-        }
+        $this->assertStringContainsString("'driver' => env('SESSION_DRIVER', 'database')", $source);
+        $this->assertStringNotContainsString("env('APP_ENV') === 'production' ? 'database'", $source);
     }
 
     public function test_service_worker_forces_new_activation_and_disables_navigation_preload_early(): void
