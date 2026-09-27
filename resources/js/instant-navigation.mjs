@@ -34,15 +34,30 @@ function payloadFromDocument(documentRef, url) {
     const page = documentRef.querySelector('[data-canovia-page]');
     if (!page) return null;
 
-    const nav = {};
-    documentRef.querySelectorAll('[data-canovia-nav-key]').forEach((element) => {
-        const key = element.dataset.canoviaNavKey;
-        if (!key) return;
-        nav[key] = {
-            className: element.className,
-            ariaCurrent: element.getAttribute('aria-current'),
-        };
-    });
+    let fragmentMeta = null;
+    const fragmentMetaElement = documentRef.getElementById('canovia-instant-meta');
+    if (fragmentMetaElement) {
+        try {
+            fragmentMeta = JSON.parse(fragmentMetaElement.textContent || 'null');
+        } catch (_) {
+            fragmentMeta = null;
+        }
+    }
+
+    const nav = fragmentMeta?.nav && typeof fragmentMeta.nav === 'object'
+        ? fragmentMeta.nav
+        : {};
+
+    if (!fragmentMeta?.nav) {
+        documentRef.querySelectorAll('[data-canovia-nav-key]').forEach((element) => {
+            const key = element.dataset.canoviaNavKey;
+            if (!key) return;
+            nav[key] = {
+                className: element.className,
+                ariaCurrent: element.getAttribute('aria-current'),
+            };
+        });
+    }
 
     const pageSnapshot = page.cloneNode(true);
     pageSnapshot.querySelectorAll('[data-canovia-instant-initialized]').forEach((element) => {
@@ -58,9 +73,11 @@ function payloadFromDocument(documentRef, url) {
         routeName: documentRef.body?.dataset.routeName || '',
         pageHtml: pageSnapshot.innerHTML,
         companionHtml: documentRef.querySelector('[data-canovia-companion-slot]')?.innerHTML || '',
-        mobileSection: documentRef.querySelector('[data-mobile-section-label]')?.textContent || '',
+        mobileSection: fragmentMeta?.mobileSection
+            || documentRef.querySelector('[data-mobile-section-label]')?.textContent
+            || '',
         nav,
-        feedbackContext: feedbackContextFrom(documentRef),
+        feedbackContext: fragmentMeta?.feedbackContext || feedbackContextFrom(documentRef),
         capturedAt: Date.now(),
     };
 }
