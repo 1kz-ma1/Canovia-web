@@ -70,6 +70,7 @@ final class MeasurePagePerformance
                     'response_bytes' => $responseBytes,
                     'instant_fragment' => is_string($responseContent)
                         && str_contains($responseContent, 'id="canovia-instant-meta"'),
+                    'core_bundle' => $request->routeIs('instant.core_bundle'),
                 ]);
             } catch (\Throwable) {
                 // Performance diagnosis must never make a normal request fail.
