@@ -16,7 +16,9 @@ return [
     |
     */
 
-    'driver' => env('APP_ENV') === 'production' ? 'database' : env('SESSION_DRIVER', 'database'),
+    // Keep database as the safe default, but allow production to move the
+    // session hot path to a low-latency store such as Render Key Value.
+    'driver' => env('SESSION_DRIVER', 'database'),
 
     /*
     |--------------------------------------------------------------------------
