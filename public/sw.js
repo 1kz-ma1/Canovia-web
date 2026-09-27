@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'canovia-shell-v41-16-1';
+const CACHE_VERSION = 'canovia-shell-v41-19-1';
 const META_CACHE = 'canovia-instant-meta-v2';
 const LAST_NETWORK_KEY = '/__canovia_last_network_success__';
 const LIKELY_SLEEP_AFTER_MS = 12 * 60 * 1000;
@@ -26,6 +26,13 @@ const STATIC_ASSETS = [
 
 self.addEventListener('install', (event) => {
     event.waitUntil((async () => {
+        // A previous worker may have enabled navigation preload. Disable it
+        // during install as well as activate so this deployment repairs
+        // existing registrations before the next controlled navigation.
+        if (self.registration.navigationPreload) {
+            await self.registration.navigationPreload.disable().catch(() => {});
+        }
+
         const cache = await caches.open(CACHE_VERSION);
 
         // offline.html is the only required fallback. Decorative assets are

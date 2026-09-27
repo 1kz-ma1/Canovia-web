@@ -31,12 +31,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libicu-dev \
         libonig-dev \
         libzip-dev \
+        $PHPIZE_DEPS \
     && docker-php-ext-install -j"$(nproc)" \
         intl \
         mbstring \
         opcache \
         pdo_mysql \
         zip \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -64,6 +67,7 @@ RUN composer install \
         bootstrap/cache \
         /run/nginx \
         /var/log/supervisor \
+    && chown -R www-data:www-data storage bootstrap/cache \
     && chmod +x docker/render-start.sh \
     && php-fpm -tt \
     && nginx -t
