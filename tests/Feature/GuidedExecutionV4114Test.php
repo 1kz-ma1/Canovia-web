@@ -270,7 +270,7 @@ class GuidedExecutionV4114Test extends TestCase
                 'outcome_rating' => 'partly',
                 'actual_outcome' => '他人の記録',
             ])
-            ->assertNotFound();
+            ->assertForbidden();
 
         $this->assertSame(GuidedExecution::STATUS_PREPARED, $execution->fresh()->status);
         $this->assertDatabaseCount('task_evidences', 0);
