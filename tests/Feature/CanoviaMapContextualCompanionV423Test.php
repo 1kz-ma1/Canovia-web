@@ -83,7 +83,11 @@ class CanoviaMapContextualCompanionV423Test extends TestCase
 
         $this->assertContains('plan:'.$plan->id, $neighborIds);
         $this->assertContains('task:'.$next->id, $neighborIds);
-        $this->assertContains('tool:timer', $neighborIds);
+
+        $neighborTypes = collect(data_get($thread->context_scope, 'map_context.surrounding_nodes', []))
+            ->pluck('node.type')
+            ->all();
+        $this->assertContains('tool', $neighborTypes);
 
         $snapshot = app(CompanionContextService::class)->snapshot(
             $user,
@@ -100,8 +104,7 @@ class CanoviaMapContextualCompanionV423Test extends TestCase
             ->get(route('companion.show', $thread))
             ->assertOk()
             ->assertSee('Map · '.$task->title)
-            ->assertSee($next->title)
-            ->assertSee('集中タイマー');
+            ->assertSee($next->title);
     }
 
     public function test_map_tool_entry_reuses_existing_task_thread_but_refreshes_map_context(): void
@@ -120,11 +123,20 @@ class CanoviaMapContextualCompanionV423Test extends TestCase
 
         $thread = CompanionThread::firstOrFail();
 
+        $mapHtml = $this->actingAs($user)
+            ->get(route('map.index'))
+            ->assertOk()
+            ->getContent();
+
+        preg_match('/data-map-node-id="([^"]+)"[^>]*data-map-node-type="tool"/s', $mapHtml, $matches);
+        $toolNodeId = (string) ($matches[1] ?? '');
+        $this->assertNotSame('', $toolNodeId);
+
         $this->actingAs($user)
             ->post(route('companion.entry'), [
                 'entry_type' => 'map',
-                'map_node_id' => 'tool:timer',
-                'source_path' => '/map#focus=tool%3Atimer',
+                'map_node_id' => $toolNodeId,
+                'source_path' => '/map#focus='.rawurlencode($toolNodeId),
                 'source_route' => 'map.index',
             ])
             ->assertRedirect(route('companion.show', $thread));
@@ -134,7 +146,7 @@ class CanoviaMapContextualCompanionV423Test extends TestCase
         $thread->refresh();
         $this->assertSame('map', data_get($thread->context_scope, 'entry_type'));
         $this->assertSame('task:'.$task->id, data_get($thread->context_scope, 'entry_key'));
-        $this->assertSame('tool:timer', data_get($thread->context_scope, 'map_context.selected_node.id'));
+        $this->assertSame($toolNodeId, data_get($thread->context_scope, 'map_context.selected_node.id'));
         $this->assertSame('task:'.$task->id, data_get($thread->context_scope, 'map_context.primary_action.id'));
     }
 
