@@ -361,11 +361,15 @@ export function mountCanoviaInstantNavigation({
 
         const prefetched = inflight.get(`prefetch:${key}`) || bundleInflight.get(key);
         try {
-            const payload = await withUncachedFeedback(() => (
+            let payload = await withUncachedFeedback(() => (
                 prefetched
                     ? prefetched
                     : fetchPayload(url, 'navigate')
             ));
+
+            if (!payload) {
+                payload = await withUncachedFeedback(() => fetchPayload(url, 'navigate'));
+            }
 
             if (serial !== navigationSerial || disposed) return false;
             render(payload, { historyMode, scroll });
