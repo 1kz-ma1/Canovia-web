@@ -1,6 +1,6 @@
 # Canovia Product Specification
 
-更新基準: 2026-09-27 / V41.15 Step 3 Contextual Companion Entry
+更新基準: 2026-09-27 / V41.15 Step 4 Companion Continuity
 
 V41.8〜V41.12のNative AI Practice / Adaptive Learning Flow / Recall基盤を維持しつつ、V41.13ではTaskごとのPrimary Actionを1つに整理し、旧「今日」をメインナビから退役させてCanovia Inboxを追加する。Home=Now、Inbox=Input、Roadmap=Future、Timeline=Pastとして主要導線の責務を分離する。詳細は [V41.12仕様](V41.12_RECALL_CANDIDATE_IMPORT.md)、[V41.13仕様](V41.13_ACTION_INBOX_REFRAME.md) を参照。
 
@@ -83,6 +83,11 @@ Canoviaは「完璧な計画を守らせる」より、現実の行動・発見�
 - Companion entryは元画面のsource path / routeをThreadに保持し、会話画面へ遷移した後もCurrent Screen contextを失わない
 - Step 1で作成済みのglobal / Plan / Task Threadは同じscopeなら再利用し、Contextual Entry導入でConversationを不要に増やさない
 - `/companion` の手動Context selectorは、別対象やglobal相談を明示選択するfallbackとして維持する
+- Companion Continuityはpending Candidate / 前回会話後のEvidence / Known Unknown / next_action未整理を既存stateから決定論的に再構成する
+- Continuityは最大3件を優先表示し、専用既読DB・Push通知・自動AI実行・自動Message生成を追加しない
+- pending CandidateはConversation一覧でも件数を見せ、Native AIへ同状態を渡しつつserver-sideでもtype + normalized payload一致のpending Candidate重複保存を防ぐ
+- Evidence follow-upは前回Assistant replyより新しいEvidenceだけを対象にし、一度Companionがreplyすれば自動的に解消する
+- Known Unknownは同じFact keyがconfirmedになれば解消し、next_action signalはTaskへnext_action_noteが設定されれば解消する
 - Companion messageはrequest_idで再送を吸収し、Native AI失敗後も同じ送信を安全に再試行可能
 - Companionは `canovia_companion` と `automatic_ai_execution` を別Capabilityとして扱い、Premium Coreから利用権を供給
 - WorkSession / Timer / WorkLog / Continuity
@@ -137,8 +142,8 @@ Canoviaは「完璧な計画を守らせる」より、現実の行動・発見�
 
 iOS正式公開準備や、現行基盤を実運用へ接続する近い将来。
 
-V41.15の次段階:
-- Conversation Continuity（pending Candidate / Known Unknown / Evidence後follow-up）の設計
+V41.15はStep 4まで実装済み。次の大きな検討:
+- Companion実利用データを見た上で、Proactive notification / follow-up通知を別バージョンで判断
 
 - iOSアプリ化とApp Store Review運用
 - server-backed Feature Flag保存とAdmin操作

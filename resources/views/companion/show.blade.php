@@ -17,6 +17,12 @@
             'applied' => '反映済み',
             'dismissed' => '見送り',
         ];
+        $continuityLabels = [
+            'pending_candidate' => '確認待ち',
+            'new_evidence' => '新しいEvidence',
+            'known_unknown' => '未確認',
+            'next_action_clarification' => '次のAction',
+        ];
         $fieldLabels = [
             'title' => 'タイトル',
             'description' => '説明',
@@ -91,6 +97,45 @@
             </div>
         @endif
 
+        @if (! empty($continuitySignals))
+            <section class="page-card border-violet-300/15 p-4 sm:p-5" data-companion-continuity>
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-[.16em] text-violet-300">CONTINUITY</p>
+                        <h2 class="mt-1 text-base font-black text-slate-100">今の状態から、続きがあります</h2>
+                        <p class="mt-1 text-xs leading-5 text-slate-500">会話を増やすためではなく、未解決の状態だけをCanoviaから拾っています。</p>
+                    </div>
+                    <span class="badge badge-slate">{{ count($continuitySignals) }}件</span>
+                </div>
+
+                <div class="mt-4 space-y-2">
+                    @foreach ($continuitySignals as $signal)
+                        <article class="rounded-xl border border-white/8 bg-white/[0.025] p-3">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div class="min-w-0 flex-1">
+                                    <span class="badge badge-slate">{{ $continuityLabels[$signal['kind'] ?? ''] ?? '続き' }}</span>
+                                    <p class="mt-2 text-sm font-bold text-slate-200">{{ $signal['title'] ?? '続きがあります' }}</p>
+                                    <p class="mt-1 text-xs leading-5 text-slate-500">{{ $signal['summary'] ?? '' }}</p>
+                                </div>
+
+                                @if (($signal['action'] ?? null) === 'review' && filled($signal['anchor'] ?? null))
+                                    <a href="#{{ $signal['anchor'] }}" class="btn-secondary shrink-0 px-3 py-2 text-xs">確認する</a>
+                                @elseif (($signal['action'] ?? null) === 'ask' && $canUseCompanion && filled($signal['suggested_message'] ?? null))
+                                    <form method="POST" action="{{ route('companion.messages.store', $thread) }}" class="shrink-0" data-mutation-once>
+                                        @csrf
+                                        <input type="hidden" name="request_id" value="{{ $continuityRequestIds[$signal['key']] ?? '' }}">
+                                        <input type="hidden" name="source_path" value="{{ $companionSourcePath }}">
+                                        <input type="hidden" name="content" value="{{ $signal['suggested_message'] }}">
+                                        <button type="submit" class="btn-secondary px-3 py-2 text-xs">この続きを相談</button>
+                                    </form>
+                                @endif
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
         <details class="page-card p-4">
             <summary class="cursor-pointer text-xs font-bold text-slate-300">この会話でCanoviaが参照しているContext</summary>
             <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -130,7 +175,7 @@
                                     $previewChanges = $preview['changes'] ?? [];
                                     $blockedFields = $preview['blocked_fields'] ?? [];
                                 @endphp
-                                <div class="rounded-xl border {{ $candidate->status === 'pending' ? 'border-amber-300/15 bg-amber-300/[0.025]' : ($candidate->status === 'applied' ? 'border-emerald-300/15 bg-emerald-300/[0.025]' : 'border-slate-800 bg-slate-950/20') }} p-3">
+                                <div id="companion-candidate-{{ $candidate->id }}" class="scroll-mt-24 rounded-xl border {{ $candidate->status === 'pending' ? 'border-amber-300/15 bg-amber-300/[0.025]' : ($candidate->status === 'applied' ? 'border-emerald-300/15 bg-emerald-300/[0.025]' : 'border-slate-800 bg-slate-950/20') }} p-3">
                                     <div class="flex flex-wrap items-start justify-between gap-3">
                                         <div class="min-w-0 flex-1">
                                             <span class="badge {{ $candidate->status === 'applied' ? 'badge-green' : 'badge-slate' }}">{{ $candidateStatusLabels[$candidate->status] ?? $candidate->status }}</span>

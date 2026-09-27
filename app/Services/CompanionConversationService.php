@@ -18,6 +18,7 @@ class CompanionConversationService
     public function __construct(
         private readonly NativeAiGateway $nativeAi,
         private readonly CompanionContextService $context,
+        private readonly CompanionContinuityService $continuity,
         private readonly AiCapacityService $capacity,
     ) {}
 
@@ -82,6 +83,9 @@ class CompanionConversationService
             ? $sourcePath
             : data_get($thread->context_scope, 'source_path');
 
+        $continuitySignals = $this->continuity->signals($thread, $contextSnapshot);
+        $contextSnapshot['continuity'] = $this->continuity->promptContext($continuitySignals);
+
         $history = $thread->messages()
             ->where('id', '<=', $userMessage->id)
             ->latest('id')
@@ -140,6 +144,7 @@ class CompanionConversationService
                     'reply_to_message_id' => (int) $userMessage->id,
                     'context_scope' => $contextSnapshot['scope'] ?? 'global',
                     'candidate_count' => count($data['candidates'] ?? []),
+                    'continuity_signal_count' => count($contextSnapshot['continuity'] ?? []),
                 ],
             ]);
 
@@ -204,6 +209,21 @@ class CompanionConversationService
             $payload['owner_token'],
         );
 
+        $normalizedPayload = $this->canonicalizePayload($payload);
+        $duplicatePending = CompanionMutationCandidate::query()
+            ->where('companion_thread_id', $thread->id)
+            ->where('status', CompanionMutationCandidate::STATUS_PENDING)
+            ->where('type', $type)
+            ->get()
+            ->first(fn (CompanionMutationCandidate $existing) => (
+                $this->canonicalizePayload(is_array($existing->payload) ? $existing->payload : [])
+                === $normalizedPayload
+            ));
+
+        if ($duplicatePending) {
+            return null;
+        }
+
         return CompanionMutationCandidate::query()->create([
             'companion_thread_id' => $thread->id,
             'companion_message_id' => $assistant->id,
@@ -222,6 +242,24 @@ class CompanionConversationService
                 'target_source' => 'selected_context',
             ],
         ]);
+    }
+
+    /**
+     * Canonicalize object keys for deterministic duplicate detection while preserving list order.
+     */
+    private function canonicalizePayload(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        if (array_is_list($value)) {
+            return array_map(fn ($item) => $this->canonicalizePayload($item), $value);
+        }
+
+        ksort($value);
+
+        return array_map(fn ($item) => $this->canonicalizePayload($item), $value);
     }
 
     private function buildPrompt(array $context, array $history): string
@@ -245,6 +283,10 @@ class CompanionConversationService
 - CandidateへPlan ID / Task ID / User IDを書かない。対象はCanovia側が選択中Contextから決める
 - 単なる相談ならCandidateは0件でよい
 - 一度に候補を増やしすぎず、最大3件
+- CONTEXTのcontinuityにpending_candidateがある場合、同じ変更候補を重複生成しない
+- continuityのnew_evidenceは前回の会話後に増えたEvidence。必要なら見直しを提案するが、EvidenceだけでProgressや完了を決めない
+- continuityのknown_unknownは未確認事項。推測で埋めず、確認方法や観測方法を整理する
+- continuityのnext_action_clarificationは次のActionが未整理な状態。必要ならupdate_task Candidateとして提案できる
 - 返答は日本語で簡潔に、次に動きやすい内容にする
 
 【許可されたCandidate type / payload】
