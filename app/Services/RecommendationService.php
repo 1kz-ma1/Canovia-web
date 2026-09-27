@@ -14,6 +14,7 @@ class RecommendationService
     public function __construct(
         private readonly PlanProgressService $progressService,
         private readonly RecommendationPersonalizationService $personalizationService,
+        private readonly RequestBehaviorHistory $history,
     ) {}
 
     public function recommend(
@@ -292,13 +293,10 @@ class RecommendationService
             return [];
         }
 
-        return WorkSession::query()
-            ->where('actor_token', $actorToken)
-            ->whereNotNull('task_id')
-            ->whereIn('status', ['completed', 'interrupted'])
-            ->where('started_at', '>=', now()->subDays(7))
-            ->latest('ended_at')
-            ->get()
+        return $this->history
+            ->completedSessions($actorToken, 7)
+            ->filter(fn ($session) => $session->task_id !== null)
+            ->sortByDesc(fn ($session) => $session->ended_at?->timestamp ?? $session->started_at?->timestamp ?? 0)
             ->groupBy('task_id')
             ->map(fn ($sessions) => $sessions->first())
             ->all();

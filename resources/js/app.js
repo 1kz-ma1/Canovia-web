@@ -742,6 +742,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const loadingOverlay = document.querySelector('[data-route-loading]');
     let loadingTimer = null;
+    let navigationLocked = false;
+    let pendingNavigationLink = null;
+    let navigationUnlockTimer = null;
 
     const showLoading = () => {
         if (!loadingOverlay) return;
@@ -749,7 +752,19 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingTimer = window.setTimeout(() => {
             loadingOverlay.classList.add('is-visible');
             loadingOverlay.setAttribute('aria-hidden', 'false');
-        }, 380);
+        }, 120);
+    };
+
+    const resetNavigationLock = () => {
+        navigationLocked = false;
+        window.clearTimeout(navigationUnlockTimer);
+        navigationUnlockTimer = null;
+
+        if (pendingNavigationLink) {
+            pendingNavigationLink.removeAttribute('aria-busy');
+            pendingNavigationLink.classList.remove('pointer-events-none', 'opacity-70');
+            pendingNavigationLink = null;
+        }
     };
 
     const uuidForMutation = () => {
@@ -842,19 +857,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('click', (event) => {
         const link = event.target.closest('a[href]');
-        if (!link) return;
-        if (link.target === '_blank' || link.hasAttribute('download')) return;
+        if (!link || event.defaultPrevented) return;
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        if (link.target === '_blank' || link.hasAttribute('download') || link.hasAttribute('data-route-lock-skip')) return;
         if (link.href.startsWith('mailto:') || link.href.startsWith('tel:')) return;
+
         const url = new URL(link.href, window.location.href);
         if (url.origin !== window.location.origin) return;
         if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) return;
+
+        if (navigationLocked) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            return;
+        }
+
+        navigationLocked = true;
+        pendingNavigationLink = link;
+        link.setAttribute('aria-busy', 'true');
+        link.classList.add('pointer-events-none', 'opacity-70');
         showLoading();
+
+        // Fail open if another handler cancels navigation or the browser keeps
+        // the current document alive. Normal navigation resets on pageshow.
+        navigationUnlockTimer = window.setTimeout(resetNavigationLock, 8000);
     });
 
     window.addEventListener('pageshow', () => {
         window.clearTimeout(loadingTimer);
         loadingOverlay?.classList.remove('is-visible');
         loadingOverlay?.setAttribute('aria-hidden', 'true');
+        resetNavigationLock();
         resetMutationLocks();
     });
 

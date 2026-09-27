@@ -4,31 +4,19 @@ namespace App\Services;
 
 use App\Data\UserBehaviorBaselineData;
 use App\Enums\BehaviorEventType;
-use App\Models\BehaviorEvent;
-use App\Models\WorkSession;
 use Illuminate\Support\Collection;
 
 class UserBehaviorService
 {
+    public function __construct(private readonly RequestBehaviorHistory $history) {}
+
     public function baseline(string $actorToken, ?int $days = null): UserBehaviorBaselineData
     {
         $days ??= (int) config('recommendations.baseline_days', 28);
-        $since = now()->subDays($days);
         $minFocusSeconds = (int) config('recommendations.min_focus_session_seconds', 120);
 
-        $events = BehaviorEvent::query()
-            ->where('actor_token', $actorToken)
-            ->where('occurred_at', '>=', $since)
-            ->orderBy('occurred_at')
-            ->get()
-            ->toBase();
-
-        $sessions = WorkSession::query()
-            ->where('actor_token', $actorToken)
-            ->where('started_at', '>=', $since)
-            ->whereIn('status', ['completed', 'interrupted'])
-            ->get()
-            ->toBase();
+        $events = $this->history->events($actorToken, $days);
+        $sessions = $this->history->completedSessions($actorToken, $days);
 
         $qualifiedSessions = $sessions
             ->filter(fn ($session) => (int) $session->actual_seconds >= $minFocusSeconds);

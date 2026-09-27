@@ -2,11 +2,18 @@
 
 namespace App\Models;
 
+use App\Support\ReleaseNotes;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class ReleaseNote extends Model
 {
+    protected static function booted(): void
+    {
+        static::saved(fn () => ReleaseNotes::forgetCache());
+        static::deleted(fn () => ReleaseNotes::forgetCache());
+    }
+
     protected $fillable = [
         'feedback_id',
         'version',

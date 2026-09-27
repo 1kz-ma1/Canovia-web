@@ -9,6 +9,7 @@ use App\Services\Entitlements\SponsorProductGrantEntitlementResolver;
 use App\Services\AdminAccessService;
 use App\Services\AdminPreviewContext;
 use App\Services\FeatureAccessService;
+use App\Services\RequestBehaviorHistory;
 use App\Support\RequestPerformance;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
@@ -22,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ProductGrantEntitlementResolver::class);
         $this->app->singleton(GiftProductGrantEntitlementResolver::class);
         $this->app->singleton(SponsorProductGrantEntitlementResolver::class);
+        $this->app->scoped(RequestBehaviorHistory::class);
         $this->app->tag(
             [
                 SponsorProductGrantEntitlementResolver::class,

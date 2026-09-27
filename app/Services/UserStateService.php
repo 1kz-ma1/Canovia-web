@@ -6,14 +6,15 @@ use App\Data\UserBehaviorBaselineData;
 use App\Data\UserStateData;
 use App\Enums\BehaviorEventType;
 use App\Enums\UserBehaviorState;
-use App\Models\BehaviorEvent;
 use App\Models\UserStateSnapshot;
-use App\Models\WorkSession;
 use Illuminate\Support\Collection;
 
 class UserStateService
 {
-    public function __construct(private readonly PlanProgressService $progressService) {}
+    public function __construct(
+        private readonly PlanProgressService $progressService,
+        private readonly RequestBehaviorHistory $history,
+    ) {}
 
     public function calculate(
         string $actorToken,
@@ -23,11 +24,7 @@ class UserStateService
     {
         $plans = collect(($plans ?? collect())->all());
         $windowDays = (int) config('recommendations.state_window_days', 14);
-        $events = BehaviorEvent::query()
-            ->where('actor_token', $actorToken)
-            ->where('occurred_at', '>=', now()->subDays($windowDays))
-            ->get()
-            ->toBase();
+        $events = $this->history->events($actorToken, $windowDays);
         $recent = $events->where('occurred_at', '>=', now()->subHour());
         $today = $events->where('occurred_at', '>=', today());
 
@@ -89,12 +86,7 @@ class UserStateService
             - min(16, max(0, $latencyRatio - 1) * 8)
         );
 
-        $sessions = WorkSession::query()
-            ->where('actor_token', $actorToken)
-            ->where('started_at', '>=', now()->subDays($windowDays))
-            ->whereIn('status', ['completed', 'interrupted'])
-            ->get()
-            ->toBase();
+        $sessions = $this->history->completedSessions($actorToken, $windowDays);
         $minFocusSeconds = (int) config('recommendations.min_focus_session_seconds', 120);
         $qualifiedSessions = $sessions->filter(fn ($session) => (int) $session->actual_seconds >= $minFocusSeconds);
         $recentDurations = $qualifiedSessions->pluck('actual_seconds')->filter()->map(fn ($seconds) => $seconds / 60);
@@ -154,18 +146,33 @@ class UserStateService
         );
     }
 
-    public function captureDaily(string $actorToken, UserStateData $state): UserStateSnapshot
+    public function captureDaily(string $actorToken, UserStateData $state): void
     {
-        return UserStateSnapshot::updateOrCreate(
-            ['actor_token' => $actorToken, 'snapshot_date' => today()->toDateString()],
-            [
+        $now = now();
+
+        UserStateSnapshot::query()->upsert(
+            [[
+                'actor_token' => $actorToken,
+                'snapshot_date' => today()->toDateString(),
                 'action_readiness' => $state->actionReadiness,
                 'decision_load' => $state->decisionLoad,
                 'focus_continuity' => $state->focusContinuity,
                 'consistency' => $state->consistency,
-                'state' => $state->state,
-                'evidence' => $state->evidence,
-            ]
+                'state' => $state->state->value,
+                'evidence' => json_encode($state->evidence, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]],
+            ['actor_token', 'snapshot_date'],
+            [
+                'action_readiness',
+                'decision_load',
+                'focus_continuity',
+                'consistency',
+                'state',
+                'evidence',
+                'updated_at',
+            ],
         );
     }
 
