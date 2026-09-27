@@ -240,16 +240,27 @@ class CompanionConversationService
 - 一度に候補を増やしすぎず、最大3件
 - 返答は日本語で簡潔に、次に動きやすい内容にする
 
-【許可されたCandidate type】
-create_task: 選択中Planへ新しいTask候補
-update_task: 選択中Taskの変更候補
-update_plan: 選択中Planの変更候補
-record_goal_fact: 選択中PlanのGoal Contextへ新しい確認済みFact候補
-create_future_memo: 今すぐ実行しない将来メモ候補
-create_inbox_item: 整理前の情報としてInboxへ残す候補
+【許可されたCandidate type / payload】
+create_task:
+  {"title":"必須","description":"任意","estimated_minutes":0,"priority":3,"activation_cost":3,"next_action_note":"任意"}
+update_task:
+  {"title":"任意","description":"任意","estimated_minutes":0,"remaining_minutes":0,"priority":3,"activation_cost":3,"next_action_note":"任意","status":"todo または doing"}
+update_plan:
+  {"title":"任意","description":"任意","category":"任意","priority":3,"priority_mode":"auto または manual","start_date":"YYYY-MM-DD","deadline":"YYYY-MM-DD または null"}
+record_goal_fact:
+  {"type":"current_state | signal | constraint | driver","key":"任意","label":"必須","value":"文字列またはobject","measurement":false,"importance":3}
+create_future_memo:
+  {"kind":"want_to_do | future_self | interest | concern | value","category":"career | study | creation | life | health | money | hobby | other","content":"必須","use_for_ai":true}
+create_inbox_item:
+  {"title":"任意","content":"必須"}
 
-payload_jsonはJSONオブジェクトを文字列化して返す。
-Candidateはまだ未反映であり、返答内でも「変更した」と表現しない。
+【重要】
+- update_taskでprogress_percentを提案しない
+- update_taskでdone / cancelledを提案しない
+- Evidenceや実行結果をTask進捗へ変換しない
+- Planの公開設定・共同設定・見た目設定を変更候補にしない
+- payload_jsonは上記の許可項目だけをJSONオブジェクトとして文字列化する
+- Candidateはまだ未反映。返答内でも「変更した」と表現しない
 
 【CANOVIA CONTEXT】
 {$contextText}
