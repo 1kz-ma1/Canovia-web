@@ -20,6 +20,10 @@
         class="{{ request()->routeIs('admin.practice_demand.*') ? 'btn-primary' : 'btn-secondary' }} px-3 py-2 text-xs"
     >演習需要</a>
     <a
+        href="{{ route('admin.goal_pattern_demand.index') }}"
+        class="{{ request()->routeIs('admin.goal_pattern_demand.*') ? 'btn-primary' : 'btn-secondary' }} px-3 py-2 text-xs"
+    >Goal需要</a>
+    <a
         href="{{ route('admin.economy.index') }}"
         class="{{ request()->routeIs('admin.economy.*') ? 'btn-primary' : 'btn-secondary' }} px-3 py-2 text-xs"
     >Economy</a>
