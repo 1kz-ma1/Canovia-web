@@ -6,7 +6,6 @@ use App\Data\UserBehaviorBaselineData;
 use App\Data\UserStateData;
 use App\Enums\BehaviorEventType;
 use App\Enums\UserBehaviorState;
-use App\Models\BehaviorEvent;
 use App\Models\User;
 use App\Models\UserStateSnapshot;
 use App\Models\WorkSession;
@@ -24,6 +23,7 @@ class DashboardPresentationService
         private readonly PlanCategoryProfileService $categoryProfiles,
         private readonly PlanSituationResolver $situationResolver,
         private readonly PlanSurfaceEngine $surfaceEngine,
+        private readonly RequestBehaviorHistory $history,
     ) {}
 
     public function build(
@@ -36,12 +36,11 @@ class DashboardPresentationService
         ?User $actor = null,
     ): array {
         $plans = collect($plans->all());
-        $previousSessions = WorkSession::with(['plan', 'task'])
-            ->where('actor_token', $actorToken)
-            ->whereIn('status', ['completed', 'interrupted'])
-            ->whereNotNull('task_id')
-            ->latest('ended_at')
-            ->get()
+        $historyDays = max(7, (int) config('recommendations.baseline_days', 28));
+        $completedSessions = $this->history->completedSessions($actorToken, $historyDays);
+        $previousSessions = $completedSessions
+            ->filter(fn ($session) => $session->task_id !== null)
+            ->sortByDesc(fn ($session) => $session->ended_at?->timestamp ?? $session->started_at?->timestamp ?? 0)
             ->groupBy('plan_id')
             ->map(fn ($sessions) => $sessions->first());
 
@@ -197,17 +196,26 @@ class DashboardPresentationService
             ->sortByDesc(fn ($item) => $item['progress']['daily_required_minutes'])
             ->take(3)
             ->values();
-        $pendingPlanUpdates = WorkSession::with(['plan', 'task'])
+        $dashboardSessions = WorkSession::with(['plan', 'task'])
             ->where('actor_token', $actorToken)
-            ->where('needs_plan_update', true)
-            ->whereIn('status', ['completed', 'interrupted'])
-            ->latest('ended_at')
-            ->take(5)
+            ->where(function ($query) {
+                $query->whereIn('status', ['active', 'paused'])
+                    ->orWhere(function ($pendingQuery) {
+                        $pendingQuery
+                            ->where('needs_plan_update', true)
+                            ->whereIn('status', ['completed', 'interrupted']);
+                    });
+            })
             ->get();
-        $activeWorkSession = WorkSession::with(['plan', 'task'])
-            ->where('actor_token', $actorToken)
-            ->whereIn('status', ['active', 'paused'])
-            ->latest('started_at')
+        $pendingPlanUpdates = $dashboardSessions
+            ->filter(fn ($session) => (bool) $session->needs_plan_update
+                && in_array($session->status, ['completed', 'interrupted'], true))
+            ->sortByDesc(fn ($session) => $session->ended_at?->timestamp ?? 0)
+            ->take(5)
+            ->values();
+        $activeWorkSession = $dashboardSessions
+            ->filter(fn ($session) => in_array($session->status, ['active', 'paused'], true))
+            ->sortByDesc(fn ($session) => $session->started_at?->timestamp ?? 0)
             ->first();
         $trend = UserStateSnapshot::query()
             ->where('actor_token', $actorToken)
@@ -216,12 +224,14 @@ class DashboardPresentationService
             ->get()
             ->sortBy('snapshot_date')
             ->values();
-        $activeDays = BehaviorEvent::query()
-            ->where('actor_token', $actorToken)
-            ->where('event_type', BehaviorEventType::WorkStarted->value)
-            ->where('occurred_at', '>=', now()->subDays((int) config('recommendations.baseline_days', 28)))
-            ->get()
-            ->toBase()
+        $behaviorEvents = $this->history->events($actorToken, 60);
+        $workStartedEvents = $behaviorEvents
+            ->where('event_type', BehaviorEventType::WorkStarted)
+            ->values();
+        $activeDays = $workStartedEvents
+            ->filter(fn ($event) => $event->occurred_at?->gte(
+                now()->subDays((int) config('recommendations.baseline_days', 28))
+            ))
             ->map(fn ($event) => $event->occurred_at->toDateString())
             ->unique()
             ->count();
@@ -229,8 +239,15 @@ class DashboardPresentationService
             && $activeDays >= (int) config('recommendations.analysis_min_days', 3);
         $trendReady = $analysisReady && $trend->count() >= (int) config('recommendations.trend_min_days', 3);
 
-        $streakDays = $this->streakDays($actorToken);
-        $processHighlights = $this->processHighlights($actorToken, $baseline, $todayMinutes, $totalDailyRequired, $streakDays);
+        $streakDays = $this->streakDays($workStartedEvents);
+        $processHighlights = $this->processHighlights(
+            $workStartedEvents,
+            $completedSessions,
+            $baseline,
+            $todayMinutes,
+            $totalDailyRequired,
+            $streakDays,
+        );
         $uiMode = $this->uiMode($state, $analysisReady);
 
         return [
@@ -259,7 +276,8 @@ class DashboardPresentationService
     }
 
     private function processHighlights(
-        string $actorToken,
+        Collection $workStartedEvents,
+        Collection $completedSessions,
         UserBehaviorBaselineData $baseline,
         int $todayMinutes,
         int $dailyRequiredMinutes,
@@ -270,11 +288,9 @@ class DashboardPresentationService
         }
 
         $highlights = [];
-        $started = BehaviorEvent::query()
-            ->where('actor_token', $actorToken)
-            ->where('event_type', BehaviorEventType::WorkStarted->value)
-            ->where('occurred_at', '>=', today())
-            ->oldest('occurred_at')
+        $started = $workStartedEvents
+            ->filter(fn ($event) => $event->occurred_at?->gte(today()))
+            ->sortBy('occurred_at')
             ->first();
         $latency = (int) data_get($started?->metadata, 'start_latency_seconds', 0);
 
@@ -286,13 +302,9 @@ class DashboardPresentationService
             $highlights[] = "今日も取り組みが続き、{$streakDays}日連続で作業を開始できています。";
         }
 
-        $sessions = WorkSession::query()
-            ->where('actor_token', $actorToken)
-            ->where('started_at', '>=', today())
-            ->whereIn('status', ['completed', 'interrupted'])
-            ->get()
-            ->toBase();
-        $qualified = $sessions->filter(fn ($session) => (int) $session->actual_seconds >= (int) config('recommendations.min_focus_session_seconds', 120));
+        $qualified = $completedSessions
+            ->filter(fn ($session) => $session->started_at?->gte(today()))
+            ->filter(fn ($session) => (int) $session->actual_seconds >= (int) config('recommendations.min_focus_session_seconds', 120));
 
         if ($qualified->count() >= 2) {
             $highlights[] = "今日は{$qualified->count()}回に分けて、合計{$todayMinutes}分を積み上げています。";
@@ -326,14 +338,10 @@ class DashboardPresentationService
         };
     }
 
-    private function streakDays(string $actorToken): int
+    private function streakDays(Collection $workStartedEvents): int
     {
-        $dates = BehaviorEvent::query()
-            ->where('actor_token', $actorToken)
-            ->where('event_type', BehaviorEventType::WorkStarted->value)
-            ->where('occurred_at', '>=', today()->subDays(60))
-            ->get()
-            ->toBase()
+        $dates = $workStartedEvents
+            ->filter(fn ($event) => $event->occurred_at?->gte(today()->subDays(60)))
             ->map(fn ($event) => $event->occurred_at->toDateString())
             ->unique()
             ->flip();
