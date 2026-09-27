@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Plan;
 use App\Models\Task;
 use App\Models\User;
+use App\Services\FirstRunService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -15,7 +16,7 @@ class PublicBetaPolishV16Test extends TestCase
 
     public function test_plan_create_uses_goal_discovery_and_manual_fallback_keeps_visual_preferences(): void
     {
-        $this->get(route('plans.create'))
+        $this->withCookie(FirstRunService::COOKIE, '1')->get(route('plans.create'))
             ->assertOk()
             ->assertSee('どんな未来にしたい？')
             ->assertSee('応用情報技術者試験 合格')
@@ -23,7 +24,7 @@ class PublicBetaPolishV16Test extends TestCase
             ->assertSee('手動で細かくPlanを作る')
             ->assertDontSee('Personalize');
 
-        $this->get(route('plans.create.manual'))
+        $this->withCookie(FirstRunService::COOKIE, '1')->get(route('plans.create.manual'))
             ->assertOk()
             ->assertSee('まず、目標の名前だけ決めよう。')
             ->assertSee('AIで具体化')
@@ -33,14 +34,19 @@ class PublicBetaPolishV16Test extends TestCase
             ->assertSee('>紫<', false);
     }
 
-    public function test_first_run_ui_contains_a_short_product_intro_before_the_spotlight_tutorial(): void
+    public function test_first_run_ui_is_a_dedicated_entry_before_the_core_app(): void
     {
         $this->get(route('home'))
+            ->assertRedirect(route('first_run.show'));
+
+        $this->get(route('first_run.show'))
             ->assertOk()
-            ->assertSee('data-onboarding-intro', false)
-            ->assertSee('Canoviaは、次の一歩を決めやすくするアプリです')
-            ->assertSee('いつものAIで相談')
-            ->assertSee('新しい情報はInboxへ');
+            ->assertSee('はじめまして')
+            ->assertSee('Canoviaは、話しながら')
+            ->assertSee('新しい情報はInboxへ')
+            ->assertSee('ログインする')
+            ->assertDontSee('今はスキップ')
+            ->assertDontSee('aria-label="案内をスキップ"', false);
     }
 
     public function test_ai_import_accepts_explanatory_text_around_the_json_payload(): void
