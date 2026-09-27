@@ -29,4 +29,6 @@ jobs:
       - run: php -l app/Services/MapTelemetryService.php
       - run: php artisan view:cache
       - run: node --test tests/js/living-map-v421.test.mjs tests/js/map-telemetry-v424.test.mjs
-      - run: php artisan test tests/Feature/CanoviaMapV420Test.php tests/Feature/CanoviaMapFocusV421Test.php tests/Feature/CanoviaMapLivingReevaluationV422Test.php tests/Feature/CanoviaMapContextualCompanionV423Test.php tests/Feature/CanoviaMapTelemetryV424Test.php tests/Feature/BehaviorTrackingTest.php tests/Feature/AdminPremiumExperienceV417Test.php tests/Feature/FirstRunUxV4123Test.php tests/Feature/InstantNavigationV4120Test.php tests/Feature/InstantNavigationFragmentV4121Test.php
+      - run: php artisan test tests/Feature/BehaviorTrackingTest.php --filter=test_work_session_start_records_the_observable_start_events
+      - run: php artisan test tests/Feature/BehaviorTrackingTest.php --filter=test_client_event_cannot_reference_a_plan_the_browser_does_not_own
+      - run: php artisan test tests/Feature/CanoviaMapV420Test.php tests/Feature/CanoviaMapFocusV421Test.php tests/Feature/CanoviaMapLivingReevaluationV422Test.php tests/Feature/CanoviaMapContextualCompanionV423Test.php tests/Feature/CanoviaMapTelemetryV424Test.php tests/Feature/AdminPremiumExperienceV417Test.php tests/Feature/FirstRunUxV4123Test.php tests/Feature/InstantNavigationV4120Test.php tests/Feature/InstantNavigationFragmentV4121Test.php
