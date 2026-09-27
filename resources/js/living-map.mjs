@@ -1,3 +1,5 @@
+const PENDING_REEVALUATION_KEY = 'canovia.map.pending-reevaluation.v1';
+
 function roleGroup(role = '') {
     if (role.startsWith('future')) return 'future';
     if (role.startsWith('past')) return 'past';
@@ -75,6 +77,17 @@ export function buildFocusLayout(nodes, edges, selectedId) {
     return { selectedId, visibleIds, positions };
 }
 
+export function mapReturnDecision({
+    persisted = false,
+    currentProjectionKey = '',
+    previousProjectionKey = '',
+} = {}) {
+    if (!previousProjectionKey) return 'none';
+    if (persisted) return 'revalidate';
+    if (currentProjectionKey && currentProjectionKey !== previousProjectionKey) return 'updated';
+    return 'clear';
+}
+
 function focusIdFromLocation(windowRef) {
     const hash = String(windowRef.location.hash || '');
     if (!hash.startsWith('#focus=')) return null;
@@ -90,9 +103,37 @@ function focusHash(nodeId) {
     return '#focus=' + encodeURIComponent(nodeId);
 }
 
+function mapUrlWithoutFocus(windowRef) {
+    return windowRef.location.pathname + windowRef.location.search;
+}
+
+function readPending(windowRef) {
+    try {
+        const raw = windowRef.sessionStorage?.getItem(PENDING_REEVALUATION_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (_) {
+        return null;
+    }
+}
+
+function writePending(windowRef, payload) {
+    try {
+        windowRef.sessionStorage?.setItem(PENDING_REEVALUATION_KEY, JSON.stringify(payload));
+    } catch (_) {}
+}
+
+function clearPending(windowRef) {
+    try {
+        windowRef.sessionStorage?.removeItem(PENDING_REEVALUATION_KEY);
+    } catch (_) {}
+}
+
 export function mountLivingGoalMap({
     documentRef = globalThis.document,
     windowRef = globalThis.window,
+    fetchRef = globalThis.fetch,
 } = {}) {
     const page = documentRef?.querySelector?.('[data-canovia-map-page]');
     if (!page || !windowRef) return null;
@@ -104,6 +145,8 @@ export function mountLivingGoalMap({
     const surfaceContent = page.querySelector('[data-map-context-content]');
     const resetButton = page.querySelector('[data-map-focus-reset]');
     const closeButton = page.querySelector('[data-map-context-close]');
+    const updateStatus = page.querySelector('[data-map-update-status]');
+    const mapShell = page.querySelector('[data-canovia-map]');
     const nodeElements = [...page.querySelectorAll('[data-map-node]')];
     const edgeElements = [...page.querySelectorAll('[data-map-edge]')];
     const templates = [...page.querySelectorAll('[data-map-surface-template]')];
@@ -124,6 +167,9 @@ export function mountLivingGoalMap({
 
     const nodeElementById = new Map(nodeElements.map((element) => [element.dataset.mapNodeId, element]));
     let activeFocusId = null;
+    let revalidationPromise = null;
+    let updateTimer = null;
+    let disposed = false;
 
     const originalPosition = (nodeId) => {
         const node = nodes.find((candidate) => candidate.id === nodeId);
@@ -150,6 +196,19 @@ export function mountLivingGoalMap({
     const templateFor = (nodeId) => templates.find(
         (template) => template.dataset.mapSurfaceTemplate === nodeId
     );
+
+    const showUpdatedStatus = () => {
+        if (disposed) return;
+
+        updateStatus?.classList.remove('hidden');
+        mapShell?.classList.add('is-reprojected');
+
+        windowRef.clearTimeout(updateTimer);
+        updateTimer = windowRef.setTimeout(() => {
+            updateStatus?.classList.add('hidden');
+            mapShell?.classList.remove('is-reprojected');
+        }, 2600);
+    };
 
     const renderSurface = (nodeId) => {
         if (!surface || !surfaceContent || !workspace) return;
@@ -188,6 +247,11 @@ export function mountLivingGoalMap({
         }
         surfaceContent?.replaceChildren();
         resetButton?.classList.add('hidden');
+    };
+
+    const removeInvalidFocusHash = () => {
+        if (!focusIdFromLocation(windowRef)) return;
+        windowRef.history.replaceState(windowRef.history.state, '', mapUrlWithoutFocus(windowRef));
     };
 
     const openFocus = (nodeId, { historyMode = 'push' } = {}) => {
@@ -230,16 +294,90 @@ export function mountLivingGoalMap({
         }
 
         clearFocus();
-        if (focusIdFromLocation(windowRef)) {
-            windowRef.history.replaceState(
-                windowRef.history.state,
-                '',
-                windowRef.location.pathname + windowRef.location.search
-            );
-        }
+        removeInvalidFocusHash();
     };
 
-    page.addEventListener('click', (event) => {
+    const markPendingReevaluation = (nodeId = activeFocusId) => {
+        writePending(windowRef, {
+            projectionKey: page.dataset.mapProjectionKey || '',
+            sourceNodeId: nodeId || null,
+            leftAt: Date.now(),
+        });
+    };
+
+    const destroy = () => {
+        if (disposed) return;
+        disposed = true;
+        windowRef.clearTimeout(updateTimer);
+        page.removeEventListener('click', onPageClick);
+        resetButton?.removeEventListener('click', closeFocus);
+        closeButton?.removeEventListener('click', closeFocus);
+        documentRef.removeEventListener('keydown', onKeyDown);
+        windowRef.removeEventListener('popstate', onPopState);
+        windowRef.removeEventListener('pageshow', onPageShow);
+        delete page.dataset.mapFocusInitialized;
+    };
+
+    const replaceWithFreshPage = (nextPage) => {
+        const imported = documentRef.importNode
+            ? documentRef.importNode(nextPage, true)
+            : nextPage.cloneNode(true);
+
+        imported.dataset.mapReprojected = '1';
+        destroy();
+        page.replaceWith(imported);
+
+        return mountLivingGoalMap({ documentRef, windowRef, fetchRef });
+    };
+
+    const revalidateProjection = async () => {
+        if (revalidationPromise || disposed || typeof fetchRef !== 'function') {
+            return revalidationPromise;
+        }
+
+        revalidationPromise = fetchRef(mapUrlWithoutFocus(windowRef), {
+            method: 'GET',
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: {
+                Accept: 'text/html',
+                'X-Canovia-Map-Revalidate': '1',
+            },
+        }).then(async (response) => {
+            if (!response.ok) throw new Error('map-reevaluation-unavailable');
+
+            const html = await response.text();
+            const parser = new windowRef.DOMParser();
+            const nextDocument = parser.parseFromString(html, 'text/html');
+            const nextPage = nextDocument.querySelector('[data-canovia-map-page]');
+            if (!nextPage) throw new Error('map-reevaluation-payload-missing');
+
+            const currentKey = page.dataset.mapProjectionKey || '';
+            const nextKey = nextPage.dataset.mapProjectionKey || '';
+            clearPending(windowRef);
+
+            if (!nextKey || nextKey === currentKey) {
+                return false;
+            }
+
+            replaceWithFreshPage(nextPage);
+            return true;
+        }).catch(() => {
+            return false;
+        }).finally(() => {
+            revalidationPromise = null;
+        });
+
+        return revalidationPromise;
+    };
+
+    function onPageClick(event) {
+        const classicAction = event.target.closest?.('[data-map-classic-action]');
+        if (classicAction && page.contains(classicAction)) {
+            markPendingReevaluation();
+            return;
+        }
+
         const node = event.target.closest?.('[data-map-node]');
         if (!node || !page.contains(node)) return;
         if (!(node instanceof windowRef.HTMLAnchorElement)) return;
@@ -252,28 +390,73 @@ export function mountLivingGoalMap({
 
         event.preventDefault();
         openFocus(nodeId);
-    });
+    }
 
+    function onKeyDown(event) {
+        if (event.key === 'Escape' && activeFocusId) closeFocus();
+    }
+
+    function onPopState() {
+        const nodeId = focusIdFromLocation(windowRef);
+        if (!nodeId) {
+            clearFocus();
+            return;
+        }
+
+        if (!openFocus(nodeId, { historyMode: 'none' })) {
+            clearFocus();
+            removeInvalidFocusHash();
+        }
+    }
+
+    function onPageShow(event) {
+        const pending = readPending(windowRef);
+        if (!pending) return;
+
+        const decision = mapReturnDecision({
+            persisted: Boolean(event.persisted),
+            currentProjectionKey: page.dataset.mapProjectionKey || '',
+            previousProjectionKey: String(pending.projectionKey || ''),
+        });
+
+        if (decision === 'revalidate') {
+            void revalidateProjection();
+            return;
+        }
+
+        clearPending(windowRef);
+        if (decision === 'updated') showUpdatedStatus();
+    }
+
+    page.addEventListener('click', onPageClick);
     resetButton?.addEventListener('click', closeFocus);
     closeButton?.addEventListener('click', closeFocus);
-
-    documentRef.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && activeFocusId) closeFocus();
-    });
-
-    windowRef.addEventListener('popstate', () => {
-        const nodeId = focusIdFromLocation(windowRef);
-        if (nodeId) openFocus(nodeId, { historyMode: 'none' });
-        else clearFocus();
-    });
+    documentRef.addEventListener('keydown', onKeyDown);
+    windowRef.addEventListener('popstate', onPopState);
+    windowRef.addEventListener('pageshow', onPageShow);
 
     const initialFocusId = focusIdFromLocation(windowRef);
-    if (initialFocusId) openFocus(initialFocusId, { historyMode: 'none' });
-    else clearFocus();
+    if (initialFocusId) {
+        if (!openFocus(initialFocusId, { historyMode: 'none' })) {
+            clearFocus();
+            removeInvalidFocusHash();
+        }
+    } else {
+        clearFocus();
+    }
+
+    if (page.dataset.mapReprojected === '1') {
+        delete page.dataset.mapReprojected;
+        clearPending(windowRef);
+        showUpdatedStatus();
+    }
 
     return {
         openFocus,
         clearFocus,
+        revalidateProjection,
+        markPendingReevaluation,
+        destroy,
         get activeFocusId() {
             return activeFocusId;
         },
