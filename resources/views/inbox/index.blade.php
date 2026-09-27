@@ -182,21 +182,6 @@
                                                     @endforeach
                                                 </select>
                                             </div>
-                                            <div>
-                                                <label class="text-[10px] font-bold text-slate-500">Future Memo種別</label>
-                                                <div class="mt-1 grid grid-cols-2 gap-2">
-                                                    <select name="future_memo_kind" class="input-field w-full">
-                                                        @foreach ($futureMemoKinds as $kindKey => $kindLabel)
-                                                            <option value="{{ $kindKey }}" @selected(data_get($routingSuggestion, 'future_memo_kind', 'interest') === $kindKey)>{{ $kindLabel }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                    <select name="future_memo_category" class="input-field w-full">
-                                                        @foreach ($futureMemoCategories as $categoryKey => $categoryLabel)
-                                                            <option value="{{ $categoryKey }}" @selected(data_get($routingSuggestion, 'future_memo_category', 'other') === $categoryKey)>{{ $categoryLabel }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-                                            </div>
                                         </div>
                                         <p class="text-[10px] leading-4 text-slate-600">Recall教材は資格学習Plan + Taskが必要で、Candidate抽出時のみAutomatic AIを使います。Evidenceは確認事実として記録しますが、これだけでTask進捗は自動加算しません。</p>
                                         <button type="submit" class="btn-primary px-3 py-2 text-xs">この整理先で確定</button>
