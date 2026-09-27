@@ -2,6 +2,27 @@
 
 return [
     [
+        'version' => 'v41.16',
+        'date' => '2026-09-27',
+        'title' => '最初から、Canoviaと話して始める',
+        'summary' => '新規ユーザーの入口をPlanフォーム中心からFirst Companion Conversationへ変更しました。Goal Contextの安全な境界は維持したまま、Native AIが最初の会話を担当し、明示された将来意図はCanovia Memoryとして自動で引き継げます。',
+        'highlights' => [
+            '新規Accountに既存Guest Planがない場合、登録後は空のHomeではなく「Canoviaと始める」First Companionへ進みます。',
+            '最初の入力は詳細Plan設定ではなく、やりたいこと・困っていること・曖昧な目標をそのまま文章で伝えるConversationになりました。',
+            'First Companionはconversational_onboardingとしてFree Goal Pathに含め、継続Canovia CompanionのPremium境界とは分離しています。',
+            'Native AIは自然な受け答えを担当しますが、質問順・confirmed / unknown Fact・Readinessは既存Goal Context Policyが決定し、AIの推測を事実にしません。',
+            'Native AI providerが使えない場合も既存のdeterministic Goal Discoveryへfallbackし、Plan作成経路を止めません。',
+            'Future Memoは通常のHome / Plan作成導線から退役し、既存データを壊さずCanovia Memoryの内部互換ストレージとして維持します。',
+            '会話中に明示された「いつかやりたい」「気になる」「困っている」「大事にしたい」内容は、AIが候補化できます。',
+            'Memory保存時はsource_quoteが直近User Inputに実際に含まれる原文かserver-sideで検証し、推測した人格・属性・事情は保存しません。',
+            '同じMemoryは正規化した本文で重複を防ぎ、source / source context / captured_atを保持します。',
+            'Premium Companionでも同じMemory境界を利用し、保存済みMemoryは最大8件だけContextへ渡します。',
+            'AI Task Builder / Plan Reviewでは旧Future Memoを入力させるのではなく、Canovia Memoryをread-only Contextとして参照します。',
+            '詳細Plan Formとlegacy Future Memo routeは互換・control fallbackとして残し、既存ユーザーのデータやFree経路を破壊しません。',
+        ],
+        'tip' => '最初にCanoviaの使い方を覚える必要はありません。まず今の目標や状況を話すと、Canoviaが必要なことだけ確認し、最初のPlanと次の一歩へつなげます。',
+    ],
+    [
         'version' => 'v41.15',
         'date' => '2026-09-27',
         'title' => 'Canoviaが知っていることを、そのまま会話へ',
