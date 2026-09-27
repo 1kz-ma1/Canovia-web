@@ -9,7 +9,6 @@ use App\Models\CompanionThread;
 use App\Models\Plan;
 use App\Models\Task;
 use App\Models\User;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -210,14 +209,14 @@ class CompanionConversationService
             $payload['owner_token'],
         );
 
-        $normalizedPayload = Arr::sortRecursive($payload);
+        $normalizedPayload = $this->canonicalizePayload($payload);
         $duplicatePending = CompanionMutationCandidate::query()
             ->where('companion_thread_id', $thread->id)
             ->where('status', CompanionMutationCandidate::STATUS_PENDING)
             ->where('type', $type)
             ->get()
             ->first(fn (CompanionMutationCandidate $existing) => (
-                Arr::sortRecursive(is_array($existing->payload) ? $existing->payload : [])
+                $this->canonicalizePayload(is_array($existing->payload) ? $existing->payload : [])
                 === $normalizedPayload
             ));
 
@@ -243,6 +242,24 @@ class CompanionConversationService
                 'target_source' => 'selected_context',
             ],
         ]);
+    }
+
+    /**
+     * Canonicalize object keys for deterministic duplicate detection while preserving list order.
+     */
+    private function canonicalizePayload(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        if (array_is_list($value)) {
+            return array_map(fn ($item) => $this->canonicalizePayload($item), $value);
+        }
+
+        ksort($value);
+
+        return array_map(fn ($item) => $this->canonicalizePayload($item), $value);
     }
 
     private function buildPrompt(array $context, array $history): string
