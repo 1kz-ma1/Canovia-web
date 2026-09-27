@@ -11,10 +11,10 @@ final class FirstRunService
     public function requiresGate(Request $request): bool
     {
         if ($request->user()) {
-            return $request->session()->boolean('canovia.first_run.required');
+            return (bool) $request->session()->get('canovia.first_run.required', false);
         }
 
-        if ($request->session()->boolean('canovia.first_run.passed')) {
+        if ((bool) $request->session()->get('canovia.first_run.passed', false)) {
             return false;
         }
 
