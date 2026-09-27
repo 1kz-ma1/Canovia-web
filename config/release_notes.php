@@ -12,6 +12,7 @@ return [
             'First Companionはconversational_onboardingとしてFree Goal Pathに含め、継続Canovia CompanionのPremium境界とは分離しています。',
             'Native AIは自然な受け答えを担当しますが、質問順・confirmed / unknown Fact・Readinessは既存Goal Context Policyが決定し、AIの推測を事実にしません。',
             'Native AI providerが使えない場合も既存のdeterministic Goal Discoveryへfallbackし、Plan作成経路を止めません。',
+            'FreeのFirst Companion POSTにはrate limitを置き、初回価値を無料提供しつつ無制限なAPI呼び出し口にはしません。',
             'Future Memoは通常のHome / Plan作成導線から退役し、既存データを壊さずCanovia Memoryの内部互換ストレージとして維持します。',
             '会話中に明示された「いつかやりたい」「気になる」「困っている」「大事にしたい」内容は、AIが候補化できます。',
             'Memory保存時はsource_quoteが直近User Inputに実際に含まれる原文かserver-sideで検証し、推測した人格・属性・事情は保存しません。',
