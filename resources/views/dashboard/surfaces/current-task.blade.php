@@ -43,6 +43,8 @@
                     <a href="{{ route('plans.artifacts.index', $item['plan']) }}" class="btn-primary px-3 py-2 text-xs">◇ 制作ファイルを開く</a>
                 @elseif (($primaryExecutionTool['id'] ?? null) === 'resources')
                     <a href="{{ route('plans.resources.index', $item['plan']) }}" class="btn-primary px-3 py-2 text-xs">⌘ 関連資料を開く</a>
+                @elseif (($primaryExecutionTool['id'] ?? null) === 'guided_execution')
+                    <a href="{{ route('plans.tasks.guided_execution.show', [$item['plan'], $hubCurrentTask]) }}" class="btn-primary px-3 py-2 text-xs">◎ 方針を決めて実行する</a>
                 @elseif (($primaryExecutionTool['id'] ?? null) === 'timer')
                     <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form>
                         @csrf
@@ -67,6 +69,8 @@
                     <p class="mt-3 text-[11px] leading-5 text-cyan-200/80">このTaskでは「{{ data_get($primaryExecutionTool, 'activity.label', 'Study Activity') }}」をAI演習より優先しています。</p>
                 @elseif (($primaryExecutionTool['id'] ?? null) === 'ai_practice')
                     <p class="mt-3 text-[11px] leading-5 text-cyan-200/80">AI演習は回答・評価結果をCanoviaが自動でEvidenceとして残します。</p>
+                @elseif (($primaryExecutionTool['id'] ?? null) === 'guided_execution')
+                    <p class="mt-3 text-[11px] leading-5 text-cyan-200/80">時間は測らず、実行前に見るポイントを決め、戻ってからReflectionをEvidenceとして残します。</p>
                 @endif
             </details>
         </div>

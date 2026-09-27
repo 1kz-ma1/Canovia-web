@@ -5,7 +5,7 @@ return [
         'version' => 'v41.14',
         'date' => '2026-09-27',
         'title' => '計画を作る前に、Canoviaが現在地を理解する',
-        'summary' => '未知の目標でもAIが不足情報を想像で埋めないGoal Context基盤に加え、目標を一言だけ渡してCurrent Stateを1問ずつ確認するAdaptive Goal Discoveryを追加しました。質問途中でも仮Planへ進めます。',
+        'summary' => 'Goal ContextとAdaptive Goal Discoveryに加え、Canovia外で行う現実のTaskを「方針を決める → 実行 → 振り返る → Evidence」に接続するGuided Executionを追加しました。Timerで時間を測らなくても実行結果を残せます。',
         'highlights' => [
             'Plan作成時にGoal Contextを自動生成し、既存Planも必要になった時点で安全にlazy生成します。',
             'Goal Context Factはconfirmed / candidate / unknown / supersededを分離し、Native AIの推測をそのまま事実扱いしません。',
@@ -18,8 +18,13 @@ return [
             '質問を飛ばすユーザーには仮Planを前へ出し、分からない部分を無理に入力させません。',
             'Readinessが70点以上でも、Desired State・Current State・Success Signalが揃わなければHIGHにしません。',
             '従来の詳細Planフォームはmanual fallbackとして残しています。',
+            '商談・練習・面接・運動などの現実世界Taskでは、専用ToolがなければGuided ExecutionをPrimary Actionとして提案します。',
+            'Guided Executionでは実行前に目的・意識点・観測点を決めますが、この時点ではEvidenceやWorkSessionを作りません。',
+            '実行後のReflectionを確定した時だけTask Evidenceを保存し、自己申告の構造化度に応じてconfidence 0.55〜0.70を付けます。',
+            'Guided ReflectionだけでTask Progressは自動変更せず、Timerも自動開始しません。',
+            '実装・調査・読書など集中作業では従来どおりTimer fallbackを維持し、専用Toolがある場合は必ずそちらを優先します。',
         ],
-        'tip' => 'まず未来を一言だけ渡せば大丈夫です。答えやすい質問だけ進め、面倒なら途中で仮Planへ進めます。Unknownは後からInboxやEvidenceで更新できます。',
+        'tip' => 'Canoviaの外でやる行動も、時間を測る必要はありません。始める前に「今回見ること」を決め、終わったら起きたことを振り返ればEvidenceとして次へつなげられます。',
     ],
     [
         'version' => 'v41.13',

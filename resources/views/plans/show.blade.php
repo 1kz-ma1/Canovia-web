@@ -79,6 +79,8 @@
                         <a href="{{ route('plans.artifacts.index', $plan) }}" class="btn-primary flex-1 md:flex-none">◇ 制作ファイルを開く</a>
                     @elseif ($toolFocusTask && ($primaryPlanAction['id'] ?? null) === 'resources')
                         <a href="{{ route('plans.resources.index', $plan) }}" class="btn-primary flex-1 md:flex-none">⌘ 関連資料を開く</a>
+                    @elseif ($toolFocusTask && ($primaryPlanAction['id'] ?? null) === 'guided_execution')
+                        <a href="{{ route('plans.tasks.guided_execution.show', [$plan, $toolFocusTask]) }}" class="btn-primary flex-1 md:flex-none">◎ 方針を決めて実行する</a>
                     @elseif ($toolFocusTask && ($primaryPlanAction['id'] ?? null) === 'timer')
                         <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form class="flex-1 md:flex-none">
                             @csrf

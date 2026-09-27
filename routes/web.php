@@ -46,6 +46,7 @@ use App\Http\Controllers\StudyRecallCandidateController;
 use App\Http\Controllers\FutureMemoController;
 use App\Http\Controllers\CareerWorkspaceController;
 use App\Http\Controllers\InterviewReviewController;
+use App\Http\Controllers\GuidedExecutionController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
@@ -231,6 +232,16 @@ Route::middleware('feature.access:'.FeatureKey::ProjectArtifact->value)->group(f
     Route::put('/plans/{plan}/artifacts/{artifact}', [PlanArtifactController::class, 'update'])->name('plans.artifacts.update');
     Route::delete('/plans/{plan}/artifacts/{artifact}', [PlanArtifactController::class, 'destroy'])->name('plans.artifacts.destroy');
 });
+
+// 資格学習のActivity選択はAI演習より上位の共通入口として扱う。
+Route::get('/plans/{plan}/tasks/{task}/guided-execution', [GuidedExecutionController::class, 'show'])
+    ->name('plans.tasks.guided_execution.show');
+Route::post('/plans/{plan}/tasks/{task}/guided-execution', [GuidedExecutionController::class, 'prepare'])
+    ->name('plans.tasks.guided_execution.prepare');
+Route::post('/plans/{plan}/tasks/{task}/guided-execution/{guidedExecution}/reflect', [GuidedExecutionController::class, 'reflect'])
+    ->name('plans.tasks.guided_execution.reflect');
+Route::post('/plans/{plan}/tasks/{task}/guided-execution/{guidedExecution}/cancel', [GuidedExecutionController::class, 'cancel'])
+    ->name('plans.tasks.guided_execution.cancel');
 
 // 資格学習のActivity選択はAI演習より上位の共通入口として扱う。
 Route::get('/plans/{plan}/tasks/{task}/study-activity', [StudyActivityController::class, 'show'])
