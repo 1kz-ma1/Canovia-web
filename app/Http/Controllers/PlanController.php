@@ -19,7 +19,6 @@ use App\Services\RecommendationService;
 use App\Services\RoadmapService;
 use App\Services\UserBehaviorService;
 use App\Services\UserStateService;
-use App\Services\FutureMemoService;
 use App\Services\GoalContextService;
 use App\Services\GoalContextAccessService;
 use Illuminate\Http\Request;
@@ -29,12 +28,11 @@ use Carbon\Carbon;
 
 class PlanController extends Controller
 {
-    public function create(Request $request, FutureMemoService $futureMemoService)
+    public function create(Request $request)
     {
         $prefill = $request->session()->pull('plan_create_prefill', []);
-        $futureMemos = $futureMemoService->all($request, true);
 
-        return view('plans.create', compact('prefill', 'futureMemos'));
+        return view('plans.create', compact('prefill'));
     }
 
     public function store(
