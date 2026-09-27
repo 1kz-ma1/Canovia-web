@@ -28,6 +28,7 @@ return new class extends Migration
             $table->foreignId('companion_thread_id')->constrained('companion_threads')->cascadeOnDelete();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('native_ai_run_id')->nullable()->constrained('native_ai_runs')->nullOnDelete();
+            $table->uuid('request_id')->nullable()->unique();
             $table->string('role', 16);
             $table->text('content');
             $table->json('metadata')->nullable();
