@@ -5,13 +5,14 @@ namespace App\Services;
 use App\Enums\MapLevel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use LogicException;
 
 final class MapProjectionService
 {
     public function __construct(
         private readonly IntentMapProjectionService $intent,
+        private readonly HierarchyMapProjectionService $hierarchy,
         private readonly ExecutionMapProjectionService $execution,
+        private readonly MapSpatialMemoryService $spatialMemory,
     ) {}
 
     /**
@@ -34,13 +35,13 @@ final class MapProjectionService
      */
     public function project(Request $request, MapLevel $level): array
     {
-        return match ($level) {
+        $projection = match ($level) {
             MapLevel::Intent => $this->intent->build($request),
+            MapLevel::Domain, MapLevel::Plan => $this->hierarchy->build($request, $level),
             MapLevel::Execution => $this->execution->build($request),
-            default => throw new LogicException(
-                'Map level '.$level->value.' is not projected until its version is implemented.'
-            ),
         };
+
+        return $this->spatialMemory->decorate($request, $level, $projection);
     }
 
     /**
