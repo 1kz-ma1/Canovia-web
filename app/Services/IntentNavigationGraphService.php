@@ -69,10 +69,10 @@ final class IntentNavigationGraphService
                 key: 'collaboration',
                 label: '共同',
                 subtitle: 'Shared Planと人との作業へ進む',
-                summary: 'Shared Planを含むCanoviaの領域を辿ります。外部共同Toolの再投影はV44.5で接続します。',
+                summary: 'Shared Plan・担当Artifact・外部Toolを、サービス別ではなく「次に何をするか」という共同作業Contextから辿ります。',
                 fallbackLabel: '共同Planを探す',
                 fallbackUrl: route('my_plans.index'),
-                meta: ['Shared Plan', 'Members', 'External Tools'],
+                meta: ['My Action', 'Review', 'Waiting', 'External Tools'],
             ),
         ]);
 
