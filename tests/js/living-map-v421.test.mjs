@@ -7,6 +7,7 @@ import {
     clampMapViewTransform,
     createFrameBatcher,
     mapActionTelemetryContext,
+    mapDockHistoryState,
     mapHistoryDirection,
     mapReturnDecision,
     mapSemanticZoomDirection,
@@ -417,4 +418,20 @@ test('frame batcher cancel drops pending runtime work without flushing it', () =
     assert.deepEqual(cancelled, [91]);
     assert.deepEqual(flushed, []);
     assert.equal(batcher.pending(), false);
+});
+
+
+test('dock history removes stale focus id while preserving focus depth', () => {
+    assert.deepEqual(
+        mapDockHistoryState({
+            canoviaMapFocus: 'task:1',
+            canoviaMapFocusDepth: 2,
+            unrelated: 'keep',
+        }, 'space-station'),
+        {
+            canoviaMapFocusDepth: 2,
+            unrelated: 'keep',
+            canoviaMapDock: 'space-station',
+        },
+    );
 });
