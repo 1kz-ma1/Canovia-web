@@ -22,7 +22,7 @@ class InstantNavigationFragmentV4121Test extends TestCase
         $user = User::factory()->create();
         $this->createPlan($user);
 
-        foreach (['/', '/inbox', '/roadmap', '/timeline', '/calendar'] as $path) {
+        foreach (['/', '/map', '/inbox', '/roadmap', '/timeline', '/calendar'] as $path) {
             $response = $this->actingAs($user)
                 ->withHeader('X-Canovia-Instant-Navigation', 'prefetch')
                 ->get($path);
