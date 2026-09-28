@@ -212,3 +212,31 @@ test('semantic zoom direction fails safe to zoom-in', () => {
     assert.equal(mapSemanticZoomDirection('out'), 'out');
     assert.equal(mapSemanticZoomDirection('something-else'), 'in');
 });
+
+
+test('personalized satellite focus keeps each orbit slot in its spatial direction', () => {
+    const nodes = [
+        { id: 'intent:space-station', positionRole: 'space-station' },
+        { id: 'satellite:plan:1', positionRole: 'satellite-1' },
+        { id: 'satellite:plan:2', positionRole: 'satellite-2' },
+        { id: 'satellite:plan:3', positionRole: 'satellite-3' },
+        { id: 'satellite:plan:4', positionRole: 'satellite-4' },
+    ];
+    const edges = [
+        { source: 'intent:space-station', target: 'satellite:plan:1', relation: 'personalized_shortcut' },
+        { source: 'intent:space-station', target: 'satellite:plan:2', relation: 'personalized_shortcut' },
+        { source: 'intent:space-station', target: 'satellite:plan:3', relation: 'personalized_shortcut' },
+        { source: 'intent:space-station', target: 'satellite:plan:4', relation: 'personalized_shortcut' },
+    ];
+
+    const top = buildFocusLayout(nodes, edges, 'satellite:plan:1');
+    const right = buildFocusLayout(nodes, edges, 'satellite:plan:2');
+    const bottom = buildFocusLayout(nodes, edges, 'satellite:plan:3');
+    const left = buildFocusLayout(nodes, edges, 'satellite:plan:4');
+
+    assert.deepEqual(top.positions.get('satellite:plan:1'), { x: 50, y: 50 });
+    assert.ok(top.positions.get('intent:space-station').y > 50);
+    assert.ok(right.positions.get('intent:space-station').x < 50);
+    assert.ok(bottom.positions.get('intent:space-station').y < 50);
+    assert.ok(left.positions.get('intent:space-station').x > 50);
+});

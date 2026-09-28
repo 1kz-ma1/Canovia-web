@@ -194,18 +194,21 @@
                                 'intent' => 'is-intent',
                                 'hierarchy-parent' => 'is-hierarchy-parent',
                                 'hierarchy-child' => 'is-hierarchy-child',
+                                'satellite' => 'is-satellite',
                                 default => '',
                             };
                             $kindClass = match ($node['type'] ?? '') {
                                 'space_station' => 'is-space-station',
                                 'intent' => 'is-intent-node',
                                 'domain', 'intent_context', 'plan' => 'is-hierarchy-node',
+                                'satellite_plan', 'satellite_tool' => 'is-personalized-satellite',
                                 default => '',
                             };
                             $hasFocusFallback = filled($node['available_action'] ?? null);
                             $directNavigation = $node['direct_navigation'] ?? null;
                             $directNavigationKind = (string) data_get($directNavigation, 'kind', 'classic');
                             $isZoomNavigation = str_starts_with($directNavigationKind, 'zoom-');
+                            $isSatelliteNavigation = $directNavigationKind === 'satellite';
                             $zoomDirection = $directNavigationKind === 'zoom-out' ? 'out' : 'in';
                         @endphp
 
@@ -252,7 +255,7 @@
                                     class="canovia-map-node-direct-open {{ $isZoomNavigation ? 'is-semantic-zoom' : '' }}"
                                     data-map-direct-open
                                     data-map-direct-navigation
-                                    data-map-action-role="{{ $isZoomNavigation ? 'zoom' : 'direct' }}"
+                                    data-map-action-role="{{ $isZoomNavigation ? 'zoom' : ($isSatelliteNavigation ? 'satellite' : 'direct') }}"
                                     data-map-node-id="{{ $node['id'] }}"
                                     data-map-node-type="{{ $node['type'] }}"
                                     data-map-position-role="{{ $node['position_role'] }}"
@@ -263,7 +266,7 @@
                                     @endif
                                     title="{{ data_get($directNavigation, 'label', '開く') }}"
                                     aria-label="{{ data_get($directNavigation, 'label', '開く') }}"
-                                >{{ $isZoomNavigation ? ($zoomDirection === 'out' ? '戻る ↖' : '潜る ↘') : '開く ↗' }}</a>
+                                >{{ $isZoomNavigation ? ($zoomDirection === 'out' ? '戻る ↖' : '潜る ↘') : ($isSatelliteNavigation ? '移動 ↗' : '開く ↗') }}</a>
                             @endif
                         </div>
                     @endforeach
@@ -406,7 +409,7 @@
 
         <p class="canovia-map-note">
             @if ($isIntentHub)
-                L0はCanovia全体へ辿る固定Navigation Layerです。おすすめはNodeの存在を決めず、Attentionとして強調へ反映します。
+                L0の固定Intentは常に残ります。Personalized Satelliteは既存Contextを最大4件だけ昇格するAttention表現で、元のPlan / Toolの存在そのものは変えません。
             @elseif ($isHierarchyLevel)
                 この階層のNode位置は現在の構造から決定的に投影し、保存しません。Space Station DockはLevelを跨いで同じ位置に残ります。
             @else

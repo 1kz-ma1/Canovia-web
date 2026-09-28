@@ -101,7 +101,20 @@ class BehaviorEventController extends Controller
                 throw ValidationException::withMessages(['metadata.flow_id' => 'Map flowを確認してください。']);
             }
 
-            $nodeTypes = ['goal', 'plan', 'task', 'tool', 'evidence', 'inbox', 'space_station', 'intent', 'domain', 'intent_context'];
+            $nodeTypes = [
+                'goal',
+                'plan',
+                'task',
+                'tool',
+                'evidence',
+                'inbox',
+                'space_station',
+                'intent',
+                'domain',
+                'intent_context',
+                'satellite_plan',
+                'satellite_tool',
+            ];
             $positionRoles = [
                 'future-goal',
                 'future-plan',
@@ -119,8 +132,12 @@ class BehaviorEventController extends Controller
                 'hierarchy-parent',
                 'hierarchy-child',
                 'spatial-dock',
+                'satellite-1',
+                'satellite-2',
+                'satellite-3',
+                'satellite-4',
             ];
-            $actionRoles = ['primary', 'secondary', 'direct', 'zoom', 'companion', 'home'];
+            $actionRoles = ['primary', 'secondary', 'direct', 'zoom', 'satellite', 'companion', 'home'];
 
             $safeMetadata = array_filter([
                 'flow_id' => $flowId,

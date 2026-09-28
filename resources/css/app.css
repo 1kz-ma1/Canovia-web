@@ -6728,3 +6728,144 @@ html[data-theme-resolved="light"] .canovia-map-node-direct-open {
         }
     }
 }
+
+
+/* --------------------------------------------------------------------------
+ * V44.4 Personalized Satellites
+ * Existing contexts promoted into L0 attention without changing semantic truth.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .canovia-map-node.is-personalized-satellite {
+        display: flex;
+        width: clamp(5.7rem, 12vw, 7rem);
+        min-height: clamp(5.7rem, 12vw, 7rem);
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgb(250 204 21 / 0.32);
+        border-radius: 50%;
+        padding: 0.55rem;
+        background:
+            radial-gradient(circle at 38% 28%, rgb(255 255 255 / 0.09), transparent 24%),
+            radial-gradient(circle at 50% 50%, rgb(250 204 21 / 0.08), transparent 66%),
+            rgb(15 23 42 / 0.95);
+        box-shadow:
+            0 0 0 0.26rem rgb(250 204 21 / 0.018),
+            0 0 1.75rem rgb(250 204 21 / 0.08),
+            0 14px 34px rgb(2 6 23 / 0.44);
+        text-align: center;
+    }
+
+    .canovia-map-node.is-personalized-satellite::before {
+        content: "";
+        position: absolute;
+        inset: -0.34rem;
+        pointer-events: none;
+        border: 1px dashed rgb(250 204 21 / 0.12);
+        border-radius: 50%;
+    }
+
+    .canovia-map-node.is-personalized-satellite[data-map-node-type="satellite_tool"] {
+        border-color: rgb(196 181 253 / 0.42);
+        background:
+            radial-gradient(circle at 38% 28%, rgb(255 255 255 / 0.10), transparent 24%),
+            radial-gradient(circle at 50% 50%, rgb(167 139 250 / 0.12), transparent 66%),
+            rgb(15 23 42 / 0.96);
+        box-shadow:
+            0 0 0 0.26rem rgb(167 139 250 / 0.02),
+            0 0 1.9rem rgb(167 139 250 / 0.10),
+            0 14px 34px rgb(2 6 23 / 0.44);
+    }
+
+    .canovia-map-node.is-personalized-satellite[data-map-node-type="satellite_tool"]::before {
+        border-color: rgb(196 181 253 / 0.14);
+    }
+
+    .canovia-map-node.is-personalized-satellite .canovia-map-node-focus-link {
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .canovia-map-node.is-personalized-satellite .canovia-map-node-eyebrow {
+        color: rgb(253 224 71);
+        font-size: 0.5rem;
+    }
+
+    .canovia-map-node.is-personalized-satellite[data-map-node-type="satellite_tool"] .canovia-map-node-eyebrow {
+        color: rgb(216 180 254);
+    }
+
+    .canovia-map-node.is-personalized-satellite .canovia-map-node-label {
+        font-size: 0.72rem;
+        line-height: 1.25;
+        -webkit-line-clamp: 2;
+    }
+
+    .canovia-map-node.is-personalized-satellite .canovia-map-node-subtitle {
+        max-width: 5.2rem;
+        color: rgb(148 163 184);
+        font-size: 0.5rem;
+        -webkit-line-clamp: 1;
+    }
+
+    .canovia-map-node.is-personalized-satellite.has-direct-navigation {
+        padding-bottom: 1.55rem;
+    }
+
+    .canovia-map-node.is-personalized-satellite .canovia-map-node-direct-open {
+        right: 50%;
+        bottom: 0.3rem;
+        border-color: rgb(250 204 21 / 0.18);
+        background: rgb(69 56 14 / 0.66);
+        color: rgb(254 240 138);
+        transform: translateX(50%);
+    }
+
+    .canovia-map-node.is-personalized-satellite[data-map-node-type="satellite_tool"] .canovia-map-node-direct-open {
+        border-color: rgb(196 181 253 / 0.22);
+        background: rgb(46 16 101 / 0.48);
+        color: rgb(233 213 255);
+    }
+
+    .canovia-map-node.is-personalized-satellite:hover,
+    .canovia-map-node.is-personalized-satellite:focus-within {
+        border-color: rgb(250 204 21 / 0.54);
+        transform: translate(-50%, -50%) scale(1.045);
+    }
+
+    .canovia-map-node.is-personalized-satellite[data-map-node-type="satellite_tool"]:hover,
+    .canovia-map-node.is-personalized-satellite[data-map-node-type="satellite_tool"]:focus-within {
+        border-color: rgb(196 181 253 / 0.62);
+    }
+
+    .canovia-map-node.is-personalized-satellite.is-focus-center {
+        width: min(12rem, 72vw);
+        min-height: 8.6rem;
+        border-radius: 1.6rem;
+    }
+
+    .canovia-map-shell.is-intent-hub .canovia-map-edge[data-map-edge-relation="personalized_shortcut"] {
+        stroke: rgb(250 204 21 / calc(0.12 + var(--edge-strength) * 0.34));
+        stroke-dasharray: 1 4;
+    }
+
+    @media (max-width: 767px) {
+        .canovia-map-node.is-personalized-satellite {
+            width: 5.1rem;
+            min-height: 5.1rem;
+            padding: 0.42rem;
+        }
+
+        .canovia-map-node.is-personalized-satellite .canovia-map-node-subtitle {
+            display: none;
+        }
+
+        .canovia-map-node.is-personalized-satellite.has-direct-navigation {
+            padding-bottom: 1.35rem;
+        }
+
+        .canovia-map-node.is-personalized-satellite .canovia-map-node-direct-open {
+            bottom: 0.22rem;
+        }
+    }
+}
