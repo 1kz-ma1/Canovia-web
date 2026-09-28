@@ -1,5 +1,6 @@
 @php
     $surface = $instantSurface ?? match (true) {
+        request()->routeIs('map.*') => 'map',
         request()->routeIs('inbox.*') => 'inbox',
         request()->routeIs('roadmap.*') => 'roadmap',
         request()->routeIs('timeline.*') => 'timeline',
@@ -8,6 +9,7 @@
     };
 
     $routeName = match ($surface) {
+        'map' => 'map.index',
         'inbox' => 'inbox.index',
         'roadmap' => 'roadmap.index',
         'timeline' => 'timeline.index',
@@ -16,6 +18,7 @@
     };
 
     $mobileSection = match ($surface) {
+        'map' => 'ホーム',
         'inbox' => 'Inbox',
         'roadmap' => 'ロードマップ',
         'timeline' => 'タイムライン',
@@ -23,12 +26,12 @@
         default => 'ホーム',
     };
 
-    $desktopHomeActive = in_array($surface, ['home', 'calendar'], true);
+    $desktopHomeActive = in_array($surface, ['home', 'map', 'calendar'], true);
     $desktopInboxActive = $surface === 'inbox';
     $desktopRoadmapActive = $surface === 'roadmap';
     $desktopTimelineActive = $surface === 'timeline';
 
-    $mobileHomeActive = in_array($surface, ['home', 'calendar'], true);
+    $mobileHomeActive = in_array($surface, ['home', 'map', 'calendar'], true);
     $mobileInboxActive = $surface === 'inbox';
     $mobileRoadmapActive = $surface === 'roadmap';
     $mobileTimelineActive = $surface === 'timeline';
@@ -143,7 +146,7 @@
 
     <div data-canovia-companion-slot>
         @auth
-            @if ((bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
+            @if ($surface !== 'map' && (bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
                 <form
                     method="POST"
                     action="{{ route('companion.entry') }}"
