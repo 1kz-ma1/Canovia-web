@@ -411,6 +411,19 @@ export function mountLivingGoalMap({
         });
     };
 
+    const isMapLevelNavigation = (link) => {
+        if (!(link instanceof windowRef.HTMLAnchorElement)) return false;
+
+        try {
+            const target = new URL(link.href, windowRef.location.href);
+            return target.origin === windowRef.location.origin
+                && target.pathname === windowRef.location.pathname
+                && target.pathname === '/map';
+        } catch (_) {
+            return false;
+        }
+    };
+
     const destroy = () => {
         if (disposed) return;
         disposed = true;
@@ -493,7 +506,9 @@ export function mountLivingGoalMap({
 
         const directNavigation = link.closest?.('[data-map-direct-navigation]');
         if (directNavigation) {
-            markPendingReevaluation(directNavigation.dataset.mapNodeId || activeFocusId);
+            if (!isMapLevelNavigation(directNavigation)) {
+                markPendingReevaluation(directNavigation.dataset.mapNodeId || activeFocusId);
+            }
             trackTelemetry(
                 'map_classic_action_opened',
                 mapActionTelemetryContext(directNavigation),
@@ -505,7 +520,9 @@ export function mountLivingGoalMap({
         const classicAction = link.closest?.('[data-map-classic-action]');
         if (classicAction) {
             const focusedNode = activeFocusId ? nodeElementById.get(activeFocusId) : null;
-            markPendingReevaluation(classicAction.dataset.mapNodeId || activeFocusId);
+            if (!isMapLevelNavigation(classicAction)) {
+                markPendingReevaluation(classicAction.dataset.mapNodeId || activeFocusId);
+            }
             trackTelemetry(
                 'map_classic_action_opened',
                 mapActionTelemetryContext(classicAction, focusedNode),
@@ -530,7 +547,9 @@ export function mountLivingGoalMap({
         if (directOpen && page.contains(directOpen)) {
             const directLink = directOpen.closest?.('a[data-map-direct-navigation]');
             if (directLink instanceof windowRef.HTMLAnchorElement) {
-                markPendingReevaluation(directLink.dataset.mapNodeId || activeFocusId);
+                if (!isMapLevelNavigation(directLink)) {
+                    markPendingReevaluation(directLink.dataset.mapNodeId || activeFocusId);
+                }
                 trackTelemetry(
                     'map_classic_action_opened',
                     mapActionTelemetryContext(directLink),
@@ -563,7 +582,9 @@ export function mountLivingGoalMap({
         const classicAction = event.target.closest?.('[data-map-classic-action]');
         if (classicAction && page.contains(classicAction)) {
             const focusedNode = activeFocusId ? nodeElementById.get(activeFocusId) : null;
-            markPendingReevaluation(classicAction.dataset.mapNodeId || activeFocusId);
+            if (!isMapLevelNavigation(classicAction)) {
+                markPendingReevaluation(classicAction.dataset.mapNodeId || activeFocusId);
+            }
 
             if (classicAction instanceof windowRef.HTMLAnchorElement) {
                 trackTelemetry(
