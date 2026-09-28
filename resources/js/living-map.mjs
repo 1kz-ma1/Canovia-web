@@ -280,6 +280,14 @@ export function createFrameBatcher(
     };
 }
 
+export function mapDockHistoryState(currentState = {}, dockId = 'space-station') {
+    const nextState = { ...(currentState || {}) };
+    delete nextState.canoviaMapFocus;
+    nextState.canoviaMapDock = dockId;
+
+    return nextState;
+}
+
 export function mapHistoryDirection(currentDepth, targetDepth) {
     const current = Math.max(0, Number(currentDepth || 0));
     const target = Math.max(0, Number(targetDepth || 0));
@@ -916,9 +924,10 @@ export function mountLivingGoalMap({
         }
 
         if (historyMode === 'push' && windowRef.location.hash !== dockHash(normalizedDockId)) {
-            const nextState = { ...(windowRef.history.state || {}) };
-            delete nextState.canoviaMapFocus;
-            nextState.canoviaMapDock = normalizedDockId;
+            const nextState = mapDockHistoryState(
+                windowRef.history.state || {},
+                normalizedDockId,
+            );
 
             windowRef.history.pushState(
                 nextState,
@@ -1052,6 +1061,9 @@ export function mountLivingGoalMap({
         if (event.pointerType === 'mouse' && event.button !== 0) return;
 
         if (activePointers.size === 0) {
+            mapViewBatcher.flushNow();
+            windowRef.clearTimeout(viewAnimationTimer);
+            mapShell?.classList.remove('is-map-view-animating');
             refreshMapViewport();
             mapShell?.classList.add('is-map-gesture-active');
             page.classList.add('is-map-gesture-active');
