@@ -350,7 +350,9 @@ final class MapProjectionService
             }
         }
 
-        $nodes = $nodes->values();
+        $nodes = $nodes
+            ->map(fn (array $node) => $this->withDirectNavigation($node, $primaryNodeId))
+            ->values();
         $edges = $edges->values();
 
         return [
@@ -539,6 +541,45 @@ final class MapProjectionService
             'available_action' => $action,
             'classic_surface' => $classicSurface,
         ];
+    }
+
+
+    /**
+     * Add a direct-open destination only when the node has one clear canonical place.
+     *
+     * Current / next Task stay Focus-first:
+     * - current Task already has the V43.4 Primary launch
+     * - next Task has multiple meaningful operations (inspect Plan / edit Task)
+     *
+     * @param array<string,mixed> $node
+     * @return array<string,mixed>
+     */
+    private function withDirectNavigation(array $node, ?string $primaryNodeId): array
+    {
+        $node['direct_navigation'] = null;
+
+        if (($node['id'] ?? null) === $primaryNodeId) {
+            return $node;
+        }
+
+        if (! in_array(($node['type'] ?? null), ['goal', 'plan', 'tool', 'evidence', 'inbox'], true)) {
+            return $node;
+        }
+
+        $actions = collect(data_get($node, 'classic_surface.actions', []));
+        $action = $actions->first(fn ($candidate) => is_array($candidate) && ($candidate['primary'] ?? false))
+            ?? $actions->first();
+
+        if (! is_array($action) || ! filled($action['url'] ?? null)) {
+            return $node;
+        }
+
+        $node['direct_navigation'] = [
+            'label' => (string) ($action['label'] ?? '開く'),
+            'url' => (string) $action['url'],
+        ];
+
+        return $node;
     }
 
     /**
