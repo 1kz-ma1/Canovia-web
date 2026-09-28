@@ -945,10 +945,7 @@ export function mountLivingGoalMap({
     }
 
     function onPageShow(event) {
-        applyBaseLayout();
-    windowRef.addEventListener?.('resize', onViewportResize);
-
-    const pending = readPending(windowRef);
+        const pending = readPending(windowRef);
         if (!pending) return;
 
         const decision = mapReturnDecision({
@@ -965,6 +962,9 @@ export function mountLivingGoalMap({
         clearPending(windowRef);
         if (decision === 'updated') showUpdatedStatus();
     }
+
+    applyBaseLayout();
+    windowRef.addEventListener?.('resize', onViewportResize);
 
     page.addEventListener('click', onPageClick);
     page.addEventListener('submit', onPageSubmit);
