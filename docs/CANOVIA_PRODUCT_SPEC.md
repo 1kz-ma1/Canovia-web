@@ -741,3 +741,7 @@ visual kindはBlade/CSSでのみ利用し、Navigation Graph / Attention State /
 V45.4ではMap Runtimeのhot pathを最適化する。pointermoveはJS state更新に限定し、Map SceneのDOM transformはrequestAnimationFrameで1frame1回へbatchする。同一frame内では最後のMap stateだけをcommitし、transformはtranslate3d + scaleの単一style writeとする。
 Gesture中のviewport geometryはpointerdown時にgetBoundingClientRectでcacheし、pointermove中はlayout readを行わない。resize / pageshow / double-tap開始時にのみcacheをrefreshする。Node base positionとSVG edge visibility/geometryは前回描画signatureとの差分がある場合だけDOMへ書き、Context Surface templateはmount時にMap化してO(1) lookupにする。
 Gesture中だけis-map-gesture-activeを付与し、Sceneへwill-change: transform、Node shadow簡略化、transition停止、edge optimizeSpeedを適用する。pointerup/cancelでfinal frameをflushして通常Visual Grammarへ戻す。Sceneにはcontain: layout paintを適用する。viewport cache / render signature / RAF queue等はruntime-onlyでDB / sessionStorage / Projection Key / Telemetryへ保存しない。
+
+V45.4.1 reviewではFocusとSpace Station Dockのruntime stateを排他的にし、Dockへ入る前にFocusをclearする。Dock history entryからstale canoviaMapFocus IDを除去する一方、Back/Forward判定に必要なcanoviaMapFocusDepthは維持する。
+Mobile Node切替は初回normalize後、previous / next selected Nodeだけを更新し、同一Node再タップ時は既存Context Surfaceを再cloneしない。manual pointerdown時はpending Map frameをflushしてview animationを停止し、直接Gestureをcosmetic animationより優先する。
+Gesture中はMap Pageにもis-map-gesture-activeを付与し、Fullscreen Top Bar / Gesture Controlsのbackdrop blurを一時停止する。pointerup/cancel/destroyで通常表現へ戻す。decorative Glyphの英語title tooltipと不要になったMapNodeVisualGrammar::label、delegated close移行後に残っていたunused closeButton queryも削除する。
