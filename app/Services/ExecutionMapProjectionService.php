@@ -11,6 +11,7 @@ final class ExecutionMapProjectionService
         private readonly MapExecutionContextService $context,
         private readonly ExecutionNavigationGraphService $navigationGraph,
         private readonly MapAttentionStateService $attention,
+        private readonly MapHierarchyContextService $hierarchyContext,
     ) {}
 
     /**
@@ -52,7 +53,84 @@ final class ExecutionMapProjectionService
             'primary_node_id' => $primaryNodeId,
             'primary_launch' => $attention['primary_launch'],
             'has_primary_action' => $attention['has_primary_action'],
+            'hierarchy' => $this->hierarchyMetadata($request, $context),
             'projection_key' => $this->projectionKey($nodes, $edges, $primaryNodeId),
+        ];
+    }
+
+    /**
+     * @param array<string,mixed> $context
+     * @return array<string,mixed>
+     */
+    private function hierarchyMetadata(Request $request, array $context): array
+    {
+        $intent = $this->hierarchyContext->intent((string) $request->query('intent', 'execution'));
+        $intentLabel = $this->hierarchyContext->intentLabel($intent);
+        $plan = $context['plan'] ?? null;
+
+        if (! $plan instanceof \App\Models\Plan) {
+            return [
+                'depth' => 3,
+                'intent' => $intent,
+                'intent_label' => $intentLabel,
+                'current_label' => 'Execution',
+                'parent_url' => route('map.index', [
+                    'level' => \App\Enums\MapLevel::Domain->value,
+                    'intent' => $intent,
+                ]),
+                'breadcrumbs' => [
+                    ['label' => 'Canovia', 'url' => route('map.index')],
+                    [
+                        'label' => $intentLabel,
+                        'url' => route('map.index', [
+                            'level' => \App\Enums\MapLevel::Domain->value,
+                            'intent' => $intent,
+                        ]),
+                    ],
+                    ['label' => 'Execution', 'url' => null],
+                ],
+            ];
+        }
+
+        $domainKey = $this->hierarchyContext->domainKey($plan->category);
+        $domainLabel = $this->hierarchyContext->domainLabel($plan->category);
+        $parentUrl = route('map.index', [
+            'level' => \App\Enums\MapLevel::Plan->value,
+            'intent' => $intent,
+            'domain' => $domainKey,
+            'plan' => $plan->id,
+        ]);
+
+        return [
+            'depth' => 3,
+            'intent' => $intent,
+            'intent_label' => $intentLabel,
+            'domain_key' => $domainKey,
+            'domain_label' => $domainLabel,
+            'plan_id' => (int) $plan->id,
+            'plan_label' => (string) $plan->title,
+            'current_label' => (string) $plan->title,
+            'parent_url' => $parentUrl,
+            'breadcrumbs' => [
+                ['label' => 'Canovia', 'url' => route('map.index')],
+                [
+                    'label' => $intentLabel,
+                    'url' => route('map.index', [
+                        'level' => \App\Enums\MapLevel::Domain->value,
+                        'intent' => $intent,
+                    ]),
+                ],
+                [
+                    'label' => $domainLabel,
+                    'url' => route('map.index', [
+                        'level' => \App\Enums\MapLevel::Plan->value,
+                        'intent' => $intent,
+                        'domain' => $domainKey,
+                        'plan' => $plan->id,
+                    ]),
+                ],
+                ['label' => (string) $plan->title, 'url' => null],
+            ],
         ];
     }
 
