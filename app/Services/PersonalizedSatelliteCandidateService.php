@@ -7,6 +7,7 @@ use App\Enums\MapLevel;
 use App\Models\Plan;
 use App\Models\StudyPracticeAttempt;
 use App\Models\Task;
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -181,7 +182,7 @@ final class PersonalizedSatelliteCandidateService
             'importance' => round(max(0, min(1, $importance)), 4),
             'usage_frequency' => round(min(1, $usageWeight / 12), 4),
             'recency' => round($this->recencyScore(
-                $latest > 0 ? now()->createFromTimestamp($latest) : $plan->updated_at,
+                $latest > 0 ? Carbon::createFromTimestamp($latest) : $plan->updated_at,
                 $latest > 0 ? 1.0 : 0.25,
             ), 4),
             'continuity' => round(min(1, $continuityBase + min(0.55, $activeDays * 0.11)), 4),
@@ -254,7 +255,7 @@ final class PersonalizedSatelliteCandidateService
                 'importance' => $planSignals['importance'],
                 'usage_frequency' => round(min(1, $recentAttempts->count() / 8), 4),
                 'recency' => round($this->recencyScore(
-                    $latest > 0 ? now()->createFromTimestamp($latest) : null,
+                    $latest > 0 ? Carbon::createFromTimestamp($latest) : null,
                 ), 4),
                 'continuity' => round(min(
                     1,
