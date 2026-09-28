@@ -29,7 +29,7 @@ class CanoviaMapFocusSurfaceV431Test extends TestCase
         [$user, $task] = $this->scenario();
 
         $this->actingAs($user)
-            ->get(route('map.index'))
+            ->get(route('map.index', ['level' => 'l3']))
             ->assertOk()
             ->assertSee('data-map-context-expand', false)
             ->assertSee('data-map-context-expand-label', false)
