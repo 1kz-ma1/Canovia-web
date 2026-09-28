@@ -59,7 +59,11 @@ class AuthController extends Controller
         if ($claimed > 0) $claimMessages[] = "{$claimed}件のGuest計画";
         if ($claimedMemos > 0) $claimMessages[] = "{$claimedMemos}件の保存情報";
 
-        return redirect()->intended($homeSurface->url($request))->with(
+        $defaultHome = $request->user()?->first_run_completed_at
+            ? $homeSurface->url($request)
+            : route('home');
+
+        return redirect()->intended($defaultHome)->with(
             'status',
             $claimMessages !== []
                 ? 'ログインしました。' . implode('と', $claimMessages) . 'もこのアカウントに引き継ぎました。'
