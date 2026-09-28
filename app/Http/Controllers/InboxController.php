@@ -121,6 +121,7 @@ class InboxController extends Controller
             'content' => ['nullable', 'string', 'max:50000'],
             'source_url' => ['nullable', 'url', 'max:2048'],
             'source_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'return_to' => ['nullable', 'in:inbox,space_station'],
         ]);
 
         $file = $request->file('source_file');
@@ -186,8 +187,7 @@ class InboxController extends Controller
             'metadata' => [],
         ]);
 
-        return redirect()
-            ->route('inbox.index')
+        return $this->redirectAfterAction($request)
             ->with('success', 'Inboxへ追加しました。整理先はあとから決められます。');
     }
 
@@ -198,14 +198,17 @@ class InboxController extends Controller
         FeatureAccessService $featureAccess,
         InboxIntelligenceService $intelligence,
     ) {
+        $request->validate([
+            'return_to' => ['nullable', 'in:inbox,space_station'],
+        ]);
+
         $this->authorizeItem($request, $inboxItem, $identity);
         $featureAccess->authorizeUse($request->user(), FeatureKey::AutomaticAiExecution);
 
         try {
             $suggestion = $intelligence->suggest($inboxItem, $request->user()?->id);
         } catch (NativeAiExecutionException $exception) {
-            return redirect()
-                ->route('inbox.index')
+            return $this->redirectAfterAction($request)
                 ->with('status', $exception->getMessage());
         }
 
@@ -217,8 +220,7 @@ class InboxController extends Controller
             'metadata' => $metadata,
         ]);
 
-        return redirect()
-            ->route('inbox.index')
+        return $this->redirectAfterAction($request)
             ->with('success', '行き先候補を作りました。確認してから確定してください。');
     }
 
@@ -238,6 +240,7 @@ class InboxController extends Controller
             'task_id' => ['nullable', 'integer'],
             'future_memo_kind' => ['nullable', 'in:'.implode(',', array_keys(FutureMemo::KINDS))],
             'future_memo_category' => ['nullable', 'in:'.implode(',', array_keys(FutureMemo::CATEGORIES))],
+            'return_to' => ['nullable', 'in:inbox,space_station'],
         ]);
 
         $editablePlans = $ownership->ownedPlans($request, ['tasks'])
@@ -278,8 +281,7 @@ class InboxController extends Controller
             $identity->resolve($request),
         );
 
-        return redirect()
-            ->route('inbox.index')
+        return $this->redirectAfterAction($request)
             ->with('success', $result['message']);
     }
 
@@ -363,6 +365,17 @@ class InboxController extends Controller
             && hash_equals($item->actor_token, $actorToken),
             403,
         );
+    }
+
+    private function redirectAfterAction(Request $request)
+    {
+        if ($request->input('return_to') === 'space_station') {
+            return redirect()->to(
+                route('map.index').'#focus='.rawurlencode('intent:space-station')
+            );
+        }
+
+        return redirect()->route('inbox.index');
     }
 
     private function inferTitle(
