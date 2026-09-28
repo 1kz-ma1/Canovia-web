@@ -454,3 +454,36 @@ test('dock history removes stale focus id while preserving focus depth', () => {
         },
     );
 });
+
+
+test('mobile L3 uses separated semantic slots for execution nodes', () => {
+    const executionNodes = [
+        { id: 'goal:1', positionRole: 'future-goal', x: 50, y: 9 },
+        { id: 'plan:1', positionRole: 'future-plan', x: 32, y: 25 },
+        { id: 'task:1', positionRole: 'now', x: 50, y: 50 },
+        { id: 'task:2', positionRole: 'future-next', x: 68, y: 25 },
+        { id: 'tool:1', positionRole: 'action-tool', x: 82, y: 51 },
+        { id: 'evidence:1', positionRole: 'past-evidence', x: 50, y: 79 },
+        { id: 'inbox:1', positionRole: 'input-inbox', x: 18, y: 52 },
+    ];
+    const viewport = { width: 390, height: 700 };
+
+    const layout = buildMobileBaseLayout(executionNodes, 'l3', viewport);
+
+    assert.deepEqual(layout.get('goal:1'), { x: 50, y: 18.6 });
+    assert.deepEqual(layout.get('plan:1'), { x: 25, y: 31.1 });
+    assert.deepEqual(layout.get('task:2'), { x: 75, y: 31.1 });
+    assert.deepEqual(layout.get('task:1'), { x: 50, y: 50 });
+    assert.deepEqual(layout.get('inbox:1'), { x: 11, y: 52 });
+    assert.deepEqual(layout.get('tool:1'), { x: 89, y: 52 });
+    assert.deepEqual(layout.get('evidence:1'), { x: 50, y: 75.7 });
+
+    const primary = layout.get('task:1');
+    const tool = layout.get('tool:1');
+    const inbox = layout.get('inbox:1');
+    const toolDistance = Math.abs(tool.x - primary.x) * viewport.width / 100;
+    const inboxDistance = Math.abs(primary.x - inbox.x) * viewport.width / 100;
+
+    assert.ok(toolDistance >= 150, 'tool keeps a wide mobile gap from Primary Action');
+    assert.ok(inboxDistance >= 150, 'inbox keeps a wide mobile gap from Primary Action');
+});
