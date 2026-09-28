@@ -6,6 +6,10 @@ use Illuminate\Support\Collection;
 
 final class PersonalizedSatellitePromotionService
 {
+    private const MIN_PROMOTION_SCORE = 0.55;
+
+    private const MAX_SATELLITES = 2;
+
     private const WEIGHTS = [
         'importance' => 0.35,
         'usage_frequency' => 0.25,
@@ -26,9 +30,9 @@ final class PersonalizedSatellitePromotionService
      *     promoted:Collection<int,array<string,mixed>>
      * }
      */
-    public function promote(Collection $candidates, int $limit = 4): array
+    public function promote(Collection $candidates, int $limit = self::MAX_SATELLITES): array
     {
-        $limit = max(0, min(4, $limit));
+        $limit = max(0, min(self::MAX_SATELLITES, $limit));
 
         if ($limit === 0 || $candidates->isEmpty()) {
             return [
@@ -45,7 +49,7 @@ final class PersonalizedSatellitePromotionService
 
                 return $candidate;
             })
-            ->filter(fn (array $candidate) => (float) ($candidate['promotion_score'] ?? 0) >= 0.28)
+            ->filter(fn (array $candidate) => (float) ($candidate['promotion_score'] ?? 0) >= self::MIN_PROMOTION_SCORE)
             ->sort(function (array $left, array $right) {
                 $score = (float) ($right['promotion_score'] ?? 0)
                     <=> (float) ($left['promotion_score'] ?? 0);
@@ -62,6 +66,22 @@ final class PersonalizedSatellitePromotionService
                 }
 
                 return strcmp((string) ($left['id'] ?? ''), (string) ($right['id'] ?? ''));
+            })
+            ->values();
+
+        $seenAnchors = [];
+        $ranked = $ranked
+            ->filter(function (array $candidate) use (&$seenAnchors) {
+                $anchor = (string) ($candidate['anchor_node_id'] ?? '');
+                $key = $anchor !== '' ? $anchor : 'kind:'.(string) ($candidate['kind'] ?? 'unknown');
+
+                if (isset($seenAnchors[$key])) {
+                    return false;
+                }
+
+                $seenAnchors[$key] = true;
+
+                return true;
             })
             ->take($limit)
             ->values();
