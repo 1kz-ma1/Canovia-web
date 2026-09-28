@@ -8,6 +8,7 @@
         $edges = collect($graph['edges'] ?? []);
         $nodeIndex = $nodes->keyBy('id');
         $primaryNodeId = $graph['primary_node_id'] ?? null;
+        $primaryLaunch = $graph['primary_launch'] ?? null;
     @endphp
 
     @include('layouts.partials.home-surface-switcher', ['activeSurface' => 'map'])
@@ -33,7 +34,24 @@
                 </details>
             </div>
             <div class="canovia-map-hero-actions">
-                @if ($primaryNodeId)
+                @if ($primaryNodeId && filled(data_get($primaryLaunch, 'url')))
+                    <a
+                        href="{{ data_get($primaryLaunch, 'url') }}"
+                        class="btn-primary canovia-map-primary-launch"
+                        data-map-classic-action
+                        data-map-direct-primary-launch
+                        data-map-action-role="primary"
+                        data-map-node-id="{{ $primaryNodeId }}"
+                        data-map-node-type="task"
+                        data-map-position-role="now"
+                        data-map-is-primary="1"
+                        title="{{ data_get($primaryLaunch, 'label', 'Primary Actionを進める') }}"
+                        aria-label="{{ data_get($primaryLaunch, 'label', 'Primary Actionを進める') }}"
+                    >そのまま進める</a>
+                    <button type="button" class="btn-secondary canovia-map-now-button" data-map-primary-focus>
+                        Contextを見る
+                    </button>
+                @elseif ($primaryNodeId)
                     <button type="button" class="btn-primary canovia-map-now-button" data-map-primary-focus>
                         今やることを見る
                     </button>

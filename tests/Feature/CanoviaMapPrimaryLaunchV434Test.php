@@ -9,7 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
-class CanoviaMapUsabilityV430Test extends TestCase
+class CanoviaMapPrimaryLaunchV434Test extends TestCase
 {
     use RefreshDatabase;
 
@@ -24,24 +24,25 @@ class CanoviaMapUsabilityV430Test extends TestCase
         ]);
     }
 
-    public function test_map_starts_with_compact_toolbar_and_clear_primary_execution_and_context_affordances(): void
+    public function test_map_overview_exposes_one_tap_primary_launch_and_keeps_context_focus_separate(): void
     {
         [$user, $task] = $this->scenario();
 
         $this->actingAs($user)
             ->get(route('map.index'))
             ->assertOk()
-            ->assertSee('canovia-map-toolbar', false)
-            ->assertSee('Mapの見方')
-            ->assertSee('そのまま進める')
-            ->assertSee('Contextを見る')
             ->assertSee('data-map-direct-primary-launch', false)
-            ->assertSee('data-map-primary-focus', false)
+            ->assertSee('data-map-classic-action', false)
+            ->assertSee('data-map-action-role="primary"', false)
+            ->assertSee('data-map-node-id="task:'.$task->id.'"', false)
+            ->assertSee('data-map-node-type="task"', false)
+            ->assertSee('data-map-position-role="now"', false)
             ->assertSee('data-map-is-primary="1"', false)
-            ->assertSee($task->title);
+            ->assertSee('そのまま進める')
+            ->assertSee('Contextを見る');
     }
 
-    public function test_map_without_primary_action_does_not_render_fake_now_shortcut(): void
+    public function test_map_without_primary_action_does_not_render_direct_launch(): void
     {
         $user = User::factory()->create([
             'first_run_completed_at' => now(),
@@ -50,7 +51,7 @@ class CanoviaMapUsabilityV430Test extends TestCase
         $this->actingAs($user)
             ->get(route('map.index'))
             ->assertOk()
-            ->assertDontSee('data-map-primary-focus', false)
+            ->assertDontSee('data-map-direct-primary-launch', false)
             ->assertSee('まだMapに置くActionがありません');
     }
 
@@ -64,8 +65,8 @@ class CanoviaMapUsabilityV430Test extends TestCase
             'user_id' => $user->id,
             'owner_token' => Str::random(64),
             'public_slug' => (string) Str::uuid(),
-            'title' => 'Map UXを磨く',
-            'description' => '最初の一画面でNowへ到達できるようにする',
+            'title' => 'Primary Launchを検証する',
+            'description' => 'Mapから実行先へ最短で移動する',
             'category' => '個人開発',
             'priority' => 1,
             'priority_mode' => 'manual',
@@ -76,11 +77,11 @@ class CanoviaMapUsabilityV430Test extends TestCase
 
         $task = Task::query()->create([
             'plan_id' => $plan->id,
-            'title' => 'Primary Actionを見やすくする',
-            'description' => 'Mapを開いた瞬間に今やることを理解する',
+            'title' => '今やるTaskを直接始める',
+            'description' => 'Focusせずに既存の実行先へ入れるようにする',
             'estimated_minutes' => 45,
             'remaining_minutes' => 45,
-            'progress_percent' => 20,
+            'progress_percent' => 15,
             'status' => 'doing',
             'priority' => 1,
             'activation_cost' => 1,

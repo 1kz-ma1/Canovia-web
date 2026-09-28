@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
     buildFocusLayout,
+    mapActionTelemetryContext,
     mapHistoryDirection,
     mapReturnDecision,
     oneHopNodeIds,
@@ -94,4 +95,41 @@ test('mobile focus keeps selected node above the sheet while preserving semantic
     assert.ok(layout.positions.get('tool:ai').x > 50);
     assert.ok(layout.positions.get('evidence:1').y > 34);
     assert.ok(layout.positions.get('evidence:1').y <= 62);
+});
+
+
+test('direct Primary launch keeps Primary Task telemetry without requiring Focus first', () => {
+    const action = {
+        dataset: {
+            mapActionRole: 'primary',
+            mapNodeType: 'task',
+            mapPositionRole: 'now',
+            mapIsPrimary: '1',
+        },
+    };
+
+    assert.deepEqual(mapActionTelemetryContext(action), {
+        action_role: 'primary',
+        node_type: 'task',
+        position_role: 'now',
+        is_primary: true,
+    });
+});
+
+test('Context Surface action still inherits the focused node when action metadata is absent', () => {
+    const action = { dataset: { mapActionRole: 'secondary' } };
+    const focusedNode = {
+        dataset: {
+            mapNodeType: 'evidence',
+            mapPositionRole: 'past-evidence',
+            mapIsPrimary: '0',
+        },
+    };
+
+    assert.deepEqual(mapActionTelemetryContext(action, focusedNode), {
+        action_role: 'secondary',
+        node_type: 'evidence',
+        position_role: 'past-evidence',
+        is_primary: false,
+    });
 });
