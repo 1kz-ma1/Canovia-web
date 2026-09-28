@@ -59,29 +59,37 @@
                 >{{ old('content') }}</textarea>
             </div>
 
-            <div>
-                <label for="space-station-url">URL</label>
-                <input
-                    id="space-station-url"
-                    type="url"
-                    name="source_url"
-                    value="{{ old('source_url') }}"
-                    class="input-field w-full"
-                    placeholder="https://..."
-                >
-            </div>
+            <details
+                class="canovia-space-station-attachments"
+                @if (filled(old('source_url')) || $errors->has('source_url') || $errors->has('source_file')) open @endif
+            >
+                <summary>URL・スクリーンショット・PDFを追加</summary>
+                <div class="canovia-space-station-attachments-grid">
+                    <div>
+                        <label for="space-station-url">URL</label>
+                        <input
+                            id="space-station-url"
+                            type="url"
+                            name="source_url"
+                            value="{{ old('source_url') }}"
+                            class="input-field w-full"
+                            placeholder="https://..."
+                        >
+                    </div>
 
-            <div>
-                <label for="space-station-file">スクリーンショット / PDF</label>
-                <input
-                    id="space-station-file"
-                    type="file"
-                    name="source_file"
-                    accept=".pdf,image/jpeg,image/png,image/webp"
-                    class="input-field w-full"
-                >
-                <p class="canovia-space-station-help">画像・PDFは既存Inboxと同じprivate storageへ保存します。</p>
-            </div>
+                    <div>
+                        <label for="space-station-file">スクリーンショット / PDF</label>
+                        <input
+                            id="space-station-file"
+                            type="file"
+                            name="source_file"
+                            accept=".pdf,image/jpeg,image/png,image/webp"
+                            class="input-field w-full"
+                        >
+                        <p class="canovia-space-station-help">画像・PDFは既存Inboxと同じprivate storageへ保存します。</p>
+                    </div>
+                </div>
+            </details>
 
             <button type="submit" class="btn-primary w-full justify-center">
                 Space Stationへ送る
