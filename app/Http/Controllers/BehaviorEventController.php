@@ -101,8 +101,22 @@ class BehaviorEventController extends Controller
                 throw ValidationException::withMessages(['metadata.flow_id' => 'Map flowを確認してください。']);
             }
 
-            $nodeTypes = ['goal', 'plan', 'task', 'tool', 'evidence', 'inbox'];
-            $positionRoles = ['future-goal', 'future-plan', 'future-next', 'now', 'action-tool', 'past-evidence', 'input-inbox'];
+            $nodeTypes = ['goal', 'plan', 'task', 'tool', 'evidence', 'inbox', 'space_station', 'intent'];
+            $positionRoles = [
+                'future-goal',
+                'future-plan',
+                'future-next',
+                'now',
+                'action-tool',
+                'past-evidence',
+                'input-inbox',
+                'space-station',
+                'intent-plan',
+                'intent-execution',
+                'intent-reflection',
+                'intent-collaboration',
+                'intent-context',
+            ];
             $actionRoles = ['primary', 'secondary', 'direct', 'companion', 'home'];
 
             $safeMetadata = array_filter([
