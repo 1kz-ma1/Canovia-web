@@ -315,7 +315,9 @@
 
         <div hidden data-map-surface-templates>
             @foreach ($nodes as $node)
-                @php($surface = $node['classic_surface'] ?? [])
+                @php
+                    $surface = $node['classic_surface'] ?? [];
+                @endphp
                 @if (! empty($surface))
                     <template data-map-surface-template="{{ $node['id'] }}">
                         <section class="canovia-map-classic-content" data-map-classic-content="{{ $node['id'] }}">
