@@ -8,6 +8,7 @@ import {
 } from './map-telemetry.mjs';
 
 const PENDING_REEVALUATION_KEY = 'canovia.map.pending-reevaluation.v1';
+const SEMANTIC_TRANSITION_KEY = 'canovia.map.semantic-transition.v1';
 
 function roleGroup(role = '') {
     if (role === 'space-station') return 'now';
@@ -15,6 +16,8 @@ function roleGroup(role = '') {
     if (role === 'intent-execution') return 'action';
     if (role === 'intent-reflection') return 'past';
     if (role === 'intent-collaboration') return 'input';
+    if (role === 'hierarchy-parent') return 'now';
+    if (role === 'hierarchy-child') return 'future';
     if (role.startsWith('future')) return 'future';
     if (role.startsWith('past')) return 'past';
     if (role.startsWith('input')) return 'input';
@@ -156,6 +159,48 @@ function focusHash(nodeId) {
     return '#focus=' + encodeURIComponent(nodeId);
 }
 
+function dockIdFromLocation(windowRef) {
+    const hash = String(windowRef.location.hash || '');
+    if (!hash.startsWith('#dock=')) return null;
+
+    try {
+        return decodeURIComponent(hash.slice('#dock='.length));
+    } catch (_) {
+        return null;
+    }
+}
+
+function dockHash(dockId) {
+    return '#dock=' + encodeURIComponent(dockId);
+}
+
+export function mapSemanticZoomDirection(value = 'in') {
+    return value === 'out' ? 'out' : 'in';
+}
+
+function writeSemanticTransition(windowRef, payload) {
+    try {
+        windowRef.sessionStorage?.setItem(SEMANTIC_TRANSITION_KEY, JSON.stringify(payload));
+    } catch (_) {}
+}
+
+function readSemanticTransition(windowRef) {
+    try {
+        const raw = windowRef.sessionStorage?.getItem(SEMANTIC_TRANSITION_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (_) {
+        return null;
+    }
+}
+
+function clearSemanticTransition(windowRef) {
+    try {
+        windowRef.sessionStorage?.removeItem(SEMANTIC_TRANSITION_KEY);
+    } catch (_) {}
+}
+
 function mapUrlWithoutFocus(windowRef) {
     return windowRef.location.pathname + windowRef.location.search;
 }
@@ -206,6 +251,8 @@ export function mountLivingGoalMap({
     const nodeElements = [...page.querySelectorAll('[data-map-node]')];
     const edgeElements = [...page.querySelectorAll('[data-map-edge]')];
     const templates = [...page.querySelectorAll('[data-map-surface-template]')];
+    const globalTemplates = [...page.querySelectorAll('[data-map-global-surface-template]')];
+    const spatialDock = page.querySelector('[data-map-spatial-dock]');
 
     const nodes = nodeElements.map((element) => ({
         id: element.dataset.mapNodeId,
@@ -248,6 +295,7 @@ export function mountLivingGoalMap({
     }
 
     let activeFocusId = null;
+    let activeDockId = null;
     let focusHistoryDepth = Math.max(0, Number(windowRef.history.state?.canoviaMapFocusDepth || 0));
     let revalidationPromise = null;
     let updateTimer = null;
@@ -277,6 +325,9 @@ export function mountLivingGoalMap({
 
     const templateFor = (nodeId) => templates.find(
         (template) => template.dataset.mapSurfaceTemplate === nodeId
+    );
+    const globalTemplateFor = (dockId) => globalTemplates.find(
+        (template) => template.dataset.mapGlobalSurfaceTemplate === dockId
     );
 
     const showUpdatedStatus = () => {
@@ -317,6 +368,40 @@ export function mountLivingGoalMap({
         resetButton?.classList.remove('hidden');
     };
 
+    const renderGlobalSurface = (dockId) => {
+        if (!surface || !surfaceContent || !workspace) return false;
+
+        const template = globalTemplateFor(dockId);
+        if (!template?.content) return false;
+
+        surfaceContent.replaceChildren();
+        surfaceContent.append(template.content.cloneNode(true));
+        setSurfaceExpanded(false);
+        surface.setAttribute('aria-hidden', 'false');
+        workspace.classList.add('is-context-open', 'is-spatial-dock-open');
+        spatialDock?.setAttribute('aria-expanded', 'true');
+        resetButton?.classList.remove('hidden');
+
+        return true;
+    };
+
+    const hideSurface = () => {
+        if (surface && workspace) {
+            setSurfaceExpanded(false);
+            surface.setAttribute('aria-hidden', 'true');
+            workspace.classList.remove('is-context-open', 'is-spatial-dock-open');
+        }
+        surfaceContent?.replaceChildren();
+        resetButton?.classList.add('hidden');
+    };
+
+    const clearSpatialDock = () => {
+        activeDockId = null;
+        page.dataset.mapDock = '';
+        spatialDock?.setAttribute('aria-expanded', 'false');
+        hideSurface();
+    };
+
     const clearFocus = () => {
         activeFocusId = null;
         page.dataset.mapFocus = '';
@@ -335,13 +420,7 @@ export function mountLivingGoalMap({
 
         syncEdges(positions);
 
-        if (surface && workspace) {
-            setSurfaceExpanded(false);
-            surface.setAttribute('aria-hidden', 'true');
-            workspace.classList.remove('is-context-open');
-        }
-        surfaceContent?.replaceChildren();
-        resetButton?.classList.add('hidden');
+        hideSurface();
     };
 
     const removeInvalidFocusHash = () => {
@@ -354,6 +433,10 @@ export function mountLivingGoalMap({
     };
 
     const openFocus = (nodeId, { historyMode = 'push' } = {}) => {
+        if (activeDockId) {
+            clearSpatialDock();
+        }
+
         const mobile = Boolean(windowRef.matchMedia?.('(max-width: 767px)')?.matches);
         const layout = buildFocusLayout(nodes, edges, nodeId, { mobile });
         if (!layout) return false;
@@ -393,7 +476,52 @@ export function mountLivingGoalMap({
         return true;
     };
 
-    const closeFocus = () => {
+    const openSpatialDock = (dockId, { historyMode = 'push' } = {}) => {
+        const normalizedDockId = String(dockId || '').trim();
+        if (!normalizedDockId || !globalTemplateFor(normalizedDockId)) return false;
+
+        if (activeFocusId) {
+            clearFocus();
+        }
+
+        activeDockId = normalizedDockId;
+        page.dataset.mapDock = normalizedDockId;
+
+        if (!renderGlobalSurface(normalizedDockId)) {
+            activeDockId = null;
+            page.dataset.mapDock = '';
+            return false;
+        }
+
+        if (historyMode === 'push' && windowRef.location.hash !== dockHash(normalizedDockId)) {
+            windowRef.history.pushState({
+                ...(windowRef.history.state || {}),
+                canoviaMapDock: normalizedDockId,
+            }, '', dockHash(normalizedDockId));
+        }
+
+        return true;
+    };
+
+    const removeInvalidDockHash = () => {
+        if (!dockIdFromLocation(windowRef)) return;
+        const nextState = { ...(windowRef.history.state || {}) };
+        delete nextState.canoviaMapDock;
+        windowRef.history.replaceState(nextState, '', mapUrlWithoutFocus(windowRef));
+    };
+
+    const closeContext = () => {
+        if (activeDockId) {
+            if (windowRef.history.state?.canoviaMapDock) {
+                windowRef.history.back();
+                return;
+            }
+
+            clearSpatialDock();
+            removeInvalidDockHash();
+            return;
+        }
+
         if (windowRef.history.state?.canoviaMapFocus && activeFocusId) {
             windowRef.history.back();
             return;
@@ -409,6 +537,21 @@ export function mountLivingGoalMap({
             sourceNodeId: nodeId || null,
             leftAt: Date.now(),
         });
+    };
+
+    const markSemanticTransition = (link) => {
+        const semanticLink = link?.closest?.('[data-map-semantic-zoom]')
+            ?? (link?.hasAttribute?.('data-map-semantic-zoom') ? link : null);
+        if (!semanticLink) return false;
+
+        const direction = mapSemanticZoomDirection(semanticLink.dataset.mapZoomDirection || 'in');
+        writeSemanticTransition(windowRef, {
+            direction,
+            from_depth: Number(page.dataset.mapHierarchyDepth || 0),
+            left_at: Date.now(),
+        });
+        page.classList.add(direction === 'out' ? 'is-semantic-departure-out' : 'is-semantic-departure-in');
+        return true;
     };
 
     const isMapLevelNavigation = (link) => {
@@ -430,8 +573,8 @@ export function mountLivingGoalMap({
         windowRef.clearTimeout(updateTimer);
         page.removeEventListener('click', onPageClick);
         page.removeEventListener('submit', onPageSubmit);
-        resetButton?.removeEventListener('click', closeFocus);
-        closeButton?.removeEventListener('click', closeFocus);
+        resetButton?.removeEventListener('click', closeContext);
+        closeButton?.removeEventListener('click', closeContext);
         expandButton?.removeEventListener('click', onExpandToggle);
         documentRef.removeEventListener('keydown', onKeyDown);
         documentRef.removeEventListener('canovia:before-instant-navigation', onBeforeInstantNavigation);
@@ -535,6 +678,7 @@ export function mountLivingGoalMap({
     }
 
     function onBeforeInstantNavigation(event) {
+        markSemanticTransition(event.detail?.link);
         trackInstantMapLink(event.detail?.link);
     }
 
@@ -543,6 +687,24 @@ export function mountLivingGoalMap({
     }
 
     function onPageClick(event) {
+        const semanticLink = event.target.closest?.('a[data-map-semantic-zoom]');
+        if (semanticLink && page.contains(semanticLink)) {
+            markSemanticTransition(semanticLink);
+        }
+
+        const dockControl = event.target.closest?.('[data-map-spatial-dock]');
+        if (dockControl && page.contains(dockControl)) {
+            event.preventDefault();
+            const dockId = dockControl.dataset.mapDockId || 'space-station';
+            trackTelemetry('map_node_focused', {
+                node_type: 'space_station',
+                position_role: 'spatial-dock',
+                is_primary: false,
+            }, true);
+            openSpatialDock(dockId);
+            return;
+        }
+
         const directOpen = event.target.closest?.('[data-map-direct-open]');
         if (directOpen && page.contains(directOpen)) {
             const directLink = directOpen.closest?.('a[data-map-direct-navigation]');
@@ -621,12 +783,12 @@ export function mountLivingGoalMap({
         if (!form || !page.contains(form)) return;
 
         const focusedNode = activeFocusId ? nodeElementById.get(activeFocusId) : null;
-        markPendingReevaluation();
+        markPendingReevaluation(activeDockId ? 'dock:space-station' : activeFocusId);
         trackTelemetry('map_companion_opened', {
             action_role: 'companion',
-            node_type: focusedNode?.dataset.mapNodeType || null,
-            position_role: focusedNode?.dataset.mapPositionRole || null,
-            is_primary: focusedNode?.dataset.mapIsPrimary === '1',
+            node_type: activeDockId ? 'space_station' : (focusedNode?.dataset.mapNodeType || null),
+            position_role: activeDockId ? 'spatial-dock' : (focusedNode?.dataset.mapPositionRole || null),
+            is_primary: activeDockId ? false : focusedNode?.dataset.mapIsPrimary === '1',
         }, true);
     }
 
@@ -636,7 +798,7 @@ export function mountLivingGoalMap({
     }
 
     function onKeyDown(event) {
-        if (event.key === 'Escape' && activeFocusId) closeFocus();
+        if (event.key === 'Escape' && (activeFocusId || activeDockId)) closeContext();
     }
 
     function onPopState(event) {
@@ -646,8 +808,19 @@ export function mountLivingGoalMap({
         }
         focusHistoryDepth = targetDepth;
 
+        const dockId = dockIdFromLocation(windowRef);
+        if (dockId) {
+            clearFocus();
+            if (!openSpatialDock(dockId, { historyMode: 'none' })) {
+                clearSpatialDock();
+                removeInvalidDockHash();
+            }
+            return;
+        }
+
         const nodeId = focusIdFromLocation(windowRef);
         if (!nodeId) {
+            clearSpatialDock();
             clearFocus();
             return;
         }
@@ -679,8 +852,8 @@ export function mountLivingGoalMap({
 
     page.addEventListener('click', onPageClick);
     page.addEventListener('submit', onPageSubmit);
-    resetButton?.addEventListener('click', closeFocus);
-    closeButton?.addEventListener('click', closeFocus);
+    resetButton?.addEventListener('click', closeContext);
+    closeButton?.addEventListener('click', closeContext);
     expandButton?.addEventListener('click', onExpandToggle);
     documentRef.addEventListener('keydown', onKeyDown);
     documentRef.addEventListener('canovia:before-instant-navigation', onBeforeInstantNavigation);
@@ -688,14 +861,33 @@ export function mountLivingGoalMap({
     windowRef.addEventListener('popstate', onPopState);
     windowRef.addEventListener('pageshow', onPageShow);
 
+    const initialDockId = dockIdFromLocation(windowRef);
     const initialFocusId = focusIdFromLocation(windowRef);
-    if (initialFocusId) {
+    if (initialDockId) {
+        if (!openSpatialDock(initialDockId, { historyMode: 'none' })) {
+            clearSpatialDock();
+            removeInvalidDockHash();
+        }
+    } else if (initialFocusId) {
         if (!openFocus(initialFocusId, { historyMode: 'none' })) {
             clearFocus();
             removeInvalidFocusHash();
         }
     } else {
+        clearSpatialDock();
         clearFocus();
+    }
+
+    const semanticArrival = readSemanticTransition(windowRef);
+    if (semanticArrival && Date.now() - Number(semanticArrival.left_at || 0) < 10000) {
+        clearSemanticTransition(windowRef);
+        const direction = mapSemanticZoomDirection(semanticArrival.direction);
+        page.classList.add(direction === 'out' ? 'is-semantic-arrival-out' : 'is-semantic-arrival-in');
+        windowRef.setTimeout(() => {
+            page.classList.remove('is-semantic-arrival-out', 'is-semantic-arrival-in');
+        }, 420);
+    } else if (semanticArrival) {
+        clearSemanticTransition(windowRef);
     }
 
     if (page.dataset.mapReprojected === '1') {
@@ -712,12 +904,17 @@ export function mountLivingGoalMap({
 
     return {
         openFocus,
+        openSpatialDock,
         clearFocus,
+        clearSpatialDock,
         revalidateProjection,
         markPendingReevaluation,
         destroy,
         get activeFocusId() {
             return activeFocusId;
+        },
+        get activeDockId() {
+            return activeDockId;
         },
     };
 }
