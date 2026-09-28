@@ -945,6 +945,7 @@ export function mountLivingGoalMap({
     }
 
     function onPageShow(event) {
+        applyBaseLayout();
         const pending = readPending(windowRef);
         if (!pending) return;
 
