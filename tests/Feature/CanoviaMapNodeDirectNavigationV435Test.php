@@ -33,7 +33,7 @@ class CanoviaMapNodeDirectNavigationV435Test extends TestCase
     {
         [$user, $plan, $current, $next] = $this->scenario();
 
-        $response = $this->actingAs($user)->get(route('map.index'));
+        $response = $this->actingAs($user)->get(route('map.index', ['level' => 'l3']));
         $response->assertOk()
             ->assertSee('data-map-node-focus', false)
             ->assertSee('data-map-direct-navigation', false)
