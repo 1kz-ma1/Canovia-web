@@ -83,8 +83,8 @@
 
             <p class="canovia-space-station-summary">
                 {{ filled($latestItem->content)
-                    ? IlluminateSupportStr::limit(IlluminateSupportStr::squish((string) $latestItem->content), 160)
-                    : (filled($latestItem->source_url) ? IlluminateSupportStr::limit((string) $latestItem->source_url, 160) : 'ファイル入力を受け取りました。') }}
+                    ? str((string) $latestItem->content)->squish()->limit(160)
+                    : (filled($latestItem->source_url) ? str((string) $latestItem->source_url)->limit(160) : 'ファイル入力を受け取りました。') }}
             </p>
 
             @if ($candidate)
