@@ -9,6 +9,11 @@ import {
 
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
+document.addEventListener('canovia:before-instant-navigation', (event) => {
+    const link = event.detail?.link;
+    if (link) advanceMapTelemetryForClassicNavigation(link);
+});
+
 
 document.addEventListener('click', async (event) => {
     const button = event.target.closest('[data-copy-text], [data-copy-target]');
