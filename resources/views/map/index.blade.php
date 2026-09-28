@@ -107,12 +107,12 @@
                                 'past' => 'is-past',
                                 default => '',
                             };
-                            $tag = filled($node['available_action'] ?? null) ? 'a' : 'div';
+                            $hasFocusFallback = filled($node['available_action'] ?? null);
+                            $directNavigation = $node['direct_navigation'] ?? null;
                         @endphp
 
-                        <{{ $tag }}
-                            @if ($tag === 'a') href="{{ $node['available_action'] }}" @endif
-                            class="canovia-map-node {{ $stateClass }}"
+                        <div
+                            class="canovia-map-node {{ $stateClass }} {{ filled(data_get($directNavigation, 'url')) ? 'has-direct-navigation' : '' }}"
                             style="--map-x: {{ data_get($node, 'position.x', 50) }}%; --map-y: {{ data_get($node, 'position.y', 50) }}%; --node-scale: {{ (float) ($node['size_weight'] ?? 0.7) }}"
                             data-map-node
                             data-map-node-id="{{ $node['id'] }}"
@@ -123,15 +123,46 @@
                             data-map-y="{{ data_get($node, 'position.y', 50) }}"
                             @if ($isPrimary) aria-current="true" @endif
                         >
-                            <span class="canovia-map-node-eyebrow">{{ $node['eyebrow'] }}</span>
-                            <span class="canovia-map-node-label">{{ $node['label'] }}</span>
-                            @if (filled($node['subtitle'] ?? null))
-                                <span class="canovia-map-node-subtitle">{{ $node['subtitle'] }}</span>
+                            @if ($hasFocusFallback)
+                                <a
+                                    href="{{ $node['available_action'] }}"
+                                    class="canovia-map-node-focus-link"
+                                    data-map-node-focus
+                                    aria-label="{{ $node['label'] }}のContextを見る"
+                                >
+                            @else
+                                <div class="canovia-map-node-focus-link is-static">
                             @endif
-                            @if ($tag === 'a')
-                                <span class="canovia-map-node-action">選択して操作 →</span>
+                                <span class="canovia-map-node-eyebrow">{{ $node['eyebrow'] }}</span>
+                                <span class="canovia-map-node-label">{{ $node['label'] }}</span>
+                                @if (filled($node['subtitle'] ?? null))
+                                    <span class="canovia-map-node-subtitle">{{ $node['subtitle'] }}</span>
+                                @endif
+                                @if ($hasFocusFallback)
+                                    <span class="canovia-map-node-action">Contextを見る →</span>
+                                @endif
+                            @if ($hasFocusFallback)
+                                </a>
+                            @else
+                                </div>
                             @endif
-                        </{{ $tag }}>
+
+                            @if (filled(data_get($directNavigation, 'url')))
+                                <a
+                                    href="{{ data_get($directNavigation, 'url') }}"
+                                    class="canovia-map-node-direct-open"
+                                    data-map-direct-open
+                                    data-map-direct-navigation
+                                    data-map-action-role="direct"
+                                    data-map-node-id="{{ $node['id'] }}"
+                                    data-map-node-type="{{ $node['type'] }}"
+                                    data-map-position-role="{{ $node['position_role'] }}"
+                                    data-map-is-primary="{{ $isPrimary ? '1' : '0' }}"
+                                    title="{{ data_get($directNavigation, 'label', '開く') }}"
+                                    aria-label="{{ data_get($directNavigation, 'label', '開く') }}"
+                                >開く ↗</a>
+                            @endif
+                        </div>
                     @endforeach
                 @else
                     <div class="canovia-map-empty">
