@@ -480,10 +480,6 @@ export function mountLivingGoalMap({
         const normalizedDockId = String(dockId || '').trim();
         if (!normalizedDockId || !globalTemplateFor(normalizedDockId)) return false;
 
-        if (activeFocusId) {
-            clearFocus();
-        }
-
         activeDockId = normalizedDockId;
         page.dataset.mapDock = normalizedDockId;
 
@@ -810,7 +806,6 @@ export function mountLivingGoalMap({
 
         const dockId = dockIdFromLocation(windowRef);
         if (dockId) {
-            clearFocus();
             if (!openSpatialDock(dockId, { historyMode: 'none' })) {
                 clearSpatialDock();
                 removeInvalidDockHash();
