@@ -257,9 +257,9 @@ class CollaborationExternalToolsV445Test extends TestCase
         $params = [
             'level' => 'l3',
             'intent' => 'collaboration',
-            'collab_context' => 'review',
             'domain' => $domainKey,
             'plan' => $plan->id,
+            'collab_context' => 'review',
         ];
 
         $response = $this->actingAs($owner)->get(route('map.index', $params));
