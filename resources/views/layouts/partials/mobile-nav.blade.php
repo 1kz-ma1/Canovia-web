@@ -1,5 +1,9 @@
+@php
+    $preferredHomeUrl = $preferredHomeUrl ?? app(\App\Services\HomeSurfacePreference::class)->url(request());
+@endphp
+
 <nav class="mobile-tabbar pk-mobile-tabbar" aria-label="モバイルナビゲーション">
-    <a href="{{ route('home') }}" data-canovia-nav-key="mobile-home"
+    <a href="{{ $preferredHomeUrl }}" data-preferred-home-link data-canovia-nav-key="mobile-home"
        class="mobile-tabbar-link {{ request()->routeIs('home') || request()->routeIs('map.*') || request()->routeIs('calendar.*') || request()->routeIs('my_plans.*') || request()->routeIs('plans.show') || request()->routeIs('plans.edit') || request()->routeIs('tasks.*') || request()->routeIs('work_sessions.*') || request()->routeIs('navigation.*') ? 'is-active' : '' }}"
        aria-current="{{ request()->routeIs('home') || request()->routeIs('map.*') || request()->routeIs('calendar.*') || request()->routeIs('my_plans.*') || request()->routeIs('plans.show') || request()->routeIs('plans.edit') || request()->routeIs('tasks.*') || request()->routeIs('work_sessions.*') ? 'page' : 'false' }}">
         <span class="pk-tab-icon pk-tab-icon-home" aria-hidden="true">
