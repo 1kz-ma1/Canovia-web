@@ -8684,3 +8684,46 @@ html[data-theme-resolved="light"] .canovia-map-node-direct-open {
         }
     }
 }
+
+
+/* --------------------------------------------------------------------------
+ * V45.6 Edge-to-edge Map shell
+ * Map route owns the viewport regardless of app density / utility padding.
+ * -------------------------------------------------------------------------- */
+body[data-route-name="map.index"] {
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+body[data-route-name="map.index"] .app-main {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+body[data-route-name="map.index"] [data-canovia-page],
+body[data-route-name="map.index"] .canovia-map-page,
+body[data-route-name="map.index"] .canovia-map-workspace,
+body[data-route-name="map.index"] .canovia-map-shell {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+body[data-route-name="map.index"] [data-canovia-page],
+body[data-route-name="map.index"] .canovia-map-page {
+    height: 100% !important;
+    min-height: 0 !important;
+}

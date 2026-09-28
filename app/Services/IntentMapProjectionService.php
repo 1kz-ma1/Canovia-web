@@ -34,7 +34,7 @@ final class IntentMapProjectionService
         $spaceStation = $this->spaceStation->build($request);
         $satellites = $this->satellitePromotion->promote(
             $this->satelliteCandidates->candidates($request),
-            4,
+            2,
         );
 
         $nodes = $attention['nodes']
