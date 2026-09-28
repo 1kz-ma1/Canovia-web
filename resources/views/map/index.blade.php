@@ -16,19 +16,29 @@
         data-map-projection-key="{{ $graph['projection_key'] ?? '' }}"
         data-event-url="{{ route('behavior_events.store') }}"
     >
-        <div class="canovia-map-hero">
+        <div class="canovia-map-hero canovia-map-toolbar">
             <div class="canovia-map-hero-copy">
-                <p class="canovia-map-kicker">Experimental · Living Goal Map</p>
-                <h1 class="canovia-map-title">Canovia Map</h1>
-                <p class="canovia-map-description">
-                    必要な情報・機能・画面へたどり着くためのContext Mapです。
-                    ノードを選ぶと直接関係する情報だけへFocusし、そのContextに必要なClassic操作を開けます。
-                </p>
+                <div class="canovia-map-heading">
+                    <p class="canovia-map-kicker">Living Goal Map</p>
+                    <h1 class="canovia-map-title">Canovia Map</h1>
+                </div>
+                <details class="canovia-map-help">
+                    <summary>Mapの見方</summary>
+                    <p>
+                        中央が現在のPrimary Actionです。上下はFuture / Past、左右はInput / Action。
+                        Nodeを選ぶと直接関係するContextだけへFocusし、操作はClassic Surfaceで行います。
+                    </p>
+                </details>
             </div>
             <div class="canovia-map-hero-actions">
+                @if ($primaryNodeId)
+                    <button type="button" class="btn-primary canovia-map-now-button" data-map-primary-focus>
+                        今やることを見る
+                    </button>
+                @endif
                 <button type="button" class="btn-secondary hidden" data-map-focus-reset>全体を見る</button>
                 <a href="{{ route('home') }}" class="btn-secondary" data-map-home-fallback>Classic Home</a>
-                <a href="{{ route('roadmap.index') }}" class="btn-secondary">Roadmap</a>
+                <a href="{{ route('roadmap.index') }}" class="btn-secondary canovia-map-roadmap-link">Roadmap</a>
             </div>
         </div>
 
