@@ -24,7 +24,7 @@ class CanoviaMapUsabilityV430Test extends TestCase
         ]);
     }
 
-    public function test_map_starts_with_compact_toolbar_and_one_tap_primary_focus_affordance(): void
+    public function test_map_starts_with_compact_toolbar_and_clear_primary_execution_and_context_affordances(): void
     {
         [$user, $task] = $this->scenario();
 
@@ -33,7 +33,9 @@ class CanoviaMapUsabilityV430Test extends TestCase
             ->assertOk()
             ->assertSee('canovia-map-toolbar', false)
             ->assertSee('Mapの見方')
-            ->assertSee('今やることを見る')
+            ->assertSee('そのまま進める')
+            ->assertSee('Contextを見る')
+            ->assertSee('data-map-direct-primary-launch', false)
             ->assertSee('data-map-primary-focus', false)
             ->assertSee('data-map-is-primary="1"', false)
             ->assertSee($task->title);
