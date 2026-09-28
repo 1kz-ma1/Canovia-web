@@ -21,6 +21,13 @@ class PlanArtifact extends Model
         'link' => 'リンク',
     ];
 
+    public const COLLABORATION_STATES = [
+        'active' => '進行中',
+        'review' => 'レビュー待ち',
+        'waiting' => '相手待ち',
+        'external_followup' => '外部確認',
+    ];
+
     protected $fillable = [
         'plan_id',
         'created_by_user_id',
@@ -70,5 +77,21 @@ class PlanArtifact extends Model
     public function artifactTypeLabel(): string
     {
         return self::ARTIFACT_TYPES[$this->artifact_type] ?? $this->artifact_type;
+    }
+
+    public function collaborationState(): ?string
+    {
+        $state = data_get($this->metadata, 'collaboration_state');
+
+        return is_string($state) && array_key_exists($state, self::COLLABORATION_STATES)
+            ? $state
+            : null;
+    }
+
+    public function collaborationStateLabel(): ?string
+    {
+        $state = $this->collaborationState();
+
+        return $state ? self::COLLABORATION_STATES[$state] : null;
     }
 }
