@@ -40,7 +40,7 @@ jobs:
           for f in storage/framework/views/*.php; do
             if ! php -l "$f"; then
               echo "--- failing compiled view: $f ---"
-              nl -ba "$f" | sed -n '340,395p'
+              nl -ba "$f" | sed -n '315,395p'
               exit 1
             fi
           done
