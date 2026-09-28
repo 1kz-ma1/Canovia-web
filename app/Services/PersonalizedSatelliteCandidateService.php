@@ -74,7 +74,7 @@ final class PersonalizedSatelliteCandidateService
                 'entity_id' => (int) $plan->id,
                 'plan_id' => (int) $plan->id,
                 'task_id' => null,
-                'eyebrow' => 'PLAN SATELLITE',
+                'eyebrow' => 'PLAN',
                 'label' => (string) $plan->title,
                 'subtitle' => '継続中のPlanへのショートカット',
                 'available_action' => $executionUrl,
@@ -82,9 +82,9 @@ final class PersonalizedSatelliteCandidateService
                 'anchor_node_id' => 'intent:plan',
                 'signals' => $signals,
                 'classic_surface' => [
-                    'kind' => 'Personalized Satellite',
+                    'kind' => 'Plan Shortcut',
                     'title' => (string) $plan->title,
-                    'summary' => '既存PlanをL0へ昇格したショートカットです。Plan自体はSatellite判定と無関係に存在し続けます。',
+                    'summary' => '継続して使っているPlanへすぐ戻るためのショートカットです。',
                     'actions' => [
                         [
                             'label' => 'Executionへ移動',
