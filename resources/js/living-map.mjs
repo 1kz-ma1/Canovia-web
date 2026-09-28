@@ -161,6 +161,36 @@ export function buildMobileBaseLayout(
         return positions;
     }
 
+    if (mapLevel === 'l3') {
+        const sideOffset = Math.min(width * 0.39, 152);
+        const upperOffsetX = Math.min(width * 0.25, 98);
+        const upperOffsetY = Math.min(height * 0.20, 132);
+        const goalOffsetY = Math.min(height * 0.35, 220);
+        const lowerOffsetY = Math.min(height * 0.28, 180);
+        const sideX = xPercent(sideOffset);
+        const upperX = xPercent(upperOffsetX);
+        const upperY = yPercent(upperOffsetY);
+        const goalY = yPercent(goalOffsetY);
+        const lowerY = yPercent(lowerOffsetY);
+        const sideY = yPercent(Math.min(height * 0.02, 14));
+        const rolePositions = {
+            'future-goal': roundedPoint(50, 50 - goalY),
+            'future-plan': roundedPoint(50 - upperX, 50 - upperY),
+            'future-next': roundedPoint(50 + upperX, 50 - upperY),
+            'now': { x: 50, y: 50 },
+            'input-inbox': roundedPoint(50 - sideX, 50 + sideY),
+            'action-tool': roundedPoint(50 + sideX, 50 + sideY),
+            'past-evidence': roundedPoint(50, 50 + lowerY),
+        };
+
+        for (const node of nodes) {
+            const position = rolePositions[node.positionRole];
+            if (position) positions.set(node.id, position);
+        }
+
+        return positions;
+    }
+
     if (mapLevel === 'l1' || mapLevel === 'l2') {
         const parent = nodes.find((node) => node.positionRole === 'hierarchy-parent');
         const children = nodes.filter((node) => node.positionRole === 'hierarchy-child');

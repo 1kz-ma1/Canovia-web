@@ -295,6 +295,7 @@
                                     @if ($isZoomNavigation)
                                         data-map-semantic-zoom
                                         data-map-zoom-direction="{{ $zoomDirection }}"
+                                        data-route-lock-skip
                                     @endif
                                     @if ($isExternalNavigation)
                                         target="_blank"

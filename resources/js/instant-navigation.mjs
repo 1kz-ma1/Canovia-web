@@ -333,9 +333,16 @@ export function mountCanoviaInstantNavigation({
         void fetchPayload(url, 'navigate').catch(() => {});
     };
 
-    const withUncachedFeedback = async (callback) => {
+    const withUncachedFeedback = async (callback, { spatial = false } = {}) => {
         const overlay = documentRef.querySelector('[data-route-loading]');
+        const page = documentRef.querySelector('[data-canovia-page]');
         const timer = windowRef.setTimeout(() => {
+            if (spatial) {
+                page?.classList.add('is-map-semantic-loading');
+                page?.setAttribute('aria-busy', 'true');
+                return;
+            }
+
             overlay?.classList.add('is-visible');
             overlay?.setAttribute('aria-hidden', 'false');
         }, 120);
@@ -344,6 +351,8 @@ export function mountCanoviaInstantNavigation({
             return await callback();
         } finally {
             windowRef.clearTimeout(timer);
+            page?.classList.remove('is-map-semantic-loading');
+            page?.removeAttribute('aria-busy');
             overlay?.classList.remove('is-visible');
             overlay?.setAttribute('aria-hidden', 'true');
         }
@@ -362,6 +371,7 @@ export function mountCanoviaInstantNavigation({
 
         const key = cacheKey(url);
         const serial = ++navigationSerial;
+        const spatial = windowRef.location.pathname === '/map' && url.pathname === '/map';
         captureCurrent();
 
         const cached = cache.get(key);
@@ -377,10 +387,10 @@ export function mountCanoviaInstantNavigation({
                 prefetched
                     ? prefetched
                     : fetchPayload(url, 'navigate')
-            ));
+            ), { spatial });
 
             if (!payload) {
-                payload = await withUncachedFeedback(() => fetchPayload(url, 'navigate'));
+                payload = await withUncachedFeedback(() => fetchPayload(url, 'navigate'), { spatial });
             }
 
             if (serial !== navigationSerial || disposed) return false;
