@@ -1,0 +1,36 @@
+name: V45.4 Map Runtime Performance validation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist
+      - run: npm ci
+      - run: npm run build
+      - run: cp .env.example .env
+      - run: touch database/database.sqlite
+      - run: php artisan key:generate
+      - run: php artisan migrate:fresh --force
+      - run: php -l tests/Feature/MapRuntimePerformanceV454Test.php
+      - run: php artisan view:cache
+      - name: Lint compiled Blade views
+        run: |
+          set -e
+          for f in storage/framework/views/*.php; do
+            php -l "$f"
+          done
+      - run: node --check resources/js/living-map.mjs
+      - run: node --check resources/js/instant-navigation.mjs
+      - run: node --test tests/js/living-map-v421.test.mjs tests/js/map-telemetry-v424.test.mjs tests/js/home-surface-preference-v433.test.mjs
+      - run: php artisan test tests/Feature/MapRuntimePerformanceV454Test.php tests/Feature/NodeVisualGrammarV453Test.php tests/Feature/FullscreenMapShellV452Test.php tests/Feature/MobileMapGestureUxV451Test.php tests/Feature/MobileSpatialUxV450Test.php tests/Feature/CollaborationExternalToolsV445Test.php tests/Feature/PersonalizedSatellitesV444Test.php tests/Feature/SemanticZoomSpatialMemoryV443Test.php tests/Feature/SpaceStationV442Test.php tests/Feature/IntentHubV441Test.php tests/Feature/HierarchicalMapFoundationV440Test.php tests/Feature/CanoviaHomeSurfaceV432Test.php tests/Feature/CanoviaHomeSurfacePreferenceV433Test.php tests/Feature/CanoviaMapV420Test.php tests/Feature/CanoviaMapFocusV421Test.php tests/Feature/CanoviaMapLivingReevaluationV422Test.php tests/Feature/CanoviaMapContextualCompanionV423Test.php tests/Feature/CanoviaMapTelemetryV424Test.php tests/Feature/CanoviaMapUsabilityV430Test.php tests/Feature/CanoviaMapFocusSurfaceV431Test.php tests/Feature/CanoviaMapPrimaryLaunchV434Test.php tests/Feature/CanoviaMapNodeDirectNavigationV435Test.php tests/Feature/InboxFoundationV4113Test.php tests/Feature/InboxIntelligenceGuideV4113Test.php tests/Feature/CanoviaCompanionContextualEntryV4115Test.php tests/Feature/FirstRunUxV4123Test.php tests/Feature/InstantNavigationV4120Test.php tests/Feature/InstantNavigationFragmentV4121Test.php
