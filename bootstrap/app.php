@@ -22,8 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Measure before the web middleware group so database-backed session
         // reads/writes are included in the request total.
         $middleware->prepend(MeasurePagePerformance::class);
+        $middleware->encryptCookies(except: [\App\Services\HomeSurfacePreference::COOKIE]);
         $middleware->redirectGuestsTo(fn (Request $request) => route('auth.login.form'));
-        $middleware->redirectUsersTo(fn (Request $request) => route('home'));
+        $middleware->redirectUsersTo(fn (Request $request) => app(\App\Services\HomeSurfacePreference::class)->url($request));
         $middleware->alias([
             'admin.access' => EnsureAdminAccess::class,
             'feature.access' => EnsureFeatureAccess::class,

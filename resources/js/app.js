@@ -6,6 +6,11 @@ import {
     advanceMapTelemetryForClassicNavigation,
     attachMapTelemetryToWorkStartForm,
 } from './map-telemetry.mjs';
+import {
+    homeSurfaceUrl,
+    persistHomeSurface,
+    resolveHomeSurface,
+} from './home-surface-preference.mjs';
 
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
@@ -1738,6 +1743,7 @@ function applyUiPreferences() {
     const storedDensity = localStorage.getItem('pacekeeper.ui.density');
     const isMobile = window.matchMedia('(max-width: 767px)').matches;
     const density = storedDensity || (isMobile ? 'standard' : 'compact');
+    const homeSurface = resolveHomeSurface();
 
     // Canovia v33: dark is the only official theme for now.
     // Overwrite legacy light/system selections so installed PWAs converge on it.
@@ -1749,6 +1755,29 @@ function applyUiPreferences() {
     root.dataset.themeResolved = 'dark';
     root.dataset.uiAccent = accent;
     root.dataset.uiDensity = density;
+    root.dataset.homeSurface = homeSurface;
+    if (document.body) document.body.dataset.homeSurface = homeSurface;
+
+    const classicHomeUrl = document.body?.dataset.homeClassicUrl || '/';
+    const mapHomeUrl = document.body?.dataset.homeMapUrl || '/map';
+    const preferredHomeUrl = homeSurfaceUrl(homeSurface, {
+        classicUrl: classicHomeUrl,
+        mapUrl: mapHomeUrl,
+    });
+    document.querySelectorAll('[data-preferred-home-link]').forEach((link) => {
+        link.setAttribute('href', preferredHomeUrl);
+    });
+
+    document.querySelectorAll('[data-home-surface-preference]').forEach((button) => {
+        const active = button.dataset.homeSurfacePreference === homeSurface;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+
+    // Keep the non-sensitive server-visible cookie aligned with the existing
+    // per-device localStorage preference so redirects can honor it.
+    persistHomeSurface(homeSurface);
+
     const themeColor = document.querySelector('meta[name="theme-color"]');
     if (themeColor) themeColor.content = '#020617';
 
@@ -1836,6 +1865,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-ui-density-value]').forEach((button) => {
         button.addEventListener('click', () => {
             localStorage.setItem('pacekeeper.ui.density', button.dataset.uiDensityValue);
+            applyUiPreferences();
+        });
+    });
+
+    document.querySelectorAll('[data-home-surface-preference]').forEach((button) => {
+        button.addEventListener('click', () => {
+            persistHomeSurface(button.dataset.homeSurfacePreference);
             applyUiPreferences();
         });
     });
