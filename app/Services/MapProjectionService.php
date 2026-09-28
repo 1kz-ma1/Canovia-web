@@ -35,7 +35,7 @@ final class MapProjectionService
     public function project(Request $request, MapLevel $level): array
     {
         return match ($level) {
-            MapLevel::Intent => $this->intent->build(),
+            MapLevel::Intent => $this->intent->build($request),
             MapLevel::Execution => $this->execution->build($request),
             default => throw new LogicException(
                 'Map level '.$level->value.' is not projected until its version is implemented.'
