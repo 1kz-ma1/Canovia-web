@@ -730,3 +730,7 @@ Mobile Canvasは`clamp(42rem, calc(100dvh - 8.5rem), 50rem)`を基本とし、�
 V45.1ではMobile Node選択をDesktop Focus Modeから分離し、Map全体の位置を維持したままselected highlightとContext Surface差し替えだけを行う。これによりContext Surfaceを開いたまま別Nodeを直接タップできる。Close / Expandはdelegated clickでも処理し、Closeはhistory同期を待たず即時にSurfaceとselected stateを解除する。
 Mobile Mapはtransformable sceneとして1本指の全方向Panと2本指Pinch Zoomを提供する。Mapの向きは回転させずSpatial Memoryを維持する。Zoomは0.82x〜2.2x、scale>=1ではscaled overflow / 2 + viewport 10%、scale<1ではviewport 4%をPan上限とする。右上に縮小 / 中央リセット / 拡大Controlを常設し、Resetでpan=0 / zoom=1へ戻す。
 Node / SVG edge / decorative orbitは同じMap Sceneとしてtransformし、axis label / Space Station Dock / gesture controlsはviewport chromeとして固定する。Pan / zoom値・pointer履歴はruntime onlyで、DB / Projection Key / Telemetryへ保存しない。
+
+V45.2ではMap routeを通常Document内コンテンツではなくFullscreen Map Shellとして扱う。body[data-route-name="map.index"]をshell stateのsourceとし、Map中だけDesktop Header / Mobile Header / Mobile Bottom Navigation / Footerを非表示にする。App Shell DOM自体は残し、Instant NavigationでClassicへ戻った際に再生成なしで復帰できるようにする。
+Map mainは100dvh固定・overflow hidden・page paddingなしとし、上部のFullscreen Top Barと残り全域のMap viewportだけで構成する。Top Barにはcurrent context、breadcrumb / depth、Classic / Map切替を置き、long description / Map help / hero shortcut群はFullscreen modeでは表示しない。HomeSurfacePreferenceやSemantic Zoom URLは変更しない。
+Context SurfaceはDesktopでもMapを押し縮めるsidebarではなく右側floating overlayとし、MobileはBottom Sheetを維持する。Map modeではBottom Navigationが消えるためMobile Surface / Space Station Dockのbottom offsetはsafe-area基準へ下げる。Fullscreen stateやviewport sizeは永続化・Telemetry保存しない。
