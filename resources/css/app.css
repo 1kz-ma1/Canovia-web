@@ -6869,3 +6869,61 @@ html[data-theme-resolved="light"] .canovia-map-node-direct-open {
         }
     }
 }
+
+
+/* --------------------------------------------------------------------------
+ * V44.5 Collaboration / External Tools
+ * Purpose-based shared-work projection.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .canovia-map-shell.is-collaboration-map {
+        background:
+            radial-gradient(circle at 20% 18%, rgb(167 139 250 / 0.08), transparent 14rem),
+            radial-gradient(circle at 82% 74%, rgb(34 211 238 / 0.07), transparent 15rem),
+            radial-gradient(circle at 16% 16%, rgb(224 242 254 / 0.55) 0 1px, transparent 1.4px),
+            radial-gradient(circle at 78% 24%, rgb(196 181 253 / 0.5) 0 1px, transparent 1.5px),
+            linear-gradient(155deg, rgb(2 6 23 / 0.99), rgb(11 11 35 / 0.98) 52%, rgb(8 18 38 / 0.97));
+        background-size: auto, auto, 8rem 8rem, 11rem 11rem, auto;
+    }
+
+    .canovia-map-node.is-collaboration-node {
+        border-color: rgb(167 139 250 / 0.4);
+        background:
+            radial-gradient(circle at 35% 27%, rgb(255 255 255 / 0.08), transparent 22%),
+            radial-gradient(circle at 50% 52%, rgb(139 92 246 / 0.11), transparent 62%),
+            rgb(15 23 42 / 0.97);
+        box-shadow:
+            0 0 0 0.28rem rgb(139 92 246 / 0.018),
+            0 0 2rem rgb(139 92 246 / 0.08),
+            0 16px 38px rgb(2 6 23 / 0.44);
+    }
+
+    .canovia-map-node.is-collaboration-node.is-hierarchy-parent {
+        border-color: rgb(103 232 249 / 0.5);
+        background:
+            radial-gradient(circle at 50% 30%, rgb(224 242 254 / 0.1), transparent 23%),
+            radial-gradient(circle at 50% 50%, rgb(34 211 238 / 0.1), transparent 58%),
+            linear-gradient(145deg, rgb(30 41 80 / 0.48), rgb(15 23 42 / 0.98));
+    }
+
+    .canovia-map-node.is-collaboration-node .canovia-map-node-eyebrow {
+        color: rgb(216 180 254);
+    }
+
+    .canovia-map-node-direct-open.is-external-tool {
+        border-color: rgb(103 232 249 / 0.28);
+        background: rgb(8 47 73 / 0.76);
+        color: rgb(165 243 252);
+    }
+
+    .canovia-map-node-direct-open.is-external-tool:hover,
+    .canovia-map-node-direct-open.is-external-tool:focus-visible {
+        border-color: rgb(103 232 249 / 0.52);
+        background: rgb(14 116 144 / 0.42);
+        color: rgb(224 242 254);
+    }
+
+    .canovia-map-shell.is-collaboration-map .canovia-map-edge {
+        stroke: rgb(196 181 253 / calc(0.16 + var(--edge-strength) * 0.36));
+    }
+}
