@@ -7,6 +7,7 @@ import {
     clampMapViewTransform,
     createFrameBatcher,
     mapActionTelemetryContext,
+    mapDockHistoryState,
     mapHistoryDirection,
     mapReturnDecision,
     mapSemanticZoomDirection,
@@ -246,7 +247,7 @@ test('personalized satellite focus keeps each orbit slot in its spatial directio
 });
 
 
-test('mobile L0 uses a vertical two-ring layout without mutating desktop coordinates', () => {
+test('mobile L0 compensates for tall viewport aspect ratio without mutating desktop coordinates', () => {
     const l0Nodes = [
         { id: 'intent:space-station', positionRole: 'space-station', x: 50, y: 50 },
         { id: 'intent:plan', positionRole: 'intent-plan', x: 24, y: 23 },
@@ -258,18 +259,30 @@ test('mobile L0 uses a vertical two-ring layout without mutating desktop coordin
         { id: 'satellite:3', positionRole: 'satellite-3', x: 50, y: 88 },
         { id: 'satellite:4', positionRole: 'satellite-4', x: 12, y: 50 },
     ];
+    const viewport = { width: 390, height: 700 };
 
-    const layout = buildMobileBaseLayout(l0Nodes, 'l0');
+    const layout = buildMobileBaseLayout(l0Nodes, 'l0', viewport);
 
     assert.deepEqual(layout.get('intent:space-station'), { x: 50, y: 50 });
-    assert.deepEqual(layout.get('intent:plan'), { x: 27, y: 29 });
-    assert.deepEqual(layout.get('intent:execution'), { x: 73, y: 29 });
-    assert.deepEqual(layout.get('intent:reflection'), { x: 73, y: 71 });
-    assert.deepEqual(layout.get('intent:collaboration'), { x: 27, y: 71 });
-    assert.deepEqual(layout.get('satellite:1'), { x: 50, y: 9 });
+    assert.deepEqual(layout.get('intent:plan'), { x: 27, y: 37.2 });
+    assert.deepEqual(layout.get('intent:execution'), { x: 73, y: 37.2 });
+    assert.deepEqual(layout.get('intent:reflection'), { x: 73, y: 62.8 });
+    assert.deepEqual(layout.get('intent:collaboration'), { x: 27, y: 62.8 });
+    assert.deepEqual(layout.get('satellite:1'), { x: 50, y: 28.8 });
     assert.deepEqual(layout.get('satellite:2'), { x: 88, y: 50 });
-    assert.deepEqual(layout.get('satellite:3'), { x: 50, y: 91 });
+    assert.deepEqual(layout.get('satellite:3'), { x: 50, y: 71.2 });
     assert.deepEqual(layout.get('satellite:4'), { x: 12, y: 50 });
+
+    const plan = layout.get('intent:plan');
+    const innerDx = (50 - plan.x) * viewport.width / 100;
+    const innerDy = (50 - plan.y) * viewport.height / 100;
+    assert.ok(Math.abs(innerDx - innerDy) < 1, 'inner ring uses equal pixel radius');
+
+    const topSatellite = layout.get('satellite:1');
+    const rightSatellite = layout.get('satellite:2');
+    const outerDy = (50 - topSatellite.y) * viewport.height / 100;
+    const outerDx = (rightSatellite.x - 50) * viewport.width / 100;
+    assert.ok(Math.abs(outerDx - outerDy) < 1, 'outer ring uses equal pixel radius');
 
     assert.deepEqual(
         { x: l0Nodes[1].x, y: l0Nodes[1].y },
@@ -278,7 +291,7 @@ test('mobile L0 uses a vertical two-ring layout without mutating desktop coordin
     );
 });
 
-test('mobile hierarchy stretches children vertically around the same semantic parent', () => {
+test('mobile hierarchy uses a pixel-balanced orbit around the same semantic parent', () => {
     const hierarchyNodes = [
         { id: 'parent', positionRole: 'hierarchy-parent', x: 50, y: 50 },
         { id: 'child:1', positionRole: 'hierarchy-child', x: 50, y: 20 },
@@ -286,14 +299,21 @@ test('mobile hierarchy stretches children vertically around the same semantic pa
         { id: 'child:3', positionRole: 'hierarchy-child', x: 50, y: 80 },
         { id: 'child:4', positionRole: 'hierarchy-child', x: 20, y: 50 },
     ];
+    const viewport = { width: 390, height: 700 };
 
-    const layout = buildMobileBaseLayout(hierarchyNodes, 'l2');
+    const layout = buildMobileBaseLayout(hierarchyNodes, 'l2', viewport);
 
     assert.deepEqual(layout.get('parent'), { x: 50, y: 50 });
-    assert.deepEqual(layout.get('child:1'), { x: 50, y: 13 });
-    assert.deepEqual(layout.get('child:2'), { x: 81, y: 50 });
-    assert.deepEqual(layout.get('child:3'), { x: 50, y: 87 });
-    assert.deepEqual(layout.get('child:4'), { x: 19, y: 50 });
+    assert.deepEqual(layout.get('child:1'), { x: 50, y: 31.1 });
+    assert.deepEqual(layout.get('child:2'), { x: 84, y: 50 });
+    assert.deepEqual(layout.get('child:3'), { x: 50, y: 68.9 });
+    assert.deepEqual(layout.get('child:4'), { x: 16, y: 50 });
+
+    const top = layout.get('child:1');
+    const right = layout.get('child:2');
+    const dy = (50 - top.y) * viewport.height / 100;
+    const dx = (right.x - 50) * viewport.width / 100;
+    assert.ok(Math.abs(dx - dy) < 1, 'hierarchy orbit is circular in rendered pixels');
 });
 
 
@@ -417,4 +437,20 @@ test('frame batcher cancel drops pending runtime work without flushing it', () =
     assert.deepEqual(cancelled, [91]);
     assert.deepEqual(flushed, []);
     assert.equal(batcher.pending(), false);
+});
+
+
+test('dock history removes stale focus id while preserving focus depth', () => {
+    assert.deepEqual(
+        mapDockHistoryState({
+            canoviaMapFocus: 'task:1',
+            canoviaMapFocusDepth: 2,
+            unrelated: 'keep',
+        }, 'space-station'),
+        {
+            canoviaMapFocusDepth: 2,
+            unrelated: 'keep',
+            canoviaMapDock: 'space-station',
+        },
+    );
 });

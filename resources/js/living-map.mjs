@@ -116,22 +116,40 @@ export function buildFocusLayout(nodes, edges, selectedId, { mobile = false } = 
 }
 
 
-export function buildMobileBaseLayout(nodes, mapLevel = 'l0') {
+export function buildMobileBaseLayout(
+    nodes,
+    mapLevel = 'l0',
+    viewport = { width: 390, height: 700 },
+) {
     const positions = new Map(
         nodes.map((node) => [node.id, { x: Number(node.x ?? 50), y: Number(node.y ?? 50) }])
     );
+    const width = Math.max(1, Number(viewport?.width || 390));
+    const height = Math.max(1, Number(viewport?.height || 700));
+    const xPercent = (pixels) => (Number(pixels) / width) * 100;
+    const yPercent = (pixels) => (Number(pixels) / height) * 100;
+    const roundedPoint = (x, y) => ({
+        x: Math.round(x * 10) / 10,
+        y: Math.round(y * 10) / 10,
+    });
 
     if (mapLevel === 'l0') {
+        const innerRadius = Math.min(width * 0.23, 104);
+        const outerRadius = Math.min(width * 0.38, 164);
+        const innerX = xPercent(innerRadius);
+        const innerY = yPercent(innerRadius);
+        const outerX = xPercent(outerRadius);
+        const outerY = yPercent(outerRadius);
         const rolePositions = {
             'space-station': { x: 50, y: 50 },
-            'intent-plan': { x: 27, y: 29 },
-            'intent-execution': { x: 73, y: 29 },
-            'intent-reflection': { x: 73, y: 71 },
-            'intent-collaboration': { x: 27, y: 71 },
-            'satellite-1': { x: 50, y: 9 },
-            'satellite-2': { x: 88, y: 50 },
-            'satellite-3': { x: 50, y: 91 },
-            'satellite-4': { x: 12, y: 50 },
+            'intent-plan': roundedPoint(50 - innerX, 50 - innerY),
+            'intent-execution': roundedPoint(50 + innerX, 50 - innerY),
+            'intent-reflection': roundedPoint(50 + innerX, 50 + innerY),
+            'intent-collaboration': roundedPoint(50 - innerX, 50 + innerY),
+            'satellite-1': roundedPoint(50, 50 - outerY),
+            'satellite-2': roundedPoint(50 + outerX, 50),
+            'satellite-3': roundedPoint(50, 50 + outerY),
+            'satellite-4': roundedPoint(50 - outerX, 50),
         };
 
         for (const node of nodes) {
@@ -153,15 +171,19 @@ export function buildMobileBaseLayout(nodes, mapLevel = 'l0') {
 
         const count = children.length;
         if (count > 0) {
-            const radiusX = count <= 4 ? 31 : 34;
-            const radiusY = count <= 4 ? 37 : 40;
+            const radiusPixels = Math.min(
+                width * (count <= 4 ? 0.34 : 0.37),
+                count <= 4 ? 145 : 158,
+            );
+            const radiusX = xPercent(radiusPixels);
+            const radiusY = yPercent(radiusPixels);
 
             children.forEach((node, index) => {
                 const angle = (-90 + (360 / count) * index) * Math.PI / 180;
-                positions.set(node.id, {
-                    x: Math.round(50 + Math.cos(angle) * radiusX),
-                    y: Math.round(50 + Math.sin(angle) * radiusY),
-                });
+                positions.set(node.id, roundedPoint(
+                    50 + Math.cos(angle) * radiusX,
+                    50 + Math.sin(angle) * radiusY,
+                ));
             });
         }
     }
@@ -278,6 +300,14 @@ export function createFrameBatcher(
             return frameId !== null;
         },
     };
+}
+
+export function mapDockHistoryState(currentState = {}, dockId = 'space-station') {
+    const nextState = { ...(currentState || {}) };
+    delete nextState.canoviaMapFocus;
+    nextState.canoviaMapDock = dockId;
+
+    return nextState;
 }
 
 export function mapHistoryDirection(currentDepth, targetDepth) {
@@ -412,7 +442,6 @@ export function mountLivingGoalMap({
     const surface = page.querySelector('[data-map-context-surface]');
     const surfaceContent = page.querySelector('[data-map-context-content]');
     const resetButton = page.querySelector('[data-map-focus-reset]');
-    const closeButton = page.querySelector('[data-map-context-close]');
     const expandButton = page.querySelector('[data-map-context-expand]');
     const expandLabel = page.querySelector('[data-map-context-expand-label]');
     const updateStatus = page.querySelector('[data-map-update-status]');
@@ -656,7 +685,11 @@ export function mountLivingGoalMap({
     const applyBaseLayout = () => {
         const mobile = isMobileViewport();
         basePositions = mobile
-            ? buildMobileBaseLayout(nodes, page.dataset.mapLevel || 'l3')
+            ? buildMobileBaseLayout(
+                nodes,
+                page.dataset.mapLevel || 'l3',
+                currentMapViewport(),
+            )
             : new Map(nodes.map((node) => [node.id, { x: node.x, y: node.y }]));
 
         const spatialLayout = mobile ? 'mobile' : 'desktop';
@@ -792,27 +825,52 @@ export function mountLivingGoalMap({
         }
 
         const mobile = isMobileViewport();
-        const hadFocus = Boolean(activeFocusId);
+        const previousFocusId = activeFocusId;
+        const hadFocus = Boolean(previousFocusId);
 
         if (mobile) {
+            if (
+                previousFocusId === nodeId
+                && page.classList.contains('is-map-mobile-selection')
+                && workspace?.classList.contains('is-context-open')
+            ) {
+                return true;
+            }
+
+            const alreadyMobileSelection = page.classList.contains('is-map-mobile-selection');
             activeFocusId = nodeId;
             page.dataset.mapFocus = nodeId;
             page.classList.add('is-map-focused', 'is-map-mobile-selection');
 
-            for (const node of nodes) {
-                const element = nodeElementById.get(node.id);
-                if (!element) continue;
+            if (alreadyMobileSelection) {
+                if (previousFocusId && previousFocusId !== nodeId) {
+                    const previousElement = nodeElementById.get(previousFocusId);
+                    previousElement?.classList.remove('is-map-selected');
+                    previousElement?.setAttribute('aria-selected', 'false');
+                    previousElement?.setAttribute('aria-expanded', 'false');
+                }
 
-                const selected = node.id === nodeId;
-                element.classList.remove('is-focus-center', 'is-focus-neighbor', 'is-focus-hidden');
-                element.classList.toggle('is-map-selected', selected);
-                element.setAttribute('aria-selected', selected ? 'true' : 'false');
-                element.setAttribute('aria-expanded', selected ? 'true' : 'false');
-                element.style.removeProperty('--map-focus-x');
-                element.style.removeProperty('--map-focus-y');
+                const selectedElement = nodeElementById.get(nodeId);
+                selectedElement?.classList.add('is-map-selected');
+                selectedElement?.setAttribute('aria-selected', 'true');
+                selectedElement?.setAttribute('aria-expanded', 'true');
+            } else {
+                for (const node of nodes) {
+                    const element = nodeElementById.get(node.id);
+                    if (!element) continue;
+
+                    const selected = node.id === nodeId;
+                    element.classList.remove('is-focus-center', 'is-focus-neighbor', 'is-focus-hidden');
+                    element.classList.toggle('is-map-selected', selected);
+                    element.setAttribute('aria-selected', selected ? 'true' : 'false');
+                    element.setAttribute('aria-expanded', selected ? 'true' : 'false');
+                    element.style.removeProperty('--map-focus-x');
+                    element.style.removeProperty('--map-focus-y');
+                }
+
+                syncEdges(basePositions);
             }
 
-            syncEdges(basePositions);
             renderSurface(nodeId);
 
             if (historyMode === 'push' && windowRef.location.hash !== focusHash(nodeId)) {
@@ -878,6 +936,10 @@ export function mountLivingGoalMap({
         const normalizedDockId = String(dockId || '').trim();
         if (!normalizedDockId || !globalTemplateFor(normalizedDockId)) return false;
 
+        if (activeFocusId) {
+            clearFocus();
+        }
+
         activeDockId = normalizedDockId;
         page.dataset.mapDock = normalizedDockId;
 
@@ -888,10 +950,16 @@ export function mountLivingGoalMap({
         }
 
         if (historyMode === 'push' && windowRef.location.hash !== dockHash(normalizedDockId)) {
-            windowRef.history.pushState({
-                ...(windowRef.history.state || {}),
-                canoviaMapDock: normalizedDockId,
-            }, '', dockHash(normalizedDockId));
+            const nextState = mapDockHistoryState(
+                windowRef.history.state || {},
+                normalizedDockId,
+            );
+
+            windowRef.history.pushState(
+                nextState,
+                '',
+                dockHash(normalizedDockId),
+            );
         }
 
         return true;
@@ -1019,8 +1087,12 @@ export function mountLivingGoalMap({
         if (event.pointerType === 'mouse' && event.button !== 0) return;
 
         if (activePointers.size === 0) {
+            mapViewBatcher.flushNow();
+            windowRef.clearTimeout(viewAnimationTimer);
+            mapShell?.classList.remove('is-map-view-animating');
             refreshMapViewport();
             mapShell?.classList.add('is-map-gesture-active');
+            page.classList.add('is-map-gesture-active');
         }
 
         const point = { x: event.clientX, y: event.clientY };
@@ -1113,6 +1185,7 @@ export function mountLivingGoalMap({
         gesture = null;
         mapViewBatcher.flushNow();
         mapShell?.classList.remove('is-map-gesture-active');
+        page.classList.remove('is-map-gesture-active');
     };
 
     const onSceneDoubleClick = (event) => {
@@ -1156,6 +1229,7 @@ export function mountLivingGoalMap({
         windowRef.clearTimeout(viewAnimationTimer);
         mapViewBatcher.cancel();
         mapShell?.classList.remove('is-map-gesture-active', 'is-map-view-animating');
+        page.classList.remove('is-map-gesture-active');
         windowRef.removeEventListener?.('resize', onViewportResize);
         mapScene?.removeEventListener('pointerdown', onScenePointerDown);
         mapScene?.removeEventListener('pointermove', onScenePointerMove);

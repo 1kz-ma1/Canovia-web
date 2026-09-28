@@ -265,7 +265,6 @@
                                     class="canovia-map-node-glyph"
                                     data-map-node-glyph
                                     data-map-node-glyph-kind="{{ $visualKind }}"
-                                    title="{{ \App\Support\MapNodeVisualGrammar::label($visualKind) }}"
                                     aria-hidden="true"
                                 ><span class="canovia-map-node-glyph-core"></span></span>
                                 <span class="canovia-map-node-eyebrow">{{ $node['eyebrow'] }}</span>

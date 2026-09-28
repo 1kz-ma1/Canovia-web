@@ -74,4 +74,21 @@ class MobileSpatialUxV450Test extends TestCase
         $this->assertNull($graph['primary_node_id']);
         $this->assertFalse($graph['has_primary_action']);
     }
+
+    public function test_mobile_node_proportions_follow_semantic_shape_instead_of_phone_width_compression(): void
+    {
+        $css = file_get_contents(resource_path('css/app.css'));
+
+        $this->assertStringContainsString('.canovia-map-node.is-space-station {', $css);
+        $this->assertStringContainsString('aspect-ratio: 1 / 1;', $css);
+        $this->assertStringContainsString('.canovia-map-node.is-personalized-satellite {', $css);
+        $this->assertStringContainsString('aspect-ratio: 1.38 / 1;', $css);
+        $this->assertStringContainsString('.canovia-map-node.is-hierarchy-node {', $css);
+        $this->assertStringContainsString('width: 7.5rem;', $css);
+        $this->assertStringContainsString('min-height: 4.9rem;', $css);
+        $this->assertStringContainsString('.canovia-map-node.is-hierarchy-parent {', $css);
+        $this->assertStringContainsString('width: 8.4rem;', $css);
+        $this->assertStringContainsString('min-height: 5.6rem;', $css);
+    }
+
 }

@@ -28,24 +28,6 @@ final class MapNodeVisualGrammar
         };
     }
 
-    public static function label(string $kind): string
-    {
-        return match ($kind) {
-            'station' => 'Space Station',
-            'planet' => 'Planet',
-            'moon' => 'Moon',
-            'star' => 'Goal Star',
-            'rocket' => 'Current Action Rocket',
-            'beacon' => 'Next Action Beacon',
-            'module' => 'Execution Module',
-            'archive' => 'Evidence Archive',
-            'inbox-dock' => 'Input Dock',
-            'satellite' => 'Personalized Satellite',
-            'crew-station' => 'Collaboration Hub',
-            'crew' => 'Collaboration Context',
-            default => 'Context Node',
-        };
-    }
 
     private function __construct()
     {

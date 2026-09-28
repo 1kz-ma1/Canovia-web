@@ -724,7 +724,7 @@ GitHub / Drive / OneDrive等は外部確認先として再投影する。URL pat
 共同L2からL3へはcollab_contextをstructural pathとして保持し、BreadcrumbとSpace Station returnでも同じPurposeへ復帰する。Map Telemetryはcollaboration_hub / collaboration_context / collaboration_item / action_role=external_tool等の構造値だけを保存し、Artifact名・URL・state・member名・Plan名は保存しない。
 
 V45.0ではMobile MapをDesktopの縮小版ではなく、同じNavigation Graph / Attention Stateを縦長Viewportへ再投影するMobile Spatial UXへ変更する。Server側のcanonical / attention座標は変更せず、client側の`buildMobileBaseLayout()`でL0をSpace Station中央・Intent内周・Satellite外周の2リングへ再配置し、SVG edgeも同じmobile座標へ同期する。
-共同を含むL1 / L2はHierarchy parentを中央に保ち、childrenを縦長楕円軌道へ再配置する。Desktop layout、Semantic Zoom URL、L3 Execution semantics、Spatial Memoryは変更しない。
+共同を含むL1 / L2はHierarchy parentを中央に保ち、childrenをMobile専用軌道へ再配置する。V45.4.1以降は縦横の%を固定せず、実Viewportのwidth / heightから同じpixel radiusになるよう補正して、縦長画面で軌道が縦方向へ引き伸ばされないようにする。Desktop layout、Semantic Zoom URL、L3 Execution semantics、Spatial Memoryは変更しない。
 Mobile Canvasは`clamp(42rem, calc(100dvh - 8.5rem), 50rem)`を基本とし、短い端末では39remへcompact fallbackする。L0ではNode内部のDirect Open pillとsubtitleを隠し、Node Focus → Context Surface → canonical actionを主操作にして情報密度を下げる。mobile absolute coordinatesは永続化・Telemetry保存しない。
 
 V45.1ではMobile Node選択をDesktop Focus Modeから分離し、Map全体の位置を維持したままselected highlightとContext Surface差し替えだけを行う。これによりContext Surfaceを開いたまま別Nodeを直接タップできる。Close / Expandはdelegated clickでも処理し、Closeはhistory同期を待たず即時にSurfaceとselected stateを解除する。
@@ -741,3 +741,8 @@ visual kindはBlade/CSSでのみ利用し、Navigation Graph / Attention State /
 V45.4ではMap Runtimeのhot pathを最適化する。pointermoveはJS state更新に限定し、Map SceneのDOM transformはrequestAnimationFrameで1frame1回へbatchする。同一frame内では最後のMap stateだけをcommitし、transformはtranslate3d + scaleの単一style writeとする。
 Gesture中のviewport geometryはpointerdown時にgetBoundingClientRectでcacheし、pointermove中はlayout readを行わない。resize / pageshow / double-tap開始時にのみcacheをrefreshする。Node base positionとSVG edge visibility/geometryは前回描画signatureとの差分がある場合だけDOMへ書き、Context Surface templateはmount時にMap化してO(1) lookupにする。
 Gesture中だけis-map-gesture-activeを付与し、Sceneへwill-change: transform、Node shadow簡略化、transition停止、edge optimizeSpeedを適用する。pointerup/cancelでfinal frameをflushして通常Visual Grammarへ戻す。Sceneにはcontain: layout paintを適用する。viewport cache / render signature / RAF queue等はruntime-onlyでDB / sessionStorage / Projection Key / Telemetryへ保存しない。
+
+V45.4.1 reviewではFocusとSpace Station Dockのruntime stateを排他的にし、Dockへ入る前にFocusをclearする。Dock history entryからstale canoviaMapFocus IDを除去する一方、Back/Forward判定に必要なcanoviaMapFocusDepthは維持する。
+Mobile Node切替は初回normalize後、previous / next selected Nodeだけを更新し、同一Node再タップ時は既存Context Surfaceを再cloneしない。manual pointerdown時はpending Map frameをflushしてview animationを停止し、直接Gestureをcosmetic animationより優先する。
+Gesture中はMap Pageにもis-map-gesture-activeを付与し、Fullscreen Top Bar / Gesture Controlsのbackdrop blurを一時停止する。pointerup/cancel/destroyで通常表現へ戻す。decorative Glyphの英語title tooltipと不要になったMapNodeVisualGrammar::label、delegated close移行後に残っていたunused closeButton queryも削除する。
+Mobile Node比率もFullscreen + Pan/Zoom前提へ見直し、画面内へ全Nodeを押し込むための正方形寄せを解除する。Space Station / Intent Planetは意味上の円形を保つため1:1、Personalized Satelliteは人工衛星らしい横長、Hierarchy child / parentは読みやすい横長カードへ変更する。L0/L1/L2のMobile座標はbuildMobileBaseLayoutへViewport実寸を渡し、同一ringのx/y半径がrendered pixel上でほぼ等しくなるようaspect compensationする。Server / Desktop座標は変更しない。
