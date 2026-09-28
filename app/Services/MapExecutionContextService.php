@@ -39,23 +39,37 @@ final class MapExecutionContextService
             ->filter(fn (Plan $plan) => $this->core->canEdit($request, $plan))
             ->values();
 
+        $requestedPlanId = max(0, (int) $request->query('plan', 0));
+        $requestedPlan = $requestedPlanId > 0
+            ? $plans->firstWhere('id', $requestedPlanId)
+            : null;
+
         $guidanceDeck = collect();
 
         if ($editablePlans->isNotEmpty()) {
             $baseline = $this->behavior->baseline($actorToken);
             $state = $this->states->calculate($actorToken, $baseline, $editablePlans);
 
+            $guidancePlans = $requestedPlan instanceof Plan
+                ? collect([$requestedPlan])
+                : $plans;
+            $guidanceEditableIds = $requestedPlan instanceof Plan
+                && $editablePlans->contains(fn (Plan $plan) => (int) $plan->id === (int) $requestedPlan->id)
+                    ? [(int) $requestedPlan->id]
+                    : $editablePlans->pluck('id')->map(fn ($id) => (int) $id)->all();
+
             $guidanceDeck = $this->guidance->build(
-                $plans,
+                $guidancePlans,
                 $state,
                 $actorToken,
-                $editablePlans->pluck('id')->map(fn ($id) => (int) $id)->all(),
+                $guidanceEditableIds,
                 $request->user(),
             );
         }
 
         $primaryGuidance = $guidanceDeck->first();
-        $plan = data_get($primaryGuidance, 'plan')
+        $plan = $requestedPlan
+            ?? data_get($primaryGuidance, 'plan')
             ?? $editablePlans->first()
             ?? $plans->first();
         $currentTask = data_get($primaryGuidance, 'task');
@@ -83,6 +97,7 @@ final class MapExecutionContextService
             'next_task' => $nextTask,
             'pending_inbox_count' => $pendingInboxCount,
             'latest_inbox' => $latestInbox,
+            'requested_plan_id' => $requestedPlan?->id,
         ];
     }
 
