@@ -9,6 +9,7 @@
             href="{{ route('home') }}"
             class="canovia-home-surface-option {{ $homeSurface === 'classic' ? 'is-active' : '' }}"
             data-home-surface="classic"
+            data-route-lock-skip
             aria-label="Classic Home"
             @if ($homeSurface === 'classic') aria-current="page" @endif
             @if ($homeSurface === 'map') data-map-home-fallback @endif
@@ -17,6 +18,7 @@
             href="{{ route('map.index') }}"
             class="canovia-home-surface-option {{ $homeSurface === 'map' ? 'is-active' : '' }}"
             data-home-surface="map"
+            data-route-lock-skip
             @if ($homeSurface === 'map') aria-current="page" @endif
         >
             <span>Map</span>
