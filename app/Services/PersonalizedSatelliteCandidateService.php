@@ -119,9 +119,6 @@ final class PersonalizedSatelliteCandidateService
     {
         $priority = (int) data_get($this->priorities->evaluate($plan), 'priority', 3);
         $importance = (6 - max(1, min(5, $priority))) / 5;
-        if ((bool) $plan->is_collaborative) {
-            $importance = min(1, $importance + 0.08);
-        }
 
         $usageWeight = $events->sum(function ($event) {
             return match ($event->event_type) {
@@ -175,32 +172,6 @@ final class PersonalizedSatelliteCandidateService
     {
         return $plan->tasks->contains(fn (Task $task) => ! in_array($task->status, ['done', 'cancelled'], true)
             && (int) $task->progress_percent < 100);
-    }
-
-    private function selectTask(Plan $plan): ?Task
-    {
-        return $plan->tasks
-            ->filter(fn (Task $task) => ! in_array($task->status, ['done', 'cancelled'], true)
-                && (int) $task->progress_percent < 100)
-            ->sort(function (Task $left, Task $right) {
-                $status = ($left->status === 'doing' ? 0 : 1)
-                    <=> ($right->status === 'doing' ? 0 : 1);
-                if ($status !== 0) {
-                    return $status;
-                }
-
-                $priority = max(1, min(5, (int) $left->priority))
-                    <=> max(1, min(5, (int) $right->priority));
-                if ($priority !== 0) {
-                    return $priority;
-                }
-
-                $sort = (int) ($left->sort_order ?? PHP_INT_MAX)
-                    <=> (int) ($right->sort_order ?? PHP_INT_MAX);
-
-                return $sort !== 0 ? $sort : (int) $left->id <=> (int) $right->id;
-            })
-            ->first();
     }
 
     private function recencyScore(?CarbonInterface $time, float $cap = 1.0): float
