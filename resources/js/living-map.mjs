@@ -708,11 +708,13 @@ export function mountLivingGoalMap({
         activeFocusId = nodeId;
         page.dataset.mapFocus = nodeId;
         page.classList.add('is-map-focused');
+        page.classList.remove('is-map-mobile-selection');
 
         for (const node of nodes) {
             const element = nodeElementById.get(node.id);
             if (!element) continue;
 
+            element.classList.remove('is-map-selected');
             const visible = layout.visibleIds.has(node.id);
             const selected = node.id === nodeId;
             const position = layout.positions.get(node.id) || { x: node.x, y: node.y };
@@ -1007,22 +1009,8 @@ export function mountLivingGoalMap({
             applyBaseLayout();
             applyMapView(mapView);
 
-            if (activeFocusId && !isMobileViewport()) {
-                const layout = buildFocusLayout(nodes, edges, activeFocusId, {
-                    mobile: isMobileViewport(),
-                });
-                if (!layout) return;
-
-                for (const node of nodes) {
-                    const element = nodeElementById.get(node.id);
-                    const position = layout.positions.get(node.id);
-                    if (!element || !position) continue;
-
-                    element.style.setProperty('--map-focus-x', String(position.x) + '%');
-                    element.style.setProperty('--map-focus-y', String(position.y) + '%');
-                }
-
-                syncEdges(layout.positions, layout.visibleIds, activeFocusId);
+            if (activeFocusId) {
+                openFocus(activeFocusId, { historyMode: 'none' });
             }
         }, 90);
     };
