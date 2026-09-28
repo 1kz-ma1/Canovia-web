@@ -64,7 +64,9 @@ class NodeVisualGrammarV453Test extends TestCase
             ->assertSee('visual-station', false)
             ->assertSee('data-map-node-glyph-kind="station"', false)
             ->assertSee('data-map-visual-kind="planet"', false)
-            ->assertSee('data-map-node-glyph', false);
+            ->assertSee('data-map-node-glyph', false)
+            ->assertDontSee('title="Space Station"', false)
+            ->assertDontSee('title="Current Action Rocket"', false);
 
         $graph = $response->viewData('graph');
         $station = $graph['nodes']->firstWhere('id', 'intent:space-station');
@@ -78,12 +80,4 @@ class NodeVisualGrammarV453Test extends TestCase
         $this->assertArrayNotHasKey('glyph', $plan);
     }
 
-    public function test_visual_grammar_has_human_readable_presentational_labels(): void
-    {
-        $this->assertSame('Space Station', MapNodeVisualGrammar::label('station'));
-        $this->assertSame('Current Action Rocket', MapNodeVisualGrammar::label('rocket'));
-        $this->assertSame('Personalized Satellite', MapNodeVisualGrammar::label('satellite'));
-        $this->assertSame('Input Dock', MapNodeVisualGrammar::label('inbox-dock'));
-        $this->assertSame('Context Node', MapNodeVisualGrammar::label('unknown'));
-    }
 }
