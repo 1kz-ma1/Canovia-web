@@ -94,6 +94,55 @@ final class ExecutionMapProjectionService
 
         $domainKey = $this->hierarchyContext->domainKey($plan->category);
         $domainLabel = $this->hierarchyContext->domainLabel($plan->category);
+
+        $collaborationContextKey = $intent === 'collaboration'
+            ? trim((string) $request->query('collab_context', ''))
+            : '';
+        $collaborationDefinition = array_key_exists(
+            $collaborationContextKey,
+            CollaborationContextService::CONTEXTS,
+        )
+            ? CollaborationContextService::CONTEXTS[$collaborationContextKey]
+            : null;
+
+        if (is_array($collaborationDefinition)) {
+            $collaborationLabel = (string) ($collaborationDefinition['label'] ?? '共同Context');
+            $parentUrl = route('map.index', [
+                'level' => \App\Enums\MapLevel::Plan->value,
+                'intent' => 'collaboration',
+                'collab_context' => $collaborationContextKey,
+            ]);
+
+            return [
+                'depth' => 3,
+                'intent' => 'collaboration',
+                'intent_label' => '共同',
+                'domain_key' => $domainKey,
+                'domain_label' => $domainLabel,
+                'collaboration_context_key' => $collaborationContextKey,
+                'collaboration_context_label' => $collaborationLabel,
+                'plan_id' => (int) $plan->id,
+                'plan_label' => (string) $plan->title,
+                'current_label' => (string) $plan->title,
+                'parent_url' => $parentUrl,
+                'breadcrumbs' => [
+                    ['label' => 'Canovia', 'url' => route('map.index')],
+                    [
+                        'label' => '共同',
+                        'url' => route('map.index', [
+                            'level' => \App\Enums\MapLevel::Domain->value,
+                            'intent' => 'collaboration',
+                        ]),
+                    ],
+                    [
+                        'label' => $collaborationLabel,
+                        'url' => $parentUrl,
+                    ],
+                    ['label' => (string) $plan->title, 'url' => null],
+                ],
+            ];
+        }
+
         $parentUrl = route('map.index', [
             'level' => \App\Enums\MapLevel::Plan->value,
             'intent' => $intent,
