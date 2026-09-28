@@ -173,6 +173,7 @@
                     <span class="canovia-map-axis-label is-action">Action</span>
                 @endif
 
+                <div class="canovia-map-scene" data-map-scene>
                 @if ($nodes->isNotEmpty())
                     <svg class="canovia-map-edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                         @foreach ($edges as $edge)
@@ -312,6 +313,13 @@
                         </div>
                     </div>
                 @endif
+                </div>
+
+                <div class="canovia-map-gesture-controls" data-map-gesture-controls aria-label="Map表示操作">
+                    <button type="button" data-map-zoom-out aria-label="Mapを縮小">−</button>
+                    <button type="button" data-map-view-reset aria-label="Map表示を中央へ戻す">◎</button>
+                    <button type="button" data-map-zoom-in aria-label="Mapを拡大">＋</button>
+                </div>
 
                 @include('map.partials.spatial-dock')
             </div>
