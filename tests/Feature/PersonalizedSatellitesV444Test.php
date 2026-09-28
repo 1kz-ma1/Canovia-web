@@ -79,13 +79,16 @@ class PersonalizedSatellitesV444Test extends TestCase
             ->filter(fn (array $node) => str_starts_with((string) ($node['type'] ?? ''), 'satellite_'))
             ->values();
 
-        $this->assertCount(4, $satellites);
-        $this->assertSame(4, data_get($graph, 'personalized_satellites.count'));
+        $this->assertCount(1, $satellites);
+        $this->assertSame(1, data_get($graph, 'personalized_satellites.count'));
         $this->assertSame('intent:space-station', $graph['center_node_id']);
         $this->assertNull($graph['primary_node_id']);
         $this->assertSame(
-            ['satellite-1', 'satellite-2', 'satellite-3', 'satellite-4'],
+            ['satellite-1'],
             $satellites->pluck('position_role')->all(),
+        );
+        $this->assertFalse(
+            $satellites->contains(fn (array $node) => ($node['eyebrow'] ?? null) === 'SHARED SATELLITE')
         );
 
         $semantic = app(IntentNavigationGraphService::class)->build();
@@ -95,7 +98,7 @@ class PersonalizedSatellitesV444Test extends TestCase
         ));
     }
 
-    public function test_promotion_score_uses_only_the_four_declared_axes_and_caps_at_four(): void
+    public function test_promotion_score_uses_only_declared_axes_and_caps_signal_density_at_two(): void
     {
         $promotion = app(PersonalizedSatellitePromotionService::class);
 
@@ -114,6 +117,15 @@ class PersonalizedSatellitesV444Test extends TestCase
             'continuity' => 1,
         ]));
 
+        $anchors = [
+            1 => 'intent:plan',
+            2 => 'intent:plan',
+            3 => 'intent:execution',
+            4 => 'intent:reflection',
+            5 => 'intent:collaboration',
+            6 => 'intent:execution',
+        ];
+
         $candidates = collect(range(1, 6))->map(fn (int $rank) => [
             'id' => 'candidate:'.$rank,
             'kind' => 'plan',
@@ -123,7 +135,7 @@ class PersonalizedSatellitesV444Test extends TestCase
             'label' => 'Plan '.$rank,
             'subtitle' => 'shortcut',
             'available_action' => '/map?plan='.$rank,
-            'anchor_node_id' => 'intent:plan',
+            'anchor_node_id' => $anchors[$rank],
             'signals' => [
                 'importance' => 1 - (($rank - 1) * 0.08),
                 'usage_frequency' => 1,
@@ -142,14 +154,15 @@ class PersonalizedSatellitesV444Test extends TestCase
 
         $result = $promotion->promote($candidates, 4);
 
-        $this->assertCount(4, $result['nodes']);
-        $this->assertCount(4, $result['edges']);
+        $this->assertCount(2, $result['nodes']);
+        $this->assertCount(2, $result['edges']);
         $this->assertSame('candidate:1', data_get($result, 'nodes.0.id'));
+        $this->assertSame('candidate:3', data_get($result, 'nodes.1.id'));
         $this->assertSame(['x' => 50, 'y' => 12], data_get($result, 'nodes.0.position'));
-        $this->assertSame(['x' => 12, 'y' => 50], data_get($result, 'nodes.3.position'));
+        $this->assertSame(['x' => 88, 'y' => 50], data_get($result, 'nodes.1.position'));
     }
 
-    public function test_repeated_ai_practice_can_be_promoted_as_a_tool_satellite(): void
+    public function test_task_bound_ai_practice_stays_inside_its_plan_instead_of_becoming_a_satellite(): void
     {
         $user = User::factory()->create([
             'first_run_completed_at' => now(),
@@ -176,6 +189,16 @@ class PersonalizedSatellitesV444Test extends TestCase
             ]);
         }
 
+        BehaviorEvent::query()->create([
+            'actor_token' => $actorToken,
+            'event_type' => BehaviorEventType::WorkStarted,
+            'plan_id' => $plan->id,
+            'task_id' => $task->id,
+            'session_id' => 'ai-practice-plan-signal',
+            'occurred_at' => now(),
+            'metadata' => [],
+        ]);
+
         $response = $this
             ->withSession(['pace_keeper.actor_token' => $actorToken])
             ->actingAs($user)
@@ -187,19 +210,15 @@ class PersonalizedSatellitesV444Test extends TestCase
         $tool = $graph['nodes']->first(
             fn (array $node) => ($node['type'] ?? null) === 'satellite_tool'
         );
+        $planSatellite = $graph['nodes']->firstWhere('id', 'satellite:plan:'.$plan->id);
 
-        $this->assertIsArray($tool);
-        $this->assertSame('AI演習', $tool['label']);
-        $this->assertSame('satellite', data_get($tool, 'direct_navigation.kind'));
-        $this->assertStringContainsString(
-            route('plans.tasks.study_practice.show', [$plan, $task]),
-            (string) data_get($tool, 'direct_navigation.url'),
-        );
-        $this->assertGreaterThan(0, data_get($tool, 'promotion_signals.usage_frequency'));
-        $this->assertGreaterThan(0, data_get($tool, 'promotion_signals.continuity'));
+        $this->assertNull($tool);
+        $this->assertIsArray($planSatellite);
+        $this->assertSame((string) $plan->title, $planSatellite['label']);
+        $this->assertSame('PLAN SATELLITE', $planSatellite['eyebrow']);
     }
 
-    public function test_shared_plan_satellite_anchors_to_collaboration_intent(): void
+    public function test_shared_plan_uses_fixed_collaboration_intent_without_duplicate_satellite(): void
     {
         $user = User::factory()->create([
             'first_run_completed_at' => now(),
@@ -225,12 +244,12 @@ class PersonalizedSatellitesV444Test extends TestCase
             ->viewData('graph');
 
         $satellite = $graph['nodes']->firstWhere('id', 'satellite:plan:'.$plan->id);
+        $collaboration = $graph['nodes']->firstWhere('id', 'intent:collaboration');
         $edge = $graph['edges']->firstWhere('target', 'satellite:plan:'.$plan->id);
 
-        $this->assertIsArray($satellite);
-        $this->assertSame('SHARED SATELLITE', $satellite['eyebrow']);
-        $this->assertSame('intent:collaboration', $edge['source']);
-        $this->assertSame('personalized_shortcut', $edge['relation']);
+        $this->assertNull($satellite);
+        $this->assertNull($edge);
+        $this->assertIsArray($collaboration);
     }
 
     public function test_satellite_telemetry_keeps_only_structural_values(): void
