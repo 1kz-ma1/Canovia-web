@@ -672,3 +672,47 @@ Native AIはStructured JSONを返すが、Provider出力をそのまま信頼し
 `native_ai_runs` はProvider / model / purpose / capacity tier / token usage / status / errorを記録する最小usage historyとする。Prompt本文やAPI credentialは保存しない。V41.8ではusage historyを請求へ接続せず、将来のquota・cost policyの観測データとしてのみ使う。
 
 Native AI server configurationはdefault disabledとし、API credentialをclientへ公開しない。StoreKit / Stripe、公開Pricing、token課金、Plan/Career/DeveloperのNative AI化、完全Native SwiftUI UIはV41.8のNon-goalとする。
+
+
+## 20. V44 Hierarchical Map Navigation
+
+Canovia Mapは、現在のおすすめTaskだけを示すExecution Viewではなく、Canovia全体の情報・機能を空間的に辿るNavigation Layerとして扱う。
+
+階層:
+
+```text
+L0 Intent Hub
+  -> L1 Domain
+    -> L2 Plan
+      -> L3 Execution
+        -> Classic Surface / Execution Tool
+```
+
+L0は固定構造とし、中央にSpace Station、周囲に計画 / 実行 / 振り返り / 共同を置く。
+Space StationはPrimary RecommendationではなくCapture / Companion / Inbox routingの常設Hubである。
+
+Navigation GraphとAttention Stateは分離する。
+Navigation GraphはEntity / Contextの存在とsemantic relationを決め、Attention Stateはimportance / position / size / glow / edge emphasisを決める。
+原則は「おすすめだからNodeが存在するのではない。おすすめだから目立つ。」とする。
+
+V44.2以降、Space Stationはtext / URL / screenshot / PDFを既存InboxItemへCaptureし、Inbox Intelligenceがrouting candidateを生成できる。
+AIはPlan / Task IDを選択せず、candidate生成だけではcanonical dataを変更しない。
+Human Review後に既存InboxRoutingServiceへ確定する。
+
+V44.3ではL1 / L2を実装する。
+L1 Domainは新規DB Entityではなく既存Plan.categoryから決定的にProjectionし、L2は選択DomainのPlanを表示する。
+Domain / Graph / absolute node positionは永続化しない。
+
+Semantic ZoomはIntent -> Domain -> Plan -> Executionという意味上の親子関係に沿うLevel移動として扱う。
+`plan=<id>` を伴ってL3へ入った場合、user-selected PlanをExecution scopeとして優先し、そのPlan内部で既存guidanceを利用する。
+plan指定なしのL3はV43互換挙動を維持する。
+
+Spatial Memoryとして、L0ではSpace Stationを中央Graph Node、L1〜L3では右下固定Spatial Dockとして表示する。
+Spatial DockはGraph EntityではなくNavigation chromeであり、Domain / Plan / Execution Graphを変形させずCapture / Companionを開く。
+Deep LevelからCapture等を行った後も、validated structural pathだけを使って同じMap Level / Intent / Domain / Planへ復帰する。
+
+Map hierarchy transitionでsessionStorageへ保持してよいのはzoom direction / depth / timestamp等の構造情報だけとし、Plan title / Task title / user input / AI contentを保存しない。
+Map Telemetryもwhitelistされたnode_type / position_role / action_role等の構造metadataだけを保存する。
+
+V44.4では固定Intent構造を維持したままPersonalized Satelliteを追加し、importance × usage frequency × recency × continuityによって最大3〜4個程度のshortcutをpromotionする。
+V44.5では共同Context / GitHub等の外部Toolをユーザー目的ベースのViewへ再投影する。

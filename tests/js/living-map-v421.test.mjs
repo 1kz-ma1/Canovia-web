@@ -6,6 +6,7 @@ import {
     mapActionTelemetryContext,
     mapHistoryDirection,
     mapReturnDecision,
+    mapSemanticZoomDirection,
     oneHopNodeIds,
 } from '../../resources/js/living-map.mjs';
 
@@ -176,4 +177,38 @@ test('L0 Space Station focus preserves the intent spatial grammar', () => {
     assert.ok(layout.positions.get('intent:execution').x > 50);
     assert.ok(layout.positions.get('intent:reflection').y > 50);
     assert.ok(layout.positions.get('intent:collaboration').x < 50);
+});
+
+
+test('hierarchy focus keeps parent and child direction stable across L1 and L2', () => {
+    const hierarchyNodes = [
+        { id: 'hierarchy:intent:execution', positionRole: 'hierarchy-parent' },
+        { id: 'domain:dev', positionRole: 'hierarchy-child' },
+        { id: 'domain:study', positionRole: 'hierarchy-child' },
+    ];
+    const hierarchyEdges = [
+        { source: 'hierarchy:intent:execution', target: 'domain:dev', relation: 'contains_domain' },
+        { source: 'hierarchy:intent:execution', target: 'domain:study', relation: 'contains_domain' },
+    ];
+
+    const parentFocus = buildFocusLayout(
+        hierarchyNodes,
+        hierarchyEdges,
+        'hierarchy:intent:execution',
+    );
+
+    assert.deepEqual(parentFocus.positions.get('hierarchy:intent:execution'), { x: 50, y: 50 });
+    assert.ok(parentFocus.positions.get('domain:dev').y < 50);
+    assert.ok(parentFocus.positions.get('domain:study').y < 50);
+
+    const childFocus = buildFocusLayout(hierarchyNodes, hierarchyEdges, 'domain:dev');
+
+    assert.deepEqual(childFocus.positions.get('domain:dev'), { x: 50, y: 50 });
+    assert.ok(childFocus.positions.get('hierarchy:intent:execution').y > 50);
+});
+
+test('semantic zoom direction fails safe to zoom-in', () => {
+    assert.equal(mapSemanticZoomDirection('in'), 'in');
+    assert.equal(mapSemanticZoomDirection('out'), 'out');
+    assert.equal(mapSemanticZoomDirection('something-else'), 'in');
 });

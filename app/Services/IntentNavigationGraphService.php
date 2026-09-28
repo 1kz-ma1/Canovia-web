@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Enums\MapLevel;
+
 final class IntentNavigationGraphService
 {
     /**
@@ -36,81 +38,41 @@ final class IntentNavigationGraphService
                     ['Capture', 'Companion', 'Human Review'],
                 ),
             ),
-            $this->node(
-                id: 'intent:plan',
-                type: 'intent',
-                eyebrow: 'INTENT',
+            $this->intentNode(
+                key: 'plan',
                 label: '計画',
                 subtitle: '目標・Plan・これからを整理する',
-                action: route('my_plans.index'),
-                attentionRole: 'intent-plan',
-                classicSurface: $this->surface(
-                    'Intent',
-                    '計画',
-                    '目標やPlanを見渡し、これから進む方向を整える領域です。',
-                    [
-                        $this->action('計画一覧を見る', route('my_plans.index'), true),
-                        $this->action('新しいPlanを作る', route('plans.create')),
-                    ],
-                    ['Goal', 'Plan', 'Roadmap'],
-                ),
+                summary: '目標やPlanを見渡し、これから進む方向を整える領域です。',
+                fallbackLabel: '計画一覧を開く',
+                fallbackUrl: route('my_plans.index'),
+                meta: ['Goal', 'Plan', 'Roadmap'],
             ),
-            $this->node(
-                id: 'intent:execution',
-                type: 'intent',
-                eyebrow: 'INTENT',
+            $this->intentNode(
+                key: 'execution',
                 label: '実行',
                 subtitle: '今やることと実行Contextへ進む',
-                action: route('map.index', ['level' => 'l3']),
-                attentionRole: 'intent-execution',
-                classicSurface: $this->surface(
-                    'Intent',
-                    '実行',
-                    '現在のPlan・Task・Tool・EvidenceをつないだExecution Mapへ入り、今のContextで行動します。',
-                    [
-                        $this->action('Execution Mapへ入る', route('map.index', ['level' => 'l3']), true),
-                        $this->action('今日の実行導線を開く', route('navigation.index')),
-                    ],
-                    ['Task', 'Tool', 'Current Context'],
-                ),
+                summary: 'DomainとPlanを辿って、現在のExecution ContextへSemantic Zoomします。',
+                fallbackLabel: '今日の実行導線を開く',
+                fallbackUrl: route('navigation.index'),
+                meta: ['Task', 'Tool', 'Current Context'],
             ),
-            $this->node(
-                id: 'intent:reflection',
-                type: 'intent',
-                eyebrow: 'INTENT',
+            $this->intentNode(
+                key: 'reflection',
                 label: '振り返り',
                 subtitle: '実績・Evidence・過去の流れを見る',
-                action: route('timeline.index'),
-                attentionRole: 'intent-reflection',
-                classicSurface: $this->surface(
-                    'Intent',
-                    '振り返り',
-                    '実績・Evidence・成果を振り返り、次の判断につながるContextを確認する領域です。',
-                    [
-                        $this->action('Timelineを見る', route('timeline.index'), true),
-                        $this->action('実績を見る', route('achievements.index')),
-                    ],
-                    ['Evidence', 'Timeline', 'Achievements'],
-                ),
+                summary: 'Planの構造を保ったまま実績・Evidence・成果へ辿る入口です。',
+                fallbackLabel: 'Timelineを開く',
+                fallbackUrl: route('timeline.index'),
+                meta: ['Evidence', 'Timeline', 'Achievements'],
             ),
-            $this->node(
-                id: 'intent:collaboration',
-                type: 'intent',
-                eyebrow: 'INTENT',
+            $this->intentNode(
+                key: 'collaboration',
                 label: '共同',
                 subtitle: 'Shared Planと人との作業へ進む',
-                action: route('my_plans.index'),
-                attentionRole: 'intent-collaboration',
-                classicSurface: $this->surface(
-                    'Intent',
-                    '共同',
-                    'Shared Planやメンバーとの作業を確認する領域です。外部共同Toolの再投影はV44.5でここへ接続します。',
-                    [
-                        $this->action('共同Planを探す', route('my_plans.index'), true),
-                        $this->action('共同Planを作る', route('plans.create')),
-                    ],
-                    ['Shared Plan', 'Members', 'External Tools'],
-                ),
+                summary: 'Shared Planを含むCanoviaの領域を辿ります。外部共同Toolの再投影はV44.5で接続します。',
+                fallbackLabel: '共同Planを探す',
+                fallbackUrl: route('my_plans.index'),
+                meta: ['Shared Plan', 'Members', 'External Tools'],
             ),
         ]);
 
@@ -128,6 +90,46 @@ final class IntentNavigationGraphService
     }
 
     /**
+     * @param array<int,string> $meta
+     * @return array<string,mixed>
+     */
+    private function intentNode(
+        string $key,
+        string $label,
+        string $subtitle,
+        string $summary,
+        string $fallbackLabel,
+        string $fallbackUrl,
+        array $meta,
+    ): array {
+        $zoomUrl = route('map.index', [
+            'level' => MapLevel::Domain->value,
+            'intent' => $key,
+        ]);
+
+        return $this->node(
+            id: 'intent:'.$key,
+            type: 'intent',
+            eyebrow: 'INTENT',
+            label: $label,
+            subtitle: $subtitle,
+            action: $zoomUrl,
+            attentionRole: 'intent-'.$key,
+            navigationKind: 'zoom-in',
+            classicSurface: $this->surface(
+                'Intent',
+                $label,
+                $summary,
+                [
+                    $this->action('領域へ入る', $zoomUrl, true, 'zoom-in'),
+                    $this->action($fallbackLabel, $fallbackUrl),
+                ],
+                $meta,
+            ),
+        );
+    }
+
+    /**
      * @param array<string,mixed> $classicSurface
      * @return array<string,mixed>
      */
@@ -140,6 +142,7 @@ final class IntentNavigationGraphService
         string $action,
         string $attentionRole,
         array $classicSurface,
+        ?string $navigationKind = null,
     ): array {
         return [
             'id' => $id,
@@ -151,6 +154,7 @@ final class IntentNavigationGraphService
             'available_action' => $action,
             'classic_surface' => $classicSurface,
             'attention_role' => $attentionRole,
+            'navigation_kind' => $navigationKind,
         ];
     }
 
@@ -192,12 +196,17 @@ final class IntentNavigationGraphService
     /**
      * @return array<string,mixed>
      */
-    private function action(string $label, string $url, bool $primary = false): array
-    {
-        return [
+    private function action(
+        string $label,
+        string $url,
+        bool $primary = false,
+        ?string $navigationKind = null,
+    ): array {
+        return array_filter([
             'label' => $label,
             'url' => $url,
             'primary' => $primary,
-        ];
+            'navigation_kind' => $navigationKind,
+        ], fn ($value) => $value !== null);
     }
 }

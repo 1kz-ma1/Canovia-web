@@ -7,6 +7,14 @@
     $canUseInboxAi = (bool) ($station['can_use_inbox_ai'] ?? false);
     $canUseCompanion = (bool) ($station['can_use_companion'] ?? false);
     $pendingCount = (int) ($station['pending_count'] ?? 0);
+    $stationMapLevel = (string) ($graph['level'] ?? 'l0');
+    $stationIsDock = $stationMapLevel !== 'l0';
+    $stationReturnTo = $stationIsDock ? 'map_station' : 'space_station';
+    $stationHierarchy = $graph['hierarchy'] ?? [];
+    $stationHash = $stationIsDock
+        ? '#dock=space-station'
+        : '#focus='.rawurlencode('intent:space-station');
+    $stationSourcePath = request()->getRequestUri().$stationHash;
 @endphp
 
 <div class="canovia-space-station-panel" data-space-station-panel>
@@ -27,7 +35,13 @@
             data-mutation-once
         >
             @csrf
-            <input type="hidden" name="return_to" value="space_station">
+            <input type="hidden" name="return_to" value="{{ $stationReturnTo }}">
+            @if ($stationIsDock)
+                <input type="hidden" name="map_level" value="{{ $stationMapLevel }}">
+                <input type="hidden" name="map_intent" value="{{ $stationHierarchy['intent'] ?? '' }}">
+                <input type="hidden" name="map_domain" value="{{ $stationHierarchy['domain_key'] ?? '' }}">
+                <input type="hidden" name="map_plan" value="{{ $stationHierarchy['plan_id'] ?? '' }}">
+            @endif
 
             <div>
                 <label for="space-station-content">テキスト</label>
@@ -113,7 +127,13 @@
             @elseif ($canUseInboxAi)
                 <form method="POST" action="{{ route('inbox.suggest', $latestItem) }}" data-mutation-once>
                     @csrf
-                    <input type="hidden" name="return_to" value="space_station">
+                    <input type="hidden" name="return_to" value="{{ $stationReturnTo }}">
+                    @if ($stationIsDock)
+                        <input type="hidden" name="map_level" value="{{ $stationMapLevel }}">
+                        <input type="hidden" name="map_intent" value="{{ $stationHierarchy['intent'] ?? '' }}">
+                        <input type="hidden" name="map_domain" value="{{ $stationHierarchy['domain_key'] ?? '' }}">
+                        <input type="hidden" name="map_plan" value="{{ $stationHierarchy['plan_id'] ?? '' }}">
+                    @endif
                     <button type="submit" class="btn-secondary w-full justify-center">
                         ✦ 内容を読んで接続候補を作る
                     </button>
@@ -132,7 +152,13 @@
                 data-mutation-once
             >
                 @csrf
-                <input type="hidden" name="return_to" value="space_station">
+                <input type="hidden" name="return_to" value="{{ $stationReturnTo }}">
+                @if ($stationIsDock)
+                    <input type="hidden" name="map_level" value="{{ $stationMapLevel }}">
+                    <input type="hidden" name="map_intent" value="{{ $stationHierarchy['intent'] ?? '' }}">
+                    <input type="hidden" name="map_domain" value="{{ $stationHierarchy['domain_key'] ?? '' }}">
+                    <input type="hidden" name="map_plan" value="{{ $stationHierarchy['plan_id'] ?? '' }}">
+                @endif
 
                 <div>
                     <label for="space-station-destination">接続先</label>
@@ -205,7 +231,7 @@
                 <form method="POST" action="{{ route('companion.entry') }}" data-mutation-once data-map-companion-form>
                     @csrf
                     <input type="hidden" name="entry_type" value="global">
-                    <input type="hidden" name="source_path" value="{{ route('map.index') }}#focus={{ rawurlencode('intent:space-station') }}">
+                    <input type="hidden" name="source_path" value="{{ $stationSourcePath }}">
                     <input type="hidden" name="source_route" value="map.index">
                     <button type="submit" class="btn-secondary w-full justify-center">
                         ✦ Companionへ相談

@@ -9,12 +9,21 @@
         $nodeIndex = $nodes->keyBy('id');
         $mapLevel = (string) ($graph['level'] ?? 'l3');
         $isIntentHub = $mapLevel === 'l0';
+        $isDomainLevel = $mapLevel === 'l1';
+        $isPlanLevel = $mapLevel === 'l2';
+        $isExecutionLevel = $mapLevel === 'l3';
+        $isHierarchyLevel = $isDomainLevel || $isPlanLevel;
         $primaryNodeId = $graph['primary_node_id'] ?? null;
         $centerNodeId = $graph['center_node_id'] ?? $primaryNodeId;
         $primaryLaunch = $graph['primary_launch'] ?? null;
-        $mapReturnUrl = $isIntentHub
-            ? route('map.index')
-            : route('map.index', ['level' => 'l3']);
+        $hierarchy = is_array($graph['hierarchy'] ?? null) ? $graph['hierarchy'] : [];
+        $mapReturnUrl = request()->getRequestUri();
+        $heroKicker = match ($mapLevel) {
+            'l0' => 'L0 · CANOVIA NAVIGATION',
+            'l1' => 'L1 · DOMAIN MAP',
+            'l2' => 'L2 · PLAN MAP',
+            default => 'L3 · EXECUTION MAP',
+        };
     @endphp
 
     @include('layouts.partials.home-surface-switcher', ['activeSurface' => 'map'])
@@ -23,41 +32,62 @@
         class="canovia-map-page"
         data-canovia-map-page
         data-map-level="{{ $mapLevel }}"
+        data-map-hierarchy-depth="{{ (int) ($hierarchy['depth'] ?? 0) }}"
         data-map-projection-key="{{ $graph['projection_key'] ?? '' }}"
         data-event-url="{{ route('behavior_events.store') }}"
     >
         <div class="canovia-map-hero canovia-map-toolbar">
             <div class="canovia-map-hero-copy">
                 <div class="canovia-map-heading">
-                    <p class="canovia-map-kicker">{{ $isIntentHub ? 'CANOVIA NAVIGATION' : 'L3 · EXECUTION MAP' }}</p>
+                    <p class="canovia-map-kicker">{{ $heroKicker }}</p>
                     <h1 class="canovia-map-title">Canovia Map</h1>
+
                     @if ($isIntentHub)
                         <p class="canovia-map-description">
                             Space Stationを中心に、計画・実行・振り返り・共同へ辿るCanovia全体のNavigation Layerです。
                         </p>
+                    @elseif ($isDomainLevel)
+                        <p class="canovia-map-description">
+                            {{ $hierarchy['intent_label'] ?? '計画' }}のContextを保ったまま、Planが属する領域へSemantic Zoomします。
+                        </p>
+                    @elseif ($isPlanLevel)
+                        <p class="canovia-map-description">
+                            {{ $hierarchy['domain_label'] ?? 'Domain' }}の中からPlanを選び、そのExecution Contextへ潜ります。
+                        </p>
                     @endif
                 </div>
+
                 <details class="canovia-map-help">
                     <summary>Mapの見方</summary>
                     @if ($isIntentHub)
                         <p>
-                            中央のSpace Stationが入力・相談のHubです。周囲のNodeは行動目的を表し、
-                            Node本体でContextを確認、「開く ↗」から現在のClassic Surfaceへ直接移動できます。
+                            中央のSpace Stationが入力・相談のHubです。周囲のIntentからDomain → Plan → Executionへ潜れます。
+                        </p>
+                    @elseif ($isHierarchyLevel)
+                        <p>
+                            中央はひとつ上のContext、周囲はその子Contextです。「潜る ↘」で内側へ、「戻る」で外側へ移動します。
+                            Space Stationは右下に固定され、現在のContextを離れずCaptureやAIを開けます。
                         </p>
                     @else
                         <p>
                             中央が現在のPrimary Actionです。上下はFuture / Past、左右はInput / Action。
-                            Node本体でContextへFocusし、「開く ↗」があるNodeは目的地へ直接移動できます。操作はClassic Surfaceで行います。
+                            Space Stationは右下の固定Dockからいつでも開けます。
                         </p>
                     @endif
                 </details>
             </div>
+
             <div class="canovia-map-hero-actions">
                 @if ($isIntentHub)
-                    <a href="{{ route('map.index', ['level' => 'l3']) }}" class="btn-primary">実行Mapへ</a>
+                    <a
+                        href="{{ route('map.index', ['level' => 'l1', 'intent' => 'execution']) }}"
+                        class="btn-primary"
+                        data-map-semantic-zoom
+                        data-map-zoom-direction="in"
+                    >実行へ潜る</a>
                     <button type="button" class="btn-secondary hidden" data-map-focus-reset>全体を見る</button>
                     <a href="{{ route('my_plans.index') }}" class="btn-secondary">計画一覧</a>
-                @else
+                @elseif ($isExecutionLevel)
                     @if ($primaryNodeId && filled(data_get($primaryLaunch, 'url')))
                         <a
                             href="{{ data_get($primaryLaunch, 'url') }}"
@@ -81,11 +111,33 @@
                         </button>
                     @endif
                     <button type="button" class="btn-secondary hidden" data-map-focus-reset>全体を見る</button>
-                    <a href="{{ route('map.index') }}" class="btn-secondary">Canovia全体</a>
+                    @if (filled($hierarchy['parent_url'] ?? null))
+                        <a
+                            href="{{ $hierarchy['parent_url'] }}"
+                            class="btn-secondary"
+                            data-map-semantic-zoom
+                            data-map-zoom-direction="out"
+                        >Plan Mapへ戻る</a>
+                    @else
+                        <a href="{{ route('map.index') }}" class="btn-secondary">Canovia全体</a>
+                    @endif
                     <a href="{{ route('roadmap.index') }}" class="btn-secondary canovia-map-roadmap-link">Roadmap</a>
+                @else
+                    @if (filled($hierarchy['parent_url'] ?? null))
+                        <a
+                            href="{{ $hierarchy['parent_url'] }}"
+                            class="btn-secondary"
+                            data-map-semantic-zoom
+                            data-map-zoom-direction="out"
+                        >ひとつ外へ戻る</a>
+                    @endif
+                    <button type="button" class="btn-secondary hidden" data-map-focus-reset>全体を見る</button>
+                    <a href="{{ route('my_plans.index') }}" class="btn-secondary">Classic Plans</a>
                 @endif
             </div>
         </div>
+
+        @include('map.partials.hierarchy-navigation')
 
         <div class="canovia-map-update-status hidden" data-map-update-status role="status" aria-live="polite">
             <span class="canovia-map-update-status-mark" aria-hidden="true">✦</span>
@@ -93,13 +145,17 @@
         </div>
 
         <div class="canovia-map-workspace" data-map-workspace>
-            <div class="canovia-map-shell {{ $isIntentHub ? 'is-intent-hub' : 'is-execution-map' }}" data-canovia-map data-map-level="{{ $mapLevel }}">
-                @unless ($isIntentHub)
+            <div
+                class="canovia-map-shell {{ $isIntentHub ? 'is-intent-hub' : ($isHierarchyLevel ? 'is-hierarchy-map' : 'is-execution-map') }}"
+                data-canovia-map
+                data-map-level="{{ $mapLevel }}"
+            >
+                @if ($isExecutionLevel)
                     <span class="canovia-map-axis-label is-future">Future</span>
                     <span class="canovia-map-axis-label is-past">Past</span>
                     <span class="canovia-map-axis-label is-input">Input</span>
                     <span class="canovia-map-axis-label is-action">Action</span>
-                @endunless
+                @endif
 
                 @if ($nodes->isNotEmpty())
                     <svg class="canovia-map-edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
@@ -136,15 +192,21 @@
                                 'past' => 'is-past',
                                 'hub' => 'is-hub',
                                 'intent' => 'is-intent',
+                                'hierarchy-parent' => 'is-hierarchy-parent',
+                                'hierarchy-child' => 'is-hierarchy-child',
                                 default => '',
                             };
                             $kindClass = match ($node['type'] ?? '') {
                                 'space_station' => 'is-space-station',
                                 'intent' => 'is-intent-node',
+                                'domain', 'intent_context', 'plan' => 'is-hierarchy-node',
                                 default => '',
                             };
                             $hasFocusFallback = filled($node['available_action'] ?? null);
                             $directNavigation = $node['direct_navigation'] ?? null;
+                            $directNavigationKind = (string) data_get($directNavigation, 'kind', 'classic');
+                            $isZoomNavigation = str_starts_with($directNavigationKind, 'zoom-');
+                            $zoomDirection = $directNavigationKind === 'zoom-out' ? 'out' : 'in';
                         @endphp
 
                         <div
@@ -187,33 +249,46 @@
                             @if (filled(data_get($directNavigation, 'url')))
                                 <a
                                     href="{{ data_get($directNavigation, 'url') }}"
-                                    class="canovia-map-node-direct-open"
+                                    class="canovia-map-node-direct-open {{ $isZoomNavigation ? 'is-semantic-zoom' : '' }}"
                                     data-map-direct-open
                                     data-map-direct-navigation
-                                    data-map-action-role="direct"
+                                    data-map-action-role="{{ $isZoomNavigation ? 'zoom' : 'direct' }}"
                                     data-map-node-id="{{ $node['id'] }}"
                                     data-map-node-type="{{ $node['type'] }}"
                                     data-map-position-role="{{ $node['position_role'] }}"
                                     data-map-is-primary="{{ $isPrimary ? '1' : '0' }}"
+                                    @if ($isZoomNavigation)
+                                        data-map-semantic-zoom
+                                        data-map-zoom-direction="{{ $zoomDirection }}"
+                                    @endif
                                     title="{{ data_get($directNavigation, 'label', '開く') }}"
                                     aria-label="{{ data_get($directNavigation, 'label', '開く') }}"
-                                >開く ↗</a>
+                                >{{ $isZoomNavigation ? ($zoomDirection === 'out' ? '戻る ↖' : '潜る ↘') : '開く ↗' }}</a>
                             @endif
                         </div>
                     @endforeach
                 @else
                     <div class="canovia-map-empty">
                         <p class="canovia-map-kicker">MAP IS READY</p>
-                        <h2 class="mt-2 text-lg font-black text-slate-50">まだMapに置くActionがありません</h2>
-                        <p class="mt-2 text-sm leading-6 text-slate-400">
-                            PlanとTaskができると、Canoviaが現在のActionを中央へ配置します。
-                        </p>
+                        @if ($isExecutionLevel)
+                            <h2 class="mt-2 text-lg font-black text-slate-50">まだMapに置くActionがありません</h2>
+                            <p class="mt-2 text-sm leading-6 text-slate-400">
+                                PlanとTaskができると、Canoviaが現在のActionを中央へ配置します。
+                            </p>
+                        @else
+                            <h2 class="mt-2 text-lg font-black text-slate-50">まだこの階層に置くContextがありません</h2>
+                            <p class="mt-2 text-sm leading-6 text-slate-400">
+                                Planを作るとDomain → Plan → Executionの階層としてMapへ現れます。
+                            </p>
+                        @endif
                         <div class="mt-4 flex flex-wrap justify-center gap-2">
                             <a href="{{ route('plans.create') }}" class="btn-primary">目標・Planを作る</a>
                             <a href="{{ route('inbox.index') }}" class="btn-secondary">Inboxを開く</a>
                         </div>
                     </div>
                 @endif
+
+                @include('map.partials.spatial-dock')
             </div>
 
             <aside
@@ -247,7 +322,9 @@
 
         <div hidden data-map-surface-templates>
             @foreach ($nodes as $node)
-                @php($surface = $node['classic_surface'] ?? [])
+                @php
+                    $surface = $node['classic_surface'] ?? [];
+                @endphp
                 @if (! empty($surface))
                     <template data-map-surface-template="{{ $node['id'] }}">
                         <section class="canovia-map-classic-content" data-map-classic-content="{{ $node['id'] }}">
@@ -270,16 +347,25 @@
                             @else
                                 <div class="canovia-map-classic-actions">
                                     @foreach (($surface['actions'] ?? []) as $action)
+                                        @php
+                                            $actionNavigationKind = (string) ($action['navigation_kind'] ?? '');
+                                            $actionIsZoom = str_starts_with($actionNavigationKind, 'zoom-');
+                                            $actionZoomDirection = $actionNavigationKind === 'zoom-out' ? 'out' : 'in';
+                                        @endphp
                                         <a
                                             href="{{ $action['url'] }}"
                                             class="{{ ($action['primary'] ?? false) ? 'btn-primary' : 'btn-secondary' }} w-full justify-center"
                                             data-map-classic-action
-                                            data-map-action-role="{{ ($action['primary'] ?? false) ? 'primary' : 'secondary' }}"
+                                            data-map-action-role="{{ $actionIsZoom ? 'zoom' : (($action['primary'] ?? false) ? 'primary' : 'secondary') }}"
+                                            @if ($actionIsZoom)
+                                                data-map-semantic-zoom
+                                                data-map-zoom-direction="{{ $actionZoomDirection }}"
+                                            @endif
                                         >{{ $action['label'] }}</a>
                                     @endforeach
                                 </div>
                                 @auth
-                                    @if (! $isIntentHub && (bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
+                                    @if ($isExecutionLevel && (bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
                                         <div class="canovia-map-companion-entry">
                                             <div>
                                                 <p class="canovia-map-companion-kicker">COMPANION</p>
@@ -303,15 +389,28 @@
                     </template>
                 @endif
             @endforeach
+
+            @if (is_array($graph['spatial_dock'] ?? null))
+                <template data-map-global-surface-template="space-station">
+                    <section class="canovia-map-classic-content" data-map-global-classic-content="space-station">
+                        <p class="canovia-map-classic-kind">Spatial Dock</p>
+                        <h2 class="canovia-map-classic-title">Space Station</h2>
+                        <p class="canovia-map-classic-summary">
+                            今見ている{{ $hierarchy['current_label'] ?? 'Context' }}を離れず、Capture・接続候補・Companionを開きます。
+                        </p>
+                        @include('map.partials.space-station-surface')
+                    </section>
+                </template>
+            @endif
         </div>
 
         <p class="canovia-map-note">
             @if ($isIntentHub)
-                L0はCanovia全体へ辿るための固定Navigation Layerです。おすすめはNodeの存在を決めず、
-                今後AttentionやPersonalized Satelliteとして強調へ反映します。
+                L0はCanovia全体へ辿る固定Navigation Layerです。おすすめはNodeの存在を決めず、Attentionとして強調へ反映します。
+            @elseif ($isHierarchyLevel)
+                この階層のNode位置は現在の構造から決定的に投影し、保存しません。Space Station DockはLevelを跨いで同じ位置に残ります。
             @else
-                Focus中もMap自体はContextの理解に専念します。Classic Surfaceから実行画面へ移動したあとは、
-                Mapへ戻った時だけ最新状態を確認し、Primary ActionやEvidenceなどに意味のある差がある場合だけ静かに再配置します。
+                Execution中も右下のSpace Stationから入力・相談へ戻れます。Classic Surfaceで操作した後は、意味のある状態差分だけ静かに再投影します。
             @endif
         </p>
     </section>
