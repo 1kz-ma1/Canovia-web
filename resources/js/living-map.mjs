@@ -111,6 +111,20 @@ export function mapHistoryDirection(currentDepth, targetDepth) {
     return 'same';
 }
 
+export function mapActionTelemetryContext(action, focusedNode = null) {
+    const actionData = action?.dataset || {};
+    const focusedData = focusedNode?.dataset || {};
+
+    return {
+        action_role: actionData.mapActionRole || 'secondary',
+        node_type: actionData.mapNodeType || focusedData.mapNodeType || null,
+        position_role: actionData.mapPositionRole || focusedData.mapPositionRole || null,
+        is_primary: actionData.mapIsPrimary !== undefined
+            ? actionData.mapIsPrimary === '1'
+            : focusedData.mapIsPrimary === '1',
+    };
+}
+
 export function mapReturnDecision({
     persisted = false,
     currentProjectionKey = '',
@@ -474,14 +488,13 @@ export function mountLivingGoalMap({
 
         const classicAction = link.closest?.('[data-map-classic-action]');
         if (classicAction) {
-            markPendingReevaluation();
             const focusedNode = activeFocusId ? nodeElementById.get(activeFocusId) : null;
-            trackTelemetry('map_classic_action_opened', {
-                action_role: classicAction.dataset.mapActionRole || 'secondary',
-                node_type: focusedNode?.dataset.mapNodeType || null,
-                position_role: focusedNode?.dataset.mapPositionRole || null,
-                is_primary: focusedNode?.dataset.mapIsPrimary === '1',
-            }, true);
+            markPendingReevaluation(classicAction.dataset.mapNodeId || activeFocusId);
+            trackTelemetry(
+                'map_classic_action_opened',
+                mapActionTelemetryContext(classicAction, focusedNode),
+                true,
+            );
             return true;
         }
 
@@ -519,16 +532,15 @@ export function mountLivingGoalMap({
 
         const classicAction = event.target.closest?.('[data-map-classic-action]');
         if (classicAction && page.contains(classicAction)) {
-            markPendingReevaluation();
+            const focusedNode = activeFocusId ? nodeElementById.get(activeFocusId) : null;
+            markPendingReevaluation(classicAction.dataset.mapNodeId || activeFocusId);
 
             if (classicAction instanceof windowRef.HTMLAnchorElement) {
-                const focusedNode = activeFocusId ? nodeElementById.get(activeFocusId) : null;
-                trackTelemetry('map_classic_action_opened', {
-                    action_role: classicAction.dataset.mapActionRole || 'secondary',
-                    node_type: focusedNode?.dataset.mapNodeType || null,
-                    position_role: focusedNode?.dataset.mapPositionRole || null,
-                    is_primary: focusedNode?.dataset.mapIsPrimary === '1',
-                }, true);
+                trackTelemetry(
+                    'map_classic_action_opened',
+                    mapActionTelemetryContext(classicAction, focusedNode),
+                    true,
+                );
             }
             return;
         }
