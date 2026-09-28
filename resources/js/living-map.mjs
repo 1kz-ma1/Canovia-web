@@ -486,6 +486,17 @@ export function mountLivingGoalMap({
             return true;
         }
 
+        const directNavigation = link.closest?.('[data-map-direct-navigation]');
+        if (directNavigation) {
+            markPendingReevaluation(directNavigation.dataset.mapNodeId || activeFocusId);
+            trackTelemetry(
+                'map_classic_action_opened',
+                mapActionTelemetryContext(directNavigation),
+                true,
+            );
+            return true;
+        }
+
         const classicAction = link.closest?.('[data-map-classic-action]');
         if (classicAction) {
             const focusedNode = activeFocusId ? nodeElementById.get(activeFocusId) : null;
@@ -510,6 +521,20 @@ export function mountLivingGoalMap({
     }
 
     function onPageClick(event) {
+        const directOpen = event.target.closest?.('[data-map-direct-open]');
+        if (directOpen && page.contains(directOpen)) {
+            const directLink = directOpen.closest?.('a[data-map-direct-navigation]');
+            if (directLink instanceof windowRef.HTMLAnchorElement) {
+                markPendingReevaluation(directLink.dataset.mapNodeId || activeFocusId);
+                trackTelemetry(
+                    'map_classic_action_opened',
+                    mapActionTelemetryContext(directLink),
+                    true,
+                );
+            }
+            return;
+        }
+
         const primaryShortcut = event.target.closest?.('[data-map-primary-focus]');
         if (primaryShortcut && page.contains(primaryShortcut) && primaryNode) {
             event.preventDefault();
@@ -545,9 +570,10 @@ export function mountLivingGoalMap({
             return;
         }
 
-        const node = event.target.closest?.('[data-map-node]');
-        if (!node || !page.contains(node)) return;
-        if (!(node instanceof windowRef.HTMLAnchorElement)) return;
+        const focusLink = event.target.closest?.('[data-map-node-focus]');
+        const node = focusLink?.closest?.('[data-map-node]');
+        if (!focusLink || !node || !page.contains(node)) return;
+        if (!(focusLink instanceof windowRef.HTMLAnchorElement)) return;
         if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
             return;
         }
