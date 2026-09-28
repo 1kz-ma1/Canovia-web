@@ -162,7 +162,7 @@
 
         <div class="canovia-map-workspace" data-map-workspace>
             <div
-                class="canovia-map-shell {{ $isIntentHub ? 'is-intent-hub' : ($isHierarchyLevel ? 'is-hierarchy-map' : 'is-execution-map') }} {{ $isCollaborationMode ? 'is-collaboration-map' : '' }}"
+                class="canovia-map-shell {{ $isIntentHub ? 'is-intent-hub' : ($isHierarchyLevel ? 'is-hierarchy-map' : 'is-execution-map') }}{{ $isCollaborationMode ? ' is-collaboration-map' : '' }}"
                 data-canovia-map
                 data-map-level="{{ $mapLevel }}"
             >
