@@ -18,6 +18,10 @@ function roleGroup(role = '') {
     if (role === 'intent-collaboration') return 'input';
     if (role === 'hierarchy-parent') return 'now';
     if (role === 'hierarchy-child') return 'future';
+    if (role === 'satellite-1') return 'future';
+    if (role === 'satellite-2') return 'action';
+    if (role === 'satellite-3') return 'past';
+    if (role === 'satellite-4') return 'input';
     if (role.startsWith('future')) return 'future';
     if (role.startsWith('past')) return 'past';
     if (role.startsWith('input')) return 'input';
