@@ -68,6 +68,24 @@ class CanoviaHomeSurfaceV432Test extends TestCase
             ->assertDontSee('aria-label="Canovia Companionを現在の文脈で開く"', false);
     }
 
+    public function test_instant_navigation_emits_map_lifecycle_hooks_and_preserves_flow_steps(): void
+    {
+        $instant = file_get_contents(resource_path('js/instant-navigation.mjs'));
+        $living = file_get_contents(resource_path('js/living-map.mjs'));
+        $app = file_get_contents(resource_path('js/app.js'));
+
+        $this->assertStringContainsString("'/map'", $instant);
+        $this->assertStringContainsString('canovia:before-instant-navigation', $instant);
+        $this->assertStringContainsString('canovia:before-page-replace', $instant);
+
+        $this->assertStringContainsString('function trackInstantMapLink', $living);
+        $this->assertStringContainsString("removeEventListener('canovia:before-page-replace'", $living);
+        $this->assertStringContainsString('clearMapTelemetryFlow(windowRef)', $living);
+
+        $this->assertStringContainsString("document.addEventListener('canovia:before-instant-navigation'", $app);
+        $this->assertStringContainsString('advanceMapTelemetryForClassicNavigation(link)', $app);
+    }
+
     private function scenario(): array
     {
         $user = User::factory()->create([
