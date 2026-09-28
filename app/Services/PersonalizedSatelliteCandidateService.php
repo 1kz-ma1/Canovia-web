@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Enums\BehaviorEventType;
 use App\Enums\MapLevel;
 use App\Models\Plan;
-use App\Models\StudyPracticeAttempt;
 use App\Models\Task;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -19,8 +18,6 @@ final class PersonalizedSatelliteCandidateService
         private readonly RequestBehaviorHistory $history,
         private readonly PlanPriorityService $priorities,
         private readonly MapHierarchyContextService $hierarchy,
-        private readonly PlanToolService $tools,
-        private readonly ExecutionActionPolicyService $executionActions,
     ) {}
 
     /**
@@ -45,15 +42,14 @@ final class PersonalizedSatelliteCandidateService
         $actorToken = $this->core->actorToken($request);
         $events = $this->history->events($actorToken, 30);
         $sessions = $this->history->completedSessions($actorToken, 30);
-        $practiceAttempts = $this->practiceAttempts(
-            $request,
-            $actorToken,
-            $plans->pluck('id')->map(fn ($id) => (int) $id)->all(),
-        );
-
         $candidates = collect();
 
         foreach ($plans as $plan) {
+            // L0 already has a stable Collaboration intent. A Shared Plan here
+            // duplicates that entry point instead of shortening a unique route.
+            if ((bool) $plan->is_collaborative) {
+                continue;
+            }
             $planEvents = $events
                 ->filter(fn ($event) => (int) ($event->plan_id ?? 0) === (int) $plan->id)
                 ->values();
@@ -63,7 +59,7 @@ final class PersonalizedSatelliteCandidateService
 
             $signals = $this->planSignals($plan, $planEvents, $planSessions);
             $domainKey = $this->hierarchy->domainKey($plan->category);
-            $intent = (bool) $plan->is_collaborative ? 'collaboration' : 'execution';
+            $intent = 'execution';
             $executionUrl = route('map.index', [
                 'level' => MapLevel::Execution->value,
                 'intent' => $intent,
@@ -78,16 +74,12 @@ final class PersonalizedSatelliteCandidateService
                 'entity_id' => (int) $plan->id,
                 'plan_id' => (int) $plan->id,
                 'task_id' => null,
-                'eyebrow' => (bool) $plan->is_collaborative ? 'SHARED SATELLITE' : 'PLAN SATELLITE',
+                'eyebrow' => 'PLAN SATELLITE',
                 'label' => (string) $plan->title,
-                'subtitle' => (bool) $plan->is_collaborative
-                    ? 'よく使う共同Planへのショートカット'
-                    : 'よく使うPlanへのショートカット',
+                'subtitle' => '継続中のPlanへのショートカット',
                 'available_action' => $executionUrl,
                 'navigation_kind' => 'satellite',
-                'anchor_node_id' => (bool) $plan->is_collaborative
-                    ? 'intent:collaboration'
-                    : 'intent:plan',
+                'anchor_node_id' => 'intent:plan',
                 'signals' => $signals,
                 'classic_surface' => [
                     'kind' => 'Personalized Satellite',
@@ -108,21 +100,11 @@ final class PersonalizedSatelliteCandidateService
                     ],
                     'meta' => array_values(array_filter([
                         $plan->category ?: null,
-                        (bool) $plan->is_collaborative ? 'Shared Plan' : 'Personal Plan',
+                        'Personal Plan',
                     ])),
                 ],
             ]);
 
-            $toolCandidate = $this->toolCandidate(
-                $request,
-                $plan,
-                $signals,
-                $practiceAttempts->get((int) $plan->id, collect()),
-            );
-
-            if ($toolCandidate) {
-                $candidates->push($toolCandidate);
-            }
         }
 
         return $candidates->values();
@@ -187,132 +169,6 @@ final class PersonalizedSatelliteCandidateService
             ), 4),
             'continuity' => round(min(1, $continuityBase + min(0.55, $activeDays * 0.11)), 4),
         ];
-    }
-
-    /**
-     * @param array{importance:float,usage_frequency:float,recency:float,continuity:float} $planSignals
-     * @param Collection<int,StudyPracticeAttempt> $attempts
-     * @return array<string,mixed>|null
-     */
-    private function toolCandidate(
-        Request $request,
-        Plan $plan,
-        array $planSignals,
-        Collection $attempts,
-    ): ?array {
-        if ($attempts->isEmpty()) {
-            return null;
-        }
-
-        $task = $this->selectTask($plan);
-        if (! $task) {
-            return null;
-        }
-
-        $tools = collect($this->tools->forTask(
-            $plan,
-            $task,
-            $this->core->canEdit($request, $plan),
-            $request->user(),
-        ));
-        $primaryTool = $this->executionActions->primary($tools);
-
-        if (($primaryTool['id'] ?? null) !== 'ai_practice') {
-            return null;
-        }
-
-        $recentAttempts = $attempts
-            ->filter(fn (StudyPracticeAttempt $attempt) => $attempt->created_at?->gte(now()->subDays(30)))
-            ->values();
-
-        if ($recentAttempts->count() < 2) {
-            return null;
-        }
-
-        $latest = $recentAttempts->max(fn (StudyPracticeAttempt $attempt) => $attempt->created_at?->timestamp ?? 0);
-        $activeDays = $recentAttempts
-            ->map(fn (StudyPracticeAttempt $attempt) => $attempt->created_at?->toDateString())
-            ->filter()
-            ->unique()
-            ->count();
-
-        $url = route('plans.tasks.study_practice.show', [$plan, $task]);
-
-        return [
-            'id' => 'satellite:tool:ai_practice:plan:'.$plan->id.':task:'.$task->id,
-            'kind' => 'tool',
-            'node_type' => 'satellite_tool',
-            'entity_id' => null,
-            'plan_id' => (int) $plan->id,
-            'task_id' => (int) $task->id,
-            'eyebrow' => 'TOOL SATELLITE',
-            'label' => 'AI演習',
-            'subtitle' => (string) $plan->title,
-            'available_action' => $url,
-            'navigation_kind' => 'satellite',
-            'anchor_node_id' => 'intent:execution',
-            'signals' => [
-                'importance' => $planSignals['importance'],
-                'usage_frequency' => round(min(1, $recentAttempts->count() / 8), 4),
-                'recency' => round($this->recencyScore(
-                    $latest > 0 ? Carbon::createFromTimestamp($latest) : null,
-                ), 4),
-                'continuity' => round(min(
-                    1,
-                    0.25 + min(0.75, $activeDays * 0.15),
-                ), 4),
-            ],
-            'classic_surface' => [
-                'kind' => 'Personalized Tool Satellite',
-                'title' => 'AI演習',
-                'summary' => '最近継続して使っている既存ToolをL0へ昇格したショートカットです。',
-                'actions' => [
-                    [
-                        'label' => 'AI演習を開く',
-                        'url' => $url,
-                        'primary' => true,
-                        'navigation_kind' => 'satellite',
-                    ],
-                    [
-                        'label' => 'Planを開く',
-                        'url' => route('plans.show', $plan),
-                        'primary' => false,
-                    ],
-                ],
-                'meta' => [(string) $plan->title, $recentAttempts->count().' recent attempts'],
-            ],
-        ];
-    }
-
-    /**
-     * @return Collection<int,StudyPracticeAttempt>
-     */
-    private function practiceAttempts(
-        Request $request,
-        string $actorToken,
-        array $planIds,
-    ): Collection {
-        if ($planIds === []) {
-            return collect();
-        }
-
-        $userId = $request->user()?->id;
-
-        return StudyPracticeAttempt::query()
-            ->select(['id', 'plan_id', 'task_id', 'user_id', 'actor_token', 'created_at'])
-            ->whereIn('plan_id', $planIds)
-            ->where('created_at', '>=', now()->subDays(30))
-            ->where(function ($query) use ($userId, $actorToken) {
-                if ($userId) {
-                    $query->where('user_id', $userId)
-                        ->orWhere('actor_token', $actorToken);
-                    return;
-                }
-
-                $query->whereNull('user_id')->where('actor_token', $actorToken);
-            })
-            ->get()
-            ->groupBy(fn (StudyPracticeAttempt $attempt) => (int) $attempt->plan_id);
     }
 
     private function hasActiveTask(Plan $plan): bool
