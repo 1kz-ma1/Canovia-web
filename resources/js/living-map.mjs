@@ -792,27 +792,52 @@ export function mountLivingGoalMap({
         }
 
         const mobile = isMobileViewport();
-        const hadFocus = Boolean(activeFocusId);
+        const previousFocusId = activeFocusId;
+        const hadFocus = Boolean(previousFocusId);
 
         if (mobile) {
+            if (
+                previousFocusId === nodeId
+                && page.classList.contains('is-map-mobile-selection')
+                && workspace?.classList.contains('is-context-open')
+            ) {
+                return true;
+            }
+
+            const alreadyMobileSelection = page.classList.contains('is-map-mobile-selection');
             activeFocusId = nodeId;
             page.dataset.mapFocus = nodeId;
             page.classList.add('is-map-focused', 'is-map-mobile-selection');
 
-            for (const node of nodes) {
-                const element = nodeElementById.get(node.id);
-                if (!element) continue;
+            if (alreadyMobileSelection) {
+                if (previousFocusId && previousFocusId !== nodeId) {
+                    const previousElement = nodeElementById.get(previousFocusId);
+                    previousElement?.classList.remove('is-map-selected');
+                    previousElement?.setAttribute('aria-selected', 'false');
+                    previousElement?.setAttribute('aria-expanded', 'false');
+                }
 
-                const selected = node.id === nodeId;
-                element.classList.remove('is-focus-center', 'is-focus-neighbor', 'is-focus-hidden');
-                element.classList.toggle('is-map-selected', selected);
-                element.setAttribute('aria-selected', selected ? 'true' : 'false');
-                element.setAttribute('aria-expanded', selected ? 'true' : 'false');
-                element.style.removeProperty('--map-focus-x');
-                element.style.removeProperty('--map-focus-y');
+                const selectedElement = nodeElementById.get(nodeId);
+                selectedElement?.classList.add('is-map-selected');
+                selectedElement?.setAttribute('aria-selected', 'true');
+                selectedElement?.setAttribute('aria-expanded', 'true');
+            } else {
+                for (const node of nodes) {
+                    const element = nodeElementById.get(node.id);
+                    if (!element) continue;
+
+                    const selected = node.id === nodeId;
+                    element.classList.remove('is-focus-center', 'is-focus-neighbor', 'is-focus-hidden');
+                    element.classList.toggle('is-map-selected', selected);
+                    element.setAttribute('aria-selected', selected ? 'true' : 'false');
+                    element.setAttribute('aria-expanded', selected ? 'true' : 'false');
+                    element.style.removeProperty('--map-focus-x');
+                    element.style.removeProperty('--map-focus-y');
+                }
+
+                syncEdges(basePositions);
             }
 
-            syncEdges(basePositions);
             renderSurface(nodeId);
 
             if (historyMode === 'push' && windowRef.location.hash !== focusHash(nodeId)) {
@@ -877,6 +902,10 @@ export function mountLivingGoalMap({
     const openSpatialDock = (dockId, { historyMode = 'push' } = {}) => {
         const normalizedDockId = String(dockId || '').trim();
         if (!normalizedDockId || !globalTemplateFor(normalizedDockId)) return false;
+
+        if (activeFocusId) {
+            clearFocus();
+        }
 
         activeDockId = normalizedDockId;
         page.dataset.mapDock = normalizedDockId;
@@ -1021,6 +1050,7 @@ export function mountLivingGoalMap({
         if (activePointers.size === 0) {
             refreshMapViewport();
             mapShell?.classList.add('is-map-gesture-active');
+            page.classList.add('is-map-gesture-active');
         }
 
         const point = { x: event.clientX, y: event.clientY };
@@ -1113,6 +1143,7 @@ export function mountLivingGoalMap({
         gesture = null;
         mapViewBatcher.flushNow();
         mapShell?.classList.remove('is-map-gesture-active');
+        page.classList.remove('is-map-gesture-active');
     };
 
     const onSceneDoubleClick = (event) => {
@@ -1156,6 +1187,7 @@ export function mountLivingGoalMap({
         windowRef.clearTimeout(viewAnimationTimer);
         mapViewBatcher.cancel();
         mapShell?.classList.remove('is-map-gesture-active', 'is-map-view-animating');
+        page.classList.remove('is-map-gesture-active');
         windowRef.removeEventListener?.('resize', onViewportResize);
         mapScene?.removeEventListener('pointerdown', onScenePointerDown);
         mapScene?.removeEventListener('pointermove', onScenePointerMove);
