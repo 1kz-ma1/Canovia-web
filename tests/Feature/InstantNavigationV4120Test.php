@@ -22,7 +22,7 @@ class InstantNavigationV4120Test extends TestCase
         $user = User::factory()->create();
         $this->createPlan($user);
 
-        foreach (['/', '/inbox', '/roadmap', '/timeline', '/calendar'] as $path) {
+        foreach (['/', '/map', '/inbox', '/roadmap', '/timeline', '/calendar'] as $path) {
             $response = $this->actingAs($user)->get($path);
             $response->assertOk();
             $response->assertSee('data-canovia-page', false);
@@ -80,6 +80,7 @@ class InstantNavigationV4120Test extends TestCase
         $this->assertStringContainsString('mountCanoviaInstantNavigation();', $app);
         $this->assertStringContainsString("document.addEventListener('canovia:page-ready'", $app);
         $this->assertStringContainsString("'X-Canovia-Instant-Navigation': mode", $runtime);
+        $this->assertStringContainsString("'/map'", $runtime);
         $this->assertStringContainsString("'/inbox'", $runtime);
         $this->assertStringContainsString("'/roadmap'", $runtime);
         $this->assertStringContainsString("'/timeline'", $runtime);
@@ -87,6 +88,8 @@ class InstantNavigationV4120Test extends TestCase
         $this->assertStringContainsString("windowRef.history.pushState", $runtime);
         $this->assertStringContainsString("if (!corePaths.has(initialUrl.pathname)) return null;", $runtime);
         $this->assertStringContainsString("removeAttribute('data-canovia-instant-initialized')", $runtime);
+        $this->assertStringContainsString('canovia:before-instant-navigation', $runtime);
+        $this->assertStringContainsString('canovia:before-page-replace', $runtime);
     }
 
     private function createPlan(User $user): Plan
