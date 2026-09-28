@@ -10,9 +10,7 @@ use App\Services\ExecutionNavigationGraphService;
 use App\Services\MapAttentionStateService;
 use App\Services\MapProjectionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use LogicException;
 use Tests\TestCase;
 
 class HierarchicalMapFoundationV440Test extends TestCase
@@ -178,13 +176,42 @@ class HierarchicalMapFoundationV440Test extends TestCase
         $this->assertArrayNotHasKey('attention_role', $primary);
     }
 
-    public function test_unimplemented_levels_are_reserved_without_shipping_partial_projection(): void
+    public function test_reserved_l1_and_l2_levels_are_now_projected_without_changing_level_contract(): void
     {
-        $this->expectException(LogicException::class);
+        $user = User::factory()->create([
+            'first_run_completed_at' => now(),
+        ]);
 
-        app(MapProjectionService::class)->project(
-            Request::create('/map', 'GET'),
-            MapLevel::Domain,
-        );
+        $plan = Plan::query()->create([
+            'user_id' => $user->id,
+            'owner_token' => Str::random(64),
+            'public_slug' => (string) Str::uuid(),
+            'title' => 'Hierarchy implementation Plan',
+            'category' => '個人開発',
+            'priority' => 1,
+            'priority_mode' => 'manual',
+            'start_date' => today(),
+            'deadline' => today()->addWeek(),
+            'is_public' => false,
+        ]);
+
+        $l1 = $this->actingAs($user)->get(route('map.index', [
+            'level' => MapLevel::Domain->value,
+            'intent' => 'plan',
+        ]));
+        $l1->assertOk()
+            ->assertSee('data-map-level="l1"', false)
+            ->assertSee('個人開発');
+
+        $domainKey = app(\App\Services\MapHierarchyContextService::class)->domainKey($plan->category);
+
+        $l2 = $this->actingAs($user)->get(route('map.index', [
+            'level' => MapLevel::Plan->value,
+            'intent' => 'plan',
+            'domain' => $domainKey,
+        ]));
+        $l2->assertOk()
+            ->assertSee('data-map-level="l2"', false)
+            ->assertSee($plan->title);
     }
 }
