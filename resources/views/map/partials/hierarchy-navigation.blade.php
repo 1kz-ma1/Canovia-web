@@ -32,6 +32,7 @@
                     class="canovia-map-breadcrumb-link"
                     data-map-semantic-zoom
                     data-map-zoom-direction="out"
+                    data-route-lock-skip
                 >{{ $crumb['label'] }}</a>
             @else
                 <span class="canovia-map-breadcrumb-current" aria-current="page">{{ $crumb['label'] ?? '' }}</span>
