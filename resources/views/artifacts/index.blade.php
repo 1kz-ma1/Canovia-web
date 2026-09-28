@@ -87,6 +87,18 @@
                             @endforeach
                         </select>
                     </label>
+                    @if ($plan->is_collaborative)
+                        <label class="block sm:col-span-2">
+                            <span class="text-xs font-semibold text-slate-400">共同作業の状態</span>
+                            <select name="collaboration_state" class="form-control mt-2">
+                                <option value="">状態未設定</option>
+                                @foreach ($collaborationStates as $key => $label)
+                                    <option value="{{ $key }}" @selected(old('collaboration_state') === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            <span class="mt-1 block text-[11px] leading-5 text-slate-500">Canovia Mapの「共同」で目的別に整理するための明示状態です。自動変更はしません。</span>
+                        </label>
+                    @endif
                     <label class="block sm:col-span-2">
                         <span class="text-xs font-semibold text-slate-400">メモ（任意）</span>
                         <input type="text" name="notes" value="{{ old('notes') }}" class="form-control mt-2" placeholder="例：発表用に使う最終版">
@@ -135,6 +147,9 @@
                                     <span class="badge badge-slate">{{ $providerIcons[$artifact->provider] ?? '•' }} {{ $artifact->providerLabel() }}</span>
                                     <span class="badge badge-slate">{{ $artifact->artifactTypeLabel() }}</span>
                                     @if ($artifact->version_label)<span class="badge badge-green">{{ $artifact->version_label }}</span>@endif
+                                    @if ($plan->is_collaborative && $artifact->collaborationStateLabel())
+                                        <span class="badge badge-slate">{{ $artifact->collaborationStateLabel() }}</span>
+                                    @endif
                                 </div>
                                 <h3 class="mt-3 break-words text-lg font-bold text-slate-50">{{ $artifact->title }}</h3>
                                 <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
@@ -191,6 +206,17 @@
                                                 @foreach ($assignees as $person)<option value="{{ $person->id }}" @selected((int) $artifact->assigned_user_id === (int) $person->id)>{{ $person->name }}</option>@endforeach
                                             </select>
                                         </label>
+                                        @if ($plan->is_collaborative)
+                                            <label class="block sm:col-span-2">
+                                                <span class="text-xs font-semibold text-slate-400">共同作業の状態</span>
+                                                <select name="collaboration_state" class="form-control mt-2">
+                                                    <option value="">状態未設定</option>
+                                                    @foreach ($collaborationStates as $key => $label)
+                                                        <option value="{{ $key }}" @selected($artifact->collaborationState() === $key)>{{ $label }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </label>
+                                        @endif
                                         <label class="block sm:col-span-2">
                                             <span class="text-xs font-semibold text-slate-400">メモ</span>
                                             <input type="text" name="notes" value="{{ $artifact->notes }}" class="form-control mt-2">

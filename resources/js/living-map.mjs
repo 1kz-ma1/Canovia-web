@@ -567,6 +567,11 @@ export function mountLivingGoalMap({
         }
     };
 
+    const isNonMutatingNavigation = (link) => {
+        return isMapLevelNavigation(link)
+            || link?.dataset?.mapActionRole === 'external_tool';
+    };
+
     const destroy = () => {
         if (disposed) return;
         disposed = true;
@@ -649,7 +654,7 @@ export function mountLivingGoalMap({
 
         const directNavigation = link.closest?.('[data-map-direct-navigation]');
         if (directNavigation) {
-            if (!isMapLevelNavigation(directNavigation)) {
+            if (!isNonMutatingNavigation(directNavigation)) {
                 markPendingReevaluation(directNavigation.dataset.mapNodeId || activeFocusId);
             }
             trackTelemetry(
@@ -663,7 +668,7 @@ export function mountLivingGoalMap({
         const classicAction = link.closest?.('[data-map-classic-action]');
         if (classicAction) {
             const focusedNode = activeFocusId ? nodeElementById.get(activeFocusId) : null;
-            if (!isMapLevelNavigation(classicAction)) {
+            if (!isNonMutatingNavigation(classicAction)) {
                 markPendingReevaluation(classicAction.dataset.mapNodeId || activeFocusId);
             }
             trackTelemetry(
@@ -709,7 +714,7 @@ export function mountLivingGoalMap({
         if (directOpen && page.contains(directOpen)) {
             const directLink = directOpen.closest?.('a[data-map-direct-navigation]');
             if (directLink instanceof windowRef.HTMLAnchorElement) {
-                if (!isMapLevelNavigation(directLink)) {
+                if (!isNonMutatingNavigation(directLink)) {
                     markPendingReevaluation(directLink.dataset.mapNodeId || activeFocusId);
                 }
                 trackTelemetry(
@@ -744,7 +749,7 @@ export function mountLivingGoalMap({
         const classicAction = event.target.closest?.('[data-map-classic-action]');
         if (classicAction && page.contains(classicAction)) {
             const focusedNode = activeFocusId ? nodeElementById.get(activeFocusId) : null;
-            if (!isMapLevelNavigation(classicAction)) {
+            if (!isNonMutatingNavigation(classicAction)) {
                 markPendingReevaluation(classicAction.dataset.mapNodeId || activeFocusId);
             }
 

@@ -33,6 +33,7 @@ class PlanArtifactController extends Controller
         $assignees = $this->assigneesFor($plan);
         $providers = PlanArtifact::PROVIDERS;
         $artifactTypes = PlanArtifact::ARTIFACT_TYPES;
+        $collaborationStates = PlanArtifact::COLLABORATION_STATES;
 
         return view('artifacts.index', compact(
             'plan',
@@ -40,6 +41,7 @@ class PlanArtifactController extends Controller
             'assignees',
             'providers',
             'artifactTypes',
+            'collaborationStates',
         ));
     }
 
@@ -64,6 +66,7 @@ class PlanArtifactController extends Controller
             'url' => $validated['url'],
             'version_label' => $validated['version_label'] ?? null,
             'notes' => $validated['notes'] ?? null,
+            'metadata' => $this->collaborationMetadata($plan, $validated),
         ]);
 
         $artifact->tasks()->sync($this->taskIds($validated));
@@ -105,6 +108,7 @@ class PlanArtifactController extends Controller
             'url' => $validated['url'],
             'version_label' => $validated['version_label'] ?? null,
             'notes' => $validated['notes'] ?? null,
+            'metadata' => $this->collaborationMetadata($plan, $validated, (array) ($artifact->metadata ?? [])),
         ]);
         $artifact->tasks()->sync($this->taskIds($validated));
         $artifact->load('tasks');
@@ -157,6 +161,11 @@ class PlanArtifactController extends Controller
             'version_label' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'assigned_user_id' => ['nullable', 'integer'],
+            'collaboration_state' => [
+                'sometimes',
+                'nullable',
+                Rule::in(array_keys(PlanArtifact::COLLABORATION_STATES)),
+            ],
             'task_ids' => ['nullable', 'array', 'max:100'],
             'task_ids.*' => [
                 'integer',
@@ -171,6 +180,31 @@ class PlanArtifactController extends Controller
         }
 
         return $validated;
+    }
+
+    /**
+     * @param array<string,mixed> $validated
+     * @param array<string,mixed> $existing
+     * @return array<string,mixed>|null
+     */
+    private function collaborationMetadata(Plan $plan, array $validated, array $existing = []): ?array
+    {
+        if (! $plan->is_collaborative) {
+            return $existing === [] ? null : $existing;
+        }
+
+        if (! array_key_exists('collaboration_state', $validated)) {
+            return $existing === [] ? null : $existing;
+        }
+
+        $state = $validated['collaboration_state'];
+        if (is_string($state) && array_key_exists($state, PlanArtifact::COLLABORATION_STATES)) {
+            $existing['collaboration_state'] = $state;
+        } else {
+            unset($existing['collaboration_state']);
+        }
+
+        return $existing === [] ? null : $existing;
     }
 
     /** @return array<int> */

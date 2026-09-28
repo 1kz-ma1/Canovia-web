@@ -376,6 +376,7 @@ class InboxController extends Controller
             'map_intent' => ['nullable', 'in:plan,execution,reflection,collaboration'],
             'map_domain' => ['nullable', 'string', 'regex:/^[a-f0-9]{12}$/'],
             'map_plan' => ['nullable', 'integer', 'min:1'],
+            'map_collab_context' => ['nullable', 'in:my_action,review,waiting,external'],
         ];
     }
 
@@ -408,6 +409,14 @@ class InboxController extends Controller
             $planId = max(0, (int) $request->input('map_plan', 0));
             if ($planId > 0) {
                 $params['plan'] = $planId;
+            }
+
+            $collaborationContext = trim((string) $request->input('map_collab_context', ''));
+            if (
+                $intent === 'collaboration'
+                && in_array($collaborationContext, ['my_action', 'review', 'waiting', 'external'], true)
+            ) {
+                $params['collab_context'] = $collaborationContext;
             }
 
             return redirect()->to(

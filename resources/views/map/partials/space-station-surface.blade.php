@@ -11,6 +11,7 @@
     $stationIsDock = $stationMapLevel !== 'l0';
     $stationReturnTo = $stationIsDock ? 'map_station' : 'space_station';
     $stationHierarchy = $graph['hierarchy'] ?? [];
+    $stationCollaborationContext = (string) ($stationHierarchy['collaboration_context_key'] ?? '');
     $stationHash = $stationIsDock
         ? '#dock=space-station'
         : '#focus='.rawurlencode('intent:space-station');
@@ -41,6 +42,9 @@
                 <input type="hidden" name="map_intent" value="{{ $stationHierarchy['intent'] ?? '' }}">
                 <input type="hidden" name="map_domain" value="{{ $stationHierarchy['domain_key'] ?? '' }}">
                 <input type="hidden" name="map_plan" value="{{ $stationHierarchy['plan_id'] ?? '' }}">
+                @if ($stationCollaborationContext !== '')
+                    <input type="hidden" name="map_collab_context" value="{{ $stationCollaborationContext }}">
+                @endif
             @endif
 
             <div>
@@ -133,6 +137,9 @@
                         <input type="hidden" name="map_intent" value="{{ $stationHierarchy['intent'] ?? '' }}">
                         <input type="hidden" name="map_domain" value="{{ $stationHierarchy['domain_key'] ?? '' }}">
                         <input type="hidden" name="map_plan" value="{{ $stationHierarchy['plan_id'] ?? '' }}">
+                @if ($stationCollaborationContext !== '')
+                    <input type="hidden" name="map_collab_context" value="{{ $stationCollaborationContext }}">
+                @endif
                     @endif
                     <button type="submit" class="btn-secondary w-full justify-center">
                         ✦ 内容を読んで接続候補を作る
@@ -158,6 +165,9 @@
                     <input type="hidden" name="map_intent" value="{{ $stationHierarchy['intent'] ?? '' }}">
                     <input type="hidden" name="map_domain" value="{{ $stationHierarchy['domain_key'] ?? '' }}">
                     <input type="hidden" name="map_plan" value="{{ $stationHierarchy['plan_id'] ?? '' }}">
+                @if ($stationCollaborationContext !== '')
+                    <input type="hidden" name="map_collab_context" value="{{ $stationCollaborationContext }}">
+                @endif
                 @endif
 
                 <div>

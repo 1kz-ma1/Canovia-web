@@ -114,6 +114,9 @@ class BehaviorEventController extends Controller
                 'intent_context',
                 'satellite_plan',
                 'satellite_tool',
+                'collaboration_hub',
+                'collaboration_context',
+                'collaboration_item',
             ];
             $positionRoles = [
                 'future-goal',
@@ -137,7 +140,7 @@ class BehaviorEventController extends Controller
                 'satellite-3',
                 'satellite-4',
             ];
-            $actionRoles = ['primary', 'secondary', 'direct', 'zoom', 'satellite', 'companion', 'home'];
+            $actionRoles = ['primary', 'secondary', 'direct', 'zoom', 'satellite', 'external_tool', 'companion', 'home'];
 
             $safeMetadata = array_filter([
                 'flow_id' => $flowId,
