@@ -103,7 +103,7 @@ class BehaviorEventController extends Controller
 
             $nodeTypes = ['goal', 'plan', 'task', 'tool', 'evidence', 'inbox'];
             $positionRoles = ['future-goal', 'future-plan', 'future-next', 'now', 'action-tool', 'past-evidence', 'input-inbox'];
-            $actionRoles = ['primary', 'secondary', 'companion', 'home'];
+            $actionRoles = ['primary', 'secondary', 'direct', 'companion', 'home'];
 
             $safeMetadata = array_filter([
                 'flow_id' => $flowId,

@@ -133,3 +133,22 @@ test('Context Surface action still inherits the focused node when action metadat
         is_primary: false,
     });
 });
+
+
+test('non-primary direct navigation carries the direct telemetry role', () => {
+    const action = {
+        dataset: {
+            mapActionRole: 'direct',
+            mapNodeType: 'plan',
+            mapPositionRole: 'future-plan',
+            mapIsPrimary: '0',
+        },
+    };
+
+    assert.deepEqual(mapActionTelemetryContext(action), {
+        action_role: 'direct',
+        node_type: 'plan',
+        position_role: 'future-plan',
+        is_primary: false,
+    });
+});
