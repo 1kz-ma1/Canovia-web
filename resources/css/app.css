@@ -7117,3 +7117,183 @@ html[data-theme-resolved="light"] .canovia-map-node-direct-open {
         }
     }
 }
+
+
+/* --------------------------------------------------------------------------
+ * V45.1 Mobile Map Navigation / Gesture UX
+ * Stable selection + bounded pan / pinch zoom.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .canovia-map-scene {
+        position: absolute;
+        z-index: 2;
+        inset: 0;
+        transform:
+            translate3d(var(--map-pan-x, 0px), var(--map-pan-y, 0px), 0)
+            scale(var(--map-view-scale, 1));
+        transform-origin: 50% 50%;
+    }
+
+    .canovia-map-shell.is-map-view-animating .canovia-map-scene {
+        transition: transform 190ms cubic-bezier(.2,.8,.2,1);
+    }
+
+    .canovia-map-gesture-controls {
+        display: none;
+    }
+
+    .canovia-map-node.is-map-selected {
+        z-index: 7;
+        border-color: rgb(103 232 249 / 0.78);
+        box-shadow:
+            0 0 0 1px rgb(103 232 249 / 0.12),
+            0 0 2.2rem rgb(34 211 238 / 0.18),
+            0 18px 42px rgb(2 6 23 / 0.52);
+    }
+
+    @media (max-width: 767px) {
+        .canovia-map-scene {
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            overscroll-behavior: contain;
+        }
+
+        .canovia-map-shell.is-intent-hub::before,
+        .canovia-map-shell.is-intent-hub::after,
+        .canovia-map-shell.is-hierarchy-map::before,
+        .canovia-map-shell.is-hierarchy-map::after {
+            display: none;
+        }
+
+        .canovia-map-shell.is-intent-hub .canovia-map-scene::before,
+        .canovia-map-shell.is-intent-hub .canovia-map-scene::after,
+        .canovia-map-shell.is-hierarchy-map .canovia-map-scene::before,
+        .canovia-map-shell.is-hierarchy-map .canovia-map-scene::after {
+            content: "";
+            position: absolute;
+            z-index: 0;
+            top: 50%;
+            left: 50%;
+            pointer-events: none;
+            border: 1px solid rgb(103 232 249 / 0.10);
+            border-radius: 9999px;
+            background: none;
+            transform: translate(-50%, -50%);
+        }
+
+        .canovia-map-shell.is-intent-hub .canovia-map-scene::before,
+        .canovia-map-shell.is-hierarchy-map .canovia-map-scene::before {
+            width: 84%;
+            height: 78%;
+            box-shadow:
+                0 0 3rem rgb(56 189 248 / 0.025),
+                inset 0 0 3rem rgb(56 189 248 / 0.02);
+        }
+
+        .canovia-map-shell.is-intent-hub .canovia-map-scene::after,
+        .canovia-map-shell.is-hierarchy-map .canovia-map-scene::after {
+            width: 56%;
+            height: 52%;
+            border-style: dashed;
+            border-color: rgb(167 139 250 / 0.10);
+        }
+
+        .canovia-map-page.is-map-mobile-selection .canovia-map-node {
+            pointer-events: auto;
+        }
+
+        .canovia-map-page.is-map-mobile-selection .canovia-map-node:not(.is-map-selected) {
+            opacity: 0.88;
+        }
+
+        .canovia-map-page.is-map-mobile-selection .canovia-map-node.is-map-selected {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.035);
+        }
+
+        .canovia-map-gesture-controls {
+            position: absolute;
+            z-index: 12;
+            top: 0.58rem;
+            right: 0.58rem;
+            display: grid;
+            overflow: hidden;
+            border: 1px solid rgb(103 232 249 / 0.24);
+            border-radius: 9999px;
+            background: rgb(8 15 34 / 0.90);
+            box-shadow:
+                0 0 1.6rem rgb(34 211 238 / 0.08),
+                0 10px 26px rgb(2 6 23 / 0.38);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .canovia-map-gesture-controls button {
+            display: grid;
+            width: 2.55rem;
+            height: 2.55rem;
+            place-items: center;
+            border: 0;
+            border-bottom: 1px solid rgb(71 85 105 / 0.42);
+            background: transparent;
+            color: rgb(186 230 253);
+            font-size: 1rem;
+            font-weight: 900;
+            line-height: 1;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .canovia-map-gesture-controls button:last-child {
+            border-bottom: 0;
+        }
+
+        .canovia-map-gesture-controls button:hover,
+        .canovia-map-gesture-controls button:focus-visible,
+        .canovia-map-gesture-controls button[data-map-view-changed="1"] {
+            background: rgb(14 116 144 / 0.18);
+            color: rgb(224 242 254);
+            outline: none;
+        }
+
+        .canovia-map-gesture-controls button:disabled {
+            opacity: 0.34;
+        }
+
+        .canovia-map-context-surface {
+            pointer-events: auto;
+        }
+
+        .canovia-map-context-card {
+            pointer-events: auto;
+        }
+
+        .canovia-map-context-header {
+            z-index: 6;
+        }
+
+        .canovia-map-context-close,
+        .canovia-map-context-expand {
+            min-width: 2.75rem;
+            min-height: 2.75rem;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .canovia-map-context-close {
+            width: 2.75rem;
+            height: 2.75rem;
+            font-size: 1.3rem;
+        }
+
+        .canovia-map-context-expand {
+            padding-inline: 0.72rem;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .canovia-map-shell.is-map-view-animating .canovia-map-scene {
+            transition: none;
+        }
+    }
+}

@@ -4,11 +4,13 @@ import assert from 'node:assert/strict';
 import {
     buildFocusLayout,
     buildMobileBaseLayout,
+    clampMapViewTransform,
     mapActionTelemetryContext,
     mapHistoryDirection,
     mapReturnDecision,
     mapSemanticZoomDirection,
     oneHopNodeIds,
+    zoomMapViewAt,
 } from '../../resources/js/living-map.mjs';
 
 const nodes = [
@@ -291,4 +293,51 @@ test('mobile hierarchy stretches children vertically around the same semantic pa
     assert.deepEqual(layout.get('child:2'), { x: 81, y: 50 });
     assert.deepEqual(layout.get('child:3'), { x: 50, y: 87 });
     assert.deepEqual(layout.get('child:4'), { x: 19, y: 50 });
+});
+
+
+test('mobile map transform clamps zoom and pan to a bounded universe', () => {
+    assert.deepEqual(
+        clampMapViewTransform(
+            { x: 999, y: -999, scale: 3 },
+            { width: 400, height: 800 },
+        ),
+        { x: 280, y: -560, scale: 2.2 },
+    );
+
+    assert.deepEqual(
+        clampMapViewTransform(
+            { x: 999, y: -999, scale: 0.5 },
+            { width: 400, height: 800 },
+        ),
+        { x: 16, y: -32, scale: 0.82 },
+    );
+
+    assert.deepEqual(
+        clampMapViewTransform(
+            { x: 80, y: -100, scale: 1 },
+            { width: 400, height: 800 },
+        ),
+        { x: 40, y: -80, scale: 1 },
+    );
+});
+
+test('pinch zoom keeps the chosen focus point stable before applying bounds', () => {
+    const next = zoomMapViewAt(
+        { x: 0, y: 0, scale: 1 },
+        2,
+        { x: 300, y: 400 },
+        { width: 400, height: 800 },
+    );
+
+    assert.deepEqual(next, { x: -100, y: 0, scale: 2 });
+
+    const centered = zoomMapViewAt(
+        { x: 0, y: 0, scale: 1 },
+        1.5,
+        { x: 200, y: 400 },
+        { width: 400, height: 800 },
+    );
+
+    assert.deepEqual(centered, { x: 0, y: 0, scale: 1.5 });
 });
