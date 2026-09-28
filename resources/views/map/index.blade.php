@@ -270,10 +270,17 @@
                 @else
                     <div class="canovia-map-empty">
                         <p class="canovia-map-kicker">MAP IS READY</p>
-                        <h2 class="mt-2 text-lg font-black text-slate-50">まだこの階層に置くContextがありません</h2>
-                        <p class="mt-2 text-sm leading-6 text-slate-400">
-                            Planを作るとDomain → Plan → Executionの階層としてMapへ現れます。
-                        </p>
+                        @if ($isExecutionLevel)
+                            <h2 class="mt-2 text-lg font-black text-slate-50">まだMapに置くActionがありません</h2>
+                            <p class="mt-2 text-sm leading-6 text-slate-400">
+                                PlanとTaskができると、Canoviaが現在のActionを中央へ配置します。
+                            </p>
+                        @else
+                            <h2 class="mt-2 text-lg font-black text-slate-50">まだこの階層に置くContextがありません</h2>
+                            <p class="mt-2 text-sm leading-6 text-slate-400">
+                                Planを作るとDomain → Plan → Executionの階層としてMapへ現れます。
+                            </p>
+                        @endif
                         <div class="mt-4 flex flex-wrap justify-center gap-2">
                             <a href="{{ route('plans.create') }}" class="btn-primary">目標・Planを作る</a>
                             <a href="{{ route('inbox.index') }}" class="btn-secondary">Inboxを開く</a>
