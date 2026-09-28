@@ -47,7 +47,7 @@ class IntentHubV441Test extends TestCase
             ->assertSee('data-map-node-id="intent:space-station"', false)
             ->assertSee('data-map-is-center="1"', false)
             ->assertSee('class="canovia-map-shell is-intent-hub"', false)
-            ->assertSee(route('map.index', ['level' => 'l1', 'intent' => 'execution']), false);
+            ->assertSee(route('map.index', ['level' => 'l1', 'intent' => 'execution']));
 
         $graph = $response->viewData('graph');
 
