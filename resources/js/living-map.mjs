@@ -402,6 +402,8 @@ export function mountLivingGoalMap({
         closeButton?.removeEventListener('click', closeFocus);
         expandButton?.removeEventListener('click', onExpandToggle);
         documentRef.removeEventListener('keydown', onKeyDown);
+        documentRef.removeEventListener('canovia:before-instant-navigation', onBeforeInstantNavigation);
+        documentRef.removeEventListener('canovia:before-page-replace', onBeforePageReplace);
         windowRef.removeEventListener('popstate', onPopState);
         windowRef.removeEventListener('pageshow', onPageShow);
         delete page.dataset.mapFocusInitialized;
@@ -459,6 +461,40 @@ export function mountLivingGoalMap({
 
         return revalidationPromise;
     };
+
+    function trackInstantMapLink(link) {
+        if (!link || !page.contains(link)) return false;
+
+        const fallback = link.closest?.('[data-map-home-fallback]');
+        if (fallback) {
+            trackTelemetry('map_classic_home_opened', { action_role: 'home' }, true);
+            clearMapTelemetryFlow(windowRef);
+            return true;
+        }
+
+        const classicAction = link.closest?.('[data-map-classic-action]');
+        if (classicAction) {
+            markPendingReevaluation();
+            const focusedNode = activeFocusId ? nodeElementById.get(activeFocusId) : null;
+            trackTelemetry('map_classic_action_opened', {
+                action_role: classicAction.dataset.mapActionRole || 'secondary',
+                node_type: focusedNode?.dataset.mapNodeType || null,
+                position_role: focusedNode?.dataset.mapPositionRole || null,
+                is_primary: focusedNode?.dataset.mapIsPrimary === '1',
+            }, true);
+            return true;
+        }
+
+        return false;
+    }
+
+    function onBeforeInstantNavigation(event) {
+        trackInstantMapLink(event.detail?.link);
+    }
+
+    function onBeforePageReplace() {
+        destroy();
+    }
 
     function onPageClick(event) {
         const primaryShortcut = event.target.closest?.('[data-map-primary-focus]');
@@ -583,6 +619,8 @@ export function mountLivingGoalMap({
     closeButton?.addEventListener('click', closeFocus);
     expandButton?.addEventListener('click', onExpandToggle);
     documentRef.addEventListener('keydown', onKeyDown);
+    documentRef.addEventListener('canovia:before-instant-navigation', onBeforeInstantNavigation);
+    documentRef.addEventListener('canovia:before-page-replace', onBeforePageReplace);
     windowRef.addEventListener('popstate', onPopState);
     windowRef.addEventListener('pageshow', onPageShow);
 
