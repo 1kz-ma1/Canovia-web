@@ -7,8 +7,14 @@
         $nodes = collect($graph['nodes'] ?? []);
         $edges = collect($graph['edges'] ?? []);
         $nodeIndex = $nodes->keyBy('id');
+        $mapLevel = (string) ($graph['level'] ?? 'l3');
+        $isIntentHub = $mapLevel === 'l0';
         $primaryNodeId = $graph['primary_node_id'] ?? null;
+        $centerNodeId = $graph['center_node_id'] ?? $primaryNodeId;
         $primaryLaunch = $graph['primary_launch'] ?? null;
+        $mapReturnUrl = $isIntentHub
+            ? route('map.index')
+            : route('map.index', ['level' => 'l3']);
     @endphp
 
     @include('layouts.partials.home-surface-switcher', ['activeSurface' => 'map'])
@@ -16,48 +22,68 @@
     <section
         class="canovia-map-page"
         data-canovia-map-page
+        data-map-level="{{ $mapLevel }}"
         data-map-projection-key="{{ $graph['projection_key'] ?? '' }}"
         data-event-url="{{ route('behavior_events.store') }}"
     >
         <div class="canovia-map-hero canovia-map-toolbar">
             <div class="canovia-map-hero-copy">
                 <div class="canovia-map-heading">
-                    <p class="canovia-map-kicker">Living Goal Map</p>
+                    <p class="canovia-map-kicker">{{ $isIntentHub ? 'CANOVIA NAVIGATION' : 'L3 · EXECUTION MAP' }}</p>
                     <h1 class="canovia-map-title">Canovia Map</h1>
+                    @if ($isIntentHub)
+                        <p class="canovia-map-description">
+                            Space Stationを中心に、計画・実行・振り返り・共同へ辿るCanovia全体のNavigation Layerです。
+                        </p>
+                    @endif
                 </div>
                 <details class="canovia-map-help">
                     <summary>Mapの見方</summary>
-                    <p>
-                        中央が現在のPrimary Actionです。上下はFuture / Past、左右はInput / Action。
-                        Node本体でContextへFocusし、「開く ↗」があるNodeは目的地へ直接移動できます。操作はClassic Surfaceで行います。
-                    </p>
+                    @if ($isIntentHub)
+                        <p>
+                            中央のSpace Stationが入力・相談のHubです。周囲のNodeは行動目的を表し、
+                            Node本体でContextを確認、「開く ↗」から現在のClassic Surfaceへ直接移動できます。
+                        </p>
+                    @else
+                        <p>
+                            中央が現在のPrimary Actionです。上下はFuture / Past、左右はInput / Action。
+                            Node本体でContextへFocusし、「開く ↗」があるNodeは目的地へ直接移動できます。操作はClassic Surfaceで行います。
+                        </p>
+                    @endif
                 </details>
             </div>
             <div class="canovia-map-hero-actions">
-                @if ($primaryNodeId && filled(data_get($primaryLaunch, 'url')))
-                    <a
-                        href="{{ data_get($primaryLaunch, 'url') }}"
-                        class="btn-primary canovia-map-primary-launch"
-                        data-map-classic-action
-                        data-map-direct-primary-launch
-                        data-map-action-role="primary"
-                        data-map-node-id="{{ $primaryNodeId }}"
-                        data-map-node-type="task"
-                        data-map-position-role="now"
-                        data-map-is-primary="1"
-                        title="{{ data_get($primaryLaunch, 'label', 'Primary Actionを進める') }}"
-                        aria-label="{{ data_get($primaryLaunch, 'label', 'Primary Actionを進める') }}"
-                    >そのまま進める</a>
-                    <button type="button" class="btn-secondary canovia-map-now-button" data-map-primary-focus>
-                        Contextを見る
-                    </button>
-                @elseif ($primaryNodeId)
-                    <button type="button" class="btn-primary canovia-map-now-button" data-map-primary-focus>
-                        今やることを見る
-                    </button>
+                @if ($isIntentHub)
+                    <a href="{{ route('map.index', ['level' => 'l3']) }}" class="btn-primary">実行Mapへ</a>
+                    <button type="button" class="btn-secondary hidden" data-map-focus-reset>全体を見る</button>
+                    <a href="{{ route('my_plans.index') }}" class="btn-secondary">計画一覧</a>
+                @else
+                    @if ($primaryNodeId && filled(data_get($primaryLaunch, 'url')))
+                        <a
+                            href="{{ data_get($primaryLaunch, 'url') }}"
+                            class="btn-primary canovia-map-primary-launch"
+                            data-map-classic-action
+                            data-map-direct-primary-launch
+                            data-map-action-role="primary"
+                            data-map-node-id="{{ $primaryNodeId }}"
+                            data-map-node-type="task"
+                            data-map-position-role="now"
+                            data-map-is-primary="1"
+                            title="{{ data_get($primaryLaunch, 'label', 'Primary Actionを進める') }}"
+                            aria-label="{{ data_get($primaryLaunch, 'label', 'Primary Actionを進める') }}"
+                        >そのまま進める</a>
+                        <button type="button" class="btn-secondary canovia-map-now-button" data-map-primary-focus>
+                            Contextを見る
+                        </button>
+                    @elseif ($primaryNodeId)
+                        <button type="button" class="btn-primary canovia-map-now-button" data-map-primary-focus>
+                            今やることを見る
+                        </button>
+                    @endif
+                    <button type="button" class="btn-secondary hidden" data-map-focus-reset>全体を見る</button>
+                    <a href="{{ route('map.index') }}" class="btn-secondary">Canovia全体</a>
+                    <a href="{{ route('roadmap.index') }}" class="btn-secondary canovia-map-roadmap-link">Roadmap</a>
                 @endif
-                <button type="button" class="btn-secondary hidden" data-map-focus-reset>全体を見る</button>
-                <a href="{{ route('roadmap.index') }}" class="btn-secondary canovia-map-roadmap-link">Roadmap</a>
             </div>
         </div>
 
@@ -67,11 +93,13 @@
         </div>
 
         <div class="canovia-map-workspace" data-map-workspace>
-            <div class="canovia-map-shell" data-canovia-map>
-                <span class="canovia-map-axis-label is-future">Future</span>
-                <span class="canovia-map-axis-label is-past">Past</span>
-                <span class="canovia-map-axis-label is-input">Input</span>
-                <span class="canovia-map-axis-label is-action">Action</span>
+            <div class="canovia-map-shell {{ $isIntentHub ? 'is-intent-hub' : 'is-execution-map' }}" data-canovia-map data-map-level="{{ $mapLevel }}">
+                @unless ($isIntentHub)
+                    <span class="canovia-map-axis-label is-future">Future</span>
+                    <span class="canovia-map-axis-label is-past">Past</span>
+                    <span class="canovia-map-axis-label is-input">Input</span>
+                    <span class="canovia-map-axis-label is-action">Action</span>
+                @endunless
 
                 @if ($nodes->isNotEmpty())
                     <svg class="canovia-map-edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
@@ -100,11 +128,19 @@
                     @foreach ($nodes as $node)
                         @php
                             $isPrimary = $node['id'] === $primaryNodeId;
+                            $isCenter = $node['id'] === $centerNodeId;
                             $stateClass = match ($node['state'] ?? '') {
                                 'primary' => 'is-primary',
                                 'action' => 'is-action',
                                 'input' => 'is-input',
                                 'past' => 'is-past',
+                                'hub' => 'is-hub',
+                                'intent' => 'is-intent',
+                                default => '',
+                            };
+                            $kindClass = match ($node['type'] ?? '') {
+                                'space_station' => 'is-space-station',
+                                'intent' => 'is-intent-node',
                                 default => '',
                             };
                             $hasFocusFallback = filled($node['available_action'] ?? null);
@@ -112,13 +148,14 @@
                         @endphp
 
                         <div
-                            class="canovia-map-node {{ $stateClass }} {{ filled(data_get($directNavigation, 'url')) ? 'has-direct-navigation' : '' }}"
+                            class="canovia-map-node {{ $stateClass }} {{ $kindClass }} {{ $isCenter ? 'is-map-center' : '' }} {{ filled(data_get($directNavigation, 'url')) ? 'has-direct-navigation' : '' }}"
                             style="--map-x: {{ data_get($node, 'position.x', 50) }}%; --map-y: {{ data_get($node, 'position.y', 50) }}%; --node-scale: {{ (float) ($node['size_weight'] ?? 0.7) }}"
                             data-map-node
                             data-map-node-id="{{ $node['id'] }}"
                             data-map-node-type="{{ $node['type'] }}"
                             data-map-position-role="{{ $node['position_role'] }}"
                             data-map-is-primary="{{ $isPrimary ? '1' : '0' }}"
+                            data-map-is-center="{{ $isCenter ? '1' : '0' }}"
                             data-map-x="{{ data_get($node, 'position.x', 50) }}"
                             data-map-y="{{ data_get($node, 'position.y', 50) }}"
                             @if ($isPrimary) aria-current="true" @endif
@@ -239,7 +276,7 @@
                                 @endforeach
                             </div>
                             @auth
-                                @if ((bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
+                                @if (! $isIntentHub && (bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
                                     <div class="canovia-map-companion-entry">
                                         <div>
                                             <p class="canovia-map-companion-kicker">COMPANION</p>
@@ -249,7 +286,7 @@
                                             @csrf
                                             <input type="hidden" name="entry_type" value="map">
                                             <input type="hidden" name="map_node_id" value="{{ $node['id'] }}">
-                                            <input type="hidden" name="source_path" value="{{ route('map.index') }}#focus={{ rawurlencode($node['id']) }}">
+                                            <input type="hidden" name="source_path" value="{{ $mapReturnUrl }}#focus={{ rawurlencode($node['id']) }}">
                                             <input type="hidden" name="source_route" value="map.index">
                                             <button type="submit" class="btn-secondary w-full justify-center" data-map-classic-action>
                                                 ✦ このContextについて相談
@@ -265,8 +302,13 @@
         </div>
 
         <p class="canovia-map-note">
-            Focus中もMap自体はContextの理解に専念します。Classic Surfaceから実行画面へ移動したあとは、
-            Mapへ戻った時だけ最新状態を確認し、Primary ActionやEvidenceなどに意味のある差がある場合だけ静かに再配置します。
+            @if ($isIntentHub)
+                L0はCanovia全体へ辿るための固定Navigation Layerです。おすすめはNodeの存在を決めず、
+                今後AttentionやPersonalized Satelliteとして強調へ反映します。
+            @else
+                Focus中もMap自体はContextの理解に専念します。Classic Surfaceから実行画面へ移動したあとは、
+                Mapへ戻った時だけ最新状態を確認し、Primary ActionやEvidenceなどに意味のある差がある場合だけ静かに再配置します。
+            @endif
         </p>
     </section>
 @endsection
