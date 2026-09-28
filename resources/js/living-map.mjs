@@ -28,11 +28,19 @@ export function oneHopNodeIds(edges, selectedId) {
     return ids;
 }
 
-function slots(group, count) {
+function slots(group, count, { mobile = false } = {}) {
     const safeCount = Math.max(1, count);
     const centered = (index, step) => (index - (safeCount - 1) / 2) * step;
 
     return Array.from({ length: safeCount }, (_, index) => {
+        if (mobile) {
+            if (group === 'future') return { x: 50 + centered(index, 23), y: 14 };
+            if (group === 'past') return { x: 50 + centered(index, 22), y: 62 };
+            if (group === 'input') return { x: 18, y: 34 + centered(index, 15) };
+            if (group === 'action') return { x: 82, y: 34 + centered(index, 15) };
+            return { x: 50 + centered(index, 21), y: 60 };
+        }
+
         if (group === 'future') return { x: 50 + centered(index, 25), y: 23 };
         if (group === 'past') return { x: 50 + centered(index, 24), y: 78 };
         if (group === 'input') return { x: 18, y: 50 + centered(index, 21) };
@@ -41,8 +49,17 @@ function slots(group, count) {
     });
 }
 
-function nowSlot(selectedRole) {
+function nowSlot(selectedRole, { mobile = false } = {}) {
     const selectedGroup = roleGroup(selectedRole);
+
+    if (mobile) {
+        if (selectedGroup === 'action') return { x: 20, y: 34 };
+        if (selectedGroup === 'past') return { x: 50, y: 15 };
+        if (selectedGroup === 'input') return { x: 80, y: 34 };
+        if (selectedGroup === 'future') return { x: 50, y: 59 };
+        return { x: 50, y: 59 };
+    }
+
     if (selectedGroup === 'action') return { x: 20, y: 50 };
     if (selectedGroup === 'past') return { x: 50, y: 22 };
     if (selectedGroup === 'input') return { x: 80, y: 50 };
@@ -50,7 +67,7 @@ function nowSlot(selectedRole) {
     return { x: 50, y: 72 };
 }
 
-export function buildFocusLayout(nodes, edges, selectedId) {
+export function buildFocusLayout(nodes, edges, selectedId, { mobile = false } = {}) {
     const selected = nodes.find((node) => node.id === selectedId);
     if (!selected) return null;
 
@@ -65,11 +82,11 @@ export function buildFocusLayout(nodes, edges, selectedId) {
         groups.get(group).push(node);
     }
 
-    const positions = new Map([[selectedId, { x: 50, y: 50 }]]);
+    const positions = new Map([[selectedId, mobile ? { x: 50, y: 34 } : { x: 50, y: 50 }]]);
 
     for (const [group, groupNodes] of groups.entries()) {
         if (group === 'now') {
-            const base = nowSlot(selected.positionRole);
+            const base = nowSlot(selected.positionRole, { mobile });
             groupNodes.forEach((node, index) => {
                 positions.set(node.id, {
                     x: Math.max(14, Math.min(86, base.x + (index - (groupNodes.length - 1) / 2) * 18)),
@@ -79,7 +96,7 @@ export function buildFocusLayout(nodes, edges, selectedId) {
             continue;
         }
 
-        const available = slots(group, groupNodes.length);
+        const available = slots(group, groupNodes.length, { mobile });
         groupNodes.forEach((node, index) => positions.set(node.id, available[index]));
     }
 
@@ -163,6 +180,8 @@ export function mountLivingGoalMap({
     const surfaceContent = page.querySelector('[data-map-context-content]');
     const resetButton = page.querySelector('[data-map-focus-reset]');
     const closeButton = page.querySelector('[data-map-context-close]');
+    const expandButton = page.querySelector('[data-map-context-expand]');
+    const expandLabel = page.querySelector('[data-map-context-expand-label]');
     const updateStatus = page.querySelector('[data-map-update-status]');
     const mapShell = page.querySelector('[data-canovia-map]');
     const nodeElements = [...page.querySelectorAll('[data-map-node]')];
@@ -254,6 +273,15 @@ export function mountLivingGoalMap({
         }, 2600);
     };
 
+    const setSurfaceExpanded = (expanded) => {
+        const isExpanded = Boolean(expanded);
+        surface?.classList.toggle('is-expanded', isExpanded);
+        expandButton?.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+        if (expandLabel) {
+            expandLabel.textContent = isExpanded ? '縮める' : '広げる';
+        }
+    };
+
     const renderSurface = (nodeId) => {
         if (!surface || !surfaceContent || !workspace) return;
 
@@ -264,6 +292,7 @@ export function mountLivingGoalMap({
             surfaceContent.append(template.content.cloneNode(true));
         }
 
+        setSurfaceExpanded(false);
         surface.setAttribute('aria-hidden', 'false');
         workspace.classList.add('is-context-open');
         resetButton?.classList.remove('hidden');
@@ -280,6 +309,7 @@ export function mountLivingGoalMap({
             const element = nodeElementById.get(node.id);
             element?.classList.remove('is-focus-center', 'is-focus-neighbor', 'is-focus-hidden');
             element?.removeAttribute('aria-selected');
+            element?.removeAttribute('aria-expanded');
             element?.style.removeProperty('--map-focus-x');
             element?.style.removeProperty('--map-focus-y');
         }
@@ -287,6 +317,7 @@ export function mountLivingGoalMap({
         syncEdges(positions);
 
         if (surface && workspace) {
+            setSurfaceExpanded(false);
             surface.setAttribute('aria-hidden', 'true');
             workspace.classList.remove('is-context-open');
         }
@@ -304,7 +335,8 @@ export function mountLivingGoalMap({
     };
 
     const openFocus = (nodeId, { historyMode = 'push' } = {}) => {
-        const layout = buildFocusLayout(nodes, edges, nodeId);
+        const mobile = Boolean(windowRef.matchMedia?.('(max-width: 767px)')?.matches);
+        const layout = buildFocusLayout(nodes, edges, nodeId, { mobile });
         if (!layout) return false;
 
         activeFocusId = nodeId;
@@ -323,6 +355,7 @@ export function mountLivingGoalMap({
             element.classList.toggle('is-focus-center', selected);
             element.classList.toggle('is-focus-neighbor', visible && !selected);
             element.setAttribute('aria-selected', selected ? 'true' : 'false');
+            element.setAttribute('aria-expanded', selected ? 'true' : 'false');
             element.style.setProperty('--map-focus-x', position.x + '%');
             element.style.setProperty('--map-focus-y', position.y + '%');
         }
@@ -367,6 +400,7 @@ export function mountLivingGoalMap({
         page.removeEventListener('submit', onPageSubmit);
         resetButton?.removeEventListener('click', closeFocus);
         closeButton?.removeEventListener('click', closeFocus);
+        expandButton?.removeEventListener('click', onExpandToggle);
         documentRef.removeEventListener('keydown', onKeyDown);
         windowRef.removeEventListener('popstate', onPopState);
         windowRef.removeEventListener('pageshow', onPageShow);
@@ -496,6 +530,11 @@ export function mountLivingGoalMap({
         }, true);
     }
 
+    function onExpandToggle() {
+        const expanded = surface?.classList.contains('is-expanded') ?? false;
+        setSurfaceExpanded(!expanded);
+    }
+
     function onKeyDown(event) {
         if (event.key === 'Escape' && activeFocusId) closeFocus();
     }
@@ -542,6 +581,7 @@ export function mountLivingGoalMap({
     page.addEventListener('submit', onPageSubmit);
     resetButton?.addEventListener('click', closeFocus);
     closeButton?.addEventListener('click', closeFocus);
+    expandButton?.addEventListener('click', onExpandToggle);
     documentRef.addEventListener('keydown', onKeyDown);
     windowRef.addEventListener('popstate', onPopState);
     windowRef.addEventListener('pageshow', onPageShow);

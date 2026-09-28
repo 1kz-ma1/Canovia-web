@@ -83,3 +83,15 @@ test('browser forward is not counted as Map back navigation', () => {
     assert.equal(mapHistoryDirection(1, 2), 'forward');
     assert.equal(mapHistoryDirection(1, 1), 'same');
 });
+
+
+test('mobile focus keeps selected node above the sheet while preserving semantic directions', () => {
+    const layout = buildFocusLayout(nodes, edges, 'task:1', { mobile: true });
+
+    assert.deepEqual(layout.positions.get('task:1'), { x: 50, y: 34 });
+    assert.ok(layout.positions.get('plan:1').y < 34);
+    assert.ok(layout.positions.get('task:2').y < 34);
+    assert.ok(layout.positions.get('tool:ai').x > 50);
+    assert.ok(layout.positions.get('evidence:1').y > 34);
+    assert.ok(layout.positions.get('evidence:1').y <= 62);
+});
