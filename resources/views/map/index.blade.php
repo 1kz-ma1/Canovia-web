@@ -29,7 +29,7 @@
                     <summary>Mapの見方</summary>
                     <p>
                         中央が現在のPrimary Actionです。上下はFuture / Past、左右はInput / Action。
-                        Nodeを選ぶと直接関係するContextだけへFocusし、操作はClassic Surfaceで行います。
+                        Node本体でContextへFocusし、「開く ↗」があるNodeは目的地へ直接移動できます。操作はClassic Surfaceで行います。
                     </p>
                 </details>
             </div>
