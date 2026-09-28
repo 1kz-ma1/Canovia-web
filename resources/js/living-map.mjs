@@ -916,10 +916,15 @@ export function mountLivingGoalMap({
         }
 
         if (historyMode === 'push' && windowRef.location.hash !== dockHash(normalizedDockId)) {
-            windowRef.history.pushState({
-                ...(windowRef.history.state || {}),
-                canoviaMapDock: normalizedDockId,
-            }, '', dockHash(normalizedDockId));
+            const nextState = { ...(windowRef.history.state || {}) };
+            delete nextState.canoviaMapFocus;
+            nextState.canoviaMapDock = normalizedDockId;
+
+            windowRef.history.pushState(
+                nextState,
+                '',
+                dockHash(normalizedDockId),
+            );
         }
 
         return true;
