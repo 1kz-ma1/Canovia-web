@@ -189,10 +189,12 @@ export function clampMapViewTransform(
         ? ((scale - 1) * height) / 2 + height * overscrollRatio
         : height * minPanRatio;
 
+    const round = (value) => Math.round(Number(value) * 10000) / 10000;
+
     return {
-        x: Math.max(-extraX, Math.min(extraX, Number(transform?.x || 0))),
-        y: Math.max(-extraY, Math.min(extraY, Number(transform?.y || 0))),
-        scale,
+        x: round(Math.max(-extraX, Math.min(extraX, Number(transform?.x || 0)))),
+        y: round(Math.max(-extraY, Math.min(extraY, Number(transform?.y || 0)))),
+        scale: round(scale),
     };
 }
 
@@ -1312,6 +1314,7 @@ export function mountLivingGoalMap({
 
     function onPageShow(event) {
         applyBaseLayout();
+        applyMapView(mapView);
         const pending = readPending(windowRef);
         if (!pending) return;
 
