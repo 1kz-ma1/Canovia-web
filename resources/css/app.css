@@ -8381,3 +8381,306 @@ html[data-theme-resolved="light"] .canovia-map-node-direct-open {
         }
     }
 }
+
+
+/* --------------------------------------------------------------------------
+ * V45.5 Mobile Map Usability Polish
+ * Video-driven cleanup: collision-safe L3, lighter chrome and denser details
+ * moved out of the spatial canvas.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .canovia-map-page.is-map-semantic-loading .canovia-map-scene {
+        opacity: 0.72;
+        transition: opacity 120ms ease;
+    }
+
+    .canovia-map-page.is-map-semantic-loading .canovia-map-fullscreen-topbar::after {
+        content: "";
+        position: absolute;
+        right: 0;
+        bottom: -1px;
+        left: 0;
+        height: 2px;
+        background:
+            linear-gradient(
+                90deg,
+                transparent 0%,
+                rgb(103 232 249 / 0.18) 18%,
+                rgb(103 232 249 / 0.9) 48%,
+                rgb(167 139 250 / 0.78) 68%,
+                transparent 100%
+            );
+        transform-origin: left center;
+        animation: canovia-map-spatial-loading 820ms ease-in-out infinite alternate;
+        pointer-events: none;
+    }
+
+    .canovia-space-station-attachments {
+        border: 1px solid rgb(71 85 105 / 0.52);
+        border-radius: 0.9rem;
+        background: rgb(15 23 42 / 0.42);
+    }
+
+    .canovia-space-station-attachments > summary {
+        cursor: pointer;
+        list-style: none;
+        padding: 0.62rem 0.72rem;
+        color: rgb(148 163 184);
+        font-size: 0.7rem;
+        font-weight: 800;
+    }
+
+    .canovia-space-station-attachments > summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .canovia-space-station-attachments > summary::after {
+        content: "＋";
+        float: right;
+        color: rgb(103 232 249 / 0.78);
+    }
+
+    .canovia-space-station-attachments[open] > summary::after {
+        content: "−";
+    }
+
+    .canovia-space-station-attachments-grid {
+        display: grid;
+        gap: 0.7rem;
+        border-top: 1px solid rgb(71 85 105 / 0.4);
+        padding: 0.72rem;
+    }
+
+    @keyframes canovia-map-spatial-loading {
+        from { transform: scaleX(0.28); opacity: 0.45; }
+        to { transform: scaleX(0.88); opacity: 1; }
+    }
+
+    @media (max-width: 767px) {
+        body[data-route-name="map.index"] .canovia-map-fullscreen-topbar {
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 0.18rem 0.42rem;
+            padding:
+                max(0.34rem, env(safe-area-inset-top))
+                max(0.46rem, env(safe-area-inset-right))
+                0.28rem
+                max(0.46rem, env(safe-area-inset-left));
+        }
+
+        body[data-route-name="map.index"] .canovia-map-fullscreen-topbar .canovia-map-kicker {
+            display: none;
+        }
+
+        body[data-route-name="map.index"] .canovia-map-fullscreen-topbar .canovia-map-title {
+            max-width: 55vw;
+            margin: 0;
+            font-size: 0.84rem;
+            line-height: 1.15;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        body[data-route-name="map.index"] .canovia-map-fullscreen-surface-switch .canovia-home-surface-switcher {
+            gap: 0.08rem;
+            padding: 0.12rem;
+            border-radius: 0.72rem;
+        }
+
+        body[data-route-name="map.index"] .canovia-map-fullscreen-surface-switch .canovia-home-surface-options {
+            gap: 0.08rem;
+        }
+
+        body[data-route-name="map.index"] .canovia-map-fullscreen-surface-switch .canovia-home-surface-option {
+            min-width: 0;
+            min-height: 1.48rem;
+            padding: 0.2rem 0.38rem;
+            border-radius: 0.58rem;
+            font-size: 0.5rem;
+        }
+
+        body[data-route-name="map.index"] .canovia-map-depth-track {
+            display: none;
+        }
+
+        body[data-route-name="map.index"] .canovia-map-breadcrumbs {
+            gap: 0.18rem;
+            font-size: 0.5rem;
+        }
+
+        body[data-route-name="map.index"] .canovia-map-hierarchy-bar {
+            gap: 0.2rem;
+        }
+
+        .canovia-map-axis-label {
+            display: none;
+        }
+
+        .canovia-map-edge {
+            opacity: 0.62;
+            stroke-width: calc(0.8px + var(--edge-strength) * 1.15px);
+        }
+
+        .canovia-map-node {
+            background:
+                radial-gradient(circle at top right, rgb(56 189 248 / 0.07), transparent 6rem),
+                rgb(10 18 36 / 0.985);
+        }
+
+        .canovia-map-node-subtitle,
+        .canovia-map-node-action {
+            display: none;
+        }
+
+        .canovia-map-node.has-direct-navigation {
+            padding-bottom: 0.56rem;
+        }
+
+        .canovia-map-node-direct-open:not(.is-external-tool) {
+            display: none;
+        }
+
+        .canovia-map-node.has-direct-navigation:has(.canovia-map-node-direct-open.is-external-tool) {
+            padding-bottom: 1.65rem;
+        }
+
+        .canovia-map-node.is-personalized-satellite .canovia-map-node-label,
+        .canovia-map-node.is-hierarchy-node .canovia-map-node-label,
+        .canovia-map-shell.is-execution-map .canovia-map-node-label {
+            -webkit-line-clamp: 2;
+        }
+
+        .canovia-map-shell.is-execution-map .canovia-map-node {
+            width: clamp(6.9rem, calc(6.05rem + var(--node-scale) * 2.2rem), 8.55rem);
+            min-height: 3.65rem;
+            padding: 0.48rem 0.58rem;
+        }
+
+        .canovia-map-shell.is-execution-map .canovia-map-node.is-primary {
+            width: clamp(7.9rem, calc(7rem + var(--node-scale) * 1.9rem), 8.9rem);
+            min-height: 4.1rem;
+        }
+
+        .canovia-map-shell.is-execution-map .canovia-map-node.visual-rocket {
+            min-height: 4.2rem;
+        }
+
+        .canovia-map-gesture-controls {
+            top: 0.46rem;
+            right: max(0.46rem, env(safe-area-inset-right));
+            display: flex;
+            border-radius: 0.78rem;
+        }
+
+        .canovia-map-gesture-controls button {
+            width: 2rem;
+            height: 2rem;
+            border-right: 1px solid rgb(71 85 105 / 0.42);
+            border-bottom: 0;
+            font-size: 0.82rem;
+        }
+
+        .canovia-map-gesture-controls button:last-child {
+            border-right: 0;
+        }
+
+        body[data-route-name="map.index"] .canovia-map-context-surface {
+            right: 0.48rem;
+            bottom: max(0.48rem, env(safe-area-inset-bottom));
+            left: 0.48rem;
+            max-height: min(38dvh, 21rem);
+        }
+
+        body[data-route-name="map.index"] .canovia-map-context-card {
+            max-height: min(38dvh, 21rem);
+            border-radius: 1.08rem;
+        }
+
+        body[data-route-name="map.index"] .canovia-map-context-surface.is-expanded,
+        body[data-route-name="map.index"] .canovia-map-context-surface.is-expanded .canovia-map-context-card {
+            max-height: min(76dvh, 40rem);
+        }
+
+        .canovia-map-context-card::before {
+            display: none;
+        }
+
+        .canovia-map-context-header {
+            padding: 0.5rem 0.62rem;
+        }
+
+        .canovia-map-context-caption {
+            display: none;
+        }
+
+        .canovia-map-context-close,
+        .canovia-map-context-expand {
+            min-width: 2.35rem;
+            min-height: 2.35rem;
+        }
+
+        .canovia-map-context-close {
+            width: 2.35rem;
+            height: 2.35rem;
+        }
+
+        .canovia-map-classic-content {
+            padding: 0.62rem;
+        }
+
+        .canovia-space-station-panel {
+            gap: 0.6rem;
+        }
+
+        .canovia-space-station-section {
+            padding: 0.68rem;
+        }
+
+        .canovia-space-station-section-head {
+            gap: 0.45rem;
+        }
+
+        .canovia-space-station-form {
+            gap: 0.58rem;
+        }
+
+        .canovia-space-station-form textarea {
+            min-height: 5.4rem;
+        }
+
+        .canovia-map-spatial-dock {
+            right: max(0.52rem, env(safe-area-inset-right));
+            bottom: max(0.52rem, env(safe-area-inset-bottom));
+            width: 2.8rem;
+            min-width: 2.8rem;
+            height: 2.8rem;
+            min-height: 2.8rem;
+            gap: 0;
+            justify-content: center;
+            border-radius: 50%;
+            padding: 0;
+        }
+
+        .canovia-map-spatial-dock-copy {
+            display: none;
+        }
+
+        .canovia-map-spatial-dock-orbit {
+            inset: 0.28rem;
+        }
+
+        .canovia-map-spatial-dock-mark {
+            font-size: 0.86rem;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .canovia-map-page.is-map-semantic-loading .canovia-map-fullscreen-topbar::after {
+            animation: none;
+            transform: scaleX(0.72);
+        }
+
+        .canovia-map-page.is-map-semantic-loading .canovia-map-scene {
+            transition: none;
+        }
+    }
+}
