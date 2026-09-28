@@ -121,7 +121,7 @@ class InboxController extends Controller
             'content' => ['nullable', 'string', 'max:50000'],
             'source_url' => ['nullable', 'url', 'max:2048'],
             'source_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
-            'return_to' => ['nullable', 'in:inbox,space_station'],
+            ...$this->mapReturnRules(),
         ]);
 
         $file = $request->file('source_file');
@@ -198,9 +198,7 @@ class InboxController extends Controller
         FeatureAccessService $featureAccess,
         InboxIntelligenceService $intelligence,
     ) {
-        $request->validate([
-            'return_to' => ['nullable', 'in:inbox,space_station'],
-        ]);
+        $request->validate($this->mapReturnRules());
 
         $this->authorizeItem($request, $inboxItem, $identity);
         $featureAccess->authorizeUse($request->user(), FeatureKey::AutomaticAiExecution);
@@ -240,7 +238,7 @@ class InboxController extends Controller
             'task_id' => ['nullable', 'integer'],
             'future_memo_kind' => ['nullable', 'in:'.implode(',', array_keys(FutureMemo::KINDS))],
             'future_memo_category' => ['nullable', 'in:'.implode(',', array_keys(FutureMemo::CATEGORIES))],
-            'return_to' => ['nullable', 'in:inbox,space_station'],
+            ...$this->mapReturnRules(),
         ]);
 
         $editablePlans = $ownership->ownedPlans($request, ['tasks'])
@@ -367,11 +365,53 @@ class InboxController extends Controller
         );
     }
 
+    /**
+     * @return array<string,array<int,string>>
+     */
+    private function mapReturnRules(): array
+    {
+        return [
+            'return_to' => ['nullable', 'in:inbox,space_station,map_station'],
+            'map_level' => ['nullable', 'in:l1,l2,l3'],
+            'map_intent' => ['nullable', 'in:plan,execution,reflection,collaboration'],
+            'map_domain' => ['nullable', 'string', 'regex:/^[a-f0-9]{12}$/'],
+            'map_plan' => ['nullable', 'integer', 'min:1'],
+        ];
+    }
+
     private function redirectAfterAction(Request $request)
     {
         if ($request->input('return_to') === 'space_station') {
             return redirect()->to(
                 route('map.index').'#focus='.rawurlencode('intent:space-station')
+            );
+        }
+
+        if ($request->input('return_to') === 'map_station') {
+            $level = in_array($request->input('map_level'), ['l1', 'l2', 'l3'], true)
+                ? (string) $request->input('map_level')
+                : 'l1';
+            $intent = in_array($request->input('map_intent'), ['plan', 'execution', 'reflection', 'collaboration'], true)
+                ? (string) $request->input('map_intent')
+                : 'plan';
+
+            $params = [
+                'level' => $level,
+                'intent' => $intent,
+            ];
+
+            $domain = trim((string) $request->input('map_domain', ''));
+            if (preg_match('/^[a-f0-9]{12}$/', $domain)) {
+                $params['domain'] = $domain;
+            }
+
+            $planId = max(0, (int) $request->input('map_plan', 0));
+            if ($planId > 0) {
+                $params['plan'] = $planId;
+            }
+
+            return redirect()->to(
+                route('map.index', $params).'#dock=space-station'
             );
         }
 
