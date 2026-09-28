@@ -1869,6 +1869,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    document.querySelectorAll('[data-home-surface-preference]').forEach((button) => {
+        button.addEventListener('click', () => {
+            persistHomeSurface(button.dataset.homeSurfacePreference);
+            applyUiPreferences();
+        });
+    });
+
     document.querySelectorAll('[data-roadmap-view-root]').forEach((root) => {
         setRoadmapView(root, resolveRoadmapView(root), false);
         root.querySelectorAll('[data-roadmap-view-button]').forEach((button) => {
