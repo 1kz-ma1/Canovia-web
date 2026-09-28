@@ -13,15 +13,18 @@
         $isPlanLevel = $mapLevel === 'l2';
         $isExecutionLevel = $mapLevel === 'l3';
         $isHierarchyLevel = $isDomainLevel || $isPlanLevel;
+        $isCollaborationMode = (bool) ($graph['collaboration_mode'] ?? false);
         $primaryNodeId = $graph['primary_node_id'] ?? null;
         $centerNodeId = $graph['center_node_id'] ?? $primaryNodeId;
         $primaryLaunch = $graph['primary_launch'] ?? null;
         $hierarchy = is_array($graph['hierarchy'] ?? null) ? $graph['hierarchy'] : [];
         $mapReturnUrl = request()->getRequestUri();
-        $heroKicker = match ($mapLevel) {
-            'l0' => 'L0 · CANOVIA NAVIGATION',
-            'l1' => 'L1 · DOMAIN MAP',
-            'l2' => 'L2 · PLAN MAP',
+        $heroKicker = match (true) {
+            $mapLevel === 'l0' => 'L0 · CANOVIA NAVIGATION',
+            $mapLevel === 'l1' && $isCollaborationMode => 'L1 · COLLABORATION CONTEXT',
+            $mapLevel === 'l2' && $isCollaborationMode => 'L2 · COLLABORATION ITEMS',
+            $mapLevel === 'l1' => 'L1 · DOMAIN MAP',
+            $mapLevel === 'l2' => 'L2 · PLAN MAP',
             default => 'L3 · EXECUTION MAP',
         };
     @endphp
@@ -46,6 +49,14 @@
                         <p class="canovia-map-description">
                             Space Stationを中心に、計画・実行・振り返り・共同へ辿るCanovia全体のNavigation Layerです。
                         </p>
+                    @elseif ($isDomainLevel && $isCollaborationMode)
+                        <p class="canovia-map-description">
+                            Shared Planや外部Toolをサービス別ではなく、自分のAction・レビュー待ち・相手待ち・外部確認という目的から辿ります。
+                        </p>
+                    @elseif ($isPlanLevel && $isCollaborationMode)
+                        <p class="canovia-map-description">
+                            {{ $hierarchy['collaboration_context_label'] ?? '共同Context' }}に該当するTask / Artifactを確認し、必要なExecutionまたは外部Toolへ進みます。
+                        </p>
                     @elseif ($isDomainLevel)
                         <p class="canovia-map-description">
                             {{ $hierarchy['intent_label'] ?? '計画' }}のContextを保ったまま、Planが属する領域へSemantic Zoomします。
@@ -62,6 +73,11 @@
                     @if ($isIntentHub)
                         <p>
                             中央のSpace Stationが入力・相談のHubです。周囲のIntentからDomain → Plan → Executionへ潜れます。
+                        </p>
+                    @elseif ($isHierarchyLevel && $isCollaborationMode)
+                        <p>
+                            中央は共同作業の目的Context、周囲はその目的に該当するShared Plan / Artifactです。
+                            GitHub等の外部状態は推測せず、Canoviaで明示された状態と確認先だけを表示します。
                         </p>
                     @elseif ($isHierarchyLevel)
                         <p>
@@ -146,7 +162,7 @@
 
         <div class="canovia-map-workspace" data-map-workspace>
             <div
-                class="canovia-map-shell {{ $isIntentHub ? 'is-intent-hub' : ($isHierarchyLevel ? 'is-hierarchy-map' : 'is-execution-map') }}"
+                class="canovia-map-shell {{ $isIntentHub ? 'is-intent-hub' : ($isHierarchyLevel ? 'is-hierarchy-map' : 'is-execution-map') }} {{ $isCollaborationMode ? 'is-collaboration-map' : '' }}"
                 data-canovia-map
                 data-map-level="{{ $mapLevel }}"
             >
@@ -201,6 +217,7 @@
                                 'space_station' => 'is-space-station',
                                 'intent' => 'is-intent-node',
                                 'domain', 'intent_context', 'plan' => 'is-hierarchy-node',
+                                'collaboration_hub', 'collaboration_context', 'collaboration_item' => 'is-hierarchy-node is-collaboration-node',
                                 'satellite_plan', 'satellite_tool' => 'is-personalized-satellite',
                                 default => '',
                             };
@@ -209,6 +226,7 @@
                             $directNavigationKind = (string) data_get($directNavigation, 'kind', 'classic');
                             $isZoomNavigation = str_starts_with($directNavigationKind, 'zoom-');
                             $isSatelliteNavigation = $directNavigationKind === 'satellite';
+                            $isExternalNavigation = $directNavigationKind === 'external';
                             $zoomDirection = $directNavigationKind === 'zoom-out' ? 'out' : 'in';
                         @endphp
 
@@ -252,10 +270,10 @@
                             @if (filled(data_get($directNavigation, 'url')))
                                 <a
                                     href="{{ data_get($directNavigation, 'url') }}"
-                                    class="canovia-map-node-direct-open {{ $isZoomNavigation ? 'is-semantic-zoom' : '' }}"
+                                    class="canovia-map-node-direct-open {{ $isZoomNavigation ? 'is-semantic-zoom' : '' }} {{ $isExternalNavigation ? 'is-external-tool' : '' }}"
                                     data-map-direct-open
                                     data-map-direct-navigation
-                                    data-map-action-role="{{ $isZoomNavigation ? 'zoom' : ($isSatelliteNavigation ? 'satellite' : 'direct') }}"
+                                    data-map-action-role="{{ $isZoomNavigation ? 'zoom' : ($isSatelliteNavigation ? 'satellite' : ($isExternalNavigation ? 'external_tool' : 'direct')) }}"
                                     data-map-node-id="{{ $node['id'] }}"
                                     data-map-node-type="{{ $node['type'] }}"
                                     data-map-position-role="{{ $node['position_role'] }}"
@@ -264,9 +282,13 @@
                                         data-map-semantic-zoom
                                         data-map-zoom-direction="{{ $zoomDirection }}"
                                     @endif
+                                    @if ($isExternalNavigation)
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    @endif
                                     title="{{ data_get($directNavigation, 'label', '開く') }}"
                                     aria-label="{{ data_get($directNavigation, 'label', '開く') }}"
-                                >{{ $isZoomNavigation ? ($zoomDirection === 'out' ? '戻る ↖' : '潜る ↘') : ($isSatelliteNavigation ? '移動 ↗' : '開く ↗') }}</a>
+                                >{{ $isZoomNavigation ? ($zoomDirection === 'out' ? '戻る ↖' : '潜る ↘') : ($isSatelliteNavigation ? '移動 ↗' : ($isExternalNavigation ? '外部 ↗' : '開く ↗')) }}</a>
                             @endif
                         </div>
                     @endforeach
@@ -353,13 +375,18 @@
                                         @php
                                             $actionNavigationKind = (string) ($action['navigation_kind'] ?? '');
                                             $actionIsZoom = str_starts_with($actionNavigationKind, 'zoom-');
+                                            $actionIsExternal = $actionNavigationKind === 'external' || (bool) ($action['external'] ?? false);
                                             $actionZoomDirection = $actionNavigationKind === 'zoom-out' ? 'out' : 'in';
                                         @endphp
                                         <a
                                             href="{{ $action['url'] }}"
                                             class="{{ ($action['primary'] ?? false) ? 'btn-primary' : 'btn-secondary' }} w-full justify-center"
                                             data-map-classic-action
-                                            data-map-action-role="{{ $actionIsZoom ? 'zoom' : (($action['primary'] ?? false) ? 'primary' : 'secondary') }}"
+                                            data-map-action-role="{{ $actionIsZoom ? 'zoom' : ($actionIsExternal ? 'external_tool' : (($action['primary'] ?? false) ? 'primary' : 'secondary')) }}"
+                                            @if ($actionIsExternal)
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            @endif
                                             @if ($actionIsZoom)
                                                 data-map-semantic-zoom
                                                 data-map-zoom-direction="{{ $actionZoomDirection }}"
