@@ -98,6 +98,7 @@ final class IntentMapAttentionStateService
             'position' => $attention['position'],
             'available_action' => $node['available_action'] ?? null,
             'classic_surface' => $node['classic_surface'] ?? [],
+            'navigation_kind' => $node['navigation_kind'] ?? null,
         ];
     }
 
