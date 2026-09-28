@@ -1,5 +1,6 @@
 const DEFAULT_CORE_PATHS = new Set([
     '/',
+    '/map',
     '/inbox',
     '/roadmap',
     '/timeline',
@@ -281,7 +282,15 @@ export function mountCanoviaInstantNavigation({
         const page = documentRef.querySelector('[data-canovia-page]');
         if (!page || !payload) return false;
 
+        documentRef.dispatchEvent(new windowRef.CustomEvent('canovia:before-page-replace', {
+            detail: {
+                from: windowRef.location.pathname + windowRef.location.search,
+                to: payload.url,
+            },
+        }));
+
         page.innerHTML = payload.pageHtml;
+        page.dataset.canoviaInstantRendered = '1';
         documentRef.title = payload.title || 'Canovia';
         if (documentRef.body) documentRef.body.dataset.routeName = payload.routeName || '';
 
@@ -413,6 +422,13 @@ export function mountCanoviaInstantNavigation({
         const target = normalizedUrl(link.href, windowRef);
         const current = normalizedUrl(windowRef.location.href, windowRef);
         if (target.pathname === current.pathname && target.search === current.search && link.hash) return;
+
+        documentRef.dispatchEvent(new windowRef.CustomEvent('canovia:before-instant-navigation', {
+            detail: {
+                link,
+                url: target.pathname + target.search,
+            },
+        }));
 
         event.preventDefault();
         event.stopImmediatePropagation();

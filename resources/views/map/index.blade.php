@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(($instantFragment ?? false) || in_array(request()->header('X-Canovia-Instant-Navigation'), ['prefetch', 'navigate'], true) ? 'layouts.instant' : 'layouts.app')
 
 @section('title', 'Canovia Map | Canovia')
 
@@ -9,6 +9,8 @@
         $nodeIndex = $nodes->keyBy('id');
         $primaryNodeId = $graph['primary_node_id'] ?? null;
     @endphp
+
+    @include('layouts.partials.home-surface-switcher', ['activeSurface' => 'map'])
 
     <section
         class="canovia-map-page"
@@ -37,7 +39,6 @@
                     </button>
                 @endif
                 <button type="button" class="btn-secondary hidden" data-map-focus-reset>全体を見る</button>
-                <a href="{{ route('home') }}" class="btn-secondary" data-map-home-fallback>Classic Home</a>
                 <a href="{{ route('roadmap.index') }}" class="btn-secondary canovia-map-roadmap-link">Roadmap</a>
             </div>
         </div>
