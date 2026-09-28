@@ -45,7 +45,7 @@ class CanoviaMapContextualCompanionV423Test extends TestCase
         $this->grantPremium($user);
 
         $this->actingAs($user)
-            ->get(route('map.index'))
+            ->get(route('map.index', ['level' => 'l3']))
             ->assertOk()
             ->assertSee('name="entry_type" value="map"', false)
             ->assertSee('name="map_node_id" value="task:'.$task->id.'"', false)
@@ -62,7 +62,7 @@ class CanoviaMapContextualCompanionV423Test extends TestCase
             ->post(route('companion.entry'), [
                 'entry_type' => 'map',
                 'map_node_id' => 'task:'.$task->id,
-                'source_path' => '/map#focus=task%3A'.$task->id,
+                'source_path' => '/map?level=l3#focus=task%3A'.$task->id,
                 'source_route' => 'map.index',
             ]);
 
@@ -124,7 +124,7 @@ class CanoviaMapContextualCompanionV423Test extends TestCase
         $thread = CompanionThread::firstOrFail();
 
         $mapHtml = $this->actingAs($user)
-            ->get(route('map.index'))
+            ->get(route('map.index', ['level' => 'l3']))
             ->assertOk()
             ->getContent();
 
@@ -136,7 +136,7 @@ class CanoviaMapContextualCompanionV423Test extends TestCase
             ->post(route('companion.entry'), [
                 'entry_type' => 'map',
                 'map_node_id' => $toolNodeId,
-                'source_path' => '/map#focus='.rawurlencode($toolNodeId),
+                'source_path' => '/map?level=l3#focus='.rawurlencode($toolNodeId),
                 'source_route' => 'map.index',
             ])
             ->assertRedirect(route('companion.show', $thread));
@@ -160,7 +160,7 @@ class CanoviaMapContextualCompanionV423Test extends TestCase
             ->post(route('companion.entry'), [
                 'entry_type' => 'map',
                 'map_node_id' => 'task:999999',
-                'source_path' => '/map#focus=task%3A999999',
+                'source_path' => '/map?level=l3#focus=task%3A999999',
                 'source_route' => 'map.index',
             ])
             ->assertRedirect(route('map.index'))

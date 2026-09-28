@@ -10,14 +10,15 @@ use LogicException;
 final class MapProjectionService
 {
     public function __construct(
+        private readonly IntentMapProjectionService $intent,
         private readonly ExecutionMapProjectionService $execution,
     ) {}
 
     /**
-     * Backward-compatible V43 entry point.
+     * Backward-compatible V43/V44.0 entry point.
      *
-     * Existing callers continue to receive the L3 Execution projection until a
-     * higher Map level is explicitly requested by a future version.
+     * Internal callers that do not choose a level still receive the L3 Execution
+     * projection. The public /map route chooses L0 explicitly in V44.1.
      *
      * @return array<string,mixed>
      */
@@ -27,15 +28,14 @@ final class MapProjectionService
     }
 
     /**
-     * Hierarchical projection boundary introduced by V44.0.
-     *
-     * L0-L2 are intentionally reserved here without shipping incomplete UI.
+     * Hierarchical projection boundary.
      *
      * @return array<string,mixed>
      */
     public function project(Request $request, MapLevel $level): array
     {
         return match ($level) {
+            MapLevel::Intent => $this->intent->build(),
             MapLevel::Execution => $this->execution->build($request),
             default => throw new LogicException(
                 'Map level '.$level->value.' is not projected until its version is implemented.'
@@ -44,10 +44,10 @@ final class MapProjectionService
     }
 
     /**
-     * Build the server-authoritative Companion context for one currently projected Map node.
+     * Build the server-authoritative Companion context for one currently projected L3 node.
      *
-     * The client submits only map_node_id. Labels, neighbors and target IDs are rebuilt
-     * from the latest projection so stale/tampered browser payloads never become AI context.
+     * V44.1 keeps contextual Companion on Execution Map only. Space Station gets
+     * its dedicated Companion/Capture routing in V44.2.
      *
      * @return array<string,mixed>|null
      */

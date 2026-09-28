@@ -18,8 +18,10 @@ final class ExecutionMapProjectionService
      * Navigation Graph and Attention State boundaries.
      *
      * @return array{
+     *     level:string,
      *     nodes: Collection<int,array<string,mixed>>,
      *     edges: Collection<int,array<string,mixed>>,
+     *     center_node_id:?string,
      *     primary_node_id:?string,
      *     primary_launch:?array<string,mixed>,
      *     has_primary_action:bool,
@@ -43,8 +45,10 @@ final class ExecutionMapProjectionService
         $edges = $attention['edges']->values();
 
         return [
+            'level' => 'l3',
             'nodes' => $nodes,
             'edges' => $edges,
+            'center_node_id' => $primaryNodeId,
             'primary_node_id' => $primaryNodeId,
             'primary_launch' => $attention['primary_launch'],
             'has_primary_action' => $attention['has_primary_action'],

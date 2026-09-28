@@ -29,7 +29,7 @@ class CanoviaMapPrimaryLaunchV434Test extends TestCase
         [$user, $task] = $this->scenario();
 
         $this->actingAs($user)
-            ->get(route('map.index'))
+            ->get(route('map.index', ['level' => 'l3']))
             ->assertOk()
             ->assertSee('data-map-direct-primary-launch', false)
             ->assertSee('data-map-classic-action', false)
@@ -49,7 +49,7 @@ class CanoviaMapPrimaryLaunchV434Test extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('map.index'))
+            ->get(route('map.index', ['level' => 'l3']))
             ->assertOk()
             ->assertDontSee('data-map-direct-primary-launch', false)
             ->assertSee('まだMapに置くActionがありません');

@@ -152,3 +152,28 @@ test('non-primary direct navigation carries the direct telemetry role', () => {
         is_primary: false,
     });
 });
+
+
+test('L0 Space Station focus preserves the intent spatial grammar', () => {
+    const intentNodes = [
+        { id: 'intent:space-station', positionRole: 'space-station' },
+        { id: 'intent:plan', positionRole: 'intent-plan' },
+        { id: 'intent:execution', positionRole: 'intent-execution' },
+        { id: 'intent:reflection', positionRole: 'intent-reflection' },
+        { id: 'intent:collaboration', positionRole: 'intent-collaboration' },
+    ];
+    const intentEdges = [
+        { source: 'intent:space-station', target: 'intent:plan', relation: 'routes_to' },
+        { source: 'intent:space-station', target: 'intent:execution', relation: 'routes_to' },
+        { source: 'intent:space-station', target: 'intent:reflection', relation: 'routes_to' },
+        { source: 'intent:space-station', target: 'intent:collaboration', relation: 'routes_to' },
+    ];
+
+    const layout = buildFocusLayout(intentNodes, intentEdges, 'intent:space-station');
+
+    assert.deepEqual(layout.positions.get('intent:space-station'), { x: 50, y: 50 });
+    assert.ok(layout.positions.get('intent:plan').y < 50);
+    assert.ok(layout.positions.get('intent:execution').x > 50);
+    assert.ok(layout.positions.get('intent:reflection').y > 50);
+    assert.ok(layout.positions.get('intent:collaboration').x < 50);
+});

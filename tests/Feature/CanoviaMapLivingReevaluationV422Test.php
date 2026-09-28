@@ -30,7 +30,7 @@ class CanoviaMapLivingReevaluationV422Test extends TestCase
     {
         [$user, $plan, $current, $next] = $this->scenario();
 
-        $before = $this->actingAs($user)->get(route('map.index'));
+        $before = $this->actingAs($user)->get(route('map.index', ['level' => 'l3']));
         $before->assertOk();
 
         $beforeKey = $this->projectionKey($before->getContent());
@@ -43,7 +43,7 @@ class CanoviaMapLivingReevaluationV422Test extends TestCase
             'remaining_minutes' => 0,
         ]);
 
-        $after = $this->actingAs($user)->get(route('map.index'));
+        $after = $this->actingAs($user)->get(route('map.index', ['level' => 'l3']));
         $after->assertOk();
 
         $afterKey = $this->projectionKey($after->getContent());
@@ -57,7 +57,7 @@ class CanoviaMapLivingReevaluationV422Test extends TestCase
     {
         [$user, $plan, $current] = $this->scenario();
 
-        $before = $this->actingAs($user)->get(route('map.index'));
+        $before = $this->actingAs($user)->get(route('map.index', ['level' => 'l3']));
         $beforeKey = $this->projectionKey($before->getContent());
 
         TaskEvidence::query()->create([
@@ -72,7 +72,7 @@ class CanoviaMapLivingReevaluationV422Test extends TestCase
             'metadata' => ['actual_minutes' => 20],
         ]);
 
-        $after = $this->actingAs($user)->get(route('map.index'));
+        $after = $this->actingAs($user)->get(route('map.index', ['level' => 'l3']));
         $afterKey = $this->projectionKey($after->getContent());
 
         $this->assertNotSame($beforeKey, $afterKey);

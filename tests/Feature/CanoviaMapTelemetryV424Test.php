@@ -32,7 +32,7 @@ class CanoviaMapTelemetryV424Test extends TestCase
         [$user] = $this->scenario();
 
         $this->actingAs($user)
-            ->get(route('map.index'))
+            ->get(route('map.index', ['level' => 'l3']))
             ->assertOk()
             ->assertSee('data-event-url="'.route('behavior_events.store').'"', false)
             ->assertSee('data-map-home-fallback', false)

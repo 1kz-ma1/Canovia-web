@@ -96,7 +96,7 @@ class CanoviaMapV420Test extends TestCase
             'metadata' => [],
         ]);
 
-        $response = $this->actingAs($user)->get(route('map.index'));
+        $response = $this->actingAs($user)->get(route('map.index', ['level' => 'l3']));
 
         $response
             ->assertOk()
