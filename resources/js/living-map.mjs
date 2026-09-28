@@ -986,14 +986,10 @@ export function mountLivingGoalMap({
         y: (Number(left?.y || 0) + Number(right?.y || 0)) / 2,
     });
 
-    const scenePoint = (clientPoint) => {
-        const rect = mapShell?.getBoundingClientRect?.();
-
-        return {
-            x: Number(clientPoint?.x || 0) - Number(rect?.left || 0),
-            y: Number(clientPoint?.y || 0) - Number(rect?.top || 0),
-        };
-    };
+    const scenePoint = (clientPoint) => ({
+        x: Number(clientPoint?.x || 0) - viewportCache.left,
+        y: Number(clientPoint?.y || 0) - viewportCache.top,
+    });
 
     const beginPanGesture = (point) => {
         gesture = {
@@ -1022,6 +1018,11 @@ export function mountLivingGoalMap({
         if (!isMobileViewport() || !mapScene) return;
         if (event.pointerType === 'mouse' && event.button !== 0) return;
 
+        if (activePointers.size === 0) {
+            refreshMapViewport();
+            mapShell?.classList.add('is-map-gesture-active');
+        }
+
         const point = { x: event.clientX, y: event.clientY };
         activePointers.set(event.pointerId, point);
         mapScene.setPointerCapture?.(event.pointerId);
@@ -1044,7 +1045,7 @@ export function mountLivingGoalMap({
             const points = [...activePointers.values()];
             const currentDistance = Math.max(1, pointerDistance(points[0], points[1]));
             const currentMidpoint = pointerMidpoint(points[0], points[1]);
-            const viewport = mapViewport();
+            const viewport = currentMapViewport();
             const startFocus = scenePoint(gesture.startMidpoint);
             const currentFocus = scenePoint(currentMidpoint);
             const scale = gesture.startTransform.scale
@@ -1110,6 +1111,8 @@ export function mountLivingGoalMap({
         }
 
         gesture = null;
+        mapViewBatcher.flushNow();
+        mapShell?.classList.remove('is-map-gesture-active');
     };
 
     const onSceneDoubleClick = (event) => {
@@ -1117,14 +1120,11 @@ export function mountLivingGoalMap({
         if (event.target.closest?.('[data-map-node], a, button, input, select, textarea')) return;
 
         event.preventDefault();
-        const rect = mapShell?.getBoundingClientRect?.();
-        const focus = {
-            x: event.clientX - Number(rect?.left || 0),
-            y: event.clientY - Number(rect?.top || 0),
-        };
+        refreshMapViewport();
+        const focus = scenePoint({ x: event.clientX, y: event.clientY });
         const targetScale = mapView.scale > 1.18 ? 1 : Math.min(1.55, 2.2);
         applyMapView(
-            zoomMapViewAt(mapView, targetScale, focus, mapViewport()),
+            zoomMapViewAt(mapView, targetScale, focus, currentMapViewport()),
             { animate: true },
         );
     };
@@ -1138,8 +1138,9 @@ export function mountLivingGoalMap({
         viewportTimer = windowRef.setTimeout(() => {
             if (disposed) return;
 
+            refreshMapViewport();
             applyBaseLayout();
-            applyMapView(mapView);
+            applyMapView(mapView, { immediate: true });
 
             if (activeFocusId) {
                 openFocus(activeFocusId, { historyMode: 'none' });
@@ -1153,6 +1154,8 @@ export function mountLivingGoalMap({
         windowRef.clearTimeout(updateTimer);
         windowRef.clearTimeout(viewportTimer);
         windowRef.clearTimeout(viewAnimationTimer);
+        mapViewBatcher.cancel();
+        mapShell?.classList.remove('is-map-gesture-active', 'is-map-view-animating');
         windowRef.removeEventListener?.('resize', onViewportResize);
         mapScene?.removeEventListener('pointerdown', onScenePointerDown);
         mapScene?.removeEventListener('pointermove', onScenePointerMove);
@@ -1443,8 +1446,9 @@ export function mountLivingGoalMap({
     }
 
     function onPageShow(event) {
+        refreshMapViewport();
         applyBaseLayout();
-        applyMapView(mapView);
+        applyMapView(mapView, { immediate: true });
         const pending = readPending(windowRef);
         if (!pending) return;
 
@@ -1463,8 +1467,9 @@ export function mountLivingGoalMap({
         if (decision === 'updated') showUpdatedStatus();
     }
 
+    refreshMapViewport();
     applyBaseLayout();
-    applyMapView(mapView);
+    applyMapView(mapView, { immediate: true });
     windowRef.addEventListener?.('resize', onViewportResize);
     mapScene?.addEventListener('pointerdown', onScenePointerDown);
     mapScene?.addEventListener('pointermove', onScenePointerMove, { passive: false });
