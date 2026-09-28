@@ -30,6 +30,7 @@ final class MapProjectionService
      *     nodes: Collection<int,array<string,mixed>>,
      *     edges: Collection<int,array<string,mixed>>,
      *     primary_node_id:?string,
+     *     primary_launch:?array<string,mixed>,
      *     has_primary_action:bool,
      *     projection_key:string
      * }
@@ -152,6 +153,7 @@ final class MapProjectionService
         }
 
         $primaryNodeId = null;
+        $primaryLaunch = null;
 
         if ($plan instanceof Plan && $currentTask instanceof Task) {
             $primaryNodeId = 'task:'.$currentTask->id;
@@ -170,6 +172,8 @@ final class MapProjectionService
             } else {
                 $taskActions[] = $this->action('Planを開いて進める', route('plans.show', $plan), true);
             }
+
+            $primaryLaunch = $taskActions[0] ?? null;
 
             $taskActions[] = $this->action('Taskを編集', route('tasks.edit', $currentTask));
             $taskActions[] = $this->action('Plan全体を見る', route('plans.show', $plan));
@@ -353,6 +357,7 @@ final class MapProjectionService
             'nodes' => $nodes,
             'edges' => $edges,
             'primary_node_id' => $primaryNodeId,
+            'primary_launch' => $primaryLaunch,
             'has_primary_action' => $primaryNodeId !== null,
             'projection_key' => $this->projectionKey($nodes, $edges, $primaryNodeId),
         ];
