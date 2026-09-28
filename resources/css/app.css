@@ -5850,3 +5850,27 @@ html[data-theme-resolved="light"] .canovia-home-surface-option.is-active {
     background: rgb(238 242 255);
     color: rgb(49 46 129);
 }
+
+
+/* --------------------------------------------------------------------------
+ * V43.4 Primary Action Launch
+ * One tap from Map overview into the existing execution destination.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .canovia-map-primary-launch {
+        min-width: 8.8rem;
+        justify-content: center;
+    }
+
+    .canovia-map-page.is-map-focused .canovia-map-primary-launch {
+        display: none;
+    }
+
+    @media (max-width: 767px) {
+        .canovia-map-primary-launch,
+        .canovia-map-now-button {
+            min-width: 0;
+            flex: 1 1 0;
+        }
+    }
+}
