@@ -10,6 +10,11 @@ import {
 const PENDING_REEVALUATION_KEY = 'canovia.map.pending-reevaluation.v1';
 
 function roleGroup(role = '') {
+    if (role === 'space-station') return 'now';
+    if (role === 'intent-plan') return 'future';
+    if (role === 'intent-execution') return 'action';
+    if (role === 'intent-reflection') return 'past';
+    if (role === 'intent-collaboration') return 'input';
     if (role.startsWith('future')) return 'future';
     if (role.startsWith('past')) return 'past';
     if (role.startsWith('input')) return 'input';
