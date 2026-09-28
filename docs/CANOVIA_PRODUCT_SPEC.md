@@ -726,3 +726,7 @@ GitHub / Drive / OneDrive等は外部確認先として再投影する。URL pat
 V45.0ではMobile MapをDesktopの縮小版ではなく、同じNavigation Graph / Attention Stateを縦長Viewportへ再投影するMobile Spatial UXへ変更する。Server側のcanonical / attention座標は変更せず、client側の`buildMobileBaseLayout()`でL0をSpace Station中央・Intent内周・Satellite外周の2リングへ再配置し、SVG edgeも同じmobile座標へ同期する。
 共同を含むL1 / L2はHierarchy parentを中央に保ち、childrenを縦長楕円軌道へ再配置する。Desktop layout、Semantic Zoom URL、L3 Execution semantics、Spatial Memoryは変更しない。
 Mobile Canvasは`clamp(42rem, calc(100dvh - 8.5rem), 50rem)`を基本とし、短い端末では39remへcompact fallbackする。L0ではNode内部のDirect Open pillとsubtitleを隠し、Node Focus → Context Surface → canonical actionを主操作にして情報密度を下げる。mobile absolute coordinatesは永続化・Telemetry保存しない。
+
+V45.1ではMobile Node選択をDesktop Focus Modeから分離し、Map全体の位置を維持したままselected highlightとContext Surface差し替えだけを行う。これによりContext Surfaceを開いたまま別Nodeを直接タップできる。Close / Expandはdelegated clickでも処理し、Closeはhistory同期を待たず即時にSurfaceとselected stateを解除する。
+Mobile Mapはtransformable sceneとして1本指の全方向Panと2本指Pinch Zoomを提供する。Mapの向きは回転させずSpatial Memoryを維持する。Zoomは0.82x〜2.2x、scale>=1ではscaled overflow / 2 + viewport 10%、scale<1ではviewport 4%をPan上限とする。右上に縮小 / 中央リセット / 拡大Controlを常設し、Resetでpan=0 / zoom=1へ戻す。
+Node / SVG edge / decorative orbitは同じMap Sceneとしてtransformし、axis label / Space Station Dock / gesture controlsはviewport chromeとして固定する。Pan / zoom値・pointer履歴はruntime onlyで、DB / Projection Key / Telemetryへ保存しない。
