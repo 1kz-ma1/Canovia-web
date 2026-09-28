@@ -115,6 +115,60 @@ export function buildFocusLayout(nodes, edges, selectedId, { mobile = false } = 
     return { selectedId, visibleIds, positions };
 }
 
+
+export function buildMobileBaseLayout(nodes, mapLevel = 'l0') {
+    const positions = new Map(
+        nodes.map((node) => [node.id, { x: Number(node.x ?? 50), y: Number(node.y ?? 50) }])
+    );
+
+    if (mapLevel === 'l0') {
+        const rolePositions = {
+            'space-station': { x: 50, y: 50 },
+            'intent-plan': { x: 27, y: 29 },
+            'intent-execution': { x: 73, y: 29 },
+            'intent-reflection': { x: 73, y: 71 },
+            'intent-collaboration': { x: 27, y: 71 },
+            'satellite-1': { x: 50, y: 9 },
+            'satellite-2': { x: 88, y: 50 },
+            'satellite-3': { x: 50, y: 91 },
+            'satellite-4': { x: 12, y: 50 },
+        };
+
+        for (const node of nodes) {
+            if (rolePositions[node.positionRole]) {
+                positions.set(node.id, rolePositions[node.positionRole]);
+            }
+        }
+
+        return positions;
+    }
+
+    if (mapLevel === 'l1' || mapLevel === 'l2') {
+        const parent = nodes.find((node) => node.positionRole === 'hierarchy-parent');
+        const children = nodes.filter((node) => node.positionRole === 'hierarchy-child');
+
+        if (parent) {
+            positions.set(parent.id, { x: 50, y: 50 });
+        }
+
+        const count = children.length;
+        if (count > 0) {
+            const radiusX = count <= 4 ? 31 : 34;
+            const radiusY = count <= 4 ? 37 : 40;
+
+            children.forEach((node, index) => {
+                const angle = (-90 + (360 / count) * index) * Math.PI / 180;
+                positions.set(node.id, {
+                    x: Math.round(50 + Math.cos(angle) * radiusX),
+                    y: Math.round(50 + Math.sin(angle) * radiusY),
+                });
+            });
+        }
+    }
+
+    return positions;
+}
+
 export function mapHistoryDirection(currentDepth, targetDepth) {
     const current = Math.max(0, Number(currentDepth || 0));
     const target = Math.max(0, Number(targetDepth || 0));
@@ -303,11 +357,14 @@ export function mountLivingGoalMap({
     let focusHistoryDepth = Math.max(0, Number(windowRef.history.state?.canoviaMapFocusDepth || 0));
     let revalidationPromise = null;
     let updateTimer = null;
+    let viewportTimer = null;
     let disposed = false;
+    let basePositions = new Map(nodes.map((node) => [node.id, { x: node.x, y: node.y }]));
+
+    const isMobileViewport = () => Boolean(windowRef.matchMedia?.('(max-width: 767px)')?.matches);
 
     const originalPosition = (nodeId) => {
-        const node = nodes.find((candidate) => candidate.id === nodeId);
-        return node ? { x: node.x, y: node.y } : { x: 50, y: 50 };
+        return basePositions.get(nodeId) || { x: 50, y: 50 };
     };
 
     const syncEdges = (positions, visibleIds = null, selectedId = null) => {
@@ -325,6 +382,29 @@ export function mountLivingGoalMap({
             edge.element.setAttribute('x2', String(target.x));
             edge.element.setAttribute('y2', String(target.y));
         }
+    };
+
+
+    const applyBaseLayout = () => {
+        const mobile = isMobileViewport();
+        basePositions = mobile
+            ? buildMobileBaseLayout(nodes, page.dataset.mapLevel || 'l3')
+            : new Map(nodes.map((node) => [node.id, { x: node.x, y: node.y }]));
+
+        page.dataset.mapSpatialLayout = mobile ? 'mobile' : 'desktop';
+
+        for (const node of nodes) {
+            const position = basePositions.get(node.id) || { x: node.x, y: node.y };
+            const element = nodeElementById.get(node.id);
+            element?.style.setProperty('--map-x', String(position.x) + '%');
+            element?.style.setProperty('--map-y', String(position.y) + '%');
+        }
+
+        if (!activeFocusId) {
+            syncEdges(basePositions);
+        }
+
+        return basePositions;
     };
 
     const templateFor = (nodeId) => templates.find(
@@ -411,9 +491,8 @@ export function mountLivingGoalMap({
         page.dataset.mapFocus = '';
         page.classList.remove('is-map-focused');
 
-        const positions = new Map();
+        const positions = applyBaseLayout();
         for (const node of nodes) {
-            positions.set(node.id, { x: node.x, y: node.y });
             const element = nodeElementById.get(node.id);
             element?.classList.remove('is-focus-center', 'is-focus-neighbor', 'is-focus-hidden');
             element?.removeAttribute('aria-selected');
@@ -441,7 +520,7 @@ export function mountLivingGoalMap({
             clearSpatialDock();
         }
 
-        const mobile = Boolean(windowRef.matchMedia?.('(max-width: 767px)')?.matches);
+        const mobile = isMobileViewport();
         const layout = buildFocusLayout(nodes, edges, nodeId, { mobile });
         if (!layout) return false;
 
@@ -572,10 +651,40 @@ export function mountLivingGoalMap({
             || link?.dataset?.mapActionRole === 'external_tool';
     };
 
+
+    const onViewportResize = () => {
+        windowRef.clearTimeout(viewportTimer);
+        viewportTimer = windowRef.setTimeout(() => {
+            if (disposed) return;
+
+            applyBaseLayout();
+
+            if (activeFocusId) {
+                const layout = buildFocusLayout(nodes, edges, activeFocusId, {
+                    mobile: isMobileViewport(),
+                });
+                if (!layout) return;
+
+                for (const node of nodes) {
+                    const element = nodeElementById.get(node.id);
+                    const position = layout.positions.get(node.id);
+                    if (!element || !position) continue;
+
+                    element.style.setProperty('--map-focus-x', String(position.x) + '%');
+                    element.style.setProperty('--map-focus-y', String(position.y) + '%');
+                }
+
+                syncEdges(layout.positions, layout.visibleIds, activeFocusId);
+            }
+        }, 90);
+    };
+
     const destroy = () => {
         if (disposed) return;
         disposed = true;
         windowRef.clearTimeout(updateTimer);
+        windowRef.clearTimeout(viewportTimer);
+        windowRef.removeEventListener?.('resize', onViewportResize);
         page.removeEventListener('click', onPageClick);
         page.removeEventListener('submit', onPageSubmit);
         resetButton?.removeEventListener('click', closeContext);
@@ -836,6 +945,7 @@ export function mountLivingGoalMap({
     }
 
     function onPageShow(event) {
+        applyBaseLayout();
         const pending = readPending(windowRef);
         if (!pending) return;
 
@@ -853,6 +963,9 @@ export function mountLivingGoalMap({
         clearPending(windowRef);
         if (decision === 'updated') showUpdatedStatus();
     }
+
+    applyBaseLayout();
+    windowRef.addEventListener?.('resize', onViewportResize);
 
     page.addEventListener('click', onPageClick);
     page.addEventListener('submit', onPageSubmit);

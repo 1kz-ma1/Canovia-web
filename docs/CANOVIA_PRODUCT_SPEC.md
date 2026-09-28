@@ -722,3 +722,7 @@ V44.5では共同IntentのL1 / L2をpurpose-based projectionへ切り替え、�
 レビュー待ち・相手待ちはPlanArtifact.metadataの明示stateだけを使用し、GitHub PR URL、担当者、Activityから状態を推測しない。stateはactive / review / waiting / external_followupを許可し、新規defaultは未設定、自動Mutationは行わない。旧clientがfieldを送らないupdateでは既存stateを保持する。
 GitHub / Drive / OneDrive等は外部確認先として再投影する。URL pathからGitHub Pull Request / Issueというlink kindは識別できるが、open / merged / approved / CI等のlive状態はConnectorなしでは断定しない。External actionは別tabで開き、Canovia内部MutationではないためLiving Reevaluation pendingを作らない。
 共同L2からL3へはcollab_contextをstructural pathとして保持し、BreadcrumbとSpace Station returnでも同じPurposeへ復帰する。Map Telemetryはcollaboration_hub / collaboration_context / collaboration_item / action_role=external_tool等の構造値だけを保存し、Artifact名・URL・state・member名・Plan名は保存しない。
+
+V45.0ではMobile MapをDesktopの縮小版ではなく、同じNavigation Graph / Attention Stateを縦長Viewportへ再投影するMobile Spatial UXへ変更する。Server側のcanonical / attention座標は変更せず、client側の`buildMobileBaseLayout()`でL0をSpace Station中央・Intent内周・Satellite外周の2リングへ再配置し、SVG edgeも同じmobile座標へ同期する。
+共同を含むL1 / L2はHierarchy parentを中央に保ち、childrenを縦長楕円軌道へ再配置する。Desktop layout、Semantic Zoom URL、L3 Execution semantics、Spatial Memoryは変更しない。
+Mobile Canvasは`clamp(42rem, calc(100dvh - 8.5rem), 50rem)`を基本とし、短い端末では39remへcompact fallbackする。L0ではNode内部のDirect Open pillとsubtitleを隠し、Node Focus → Context Surface → canonical actionを主操作にして情報密度を下げる。mobile absolute coordinatesは永続化・Telemetry保存しない。
