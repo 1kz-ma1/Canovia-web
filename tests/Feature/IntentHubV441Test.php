@@ -134,7 +134,7 @@ class IntentHubV441Test extends TestCase
             ->assertSee($plan->title)
             ->assertSee($task->title)
             ->assertSee('data-map-position-role="now"', false)
-            ->assertSee('Canovia全体');
+            ->assertSee('data-map-spatial-dock', false);
 
         $graph = $response->viewData('graph');
 
