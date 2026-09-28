@@ -143,7 +143,7 @@ class IntentHubV441Test extends TestCase
         $this->assertSame('task:'.$task->id, $graph['primary_node_id']);
     }
 
-    public function test_space_station_context_uses_existing_inbox_and_ai_without_shipping_v442_routing_early(): void
+    public function test_space_station_remains_the_fixed_l0_hub_when_its_surface_evolves(): void
     {
         $user = User::factory()->create([
             'first_run_completed_at' => now(),
@@ -153,11 +153,11 @@ class IntentHubV441Test extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('Inboxへ入力する')
-            ->assertSee('AIへ相談する')
+            ->assertSee('Space Station')
+            ->assertSee('Inboxをすべて見る')
             ->assertSee(route('inbox.index'), false)
-            ->assertSee(route('chat.index'), false)
-            ->assertDontSee('data-map-companion-form', false);
+            ->assertSee('data-map-node-id="intent:space-station"', false)
+            ->assertSee('data-map-is-center="1"', false);
     }
 
     public function test_l0_telemetry_accepts_structural_roles_but_discards_arbitrary_content(): void

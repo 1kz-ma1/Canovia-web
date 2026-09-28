@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
 final class IntentMapProjectionService
@@ -9,6 +10,7 @@ final class IntentMapProjectionService
     public function __construct(
         private readonly IntentNavigationGraphService $navigationGraph,
         private readonly IntentMapAttentionStateService $attention,
+        private readonly SpaceStationContextService $spaceStation,
     ) {}
 
     /**
@@ -22,16 +24,18 @@ final class IntentMapProjectionService
      *     primary_node_id:null,
      *     primary_launch:null,
      *     has_primary_action:false,
+     *     space_station:array<string,mixed>,
      *     projection_key:string
      * }
      */
-    public function build(): array
+    public function build(Request $request): array
     {
         $graph = $this->navigationGraph->build();
         $attention = $this->attention->apply(
             $graph['nodes'],
             $graph['edges'],
         );
+        $spaceStation = $this->spaceStation->build($request);
 
         $nodes = $attention['nodes']
             ->map(fn (array $node) => $this->withDirectNavigation($node))
@@ -47,7 +51,13 @@ final class IntentMapProjectionService
             'primary_node_id' => null,
             'primary_launch' => null,
             'has_primary_action' => false,
-            'projection_key' => $this->projectionKey($nodes, $edges, $centerNodeId),
+            'space_station' => $spaceStation,
+            'projection_key' => $this->projectionKey(
+                $nodes,
+                $edges,
+                $centerNodeId,
+                (string) ($spaceStation['state_key'] ?? ''),
+            ),
         ];
     }
 
@@ -71,8 +81,12 @@ final class IntentMapProjectionService
         return $node;
     }
 
-    private function projectionKey(Collection $nodes, Collection $edges, string $centerNodeId): string
-    {
+    private function projectionKey(
+        Collection $nodes,
+        Collection $edges,
+        string $centerNodeId,
+        string $spaceStationStateKey,
+    ): string {
         return hash(
             'sha256',
             (string) json_encode([
@@ -80,6 +94,7 @@ final class IntentMapProjectionService
                 'center_node_id' => $centerNodeId,
                 'nodes' => $nodes->all(),
                 'edges' => $edges->all(),
+                'space_station_state_key' => $spaceStationStateKey,
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         );
     }
