@@ -1,0 +1,105 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Plan;
+use App\Models\Task;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
+use Tests\TestCase;
+
+class CanoviaHomeSurfaceV432Test extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withoutVite();
+
+        config([
+            'canovia.super_admin_user_id' => null,
+            'canovia.admin_email' => null,
+        ]);
+    }
+
+    public function test_classic_and_map_share_one_home_shell_entry_with_surface_switcher(): void
+    {
+        [$user] = $this->scenario();
+
+        $home = $this->actingAs($user)->get(route('home'));
+        $home->assertOk()
+            ->assertSee('data-home-surface-switcher', false)
+            ->assertSee('data-home-surface="classic"', false)
+            ->assertSee('data-home-surface="map"', false)
+            ->assertSee('aria-label="Classic Home"', false)
+            ->assertSee('data-canovia-nav-key="desktop-home"', false)
+            ->assertDontSee('data-canovia-nav-key="desktop-map"', false)
+            ->assertDontSee('data-canovia-nav-key="mobile-map"', false);
+
+        $map = $this->actingAs($user)->get(route('map.index'));
+        $map->assertOk()
+            ->assertSee('data-home-surface-switcher', false)
+            ->assertSee('data-map-home-fallback', false)
+            ->assertSee('data-home-surface="map"', false)
+            ->assertSee('aria-current="page"', false)
+            ->assertSee('data-canovia-nav-key="desktop-home"', false)
+            ->assertDontSee('data-canovia-nav-key="desktop-map"', false)
+            ->assertDontSee('data-canovia-nav-key="mobile-map"', false);
+    }
+
+    public function test_map_supports_instant_fragment_layout_as_home_surface_without_detached_companion(): void
+    {
+        [$user] = $this->scenario();
+
+        $response = $this->actingAs($user)
+            ->withHeader('X-Canovia-Instant-Navigation', 'navigate')
+            ->get(route('map.index'));
+
+        $response->assertOk()
+            ->assertSee('id="canovia-instant-meta"', false)
+            ->assertSee('"mobileSection":"ホーム"', false)
+            ->assertSee('"desktop-home"', false)
+            ->assertSee('nav-link-active', false)
+            ->assertSee('data-canovia-page', false)
+            ->assertSee('data-canovia-companion-slot', false)
+            ->assertDontSee('desktop-app-header', false)
+            ->assertDontSee('aria-label="Canovia Companionを現在の文脈で開く"', false);
+    }
+
+    private function scenario(): array
+    {
+        $user = User::factory()->create([
+            'first_run_completed_at' => now(),
+        ]);
+
+        $plan = Plan::query()->create([
+            'user_id' => $user->id,
+            'owner_token' => Str::random(64),
+            'public_slug' => (string) Str::uuid(),
+            'title' => 'Home Surfaceを整理する',
+            'description' => 'ClassicとMapを同じHome領域として扱う',
+            'category' => '個人開発',
+            'priority' => 1,
+            'priority_mode' => 'manual',
+            'start_date' => today(),
+            'deadline' => today()->addMonth(),
+            'is_public' => false,
+        ]);
+
+        Task::query()->create([
+            'plan_id' => $plan->id,
+            'title' => '入口を一つにする',
+            'estimated_minutes' => 30,
+            'remaining_minutes' => 30,
+            'progress_percent' => 20,
+            'status' => 'doing',
+            'priority' => 1,
+            'activation_cost' => 1,
+            'sort_order' => 1,
+        ]);
+
+        return [$user, $plan];
+    }
+}
