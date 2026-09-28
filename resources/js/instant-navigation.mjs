@@ -290,6 +290,7 @@ export function mountCanoviaInstantNavigation({
         }));
 
         page.innerHTML = payload.pageHtml;
+        page.dataset.canoviaInstantRendered = '1';
         documentRef.title = payload.title || 'Canovia';
         if (documentRef.body) documentRef.body.dataset.routeName = payload.routeName || '';
 
