@@ -227,6 +227,7 @@
                                 'satellite_plan', 'satellite_tool' => 'is-personalized-satellite',
                                 default => '',
                             };
+                            $visualKind = \App\Support\MapNodeVisualGrammar::kind($node);
                             $hasFocusFallback = filled($node['available_action'] ?? null);
                             $directNavigation = $node['direct_navigation'] ?? null;
                             $directNavigationKind = (string) data_get($directNavigation, 'kind', 'classic');
@@ -237,11 +238,12 @@
                         @endphp
 
                         <div
-                            class="canovia-map-node {{ $stateClass }} {{ $kindClass }} {{ $isCenter ? 'is-map-center' : '' }} {{ filled(data_get($directNavigation, 'url')) ? 'has-direct-navigation' : '' }}"
+                            class="canovia-map-node {{ $stateClass }} {{ $kindClass }} visual-{{ $visualKind }} {{ $isCenter ? 'is-map-center' : '' }} {{ filled(data_get($directNavigation, 'url')) ? 'has-direct-navigation' : '' }}"
                             style="--map-x: {{ data_get($node, 'position.x', 50) }}%; --map-y: {{ data_get($node, 'position.y', 50) }}%; --node-scale: {{ (float) ($node['size_weight'] ?? 0.7) }}"
                             data-map-node
                             data-map-node-id="{{ $node['id'] }}"
                             data-map-node-type="{{ $node['type'] }}"
+                            data-map-visual-kind="{{ $visualKind }}"
                             data-map-position-role="{{ $node['position_role'] }}"
                             data-map-is-primary="{{ $isPrimary ? '1' : '0' }}"
                             data-map-is-center="{{ $isCenter ? '1' : '0' }}"
@@ -259,6 +261,13 @@
                             @else
                                 <div class="canovia-map-node-focus-link is-static">
                             @endif
+                                <span
+                                    class="canovia-map-node-glyph"
+                                    data-map-node-glyph
+                                    data-map-node-glyph-kind="{{ $visualKind }}"
+                                    title="{{ \App\Support\MapNodeVisualGrammar::label($visualKind) }}"
+                                    aria-hidden="true"
+                                ><span class="canovia-map-node-glyph-core"></span></span>
                                 <span class="canovia-map-node-eyebrow">{{ $node['eyebrow'] }}</span>
                                 <span class="canovia-map-node-label">{{ $node['label'] }}</span>
                                 @if (filled($node['subtitle'] ?? null))
