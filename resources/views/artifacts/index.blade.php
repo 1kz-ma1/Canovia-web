@@ -93,7 +93,7 @@
                             <select name="collaboration_state" class="form-control mt-2">
                                 <option value="">状態未設定</option>
                                 @foreach ($collaborationStates as $key => $label)
-                                    <option value="{{ $key }}" @selected(old('collaboration_state', 'active') === $key)>{{ $label }}</option>
+                                    <option value="{{ $key }}" @selected(old('collaboration_state') === $key)>{{ $label }}</option>
                                 @endforeach
                             </select>
                             <span class="mt-1 block text-[11px] leading-5 text-slate-500">Canovia Mapの「共同」で目的別に整理するための明示状態です。自動変更はしません。</span>
