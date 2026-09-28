@@ -29,7 +29,7 @@ class CanoviaMapUsabilityV430Test extends TestCase
         [$user, $task] = $this->scenario();
 
         $this->actingAs($user)
-            ->get(route('map.index'))
+            ->get(route('map.index', ['level' => 'l3']))
             ->assertOk()
             ->assertSee('canovia-map-toolbar', false)
             ->assertSee('Mapの見方')
@@ -48,7 +48,7 @@ class CanoviaMapUsabilityV430Test extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('map.index'))
+            ->get(route('map.index', ['level' => 'l3']))
             ->assertOk()
             ->assertDontSee('data-map-primary-focus', false)
             ->assertSee('まだMapに置くActionがありません');
