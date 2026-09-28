@@ -5641,3 +5641,92 @@ body.canovia-guide-active { overflow: hidden; }
         }
     }
 }
+
+
+/* --------------------------------------------------------------------------
+ * V43.1 Focus + Context Surface UX
+ * Mobile focus occupies the upper safe area while the sheet stays compact.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .canovia-map-context-tools {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .canovia-map-context-expand {
+        display: none;
+        min-height: 2rem;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgb(71 85 105 / 0.72);
+        border-radius: 9999px;
+        padding: 0.28rem 0.58rem;
+        color: rgb(148 163 184);
+        font-size: 0.62rem;
+        font-weight: 800;
+    }
+
+    .canovia-map-context-expand:hover,
+    .canovia-map-context-expand:focus-visible {
+        border-color: rgb(103 232 249 / 0.34);
+        color: rgb(224 242 254);
+        outline: none;
+    }
+
+    @media (max-width: 767px) {
+        .canovia-map-context-expand {
+            display: inline-flex;
+        }
+
+        .canovia-map-context-surface {
+            max-height: min(34dvh, 18rem);
+            transition: max-height 180ms ease;
+        }
+
+        .canovia-map-context-surface .canovia-map-context-card {
+            max-height: min(34dvh, 18rem);
+            transition: max-height 180ms ease;
+        }
+
+        .canovia-map-context-surface.is-expanded {
+            max-height: min(64dvh, 34rem);
+        }
+
+        .canovia-map-context-surface.is-expanded .canovia-map-context-card {
+            max-height: min(64dvh, 34rem);
+        }
+
+        .canovia-map-page.is-map-focused .canovia-map-shell {
+            background:
+                linear-gradient(rgb(56 189 248 / 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgb(56 189 248 / 0.04) 1px, transparent 1px),
+                radial-gradient(circle at 50% 34%, rgb(14 165 233 / 0.11), transparent 16rem),
+                rgb(2 6 23 / 0.9);
+        }
+
+        .canovia-map-node.is-focus-center {
+            width: min(10.6rem, 48vw);
+        }
+
+        .canovia-map-node.is-focus-neighbor {
+            max-width: 9rem;
+        }
+
+        .canovia-map-context-header {
+            gap: 0.5rem;
+        }
+
+        .canovia-map-context-caption {
+            max-width: 12rem;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .canovia-map-context-surface,
+        .canovia-map-context-surface .canovia-map-context-card {
+            transition: none;
+        }
+    }
+}
