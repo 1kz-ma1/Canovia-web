@@ -33,6 +33,7 @@ class PlanArtifactController extends Controller
         $assignees = $this->assigneesFor($plan);
         $providers = PlanArtifact::PROVIDERS;
         $artifactTypes = PlanArtifact::ARTIFACT_TYPES;
+        $collaborationStates = PlanArtifact::COLLABORATION_STATES;
 
         return view('artifacts.index', compact(
             'plan',
@@ -40,6 +41,7 @@ class PlanArtifactController extends Controller
             'assignees',
             'providers',
             'artifactTypes',
+            'collaborationStates',
         ));
     }
 
