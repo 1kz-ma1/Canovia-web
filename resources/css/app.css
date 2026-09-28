@@ -4968,8 +4968,8 @@ body.canovia-guide-active { overflow: hidden; }
         -webkit-tap-highlight-color: transparent;
     }
 
-    a.canovia-map-node:hover,
-    a.canovia-map-node:focus-visible {
+    .canovia-map-node:hover,
+    .canovia-map-node:focus-within {
         border-color: rgb(103 232 249 / 0.62);
         background:
             radial-gradient(circle at top right, rgb(56 189 248 / 0.17), transparent 7rem),
@@ -5493,8 +5493,8 @@ body.canovia-guide-active { overflow: hidden; }
         opacity: 0.9;
     }
 
-    a.canovia-map-node:not(.is-primary):hover,
-    a.canovia-map-node:not(.is-primary):focus-visible,
+    .canovia-map-node:not(.is-primary):hover,
+    .canovia-map-node:not(.is-primary):focus-within,
     .canovia-map-node.is-focus-neighbor,
     .canovia-map-node.is-focus-center {
         opacity: 1;
@@ -5873,4 +5873,87 @@ html[data-theme-resolved="light"] .canovia-home-surface-option.is-active {
             flex: 1 1 0;
         }
     }
+}
+
+
+/* --------------------------------------------------------------------------
+ * V43.5 Node Direct Navigation
+ * Node body = Context. Explicit chip = unambiguous destination.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .canovia-map-node-focus-link {
+        display: flex;
+        min-width: 0;
+        min-height: inherit;
+        flex-direction: column;
+        color: inherit;
+        text-decoration: none;
+        outline: none;
+    }
+
+    .canovia-map-node-focus-link.is-static {
+        pointer-events: none;
+    }
+
+    .canovia-map-node.has-direct-navigation {
+        padding-bottom: 2.25rem;
+    }
+
+    .canovia-map-node-direct-open {
+        position: absolute;
+        z-index: 2;
+        right: 0.5rem;
+        bottom: 0.48rem;
+        display: inline-flex;
+        min-height: 1.55rem;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgb(103 232 249 / 0.22);
+        border-radius: 9999px;
+        background: rgb(8 15 34 / 0.82);
+        padding: 0.22rem 0.48rem;
+        color: rgb(125 211 252);
+        font-size: 0.56rem;
+        font-weight: 900;
+        line-height: 1;
+        text-decoration: none;
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035);
+    }
+
+    .canovia-map-node-direct-open:hover,
+    .canovia-map-node-direct-open:focus-visible {
+        border-color: rgb(103 232 249 / 0.5);
+        background: rgb(14 116 144 / 0.2);
+        color: rgb(224 242 254);
+        outline: none;
+    }
+
+    .canovia-map-node.is-focus-center .canovia-map-node-direct-open,
+    .canovia-map-node.is-focus-neighbor .canovia-map-node-direct-open {
+        opacity: 0.72;
+    }
+
+    @media (max-width: 767px) {
+        .canovia-map-node.has-direct-navigation {
+            padding-bottom: 1.85rem;
+        }
+
+        .canovia-map-node-direct-open {
+            right: 0.36rem;
+            bottom: 0.34rem;
+            min-height: 1.35rem;
+            padding: 0.18rem 0.4rem;
+            font-size: 0.5rem;
+        }
+
+        .canovia-map-node.has-direct-navigation .canovia-map-node-action {
+            display: none;
+        }
+    }
+}
+
+html[data-theme-resolved="light"] .canovia-map-node-direct-open {
+    border-color: rgb(14 116 144 / 0.2);
+    background: rgb(255 255 255 / 0.88);
+    color: rgb(14 116 144);
 }
