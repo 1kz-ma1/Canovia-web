@@ -11,22 +11,18 @@ final class IntentMapProjectionService
         private readonly IntentNavigationGraphService $navigationGraph,
         private readonly IntentMapAttentionStateService $attention,
         private readonly SpaceStationContextService $spaceStation,
+        private readonly PersonalizedSatelliteCandidateService $satelliteCandidates,
+        private readonly PersonalizedSatellitePromotionService $satellitePromotion,
     ) {}
 
     /**
      * Build the L0 Intent Hub projection.
      *
-     * @return array{
-     *     level:string,
-     *     nodes:Collection<int,array<string,mixed>>,
-     *     edges:Collection<int,array<string,mixed>>,
-     *     center_node_id:string,
-     *     primary_node_id:null,
-     *     primary_launch:null,
-     *     has_primary_action:false,
-     *     space_station:array<string,mixed>,
-     *     projection_key:string
-     * }
+     * Fixed Intent nodes come from the semantic graph. Personalized Satellites
+     * are an Attention-layer promotion of contexts that already exist elsewhere
+     * in Canovia and never replace/remove those canonical contexts.
+     *
+     * @return array<string,mixed>
      */
     public function build(Request $request): array
     {
@@ -36,11 +32,18 @@ final class IntentMapProjectionService
             $graph['edges'],
         );
         $spaceStation = $this->spaceStation->build($request);
+        $satellites = $this->satellitePromotion->promote(
+            $this->satelliteCandidates->candidates($request),
+            4,
+        );
 
         $nodes = $attention['nodes']
+            ->concat($satellites['nodes'])
             ->map(fn (array $node) => $this->withDirectNavigation($node))
             ->values();
-        $edges = $attention['edges']->values();
+        $edges = $attention['edges']
+            ->concat($satellites['edges'])
+            ->values();
         $centerNodeId = $attention['center_node_id'];
 
         return [
@@ -60,6 +63,16 @@ final class IntentMapProjectionService
                 ],
             ],
             'space_station' => $spaceStation,
+            'personalized_satellites' => [
+                'count' => $satellites['nodes']->count(),
+                'max' => 4,
+                'weights' => [
+                    'importance' => 0.35,
+                    'usage_frequency' => 0.25,
+                    'recency' => 0.20,
+                    'continuity' => 0.20,
+                ],
+            ],
             'projection_key' => $this->projectionKey(
                 $nodes,
                 $edges,
