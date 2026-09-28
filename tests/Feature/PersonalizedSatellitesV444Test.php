@@ -215,7 +215,7 @@ class PersonalizedSatellitesV444Test extends TestCase
         $this->assertNull($tool);
         $this->assertIsArray($planSatellite);
         $this->assertSame((string) $plan->title, $planSatellite['label']);
-        $this->assertSame('PLAN SATELLITE', $planSatellite['eyebrow']);
+        $this->assertSame('PLAN', $planSatellite['eyebrow']);
     }
 
     public function test_shared_plan_uses_fixed_collaboration_intent_without_duplicate_satellite(): void
