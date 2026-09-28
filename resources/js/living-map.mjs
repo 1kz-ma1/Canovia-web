@@ -412,7 +412,6 @@ export function mountLivingGoalMap({
     const surface = page.querySelector('[data-map-context-surface]');
     const surfaceContent = page.querySelector('[data-map-context-content]');
     const resetButton = page.querySelector('[data-map-focus-reset]');
-    const closeButton = page.querySelector('[data-map-context-close]');
     const expandButton = page.querySelector('[data-map-context-expand]');
     const expandLabel = page.querySelector('[data-map-context-expand-label]');
     const updateStatus = page.querySelector('[data-map-update-status]');
