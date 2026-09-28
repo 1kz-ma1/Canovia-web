@@ -718,4 +718,7 @@ V44.4では固定Intent構造を維持したままPersonalized Satelliteを追�
 初期weightは importance 35% / usage frequency 25% / recency 20% / continuity 20%、promotion thresholdは0.28、最大4件とする。ranking / layoutにAIは使わず、既存BehaviorEvent / WorkSession / StudyPracticeAttemptからrequest時に決定的に算出する。
 Plan Satelliteは未完了Taskを持つPlanを対象とし、Shared Planは共同Intentへanchorする。Tool Satelliteは、V44.4初期版では安全なtool-level usage signalが存在するAI Practiceのみを対象とし、過去30日2回以上の利用をpromotion candidate条件とする。
 Satellite row、absolute position、score historyは永続化しない。Map Telemetryへ保存するのは satellite_plan / satellite_tool、satellite-1〜4、action_role=satellite等の構造metadataだけで、promotion score / signal値 / Plan名 / user contentは保存しない。
-V44.5では共同Context / GitHub等の外部Toolをユーザー目的ベースのViewへ再投影する。
+V44.5では共同IntentのL1 / L2をpurpose-based projectionへ切り替え、「自分が進める / レビュー待ち / 相手待ち / 外部Toolで確認」からShared Plan / Artifact / Taskを辿る。通常IntentのDomain / Plan hierarchyは変更しない。
+レビュー待ち・相手待ちはPlanArtifact.metadataの明示stateだけを使用し、GitHub PR URL、担当者、Activityから状態を推測しない。stateはactive / review / waiting / external_followupを許可し、新規defaultは未設定、自動Mutationは行わない。旧clientがfieldを送らないupdateでは既存stateを保持する。
+GitHub / Drive / OneDrive等は外部確認先として再投影する。URL pathからGitHub Pull Request / Issueというlink kindは識別できるが、open / merged / approved / CI等のlive状態はConnectorなしでは断定しない。External actionは別tabで開き、Canovia内部MutationではないためLiving Reevaluation pendingを作らない。
+共同L2からL3へはcollab_contextをstructural pathとして保持し、BreadcrumbとSpace Station returnでも同じPurposeへ復帰する。Map Telemetryはcollaboration_hub / collaboration_context / collaboration_item / action_role=external_tool等の構造値だけを保存し、Artifact名・URL・state・member名・Plan名は保存しない。
