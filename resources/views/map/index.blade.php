@@ -19,6 +19,7 @@
         $primaryLaunch = $graph['primary_launch'] ?? null;
         $hierarchy = is_array($graph['hierarchy'] ?? null) ? $graph['hierarchy'] : [];
         $mapReturnUrl = request()->getRequestUri();
+        $currentContextLabel = (string) ($hierarchy['current_label'] ?? ($isIntentHub ? 'Canovia Map' : 'Canovia Map'));
         $heroKicker = match (true) {
             $mapLevel === 'l0' => 'L0 · CANOVIA NAVIGATION',
             $mapLevel === 'l1' && $isCollaborationMode => 'L1 · COLLABORATION CONTEXT',
@@ -29,8 +30,6 @@
         };
     @endphp
 
-    @include('layouts.partials.home-surface-switcher', ['activeSurface' => 'map'])
-
     <section
         class="canovia-map-page"
         data-canovia-map-page
@@ -39,11 +38,11 @@
         data-map-projection-key="{{ $graph['projection_key'] ?? '' }}"
         data-event-url="{{ route('behavior_events.store') }}"
     >
-        <div class="canovia-map-hero canovia-map-toolbar">
+        <div class="canovia-map-hero canovia-map-toolbar canovia-map-fullscreen-topbar" data-map-fullscreen-topbar>
             <div class="canovia-map-hero-copy">
                 <div class="canovia-map-heading">
                     <p class="canovia-map-kicker">{{ $heroKicker }}</p>
-                    <h1 class="canovia-map-title">Canovia Map</h1>
+                    <h1 class="canovia-map-title">{{ $currentContextLabel }}</h1>
 
                     @if ($isIntentHub)
                         <p class="canovia-map-description">
@@ -91,6 +90,10 @@
                         </p>
                     @endif
                 </details>
+            </div>
+
+            <div class="canovia-map-fullscreen-surface-switch">
+                @include('layouts.partials.home-surface-switcher', ['activeSurface' => 'map'])
             </div>
 
             <div class="canovia-map-hero-actions">
@@ -151,9 +154,11 @@
                     <a href="{{ route('my_plans.index') }}" class="btn-secondary">Classic Plans</a>
                 @endif
             </div>
-        </div>
 
-        @include('map.partials.hierarchy-navigation')
+            <div class="canovia-map-fullscreen-hierarchy">
+                @include('map.partials.hierarchy-navigation')
+            </div>
+        </div>
 
         <div class="canovia-map-update-status hidden" data-map-update-status role="status" aria-live="polite">
             <span class="canovia-map-update-status-mark" aria-hidden="true">✦</span>
