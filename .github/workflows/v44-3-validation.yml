@@ -35,5 +35,14 @@ jobs:
       - run: php -l app/Http/Controllers/InboxController.php
       - run: php -l app/Http/Controllers/BehaviorEventController.php
       - run: php artisan view:cache
+      - name: Lint compiled Blade views
+        run: |
+          for f in storage/framework/views/*.php; do
+            if ! php -l "$f"; then
+              echo "--- failing compiled view: $f ---"
+              nl -ba "$f" | sed -n '340,395p'
+              exit 1
+            fi
+          done
       - run: node --test tests/js/living-map-v421.test.mjs tests/js/map-telemetry-v424.test.mjs tests/js/home-surface-preference-v433.test.mjs
       - run: php artisan test tests/Feature/SemanticZoomSpatialMemoryV443Test.php tests/Feature/SpaceStationV442Test.php tests/Feature/IntentHubV441Test.php tests/Feature/HierarchicalMapFoundationV440Test.php tests/Feature/InboxFoundationV4113Test.php tests/Feature/InboxIntelligenceGuideV4113Test.php tests/Feature/CanoviaCompanionContextualEntryV4115Test.php tests/Feature/CanoviaMapV420Test.php tests/Feature/CanoviaMapFocusV421Test.php tests/Feature/CanoviaMapLivingReevaluationV422Test.php tests/Feature/CanoviaMapContextualCompanionV423Test.php tests/Feature/CanoviaMapTelemetryV424Test.php tests/Feature/CanoviaMapUsabilityV430Test.php tests/Feature/CanoviaMapFocusSurfaceV431Test.php tests/Feature/CanoviaHomeSurfaceV432Test.php tests/Feature/CanoviaHomeSurfacePreferenceV433Test.php tests/Feature/CanoviaMapPrimaryLaunchV434Test.php tests/Feature/CanoviaMapNodeDirectNavigationV435Test.php tests/Feature/FirstRunUxV4123Test.php tests/Feature/InstantNavigationV4120Test.php tests/Feature/InstantNavigationFragmentV4121Test.php
