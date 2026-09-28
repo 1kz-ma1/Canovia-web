@@ -169,6 +169,60 @@ export function buildMobileBaseLayout(nodes, mapLevel = 'l0') {
     return positions;
 }
 
+export function clampMapViewTransform(
+    transform,
+    viewport,
+    {
+        minScale = 0.82,
+        maxScale = 2.2,
+        overscrollRatio = 0.10,
+        minPanRatio = 0.04,
+    } = {},
+) {
+    const width = Math.max(1, Number(viewport?.width || 1));
+    const height = Math.max(1, Number(viewport?.height || 1));
+    const scale = Math.max(minScale, Math.min(maxScale, Number(transform?.scale || 1)));
+    const extraX = scale >= 1
+        ? ((scale - 1) * width) / 2 + width * overscrollRatio
+        : width * minPanRatio;
+    const extraY = scale >= 1
+        ? ((scale - 1) * height) / 2 + height * overscrollRatio
+        : height * minPanRatio;
+
+    return {
+        x: Math.max(-extraX, Math.min(extraX, Number(transform?.x || 0))),
+        y: Math.max(-extraY, Math.min(extraY, Number(transform?.y || 0))),
+        scale,
+    };
+}
+
+export function zoomMapViewAt(
+    transform,
+    targetScale,
+    focusPoint,
+    viewport,
+    options = {},
+) {
+    const width = Math.max(1, Number(viewport?.width || 1));
+    const height = Math.max(1, Number(viewport?.height || 1));
+    const current = clampMapViewTransform(transform, viewport, options);
+    const target = clampMapViewTransform(
+        { ...current, scale: targetScale },
+        viewport,
+        options,
+    );
+
+    const focusX = Number(focusPoint?.x ?? width / 2) - width / 2;
+    const focusY = Number(focusPoint?.y ?? height / 2) - height / 2;
+    const ratio = target.scale / current.scale;
+
+    return clampMapViewTransform({
+        x: focusX - ratio * (focusX - current.x),
+        y: focusY - ratio * (focusY - current.y),
+        scale: target.scale,
+    }, viewport, options);
+}
+
 export function mapHistoryDirection(currentDepth, targetDepth) {
     const current = Math.max(0, Number(currentDepth || 0));
     const target = Math.max(0, Number(targetDepth || 0));
@@ -306,6 +360,10 @@ export function mountLivingGoalMap({
     const expandLabel = page.querySelector('[data-map-context-expand-label]');
     const updateStatus = page.querySelector('[data-map-update-status]');
     const mapShell = page.querySelector('[data-canovia-map]');
+    const mapScene = page.querySelector('[data-map-scene]');
+    const zoomOutControl = page.querySelector('[data-map-zoom-out]');
+    const zoomInControl = page.querySelector('[data-map-zoom-in]');
+    const viewResetControl = page.querySelector('[data-map-view-reset]');
     const nodeElements = [...page.querySelectorAll('[data-map-node]')];
     const edgeElements = [...page.querySelectorAll('[data-map-edge]')];
     const templates = [...page.querySelectorAll('[data-map-surface-template]')];
@@ -358,10 +416,91 @@ export function mountLivingGoalMap({
     let revalidationPromise = null;
     let updateTimer = null;
     let viewportTimer = null;
+    let viewAnimationTimer = null;
     let disposed = false;
     let basePositions = new Map(nodes.map((node) => [node.id, { x: node.x, y: node.y }]));
 
     const isMobileViewport = () => Boolean(windowRef.matchMedia?.('(max-width: 767px)')?.matches);
+    const activePointers = new Map();
+    let gesture = null;
+    let suppressMapClickUntil = 0;
+    let mapView = { x: 0, y: 0, scale: 1 };
+
+    const mapViewport = () => {
+        const rect = mapShell?.getBoundingClientRect?.();
+
+        return {
+            width: Math.max(1, Number(rect?.width || mapShell?.clientWidth || 1)),
+            height: Math.max(1, Number(rect?.height || mapShell?.clientHeight || 1)),
+        };
+    };
+
+    const syncViewControls = () => {
+        const atMinimum = mapView.scale <= 0.821;
+        const atMaximum = mapView.scale >= 2.199;
+        if (zoomOutControl) zoomOutControl.disabled = atMinimum;
+        if (zoomInControl) zoomInControl.disabled = atMaximum;
+        if (viewResetControl) {
+            viewResetControl.dataset.mapViewChanged = (
+                Math.abs(mapView.x) > 0.5
+                || Math.abs(mapView.y) > 0.5
+                || Math.abs(mapView.scale - 1) > 0.005
+            ) ? '1' : '0';
+        }
+    };
+
+    const applyMapView = (next, { animate = false } = {}) => {
+        if (!mapScene) return mapView;
+
+        if (!isMobileViewport()) {
+            mapView = { x: 0, y: 0, scale: 1 };
+        } else {
+            mapView = clampMapViewTransform(next, mapViewport());
+        }
+
+        windowRef.clearTimeout(viewAnimationTimer);
+        mapShell?.classList.toggle('is-map-view-animating', Boolean(animate));
+        if (animate) {
+            viewAnimationTimer = windowRef.setTimeout(() => {
+                mapShell?.classList.remove('is-map-view-animating');
+            }, 210);
+        }
+
+        mapScene.style.setProperty('--map-pan-x', mapView.x + 'px');
+        mapScene.style.setProperty('--map-pan-y', mapView.y + 'px');
+        mapScene.style.setProperty('--map-view-scale', String(mapView.scale));
+        mapShell?.classList.toggle(
+            'is-map-transformed',
+            Math.abs(mapView.x) > 0.5
+                || Math.abs(mapView.y) > 0.5
+                || Math.abs(mapView.scale - 1) > 0.005,
+        );
+        syncViewControls();
+
+        return mapView;
+    };
+
+    const resetMapView = ({ animate = true } = {}) => {
+        return applyMapView({ x: 0, y: 0, scale: 1 }, { animate });
+    };
+
+    const zoomMapBy = (factor, focusPoint = null, { animate = true } = {}) => {
+        if (!isMobileViewport()) return mapView;
+
+        const viewport = mapViewport();
+        const point = focusPoint || {
+            x: viewport.width / 2,
+            y: viewport.height / 2,
+        };
+        const next = zoomMapViewAt(
+            mapView,
+            mapView.scale * factor,
+            point,
+            viewport,
+        );
+
+        return applyMapView(next, { animate });
+    };
 
     const originalPosition = (nodeId) => {
         return basePositions.get(nodeId) || { x: 50, y: 50 };
@@ -489,12 +628,12 @@ export function mountLivingGoalMap({
     const clearFocus = () => {
         activeFocusId = null;
         page.dataset.mapFocus = '';
-        page.classList.remove('is-map-focused');
+        page.classList.remove('is-map-focused', 'is-map-mobile-selection');
 
         const positions = applyBaseLayout();
         for (const node of nodes) {
             const element = nodeElementById.get(node.id);
-            element?.classList.remove('is-focus-center', 'is-focus-neighbor', 'is-focus-hidden');
+            element?.classList.remove('is-focus-center', 'is-focus-neighbor', 'is-focus-hidden', 'is-map-selected');
             element?.removeAttribute('aria-selected');
             element?.removeAttribute('aria-expanded');
             element?.style.removeProperty('--map-focus-x');
@@ -521,7 +660,49 @@ export function mountLivingGoalMap({
         }
 
         const mobile = isMobileViewport();
-        const layout = buildFocusLayout(nodes, edges, nodeId, { mobile });
+        const hadFocus = Boolean(activeFocusId);
+
+        if (mobile) {
+            activeFocusId = nodeId;
+            page.dataset.mapFocus = nodeId;
+            page.classList.add('is-map-focused', 'is-map-mobile-selection');
+
+            for (const node of nodes) {
+                const element = nodeElementById.get(node.id);
+                if (!element) continue;
+
+                const selected = node.id === nodeId;
+                element.classList.remove('is-focus-center', 'is-focus-neighbor', 'is-focus-hidden');
+                element.classList.toggle('is-map-selected', selected);
+                element.setAttribute('aria-selected', selected ? 'true' : 'false');
+                element.setAttribute('aria-expanded', selected ? 'true' : 'false');
+                element.style.removeProperty('--map-focus-x');
+                element.style.removeProperty('--map-focus-y');
+            }
+
+            syncEdges(basePositions);
+            renderSurface(nodeId);
+
+            if (historyMode === 'push' && windowRef.location.hash !== focusHash(nodeId)) {
+                if (hadFocus && windowRef.history.state?.canoviaMapFocus) {
+                    windowRef.history.replaceState({
+                        ...(windowRef.history.state || {}),
+                        canoviaMapFocus: nodeId,
+                        canoviaMapFocusDepth: focusHistoryDepth,
+                    }, '', focusHash(nodeId));
+                } else {
+                    focusHistoryDepth += 1;
+                    windowRef.history.pushState({
+                        canoviaMapFocus: nodeId,
+                        canoviaMapFocusDepth: focusHistoryDepth,
+                    }, '', focusHash(nodeId));
+                }
+            }
+
+            return true;
+        }
+
+        const layout = buildFocusLayout(nodes, edges, nodeId, { mobile: false });
         if (!layout) return false;
 
         activeFocusId = nodeId;
@@ -591,23 +772,32 @@ export function mountLivingGoalMap({
 
     const closeContext = () => {
         if (activeDockId) {
-            if (windowRef.history.state?.canoviaMapDock) {
+            const shouldGoBack = Boolean(windowRef.history.state?.canoviaMapDock);
+            clearSpatialDock();
+
+            if (shouldGoBack) {
                 windowRef.history.back();
                 return;
             }
 
-            clearSpatialDock();
             removeInvalidDockHash();
             return;
         }
 
-        if (windowRef.history.state?.canoviaMapFocus && activeFocusId) {
-            windowRef.history.back();
+        if (activeFocusId) {
+            const shouldGoBack = Boolean(windowRef.history.state?.canoviaMapFocus);
+            clearFocus();
+
+            if (shouldGoBack) {
+                windowRef.history.back();
+                return;
+            }
+
+            removeInvalidFocusHash();
             return;
         }
 
-        clearFocus();
-        removeInvalidFocusHash();
+        hideSurface();
     };
 
     const markPendingReevaluation = (nodeId = activeFocusId) => {
