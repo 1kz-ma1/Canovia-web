@@ -51,6 +51,14 @@ final class IntentMapProjectionService
             'primary_node_id' => null,
             'primary_launch' => null,
             'has_primary_action' => false,
+            'hierarchy' => [
+                'depth' => 0,
+                'current_label' => 'Canovia',
+                'parent_url' => null,
+                'breadcrumbs' => [
+                    ['label' => 'Canovia', 'url' => null],
+                ],
+            ],
             'space_station' => $spaceStation,
             'projection_key' => $this->projectionKey(
                 $nodes,
@@ -75,6 +83,7 @@ final class IntentMapProjectionService
             ? [
                 'label' => (string) ($action['label'] ?? '開く'),
                 'url' => (string) $action['url'],
+                'kind' => (string) ($action['navigation_kind'] ?? $node['navigation_kind'] ?? 'classic'),
             ]
             : null;
 
