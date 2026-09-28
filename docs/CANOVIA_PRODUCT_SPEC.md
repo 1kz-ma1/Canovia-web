@@ -737,3 +737,7 @@ Context SurfaceはDesktopでもMapを押し縮めるsidebarではなく右側flo
 
 V45.3では既存node.type / state / position_roleをPresentation-onlyのMapNodeVisualGrammarでsilhouetteへ変換し、各Nodeを文字だけでなく形でも判別できるようにする。space_station=station、intent/domain=planet、plan=moon、goal=star、primary task=rocket、other task=beacon、tool=module、evidence=archive、inbox=inbox-dock、satellite_plan/tool=satellite、collaboration系=crew familyとする。
 visual kindはBlade/CSSでのみ利用し、Navigation Graph / Attention State / Projection array / Projection Key / Telemetryへ追加しない。Glyphは軽量DOM + border / gradient / clip-path / pseudo-elementsで描画し、外部画像・常時animation・大きなfilter blurは追加しない。Node本体のhit targetと座標は維持し、L3の一部Nodeはborder-radius/backgroundだけでsilhouette perceptionを変える。
+
+V45.4ではMap Runtimeのhot pathを最適化する。pointermoveはJS state更新に限定し、Map SceneのDOM transformはrequestAnimationFrameで1frame1回へbatchする。同一frame内では最後のMap stateだけをcommitし、transformはtranslate3d + scaleの単一style writeとする。
+Gesture中のviewport geometryはpointerdown時にgetBoundingClientRectでcacheし、pointermove中はlayout readを行わない。resize / pageshow / double-tap開始時にのみcacheをrefreshする。Node base positionとSVG edge visibility/geometryは前回描画signatureとの差分がある場合だけDOMへ書き、Context Surface templateはmount時にMap化してO(1) lookupにする。
+Gesture中だけis-map-gesture-activeを付与し、Sceneへwill-change: transform、Node shadow簡略化、transition停止、edge optimizeSpeedを適用する。pointerup/cancelでfinal frameをflushして通常Visual Grammarへ戻す。Sceneにはcontain: layout paintを適用する。viewport cache / render signature / RAF queue等はruntime-onlyでDB / sessionStorage / Projection Key / Telemetryへ保存しない。
