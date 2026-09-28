@@ -714,5 +714,8 @@ Deep LevelからCapture等を行った後も、validated structural pathだけ�
 Map hierarchy transitionでsessionStorageへ保持してよいのはzoom direction / depth / timestamp等の構造情報だけとし、Plan title / Task title / user input / AI contentを保存しない。
 Map Telemetryもwhitelistされたnode_type / position_role / action_role等の構造metadataだけを保存する。
 
-V44.4では固定Intent構造を維持したままPersonalized Satelliteを追加し、importance × usage frequency × recency × continuityによって最大3〜4個程度のshortcutをpromotionする。
+V44.4では固定Intent構造を維持したままPersonalized Satelliteを追加する。Satelliteは新しいcanonical Entityではなく、既存Plan / ToolをL0へ昇格するAttention表現とする。
+初期weightは importance 35% / usage frequency 25% / recency 20% / continuity 20%、promotion thresholdは0.28、最大4件とする。ranking / layoutにAIは使わず、既存BehaviorEvent / WorkSession / StudyPracticeAttemptからrequest時に決定的に算出する。
+Plan Satelliteは未完了Taskを持つPlanを対象とし、Shared Planは共同Intentへanchorする。Tool Satelliteは、V44.4初期版では安全なtool-level usage signalが存在するAI Practiceのみを対象とし、過去30日2回以上の利用をpromotion candidate条件とする。
+Satellite row、absolute position、score historyは永続化しない。Map Telemetryへ保存するのは satellite_plan / satellite_tool、satellite-1〜4、action_role=satellite等の構造metadataだけで、promotion score / signal値 / Plan名 / user contentは保存しない。
 V44.5では共同Context / GitHub等の外部Toolをユーザー目的ベースのViewへ再投影する。
