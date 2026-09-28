@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\GuestPlanClaimService;
+use App\Services\HomeSurfacePreference;
 use App\Services\FutureMemoService;
 use App\Services\FirstRunService;
 use Illuminate\Http\Request;
@@ -27,6 +28,7 @@ class AuthController extends Controller
         GuestPlanClaimService $claimService,
         FutureMemoService $futureMemos,
         FirstRunService $firstRun,
+        HomeSurfacePreference $homeSurface,
     ) {
         $credentials = $request->validate([
             'email' => ['required', 'email'],
@@ -57,7 +59,7 @@ class AuthController extends Controller
         if ($claimed > 0) $claimMessages[] = "{$claimed}件のGuest計画";
         if ($claimedMemos > 0) $claimMessages[] = "{$claimedMemos}件の保存情報";
 
-        return redirect()->intended(route('home'))->with(
+        return redirect()->intended($homeSurface->url($request))->with(
             'status',
             $claimMessages !== []
                 ? 'ログインしました。' . implode('と', $claimMessages) . 'もこのアカウントに引き継ぎました。'
@@ -75,6 +77,7 @@ class AuthController extends Controller
         GuestPlanClaimService $claimService,
         FutureMemoService $futureMemos,
         FirstRunService $firstRun,
+        HomeSurfacePreference $homeSurface,
     ) {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:80'],
@@ -97,7 +100,7 @@ class AuthController extends Controller
 
         if ($claimed > 0 || $firstRun->hasBrowserPass($request)) {
             $firstRun->markPassed($request);
-            $defaultRoute = $claimed > 0 ? route('home') : route('plans.create');
+            $defaultRoute = $claimed > 0 ? $homeSurface->url($request) : route('plans.create');
         } else {
             $firstRun->requireForNewAccount($request);
             $defaultRoute = route('first_run.show');
