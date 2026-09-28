@@ -280,9 +280,9 @@
                         </div>
                     </div>
                 @endif
-            </div>
 
-            @include('map.partials.spatial-dock')
+                @include('map.partials.spatial-dock')
+            </div>
 
             <aside
                 class="canovia-map-context-surface"
