@@ -6991,7 +6991,7 @@ html[data-theme-resolved="light"] .canovia-map-node-direct-open {
         .canovia-map-shell,
         .canovia-map-shell.is-intent-hub,
         .canovia-map-shell.is-hierarchy-map {
-            height: clamp(42rem, calc(100svh - 8.5rem), 50rem);
+            height: clamp(42rem, calc(100dvh - 8.5rem), 50rem);
             min-height: 42rem;
             border-radius: 1.05rem;
         }
