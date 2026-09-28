@@ -8259,6 +8259,16 @@ html[data-theme-resolved="light"] .canovia-map-node-direct-open {
             will-change: transform;
         }
 
+        body[data-route-name="map.index"] .canovia-map-page.is-map-gesture-active .canovia-map-fullscreen-topbar,
+        body[data-route-name="map.index"] .canovia-map-page.is-map-gesture-active .canovia-map-gesture-controls {
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+        }
+
+        body[data-route-name="map.index"] .canovia-map-page.is-map-gesture-active .canovia-map-fullscreen-topbar {
+            box-shadow: 0 6px 18px rgb(2 6 23 / 0.18);
+        }
+
         .canovia-map-shell.is-map-gesture-active .canovia-map-node {
             box-shadow: 0 8px 20px rgb(2 6 23 / 0.34);
             transition: none;
