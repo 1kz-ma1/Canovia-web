@@ -2,12 +2,21 @@
     $hierarchy = is_array($graph['hierarchy'] ?? null) ? $graph['hierarchy'] : [];
     $depth = (int) ($hierarchy['depth'] ?? 0);
     $breadcrumbs = collect($hierarchy['breadcrumbs'] ?? []);
-    $levelLabels = [
-        0 => 'Intent',
-        1 => 'Domain',
-        2 => 'Plan',
-        3 => 'Execution',
-    ];
+    $isCollaborationHierarchy = (bool) ($hierarchy['collaboration_mode'] ?? false)
+        || (($hierarchy['intent'] ?? null) === 'collaboration' && filled($hierarchy['collaboration_context_key'] ?? null));
+    $levelLabels = $isCollaborationHierarchy
+        ? [
+            0 => 'Intent',
+            1 => 'Purpose',
+            2 => 'Context',
+            3 => 'Execution',
+        ]
+        : [
+            0 => 'Intent',
+            1 => 'Domain',
+            2 => 'Plan',
+            3 => 'Execution',
+        ];
 @endphp
 
 <div class="canovia-map-hierarchy-bar" data-map-hierarchy-path data-map-hierarchy-depth="{{ $depth }}">
