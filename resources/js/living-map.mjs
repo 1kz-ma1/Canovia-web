@@ -186,6 +186,7 @@ export function mountLivingGoalMap({
     }));
 
     const nodeElementById = new Map(nodeElements.map((element) => [element.dataset.mapNodeId, element]));
+    const primaryNode = nodes.find((node) => node.isPrimary) || null;
     const telemetryStart = ensureMapTelemetryFlow(windowRef);
     const trackTelemetry = (eventType, extra = {}, advanceStep = false) => {
         if (typeof recordBehaviorRef !== 'function') return;
@@ -271,6 +272,7 @@ export function mountLivingGoalMap({
     const clearFocus = () => {
         activeFocusId = null;
         page.dataset.mapFocus = '';
+        page.classList.remove('is-map-focused');
 
         const positions = new Map();
         for (const node of nodes) {
@@ -307,6 +309,7 @@ export function mountLivingGoalMap({
 
         activeFocusId = nodeId;
         page.dataset.mapFocus = nodeId;
+        page.classList.add('is-map-focused');
 
         for (const node of nodes) {
             const element = nodeElementById.get(node.id);
@@ -424,6 +427,19 @@ export function mountLivingGoalMap({
     };
 
     function onPageClick(event) {
+        const primaryShortcut = event.target.closest?.('[data-map-primary-focus]');
+        if (primaryShortcut && page.contains(primaryShortcut) && primaryNode) {
+            event.preventDefault();
+            const nodeElement = nodeElementById.get(primaryNode.id);
+            trackTelemetry('map_node_focused', {
+                node_type: nodeElement?.dataset.mapNodeType || primaryNode.nodeType || null,
+                position_role: nodeElement?.dataset.mapPositionRole || primaryNode.positionRole || null,
+                is_primary: true,
+            }, true);
+            openFocus(primaryNode.id);
+            return;
+        }
+
         const fallback = event.target.closest?.('[data-map-home-fallback]');
         if (fallback && page.contains(fallback)) {
             trackTelemetry('map_classic_home_opened', { action_role: 'home' }, true);

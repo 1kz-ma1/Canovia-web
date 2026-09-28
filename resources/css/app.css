@@ -5397,3 +5397,247 @@ body.canovia-guide-active { overflow: hidden; }
         line-height: 1.55;
     }
 }
+
+
+/* --------------------------------------------------------------------------
+ * V43.0 Map Usability Baseline
+ * Keep the overview visible, make NOW dominant, reveal detail on demand.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .canovia-map-toolbar {
+        align-items: center;
+        gap: 0.65rem 1rem;
+        border-radius: 1.15rem;
+        padding: 0.68rem 0.78rem;
+    }
+
+    .canovia-map-toolbar .canovia-map-hero-copy {
+        display: flex;
+        min-width: min(100%, 24rem);
+        flex: 1 1 28rem;
+        align-items: center;
+        gap: 0.9rem;
+    }
+
+    .canovia-map-heading {
+        flex: 0 0 auto;
+    }
+
+    .canovia-map-toolbar .canovia-map-kicker {
+        font-size: 0.58rem;
+        letter-spacing: 0.15em;
+    }
+
+    .canovia-map-toolbar .canovia-map-title {
+        margin-top: 0.08rem;
+        font-size: clamp(1.15rem, 2.2vw, 1.55rem);
+        line-height: 1.05;
+    }
+
+    .canovia-map-help {
+        min-width: 0;
+        color: rgb(148 163 184);
+        font-size: 0.68rem;
+    }
+
+    .canovia-map-help > summary {
+        width: fit-content;
+        cursor: pointer;
+        list-style: none;
+        border-radius: 9999px;
+        padding: 0.3rem 0.5rem;
+        color: rgb(125 211 252);
+        font-weight: 800;
+    }
+
+    .canovia-map-help > summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .canovia-map-help > summary::before {
+        content: "ⓘ";
+        margin-right: 0.3rem;
+        color: rgb(100 116 139);
+    }
+
+    .canovia-map-help > summary:hover,
+    .canovia-map-help > summary:focus-visible {
+        background: rgb(14 116 144 / 0.12);
+        outline: none;
+    }
+
+    .canovia-map-help > p {
+        margin-top: 0.4rem;
+        max-width: 36rem;
+        line-height: 1.55;
+    }
+
+    .canovia-map-hero-actions {
+        align-items: center;
+    }
+
+    .canovia-map-now-button {
+        box-shadow: 0 0 22px rgb(34 211 238 / 0.10);
+    }
+
+    .canovia-map-page.is-map-focused .canovia-map-now-button {
+        display: none;
+    }
+
+    .canovia-map-shell {
+        height: clamp(34rem, 68dvh, 44rem);
+        min-height: 34rem;
+    }
+
+    .canovia-map-node:not(.is-primary) {
+        opacity: 0.9;
+    }
+
+    a.canovia-map-node:not(.is-primary):hover,
+    a.canovia-map-node:not(.is-primary):focus-visible,
+    .canovia-map-node.is-focus-neighbor,
+    .canovia-map-node.is-focus-center {
+        opacity: 1;
+    }
+
+    .canovia-map-node.is-primary::before {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        inset: -0.48rem;
+        border: 1px solid rgb(103 232 249 / 0.16);
+        border-radius: 1.48rem;
+        box-shadow: 0 0 28px rgb(34 211 238 / 0.10);
+        pointer-events: none;
+    }
+
+    .canovia-map-note {
+        padding: 0.65rem 0.8rem;
+        font-size: 0.68rem;
+    }
+
+    @media (max-width: 767px) {
+        .canovia-map-page {
+            gap: 0.65rem;
+        }
+
+        .canovia-map-toolbar {
+            gap: 0.55rem;
+            border-radius: 1rem;
+            padding: 0.58rem 0.62rem;
+        }
+
+        .canovia-map-toolbar .canovia-map-hero-copy {
+            min-width: 0;
+            flex: 1 1 100%;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+
+        .canovia-map-toolbar .canovia-map-title {
+            font-size: 1.12rem;
+        }
+
+        .canovia-map-toolbar .canovia-map-kicker {
+            font-size: 0.52rem;
+        }
+
+        .canovia-map-help > p {
+            position: absolute;
+            z-index: 15;
+            right: 0.65rem;
+            left: 0.65rem;
+            margin-top: 0.45rem;
+            border: 1px solid rgb(71 85 105 / 0.72);
+            border-radius: 0.9rem;
+            background: rgb(8 15 34 / 0.98);
+            padding: 0.65rem 0.72rem;
+            box-shadow: 0 14px 34px rgb(2 6 23 / 0.48);
+        }
+
+        .canovia-map-hero-actions {
+            width: 100%;
+            flex-wrap: nowrap;
+            gap: 0.4rem;
+        }
+
+        .canovia-map-hero-actions > * {
+            min-width: 0;
+            flex: 1 1 auto;
+            padding-right: 0.62rem;
+            padding-left: 0.62rem;
+            font-size: 0.7rem;
+            white-space: nowrap;
+        }
+
+        .canovia-map-roadmap-link {
+            display: none;
+        }
+
+        .canovia-map-shell {
+            height: clamp(31rem, calc(100dvh - 10.75rem), 38rem);
+            min-height: 31rem;
+            border-radius: 1.15rem;
+        }
+
+        .canovia-map-node:not(.is-primary):not(.is-focus-center) .canovia-map-node-subtitle {
+            display: none;
+        }
+
+        .canovia-map-node:not(.is-primary) {
+            min-height: 3.5rem;
+            padding: 0.5rem 0.56rem;
+            opacity: 0.82;
+        }
+
+        .canovia-map-node.is-primary {
+            min-height: 5rem;
+        }
+
+        .canovia-map-context-surface {
+            max-height: min(46dvh, 23rem);
+        }
+
+        .canovia-map-context-card {
+            max-height: min(46dvh, 23rem);
+            border-radius: 1.15rem;
+        }
+
+        .canovia-map-context-card::before {
+            content: "";
+            display: block;
+            width: 2.4rem;
+            height: 0.22rem;
+            margin: 0.45rem auto 0;
+            border-radius: 9999px;
+            background: rgb(100 116 139 / 0.6);
+        }
+
+        .canovia-map-context-header {
+            position: sticky;
+            z-index: 2;
+            top: 0;
+            background: rgb(8 15 34 / 0.965);
+            padding: 0.68rem 0.8rem;
+        }
+
+        .canovia-map-classic-content {
+            padding: 0.8rem;
+        }
+
+        .canovia-map-classic-summary {
+            margin-top: 0.55rem;
+            line-height: 1.6;
+        }
+
+        .canovia-map-note {
+            display: none;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .canovia-map-node.is-primary::before {
+            box-shadow: none;
+        }
+    }
+}
