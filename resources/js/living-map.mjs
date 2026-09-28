@@ -225,6 +225,61 @@ export function zoomMapViewAt(
     }, viewport, options);
 }
 
+export function createFrameBatcher(
+    flush,
+    {
+        requestFrame = globalThis.requestAnimationFrame?.bind(globalThis),
+        cancelFrame = globalThis.cancelAnimationFrame?.bind(globalThis),
+    } = {},
+) {
+    let frameId = null;
+    let pendingValue;
+    const request = typeof requestFrame === 'function'
+        ? requestFrame
+        : (callback) => globalThis.setTimeout(callback, 16);
+    const cancel = typeof cancelFrame === 'function'
+        ? cancelFrame
+        : (id) => globalThis.clearTimeout(id);
+
+    const run = () => {
+        frameId = null;
+        const value = pendingValue;
+        pendingValue = undefined;
+        flush(value);
+    };
+
+    return {
+        schedule(value) {
+            pendingValue = value;
+            if (frameId !== null) return frameId;
+            frameId = request(run);
+            return frameId;
+        },
+        flushNow() {
+            if (frameId !== null) {
+                cancel(frameId);
+                frameId = null;
+            }
+
+            if (pendingValue === undefined) return false;
+            const value = pendingValue;
+            pendingValue = undefined;
+            flush(value);
+            return true;
+        },
+        cancel() {
+            if (frameId !== null) {
+                cancel(frameId);
+            }
+            frameId = null;
+            pendingValue = undefined;
+        },
+        pending() {
+            return frameId !== null;
+        },
+    };
+}
+
 export function mapHistoryDirection(currentDepth, targetDepth) {
     const current = Math.max(0, Number(currentDepth || 0));
     const target = Math.max(0, Number(targetDepth || 0));
