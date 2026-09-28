@@ -634,10 +634,17 @@ export function mountLivingGoalMap({
             const visible = !visibleIds
                 || (visibleIds.has(edge.source) && visibleIds.has(edge.target) && directlyRelated);
 
-            edge.element.classList.toggle('is-focus-hidden', !visible);
+            if (edge.renderedVisibility !== visible) {
+                edge.renderedVisibility = visible;
+                edge.element.classList.toggle('is-focus-hidden', !visible);
+            }
 
             const source = positions.get(edge.source) || originalPosition(edge.source);
             const target = positions.get(edge.target) || originalPosition(edge.target);
+            const geometry = [source.x, source.y, target.x, target.y].join(':');
+
+            if (edge.renderedGeometry === geometry) continue;
+            edge.renderedGeometry = geometry;
             edge.element.setAttribute('x1', String(source.x));
             edge.element.setAttribute('y1', String(source.y));
             edge.element.setAttribute('x2', String(target.x));
@@ -652,10 +659,17 @@ export function mountLivingGoalMap({
             ? buildMobileBaseLayout(nodes, page.dataset.mapLevel || 'l3')
             : new Map(nodes.map((node) => [node.id, { x: node.x, y: node.y }]));
 
-        page.dataset.mapSpatialLayout = mobile ? 'mobile' : 'desktop';
+        const spatialLayout = mobile ? 'mobile' : 'desktop';
+        if (page.dataset.mapSpatialLayout !== spatialLayout) {
+            page.dataset.mapSpatialLayout = spatialLayout;
+        }
 
         for (const node of nodes) {
             const position = basePositions.get(node.id) || { x: node.x, y: node.y };
+            const signature = position.x + ':' + position.y;
+            if (node.renderedBasePosition === signature) continue;
+
+            node.renderedBasePosition = signature;
             const element = nodeElementById.get(node.id);
             element?.style.setProperty('--map-x', String(position.x) + '%');
             element?.style.setProperty('--map-y', String(position.y) + '%');
@@ -668,12 +682,8 @@ export function mountLivingGoalMap({
         return basePositions;
     };
 
-    const templateFor = (nodeId) => templates.find(
-        (template) => template.dataset.mapSurfaceTemplate === nodeId
-    );
-    const globalTemplateFor = (dockId) => globalTemplates.find(
-        (template) => template.dataset.mapGlobalSurfaceTemplate === dockId
-    );
+    const templateFor = (nodeId) => templateByNodeId.get(nodeId);
+    const globalTemplateFor = (dockId) => globalTemplateByDockId.get(dockId);
 
     const showUpdatedStatus = () => {
         if (disposed) return;
