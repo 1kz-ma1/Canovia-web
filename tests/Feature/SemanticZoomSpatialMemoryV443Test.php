@@ -46,7 +46,6 @@ class SemanticZoomSpatialMemoryV443Test extends TestCase
             ->assertSee('data-map-zoom-direction="in"', false)
             ->assertSee(
                 route('map.index', ['level' => MapLevel::Domain->value, 'intent' => 'execution']),
-                false,
             );
 
         $graph = $response->viewData('graph');
