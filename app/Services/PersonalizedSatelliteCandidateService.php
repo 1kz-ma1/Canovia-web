@@ -334,7 +334,7 @@ final class PersonalizedSatelliteCandidateService
                 }
 
                 $priority = max(1, min(5, (int) $left->priority))
-                    <=> max(1, min(5, (int) $right->priority);
+                    <=> max(1, min(5, (int) $right->priority));
                 if ($priority !== 0) {
                     return $priority;
                 }
