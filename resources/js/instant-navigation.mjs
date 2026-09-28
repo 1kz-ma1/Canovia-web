@@ -410,6 +410,7 @@ export function mountCanoviaInstantNavigation({
         const link = event.target?.closest?.('a[href]');
         if (!link) return null;
         if (link.target === '_blank' || link.hasAttribute('download') || link.hasAttribute('data-instant-nav-skip')) return null;
+        if (link.hasAttribute('data-map-node-focus')) return null;
         if (link.href.startsWith('mailto:') || link.href.startsWith('tel:')) return null;
         return isCoreUrl(link.href) ? link : null;
     };
