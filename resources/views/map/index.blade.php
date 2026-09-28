@@ -265,36 +265,40 @@
                                 </div>
                             @endif
 
-                            <div class="canovia-map-classic-actions">
-                                @foreach (($surface['actions'] ?? []) as $action)
-                                    <a
-                                        href="{{ $action['url'] }}"
-                                        class="{{ ($action['primary'] ?? false) ? 'btn-primary' : 'btn-secondary' }} w-full justify-center"
-                                        data-map-classic-action
-                                        data-map-action-role="{{ ($action['primary'] ?? false) ? 'primary' : 'secondary' }}"
-                                    >{{ $action['label'] }}</a>
-                                @endforeach
-                            </div>
-                            @auth
-                                @if (! $isIntentHub && (bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
-                                    <div class="canovia-map-companion-entry">
-                                        <div>
-                                            <p class="canovia-map-companion-kicker">COMPANION</p>
-                                            <p class="canovia-map-companion-copy">このNodeと直接つながるContextを引き継いで相談します。</p>
+                            @if ($isIntentHub && ($node['id'] ?? null) === 'intent:space-station')
+                                @include('map.partials.space-station-surface')
+                            @else
+                                <div class="canovia-map-classic-actions">
+                                    @foreach (($surface['actions'] ?? []) as $action)
+                                        <a
+                                            href="{{ $action['url'] }}"
+                                            class="{{ ($action['primary'] ?? false) ? 'btn-primary' : 'btn-secondary' }} w-full justify-center"
+                                            data-map-classic-action
+                                            data-map-action-role="{{ ($action['primary'] ?? false) ? 'primary' : 'secondary' }}"
+                                        >{{ $action['label'] }}</a>
+                                    @endforeach
+                                </div>
+                                @auth
+                                    @if (! $isIntentHub && (bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
+                                        <div class="canovia-map-companion-entry">
+                                            <div>
+                                                <p class="canovia-map-companion-kicker">COMPANION</p>
+                                                <p class="canovia-map-companion-copy">このNodeと直接つながるContextを引き継いで相談します。</p>
+                                            </div>
+                                            <form method="POST" action="{{ route('companion.entry') }}" data-mutation-once data-map-companion-form>
+                                                @csrf
+                                                <input type="hidden" name="entry_type" value="map">
+                                                <input type="hidden" name="map_node_id" value="{{ $node['id'] }}">
+                                                <input type="hidden" name="source_path" value="{{ $mapReturnUrl }}#focus={{ rawurlencode($node['id']) }}">
+                                                <input type="hidden" name="source_route" value="map.index">
+                                                <button type="submit" class="btn-secondary w-full justify-center" data-map-classic-action>
+                                                    ✦ このContextについて相談
+                                                </button>
+                                            </form>
                                         </div>
-                                        <form method="POST" action="{{ route('companion.entry') }}" data-mutation-once data-map-companion-form>
-                                            @csrf
-                                            <input type="hidden" name="entry_type" value="map">
-                                            <input type="hidden" name="map_node_id" value="{{ $node['id'] }}">
-                                            <input type="hidden" name="source_path" value="{{ $mapReturnUrl }}#focus={{ rawurlencode($node['id']) }}">
-                                            <input type="hidden" name="source_route" value="map.index">
-                                            <button type="submit" class="btn-secondary w-full justify-center" data-map-classic-action>
-                                                ✦ このContextについて相談
-                                            </button>
-                                        </form>
-                                    </div>
-                                @endif
-                            @endauth
+                                    @endif
+                                @endauth
+                            @endif
                         </section>
                     </template>
                 @endif
