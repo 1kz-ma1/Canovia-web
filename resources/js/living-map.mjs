@@ -639,6 +639,11 @@ export function mountLivingGoalMap({
         clearPending(windowRef);
         showUpdatedStatus();
         trackTelemetry('map_reprojected');
+    } else {
+        const instantRoot = page.closest?.('[data-canovia-page]');
+        if (readPending(windowRef) && instantRoot?.dataset.canoviaInstantRendered === '1') {
+            void revalidateProjection();
+        }
     }
 
     return {
