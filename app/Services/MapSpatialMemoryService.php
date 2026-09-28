@@ -41,6 +41,14 @@ final class MapSpatialMemoryService
                 'open_hash' => '#dock=space-station',
             ];
 
+        if ($level !== MapLevel::Intent) {
+            $projection['projection_key'] = hash('sha256', implode('|', [
+                (string) ($projection['projection_key'] ?? ''),
+                (string) data_get($projection, 'space_station.state_key', ''),
+                $level->value,
+            ]));
+        }
+
         return $projection;
     }
 
