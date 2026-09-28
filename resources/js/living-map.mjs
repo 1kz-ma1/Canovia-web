@@ -116,22 +116,40 @@ export function buildFocusLayout(nodes, edges, selectedId, { mobile = false } = 
 }
 
 
-export function buildMobileBaseLayout(nodes, mapLevel = 'l0') {
+export function buildMobileBaseLayout(
+    nodes,
+    mapLevel = 'l0',
+    viewport = { width: 390, height: 700 },
+) {
     const positions = new Map(
         nodes.map((node) => [node.id, { x: Number(node.x ?? 50), y: Number(node.y ?? 50) }])
     );
+    const width = Math.max(1, Number(viewport?.width || 390));
+    const height = Math.max(1, Number(viewport?.height || 700));
+    const xPercent = (pixels) => (Number(pixels) / width) * 100;
+    const yPercent = (pixels) => (Number(pixels) / height) * 100;
+    const roundedPoint = (x, y) => ({
+        x: Math.round(x * 10) / 10,
+        y: Math.round(y * 10) / 10,
+    });
 
     if (mapLevel === 'l0') {
+        const innerRadius = Math.min(width * 0.23, 104);
+        const outerRadius = Math.min(width * 0.38, 164);
+        const innerX = xPercent(innerRadius);
+        const innerY = yPercent(innerRadius);
+        const outerX = xPercent(outerRadius);
+        const outerY = yPercent(outerRadius);
         const rolePositions = {
             'space-station': { x: 50, y: 50 },
-            'intent-plan': { x: 27, y: 29 },
-            'intent-execution': { x: 73, y: 29 },
-            'intent-reflection': { x: 73, y: 71 },
-            'intent-collaboration': { x: 27, y: 71 },
-            'satellite-1': { x: 50, y: 9 },
-            'satellite-2': { x: 88, y: 50 },
-            'satellite-3': { x: 50, y: 91 },
-            'satellite-4': { x: 12, y: 50 },
+            'intent-plan': roundedPoint(50 - innerX, 50 - innerY),
+            'intent-execution': roundedPoint(50 + innerX, 50 - innerY),
+            'intent-reflection': roundedPoint(50 + innerX, 50 + innerY),
+            'intent-collaboration': roundedPoint(50 - innerX, 50 + innerY),
+            'satellite-1': roundedPoint(50, 50 - outerY),
+            'satellite-2': roundedPoint(50 + outerX, 50),
+            'satellite-3': roundedPoint(50, 50 + outerY),
+            'satellite-4': roundedPoint(50 - outerX, 50),
         };
 
         for (const node of nodes) {
@@ -153,15 +171,19 @@ export function buildMobileBaseLayout(nodes, mapLevel = 'l0') {
 
         const count = children.length;
         if (count > 0) {
-            const radiusX = count <= 4 ? 31 : 34;
-            const radiusY = count <= 4 ? 37 : 40;
+            const radiusPixels = Math.min(
+                width * (count <= 4 ? 0.34 : 0.37),
+                count <= 4 ? 145 : 158,
+            );
+            const radiusX = xPercent(radiusPixels);
+            const radiusY = yPercent(radiusPixels);
 
             children.forEach((node, index) => {
                 const angle = (-90 + (360 / count) * index) * Math.PI / 180;
-                positions.set(node.id, {
-                    x: Math.round(50 + Math.cos(angle) * radiusX),
-                    y: Math.round(50 + Math.sin(angle) * radiusY),
-                });
+                positions.set(node.id, roundedPoint(
+                    50 + Math.cos(angle) * radiusX,
+                    50 + Math.sin(angle) * radiusY,
+                ));
             });
         }
     }
@@ -663,7 +685,11 @@ export function mountLivingGoalMap({
     const applyBaseLayout = () => {
         const mobile = isMobileViewport();
         basePositions = mobile
-            ? buildMobileBaseLayout(nodes, page.dataset.mapLevel || 'l3')
+            ? buildMobileBaseLayout(
+                nodes,
+                page.dataset.mapLevel || 'l3',
+                currentMapViewport(),
+            )
             : new Map(nodes.map((node) => [node.id, { x: node.x, y: node.y }]));
 
         const spatialLayout = mobile ? 'mobile' : 'desktop';
