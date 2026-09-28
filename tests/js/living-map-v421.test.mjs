@@ -5,6 +5,7 @@ import {
     buildFocusLayout,
     buildMobileBaseLayout,
     clampMapViewTransform,
+    createFrameBatcher,
     mapActionTelemetryContext,
     mapHistoryDirection,
     mapReturnDecision,
@@ -340,4 +341,80 @@ test('pinch zoom keeps the chosen focus point stable before applying bounds', ()
     );
 
     assert.deepEqual(centered, { x: 0, y: 0, scale: 1.5 });
+});
+
+
+test('frame batcher coalesces repeated runtime writes and flushes only the latest value', () => {
+    const queued = [];
+    const cancelled = [];
+    const flushed = [];
+
+    const batcher = createFrameBatcher(
+        (value) => flushed.push(value),
+        {
+            requestFrame: (callback) => {
+                queued.push(callback);
+                return queued.length;
+            },
+            cancelFrame: (id) => cancelled.push(id),
+        },
+    );
+
+    batcher.schedule({ x: 1 });
+    batcher.schedule({ x: 2 });
+    batcher.schedule({ x: 3 });
+
+    assert.equal(queued.length, 1);
+    assert.equal(batcher.pending(), true);
+    assert.deepEqual(flushed, []);
+
+    queued[0]();
+
+    assert.equal(batcher.pending(), false);
+    assert.deepEqual(flushed, [{ x: 3 }]);
+    assert.deepEqual(cancelled, []);
+});
+
+test('frame batcher flushNow commits pending work once and cancels the queued frame', () => {
+    const queued = [];
+    const cancelled = [];
+    const flushed = [];
+
+    const batcher = createFrameBatcher(
+        (value) => flushed.push(value),
+        {
+            requestFrame: (callback) => {
+                queued.push(callback);
+                return 44;
+            },
+            cancelFrame: (id) => cancelled.push(id),
+        },
+    );
+
+    batcher.schedule('latest');
+    assert.equal(batcher.flushNow(), true);
+    assert.deepEqual(flushed, ['latest']);
+    assert.deepEqual(cancelled, [44]);
+    assert.equal(batcher.pending(), false);
+    assert.equal(batcher.flushNow(), false);
+});
+
+test('frame batcher cancel drops pending runtime work without flushing it', () => {
+    const flushed = [];
+    const cancelled = [];
+
+    const batcher = createFrameBatcher(
+        (value) => flushed.push(value),
+        {
+            requestFrame: () => 91,
+            cancelFrame: (id) => cancelled.push(id),
+        },
+    );
+
+    batcher.schedule('discard-me');
+    batcher.cancel();
+
+    assert.deepEqual(cancelled, [91]);
+    assert.deepEqual(flushed, []);
+    assert.equal(batcher.pending(), false);
 });

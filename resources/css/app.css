@@ -8241,3 +8241,42 @@ html[data-theme-resolved="light"] .canovia-map-node-direct-open {
         }
     }
 }
+
+
+/* --------------------------------------------------------------------------
+ * V45.4 Map Runtime Performance
+ * Keep the static visual grammar, but make active navigation cheap.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .canovia-map-scene {
+        contain: layout paint;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+    }
+
+    @media (max-width: 767px) {
+        .canovia-map-shell.is-map-gesture-active .canovia-map-scene {
+            will-change: transform;
+        }
+
+        .canovia-map-shell.is-map-gesture-active .canovia-map-node {
+            box-shadow: 0 8px 20px rgb(2 6 23 / 0.34);
+            transition: none;
+        }
+
+        .canovia-map-shell.is-map-gesture-active .canovia-map-node-glyph,
+        .canovia-map-shell.is-map-gesture-active .canovia-map-node-direct-open {
+            transition: none;
+        }
+
+        .canovia-map-shell.is-map-gesture-active .canovia-map-edge {
+            shape-rendering: optimizeSpeed;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .canovia-map-shell.is-map-view-animating .canovia-map-scene {
+            transition: none;
+        }
+    }
+}

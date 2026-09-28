@@ -225,6 +225,61 @@ export function zoomMapViewAt(
     }, viewport, options);
 }
 
+export function createFrameBatcher(
+    flush,
+    {
+        requestFrame = globalThis.requestAnimationFrame?.bind(globalThis),
+        cancelFrame = globalThis.cancelAnimationFrame?.bind(globalThis),
+    } = {},
+) {
+    let frameId = null;
+    let pendingValue;
+    const request = typeof requestFrame === 'function'
+        ? requestFrame
+        : (callback) => globalThis.setTimeout(callback, 16);
+    const cancel = typeof cancelFrame === 'function'
+        ? cancelFrame
+        : (id) => globalThis.clearTimeout(id);
+
+    const run = () => {
+        frameId = null;
+        const value = pendingValue;
+        pendingValue = undefined;
+        flush(value);
+    };
+
+    return {
+        schedule(value) {
+            pendingValue = value;
+            if (frameId !== null) return frameId;
+            frameId = request(run);
+            return frameId;
+        },
+        flushNow() {
+            if (frameId !== null) {
+                cancel(frameId);
+                frameId = null;
+            }
+
+            if (pendingValue === undefined) return false;
+            const value = pendingValue;
+            pendingValue = undefined;
+            flush(value);
+            return true;
+        },
+        cancel() {
+            if (frameId !== null) {
+                cancel(frameId);
+            }
+            frameId = null;
+            pendingValue = undefined;
+        },
+        pending() {
+            return frameId !== null;
+        },
+    };
+}
+
 export function mapHistoryDirection(currentDepth, targetDepth) {
     const current = Math.max(0, Number(currentDepth || 0));
     const target = Math.max(0, Number(targetDepth || 0));
@@ -386,9 +441,17 @@ export function mountLivingGoalMap({
         target: element.dataset.mapEdgeTarget,
         relation: element.dataset.mapEdgeRelation || '',
         element,
+        renderedVisibility: null,
+        renderedGeometry: '',
     }));
 
     const nodeElementById = new Map(nodeElements.map((element) => [element.dataset.mapNodeId, element]));
+    const templateByNodeId = new Map(
+        templates.map((template) => [template.dataset.mapSurfaceTemplate, template])
+    );
+    const globalTemplateByDockId = new Map(
+        globalTemplates.map((template) => [template.dataset.mapGlobalSurfaceTemplate, template])
+    );
     const primaryNode = nodes.find((node) => node.isPrimary) || null;
     const telemetryStart = ensureMapTelemetryFlow(windowRef);
     const trackTelemetry = (eventType, extra = {}, advanceStep = false) => {
@@ -427,57 +490,114 @@ export function mountLivingGoalMap({
     let gesture = null;
     let suppressMapClickUntil = 0;
     let mapView = { x: 0, y: 0, scale: 1 };
+    let viewportCache = {
+        left: 0,
+        top: 0,
+        width: Math.max(1, Number(mapShell?.clientWidth || 1)),
+        height: Math.max(1, Number(mapShell?.clientHeight || 1)),
+    };
+    let renderedMapViewSignature = '';
+    let renderedTransformed = null;
+    let renderedControlSignature = '';
 
-    const mapViewport = () => {
+    const refreshMapViewport = () => {
         const rect = mapShell?.getBoundingClientRect?.();
 
-        return {
+        viewportCache = {
+            left: Number(rect?.left || 0),
+            top: Number(rect?.top || 0),
             width: Math.max(1, Number(rect?.width || mapShell?.clientWidth || 1)),
             height: Math.max(1, Number(rect?.height || mapShell?.clientHeight || 1)),
         };
+
+        return viewportCache;
     };
 
-    const syncViewControls = () => {
-        const atMinimum = mapView.scale <= 0.821;
-        const atMaximum = mapView.scale >= 2.199;
+    const currentMapViewport = () => ({
+        width: viewportCache.width,
+        height: viewportCache.height,
+    });
+
+    const syncViewControls = (view) => {
+        const atMinimum = view.scale <= 0.821;
+        const atMaximum = view.scale >= 2.199;
+        const changed = (
+            Math.abs(view.x) > 0.5
+            || Math.abs(view.y) > 0.5
+            || Math.abs(view.scale - 1) > 0.005
+        );
+        const signature = [atMinimum ? 1 : 0, atMaximum ? 1 : 0, changed ? 1 : 0].join(':');
+
+        if (signature === renderedControlSignature) return;
+        renderedControlSignature = signature;
+
         if (zoomOutControl) zoomOutControl.disabled = atMinimum;
         if (zoomInControl) zoomInControl.disabled = atMaximum;
         if (viewResetControl) {
-            viewResetControl.dataset.mapViewChanged = (
-                Math.abs(mapView.x) > 0.5
-                || Math.abs(mapView.y) > 0.5
-                || Math.abs(mapView.scale - 1) > 0.005
-            ) ? '1' : '0';
+            viewResetControl.dataset.mapViewChanged = changed ? '1' : '0';
         }
     };
 
-    const applyMapView = (next, { animate = false } = {}) => {
-        if (!mapScene) return mapView;
+    const commitMapView = (payload) => {
+        if (!payload || !mapScene || disposed) return;
 
-        if (!isMobileViewport()) {
-            mapView = { x: 0, y: 0, scale: 1 };
-        } else {
-            mapView = clampMapViewTransform(next, mapViewport());
-        }
+        const view = payload.view;
+        const animate = Boolean(payload.animate);
+        const signature = [view.x, view.y, view.scale].join(':');
 
-        windowRef.clearTimeout(viewAnimationTimer);
-        mapShell?.classList.toggle('is-map-view-animating', Boolean(animate));
         if (animate) {
+            windowRef.clearTimeout(viewAnimationTimer);
+            mapShell?.classList.add('is-map-view-animating');
             viewAnimationTimer = windowRef.setTimeout(() => {
                 mapShell?.classList.remove('is-map-view-animating');
             }, 210);
+        } else if (mapShell?.classList.contains('is-map-view-animating')) {
+            windowRef.clearTimeout(viewAnimationTimer);
+            mapShell.classList.remove('is-map-view-animating');
         }
 
-        mapScene.style.setProperty('--map-pan-x', mapView.x + 'px');
-        mapScene.style.setProperty('--map-pan-y', mapView.y + 'px');
-        mapScene.style.setProperty('--map-view-scale', String(mapView.scale));
-        mapShell?.classList.toggle(
-            'is-map-transformed',
-            Math.abs(mapView.x) > 0.5
-                || Math.abs(mapView.y) > 0.5
-                || Math.abs(mapView.scale - 1) > 0.005,
+        if (signature !== renderedMapViewSignature) {
+            renderedMapViewSignature = signature;
+            mapScene.style.transform = 'translate3d('
+                + view.x + 'px, '
+                + view.y + 'px, 0) scale('
+                + view.scale + ')';
+        }
+
+        const transformed = (
+            Math.abs(view.x) > 0.5
+            || Math.abs(view.y) > 0.5
+            || Math.abs(view.scale - 1) > 0.005
         );
-        syncViewControls();
+
+        if (renderedTransformed !== transformed) {
+            renderedTransformed = transformed;
+            mapShell?.classList.toggle('is-map-transformed', transformed);
+        }
+
+        syncViewControls(view);
+    };
+
+    const mapViewBatcher = createFrameBatcher(commitMapView, {
+        requestFrame: windowRef.requestAnimationFrame?.bind(windowRef),
+        cancelFrame: windowRef.cancelAnimationFrame?.bind(windowRef),
+    });
+
+    const applyMapView = (next, { animate = false, immediate = false } = {}) => {
+        if (!mapScene) return mapView;
+
+        mapView = isMobileViewport()
+            ? clampMapViewTransform(next, currentMapViewport())
+            : { x: 0, y: 0, scale: 1 };
+
+        mapViewBatcher.schedule({
+            view: { ...mapView },
+            animate,
+        });
+
+        if (immediate) {
+            mapViewBatcher.flushNow();
+        }
 
         return mapView;
     };
@@ -489,7 +609,7 @@ export function mountLivingGoalMap({
     const zoomMapBy = (factor, focusPoint = null, { animate = true } = {}) => {
         if (!isMobileViewport()) return mapView;
 
-        const viewport = mapViewport();
+        const viewport = currentMapViewport();
         const point = focusPoint || {
             x: viewport.width / 2,
             y: viewport.height / 2,
@@ -514,10 +634,17 @@ export function mountLivingGoalMap({
             const visible = !visibleIds
                 || (visibleIds.has(edge.source) && visibleIds.has(edge.target) && directlyRelated);
 
-            edge.element.classList.toggle('is-focus-hidden', !visible);
+            if (edge.renderedVisibility !== visible) {
+                edge.renderedVisibility = visible;
+                edge.element.classList.toggle('is-focus-hidden', !visible);
+            }
 
             const source = positions.get(edge.source) || originalPosition(edge.source);
             const target = positions.get(edge.target) || originalPosition(edge.target);
+            const geometry = [source.x, source.y, target.x, target.y].join(':');
+
+            if (edge.renderedGeometry === geometry) continue;
+            edge.renderedGeometry = geometry;
             edge.element.setAttribute('x1', String(source.x));
             edge.element.setAttribute('y1', String(source.y));
             edge.element.setAttribute('x2', String(target.x));
@@ -532,10 +659,17 @@ export function mountLivingGoalMap({
             ? buildMobileBaseLayout(nodes, page.dataset.mapLevel || 'l3')
             : new Map(nodes.map((node) => [node.id, { x: node.x, y: node.y }]));
 
-        page.dataset.mapSpatialLayout = mobile ? 'mobile' : 'desktop';
+        const spatialLayout = mobile ? 'mobile' : 'desktop';
+        if (page.dataset.mapSpatialLayout !== spatialLayout) {
+            page.dataset.mapSpatialLayout = spatialLayout;
+        }
 
         for (const node of nodes) {
             const position = basePositions.get(node.id) || { x: node.x, y: node.y };
+            const signature = position.x + ':' + position.y;
+            if (node.renderedBasePosition === signature) continue;
+
+            node.renderedBasePosition = signature;
             const element = nodeElementById.get(node.id);
             element?.style.setProperty('--map-x', String(position.x) + '%');
             element?.style.setProperty('--map-y', String(position.y) + '%');
@@ -548,12 +682,8 @@ export function mountLivingGoalMap({
         return basePositions;
     };
 
-    const templateFor = (nodeId) => templates.find(
-        (template) => template.dataset.mapSurfaceTemplate === nodeId
-    );
-    const globalTemplateFor = (dockId) => globalTemplates.find(
-        (template) => template.dataset.mapGlobalSurfaceTemplate === dockId
-    );
+    const templateFor = (nodeId) => templateByNodeId.get(nodeId);
+    const globalTemplateFor = (dockId) => globalTemplateByDockId.get(dockId);
 
     const showUpdatedStatus = () => {
         if (disposed) return;
@@ -856,14 +986,10 @@ export function mountLivingGoalMap({
         y: (Number(left?.y || 0) + Number(right?.y || 0)) / 2,
     });
 
-    const scenePoint = (clientPoint) => {
-        const rect = mapShell?.getBoundingClientRect?.();
-
-        return {
-            x: Number(clientPoint?.x || 0) - Number(rect?.left || 0),
-            y: Number(clientPoint?.y || 0) - Number(rect?.top || 0),
-        };
-    };
+    const scenePoint = (clientPoint) => ({
+        x: Number(clientPoint?.x || 0) - viewportCache.left,
+        y: Number(clientPoint?.y || 0) - viewportCache.top,
+    });
 
     const beginPanGesture = (point) => {
         gesture = {
@@ -892,6 +1018,11 @@ export function mountLivingGoalMap({
         if (!isMobileViewport() || !mapScene) return;
         if (event.pointerType === 'mouse' && event.button !== 0) return;
 
+        if (activePointers.size === 0) {
+            refreshMapViewport();
+            mapShell?.classList.add('is-map-gesture-active');
+        }
+
         const point = { x: event.clientX, y: event.clientY };
         activePointers.set(event.pointerId, point);
         mapScene.setPointerCapture?.(event.pointerId);
@@ -914,7 +1045,7 @@ export function mountLivingGoalMap({
             const points = [...activePointers.values()];
             const currentDistance = Math.max(1, pointerDistance(points[0], points[1]));
             const currentMidpoint = pointerMidpoint(points[0], points[1]);
-            const viewport = mapViewport();
+            const viewport = currentMapViewport();
             const startFocus = scenePoint(gesture.startMidpoint);
             const currentFocus = scenePoint(currentMidpoint);
             const scale = gesture.startTransform.scale
@@ -980,6 +1111,8 @@ export function mountLivingGoalMap({
         }
 
         gesture = null;
+        mapViewBatcher.flushNow();
+        mapShell?.classList.remove('is-map-gesture-active');
     };
 
     const onSceneDoubleClick = (event) => {
@@ -987,14 +1120,11 @@ export function mountLivingGoalMap({
         if (event.target.closest?.('[data-map-node], a, button, input, select, textarea')) return;
 
         event.preventDefault();
-        const rect = mapShell?.getBoundingClientRect?.();
-        const focus = {
-            x: event.clientX - Number(rect?.left || 0),
-            y: event.clientY - Number(rect?.top || 0),
-        };
+        refreshMapViewport();
+        const focus = scenePoint({ x: event.clientX, y: event.clientY });
         const targetScale = mapView.scale > 1.18 ? 1 : Math.min(1.55, 2.2);
         applyMapView(
-            zoomMapViewAt(mapView, targetScale, focus, mapViewport()),
+            zoomMapViewAt(mapView, targetScale, focus, currentMapViewport()),
             { animate: true },
         );
     };
@@ -1008,8 +1138,9 @@ export function mountLivingGoalMap({
         viewportTimer = windowRef.setTimeout(() => {
             if (disposed) return;
 
+            refreshMapViewport();
             applyBaseLayout();
-            applyMapView(mapView);
+            applyMapView(mapView, { immediate: true });
 
             if (activeFocusId) {
                 openFocus(activeFocusId, { historyMode: 'none' });
@@ -1023,6 +1154,8 @@ export function mountLivingGoalMap({
         windowRef.clearTimeout(updateTimer);
         windowRef.clearTimeout(viewportTimer);
         windowRef.clearTimeout(viewAnimationTimer);
+        mapViewBatcher.cancel();
+        mapShell?.classList.remove('is-map-gesture-active', 'is-map-view-animating');
         windowRef.removeEventListener?.('resize', onViewportResize);
         mapScene?.removeEventListener('pointerdown', onScenePointerDown);
         mapScene?.removeEventListener('pointermove', onScenePointerMove);
@@ -1313,8 +1446,9 @@ export function mountLivingGoalMap({
     }
 
     function onPageShow(event) {
+        refreshMapViewport();
         applyBaseLayout();
-        applyMapView(mapView);
+        applyMapView(mapView, { immediate: true });
         const pending = readPending(windowRef);
         if (!pending) return;
 
@@ -1333,8 +1467,9 @@ export function mountLivingGoalMap({
         if (decision === 'updated') showUpdatedStatus();
     }
 
+    refreshMapViewport();
     applyBaseLayout();
-    applyMapView(mapView);
+    applyMapView(mapView, { immediate: true });
     windowRef.addEventListener?.('resize', onViewportResize);
     mapScene?.addEventListener('pointerdown', onScenePointerDown);
     mapScene?.addEventListener('pointermove', onScenePointerMove, { passive: false });
