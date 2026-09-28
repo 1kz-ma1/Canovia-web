@@ -379,10 +379,10 @@
                             ホームボタンやログイン後に最初に開くSurfaceを、この端末だけで選べます。
                         </p>
                         <div class="ui-choice-grid mt-3" data-home-surface-preference-options>
-                            <button type="button" class="ui-choice" data-home-surface-preference="classic">
+                            <button type="button" class="ui-choice {{ $preferredHomeSurface === 'classic' ? 'is-active' : '' }}" data-home-surface-preference="classic" aria-pressed="{{ $preferredHomeSurface === 'classic' ? 'true' : 'false' }}">
                                 <strong>Classic</strong><small>標準 · 安定版</small>
                             </button>
-                            <button type="button" class="ui-choice" data-home-surface-preference="map">
+                            <button type="button" class="ui-choice {{ $preferredHomeSurface === 'map' ? 'is-active' : '' }}" data-home-surface-preference="map" aria-pressed="{{ $preferredHomeSurface === 'map' ? 'true' : 'false' }}">
                                 <strong>Map</strong><small>試験中 · Context Map</small>
                             </button>
                         </div>
