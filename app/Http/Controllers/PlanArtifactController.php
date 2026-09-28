@@ -162,6 +162,7 @@ class PlanArtifactController extends Controller
             'notes' => ['nullable', 'string', 'max:1000'],
             'assigned_user_id' => ['nullable', 'integer'],
             'collaboration_state' => [
+                'sometimes',
                 'nullable',
                 Rule::in(array_keys(PlanArtifact::COLLABORATION_STATES)),
             ],
@@ -192,7 +193,11 @@ class PlanArtifactController extends Controller
             return $existing === [] ? null : $existing;
         }
 
-        $state = $validated['collaboration_state'] ?? null;
+        if (! array_key_exists('collaboration_state', $validated)) {
+            return $existing === [] ? null : $existing;
+        }
+
+        $state = $validated['collaboration_state'];
         if (is_string($state) && array_key_exists($state, PlanArtifact::COLLABORATION_STATES)) {
             $existing['collaboration_state'] = $state;
         } else {
