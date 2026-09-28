@@ -77,10 +77,12 @@ class CanoviaHomeSurfaceV432Test extends TestCase
         $this->assertStringContainsString("'/map'", $instant);
         $this->assertStringContainsString('canovia:before-instant-navigation', $instant);
         $this->assertStringContainsString('canovia:before-page-replace', $instant);
+        $this->assertStringContainsString('canoviaInstantRendered', $instant);
 
         $this->assertStringContainsString('function trackInstantMapLink', $living);
         $this->assertStringContainsString("removeEventListener('canovia:before-page-replace'", $living);
         $this->assertStringContainsString('clearMapTelemetryFlow(windowRef)', $living);
+        $this->assertStringContainsString("instantRoot?.dataset.canoviaInstantRendered === '1'", $living);
 
         $this->assertStringContainsString("document.addEventListener('canovia:before-instant-navigation'", $app);
         $this->assertStringContainsString('advanceMapTelemetryForClassicNavigation(link)', $app);
