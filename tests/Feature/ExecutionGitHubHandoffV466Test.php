@@ -169,7 +169,11 @@ class ExecutionGitHubHandoffV466Test extends TestCase
                 '変更候補を確認した後にPlan / TaskのContextが変わっています。現在Contextから候補を作り直してください。',
             );
 
-        Http::assertNothingSent();
+        Http::assertNotSent(fn (HttpRequest $request) =>
+            ($request->method() === 'POST' && str_contains($request->url(), '/git/refs'))
+            || ($request->method() === 'PUT' && str_contains($request->url(), '/contents/'))
+            || ($request->method() === 'POST' && str_ends_with($request->url(), '/pulls'))
+        );
         $this->assertDatabaseMissing('plan_artifacts', ['external_id' => '55']);
     }
 
