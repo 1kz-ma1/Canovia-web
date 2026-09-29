@@ -117,7 +117,6 @@ final class GitHubIntegrationDiagnosticsService
             ->where('provider', 'github')
             ->where('artifact_type', 'repository')
             ->orderByDesc('updated_at')
-            ->limit(100)
             ->get()
             ->filter(fn (PlanArtifact $artifact) =>
                 data_get($artifact->metadata, 'github_app_connection.status') === 'connected'
@@ -130,11 +129,6 @@ final class GitHubIntegrationDiagnosticsService
                     'plan_id' => (int) $artifact->plan_id,
                     'plan_title' => (string) ($artifact->plan?->title ?? 'Plan'),
                     'repo_full_name' => (string) ($parsed['repo_full_name'] ?? $artifact->title),
-                    'installation_id' => (int) data_get(
-                        $artifact->metadata,
-                        'github_app_connection.installation_id',
-                        0,
-                    ),
                     'updated_at' => $artifact->updated_at,
                 ];
             })
