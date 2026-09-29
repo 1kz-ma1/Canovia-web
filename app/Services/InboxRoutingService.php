@@ -226,6 +226,7 @@ class InboxRoutingService
     ): string {
         $this->requireTask($plan, $task);
 
+        $instruction = trim((string) ($data['execution_instruction'] ?? ''));
         $actorType = trim((string) ($data['execution_actor_type'] ?? 'human_ai'));
         $availableMinutes = isset($data['execution_available_minutes'])
             ? (int) $data['execution_available_minutes']
@@ -236,6 +237,7 @@ class InboxRoutingService
             $item,
             $plan,
             $task,
+            $instruction,
             $actorType,
             $availableMinutes,
         );
