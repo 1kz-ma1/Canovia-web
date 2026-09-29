@@ -549,6 +549,30 @@ test('dock history removes stale focus id while preserving focus depth', () => {
 });
 
 
+test('Task Focus recenters Primary Action while keeping Plan as its context neighbor', () => {
+    const executionNodes = [
+        { id: 'plan:1', positionRole: 'context-plan' },
+        { id: 'task:1', positionRole: 'action-primary' },
+        { id: 'task:2', positionRole: 'future-next' },
+        { id: 'tool:1', positionRole: 'action-tool' },
+        { id: 'evidence:1', positionRole: 'past-evidence' },
+    ];
+    const executionEdges = [
+        { source: 'plan:1', target: 'task:1', relation: 'current_action' },
+        { source: 'task:1', target: 'task:2', relation: 'next' },
+        { source: 'task:1', target: 'tool:1', relation: 'executed_with' },
+        { source: 'task:1', target: 'evidence:1', relation: 'produced_evidence' },
+    ];
+
+    const layout = buildFocusLayout(executionNodes, executionEdges, 'task:1');
+
+    assert.deepEqual(layout.positions.get('task:1'), { x: 50, y: 50 });
+    assert.ok(layout.positions.get('plan:1').x < 50, 'Plan becomes the current-context neighbor');
+    assert.ok(layout.positions.get('task:2').y < 50, 'Next Task remains Future');
+    assert.ok(layout.positions.get('tool:1').x > 50, 'Tool remains Action');
+    assert.ok(layout.positions.get('evidence:1').y > 50, 'Evidence remains Past');
+});
+
 test('mobile L3 keeps the selected Plan centered and orbits execution context around it', () => {
     const executionNodes = [
         { id: 'goal:1', positionRole: 'future-goal', x: 34, y: 16 },
