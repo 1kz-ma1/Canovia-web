@@ -157,6 +157,34 @@ class ReflectionMapV474Test extends TestCase
         $this->assertSame($beforeLogs, WorkLog::query()->count());
     }
 
+
+    public function test_space_station_capture_returns_to_the_same_reflection_lens(): void
+    {
+        [$user] = $this->scenario();
+
+        $params = [
+            'level' => 'l2',
+            'intent' => 'reflection',
+            'reflection_context' => 'reflections',
+        ];
+
+        $page = $this->actingAs($user)->get(route('map.index', $params));
+
+        $page
+            ->assertOk()
+            ->assertSee('name="map_reflection_context" value="reflections"', false);
+
+        $this->actingAs($user)
+            ->post(route('inbox.store'), [
+                'content' => '振り返り中に追加したメモ',
+                'return_to' => 'map_station',
+                'map_level' => 'l2',
+                'map_intent' => 'reflection',
+                'map_reflection_context' => 'reflections',
+            ])
+            ->assertRedirect(route('map.index', $params).'#dock=space-station');
+    }
+
     private function scenario(): array
     {
         $user = User::factory()->create([
