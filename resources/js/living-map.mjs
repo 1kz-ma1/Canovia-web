@@ -481,9 +481,13 @@ export function semanticContinuityTransform(sourceRect, targetRect) {
     const areaRatio = (sourceWidth * sourceHeight) / (targetWidth * targetHeight);
     const scale = Math.max(0.52, Math.min(1.9, Math.sqrt(Math.max(0.01, areaRatio))));
 
+    const translationLimit = 2400;
+    const translateX = Math.max(-translationLimit, Math.min(translationLimit, sourceCenterX - targetCenterX));
+    const translateY = Math.max(-translationLimit, Math.min(translationLimit, sourceCenterY - targetCenterY));
+
     return {
-        x: Math.round((sourceCenterX - targetCenterX) * 10) / 10,
-        y: Math.round((sourceCenterY - targetCenterY) * 10) / 10,
+        x: Math.round(translateX * 10) / 10,
+        y: Math.round(translateY * 10) / 10,
         scale: Math.round(scale * 1000) / 1000,
     };
 }
