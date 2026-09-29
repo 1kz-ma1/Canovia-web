@@ -114,6 +114,10 @@ final class ExecutionNavigationGraphService
                 $taskActions[] = $this->action('Planを開いて進める', route('plans.show', $plan), true);
             }
 
+            $taskActions[] = $this->action(
+                '今やることを生成',
+                route('plans.tasks.execution_orchestration.show', [$plan, $currentTask]),
+            );
             $taskActions[] = $this->action('Taskを編集', route('tasks.edit', $currentTask));
             $taskActions[] = $this->action('Plan全体を見る', route('plans.show', $plan));
 
@@ -150,13 +154,24 @@ final class ExecutionNavigationGraphService
             ));
 
             if ($nextTask instanceof Task) {
+                $nextBlockerCount = collect($nextTask->dependencyIds())
+                    ->filter(function (int $dependencyId) use ($plan) {
+                        $dependency = $plan->tasks->firstWhere('id', $dependencyId);
+
+                        return ! $dependency
+                            || ($dependency->status !== 'done' && (int) $dependency->progress_percent < 100);
+                    })
+                    ->count();
+
                 $nodes->push($this->node(
                     id: 'task:'.$nextTask->id,
                     type: 'task',
                     entityId: (int) $nextTask->id,
                     eyebrow: 'NEXT TASK',
                     label: (string) $nextTask->title,
-                    subtitle: '現在Actionの次に見えている候補',
+                    subtitle: $nextBlockerCount > 0
+                        ? $nextBlockerCount.'件の前提待ち · 先行可能な作業を確認できます'
+                        : '現在Actionの次に見えている候補',
                     action: route('plans.show', $plan),
                     attentionRole: 'next-task',
                     classicSurface: $this->surface(
@@ -166,13 +181,19 @@ final class ExecutionNavigationGraphService
                             ? Str::limit((string) $nextTask->description, 180)
                             : '現在Actionの次に取り組む候補です。',
                         [
-                            $this->action('Planで確認', route('plans.show', $plan), true),
+                            $this->action(
+                                '今やることを生成',
+                                route('plans.tasks.execution_orchestration.show', [$plan, $nextTask]),
+                                $nextBlockerCount > 0,
+                            ),
+                            $this->action('Planで確認', route('plans.show', $plan), $nextBlockerCount === 0),
                             $this->action('Taskを編集', route('tasks.edit', $nextTask)),
                         ],
-                        [
+                        array_values(array_filter([
                             '進捗 '.max(0, min(100, (int) $nextTask->progress_percent)).'%',
+                            $nextBlockerCount > 0 ? '前提待ち '.$nextBlockerCount.'件' : null,
                             (string) $plan->title,
-                        ],
+                        ])),
                     ),
                 ));
                 $edges->push($this->edge(

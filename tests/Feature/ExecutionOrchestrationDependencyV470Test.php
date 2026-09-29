@@ -16,7 +16,8 @@ class ExecutionOrchestrationDependencyV470Test extends TestCase
 
     public function test_task_can_have_multiple_dependencies_and_legacy_column_mirrors_first(): void
     {
-        $plan = Plan::factory()->for(User::factory())->create();
+        $user = User::factory()->create();
+        $plan = $this->plan($user);
         $a = $this->task($plan, 'A');
         $b = $this->task($plan, 'B');
         $c = $this->task($plan, 'C');
@@ -32,7 +33,8 @@ class ExecutionOrchestrationDependencyV470Test extends TestCase
 
     public function test_dependency_cycle_is_rejected(): void
     {
-        $plan = Plan::factory()->for(User::factory())->create();
+        $user = User::factory()->create();
+        $plan = $this->plan($user);
         $a = $this->task($plan, 'A');
         $b = $this->task($plan, 'B');
 
@@ -40,6 +42,23 @@ class ExecutionOrchestrationDependencyV470Test extends TestCase
 
         $this->expectException(ValidationException::class);
         app(TaskDependencyService::class)->sync($a, [$b->id]);
+    }
+
+    private function plan(User $user): Plan
+    {
+        return Plan::query()->create([
+            'user_id' => $user->id,
+            'owner_token' => \Illuminate\Support\Str::random(64),
+            'public_slug' => (string) \Illuminate\Support\Str::uuid(),
+            'title' => 'Dependency Test',
+            'description' => 'V47 dependency graph',
+            'category' => '個人開発',
+            'priority' => 1,
+            'priority_mode' => 'manual',
+            'start_date' => today(),
+            'deadline' => today()->addMonth(),
+            'is_public' => false,
+        ]);
     }
 
     private function task(Plan $plan, string $title): Task
