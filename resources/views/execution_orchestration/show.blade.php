@@ -291,6 +291,8 @@
 
         @include('execution_orchestration.partials.github_handoff')
 
+        @include('execution_orchestration.partials.coordination')
+
         @if ($packet || $handoffPrompt !== '')
             <form method="POST" action="{{ route('plans.tasks.execution_orchestration.reset', [$plan, $task]) }}">
                 @csrf
