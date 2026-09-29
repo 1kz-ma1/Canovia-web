@@ -30,8 +30,11 @@ final class GitHubRepositoryWriter
         }
 
         $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
 
-        return in_array($host, ['github.com', 'www.github.com'], true) ? $url : null;
+        return $scheme === 'https' && in_array($host, ['github.com', 'www.github.com'], true)
+            ? $url
+            : null;
     }
 
     /**
@@ -148,6 +151,17 @@ final class GitHubRepositoryWriter
             $existingFileSha = trim((string) ($existingFile['sha'] ?? ''));
             if ($existingFileSha === '') {
                 throw new RuntimeException('既存ファイルのSHAを確認できませんでした。');
+            }
+
+            if (($existingFile['encoding'] ?? null) === 'base64' && is_string($existingFile['content'] ?? null)) {
+                $currentContent = base64_decode(
+                    preg_replace('/\\s+/', '', (string) $existingFile['content']) ?: '',
+                    true,
+                );
+
+                if (is_string($currentContent) && hash_equals(hash('sha256', $currentContent), hash('sha256', $content))) {
+                    throw new RuntimeException('指定したファイル内容は現在のdefault branchと同じです。変更は作成していません。');
+                }
             }
         } elseif ($existingFileResponse->status() !== 404) {
             throw new RuntimeException('変更対象ファイルの現在状態を確認できませんでした。');
