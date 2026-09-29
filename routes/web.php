@@ -28,6 +28,7 @@ use App\Http\Controllers\CanoviaFutureController;
 use App\Http\Controllers\AdminFeedbackController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminTelemetryController;
+use App\Http\Controllers\AdminGitHubDiagnosticsController;
 use App\Http\Controllers\AdminQuestionPackController;
 use App\Http\Controllers\AdminPracticeDemandController;
 use App\Http\Controllers\AdminGoalPatternDemandController;
@@ -117,6 +118,7 @@ Route::middleware('admin.access')->group(function () {
     Route::post('/admin/feedback/login', [AdminFeedbackController::class, 'authenticate'])->middleware('throttle:10,1')->name('admin.feedback.authenticate');
     Route::get('/admin/feedback', [AdminFeedbackController::class, 'index'])->name('admin.feedback.index');
     Route::get('/admin/telemetry', [AdminTelemetryController::class, 'index'])->name('admin.telemetry.index');
+    Route::get('/admin/github', [AdminGitHubDiagnosticsController::class, 'index'])->name('admin.github.index');
     Route::get('/admin/question-packs', [AdminQuestionPackController::class, 'index'])->name('admin.question_packs.index');
     Route::get('/admin/practice-demand', [AdminPracticeDemandController::class, 'index'])->name('admin.practice_demand.index');
     Route::get('/admin/goal-pattern-demand', [AdminGoalPatternDemandController::class, 'index'])->name('admin.goal_pattern_demand.index');
