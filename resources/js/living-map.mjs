@@ -345,6 +345,15 @@ export function mapDockHistoryState(currentState = {}, dockId = 'space-station')
     return nextState;
 }
 
+export function mapGlobalHomeHistoryState(currentState = {}) {
+    const nextState = { ...(currentState || {}) };
+    delete nextState.canoviaMapFocus;
+    delete nextState.canoviaMapFocusDepth;
+    delete nextState.canoviaMapDock;
+
+    return nextState;
+}
+
 export function mapHistoryDirection(currentDepth, targetDepth) {
     const current = Math.max(0, Number(currentDepth || 0));
     const target = Math.max(0, Number(targetDepth || 0));
@@ -1108,6 +1117,19 @@ export function mountLivingGoalMap({
         windowRef.history.replaceState(nextState, '', mapUrlWithoutFocus(windowRef));
     };
 
+    const resetGlobalHomeContext = () => {
+        clearSpatialDock();
+        clearFocus();
+        resetMapView({ animate: false });
+        focusHistoryDepth = 0;
+
+        windowRef.history.replaceState(
+            mapGlobalHomeHistoryState(windowRef.history.state || {}),
+            '',
+            mapUrlWithoutFocus(windowRef),
+        );
+    };
+
     const closeContext = () => {
         if (activeDockId) {
             const shouldGoBack = Boolean(windowRef.history.state?.canoviaMapDock);
@@ -1525,8 +1547,14 @@ export function mountLivingGoalMap({
     }
 
     function onBeforeInstantNavigation(event) {
-        markSemanticTransition(event.detail?.link);
-        trackInstantMapLink(event.detail?.link);
+        const link = event.detail?.link;
+        markSemanticTransition(link);
+
+        if (link?.closest?.('[data-map-global-home]')) {
+            resetGlobalHomeContext();
+        }
+
+        trackInstantMapLink(link);
     }
 
     function onBeforePageReplace() {
@@ -1571,6 +1599,11 @@ export function mountLivingGoalMap({
             && !event.altKey;
         if (semanticLink && page.contains(semanticLink) && isPlainSemanticClick) {
             markSemanticTransition(semanticLink);
+        }
+
+        const globalHomeLink = event.target.closest?.('a[data-map-global-home]');
+        if (globalHomeLink && page.contains(globalHomeLink) && isPlainSemanticClick) {
+            resetGlobalHomeContext();
         }
 
         const dockControl = event.target.closest?.('[data-map-spatial-dock]');
