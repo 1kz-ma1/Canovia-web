@@ -63,7 +63,7 @@
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
                         <p class="text-[10px] font-black uppercase tracking-[.16em] text-emerald-300">CONFIRMED EXECUTION REQUEST</p>
-                        <h2 class="mt-1 text-base font-black text-slate-100">Inboxで確認した依頼を引き継いでいます</h2>
+                        <h2 class="mt-1 text-base font-black text-slate-100">{{ data_get($executionRequest, 'source.type') === 'companion_candidate' ? 'Companionで確認した依頼を引き継いでいます' : 'Inboxで確認した依頼を引き継いでいます' }}</h2>
                         <p class="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-300">{{ data_get($executionRequest, 'instruction') }}</p>
                         <p class="mt-2 text-[10px] leading-4 text-slate-600">
                             元: {{ data_get($executionRequest, 'source.title', 'Inbox Item') }}
@@ -176,7 +176,7 @@
                         <li>・Resource / Artifact / 最近のEvidence・実績</li>
                         <li>・confirmed constraint / known unknown / protected scope</li>
                         @if ($executionRequest)
-                            <li>・Inboxで人が確認したExecution Request</li>
+                            <li>・{{ data_get($executionRequest, 'source.type') === 'companion_candidate' ? 'Companion' : 'Inbox' }}で人が確認したExecution Request</li>
                         @endif
                     </ul>
                 </details>
