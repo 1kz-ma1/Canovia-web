@@ -115,7 +115,13 @@
                     data-map-zoom-direction="out"
                 >Plan Mapへ戻る</a>
             @else
-                <a href="{{ route('map.index') }}" class="btn-secondary">Canovia全体</a>
+                <a
+                    href="{{ route('map.index') }}"
+                    class="btn-secondary"
+                    data-map-semantic-zoom
+                    data-map-zoom-direction="out"
+                    data-map-global-home
+                >Canovia全体</a>
             @endif
             <a href="{{ route('roadmap.index') }}" class="btn-secondary canovia-map-roadmap-link">Roadmap</a>
         @else
