@@ -395,6 +395,7 @@ export function mountMapPages({
     const applyPreset = (preset, { globalHome = false } = {}) => {
         if (!preset) return;
 
+        const previousActiveId = activeId;
         activeId = preset.id;
         persistActiveId(storage, activeId);
 
@@ -408,9 +409,11 @@ export function mountMapPages({
         }
 
         const current = normalizeMapPageRoute(windowRef.location.href, windowRef.location.origin);
+        const hasLocalSelection = String(windowRef.location.hash || '') !== '';
+        const changedPage = previousActiveId !== activeId;
         sync();
 
-        if (preset.route !== current) {
+        if (preset.route !== current || hasLocalSelection || globalHome || changedPage) {
             navigateToPage(windowRef, preset.route);
         }
     };
