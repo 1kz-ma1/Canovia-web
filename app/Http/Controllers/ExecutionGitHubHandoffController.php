@@ -11,6 +11,7 @@ use App\Services\ExecutionOrchestrationContextService;
 use App\Services\ExecutionRequestHandoffService;
 use App\Services\FeatureAccessService;
 use App\Services\GitHubRepositoryWriter;
+use App\Services\GitHubReturnEvidenceService;
 use App\Services\PlanActivityService;
 use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
@@ -307,6 +308,73 @@ final class ExecutionGitHubHandoffController extends Controller
         return redirect()
             ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
             ->with('success', '確認した変更をGitHubのレビュー用Pull Requestへ反映しました。Task進捗はまだ変更していません。');
+    }
+
+    public function syncReturn(
+        Request $request,
+        Plan $plan,
+        Task $task,
+        PlanArtifact $artifact,
+        PlanOwnershipService $ownership,
+        FeatureAccessService $access,
+        GitHubReturnEvidenceService $returns,
+        PlanActivityService $activity,
+    ) {
+        $this->authorizeTask($request, $plan, $task, $ownership);
+        $access->authorizeUse(
+            $request->user(),
+            FeatureKey::DeveloperGithubEvidence,
+            ['plan_id' => (int) $plan->id, 'task_id' => (int) $task->id, 'artifact_id' => (int) $artifact->id],
+        );
+
+        abort_unless(
+            (int) $artifact->plan_id === (int) $plan->id
+            && $artifact->provider === 'github',
+            404,
+        );
+
+        try {
+            $result = $returns->sync(
+                $plan,
+                $task,
+                $artifact,
+                $request->user()?->id,
+            );
+        } catch (\RuntimeException $exception) {
+            return redirect()
+                ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
+                ->with('status', $exception->getMessage());
+        }
+
+        $snapshot = (array) ($result['snapshot'] ?? []);
+        $pull = (array) ($snapshot['pull_request'] ?? []);
+        $reviewSummary = (array) ($snapshot['review_summary'] ?? []);
+        $ci = (array) ($snapshot['ci'] ?? []);
+
+        $activity->record(
+            $plan,
+            $request->user(),
+            'github_return_synced',
+            'plan_artifact',
+            (int) $artifact->id,
+            [
+                'task_id' => (int) $task->id,
+                'repo_full_name' => (string) ($snapshot['repo_full_name'] ?? ''),
+                'pull_request_number' => (int) ($pull['number'] ?? 0),
+                'merged' => (bool) ($pull['merged'] ?? false),
+                'approved_reviewers' => (int) ($reviewSummary['approved_reviewers'] ?? 0),
+                'changes_requested_reviewers' => (int) ($reviewSummary['changes_requested_reviewers'] ?? 0),
+                'ci_state' => (string) ($ci['state'] ?? 'unknown'),
+                'evidence_count' => (int) ($result['evidence_count'] ?? 0),
+            ],
+        );
+
+        return redirect()
+            ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
+            ->with(
+                'success',
+                'GitHubのReview / Merge / CI結果を確認し、Task Evidenceへ反映しました。Task進捗・完了状態は自動変更していません。',
+            );
     }
 
     public function discard(
