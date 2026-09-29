@@ -234,7 +234,7 @@
                             <span class="rounded-full border border-amber-300/15 bg-amber-300/[0.04] px-2 py-1 text-[10px] font-bold text-amber-200">接続待ち</span>
                         @elseif ($connectionStatus === 'permission_update_required')
                             <span class="rounded-full border border-amber-300/15 bg-amber-300/[0.04] px-2 py-1 text-[10px] font-bold text-amber-200">権限承認待ち</span>
-                        @elseif ($connectionStatus === 'revoked')
+                        @elseif (in_array($connectionStatus, ['revoked', 'verification_failed'], true))
                             <span class="rounded-full border border-rose-300/15 bg-rose-300/[0.04] px-2 py-1 text-[10px] font-bold text-rose-200">接続を確認できません</span>
                         @endif
                     </div>
@@ -299,6 +299,13 @@
                     <p class="text-xs font-bold text-rose-100">以前のGitHub App接続を現在確認できません</p>
                     <p class="mt-1 text-[11px] leading-5 text-slate-500">
                         Repository側でAppが削除された、または対象Repositoryへのアクセスが外れた可能性があります。必要なら「GitHubを接続」から再設定してください。
+                    </p>
+                </div>
+            @elseif ($connectionStatus === 'verification_failed')
+                <div class="mt-4 rounded-xl border border-rose-300/12 bg-rose-300/[0.025] p-3">
+                    <p class="text-xs font-bold text-rose-100">GitHubから返された接続情報を検証できませんでした</p>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                        Canoviaはcallbackのinstallation IDをそのまま信用せず、対象Repositoryの現在のInstallationと照合します。もう一度Canoviaから接続を開始してください。
                     </p>
                 </div>
             @endif
