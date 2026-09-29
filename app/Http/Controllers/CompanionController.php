@@ -254,6 +254,19 @@ class CompanionController extends Controller
             (string) $validated['apply_request_id'],
         );
 
+        if (
+            ($result['target_type'] ?? null) === 'execution_request'
+            && (int) $candidate->plan_id > 0
+            && (int) $candidate->task_id > 0
+        ) {
+            return redirect()
+                ->route('plans.tasks.execution_orchestration.show', [
+                    (int) $candidate->plan_id,
+                    (int) $candidate->task_id,
+                ])
+                ->with('success', $result['message']);
+        }
+
         return redirect()
             ->route('companion.show', $companionThread)
             ->with('status', $result['message']);

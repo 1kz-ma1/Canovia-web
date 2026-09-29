@@ -8,6 +8,7 @@ use App\Models\Plan;
 use App\Models\Task;
 use App\Services\ExecutionOrchestrationContextService;
 use App\Services\ExecutionPacketService;
+use App\Services\ExecutionRequestHandoffService;
 use App\Services\FeatureAccessService;
 use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
@@ -28,7 +29,10 @@ final class ExecutionOrchestrationController extends Controller
 
         $context = $contexts->snapshot($request, $plan, $task);
         $state = $request->session()->get($this->sessionKey($plan, $task), []);
-        $stale = filled($state['context_fingerprint'] ?? null)
+        $hasGeneratedState = is_array($state['packet'] ?? null)
+            || filled($state['handoff_prompt'] ?? null);
+        $stale = $hasGeneratedState
+            && filled($state['context_fingerprint'] ?? null)
             && ! hash_equals(
                 (string) $context['context_fingerprint'],
                 (string) $state['context_fingerprint'],
@@ -46,6 +50,7 @@ final class ExecutionOrchestrationController extends Controller
             'context' => $context,
             'packet' => is_array($state['packet'] ?? null) ? $state['packet'] : null,
             'handoffPrompt' => (string) ($state['handoff_prompt'] ?? ''),
+            'executionRequest' => is_array($state['execution_request'] ?? null) ? $state['execution_request'] : null,
             'actorType' => (string) ($state['actor_type'] ?? 'human_ai'),
             'availableMinutes' => $state['available_minutes'] ?? null,
             'packetStale' => $stale,
@@ -79,16 +84,29 @@ final class ExecutionOrchestrationController extends Controller
             ? (int) $validated['available_minutes']
             : null;
 
+        $existingState = $request->session()->get($this->sessionKey($plan, $task), []);
+        $executionRequest = is_array($existingState['execution_request'] ?? null)
+            ? $existingState['execution_request']
+            : null;
+
+        if ($executionRequest) {
+            // The prepare form is another explicit human confirmation point.
+            // Keep the request contract aligned with the actor/time actually used for this Packet.
+            $executionRequest['actor_type'] = $actorType;
+            $executionRequest['available_minutes'] = $availableMinutes;
+        }
+
         $state = [
             'context_fingerprint' => (string) $context['context_fingerprint'],
             'actor_type' => $actorType,
             'available_minutes' => $availableMinutes,
+            'execution_request' => $executionRequest,
             'packet' => null,
             'handoff_prompt' => null,
         ];
 
         if ($validated['generation_mode'] === 'external') {
-            $state['handoff_prompt'] = $packets->prompt($context, $actorType, $availableMinutes);
+            $state['handoff_prompt'] = $packets->prompt($context, $actorType, $availableMinutes, $executionRequest);
             $request->session()->put($this->sessionKey($plan, $task), $state);
 
             return redirect()
@@ -103,7 +121,7 @@ final class ExecutionOrchestrationController extends Controller
         );
 
         if (! $packets->nativeConfigured()) {
-            $state['handoff_prompt'] = $packets->prompt($context, $actorType, $availableMinutes);
+            $state['handoff_prompt'] = $packets->prompt($context, $actorType, $availableMinutes, $executionRequest);
             $request->session()->put($this->sessionKey($plan, $task), $state);
 
             return redirect()
@@ -119,11 +137,12 @@ final class ExecutionOrchestrationController extends Controller
                 $request->user(),
                 $actorType,
                 $availableMinutes,
+                $executionRequest,
             );
             $state['packet'] = $generated['packet'];
             $state['native_run_id'] = $generated['run_id'];
         } catch (NativeAiExecutionException $exception) {
-            $state['handoff_prompt'] = $packets->prompt($context, $actorType, $availableMinutes);
+            $state['handoff_prompt'] = $packets->prompt($context, $actorType, $availableMinutes, $executionRequest);
             $request->session()->put($this->sessionKey($plan, $task), $state);
 
             return redirect()
@@ -187,11 +206,28 @@ final class ExecutionOrchestrationController extends Controller
         PlanOwnershipService $ownership,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
-        $request->session()->forget($this->sessionKey($plan, $task));
+
+        $key = $this->sessionKey($plan, $task);
+        $state = $request->session()->get($key, []);
+        $executionRequest = is_array($state['execution_request'] ?? null)
+            ? $state['execution_request']
+            : null;
+
+        if ($executionRequest) {
+            $request->session()->put($key, [
+                'actor_type' => (string) ($state['actor_type'] ?? data_get($executionRequest, 'actor_type', 'human_ai')),
+                'available_minutes' => $state['available_minutes'] ?? data_get($executionRequest, 'available_minutes'),
+                'execution_request' => $executionRequest,
+                'packet' => null,
+                'handoff_prompt' => null,
+            ]);
+        } else {
+            $request->session()->forget($key);
+        }
 
         return redirect()
             ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
-            ->with('status', 'Execution Packetをリセットしました。TaskやPlanは変更していません。');
+            ->with('status', 'Execution Packetをリセットしました。確認済みの実行リクエストとTask / Planは変更していません。');
     }
 
     private function authorizeTask(
@@ -206,6 +242,6 @@ final class ExecutionOrchestrationController extends Controller
 
     private function sessionKey(Plan $plan, Task $task): string
     {
-        return 'execution_orchestration.'.$plan->id.'.'.$task->id;
+        return ExecutionRequestHandoffService::sessionKey($plan, $task);
     }
 }

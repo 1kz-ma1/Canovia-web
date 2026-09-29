@@ -197,8 +197,8 @@ class CompanionConversationService
             return null;
         }
 
-        $requiresPlan = in_array($type, ['create_task', 'update_plan', 'record_goal_fact'], true);
-        $requiresTask = $type === 'update_task';
+        $requiresPlan = in_array($type, ['create_task', 'update_plan', 'record_goal_fact', 'prepare_execution_request'], true);
+        $requiresTask = in_array($type, ['update_task', 'prepare_execution_request'], true);
 
         if (($requiresPlan && ! $plan) || ($requiresTask && ! $task)) {
             return null;
@@ -291,6 +291,8 @@ class CompanionConversationService
 - ユーザーの意図を尊重し、勝手にPlan/Taskを変更したと断言しない
 - DB変更は一切できない。必要ならMutation Candidateを提案するだけ
 - CandidateへPlan ID / Task ID / User IDを書かない。対象はCanovia側が選択中Contextから決める
+- ユーザーが選択中Taskについて「実行したい」「AIや担当へ渡したい」「このまま進めて」と明示した場合、Task自体を変更せずprepare_execution_request CandidateとしてOrchestrationへの引継ぎを提案できる
+- prepare_execution_requestはTask scopeでのみ使い、Dependencyやprotected scopeを回避する指示をpayloadへ作らない
 - ユーザーが明示した将来意図・関心・困りごと・価値はmemoriesへ最大2件まで出せる
 - memoriesのsource_quoteは直近USER発言に実際に含まれる連続した原文だけにする。推測した属性・事情・意図は保存候補にしない
 - 現在のPlan/TaskそのものをMemoryへ重複保存しない
@@ -318,12 +320,15 @@ create_future_memo:
   {"kind":"want_to_do | future_self | interest | concern | value","category":"career | study | creation | life | health | money | hobby | other","content":"必須","use_for_ai":true}
 create_inbox_item:
   {"title":"任意","content":"必須"}
+prepare_execution_request:
+  {"instruction":"必須","actor_type":"human | ai | human_ai | external","available_minutes":30}
 
 【重要】
 - update_taskでprogress_percentを提案しない
 - update_taskでdone / cancelledを提案しない
 - Evidenceや実行結果をTask進捗へ変換しない
 - Planの公開設定・共同設定・見た目設定を変更候補にしない
+- prepare_execution_requestは実行済みを意味しない。人がCandidateを確認した後にExecution Orchestrationへ移るだけ
 - payload_jsonは上記の許可項目だけをJSONオブジェクトとして文字列化する
 - Candidateはまだ未反映。返答内でも「変更した」と表現しない
 

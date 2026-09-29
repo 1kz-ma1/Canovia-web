@@ -21,6 +21,7 @@ class InboxRoutingService
         private readonly StudyRecallCandidateExtractionService $recallExtractor,
         private readonly TaskEvidenceService $evidence,
         private readonly PlanActivityService $activity,
+        private readonly ExecutionRequestHandoffService $executionRequests,
     ) {}
 
     /**
@@ -38,33 +39,34 @@ class InboxRoutingService
         $destination = (string) $data['destination'];
 
         $message = match ($destination) {
-                'future_memo' => $this->toFutureMemo($request, $item, $data),
-                'career_capture' => $this->toCareerCapture($request, $item, $plan, $actorToken),
-                'recall_material' => $this->toRecall($request, $item, $plan, $task, $actorToken),
-                'task_evidence' => $this->toEvidence($request, $item, $plan, $task, $actorToken),
-                'plan_resource' => $this->toResource($request, $item, $plan),
-                'keep_inbox' => 'Inboxに残しました。',
-                default => throw ValidationException::withMessages(['destination' => '未対応の整理先です。']),
-            };
+            'future_memo' => $this->toFutureMemo($request, $item, $data),
+            'career_capture' => $this->toCareerCapture($request, $item, $plan, $actorToken),
+            'recall_material' => $this->toRecall($request, $item, $plan, $task, $actorToken),
+            'task_evidence' => $this->toEvidence($request, $item, $plan, $task, $actorToken),
+            'plan_resource' => $this->toResource($request, $item, $plan),
+            'execution_request' => $this->toExecutionRequest($request, $item, $data, $plan, $task),
+            'keep_inbox' => 'Inboxに残しました。',
+            default => throw ValidationException::withMessages(['destination' => '未対応の整理先です。']),
+        };
 
-            if ($destination !== 'keep_inbox') {
-                $metadata = is_array($item->metadata) ? $item->metadata : [];
-                $metadata['routing_confirmed'] = [
-                    'destination' => $destination,
-                    'plan_id' => $plan?->id,
-                    'task_id' => $task?->id,
-                    'confirmed_at' => now()->toIso8601String(),
-                ];
+        if ($destination !== 'keep_inbox') {
+            $metadata = is_array($item->metadata) ? $item->metadata : [];
+            $metadata['routing_confirmed'] = [
+                'destination' => $destination,
+                'plan_id' => $plan?->id,
+                'task_id' => $task?->id,
+                'confirmed_at' => now()->toIso8601String(),
+            ];
 
-                $item->update([
-                    'plan_id' => $plan?->id ?? $item->plan_id,
-                    'status' => 'processed',
-                    'processed_at' => now(),
-                    'metadata' => $metadata,
-                ]);
-            } else {
-                $item->update(['status' => 'new']);
-            }
+            $item->update([
+                'plan_id' => $plan?->id ?? $item->plan_id,
+                'status' => 'processed',
+                'processed_at' => now(),
+                'metadata' => $metadata,
+            ]);
+        } else {
+            $item->update(['status' => 'new']);
+        }
 
         return ['message' => $message, 'destination' => $destination];
     }
@@ -213,6 +215,38 @@ class InboxRoutingService
         );
 
         return 'Task Evidenceへ記録しました。進捗は自動加算しません。';
+    }
+
+    private function toExecutionRequest(
+        Request $request,
+        InboxItem $item,
+        array $data,
+        ?Plan $plan,
+        ?Task $task,
+    ): string {
+        $this->requireTask($plan, $task);
+
+        $instruction = trim((string) ($data['execution_instruction'] ?? ''));
+        $actorType = trim((string) ($data['execution_actor_type'] ?? 'human_ai'));
+        $availableMinutes = isset($data['execution_available_minutes'])
+            ? (int) $data['execution_available_minutes']
+            : null;
+
+        $executionRequest = $this->executionRequests->confirmFromInbox(
+            $request,
+            $item,
+            $plan,
+            $task,
+            $instruction,
+            $actorType,
+            $availableMinutes,
+        );
+
+        $metadata = is_array($item->metadata) ? $item->metadata : [];
+        $metadata['execution_request'] = $executionRequest;
+        $item->update(['metadata' => $metadata]);
+
+        return '実行リクエストを確認しました。全体ContextとDependencyを確認して、担当へ渡す指示を組み立てます。';
     }
 
     private function toResource(Request $request, InboxItem $item, ?Plan $plan): string

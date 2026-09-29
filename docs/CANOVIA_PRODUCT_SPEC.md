@@ -798,3 +798,18 @@ Contextには時刻を含まないcontext_fingerprintを付ける。Promptまた
 Native AI direct generationは既存AutomaticAiExecution entitlementを利用し、Free pathでは従来どおり外部AIへPromptをコピーして返却JSONをCanoviaへ読み込める。新しい課金境界は作らない。
 
 Map L3ではCurrent / Next Taskから「今やることを生成」へ遷移できる。PacketからPlan / Taskを直接変更せず、結果反映は既存Plan Review / Artifact / Evidence経路へ戻し、提案→確認→反映の境界を維持する。
+
+
+## V47.1 Execution Request Handoff
+
+V47.1ではV46.1 Conversational Inbox / Canovia Companionで受け取ったfuture actionを、Human Confirmation後にV47.0 Execution Orchestrationへ渡すcanonical Execution Request contractを追加する。
+
+Execution Request専用の永続Entityは作らず、active handoffは対象TaskのExecution Orchestration sessionへ保持する。Human Confirmationのauditは既存sourceに残し、InboxではInboxItem.metadata.execution_request、Companionではapplied Candidateのapply auditから追跡できる。TaskをSource of Truthとする原則は変更しない。Requestは「ユーザーが今回何を進めたいか」、Execution Packetは「現在のPlan / Task / Dependency / Evidenceから今どう進めるか」であり、両者を分離する。
+
+Inbox Intelligenceは `execution_request` をrouting candidateとして提案できるが、Plan / Task IDはAIに選択させない。人がdestination / Plan / Task / 今回してほしいこと / actor type / optional available minutesを確認した後にだけExecutionRequestHandoffServiceへ渡す。過去の作業結果はtask_evidence、これから行う依頼はexecution_requestとして区別する。
+
+CompanionはTask Context内で `prepare_execution_request` Mutation Candidateを提案できる。Candidateを人がApplyするまでOrchestrationへは渡さず、ApplyしてもTask / Plan / progressは変更しない。確認済みCandidateはhandoff auditとしてappliedとなり、Execution Orchestration画面へ遷移する。
+
+ExecutionPacketServiceはHuman-confirmed requestをPromptへ含めるが、RequestはDependency / protected scope / confirmed constraints / canonical targetを上書きできない。blocked Taskのexecute fail-safeも維持する。Packet / PromptのResetでは確認済みRequestを保持し、Context変化後はPacketだけを再生成できる。
+
+詳細は `docs/V47.1_EXECUTION_REQUEST_HANDOFF.md` を正とする。
