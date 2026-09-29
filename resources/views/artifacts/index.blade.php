@@ -22,6 +22,7 @@
             </p>
         </div>
         <div class="flex flex-wrap gap-2">
+            <a href="{{ route('github_workflow.index', ['plan_id' => $plan->id]) }}" class="btn-secondary border-violet-300/20 bg-violet-300/[0.05] text-violet-100">GitHub Workflow</a>
             <a href="{{ route('plans.resources.index', $plan) }}" class="btn-secondary">関連資料</a>
             <a href="{{ route('plans.show', $plan) }}" class="btn-secondary">計画へ戻る</a>
         </div>
@@ -140,7 +141,7 @@
         @else
             <div class="mt-5 space-y-4">
                 @foreach ($plan->artifacts as $artifact)
-                    <article class="rounded-2xl border border-white/8 bg-white/[0.03] p-4 sm:p-5">
+                    <article id="artifact-{{ $artifact->id }}" class="rounded-2xl border border-white/8 bg-white/[0.03] p-4 sm:p-5">
                         <div class="flex flex-wrap items-start justify-between gap-4">
                             <div class="min-w-0 flex-1">
                                 <div class="flex flex-wrap items-center gap-2">
@@ -149,6 +150,9 @@
                                     @if ($artifact->version_label)<span class="badge badge-green">{{ $artifact->version_label }}</span>@endif
                                     @if ($plan->is_collaborative && $artifact->collaborationStateLabel())
                                         <span class="badge badge-slate">{{ $artifact->collaborationStateLabel() }}</span>
+                                    @endif
+                                    @if ($artifact->provider === 'github' && $artifact->githubWorkflowStateLabel())
+                                        <span class="badge badge-slate">Canovia: {{ $artifact->githubWorkflowStateLabel() }}</span>
                                     @endif
                                 </div>
                                 <h3 class="mt-3 break-words text-lg font-bold text-slate-50">{{ $artifact->title }}</h3>

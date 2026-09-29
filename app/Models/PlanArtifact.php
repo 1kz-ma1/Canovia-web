@@ -28,6 +28,21 @@ class PlanArtifact extends Model
         'external_followup' => '外部確認',
     ];
 
+    /**
+     * Canovia-side workflow state for GitHub artifacts.
+     *
+     * This is intentionally not a mirror of GitHub's remote state. Until an
+     * authoritative connector is present, the user explicitly chooses how the
+     * item should be handled inside Canovia.
+     */
+    public const GITHUB_WORKFLOW_STATES = [
+        'now' => '今やる',
+        'review' => 'レビュー待ち',
+        'changes' => '修正必要',
+        'merge' => 'マージ待ち',
+        'done' => '完了',
+    ];
+
     protected $fillable = [
         'plan_id',
         'created_by_user_id',
@@ -93,5 +108,25 @@ class PlanArtifact extends Model
         $state = $this->collaborationState();
 
         return $state ? self::COLLABORATION_STATES[$state] : null;
+    }
+
+    public function githubWorkflowState(): ?string
+    {
+        if ($this->provider !== 'github') {
+            return null;
+        }
+
+        $state = data_get($this->metadata, 'github_workflow_state');
+
+        return is_string($state) && array_key_exists($state, self::GITHUB_WORKFLOW_STATES)
+            ? $state
+            : null;
+    }
+
+    public function githubWorkflowStateLabel(): ?string
+    {
+        $state = $this->githubWorkflowState();
+
+        return $state ? self::GITHUB_WORKFLOW_STATES[$state] : null;
     }
 }

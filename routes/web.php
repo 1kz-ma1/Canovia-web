@@ -42,6 +42,7 @@ use App\Http\Controllers\PlanCollaborationController;
 use App\Http\Controllers\PlanResourceController;
 use App\Http\Controllers\PlanResourceAssistantController;
 use App\Http\Controllers\PlanArtifactController;
+use App\Http\Controllers\GitHubWorkflowController;
 use App\Http\Controllers\StudyPracticeController;
 use App\Http\Controllers\StudyActivityController;
 use App\Http\Controllers\StudyRecallController;
@@ -253,6 +254,11 @@ Route::middleware('feature.access:'.FeatureKey::ProjectArtifact->value)->group(f
     Route::post('/plans/{plan}/artifacts', [PlanArtifactController::class, 'store'])->name('plans.artifacts.store');
     Route::put('/plans/{plan}/artifacts/{artifact}', [PlanArtifactController::class, 'update'])->name('plans.artifacts.update');
     Route::delete('/plans/{plan}/artifacts/{artifact}', [PlanArtifactController::class, 'destroy'])->name('plans.artifacts.destroy');
+
+    Route::get('/github-workflow', [GitHubWorkflowController::class, 'index'])->name('github_workflow.index');
+    Route::post('/github-workflow', [GitHubWorkflowController::class, 'store'])->name('github_workflow.store');
+    Route::patch('/github-workflow/artifacts/{artifact}/state', [GitHubWorkflowController::class, 'updateState'])
+        ->name('github_workflow.state.update');
 });
 
 // 資格学習のActivity選択はAI演習より上位の共通入口として扱う。

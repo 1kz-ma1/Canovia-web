@@ -26,8 +26,8 @@
 
     <a href="{{ route('roadmap.index') }}" data-canovia-nav-key="mobile-roadmap"
        data-onboarding-target="roadmap-nav"
-       class="mobile-tabbar-link {{ request()->routeIs('roadmap.*') || request()->routeIs('chat.*') || request()->routeIs('achievements.*') || request()->routeIs('plans.review_assistant.*') ? 'is-active' : '' }}"
-       aria-current="{{ request()->routeIs('roadmap.*') || request()->routeIs('chat.*') || request()->routeIs('achievements.*') || request()->routeIs('plans.review_assistant.*') ? 'page' : 'false' }}">
+       class="mobile-tabbar-link {{ request()->routeIs('roadmap.*') || request()->routeIs('github_workflow.*') || request()->routeIs('chat.*') || request()->routeIs('achievements.*') || request()->routeIs('plans.review_assistant.*') ? 'is-active' : '' }}"
+       aria-current="{{ request()->routeIs('roadmap.*') || request()->routeIs('github_workflow.*') || request()->routeIs('chat.*') || request()->routeIs('achievements.*') || request()->routeIs('plans.review_assistant.*') ? 'page' : 'false' }}">
         <span class="pk-tab-icon pk-tab-icon-roadmap" aria-hidden="true">
             <svg viewBox="0 0 32 32"><path d="M6 8 12 5l8 3 6-3v19l-6 3-8-3-6 3V8Zm6-3v19M20 8v19"/></svg>
             <i></i><b></b>

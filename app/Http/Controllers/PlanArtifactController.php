@@ -189,6 +189,10 @@ class PlanArtifactController extends Controller
      */
     private function collaborationMetadata(Plan $plan, array $validated, array $existing = []): ?array
     {
+        if (($validated['provider'] ?? null) !== 'github') {
+            unset($existing['github_workflow_state']);
+        }
+
         if (! $plan->is_collaborative) {
             return $existing === [] ? null : $existing;
         }
