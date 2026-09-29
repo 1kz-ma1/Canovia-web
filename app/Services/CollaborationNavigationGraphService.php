@@ -256,7 +256,11 @@ final class CollaborationNavigationGraphService
 
         if ($nodes->count() === 1) {
             $sharedPlansUrl = route('my_plans.index');
-            $spaceStationUrl = route('map.index').'#dock=space-station';
+            $spaceStationUrl = route('map.index', [
+                'level' => MapLevel::Plan->value,
+                'intent' => 'collaboration',
+                'collab_context' => $key,
+            ]).'#dock=space-station';
 
             $nodes->push($this->node(
                 id: 'collaboration:empty:plans',
