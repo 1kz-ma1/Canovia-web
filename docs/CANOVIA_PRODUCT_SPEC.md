@@ -813,3 +813,18 @@ CompanionはTask Context内で `prepare_execution_request` Mutation Candidateを
 ExecutionPacketServiceはHuman-confirmed requestをPromptへ含めるが、RequestはDependency / protected scope / confirmed constraints / canonical targetを上書きできない。blocked Taskのexecute fail-safeも維持する。Packet / PromptのResetでは確認済みRequestを保持し、Context変化後はPacketだけを再生成できる。
 
 詳細は `docs/V47.1_EXECUTION_REQUEST_HANDOFF.md` を正とする。
+
+
+## V47.2 Map Semantic Interaction
+
+V47.2では、V43.5で導入した「Node本体 = Context / 小chip = Navigation」という操作をContainer Nodeに限って改める。L0 Intent、L1 Domain / Collaboration Purpose、L2 Plan / internal Collaboration Itemなど、`navigation_kind=zoom-in` を持つNodeはNode本体のクリックをSemantic Zoomとして扱い、クリックした意味Contextを次階層の中心として、より具体的なNode / Actionを周囲へ展開する。右下のNavigation chipは明示的affordanceとして残すが、次階層へ進むための必須Gateにはしない。
+
+Execution Task / Evidence等のLeaf NodeはFocus-firstを維持し、Context Surfaceは階層Navigationの前提画面ではなくContext Inspectorとして詳細確認・補助操作を担う。`direct` / `satellite` / `external` の明示Navigationを持つNodeはNode本体から直接destinationへ進める。external Toolは従来どおり別tabで開き、外部状態や完了を推測しない。
+
+Pan / Pinch後のghost click抑止は非interactiveなMap Scene backgroundだけへ限定し、Node・Map controls・Spatial Dock・form controlsは抑止時間中でも即時操作可能とする。Focus中に別Nodeへ切り替える場合は同一Focus history entryをreplaceし、一度全体表示へ戻す操作や不要なBack履歴増加を要求しない。
+
+共同PurposeのL2 Projectionで該当Itemが0件の場合は、center Nodeだけのdead-endを作らず、「共同Planを確認」「Space Stationで整理」というProjection-onlyのNEXT OPTION Nodeを周囲へ出す。これらはDB Entityではなくcanonical dataを変更しない。
+
+既存のNavigation Graph / Attention State分離、Living Reevaluation、Projection Key、Map -> Map Instant Navigation、semantic departure / arrival、Space Station Spatial Dock、L3 Execution semanticsは維持する。ReflectionのDomain -> Plan hierarchy自体はV47.2では変更せず、今回の対象はInteraction Contractの整理である。Map position永続化、Reflection専用Graph、AI layout、課金・billing変更は行わない。
+
+詳細は `docs/V47.2_MAP_SEMANTIC_INTERACTION.md` を正とする。
