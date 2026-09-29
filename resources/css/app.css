@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './map/index.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
@@ -8934,76 +8935,6 @@ body[data-route-name="map.index"] .canovia-map-page {
             .canovia-map-shell.is-execution-map
             .canovia-map-node.is-map-center {
             transition: none;
-        }
-    }
-}
-
-
-/* --------------------------------------------------------------------------
- * V47.7 Map Presentation Foundation
- * Canvas nodes communicate role and place. Concrete names, summaries and
- * actions live in the detail palette instead of turning the map into cards.
- * -------------------------------------------------------------------------- */
-@layer components {
-    .canovia-map-node[data-map-presentation-kind="leaf"] {
-        width: clamp(6.25rem, 12vw, 8.1rem);
-        min-height: 4rem;
-        padding: 0.72rem 0.66rem;
-        border-radius: 1.15rem;
-    }
-
-    .canovia-map-node[data-map-presentation-kind="leaf"] .canovia-map-node-focus-link {
-        min-height: 2.35rem;
-        justify-content: center;
-        gap: 0.32rem;
-    }
-
-    .canovia-map-node[data-map-presentation-kind="leaf"] .canovia-map-node-label {
-        margin-top: 0.12rem;
-        max-width: 7rem;
-        font-size: 0.86rem;
-        line-height: 1.18;
-        letter-spacing: 0.01em;
-        text-align: center;
-    }
-
-    .canovia-map-node[data-map-presentation-kind="leaf"] .canovia-map-node-glyph {
-        transform: scale(0.88);
-        transform-origin: center;
-    }
-
-    .canovia-map-node[data-map-presentation-kind="leaf"].is-primary .canovia-map-node-label {
-        font-size: 0.94rem;
-    }
-
-    .canovia-map-node[data-map-presentation-kind="container"] .canovia-map-node-label {
-        margin-top: 0.2rem;
-        line-height: 1.2;
-    }
-
-    .canovia-map-context-surface .canovia-map-context-card {
-        backdrop-filter: blur(22px);
-        -webkit-backdrop-filter: blur(22px);
-    }
-
-    .canovia-map-context-surface .canovia-map-context-caption {
-        max-width: 22rem;
-    }
-
-    @media (max-width: 767px) {
-        .canovia-map-node[data-map-presentation-kind="leaf"] {
-            width: 6.4rem;
-            min-height: 3.7rem;
-            padding: 0.62rem 0.54rem;
-        }
-
-        .canovia-map-node[data-map-presentation-kind="leaf"] .canovia-map-node-label {
-            max-width: 5.8rem;
-            font-size: 0.78rem;
-        }
-
-        .canovia-map-node[data-map-presentation-kind="leaf"].is-primary .canovia-map-node-label {
-            font-size: 0.84rem;
         }
     }
 }
