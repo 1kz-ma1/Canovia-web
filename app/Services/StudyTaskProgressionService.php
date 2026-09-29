@@ -188,7 +188,7 @@ class StudyTaskProgressionService
 
     private function nextEligibleTask(Plan $plan, Task $currentTask): ?Task
     {
-        $tasks = $plan->tasks()->get();
+        $tasks = $plan->tasks()->with('prerequisites')->get();
         $byId = $tasks->keyBy('id');
 
         return $tasks
@@ -201,16 +201,16 @@ class StudyTaskProgressionService
                     return false;
                 }
 
-                $dependencyId = (int) ($candidate->depends_on_task_id ?? 0);
-                if ($dependencyId <= 0 || $dependencyId === (int) $currentTask->id) {
-                    return true;
-                }
+                return collect($candidate->dependencyIds())->every(function (int $dependencyId) use ($currentTask, $byId) {
+                    if ($dependencyId === (int) $currentTask->id) {
+                        return true;
+                    }
 
-                $dependency = $byId->get($dependencyId);
+                    $dependency = $byId->get($dependencyId);
 
-                return ! $dependency
-                    || $dependency->status === 'done'
-                    || (int) $dependency->progress_percent >= 100;
+                    return $dependency
+                        && ($dependency->status === 'done' || (int) $dependency->progress_percent >= 100);
+                });
             })
             ->sort(function (Task $left, Task $right) {
                 $leftRank = [

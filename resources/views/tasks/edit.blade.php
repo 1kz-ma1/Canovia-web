@@ -175,14 +175,20 @@
                     </div>
 
                     <div class="md:col-span-2">
-                        <label for="depends_on_task_id" class="mb-2 block text-sm font-medium text-slate-700">前提Task</label>
-                        <select id="depends_on_task_id" name="depends_on_task_id" class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200">
-                            <option value="">なし</option>
+                        @php
+                            $selectedDependencyIds = collect(old('dependency_task_ids', $task->dependencyIds()))
+                                ->map(fn ($id) => (int) $id)
+                                ->all();
+                        @endphp
+                        <label for="dependency_task_ids" class="mb-2 block text-sm font-medium text-slate-700">前提Task</label>
+                        <select id="dependency_task_ids" name="dependency_task_ids[]" multiple size="5" class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200">
                             @foreach ($task->plan->tasks->where('id', '!=', $task->id) as $candidate)
-                                <option value="{{ $candidate->id }}" @selected((int) old('depends_on_task_id', $task->depends_on_task_id) === $candidate->id)>{{ $candidate->title }}</option>
+                                <option value="{{ $candidate->id }}" @selected(in_array((int) $candidate->id, $selectedDependencyIds, true))>
+                                    {{ $candidate->title }} · {{ $candidate->status === 'done' ? '完了' : '未完了' }}
+                                </option>
                             @endforeach
                         </select>
-                        <p class="mt-2 text-xs text-slate-500">前提Taskが完了するまで、このTaskは「今日のおすすめ」から外れます。</p>
+                        <p class="mt-2 text-xs text-slate-500">複数選択できます。未完了の前提が1つでもあるTaskは通常の「次にやること」候補から外れます。</p>
                     </div>
                 </div>
 
