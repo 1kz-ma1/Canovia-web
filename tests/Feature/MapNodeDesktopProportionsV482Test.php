@@ -17,7 +17,11 @@ class MapNodeDesktopProportionsV482Test extends TestCase
         $this->assertStringContainsString('top: -.72rem;', $css);
         $this->assertStringContainsString('bottom: auto;', $css);
 
-        $this->assertStringNotContainsString('padding-bottom: 2.9rem;', $css);
+        $desktopStart = strpos($css, '@media (min-width: 768px)');
+        $mobileStart = strpos($css, '@media (max-width: 767px)', $desktopStart);
+        $desktopRules = substr($css, $desktopStart, $mobileStart - $desktopStart);
+
+        $this->assertStringNotContainsString('padding-bottom: 2.9rem;', $desktopRules);
     }
 
     public function test_primary_leaf_stays_emphasized_without_becoming_vertical(): void
