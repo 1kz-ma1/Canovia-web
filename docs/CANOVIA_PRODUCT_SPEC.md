@@ -884,3 +884,20 @@ Reflection hierarchyのdepth labelは Intent -> Lens -> Record -> Detail とす�
 既存のL0 fixed Intent、Navigation Graph / Attention State分離、Living Reevaluation / Projection Key、Map -> Map Instant Navigation、Space Station Dock、L3 Execution Map、Collaboration専用Projection、Timeline / Achievement画面は維持する。AIによる過去の生成・要約、Map position永続化、billing / entitlement変更は行わない。
 
 詳細は `docs/V47.4_REFLECTION_MAP.md` を正とする。
+
+
+## V47.5 Semantic Zoom Spatial Continuity
+
+V47.5ではV47.3のContainer Node本体Semantic Zoomを、単なるMap route切替ではなく「選択したNodeの内側へ潜る」空間操作として知覚できるようにする。Navigation Graph / canonical stateは変更せず、Projection間の短命なvisual continuityだけを追加する。
+
+zoom-in時はクリックしたNodeのviewport geometryを取得し、次Projectionに同じNode IDが存在する場合はそのNode、存在しない場合はcenter Nodeをarrival anchorとする。これによりL2 Plan -> L3でPlanがCurrent Taskへ変身して見えることを避け、同じ `plan:<id>` がL3に存在する場合はPlan identityを維持したままTask / Tool / Evidenceを新Projectionとして展開する。
+
+zoom-out時は現在Projectionのcenter Nodeをdeparture sourceとし、遷移先で「遷移前のstructural routeへzoom-inするNode」を検索してreverse anchorとする。解決できない場合は既存shell-level animationへfallbackする。
+
+既存 `canovia.map.semantic-transition.v1` session payloadには direction / depth / timestamp に加えて、短命な `from_route` / `source_node_ref` / viewport geometryのみ保持できる。Plan・Task title、description、Evidence summary、user input、AI output等の内容は保存しない。payloadはarrival時に即削除し、geometryはDB / cookie / BehaviorEvent / Projection Keyへ保存しない。
+
+arrivalではanchorがsource geometryからcanonical positionへ移動し、その後周囲のNode / Edgeが展開する。最終位置は常に既存Map layoutでありanimation overrideは残さない。`prefers-reduced-motion: reduce` ではnode-to-node animationを無効化し、canonical geometryを維持する。
+
+V47.3のgesture直後click、Focus切替、Context Inspector、V47.4 Reflection Map、Collaboration Projection、L3 Execution semantics、Living Reevaluation、Instant Navigationは維持する。Navigationをanimation完了待ちで遅延させず、AI layoutやcanonical position永続化、billing / entitlement変更は行わない。
+
+詳細は `docs/V47.5_SEMANTIC_ZOOM_SPATIAL_CONTINUITY.md` を正とする。
