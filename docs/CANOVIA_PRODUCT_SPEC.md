@@ -849,6 +849,20 @@ PR作成だけではTask progress / Task done / Plan progress / TaskEvidenceを�
 
 詳細は `docs/V46.6_EXECUTION_GITHUB_HANDOFF.md` を正とする。
 
+## V46.7 GitHub Return / Evidence Bridge
+
+V46.7ではV46.6で作成したPull RequestのReview / Merge / optional CI結果を、GitHub App installation tokenでauthoritativeに再取得し、元TaskへEvidenceとして戻す。Return対象TaskはAI推論ではなく、PR Artifactへ明示linkされた同一Plan内Taskだけとする。
+
+Pull Request本体とsubmitted reviewはPull Requests permissionから取得する。CIは企業Organizationで追加permission承認が難しい場合を考慮してoptionalとし、GitHub App installationがActions read / Checks read / Commit statuses readを持つsourceだけ取得する。permissionがないCI sourceを無理に呼ばずwarningとして表示し、Review / Merge Return自体は継続する。
+
+PR Artifactの `metadata.github_return_snapshot` にはremote PR state / merged state / review summary / bounded CI projection / fetched_at / warningsを保存する。source code本文やGitHub access tokenは保存しない。Canoviaの `github_workflow_state` は作業判断レイヤーなのでremote stateから自動変更しない。
+
+TaskEvidenceはEvidenceSource::GitHubとしてidempotentに記録する。reviewはreview ID、mergeはrepo + PR number、CIはrepo + PR number + head SHAをstable external keyとし、同じReturn Syncを繰り返しても重複Evidenceを作らない。MergeやCI successを確認してもTask progress / Task status / Plan progress / Dependency completionは自動変更しない。
+
+GitHub Evidenceが追加・更新されるとExecution canonical Contextが変わるため、sync前のExecution Packetはstaleになる。Return Layer自身は新Packetを自動生成せず、「EvidenceをPlan / Taskへ反映」「担当Contextを再評価」から人が次の判断へ進む。
+
+詳細は `docs/V46.7_GITHUB_RETURN_EVIDENCE.md` を正とする。
+
 ## V47 Execution Orchestration
 
 V47.0ではTaskを単独で推薦するだけでなく、Plan全体のDependency・Evidence・Goal Context・制約を保ったまま、選択Taskへ「今この主体が何をすべきか」を渡すExecution Orchestration Layerを追加する。
