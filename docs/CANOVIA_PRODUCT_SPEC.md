@@ -1071,3 +1071,25 @@ Dependency readinessはExecution Coordinationと同じ完了判定（status=done
 RoadmapからPlan-centered Map L3へ戻る導線、Map L3のPlan詳細から「ロードマップMapを見る」導線を持ち、RoadmapをCanovia Map Navigation Layerの1 Surfaceとして扱う。
 
 詳細は `docs/V48.0_ROADMAP_SPATIAL_MAP.md` を正とする。
+
+
+## V48.3 Space Station Intake Hub
+
+Space StationをCanoviaの共通入力Surfaceとして、`Input → Interpret → Connect → Action` の4段階Flowへ完成させる。
+
+Space Stationからのtext / URL / screenshot / PDFは既存Inboxへchat intakeとして保存し、Native AIが利用可能な場合はInbox IntelligenceによるInterpretationまで自動で進める。ただしAIはdestination / reason / confidence / Plan・Task名hintのみを返し、Plan ID / Task IDを選ばない。
+
+L1-L3のMap ContextにPlanが存在する場合は現在Planを接続候補として初期表示できるが、capture時点でInboxItem.plan_idを変更せず、Human Confirmまではcanonical connectionを作らない。
+
+接続確定は既存InboxRoutingServiceを使う。execution_request選択時はinstruction / actor type / available minutesをSpace Station内で確認し、ExecutionRequestHandoffServiceへ渡す。
+
+確定後にSpace Stationへ戻るFlowでは、flash-only resultとして接続先と次Actionを表示する。Task Evidenceなら関連Task Map、Plan ResourceならResource、RecallならRecall等へ進める。
+
+Space Stationはroutingを強制せず、整理せずCompanionへ相談する導線も維持する。
+
+Human agency境界:
+- 自動可: capture / interpretation / candidate / current-context candidate
+- Human Confirm必須: destination / Plan / Task / canonical mutation / Execution Request
+- Task completion / progress変更は行わない
+
+詳細は `docs/V48.3_SPACE_STATION_INTAKE_HUB.md` を正とする。
