@@ -36,12 +36,35 @@ final class MapNodePresentation
             ];
         }
 
+        $roleLabel = self::leafLabel($type, $state, $positionRole, $eyebrow);
+        $isRecommendation = $type === 'task' && $roleLabel === 'おすすめ';
+
         return [
             'kind' => 'leaf',
-            'label' => $label !== '' ? $label : self::fallbackLabel($type),
-            'eyebrow' => self::leafLabel($type, $state, $positionRole, $eyebrow),
+            // Recommendation is intentionally role-only on the canvas.
+            // The concrete Task title remains available in the detail palette.
+            'label' => $isRecommendation
+                ? 'おすすめ'
+                : ($label !== '' ? $label : self::fallbackLabel($type)),
+            'eyebrow' => $isRecommendation ? null : $roleLabel,
             'subtitle' => null,
         ];
+    }
+
+    /** User-facing role label for leaf details; never returns raw debug metadata. */
+    public static function role(array $node): ?string
+    {
+        $type = (string) ($node['type'] ?? '');
+        if (! self::isLeafType($type)) {
+            return null;
+        }
+
+        return self::leafLabel(
+            $type,
+            (string) ($node['state'] ?? ''),
+            (string) ($node['position_role'] ?? ''),
+            strtoupper(trim((string) ($node['eyebrow'] ?? ''))),
+        );
     }
 
     private static function isLeafType(string $type): bool
