@@ -25,16 +25,19 @@ class MapPresentationFoundationV477Test extends TestCase
         ]);
     }
 
-    public function test_leaf_presentation_exposes_role_instead_of_internal_content(): void
+    public function test_leaf_presentation_separates_role_from_the_concrete_name(): void
     {
-        $this->assertSame('おすすめ', MapNodePresentation::for([
+        $recommended = MapNodePresentation::for([
             'type' => 'task',
             'state' => 'primary',
             'position_role' => 'action-primary',
             'eyebrow' => 'NOW · PRIMARY ACTION',
             'label' => 'V47.7を実装する',
             'subtitle' => '具体的な説明',
-        ])['label']);
+        ]);
+
+        $this->assertSame('おすすめ', $recommended['label']);
+        $this->assertNull($recommended['eyebrow']);
 
         $this->assertSame('次にやる', MapNodePresentation::for([
             'type' => 'task',
@@ -42,25 +45,25 @@ class MapPresentationFoundationV477Test extends TestCase
             'position_role' => 'future-next',
             'eyebrow' => 'NEXT TASK',
             'label' => '次のTask名',
-        ])['label']);
+        ])['eyebrow']);
 
         $this->assertSame('レビュー待ち', MapNodePresentation::for([
             'type' => 'collaboration_item',
             'eyebrow' => 'REVIEW WAITING',
             'label' => 'PR #123',
-        ])['label']);
+        ])['eyebrow']);
 
         $this->assertSame('外部確認', MapNodePresentation::for([
             'type' => 'collaboration_item',
             'eyebrow' => 'EXTERNAL TOOL',
             'label' => 'GitHub Pull Request',
-        ])['label']);
+        ])['eyebrow']);
 
-        $this->assertSame('Evidence', MapNodePresentation::for([
+        $this->assertSame('記録', MapNodePresentation::for([
             'type' => 'evidence',
             'eyebrow' => 'EVIDENCE',
             'label' => '実装完了ログ',
-        ])['label']);
+        ])['eyebrow']);
 
         $container = MapNodePresentation::for([
             'type' => 'plan',
@@ -119,6 +122,9 @@ class MapPresentationFoundationV477Test extends TestCase
             ->assertSee('data-map-presentation-kind="leaf"', false)
             ->assertSee('おすすめ')
             ->assertSee('具体的なTask名はPaletteで見る')
+            ->assertSee('ここにある理由')
+            ->assertSee('状態・関連情報')
+            ->assertSee('次にできること')
             ->assertSee('選んだマスの内容と操作を確認できます')
             ->assertDontSee('Context Inspector')
             ->assertDontSee('NOW · PRIMARY ACTION');
@@ -132,6 +138,16 @@ class MapPresentationFoundationV477Test extends TestCase
             'canonical detail copy stays in the palette source'
         );
         $this->assertSame('action-primary', $taskNode['position_role']);
+
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+        $xpath = new \DOMXPath($dom);
+        $canvasLabel = $xpath->query('//*[@data-map-node-id="task:'.$task->id.'"]//span[contains(@class,"canovia-map-node-label")]')->item(0);
+        $this->assertNotNull($canvasLabel);
+        $this->assertSame('おすすめ', trim($canvasLabel->textContent));
+
+        $canvasEyebrow = $xpath->query('//*[@data-map-node-id="task:'.$task->id.'"]//span[contains(@class,"canovia-map-node-eyebrow")]')->item(0);
+        $this->assertNull($canvasEyebrow);
     }
 
     public function test_collaboration_without_any_shared_plan_offers_creation_inside_the_map(): void
@@ -164,7 +180,7 @@ class MapPresentationFoundationV477Test extends TestCase
 
     public function test_leaf_nodes_are_palette_first_even_when_a_direct_destination_exists(): void
     {
-        $blade = file_get_contents(resource_path('views/map/index.blade.php'));
+        $blade = file_get_contents(resource_path('views/map/partials/scene.blade.php'));
 
         $this->assertStringContainsString(
             '&& (! $isLeafPresentation || $isSatelliteNavigation)',

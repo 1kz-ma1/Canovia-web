@@ -1,0 +1,141 @@
+/* Presentation boundary. No coordinates, zoom, hierarchy or visibility rules.
+ * Unlayered rules intentionally override the legacy component cascade. */
+.canovia-map-page .canovia-map-node[data-map-presentation-kind="leaf"] {
+    width: 8rem;
+    min-height: 4.75rem;
+    padding: .5rem;
+    border-radius: 1rem;
+}
+
+.canovia-map-page .canovia-map-node[data-map-presentation-kind="leaf"] .canovia-map-node-glyph {
+    display: none;
+}
+
+.canovia-map-page .canovia-map-node[data-map-presentation-kind="leaf"] .canovia-map-node-focus-link {
+    min-height: 3.5rem;
+    gap: .2rem;
+}
+
+.canovia-map-page .canovia-map-node[data-map-presentation-kind="leaf"] .canovia-map-node-eyebrow {
+    display: block;
+    color: #a5e8fa;
+    font-size: .75rem;
+    line-height: 1.3;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.canovia-map-page .canovia-map-node[data-map-presentation-kind="leaf"] .canovia-map-node-label {
+    max-width: 100%;
+    font-size: .875rem;
+    line-height: 1.4;
+    margin: 0;
+    overflow-wrap: anywhere;
+    -webkit-line-clamp: 2;
+}
+
+/* Reserve separate space for the existing explicit destination control. */
+@media (min-width: 768px) {
+    .canovia-map-page .canovia-map-node[data-map-presentation-kind="leaf"].has-direct-navigation {
+        padding-bottom: 2.9rem;
+    }
+    .canovia-map-page .canovia-map-node[data-map-presentation-kind="leaf"] .canovia-map-node-direct-open {
+        min-height: 2.75rem;
+        min-width: 2.75rem;
+    }
+}
+
+.canovia-map-page .canovia-map-context-header > div:first-child,
+.canovia-map-page [data-map-context-content] {
+    min-width: 0;
+}
+
+.canovia-map-page .canovia-map-context-tools {
+    flex-shrink: 0;
+}
+
+.canovia-map-page .canovia-map-classic-content {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.canovia-map-page .canovia-map-classic-title {
+    font-size: 1.125rem;
+    line-height: 1.5;
+}
+
+.canovia-map-page .canovia-map-classic-summary,
+.canovia-map-page .canovia-map-classic-meta,
+.canovia-map-page .canovia-map-node-context {
+    font-size: .875rem;
+    line-height: 1.6;
+}
+
+.canovia-map-page .canovia-map-classic-meta > span {
+    font-size: .8125rem;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+}
+
+.canovia-map-node-context {
+    margin-block: .75rem;
+    color: #cbd5e1;
+}
+.canovia-map-node-context h3 {
+    color: #a5e8fa;
+    font-size: .75rem;
+    font-weight: 700;
+}
+
+.canovia-map-page .canovia-map-detail-label {
+    margin-top: .75rem;
+    color: #a5e8fa;
+    font-size: .75rem;
+    font-weight: 700;
+}
+
+.canovia-map-page .canovia-map-classic-actions a,
+.canovia-map-page .canovia-map-context-close,
+.canovia-map-page .canovia-map-context-expand {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+    white-space: normal;
+}
+
+.canovia-map-page .canovia-map-node-focus-link:focus-visible,
+.canovia-map-page .canovia-map-classic-actions a:focus-visible {
+    outline: 2px solid #a5e8fa;
+    outline-offset: 3px;
+}
+
+@media (max-width: 767px) {
+    .canovia-map-page .canovia-map-node[data-map-presentation-kind="leaf"] {
+        width: 6.5rem;
+        min-height: 4.5rem;
+        padding: .375rem;
+    }
+    .canovia-map-page .canovia-map-node[data-map-presentation-kind="leaf"]:has(.is-external-tool) {
+        padding-bottom: 2.9rem;
+    }
+    .canovia-map-page .canovia-map-node[data-map-presentation-kind="leaf"] .is-external-tool {
+        min-height: 2.75rem;
+        min-width: 2.75rem;
+    }
+    .canovia-map-page .canovia-map-context-card {
+        overscroll-behavior: contain;
+        overflow-x: hidden;
+    }
+    .canovia-map-page .canovia-map-context-header {
+        gap: .5rem;
+        flex-wrap: wrap;
+    }
+    .canovia-map-page .canovia-map-context-tools {
+        margin-left: auto;
+    }
+    .canovia-map-page .canovia-map-classic-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: .5rem;
+    }
+}
