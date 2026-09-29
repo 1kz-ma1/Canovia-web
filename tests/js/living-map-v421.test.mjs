@@ -11,6 +11,10 @@ import {
     mapHistoryDirection,
     mapReturnDecision,
     mapSemanticZoomDirection,
+    semanticContinuityTransform,
+    semanticRectSnapshot,
+    semanticRouteKey,
+    adaptSemanticRect,
     oneHopNodeIds,
     zoomMapViewAt,
 } from '../../resources/js/living-map.mjs';
@@ -32,6 +36,85 @@ const edges = [
     { source: 'task:1', target: 'tool:ai', relation: 'executed_with' },
     { source: 'task:1', target: 'evidence:1', relation: 'produced_evidence' },
 ];
+
+test('semantic route key normalizes query ordering and removes hash-only UI state', () => {
+    assert.equal(
+        semanticRouteKey('/map?plan=12&intent=execution&level=l3#focus=task%3A9'),
+        '/map?intent=execution&level=l3&plan=12',
+    );
+    assert.equal(
+        semanticRouteKey('/map?level=l3&intent=execution&plan=12'),
+        '/map?intent=execution&level=l3&plan=12',
+    );
+});
+
+test('semantic rect snapshot stores geometry without node labels or user content', () => {
+    assert.deepEqual(
+        semanticRectSnapshot(
+            { left: 20.04, top: 30.06, width: 120.02, height: 80.08 },
+            { width: 390, height: 700 },
+        ),
+        {
+            left: 20,
+            top: 30.1,
+            width: 120,
+            height: 80.1,
+            viewport_width: 390,
+            viewport_height: 700,
+        },
+    );
+});
+
+test('semantic rect adapts to viewport changes before continuity transform', () => {
+    const adapted = adaptSemanticRect({
+        left: 50,
+        top: 100,
+        width: 100,
+        height: 80,
+        viewport_width: 400,
+        viewport_height: 800,
+    }, {
+        width: 800,
+        height: 400,
+    });
+
+    assert.deepEqual(adapted, {
+        left: 100,
+        top: 50,
+        width: 200,
+        height: 40,
+    });
+});
+
+test('semantic continuity moves the arriving center from the clicked node geometry', () => {
+    const transform = semanticContinuityTransform(
+        { left: 40, top: 120, width: 100, height: 80 },
+        { left: 160, top: 260, width: 200, height: 120 },
+    );
+
+    assert.deepEqual(transform, {
+        x: -170,
+        y: -160,
+        scale: 0.577,
+    });
+});
+
+test('semantic continuity bounds extreme size ratios to avoid explosive transitions', () => {
+    assert.equal(
+        semanticContinuityTransform(
+            { left: 0, top: 0, width: 4, height: 4 },
+            { left: 0, top: 0, width: 400, height: 400 },
+        ).scale,
+        0.52,
+    );
+    assert.equal(
+        semanticContinuityTransform(
+            { left: 0, top: 0, width: 800, height: 800 },
+            { left: 0, top: 0, width: 20, height: 20 },
+        ).scale,
+        1.9,
+    );
+});
 
 test('one-hop focus keeps only the selected node and direct neighbors', () => {
     assert.deepEqual(
