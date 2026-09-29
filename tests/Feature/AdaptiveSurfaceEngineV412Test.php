@@ -237,7 +237,7 @@ class AdaptiveSurfaceEngineV412Test extends TestCase
             ->assertDontSee('INTERVIEW FOCUS');
     }
 
-    public function test_roadmap_copy_changes_with_career_profile_while_task_flow_remains_safe_fallback(): void
+    public function test_roadmap_copy_changes_with_career_profile_while_spatial_map_is_primary(): void
     {
         $user = User::factory()->create();
         $plan = Plan::create([
@@ -260,7 +260,7 @@ class AdaptiveSurfaceEngineV412Test extends TestCase
             ->assertSee('選考ロードマップ')
             ->assertSee('企業探し・応募・面接・内定')
             ->assertSee('data-roadmap-renderer-preference="pipeline"', false)
-            ->assertSee('data-roadmap-renderer-active="task_flow"', false);
+            ->assertSee('data-roadmap-renderer-active="spatial_map"', false);
     }
 
     public function test_plan_creation_and_editing_offer_career_category(): void

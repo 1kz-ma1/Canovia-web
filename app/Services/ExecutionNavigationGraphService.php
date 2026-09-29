@@ -74,10 +74,10 @@ final class ExecutionNavigationGraphService
                     (string) $plan->title,
                     filled($plan->description)
                         ? Str::limit((string) $plan->description, 180)
-                        : 'このPlanの詳細・Task・ToolsをClassic画面で確認します。',
+                        : 'このPlanの詳細・Task・Toolsを確認します。',
                     [
                         $this->action('Planを開く', route('plans.show', $plan), true),
-                        $this->action('Roadmapで見る', route('roadmap.index', ['plan_id' => $plan->id])),
+                        $this->action('ロードマップMapを見る', route('roadmap.index', ['plan_id' => $plan->id])),
                     ],
                     array_values(array_filter([
                         $plan->category ?: null,

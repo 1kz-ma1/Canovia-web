@@ -5,6 +5,7 @@
     $roadmapPlanId = $roadmapPreview ? 'preview' : ($roadmapPlan?->id ?? 'generic');
     $roadmapAccent = $roadmapPlan?->accentKey() ?? 'sky';
     $roadmapWorld = $roadmapPlan?->roadmapWorld() ?? 'default';
+    $roadmapSpatial = $roadmapSpatial ?? null;
 @endphp
 
 <div class="plan-identity-shell" data-plan-accent="{{ $roadmapAccent }}" data-roadmap-view-root data-roadmap-plan-id="{{ $roadmapPlanId }}">
@@ -23,15 +24,27 @@
     </div>
 
     <div data-roadmap-view-panel="map">
-        @include('plans.partials.roadmap-map', [
-            'roadmap' => $roadmap,
-            'roadmapPlan' => $roadmapPlan,
-            'roadmapCanEdit' => $roadmapCanEdit ?? false,
-            'roadmapMode' => $roadmapMode,
-            'roadmapRecommendedMinutes' => $roadmapRecommendedMinutes ?? null,
-            'roadmapRecommendationReasons' => $roadmapRecommendationReasons ?? [],
-            'roadmapWorld' => $roadmapWorld,
-        ])
+        @if (is_array($roadmapSpatial))
+            @include('plans.partials.roadmap-spatial-map', [
+                'roadmap' => $roadmap,
+                'roadmapSpatial' => $roadmapSpatial,
+                'roadmapPlan' => $roadmapPlan,
+                'roadmapCanEdit' => $roadmapCanEdit ?? false,
+                'roadmapCanManage' => $roadmapCanManage ?? false,
+                'roadmapMode' => $roadmapMode,
+                'roadmapRecommendedMinutes' => $roadmapRecommendedMinutes ?? null,
+            ])
+        @else
+            @include('plans.partials.roadmap-map', [
+                'roadmap' => $roadmap,
+                'roadmapPlan' => $roadmapPlan,
+                'roadmapCanEdit' => $roadmapCanEdit ?? false,
+                'roadmapMode' => $roadmapMode,
+                'roadmapRecommendedMinutes' => $roadmapRecommendedMinutes ?? null,
+                'roadmapRecommendationReasons' => $roadmapRecommendationReasons ?? [],
+                'roadmapWorld' => $roadmapWorld,
+            ])
+        @endif
     </div>
 
     <div data-roadmap-view-panel="list" hidden>

@@ -1056,3 +1056,18 @@ V47.7のPresentation Grammarは、今後のMap Data Layers、スマホのホー�
 ## Map Node表示・スマホUIの改善
 
 Leaf Nodeは原則として具体名と短い役割を表示し、詳細で状態・表示理由・既存の操作を確認する。ただしPrimary TaskはV47.7の「おすすめ」role-only表示を維持し、具体Task名はDetail Paletteで確認する。スマホでは実寸に基づく端切れ・重なり補正と44pxの詳細操作領域を用いる。階層Navigation・Breadcrumb・semantic zoom・canonical graphは変更しない。仕様と並行実装境界は [MAP_NODE_MOBILE_PRESENTATION.md](MAP_NODE_MOBILE_PRESENTATION.md) を参照。
+
+
+## V48.0 Roadmap Spatial Map
+
+RoadmapのPrimary Map表示を、従来の一本道型orbitからDependency Spatial Mapへ移行する。canonical dataは既存Plan / Task / task_dependencies / RoadmapServiceを維持し、新しいPhase/Cluster DB entityは作らない。
+
+V48.0の表示上のPhaseはDependency深度、Task Clusterは同一Phase内で同じ直接前提集合を共有するTask群とする。横方向にDependency depth、縦方向にCluster/parallel Taskを配置し、Dependency edgeとlineage edgeを分けて表示する。複数Taskを含むClusterは「並行 N件」として見せるが、同時実行を強制・推奨する意味は持たない。
+
+Dependency readinessはExecution Coordinationと同じ完了判定（status=done または progress_percent>=100）のみを使う。未完了Dependencyが残るActive Taskはblockedとして表示し、Roadmapからの直接Work Session開始は出さず、Execution Orchestrationへ判断を委ねる。Roadmap自身はTask status/progressを変更しない。
+
+`/roadmap` ではSpatial MapをPrimary、既存ListをSecondaryとする。shared Roadmap partialは `roadmapSpatial` 未提供時に従来Mapへfallbackし、Plan Review preview等の既存利用を維持する。
+
+RoadmapからPlan-centered Map L3へ戻る導線、Map L3のPlan詳細から「ロードマップMapを見る」導線を持ち、RoadmapをCanovia Map Navigation Layerの1 Surfaceとして扱う。
+
+詳細は `docs/V48.0_ROADMAP_SPATIAL_MAP.md` を正とする。

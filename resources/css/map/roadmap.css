@@ -1,1 +1,477 @@
-/* Spatial Roadmap projection styles. */
+/* --------------------------------------------------------------------------
+ * V48.0 Roadmap Spatial Map
+ * Dependency depth forms phases; shared direct prerequisites form clusters.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .canovia-roadmap-spatial-shell {
+        position: relative;
+        min-height: 34rem;
+        overflow: auto;
+        overscroll-behavior: contain;
+        border: 1px solid rgb(71 85 105 / 0.5);
+        border-radius: 1.5rem;
+        background:
+            radial-gradient(circle at 18% 14%, rgb(34 211 238 / 0.08), transparent 18rem),
+            radial-gradient(circle at 82% 20%, rgb(139 92 246 / 0.08), transparent 20rem),
+            linear-gradient(rgb(148 163 184 / 0.025) 1px, transparent 1px),
+            linear-gradient(90deg, rgb(148 163 184 / 0.025) 1px, transparent 1px),
+            rgb(2 6 23 / 0.9);
+        background-size: auto, auto, 2.25rem 2.25rem, 2.25rem 2.25rem, auto;
+        box-shadow:
+            inset 0 1px 0 rgb(255 255 255 / 0.035),
+            0 22px 54px rgb(2 6 23 / 0.32);
+        scrollbar-width: thin;
+        scrollbar-color: rgb(71 85 105) transparent;
+    }
+
+    .canovia-roadmap-spatial-stage {
+        position: relative;
+        width: var(--roadmap-stage-width);
+        min-width: 100%;
+        height: var(--roadmap-stage-height);
+        min-height: 34rem;
+        isolation: isolate;
+    }
+
+    .canovia-roadmap-spatial-stars {
+        position: absolute;
+        z-index: 0;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+            radial-gradient(circle at 8% 18%, rgb(226 232 240 / 0.48) 0 1px, transparent 1.4px),
+            radial-gradient(circle at 31% 42%, rgb(103 232 249 / 0.36) 0 1px, transparent 1.4px),
+            radial-gradient(circle at 73% 22%, rgb(196 181 253 / 0.42) 0 1px, transparent 1.4px),
+            radial-gradient(circle at 91% 65%, rgb(226 232 240 / 0.36) 0 1px, transparent 1.4px);
+        background-size: 11rem 9rem, 13rem 11rem, 15rem 10rem, 12rem 13rem;
+        opacity: 0.6;
+    }
+
+    .canovia-roadmap-phase {
+        position: absolute;
+        z-index: 1;
+        top: 0;
+        bottom: 0;
+        left: var(--phase-x);
+        width: 13.5rem;
+        transform: translateX(-50%);
+        pointer-events: none;
+        border-inline: 1px solid rgb(103 232 249 / 0.045);
+        background: linear-gradient(
+            180deg,
+            rgb(34 211 238 / 0.035),
+            transparent 7rem,
+            transparent calc(100% - 4rem),
+            rgb(139 92 246 / 0.025)
+        );
+    }
+
+    .canovia-roadmap-phase::before {
+        content: "";
+        position: absolute;
+        top: 5rem;
+        bottom: 2rem;
+        left: 50%;
+        border-left: 1px dashed rgb(103 232 249 / 0.11);
+    }
+
+    .canovia-roadmap-phase-heading {
+        position: sticky;
+        top: 0.65rem;
+        z-index: 2;
+        display: inline-grid;
+        min-width: 6rem;
+        gap: 0.06rem;
+        margin-top: 0.8rem;
+        margin-left: 50%;
+        transform: translateX(-50%);
+        border: 1px solid rgb(103 232 249 / 0.18);
+        border-radius: 9999px;
+        background: rgb(8 15 34 / 0.88);
+        padding: 0.35rem 0.65rem;
+        text-align: center;
+        backdrop-filter: blur(12px);
+    }
+
+    .canovia-roadmap-phase-heading strong {
+        color: rgb(207 250 254);
+        font-size: 0.66rem;
+        font-weight: 900;
+    }
+
+    .canovia-roadmap-phase-heading span {
+        color: rgb(100 116 139);
+        font-size: 0.52rem;
+        font-weight: 700;
+    }
+
+    .canovia-roadmap-cluster {
+        position: absolute;
+        z-index: 2;
+        top: var(--cluster-y);
+        left: var(--cluster-x);
+        width: var(--cluster-width);
+        height: var(--cluster-height);
+        transform: translateX(-50%);
+        pointer-events: none;
+        border: 1px solid rgb(71 85 105 / 0.2);
+        border-radius: 1.45rem;
+        background: rgb(15 23 42 / 0.14);
+    }
+
+    .canovia-roadmap-cluster.is-parallel {
+        border-style: dashed;
+        border-color: rgb(167 139 250 / 0.25);
+        background:
+            radial-gradient(circle at 50% 20%, rgb(139 92 246 / 0.055), transparent 8rem),
+            rgb(15 23 42 / 0.12);
+    }
+
+    .canovia-roadmap-cluster > span {
+        position: absolute;
+        top: -0.72rem;
+        left: 50%;
+        transform: translateX(-50%);
+        border-radius: 9999px;
+        background: rgb(15 23 42 / 0.94);
+        padding: 0.16rem 0.42rem;
+        color: rgb(100 116 139);
+        font-size: 0.5rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .canovia-roadmap-cluster.is-parallel > span {
+        color: rgb(196 181 253);
+    }
+
+    .canovia-roadmap-spatial-edges {
+        position: absolute;
+        z-index: 3;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+        pointer-events: none;
+    }
+
+    .canovia-roadmap-spatial-edge {
+        stroke: rgb(100 116 139 / 0.44);
+        stroke-width: 2;
+        vector-effect: non-scaling-stroke;
+    }
+
+    .canovia-roadmap-spatial-edge.is-dependency {
+        stroke: rgb(103 232 249 / 0.52);
+    }
+
+    .canovia-roadmap-spatial-edge.is-dependency + marker,
+    #canovia-roadmap-dependency-arrow path {
+        fill: rgb(103 232 249 / 0.65);
+    }
+
+    .canovia-roadmap-spatial-edge.is-lineage {
+        stroke: rgb(167 139 250 / 0.4);
+        stroke-dasharray: 5 6;
+    }
+
+    .canovia-roadmap-spatial-node {
+        position: absolute;
+        z-index: 5;
+        top: var(--task-y);
+        left: var(--task-x);
+        width: 11.6rem;
+        transform: translate(-50%, -50%);
+    }
+
+    .canovia-roadmap-spatial-node > summary {
+        position: relative;
+        display: flex;
+        min-height: 5rem;
+        cursor: pointer;
+        list-style: none;
+        align-items: center;
+        gap: 0.62rem;
+        border: 1px solid rgb(71 85 105 / 0.72);
+        border-radius: 1.15rem;
+        background:
+            linear-gradient(145deg, rgb(30 41 59 / 0.93), rgb(8 15 34 / 0.96));
+        padding: 0.62rem;
+        box-shadow:
+            inset 0 1px 0 rgb(255 255 255 / 0.04),
+            0 14px 30px rgb(2 6 23 / 0.42);
+        transition:
+            border-color 150ms ease,
+            transform 150ms ease,
+            box-shadow 150ms ease,
+            opacity 150ms ease;
+    }
+
+    .canovia-roadmap-spatial-node > summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .canovia-roadmap-spatial-node > summary:hover,
+    .canovia-roadmap-spatial-node > summary:focus-visible {
+        border-color: rgb(103 232 249 / 0.48);
+        outline: none;
+        transform: translateY(-1px);
+    }
+
+    .canovia-roadmap-spatial-node.is-current {
+        z-index: 8;
+        width: 12.4rem;
+    }
+
+    .canovia-roadmap-spatial-node.is-current > summary {
+        border-color: rgb(103 232 249 / 0.76);
+        background:
+            radial-gradient(circle at 18% 25%, rgb(34 211 238 / 0.13), transparent 6rem),
+            linear-gradient(145deg, rgb(15 43 63 / 0.96), rgb(8 15 34 / 0.98));
+        box-shadow:
+            0 0 0 1px rgb(103 232 249 / 0.08),
+            0 0 2.5rem rgb(34 211 238 / 0.13),
+            0 18px 38px rgb(2 6 23 / 0.48);
+    }
+
+    .canovia-roadmap-spatial-node.is-done > summary {
+        border-color: rgb(52 211 153 / 0.28);
+        opacity: 0.75;
+    }
+
+    .canovia-roadmap-spatial-node.is-cancelled > summary {
+        opacity: 0.48;
+        filter: grayscale(0.45);
+    }
+
+    .canovia-roadmap-spatial-node.is-blocked:not(.is-current) > summary {
+        border-color: rgb(251 146 60 / 0.38);
+        box-shadow:
+            inset 0 1px 0 rgb(255 255 255 / 0.03),
+            0 12px 28px rgb(124 45 18 / 0.12);
+    }
+
+    .canovia-roadmap-spatial-node.is-ready:not(.is-current):not(.is-done) > summary {
+        border-color: rgb(52 211 153 / 0.3);
+    }
+
+    .canovia-roadmap-task-orbit {
+        position: relative;
+        display: grid;
+        width: 2.15rem;
+        height: 2.15rem;
+        flex: 0 0 auto;
+        place-items: center;
+        border: 1px solid rgb(103 232 249 / 0.3);
+        border-radius: 9999px;
+        color: rgb(165 243 252);
+        font-size: 0.68rem;
+    }
+
+    .canovia-roadmap-task-orbit::after {
+        content: "";
+        position: absolute;
+        inset: -0.32rem;
+        border: 1px dashed rgb(103 232 249 / 0.12);
+        border-radius: inherit;
+    }
+
+    .canovia-roadmap-spatial-node.is-done .canovia-roadmap-task-orbit {
+        border-color: rgb(52 211 153 / 0.42);
+        color: rgb(134 239 172);
+    }
+
+    .canovia-roadmap-task-copy {
+        display: grid;
+        min-width: 0;
+        gap: 0.12rem;
+    }
+
+    .canovia-roadmap-task-copy small {
+        color: rgb(103 232 249);
+        font-size: 0.5rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+    }
+
+    .canovia-roadmap-task-copy strong {
+        display: -webkit-box;
+        overflow: hidden;
+        color: rgb(241 245 249);
+        font-size: 0.72rem;
+        font-weight: 850;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+    }
+
+    .canovia-roadmap-task-copy > span {
+        color: rgb(100 116 139);
+        font-size: 0.54rem;
+        font-weight: 700;
+    }
+
+    .canovia-roadmap-task-detail {
+        position: absolute;
+        z-index: 40;
+        top: calc(100% + 0.45rem);
+        left: 50%;
+        width: 19rem;
+        max-width: min(19rem, 82vw);
+        transform: translateX(-50%);
+        border: 1px solid rgb(103 232 249 / 0.26);
+        border-radius: 1rem;
+        background:
+            radial-gradient(circle at top right, rgb(34 211 238 / 0.07), transparent 9rem),
+            rgb(8 15 34 / 0.985);
+        padding: 0.8rem;
+        box-shadow: 0 22px 54px rgb(2 6 23 / 0.62);
+        backdrop-filter: blur(18px);
+    }
+
+    .canovia-roadmap-task-detail-meta,
+    .canovia-roadmap-task-detail-stats,
+    .canovia-roadmap-task-resources,
+    .canovia-roadmap-task-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+
+    .canovia-roadmap-task-detail-meta span,
+    .canovia-roadmap-task-detail-stats span {
+        border-radius: 9999px;
+        background: rgb(30 41 59 / 0.72);
+        padding: 0.22rem 0.42rem;
+        color: rgb(148 163 184);
+        font-size: 0.55rem;
+        font-weight: 750;
+    }
+
+    .canovia-roadmap-task-detail-meta span.is-ready {
+        background: rgb(16 185 129 / 0.11);
+        color: rgb(110 231 183);
+    }
+
+    .canovia-roadmap-task-detail-meta span.is-blocked {
+        background: rgb(234 88 12 / 0.11);
+        color: rgb(253 186 116);
+    }
+
+    .canovia-roadmap-task-detail h3 {
+        margin-top: 0.55rem;
+        color: rgb(248 250 252);
+        font-size: 0.9rem;
+        font-weight: 900;
+        line-height: 1.4;
+    }
+
+    .canovia-roadmap-task-detail p {
+        margin-top: 0.42rem;
+        color: rgb(148 163 184);
+        font-size: 0.68rem;
+        line-height: 1.6;
+    }
+
+    .canovia-roadmap-task-detail-stats,
+    .canovia-roadmap-task-resources,
+    .canovia-roadmap-task-actions {
+        margin-top: 0.65rem;
+    }
+
+    .canovia-roadmap-task-resources a {
+        border: 1px solid rgb(103 232 249 / 0.18);
+        border-radius: 9999px;
+        background: rgb(34 211 238 / 0.05);
+        padding: 0.25rem 0.45rem;
+        color: rgb(165 243 252);
+        font-size: 0.56rem;
+        font-weight: 750;
+    }
+
+    .canovia-roadmap-task-actions {
+        align-items: stretch;
+    }
+
+    .canovia-roadmap-task-actions > a,
+    .canovia-roadmap-task-actions > form {
+        flex: 1 1 8rem;
+    }
+
+    .canovia-roadmap-task-actions form > button {
+        width: 100%;
+    }
+
+    .canovia-roadmap-spatial-empty {
+        position: absolute;
+        z-index: 5;
+        top: 50%;
+        left: 50%;
+        width: min(24rem, calc(100% - 2rem));
+        transform: translate(-50%, -50%);
+        border: 1px dashed rgb(71 85 105 / 0.72);
+        border-radius: 1.2rem;
+        background: rgb(15 23 42 / 0.72);
+        padding: 1.2rem;
+        text-align: center;
+    }
+
+    .canovia-roadmap-spatial-empty strong {
+        color: rgb(241 245 249);
+    }
+
+    .canovia-roadmap-spatial-empty p {
+        margin-top: 0.3rem;
+        color: rgb(100 116 139);
+        font-size: 0.72rem;
+    }
+
+    .canovia-roadmap-spatial-caption {
+        margin-top: 0.5rem;
+        color: rgb(100 116 139);
+        font-size: 0.62rem;
+        line-height: 1.55;
+        text-align: center;
+    }
+
+    @media (max-width: 767px) {
+        .canovia-roadmap-spatial-shell {
+            min-height: 31rem;
+            border-radius: 1.15rem;
+            scroll-snap-type: x proximity;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .canovia-roadmap-phase {
+            scroll-snap-align: center;
+        }
+
+        .canovia-roadmap-spatial-node {
+            width: 10.4rem;
+        }
+
+        .canovia-roadmap-spatial-node.is-current {
+            width: 11.1rem;
+        }
+
+        .canovia-roadmap-spatial-node > summary {
+            min-height: 4.65rem;
+            padding: 0.55rem;
+        }
+
+        .canovia-roadmap-task-copy strong {
+            font-size: 0.68rem;
+        }
+
+        .canovia-roadmap-task-detail {
+            width: min(18rem, 78vw);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .canovia-roadmap-spatial-node > summary {
+            transition: none;
+        }
+    }
+}

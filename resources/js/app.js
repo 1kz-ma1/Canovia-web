@@ -1997,7 +1997,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pager.addEventListener('touchstart', (event) => {
             const touch = event.touches?.[0];
             if (!touch) return;
-            if (event.target.closest('button, a, input, select, textarea, [data-roadmap-plan-tabs]')) return;
+            if (event.target.closest('button, a, input, select, textarea, [data-roadmap-plan-tabs], [data-roadmap-spatial-scroll]')) return;
             startX = touch.clientX;
             startY = touch.clientY;
             tracking = true;
@@ -2029,6 +2029,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const activePlanTab = document.querySelector('[data-roadmap-plan-tabs] .pk-v19-plan-card.is-active, [data-roadmap-plan-tabs] .roadmap-plan-tab.is-active');
     activePlanTab?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+
+    document.querySelectorAll('[data-roadmap-spatial-scroll]').forEach((scroll) => {
+        const current = scroll.querySelector('[data-roadmap-spatial-node][data-roadmap-current="1"]');
+        if (!current) return;
+
+        window.requestAnimationFrame(() => {
+            if (!scroll.isConnected || !current.isConnected) return;
+            const left = Math.max(0, current.offsetLeft - (scroll.clientWidth / 2) + (current.offsetWidth / 2));
+            const top = Math.max(0, current.offsetTop - (scroll.clientHeight / 2) + (current.offsetHeight / 2));
+            scroll.scrollTo({ left, top, behavior: 'auto' });
+        });
+    });
 });
 
 // v13: optional five-star overall score inside the existing feedback flow.
@@ -3353,6 +3365,18 @@ function initializeInstantRoadmapPage() {
         });
     });
 
+    page.querySelectorAll('[data-roadmap-spatial-scroll]').forEach((scroll) => {
+        const current = scroll.querySelector('[data-roadmap-spatial-node][data-roadmap-current="1"]');
+        if (!current) return;
+
+        window.requestAnimationFrame(() => {
+            if (!scroll.isConnected || !current.isConnected) return;
+            const left = Math.max(0, current.offsetLeft - (scroll.clientWidth / 2) + (current.offsetWidth / 2));
+            const top = Math.max(0, current.offsetTop - (scroll.clientHeight / 2) + (current.offsetHeight / 2));
+            scroll.scrollTo({ left, top, behavior: 'auto' });
+        });
+    });
+
     page.querySelectorAll('[data-roadmap-overview]').forEach((button) => {
         button.addEventListener('click', () => {
             const root = button.closest('[data-roadmap-view-root]');
@@ -3382,7 +3406,7 @@ function initializeInstantRoadmapPage() {
 
         pager.addEventListener('touchstart', (event) => {
             const touch = event.touches?.[0];
-            if (!touch || event.target.closest('button, a, input, select, textarea, [data-roadmap-plan-tabs]')) return;
+            if (!touch || event.target.closest('button, a, input, select, textarea, [data-roadmap-plan-tabs], [data-roadmap-spatial-scroll]')) return;
             startX = touch.clientX;
             startY = touch.clientY;
             tracking = true;
