@@ -33,6 +33,12 @@
             'url' => route('map.index'),
         ],
         [
+            'id' => 'builtin:plan',
+            'label' => '計画',
+            'hint' => 'Goal・Plan',
+            'url' => route('map.index', ['level' => 'l1', 'intent' => 'plan']),
+        ],
+        [
             'id' => 'builtin:execution',
             'label' => '実行',
             'hint' => '作業Context',
