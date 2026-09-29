@@ -1055,4 +1055,4 @@ V47.7のPresentation Grammarは、今後のMap Data Layers、スマホのホー�
 
 ## Map Node表示・スマホUIの改善
 
-Leaf Nodeは具体名と短い役割を表示し、詳細で状態・表示理由・既存の操作を確認する。V47.7の役割名のみの表示を更新する。スマホでは実寸に基づく端切れ・重なり補正と44pxの詳細操作領域を用いる。階層Navigation・Breadcrumb・semantic zoom・canonical graphは変更しない。仕様と並行実装境界は [MAP_NODE_MOBILE_PRESENTATION.md](MAP_NODE_MOBILE_PRESENTATION.md) を参照。
+Leaf Nodeは原則として具体名と短い役割を表示し、詳細で状態・表示理由・既存の操作を確認する。ただしPrimary TaskはV47.7の「おすすめ」role-only表示を維持し、具体Task名はDetail Paletteで確認する。スマホでは実寸に基づく端切れ・重なり補正と44pxの詳細操作領域を用いる。階層Navigation・Breadcrumb・semantic zoom・canonical graphは変更しない。仕様と並行実装境界は [MAP_NODE_MOBILE_PRESENTATION.md](MAP_NODE_MOBILE_PRESENTATION.md) を参照。
