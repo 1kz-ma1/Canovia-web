@@ -251,7 +251,11 @@
                                             </div>
                                             <div class="sm:col-span-2 rounded-xl border border-violet-300/10 bg-violet-300/[0.025] p-3">
                                                 <p class="text-[10px] font-black uppercase tracking-[.12em] text-violet-300">実行リクエストにする場合</p>
-                                                <p class="mt-1 text-[10px] leading-4 text-slate-600">Plan / Taskを人が確認したあとだけ、Execution Orchestrationへ渡します。</p>
+                                                <p class="mt-1 text-[10px] leading-4 text-slate-600">Plan / Taskと「今回してほしいこと」を人が確認したあとだけ、Execution Orchestrationへ渡します。</p>
+                                                <div class="mt-3">
+                                                    <label class="text-[10px] font-bold text-slate-500">今回してほしいこと</label>
+                                                    <textarea name="execution_instruction" rows="3" maxlength="6000" class="input-field mt-1 w-full" placeholder="例：既存Contractを壊さず、Validationを先に進める">{{ old('execution_instruction', mb_substr((string) $inboxItem->content, 0, 6000)) }}</textarea>
+                                                </div>
                                                 <div class="mt-3 grid gap-3 sm:grid-cols-2">
                                                     <div>
                                                         <label class="text-[10px] font-bold text-slate-500">実行主体</label>
