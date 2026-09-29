@@ -11,6 +11,7 @@
             'record_goal_fact' => 'Goal Context更新候補',
             'create_future_memo' => 'Memory保存候補',
             'create_inbox_item' => 'Inbox候補',
+            'prepare_execution_request' => '実行リクエスト候補',
         ];
         $candidateStatusLabels = [
             'pending' => '確認待ち',
@@ -45,6 +46,9 @@
             'kind' => '種類',
             'content' => '本文',
             'use_for_ai' => 'AI Contextで使う',
+            'instruction' => '実行したいこと',
+            'actor_type' => '実行主体',
+            'available_minutes' => '今回使える時間',
         ];
     @endphp
 
@@ -241,7 +245,7 @@
                                                 <form method="POST" action="{{ route('companion.candidates.apply', [$thread, $candidate]) }}" data-mutation-once>
                                                     @csrf
                                                     <input type="hidden" name="apply_request_id" value="{{ $candidateApplyRequestIds[$candidate->id] ?? '' }}">
-                                                    <button type="submit" class="btn-primary px-3 py-2 text-xs">この内容を反映する</button>
+                                                    <button type="submit" class="btn-primary px-3 py-2 text-xs">{{ $candidate->type === 'prepare_execution_request' ? '確認して実行整理へ進む' : 'この内容を反映する' }}</button>
                                                 </form>
                                             @endif
                                             <form method="POST" action="{{ route('companion.candidates.dismiss', [$thread, $candidate]) }}">
@@ -249,10 +253,16 @@
                                                 <button type="submit" class="btn-secondary px-3 py-2 text-xs">見送る</button>
                                             </form>
                                         </div>
-                                        <p class="mt-3 text-[10px] leading-4 text-amber-200/70">「反映する」を押すまでCanoviaのデータは変更されません。</p>
+                                        <p class="mt-3 text-[10px] leading-4 text-amber-200/70">
+                                            @if ($candidate->type === 'prepare_execution_request')
+                                                確認するまでExecution Orchestrationへは引き継ぎません。Taskの進捗や内容も変更しません。
+                                            @else
+                                                「反映する」を押すまでCanoviaのデータは変更されません。
+                                            @endif
+                                        </p>
                                     @elseif ($candidate->status === 'applied')
                                         <p class="mt-3 text-[10px] leading-4 text-emerald-200/70">
-                                            人の確認後に反映済みです。
+                                            {{ $candidate->type === 'prepare_execution_request' ? '人の確認後にExecution Orchestrationへ引き継ぎ済みです。' : '人の確認後に反映済みです。' }}
                                             @if ($candidate->applied_target_type && $candidate->applied_target_id)
                                                 {{ $candidate->applied_target_type }} #{{ $candidate->applied_target_id }}
                                             @endif
