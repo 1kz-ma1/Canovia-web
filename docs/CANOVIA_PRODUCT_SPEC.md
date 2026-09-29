@@ -959,3 +959,18 @@ arrivalではanchorがsource geometryからcanonical positionへ移動し、そ�
 V47.3のgesture直後click、Focus切替、Context Inspector、V47.4 Reflection Map、Collaboration Projection、L3 Execution semantics、Living Reevaluation、Instant Navigationは維持する。Navigationをanimation完了待ちで遅延させず、AI layoutやcanonical position永続化、billing / entitlement変更は行わない。
 
 詳細は `docs/V47.5_SEMANTIC_ZOOM_SPATIAL_CONTINUITY.md` を正とする。
+
+
+## V47.6 Context-Centered Execution Map
+
+V47.6では、V47.5実機確認で残った「PlanをSemantic ZoomしたのにL3でCurrent Taskが中央を奪う」問題を解消する。Execution Mapでは `center_node_id` と `primary_node_id` を分離し、Planが解決できるL3では `center_node_id = plan:<id>`、Current Taskがある場合のみ `primary_node_id = task:<id>` とする。中央は「現在いるContext」、Primaryは「今おすすめするAction」を表し、「中央 = Primary Action」という旧契約は廃止する。
+
+L3の通常ProjectionはPlanを中央に固定し、Current TaskをAction側の強調Node、Next Task / GoalをFuture、ToolをAction、EvidenceをPast、Inbox / DependencyをInput側へ配置する。新しいstructural position roleとして `context-plan` / `action-primary` を追加し、BehaviorEventでは本文を追加せずroleだけをallowlist対象とする。既存roleは互換性のため削除しない。
+
+Current Task / Next Task / Dependency TaskはLeaf NodeとしてFocus-firstを維持する。Taskを押した場合は既存Focus ModeによりTaskが中央となり、Planはcurrent-context neighborへ移動する。Focus解除またはBackでPlan-centered L3へ戻る。新しいL4 routeやDB Entityは作らない。
+
+V47.5のSpatial ContinuityではL2とL3の同一 `plan:<id>` をidentity anchorとして利用できるため、Plan NodeがそのままL3 centerへ移動し、Task / Tool / Evidenceが周囲に展開する。Primary Actionの推薦ロジック、direct launch、Execution Orchestration、Living Reevaluation、Collaboration L3、Reflection Map、Space Station Dockは維持する。
+
+Desktop / MobileともPlan Contextをcenterとする。Mobileは既存pixel-balanced layoutでPlan=50/50、Primary Action=右上、Next Task=上、Goal=左上、Tool=右、Evidence=下、Inbox=左へ再配置する。通常L3ではPlanをcyan context emphasis、Primary Taskをviolet primary-action emphasisとして「場所」と「おすすめ」を視覚的にも分離し、Focus中はPlan center用emphasisを外す。
+
+詳細は `docs/V47.6_CONTEXT_CENTERED_EXECUTION_MAP.md` を正とする。
