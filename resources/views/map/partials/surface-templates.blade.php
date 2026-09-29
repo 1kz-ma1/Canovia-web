@@ -4,7 +4,7 @@
             $surface = $node['classic_surface'] ?? [];
             $surfacePresentation = \App\Support\MapNodePresentation::for($node);
             $surfaceKind = ($surfacePresentation['kind'] ?? null) === 'leaf'
-                ? ($surfacePresentation['eyebrow'] ?? '詳細')
+                ? (\App\Support\MapNodePresentation::role($node) ?? '詳細')
                 : ($surface['kind'] ?? $node['type']);
         @endphp
         @if (! empty($surface))
