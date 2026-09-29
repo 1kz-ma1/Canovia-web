@@ -234,7 +234,16 @@
                             $isZoomNavigation = str_starts_with($directNavigationKind, 'zoom-');
                             $isSatelliteNavigation = $directNavigationKind === 'satellite';
                             $isExternalNavigation = $directNavigationKind === 'external';
+                            $isDirectNavigation = $directNavigationKind === 'direct';
                             $zoomDirection = $directNavigationKind === 'zoom-out' ? 'out' : 'in';
+                            $usesDirectBody = filled(data_get($directNavigation, 'url'))
+                                && (($isZoomNavigation && $zoomDirection === 'in')
+                                    || $isSatelliteNavigation
+                                    || $isExternalNavigation
+                                    || $isDirectNavigation);
+                            $nodeEntryMode = $usesDirectBody
+                                ? (($isZoomNavigation && $zoomDirection === 'in') ? 'semantic' : 'direct')
+                                : 'focus';
                         @endphp
 
                         <div
@@ -247,16 +256,38 @@
                             data-map-position-role="{{ $node['position_role'] }}"
                             data-map-is-primary="{{ $isPrimary ? '1' : '0' }}"
                             data-map-is-center="{{ $isCenter ? '1' : '0' }}"
+                            data-map-node-entry-mode="{{ $nodeEntryMode }}"
                             data-map-x="{{ data_get($node, 'position.x', 50) }}"
                             data-map-y="{{ data_get($node, 'position.y', 50) }}"
                             @if ($isPrimary) aria-current="true" @endif
                         >
-                            @if ($hasFocusFallback)
+                            @if ($usesDirectBody)
+                                <a
+                                    href="{{ data_get($directNavigation, 'url') }}"
+                                    class="canovia-map-node-focus-link {{ $isZoomNavigation ? 'is-semantic-entry' : 'is-direct-entry' }}"
+                                    data-map-direct-navigation
+                                    data-map-action-role="{{ $isZoomNavigation ? 'zoom' : ($isSatelliteNavigation ? 'satellite' : ($isExternalNavigation ? 'external_tool' : 'direct')) }}"
+                                    data-map-node-id="{{ $node['id'] }}"
+                                    data-map-node-type="{{ $node['type'] }}"
+                                    data-map-position-role="{{ $node['position_role'] }}"
+                                    data-map-is-primary="{{ $isPrimary ? '1' : '0' }}"
+                                    @if ($isZoomNavigation)
+                                        data-map-semantic-zoom
+                                        data-map-zoom-direction="{{ $zoomDirection }}"
+                                        data-route-lock-skip
+                                    @endif
+                                    @if ($isExternalNavigation)
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    @endif
+                                    aria-label="{{ data_get($directNavigation, 'label', $node['label']) }}"
+                                >
+                            @elseif ($hasFocusFallback)
                                 <a
                                     href="{{ $node['available_action'] }}"
                                     class="canovia-map-node-focus-link"
                                     data-map-node-focus
-                                    aria-label="{{ $node['label'] }}のContextを見る"
+                                    aria-label="{{ $node['label'] }}の詳細を見る"
                                 >
                             @else
                                 <div class="canovia-map-node-focus-link is-static">
@@ -272,10 +303,14 @@
                                 @if (filled($node['subtitle'] ?? null))
                                     <span class="canovia-map-node-subtitle">{{ $node['subtitle'] }}</span>
                                 @endif
-                                @if ($hasFocusFallback)
-                                    <span class="canovia-map-node-action">Contextを見る →</span>
+                                @if ($usesDirectBody)
+                                    <span class="canovia-map-node-action">
+                                        {{ ($isZoomNavigation && $zoomDirection === 'in') ? '1段深く見る →' : '開く →' }}
+                                    </span>
+                                @elseif ($hasFocusFallback)
+                                    <span class="canovia-map-node-action">詳細を見る →</span>
                                 @endif
-                            @if ($hasFocusFallback)
+                            @if ($usesDirectBody || $hasFocusFallback)
                                 </a>
                             @else
                                 </div>
@@ -348,8 +383,8 @@
                 <div class="canovia-map-context-card">
                     <div class="canovia-map-context-header">
                         <div>
-                            <p class="canovia-map-kicker">Contextual Classic Surface</p>
-                            <p class="canovia-map-context-caption">選択中のContextに必要な操作だけを表示します</p>
+                            <p class="canovia-map-kicker">Context Inspector</p>
+                            <p class="canovia-map-context-caption">Leaf Nodeの詳細確認と補助操作を表示します</p>
                         </div>
                         <div class="canovia-map-context-tools">
                             <button
