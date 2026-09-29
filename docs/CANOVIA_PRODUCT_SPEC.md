@@ -773,7 +773,7 @@ Manual Workflow HubはProjectArtifact能力の延長とし、OAuth / Webhook / a
 Inboxは「先に分類してから登録するフォーム」ではなく、曖昧な意図・URL・画像・PDFをそのままCanoviaへ渡すConversational Intakeとして扱う。
 primary capture surfaceは1つのcomposerとし、Title / Category / Plan / Taskをcapture前に要求しない。URLはcomposerへ貼り付けたHTTP(S) URLをsource_urlとして抽出し、画像 / PDFはattachmentとして扱う。
 
-Chat modeもcanonical captureは既存InboxItemを使い、`metadata.intake_mode=chat` / `capture_surface=inbox`だけを追加する。capture直後はYOU / CANOVIAのConversation previewを表示するが、preview専用のchat tableは作らない。複数ターン相談は既存Canovia CompanionへInbox Contextを引き継ぐ。
+Chat modeもcanonical captureは既存InboxItemを使い、`metadata.intake_mode=chat` / `capture_surface=inbox`だけを追加する。Automatic AI entitlementがありNative AIが利用可能ならcapture直後にrouting suggestionまで自動生成し、失敗してもcapture自体は成功させる。capture直後はYOU / CANOVIAのConversation previewを表示するが、preview専用のchat tableは作らない。複数ターン相談は既存Canovia CompanionへInbox Contextを引き継ぐ。
 
 Inbox Intelligenceはrouting candidateだけを作り、AIはPlan / Task IDを選ばない。candidate生成だけではcanonical dataを変更せず、既存InboxRoutingServiceまたはCompanion Mutation Candidateのhuman review後に確定する。判断できない入力はkeep_inboxへ残してよい。
 
