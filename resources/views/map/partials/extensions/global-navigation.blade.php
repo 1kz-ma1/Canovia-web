@@ -70,6 +70,7 @@
                 data-map-semantic-zoom
                 data-map-zoom-direction="out"
                 data-route-lock-skip
+                data-map-global-home
             >Canovia</a>
         @endif
 
