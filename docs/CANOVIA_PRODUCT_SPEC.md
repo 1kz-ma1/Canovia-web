@@ -804,7 +804,7 @@ Map L3ではCurrent / Next Taskから「今やることを生成」へ遷移で�
 
 V47.1ではV46.1 Conversational Inbox / Canovia Companionで受け取ったfuture actionを、Human Confirmation後にV47.0 Execution Orchestrationへ渡すcanonical Execution Request contractを追加する。
 
-Execution Requestは永続Entityにせず、対象TaskのExecution Orchestration sessionへ一時保持する。TaskをSource of Truthとする原則は変更しない。Requestは「ユーザーが今回何を進めたいか」、Execution Packetは「現在のPlan / Task / Dependency / Evidenceから今どう進めるか」であり、両者を分離する。
+Execution Request専用の永続Entityは作らず、active handoffは対象TaskのExecution Orchestration sessionへ保持する。Human Confirmationのauditは既存sourceに残し、InboxではInboxItem.metadata.execution_request、Companionではapplied Candidateのapply auditから追跡できる。TaskをSource of Truthとする原則は変更しない。Requestは「ユーザーが今回何を進めたいか」、Execution Packetは「現在のPlan / Task / Dependency / Evidenceから今どう進めるか」であり、両者を分離する。
 
 Inbox Intelligenceは `execution_request` をrouting candidateとして提案できるが、Plan / Task IDはAIに選択させない。人がdestination / Plan / Task / 今回してほしいこと / actor type / optional available minutesを確認した後にだけExecutionRequestHandoffServiceへ渡す。過去の作業結果はtask_evidence、これから行う依頼はexecution_requestとして区別する。
 
