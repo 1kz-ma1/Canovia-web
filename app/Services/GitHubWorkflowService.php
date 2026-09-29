@@ -59,19 +59,33 @@ final class GitHubWorkflowService
             ->sortByDesc(fn (array $item) => (int) ($item['updated_at_ts'] ?? 0))
             ->values();
 
+        // Repository URLs are navigation roots, not pieces of work.
+        // Keep them out of the decision lanes and use them to group the
+        // GitHub objects Canovia already knows about for the same Plan/repo.
+        $repositoryOverviews = $items
+            ->filter(fn (array $item) => filled($item['repo_full_name'] ?? null))
+            ->groupBy(fn (array $item) => $item['plan_id'].'|'.mb_strtolower((string) $item['repo_full_name']))
+            ->map(fn (Collection $repoItems) => $this->repositoryOverview($repoItems))
+            ->sortByDesc(fn (array $overview) => (int) ($overview['updated_at_ts'] ?? 0))
+            ->values();
+
+        $workflowItems = $items
+            ->reject(fn (array $item) => ($item['kind'] ?? null) === 'repository')
+            ->values();
+
         $lanes = collect(PlanArtifact::GITHUB_WORKFLOW_STATES)
-            ->map(function (string $label, string $key) use ($items) {
+            ->map(function (string $label, string $key) use ($workflowItems) {
                 return [
                     'key' => $key,
                     'label' => $label,
-                    'items' => $items
+                    'items' => $workflowItems
                         ->filter(fn (array $item) => ($item['workflow_state'] ?? null) === $key)
                         ->values(),
                 ];
             })
             ->values();
 
-        $unclassified = $items
+        $unclassified = $workflowItems
             ->filter(fn (array $item) => ($item['workflow_state'] ?? null) === self::UNCLASSIFIED)
             ->values();
 
@@ -84,18 +98,103 @@ final class GitHubWorkflowService
             'editable_plans' => $editablePlans,
             'selected_plan' => $selectedPlan,
             'items' => $items,
+            'workflow_items' => $workflowItems,
+            'repository_overviews' => $repositoryOverviews,
             'lanes' => $lanes,
             'unclassified' => $unclassified,
             'workflow_states' => PlanArtifact::GITHUB_WORKFLOW_STATES,
             'summary' => [
-                'total' => $items->count(),
+                'total' => $workflowItems->count(),
+                'repositories' => $repositoryOverviews->count(),
                 'unclassified' => $unclassified->count(),
-                'now' => $items->where('workflow_state', 'now')->count(),
-                'review' => $items->where('workflow_state', 'review')->count(),
-                'changes' => $items->where('workflow_state', 'changes')->count(),
-                'merge' => $items->where('workflow_state', 'merge')->count(),
-                'done' => $items->where('workflow_state', 'done')->count(),
+                'now' => $workflowItems->where('workflow_state', 'now')->count(),
+                'review' => $workflowItems->where('workflow_state', 'review')->count(),
+                'changes' => $workflowItems->where('workflow_state', 'changes')->count(),
+                'merge' => $workflowItems->where('workflow_state', 'merge')->count(),
+                'done' => $workflowItems->where('workflow_state', 'done')->count(),
             ],
+        ];
+    }
+
+    /**
+     * Build one repository-level overview from Canovia-known GitHub URLs.
+     *
+     * This is intentionally not a GitHub remote inventory. It only groups
+     * artifacts that Canovia already owns for the same Plan/repository.
+     *
+     * @param Collection<int,array<string,mixed>> $items
+     * @return array<string,mixed>
+     */
+    private function repositoryOverview(Collection $items): array
+    {
+        $items = $items
+            ->sortByDesc(fn (array $item) => (int) ($item['updated_at_ts'] ?? 0))
+            ->values();
+
+        $repositoryItem = $items->first(
+            fn (array $item) => ($item['kind'] ?? null) === 'repository',
+        );
+        $anchor = is_array($repositoryItem) ? $repositoryItem : $items->first();
+        $workItems = $items
+            ->reject(fn (array $item) => ($item['kind'] ?? null) === 'repository')
+            ->values();
+
+        $repoFullName = (string) ($anchor['repo_full_name'] ?? '');
+        $repoUrl = is_array($repositoryItem)
+            ? (string) ($repositoryItem['url'] ?? '')
+            : 'https://github.com/'.$repoFullName;
+
+        $linkedTasks = $items
+            ->flatMap(fn (array $item) => $item['tasks'] ?? [])
+            ->filter(fn ($task) => is_array($task) && isset($task['id']))
+            ->unique(fn (array $task) => (int) $task['id'])
+            ->values();
+
+        $kindCounts = [
+            'pull_request' => $workItems->where('kind', 'pull_request')->count(),
+            'issue' => $workItems->where('kind', 'issue')->count(),
+            'branch' => $workItems->where('kind', 'branch')->count(),
+            'commit' => $workItems->where('kind', 'commit')->count(),
+            'actions_run' => $workItems->where('kind', 'actions_run')->count(),
+            'other' => $workItems
+                ->reject(fn (array $item) => in_array(
+                    $item['kind'] ?? null,
+                    ['pull_request', 'issue', 'branch', 'commit', 'actions_run'],
+                    true,
+                ))
+                ->count(),
+        ];
+
+        $workflowCounts = [
+            'unclassified' => $workItems->where('workflow_state', self::UNCLASSIFIED)->count(),
+            'now' => $workItems->where('workflow_state', 'now')->count(),
+            'review' => $workItems->where('workflow_state', 'review')->count(),
+            'changes' => $workItems->where('workflow_state', 'changes')->count(),
+            'merge' => $workItems->where('workflow_state', 'merge')->count(),
+            'done' => $workItems->where('workflow_state', 'done')->count(),
+        ];
+
+        return [
+            'key' => ($anchor['plan_id'] ?? '0').'|'.mb_strtolower($repoFullName),
+            'repo_full_name' => $repoFullName,
+            'url' => $repoUrl,
+            'plan_id' => (int) ($anchor['plan_id'] ?? 0),
+            'plan_title' => (string) ($anchor['plan_title'] ?? ''),
+            'plan_icon' => (string) ($anchor['plan_icon'] ?? ''),
+            'repository_registered' => is_array($repositoryItem),
+            'repository_artifact_id' => is_array($repositoryItem)
+                ? (int) ($repositoryItem['id'] ?? 0)
+                : null,
+            'details_url' => is_array($repositoryItem)
+                ? ($repositoryItem['details_url'] ?? null)
+                : null,
+            'can_edit' => (bool) ($anchor['can_edit'] ?? false),
+            'work_count' => $workItems->count(),
+            'kind_counts' => $kindCounts,
+            'workflow_counts' => $workflowCounts,
+            'linked_tasks' => $linkedTasks,
+            'recent_items' => $workItems->take(5)->values(),
+            'updated_at_ts' => $items->max('updated_at_ts') ?? 0,
         ];
     }
 

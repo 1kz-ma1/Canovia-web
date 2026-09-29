@@ -296,6 +296,101 @@ class GitHubWorkflowHubV460Test extends TestCase
             ->assertSee(route('github_workflow.index', ['plan_id' => $plan->id]));
     }
 
+    public function test_repository_url_becomes_an_overview_root_instead_of_a_workflow_lane(): void
+    {
+        $user = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($user, 'HINANEX');
+
+        $this->actingAs($user)
+            ->post(route('github_workflow.store'), [
+                'plan_id' => $plan->id,
+                'url' => 'https://github.com/1kz-ma1/HINANEX',
+                'workflow_state' => 'now',
+                'title' => 'ヒナネクス-リポジトリ',
+            ])
+            ->assertRedirect(route('github_workflow.index', ['plan_id' => $plan->id]))
+            ->assertSessionHasNoErrors();
+
+        $artifact = PlanArtifact::query()->firstOrFail();
+
+        $this->assertSame('repository', $artifact->artifact_type);
+        $this->assertNull($artifact->githubWorkflowState());
+
+        $response = $this->actingAs($user)
+            ->get(route('github_workflow.index', ['plan_id' => $plan->id]));
+
+        $response
+            ->assertOk()
+            ->assertSee('REPOSITORY OVERVIEW')
+            ->assertSee('Repositoryを起点に、全体像を見る')
+            ->assertSee('1kz-ma1/HINANEX')
+            ->assertSee('Repositoryだけ登録されています')
+            ->assertSee('Repositoryは「今やる」項目ではなく');
+
+        $this->assertSame(1, data_get($response->viewData('summary'), 'repositories'));
+        $this->assertSame(0, data_get($response->viewData('summary'), 'total'));
+        $this->assertCount(1, $response->viewData('repository_overviews'));
+
+        foreach ($response->viewData('lanes') as $lane) {
+            $this->assertCount(0, $lane['items']);
+        }
+    }
+
+    public function test_repository_overview_groups_known_objects_workflow_state_and_linked_tasks(): void
+    {
+        $user = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($user, 'HINANEX');
+        $task = $this->task($plan, 'C / Validation');
+
+        $repo = $this->artifact(
+            $plan,
+            'HINANEX repository',
+            'https://github.com/1kz-ma1/HINANEX',
+            ['github_workflow_state' => 'now'],
+            artifactType: 'repository',
+        );
+        $pr = $this->artifact(
+            $plan,
+            'Validation PR',
+            'https://github.com/1kz-ma1/HINANEX/pull/12',
+            ['github_workflow_state' => 'review'],
+        );
+        $branch = $this->artifact(
+            $plan,
+            'Validation branch',
+            'https://github.com/1kz-ma1/HINANEX/tree/feature/validation',
+            ['github_workflow_state' => 'now'],
+        );
+        $pr->tasks()->sync([$task->id]);
+
+        $response = $this->actingAs($user)
+            ->get(route('github_workflow.index', ['plan_id' => $plan->id]))
+            ->assertOk()
+            ->assertSee('Validation PR')
+            ->assertSee('Validation branch')
+            ->assertSee('C / Validation');
+
+        $overview = data_get($response->viewData('repository_overviews'), '0');
+
+        $this->assertSame('1kz-ma1/HINANEX', data_get($overview, 'repo_full_name'));
+        $this->assertTrue((bool) data_get($overview, 'repository_registered'));
+        $this->assertSame($repo->id, data_get($overview, 'repository_artifact_id'));
+        $this->assertSame(2, data_get($overview, 'work_count'));
+        $this->assertSame(1, data_get($overview, 'kind_counts.pull_request'));
+        $this->assertSame(1, data_get($overview, 'kind_counts.branch'));
+        $this->assertSame(1, data_get($overview, 'workflow_counts.review'));
+        $this->assertSame(1, data_get($overview, 'workflow_counts.now'));
+        $this->assertSame($task->id, data_get($overview, 'linked_tasks.0.id'));
+
+        $nowLane = collect($response->viewData('lanes'))->firstWhere('key', 'now');
+        $reviewLane = collect($response->viewData('lanes'))->firstWhere('key', 'review');
+
+        $this->assertCount(1, $nowLane['items']);
+        $this->assertSame($branch->id, data_get($nowLane, 'items.0.id'));
+        $this->assertCount(1, $reviewLane['items']);
+        $this->assertSame($pr->id, data_get($reviewLane, 'items.0.id'));
+    }
+
     private function plan(
         User $user,
         string $title,
