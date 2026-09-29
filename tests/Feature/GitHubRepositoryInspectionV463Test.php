@@ -145,7 +145,7 @@ class GitHubRepositoryInspectionV463Test extends TestCase
         $this->grantAllAccess($user);
 
         Http::fake([
-            'api.github.com/repos/1kz-ma1/PRIVATE' => Http::response(['message' => 'Not Found'], 404),
+            'https://api.github.com/repos/1kz-ma1/PRIVATE' => Http::response(['message' => 'Not Found'], 404),
         ]);
 
         $this->actingAs($user)
@@ -177,7 +177,7 @@ class GitHubRepositoryInspectionV463Test extends TestCase
         config(['services.github.read_token' => 'server-token']);
 
         Http::fake([
-            'api.github.com/repos/private-org/secret-repo' => Http::response([
+            'https://api.github.com/repos/private-org/secret-repo' => Http::response([
                 'full_name' => 'private-org/secret-repo',
                 'private' => true,
                 'visibility' => 'private',
@@ -212,7 +212,7 @@ class GitHubRepositoryInspectionV463Test extends TestCase
     private function fakeGitHubRepository(): void
     {
         Http::fake([
-            'api.github.com/repos/1kz-ma1/HINANEX' => Http::response([
+            'https://api.github.com/repos/1kz-ma1/HINANEX' => Http::response([
                 'full_name' => '1kz-ma1/HINANEX',
                 'description' => '複数担当で開発するHINANEX',
                 'default_branch' => 'main',
@@ -227,7 +227,7 @@ class GitHubRepositoryInspectionV463Test extends TestCase
                 'pushed_at' => '2026-09-29T01:55:00Z',
                 'html_url' => 'https://github.com/1kz-ma1/HINANEX',
             ], 200, ['X-RateLimit-Remaining' => '59']),
-            'api.github.com/repos/1kz-ma1/HINANEX/branches*' => Http::response([
+            'https://api.github.com/repos/1kz-ma1/HINANEX/branches*' => Http::response([
                 [
                     'name' => 'main',
                     'protected' => true,
@@ -239,7 +239,7 @@ class GitHubRepositoryInspectionV463Test extends TestCase
                     'commit' => ['sha' => str_repeat('b', 40)],
                 ],
             ]),
-            'api.github.com/repos/1kz-ma1/HINANEX/pulls*' => Http::response([
+            'https://api.github.com/repos/1kz-ma1/HINANEX/pulls*' => Http::response([
                 [
                     'number' => 12,
                     'title' => 'Validationを更新',
@@ -250,7 +250,7 @@ class GitHubRepositoryInspectionV463Test extends TestCase
                     'html_url' => 'https://github.com/1kz-ma1/HINANEX/pull/12',
                 ],
             ]),
-            'api.github.com/repos/1kz-ma1/HINANEX/issues*' => Http::response([
+            'https://api.github.com/repos/1kz-ma1/HINANEX/issues*' => Http::response([
                 [
                     'number' => 12,
                     'title' => 'PRとして返るIssue API項目',
@@ -265,7 +265,7 @@ class GitHubRepositoryInspectionV463Test extends TestCase
                     'html_url' => 'https://github.com/1kz-ma1/HINANEX/issues/31',
                 ],
             ]),
-            'api.github.com/repos/1kz-ma1/HINANEX/actions/runs*' => Http::response([
+            'https://api.github.com/repos/1kz-ma1/HINANEX/actions/runs*' => Http::response([
                 'workflow_runs' => [
                     [
                         'id' => 9001,
