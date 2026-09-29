@@ -754,3 +754,15 @@ Map -> Mapのuncached Semantic Zoomではglobal route-loading overlayを使わ�
 
 V45.6ではFullscreen Map routeをApp shellの通常paddingから完全分離し、body / app-main / map pageをedge-to-edgeに固定する。layouts/appのpx-4 / py-5やUI densityの!important paddingよりMap route overrideを優先し、app-mainはinset 0 / 100vw / 100dvh / margin 0 / padding 0 !importantとする。Safe AreaはCanvas外余白ではなくTop Bar / Dock / Context Surface側で扱う。
 Personalized Satelliteは「頻用項目一覧」ではなく独立Contextへの航路短縮に限定する。Task-bound Tool（AI Practice等）はL0 candidateから除外し、Shared Planも固定の共同Intentと意味が重複するためL0 candidateから除外する。Plan promotion thresholdは0.55、最大2件、同一anchor Intentから最大1件とする。importanceだけでは表示せずusage / recency / continuityを含む強いsignalを要求する。Node eyebrowは内部用のPLAN SATELLITE表記ではなくPLANへ簡略化する。fixed L0 5 node / Navigation Graph / Telemetry contractは変更しない。
+
+## V46 GitHub Workflow
+
+V46.0ではGitHubのBranch / PR / Issue / Review / CI構造をそのままUIへ複製せず、既存PlanArtifactを「今やる / レビュー待ち / 修正必要 / マージ待ち / 完了」というCanovia側の作業判断へ再投影するGitHub Workflow Hubを追加する。
+
+Canovia workflow stateはPlanArtifact.metadataのgithub_workflow_stateへ保存するが、GitHub remote stateではない。GitHub API / OAuth / WebhookがないV46.0ではopen / merged / approved / changes requested / CI結果等をURLや利用履歴から推測しない。state未設定の既存Artifactは未整理として表示し、人が明示分類する。
+
+GitHub URL parserはgithub.com URLに埋め込まれたRepository / Pull Request number / Issue number / Commit / Actions run / Branch pathのみを構造情報として読める。Quick CaptureではGitHub URL、Plan、初期Canovia stateだけでArtifact登録できる。remote network requestは行わない。
+
+lane変更は整理操作でありGitHub execution evidenceではないためTaskEvidenceを生成しない。将来authoritative GitHub connectorから取得したcommit / PR / review / merge / CI eventはEvidenceSource::GitHub側で別管理し、このWorkflow Hubへnormalizeする。
+
+Manual Workflow HubはProjectArtifact能力の延長とし、OAuth / Webhook / automatic evidence / live status synchronization等の外部自動化はdeveloper_github_evidence capabilityへ接続できる境界を維持する。
