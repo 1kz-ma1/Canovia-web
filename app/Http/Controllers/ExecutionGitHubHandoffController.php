@@ -10,11 +10,14 @@ use App\Services\ExecutionGitHubHandoffService;
 use App\Services\ExecutionOrchestrationContextService;
 use App\Services\ExecutionRequestHandoffService;
 use App\Services\FeatureAccessService;
+use App\Services\GitHubEvidenceDecisionService;
 use App\Services\GitHubRepositoryWriter;
 use App\Services\GitHubReturnEvidenceService;
 use App\Services\PlanActivityService;
 use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 final class ExecutionGitHubHandoffController extends Controller
@@ -374,6 +377,139 @@ final class ExecutionGitHubHandoffController extends Controller
                 'success',
                 'GitHubのReview / Merge / CI結果を確認し、Task Evidenceへ反映しました。Task進捗・完了状態は自動変更していません。',
             );
+    }
+
+    public function applyEvidenceDecision(
+        Request $request,
+        Plan $plan,
+        Task $task,
+        PlanArtifact $artifact,
+        PlanOwnershipService $ownership,
+        FeatureAccessService $access,
+        GitHubReturnEvidenceService $returns,
+        GitHubEvidenceDecisionService $decisions,
+        PlanActivityService $activity,
+    ) {
+        $this->authorizeTask($request, $plan, $task, $ownership);
+        $access->authorizeUse(
+            $request->user(),
+            FeatureKey::DeveloperGithubEvidence,
+            ['plan_id' => (int) $plan->id, 'task_id' => (int) $task->id, 'artifact_id' => (int) $artifact->id],
+        );
+
+        abort_unless(
+            (int) $artifact->plan_id === (int) $plan->id
+            && $artifact->provider === 'github'
+            && data_get($artifact->metadata, 'github_write_origin.source') === 'execution_github_handoff',
+            404,
+        );
+
+        $validated = $request->validate([
+            'action' => ['required', Rule::in(['complete', 'continue', 'wait'])],
+            'expected_snapshot_fingerprint' => ['required', 'string', 'size:64', 'regex:/^[a-f0-9]{64}$/'],
+            'expected_task_fingerprint' => ['required', 'string', 'size:64', 'regex:/^[a-f0-9]{64}$/'],
+        ]);
+
+        try {
+            $returnResult = $returns->sync(
+                $plan,
+                $task,
+                $artifact,
+            );
+        } catch (\RuntimeException $exception) {
+            return redirect()
+                ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
+                ->with('status', $exception->getMessage());
+        }
+
+        $snapshot = (array) ($returnResult['snapshot'] ?? []);
+        $freshTask = Task::query()->findOrFail($task->id);
+        $freshCandidate = $decisions->candidate($freshTask, $artifact->fresh(), $snapshot);
+
+        $snapshotMatches = hash_equals(
+            (string) $validated['expected_snapshot_fingerprint'],
+            (string) ($freshCandidate['snapshot_fingerprint'] ?? ''),
+        );
+        $taskMatches = hash_equals(
+            (string) $validated['expected_task_fingerprint'],
+            (string) ($freshCandidate['task_fingerprint'] ?? ''),
+        );
+
+        if (! $snapshotMatches || ! $taskMatches) {
+            return redirect()
+                ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
+                ->with(
+                    'status',
+                    '確認中にGitHubまたはTaskの状態が変わりました。最新結果を表示したので、内容を確認してからもう一度反映してください。',
+                );
+        }
+
+        $applied = DB::transaction(function () use (
+            $task,
+            $artifact,
+            $snapshot,
+            $decisions,
+            $validated
+        ) {
+            $lockedTask = Task::query()
+                ->whereKey($task->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $candidate = $decisions->candidate(
+                $lockedTask,
+                $artifact->fresh(),
+                $snapshot,
+            );
+
+            if (! hash_equals(
+                (string) $validated['expected_task_fingerprint'],
+                (string) ($candidate['task_fingerprint'] ?? ''),
+            )) {
+                throw ValidationException::withMessages([
+                    'github_decision' => 'Task状態が確認後に変わっています。最新状態から判断し直してください。',
+                ]);
+            }
+
+            return [
+                'candidate' => $candidate,
+                'mutation' => $decisions->apply(
+                    $lockedTask,
+                    $candidate,
+                    (string) $validated['action'],
+                ),
+            ];
+        });
+
+        $candidate = (array) ($applied['candidate'] ?? []);
+        $mutation = (array) ($applied['mutation'] ?? []);
+
+        $activity->record(
+            $plan,
+            $request->user(),
+            'github_evidence_decision_applied',
+            'task',
+            (int) $task->id,
+            [
+                'action' => (string) $validated['action'],
+                'pull_request_artifact_id' => (int) $artifact->id,
+                'pull_request_number' => (int) ($candidate['pull_request_number'] ?? 0),
+                'snapshot_fingerprint' => (string) ($candidate['snapshot_fingerprint'] ?? ''),
+                'evidence_ids' => array_values((array) ($returnResult['evidence_ids'] ?? [])),
+                'before' => (array) ($mutation['before'] ?? []),
+                'after' => (array) ($mutation['after'] ?? []),
+            ],
+        );
+
+        $message = match ((string) $validated['action']) {
+            'complete' => 'GitHub Evidenceを確認し、このTaskを完了として反映しました。',
+            'continue' => 'GitHub Evidenceを確認し、修正対応を続ける状態へ反映しました。進捗率は変更していません。',
+            default => 'GitHub Evidenceを確認し、次の確認Actionだけを更新しました。進捗率は変更していません。',
+        };
+
+        return redirect()
+            ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
+            ->with('success', $message);
     }
 
     public function discard(
