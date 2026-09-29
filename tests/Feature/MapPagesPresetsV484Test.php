@@ -36,6 +36,7 @@ class MapPagesPresetsV484Test extends TestCase
             ->assertSee('data-map-page-control', false)
             ->assertSee('data-map-page-save-form', false)
             ->assertSee('data-map-page-id="builtin:overview"', false)
+            ->assertSee('data-map-page-id="builtin:plan"', false)
             ->assertSee('data-map-page-id="builtin:execution"', false)
             ->assertSee('data-map-page-id="builtin:reflection"', false)
             ->assertSee('data-map-page-id="builtin:collaboration"', false)
