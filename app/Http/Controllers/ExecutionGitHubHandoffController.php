@@ -338,7 +338,6 @@ final class ExecutionGitHubHandoffController extends Controller
                 $plan,
                 $task,
                 $artifact,
-                $request->user()?->id,
             );
         } catch (\RuntimeException $exception) {
             return redirect()
