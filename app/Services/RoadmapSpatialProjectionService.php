@@ -107,12 +107,28 @@ final class RoadmapSpatialProjectionService
                     $taskY = $yCursor + 24 + ($taskIndex * self::TASK_GAP_Y);
                     $positions[$taskId] = ['x' => $phaseX, 'y' => $taskY];
 
+                    $dependencyIds = $this->dependencyIds($node, $nodesByTaskId);
+                    $blockerIds = collect($dependencyIds)
+                        ->filter(function (int $dependencyId) use ($nodesByTaskId) {
+                            $dependency = $nodesByTaskId->get($dependencyId);
+
+                            return is_array($dependency) && ! $this->isComplete($dependency);
+                        })
+                        ->values()
+                        ->all();
+
+                    $dependencyState = in_array(($node['status'] ?? null), ['done', 'cancelled'], true)
+                        ? null
+                        : ($dependencyIds === [] || $blockerIds === [] ? 'ready' : 'blocked');
+
                     $projectedNodes[] = [
                         ...$node,
                         'id' => 'task:'.$taskId,
                         'phase_id' => $phaseId,
                         'cluster_id' => $clusterId,
                         'dependency_depth' => $depth,
+                        'dependency_state' => $dependencyState,
+                        'blocker_task_ids' => $blockerIds,
                         'x' => $phaseX,
                         'y' => $taskY,
                     ];
@@ -265,6 +281,12 @@ final class RoadmapSpatialProjectionService
             ->sort()
             ->values()
             ->all();
+    }
+
+    private function isComplete(array $node): bool
+    {
+        return ($node['status'] ?? null) === 'done'
+            || (int) ($node['progress_percent'] ?? 0) >= 100;
     }
 
     /**
