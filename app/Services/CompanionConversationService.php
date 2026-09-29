@@ -197,7 +197,7 @@ class CompanionConversationService
             return null;
         }
 
-        $requiresPlan = in_array($type, ['create_task', 'update_plan', 'record_goal_fact'], true);
+        $requiresPlan = in_array($type, ['create_task', 'update_plan', 'record_goal_fact', 'prepare_execution_request'], true);
         $requiresTask = in_array($type, ['update_task', 'prepare_execution_request'], true);
 
         if (($requiresPlan && ! $plan) || ($requiresTask && ! $task)) {
