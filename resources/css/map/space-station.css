@@ -1,1 +1,267 @@
-/* Space Station input / routing visualization styles. */
+/* --------------------------------------------------------------------------
+ * V48.3 Space Station Intake Hub
+ * Input -> Interpret -> Connect -> Action, with human confirmation preserved.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .canovia-space-station-flow {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.28rem;
+        border: 1px solid rgb(71 85 105 / 0.48);
+        border-radius: 1rem;
+        background:
+            radial-gradient(circle at 50% 0%, rgb(34 211 238 / 0.06), transparent 9rem),
+            rgb(8 15 34 / 0.72);
+        padding: 0.48rem;
+    }
+
+    .canovia-space-station-flow-step {
+        position: relative;
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 0.36rem;
+        border-radius: 0.72rem;
+        padding: 0.34rem 0.38rem;
+        color: rgb(71 85 105);
+    }
+
+    .canovia-space-station-flow-step::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        right: calc(100% - 0.22rem);
+        width: calc(100% - 0.16rem);
+        height: 1px;
+        background: rgb(51 65 85 / 0.7);
+        transform: translateY(-50%);
+        z-index: -1;
+    }
+
+    .canovia-space-station-flow-step:first-child::before {
+        display: none;
+    }
+
+    .canovia-space-station-flow-step.is-active {
+        background: rgb(34 211 238 / 0.075);
+        color: rgb(207 250 254);
+    }
+
+    .canovia-space-station-flow-step.is-complete {
+        color: rgb(125 211 252);
+    }
+
+    .canovia-space-station-flow-dot {
+        display: grid;
+        width: 1.35rem;
+        height: 1.35rem;
+        flex: 0 0 auto;
+        place-items: center;
+        border: 1px solid rgb(71 85 105);
+        border-radius: 9999px;
+        background: rgb(15 23 42);
+        font-size: 0.52rem;
+        font-weight: 900;
+    }
+
+    .canovia-space-station-flow-step.is-active .canovia-space-station-flow-dot {
+        border-color: rgb(103 232 249 / 0.78);
+        background: rgb(14 116 144 / 0.36);
+        color: rgb(207 250 254);
+        box-shadow: 0 0 0 0.18rem rgb(34 211 238 / 0.07);
+    }
+
+    .canovia-space-station-flow-step.is-complete .canovia-space-station-flow-dot {
+        border-color: rgb(56 189 248 / 0.52);
+        background: rgb(14 116 144 / 0.28);
+        color: rgb(165 243 252);
+    }
+
+    .canovia-space-station-flow-step > span:last-child {
+        display: grid;
+        min-width: 0;
+        gap: 0.02rem;
+    }
+
+    .canovia-space-station-flow-step small {
+        overflow: hidden;
+        color: currentColor;
+        font-size: 0.46rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        opacity: 0.66;
+    }
+
+    .canovia-space-station-flow-step strong {
+        overflow: hidden;
+        color: currentColor;
+        font-size: 0.6rem;
+        font-weight: 900;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .canovia-space-station-section.is-result {
+        border-color: rgb(52 211 153 / 0.28);
+        background:
+            radial-gradient(circle at top right, rgb(52 211 153 / 0.08), transparent 9rem),
+            rgb(6 24 28 / 0.72);
+    }
+
+    .canovia-space-station-badge.is-complete {
+        border-color: rgb(52 211 153 / 0.3);
+        background: rgb(16 185 129 / 0.1);
+        color: rgb(110 231 183);
+    }
+
+    .canovia-space-station-result-path {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.32rem;
+        border-radius: 0.78rem;
+        background: rgb(15 23 42 / 0.5);
+        padding: 0.48rem 0.55rem;
+        color: rgb(100 116 139);
+        font-size: 0.6rem;
+        font-weight: 800;
+    }
+
+    .canovia-space-station-result-path strong {
+        color: rgb(110 231 183);
+    }
+
+    .canovia-space-station-help.is-leading {
+        margin-top: 0;
+        color: rgb(148 163 184);
+    }
+
+    .canovia-space-station-connect {
+        display: grid;
+        gap: 0.7rem;
+        border-top: 1px solid rgb(71 85 105 / 0.42);
+        padding-top: 0.75rem;
+    }
+
+    .canovia-space-station-section-head.is-compact {
+        align-items: center;
+    }
+
+    .canovia-space-station-context-candidate {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 0.58rem;
+        border: 1px solid rgb(167 139 250 / 0.22);
+        border-radius: 0.85rem;
+        background:
+            radial-gradient(circle at 0% 0%, rgb(139 92 246 / 0.09), transparent 8rem),
+            rgb(15 23 42 / 0.62);
+        padding: 0.62rem;
+    }
+
+    .canovia-space-station-context-mark {
+        display: grid;
+        width: 1.8rem;
+        height: 1.8rem;
+        place-items: center;
+        border: 1px solid rgb(167 139 250 / 0.38);
+        border-radius: 9999px;
+        color: rgb(196 181 253);
+        font-size: 0.68rem;
+    }
+
+    .canovia-space-station-context-candidate > div {
+        min-width: 0;
+    }
+
+    .canovia-space-station-context-candidate small {
+        display: block;
+        color: rgb(167 139 250);
+        font-size: 0.52rem;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+    }
+
+    .canovia-space-station-context-candidate strong {
+        display: block;
+        margin-top: 0.08rem;
+        overflow: hidden;
+        color: rgb(226 232 240);
+        font-size: 0.7rem;
+        font-weight: 850;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .canovia-space-station-context-candidate p {
+        margin-top: 0.18rem;
+        color: rgb(100 116 139);
+        font-size: 0.57rem;
+        line-height: 1.45;
+    }
+
+    .canovia-space-station-execution-fields {
+        display: grid;
+        gap: 0.65rem;
+        border: 1px solid rgb(103 232 249 / 0.14);
+        border-radius: 0.85rem;
+        background: rgb(8 15 34 / 0.5);
+        padding: 0.62rem;
+    }
+
+    .canovia-space-station-execution-fields[hidden] {
+        display: none;
+    }
+
+    .canovia-space-station-execution-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(6.4rem, 0.7fr);
+        gap: 0.55rem;
+    }
+
+    .canovia-space-station-section.is-companion {
+        background:
+            radial-gradient(circle at top right, rgb(139 92 246 / 0.055), transparent 8rem),
+            rgb(15 23 42 / 0.48);
+    }
+
+    @media (max-width: 767px) {
+        .canovia-space-station-flow {
+            gap: 0.14rem;
+            padding: 0.34rem;
+        }
+
+        .canovia-space-station-flow-step {
+            justify-content: center;
+            gap: 0;
+            padding: 0.3rem 0.18rem;
+        }
+
+        .canovia-space-station-flow-step > span:last-child {
+            display: none;
+        }
+
+        .canovia-space-station-flow-dot {
+            width: 1.55rem;
+            height: 1.55rem;
+            font-size: 0.56rem;
+        }
+
+        .canovia-space-station-execution-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .canovia-space-station-result-path {
+            font-size: 0.56rem;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .canovia-space-station-flow-step,
+        .canovia-space-station-flow-dot {
+            transition: none;
+        }
+    }
+}
