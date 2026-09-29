@@ -137,6 +137,139 @@ final class GitHubRepositoryWriter
     }
 
     /**
+     * Read the current target file state through the same GitHub App boundary
+     * used for write, without creating a branch or commit.
+     *
+     * @return array<string,mixed>
+     */
+    public function previewFileChange(
+        string $repoFullName,
+        string $filePath,
+        string $content,
+    ): array {
+        if (! $this->configured()) {
+            throw new RuntimeException('GitHub AppがCanoviaに設定されていません。');
+        }
+
+        [$owner, $repo] = $this->splitRepo($repoFullName);
+        $repoPath = rawurlencode($owner).'/'.rawurlencode($repo);
+        $filePath = $this->normalizeFilePath($filePath);
+
+        if (strlen($content) > self::MAX_CONTENT_BYTES) {
+            throw new RuntimeException('1回に反映できるファイルは200KBまでです。');
+        }
+
+        $appJwt = $this->appJwt();
+        $installationResponse = $this->appClient($appJwt)
+            ->get('/repos/'.$repoPath.'/installation');
+
+        if ($installationResponse->status() === 404) {
+            throw new RuntimeException('Canovia GitHub AppがこのRepositoryに接続されていません。Repository管理者に接続してもらってください。');
+        }
+
+        if (! $installationResponse->successful()) {
+            throw new RuntimeException('GitHub AppのRepository接続を確認できませんでした。');
+        }
+
+        $installationId = (int) data_get($installationResponse->json(), 'id', 0);
+        if ($installationId <= 0) {
+            throw new RuntimeException('GitHub App installationを確認できませんでした。');
+        }
+
+        $tokenResponse = $this->appClient($appJwt)
+            ->post('/app/installations/'.$installationId.'/access_tokens');
+
+        if (! $tokenResponse->successful()) {
+            throw new RuntimeException('GitHub Appの一時Access Tokenを発行できませんでした。');
+        }
+
+        $token = trim((string) data_get($tokenResponse->json(), 'token', ''));
+        $permissions = (array) data_get($tokenResponse->json(), 'permissions', []);
+
+        if ($token === '') {
+            throw new RuntimeException('GitHub Appの一時Access Tokenを取得できませんでした。');
+        }
+
+        if (($permissions['contents'] ?? null) !== 'write' || ($permissions['pull_requests'] ?? null) !== 'write') {
+            throw new RuntimeException('GitHub AppにContents / Pull Requestsのwrite権限がありません。');
+        }
+
+        $client = $this->installationClient($token);
+        $repositoryResponse = $client->get('/repos/'.$repoPath);
+        if (! $repositoryResponse->successful()) {
+            throw new RuntimeException('GitHub AppからRepository情報を取得できませんでした。');
+        }
+
+        $repository = $repositoryResponse->json();
+        if (! is_array($repository)) {
+            throw new RuntimeException('GitHub Repository情報を読み取れませんでした。');
+        }
+
+        if ((bool) ($repository['archived'] ?? false)) {
+            throw new RuntimeException('Archived Repositoryには変更を作成できません。');
+        }
+
+        $baseBranch = trim((string) ($repository['default_branch'] ?? ''));
+        if ($baseBranch === '') {
+            throw new RuntimeException('Repositoryのdefault branchを確認できませんでした。');
+        }
+
+        $encodedFilePath = $this->encodePath($filePath);
+        $existingFileResponse = $client->get('/repos/'.$repoPath.'/contents/'.$encodedFilePath, [
+            'ref' => $baseBranch,
+        ]);
+
+        $existingFileSha = null;
+        $currentBytes = 0;
+        $currentContentAvailable = false;
+
+        if ($existingFileResponse->successful()) {
+            $existingFile = $existingFileResponse->json();
+            if (! is_array($existingFile) || ($existingFile['type'] ?? null) !== 'file') {
+                throw new RuntimeException('指定されたpathは編集可能なファイルではありません。');
+            }
+
+            $existingFileSha = trim((string) ($existingFile['sha'] ?? ''));
+            if ($existingFileSha === '') {
+                throw new RuntimeException('既存ファイルのSHAを確認できませんでした。');
+            }
+
+            $currentBytes = max(0, (int) ($existingFile['size'] ?? 0));
+
+            if (($existingFile['encoding'] ?? null) === 'base64' && is_string($existingFile['content'] ?? null)) {
+                $currentContent = base64_decode(
+                    preg_replace('/\\s+/', '', (string) $existingFile['content']) ?: '',
+                    true,
+                );
+
+                if (is_string($currentContent)) {
+                    $currentContentAvailable = true;
+                    $currentBytes = strlen($currentContent);
+
+                    if (hash_equals(hash('sha256', $currentContent), hash('sha256', $content))) {
+                        throw new RuntimeException('指定したファイル内容は現在のdefault branchと同じです。変更候補は作成していません。');
+                    }
+                }
+            }
+        } elseif ($existingFileResponse->status() !== 404) {
+            throw new RuntimeException('変更対象ファイルの現在状態を確認できませんでした。');
+        }
+
+        return [
+            'repo_full_name' => (string) ($repository['full_name'] ?? $repoFullName),
+            'installation_id' => $installationId,
+            'base_branch' => $baseBranch,
+            'file_path' => $filePath,
+            'file_action' => $existingFileSha === null ? 'created' : 'updated',
+            'expected_file_sha' => $existingFileSha,
+            'current_bytes' => $currentBytes,
+            'proposed_bytes' => strlen($content),
+            'current_content_available' => $currentContentAvailable,
+            'previewed_at' => now()->toIso8601String(),
+        ];
+    }
+
+    /**
      * Create a review-only GitHub change using an installed GitHub App.
      *
      * The adapter can create a branch, create/update one text file and open a
@@ -152,6 +285,8 @@ final class GitHubRepositoryWriter
         string $commitMessage,
         string $pullRequestTitle,
         ?string $pullRequestBody = null,
+        ?string $expectedFileSha = null,
+        bool $enforceExpectedFileState = false,
     ): array {
         if (! $this->configured()) {
             throw new RuntimeException('GitHub AppがCanoviaに設定されていません。');
@@ -264,6 +399,24 @@ final class GitHubRepositoryWriter
             }
         } elseif ($existingFileResponse->status() !== 404) {
             throw new RuntimeException('変更対象ファイルの現在状態を確認できませんでした。');
+        }
+
+        if ($enforceExpectedFileState) {
+            if ($expectedFileSha === null && $existingFileSha !== null) {
+                throw new RuntimeException('確認後に対象pathへファイルが作成されています。現在状態から変更候補を作り直してください。');
+            }
+
+            if ($expectedFileSha !== null && $existingFileSha === null) {
+                throw new RuntimeException('確認後に対象ファイルが削除されています。現在状態から変更候補を作り直してください。');
+            }
+
+            if (
+                $expectedFileSha !== null
+                && $existingFileSha !== null
+                && ! hash_equals($expectedFileSha, $existingFileSha)
+            ) {
+                throw new RuntimeException('確認後に対象ファイルが更新されています。上書きを避けるため変更候補を作り直してください。');
+            }
         }
 
         $branchName = $this->branchName();
