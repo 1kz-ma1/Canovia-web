@@ -77,7 +77,7 @@
                         </p>
                     @elseif ($isExecutionLevel)
                         <p class="canovia-map-description">
-                            選んだPlanを中央に保ち、今やるTask・次のTask・Tool・Evidenceを周囲へ展開します。
+                            選んだPlanを中央に、次に進めることや記録を周囲へまとめます。マスを選ぶと詳しい内容を確認できます。
                         </p>
                     @endif
                 </div>
@@ -105,8 +105,8 @@
                         </p>
                     @else
                         <p>
-                            中央は現在のPlan Contextです。強調されたPrimary Actionを押すとTask中心のExecution Focusへ移り、
-                            Future / Past / Input / ActionをそのTaskの周囲で確認できます。Space Stationは右下の固定Dockから開けます。
+                            中央は今見ているPlanです。「おすすめ」などのマスを押すと詳細が開きます。
+                            必要な操作は詳細から進められ、Space Stationは右下からいつでも開けます。
                         </p>
                     @endif
                 </details>
