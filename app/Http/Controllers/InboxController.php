@@ -182,6 +182,31 @@ class InboxController extends Controller
             $title = $this->inferTitle($sourceType, $content, $sourceUrl, $originalName);
         }
 
+        $intakeMetadata = [];
+        if ($intakeMode === 'chat') {
+            $isSpaceStation = in_array(
+                (string) ($validated['return_to'] ?? ''),
+                ['space_station', 'map_station'],
+                true,
+            );
+
+            $intakeMetadata = [
+                'intake_mode' => 'chat',
+                'capture_surface' => $isSpaceStation ? 'space_station' : 'inbox',
+            ];
+
+            if ($isSpaceStation) {
+                $intakeMetadata['map_context'] = array_filter([
+                    'level' => $validated['map_level'] ?? null,
+                    'intent' => $validated['map_intent'] ?? null,
+                    'domain' => $validated['map_domain'] ?? null,
+                    'plan_id' => isset($validated['map_plan']) ? (int) $validated['map_plan'] : null,
+                    'collaboration_context' => $validated['map_collab_context'] ?? null,
+                    'reflection_context' => $validated['map_reflection_context'] ?? null,
+                ], fn ($value) => $value !== null && $value !== '');
+            }
+        }
+
         $item = InboxItem::query()->create([
             'user_id' => $userId,
             'actor_token' => $userId ? null : $actorToken,
@@ -195,12 +220,7 @@ class InboxController extends Controller
             'mime_type' => $mimeType,
             'original_name' => $originalName,
             'byte_size' => $byteSize,
-            'metadata' => $intakeMode === 'chat'
-                ? [
-                    'intake_mode' => 'chat',
-                    'capture_surface' => 'inbox',
-                ]
-                : [],
+            'metadata' => $intakeMetadata,
         ]);
 
         $redirect = $this->redirectAfterAction($request);
@@ -342,8 +362,19 @@ class InboxController extends Controller
                 ->with('success', $result['message']);
         }
 
-        return $this->redirectAfterAction($request)
+        $redirect = $this->redirectAfterAction($request)
             ->with('success', $result['message']);
+
+        if (in_array((string) $request->input('return_to'), ['space_station', 'map_station'], true)) {
+            $redirect->with('space_station_route_result', [
+                'destination' => (string) ($result['destination'] ?? ''),
+                'plan_id' => $plan?->id,
+                'task_id' => $task?->id,
+                'message' => (string) ($result['message'] ?? ''),
+            ]);
+        }
+
+        return $redirect;
     }
 
     public function updateStatus(
