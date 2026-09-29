@@ -806,7 +806,7 @@ V47.1ではV46.1 Conversational Inbox / Canovia Companionで受け取ったfutur
 
 Execution Requestは永続Entityにせず、対象TaskのExecution Orchestration sessionへ一時保持する。TaskをSource of Truthとする原則は変更しない。Requestは「ユーザーが今回何を進めたいか」、Execution Packetは「現在のPlan / Task / Dependency / Evidenceから今どう進めるか」であり、両者を分離する。
 
-Inbox Intelligenceは `execution_request` をrouting candidateとして提案できるが、Plan / Task IDはAIに選択させない。人がdestination / Plan / Task / actor type / optional available minutesを確認した後にだけExecutionRequestHandoffServiceへ渡す。過去の作業結果はtask_evidence、これから行う依頼はexecution_requestとして区別する。
+Inbox Intelligenceは `execution_request` をrouting candidateとして提案できるが、Plan / Task IDはAIに選択させない。人がdestination / Plan / Task / 今回してほしいこと / actor type / optional available minutesを確認した後にだけExecutionRequestHandoffServiceへ渡す。過去の作業結果はtask_evidence、これから行う依頼はexecution_requestとして区別する。
 
 CompanionはTask Context内で `prepare_execution_request` Mutation Candidateを提案できる。Candidateを人がApplyするまでOrchestrationへは渡さず、ApplyしてもTask / Plan / progressは変更しない。確認済みCandidateはhandoff auditとしてappliedとなり、Execution Orchestration画面へ遷移する。
 
