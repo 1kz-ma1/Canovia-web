@@ -194,12 +194,18 @@
                     </ul>
                 </details>
 
-                <form method="POST" action="{{ route('plans.tasks.execution_orchestration.import', [$plan, $task]) }}" class="mt-5">
-                    @csrf
-                    <label class="text-xs font-bold text-slate-300">AIから返ったExecution Packet JSON</label>
-                    <textarea name="packet_json" rows="10" required class="form-control mt-2 font-mono text-xs" placeholder='{"schema_version":"1.0","flow":"execution_packet",...}'>{{ old('packet_json') }}</textarea>
-                    <button type="submit" class="btn-secondary mt-3">Packetとして読み込む</button>
-                </form>
+                @if (! $taskComplete)
+                    <form method="POST" action="{{ route('plans.tasks.execution_orchestration.import', [$plan, $task]) }}" class="mt-5">
+                        @csrf
+                        <label class="text-xs font-bold text-slate-300">AIから返ったExecution Packet JSON</label>
+                        <textarea name="packet_json" rows="10" required class="form-control mt-2 font-mono text-xs" placeholder='{"schema_version":"1.0","flow":"execution_packet",...}'>{{ old('packet_json') }}</textarea>
+                        <button type="submit" class="btn-secondary mt-3">Packetとして読み込む</button>
+                    </form>
+                @else
+                    <p class="mt-4 text-[11px] leading-5 text-slate-500">
+                        このPromptは過去の実行Contextとして表示しています。完了済みTaskへ新しいPacketは読み込まず、後続TaskのCoordinationへ進みます。
+                    </p>
+                @endif
             </section>
         @endif
 
