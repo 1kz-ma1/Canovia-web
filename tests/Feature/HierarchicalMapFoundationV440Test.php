@@ -162,17 +162,23 @@ class HierarchicalMapFoundationV440Test extends TestCase
             ->assertOk()
             ->assertSee('V43 compatible Plan')
             ->assertSee('V43 compatible Task')
-            ->assertSee('data-map-position-role="now"', false)
+            ->assertSee('data-map-position-role="context-plan"', false)
+            ->assertSee('data-map-position-role="action-primary"', false)
             ->assertSee('data-map-context-surface', false);
 
         $graph = $response->viewData('graph');
+        $center = $graph['nodes']->firstWhere('id', 'plan:'.$plan->id);
         $primary = $graph['nodes']->firstWhere('id', 'task:'.$task->id);
 
+        $this->assertSame('plan:'.$plan->id, $graph['center_node_id']);
         $this->assertSame('task:'.$task->id, $graph['primary_node_id']);
         $this->assertTrue($graph['has_primary_action']);
         $this->assertNotEmpty($graph['projection_key']);
+        $this->assertSame(['x' => 50, 'y' => 50], $center['position']);
+        $this->assertSame('context-plan', $center['position_role']);
         $this->assertSame(1.0, $primary['importance']);
-        $this->assertSame(['x' => 50, 'y' => 50], $primary['position']);
+        $this->assertSame(['x' => 70, 'y' => 31], $primary['position']);
+        $this->assertSame('action-primary', $primary['position_role']);
         $this->assertArrayNotHasKey('attention_role', $primary);
     }
 
