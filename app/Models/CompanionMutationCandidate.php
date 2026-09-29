@@ -17,6 +17,7 @@ class CompanionMutationCandidate extends Model
         'record_goal_fact',
         'create_future_memo',
         'create_inbox_item',
+        'prepare_execution_request',
     ];
 
     protected $fillable = [
