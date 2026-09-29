@@ -29,17 +29,10 @@ final class ExecutionRequestHandoffService
         InboxItem $item,
         Plan $plan,
         Task $task,
+        string $instruction,
         string $actorType = 'human_ai',
         ?int $availableMinutes = null,
     ): array {
-        $instruction = trim((string) (
-            $item->content
-            ?: $item->title
-            ?: $item->source_url
-            ?: $item->original_name
-            ?: 'このInbox Itemをもとに次の実行内容を整理する'
-        ));
-
         return $this->confirm(
             request: $request,
             plan: $plan,
