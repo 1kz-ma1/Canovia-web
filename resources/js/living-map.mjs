@@ -553,7 +553,7 @@ function clearSemanticTransition(windowRef) {
     } catch (_) {}
 }
 
-function requestGlobalHomeReset(windowRef) {
+export function requestGlobalHomeReset(windowRef) {
     try {
         windowRef.sessionStorage?.setItem(
             GLOBAL_HOME_RESET_KEY,
