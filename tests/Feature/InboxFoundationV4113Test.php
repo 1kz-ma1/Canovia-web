@@ -89,6 +89,25 @@ class InboxFoundationV4113Test extends TestCase
             ->assertSee('保存内容を見る');
     }
 
+    public function test_chat_first_capture_keeps_overlong_url_like_text_instead_of_promoting_it_to_source_url(): void
+    {
+        [$user] = $this->scenario();
+        $overlongUrl = 'https://example.com/'.str_repeat('a', 2050);
+
+        $this->actingAs($user)
+            ->post(route('inbox.store'), [
+                'intake_mode' => 'chat',
+                'content' => '長すぎるURLは本文として保持する '.$overlongUrl,
+            ])
+            ->assertRedirect(route('inbox.index'))
+            ->assertSessionHasNoErrors();
+
+        $item = \App\Models\InboxItem::firstOrFail();
+        $this->assertSame('text', $item->source_type);
+        $this->assertNull($item->source_url);
+        $this->assertStringContainsString($overlongUrl, (string) $item->content);
+    }
+
     public function test_image_or_pdf_is_stored_privately_and_other_user_cannot_open_it(): void
     {
         [$owner] = $this->scenario();
