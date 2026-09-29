@@ -29,7 +29,7 @@ class CanoviaMapNodeDirectNavigationV435Test extends TestCase
         ]);
     }
 
-    public function test_unambiguous_non_primary_nodes_expose_direct_open_while_tasks_remain_focus_first(): void
+    public function test_direct_navigation_remains_available_while_execution_tasks_stay_focus_first(): void
     {
         [$user, $plan, $current, $next] = $this->scenario();
 
@@ -37,7 +37,7 @@ class CanoviaMapNodeDirectNavigationV435Test extends TestCase
         $response->assertOk()
             ->assertSee('data-map-node-focus', false)
             ->assertSee('data-map-direct-navigation', false)
-            ->assertSee('Contextを見る →')
+            ->assertSee('詳細を見る →')
             ->assertSee('開く ↗');
 
         $html = $response->getContent();
