@@ -34,6 +34,14 @@ final class GitHubRepositoryInspector
             throw new RuntimeException('GitHub Repository情報を読み取れませんでした。');
         }
 
+        // A service-owned token must never become an accidental cross-user
+        // private-repository credential. V46.3 is public-repository inspection
+        // only, even when a token is configured for rate-limit relief.
+        $visibility = strtolower((string) ($repository['visibility'] ?? ''));
+        if ((bool) ($repository['private'] ?? false) || ($visibility !== '' && $visibility !== 'public')) {
+            throw new RuntimeException('現在のGitHub読み込みは公開Repositoryだけに対応しています。Private Repositoryはユーザー別GitHub接続が必要です。');
+        }
+
         $warnings = [];
         $branchesResponse = $this->client()->get('/repos/'.$repoPath.'/branches', [
             'per_page' => 12,
