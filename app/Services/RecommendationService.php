@@ -67,12 +67,14 @@ class RecommendationService
                     continue;
                 }
 
-                if ($task->depends_on_task_id) {
-                    $prerequisite = $plan->tasks->firstWhere('id', $task->depends_on_task_id);
+                $dependencyIds = $task->dependencyIds();
+                if ($dependencyIds !== [] && collect($dependencyIds)->contains(function (int $dependencyId) use ($plan) {
+                    $prerequisite = $plan->tasks->firstWhere('id', $dependencyId);
 
-                    if ($prerequisite && $prerequisite->status !== 'done') {
-                        continue;
-                    }
+                    return ! $prerequisite
+                        || ($prerequisite->status !== 'done' && (int) $prerequisite->progress_percent < 100);
+                })) {
+                    continue;
                 }
 
                 $remainingMinutes = $task->remaining_minutes ?? max(
