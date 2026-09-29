@@ -8,6 +8,7 @@ use App\Models\PlanArtifact;
 use App\Models\Task;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 final class GitHubReturnEvidenceService
@@ -69,19 +70,21 @@ final class GitHubReturnEvidenceService
             (int) $parsed['number'],
         );
 
-        $this->storeSnapshot($pullRequestArtifact, $snapshot);
+        return DB::transaction(function () use ($task, $pullRequestArtifact, $snapshot) {
+            $this->storeSnapshot($pullRequestArtifact, $snapshot);
 
-        $recorded = $this->recordEvidence(
-            $task,
-            $pullRequestArtifact,
-            $snapshot,
-        );
+            $recorded = $this->recordEvidence(
+                $task,
+                $pullRequestArtifact,
+                $snapshot,
+            );
 
-        return [
-            'snapshot' => $snapshot,
-            'evidence_ids' => $recorded->pluck('id')->map(fn ($id) => (int) $id)->values()->all(),
-            'evidence_count' => $recorded->count(),
-        ];
+            return [
+                'snapshot' => $snapshot,
+                'evidence_ids' => $recorded->pluck('id')->map(fn ($id) => (int) $id)->values()->all(),
+                'evidence_count' => $recorded->count(),
+            ];
+        });
     }
 
     /**
