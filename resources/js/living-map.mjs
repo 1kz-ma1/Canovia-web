@@ -1548,7 +1548,12 @@ export function mountLivingGoalMap({
         }
 
         const semanticLink = event.target.closest?.('a[data-map-semantic-zoom]');
-        if (semanticLink && page.contains(semanticLink)) {
+        const isPlainSemanticClick = event.button === 0
+            && !event.metaKey
+            && !event.ctrlKey
+            && !event.shiftKey
+            && !event.altKey;
+        if (semanticLink && page.contains(semanticLink) && isPlainSemanticClick) {
             markSemanticTransition(semanticLink);
         }
 
