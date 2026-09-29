@@ -93,7 +93,7 @@ final class ExecutionOrchestrationContextService
                 'reason' => '前提Taskがまだ完了していません。',
             ])->all(),
             'dependents' => $dependents->map(fn (Task $item) => $this->taskSnapshot($item))->all(),
-            'available_inputs' => $this->availableInputs($canonicalTask, $dependencies),
+            'available_inputs' => $this->availableInputs($canonicalPlan, $canonicalTask, $dependencies),
             'current_tasks' => $canonicalPlan->tasks
                 ->filter(fn (Task $item) => ! in_array($item->status, ['done', 'cancelled'], true))
                 ->take(30)
@@ -192,9 +192,29 @@ final class ExecutionOrchestrationContextService
      * @param Collection<int,Task> $dependencies
      * @return array<int,array<string,mixed>>
      */
-    private function availableInputs(Task $task, Collection $dependencies): array
+    private function availableInputs(Plan $plan, Task $task, Collection $dependencies): array
     {
         $inputs = collect();
+
+        foreach ($plan->resources as $resource) {
+            $inputs->push([
+                'kind' => 'plan_resource',
+                'source_task_id' => null,
+                'title' => (string) $resource->title,
+                'provider' => (string) $resource->provider,
+                'url' => $resource->url,
+            ]);
+        }
+
+        foreach ($plan->artifacts as $artifact) {
+            $inputs->push([
+                'kind' => 'plan_artifact',
+                'source_task_id' => null,
+                'title' => (string) $artifact->title,
+                'provider' => (string) $artifact->provider,
+                'url' => $artifact->url,
+            ]);
+        }
 
         foreach ($task->resources as $resource) {
             $inputs->push([
