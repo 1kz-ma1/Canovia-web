@@ -30,7 +30,7 @@ final class ExecutionCoordinationService
         Plan $plan,
         Task $sourceTask,
     ): ?array {
-        if (! $this->isComplete($sourceTask)) {
+        if ($sourceTask->status === 'cancelled' || ! $this->isComplete($sourceTask)) {
             return null;
         }
 
@@ -43,7 +43,11 @@ final class ExecutionCoordinationService
 
         /** @var Task|null $canonicalSource */
         $canonicalSource = $plan->tasks->firstWhere('id', (int) $sourceTask->id);
-        if (! $canonicalSource instanceof Task || ! $this->isComplete($canonicalSource)) {
+        if (
+            ! $canonicalSource instanceof Task
+            || $canonicalSource->status === 'cancelled'
+            || ! $this->isComplete($canonicalSource)
+        ) {
             return null;
         }
 
