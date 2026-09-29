@@ -70,6 +70,9 @@ class TaskEvidence extends Model
             'guided_execution_reflected' => '実行振り返り',
             'interview_review_completed' => '面接振り返り',
             'interview_result_recorded' => '選考結果',
+            'pull_request_review_submitted' => 'GitHubレビュー',
+            'pull_request_merged' => 'GitHubマージ',
+            'pull_request_ci_observed' => 'GitHub CI',
             default => '活動',
         };
     }
@@ -131,6 +134,35 @@ class TaskEvidence extends Model
                     'offer' => '内定・オファー',
                     'withdrawn' => '辞退',
                     default => '結果確認',
+                },
+            ),
+            'pull_request_review_submitted' => sprintf(
+                'PR #%dで%sが「%s」を送信しました。',
+                (int) (data_get($this->metadata, 'pull_request_number') ?? data_get($this->metadata, 'pull_request', 0)),
+                trim((string) data_get($this->metadata, 'reviewer')) ?: 'reviewer',
+                match (strtoupper((string) data_get($this->metadata, 'review_state'))) {
+                    'APPROVED' => '承認',
+                    'CHANGES_REQUESTED' => '修正依頼',
+                    'DISMISSED' => 'レビュー取消',
+                    'COMMENTED' => 'コメント',
+                    default => 'レビュー',
+                },
+            ),
+            'pull_request_merged' => sprintf(
+                'PR #%dがGitHubでmergeされました。%s',
+                (int) (data_get($this->metadata, 'pull_request_number') ?? data_get($this->metadata, 'pull_request', 0)),
+                filled(data_get($this->metadata, 'merge_commit_sha'))
+                    ? 'Merge commit '.mb_substr((string) data_get($this->metadata, 'merge_commit_sha'), 0, 8)
+                    : '',
+            ),
+            'pull_request_ci_observed' => sprintf(
+                'PR #%dのCI結果を「%s」として確認しました。',
+                (int) (data_get($this->metadata, 'pull_request_number') ?? data_get($this->metadata, 'pull_request', 0)),
+                match ((string) data_get($this->metadata, 'ci_state')) {
+                    'success' => '成功',
+                    'failure' => '失敗',
+                    'pending' => '実行中',
+                    default => '未確認',
                 },
             ),
             default => 'Taskに関する活動を確認しました。',

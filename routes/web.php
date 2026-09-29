@@ -306,6 +306,9 @@ Route::post('/plans/{plan}/tasks/{task}/execution-orchestration/github/confirm',
     ->name('plans.tasks.execution_orchestration.github.confirm');
 Route::post('/plans/{plan}/tasks/{task}/execution-orchestration/github/discard', [ExecutionGitHubHandoffController::class, 'discard'])
     ->name('plans.tasks.execution_orchestration.github.discard');
+Route::post('/plans/{plan}/tasks/{task}/execution-orchestration/github/{artifact}/return-sync', [ExecutionGitHubHandoffController::class, 'syncReturn'])
+    ->middleware('throttle:6,1')
+    ->name('plans.tasks.execution_orchestration.github.return_sync');
 
 // One Plan can prepare multiple task-scoped packets while keeping the same canonical Plan context.
 Route::get('/plans/{plan}/execution-distribution', [ExecutionDistributionController::class, 'show'])

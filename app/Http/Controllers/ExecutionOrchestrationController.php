@@ -53,6 +53,11 @@ final class ExecutionOrchestrationController extends Controller
             FeatureKey::DeveloperGithubWrite,
             ['plan_id' => (int) $plan->id, 'task_id' => (int) $task->id],
         );
+        $githubEvidenceDecision = $access->resolveAccess(
+            $request->user(),
+            FeatureKey::DeveloperGithubEvidence,
+            ['plan_id' => (int) $plan->id, 'task_id' => (int) $task->id],
+        );
 
         $githubRepositories = PlanArtifact::query()
             ->where('plan_id', $plan->id)
@@ -60,6 +65,15 @@ final class ExecutionOrchestrationController extends Controller
             ->where('artifact_type', 'repository')
             ->orderBy('title')
             ->get();
+
+        $latestExecutionPullRequest = $task->artifacts()
+            ->where('provider', 'github')
+            ->where('artifact_type', 'link')
+            ->orderByDesc('plan_artifacts.id')
+            ->get()
+            ->first(fn (PlanArtifact $artifact) =>
+                data_get($artifact->metadata, 'github_write_origin.source') === 'execution_github_handoff'
+            );
 
         return view('execution_orchestration.show', [
             'plan' => $plan,
@@ -81,7 +95,13 @@ final class ExecutionOrchestrationController extends Controller
                 ? $state['github_handoff_result']
                 : null,
             'githubWriteEntitled' => $githubWriteDecision->allowed,
+            'githubEvidenceEntitled' => $githubEvidenceDecision->allowed,
             'githubWriteConfigured' => $githubWriter->configured(),
+            'latestExecutionPullRequest' => $latestExecutionPullRequest,
+            'githubReturnSnapshot' => $latestExecutionPullRequest
+                && is_array(data_get($latestExecutionPullRequest->metadata, 'github_return_snapshot'))
+                    ? data_get($latestExecutionPullRequest->metadata, 'github_return_snapshot')
+                    : null,
         ]);
     }
 

@@ -137,6 +137,269 @@ final class GitHubRepositoryWriter
     }
 
     /**
+     * Read the authoritative return state for one Pull Request through the
+     * installed GitHub App. This method is read-only.
+     *
+     * Pull Requests permission is required. Actions / Checks / Commit statuses
+     * are optional signals and are queried only when the installation grants
+     * the corresponding read permission.
+     *
+     * @return array<string,mixed>
+     */
+    public function inspectPullRequestReturn(
+        string $repoFullName,
+        int $pullRequestNumber,
+    ): array {
+        if (! $this->configured()) {
+            throw new RuntimeException('GitHub AppがCanoviaに設定されていません。');
+        }
+
+        if ($pullRequestNumber <= 0) {
+            throw new RuntimeException('Pull Request番号を確認できませんでした。');
+        }
+
+        [$owner, $repo] = $this->splitRepo($repoFullName);
+        $repoPath = rawurlencode($owner).'/'.rawurlencode($repo);
+
+        $appJwt = $this->appJwt();
+        $installationResponse = $this->appClient($appJwt)
+            ->get('/repos/'.$repoPath.'/installation');
+
+        if ($installationResponse->status() === 404) {
+            throw new RuntimeException('Canovia GitHub AppがこのRepositoryに接続されていません。Repository管理者に接続してもらってください。');
+        }
+
+        if (! $installationResponse->successful()) {
+            throw new RuntimeException('GitHub AppのRepository接続を確認できませんでした。');
+        }
+
+        $installationId = (int) data_get($installationResponse->json(), 'id', 0);
+        if ($installationId <= 0) {
+            throw new RuntimeException('GitHub App installationを確認できませんでした。');
+        }
+
+        $tokenResponse = $this->appClient($appJwt)
+            ->post('/app/installations/'.$installationId.'/access_tokens');
+
+        if (! $tokenResponse->successful()) {
+            throw new RuntimeException('GitHub Appの一時Access Tokenを発行できませんでした。');
+        }
+
+        $token = trim((string) data_get($tokenResponse->json(), 'token', ''));
+        $permissions = (array) data_get($tokenResponse->json(), 'permissions', []);
+
+        if ($token === '') {
+            throw new RuntimeException('GitHub Appの一時Access Tokenを取得できませんでした。');
+        }
+
+        if (! in_array(($permissions['pull_requests'] ?? null), ['read', 'write'], true)) {
+            throw new RuntimeException('GitHub AppにPull Requestsのread権限がありません。');
+        }
+
+        $client = $this->installationClient($token);
+        $pullResponse = $client->get('/repos/'.$repoPath.'/pulls/'.$pullRequestNumber);
+
+        if ($pullResponse->status() === 404) {
+            throw new RuntimeException('対象Pull RequestをGitHubから確認できませんでした。');
+        }
+
+        if (! $pullResponse->successful()) {
+            throw new RuntimeException('Pull Requestの現在状態をGitHubから取得できませんでした。');
+        }
+
+        $pull = $pullResponse->json();
+        if (! is_array($pull)) {
+            throw new RuntimeException('Pull Request情報を読み取れませんでした。');
+        }
+
+        $actualNumber = (int) ($pull['number'] ?? 0);
+        if ($actualNumber !== $pullRequestNumber) {
+            throw new RuntimeException('GitHubから返されたPull Request番号が一致しません。');
+        }
+
+        $headSha = mb_substr(trim((string) data_get($pull, 'head.sha', '')), 0, 64);
+        $warnings = [];
+
+        $reviewsResponse = $client->get('/repos/'.$repoPath.'/pulls/'.$pullRequestNumber.'/reviews', [
+            'per_page' => 50,
+        ]);
+        if (! $reviewsResponse->successful()) {
+            throw new RuntimeException('Pull Request reviewをGitHubから取得できませんでした。');
+        }
+
+        $reviews = collect($reviewsResponse->json())
+            ->filter(fn ($item) => is_array($item))
+            ->map(fn (array $item) => [
+                'id' => (int) ($item['id'] ?? 0),
+                'state' => mb_strtoupper(mb_substr((string) ($item['state'] ?? ''), 0, 50)),
+                'reviewer' => mb_substr((string) data_get($item, 'user.login', ''), 0, 255),
+                'submitted_at' => $this->dateValue($item['submitted_at'] ?? null),
+                'commit_id' => mb_substr((string) ($item['commit_id'] ?? ''), 0, 64),
+                'url' => $this->githubUrl($item['html_url'] ?? null),
+            ])
+            ->filter(fn (array $item) => $item['id'] > 0 && $item['state'] !== '')
+            ->sortBy(fn (array $item) => ($item['submitted_at'] ?? '').':'.str_pad((string) $item['id'], 20, '0', STR_PAD_LEFT))
+            ->values();
+
+        $latestDecisions = [];
+        foreach ($reviews as $review) {
+            $reviewer = trim((string) ($review['reviewer'] ?? ''));
+            $state = (string) ($review['state'] ?? '');
+
+            if ($reviewer === '' || ! in_array($state, ['APPROVED', 'CHANGES_REQUESTED', 'DISMISSED'], true)) {
+                continue;
+            }
+
+            $latestDecisions[$reviewer] = $review;
+        }
+
+        $latestDecisionValues = collect(array_values($latestDecisions));
+        $approvedCount = $latestDecisionValues->where('state', 'APPROVED')->count();
+        $changesRequestedCount = $latestDecisionValues->where('state', 'CHANGES_REQUESTED')->count();
+
+        $actionsRuns = [];
+        $checks = [];
+        $combinedStatus = null;
+
+        if ($headSha !== '' && in_array(($permissions['actions'] ?? null), ['read', 'write'], true)) {
+            $actionsResponse = $client->get('/repos/'.$repoPath.'/actions/runs', [
+                'head_sha' => $headSha,
+                'per_page' => 20,
+            ]);
+
+            if ($actionsResponse->successful()) {
+                $runData = $actionsResponse->json();
+                $actionsRuns = is_array($runData)
+                    ? collect($runData['workflow_runs'] ?? [])
+                        ->filter(fn ($item) => is_array($item))
+                        ->take(20)
+                        ->map(fn (array $item) => [
+                            'id' => (int) ($item['id'] ?? 0),
+                            'run_attempt' => max(1, (int) ($item['run_attempt'] ?? 1)),
+                            'name' => mb_substr((string) ($item['name'] ?? ''), 0, 255),
+                            'event' => mb_substr((string) ($item['event'] ?? ''), 0, 100),
+                            'status' => mb_substr((string) ($item['status'] ?? ''), 0, 100),
+                            'conclusion' => filled($item['conclusion'] ?? null)
+                                ? mb_substr((string) $item['conclusion'], 0, 100)
+                                : null,
+                            'head_sha' => mb_substr((string) ($item['head_sha'] ?? ''), 0, 64),
+                            'updated_at' => $this->dateValue($item['updated_at'] ?? null),
+                            'url' => $this->githubUrl($item['html_url'] ?? null),
+                        ])
+                        ->filter(fn (array $item) => $item['id'] > 0)
+                        ->values()
+                        ->all()
+                    : [];
+            } else {
+                $warnings[] = 'GitHub Actionsの結果を取得できませんでした。';
+            }
+        } else {
+            $warnings[] = 'GitHub Actions permission未設定のためCI workflow結果は取得していません。';
+        }
+
+        if ($headSha !== '' && in_array(($permissions['checks'] ?? null), ['read', 'write'], true)) {
+            $checksResponse = $client->get('/repos/'.$repoPath.'/commits/'.$headSha.'/check-runs', [
+                'per_page' => 30,
+            ]);
+
+            if ($checksResponse->successful()) {
+                $checkData = $checksResponse->json();
+                $checks = is_array($checkData)
+                    ? collect($checkData['check_runs'] ?? [])
+                        ->filter(fn ($item) => is_array($item))
+                        ->take(30)
+                        ->map(fn (array $item) => [
+                            'id' => (int) ($item['id'] ?? 0),
+                            'name' => mb_substr((string) ($item['name'] ?? ''), 0, 255),
+                            'status' => mb_substr((string) ($item['status'] ?? ''), 0, 100),
+                            'conclusion' => filled($item['conclusion'] ?? null)
+                                ? mb_substr((string) $item['conclusion'], 0, 100)
+                                : null,
+                            'completed_at' => $this->dateValue($item['completed_at'] ?? null),
+                            'url' => $this->githubUrl($item['html_url'] ?? null),
+                        ])
+                        ->filter(fn (array $item) => $item['id'] > 0)
+                        ->values()
+                        ->all()
+                    : [];
+            } else {
+                $warnings[] = 'GitHub Checksの結果を取得できませんでした。';
+            }
+        }
+
+        if ($headSha !== '' && in_array(($permissions['statuses'] ?? null), ['read', 'write'], true)) {
+            $statusResponse = $client->get('/repos/'.$repoPath.'/commits/'.$headSha.'/status');
+
+            if ($statusResponse->successful()) {
+                $statusData = $statusResponse->json();
+                if (is_array($statusData)) {
+                    $combinedStatus = [
+                        'state' => mb_substr((string) ($statusData['state'] ?? ''), 0, 50),
+                        'total_count' => max(0, (int) ($statusData['total_count'] ?? 0)),
+                        'statuses' => collect($statusData['statuses'] ?? [])
+                            ->filter(fn ($item) => is_array($item))
+                            ->take(30)
+                            ->map(fn (array $item) => [
+                                'id' => (int) ($item['id'] ?? 0),
+                                'state' => mb_substr((string) ($item['state'] ?? ''), 0, 50),
+                                'context' => mb_substr((string) ($item['context'] ?? ''), 0, 255),
+                                'updated_at' => $this->dateValue($item['updated_at'] ?? null),
+                                'url' => $this->githubUrl($item['target_url'] ?? null),
+                            ])
+                            ->values()
+                            ->all(),
+                    ];
+                }
+            } else {
+                $warnings[] = 'GitHub Commit Statusの結果を取得できませんでした。';
+            }
+        }
+
+        $ciState = $this->ciState($actionsRuns, $checks, $combinedStatus);
+
+        return [
+            'version' => 1,
+            'source' => 'github_app_rest',
+            'repo_full_name' => $repoFullName,
+            'installation_id' => $installationId,
+            'fetched_at' => now()->toIso8601String(),
+            'permissions' => collect($permissions)
+                ->filter(fn ($value, $key) => is_string($key) && is_string($value))
+                ->map(fn (string $value) => $value)
+                ->all(),
+            'pull_request' => [
+                'number' => $actualNumber,
+                'title' => mb_substr((string) ($pull['title'] ?? ''), 0, 500),
+                'state' => mb_substr((string) ($pull['state'] ?? ''), 0, 50),
+                'draft' => (bool) ($pull['draft'] ?? false),
+                'merged' => (bool) ($pull['merged'] ?? false),
+                'merged_at' => $this->dateValue($pull['merged_at'] ?? null),
+                'merged_by' => mb_substr((string) data_get($pull, 'merged_by.login', ''), 0, 255),
+                'merge_commit_sha' => mb_substr((string) ($pull['merge_commit_sha'] ?? ''), 0, 64),
+                'head_sha' => $headSha,
+                'head_ref' => mb_substr((string) data_get($pull, 'head.ref', ''), 0, 255),
+                'base_ref' => mb_substr((string) data_get($pull, 'base.ref', ''), 0, 255),
+                'updated_at' => $this->dateValue($pull['updated_at'] ?? null),
+                'closed_at' => $this->dateValue($pull['closed_at'] ?? null),
+                'url' => $this->githubUrl($pull['html_url'] ?? null),
+            ],
+            'reviews' => $reviews->take(50)->values()->all(),
+            'review_summary' => [
+                'approved_reviewers' => $approvedCount,
+                'changes_requested_reviewers' => $changesRequestedCount,
+                'latest_decisions' => $latestDecisionValues->values()->all(),
+            ],
+            'ci' => [
+                'state' => $ciState,
+                'actions_runs' => $actionsRuns,
+                'check_runs' => $checks,
+                'combined_status' => $combinedStatus,
+            ],
+            'warnings' => array_values(array_unique($warnings)),
+        ];
+    }
+
+    /**
      * Read the current target file state through the same GitHub App boundary
      * used for write, without creating a branch or commit.
      *
@@ -614,6 +877,66 @@ final class GitHubRepositoryWriter
     private function base64Url(string $value): string
     {
         return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $actionsRuns
+     * @param array<int,array<string,mixed>> $checks
+     * @param array<string,mixed>|null $combinedStatus
+     */
+    private function ciState(
+        array $actionsRuns,
+        array $checks,
+        ?array $combinedStatus,
+    ): string {
+        $failureConclusions = ['failure', 'timed_out', 'cancelled', 'action_required', 'startup_failure', 'stale'];
+        $pendingStatuses = ['queued', 'in_progress', 'requested', 'waiting', 'pending'];
+
+        $explicitSuccess = false;
+
+        foreach (array_merge($actionsRuns, $checks) as $item) {
+            $status = strtolower((string) ($item['status'] ?? ''));
+            $conclusion = strtolower((string) ($item['conclusion'] ?? ''));
+
+            if (in_array($conclusion, $failureConclusions, true)) {
+                return 'failure';
+            }
+
+            if (in_array($status, $pendingStatuses, true) || $conclusion === '') {
+                return 'pending';
+            }
+
+            if ($conclusion === 'success') {
+                $explicitSuccess = true;
+            } elseif (! in_array($conclusion, ['neutral', 'skipped'], true)) {
+                return 'unknown';
+            }
+        }
+
+        $combinedState = strtolower((string) ($combinedStatus['state'] ?? ''));
+        if (in_array($combinedState, ['failure', 'error'], true)) {
+            return 'failure';
+        }
+        if ($combinedState === 'pending') {
+            return 'pending';
+        }
+        if ($combinedState === 'success') {
+            $explicitSuccess = true;
+        }
+
+        $hasSignals = $actionsRuns !== [] || $checks !== [] || $combinedStatus !== null;
+        if (! $hasSignals) {
+            return 'unknown';
+        }
+
+        return $explicitSuccess ? 'success' : 'unknown';
+    }
+
+    private function dateValue(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value !== '' ? mb_substr($value, 0, 64) : null;
     }
 
     private function githubUrl(mixed $value): ?string
