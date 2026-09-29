@@ -40,6 +40,11 @@ final class ExecutionMapProjectionService
         );
 
         $primaryNodeId = $attention['primary_node_id'];
+        $plan = $context['plan'] ?? null;
+        $centerNodeId = $plan instanceof \App\Models\Plan
+            ? 'plan:'.$plan->id
+            : $primaryNodeId;
+
         $nodes = $attention['nodes']
             ->map(fn (array $node) => $this->withDirectNavigation($node, $primaryNodeId))
             ->values();
@@ -49,12 +54,12 @@ final class ExecutionMapProjectionService
             'level' => 'l3',
             'nodes' => $nodes,
             'edges' => $edges,
-            'center_node_id' => $primaryNodeId,
+            'center_node_id' => $centerNodeId,
             'primary_node_id' => $primaryNodeId,
             'primary_launch' => $attention['primary_launch'],
             'has_primary_action' => $attention['has_primary_action'],
             'hierarchy' => $this->hierarchyMetadata($request, $context),
-            'projection_key' => $this->projectionKey($nodes, $edges, $primaryNodeId),
+            'projection_key' => $this->projectionKey($nodes, $edges, $primaryNodeId, $centerNodeId),
         ];
     }
 
@@ -217,9 +222,14 @@ final class ExecutionMapProjectionService
         return $node;
     }
 
-    private function projectionKey(Collection $nodes, Collection $edges, ?string $primaryNodeId): string
-    {
+    private function projectionKey(
+        Collection $nodes,
+        Collection $edges,
+        ?string $primaryNodeId,
+        ?string $centerNodeId,
+    ): string {
         $payload = [
+            'center_node_id' => $centerNodeId,
             'primary_node_id' => $primaryNodeId,
             'nodes' => $nodes->all(),
             'edges' => $edges->all(),
