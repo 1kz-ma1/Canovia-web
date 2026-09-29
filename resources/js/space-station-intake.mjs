@@ -1,5 +1,29 @@
+const PLAN_DESTINATIONS = Object.freeze([
+    'career_capture',
+    'recall_material',
+    'task_evidence',
+    'plan_resource',
+    'execution_request',
+]);
+
+const TASK_DESTINATIONS = Object.freeze([
+    'recall_material',
+    'task_evidence',
+    'execution_request',
+]);
+
+export function spaceStationDestinationScope(destination) {
+    const key = String(destination || '');
+
+    return {
+        plan: PLAN_DESTINATIONS.includes(key),
+        task: TASK_DESTINATIONS.includes(key),
+        execution: key === 'execution_request',
+    };
+}
+
 export function spaceStationNeedsExecutionDetails(destination) {
-    return String(destination || '') === 'execution_request';
+    return spaceStationDestinationScope(destination).execution;
 }
 
 export function spaceStationTaskBelongsToPlan(planId, taskPlanId) {
@@ -13,21 +37,29 @@ export function syncSpaceStationConfirmForm(form) {
     if (!form) return;
 
     const destination = form.querySelector?.('[data-space-station-destination]');
+    const planField = form.querySelector?.('[data-space-station-plan-field]');
     const plan = form.querySelector?.('[data-space-station-plan]');
+    const taskField = form.querySelector?.('[data-space-station-task-field]');
     const task = form.querySelector?.('[data-space-station-task]');
     const executionFields = form.querySelector?.('[data-space-station-execution-fields]');
     const executionInstruction = form.querySelector?.('[data-space-station-execution-instruction]');
 
-    const needsExecution = spaceStationNeedsExecutionDetails(destination?.value);
-    if (executionFields) executionFields.hidden = !needsExecution;
-    if (executionInstruction) executionInstruction.required = needsExecution;
+    const scope = spaceStationDestinationScope(destination?.value);
+
+    if (planField) planField.hidden = !scope.plan;
+    if (plan) plan.disabled = !scope.plan;
+
+    if (taskField) taskField.hidden = !scope.task;
+
+    if (executionFields) executionFields.hidden = !scope.execution;
+    if (executionInstruction) executionInstruction.required = scope.execution;
 
     if (task) {
         const selectedPlanId = String(plan?.value || '');
         let selectedTaskStillValid = task.value === '';
 
         task.querySelectorAll?.('[data-space-station-task-option]')?.forEach((option) => {
-            const available = spaceStationTaskBelongsToPlan(
+            const available = scope.task && spaceStationTaskBelongsToPlan(
                 selectedPlanId,
                 option.dataset.planId,
             );
@@ -38,11 +70,11 @@ export function syncSpaceStationConfirmForm(form) {
             }
         });
 
-        if (!selectedTaskStillValid) {
+        if (!selectedTaskStillValid || !scope.task) {
             task.value = '';
         }
 
-        task.disabled = selectedPlanId === '';
+        task.disabled = !scope.task || selectedPlanId === '';
     }
 }
 
