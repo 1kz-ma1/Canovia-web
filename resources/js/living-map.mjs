@@ -572,9 +572,13 @@ function consumeGlobalHomeReset(windowRef, mapLevel) {
         request = null;
     }
 
-    const apply = shouldApplyGlobalHomeReset(request, mapLevel, Date.now());
+    const now = Date.now();
+    const fresh = shouldApplyGlobalHomeReset(request, 'l0', now);
+    const apply = String(mapLevel || '') === 'l0' && fresh;
 
-    if (String(mapLevel || '') === 'l0' || (request && !apply)) {
+    // A fresh reset request must survive any intermediate deep-map remount.
+    // Consume it only when L0 actually mounts; stale/invalid payloads are safe to drop.
+    if (String(mapLevel || '') === 'l0' || (request && !fresh)) {
         try {
             windowRef.sessionStorage?.removeItem(GLOBAL_HOME_RESET_KEY);
         } catch (_) {}
