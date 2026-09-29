@@ -37,6 +37,105 @@ final class GitHubRepositoryWriter
             : null;
     }
 
+    public function installUrlForState(string $state): ?string
+    {
+        if (! preg_match('/^[A-Za-z0-9_-]{32,128}$/', $state)) {
+            return null;
+        }
+
+        $url = $this->installUrl();
+        if ($url === null) {
+            return null;
+        }
+
+        return $url.(str_contains($url, '?') ? '&' : '?').'state='.rawurlencode($state);
+    }
+
+    /**
+     * Return the current GitHub App installation for one Repository.
+     *
+     * The installation id is not trusted from browser input. Canovia always
+     * asks GitHub for the installation bound to the target owner/repository.
+     *
+     * @return array<string,mixed>|null
+     */
+    public function repositoryInstallation(string $repoFullName): ?array
+    {
+        if (! $this->configured()) {
+            throw new RuntimeException('GitHub AppがCanoviaに設定されていません。');
+        }
+
+        [$owner, $repo] = $this->splitRepo($repoFullName);
+        $repoPath = rawurlencode($owner).'/'.rawurlencode($repo);
+
+        $response = $this->appClient($this->appJwt())
+            ->get('/repos/'.$repoPath.'/installation');
+
+        if ($response->status() === 404) {
+            return null;
+        }
+
+        if (! $response->successful()) {
+            throw new RuntimeException('GitHub AppのRepository接続状態を確認できませんでした。');
+        }
+
+        $installation = $response->json();
+        if (! is_array($installation)) {
+            throw new RuntimeException('GitHub App installation情報を読み取れませんでした。');
+        }
+
+        $installationId = (int) ($installation['id'] ?? 0);
+        if ($installationId <= 0) {
+            throw new RuntimeException('GitHub App installation IDを確認できませんでした。');
+        }
+
+        $permissions = collect((array) ($installation['permissions'] ?? []))
+            ->filter(fn ($value, $key) =>
+                is_string($key)
+                && preg_match('/^[a-z_]{1,80}$/', $key)
+                && is_string($value)
+                && in_array($value, ['read', 'write'], true)
+            )
+            ->map(fn (string $value) => $value)
+            ->all();
+
+        return [
+            'installation_id' => $installationId,
+            'account_login' => mb_substr((string) data_get($installation, 'account.login', ''), 0, 255),
+            'account_type' => mb_substr((string) data_get($installation, 'account.type', ''), 0, 80),
+            'target_type' => mb_substr((string) ($installation['target_type'] ?? ''), 0, 80),
+            'repository_selection' => mb_substr((string) ($installation['repository_selection'] ?? ''), 0, 80),
+            'permissions' => $permissions,
+            'management_url' => $this->githubUrl($installation['html_url'] ?? null),
+        ];
+    }
+
+    /**
+     * Verify that a setup redirect refers to the installation GitHub currently
+     * exposes for the exact Repository selected in Canovia.
+     *
+     * @return array<string,mixed>
+     */
+    public function verifyRepositoryInstallation(
+        string $repoFullName,
+        int $expectedInstallationId,
+    ): array {
+        if ($expectedInstallationId <= 0) {
+            throw new RuntimeException('GitHub App installation IDを確認できませんでした。');
+        }
+
+        $installation = $this->repositoryInstallation($repoFullName);
+        if ($installation === null) {
+            throw new RuntimeException('対象RepositoryへのCanovia GitHub App接続をまだ確認できません。');
+        }
+
+        if ((int) ($installation['installation_id'] ?? 0) !== $expectedInstallationId) {
+            throw new RuntimeException('GitHubから返された接続情報と対象Repositoryが一致しません。');
+        }
+
+        return $installation;
+    }
+
     /**
      * Create a review-only GitHub change using an installed GitHub App.
      *
@@ -372,8 +471,9 @@ final class GitHubRepositoryWriter
         }
 
         $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
 
-        return in_array($host, ['github.com', 'www.github.com'], true)
+        return $scheme === 'https' && in_array($host, ['github.com', 'www.github.com'], true)
             ? mb_substr($url, 0, 2048)
             : null;
     }

@@ -36,7 +36,8 @@ final class GitHubWorkflowController extends Controller
                 FeatureKey::DeveloperGithubWrite,
             ),
             'github_write_configured' => $repositoryWriter->configured(),
-            'github_app_install_url' => $repositoryWriter->installUrl(),
+            'github_app_connect_available' => $repositoryWriter->configured()
+                && $repositoryWriter->installUrl() !== null,
         ]);
     }
 
@@ -227,6 +228,277 @@ final class GitHubWorkflowController extends Controller
             ->with('success', 'GitHubからRepositoryの現在構造を更新しました。');
     }
 
+    public function beginRepositoryConnection(
+        Request $request,
+        PlanArtifact $artifact,
+        PlanOwnershipService $ownership,
+        FeatureAccessService $featureAccess,
+        GitHubWorkflowService $workflow,
+        GitHubRepositoryWriter $repositoryWriter,
+        PlanActivityService $activity,
+    ) {
+        $artifact->loadMissing('plan');
+        $plan = $artifact->plan;
+
+        abort_unless($plan && $artifact->provider === 'github', 404);
+        $ownership->authorizeEdit($request, $plan);
+        $featureAccess->authorizeUse(
+            $request->user(),
+            FeatureKey::DeveloperGithubWrite,
+            ['plan_id' => (int) $plan->id, 'artifact_id' => (int) $artifact->id],
+        );
+
+        $parsed = $workflow->parseUrl((string) $artifact->url);
+        abort_unless(($parsed['kind'] ?? null) === 'repository', 404);
+
+        if (! $repositoryWriter->configured()) {
+            return redirect()
+                ->route('github_workflow.index', ['plan_id' => $plan->id])
+                ->with('status', 'Canovia運営側のGitHub App設定がまだ完了していません。');
+        }
+
+        $state = bin2hex(random_bytes(32));
+        $installUrl = $repositoryWriter->installUrlForState($state);
+
+        if ($installUrl === null) {
+            return redirect()
+                ->route('github_workflow.index', ['plan_id' => $plan->id])
+                ->with('status', 'GitHub Appの接続URLがCanoviaに設定されていません。');
+        }
+
+        $request->session()->put($this->githubInstallStateKey($state), [
+            'artifact_id' => (int) $artifact->id,
+            'plan_id' => (int) $plan->id,
+            'user_id' => $request->user()?->id,
+            'repo_full_name' => (string) $parsed['repo_full_name'],
+            'expires_at' => now()->addMinutes(15)->timestamp,
+        ]);
+
+        $metadata = is_array($artifact->metadata) ? $artifact->metadata : [];
+        $metadata['github_app_connection'] = [
+            'status' => 'connecting',
+            'requested_by_user_id' => $request->user()?->id,
+            'requested_at' => now()->toIso8601String(),
+            'last_checked_at' => null,
+        ];
+        unset($metadata['github_workflow_state']);
+
+        $artifact->update(['metadata' => $metadata]);
+
+        $activity->record(
+            $plan,
+            $request->user(),
+            'github_app_connection_started',
+            'plan_artifact',
+            (int) $artifact->id,
+            [
+                'repo_full_name' => (string) $parsed['repo_full_name'],
+            ],
+        );
+
+        return redirect()->away($installUrl);
+    }
+
+    public function completeRepositoryConnection(
+        Request $request,
+        PlanOwnershipService $ownership,
+        FeatureAccessService $featureAccess,
+        GitHubWorkflowService $workflow,
+        GitHubRepositoryWriter $repositoryWriter,
+        PlanActivityService $activity,
+    ) {
+        $state = trim((string) $request->query('state', ''));
+        if (! preg_match('/^[a-f0-9]{64}$/', $state)) {
+            return redirect()
+                ->route('github_workflow.index')
+                ->with('status', 'GitHub接続の確認情報がありません。Canoviaから「GitHubを接続」をやり直してください。');
+        }
+
+        $pending = $request->session()->pull($this->githubInstallStateKey($state));
+        if (! is_array($pending)) {
+            return redirect()
+                ->route('github_workflow.index')
+                ->with('status', 'GitHub接続の確認期限が切れているか、すでに確認済みです。もう一度接続を開始してください。');
+        }
+
+        if (
+            (int) ($pending['expires_at'] ?? 0) < now()->timestamp
+            || (int) ($pending['user_id'] ?? 0) !== (int) ($request->user()?->id ?? 0)
+        ) {
+            return redirect()
+                ->route('github_workflow.index')
+                ->with('status', 'GitHub接続の確認情報が一致しません。もう一度接続を開始してください。');
+        }
+
+        $artifact = PlanArtifact::query()->find((int) ($pending['artifact_id'] ?? 0));
+        if (! $artifact instanceof PlanArtifact) {
+            return redirect()
+                ->route('github_workflow.index')
+                ->with('status', '接続対象のRepositoryがCanoviaに見つかりませんでした。');
+        }
+
+        $artifact->loadMissing('plan');
+        $plan = $artifact->plan;
+        abort_unless($plan && $artifact->provider === 'github', 404);
+
+        $ownership->authorizeEdit($request, $plan);
+        $featureAccess->authorizeUse(
+            $request->user(),
+            FeatureKey::DeveloperGithubWrite,
+            ['plan_id' => (int) $plan->id, 'artifact_id' => (int) $artifact->id],
+        );
+
+        $parsed = $workflow->parseUrl((string) $artifact->url);
+        abort_unless(($parsed['kind'] ?? null) === 'repository', 404);
+
+        if ((string) ($pending['repo_full_name'] ?? '') !== (string) ($parsed['repo_full_name'] ?? '')) {
+            return redirect()
+                ->route('github_workflow.index', ['plan_id' => $plan->id])
+                ->with('status', '接続対象Repositoryの確認に失敗しました。もう一度接続を開始してください。');
+        }
+
+        $installationId = filter_var(
+            $request->query('installation_id'),
+            FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 1]],
+        );
+        $setupAction = preg_match('/^[a-z_]{1,40}$/', (string) $request->query('setup_action', ''))
+            ? (string) $request->query('setup_action')
+            : null;
+
+        if (! is_int($installationId)) {
+            $this->storeRepositoryConnection($artifact, [
+                'status' => 'pending',
+                'requested_by_user_id' => $request->user()?->id,
+                'requested_at' => data_get($artifact->metadata, 'github_app_connection.requested_at'),
+                'last_checked_at' => now()->toIso8601String(),
+                'setup_action' => $setupAction,
+            ]);
+
+            return redirect()
+                ->route('github_workflow.index', ['plan_id' => $plan->id])
+                ->with('status', 'GitHub側でまだInstallationを確認できません。OrganizationではOwner承認待ちの可能性があります。');
+        }
+
+        try {
+            $installation = $repositoryWriter->verifyRepositoryInstallation(
+                (string) $parsed['repo_full_name'],
+                $installationId,
+            );
+        } catch (\RuntimeException $exception) {
+            $this->storeRepositoryConnection($artifact, [
+                'status' => 'verification_failed',
+                'requested_by_user_id' => $request->user()?->id,
+                'requested_at' => data_get($artifact->metadata, 'github_app_connection.requested_at'),
+                'last_checked_at' => now()->toIso8601String(),
+                'setup_action' => $setupAction,
+            ]);
+
+            return redirect()
+                ->route('github_workflow.index', ['plan_id' => $plan->id])
+                ->with('status', $exception->getMessage());
+        }
+
+        $connection = $this->connectionFromInstallation(
+            $installation,
+            $request->user()?->id,
+            $setupAction,
+        );
+        $this->storeRepositoryConnection($artifact, $connection);
+
+        $activity->record(
+            $plan,
+            $request->user(),
+            'github_app_connection_verified',
+            'plan_artifact',
+            (int) $artifact->id,
+            [
+                'repo_full_name' => (string) $parsed['repo_full_name'],
+                'status' => (string) $connection['status'],
+                'installation_id' => (int) ($connection['installation_id'] ?? 0),
+                'target_type' => (string) ($connection['target_type'] ?? ''),
+                'account_login' => (string) ($connection['account_login'] ?? ''),
+            ],
+        );
+
+        return redirect()
+            ->route('github_workflow.index', ['plan_id' => $plan->id])
+            ->with(
+                $connection['status'] === 'connected' ? 'success' : 'status',
+                $connection['status'] === 'connected'
+                    ? 'GitHub Repositoryとの接続を確認しました。Canoviaからレビュー用PRを作成できます。'
+                    : 'GitHub Appは接続されていますが、Contents / Pull Requestsのwrite権限承認が必要です。',
+            );
+    }
+
+    public function checkRepositoryConnection(
+        Request $request,
+        PlanArtifact $artifact,
+        PlanOwnershipService $ownership,
+        FeatureAccessService $featureAccess,
+        GitHubWorkflowService $workflow,
+        GitHubRepositoryWriter $repositoryWriter,
+    ) {
+        $artifact->loadMissing('plan');
+        $plan = $artifact->plan;
+
+        abort_unless($plan && $artifact->provider === 'github', 404);
+        $ownership->authorizeEdit($request, $plan);
+        $featureAccess->authorizeUse(
+            $request->user(),
+            FeatureKey::DeveloperGithubWrite,
+            ['plan_id' => (int) $plan->id, 'artifact_id' => (int) $artifact->id],
+        );
+
+        $parsed = $workflow->parseUrl((string) $artifact->url);
+        abort_unless(($parsed['kind'] ?? null) === 'repository', 404);
+
+        try {
+            $installation = $repositoryWriter->repositoryInstallation(
+                (string) $parsed['repo_full_name'],
+            );
+        } catch (\RuntimeException $exception) {
+            return redirect()
+                ->route('github_workflow.index', ['plan_id' => $plan->id])
+                ->with('status', $exception->getMessage());
+        }
+
+        if ($installation === null) {
+            $previousStatus = (string) data_get($artifact->metadata, 'github_app_connection.status', '');
+            $this->storeRepositoryConnection($artifact, [
+                'status' => $previousStatus === 'connected' ? 'revoked' : 'pending',
+                'requested_by_user_id' => data_get($artifact->metadata, 'github_app_connection.requested_by_user_id'),
+                'requested_at' => data_get($artifact->metadata, 'github_app_connection.requested_at'),
+                'last_checked_at' => now()->toIso8601String(),
+            ]);
+
+            return redirect()
+                ->route('github_workflow.index', ['plan_id' => $plan->id])
+                ->with(
+                    'status',
+                    $previousStatus === 'connected'
+                        ? 'GitHub App接続を現在確認できません。Repository側でAppが削除された可能性があります。'
+                        : 'GitHub AppはまだこのRepositoryへ接続されていません。OrganizationではOwner承認待ちの可能性があります。',
+                );
+        }
+
+        $connection = $this->connectionFromInstallation(
+            $installation,
+            $request->user()?->id,
+            null,
+        );
+        $this->storeRepositoryConnection($artifact, $connection);
+
+        return redirect()
+            ->route('github_workflow.index', ['plan_id' => $plan->id])
+            ->with(
+                $connection['status'] === 'connected' ? 'success' : 'status',
+                $connection['status'] === 'connected'
+                    ? 'GitHub Appの接続状態を確認しました。'
+                    : 'GitHub Appは存在しますが、必要なwrite権限がまだ承認されていません。',
+            );
+    }
+
     public function proposeRepositoryChange(
         Request $request,
         PlanArtifact $artifact,
@@ -396,6 +668,57 @@ final class GitHubWorkflowController extends Controller
         return redirect()
             ->to($this->safeReturnUrl($request, $plan->id))
             ->with('success', 'GitHub項目のCanovia状態を更新しました。');
+    }
+
+    private function githubInstallStateKey(string $state): string
+    {
+        return 'github_app_install_state.'.hash('sha256', $state);
+    }
+
+    /**
+     * @param array<string,mixed> $installation
+     * @return array<string,mixed>
+     */
+    private function connectionFromInstallation(
+        array $installation,
+        ?int $requestedByUserId,
+        ?string $setupAction,
+    ): array {
+        $permissions = is_array($installation['permissions'] ?? null)
+            ? $installation['permissions']
+            : [];
+        $ready = ($permissions['contents'] ?? null) === 'write'
+            && ($permissions['pull_requests'] ?? null) === 'write';
+
+        return [
+            'status' => $ready ? 'connected' : 'permission_update_required',
+            'installation_id' => (int) ($installation['installation_id'] ?? 0),
+            'account_login' => (string) ($installation['account_login'] ?? ''),
+            'account_type' => (string) ($installation['account_type'] ?? ''),
+            'target_type' => (string) ($installation['target_type'] ?? ''),
+            'repository_selection' => (string) ($installation['repository_selection'] ?? ''),
+            'permissions' => $permissions,
+            'management_url' => $installation['management_url'] ?? null,
+            'requested_by_user_id' => $requestedByUserId,
+            'requested_at' => now()->toIso8601String(),
+            'connected_at' => $ready ? now()->toIso8601String() : null,
+            'last_checked_at' => now()->toIso8601String(),
+            'setup_action' => $setupAction,
+        ];
+    }
+
+    /**
+     * @param array<string,mixed> $connection
+     */
+    private function storeRepositoryConnection(
+        PlanArtifact $artifact,
+        array $connection,
+    ): void {
+        $metadata = is_array($artifact->metadata) ? $artifact->metadata : [];
+        $metadata['github_app_connection'] = $connection;
+        unset($metadata['github_workflow_state']);
+
+        $artifact->update(['metadata' => $metadata]);
     }
 
     private function safeReturnUrl(Request $request, int $planId): string

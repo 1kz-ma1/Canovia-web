@@ -177,6 +177,9 @@ final class GitHubWorkflowService
         $remoteSnapshot = is_array($repositoryItem['repository_snapshot'] ?? null)
             ? $repositoryItem['repository_snapshot']
             : null;
+        $appConnection = is_array($repositoryItem['github_app_connection'] ?? null)
+            ? $repositoryItem['github_app_connection']
+            : null;
 
         return [
             'key' => ($anchor['plan_id'] ?? '0').'|'.mb_strtolower($repoFullName),
@@ -194,6 +197,7 @@ final class GitHubWorkflowService
                 : null,
             'can_edit' => (bool) ($anchor['can_edit'] ?? false),
             'remote_snapshot' => $remoteSnapshot,
+            'app_connection' => $appConnection,
             'work_count' => $workItems->count(),
             'kind_counts' => $kindCounts,
             'workflow_counts' => $workflowCounts,
@@ -335,6 +339,10 @@ final class GitHubWorkflowService
             'repository_snapshot' => ($parsed['kind'] ?? null) === 'repository'
                 && is_array(data_get($artifact->metadata, 'github_repository_snapshot'))
                     ? data_get($artifact->metadata, 'github_repository_snapshot')
+                    : null,
+            'github_app_connection' => ($parsed['kind'] ?? null) === 'repository'
+                && is_array(data_get($artifact->metadata, 'github_app_connection'))
+                    ? data_get($artifact->metadata, 'github_app_connection')
                     : null,
             'assigned_user_name' => $artifact->assignedUser?->name,
             'tasks' => $artifact->tasks

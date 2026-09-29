@@ -13,7 +13,11 @@
     $canInspectRepository = (bool) ($can_repository_inspect ?? false);
     $canWriteRepository = (bool) ($can_repository_write ?? false);
     $githubWriteConfigured = (bool) ($github_write_configured ?? false);
-    $githubAppInstallUrl = $github_app_install_url ?? null;
+    $githubAppConnectAvailable = (bool) ($github_app_connect_available ?? false);
+    $appConnection = is_array($overview['app_connection'] ?? null) ? $overview['app_connection'] : [];
+    $connectionStatus = (string) ($appConnection['status'] ?? 'not_connected');
+    $connectionManagementUrl = $appConnection['management_url'] ?? null;
+    $connectionAccount = trim((string) ($appConnection['account_login'] ?? ''));
 @endphp
 
 <article
@@ -222,7 +226,18 @@
         <section class="border-b border-violet-300/12 bg-violet-300/[0.018] p-5" data-github-review-change>
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div class="max-w-3xl">
-                    <p class="text-[10px] font-black uppercase tracking-[0.16em] text-violet-300">REVIEW-ONLY WRITE</p>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-violet-300">REVIEW-ONLY WRITE</p>
+                        @if ($connectionStatus === 'connected')
+                            <span class="rounded-full border border-emerald-300/15 bg-emerald-300/[0.04] px-2 py-1 text-[10px] font-bold text-emerald-200">GitHub App 接続済み</span>
+                        @elseif (in_array($connectionStatus, ['connecting', 'pending'], true))
+                            <span class="rounded-full border border-amber-300/15 bg-amber-300/[0.04] px-2 py-1 text-[10px] font-bold text-amber-200">接続待ち</span>
+                        @elseif ($connectionStatus === 'permission_update_required')
+                            <span class="rounded-full border border-amber-300/15 bg-amber-300/[0.04] px-2 py-1 text-[10px] font-bold text-amber-200">権限承認待ち</span>
+                        @elseif (in_array($connectionStatus, ['revoked', 'verification_failed'], true))
+                            <span class="rounded-full border border-rose-300/15 bg-rose-300/[0.04] px-2 py-1 text-[10px] font-bold text-rose-200">接続を確認できません</span>
+                        @endif
+                    </div>
                     <h4 class="mt-1 text-sm font-black text-slate-100">GitHubを知らなくても、変更をレビューに出す</h4>
                     <p class="mt-2 text-xs leading-6 text-slate-500">
                         Repository管理者がCanovia GitHub Appを一度接続すれば、CanoviaのEditorはここから変更を提出できます。
@@ -230,15 +245,73 @@
                     </p>
                 </div>
 
-                @if ($githubAppInstallUrl)
-                    <a href="{{ $githubAppInstallUrl }}" target="_blank" rel="noopener noreferrer" class="btn-secondary px-3 py-2 text-xs">
-                        GitHub Appを接続 ↗
-                    </a>
+                @if ($overview['can_edit'] && $canWriteRepository && $githubWriteConfigured)
+                    <div class="flex flex-wrap gap-2">
+                        @if ($connectionStatus !== 'connected' && $githubAppConnectAvailable)
+                            <form method="POST" action="{{ route('github_workflow.app.connect', $overview['repository_artifact_id']) }}">
+                                @csrf
+                                <button type="submit" class="btn-primary px-3 py-2 text-xs">GitHubを接続</button>
+                            </form>
+                        @endif
+
+                        <form method="POST" action="{{ route('github_workflow.app.check', $overview['repository_artifact_id']) }}">
+                            @csrf
+                            <button type="submit" class="btn-secondary px-3 py-2 text-xs">接続状態を確認</button>
+                        </form>
+
+                        @if ($connectionManagementUrl)
+                            <a href="{{ $connectionManagementUrl }}" target="_blank" rel="noopener noreferrer" class="btn-secondary px-3 py-2 text-xs">
+                                GitHubで管理 ↗
+                            </a>
+                        @endif
+                    </div>
                 @endif
             </div>
 
+            @if ($connectionStatus === 'connected')
+                <div class="mt-4 rounded-xl border border-emerald-300/12 bg-emerald-300/[0.025] p-3">
+                    <p class="text-xs font-bold text-emerald-100">
+                        このRepositoryはCanovia GitHub Appに接続されています
+                        @if ($connectionAccount !== '')
+                            · {{ $connectionAccount }}
+                        @endif
+                    </p>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                        Canovia Editorの依頼はGitHub上ではAppが実行し、誰が依頼したかはCanovia側に別記録します。個人PATやGitHubパスワードの共有は不要です。
+                    </p>
+                </div>
+            @elseif (in_array($connectionStatus, ['connecting', 'pending'], true))
+                <div class="mt-4 rounded-xl border border-amber-300/12 bg-amber-300/[0.025] p-3">
+                    <p class="text-xs font-bold text-amber-100">GitHub側の接続完了を待っています</p>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                        Organizationでは、Repository Adminが接続を要求してもOwner承認が必要な場合があります。承認後に「接続状態を確認」を押せば、Canovia側の状態を更新できます。
+                    </p>
+                </div>
+            @elseif ($connectionStatus === 'permission_update_required')
+                <div class="mt-4 rounded-xl border border-amber-300/12 bg-amber-300/[0.025] p-3">
+                    <p class="text-xs font-bold text-amber-100">GitHub Appのwrite権限承認が必要です</p>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                        App自体は対象Repositoryで確認できていますが、Contents / Pull Requestsのwrite権限が揃っていません。GitHub側で権限更新を承認してから再確認してください。
+                    </p>
+                </div>
+            @elseif ($connectionStatus === 'revoked')
+                <div class="mt-4 rounded-xl border border-rose-300/12 bg-rose-300/[0.025] p-3">
+                    <p class="text-xs font-bold text-rose-100">以前のGitHub App接続を現在確認できません</p>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                        Repository側でAppが削除された、または対象Repositoryへのアクセスが外れた可能性があります。必要なら「GitHubを接続」から再設定してください。
+                    </p>
+                </div>
+            @elseif ($connectionStatus === 'verification_failed')
+                <div class="mt-4 rounded-xl border border-rose-300/12 bg-rose-300/[0.025] p-3">
+                    <p class="text-xs font-bold text-rose-100">GitHubから返された接続情報を検証できませんでした</p>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                        Canoviaはcallbackのinstallation IDをそのまま信用せず、対象Repositoryの現在のInstallationと照合します。もう一度Canoviaから接続を開始してください。
+                    </p>
+                </div>
+            @endif
+
             @if (! $overview['can_edit'])
-                <p class="mt-4 text-xs text-slate-500">変更の提出はCanoviaのEditor以上が行えます。</p>
+                <p class="mt-4 text-xs text-slate-500">変更の提出とGitHub接続はCanoviaのEditor以上が行えます。</p>
             @elseif (! $canWriteRepository)
                 <div class="mt-4 rounded-xl border border-violet-300/12 bg-violet-300/[0.025] p-3">
                     <p class="text-xs font-bold text-violet-100">Repositoryへの反映はDeveloper GitHub Write</p>
@@ -248,9 +321,23 @@
                 </div>
             @elseif (! $githubWriteConfigured)
                 <div class="mt-4 rounded-xl border border-amber-300/12 bg-amber-300/[0.025] p-3">
-                    <p class="text-xs font-bold text-amber-100">Canovia側のGitHub App設定がまだありません</p>
+                    <p class="text-xs font-bold text-amber-100">Canovia運営側のGitHub App設定がまだありません</p>
                     <p class="mt-1 text-[11px] leading-5 text-slate-500">
-                        App IDとPrivate Keyをserver-sideに設定した後、Repository管理者が対象RepositoryへAppを接続します。個人PATの共有は不要です。
+                        App ID / Private KeyはCanovia運営側だけがserver-sideに設定します。一般ユーザーへ秘密鍵やPATを入力させません。
+                    </p>
+                </div>
+            @elseif (! $githubAppConnectAvailable && $connectionStatus !== 'connected')
+                <div class="mt-4 rounded-xl border border-amber-300/12 bg-amber-300/[0.025] p-3">
+                    <p class="text-xs font-bold text-amber-100">GitHub Appの接続URL設定が必要です</p>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                        Canovia運営側でGitHub Appのinstall URLを設定すると、ユーザーはこの画面の「GitHubを接続」だけでRepository選択へ進めます。
+                    </p>
+                </div>
+            @elseif ($connectionStatus !== 'connected')
+                <div class="mt-4 rounded-xl border border-dashed border-violet-300/15 bg-violet-300/[0.02] p-4">
+                    <p class="text-xs font-bold text-violet-100">最初にGitHubを接続してください</p>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                        GitHubで対象Repositoryを選ぶだけです。OrganizationのポリシーでOwner承認が必要な場合は、その承認が完了するまでCanoviaはwriteを有効にしません。
                     </p>
                 </div>
             @else

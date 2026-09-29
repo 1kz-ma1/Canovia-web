@@ -821,6 +821,20 @@ Execution Orchestration / AIからの自動writeはV46.4の対象外。将来は
 
 詳細は `docs/V46.4_GITHUB_APP_WRITE_LAYER.md` を正とする。
 
+## V46.5 GitHub App Connection UX
+
+V46.5では、V46.4のGitHub App Write Layerを一般ユーザー向けの接続UXへ拡張する。App ID / Private Key / PATはCanovia運営側だけがserver-sideで管理し、ユーザーはRepository Overviewの「GitHubを接続」からGitHubへ遷移し、対象Account / Organization / Repositoryを選択する。
+
+Canoviaはinstall URLへone-time stateを付与し、15分間だけsessionへArtifact / Plan / Canovia user / repo_full_nameを保持する。GitHub Setup URLへ戻る `installation_id` はそのまま信用せず、state・現在のPlan edit権限・DeveloperGithubWrite entitlement・対象Repositoryを再確認したうえで、GitHub App JWTから対象Repositoryの現在Installationをserver-side取得し、Installation IDを照合して初めてconnectedとする。
+
+Repository Artifactの `metadata.github_app_connection` にはconnecting / pending / connected / permission_update_required / revoked / verification_failedの状態と、installation_id / account / repository_selection / permission / management URL等の非secret projectionだけを保持する。App Private Key / App JWT / installation token / PAT / OAuth tokenは保存しない。
+
+Organization policyでRepository Adminが直接installできない場合はpendingとして扱い、「Owner承認後に接続状態を確認」できる。CanoviaはOrganizationのGitHub App policyを迂回しない。Owner承認後にcallbackが再発しなくても、明示的な接続状態確認からGitHubの現在Installationを再評価できる。
+
+Review-only write formはUI上connected時だけ表示するが、metadataをauthorityとはしない。実際のwrite時はV46.4 GitHubRepositoryWriterがGitHubからInstallation / permissionを再確認する。GitHub APIがwrite authority sourceであり、Canovia metadataはUX projectionである。
+
+詳細は `docs/V46.5_GITHUB_APP_CONNECTION.md` を正とする。
+
 ## V47 Execution Orchestration
 
 V47.0ではTaskを単独で推薦するだけでなく、Plan全体のDependency・Evidence・Goal Context・制約を保ったまま、選択Taskへ「今この主体が何をすべきか」を渡すExecution Orchestration Layerを追加する。

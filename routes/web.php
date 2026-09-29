@@ -267,6 +267,15 @@ Route::middleware('feature.access:'.FeatureKey::ProjectArtifact->value)->group(f
     Route::post('/github-workflow/artifacts/{artifact}/repository-change', [GitHubWorkflowController::class, 'proposeRepositoryChange'])
         ->middleware('throttle:3,1')
         ->name('github_workflow.repository.change');
+    Route::post('/github-workflow/artifacts/{artifact}/github-app/connect', [GitHubWorkflowController::class, 'beginRepositoryConnection'])
+        ->middleware('throttle:6,1')
+        ->name('github_workflow.app.connect');
+    Route::get('/github-workflow/github-app/setup', [GitHubWorkflowController::class, 'completeRepositoryConnection'])
+        ->middleware('throttle:12,1')
+        ->name('github_workflow.app.setup');
+    Route::post('/github-workflow/artifacts/{artifact}/github-app/check', [GitHubWorkflowController::class, 'checkRepositoryConnection'])
+        ->middleware('throttle:6,1')
+        ->name('github_workflow.app.check');
 });
 
 // 資格学習のActivity選択はAI演習より上位の共通入口として扱う。
