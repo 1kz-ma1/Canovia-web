@@ -71,9 +71,10 @@ final class RoadmapSpatialProjectionService
         $positions = [];
         $maxY = self::CLUSTER_START_Y;
 
+        $phaseIndex = 0;
         foreach ($phaseBuckets as $depth => $phaseNodes) {
             $depth = (int) $depth;
-            $phaseX = $phaseStartX + ($depth * self::PHASE_GAP);
+            $phaseX = $phaseStartX + ($phaseIndex * self::PHASE_GAP);
             $phaseId = 'roadmap:phase:'.$depth;
             $clusterGroups = $phaseNodes
                 ->groupBy(fn (array $node) => $this->dependencySignature($node, $nodesByTaskId))
@@ -143,10 +144,12 @@ final class RoadmapSpatialProjectionService
                 'id' => $phaseId,
                 'depth' => $depth,
                 'x' => $phaseX,
-                'label' => $depth === 0 ? '起点' : '段階 '.($depth + 1),
+                'label' => $phaseIndex === 0 ? '起点' : '段階 '.($phaseIndex + 1),
                 'task_count' => $phaseNodes->count(),
                 'cluster_count' => $clusterGroups->count(),
             ];
+
+            $phaseIndex++;
         }
 
         $edges = [];
@@ -201,9 +204,12 @@ final class RoadmapSpatialProjectionService
             }
         }
 
-        $height = max(520, $maxY + 80);
-        $currentTaskId = collect($projectedNodes)
-            ->first(fn (array $node) => (bool) ($node['is_current'] ?? false))['task_id'] ?? null;
+        $height = max(520, $maxY + 200);
+        $currentNode = collect($projectedNodes)
+            ->first(fn (array $node) => (bool) ($node['is_current'] ?? false));
+        $currentTaskId = is_array($currentNode)
+            ? (int) ($currentNode['task_id'] ?? 0)
+            : null;
 
         $projection = [
             'schema_version' => 1,
@@ -213,7 +219,7 @@ final class RoadmapSpatialProjectionService
             'clusters' => $clusters,
             'nodes' => $projectedNodes,
             'edges' => $edges,
-            'current_task_id' => $currentTaskId ? (int) $currentTaskId : null,
+            'current_task_id' => $currentTaskId > 0 ? $currentTaskId : null,
             'parallel_cluster_count' => collect($clusters)->where('is_parallel', true)->count(),
         ];
 
