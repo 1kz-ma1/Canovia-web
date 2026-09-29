@@ -47,6 +47,7 @@ class EconomyFoundationV415Test extends TestCase
             FeatureKey::StudyLongTermWeaknessProfile,
             FeatureKey::CareerNativeCaptureAnalysis,
             FeatureKey::DeveloperGithubEvidence,
+            FeatureKey::DeveloperGithubWrite,
         ] as $feature) {
             $this->assertFalse($access->canUse($user, $feature), $feature->value);
         }
@@ -116,6 +117,7 @@ class EconomyFoundationV415Test extends TestCase
         $this->assertTrue($access->canUse($user, FeatureKey::StudyLongTermWeaknessProfile));
         $this->assertTrue($access->canUse($user, FeatureKey::CareerNativeCaptureAnalysis));
         $this->assertTrue($access->canUse($user, FeatureKey::DeveloperGithubEvidence));
+        $this->assertTrue($access->canUse($user, FeatureKey::DeveloperGithubWrite));
 
         $products = app(ProductGrantService::class)->effectiveProducts($user)->map->value->all();
         $this->assertContains(ProductKey::PremiumCore->value, $products);
