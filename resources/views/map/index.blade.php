@@ -384,7 +384,7 @@
                     <div class="canovia-map-context-header">
                         <div>
                             <p class="canovia-map-kicker">Context Inspector</p>
-                            <p class="canovia-map-context-caption">Leaf Nodeの詳細確認と補助操作を表示します</p>
+                            <p class="canovia-map-context-caption">選択中Nodeの詳細確認と補助操作を表示します</p>
                         </div>
                         <div class="canovia-map-context-tools">
                             <button
