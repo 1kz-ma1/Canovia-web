@@ -32,6 +32,14 @@ final class ExecutionDistributionController extends Controller
             ->orderBy('id')
             ->get();
 
+        $suggestedTaskIds = collect(explode(',', (string) $request->query('suggested_task_ids', '')))
+            ->map(fn ($id) => (int) trim((string) $id))
+            ->filter(fn (int $id) => $id > 0)
+            ->unique()
+            ->intersect($tasks->pluck('id')->map(fn ($id) => (int) $id))
+            ->take(ExecutionDistributionService::MAX_TARGETS)
+            ->values();
+
         $bundle = $request->session()->get(ExecutionDistributionService::sessionKey($plan));
         if (is_array($bundle)) {
             $bundle = $distribution->refreshStaleness($request, $plan, $bundle);
@@ -47,6 +55,7 @@ final class ExecutionDistributionController extends Controller
             'nativeAiConfigured' => $packets->nativeConfigured(),
             'nativeAiEntitled' => $access->canUse($request->user(), FeatureKey::AutomaticAiExecution),
             'maxTargets' => ExecutionDistributionService::MAX_TARGETS,
+            'suggestedTaskIds' => $suggestedTaskIds->all(),
         ]);
     }
 
