@@ -7,9 +7,18 @@
     $candidate = is_array($githubChangeCandidate ?? null) ? $githubChangeCandidate : null;
     $handoffResult = is_array($githubHandoffResult ?? null) ? $githubHandoffResult : null;
     $packetIsStale = (bool) ($packetStale ?? false);
+    $pullRequestArtifact = $latestExecutionPullRequest ?? null;
+    $returnSnapshot = is_array($githubReturnSnapshot ?? null) ? $githubReturnSnapshot : null;
+    $remotePull = is_array(data_get($returnSnapshot, 'pull_request')) ? data_get($returnSnapshot, 'pull_request') : [];
+    $reviewSummary = is_array(data_get($returnSnapshot, 'review_summary')) ? data_get($returnSnapshot, 'review_summary') : [];
+    $ciState = (string) data_get($returnSnapshot, 'ci.state', 'unknown');
+    $returnWarnings = array_values((array) data_get($returnSnapshot, 'warnings', []));
+    $persistedOrigin = $pullRequestArtifact && is_array(data_get($pullRequestArtifact->metadata, 'github_write_origin'))
+        ? data_get($pullRequestArtifact->metadata, 'github_write_origin')
+        : [];
 @endphp
 
-@if ($packet || $candidate || $handoffResult)
+@if ($packet || $candidate || $handoffResult || $pullRequestArtifact)
     <section class="page-card border-emerald-300/15 p-5 sm:p-6" data-execution-github-handoff>
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div class="max-w-3xl">
@@ -33,7 +42,7 @@
                     <p><span class="text-slate-600">Repository</span><br>{{ data_get($handoffResult, 'repo_full_name') }}</p>
                     <p><span class="text-slate-600">File</span><br>{{ data_get($handoffResult, 'file_path') }}</p>
                     <p><span class="text-slate-600">Branch</span><br>{{ data_get($handoffResult, 'branch') }}</p>
-                    <p><span class="text-slate-600">Commit</span><br>{{ IlluminateSupportStr::limit((string) data_get($handoffResult, 'commit_sha'), 12, '') }}</p>
+                    <p><span class="text-slate-600">Commit</span><br>{{ \Illuminate\Support\Str::limit((string) data_get($handoffResult, 'commit_sha'), 12, '') }}</p>
                 </div>
                 @if (filled(data_get($handoffResult, 'pull_request_url')))
                     <a
@@ -46,6 +55,116 @@
                 <p class="mt-3 text-[11px] leading-5 text-slate-500">
                     PRを作った事実だけでTask進捗・完了・Evidenceは変更していません。レビュー結果をCanoviaへ戻してから次の状態を判断します。
                 </p>
+            </div>
+        @endif
+
+        @if ($pullRequestArtifact)
+            <div class="mt-5 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.025] p-4" data-github-return-layer>
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-[.14em] text-cyan-300">RETURN LAYER</p>
+                        <h3 class="mt-1 text-base font-black text-slate-100">GitHubの結果をCanoviaへ戻す</h3>
+                        <p class="mt-2 text-[11px] leading-5 text-slate-500">
+                            Review / Merge / optional CIをGitHubから確認し、元TaskへGitHub Evidenceとして記録します。
+                            GitHub側の状態だけでTask完了やCanoviaのworkflow laneは変更しません。
+                        </p>
+                    </div>
+
+                    <a
+                        href="{{ $pullRequestArtifact->url }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="btn-secondary px-3 py-2 text-xs"
+                    >PR #{{ $pullRequestArtifact->external_id ?: data_get($remotePull, 'number') }} ↗</a>
+                </div>
+
+                <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div class="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+                        <p class="text-[10px] text-slate-600">REMOTE PR</p>
+                        @if ((bool) data_get($remotePull, 'merged', false))
+                            <p class="mt-1 text-sm font-black text-emerald-200">Merged</p>
+                        @elseif (filled(data_get($remotePull, 'state')))
+                            <p class="mt-1 text-sm font-black text-slate-200">{{ ucfirst((string) data_get($remotePull, 'state')) }}</p>
+                        @else
+                            <p class="mt-1 text-sm font-black text-slate-500">未確認</p>
+                        @endif
+                    </div>
+
+                    <div class="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+                        <p class="text-[10px] text-slate-600">REVIEW</p>
+                        @if ((int) data_get($reviewSummary, 'changes_requested_reviewers', 0) > 0)
+                            <p class="mt-1 text-sm font-black text-amber-200">修正依頼 {{ (int) data_get($reviewSummary, 'changes_requested_reviewers') }}人</p>
+                        @elseif ((int) data_get($reviewSummary, 'approved_reviewers', 0) > 0)
+                            <p class="mt-1 text-sm font-black text-emerald-200">承認確認 {{ (int) data_get($reviewSummary, 'approved_reviewers') }}人</p>
+                        @else
+                            <p class="mt-1 text-sm font-black text-slate-500">判断未確認</p>
+                        @endif
+                    </div>
+
+                    <div class="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+                        <p class="text-[10px] text-slate-600">CI</p>
+                        <p class="mt-1 text-sm font-black {{
+                            $ciState === 'success'
+                                ? 'text-emerald-200'
+                                : ($ciState === 'failure'
+                                    ? 'text-rose-200'
+                                    : ($ciState === 'pending' ? 'text-amber-200' : 'text-slate-500'))
+                        }}">
+                            {{
+                                match ($ciState) {
+                                    'success' => '成功',
+                                    'failure' => '失敗',
+                                    'pending' => '実行中',
+                                    default => '未取得',
+                                }
+                            }}
+                        </p>
+                    </div>
+
+                    <div class="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+                        <p class="text-[10px] text-slate-600">LAST SYNC</p>
+                        <p class="mt-1 text-xs font-bold text-slate-300">
+                            {{ filled(data_get($returnSnapshot, 'fetched_at')) ? data_get($returnSnapshot, 'fetched_at') : 'まだ同期していません' }}
+                        </p>
+                    </div>
+                </div>
+
+                @if ($returnWarnings !== [])
+                    <div class="mt-4 rounded-xl border border-amber-300/10 bg-amber-300/[0.02] p-3">
+                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-amber-300">OPTIONAL SIGNALS</p>
+                        <ul class="mt-2 space-y-1 text-[11px] leading-5 text-slate-500">
+                            @foreach ($returnWarnings as $warning)
+                                <li>・{{ $warning }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                <div class="mt-4 flex flex-wrap gap-2">
+                    @if ($githubEvidenceEntitled && $githubWriteConfigured)
+                        <form method="POST" action="{{ route('plans.tasks.execution_orchestration.github.return_sync', [$plan, $task, $pullRequestArtifact]) }}">
+                            @csrf
+                            <button type="submit" class="btn-primary">GitHubから結果を確認</button>
+                        </form>
+                    @elseif (! $githubEvidenceEntitled)
+                        <div class="rounded-xl border border-violet-300/10 bg-violet-300/[0.02] px-3 py-2 text-[11px] text-slate-500">
+                            GitHub Evidenceの取得にはDeveloper GitHub Evidence capabilityが必要です。
+                        </div>
+                    @else
+                        <div class="rounded-xl border border-amber-300/10 bg-amber-300/[0.02] px-3 py-2 text-[11px] text-slate-500">
+                            Canovia運営側のGitHub App設定が必要です。
+                        </div>
+                    @endif
+
+                    <a href="{{ route('plans.review_assistant.show', $plan) }}" class="btn-secondary">EvidenceをPlan / Taskへ反映</a>
+                    <a href="{{ route('plans.execution_distribution.show', $plan) }}" class="btn-secondary">担当Contextを再評価</a>
+                </div>
+
+                @if ((bool) data_get($remotePull, 'merged', false))
+                    <p class="mt-3 text-[11px] leading-5 text-emerald-100/70">
+                        MergeはGitHubで確認済みです。ただし「このTaskの成功条件を満たしたか」は別判断なので、Taskを自動完了にはしていません。
+                    </p>
+                @endif
             </div>
         @endif
 
