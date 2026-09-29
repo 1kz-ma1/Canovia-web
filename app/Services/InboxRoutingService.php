@@ -232,7 +232,7 @@ class InboxRoutingService
             ? (int) $data['execution_available_minutes']
             : null;
 
-        $this->executionRequests->confirmFromInbox(
+        $executionRequest = $this->executionRequests->confirmFromInbox(
             $request,
             $item,
             $plan,
@@ -241,6 +241,10 @@ class InboxRoutingService
             $actorType,
             $availableMinutes,
         );
+
+        $metadata = is_array($item->metadata) ? $item->metadata : [];
+        $metadata['execution_request'] = $executionRequest;
+        $item->update(['metadata' => $metadata]);
 
         return '実行リクエストを確認しました。全体ContextとDependencyを確認して、担当へ渡す指示を組み立てます。';
     }
