@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\Plan;
 use App\Models\Task;
 use App\Models\User;
+use App\Services\ExecutionNavigationGraphService;
 use App\Services\ExecutionOrchestrationContextService;
+use App\Services\ExecutionPacketService;
 use App\Services\TaskDependencyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -119,10 +121,108 @@ class ExecutionOrchestrationV470Test extends TestCase
             ->assertSee('tests green');
     }
 
-    private function scenario(): array
+    public function test_l3_map_surfaces_only_additional_unmet_dependency_nodes(): void
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);
-        $plan = Plan::query()->create([
+        $plan = $this->plan($user);
+        $current = $this->task($plan, 'A / Evidence', 'doing', 50, 1);
+        $blocker = $this->task($plan, 'D / Normalize', 'doing', 40, 2);
+        $next = $this->task($plan, 'C / Validation', 'todo', 0, 3);
+
+        app(TaskDependencyService::class)->sync($next, [$current->id, $blocker->id]);
+        $plan->load(['tasks.prerequisites']);
+
+        $graph = app(ExecutionNavigationGraphService::class)->build([
+            'plan' => $plan,
+            'current_task' => $current,
+            'primary_tool' => null,
+            'next_task' => $next,
+            'pending_inbox_count' => 0,
+            'latest_inbox' => null,
+        ]);
+
+        $this->assertNotNull($graph['nodes']->firstWhere('id', 'task:'.$blocker->id));
+        $this->assertSame(
+            'blocks_until_done',
+            data_get(
+                $graph['edges']->first(fn (array $edge) =>
+                    $edge['source'] === 'task:'.$blocker->id
+                    && $edge['target'] === 'task:'.$next->id
+                ),
+                'relation',
+            ),
+        );
+        $this->assertStringContainsString(
+            '1件の前提待ち',
+            (string) data_get($graph['nodes']->firstWhere('id', 'task:'.$next->id), 'subtitle'),
+        );
+    }
+
+    public function test_blocked_execute_packet_fails_safe_to_clarify(): void
+    {
+        [, , , $target] = $this->scenario();
+
+        $packet = app(ExecutionPacketService::class)->normalizePacket([
+            'summary' => '本作業を開始',
+            'execution_mode' => 'execute',
+            'current_situation' => 'Dependency待ち',
+            'role' => 'Validation',
+            'objective' => '本作業',
+            'reason' => 'AI判断',
+            'actions' => [[
+                'title' => '本実装',
+                'details' => '未完成Dependencyを使う',
+                'estimated_minutes' => 30,
+            ]],
+            'inputs' => [],
+            'outputs' => [],
+            'dependencies' => [],
+            'assumptions' => [],
+            'do_not_touch' => [],
+            'completion_criteria' => [],
+            'confirmation_required' => [],
+            'next_phase' => '',
+        ], [
+            'plan' => ['id' => $target->plan_id, 'title' => 'HINANEX'],
+            'selected_node' => ['id' => $target->id, 'title' => $target->title],
+            'dependency_state' => 'blocked',
+            'context_fingerprint' => 'test',
+        ]);
+
+        $this->assertSame('clarify', $packet['execution_mode']);
+        $this->assertSame([], $packet['actions']);
+        $this->assertNotEmpty($packet['confirmation_required']);
+    }
+
+    public function test_stale_external_packet_is_rejected_after_dependency_change(): void
+    {
+        [$user, $plan, $dependency, $target] = $this->scenario();
+
+        $this->actingAs($user)
+            ->post(route('plans.tasks.execution_orchestration.prepare', [$plan, $target]), [
+                'generation_mode' => 'external',
+                'actor_type' => 'ai',
+                'available_minutes' => 30,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $dependency->update([
+            'status' => 'done',
+            'progress_percent' => 100,
+            'remaining_minutes' => 0,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('plans.tasks.execution_orchestration.import', [$plan, $target]), [
+                'packet_json' => '{"schema_version":"1.0","flow":"execution_packet"}',
+            ])
+            ->assertRedirect(route('plans.tasks.execution_orchestration.show', [$plan, $target]))
+            ->assertSessionHasErrors('packet_json');
+    }
+
+    private function plan(User $user): Plan
+    {
+        return Plan::query()->create([
             'user_id' => $user->id,
             'owner_token' => Str::random(64),
             'public_slug' => (string) Str::uuid(),
@@ -135,6 +235,12 @@ class ExecutionOrchestrationV470Test extends TestCase
             'deadline' => today()->addMonth(),
             'is_public' => false,
         ]);
+    }
+
+    private function scenario(): array
+    {
+        $user = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($user);
 
         $dependency = $this->task($plan, 'D / Data normalization', 'doing', 60, 1);
         $target = $this->task($plan, 'C / Validation', 'todo', 0, 2);

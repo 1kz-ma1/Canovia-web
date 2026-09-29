@@ -154,14 +154,16 @@ final class ExecutionNavigationGraphService
             ));
 
             if ($nextTask instanceof Task) {
-                $nextBlockerCount = collect($nextTask->dependencyIds())
-                    ->filter(function (int $dependencyId) use ($plan) {
-                        $dependency = $plan->tasks->firstWhere('id', $dependencyId);
-
-                        return ! $dependency
-                            || ($dependency->status !== 'done' && (int) $dependency->progress_percent < 100);
-                    })
-                    ->count();
+                // Waiting for the currently executing Task is normal sequencing.
+                // Only additional unmet prerequisites are surfaced as blockers.
+                $nextBlockers = collect($nextTask->dependencyIds())
+                    ->reject(fn (int $dependencyId) => $dependencyId === (int) $currentTask->id)
+                    ->map(fn (int $dependencyId) => $plan->tasks->firstWhere('id', $dependencyId))
+                    ->filter(fn ($dependency) => $dependency instanceof Task)
+                    ->filter(fn (Task $dependency) => $dependency->status !== 'done'
+                        && (int) $dependency->progress_percent < 100)
+                    ->values();
+                $nextBlockerCount = $nextBlockers->count();
 
                 $nodes->push($this->node(
                     id: 'task:'.$nextTask->id,
@@ -202,6 +204,53 @@ final class ExecutionNavigationGraphService
                     'next',
                     'primary-next',
                 ));
+
+                // Keep L3 dense but understandable: only direct unmet prerequisites
+                // beyond the current Task are projected, capped at three nodes.
+                foreach ($nextBlockers->take(3)->values() as $index => $blocker) {
+                    $blockerNodeId = 'task:'.$blocker->id;
+
+                    if (! $nodes->contains(fn (array $node) => ($node['id'] ?? null) === $blockerNodeId)) {
+                        $nodes->push($this->node(
+                            id: $blockerNodeId,
+                            type: 'task',
+                            entityId: (int) $blocker->id,
+                            eyebrow: 'DEPENDENCY',
+                            label: (string) $blocker->title,
+                            subtitle: '前提待ち · 進捗 '.max(0, min(100, (int) $blocker->progress_percent)).'%',
+                            action: route('plans.tasks.execution_orchestration.show', [$plan, $blocker]),
+                            attentionRole: 'dependency-task-'.($index + 1),
+                            classicSurface: $this->surface(
+                                'Dependency',
+                                (string) $blocker->title,
+                                filled($blocker->description)
+                                    ? Str::limit((string) $blocker->description, 180)
+                                    : '後続Taskを開始する前に必要な前提Taskです。',
+                                [
+                                    $this->action(
+                                        'この担当の今やることを生成',
+                                        route('plans.tasks.execution_orchestration.show', [$plan, $blocker]),
+                                        true,
+                                    ),
+                                    $this->action('Taskを編集', route('tasks.edit', $blocker)),
+                                    $this->action('Planを開く', route('plans.show', $plan)),
+                                ],
+                                [
+                                    '進捗 '.max(0, min(100, (int) $blocker->progress_percent)).'%',
+                                    $blocker->status === 'doing' ? '進行中' : '未着手',
+                                ],
+                            ),
+                        ));
+                    }
+
+                    $edges->push($this->edge(
+                        $blockerNodeId,
+                        'task:'.$nextTask->id,
+                        'blocks_until_done',
+                        'dependency-next',
+                        secondary: true,
+                    ));
+                }
             }
 
             if ($toolId !== '') {

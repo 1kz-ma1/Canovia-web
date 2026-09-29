@@ -100,6 +100,27 @@ final class MapAttentionStateService
                 'size_weight' => 0.76,
                 'position' => ['x' => 68, 'y' => 25],
             ],
+            'dependency-task-1' => [
+                'importance' => 0.60,
+                'state' => 'input',
+                'position_role' => 'input-dependency-1',
+                'size_weight' => 0.72,
+                'position' => ['x' => 18, 'y' => 34],
+            ],
+            'dependency-task-2' => [
+                'importance' => 0.58,
+                'state' => 'input',
+                'position_role' => 'input-dependency-2',
+                'size_weight' => 0.70,
+                'position' => ['x' => 18, 'y' => 50],
+            ],
+            'dependency-task-3' => [
+                'importance' => 0.56,
+                'state' => 'input',
+                'position_role' => 'input-dependency-3',
+                'size_weight' => 0.68,
+                'position' => ['x' => 18, 'y' => 66],
+            ],
             'tool' => [
                 'importance' => 0.78,
                 'state' => 'action',
@@ -159,6 +180,7 @@ final class MapAttentionStateService
             'primary-next' => 0.72,
             'primary-tool' => 0.86,
             'primary-evidence' => 0.62,
+            'dependency-next' => 0.62,
             'inbox-plan' => 0.45,
             default => 0.50,
         };
