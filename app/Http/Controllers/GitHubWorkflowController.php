@@ -35,7 +35,7 @@ final class GitHubWorkflowController extends Controller
             'url' => ['required', 'url', 'max:2048'],
             'title' => ['nullable', 'string', 'max:255'],
             'workflow_state' => [
-                'required',
+                'nullable',
                 Rule::in(array_keys(PlanArtifact::GITHUB_WORKFLOW_STATES)),
             ],
             'task_id' => ['nullable', 'integer', 'min:1'],
@@ -76,16 +76,22 @@ final class GitHubWorkflowController extends Controller
             $title = $workflow->suggestedTitle((string) $validated['url']);
         }
 
+        $isRepository = ($parsed['kind'] ?? null) === 'repository';
+        $workflowState = $isRepository
+            ? null
+            : trim((string) ($validated['workflow_state'] ?? 'now'));
+
         $artifact = $plan->artifacts()->create([
             'created_by_user_id' => $request->user()?->id,
             'assigned_user_id' => null,
             'provider' => 'github',
-            'artifact_type' => ($parsed['kind'] ?? null) === 'repository' ? 'repository' : 'link',
+            'artifact_type' => $isRepository ? 'repository' : 'link',
             'title' => $title,
             'url' => (string) $validated['url'],
-            'metadata' => [
-                'github_workflow_state' => (string) $validated['workflow_state'],
-            ],
+            'metadata' => $workflowState !== ''
+                && $workflowState !== null
+                    ? ['github_workflow_state' => $workflowState]
+                    : null,
         ]);
 
         if ($task) {
@@ -112,7 +118,12 @@ final class GitHubWorkflowController extends Controller
 
         return redirect()
             ->route('github_workflow.index', ['plan_id' => $plan->id])
-            ->with('success', 'GitHub項目をCanoviaへ追加しました。');
+            ->with(
+                'success',
+                $isRepository
+                    ? 'Repositoryを全体像としてCanoviaへ追加しました。'
+                    : 'GitHub項目をCanoviaへ追加しました。',
+            );
     }
 
     public function updateState(
