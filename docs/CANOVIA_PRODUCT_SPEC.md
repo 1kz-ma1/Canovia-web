@@ -1099,7 +1099,7 @@ Human agency境界:
 
 Canovia Mapに複数の用途別Pageを導入する。Pageはcanonical Plan / Task / Evidenceを複製せず、Map structural route・Page名・Data Layer state・並び順だけを保持するpresentation/navigation presetとする。
 
-標準Pageは「全体 / 実行 / 振り返り / 共同」。さらにユーザーは現在のMapを最大8件までカスタムPageとして端末内へ保存でき、開く・並び替え・削除が可能。
+標準Pageは「全体 / 計画 / 実行 / 振り返り / 共同」。さらにユーザーは現在のMapを最大8件までカスタムPageとして端末内へ保存でき、開く・並び替え・削除が可能。
 
 Custom Page保存時は現在のData Layer stateもsnapshotする。同一Map Contextでも「作業用」「全体確認用」のように異なるOverlay構成を持てる。Page削除はcanonical dataへ影響しない。
 
