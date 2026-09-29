@@ -18,6 +18,12 @@ final class TaskDependencyService
             ->sort()
             ->values();
 
+        if ($dependencyIds->count() > 20) {
+            throw ValidationException::withMessages([
+                'dependency_task_ids' => '前提Taskは20件以内にしてください。',
+            ]);
+        }
+
         if ($dependencyIds->contains((int) $task->id)) {
             throw ValidationException::withMessages([
                 'dependency_task_ids' => 'Task自身を前提Taskにはできません。',

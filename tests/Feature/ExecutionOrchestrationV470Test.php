@@ -55,6 +55,36 @@ class ExecutionOrchestrationV470Test extends TestCase
             ->assertSee('Promptをコピー');
     }
 
+    public function test_plan_level_resources_and_artifacts_are_available_inputs(): void
+    {
+        [$user, $plan, , $target] = $this->scenario();
+
+        $plan->resources()->create([
+            'created_by_user_id' => $user->id,
+            'provider' => 'github',
+            'resource_type' => 'file',
+            'title' => 'Shared Contract',
+            'url' => 'https://github.com/example/project/blob/main/contract.json',
+        ]);
+        $plan->artifacts()->create([
+            'created_by_user_id' => $user->id,
+            'provider' => 'external',
+            'artifact_type' => 'link',
+            'title' => 'Architecture Decision',
+            'url' => 'https://example.com/architecture',
+        ]);
+
+        $request = Request::create('/');
+        $request->setUserResolver(fn () => $user);
+        $context = app(ExecutionOrchestrationContextService::class)
+            ->snapshot($request, $plan->fresh(), $target->fresh());
+
+        $titles = collect($context['available_inputs'])->pluck('title');
+
+        $this->assertTrue($titles->contains('Shared Contract'));
+        $this->assertTrue($titles->contains('Architecture Decision'));
+    }
+
     public function test_context_fingerprint_changes_when_dependency_completes(): void
     {
         [$user, $plan, $dependency, $target] = $this->scenario();
