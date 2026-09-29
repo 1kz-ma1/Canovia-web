@@ -262,7 +262,7 @@ Route::middleware('feature.access:'.FeatureKey::ProjectArtifact->value)->group(f
     Route::patch('/github-workflow/artifacts/{artifact}/state', [GitHubWorkflowController::class, 'updateState'])
         ->name('github_workflow.state.update');
     Route::post('/github-workflow/artifacts/{artifact}/repository-refresh', [GitHubWorkflowController::class, 'refreshRepository'])
-        ->middleware('throttle:12,1')
+        ->middleware('throttle:3,1')
         ->name('github_workflow.repository.refresh');
 });
 
