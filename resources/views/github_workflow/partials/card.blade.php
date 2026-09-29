@@ -67,7 +67,7 @@
             <label class="min-w-0 flex-1">
                 <span class="sr-only">Canovia上の状態</span>
                 <select name="workflow_state" class="form-control w-full text-xs">
-                    <option value="" @selected($state === AppServicesGitHubWorkflowService::UNCLASSIFIED)>未整理</option>
+                    <option value="" @selected($state === 'unclassified')>未整理</option>
                     @foreach ($workflowStates as $key => $label)
                         <option value="{{ $key }}" @selected($state === $key)>{{ $label }}</option>
                     @endforeach
