@@ -230,7 +230,7 @@ class InboxController extends Controller
                     'success',
                     $interpreted
                         ? '受け取りました。内容から次の行き先候補も整理しました。'
-                        : '受け取りました。まだ整理しなくて大丈夫です.',
+                        : '受け取りました。まだ整理しなくて大丈夫です。',
                 )
                 ->with('inbox_focus_id', (int) $item->id);
         }
