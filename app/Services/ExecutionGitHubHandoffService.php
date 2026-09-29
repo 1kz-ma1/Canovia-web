@@ -80,6 +80,36 @@ final class ExecutionGitHubHandoffService
         }
 
         $context = $this->contexts->snapshot($request, $plan, $task);
+        $orchestrationState = $request->session()->get(
+            ExecutionRequestHandoffService::sessionKey($plan, $task),
+            [],
+        );
+        $packet = is_array($orchestrationState['packet'] ?? null)
+            ? $orchestrationState['packet']
+            : null;
+        $packetContextFingerprint = (string) ($orchestrationState['context_fingerprint'] ?? '');
+
+        if (! $packet) {
+            throw ValidationException::withMessages([
+                'github_change' => '先に現在ContextからExecution Packetを生成または読み込んでください。',
+            ]);
+        }
+
+        if (
+            $packetContextFingerprint === ''
+            || ! hash_equals((string) $context['context_fingerprint'], $packetContextFingerprint)
+        ) {
+            throw ValidationException::withMessages([
+                'github_change' => 'Execution Packet生成後にPlan / TaskのContextが変わっています。Packetを再生成してください。',
+            ]);
+        }
+
+        $packetJson = json_encode(
+            $packet,
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+        );
+        $packetHash = hash('sha256', is_string($packetJson) ? $packetJson : '');
+
         $preview = $this->writer->previewFileChange(
             (string) $parsed['repo_full_name'],
             $filePath,
@@ -103,6 +133,11 @@ final class ExecutionGitHubHandoffService
                 'url' => (string) $repository->url,
             ],
             'context_fingerprint' => (string) $context['context_fingerprint'],
+            'source' => [
+                'type' => 'execution_packet',
+                'packet_hash' => $packetHash,
+                'summary' => mb_substr((string) ($packet['summary'] ?? $task->title), 0, 500),
+            ],
             'change' => [
                 'file_path' => (string) $preview['file_path'],
                 'content' => $content,
