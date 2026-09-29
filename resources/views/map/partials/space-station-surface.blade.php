@@ -22,6 +22,10 @@
     $stationSourcePath = request()->getRequestUri().$stationHash;
 
     $selectedDestination = (string) old('destination', $candidate['destination'] ?? 'keep_inbox');
+    $planDestinations = ['career_capture', 'recall_material', 'task_evidence', 'plan_resource', 'execution_request'];
+    $taskDestinations = ['recall_material', 'task_evidence', 'execution_request'];
+    $destinationNeedsPlan = in_array($selectedDestination, $planDestinations, true);
+    $destinationNeedsTask = in_array($selectedDestination, $taskDestinations, true);
     $contextPlanId = (int) data_get($contextCandidate, 'plan_id', 0);
     $selectedPlanId = (string) old('plan_id', $contextPlanId > 0 ? $contextPlanId : '');
     $selectedTaskId = (string) old('task_id', '');
@@ -279,7 +283,10 @@
                         </select>
                     </div>
 
-                    <div>
+                    <div
+                        data-space-station-plan-field
+                        @if (! $destinationNeedsPlan) hidden @endif
+                    >
                         <label for="space-station-plan">Plan</label>
                         <select
                             id="space-station-plan"
@@ -302,7 +309,10 @@
                         @endif
                     </div>
 
-                    <div>
+                    <div
+                        data-space-station-task-field
+                        @if (! $destinationNeedsTask) hidden @endif
+                    >
                         <label for="space-station-task">Task</label>
                         <select
                             id="space-station-task"
