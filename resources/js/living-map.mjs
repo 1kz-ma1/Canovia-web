@@ -407,6 +407,91 @@ export function mapSemanticZoomDirection(value = 'in') {
     return value === 'out' ? 'out' : 'in';
 }
 
+export function semanticRouteKey(value, base = 'https://canovia.local') {
+    try {
+        const url = new URL(String(value || ''), base);
+        const params = [...url.searchParams.entries()]
+            .sort(([leftKey, leftValue], [rightKey, rightValue]) => {
+                const keyOrder = leftKey.localeCompare(rightKey);
+                return keyOrder !== 0 ? keyOrder : leftValue.localeCompare(rightValue);
+            });
+        const query = new URLSearchParams(params).toString();
+
+        return url.pathname + (query ? '?' + query : '');
+    } catch (_) {
+        return '';
+    }
+}
+
+export function semanticRectSnapshot(rect, viewport = {}) {
+    if (!rect) return null;
+
+    const width = Math.max(0, Number(rect.width || 0));
+    const height = Math.max(0, Number(rect.height || 0));
+    const viewportWidth = Math.max(1, Number(viewport.width || 0));
+    const viewportHeight = Math.max(1, Number(viewport.height || 0));
+
+    if (width < 1 || height < 1 || viewportWidth < 1 || viewportHeight < 1) {
+        return null;
+    }
+
+    const left = Number(rect.left || 0);
+    const top = Number(rect.top || 0);
+
+    return {
+        left: Math.round(left * 10) / 10,
+        top: Math.round(top * 10) / 10,
+        width: Math.round(width * 10) / 10,
+        height: Math.round(height * 10) / 10,
+        viewport_width: Math.round(viewportWidth * 10) / 10,
+        viewport_height: Math.round(viewportHeight * 10) / 10,
+    };
+}
+
+export function adaptSemanticRect(rect, viewport = {}) {
+    if (!rect) return null;
+
+    const sourceWidth = Math.max(1, Number(rect.viewport_width || viewport.width || 1));
+    const sourceHeight = Math.max(1, Number(rect.viewport_height || viewport.height || 1));
+    const targetWidth = Math.max(1, Number(viewport.width || sourceWidth));
+    const targetHeight = Math.max(1, Number(viewport.height || sourceHeight));
+    const ratioX = targetWidth / sourceWidth;
+    const ratioY = targetHeight / sourceHeight;
+
+    return {
+        left: Number(rect.left || 0) * ratioX,
+        top: Number(rect.top || 0) * ratioY,
+        width: Math.max(1, Number(rect.width || 1) * ratioX),
+        height: Math.max(1, Number(rect.height || 1) * ratioY),
+    };
+}
+
+export function semanticContinuityTransform(sourceRect, targetRect) {
+    if (!sourceRect || !targetRect) return null;
+
+    const sourceWidth = Math.max(1, Number(sourceRect.width || 0));
+    const sourceHeight = Math.max(1, Number(sourceRect.height || 0));
+    const targetWidth = Math.max(1, Number(targetRect.width || 0));
+    const targetHeight = Math.max(1, Number(targetRect.height || 0));
+
+    const sourceCenterX = Number(sourceRect.left || 0) + sourceWidth / 2;
+    const sourceCenterY = Number(sourceRect.top || 0) + sourceHeight / 2;
+    const targetCenterX = Number(targetRect.left || 0) + targetWidth / 2;
+    const targetCenterY = Number(targetRect.top || 0) + targetHeight / 2;
+    const areaRatio = (sourceWidth * sourceHeight) / (targetWidth * targetHeight);
+    const scale = Math.max(0.52, Math.min(1.9, Math.sqrt(Math.max(0.01, areaRatio))));
+
+    const translationLimit = 2400;
+    const translateX = Math.max(-translationLimit, Math.min(translationLimit, sourceCenterX - targetCenterX));
+    const translateY = Math.max(-translationLimit, Math.min(translationLimit, sourceCenterY - targetCenterY));
+
+    return {
+        x: Math.round(translateX * 10) / 10,
+        y: Math.round(translateY * 10) / 10,
+        scale: Math.round(scale * 1000) / 1000,
+    };
+}
+
 function writeSemanticTransition(windowRef, payload) {
     try {
         windowRef.sessionStorage?.setItem(SEMANTIC_TRANSITION_KEY, JSON.stringify(payload));
@@ -1053,13 +1138,55 @@ export function mountLivingGoalMap({
             ?? (link?.hasAttribute?.('data-map-semantic-zoom') ? link : null);
         if (!semanticLink) return false;
 
+        if (page.dataset.mapSemanticTransitionMarked === '1') {
+            return true;
+        }
+
         const direction = mapSemanticZoomDirection(semanticLink.dataset.mapZoomDirection || 'in');
+        const clickedNode = semanticLink.closest?.('[data-map-node]');
+        const centerNode = page.querySelector?.('[data-map-node][data-map-is-center="1"]');
+        const sourceNode = clickedNode || (direction === 'out' ? centerNode : null);
+        const sourceRect = sourceNode?.getBoundingClientRect?.();
+        const viewport = {
+            width: Number(windowRef.innerWidth || 0),
+            height: Number(windowRef.innerHeight || 0),
+        };
+        const snapshot = semanticRectSnapshot(sourceRect, viewport);
+
         writeSemanticTransition(windowRef, {
             direction,
             from_depth: Number(page.dataset.mapHierarchyDepth || 0),
+            from_route: semanticRouteKey(windowRef.location.href, windowRef.location.href),
+            source_node_ref: sourceNode?.dataset?.mapNodeId || null,
+            source_rect: snapshot,
             left_at: Date.now(),
         });
+
+        page.dataset.mapSemanticTransitionMarked = '1';
         page.classList.add(direction === 'out' ? 'is-semantic-departure-out' : 'is-semantic-departure-in');
+
+        if (sourceNode && snapshot) {
+            const shellRect = mapShell?.getBoundingClientRect?.();
+            const nodeCenterX = sourceRect.left + sourceRect.width / 2;
+            const nodeCenterY = sourceRect.top + sourceRect.height / 2;
+            const shellCenterX = shellRect ? shellRect.left + shellRect.width / 2 : viewport.width / 2;
+            const shellCenterY = shellRect ? shellRect.top + shellRect.height / 2 : viewport.height / 2;
+            sourceNode.style.setProperty('--semantic-departure-x', (shellCenterX - nodeCenterX).toFixed(1) + 'px');
+            sourceNode.style.setProperty('--semantic-departure-y', (shellCenterY - nodeCenterY).toFixed(1) + 'px');
+            sourceNode.style.setProperty('--semantic-departure-scale', direction === 'in' ? '1.12' : '0.88');
+            sourceNode.classList.add('is-semantic-departure-anchor');
+        }
+
+        windowRef.setTimeout(() => {
+            if (disposed) return;
+            delete page.dataset.mapSemanticTransitionMarked;
+            page.classList.remove('is-semantic-departure-in', 'is-semantic-departure-out');
+            sourceNode?.classList?.remove('is-semantic-departure-anchor');
+            sourceNode?.style?.removeProperty?.('--semantic-departure-x');
+            sourceNode?.style?.removeProperty?.('--semantic-departure-y');
+            sourceNode?.style?.removeProperty?.('--semantic-departure-scale');
+        }, 1200);
+
         return true;
     };
 
@@ -1421,7 +1548,12 @@ export function mountLivingGoalMap({
         }
 
         const semanticLink = event.target.closest?.('a[data-map-semantic-zoom]');
-        if (semanticLink && page.contains(semanticLink)) {
+        const isPlainSemanticClick = event.button === 0
+            && !event.metaKey
+            && !event.ctrlKey
+            && !event.shiftKey
+            && !event.altKey;
+        if (semanticLink && page.contains(semanticLink) && isPlainSemanticClick) {
             markSemanticTransition(semanticLink);
         }
 
@@ -1629,10 +1761,62 @@ export function mountLivingGoalMap({
     if (semanticArrival && Date.now() - Number(semanticArrival.left_at || 0) < 10000) {
         clearSemanticTransition(windowRef);
         const direction = mapSemanticZoomDirection(semanticArrival.direction);
-        page.classList.add(direction === 'out' ? 'is-semantic-arrival-out' : 'is-semantic-arrival-in');
-        windowRef.setTimeout(() => {
-            page.classList.remove('is-semantic-arrival-out', 'is-semantic-arrival-in');
-        }, 420);
+        const reducedMotion = Boolean(windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+        let arrivalAnchor = null;
+
+        if (direction === 'in') {
+            const sourceNodeRef = String(semanticArrival.source_node_ref || '');
+            arrivalAnchor = (sourceNodeRef ? nodeElementById.get(sourceNodeRef) : null)
+                || page.querySelector?.('[data-map-node][data-map-is-center="1"]')
+                || null;
+        } else {
+            const fromRoute = String(semanticArrival.from_route || '');
+            if (fromRoute) {
+                arrivalAnchor = nodeElements.find((element) => {
+                    const semanticLink = element.querySelector?.('a[data-map-semantic-zoom]');
+                    if (!semanticLink?.href) return false;
+
+                    return semanticRouteKey(semanticLink.href, windowRef.location.href) === fromRoute;
+                }) || null;
+            }
+        }
+
+        const sourceRect = adaptSemanticRect(semanticArrival.source_rect, {
+            width: Number(windowRef.innerWidth || 0),
+            height: Number(windowRef.innerHeight || 0),
+        });
+        const targetRect = arrivalAnchor?.getBoundingClientRect?.();
+        const continuity = !reducedMotion
+            ? semanticContinuityTransform(sourceRect, targetRect)
+            : null;
+
+        if (arrivalAnchor && continuity) {
+            arrivalAnchor.style.setProperty('--semantic-anchor-x', continuity.x.toFixed(1) + 'px');
+            arrivalAnchor.style.setProperty('--semantic-anchor-y', continuity.y.toFixed(1) + 'px');
+            arrivalAnchor.style.setProperty('--semantic-anchor-scale', String(continuity.scale));
+            arrivalAnchor.classList.add('is-semantic-continuity-anchor');
+            page.classList.add(
+                'is-semantic-continuity-arrival',
+                direction === 'out' ? 'is-semantic-continuity-out' : 'is-semantic-continuity-in',
+            );
+
+            windowRef.setTimeout(() => {
+                arrivalAnchor?.classList?.remove('is-semantic-continuity-anchor');
+                arrivalAnchor?.style?.removeProperty?.('--semantic-anchor-x');
+                arrivalAnchor?.style?.removeProperty?.('--semantic-anchor-y');
+                arrivalAnchor?.style?.removeProperty?.('--semantic-anchor-scale');
+                page.classList.remove(
+                    'is-semantic-continuity-arrival',
+                    'is-semantic-continuity-in',
+                    'is-semantic-continuity-out',
+                );
+            }, 520);
+        } else {
+            page.classList.add(direction === 'out' ? 'is-semantic-arrival-out' : 'is-semantic-arrival-in');
+            windowRef.setTimeout(() => {
+                page.classList.remove('is-semantic-arrival-out', 'is-semantic-arrival-in');
+            }, 420);
+        }
     } else if (semanticArrival) {
         clearSemanticTransition(windowRef);
     }
