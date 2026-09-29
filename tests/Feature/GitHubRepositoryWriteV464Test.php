@@ -205,6 +205,81 @@ class GitHubRepositoryWriteV464Test extends TestCase
         $this->assertNull(data_get($repo->fresh()->metadata, 'github_last_write'));
     }
 
+    public function test_unchanged_file_is_rejected_before_branch_creation(): void
+    {
+        $user = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($user);
+        $repo = $this->repository($plan, $user);
+        $this->grantAllAccess($user);
+
+        $same = "same content\n";
+
+        Http::fake(function (HttpRequest $request) use ($same) {
+            $url = $request->url();
+            $method = $request->method();
+
+            if ($method === 'GET' && $url === 'https://api.github.com/repos/1kz-ma1/HINANEX/installation') {
+                return Http::response(['id' => 777], 200);
+            }
+
+            if ($method === 'POST' && $url === 'https://api.github.com/app/installations/777/access_tokens') {
+                return Http::response([
+                    'token' => 'installation-token',
+                    'permissions' => [
+                        'metadata' => 'read',
+                        'contents' => 'write',
+                        'pull_requests' => 'write',
+                    ],
+                ], 201);
+            }
+
+            if ($method === 'GET' && $url === 'https://api.github.com/repos/1kz-ma1/HINANEX') {
+                return Http::response([
+                    'full_name' => '1kz-ma1/HINANEX',
+                    'archived' => false,
+                    'default_branch' => 'main',
+                ], 200);
+            }
+
+            if ($method === 'GET' && $url === 'https://api.github.com/repos/1kz-ma1/HINANEX/git/ref/heads/main') {
+                return Http::response([
+                    'object' => ['sha' => str_repeat('a', 40)],
+                ], 200);
+            }
+
+            if ($method === 'GET' && str_starts_with($url, 'https://api.github.com/repos/1kz-ma1/HINANEX/contents/README.md')) {
+                return Http::response([
+                    'type' => 'file',
+                    'sha' => str_repeat('b', 40),
+                    'encoding' => 'base64',
+                    'content' => base64_encode($same),
+                ], 200);
+            }
+
+            return Http::response(['message' => 'Unexpected write'], 500);
+        });
+
+        $this->actingAs($user)
+            ->post(route('github_workflow.repository.change', $repo), [
+                'file_path' => 'README.md',
+                'file_content' => $same,
+                'commit_message' => 'update readme',
+                'pull_request_title' => 'README更新',
+            ])
+            ->assertRedirect(route('github_workflow.index', ['plan_id' => $plan->id]))
+            ->assertSessionHas(
+                'status',
+                '指定したファイル内容は現在のdefault branchと同じです。変更は作成していません。',
+            );
+
+        Http::assertSentCount(5);
+        Http::assertNotSent(fn (HttpRequest $request) =>
+            $request->method() === 'POST'
+            && str_contains($request->url(), '/git/refs')
+        );
+        $this->assertDatabaseCount('plan_artifacts', 1);
+    }
+
     public function test_github_workflow_files_are_rejected_before_any_remote_write(): void
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);
