@@ -13,6 +13,9 @@
     $reviewSummary = is_array(data_get($returnSnapshot, 'review_summary')) ? data_get($returnSnapshot, 'review_summary') : [];
     $ciState = (string) data_get($returnSnapshot, 'ci.state', 'unknown');
     $returnWarnings = array_values((array) data_get($returnSnapshot, 'warnings', []));
+    $decisionCandidate = is_array($githubDecisionCandidate ?? null) ? $githubDecisionCandidate : null;
+    $decisionRecommendation = (string) data_get($decisionCandidate, 'recommendation', '');
+    $decisionActions = array_values((array) data_get($decisionCandidate, 'allowed_actions', []));
 @endphp
 
 @if ($packet || $candidate || $handoffResult || $pullRequestArtifact)
@@ -137,6 +140,145 @@
                     </div>
                 @endif
 
+                @if ($decisionCandidate)
+                    <div class="mt-4 rounded-2xl border border-violet-300/15 bg-violet-300/[0.025] p-4" data-github-evidence-decision>
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <p class="text-[10px] font-black uppercase tracking-[.14em] text-violet-300">EVIDENCE DECISION</p>
+                                <h4 class="mt-1 text-sm font-black text-slate-100">{{ data_get($decisionCandidate, 'headline') }}</h4>
+                                <p class="mt-2 max-w-3xl text-[11px] leading-5 text-slate-500">{{ data_get($decisionCandidate, 'reason') }}</p>
+                            </div>
+                            <span class="badge badge-slate">
+                                {{
+                                    match ($decisionRecommendation) {
+                                        'complete' => '完了候補',
+                                        'continue' => '修正継続候補',
+                                        'wait' => '待機候補',
+                                        'manual_review' => '要判断',
+                                        'no_change' => '変更なし',
+                                        default => '確認',
+                                    }
+                                }}
+                            </span>
+                        </div>
+
+                        <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                            <div class="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+                                <p class="text-[10px] text-slate-600">TASK</p>
+                                <p class="mt-1 text-xs font-bold text-slate-200">{{ $task->title }}</p>
+                                <p class="mt-1 text-[10px] text-slate-500">{{ $task->status }} · {{ (int) $task->progress_percent }}%</p>
+                            </div>
+                            <div class="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+                                <p class="text-[10px] text-slate-600">MERGE</p>
+                                <p class="mt-1 text-xs font-bold {{ data_get($decisionCandidate, 'signals.merged') ? 'text-emerald-200' : 'text-slate-400' }}">
+                                    {{ data_get($decisionCandidate, 'signals.merged') ? '確認済み' : '未確認' }}
+                                </p>
+                            </div>
+                            <div class="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+                                <p class="text-[10px] text-slate-600">REVIEW SIGNAL</p>
+                                <p class="mt-1 text-xs font-bold {{ (int) data_get($decisionCandidate, 'signals.changes_requested_reviewers', 0) > 0 ? 'text-amber-200' : 'text-slate-300' }}">
+                                    承認 {{ (int) data_get($decisionCandidate, 'signals.approved_reviewers', 0) }}
+                                    · 修正 {{ (int) data_get($decisionCandidate, 'signals.changes_requested_reviewers', 0) }}
+                                </p>
+                            </div>
+                            <div class="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+                                <p class="text-[10px] text-slate-600">CI SIGNAL</p>
+                                <p class="mt-1 text-xs font-bold {{
+                                    data_get($decisionCandidate, 'signals.ci_state') === 'success'
+                                        ? 'text-emerald-200'
+                                        : (data_get($decisionCandidate, 'signals.ci_state') === 'failure'
+                                            ? 'text-rose-200'
+                                            : 'text-slate-400')
+                                }}">
+                                    {{
+                                        match ((string) data_get($decisionCandidate, 'signals.ci_state', 'unknown')) {
+                                            'success' => '成功',
+                                            'failure' => '失敗',
+                                            'pending' => '実行中',
+                                            default => '未取得',
+                                        }
+                                    }}
+                                </p>
+                            </div>
+                        </div>
+
+                        @if ($decisionRecommendation === 'manual_review')
+                            <div class="mt-4 rounded-xl border border-amber-300/15 bg-amber-300/[0.025] p-3 text-[11px] leading-5 text-amber-100/80">
+                                Mergeと否定的signalが同時にあります。Canoviaはどちらを優先するか決めません。完了として扱うか、追加対応を続けるかを確認してください。
+                            </div>
+                        @endif
+
+                        @if ($errors->has('github_decision'))
+                            <div class="mt-4 rounded-xl border border-rose-300/15 bg-rose-300/[0.025] p-3 text-[11px] leading-5 text-rose-100/80">
+                                {{ $errors->first('github_decision') }}
+                            </div>
+                        @endif
+
+                        @if ($decisionActions !== [])
+                            <div class="mt-4 grid gap-2 text-[11px] leading-5 text-slate-500">
+                                @if (in_array('complete', $decisionActions, true))
+                                    <div class="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+                                        <span class="font-bold text-slate-300">完了として反映</span>
+                                        <span class="block mt-1">status=done / progress=100% / remaining=0。GitHub mergeだけでは自動適用せず、このボタンで確認した場合だけ更新します。</span>
+                                    </div>
+                                @endif
+                                @if (in_array('continue', $decisionActions, true))
+                                    <div class="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+                                        <span class="font-bold text-slate-300">修正対応を続ける</span>
+                                        <span class="block mt-1">{{ data_get($decisionCandidate, 'proposed.continue.next_action_note') }}</span>
+                                        <span class="block mt-1 text-slate-600">現在の進捗率・残り時間は変更しません。</span>
+                                    </div>
+                                @endif
+                                @if (in_array('wait', $decisionActions, true))
+                                    <div class="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+                                        <span class="font-bold text-slate-300">次の確認Actionだけ更新</span>
+                                        <span class="block mt-1">{{ data_get($decisionCandidate, 'proposed.wait.next_action_note') }}</span>
+                                        <span class="block mt-1 text-slate-600">status / progress / remainingは変更しません。</span>
+                                    </div>
+                                @endif
+                            </div>
+
+                            <p class="mt-4 text-[11px] leading-5 text-slate-500">
+                                反映ボタンを押す直前にGitHubを再確認します。Review / Merge / CIやTask状態が変わっていれば反映を止め、最新状態を表示します。
+                            </p>
+
+                            @if ($githubEvidenceEntitled && $githubWriteConfigured)
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    @foreach ($decisionActions as $decisionAction)
+                                        <form method="POST" action="{{ route('plans.tasks.execution_orchestration.github.decision.apply', [$plan, $task, $pullRequestArtifact]) }}">
+                                            @csrf
+                                            <input type="hidden" name="action" value="{{ $decisionAction }}">
+                                            <input type="hidden" name="expected_snapshot_fingerprint" value="{{ data_get($decisionCandidate, 'snapshot_fingerprint') }}">
+                                            <input type="hidden" name="expected_task_fingerprint" value="{{ data_get($decisionCandidate, 'task_fingerprint') }}">
+                                            <button
+                                                type="submit"
+                                                class="{{ $decisionAction === $decisionRecommendation ? 'btn-primary' : 'btn-secondary' }}"
+                                            >
+                                                {{
+                                                    match ($decisionAction) {
+                                                        'complete' => 'このTaskを完了として反映',
+                                                        'continue' => '修正対応を続ける',
+                                                        'wait' => '次の確認Actionだけ更新',
+                                                        default => '反映',
+                                                    }
+                                                }}
+                                            </button>
+                                        </form>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="mt-3 rounded-xl border border-amber-300/10 bg-amber-300/[0.02] px-3 py-2 text-[11px] text-slate-500">
+                                    Taskへ反映する前にGitHubを再確認するため、Developer GitHub Evidence capabilityとCanovia GitHub App設定が必要です。
+                                </div>
+                            @endif
+                        @else
+                            <p class="mt-4 text-[11px] leading-5 text-slate-500">
+                                このTaskにはReturn Layerから反映する変更はありません。GitHub EvidenceはContextとして引き続き利用できます。
+                            </p>
+                        @endif
+                    </div>
+                @endif
+
                 <div class="mt-4 flex flex-wrap gap-2">
                     @if ($githubEvidenceEntitled && $githubWriteConfigured)
                         <form method="POST" action="{{ route('plans.tasks.execution_orchestration.github.return_sync', [$plan, $task, $pullRequestArtifact]) }}">
@@ -153,7 +295,7 @@
                         </div>
                     @endif
 
-                    <a href="{{ route('plans.review_assistant.show', $plan) }}" class="btn-secondary">EvidenceをPlan / Taskへ反映</a>
+                    <a href="{{ route('plans.review_assistant.show', $plan) }}" class="btn-secondary">計画全体を見直す</a>
                     <a href="{{ route('plans.execution_distribution.show', $plan) }}" class="btn-secondary">担当Contextを再評価</a>
                 </div>
 

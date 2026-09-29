@@ -863,6 +863,20 @@ GitHub Evidenceが追加・更新されるとExecution canonical Contextが変�
 
 詳細は `docs/V46.7_GITHUB_RETURN_EVIDENCE.md` を正とする。
 
+## V46.8 GitHub Evidence → Task Decision
+
+V46.8では、V46.7で取得したGitHub Review / Merge / CI EvidenceをTaskへ自動反映せず、deterministicなTask Decision Candidateへ変換する。Candidate生成にAIは使わず、current Task state・linked PR Artifact・latest github_return_snapshotだけを入力とする。
+
+TaskがactiveでPR mergeを確認し、否定的signalがない場合は「完了候補」を表示できるが、status=done / progress=100 / remaining=0への変更はHuman Confirmation後だけ行う。Changes RequestedまたはCI failureでは「修正継続候補」とし、status=doing / next_action_noteだけを更新してprogress_percent / remaining_minutesは変更しない。Approved / CI success / CI pendingなどmerge前のsignalではTask完了へ進めず、必要に応じて次の確認Actionだけを更新する。
+
+MergeとChanges Requested / CI failureが同時に存在する場合はmanual_reviewとし、Canoviaがsignalの優先順位を決めない。ユーザーがcomplete / continue / waitから明示選択する。Taskがdone / progress>=100またはcancelledの場合はReturn Layerから状態を上書きしない。
+
+反映直前にはGitHubを再取得し、表示時のsnapshot_fingerprintとcurrent Taskのtask_fingerprintを再検証する。確認中にGitHub remote stateまたはTask stateが変わっていた場合、最新Evidenceは保存するがTask mutationは停止し、最新状態から再確認させる。remote API callはDB transaction外、Task mutationだけをrow lock付きtransactionで行う。
+
+反映成功時は github_evidence_decision_applied をPlanActivityへ記録し、action / PR Artifact / Evidence IDs / before / afterをauditする。Task mutation後は既存context_fingerprintによりExecution Packet / Distributionがstaleになり、Canoviaは新しいPacketを自動生成しない。
+
+詳細は `docs/V46.8_GITHUB_EVIDENCE_DECISION.md` を正とする。
+
 ## V47 Execution Orchestration
 
 V47.0ではTaskを単独で推薦するだけでなく、Plan全体のDependency・Evidence・Goal Context・制約を保ったまま、選択Taskへ「今この主体が何をすべきか」を渡すExecution Orchestration Layerを追加する。
