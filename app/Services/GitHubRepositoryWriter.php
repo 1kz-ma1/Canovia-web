@@ -221,7 +221,7 @@ final class GitHubRepositoryWriter
         $warnings = [];
 
         $reviewsResponse = $client->get('/repos/'.$repoPath.'/pulls/'.$pullRequestNumber.'/reviews', [
-            'per_page' => 100,
+            'per_page' => 50,
         ]);
         if (! $reviewsResponse->successful()) {
             throw new RuntimeException('Pull Request reviewをGitHubから取得できませんでした。');
@@ -299,7 +299,7 @@ final class GitHubRepositoryWriter
 
         if ($headSha !== '' && in_array(($permissions['checks'] ?? null), ['read', 'write'], true)) {
             $checksResponse = $client->get('/repos/'.$repoPath.'/commits/'.$headSha.'/check-runs', [
-                'per_page' => 100,
+                'per_page' => 30,
             ]);
 
             if ($checksResponse->successful()) {
@@ -307,7 +307,7 @@ final class GitHubRepositoryWriter
                 $checks = is_array($checkData)
                     ? collect($checkData['check_runs'] ?? [])
                         ->filter(fn ($item) => is_array($item))
-                        ->take(100)
+                        ->take(30)
                         ->map(fn (array $item) => [
                             'id' => (int) ($item['id'] ?? 0),
                             'name' => mb_substr((string) ($item['name'] ?? ''), 0, 255),
@@ -338,7 +338,7 @@ final class GitHubRepositoryWriter
                         'total_count' => max(0, (int) ($statusData['total_count'] ?? 0)),
                         'statuses' => collect($statusData['statuses'] ?? [])
                             ->filter(fn ($item) => is_array($item))
-                            ->take(50)
+                            ->take(30)
                             ->map(fn (array $item) => [
                                 'id' => (int) ($item['id'] ?? 0),
                                 'state' => mb_substr((string) ($item['state'] ?? ''), 0, 50),
@@ -383,7 +383,7 @@ final class GitHubRepositoryWriter
                 'closed_at' => $this->dateValue($pull['closed_at'] ?? null),
                 'url' => $this->githubUrl($pull['html_url'] ?? null),
             ],
-            'reviews' => $reviews->take(100)->values()->all(),
+            'reviews' => $reviews->take(50)->values()->all(),
             'review_summary' => [
                 'approved_reviewers' => $approvedCount,
                 'changes_requested_reviewers' => $changesRequestedCount,
