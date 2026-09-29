@@ -41,10 +41,11 @@ final class ExecutionPacketService
         string $actorType,
         ?int $availableMinutes,
         ?array $executionRequest = null,
+        ?string $actorLabel = null,
     ): array {
         $result = $this->nativeAi->generateStructured(
             purpose: 'execution_orchestration',
-            prompt: $this->prompt($context, $actorType, $availableMinutes, $executionRequest),
+            prompt: $this->prompt($context, $actorType, $availableMinutes, $executionRequest, $actorLabel),
             schema: $this->schema(),
             schemaName: 'execution_packet_v1',
             plan: $plan,
@@ -71,9 +72,12 @@ final class ExecutionPacketService
         string $actorType,
         ?int $availableMinutes,
         ?array $executionRequest = null,
+        ?string $dispatchLabel = null,
     ): string
     {
         $actorLabel = self::ACTOR_TYPES[$actorType] ?? self::ACTOR_TYPES['human_ai'];
+        $dispatchLabel = mb_substr(trim((string) $dispatchLabel), 0, 80);
+        $dispatchLabel = $dispatchLabel !== '' ? $dispatchLabel : '未指定。選択Taskの役割を使う';
         $time = $availableMinutes !== null
             ? $availableMinutes.'分'
             : '明示なし。時間を推測して作業範囲を広げない';
@@ -94,6 +98,9 @@ final class ExecutionPacketService
 
 【実行主体】
 {$actorLabel}
+
+【担当ラベル】
+{$dispatchLabel}
 
 【今回使える時間】
 {$time}
