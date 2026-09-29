@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'github' => [
+        'api_url' => env('GITHUB_API_URL', 'https://api.github.com'),
+        // Optional service-owned read token for higher rate limits.
+        // Per-user private repository access is intentionally not implemented here.
+        'read_token' => env('GITHUB_READ_TOKEN'),
+    ],
+
 ];
