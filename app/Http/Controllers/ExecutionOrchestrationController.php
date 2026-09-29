@@ -5,11 +5,14 @@ namespace App\Http\Controllers;
 use App\Enums\FeatureKey;
 use App\Exceptions\NativeAiExecutionException;
 use App\Models\Plan;
+use App\Models\PlanArtifact;
 use App\Models\Task;
+use App\Services\ExecutionGitHubHandoffService;
 use App\Services\ExecutionOrchestrationContextService;
 use App\Services\ExecutionPacketService;
 use App\Services\ExecutionRequestHandoffService;
 use App\Services\FeatureAccessService;
+use App\Services\GitHubRepositoryWriter;
 use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -24,6 +27,8 @@ final class ExecutionOrchestrationController extends Controller
         ExecutionOrchestrationContextService $contexts,
         ExecutionPacketService $packets,
         FeatureAccessService $access,
+        ExecutionGitHubHandoffService $githubHandoff,
+        GitHubRepositoryWriter $githubWriter,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
 
@@ -43,6 +48,18 @@ final class ExecutionOrchestrationController extends Controller
             FeatureKey::AutomaticAiExecution,
             ['plan_id' => (int) $plan->id, 'task_id' => (int) $task->id],
         );
+        $githubWriteDecision = $access->resolveAccess(
+            $request->user(),
+            FeatureKey::DeveloperGithubWrite,
+            ['plan_id' => (int) $plan->id, 'task_id' => (int) $task->id],
+        );
+
+        $githubRepositories = PlanArtifact::query()
+            ->where('plan_id', $plan->id)
+            ->where('provider', 'github')
+            ->where('artifact_type', 'repository')
+            ->orderBy('title')
+            ->get();
 
         return view('execution_orchestration.show', [
             'plan' => $plan,
@@ -58,6 +75,13 @@ final class ExecutionOrchestrationController extends Controller
             'nativeAiEntitled' => $nativeDecision->allowed,
             'nativeAiConfigured' => $packets->nativeConfigured(),
             'actorTypes' => ExecutionPacketService::ACTOR_TYPES,
+            'githubRepositories' => $githubRepositories,
+            'githubChangeCandidate' => $githubHandoff->candidate($request, $plan, $task),
+            'githubHandoffResult' => is_array($state['github_handoff_result'] ?? null)
+                ? $state['github_handoff_result']
+                : null,
+            'githubWriteEntitled' => $githubWriteDecision->allowed,
+            'githubWriteConfigured' => $githubWriter->configured(),
         ]);
     }
 
