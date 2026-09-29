@@ -133,6 +133,12 @@ final class ExecutionOrchestrationController extends Controller
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
 
+        if ($this->executionClosed($task)) {
+            return redirect()
+                ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
+                ->with('status', '完了・中止済みTaskには新しいExecution Packetを生成しません。後続TaskのCoordinationを確認してください。');
+        }
+
         $validated = $request->validate([
             'generation_mode' => ['required', Rule::in(['native', 'external'])],
             'actor_type' => ['required', Rule::in(array_keys(ExecutionPacketService::ACTOR_TYPES))],
@@ -228,6 +234,14 @@ final class ExecutionOrchestrationController extends Controller
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
 
+        if ($this->executionClosed($task)) {
+            return redirect()
+                ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
+                ->withErrors([
+                    'packet_json' => '完了・中止済みTaskには新しいExecution Packetを読み込みません。後続TaskのCoordinationを確認してください。',
+                ]);
+        }
+
         $validated = $request->validate([
             'packet_json' => ['required', 'string', 'max:100000'],
         ]);
@@ -303,6 +317,12 @@ final class ExecutionOrchestrationController extends Controller
     ): void {
         abort_unless((int) $task->plan_id === (int) $plan->id, 404);
         $ownership->authorizeTask($request, $task);
+    }
+
+    private function executionClosed(Task $task): bool
+    {
+        return in_array($task->status, ['done', 'cancelled'], true)
+            || (int) $task->progress_percent >= 100;
     }
 
     private function sessionKey(Plan $plan, Task $task): string
