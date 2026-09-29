@@ -1002,3 +1002,20 @@ V47.5のSpatial ContinuityではL2とL3の同一 `plan:<id>` をidentity anchor�
 Desktop / MobileともPlan Contextをcenterとする。Mobileは既存pixel-balanced layoutでPlan=50/50、Primary Action=右上、Next Task=上、Goal=左上、Tool=右、Evidence=下、Inbox=左へ再配置する。通常L3ではPlanをcyan context emphasis、Primary Taskをviolet primary-action emphasisとして「場所」と「おすすめ」を視覚的にも分離し、Focus中はPlan center用emphasisを外す。
 
 詳細は `docs/V47.6_CONTEXT_CENTERED_EXECUTION_MAP.md` を正とする。
+
+
+## V47.7 Map Presentation Foundation
+
+V47.7では、Canovia Mapを将来のPrimary UIへ昇格させるため、Canvasと詳細表示の責務を分離する。Map Canvasは「どこに何の役割があるか」を伝え、具体的なTask名・Artifact名・summary・progress・meta・actionはDetail Paletteで確認する。
+
+`MapNodePresentation` をview-only grammarとして追加し、Plan / Domain / Intent / Collaboration Context等のContainerは固有名を表示する一方、Task / Evidence / Tool / Inbox / Collaboration Item等のLeafは「おすすめ」「次にやる」「前提」「Evidence」「レビュー待ち」「相手待ち」「外部確認」等の役割名を表示する。Navigation Graphが保持するcanonical label / eyebrow / subtitleは変更せず、Palette sourceと内部契約にはそのまま残す。
+
+Leaf Node本体はPalette-firstとし、direct destinationが存在しても即遷移ではなく詳細を先に開く。ContainerのSemantic Zoom body entry、Personalized Satellite、small direct-open controlは維持する。ユーザー向けの `Context Inspector` 表記は「詳細」に変更し、内部data attribute / JS contractは互換性のため維持する。
+
+Collaboration L2で該当Artifact / Taskが0件の場合、genericな「共同Planを確認」NodeからClassic一覧へ抜けず、既存Shared Planを最大6件そのままMapへ投影する。各Shared Planは `plan:<id>` identityを使ってcollaboration L3へSemantic Zoomするため、V47.5/V47.6のspatial continuityを継続できる。Shared Plan自体が0件の場合のみPlan作成を次の選択肢として出し、Space Stationは既存Spatial Dockを利用する。
+
+Classic routeは削除しないが、Map上では「Classic Plans」ではなく「一覧で見る」として補助Viewへ降格する。長期的な完成条件は主要操作を `Map -> Detail Palette -> Action` で完結させることであり、ClassicはData/List Viewとして残す。
+
+V47.7のPresentation Grammarは、今後のMap Data Layers、スマホのホーム画面のような複数Map Page / Preset、RoadmapのSpatial Projectionに共通利用する。Roadmap Mapでは並行Task・dependency edge・Task group・milestone・blocked / ready stateを空間的に表現する想定だが、V47.7ではRoadmap本体、Layer設定永続化、Map Page永続化、drag & drop position保存は実装しない。
+
+詳細は `docs/V47.7_MAP_PRESENTATION_FOUNDATION.md` を正とする。

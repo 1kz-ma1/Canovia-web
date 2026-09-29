@@ -169,15 +169,15 @@ class CollaborationExternalToolsV445Test extends TestCase
         ]));
         $firstGraph = $first->viewData('graph');
 
-        $this->assertCount(3, $firstGraph['nodes']);
+        $this->assertCount(2, $firstGraph['nodes']);
         $this->assertSame('collaboration:context:my_action', $firstGraph['center_node_id']);
         $this->assertTrue($firstGraph['nodes']->contains(
-            fn (array $node) => ($node['id'] ?? null) === 'collaboration:empty:plans'
-                && data_get($node, 'direct_navigation.kind') === 'direct'
+            fn (array $node) => ($node['id'] ?? null) === 'plan:'.$plan->id
+                && data_get($node, 'direct_navigation.kind') === 'zoom-in'
+                && str_contains((string) data_get($node, 'direct_navigation.url'), 'level=l3')
         ));
-        $this->assertTrue($firstGraph['nodes']->contains(
-            fn (array $node) => ($node['id'] ?? null) === 'collaboration:empty:station'
-                && data_get($node, 'direct_navigation.kind') === 'direct'
+        $this->assertFalse($firstGraph['nodes']->contains(
+            fn (array $node) => str_starts_with((string) ($node['id'] ?? ''), 'collaboration:empty:')
         ));
 
         $artifact = $this->artifact(

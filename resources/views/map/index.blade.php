@@ -77,7 +77,7 @@
                         </p>
                     @elseif ($isExecutionLevel)
                         <p class="canovia-map-description">
-                            選んだPlanを中央に保ち、今やるTask・次のTask・Tool・Evidenceを周囲へ展開します。
+                            選んだPlanを中央に、次に進めることや記録を周囲へまとめます。マスを選ぶと詳しい内容を確認できます。
                         </p>
                     @endif
                 </div>
@@ -105,8 +105,8 @@
                         </p>
                     @else
                         <p>
-                            中央は現在のPlan Contextです。強調されたPrimary Actionを押すとTask中心のExecution Focusへ移り、
-                            Future / Past / Input / ActionをそのTaskの周囲で確認できます。Space Stationは右下の固定Dockから開けます。
+                            中央は今見ているPlanです。「おすすめ」などのマスを押すと詳細が開きます。
+                            必要な操作は詳細から進められ、Space Stationは右下からいつでも開けます。
                         </p>
                     @endif
                 </details>
@@ -172,7 +172,7 @@
                     @endif
                     <button type="button" class="btn-secondary hidden" data-map-focus-reset>全体を見る</button>
                     <a href="{{ $isReflectionMode ? route('timeline.index') : route('my_plans.index') }}" class="btn-secondary">
-                        {{ $isReflectionMode ? 'Timeline' : 'Classic Plans' }}
+                        {{ $isReflectionMode ? 'Timeline' : '一覧で見る' }}
                     </a>
                 @endif
             </div>
@@ -251,6 +251,12 @@
                                 default => '',
                             };
                             $visualKind = \App\Support\MapNodeVisualGrammar::kind($node);
+                            $presentation = \App\Support\MapNodePresentation::for($node);
+                            $presentationKind = (string) ($presentation['kind'] ?? 'container');
+                            $presentationLabel = (string) ($presentation['label'] ?? $node['label']);
+                            $presentationEyebrow = $presentation['eyebrow'] ?? null;
+                            $presentationSubtitle = $presentation['subtitle'] ?? null;
+                            $isLeafPresentation = $presentationKind === 'leaf';
                             $hasFocusFallback = filled($node['available_action'] ?? null);
                             $directNavigation = $node['direct_navigation'] ?? null;
                             $directNavigationKind = (string) data_get($directNavigation, 'kind', 'classic');
@@ -260,6 +266,7 @@
                             $isDirectNavigation = $directNavigationKind === 'direct';
                             $zoomDirection = $directNavigationKind === 'zoom-out' ? 'out' : 'in';
                             $usesDirectBody = filled(data_get($directNavigation, 'url'))
+                                && (! $isLeafPresentation || $isSatelliteNavigation)
                                 && (($isZoomNavigation && $zoomDirection === 'in')
                                     || $isSatelliteNavigation
                                     || $isExternalNavigation
@@ -280,6 +287,7 @@
                             data-map-is-primary="{{ $isPrimary ? '1' : '0' }}"
                             data-map-is-center="{{ $isCenter ? '1' : '0' }}"
                             data-map-node-entry-mode="{{ $nodeEntryMode }}"
+                            data-map-presentation-kind="{{ $presentationKind }}"
                             data-map-x="{{ data_get($node, 'position.x', 50) }}"
                             data-map-y="{{ data_get($node, 'position.y', 50) }}"
                             @if ($isPrimary) aria-current="true" @endif
@@ -321,17 +329,12 @@
                                     data-map-node-glyph-kind="{{ $visualKind }}"
                                     aria-hidden="true"
                                 ><span class="canovia-map-node-glyph-core"></span></span>
-                                <span class="canovia-map-node-eyebrow">{{ $node['eyebrow'] }}</span>
-                                <span class="canovia-map-node-label">{{ $node['label'] }}</span>
-                                @if (filled($node['subtitle'] ?? null))
-                                    <span class="canovia-map-node-subtitle">{{ $node['subtitle'] }}</span>
+                                @if (filled($presentationEyebrow))
+                                    <span class="canovia-map-node-eyebrow">{{ $presentationEyebrow }}</span>
                                 @endif
-                                @if ($usesDirectBody)
-                                    <span class="canovia-map-node-action">
-                                        {{ ($isZoomNavigation && $zoomDirection === 'in') ? '1段深く見る →' : '開く →' }}
-                                    </span>
-                                @elseif ($hasFocusFallback)
-                                    <span class="canovia-map-node-action">詳細を見る →</span>
+                                <span class="canovia-map-node-label">{{ $presentationLabel }}</span>
+                                @if (filled($presentationSubtitle))
+                                    <span class="canovia-map-node-subtitle">{{ $presentationSubtitle }}</span>
                                 @endif
                             @if ($usesDirectBody || $hasFocusFallback)
                                 </a>
@@ -401,13 +404,13 @@
                 data-map-context-surface
                 aria-hidden="true"
                 aria-live="polite"
-                aria-label="選択中のContext"
+                aria-label="選択中のマスの詳細"
             >
                 <div class="canovia-map-context-card">
                     <div class="canovia-map-context-header">
                         <div>
-                            <p class="canovia-map-kicker">Context Inspector</p>
-                            <p class="canovia-map-context-caption">選択中Nodeの詳細確認と補助操作を表示します</p>
+                            <p class="canovia-map-kicker">詳細</p>
+                            <p class="canovia-map-context-caption">選んだマスの内容と操作を確認できます</p>
                         </div>
                         <div class="canovia-map-context-tools">
                             <button
@@ -415,9 +418,9 @@
                                 class="canovia-map-context-expand"
                                 data-map-context-expand
                                 aria-expanded="false"
-                                aria-label="Context Surfaceの表示サイズを切り替える"
+                                aria-label="詳細パレットの表示サイズを切り替える"
                             ><span data-map-context-expand-label>広げる</span></button>
-                            <button type="button" class="canovia-map-context-close" data-map-context-close aria-label="Focusを閉じる">×</button>
+                            <button type="button" class="canovia-map-context-close" data-map-context-close aria-label="詳細を閉じる">×</button>
                         </div>
                     </div>
                     <div data-map-context-content></div>
@@ -429,11 +432,15 @@
             @foreach ($nodes as $node)
                 @php
                     $surface = $node['classic_surface'] ?? [];
+                    $surfacePresentation = \App\Support\MapNodePresentation::for($node);
+                    $surfaceKind = ($surfacePresentation['kind'] ?? null) === 'leaf'
+                        ? ($surfacePresentation['label'] ?? '詳細')
+                        : ($surface['kind'] ?? $node['type']);
                 @endphp
                 @if (! empty($surface))
                     <template data-map-surface-template="{{ $node['id'] }}">
                         <section class="canovia-map-classic-content" data-map-classic-content="{{ $node['id'] }}">
-                            <p class="canovia-map-classic-kind">{{ $surface['kind'] ?? $node['type'] }}</p>
+                            <p class="canovia-map-classic-kind">{{ $surfaceKind }}</p>
                             <h2 class="canovia-map-classic-title">{{ $surface['title'] ?? $node['label'] }}</h2>
                             @if (filled($surface['summary'] ?? null))
                                 <p class="canovia-map-classic-summary">{{ $surface['summary'] }}</p>
@@ -520,7 +527,7 @@
             @elseif ($isHierarchyLevel)
                 この階層のNode位置は現在の構造から決定的に投影し、保存しません。Space Station DockはLevelを跨いで同じ位置に残ります。
             @else
-                Execution中も右下のSpace Stationから入力・相談へ戻れます。Classic Surfaceで操作した後は、意味のある状態差分だけ静かに再投影します。
+                Execution中も右下のSpace Stationから入力・相談へ戻れます。詳細から操作した後は、意味のある状態差分だけ静かに再投影します。
             @endif
         </p>
     </section>

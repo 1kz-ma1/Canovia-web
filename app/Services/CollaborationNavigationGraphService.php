@@ -255,64 +255,83 @@ final class CollaborationNavigationGraphService
         }
 
         if ($nodes->count() === 1) {
-            $sharedPlansUrl = route('my_plans.index');
-            $spaceStationUrl = route('map.index', [
-                'level' => MapLevel::Plan->value,
-                'intent' => 'collaboration',
-                'collab_context' => $key,
-            ]).'#dock=space-station';
+            $sharedPlans = collect($context['plans'] ?? [])
+                ->filter(fn ($plan) => $plan instanceof Plan)
+                ->take(6)
+                ->values();
 
-            $nodes->push($this->node(
-                id: 'collaboration:empty:plans',
-                type: 'collaboration_item',
-                eyebrow: 'NEXT OPTION',
-                label: '共同Planを確認',
-                subtitle: '該当Itemがまだないため、Shared Planの状態を確認',
-                action: $sharedPlansUrl,
-                attentionRole: 'hierarchy-child',
-                navigationKind: 'direct',
-                classicSurface: $this->surface(
-                    'Collaboration Action',
-                    '共同Planを確認',
-                    'このContextに該当するItemはまだありません。Shared Plan側の担当・Artifact・状態を確認できます。',
-                    [
-                        $this->action('共同Plan一覧を開く', $sharedPlansUrl, true, 'direct'),
-                    ],
-                    ['Empty-state action'],
-                ),
-            ));
-            $nodes->push($this->node(
-                id: 'collaboration:empty:station',
-                type: 'collaboration_item',
-                eyebrow: 'NEXT OPTION',
-                label: 'Space Stationで整理',
-                subtitle: '状況を入力・相談して次の接続先を整理',
-                action: $spaceStationUrl,
-                attentionRole: 'hierarchy-child',
-                navigationKind: 'direct',
-                classicSurface: $this->surface(
-                    'Collaboration Action',
-                    'Space Stationで整理',
-                    '対象がまだない、または次の接続先が不明なときは、Space Stationへ状況を持ち込んで整理できます。',
-                    [
-                        $this->action('Space Stationを開く', $spaceStationUrl, true, 'direct'),
-                    ],
-                    ['Empty-state action'],
-                ),
-            ));
+            foreach ($sharedPlans as $plan) {
+                $planNodeId = 'plan:'.$plan->id;
+                $executionUrl = route('map.index', [
+                    'level' => MapLevel::Execution->value,
+                    'intent' => 'collaboration',
+                    'collab_context' => $key,
+                    'plan' => $plan->id,
+                ]);
 
-            $edges->push($this->edge(
-                $centerId,
-                'collaboration:empty:plans',
-                'offers_empty_state_action',
-                'hierarchy-child',
-            ));
-            $edges->push($this->edge(
-                $centerId,
-                'collaboration:empty:station',
-                'offers_empty_state_action',
-                'hierarchy-child',
-            ));
+                $nodes->push($this->node(
+                    id: $planNodeId,
+                    type: 'plan',
+                    entityId: (int) $plan->id,
+                    eyebrow: 'SHARED PLAN',
+                    label: (string) $plan->title,
+                    subtitle: 'この共同ContextからPlanのExecutionへ',
+                    action: $executionUrl,
+                    attentionRole: 'hierarchy-child',
+                    navigationKind: 'zoom-in',
+                    classicSurface: $this->surface(
+                        'Shared Plan',
+                        (string) $plan->title,
+                        'このContextに該当するItemはまだありません。共同Plan自体をMap上に残し、必要ならそのExecution Contextへ潜れます。',
+                        [
+                            $this->action('Executionへ入る', $executionUrl, true, 'zoom-in'),
+                            $this->action('Planを開く', route('plans.show', $plan->id)),
+                        ],
+                        array_values(array_filter([
+                            'Shared Plan',
+                            filled($plan->category) ? (string) $plan->category : null,
+                        ])),
+                    ),
+                ));
+
+                $edges->push($this->edge(
+                    $centerId,
+                    $planNodeId,
+                    'offers_shared_plan_context',
+                    'hierarchy-child',
+                ));
+            }
+
+            if ($sharedPlans->isEmpty()) {
+                $createPlanUrl = route('plans.create');
+
+                $nodes->push($this->node(
+                    id: 'collaboration:empty:create-plan',
+                    type: 'collaboration_item',
+                    eyebrow: 'NEXT OPTION',
+                    label: '共同Planを作る',
+                    subtitle: '共同作業の起点になるPlanを作成',
+                    action: $createPlanUrl,
+                    attentionRole: 'hierarchy-child',
+                    navigationKind: 'direct',
+                    classicSurface: $this->surface(
+                        'Collaboration Action',
+                        '共同Planを作る',
+                        '共同Contextに置くPlanがまだありません。Planを作成すると、このMapから共同作業へ辿れるようになります。',
+                        [
+                            $this->action('Planを作る', $createPlanUrl, true, 'direct'),
+                        ],
+                        ['Empty-state action'],
+                    ),
+                ));
+
+                $edges->push($this->edge(
+                    $centerId,
+                    'collaboration:empty:create-plan',
+                    'offers_empty_state_action',
+                    'hierarchy-child',
+                ));
+            }
         }
 
         return [
