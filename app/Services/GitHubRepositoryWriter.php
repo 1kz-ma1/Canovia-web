@@ -892,6 +892,8 @@ final class GitHubRepositoryWriter
         $failureConclusions = ['failure', 'timed_out', 'cancelled', 'action_required', 'startup_failure', 'stale'];
         $pendingStatuses = ['queued', 'in_progress', 'requested', 'waiting', 'pending'];
 
+        $explicitSuccess = false;
+
         foreach (array_merge($actionsRuns, $checks) as $item) {
             $status = strtolower((string) ($item['status'] ?? ''));
             $conclusion = strtolower((string) ($item['conclusion'] ?? ''));
@@ -903,6 +905,12 @@ final class GitHubRepositoryWriter
             if (in_array($status, $pendingStatuses, true) || $conclusion === '') {
                 return 'pending';
             }
+
+            if ($conclusion === 'success') {
+                $explicitSuccess = true;
+            } elseif (! in_array($conclusion, ['neutral', 'skipped'], true)) {
+                return 'unknown';
+            }
         }
 
         $combinedState = strtolower((string) ($combinedStatus['state'] ?? ''));
@@ -912,25 +920,16 @@ final class GitHubRepositoryWriter
         if ($combinedState === 'pending') {
             return 'pending';
         }
+        if ($combinedState === 'success') {
+            $explicitSuccess = true;
+        }
 
         $hasSignals = $actionsRuns !== [] || $checks !== [] || $combinedStatus !== null;
         if (! $hasSignals) {
             return 'unknown';
         }
 
-        if ($combinedState === 'success') {
-            return 'success';
-        }
-
-        $allowedConclusions = ['success', 'neutral', 'skipped'];
-        foreach (array_merge($actionsRuns, $checks) as $item) {
-            $conclusion = strtolower((string) ($item['conclusion'] ?? ''));
-            if ($conclusion !== '' && ! in_array($conclusion, $allowedConclusions, true)) {
-                return 'unknown';
-            }
-        }
-
-        return 'success';
+        return $explicitSuccess ? 'success' : 'unknown';
     }
 
     private function dateValue(mixed $value): ?string
