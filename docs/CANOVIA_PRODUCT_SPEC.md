@@ -828,3 +828,18 @@ External AI pathは担当ごとにContext込みPromptを生成する。Automatic
 V47.1のHuman-confirmed Execution Requestが対象Task sessionに存在する場合、Distribution生成でもそのRequestを引き継ぐ。Distribution自体はTask / Plan / Dependency / progressを変更せず、新しいExecution Requestも自動生成しない。
 
 詳細は `docs/V47.2_EXECUTION_DISTRIBUTION.md` を正とする。
+
+
+## V47.3 Map Semantic Interaction
+
+V47.3では、V43.5で導入した「Node本体 = Context / 小chip = Navigation」という操作をContainer Nodeに限って改める。L0 Intent、L1 Domain / Collaboration Purpose、L2 Plan / internal Collaboration Itemなど、`navigation_kind=zoom-in` を持つNodeはNode本体のクリックをSemantic Zoomとして扱い、クリックした意味Contextを次階層の中心として、より具体的なNode / Actionを周囲へ展開する。右下のNavigation chipは明示的affordanceとして残すが、次階層へ進むための必須Gateにはしない。
+
+Execution Task / Evidence等のLeaf NodeはFocus-firstを維持し、Context Surfaceは階層Navigationの前提画面ではなくContext Inspectorとして詳細確認・補助操作を担う。`direct` / `satellite` / `external` の明示Navigationを持つNodeはNode本体から直接destinationへ進める。external Toolは従来どおり別tabで開き、外部状態や完了を推測しない。
+
+Pan / Pinch後のghost click抑止は非interactiveなMap Scene backgroundだけへ限定し、Node・Map controls・Spatial Dock・form controlsは抑止時間中でも即時操作可能とする。Focus中に別Nodeへ切り替える場合は同一Focus history entryをreplaceし、一度全体表示へ戻す操作や不要なBack履歴増加を要求しない。
+
+共同PurposeのL2 Projectionで該当Itemが0件の場合は、center Nodeだけのdead-endを作らず、「共同Planを確認」「Space Stationで整理」というProjection-onlyのNEXT OPTION Nodeを周囲へ出す。Space Stationは現在の共同L2 structural pathを維持したままSpatial Dockとして開き、これらのNodeはDB Entityやcanonical mutationを追加しない。
+
+既存のNavigation Graph / Attention State分離、Living Reevaluation、Projection Key、Map -> Map Instant Navigation、semantic departure / arrival、Space Station Spatial Dock、L3 Execution semanticsは維持する。ReflectionのDomain -> Plan hierarchy自体はV47.3では変更せず、今回の対象はInteraction Contractの整理である。Map position永続化、Reflection専用Graph、AI layout、課金・billing変更は行わない。
+
+詳細は `docs/V47.3_MAP_SEMANTIC_INTERACTION.md` を正とする。

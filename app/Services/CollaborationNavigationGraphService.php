@@ -254,6 +254,67 @@ final class CollaborationNavigationGraphService
             ));
         }
 
+        if ($nodes->count() === 1) {
+            $sharedPlansUrl = route('my_plans.index');
+            $spaceStationUrl = route('map.index', [
+                'level' => MapLevel::Plan->value,
+                'intent' => 'collaboration',
+                'collab_context' => $key,
+            ]).'#dock=space-station';
+
+            $nodes->push($this->node(
+                id: 'collaboration:empty:plans',
+                type: 'collaboration_item',
+                eyebrow: 'NEXT OPTION',
+                label: '共同Planを確認',
+                subtitle: '該当Itemがまだないため、Shared Planの状態を確認',
+                action: $sharedPlansUrl,
+                attentionRole: 'hierarchy-child',
+                navigationKind: 'direct',
+                classicSurface: $this->surface(
+                    'Collaboration Action',
+                    '共同Planを確認',
+                    'このContextに該当するItemはまだありません。Shared Plan側の担当・Artifact・状態を確認できます。',
+                    [
+                        $this->action('共同Plan一覧を開く', $sharedPlansUrl, true, 'direct'),
+                    ],
+                    ['Empty-state action'],
+                ),
+            ));
+            $nodes->push($this->node(
+                id: 'collaboration:empty:station',
+                type: 'collaboration_item',
+                eyebrow: 'NEXT OPTION',
+                label: 'Space Stationで整理',
+                subtitle: '状況を入力・相談して次の接続先を整理',
+                action: $spaceStationUrl,
+                attentionRole: 'hierarchy-child',
+                navigationKind: 'direct',
+                classicSurface: $this->surface(
+                    'Collaboration Action',
+                    'Space Stationで整理',
+                    '対象がまだない、または次の接続先が不明なときは、Space Stationへ状況を持ち込んで整理できます。',
+                    [
+                        $this->action('Space Stationを開く', $spaceStationUrl, true, 'direct'),
+                    ],
+                    ['Empty-state action'],
+                ),
+            ));
+
+            $edges->push($this->edge(
+                $centerId,
+                'collaboration:empty:plans',
+                'offers_empty_state_action',
+                'hierarchy-child',
+            ));
+            $edges->push($this->edge(
+                $centerId,
+                'collaboration:empty:station',
+                'offers_empty_state_action',
+                'hierarchy-child',
+            ));
+        }
+
         return [
             'nodes' => $nodes->values(),
             'edges' => $edges->values(),

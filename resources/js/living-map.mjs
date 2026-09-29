@@ -952,11 +952,19 @@ export function mountLivingGoalMap({
         renderSurface(nodeId);
 
         if (historyMode === 'push' && windowRef.location.hash !== focusHash(nodeId)) {
-            focusHistoryDepth += 1;
-            windowRef.history.pushState({
-                canoviaMapFocus: nodeId,
-                canoviaMapFocusDepth: focusHistoryDepth,
-            }, '', focusHash(nodeId));
+            if (hadFocus && windowRef.history.state?.canoviaMapFocus) {
+                windowRef.history.replaceState({
+                    ...(windowRef.history.state || {}),
+                    canoviaMapFocus: nodeId,
+                    canoviaMapFocusDepth: focusHistoryDepth,
+                }, '', focusHash(nodeId));
+            } else {
+                focusHistoryDepth += 1;
+                windowRef.history.pushState({
+                    canoviaMapFocus: nodeId,
+                    canoviaMapFocusDepth: focusHistoryDepth,
+                }, '', focusHash(nodeId));
+            }
         }
 
         return true;
@@ -1397,9 +1405,15 @@ export function mountLivingGoalMap({
             return;
         }
 
+        const sceneTarget = event.target.closest?.('[data-map-scene]');
+        const interactiveSceneTarget = event.target.closest?.(
+            '[data-map-node], [data-map-gesture-controls], [data-map-spatial-dock], a, button, input, select, textarea'
+        );
+
         if (
             Date.now() < suppressMapClickUntil
-            && event.target.closest?.('[data-map-scene]')
+            && sceneTarget
+            && !interactiveSceneTarget
         ) {
             event.preventDefault();
             event.stopPropagation();
