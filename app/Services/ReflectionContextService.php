@@ -171,7 +171,7 @@ final class ReflectionContextService
             'plan_title' => (string) $plan->title,
             'occurred_at' => $date,
             'sort_key' => $log->created_at?->timestamp
-                ?? $log->worked_on?->startOfDay()->timestamp
+                ?? $log->worked_on?->copy()->startOfDay()->timestamp
                 ?? 0,
             'url' => route('plans.show', $plan),
         ];
