@@ -93,7 +93,7 @@ function readState(storage, available, defaults) {
     try {
         return parseMapDataLayerState(
             storage?.getItem?.(MAP_DATA_LAYER_STORAGE_KEY) ?? null,
-            available,
+            MAP_DATA_LAYER_KEYS,
             defaults,
         );
     } catch (_) {
@@ -129,15 +129,17 @@ export function applyMapDataLayerState(page, control, state, available) {
         input.checked = enabled.has(layer);
     });
 
+    const activeCount = available.filter((layer) => enabled.has(layer)).length;
+
     const count = control?.querySelector?.('[data-map-data-layer-count]');
     if (count) {
-        count.textContent = enabled.size > 0 ? String(enabled.size) : '';
-        count.hidden = enabled.size === 0;
+        count.textContent = activeCount > 0 ? String(activeCount) : '';
+        count.hidden = activeCount === 0;
     }
 
     const summary = control?.querySelector?.('[data-map-data-layer-summary]');
     if (summary) {
-        const suffix = enabled.size > 0 ? ' · ' + enabled.size + '件ON' : ' · 追加表示なし';
+        const suffix = activeCount > 0 ? ' · ' + activeCount + '件ON' : ' · 追加表示なし';
         summary.setAttribute('aria-label', '表示情報' + suffix);
     }
 }
@@ -159,7 +161,10 @@ export function mountMapDataLayers({
 
     control.dataset.mapDataLayersInitialized = '1';
 
-    let state = readState(windowRef.localStorage, available, defaults);
+    // Persist the complete preference set, not only layers available on the
+    // current depth. Otherwise moving L3 -> L2 and toggling one layer would
+    // silently erase L3-only preferences such as progress/status.
+    let state = readState(windowRef.localStorage, MAP_DATA_LAYER_KEYS, defaults);
     applyMapDataLayerState(page, control, state, available);
 
     const onChange = (event) => {
