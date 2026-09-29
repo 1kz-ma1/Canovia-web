@@ -98,13 +98,39 @@ final class MapDataLayerProjectionService
             $available->push('dependency');
         }
 
-        $projection['nodes'] = $decoratedNodes;
-        $projection['data_layers'] = [
+        $dataLayers = [
             'schema_version' => self::SCHEMA_VERSION,
             'available' => $available->all(),
             // Clean Map first: users explicitly opt into extra data.
             'default_enabled' => [],
         ];
+
+        $projection['nodes'] = $decoratedNodes;
+        $projection['data_layers'] = $dataLayers;
+
+        // Overlay values are part of the rendered projection. Include their
+        // read-only signature so Living Reevaluation notices an evidence,
+        // progress, status, dependency, deadline or priority change even when
+        // the underlying navigation topology did not change.
+        $overlaySignature = $decoratedNodes
+            ->map(fn ($node) => is_array($node)
+                ? [
+                    'id' => (string) ($node['id'] ?? ''),
+                    'overlay' => (array) ($node['overlay'] ?? []),
+                ]
+                : null)
+            ->filter()
+            ->values()
+            ->all();
+
+        $projection['projection_key'] = hash(
+            'sha256',
+            (string) json_encode([
+                'base' => (string) ($projection['projection_key'] ?? ''),
+                'data_layers' => $dataLayers,
+                'overlays' => $overlaySignature,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        );
 
         return $projection;
     }
