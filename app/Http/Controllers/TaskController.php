@@ -6,12 +6,18 @@ use App\Models\Plan;
 use App\Models\Task;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanActivityService;
+use App\Services\TaskDependencyService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class TaskController extends Controller
 {
-    public function store(Request $request, Plan $plan, PlanActivityService $activity)
+    public function store(
+        Request $request,
+        Plan $plan,
+        PlanActivityService $activity,
+        TaskDependencyService $dependencies,
+    )
     {
         $this->authorizePlanOwner($plan);
 
@@ -30,6 +36,11 @@ class TaskController extends Controller
                 'integer',
                 Rule::exists('tasks', 'id')->where(fn ($query) => $query->where('plan_id', $plan->id)),
             ],
+            'dependency_task_ids' => ['nullable', 'array', 'max:20'],
+            'dependency_task_ids.*' => [
+                'integer',
+                Rule::exists('tasks', 'id')->where(fn ($query) => $query->where('plan_id', $plan->id)),
+            ],
         ]);
 
         $task = Task::create([
@@ -43,9 +54,13 @@ class TaskController extends Controller
             'priority' => $validated['priority'],
             'activation_cost' => $validated['activation_cost'],
             'next_action_note' => $validated['next_action_note'] ?? null,
-            'depends_on_task_id' => $validated['depends_on_task_id'] ?? null,
+            'depends_on_task_id' => null,
             'sort_order' => 0,
         ]);
+
+        $dependencyIds = $validated['dependency_task_ids']
+            ?? (isset($validated['depends_on_task_id']) ? [(int) $validated['depends_on_task_id']] : []);
+        $dependencies->sync($task, $dependencyIds);
 
         $activity->record($plan, $request->user(), 'task_created', 'task', (int) $task->id, [
             'task_title' => $task->title,
@@ -63,7 +78,12 @@ class TaskController extends Controller
         return view('tasks.edit', compact('task'));
     }
 
-    public function update(Request $request, Task $task, PlanActivityService $activity)
+    public function update(
+        Request $request,
+        Task $task,
+        PlanActivityService $activity,
+        TaskDependencyService $dependencies,
+    )
     {
         $task->load('plan');
 
@@ -81,6 +101,13 @@ class TaskController extends Controller
             'next_action_note' => ['nullable', 'string', 'max:1000'],
             'depends_on_task_id' => [
                 'nullable',
+                'integer',
+                Rule::exists('tasks', 'id')
+                    ->where(fn ($query) => $query->where('plan_id', $task->plan_id)),
+                Rule::notIn([$task->id]),
+            ],
+            'dependency_task_ids' => ['nullable', 'array', 'max:20'],
+            'dependency_task_ids.*' => [
                 'integer',
                 Rule::exists('tasks', 'id')
                     ->where(fn ($query) => $query->where('plan_id', $task->plan_id)),
@@ -107,8 +134,11 @@ class TaskController extends Controller
             'priority' => $validated['priority'],
             'activation_cost' => $validated['activation_cost'],
             'next_action_note' => $validated['next_action_note'] ?? null,
-            'depends_on_task_id' => $validated['depends_on_task_id'] ?? null,
         ]);
+
+        $dependencyIds = $validated['dependency_task_ids']
+            ?? (isset($validated['depends_on_task_id']) ? [(int) $validated['depends_on_task_id']] : []);
+        $dependencies->sync($task, $dependencyIds);
 
         $task->resources()->sync(collect($validated['resource_ids'] ?? [])
             ->map(fn ($id) => (int) $id)
