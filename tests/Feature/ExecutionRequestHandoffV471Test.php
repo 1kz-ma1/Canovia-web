@@ -100,8 +100,8 @@ class ExecutionRequestHandoffV471Test extends TestCase
                 'plan_id' => $plan->id,
                 'task_id' => $task->id,
                 'execution_instruction' => '依存関係を壊さずテスト基盤を先に作りたい',
-                'execution_actor_type' => 'ai',
-                'execution_available_minutes' => 45,
+                'execution_actor_type' => 'human_ai',
+                'execution_available_minutes' => 30,
             ])
             ->assertSessionHasNoErrors();
 
@@ -120,7 +120,56 @@ class ExecutionRequestHandoffV471Test extends TestCase
         $this->assertStringContainsString('CONFIRMED EXECUTION REQUEST', $prompt);
         $this->assertStringContainsString('"flow": "execution_request"', $prompt);
         $this->assertStringContainsString('依存関係を壊さずテスト基盤を先に作りたい', $prompt);
+        $this->assertStringContainsString('"actor_type": "ai"', $prompt);
+        $this->assertStringContainsString('"available_minutes": 45', $prompt);
         $this->assertStringContainsString('Dependency / protected_scope / confirmed facts', $prompt);
+        $this->assertSame('ai', data_get($state, 'execution_request.actor_type'));
+        $this->assertSame(45, data_get($state, 'execution_request.available_minutes'));
+    }
+
+    public function test_reset_discards_packet_projection_but_keeps_confirmed_request(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $item = $this->inboxItem($user, '30分で安全に進められる範囲を整理したい');
+
+        $this->actingAs($user)
+            ->post(route('inbox.route', $item), [
+                'destination' => 'execution_request',
+                'plan_id' => $plan->id,
+                'task_id' => $task->id,
+                'execution_instruction' => '30分で安全に進められる範囲を整理したい',
+                'execution_actor_type' => 'human_ai',
+                'execution_available_minutes' => 30,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($user)
+            ->post(route('plans.tasks.execution_orchestration.prepare', [$plan, $task]), [
+                'generation_mode' => 'external',
+                'actor_type' => 'human_ai',
+                'available_minutes' => 30,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $key = ExecutionRequestHandoffService::sessionKey($plan, $task);
+        $this->assertNotSame('', (string) data_get(session($key), 'handoff_prompt'));
+
+        $this->actingAs($user)
+            ->post(route('plans.tasks.execution_orchestration.reset', [$plan, $task]))
+            ->assertRedirect(route('plans.tasks.execution_orchestration.show', [$plan, $task]))
+            ->assertSessionHasNoErrors();
+
+        $state = session($key);
+        $this->assertSame('execution_request', data_get($state, 'execution_request.flow'));
+        $this->assertSame('30分で安全に進められる範囲を整理したい', data_get($state, 'execution_request.instruction'));
+        $this->assertNull(data_get($state, 'packet'));
+        $this->assertNull(data_get($state, 'handoff_prompt'));
+
+        $this->actingAs($user)
+            ->get(route('plans.tasks.execution_orchestration.show', [$plan, $task]))
+            ->assertOk()
+            ->assertSee('CONFIRMED EXECUTION REQUEST')
+            ->assertDontSee('EXTERNAL AI HANDOFF');
     }
 
     public function test_inbox_execution_request_without_a_confirmed_task_is_rejected(): void
