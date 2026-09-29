@@ -8,8 +8,8 @@
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div class="max-w-3xl">
                     <p class="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">CANOVIA INBOX</p>
-                    <h1 class="mt-2 text-2xl font-black text-slate-50">とりあえず、ここに渡す</h1>
-                    <p class="mt-2 text-sm leading-6 text-slate-300">分類はあとで大丈夫です。思いつき、URL、スクリーンショット、参考書の写真、PDFなどをCanoviaへ預けておけます。</p>
+                    <h1 class="mt-2 text-2xl font-black text-slate-50">何をしたいですか？</h1>
+                    <p class="mt-2 text-sm leading-6 text-slate-300">整理しなくて大丈夫です。思いついたまま話してください。URLはそのまま貼れて、画像やPDFも一緒に渡せます。</p>
                 </div>
                 <span class="badge {{ $pendingCount > 0 ? 'badge-green' : 'badge-slate' }}">未整理 {{ $pendingCount }}件</span>
             </div>
@@ -21,60 +21,129 @@
                 <div class="assistant-notice assistant-notice-info mt-4">{{ session('status') }}</div>
             @endif
 
-            <form method="POST" action="{{ route('inbox.store') }}" enctype="multipart/form-data" class="mt-5 space-y-4" data-mutation-once>
-                @csrf
-
-                <div class="grid gap-4 lg:grid-cols-2">
+            <div class="mt-5 rounded-2xl border border-cyan-300/15 bg-slate-950/35 p-3 sm:p-4">
+                <div class="flex items-center gap-2">
+                    <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-cyan-300/20 bg-cyan-300/[0.06] text-sm text-cyan-200">✦</span>
                     <div>
-                        <label for="inbox-content" class="text-xs font-bold text-slate-300">テキスト・メモ</label>
-                        <textarea id="inbox-content" name="content" rows="6" class="input-field mt-2 w-full" placeholder="思いついたこと、やりたいこと、作業結果、教材の文章など">{{ old('content') }}</textarea>
-                        @error('content')<p class="mt-2 text-xs text-rose-300">{{ $message }}</p>@enderror
-                    </div>
-                    <div class="space-y-4">
-                        <div>
-                            <label for="inbox-url" class="text-xs font-bold text-slate-300">URL</label>
-                            <input id="inbox-url" type="url" name="source_url" value="{{ old('source_url') }}" class="input-field mt-2 w-full" placeholder="https://...">
-                            @error('source_url')<p class="mt-2 text-xs text-rose-300">{{ $message }}</p>@enderror
-                        </div>
-                        <div>
-                            <label for="inbox-file" class="text-xs font-bold text-slate-300">画像 / スクリーンショット / PDF</label>
-                            <input id="inbox-file" type="file" name="source_file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" class="input-field mt-2 w-full">
-                            <p class="mt-2 text-[10px] leading-4 text-slate-600">最大10MB。ファイルは公開領域ではなくprivate storageへ保存します。</p>
-                            @error('source_file')<p class="mt-2 text-xs text-rose-300">{{ $message }}</p>@enderror
-                        </div>
+                        <p class="text-xs font-black text-slate-100">Canoviaに、そのまま渡してください</p>
+                        <p class="mt-0.5 text-[10px] leading-4 text-slate-500">タイトル・カテゴリ・Planを先に決める必要はありません。</p>
                     </div>
                 </div>
 
-                <details class="rounded-xl border border-white/8 bg-white/[0.02] p-3">
-                    <summary class="cursor-pointer text-xs font-bold text-slate-300">任意：タイトル・関連Plan</summary>
-                    <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                        <div>
-                            <label for="inbox-title" class="text-[11px] font-bold text-slate-400">タイトル</label>
-                            <input id="inbox-title" type="text" name="title" value="{{ old('title') }}" class="input-field mt-1 w-full" placeholder="未入力なら自動で仮タイトル">
-                        </div>
-                        <div>
-                            <label for="inbox-plan" class="text-[11px] font-bold text-slate-400">関連Plan</label>
-                            <select id="inbox-plan" name="plan_id" class="input-field mt-1 w-full">
-                                <option value="">あとで決める</option>
-                                @foreach ($editablePlans as $plan)
-                                    <option value="{{ $plan->id }}" @selected((string) old('plan_id') === (string) $plan->id)>{{ $plan->displayIcon() }} {{ $plan->title }}</option>
-                                @endforeach
-                            </select>
-                            @error('plan_id')<p class="mt-2 text-xs text-rose-300">{{ $message }}</p>@enderror
-                        </div>
-                    </div>
-                </details>
+                <form method="POST" action="{{ route('inbox.store') }}" enctype="multipart/form-data" class="mt-4 space-y-3" data-mutation-once>
+                    @csrf
+                    <input type="hidden" name="intake_mode" value="chat">
 
-                <button type="submit" class="btn-primary">Inboxへ入れる</button>
-            </form>
+                    <label for="inbox-content" class="sr-only">Canoviaに渡す内容</label>
+                    <textarea
+                        id="inbox-content"
+                        name="content"
+                        rows="4"
+                        class="input-field min-h-[7.5rem] w-full resize-y"
+                        placeholder="例：APのネットワーク分野を今週重点的に復習したい&#10;例：このスクリーンショットを見て、次に何をすべきか整理したい"
+                    >{{ old('content') }}</textarea>
+
+                    <div class="flex flex-wrap items-end justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <details class="group inline-block">
+                                <summary class="cursor-pointer list-none rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2 text-xs font-bold text-slate-300 transition hover:border-cyan-300/20 hover:text-cyan-200">
+                                    ＋ 画像 / PDFを添付
+                                </summary>
+                                <div class="mt-2 min-w-[16rem] rounded-xl border border-white/10 bg-slate-950/90 p-3">
+                                    <input
+                                        id="inbox-file"
+                                        type="file"
+                                        name="source_file"
+                                        accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
+                                        class="input-field w-full text-xs"
+                                    >
+                                    <p class="mt-2 text-[10px] leading-4 text-slate-600">最大10MB。ファイルはprivate storageへ保存します。</p>
+                                </div>
+                            </details>
+                            <p class="mt-2 text-[10px] leading-4 text-slate-600">URLは入力欄へそのまま貼り付ければ自動で拾います。</p>
+                        </div>
+                        <button type="submit" class="btn-primary shrink-0 px-5">送る</button>
+                    </div>
+
+                    @error('content')<p class="text-xs text-rose-300">{{ $message }}</p>@enderror
+                    @error('source_file')<p class="text-xs text-rose-300">{{ $message }}</p>@enderror
+                </form>
+            </div>
+
+            <div class="mt-4 flex flex-wrap gap-2 text-[10px] font-bold text-slate-500">
+                <span class="rounded-full border border-white/8 px-2.5 py-1">やることを整理</span>
+                <span class="rounded-full border border-white/8 px-2.5 py-1">資料を預ける</span>
+                <span class="rounded-full border border-white/8 px-2.5 py-1">計画について相談</span>
+                <span class="rounded-full border border-white/8 px-2.5 py-1">画像から進める</span>
+            </div>
         </section>
+
+        @php
+            $focusedItemId = (int) session('inbox_focus_id', 0);
+            $focusedItem = $focusedItemId > 0 ? $items->firstWhere('id', $focusedItemId) : null;
+        @endphp
+
+        @if ($focusedItem)
+            @php
+                $focusedSuggestion = data_get($focusedItem->metadata, 'routing_suggestion');
+                $focusedDestination = data_get($focusedSuggestion, 'destination', 'keep_inbox');
+            @endphp
+            <section class="page-card border-violet-300/15 p-4 sm:p-5">
+                <p class="text-[10px] font-black uppercase tracking-[0.16em] text-violet-300">CONVERSATION</p>
+                <div class="mt-3 space-y-3">
+                    <div class="ml-auto max-w-3xl rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.045] p-4">
+                        <p class="text-[10px] font-black uppercase tracking-[0.12em] text-cyan-300">YOU</p>
+                        @if ($focusedItem->content)
+                            <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-200">{{ $focusedItem->content }}</p>
+                        @else
+                            <p class="mt-2 text-sm leading-6 text-slate-200">{{ $focusedItem->displayTitle() }}</p>
+                        @endif
+                        @if ($focusedItem->storage_path)
+                            <p class="mt-2 text-xs text-slate-500">📎 {{ $focusedItem->original_name ?: $focusedItem->sourceLabel() }}</p>
+                        @endif
+                    </div>
+
+                    <div class="mr-auto max-w-4xl rounded-2xl border border-violet-300/15 bg-violet-300/[0.035] p-4">
+                        <p class="text-[10px] font-black uppercase tracking-[0.12em] text-violet-300">CANOVIA</p>
+                        @if ($focusedSuggestion)
+                            <p class="mt-2 text-sm font-bold text-slate-100">「{{ $routingDestinations[$focusedDestination] ?? 'Inboxに残す' }}」として整理するのが自然そうです。</p>
+                            <p class="mt-1 text-xs leading-5 text-slate-400">{{ data_get($focusedSuggestion, 'reason') ?: '内容から行き先候補を作りました。' }}</p>
+                        @else
+                            <p class="mt-2 text-sm font-bold text-slate-100">受け取りました。今はInboxに置いてあります。</p>
+                            <p class="mt-1 text-xs leading-5 text-slate-400">まだ行き先を決めなくて大丈夫です。必要になったら、内容から整理先を考えるか、そのまま会話を続けられます。</p>
+                        @endif
+
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            @auth
+                                <form method="POST" action="{{ route('companion.entry') }}" data-mutation-once>
+                                    @csrf
+                                    <input type="hidden" name="entry_type" value="inbox_item">
+                                    <input type="hidden" name="inbox_item_id" value="{{ $focusedItem->id }}">
+                                    <input type="hidden" name="source_path" value="{{ request()->getRequestUri() }}#inbox-item-{{ $focusedItem->id }}">
+                                    <input type="hidden" name="source_route" value="{{ request()->route()?->getName() }}">
+                                    <button type="submit" class="btn-primary px-3 py-2 text-xs">このまま相談する</button>
+                                </form>
+                            @endauth
+                            @if ($canUseInboxAi && ! $focusedSuggestion)
+                                <form method="POST" action="{{ route('inbox.suggest', $focusedItem) }}" data-mutation-once>
+                                    @csrf
+                                    <button type="submit" class="btn-secondary px-3 py-2 text-xs">✦ 内容から行き先を考える</button>
+                                </form>
+                            @endif
+                            <a href="#inbox-item-{{ $focusedItem->id }}" class="btn-secondary px-3 py-2 text-xs">{{ $focusedSuggestion ? '整理候補を確認する' : '保存内容を見る' }}</a>
+                        </div>
+                        <p class="mt-3 text-[10px] leading-4 text-slate-600">Canoviaが候補を出しても、確認するまでPlan / Taskなどの正規データは変更しません。</p>
+                    </div>
+                </div>
+            </section>
+        @endif
 
         <section class="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
             <div class="page-card p-5 sm:p-6">
                 <div class="flex items-center justify-between gap-3">
                     <div>
-                        <p class="text-xs font-black uppercase tracking-[0.16em] text-violet-300">UNSORTED</p>
-                        <h2 class="mt-1 text-lg font-black text-slate-50">まだ整理していないもの</h2>
+                        <p class="text-xs font-black uppercase tracking-[0.16em] text-violet-300">INBOX QUEUE</p>
+                        <h2 class="mt-1 text-lg font-black text-slate-50">まだ行き先を決めていないもの</h2>
                     </div>
                     <span class="badge badge-slate">{{ $items->count() }}件</span>
                 </div>
@@ -88,8 +157,6 @@
                                         <span class="badge badge-slate">{{ $inboxItem->sourceLabel() }}</span>
                                         @if ($inboxItem->plan)
                                             <span class="text-[10px] text-slate-500">{{ $inboxItem->plan->displayIcon() }} {{ $inboxItem->plan->title }}</span>
-                                        @else
-                                            <span class="text-[10px] text-slate-600">Plan未指定</span>
                                         @endif
                                     </div>
                                     <h3 class="mt-2 break-words text-sm font-black text-slate-100">{{ $inboxItem->displayTitle() }}</h3>
@@ -137,13 +204,13 @@
                                             @endif
                                             <input type="hidden" name="source_path" value="{{ request()->getRequestUri() }}#inbox-item-{{ $inboxItem->id }}">
                                             <input type="hidden" name="source_route" value="{{ request()->route()?->getName() }}">
-                                            <button type="submit" class="btn-secondary px-3 py-2 text-xs">✦ Companionで整理</button>
+                                            <button type="submit" class="btn-secondary px-3 py-2 text-xs">このまま相談する</button>
                                         </form>
                                     @endauth
                                     @if ($canUseInboxAi)
                                         <form method="POST" action="{{ route('inbox.suggest', $inboxItem) }}" data-mutation-once>
                                             @csrf
-                                            <button type="submit" class="{{ $routingSuggestion ? 'btn-secondary' : 'btn-primary' }} px-3 py-2 text-xs" data-guide-target="inbox-suggest">{{ $routingSuggestion ? '整理候補を作り直す' : '✦ 行き先を提案' }}</button>
+                                            <button type="submit" class="{{ $routingSuggestion ? 'btn-secondary' : 'btn-primary' }} px-3 py-2 text-xs" data-guide-target="inbox-suggest">{{ $routingSuggestion ? '整理候補を作り直す' : '✦ 内容から行き先を考える' }}</button>
                                         </form>
                                     @endif
                                     <span class="text-[10px] text-slate-600">AIを使わなくても手動で整理できます。</span>
