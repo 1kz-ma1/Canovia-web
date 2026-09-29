@@ -1,0 +1,38 @@
+name: V46.0 GitHub Workflow Hub validation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist
+      - run: npm ci
+      - run: npm run build
+      - run: cp .env.example .env
+      - run: touch database/database.sqlite
+      - run: php artisan key:generate
+      - run: php artisan migrate:fresh --force
+      - run: php -l app/Models/PlanArtifact.php
+      - run: php -l app/Http/Controllers/GitHubWorkflowController.php
+      - run: php -l app/Http/Controllers/PlanArtifactController.php
+      - run: php -l app/Services/GitHubWorkflowService.php
+      - run: php -l routes/web.php
+      - run: php artisan view:cache
+      - name: Lint compiled Blade views
+        run: |
+          set -e
+          for f in storage/framework/views/*.php; do
+            php -l "$f"
+          done
+      - run: node --test tests/js/living-map-v421.test.mjs tests/js/map-telemetry-v424.test.mjs tests/js/home-surface-preference-v433.test.mjs
+      - run: php artisan test tests/Feature/GitHubWorkflowHubV460Test.php tests/Feature/CollaborationExternalToolsV445Test.php tests/Feature/NativeEvidenceSignalsV411Test.php tests/Feature/ActionFirstV416Test.php tests/Feature/FeatureAccessV406Test.php tests/Feature/MapSignalDensityV456Test.php tests/Feature/MobileMapUsabilityV455Test.php tests/Feature/MapRuntimePerformanceV454Test.php tests/Feature/CanoviaHomeSurfaceV432Test.php tests/Feature/CanoviaHomeSurfacePreferenceV433Test.php tests/Feature/InstantNavigationV4120Test.php tests/Feature/InstantNavigationFragmentV4121Test.php
