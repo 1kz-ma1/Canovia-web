@@ -7,6 +7,8 @@ import {
     mapTelemetryMetadata,
 } from './map-telemetry.mjs';
 
+import { fitMobileNodeBoxes } from './map-node-boxes.mjs';
+
 const PENDING_REEVALUATION_KEY = 'canovia.map.pending-reevaluation.v1';
 const SEMANTIC_TRANSITION_KEY = 'canovia.map.semantic-transition.v1';
 
@@ -810,6 +812,14 @@ export function mountLivingGoalMap({
             )
             : new Map(nodes.map((node) => [node.id, { x: node.x, y: node.y }]));
 
+        if (mobile) {
+            basePositions = fitMobileNodeBoxes(basePositions, nodeElements.map(element => ({
+                id: element.dataset.mapNodeId,
+                width: element.offsetWidth,
+                height: element.offsetHeight,
+            })), currentMapViewport(), nodeElements.find(element => element.dataset.mapIsCenter === '1')?.dataset.mapNodeId);
+        }
+
         const spatialLayout = mobile ? 'mobile' : 'desktop';
         if (page.dataset.mapSpatialLayout !== spatialLayout) {
             page.dataset.mapSpatialLayout = spatialLayout;
@@ -1265,7 +1275,10 @@ export function mountLivingGoalMap({
 
         const point = { x: event.clientX, y: event.clientY };
         activePointers.set(event.pointerId, point);
-        mapScene.setPointerCapture?.(event.pointerId);
+        // Keep a leaf tap targeted at its detail link. Capturing on the scene
+        // retargets the subsequent click and silently drops the selection.
+        const captureTarget = event.target.closest?.('[data-map-node-focus]') || mapScene;
+        captureTarget.setPointerCapture?.(event.pointerId);
 
         if (activePointers.size === 1) {
             beginPanGesture(point);

@@ -11,7 +11,7 @@ final class MapNodePresentation
      * still available to the detail palette and telemetry. This class only
      * decides what should be printed directly on the spatial canvas.
      *
-     * @param array<string,mixed> $node
+     * @param  array<string,mixed>  $node
      * @return array{
      *   kind:'container'|'leaf',
      *   label:string,
@@ -38,8 +38,8 @@ final class MapNodePresentation
 
         return [
             'kind' => 'leaf',
-            'label' => self::leafLabel($type, $state, $positionRole, $eyebrow),
-            'eyebrow' => null,
+            'label' => $label !== '' ? $label : self::fallbackLabel($type),
+            'eyebrow' => self::leafLabel($type, $state, $positionRole, $eyebrow),
             'subtitle' => null,
         ];
     }
@@ -82,9 +82,9 @@ final class MapNodePresentation
                 str_contains($eyebrow, 'NEXT TASK') => '次にやる',
                 str_contains($positionRole, 'dependency'),
                 str_contains($eyebrow, 'DEPENDENCY') => '前提',
-                str_contains($eyebrow, 'COMPLETED') => '完了Task',
+                str_contains($eyebrow, 'COMPLETED') => '完了',
                 str_contains($eyebrow, 'REFLECTION') => '振り返り',
-                default => 'Task',
+                default => 'タスク',
             };
         }
 
@@ -92,13 +92,13 @@ final class MapNodePresentation
             return match (true) {
                 str_contains($eyebrow, 'NEXT OPTION') => '次の選択肢',
                 str_contains($eyebrow, 'REFLECTION') => '振り返り',
-                default => 'Evidence',
+                default => '記録',
             };
         }
 
         return match ($type) {
-            'tool' => 'Tool',
-            'inbox' => 'Inbox',
+            'tool' => '実行ツール',
+            'inbox' => '受信トレイ',
             default => self::fallbackLabel($type),
         };
     }
@@ -106,6 +106,11 @@ final class MapNodePresentation
     private static function fallbackLabel(string $type): string
     {
         return match ($type) {
+            'task' => '名前のないタスク',
+            'evidence' => '記録',
+            'tool' => '実行ツール',
+            'inbox' => '受信トレイ',
+            'collaboration_item' => '共同作業',
             'space_station' => 'Space Station',
             'plan', 'satellite_plan' => 'Plan',
             'goal' => 'Goal',
@@ -116,7 +121,26 @@ final class MapNodePresentation
         };
     }
 
-    private function __construct()
+    /** Presentation only: explains an existing role, never infers readiness. */
+    public static function reason(array $node): ?string
     {
+        $role = (string) ($node['position_role'] ?? '');
+        $eyebrow = strtoupper((string) ($node['eyebrow'] ?? ''));
+
+        return match (true) {
+            str_contains($role, 'dependency'), str_contains($eyebrow, 'DEPENDENCY') => '次の作業につながる前提タスクです。',
+            $role === 'action-primary' => 'この計画で、今取り組む候補です。',
+            $role === 'future-next' => '現在の作業の次に取り組む候補です。前提条件は状態欄で確認できます。',
+            str_contains($eyebrow, 'REVIEW') => 'レビューを待っている共同作業です。',
+            str_contains($eyebrow, 'WAITING') => '相手の対応を待っている共同作業です。',
+            str_contains($eyebrow, 'EXTERNAL') => '外部サービスで状況を確認する項目です。',
+            str_contains($eyebrow, 'COMPLETED') => '完了した作業を振り返るための項目です。',
+            ($node['type'] ?? '') === 'evidence' => 'この文脈に関連する記録です。',
+            ($node['type'] ?? '') === 'tool' => '作業を進めるために使えるツールです。',
+            ($node['type'] ?? '') === 'inbox' => '取り込んだ情報を確認する入口です。',
+            default => null,
+        };
     }
+
+    private function __construct() {}
 }

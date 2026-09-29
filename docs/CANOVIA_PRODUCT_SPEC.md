@@ -1051,3 +1051,8 @@ Classic routeは削除しないが、Map上では「Classic Plans」ではなく
 V47.7のPresentation Grammarは、今後のMap Data Layers、スマホのホーム画面のような複数Map Page / Preset、RoadmapのSpatial Projectionに共通利用する。Roadmap Mapでは並行Task・dependency edge・Task group・milestone・blocked / ready stateを空間的に表現する想定だが、V47.7ではRoadmap本体、Layer設定永続化、Map Page永続化、drag & drop position保存は実装しない。
 
 詳細は `docs/V47.7_MAP_PRESENTATION_FOUNDATION.md` を正とする。
+
+
+## Map Node表示・スマホUIの改善
+
+Leaf Nodeは具体名と短い役割を表示し、詳細で状態・表示理由・既存の操作を確認する。V47.7の役割名のみの表示を更新する。スマホでは実寸に基づく端切れ・重なり補正と44pxの詳細操作領域を用いる。階層Navigation・Breadcrumb・semantic zoom・canonical graphは変更しない。仕様と並行実装境界は [MAP_NODE_MOBILE_PRESENTATION.md](MAP_NODE_MOBILE_PRESENTATION.md) を参照。

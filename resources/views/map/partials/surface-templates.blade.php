@@ -4,7 +4,7 @@
             $surface = $node['classic_surface'] ?? [];
             $surfacePresentation = \App\Support\MapNodePresentation::for($node);
             $surfaceKind = ($surfacePresentation['kind'] ?? null) === 'leaf'
-                ? ($surfacePresentation['label'] ?? '詳細')
+                ? ($surfacePresentation['eyebrow'] ?? '詳細')
                 : ($surface['kind'] ?? $node['type']);
         @endphp
         @if (! empty($surface))
@@ -16,7 +16,10 @@
                         <p class="canovia-map-classic-summary">{{ $surface['summary'] }}</p>
                     @endif
 
+                    @include('map.partials.node-context', ['node' => $node])
+
                     @if (! empty($surface['meta']))
+                        <h3 class="canovia-map-detail-label">状態・関連情報</h3>
                         <div class="canovia-map-classic-meta">
                             @foreach ($surface['meta'] as $meta)
                                 <span>{{ $meta }}</span>
@@ -27,6 +30,9 @@
                     @if ($isIntentHub && ($node['id'] ?? null) === 'intent:space-station')
                         @include('map.partials.space-station-surface')
                     @else
+                        @if (! empty($surface['actions']))
+                            <h3 class="canovia-map-detail-label">次にできること</h3>
+                        @endif
                         <div class="canovia-map-classic-actions">
                             @foreach (($surface['actions'] ?? []) as $action)
                                 @php
