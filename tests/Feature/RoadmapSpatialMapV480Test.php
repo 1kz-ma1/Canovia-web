@@ -103,7 +103,7 @@ class RoadmapSpatialMapV480Test extends TestCase
         $plan = $this->plan($user, 'Roadmap UI');
 
         $root = $this->task($plan, '並行作業の起点', 1, 'doing', 20);
-        $this->task($plan, '後続Task', 2, 'todo', 0, dependsOn: $root);
+        $blocked = $this->task($plan, '後続Task', 2, 'todo', 0, dependsOn: $root);
 
         $response = $this->actingAs($user)->get(route('roadmap.index', [
             'plan_id' => $plan->id,
@@ -123,6 +123,45 @@ class RoadmapSpatialMapV480Test extends TestCase
 
         $this->assertIsArray($response->viewData('roadmapSpatial'));
         $this->assertNotEmpty(data_get($response->viewData('roadmapSpatial'), 'nodes'));
+
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+        $xpath = new \DOMXPath($dom);
+
+        $blockedForms = $xpath->query(
+            '//*[@data-roadmap-task-id="'.$blocked->id.'"]//form[@data-work-start-form]'
+        );
+        $this->assertSame(0, $blockedForms->length);
+
+        $blockedExecutionLinks = $xpath->query(
+            '//*[@data-roadmap-task-id="'.$blocked->id.'"]//a[contains(normalize-space(.),"今やることを見る")]'
+        );
+        $this->assertSame(1, $blockedExecutionLinks->length);
+    }
+
+    public function test_dependency_cycle_degrades_to_a_bounded_spatial_layout(): void
+    {
+        $user = User::factory()->create([
+            'first_run_completed_at' => now(),
+        ]);
+        $plan = $this->plan($user, 'Cycle safe');
+
+        $left = $this->task($plan, '循環A', 1, 'todo', 0);
+        $right = $this->task($plan, '循環B', 2, 'todo', 0, dependsOn: $left);
+        $left->update(['depends_on_task_id' => $right->id]);
+
+        $roadmap = app(RoadmapService::class)->build($plan->fresh('tasks'));
+        $spatial = app(RoadmapSpatialProjectionService::class)->build($roadmap);
+
+        $this->assertCount(2, $spatial['nodes']);
+        $this->assertNotEmpty($spatial['phases']);
+
+        foreach ($spatial['nodes'] as $node) {
+            $this->assertGreaterThanOrEqual(0, $node['x']);
+            $this->assertLessThanOrEqual($spatial['width'], $node['x']);
+            $this->assertGreaterThanOrEqual(0, $node['y']);
+            $this->assertLessThanOrEqual($spatial['height'], $node['y']);
+        }
     }
 
     public function test_shared_roadmap_partial_keeps_legacy_map_fallback_for_preview_callers(): void
