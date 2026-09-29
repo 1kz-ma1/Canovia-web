@@ -11,6 +11,9 @@
     $remoteRuns = collect(data_get($snapshot, 'actions_runs', []));
     $remoteWarnings = collect(data_get($snapshot, 'warnings', []));
     $canInspectRepository = (bool) ($can_repository_inspect ?? false);
+    $canWriteRepository = (bool) ($can_repository_write ?? false);
+    $githubWriteConfigured = (bool) ($github_write_configured ?? false);
+    $githubAppInstallUrl = $github_app_install_url ?? null;
 @endphp
 
 <article
@@ -215,6 +218,124 @@
         </section>
     @endif
 
+    @if ($overview['repository_registered'])
+        <section class="border-b border-violet-300/12 bg-violet-300/[0.018] p-5" data-github-review-change>
+            <div class="flex flex-wrap items-start justify-between gap-4">
+                <div class="max-w-3xl">
+                    <p class="text-[10px] font-black uppercase tracking-[0.16em] text-violet-300">REVIEW-ONLY WRITE</p>
+                    <h4 class="mt-1 text-sm font-black text-slate-100">GitHubを知らなくても、変更をレビューに出す</h4>
+                    <p class="mt-2 text-xs leading-6 text-slate-500">
+                        Repository管理者がCanovia GitHub Appを一度接続すれば、CanoviaのEditorはここから変更を提出できます。
+                        Canoviaが作業用Branchを作り、1回のCommitとPull Requestを作成します。mainへ直接push・mergeはしません。
+                    </p>
+                </div>
+
+                @if ($githubAppInstallUrl)
+                    <a href="{{ $githubAppInstallUrl }}" target="_blank" rel="noopener noreferrer" class="btn-secondary px-3 py-2 text-xs">
+                        GitHub Appを接続 ↗
+                    </a>
+                @endif
+            </div>
+
+            @if (! $overview['can_edit'])
+                <p class="mt-4 text-xs text-slate-500">変更の提出はCanoviaのEditor以上が行えます。</p>
+            @elseif (! $canWriteRepository)
+                <div class="mt-4 rounded-xl border border-violet-300/12 bg-violet-300/[0.025] p-3">
+                    <p class="text-xs font-bold text-violet-100">Repositoryへの反映はDeveloper GitHub Write</p>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                        閲覧・手動整理とは分離し、GitHubへBranch / Commit / Pull Requestを作る権限だけを別Capabilityにしています。
+                    </p>
+                </div>
+            @elseif (! $githubWriteConfigured)
+                <div class="mt-4 rounded-xl border border-amber-300/12 bg-amber-300/[0.025] p-3">
+                    <p class="text-xs font-bold text-amber-100">Canovia側のGitHub App設定がまだありません</p>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                        App IDとPrivate Keyをserver-sideに設定した後、Repository管理者が対象RepositoryへAppを接続します。個人PATの共有は不要です。
+                    </p>
+                </div>
+            @else
+                <details class="mt-4 rounded-2xl border border-white/8 bg-slate-950/35 p-4">
+                    <summary class="cursor-pointer list-none text-sm font-black text-slate-100">＋ 変更をレビューに出す</summary>
+
+                    <form method="POST" action="{{ route('github_workflow.repository.change', $overview['repository_artifact_id']) }}" class="mt-4 grid gap-3 lg:grid-cols-2">
+                        @csrf
+
+                        <label class="block">
+                            <span class="text-xs font-semibold text-slate-400">変更するファイル</span>
+                            <input
+                                type="text"
+                                name="file_path"
+                                value="{{ old('file_path') }}"
+                                class="form-control mt-2 w-full"
+                                maxlength="240"
+                                placeholder="例: app/Services/ExampleService.php"
+                                required
+                            >
+                            <span class="mt-1 block text-[10px] text-slate-600">既存ファイルは更新、新しいpathなら新規作成します。.github/workflows は対象外です。</span>
+                        </label>
+
+                        <label class="block">
+                            <span class="text-xs font-semibold text-slate-400">レビュー用タイトル</span>
+                            <input
+                                type="text"
+                                name="pull_request_title"
+                                value="{{ old('pull_request_title') }}"
+                                class="form-control mt-2 w-full"
+                                maxlength="240"
+                                placeholder="例: Mapのズーム操作を修正"
+                                required
+                            >
+                        </label>
+
+                        <label class="block lg:col-span-2">
+                            <span class="text-xs font-semibold text-slate-400">ファイルの新しい内容</span>
+                            <textarea
+                                name="file_content"
+                                class="form-control mt-2 min-h-64 w-full font-mono text-xs"
+                                maxlength="200000"
+                                placeholder="このファイルに反映する完全な内容を貼り付けます"
+                                required
+                            >{{ old('file_content') }}</textarea>
+                        </label>
+
+                        <label class="block">
+                            <span class="text-xs font-semibold text-slate-400">変更メモ</span>
+                            <input
+                                type="text"
+                                name="commit_message"
+                                value="{{ old('commit_message') }}"
+                                class="form-control mt-2 w-full"
+                                maxlength="240"
+                                placeholder="例: fix map zoom interaction"
+                                required
+                            >
+                        </label>
+
+                        <label class="block">
+                            <span class="text-xs font-semibold text-slate-400">レビュー説明（任意）</span>
+                            <textarea
+                                name="pull_request_body"
+                                class="form-control mt-2 min-h-24 w-full text-xs"
+                                maxlength="20000"
+                                placeholder="何を変えたか、確認してほしいこと"
+                            >{{ old('pull_request_body') }}</textarea>
+                        </label>
+
+                        <div class="lg:col-span-2 rounded-xl border border-cyan-300/10 bg-cyan-300/[0.02] p-3 text-[11px] leading-5 text-slate-500">
+                            <strong class="text-cyan-100">送信後の流れ:</strong>
+                            Canoviaがdefault branchから <code>canovia/*</code> Branchを作成 → ファイルをCommit → Pull Requestを作成 → Canoviaの「レビュー待ち」へ追加します。
+                            merge・force push・branch削除は行いません。
+                        </div>
+
+                        <div class="lg:col-span-2">
+                            <button type="submit" class="btn-primary w-full justify-center">変更をレビューに出す</button>
+                        </div>
+                    </form>
+                </details>
+            @endif
+        </section>
+    @endif
+
     <div class="grid gap-0 lg:grid-cols-[1fr_1fr_1.15fr]">
         <section class="border-b border-white/8 p-5 lg:border-b-0 lg:border-r">
             <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">CANOVIA REFERENCES</p>
@@ -309,7 +430,7 @@
     <div class="border-t border-white/8 px-5 py-3">
         <p class="text-[10px] leading-5 text-slate-600">
             GitHub snapshotは取得時点のread-only情報です。Canoviaの「今やる / レビュー待ち」等は別の判断レイヤーで、GitHubのopen / merged / CI状態から自動変更しません。
-            Private Repositoryのユーザー別アクセスはまだ接続していません。
+            read-only snapshotのユーザー別Private Repository接続はまだありません。GitHub Writeは、Repository管理者が明示的にinstallしたCanovia GitHub Appの権限だけを使います。
         </p>
     </div>
 </article>
