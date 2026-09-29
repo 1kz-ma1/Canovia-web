@@ -13,6 +13,7 @@ class InboxIntelligenceService
         'recall_material' => 'Recall教材',
         'task_evidence' => 'Task Evidence',
         'plan_resource' => 'Plan Resource',
+        'execution_request' => '実行リクエスト',
         'keep_inbox' => 'Inboxに残す',
     ];
 
@@ -21,6 +22,7 @@ class InboxIntelligenceService
         'recall_material' => 'Recall教材',
         'task_evidence' => 'Task Evidence',
         'plan_resource' => 'Plan Resource',
+        'execution_request' => '実行リクエスト',
         'keep_inbox' => 'Inboxに残す',
     ];
 
@@ -49,7 +51,9 @@ class InboxIntelligenceService
             '- recall_material: 単語、用語、参考書ページなど暗記・想起用教材',
             '- task_evidence: 既存Taskで実際に行った作業・成果・確認できる事実',
             '- plan_resource: 既存Planで参照するDrive / OneDrive / GitHub等のURL',
+            '- execution_request: 既存Plan / Taskについて、これから何かを進めたい・実行したい・担当やAIへ渡したいという依頼',
             '- keep_inbox: 判断できない、複数解釈、まだ整理不要',
+            '- 過去に行った結果はtask_evidence、これから行う依頼はexecution_requestとして区別する',
             '',
             'Inbox Item:',
             'source_type: '.$item->source_type,
