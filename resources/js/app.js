@@ -2,6 +2,7 @@ import { normalizeAiJsonText, buildAiJsonRepairPrompt } from './ai-json.mjs';
 import { mountInstantStartServiceWorker } from './instant-start.mjs';
 import { mountCanoviaInstantNavigation } from './instant-navigation.mjs';
 import { mountLivingGoalMap } from './living-map.mjs';
+import './map-data-layers.mjs';
 import {
     advanceMapTelemetryForClassicNavigation,
     attachMapTelemetryToWorkStartForm,
