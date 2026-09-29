@@ -404,7 +404,8 @@ export function mountMapPages({
             dispatchLayerState(documentRef, layers);
         }
 
-        if (globalHome) {
+        const resolvesToGlobalHome = globalHome || preset.route === '/map';
+        if (resolvesToGlobalHome) {
             requestGlobalHomeReset(windowRef);
         }
 
@@ -413,7 +414,7 @@ export function mountMapPages({
         const changedPage = previousActiveId !== activeId;
         sync();
 
-        if (preset.route !== current || hasLocalSelection || globalHome || changedPage) {
+        if (preset.route !== current || hasLocalSelection || resolvesToGlobalHome || changedPage) {
             navigateToPage(windowRef, preset.route);
         }
     };
