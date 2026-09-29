@@ -11,6 +11,7 @@
         request()->routeIs('calendar.*') => 'カレンダー',
         request()->routeIs('future_memos.*') => '未来メモ',
         request()->routeIs('feedback.*') => 'Canovia Future',
+        request()->routeIs('github_workflow.*') => 'GitHub',
         request()->routeIs('companion.*') => 'Companion',
         request()->routeIs('chat.*'), request()->routeIs('achievements.*'), request()->routeIs('plans.review_assistant.*') => '計画を更新',
         request()->routeIs('public_plans.*') => '共有プラン',
@@ -138,6 +139,7 @@
 
                 <div class="hidden items-center gap-2 lg:flex">
                     <a href="{{ route('calendar.index') }}" data-canovia-nav-key="desktop-calendar" class="header-secondary-link">カレンダー</a>
+                    <a href="{{ route('github_workflow.index') }}" data-canovia-nav-key="desktop-github" class="header-secondary-link {{ request()->routeIs('github_workflow.*') ? 'is-active' : '' }}">GitHub</a>
                     <button type="button" class="header-secondary-link canovia-guide-desktop-trigger" data-guide-open aria-label="Canovia Guideを開く">ガイド</button>
                     <button type="button" class="header-secondary-link release-notes-desktop-trigger" data-release-notes-open aria-label="Canoviaの更新情報を見る">更新情報<span class="release-notes-new-dot" data-release-notes-new aria-hidden="true"></span></button>
                     <button type="button" class="ui-settings-trigger" data-ui-settings-open aria-label="設定を開く">設定</button>
