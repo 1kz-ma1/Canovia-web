@@ -11,7 +11,7 @@
             <span
                 class="canovia-map-layer-badge is-progress"
                 data-map-layer-badge="progress"
-                style="--map-layer-progress: {{ $progressPercent }}"
+                style="--map-layer-progress: {{ $progressPercent }}%"
             >
                 <span class="canovia-map-layer-progress-ring"></span>
                 <span>{{ $progressPercent }}%</span>
