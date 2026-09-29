@@ -12,6 +12,10 @@
         class="{{ request()->routeIs('admin.telemetry.*') ? 'btn-primary' : 'btn-secondary' }} px-3 py-2 text-xs"
     >計画作成・更新の診断</a>
     <a
+        href="{{ route('admin.github.index') }}"
+        class="{{ request()->routeIs('admin.github.*') ? 'btn-primary' : 'btn-secondary' }} px-3 py-2 text-xs"
+    >GitHub連携</a>
+    <a
         href="{{ route('admin.question_packs.index') }}"
         class="{{ request()->routeIs('admin.question_packs.*') ? 'btn-primary' : 'btn-secondary' }} px-3 py-2 text-xs"
     >問題集</a>
