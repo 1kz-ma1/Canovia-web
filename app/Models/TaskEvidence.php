@@ -138,7 +138,7 @@ class TaskEvidence extends Model
             ),
             'pull_request_review_submitted' => sprintf(
                 'PR #%dで%sが「%s」を送信しました。',
-                (int) data_get($this->metadata, 'pull_request_number', 0),
+                (int) (data_get($this->metadata, 'pull_request_number') ?? data_get($this->metadata, 'pull_request', 0)),
                 trim((string) data_get($this->metadata, 'reviewer')) ?: 'reviewer',
                 match (strtoupper((string) data_get($this->metadata, 'review_state'))) {
                     'APPROVED' => '承認',
@@ -150,14 +150,14 @@ class TaskEvidence extends Model
             ),
             'pull_request_merged' => sprintf(
                 'PR #%dがGitHubでmergeされました。%s',
-                (int) data_get($this->metadata, 'pull_request_number', 0),
+                (int) (data_get($this->metadata, 'pull_request_number') ?? data_get($this->metadata, 'pull_request', 0)),
                 filled(data_get($this->metadata, 'merge_commit_sha'))
                     ? 'Merge commit '.mb_substr((string) data_get($this->metadata, 'merge_commit_sha'), 0, 8)
                     : '',
             ),
             'pull_request_ci_observed' => sprintf(
                 'PR #%dのCI結果を「%s」として確認しました。',
-                (int) data_get($this->metadata, 'pull_request_number', 0),
+                (int) (data_get($this->metadata, 'pull_request_number') ?? data_get($this->metadata, 'pull_request', 0)),
                 match ((string) data_get($this->metadata, 'ci_state')) {
                     'success' => '成功',
                     'failure' => '失敗',
