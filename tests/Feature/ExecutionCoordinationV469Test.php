@@ -149,6 +149,43 @@ class ExecutionCoordinationV469Test extends TestCase
             ->assertDontSee('EXECUTION COORDINATION');
     }
 
+    public function test_completed_task_rejects_new_execution_generation_and_import(): void
+    {
+        [$user, $plan, $source] = $this->scenario();
+
+        $source->update([
+            'status' => 'done',
+            'progress_percent' => 100,
+            'remaining_minutes' => 0,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('plans.tasks.execution_orchestration.prepare', [$plan, $source]), [
+                'generation_mode' => 'external',
+                'actor_type' => 'human_ai',
+                'available_minutes' => 30,
+            ])
+            ->assertRedirect(route('plans.tasks.execution_orchestration.show', [$plan, $source]))
+            ->assertSessionHas(
+                'status',
+                '完了・中止済みTaskには新しいExecution Packetを生成しません。後続TaskのCoordinationを確認してください。',
+            );
+
+        $this->assertNull(session(ExecutionRequestHandoffService::sessionKey($plan, $source)));
+
+        $this->actingAs($user)
+            ->post(route('plans.tasks.execution_orchestration.import', [$plan, $source]), [
+                'packet_json' => json_encode([
+                    'schema_version' => '1.0',
+                    'flow' => 'execution_packet',
+                ]),
+            ])
+            ->assertRedirect(route('plans.tasks.execution_orchestration.show', [$plan, $source]))
+            ->assertSessionHasErrors('packet_json');
+
+        $this->assertNull(session(ExecutionRequestHandoffService::sessionKey($plan, $source)));
+    }
+
     public function test_invalid_distribution_suggestion_is_ignored(): void
     {
         [$user, $plan, $source, , $ready] = $this->scenario();
