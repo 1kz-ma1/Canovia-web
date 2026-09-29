@@ -146,11 +146,11 @@ export function resolveMapPageActiveId({
     const storedBuiltin = builtins.find((page) => page.id === stored);
     if (storedBuiltin && storedBuiltin.route === route) return storedBuiltin.id;
 
-    const exactCustom = custom.find((page) => page.route === route);
-    if (exactCustom) return exactCustom.id;
-
     const exactBuiltin = builtins.find((page) => page.route === route);
     if (exactBuiltin) return exactBuiltin.id;
+
+    const exactCustom = custom.find((page) => page.route === route);
+    if (exactCustom) return exactCustom.id;
 
     return storedCustom?.id || storedBuiltin?.id || null;
 }
