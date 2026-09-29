@@ -244,6 +244,17 @@
         filter: grayscale(0.45);
     }
 
+    .canovia-roadmap-spatial-node.is-blocked:not(.is-current) > summary {
+        border-color: rgb(251 146 60 / 0.38);
+        box-shadow:
+            inset 0 1px 0 rgb(255 255 255 / 0.03),
+            0 12px 28px rgb(124 45 18 / 0.12);
+    }
+
+    .canovia-roadmap-spatial-node.is-ready:not(.is-current):not(.is-done) > summary {
+        border-color: rgb(52 211 153 / 0.3);
+    }
+
     .canovia-roadmap-task-orbit {
         position: relative;
         display: grid;
@@ -336,6 +347,16 @@
         color: rgb(148 163 184);
         font-size: 0.55rem;
         font-weight: 750;
+    }
+
+    .canovia-roadmap-task-detail-meta span.is-ready {
+        background: rgb(16 185 129 / 0.11);
+        color: rgb(110 231 183);
+    }
+
+    .canovia-roadmap-task-detail-meta span.is-blocked {
+        background: rgb(234 88 12 / 0.11);
+        color: rgb(253 186 116);
     }
 
     .canovia-roadmap-task-detail h3 {
