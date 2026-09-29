@@ -130,7 +130,7 @@
                                     <button type="submit" class="btn-secondary px-3 py-2 text-xs">✦ 内容から行き先を考える</button>
                                 </form>
                             @endif
-                            <a href="#inbox-item-{{ $focusedItem->id }}" class="btn-secondary px-3 py-2 text-xs">保存内容を見る</a>
+                            <a href="#inbox-item-{{ $focusedItem->id }}" class="btn-secondary px-3 py-2 text-xs">{{ $focusedSuggestion ? '整理候補を確認する' : '保存内容を見る' }}</a>
                         </div>
                         <p class="mt-3 text-[10px] leading-4 text-slate-600">Canoviaが候補を出しても、確認するまでPlan / Taskなどの正規データは変更しません。</p>
                     </div>
