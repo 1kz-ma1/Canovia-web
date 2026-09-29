@@ -781,6 +781,18 @@ V47 Execution Orchestrationとはrequest contractがcanonical化された後に�
 
 詳細は `docs/V46.1_CONVERSATIONAL_INBOX.md` を正とする。
 
+## V46.2 GitHub Repository Overview
+
+GitHub Repository URLは「今やる / レビュー待ち / 修正必要 / マージ待ち / 完了」の1作業として扱わず、GitHub Workflow Hub上のRepository Root / Contextとして表示する。Repository自体はWorkflow Laneから除外し、同じPlan + repo_full_nameを持つPR / Issue / Branch / Commit / ActionsをRepository Overviewへ集約する。
+
+Repository Overviewでは、Canoviaが把握しているGitHub object数、Canovia workflow state別件数、Artifactへ明示linkされたTask、直近referenceをまとめて表示する。Repository ArtifactがなくてもPR等のURLからrepo_full_nameが判明していればOverviewを構築できる。
+
+Quick CaptureでRepository URLを登録した場合はartifact_type=repositoryとし、github_workflow_stateは保存しない。既存Repository Artifactにstateが残っていてもmigrationは行わず、Projection側でLaneから除外する。PR / Issue / Branch等は従来どおりworkflow stateを持つ。
+
+V46.2でもGitHub API / OAuth / Webhookは導入しない。OverviewはCanoviaへ登録済みURLだけから構成し、未登録Branch / PR / Issue、remote status、default branch、CI結果等をRepository URLだけから推測しない。将来authoritative GitHub connectorを接続する場合も、生のGitHub hierarchyを増やすのではなくこのOverviewへnormalizeする。
+
+詳細は `docs/V46.2_GITHUB_REPOSITORY_OVERVIEW.md` を正とする。
+
 ## V47 Execution Orchestration
 
 V47.0ではTaskを単独で推薦するだけでなく、Plan全体のDependency・Evidence・Goal Context・制約を保ったまま、選択Taskへ「今この主体が何をすべきか」を渡すExecution Orchestration Layerを追加する。
