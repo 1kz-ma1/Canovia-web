@@ -454,6 +454,10 @@ class InboxController extends Controller
 
         $candidate = rtrim((string) ($matches[0] ?? ''), ".,、。)]}」』");
 
+        if (mb_strlen($candidate) > 2048) {
+            return '';
+        }
+
         return filter_var($candidate, FILTER_VALIDATE_URL) ? $candidate : '';
     }
 
