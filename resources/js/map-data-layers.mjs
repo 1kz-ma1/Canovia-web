@@ -89,7 +89,11 @@ function csv(value) {
         .filter(Boolean);
 }
 
-function readState(storage, available, defaults) {
+export function readMapDataLayerState(
+    storage,
+    available = MAP_DATA_LAYER_KEYS,
+    defaults = [],
+) {
     try {
         return parseMapDataLayerState(
             storage?.getItem?.(MAP_DATA_LAYER_STORAGE_KEY) ?? null,
@@ -101,10 +105,18 @@ function readState(storage, available, defaults) {
     }
 }
 
-function persistState(storage, state) {
+export function persistMapDataLayerState(storage, state) {
+    const normalized = normalizeMapDataLayerState(
+        state,
+        MAP_DATA_LAYER_KEYS,
+        [],
+    );
+
     try {
-        storage?.setItem?.(MAP_DATA_LAYER_STORAGE_KEY, JSON.stringify(state));
+        storage?.setItem?.(MAP_DATA_LAYER_STORAGE_KEY, JSON.stringify(normalized));
     } catch (_) {}
+
+    return normalized;
 }
 
 export function applyMapDataLayerState(page, control, state, available) {
@@ -164,7 +176,7 @@ export function mountMapDataLayers({
     // Persist the complete preference set, not only layers available on the
     // current depth. Otherwise moving L3 -> L2 and toggling one layer would
     // silently erase L3-only preferences such as progress/status.
-    let state = readState(windowRef.localStorage, MAP_DATA_LAYER_KEYS, defaults);
+    let state = readMapDataLayerState(windowRef.localStorage, MAP_DATA_LAYER_KEYS, defaults);
     applyMapDataLayerState(page, control, state, available);
 
     const onChange = (event) => {
@@ -178,7 +190,7 @@ export function mountMapDataLayers({
             MAP_DATA_LAYER_KEYS,
             defaults,
         );
-        persistState(windowRef.localStorage, state);
+        persistMapDataLayerState(windowRef.localStorage, state);
         applyMapDataLayerState(page, control, state, available);
     };
 
