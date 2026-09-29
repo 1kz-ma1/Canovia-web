@@ -15,6 +15,7 @@ final class MapProjectionService
         private readonly ReflectionMapProjectionService $reflection,
         private readonly ExecutionMapProjectionService $execution,
         private readonly MapSpatialMemoryService $spatialMemory,
+        private readonly MapDataLayerProjectionService $dataLayers,
     ) {}
 
     /**
@@ -47,7 +48,9 @@ final class MapProjectionService
             MapLevel::Execution => $this->execution->build($request),
         };
 
-        return $this->spatialMemory->decorate($request, $level, $projection);
+        $projection = $this->spatialMemory->decorate($request, $level, $projection);
+
+        return $this->dataLayers->decorate($projection);
     }
 
     /**
