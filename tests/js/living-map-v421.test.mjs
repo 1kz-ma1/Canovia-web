@@ -116,6 +116,16 @@ test('semantic continuity bounds extreme size ratios to avoid explosive transiti
     );
 });
 
+test('semantic continuity bounds tampered translation values', () => {
+    assert.deepEqual(
+        semanticContinuityTransform(
+            { left: 999999, top: -999999, width: 100, height: 100 },
+            { left: 0, top: 0, width: 100, height: 100 },
+        ),
+        { x: 2400, y: -2400, scale: 1 },
+    );
+});
+
 test('one-hop focus keeps only the selected node and direct neighbors', () => {
     assert.deepEqual(
         [...oneHopNodeIds(edges, 'task:1')].sort(),
