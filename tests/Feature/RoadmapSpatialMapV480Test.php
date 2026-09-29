@@ -60,7 +60,10 @@ class RoadmapSpatialMapV480Test extends TestCase
         $this->assertNotSame($nodes[$rootA->id]['y'], $nodes[$rootB->id]['y']);
 
         $this->assertSame(1, $nodes[$childC->id]['dependency_depth']);
+        $this->assertSame('blocked', $nodes[$childC->id]['dependency_state']);
+        $this->assertSame([$rootA->id], $nodes[$childC->id]['blocker_task_ids']);
         $this->assertSame(1, $nodes[$childD->id]['dependency_depth']);
+        $this->assertSame('blocked', $nodes[$childD->id]['dependency_state']);
         $this->assertSame($nodes[$childC->id]['cluster_id'], $nodes[$childD->id]['cluster_id']);
         $this->assertGreaterThan($nodes[$rootA->id]['x'], $nodes[$childC->id]['x']);
 
@@ -76,6 +79,20 @@ class RoadmapSpatialMapV480Test extends TestCase
         $this->assertContains('task:'.$rootA->id.'>task:'.$childD->id, $dependencyPairs);
         $this->assertContains('task:'.$childC->id.'>task:'.$final->id, $dependencyPairs);
         $this->assertContains('task:'.$childD->id.'>task:'.$final->id, $dependencyPairs);
+
+        $rootA->update([
+            'status' => 'done',
+            'progress_percent' => 100,
+            'remaining_minutes' => 0,
+        ]);
+
+        $afterRoadmap = app(RoadmapService::class)->build($plan->fresh('tasks'));
+        $afterSpatial = app(RoadmapSpatialProjectionService::class)->build($afterRoadmap);
+        $afterNodes = collect($afterSpatial['nodes'])->keyBy('task_id');
+
+        $this->assertSame('ready', $afterNodes[$childC->id]['dependency_state']);
+        $this->assertSame([], $afterNodes[$childC->id]['blocker_task_ids']);
+        $this->assertSame('ready', $afterNodes[$childD->id]['dependency_state']);
     }
 
     public function test_roadmap_page_uses_spatial_map_as_primary_and_keeps_list_as_secondary_view(): void
