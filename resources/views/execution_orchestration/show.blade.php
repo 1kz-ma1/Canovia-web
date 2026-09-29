@@ -5,6 +5,7 @@
 @section('content')
     @php
         $dependencyState = (string) ($context['dependency_state'] ?? 'ready');
+        $taskComplete = $task->status === 'done' || (int) $task->progress_percent >= 100;
         $modeLabels = [
             'execute' => '実行',
             'prepare' => '先行準備',
@@ -31,8 +32,8 @@
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     <a href="{{ route('plans.execution_distribution.show', $plan) }}" class="btn-secondary px-3 py-2 text-xs">複数担当へ分配</a>
-                    <span class="badge {{ $dependencyState === 'ready' ? 'badge-green' : 'badge-slate' }}">
-                        {{ $dependencyState === 'ready' ? '実行可能' : '前提待ち' }}
+                    <span class="badge {{ $taskComplete || $dependencyState === 'ready' ? 'badge-green' : 'badge-slate' }}">
+                        {{ $taskComplete ? '完了済み' : ($dependencyState === 'ready' ? '実行可能' : '前提待ち') }}
                     </span>
                 </div>
             </div>
@@ -91,7 +92,7 @@
                     <div>
                         <p class="text-[10px] font-black uppercase tracking-[.16em] text-cyan-300">CURRENT STATE</p>
                         <h2 class="mt-1 text-xl font-black text-slate-100">
-                            {{ $dependencyState === 'ready' ? 'このTaskは開始できます' : '本作業はDependency待ちです' }}
+                            {{ $taskComplete ? 'このTaskは完了しています' : ($dependencyState === 'ready' ? 'このTaskは開始できます' : '本作業はDependency待ちです') }}
                         </h2>
                     </div>
                     <span class="badge {{ $dependencyState === 'ready' ? 'badge-green' : 'badge-slate' }}">
@@ -129,10 +130,18 @@
                 <p class="text-[10px] font-black uppercase tracking-[.16em] text-violet-300">GENERATE</p>
                 <h2 class="mt-1 text-xl font-black text-slate-100">今この担当へ渡す指示を作る</h2>
 
-                <form method="POST" action="{{ route('plans.tasks.execution_orchestration.prepare', [$plan, $task]) }}" class="mt-5 space-y-4">
-                    @csrf
-                    <div>
-                        <label class="text-xs font-bold text-slate-300">実行主体</label>
+                @if ($taskComplete)
+                    <div class="mt-5 rounded-2xl border border-emerald-300/12 bg-emerald-300/[0.025] p-4">
+                        <p class="text-sm font-bold text-emerald-100">このTaskへの新しい指示生成は停止しています</p>
+                        <p class="mt-2 text-xs leading-5 text-slate-500">
+                            完了済みTaskへ新しいPacketを作らず、下のExecution Coordinationからreadyになった後続Taskやstaleな担当指示を確認してください。
+                        </p>
+                    </div>
+                @else
+                    <form method="POST" action="{{ route('plans.tasks.execution_orchestration.prepare', [$plan, $task]) }}" class="mt-5 space-y-4">
+                        @csrf
+                        <div>
+                            <label class="text-xs font-bold text-slate-300">実行主体</label>
                         <select name="actor_type" class="form-control mt-2">
                             @foreach ($actorTypes as $value => $label)
                                 <option value="{{ $value }}" @selected(old('actor_type', $actorType) === $value)>{{ $label }}</option>
@@ -156,9 +165,10 @@
                                 @endif
                             </div>
                         @endif
-                        <button type="submit" name="generation_mode" value="external" class="btn-secondary w-full justify-center">外部AI用Promptを準備</button>
-                    </div>
-                </form>
+                            <button type="submit" name="generation_mode" value="external" class="btn-secondary w-full justify-center">外部AI用Promptを準備</button>
+                        </div>
+                    </form>
+                @endif
             </article>
         </section>
 
