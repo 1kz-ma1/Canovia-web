@@ -65,5 +65,9 @@ return [
             'label' => 'Developer GitHub Evidence',
             'free' => false,
         ],
+        FeatureKey::DeveloperGithubWrite->value => [
+            'label' => 'Developer GitHub Write',
+            'free' => false,
+        ],
     ],
 ];
