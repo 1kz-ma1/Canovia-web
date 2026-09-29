@@ -46,6 +46,8 @@ return [
         'app_private_key' => env('GITHUB_APP_PRIVATE_KEY'),
         'app_private_key_base64' => env('GITHUB_APP_PRIVATE_KEY_BASE64'),
         'app_install_url' => env('GITHUB_APP_INSTALL_URL'),
+        // GitHub App webhook shared secret. Never expose to users or clients.
+        'app_webhook_secret' => env('GITHUB_APP_WEBHOOK_SECRET'),
     ],
 
 ];

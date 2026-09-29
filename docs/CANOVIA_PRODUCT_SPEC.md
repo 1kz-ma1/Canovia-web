@@ -891,6 +891,24 @@ Execution OrchestrationにはEXECUTION COORDINATIONを追加し、READY NEXT / S
 
 詳細は `docs/V46.9_EXECUTION_COORDINATION_BRIDGE.md` を正とする。
 
+## V46.10 GitHub App Webhook Return Sync
+
+V46.10では、V46.7で手動だったGitHub Return SyncをGitHub App Webhookからbackground起動できるようにする。Webhook payloadはremote stateのSource of Truthとして採用せず、「GitHub側で再確認すべき変化が起きた」というtriggerだけに利用する。実際のReview / Merge / CI stateは既存GitHub App installation tokenでGitHub REST APIから再取得し、V46.7 GitHubReturnEvidenceServiceへ渡す。
+
+Webhook endpointはstateless API route `POST /api/integrations/github/webhook` とし、browser session / CSRF cookie / First Run UI middlewareを使わない。Canovia運営者がGitHub App側とserver側へ同じ `GITHUB_APP_WEBHOOK_SECRET` を設定し、raw bodyに対するX-Hub-Signature-256 HMAC-SHA256をconstant-time比較する。signature不一致は永続化・queue dispatch前に拒否する。
+
+raw webhook JSON、PR body、review comment、source code、signatureは保存しない。delivery ID / event / action / repo_full_name / installation ID / PR number list / processing status等のminimal routing factだけを新規 `github_webhook_deliveries` へ保存し、delivery_id uniqueでidempotency / retry / auditを担保する。
+
+署名確認後のGitHub API取得は `ProcessGitHubWebhookDelivery` queue jobへ渡す。対象PR Artifactはprovider=github、PR number、parsed repo_full_nameから限定し、same Planのconnected Repository Artifactに保存されたinstallation_idがWebhook installation_idと一致する場合だけ処理する。Task mappingはPR Artifactへ明示linkされたTaskだけで、AI推論は行わない。
+
+background automationにはUI actorが存在しないため、DeveloperGithubEvidence entitlementはPlan ownerをbilling principalとして評価する。未許可の場合はremote APIを追加取得せずEvidenceを作らない。Webhook経由でCapability境界を迂回しない。
+
+background syncが変更できるのはPR Artifactのgithub_return_snapshotとidempotent GitHub TaskEvidenceまで。Task status / progress / remaining / Dependency / github_workflow_state / Evidence Decision / Distribution / Packetは自動変更しない。Task完了等はV46.8のHuman Confirmationを維持する。
+
+productionではdatabase queue workerを常時動かす必要がある。Canovia運営者はGitHub App Webhook URL / secret / event subscriptionとqueue workerを初回セットアップし、一般ユーザーは従来どおり対象RepositoryへCanovia GitHub Appをinstall / approveするだけとする。
+
+詳細は `docs/V46.10_GITHUB_WEBHOOK_RETURN_SYNC.md` を正とする。
+
 ## V47 Execution Orchestration
 
 V47.0ではTaskを単独で推薦するだけでなく、Plan全体のDependency・Evidence・Goal Context・制約を保ったまま、選択Taskへ「今この主体が何をすべきか」を渡すExecution Orchestration Layerを追加する。

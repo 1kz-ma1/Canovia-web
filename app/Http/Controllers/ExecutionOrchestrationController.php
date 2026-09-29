@@ -115,6 +115,7 @@ final class ExecutionOrchestrationController extends Controller
             'githubWriteEntitled' => $githubWriteDecision->allowed,
             'githubEvidenceEntitled' => $githubEvidenceDecision->allowed,
             'githubWriteConfigured' => $githubWriter->configured(),
+            'githubWebhookConfigured' => trim((string) config('services.github.app_webhook_secret', '')) !== '',
             'latestExecutionPullRequest' => $latestExecutionPullRequest,
             'githubReturnSnapshot' => $githubReturnSnapshot,
             'githubDecisionCandidate' => $githubDecisionCandidate,
