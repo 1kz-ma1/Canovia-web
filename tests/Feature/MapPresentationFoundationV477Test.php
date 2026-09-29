@@ -134,6 +134,34 @@ class MapPresentationFoundationV477Test extends TestCase
         $this->assertSame('action-primary', $taskNode['position_role']);
     }
 
+    public function test_collaboration_without_any_shared_plan_offers_creation_inside_the_map(): void
+    {
+        $user = User::factory()->create([
+            'first_run_completed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('map.index', [
+            'level' => 'l2',
+            'intent' => 'collaboration',
+            'collab_context' => 'review',
+        ]));
+
+        $response->assertOk();
+        $graph = $response->viewData('graph');
+
+        $this->assertSame('collaboration:context:review', $graph['center_node_id']);
+        $this->assertTrue($graph['nodes']->contains(
+            fn (array $node) => ($node['id'] ?? null) === 'collaboration:empty:create-plan'
+                && data_get($node, 'direct_navigation.kind') === 'direct'
+        ));
+        $this->assertFalse($graph['nodes']->contains(
+            fn (array $node) => ($node['id'] ?? null) === 'collaboration:empty:plans'
+        ));
+        $this->assertFalse($graph['nodes']->contains(
+            fn (array $node) => ($node['id'] ?? null) === 'collaboration:empty:station'
+        ));
+    }
+
     public function test_leaf_nodes_are_palette_first_even_when_a_direct_destination_exists(): void
     {
         $blade = file_get_contents(resource_path('views/map/index.blade.php'));
