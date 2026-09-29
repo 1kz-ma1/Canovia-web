@@ -172,7 +172,7 @@ final class MapDataLayerProjectionService
     {
         $dependencyIds = $task->dependencyIds();
 
-        return [
+        $overlay = [
             'progress' => [
                 'percent' => (int) $task->progress_percent,
             ],
@@ -180,18 +180,27 @@ final class MapDataLayerProjectionService
                 'value' => (string) $task->status,
                 'label' => $this->statusLabel((string) $task->status),
             ],
-            'evidence' => [
-                'count' => (int) ($task->evidences_count ?? 0),
-            ],
-            'dependency' => [
-                'count' => count($dependencyIds),
-                'task_ids' => $dependencyIds,
-            ],
             'priority' => [
                 'value' => (int) $task->priority,
                 'label' => 'P'.(int) $task->priority,
             ],
         ];
+
+        $evidenceCount = (int) ($task->evidences_count ?? 0);
+        if ($evidenceCount > 0) {
+            $overlay['evidence'] = [
+                'count' => $evidenceCount,
+            ];
+        }
+
+        if ($dependencyIds !== []) {
+            $overlay['dependency'] = [
+                'count' => count($dependencyIds),
+                'task_ids' => $dependencyIds,
+            ];
+        }
+
+        return $overlay;
     }
 
     /**
