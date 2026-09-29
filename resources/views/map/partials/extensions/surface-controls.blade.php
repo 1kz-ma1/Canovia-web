@@ -66,6 +66,7 @@
     data-map-current-label="{{ $currentContextLabel }}"
 >
     <details
+        name="map-surface-control"
         class="canovia-map-page-control"
         data-map-page-control
         data-map-page-max-custom="8"
@@ -136,6 +137,7 @@
 
     @if ($availableDataLayers->isNotEmpty())
         <details
+            name="map-surface-control"
             class="canovia-map-data-layer-control"
             data-map-data-layer-control
             data-map-data-layer-available="{{ $availableDataLayers->implode(',') }}"
