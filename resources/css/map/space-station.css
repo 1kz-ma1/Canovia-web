@@ -202,6 +202,11 @@
         line-height: 1.45;
     }
 
+    [data-space-station-plan-field][hidden],
+    [data-space-station-task-field][hidden] {
+        display: none;
+    }
+
     .canovia-space-station-execution-fields {
         display: grid;
         gap: 0.65rem;
