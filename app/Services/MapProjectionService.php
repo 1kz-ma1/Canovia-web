@@ -12,6 +12,7 @@ final class MapProjectionService
         private readonly IntentMapProjectionService $intent,
         private readonly HierarchyMapProjectionService $hierarchy,
         private readonly CollaborationMapProjectionService $collaboration,
+        private readonly ReflectionMapProjectionService $reflection,
         private readonly ExecutionMapProjectionService $execution,
         private readonly MapSpatialMemoryService $spatialMemory,
     ) {}
@@ -38,9 +39,11 @@ final class MapProjectionService
     {
         $projection = match ($level) {
             MapLevel::Intent => $this->intent->build($request),
-            MapLevel::Domain, MapLevel::Plan => $request->query('intent') === 'collaboration'
-                ? $this->collaboration->build($request, $level)
-                : $this->hierarchy->build($request, $level),
+            MapLevel::Domain, MapLevel::Plan => match ($request->query('intent')) {
+                'collaboration' => $this->collaboration->build($request, $level),
+                'reflection' => $this->reflection->build($request, $level),
+                default => $this->hierarchy->build($request, $level),
+            },
             MapLevel::Execution => $this->execution->build($request),
         };
 

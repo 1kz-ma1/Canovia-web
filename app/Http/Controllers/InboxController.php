@@ -440,6 +440,7 @@ class InboxController extends Controller
             'map_domain' => ['nullable', 'string', 'regex:/^[a-f0-9]{12}$/'],
             'map_plan' => ['nullable', 'integer', 'min:1'],
             'map_collab_context' => ['nullable', 'in:my_action,review,waiting,external'],
+            'map_reflection_context' => ['nullable', 'in:recent,evidence,completed,reflections'],
         ];
     }
 
@@ -480,6 +481,14 @@ class InboxController extends Controller
                 && in_array($collaborationContext, ['my_action', 'review', 'waiting', 'external'], true)
             ) {
                 $params['collab_context'] = $collaborationContext;
+            }
+
+            $reflectionContext = trim((string) $request->input('map_reflection_context', ''));
+            if (
+                $intent === 'reflection'
+                && in_array($reflectionContext, ['recent', 'evidence', 'completed', 'reflections'], true)
+            ) {
+                $params['reflection_context'] = $reflectionContext;
             }
 
             return redirect()->to(

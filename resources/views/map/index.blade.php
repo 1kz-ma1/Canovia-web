@@ -14,6 +14,7 @@
         $isExecutionLevel = $mapLevel === 'l3';
         $isHierarchyLevel = $isDomainLevel || $isPlanLevel;
         $isCollaborationMode = (bool) ($graph['collaboration_mode'] ?? false);
+        $isReflectionMode = (bool) ($graph['reflection_mode'] ?? false);
         $primaryNodeId = $graph['primary_node_id'] ?? null;
         $centerNodeId = $graph['center_node_id'] ?? $primaryNodeId;
         $primaryLaunch = $graph['primary_launch'] ?? null;
@@ -24,6 +25,8 @@
             $mapLevel === 'l0' => 'L0 · CANOVIA NAVIGATION',
             $mapLevel === 'l1' && $isCollaborationMode => 'L1 · COLLABORATION CONTEXT',
             $mapLevel === 'l2' && $isCollaborationMode => 'L2 · COLLABORATION ITEMS',
+            $mapLevel === 'l1' && $isReflectionMode => 'L1 · REFLECTION LENS',
+            $mapLevel === 'l2' && $isReflectionMode => 'L2 · REFLECTION RECORDS',
             $mapLevel === 'l1' => 'L1 · DOMAIN MAP',
             $mapLevel === 'l2' => 'L2 · PLAN MAP',
             default => 'L3 · EXECUTION MAP',
@@ -56,6 +59,14 @@
                         <p class="canovia-map-description">
                             {{ $hierarchy['collaboration_context_label'] ?? '共同Context' }}に該当するTask / Artifactを確認し、必要なExecutionまたは外部Toolへ進みます。
                         </p>
+                    @elseif ($isDomainLevel && $isReflectionMode)
+                        <p class="canovia-map-description">
+                            Plan分類ではなく、最近の実績・Evidence・完了Task・振り返り記録というLensから過去の事実を辿ります。
+                        </p>
+                    @elseif ($isPlanLevel && $isReflectionMode)
+                        <p class="canovia-map-description">
+                            {{ $hierarchy['reflection_context_label'] ?? '振り返り' }}に該当する具体的な記録を確認し、元のPlanやTimelineへ戻れます。
+                        </p>
                     @elseif ($isDomainLevel)
                         <p class="canovia-map-description">
                             {{ $hierarchy['intent_label'] ?? '計画' }}のContextを保ったまま、Planが属する領域へSemantic Zoomします。
@@ -77,6 +88,11 @@
                         <p>
                             中央は共同作業の目的Context、周囲はその目的に該当するShared Plan / Artifactです。
                             GitHub等の外部状態は推測せず、Canoviaで明示された状態と確認先だけを表示します。
+                        </p>
+                    @elseif ($isHierarchyLevel && $isReflectionMode)
+                        <p>
+                            中央は振り返りLens、周囲は既存WorkLog・Evidence・完了Taskから投影した記録です。
+                            Map用の履歴は作らず、確認すると元のPlanやTimelineへ戻ります。
                         </p>
                     @elseif ($isHierarchyLevel)
                         <p>
@@ -151,7 +167,9 @@
                         >ひとつ外へ戻る</a>
                     @endif
                     <button type="button" class="btn-secondary hidden" data-map-focus-reset>全体を見る</button>
-                    <a href="{{ route('my_plans.index') }}" class="btn-secondary">Classic Plans</a>
+                    <a href="{{ $isReflectionMode ? route('timeline.index') : route('my_plans.index') }}" class="btn-secondary">
+                        {{ $isReflectionMode ? 'Timeline' : 'Classic Plans' }}
+                    </a>
                 @endif
             </div>
 
@@ -167,7 +185,7 @@
 
         <div class="canovia-map-workspace" data-map-workspace>
             <div
-                class="canovia-map-shell {{ $isIntentHub ? 'is-intent-hub' : ($isHierarchyLevel ? 'is-hierarchy-map' : 'is-execution-map') }}{{ $isCollaborationMode ? ' is-collaboration-map' : '' }}"
+                class="canovia-map-shell {{ $isIntentHub ? 'is-intent-hub' : ($isHierarchyLevel ? 'is-hierarchy-map' : 'is-execution-map') }}{{ $isCollaborationMode ? ' is-collaboration-map' : '' }}{{ $isReflectionMode ? ' is-reflection-map' : '' }}"
                 data-canovia-map
                 data-map-level="{{ $mapLevel }}"
             >
@@ -225,6 +243,7 @@
                                 'domain', 'intent_context', 'plan' => 'is-hierarchy-node',
                                 'collaboration_hub', 'collaboration_context', 'collaboration_item' => 'is-hierarchy-node is-collaboration-node',
                                 'satellite_plan', 'satellite_tool' => 'is-personalized-satellite',
+                                'task', 'evidence' => $isReflectionMode && $isHierarchyLevel ? 'is-hierarchy-node is-reflection-node' : '',
                                 default => '',
                             };
                             $visualKind = \App\Support\MapNodeVisualGrammar::kind($node);
