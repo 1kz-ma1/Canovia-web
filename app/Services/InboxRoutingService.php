@@ -39,34 +39,34 @@ class InboxRoutingService
         $destination = (string) $data['destination'];
 
         $message = match ($destination) {
-                'future_memo' => $this->toFutureMemo($request, $item, $data),
-                'career_capture' => $this->toCareerCapture($request, $item, $plan, $actorToken),
-                'recall_material' => $this->toRecall($request, $item, $plan, $task, $actorToken),
-                'task_evidence' => $this->toEvidence($request, $item, $plan, $task, $actorToken),
-                'plan_resource' => $this->toResource($request, $item, $plan),
-                'execution_request' => $this->toExecutionRequest($request, $item, $data, $plan, $task),
-                'keep_inbox' => 'Inboxに残しました。',
-                default => throw ValidationException::withMessages(['destination' => '未対応の整理先です。']),
-            };
+            'future_memo' => $this->toFutureMemo($request, $item, $data),
+            'career_capture' => $this->toCareerCapture($request, $item, $plan, $actorToken),
+            'recall_material' => $this->toRecall($request, $item, $plan, $task, $actorToken),
+            'task_evidence' => $this->toEvidence($request, $item, $plan, $task, $actorToken),
+            'plan_resource' => $this->toResource($request, $item, $plan),
+            'execution_request' => $this->toExecutionRequest($request, $item, $data, $plan, $task),
+            'keep_inbox' => 'Inboxに残しました。',
+            default => throw ValidationException::withMessages(['destination' => '未対応の整理先です。']),
+        };
 
-            if ($destination !== 'keep_inbox') {
-                $metadata = is_array($item->metadata) ? $item->metadata : [];
-                $metadata['routing_confirmed'] = [
-                    'destination' => $destination,
-                    'plan_id' => $plan?->id,
-                    'task_id' => $task?->id,
-                    'confirmed_at' => now()->toIso8601String(),
-                ];
+        if ($destination !== 'keep_inbox') {
+            $metadata = is_array($item->metadata) ? $item->metadata : [];
+            $metadata['routing_confirmed'] = [
+                'destination' => $destination,
+                'plan_id' => $plan?->id,
+                'task_id' => $task?->id,
+                'confirmed_at' => now()->toIso8601String(),
+            ];
 
-                $item->update([
-                    'plan_id' => $plan?->id ?? $item->plan_id,
-                    'status' => 'processed',
-                    'processed_at' => now(),
-                    'metadata' => $metadata,
-                ]);
-            } else {
-                $item->update(['status' => 'new']);
-            }
+            $item->update([
+                'plan_id' => $plan?->id ?? $item->plan_id,
+                'status' => 'processed',
+                'processed_at' => now(),
+                'metadata' => $metadata,
+            ]);
+        } else {
+            $item->update(['status' => 'new']);
+        }
 
         return ['message' => $message, 'destination' => $destination];
     }
