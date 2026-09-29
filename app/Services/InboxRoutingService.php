@@ -21,6 +21,7 @@ class InboxRoutingService
         private readonly StudyRecallCandidateExtractionService $recallExtractor,
         private readonly TaskEvidenceService $evidence,
         private readonly PlanActivityService $activity,
+        private readonly ExecutionRequestHandoffService $executionRequests,
     ) {}
 
     /**
@@ -43,6 +44,7 @@ class InboxRoutingService
                 'recall_material' => $this->toRecall($request, $item, $plan, $task, $actorToken),
                 'task_evidence' => $this->toEvidence($request, $item, $plan, $task, $actorToken),
                 'plan_resource' => $this->toResource($request, $item, $plan),
+                'execution_request' => $this->toExecutionRequest($request, $item, $data, $plan, $task),
                 'keep_inbox' => 'Inboxに残しました。',
                 default => throw ValidationException::withMessages(['destination' => '未対応の整理先です。']),
             };
@@ -213,6 +215,32 @@ class InboxRoutingService
         );
 
         return 'Task Evidenceへ記録しました。進捗は自動加算しません。';
+    }
+
+    private function toExecutionRequest(
+        Request $request,
+        InboxItem $item,
+        array $data,
+        ?Plan $plan,
+        ?Task $task,
+    ): string {
+        $this->requireTask($plan, $task);
+
+        $actorType = trim((string) ($data['execution_actor_type'] ?? 'human_ai'));
+        $availableMinutes = isset($data['execution_available_minutes'])
+            ? (int) $data['execution_available_minutes']
+            : null;
+
+        $this->executionRequests->confirmFromInbox(
+            $request,
+            $item,
+            $plan,
+            $task,
+            $actorType,
+            $availableMinutes,
+        );
+
+        return '実行リクエストを確認しました。全体ContextとDependencyを確認して、担当へ渡す指示を組み立てます。';
     }
 
     private function toResource(Request $request, InboxItem $item, ?Plan $plan): string
