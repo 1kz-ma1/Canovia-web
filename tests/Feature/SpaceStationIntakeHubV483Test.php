@@ -92,7 +92,7 @@ class SpaceStationIntakeHubV483Test extends TestCase
             ->assertSee('data-space-station-routing-candidate', false)
             ->assertSee('Task Evidence')
             ->assertSee('どこにつなぐか確認')
-            ->assertSee('確定するまでは接続されません。');
+            ->assertSee('接続は下で人が確定します。');
     }
 
     public function test_docked_space_station_uses_current_plan_only_as_a_confirmation_candidate(): void
