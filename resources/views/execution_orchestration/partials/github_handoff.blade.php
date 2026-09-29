@@ -13,9 +13,6 @@
     $reviewSummary = is_array(data_get($returnSnapshot, 'review_summary')) ? data_get($returnSnapshot, 'review_summary') : [];
     $ciState = (string) data_get($returnSnapshot, 'ci.state', 'unknown');
     $returnWarnings = array_values((array) data_get($returnSnapshot, 'warnings', []));
-    $persistedOrigin = $pullRequestArtifact && is_array(data_get($pullRequestArtifact->metadata, 'github_write_origin'))
-        ? data_get($pullRequestArtifact->metadata, 'github_write_origin')
-        : [];
 @endphp
 
 @if ($packet || $candidate || $handoffResult || $pullRequestArtifact)
