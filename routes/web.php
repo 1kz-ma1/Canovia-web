@@ -52,6 +52,7 @@ use App\Http\Controllers\CareerWorkspaceController;
 use App\Http\Controllers\InterviewReviewController;
 use App\Http\Controllers\GuidedExecutionController;
 use App\Http\Controllers\ExecutionOrchestrationController;
+use App\Http\Controllers\ExecutionGitHubHandoffController;
 use App\Http\Controllers\ExecutionDistributionController;
 use App\Http\Controllers\CompanionController;
 use App\Http\Controllers\CoreFragmentBundleController;
@@ -297,6 +298,14 @@ Route::post('/plans/{plan}/tasks/{task}/execution-orchestration/import', [Execut
     ->name('plans.tasks.execution_orchestration.import');
 Route::post('/plans/{plan}/tasks/{task}/execution-orchestration/reset', [ExecutionOrchestrationController::class, 'reset'])
     ->name('plans.tasks.execution_orchestration.reset');
+Route::post('/plans/{plan}/tasks/{task}/execution-orchestration/github/prepare', [ExecutionGitHubHandoffController::class, 'prepare'])
+    ->middleware('throttle:6,1')
+    ->name('plans.tasks.execution_orchestration.github.prepare');
+Route::post('/plans/{plan}/tasks/{task}/execution-orchestration/github/confirm', [ExecutionGitHubHandoffController::class, 'confirm'])
+    ->middleware('throttle:3,1')
+    ->name('plans.tasks.execution_orchestration.github.confirm');
+Route::post('/plans/{plan}/tasks/{task}/execution-orchestration/github/discard', [ExecutionGitHubHandoffController::class, 'discard'])
+    ->name('plans.tasks.execution_orchestration.github.discard');
 
 // One Plan can prepare multiple task-scoped packets while keeping the same canonical Plan context.
 Route::get('/plans/{plan}/execution-distribution', [ExecutionDistributionController::class, 'show'])
