@@ -9,6 +9,7 @@ use App\Models\Task;
 use App\Models\TaskEvidence;
 use App\Models\User;
 use App\Models\UserProductGrant;
+use App\Services\ExecutionGitHubHandoffService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\Http;
@@ -60,6 +61,15 @@ class ExecutionGitHubHandoffV466Test extends TestCase
 
         $this->assertSame($beforeArtifacts, PlanArtifact::query()->count());
         $this->assertSame($beforeEvidence, TaskEvidence::query()->count());
+
+        $storedCandidate = session(ExecutionGitHubHandoffService::sessionKey($plan, $task));
+        $this->assertIsArray($storedCandidate);
+        $this->assertNull(data_get($storedCandidate, 'change.content'));
+        $this->assertNotEmpty(data_get($storedCandidate, 'change.content_encrypted'));
+        $this->assertStringNotContainsString(
+            'new content',
+            json_encode($storedCandidate, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        );
 
         Http::assertNotSent(fn (HttpRequest $request) =>
             ($request->method() === 'POST' && str_contains($request->url(), '/git/refs'))
