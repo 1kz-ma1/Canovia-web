@@ -6,6 +6,7 @@
         ->values();
     $candidate = is_array($githubChangeCandidate ?? null) ? $githubChangeCandidate : null;
     $handoffResult = is_array($githubHandoffResult ?? null) ? $githubHandoffResult : null;
+    $packetIsStale = (bool) ($packetStale ?? false);
 @endphp
 
 @if ($packet || $candidate || $handoffResult)
@@ -103,17 +104,32 @@
                         上書きを避けるためPR作成を停止して候補の作り直しを求めます。
                     </div>
 
+                    @if ($packetIsStale)
+                        <div class="mt-4 rounded-xl border border-amber-300/15 bg-amber-300/[0.025] p-3 text-[11px] leading-5 text-amber-100/80">
+                            この候補の元になったExecution Contextが変わっています。GitHubへ送らず、Packetと変更候補を現在Contextから作り直してください。
+                        </div>
+                    @endif
+
                     <div class="mt-4 flex flex-wrap gap-2">
-                        <form method="POST" action="{{ route('plans.tasks.execution_orchestration.github.confirm', [$plan, $task]) }}">
-                            @csrf
-                            <button type="submit" class="btn-primary">確認してレビューに出す</button>
-                        </form>
+                        @unless ($packetIsStale)
+                            <form method="POST" action="{{ route('plans.tasks.execution_orchestration.github.confirm', [$plan, $task]) }}">
+                                @csrf
+                                <button type="submit" class="btn-primary">確認してレビューに出す</button>
+                            </form>
+                        @endunless
                         <form method="POST" action="{{ route('plans.tasks.execution_orchestration.github.discard', [$plan, $task]) }}">
                             @csrf
                             <button type="submit" class="btn-secondary">候補を破棄</button>
                         </form>
                     </div>
                 </div>
+            </div>
+        @elseif ($packetIsStale)
+            <div class="mt-5 rounded-xl border border-amber-300/12 bg-amber-300/[0.025] p-4">
+                <p class="text-xs font-bold text-amber-100">現在ContextからExecution Packetを再生成してください</p>
+                <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                    古いPacketを元にGitHub変更候補を作ると、現在のDependency・Evidence・Task scopeとずれる可能性があるため停止しています。
+                </p>
             </div>
         @elseif (! $githubWriteEntitled)
             <div class="mt-5 rounded-xl border border-violet-300/12 bg-violet-300/[0.025] p-4">
