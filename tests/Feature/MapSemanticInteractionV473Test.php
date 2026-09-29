@@ -106,7 +106,8 @@ class MapSemanticInteractionV473Test extends TestCase
         $this->actingAs($user)
             ->get(route('map.index'))
             ->assertOk()
-            ->assertSee('Context Inspector')
-            ->assertSee('選択中Nodeの詳細確認と補助操作を表示します');
+            ->assertSee('詳細')
+            ->assertSee('選んだマスの内容と操作を確認できます')
+            ->assertDontSee('Context Inspector');
     }
 }
