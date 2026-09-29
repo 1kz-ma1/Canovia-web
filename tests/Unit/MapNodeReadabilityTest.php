@@ -7,15 +7,32 @@ use PHPUnit\Framework\TestCase;
 
 class MapNodeReadabilityTest extends TestCase
 {
-    public function test_distinct_tasks_keep_their_names_without_mutating_source_data(): void
+    public function test_recommendation_is_role_only_on_canvas_without_mutating_source_data(): void
     {
-        foreach (['画面の重なりを直す', 'レビュー結果を確認する', '<script>alert(1)</script>'] as $title) {
-            $node = ['type' => 'task', 'state' => 'primary', 'position_role' => 'action-primary', 'label' => $title];
-            $original = $node;
+        $node = [
+            'type' => 'task',
+            'state' => 'primary',
+            'position_role' => 'action-primary',
+            'label' => '画面の重なりを直す',
+        ];
+        $original = $node;
+
+        $presentation = MapNodePresentation::for($node);
+
+        $this->assertSame('おすすめ', $presentation['label']);
+        $this->assertNull($presentation['eyebrow']);
+        $this->assertSame('おすすめ', MapNodePresentation::role($node));
+        $this->assertSame($original, $node);
+    }
+
+    public function test_non_recommended_leaf_tasks_keep_their_concrete_names(): void
+    {
+        foreach (['レビュー結果を確認する', '<script>alert(1)</script>'] as $title) {
+            $node = ['type' => 'task', 'position_role' => 'future-next', 'label' => $title];
             $presentation = MapNodePresentation::for($node);
+
             $this->assertSame($title, $presentation['label']);
-            $this->assertSame('おすすめ', $presentation['eyebrow']);
-            $this->assertSame($original, $node);
+            $this->assertSame('次にやる', $presentation['eyebrow']);
         }
     }
 
