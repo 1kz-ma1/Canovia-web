@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\ProductKey;
 use App\Models\Plan;
 use App\Models\PlanArtifact;
+use App\Models\PlanMember;
 use App\Models\TaskEvidence;
 use App\Models\User;
 use App\Models\UserProductGrant;
@@ -110,6 +111,49 @@ class GitHubRepositoryWriteV464Test extends TestCase
             str_contains($request->url(), '/merge')
             || $request->method() === 'DELETE'
         );
+    }
+
+    public function test_collaboration_editor_can_submit_through_owner_installed_github_app_without_owner_credentials(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $editor = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($owner, collaborative: true);
+        $repo = $this->repository($plan, $owner);
+
+        PlanMember::query()->create([
+            'plan_id' => $plan->id,
+            'user_id' => $editor->id,
+            'role' => PlanMember::ROLE_EDITOR,
+            'joined_at' => now(),
+        ]);
+        $this->grantAllAccess($editor);
+        $this->fakeSuccessfulGitHubWrite();
+
+        $this->actingAs($editor)
+            ->post(route('github_workflow.repository.change', $repo), [
+                'file_path' => 'app/Services/MapService.php',
+                'file_content' => "<?php\n\nfinal class MapService {}\n",
+                'commit_message' => 'fix map interaction',
+                'pull_request_title' => 'Map interactionを修正',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success');
+
+        $prArtifact = PlanArtifact::query()
+            ->where('artifact_type', 'link')
+            ->firstOrFail();
+
+        $this->assertSame($editor->id, $prArtifact->created_by_user_id);
+        $this->assertSame($editor->id, data_get($prArtifact->metadata, 'github_write_origin.requested_by_user_id'));
+        $this->assertSame('github_app', data_get($prArtifact->metadata, 'github_write_origin.executed_by'));
+
+        $this->assertDatabaseHas('plan_activity_logs', [
+            'plan_id' => $plan->id,
+            'user_id' => $editor->id,
+            'action' => 'github_repository_change_proposed',
+            'target_type' => 'plan_artifact',
+            'target_id' => $prArtifact->id,
+        ]);
     }
 
     public function test_user_without_github_write_capability_cannot_trigger_remote_write(): void
@@ -293,7 +337,7 @@ class GitHubRepositoryWriteV464Test extends TestCase
         ]);
     }
 
-    private function plan(User $user): Plan
+    private function plan(User $user, bool $collaborative = false): Plan
     {
         return Plan::query()->create([
             'user_id' => $user->id,
@@ -307,6 +351,9 @@ class GitHubRepositoryWriteV464Test extends TestCase
             'start_date' => today(),
             'deadline' => today()->addMonth(),
             'is_public' => false,
+            'is_collaborative' => $collaborative,
+            'collaboration_join_code' => $collaborative ? 'CNV-'.strtoupper(Str::random(6)) : null,
+            'collaboration_share_token' => $collaborative ? Str::random(48) : null,
         ]);
     }
 
