@@ -208,10 +208,10 @@
                     <div class="canovia-space-station-candidate-meta">
                         <span>確信度 {{ $candidate['confidence'] }}%</span>
                         @if (filled($candidate['suggested_plan_title'] ?? null))
-                            <span>Plan名候補: {{ $candidate['suggested_plan_title'] }}</span>
+                            <span>Plan候補: {{ $candidate['suggested_plan_title'] }}</span>
                         @endif
                         @if (filled($candidate['suggested_task_title'] ?? null))
-                            <span>Task名候補: {{ $candidate['suggested_task_title'] }}</span>
+                            <span>Task候補: {{ $candidate['suggested_task_title'] }}</span>
                         @endif
                     </div>
                     <p class="canovia-space-station-help">
@@ -384,7 +384,7 @@
                         この接続先で確定
                     </button>
                     <p class="canovia-space-station-help">
-                        このボタンを押すまでPlan / Task / Evidence / Resource等の正規データは作りません。
+                        確定するまでPlan / Task / Evidence等の正規データは作りません。Resource等も同様です。
                     </p>
                 </form>
             </div>
@@ -395,7 +395,7 @@
         <div class="canovia-space-station-section-head">
             <div>
                 <p class="canovia-map-companion-kicker">COMPANION</p>
-                <h3>整理せず相談することもできます</h3>
+                <h3>ここから相談する</h3>
             </div>
         </div>
 
