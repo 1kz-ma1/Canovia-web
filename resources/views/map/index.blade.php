@@ -75,6 +75,10 @@
                         <p class="canovia-map-description">
                             {{ $hierarchy['domain_label'] ?? 'Domain' }}の中からPlanを選び、そのExecution Contextへ潜ります。
                         </p>
+                    @elseif ($isExecutionLevel)
+                        <p class="canovia-map-description">
+                            選んだPlanを中央に保ち、今やるTask・次のTask・Tool・Evidenceを周囲へ展開します。
+                        </p>
                     @endif
                 </div>
 
@@ -101,8 +105,8 @@
                         </p>
                     @else
                         <p>
-                            中央が現在のPrimary Actionです。上下はFuture / Past、左右はInput / Action。
-                            Space Stationは右下の固定Dockからいつでも開けます。
+                            中央は現在のPlan Contextです。強調されたPrimary Actionを押すとTask中心のExecution Focusへ移り、
+                            Future / Past / Input / ActionをそのTaskの周囲で確認できます。Space Stationは右下の固定Dockから開けます。
                         </p>
                     @endif
                 </details>
@@ -132,7 +136,7 @@
                             data-map-action-role="primary"
                             data-map-node-id="{{ $primaryNodeId }}"
                             data-map-node-type="task"
-                            data-map-position-role="now"
+                            data-map-position-role="action-primary"
                             data-map-is-primary="1"
                             title="{{ data_get($primaryLaunch, 'label', 'Primary Actionを進める') }}"
                             aria-label="{{ data_get($primaryLaunch, 'label', 'Primary Actionを進める') }}"
@@ -367,7 +371,7 @@
                         @if ($isExecutionLevel)
                             <h2 class="mt-2 text-lg font-black text-slate-50">まだMapに置くActionがありません</h2>
                             <p class="mt-2 text-sm leading-6 text-slate-400">
-                                PlanとTaskができると、Canoviaが現在のActionを中央へ配置します。
+                                PlanとTaskができると、Planを中央にして現在のActionやEvidenceを周囲へ配置します。
                             </p>
                         @else
                             <h2 class="mt-2 text-lg font-black text-slate-50">まだこの階層に置くContextがありません</h2>

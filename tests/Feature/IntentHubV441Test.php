@@ -133,13 +133,14 @@ class IntentHubV441Test extends TestCase
             ->assertSee('data-map-level="l3"', false)
             ->assertSee($plan->title)
             ->assertSee($task->title)
-            ->assertSee('data-map-position-role="now"', false)
+            ->assertSee('data-map-position-role="context-plan"', false)
+            ->assertSee('data-map-position-role="action-primary"', false)
             ->assertSee('data-map-spatial-dock', false);
 
         $graph = $response->viewData('graph');
 
         $this->assertSame('l3', $graph['level']);
-        $this->assertSame('task:'.$task->id, $graph['center_node_id']);
+        $this->assertSame('plan:'.$plan->id, $graph['center_node_id']);
         $this->assertSame('task:'.$task->id, $graph['primary_node_id']);
     }
 

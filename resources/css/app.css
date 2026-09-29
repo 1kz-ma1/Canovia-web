@@ -8862,3 +8862,78 @@ body[data-route-name="map.index"] .canovia-map-page {
         }
     }
 }
+
+
+/* --------------------------------------------------------------------------
+ * V47.6 Context-Centered Execution Map
+ * L3 keeps the selected Plan as spatial context. Primary Action remains the
+ * recommendation emphasis and becomes center only after explicit Task Focus.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .canovia-map-page:not(.is-map-focused)
+        .canovia-map-shell.is-execution-map
+        .canovia-map-node.is-map-center {
+        z-index: 7;
+        width: clamp(9rem, 22vw, 12rem);
+        min-height: 5.4rem;
+        border-color: rgb(103 232 249 / 0.62);
+        background:
+            radial-gradient(circle at 50% 12%, rgb(34 211 238 / 0.16), transparent 8rem),
+            linear-gradient(145deg, rgb(14 116 144 / 0.16), rgb(15 23 42 / 0.98));
+        box-shadow:
+            0 0 0 0.28rem rgb(34 211 238 / 0.025),
+            0 0 2.5rem rgb(34 211 238 / 0.14),
+            0 20px 46px rgb(2 6 23 / 0.46),
+            inset 0 1px 0 rgb(255 255 255 / 0.05);
+    }
+
+    .canovia-map-page:not(.is-map-focused)
+        .canovia-map-shell.is-execution-map
+        .canovia-map-node.is-map-center::before {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        inset: -0.55rem;
+        border: 1px solid rgb(103 232 249 / 0.12);
+        border-radius: inherit;
+        opacity: 0.85;
+        pointer-events: none;
+    }
+
+    .canovia-map-page:not(.is-map-focused)
+        .canovia-map-shell.is-execution-map
+        .canovia-map-node.is-primary:not(.is-map-center) {
+        border-color: rgb(167 139 250 / 0.58);
+        background:
+            radial-gradient(circle at 50% 15%, rgb(167 139 250 / 0.16), transparent 8rem),
+            linear-gradient(145deg, rgb(109 40 217 / 0.13), rgb(15 23 42 / 0.98));
+        box-shadow:
+            0 0 0 1px rgb(196 181 253 / 0.08),
+            0 0 2rem rgb(139 92 246 / 0.14),
+            0 16px 40px rgb(2 6 23 / 0.48);
+    }
+
+    @media (max-width: 767px) {
+        .canovia-map-page:not(.is-map-focused)
+            .canovia-map-shell.is-execution-map
+            .canovia-map-node.is-map-center {
+            width: 8.7rem;
+            min-height: 4.9rem;
+        }
+
+        .canovia-map-page:not(.is-map-focused)
+            .canovia-map-shell.is-execution-map
+            .canovia-map-node.is-primary:not(.is-map-center) {
+            width: 7.8rem;
+            min-height: 4rem;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .canovia-map-page:not(.is-map-focused)
+            .canovia-map-shell.is-execution-map
+            .canovia-map-node.is-map-center {
+            transition: none;
+        }
+    }
+}

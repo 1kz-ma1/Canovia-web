@@ -18,6 +18,8 @@ function roleGroup(role = '') {
     if (role === 'intent-collaboration') return 'input';
     if (role === 'hierarchy-parent') return 'now';
     if (role === 'hierarchy-child') return 'future';
+    if (role === 'context-plan') return 'now';
+    if (role === 'action-primary') return 'action';
     if (role === 'satellite-1') return 'future';
     if (role === 'satellite-2') return 'action';
     if (role === 'satellite-3') return 'past';
@@ -174,9 +176,10 @@ export function buildMobileBaseLayout(
         const lowerY = yPercent(lowerOffsetY);
         const sideY = yPercent(Math.min(height * 0.02, 14));
         const rolePositions = {
-            'future-goal': roundedPoint(50, 50 - goalY),
-            'future-plan': roundedPoint(50 - upperX, 50 - upperY),
-            'future-next': roundedPoint(50 + upperX, 50 - upperY),
+            'future-goal': roundedPoint(50 - upperX, 50 - upperY),
+            'context-plan': { x: 50, y: 50 },
+            'action-primary': roundedPoint(50 + upperX, 50 - upperY),
+            'future-next': roundedPoint(50, 50 - goalY),
             'now': { x: 50, y: 50 },
             'input-inbox': roundedPoint(50 - sideX, 50 + sideY),
             'action-tool': roundedPoint(50 + sideX, 50 + sideY),
