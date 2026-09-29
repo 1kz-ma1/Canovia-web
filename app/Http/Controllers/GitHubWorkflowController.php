@@ -8,6 +8,7 @@ use App\Models\Task;
 use App\Services\BehaviorIdentityService;
 use App\Services\FeatureAccessService;
 use App\Services\GitHubRepositoryInspector;
+use App\Services\GitHubRepositoryWriter;
 use App\Services\GitHubWorkflowService;
 use App\Services\PlanActivityService;
 use App\Services\PlanOwnershipService;
@@ -22,6 +23,7 @@ final class GitHubWorkflowController extends Controller
         Request $request,
         GitHubWorkflowService $workflow,
         FeatureAccessService $featureAccess,
+        GitHubRepositoryWriter $repositoryWriter,
     ) {
         return view('github_workflow.index', [
             ...$workflow->dashboard($request),
@@ -29,6 +31,12 @@ final class GitHubWorkflowController extends Controller
                 $request->user(),
                 FeatureKey::DeveloperGithubEvidence,
             ),
+            'can_repository_write' => $featureAccess->canUse(
+                $request->user(),
+                FeatureKey::DeveloperGithubWrite,
+            ),
+            'github_write_configured' => $repositoryWriter->configured(),
+            'github_app_install_url' => $repositoryWriter->installUrl(),
         ]);
     }
 
@@ -217,6 +225,124 @@ final class GitHubWorkflowController extends Controller
         return redirect()
             ->route('github_workflow.index', ['plan_id' => $plan->id])
             ->with('success', 'GitHubからRepositoryの現在構造を更新しました。');
+    }
+
+    public function proposeRepositoryChange(
+        Request $request,
+        PlanArtifact $artifact,
+        PlanOwnershipService $ownership,
+        FeatureAccessService $featureAccess,
+        GitHubWorkflowService $workflow,
+        GitHubRepositoryWriter $repositoryWriter,
+        PlanActivityService $activity,
+    ) {
+        $artifact->loadMissing('plan');
+        $plan = $artifact->plan;
+
+        abort_unless($plan && $artifact->provider === 'github', 404);
+        $ownership->authorizeEdit($request, $plan);
+        $featureAccess->authorizeUse(
+            $request->user(),
+            FeatureKey::DeveloperGithubWrite,
+            ['plan_id' => (int) $plan->id, 'artifact_id' => (int) $artifact->id],
+        );
+
+        $parsed = $workflow->parseUrl((string) $artifact->url);
+        abort_unless(($parsed['kind'] ?? null) === 'repository', 404);
+
+        $validated = $request->validate([
+            'file_path' => ['required', 'string', 'max:240'],
+            'file_content' => ['required', 'string', 'max:200000'],
+            'commit_message' => ['required', 'string', 'max:240'],
+            'pull_request_title' => ['required', 'string', 'max:240'],
+            'pull_request_body' => ['nullable', 'string', 'max:20000'],
+        ]);
+
+        try {
+            $result = $repositoryWriter->proposeFileChange(
+                (string) $parsed['repo_full_name'],
+                (string) $validated['file_path'],
+                (string) $validated['file_content'],
+                (string) $validated['commit_message'],
+                (string) $validated['pull_request_title'],
+                $validated['pull_request_body'] ?? null,
+            );
+        } catch (\RuntimeException $exception) {
+            return redirect()
+                ->route('github_workflow.index', ['plan_id' => $plan->id])
+                ->withInput()
+                ->with('status', $exception->getMessage());
+        }
+
+        $pullRequest = (array) ($result['pull_request'] ?? []);
+        $pullRequestNumber = (int) ($pullRequest['number'] ?? 0);
+        $pullRequestUrl = (string) ($pullRequest['url'] ?? '');
+
+        $prArtifact = $plan->artifacts()->create([
+            'created_by_user_id' => $request->user()?->id,
+            'assigned_user_id' => null,
+            'provider' => 'github',
+            'artifact_type' => 'link',
+            'title' => $pullRequestNumber > 0
+                ? 'PR #'.$pullRequestNumber.' · '.(string) ($pullRequest['title'] ?? $validated['pull_request_title'])
+                : (string) $validated['pull_request_title'],
+            'url' => $pullRequestUrl,
+            'external_id' => $pullRequestNumber > 0 ? (string) $pullRequestNumber : null,
+            'metadata' => [
+                'github_workflow_state' => 'review',
+                'github_write_origin' => [
+                    'repository_artifact_id' => (int) $artifact->id,
+                    'requested_by_user_id' => $request->user()?->id,
+                    'executed_by' => 'github_app',
+                    'base_branch' => (string) ($result['base_branch'] ?? ''),
+                    'branch' => (string) ($result['branch'] ?? ''),
+                    'file_path' => (string) ($result['file_path'] ?? ''),
+                    'file_action' => (string) ($result['file_action'] ?? ''),
+                    'commit_sha' => (string) ($result['commit_sha'] ?? ''),
+                    'created_at' => (string) ($result['created_at'] ?? now()->toIso8601String()),
+                ],
+            ],
+        ]);
+
+        $repositoryMetadata = is_array($artifact->metadata) ? $artifact->metadata : [];
+        $repositoryMetadata['github_last_write'] = [
+            'requested_by_user_id' => $request->user()?->id,
+            'executed_by' => 'github_app',
+            'branch' => (string) ($result['branch'] ?? ''),
+            'base_branch' => (string) ($result['base_branch'] ?? ''),
+            'file_path' => (string) ($result['file_path'] ?? ''),
+            'file_action' => (string) ($result['file_action'] ?? ''),
+            'commit_sha' => (string) ($result['commit_sha'] ?? ''),
+            'pull_request_number' => $pullRequestNumber,
+            'pull_request_url' => $pullRequestUrl,
+            'created_at' => (string) ($result['created_at'] ?? now()->toIso8601String()),
+        ];
+        unset($repositoryMetadata['github_workflow_state']);
+
+        $artifact->update([
+            'metadata' => $repositoryMetadata,
+        ]);
+
+        $activity->record(
+            $plan,
+            $request->user(),
+            'github_repository_change_proposed',
+            'plan_artifact',
+            (int) $prArtifact->id,
+            [
+                'repository_artifact_id' => (int) $artifact->id,
+                'repo_full_name' => (string) $parsed['repo_full_name'],
+                'branch' => (string) ($result['branch'] ?? ''),
+                'base_branch' => (string) ($result['base_branch'] ?? ''),
+                'file_path' => (string) ($result['file_path'] ?? ''),
+                'commit_sha' => (string) ($result['commit_sha'] ?? ''),
+                'pull_request_number' => $pullRequestNumber,
+            ],
+        );
+
+        return redirect()
+            ->to(route('github_workflow.index', ['plan_id' => $plan->id]).'#github-item-'.$prArtifact->id)
+            ->with('success', '変更をレビュー用Pull RequestとしてGitHubへ反映しました。mainにはまだ反映されていません。');
     }
 
     public function updateState(
