@@ -10,7 +10,7 @@ class RoadmapService
 {
     public function build(Plan $plan, ?int $currentTaskId = null, ?int $lastWorkedTaskId = null): array
     {
-        $plan->loadMissing(['tasks.prerequisite', 'tasks.resources']);
+        $plan->loadMissing(['tasks.prerequisite', 'tasks.prerequisites', 'tasks.resources']);
 
         $nodes = $plan->tasks
             ->values()
@@ -24,7 +24,7 @@ class RoadmapService
 
     public function project(Plan $plan, array $operations): array
     {
-        $plan->loadMissing(['tasks.prerequisite', 'tasks.resources']);
+        $plan->loadMissing(['tasks.prerequisite', 'tasks.prerequisites', 'tasks.resources']);
 
         $tasks = $plan->tasks
             ->mapWithKeys(fn (Task $task) => [$task->id => [
@@ -43,6 +43,7 @@ class RoadmapService
                 'activation_cost' => (int) ($task->activation_cost ?? 3),
                 'sort_order' => (int) ($task->sort_order ?? 0),
                 'depends_on_task_id' => $task->depends_on_task_id,
+                'depends_on_task_ids' => $task->dependencyIds(),
                 'continuation_of_task_id' => $task->continuation_of_task_id,
                 'source_task_ids' => $task->lineage_source_task_ids ?: ($task->continuation_of_task_id ? [(int) $task->continuation_of_task_id] : []),
                 'source_task_snapshots' => $task->lineage_source_snapshots ?? [],
@@ -170,7 +171,9 @@ class RoadmapService
             'activation_cost' => (int) ($task->activation_cost ?? 3),
             'sort_order' => (int) ($task->sort_order ?? 0),
             'depends_on_task_id' => $task->depends_on_task_id,
+            'depends_on_task_ids' => $task->dependencyIds(),
             'prerequisite_title' => $task->prerequisite?->title,
+            'prerequisite_titles' => $task->prerequisites->pluck('title')->values()->all(),
             'continuation_of_task_id' => $task->continuation_of_task_id,
             'source_task_ids' => $task->lineage_source_task_ids ?: ($task->continuation_of_task_id ? [(int) $task->continuation_of_task_id] : []),
             'source_task_snapshots' => $task->lineage_source_snapshots ?? [],
@@ -192,7 +195,16 @@ class RoadmapService
         $status = $task['status'] ?? 'todo';
         $sourceIds = array_values(array_unique(array_map('intval', $task['source_task_ids'] ?? [])));
 
+        $dependencyIds = collect($task['depends_on_task_ids'] ?? [])
+            ->push($task['depends_on_task_id'] ?? null)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
         return array_merge($task, [
+            'depends_on_task_ids' => $dependencyIds,
             'status_label' => match ($status) {
                 'doing' => '進行中',
                 'done' => '完了',
@@ -230,12 +242,18 @@ class RoadmapService
 
         while ($remaining->isNotEmpty()) {
             $eligible = $remaining->filter(function (array $node) use ($taskKeyById, $placedKeys) {
-                $dependencyId = (int) ($node['depends_on_task_id'] ?? 0);
-                if ($dependencyId <= 0 || ! isset($taskKeyById[$dependencyId])) {
-                    return true;
-                }
+                $dependencyIds = collect($node['depends_on_task_ids'] ?? [])
+                    ->map(fn ($id) => (int) $id)
+                    ->filter(fn ($id) => $id > 0)
+                    ->values();
 
-                return isset($placedKeys[$taskKeyById[$dependencyId]]);
+                return $dependencyIds->every(function (int $dependencyId) use ($taskKeyById, $placedKeys) {
+                    if (! isset($taskKeyById[$dependencyId])) {
+                        return true;
+                    }
+
+                    return isset($placedKeys[$taskKeyById[$dependencyId]]);
+                });
             });
 
             // A dependency cycle should never break rendering. Pick from the remaining

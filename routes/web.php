@@ -51,6 +51,7 @@ use App\Http\Controllers\FutureMemoController;
 use App\Http\Controllers\CareerWorkspaceController;
 use App\Http\Controllers\InterviewReviewController;
 use App\Http\Controllers\GuidedExecutionController;
+use App\Http\Controllers\ExecutionOrchestrationController;
 use App\Http\Controllers\CompanionController;
 use App\Http\Controllers\CoreFragmentBundleController;
 
@@ -270,6 +271,16 @@ Route::post('/plans/{plan}/tasks/{task}/guided-execution/{guidedExecution}/refle
     ->name('plans.tasks.guided_execution.reflect');
 Route::post('/plans/{plan}/tasks/{task}/guided-execution/{guidedExecution}/cancel', [GuidedExecutionController::class, 'cancel'])
     ->name('plans.tasks.guided_execution.cancel');
+
+// Context-aware Execution Orchestration. PacketはTaskの現在Contextから都度導出し、DBへ二重保存しない。
+Route::get('/plans/{plan}/tasks/{task}/execution-orchestration', [ExecutionOrchestrationController::class, 'show'])
+    ->name('plans.tasks.execution_orchestration.show');
+Route::post('/plans/{plan}/tasks/{task}/execution-orchestration/prepare', [ExecutionOrchestrationController::class, 'prepare'])
+    ->name('plans.tasks.execution_orchestration.prepare');
+Route::post('/plans/{plan}/tasks/{task}/execution-orchestration/import', [ExecutionOrchestrationController::class, 'importExternal'])
+    ->name('plans.tasks.execution_orchestration.import');
+Route::post('/plans/{plan}/tasks/{task}/execution-orchestration/reset', [ExecutionOrchestrationController::class, 'reset'])
+    ->name('plans.tasks.execution_orchestration.reset');
 
 // 資格学習のActivity選択はAI演習より上位の共通入口として扱う。
 Route::get('/plans/{plan}/tasks/{task}/study-activity', [StudyActivityController::class, 'show'])

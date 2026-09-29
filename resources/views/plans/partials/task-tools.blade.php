@@ -89,3 +89,13 @@
         </div>
     </div>
 @endif
+
+@if (isset($toolPlan, $toolTask))
+    <div class="{{ $compactTools ? 'mt-2' : 'mt-3' }}">
+        <a href="{{ route('plans.tasks.execution_orchestration.show', [$toolPlan, $toolTask]) }}"
+           class="{{ $compactTools ? 'btn-secondary px-3 py-2 text-xs' : 'inline-flex items-center gap-2 rounded-xl border border-violet-300/20 bg-violet-300/[0.045] px-4 py-3 text-sm font-bold text-violet-100 transition hover:border-violet-200/40 hover:bg-violet-300/[0.08]' }}">
+            <span aria-hidden="true">✦</span>
+            <span>今やることを生成</span>
+        </a>
+    </div>
+@endif

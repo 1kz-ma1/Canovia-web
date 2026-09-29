@@ -29,7 +29,7 @@ final class MapExecutionContextService
     public function resolve(Request $request): array
     {
         $actorToken = $this->core->actorToken($request);
-        $plans = $this->core->plans($request, ['tasks', 'plan_resources']);
+        $plans = $this->core->plans($request, ['tasks', 'task_dependencies', 'plan_resources']);
 
         if ($plans->isNotEmpty()) {
             (new EloquentCollection($plans->all()))->loadMissing('goalContext');
@@ -110,8 +110,8 @@ final class MapExecutionContextService
                 && ! in_array($task->status, ['done', 'cancelled'], true)
                 && (int) $task->progress_percent < 100)
             ->sort(function (Task $left, Task $right) use ($currentTask, $currentOrder) {
-                $dependency = ((int) $left->depends_on_task_id === (int) $currentTask->id ? 0 : 1)
-                    <=> ((int) $right->depends_on_task_id === (int) $currentTask->id ? 0 : 1);
+                $dependency = (in_array((int) $currentTask->id, $left->dependencyIds(), true) ? 0 : 1)
+                    <=> (in_array((int) $currentTask->id, $right->dependencyIds(), true) ? 0 : 1);
                 if ($dependency !== 0) {
                     return $dependency;
                 }

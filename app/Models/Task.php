@@ -104,13 +104,56 @@ class Task extends Model
         return $this->hasMany(self::class, 'continuation_of_task_id');
     }
 
+    /**
+     * Legacy singular dependency kept during the V47 migration window.
+     */
     public function prerequisite()
     {
         return $this->belongsTo(self::class, 'depends_on_task_id');
     }
 
+    /**
+     * Canonical V47 dependency graph.
+     */
+    public function prerequisites()
+    {
+        return $this->belongsToMany(
+            self::class,
+            'task_dependencies',
+            'task_id',
+            'prerequisite_task_id',
+        )->withTimestamps();
+    }
+
     public function dependents()
     {
-        return $this->hasMany(self::class, 'depends_on_task_id');
+        return $this->belongsToMany(
+            self::class,
+            'task_dependencies',
+            'prerequisite_task_id',
+            'task_id',
+        )->withTimestamps();
+    }
+
+    /**
+     * @return array<int,int>
+     */
+    public function dependencyIds(): array
+    {
+        $ids = $this->relationLoaded('prerequisites')
+            ? $this->prerequisites->pluck('id')
+            : $this->prerequisites()->pluck('tasks.id');
+
+        if ($this->depends_on_task_id) {
+            $ids->push((int) $this->depends_on_task_id);
+        }
+
+        return $ids
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
     }
 }

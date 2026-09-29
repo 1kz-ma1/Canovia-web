@@ -95,12 +95,14 @@ class DashboardGuidanceService
                     return false;
                 }
 
-                if ($task->depends_on_task_id) {
-                    $prerequisite = $plan->tasks->firstWhere('id', $task->depends_on_task_id);
+                $dependencyIds = $task->dependencyIds();
+                if ($dependencyIds !== [] && collect($dependencyIds)->contains(function (int $dependencyId) use ($plan) {
+                    $prerequisite = $plan->tasks->firstWhere('id', $dependencyId);
 
-                    if ($prerequisite && $prerequisite->status !== 'done') {
-                        return false;
-                    }
+                    return ! $prerequisite
+                        || ($prerequisite->status !== 'done' && (int) $prerequisite->progress_percent < 100);
+                })) {
+                    return false;
                 }
 
                 // Time is a planning estimate, not proof that the Task is complete.

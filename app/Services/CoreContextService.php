@@ -154,7 +154,7 @@ final class CoreContextService
         }
 
         (new EloquentCollection($tasks->all()))
-            ->loadMissing(['prerequisite', 'resources']);
+            ->loadMissing(['prerequisite', 'prerequisites', 'resources']);
     }
 
     private function loadTaskArtifacts(): void
