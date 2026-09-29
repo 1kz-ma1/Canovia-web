@@ -6,6 +6,14 @@
     @php
         $bundleTargets = collect($bundle['targets'] ?? [])->keyBy(fn ($target) => (int) data_get($target, 'task_id'));
         $actorTypeLabels = $actorTypes;
+        $coordinationSuggestedIds = collect($suggestedTaskIds ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->values();
+        $oldSelectedTaskIds = old('selected_task_ids');
+        $oldSelectedTaskIds = is_array($oldSelectedTaskIds)
+            ? collect($oldSelectedTaskIds)->map(fn ($id) => (int) $id)->all()
+            : null;
     @endphp
 
     <div class="mx-auto max-w-6xl space-y-5 pb-28 md:pb-0" data-execution-distribution-root>
@@ -28,6 +36,12 @@
         @endif
         @if (session('status'))
             <div class="assistant-notice assistant-notice-info">{{ session('status') }}</div>
+        @endif
+        @if ($coordinationSuggestedIds->isNotEmpty())
+            <div class="assistant-notice assistant-notice-info" data-coordination-suggestions>
+                Coordinationから、現在readyな{{ $coordinationSuggestedIds->count() }}件を今回の分配候補として選択しています。
+                ここでは担当や生成方法を確認するだけで、まだPacket / Promptは再生成していません。
+            </div>
         @endif
         @if ($errors->any())
             <div class="assistant-notice assistant-notice-error">
@@ -57,7 +71,10 @@
                     @forelse ($tasks as $task)
                         @php
                             $existingTarget = $bundleTargets->get((int) $task->id);
-                            $selected = $existingTarget !== null || in_array((int) $task->id, collect(old('selected_task_ids', []))->map(fn ($id) => (int) $id)->all(), true);
+                            $selectedFromRequest = $oldSelectedTaskIds !== null
+                                ? in_array((int) $task->id, $oldSelectedTaskIds, true)
+                                : $coordinationSuggestedIds->contains((int) $task->id);
+                            $selected = $existingTarget !== null || $selectedFromRequest;
                             $dependencyCount = $task->prerequisites->filter(fn ($dependency) => $dependency->status !== 'done' && (int) $dependency->progress_percent < 100)->count();
                         @endphp
                         <article class="rounded-2xl border border-white/8 bg-white/[0.025] p-4">

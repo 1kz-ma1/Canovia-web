@@ -7,6 +7,7 @@ use App\Exceptions\NativeAiExecutionException;
 use App\Models\Plan;
 use App\Models\PlanArtifact;
 use App\Models\Task;
+use App\Services\ExecutionCoordinationService;
 use App\Services\ExecutionGitHubHandoffService;
 use App\Services\ExecutionOrchestrationContextService;
 use App\Services\ExecutionPacketService;
@@ -31,6 +32,7 @@ final class ExecutionOrchestrationController extends Controller
         ExecutionGitHubHandoffService $githubHandoff,
         GitHubRepositoryWriter $githubWriter,
         GitHubEvidenceDecisionService $githubDecision,
+        ExecutionCoordinationService $coordination,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
 
@@ -85,6 +87,12 @@ final class ExecutionOrchestrationController extends Controller
             ? $githubDecision->candidate($task, $latestExecutionPullRequest, $githubReturnSnapshot)
             : null;
 
+        $coordinationProjection = $coordination->projection(
+            $request,
+            $plan,
+            $task,
+        );
+
         return view('execution_orchestration.show', [
             'plan' => $plan,
             'task' => $task,
@@ -110,6 +118,7 @@ final class ExecutionOrchestrationController extends Controller
             'latestExecutionPullRequest' => $latestExecutionPullRequest,
             'githubReturnSnapshot' => $githubReturnSnapshot,
             'githubDecisionCandidate' => $githubDecisionCandidate,
+            'coordinationProjection' => $coordinationProjection,
         ]);
     }
 
@@ -123,6 +132,12 @@ final class ExecutionOrchestrationController extends Controller
         FeatureAccessService $access,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
+
+        if ($this->executionClosed($task)) {
+            return redirect()
+                ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
+                ->with('status', '完了・中止済みTaskには新しいExecution Packetを生成しません。後続TaskのCoordinationを確認してください。');
+        }
 
         $validated = $request->validate([
             'generation_mode' => ['required', Rule::in(['native', 'external'])],
@@ -219,6 +234,14 @@ final class ExecutionOrchestrationController extends Controller
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
 
+        if ($this->executionClosed($task)) {
+            return redirect()
+                ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
+                ->withErrors([
+                    'packet_json' => '完了・中止済みTaskには新しいExecution Packetを読み込みません。後続TaskのCoordinationを確認してください。',
+                ]);
+        }
+
         $validated = $request->validate([
             'packet_json' => ['required', 'string', 'max:100000'],
         ]);
@@ -294,6 +317,12 @@ final class ExecutionOrchestrationController extends Controller
     ): void {
         abort_unless((int) $task->plan_id === (int) $plan->id, 404);
         $ownership->authorizeTask($request, $task);
+    }
+
+    private function executionClosed(Task $task): bool
+    {
+        return in_array($task->status, ['done', 'cancelled'], true)
+            || (int) $task->progress_percent >= 100;
     }
 
     private function sessionKey(Plan $plan, Task $task): string

@@ -877,6 +877,20 @@ MergeとChanges Requested / CI failureが同時に存在する場合はmanual_re
 
 詳細は `docs/V46.8_GITHUB_EVIDENCE_DECISION.md` を正とする。
 
+## V46.9 GitHub Decision → Execution Coordination Bridge
+
+V46.9では、Human-confirmed Task DecisionによってTaskが完了した後、その完了がDependency graphと既存Execution Packet / Distributionへ与える影響をProjectionとして可視化する。最初の入口はV46.8 GitHub Evidence Decisionだが、Coordination自体はGitHub専用ではなく、status=doneまたはprogress_percent>=100のTaskから再利用できる。
+
+source Taskをdependencyに持つ同Plan内のdirect dependentを現在のcanonical Task / task_dependenciesから再評価し、全dependencyが完了したactive Taskをready、他の未完了dependencyが残るTaskをblockedとして表示する。source完了だけを理由に後続Taskをdoingへ変更せず、blocked Taskでは残っているblockerを明示する。
+
+direct dependentに生成済みExecution Packet / External Promptがある場合は既存context_fingerprintとcurrent Contextを比較し、古ければstale individual instructionとして表示する。PlanにDistribution Bundleがある場合はV47.2のrefreshStalenessを再利用し、stale / dependency_stateだけをsession Projectionへ更新する。既存Packet / Prompt / actor label / generation modeは自動変更・削除・再生成しない。
+
+CoordinationからDistributionへ渡すのはready direct dependent、またはstale targetのうちcurrent dependency_state=readyなTask IDのsuggestionだけで、最大8件とする。suggestionはGET queryの短命なpreselectionであり、DistributionControllerはcurrent Planのactive Taskへserver-sideでintersectする。他Plan / done / cancelled / 不正IDは無視する。人がDistribution画面でtarget / actor / available minutes / generation modeを確認してsubmitするまでPacket / Promptは生成しない。
+
+Execution OrchestrationにはEXECUTION COORDINATIONを追加し、READY NEXT / STILL BLOCKED / INDIVIDUAL STALE / DISTRIBUTION STALEを表示する。個別Orchestrationまたは「次の担当候補を分配画面で確認」へ進めるが、後続Task開始、担当決定、Packet再生成、Dependency変更、Task作成は自動実行しない。完了・中止済みsource Taskでは新規Packet生成 / External Packet importもserver-sideで拒否し、過去の生成内容は履歴表示だけにする。
+
+詳細は `docs/V46.9_EXECUTION_COORDINATION_BRIDGE.md` を正とする。
+
 ## V47 Execution Orchestration
 
 V47.0ではTaskを単独で推薦するだけでなく、Plan全体のDependency・Evidence・Goal Context・制約を保ったまま、選択Taskへ「今この主体が何をすべきか」を渡すExecution Orchestration Layerを追加する。
