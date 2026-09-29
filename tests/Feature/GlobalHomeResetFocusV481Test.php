@@ -17,6 +17,18 @@ class GlobalHomeResetFocusV481Test extends TestCase
         $this->assertStringContainsString('>Canovia</a>', $view);
     }
 
+    public function test_global_home_reset_is_consumed_again_on_l0_mount_before_focus_restore(): void
+    {
+        $runtime = file_get_contents(resource_path('js/living-map.mjs'));
+
+        $this->assertStringContainsString('GLOBAL_HOME_RESET_KEY', $runtime);
+        $this->assertStringContainsString('requestGlobalHomeReset(windowRef);', $runtime);
+        $this->assertStringContainsString('const forceGlobalHomeReset = consumeGlobalHomeReset(', $runtime);
+        $this->assertStringContainsString("page.dataset.mapLevel || ''", $runtime);
+        $this->assertStringContainsString('const initialFocusId = forceGlobalHomeReset ? null : focusIdFromLocation(windowRef);', $runtime);
+        $this->assertStringContainsString('const initialDockId = forceGlobalHomeReset ? null : dockIdFromLocation(windowRef);', $runtime);
+    }
+
     public function test_global_home_runtime_resets_selection_dock_view_and_focus_history_before_navigation(): void
     {
         $runtime = file_get_contents(resource_path('js/living-map.mjs'));
