@@ -29,9 +29,12 @@
                         Taskを増やす機能ではありません。Plan全体・Dependency・Evidence・制約を見て、このTaskを今どう進めるかだけをExecution Packetとして組み立てます。
                     </p>
                 </div>
-                <span class="badge {{ $dependencyState === 'ready' ? 'badge-green' : 'badge-slate' }}">
-                    {{ $dependencyState === 'ready' ? '実行可能' : '前提待ち' }}
-                </span>
+                <div class="flex flex-wrap items-center gap-2">
+                    <a href="{{ route('plans.execution_distribution.show', $plan) }}" class="btn-secondary px-3 py-2 text-xs">複数担当へ分配</a>
+                    <span class="badge {{ $dependencyState === 'ready' ? 'badge-green' : 'badge-slate' }}">
+                        {{ $dependencyState === 'ready' ? '実行可能' : '前提待ち' }}
+                    </span>
+                </div>
             </div>
         </header>
 
