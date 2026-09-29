@@ -36,9 +36,21 @@ final class ExecutionDistributionService
         array $targetConfig,
         string $generationMode,
     ): array {
+        $tasks = $tasks->take(self::MAX_TARGETS)->values();
+
+        if ($generationMode === 'native') {
+            foreach ($tasks as $task) {
+                $this->access->authorizeUse(
+                    $request->user(),
+                    FeatureKey::AutomaticAiExecution,
+                    ['plan_id' => (int) $plan->id, 'task_id' => (int) $task->id],
+                );
+            }
+        }
+
         $targets = [];
 
-        foreach ($tasks->take(self::MAX_TARGETS) as $task) {
+        foreach ($tasks as $task) {
             $config = is_array($targetConfig[$task->id] ?? null)
                 ? $targetConfig[$task->id]
                 : [];
@@ -82,12 +94,6 @@ final class ExecutionDistributionService
             ];
 
             if ($generationMode === 'native') {
-                $this->access->authorizeUse(
-                    $request->user(),
-                    FeatureKey::AutomaticAiExecution,
-                    ['plan_id' => (int) $plan->id, 'task_id' => (int) $task->id],
-                );
-
                 if ($this->packets->nativeConfigured()) {
                     try {
                         $generated = $this->packets->generateNative(
