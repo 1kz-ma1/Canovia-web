@@ -8841,20 +8841,24 @@ body[data-route-name="map.index"] .canovia-map-page {
     @media (prefers-reduced-motion: reduce) {
         .canovia-map-page.is-semantic-departure-in .canovia-map-node,
         .canovia-map-page.is-semantic-departure-out .canovia-map-node,
+        .canovia-map-page.is-semantic-continuity-arrival .canovia-map-node {
+            animation: none !important;
+            transform: translate(-50%, -50%) !important;
+            transition: none !important;
+            opacity: 1;
+        }
+
         .canovia-map-page.is-semantic-departure-in .canovia-map-edge,
         .canovia-map-page.is-semantic-departure-out .canovia-map-edge,
-        .canovia-map-page.is-semantic-continuity-arrival .canovia-map-node,
-        .canovia-map-page.is-semantic-continuity-arrival .canovia-map-edge,
+        .canovia-map-page.is-semantic-continuity-arrival .canovia-map-edge {
+            animation: none !important;
+            transition: none !important;
+            opacity: 1;
+        }
+
         .canovia-map-page.is-semantic-continuity-arrival .canovia-map-scene::before,
         .canovia-map-page.is-semantic-continuity-arrival .canovia-map-scene::after {
             animation: none !important;
-            transform: none;
-            transition: none !important;
-        }
-
-        .canovia-map-page.is-semantic-continuity-arrival .canovia-map-node {
-            transform: translate(-50%, -50%);
-            opacity: 1;
         }
     }
 }
