@@ -63,6 +63,9 @@ class ExecutionRequestHandoffV471Test extends TestCase
         $this->assertSame('execution_request', data_get($item->metadata, 'routing_confirmed.destination'));
         $this->assertSame($plan->id, data_get($item->metadata, 'routing_confirmed.plan_id'));
         $this->assertSame($task->id, data_get($item->metadata, 'routing_confirmed.task_id'));
+        $this->assertSame('execution_request', data_get($item->metadata, 'execution_request.flow'));
+        $this->assertSame('このValidationをAIと一緒に進めたい', data_get($item->metadata, 'execution_request.instruction'));
+        $this->assertSame('human_ai', data_get($item->metadata, 'execution_request.actor_type'));
 
         $state = session(ExecutionRequestHandoffService::sessionKey($plan, $task));
         $this->assertIsArray($state);
