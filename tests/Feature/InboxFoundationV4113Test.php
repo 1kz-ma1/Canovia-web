@@ -2,15 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ProductKey;
 use App\Models\CareerCapture;
 use App\Models\Plan;
 use App\Models\StudyRecallCandidate;
 use App\Models\StudyRecallSource;
 use App\Models\Task;
 use App\Models\User;
+use App\Models\UserProductGrant;
 use App\Models\WorkSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -23,7 +26,13 @@ class InboxFoundationV4113Test extends TestCase
     {
         parent::setUp();
         $this->withoutVite();
-        config(['filesystems.default' => 'local']);
+        config([
+            'filesystems.default' => 'local',
+            'native_ai.driver' => 'openai',
+            'native_ai.providers.openai.base_url' => 'https://api.openai.com/v1',
+            'native_ai.providers.openai.api_key' => 'test-key',
+            'native_ai.providers.openai.model' => 'gpt-5.6-luna',
+        ]);
         Storage::fake('local');
     }
 
@@ -49,9 +58,106 @@ class InboxFoundationV4113Test extends TestCase
         $this->actingAs($user)
             ->get(route('inbox.index'))
             ->assertOk()
-            ->assertSee('とりあえず、ここに渡す')
+            ->assertSee('何をしたいですか？')
+            ->assertSee('整理しなくて大丈夫です。思いついたまま話してください。')
+            ->assertSee('name="intake_mode" value="chat"', false)
             ->assertSee('あとで検討したい新機能のアイデア')
-            ->assertSee('Plan未指定');
+            ->assertSee('このまま相談する');
+    }
+
+    public function test_chat_first_capture_extracts_a_pasted_url_without_a_separate_url_field(): void
+    {
+        [$user] = $this->scenario();
+
+        $this->actingAs($user)
+            ->post(route('inbox.store'), [
+                'intake_mode' => 'chat',
+                'content' => 'この仕様をあとで確認したい https://example.com/spec',
+            ])
+            ->assertRedirect(route('inbox.index'))
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('inbox_focus_id');
+
+        $this->assertDatabaseHas('inbox_items', [
+            'user_id' => $user->id,
+            'source_type' => 'url',
+            'source_url' => 'https://example.com/spec',
+            'content' => 'この仕様をあとで確認したい https://example.com/spec',
+        ]);
+
+        $item = \App\Models\InboxItem::firstOrFail();
+        $this->assertSame('chat', data_get($item->metadata, 'intake_mode'));
+        $this->assertSame('inbox', data_get($item->metadata, 'capture_surface'));
+
+        $this->actingAs($user)
+            ->withSession(['inbox_focus_id' => $item->id])
+            ->get(route('inbox.index'))
+            ->assertOk()
+            ->assertSee('CONVERSATION')
+            ->assertSee('受け取りました。今はInboxに置いてあります。')
+            ->assertSee('保存内容を見る');
+    }
+
+    public function test_premium_chat_capture_interprets_the_item_without_mutating_a_destination(): void
+    {
+        [$user] = $this->scenario();
+        $this->grantPremium($user);
+
+        Http::fake([
+            'https://api.openai.com/v1/responses' => Http::response(
+                $this->responseBody([
+                    'destination' => 'keep_inbox',
+                    'reason' => 'まだ具体的な整理先を確定する情報が足りません。',
+                    'confidence' => 62,
+                    'suggested_plan_title' => null,
+                    'suggested_task_title' => null,
+                ]),
+                200,
+            ),
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('inbox.store'), [
+                'intake_mode' => 'chat',
+                'content' => 'このアイデアをどう進めるか相談したい',
+            ])
+            ->assertRedirect(route('inbox.index'))
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', '受け取りました。内容から次の行き先候補も整理しました。');
+
+        $item = \App\Models\InboxItem::firstOrFail();
+        $this->assertSame('review', $item->status);
+        $this->assertSame('keep_inbox', data_get($item->metadata, 'routing_suggestion.destination'));
+        $this->assertSame(62, data_get($item->metadata, 'routing_suggestion.confidence'));
+        $this->assertDatabaseCount('tasks', 1);
+        $this->assertDatabaseCount('plans', 1);
+        Http::assertSentCount(1);
+
+        $this->actingAs($user)
+            ->withSession(['inbox_focus_id' => $item->id])
+            ->get(route('inbox.index'))
+            ->assertOk()
+            ->assertSee('Inboxに残す')
+            ->assertSee('整理候補を確認する');
+    }
+
+    public function test_chat_first_capture_keeps_overlong_url_like_text_instead_of_promoting_it_to_source_url(): void
+    {
+        [$user] = $this->scenario();
+        $overlongUrl = 'https://example.com/'.str_repeat('a', 2050);
+
+        $this->actingAs($user)
+            ->post(route('inbox.store'), [
+                'intake_mode' => 'chat',
+                'content' => '長すぎるURLは本文として保持する '.$overlongUrl,
+            ])
+            ->assertRedirect(route('inbox.index'))
+            ->assertSessionHasNoErrors();
+
+        $item = \App\Models\InboxItem::firstOrFail();
+        $this->assertSame('text', $item->source_type);
+        $this->assertNull($item->source_url);
+        $this->assertStringContainsString($overlongUrl, (string) $item->content);
     }
 
     public function test_image_or_pdf_is_stored_privately_and_other_user_cannot_open_it(): void
@@ -205,6 +311,37 @@ class InboxFoundationV4113Test extends TestCase
         $this->assertStringContainsString('分類はあとで大丈夫', $script);
         $this->assertStringNotContainsString('迷ったら「今日」へ', $script);
         $this->assertStringContainsString('新しい情報はInboxへ', $intro);
+    }
+
+    private function grantPremium(User $user): void
+    {
+        UserProductGrant::create([
+            'user_id' => $user->id,
+            'product_key' => ProductKey::PremiumCore,
+            'source' => 'manual',
+            'starts_at' => now()->subMinute(),
+            'metadata' => ['test' => true],
+        ]);
+    }
+
+    private function responseBody(array $data): array
+    {
+        return [
+            'id' => 'resp_'.Str::random(10),
+            'status' => 'completed',
+            'output' => [[
+                'type' => 'message',
+                'content' => [[
+                    'type' => 'output_text',
+                    'text' => json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                ]],
+            ]],
+            'usage' => [
+                'input_tokens' => 120,
+                'output_tokens' => 80,
+                'total_tokens' => 200,
+            ],
+        ];
     }
 
     private function pdfUpload(string $name): UploadedFile
