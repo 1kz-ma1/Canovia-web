@@ -49,9 +49,44 @@ class InboxFoundationV4113Test extends TestCase
         $this->actingAs($user)
             ->get(route('inbox.index'))
             ->assertOk()
-            ->assertSee('とりあえず、ここに渡す')
+            ->assertSee('何をしたいですか？')
+            ->assertSee('整理しなくて大丈夫です。思いついたまま話してください。')
+            ->assertSee('name="intake_mode" value="chat"', false)
             ->assertSee('あとで検討したい新機能のアイデア')
-            ->assertSee('Plan未指定');
+            ->assertSee('このまま相談する');
+    }
+
+    public function test_chat_first_capture_extracts_a_pasted_url_without_a_separate_url_field(): void
+    {
+        [$user] = $this->scenario();
+
+        $this->actingAs($user)
+            ->post(route('inbox.store'), [
+                'intake_mode' => 'chat',
+                'content' => 'この仕様をあとで確認したい https://example.com/spec',
+            ])
+            ->assertRedirect(route('inbox.index'))
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('inbox_focus_id');
+
+        $this->assertDatabaseHas('inbox_items', [
+            'user_id' => $user->id,
+            'source_type' => 'url',
+            'source_url' => 'https://example.com/spec',
+            'content' => 'この仕様をあとで確認したい https://example.com/spec',
+        ]);
+
+        $item = \App\Models\InboxItem::firstOrFail();
+        $this->assertSame('chat', data_get($item->metadata, 'intake_mode'));
+        $this->assertSame('inbox', data_get($item->metadata, 'capture_surface'));
+
+        $this->actingAs($user)
+            ->withSession(['inbox_focus_id' => $item->id])
+            ->get(route('inbox.index'))
+            ->assertOk()
+            ->assertSee('CONVERSATION')
+            ->assertSee('受け取りました。今はInboxに置いてあります。')
+            ->assertSee('保存内容を見る');
     }
 
     public function test_image_or_pdf_is_stored_privately_and_other_user_cannot_open_it(): void
