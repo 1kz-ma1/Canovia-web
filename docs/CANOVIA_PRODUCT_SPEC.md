@@ -843,3 +843,20 @@ Pan / Pinch後のghost click抑止は非interactiveなMap Scene backgroundだけ
 既存のNavigation Graph / Attention State分離、Living Reevaluation、Projection Key、Map -> Map Instant Navigation、semantic departure / arrival、Space Station Spatial Dock、L3 Execution semanticsは維持する。ReflectionのDomain -> Plan hierarchy自体はV47.3では変更せず、今回の対象はInteraction Contractの整理である。Map position永続化、Reflection専用Graph、AI layout、課金・billing変更は行わない。
 
 詳細は `docs/V47.3_MAP_SEMANTIC_INTERACTION.md` を正とする。
+
+
+## V47.4 Reflection Map
+
+V47.4では振り返りIntentを通常のDomain -> Plan hierarchyから切り離し、過去のcanonical factを「何を見返したいか」というLensから辿る専用Projectionへ変更する。
+
+L1は固定のReflection Lensとして「最近の実績 / Evidence / 完了Task / 振り返り記録」を表示し、L2はそのLensに該当する既存Recordを表示する。最近の実績はWorkLogとTaskEvidenceを時系列で統合し、EvidenceはTaskEvidence、完了Taskはstatus=doneまたはprogress_percent>=100、振り返り記録はguided_execution_reflected / interview_review_completedの明示Evidenceだけを対象とする。deadlineや時間経過、通常Evidenceから完了・Reflectionを推測しない。
+
+Reflection Map専用のDB Entityやhistory rowは作らない。Mapは既存WorkLog / TaskEvidence / TaskのProjectionであり、Source of Truthではない。L1 LensはV47.3 Semantic InteractionのContainer Nodeとして本体クリックでL2へSemantic Zoomし、L2 Recordは人工的なMap depthを増やさずPlan / Timeline等の既存canonical surfaceへ直接戻る。
+
+対象Recordが0件の場合も中央1Nodeのdead-endにはせず、Projection-onlyの「Timelineを確認」「達成した計画を見る」を周囲へ出す。
+
+Reflection hierarchyのdepth labelは Intent -> Lens -> Record -> Detail とする。V47.4のMap自体はL2までを利用し、Detailは既存surface側の責務とする。Space Station DockからCaptureした場合はreflection_contextをvalidation済みstructural pathとして保持し、同じLensへ復帰する。
+
+既存のL0 fixed Intent、Navigation Graph / Attention State分離、Living Reevaluation / Projection Key、Map -> Map Instant Navigation、Space Station Dock、L3 Execution Map、Collaboration専用Projection、Timeline / Achievement画面は維持する。AIによる過去の生成・要約、Map position永続化、billing / entitlement変更は行わない。
+
+詳細は `docs/V47.4_REFLECTION_MAP.md` を正とする。
