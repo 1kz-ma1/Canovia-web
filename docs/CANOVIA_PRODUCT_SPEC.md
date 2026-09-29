@@ -841,7 +841,7 @@ V46.6ではV47 Execution OrchestrationとV46.4 GitHub App Write Layerを、Human
 
 Candidate作成には現在TaskのExecution Packetを必須とし、Packetのcontext_fingerprintが現在Contextと一致することを確認する。Candidateにはcontext fingerprintとExecution PacketのSHA-256 hashを保持し、confirm時にもcurrent Context / active Packet hashが一致しなければwriteを拒否する。反映先RepositoryはAIに選ばせず、同Plan内のconnected GitHub Repositoryを人が選択する。
 
-GitHubRepositoryWriterにはread-only `previewFileChange` を追加し、default branch上のtarget file存在状態 / SHA / byte sizeを取得する。Candidate preview後のconfirmではexpected file SHAを再確認し、他担当が更新・作成・削除していた場合はBranch作成前に停止する。これによりHuman Confirmation中のstale overwriteを避ける。
+GitHubRepositoryWriterにはread-only `previewFileChange` を追加し、default branch上のtarget file存在状態 / SHA / byte sizeを取得する。Candidate preview後のconfirmではexpected file SHAを再確認し、他担当が更新・作成・削除していた場合はBranch作成前に停止する。これによりHuman Confirmation中のstale overwriteを避ける。Candidateのsource contentはsession backendへ平文保存せずLaravel Cryptで個別暗号化し、PR Artifact / Activity metadataへ本文を複製しない。
 
 確認成功後はV46.4と同じreview-only flowで `canovia/*` Branch → 1 file Commit → Pull Requestを作成する。成功したPRだけをPlanArtifactとして `review` へ追加し、元Taskへ明示linkする。origin metadataには `source=execution_github_handoff` / target_task_id / context_fingerprint / branch / commit等を保存する。
 
