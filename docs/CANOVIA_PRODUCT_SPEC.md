@@ -813,3 +813,18 @@ CompanionはTask Context内で `prepare_execution_request` Mutation Candidateを
 ExecutionPacketServiceはHuman-confirmed requestをPromptへ含めるが、RequestはDependency / protected scope / confirmed constraints / canonical targetを上書きできない。blocked Taskのexecute fail-safeも維持する。Packet / PromptのResetでは確認済みRequestを保持し、Context変化後はPacketだけを再生成できる。
 
 詳細は `docs/V47.1_EXECUTION_REQUEST_HANDOFF.md` を正とする。
+
+
+## V47.2 Execution Distribution Bundle
+
+V47.2では、1つのPlan Contextを保ったまま複数の既存TaskへExecution Packet / External AI Promptを分配できるPlan-level Distribution Boardを追加する。HINANEXのA〜E担当のような複数担当運用を一般化するが、AIへTask IDを選ばせず、人が現在Plan内の未完了Taskを最大8件選択する。
+
+Distribution Bundleは永続Entityにせずsession上のProjectionとして保持する。担当ラベル（例: A / Validation担当 / Claude）もsession-scopedであり、権限・ownership・Task担当者を意味しない。PlanActor modelは追加しない。Task / Dependency / Evidenceが引き続きSource of Truthである。
+
+各targetは既存ExecutionOrchestrationContextServiceでPlan全体Contextを再構築し、taskごとのcontext_fingerprintを保持する。生成後にTask / Dependency / Evidence等が変われば、そのtargetだけをstale表示する。他担当のPacketを自動破棄しない。
+
+External AI pathは担当ごとにContext込みPromptを生成する。Automatic AI entitlement + Native AI利用可能時は、選択Taskごとに既存ExecutionPacketServiceを実行してPacketを生成する。Native生成が個別に失敗した場合はBundle全体を失敗させず、そのtargetだけExternal Promptへfallbackする。
+
+V47.1のHuman-confirmed Execution Requestが対象Task sessionに存在する場合、Distribution生成でもそのRequestを引き継ぐ。Distribution自体はTask / Plan / Dependency / progressを変更せず、新しいExecution Requestも自動生成しない。
+
+詳細は `docs/V47.2_EXECUTION_DISTRIBUTION.md` を正とする。
