@@ -114,6 +114,9 @@ class InboxController extends Controller
         Request $request,
         BehaviorIdentityService $identity,
         PlanOwnershipService $ownership,
+        FeatureAccessService $featureAccess,
+        NativeAiGateway $nativeAi,
+        InboxIntelligenceService $intelligence,
     ) {
         $validated = $request->validate([
             'title' => ['nullable', 'string', 'max:255'],
@@ -201,8 +204,34 @@ class InboxController extends Controller
         $redirect = $this->redirectAfterAction($request);
 
         if ($intakeMode === 'chat') {
+            $interpreted = false;
+
+            if (
+                $nativeAi->isConfigured()
+                && $featureAccess->canUse($request->user(), FeatureKey::AutomaticAiExecution)
+            ) {
+                try {
+                    $suggestion = $intelligence->suggest($item, $request->user()?->id);
+                    $metadata = is_array($item->metadata) ? $item->metadata : [];
+                    $metadata['routing_suggestion'] = $suggestion;
+
+                    $item->update([
+                        'status' => 'review',
+                        'metadata' => $metadata,
+                    ]);
+                    $interpreted = true;
+                } catch (NativeAiExecutionException) {
+                    // Capture must remain available even when interpretation is temporarily unavailable.
+                }
+            }
+
             return $redirect
-                ->with('success', '受け取りました。まだ整理しなくて大丈夫です。')
+                ->with(
+                    'success',
+                    $interpreted
+                        ? '受け取りました。内容から次の行き先候補も整理しました。'
+                        : '受け取りました。まだ整理しなくて大丈夫です.',
+                )
                 ->with('inbox_focus_id', (int) $item->id);
         }
 
