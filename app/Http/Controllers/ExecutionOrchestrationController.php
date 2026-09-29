@@ -7,6 +7,7 @@ use App\Exceptions\NativeAiExecutionException;
 use App\Models\Plan;
 use App\Models\PlanArtifact;
 use App\Models\Task;
+use App\Services\ExecutionCoordinationService;
 use App\Services\ExecutionGitHubHandoffService;
 use App\Services\ExecutionOrchestrationContextService;
 use App\Services\ExecutionPacketService;
@@ -31,6 +32,7 @@ final class ExecutionOrchestrationController extends Controller
         ExecutionGitHubHandoffService $githubHandoff,
         GitHubRepositoryWriter $githubWriter,
         GitHubEvidenceDecisionService $githubDecision,
+        ExecutionCoordinationService $coordination,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
 
@@ -85,6 +87,12 @@ final class ExecutionOrchestrationController extends Controller
             ? $githubDecision->candidate($task, $latestExecutionPullRequest, $githubReturnSnapshot)
             : null;
 
+        $coordinationProjection = $coordination->projection(
+            $request,
+            $plan,
+            $task,
+        );
+
         return view('execution_orchestration.show', [
             'plan' => $plan,
             'task' => $task,
@@ -110,6 +118,7 @@ final class ExecutionOrchestrationController extends Controller
             'latestExecutionPullRequest' => $latestExecutionPullRequest,
             'githubReturnSnapshot' => $githubReturnSnapshot,
             'githubDecisionCandidate' => $githubDecisionCandidate,
+            'coordinationProjection' => $coordinationProjection,
         ]);
     }
 
