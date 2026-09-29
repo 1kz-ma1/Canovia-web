@@ -84,7 +84,7 @@ class GitHubWorkflowHubV460Test extends TestCase
             ->assertSee('data-github-workflow-lane="changes"', false)
             ->assertSee('data-github-workflow-lane="merge"', false)
             ->assertSee('data-github-workflow-lane="done"', false)
-            ->assertSee('GitHub API未接続')
+            ->assertSee('RepositoryはGitHubからread-only snapshotを取得できます')
             ->assertSee('PR without Canovia state')
             ->assertSee('PR for review');
 
@@ -324,7 +324,7 @@ class GitHubWorkflowHubV460Test extends TestCase
             ->assertSee('REPOSITORY OVERVIEW')
             ->assertSee('Repositoryを起点に、全体像を見る')
             ->assertSee('1kz-ma1/HINANEX')
-            ->assertSee('Repositoryだけ登録されています')
+            ->assertSee('Canovia側の個別項目はまだありません')
             ->assertSee('Repositoryは「今やる」項目ではなく');
 
         $this->assertSame(1, data_get($response->viewData('summary'), 'repositories'));

@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\FeatureKey;
 use App\Models\PlanArtifact;
 use App\Models\Task;
 use App\Services\BehaviorIdentityService;
+use App\Services\FeatureAccessService;
+use App\Services\GitHubRepositoryInspector;
 use App\Services\GitHubWorkflowService;
 use App\Services\PlanActivityService;
 use App\Services\PlanOwnershipService;
@@ -18,8 +21,15 @@ final class GitHubWorkflowController extends Controller
     public function index(
         Request $request,
         GitHubWorkflowService $workflow,
+        FeatureAccessService $featureAccess,
     ) {
-        return view('github_workflow.index', $workflow->dashboard($request));
+        return view('github_workflow.index', [
+            ...$workflow->dashboard($request),
+            'can_repository_inspect' => $featureAccess->canUse(
+                $request->user(),
+                FeatureKey::DeveloperGithubEvidence,
+            ),
+        ]);
     }
 
     public function store(
@@ -29,6 +39,8 @@ final class GitHubWorkflowController extends Controller
         PlanActivityService $activity,
         BehaviorIdentityService $identity,
         TaskEvidenceService $evidence,
+        FeatureAccessService $featureAccess,
+        GitHubRepositoryInspector $repositoryInspector,
     ) {
         $validated = $request->validate([
             'plan_id' => ['required', 'integer', 'min:1'],
@@ -116,7 +128,26 @@ final class GitHubWorkflowController extends Controller
             actorToken: $identity->resolve($request),
         );
 
-        return redirect()
+        $inspectionMessage = null;
+        if (
+            $isRepository
+            && $featureAccess->canUse($request->user(), FeatureKey::DeveloperGithubEvidence)
+            && filled($parsed['repo_full_name'] ?? null)
+        ) {
+            try {
+                $snapshot = $repositoryInspector->inspect((string) $parsed['repo_full_name']);
+                $metadata = is_array($artifact->metadata) ? $artifact->metadata : [];
+                $metadata['github_repository_snapshot'] = $snapshot;
+                $artifact->update(['metadata' => $metadata]);
+                $inspectionMessage = 'GitHubから現在のRepository構造も読み込みました。';
+            } catch (\RuntimeException $exception) {
+                // Repository capture must remain fail-open. The URL is still a
+                // valid Canovia root even when remote inspection is unavailable.
+                $inspectionMessage = $exception->getMessage();
+            }
+        }
+
+        $redirect = redirect()
             ->route('github_workflow.index', ['plan_id' => $plan->id])
             ->with(
                 'success',
@@ -124,6 +155,68 @@ final class GitHubWorkflowController extends Controller
                     ? 'Repositoryを全体像としてCanoviaへ追加しました。'
                     : 'GitHub項目をCanoviaへ追加しました。',
             );
+
+        return $inspectionMessage
+            ? $redirect->with('status', $inspectionMessage)
+            : $redirect;
+    }
+
+    public function refreshRepository(
+        Request $request,
+        PlanArtifact $artifact,
+        PlanOwnershipService $ownership,
+        FeatureAccessService $featureAccess,
+        GitHubWorkflowService $workflow,
+        GitHubRepositoryInspector $repositoryInspector,
+        PlanActivityService $activity,
+    ) {
+        $artifact->loadMissing('plan');
+        $plan = $artifact->plan;
+
+        abort_unless($plan && $artifact->provider === 'github', 404);
+        $ownership->authorizeEdit($request, $plan);
+        $featureAccess->authorizeUse(
+            $request->user(),
+            FeatureKey::DeveloperGithubEvidence,
+            ['plan_id' => (int) $plan->id, 'artifact_id' => (int) $artifact->id],
+        );
+
+        $parsed = $workflow->parseUrl((string) $artifact->url);
+        abort_unless(($parsed['kind'] ?? null) === 'repository', 404);
+
+        try {
+            $snapshot = $repositoryInspector->inspect((string) $parsed['repo_full_name']);
+        } catch (\RuntimeException $exception) {
+            return redirect()
+                ->route('github_workflow.index', ['plan_id' => $plan->id])
+                ->with('status', $exception->getMessage());
+        }
+
+        $metadata = is_array($artifact->metadata) ? $artifact->metadata : [];
+        $metadata['github_repository_snapshot'] = $snapshot;
+
+        // A repository is a navigation root, not a workflow item.
+        unset($metadata['github_workflow_state']);
+
+        $artifact->update([
+            'metadata' => $metadata,
+        ]);
+
+        $activity->record(
+            $plan,
+            $request->user(),
+            'github_repository_snapshot_refreshed',
+            'plan_artifact',
+            (int) $artifact->id,
+            [
+                'repo_full_name' => (string) $parsed['repo_full_name'],
+                'fetched_at' => data_get($snapshot, 'fetched_at'),
+            ],
+        );
+
+        return redirect()
+            ->route('github_workflow.index', ['plan_id' => $plan->id])
+            ->with('success', 'GitHubからRepositoryの現在構造を更新しました。');
     }
 
     public function updateState(

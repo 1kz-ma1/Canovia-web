@@ -18,8 +18,8 @@
                     「今やる / レビュー待ち / 修正必要 / マージ待ち / 完了」に整理します。
                 </p>
                 <p class="mt-2 text-xs leading-6 text-slate-500">
-                    現在はGitHub API未接続です。ここで選ぶ状態はCanovia上の作業判断であり、
-                    GitHub側のopen / merged / approved / CI結果を自動判定したものではありません。
+                    RepositoryはGitHubからread-only snapshotを取得できます。Canoviaの「今やる / レビュー待ち」等は別の判断レイヤーで、
+                    GitHub側のopen / merged / approved / CI結果から自動変更しません。
                 </p>
             </div>
 
@@ -54,6 +54,9 @@
 
     @if (session('success'))
         <div class="assistant-notice assistant-notice-info">{{ session('success') }}</div>
+    @endif
+    @if (session('status'))
+        <div class="assistant-notice assistant-notice-info">{{ session('status') }}</div>
     @endif
 
     <section class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.58fr)]">
@@ -142,7 +145,7 @@
                     <div class="sm:col-span-2">
                         <button type="submit" class="btn-primary w-full justify-center">Canoviaへ追加</button>
                         <p class="mt-2 text-[11px] leading-5 text-slate-500">
-                            Repository URLは作業レーンに置かず「全体像」として表示します。PR / Issue / Branch等だけが状態を持ちます。Task紐付け・担当者・メモは追加後の「詳細」から設定できます。
+                            Repository URLは作業レーンに置かず「全体像」として表示します。利用権限があれば登録直後にGitHubのBranch / Open PR / Issue / Actionsもread-onlyで読み込みます。PR / Issue / Branch等だけがCanovia状態を持ちます。
                         </p>
                     </div>
                 </form>

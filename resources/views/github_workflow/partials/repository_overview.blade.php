@@ -3,6 +3,14 @@
     $workflowCounts = $overview['workflow_counts'];
     $recentItems = $overview['recent_items'];
     $linkedTasks = $overview['linked_tasks'];
+    $snapshot = is_array($overview['remote_snapshot'] ?? null) ? $overview['remote_snapshot'] : null;
+    $remoteRepository = is_array(data_get($snapshot, 'repository')) ? data_get($snapshot, 'repository') : [];
+    $remoteBranches = collect(data_get($snapshot, 'branches', []));
+    $remotePullRequests = collect(data_get($snapshot, 'pull_requests', []));
+    $remoteIssues = collect(data_get($snapshot, 'issues', []));
+    $remoteRuns = collect(data_get($snapshot, 'actions_runs', []));
+    $remoteWarnings = collect(data_get($snapshot, 'warnings', []));
+    $canInspectRepository = (bool) ($can_repository_inspect ?? false);
 @endphp
 
 <article
@@ -17,21 +25,52 @@
                     <span class="rounded-full border border-violet-300/20 bg-violet-300/[0.07] px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-violet-200">
                         Repository
                     </span>
-                    @if (! $overview['repository_registered'])
+                    @if ($snapshot)
+                        <span class="rounded-full border border-emerald-300/15 bg-emerald-300/[0.035] px-2 py-1 text-[10px] font-bold text-emerald-200">
+                            GitHub snapshot
+                        </span>
+                    @elseif (! $overview['repository_registered'])
                         <span class="rounded-full border border-slate-700 px-2 py-1 text-[10px] text-slate-500">関連URLから認識</span>
                     @endif
                 </div>
+
                 <h3 class="mt-3 break-words text-lg font-black text-slate-50 md:text-xl">{{ $overview['repo_full_name'] }}</h3>
-                <p class="mt-1 text-xs text-slate-500">{{ $overview['plan_icon'] }} {{ $overview['plan_title'] }}</p>
+
+                @if (filled(data_get($remoteRepository, 'description')))
+                    <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-300">{{ data_get($remoteRepository, 'description') }}</p>
+                @endif
+
+                <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                    <span>{{ $overview['plan_icon'] }} {{ $overview['plan_title'] }}</span>
+                    @if (filled(data_get($remoteRepository, 'default_branch')))
+                        <span>default: {{ data_get($remoteRepository, 'default_branch') }}</span>
+                    @endif
+                    @if (filled(data_get($remoteRepository, 'language')))
+                        <span>{{ data_get($remoteRepository, 'language') }}</span>
+                    @endif
+                    @if (filled(data_get($remoteRepository, 'visibility')))
+                        <span>{{ data_get($remoteRepository, 'visibility') }}</span>
+                    @endif
+                </div>
             </div>
 
             <div class="flex flex-wrap gap-2">
+                @if ($overview['repository_registered'] && $overview['can_edit'] && $canInspectRepository)
+                    <form method="POST" action="{{ route('github_workflow.repository.refresh', $overview['repository_artifact_id']) }}">
+                        @csrf
+                        <button type="submit" class="btn-primary px-3 py-2 text-xs">
+                            {{ $snapshot ? 'GitHubから更新' : 'GitHubから読み込む' }}
+                        </button>
+                    </form>
+                @endif
+
                 <a
                     href="{{ $overview['url'] }}"
                     target="_blank"
                     rel="noopener noreferrer"
                     class="btn-secondary px-3 py-2 text-xs"
                 >Repositoryを開く ↗</a>
+
                 @if ($overview['details_url'])
                     <a href="{{ $overview['details_url'] }}" class="btn-secondary px-3 py-2 text-xs">Artifact詳細</a>
                 @endif
@@ -39,15 +78,147 @@
         </div>
 
         <p class="mt-4 max-w-3xl text-xs leading-6 text-slate-400">
-            Repositoryは「今やる」項目ではなく、この開発のルートとして表示します。
-            下の作業レーンにはPR / Issue / Branchなど、次の判断が必要なものだけを出します。
+            Repositoryは「今やる」項目ではなく、この開発のルートです。
+            GitHubの現在構造とCanovia上のTask・判断状態を重ねて、全体像から次の作業へ降りられるようにします。
         </p>
     </div>
 
+    @if ($snapshot)
+        <section class="border-b border-emerald-300/10 bg-emerald-300/[0.018] p-5" data-github-remote-snapshot>
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <p class="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300">GITHUB NOW</p>
+                    <h4 class="mt-1 text-sm font-black text-slate-100">GitHubから取得した現在の構造</h4>
+                    <p class="mt-1 text-[10px] text-slate-600">一覧はBranch / PR / Issue 最大12件、Actions最大10件の取得範囲です。</p>
+                </div>
+                <div class="text-right text-[10px] leading-5 text-slate-600">
+                    @if (filled(data_get($snapshot, 'fetched_at')))
+                        <p>取得 {{ data_get($snapshot, 'fetched_at') }}</p>
+                    @endif
+                    @if (data_get($snapshot, 'rate_limit_remaining') !== null)
+                        <p>API remaining {{ data_get($snapshot, 'rate_limit_remaining') }}</p>
+                    @endif
+                </div>
+            </div>
+
+            <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div class="rounded-2xl border border-white/8 bg-slate-950/35 p-4">
+                    <strong class="block text-xl text-slate-50">{{ $remoteBranches->count() }}</strong>
+                    <span class="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Branches</span>
+                    <div class="mt-3 space-y-1">
+                        @foreach ($remoteBranches->take(4) as $branch)
+                            <p class="truncate text-[11px] text-slate-400">
+                                {{ data_get($branch, 'name') }}
+                                @if (data_get($branch, 'protected'))
+                                    <span class="text-emerald-300/70">protected</span>
+                                @endif
+                            </p>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="rounded-2xl border border-white/8 bg-slate-950/35 p-4">
+                    <strong class="block text-xl text-slate-50">{{ $remotePullRequests->count() }}</strong>
+                    <span class="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Open PR</span>
+                    <div class="mt-3 space-y-2">
+                        @foreach ($remotePullRequests->take(3) as $pullRequest)
+                            @if (filled(data_get($pullRequest, 'url')))
+                                <a href="{{ data_get($pullRequest, 'url') }}" target="_blank" rel="noopener noreferrer" class="block truncate text-[11px] text-cyan-200 hover:underline">
+                                    #{{ data_get($pullRequest, 'number') }} {{ data_get($pullRequest, 'title') }}
+                                </a>
+                            @else
+                                <p class="truncate text-[11px] text-slate-400">#{{ data_get($pullRequest, 'number') }} {{ data_get($pullRequest, 'title') }}</p>
+                            @endif
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="rounded-2xl border border-white/8 bg-slate-950/35 p-4">
+                    <strong class="block text-xl text-slate-50">{{ $remoteIssues->count() }}</strong>
+                    <span class="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Open Issues</span>
+                    <div class="mt-3 space-y-2">
+                        @foreach ($remoteIssues->take(3) as $issue)
+                            @if (filled(data_get($issue, 'url')))
+                                <a href="{{ data_get($issue, 'url') }}" target="_blank" rel="noopener noreferrer" class="block truncate text-[11px] text-cyan-200 hover:underline">
+                                    #{{ data_get($issue, 'number') }} {{ data_get($issue, 'title') }}
+                                </a>
+                            @else
+                                <p class="truncate text-[11px] text-slate-400">#{{ data_get($issue, 'number') }} {{ data_get($issue, 'title') }}</p>
+                            @endif
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="rounded-2xl border border-white/8 bg-slate-950/35 p-4">
+                    <strong class="block text-xl text-slate-50">{{ $remoteRuns->count() }}</strong>
+                    <span class="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Recent Actions</span>
+                    <div class="mt-3 space-y-2">
+                        @foreach ($remoteRuns->take(3) as $run)
+                            <div class="min-w-0">
+                                @if (filled(data_get($run, 'url')))
+                                    <a href="{{ data_get($run, 'url') }}" target="_blank" rel="noopener noreferrer" class="block truncate text-[11px] text-cyan-200 hover:underline">
+                                        {{ data_get($run, 'name') ?: 'Actions run' }}
+                                    </a>
+                                @else
+                                    <p class="truncate text-[11px] text-slate-400">{{ data_get($run, 'name') ?: 'Actions run' }}</p>
+                                @endif
+                                <p class="truncate text-[10px] text-slate-600">
+                                    {{ data_get($run, 'branch') }}
+                                    · {{ data_get($run, 'conclusion') ?: data_get($run, 'status', 'unknown') }}
+                                </p>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 flex flex-wrap gap-2 text-[10px] text-slate-600">
+                @if (data_get($remoteRepository, 'pushed_at'))
+                    <span>last push {{ data_get($remoteRepository, 'pushed_at') }}</span>
+                @endif
+                @if (data_get($remoteRepository, 'stars') !== null)
+                    <span>★ {{ (int) data_get($remoteRepository, 'stars') }}</span>
+                @endif
+                @if (data_get($remoteRepository, 'forks') !== null)
+                    <span>fork {{ (int) data_get($remoteRepository, 'forks') }}</span>
+                @endif
+                @if (data_get($remoteRepository, 'archived'))
+                    <span class="text-amber-300/80">archived</span>
+                @endif
+            </div>
+
+            @if ($remoteWarnings->isNotEmpty())
+                <p class="mt-3 text-[10px] leading-5 text-amber-200/70">{{ $remoteWarnings->join(' ') }}</p>
+            @endif
+        </section>
+    @elseif ($overview['repository_registered'])
+        <section class="border-b border-dashed border-cyan-300/15 bg-cyan-300/[0.018] p-5">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="max-w-2xl">
+                    <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">GITHUB NOW</p>
+                    <h4 class="mt-1 text-sm font-black text-slate-100">Repository URLだけで終わらせない</h4>
+                    <p class="mt-2 text-xs leading-6 text-slate-500">
+                        GitHubから読み込むと、Branch・Open PR・Issue・最近のActionsをこの画面へ重ねて表示できます。
+                    </p>
+                </div>
+                @if ($overview['can_edit'] && $canInspectRepository)
+                    <form method="POST" action="{{ route('github_workflow.repository.refresh', $overview['repository_artifact_id']) }}">
+                        @csrf
+                        <button type="submit" class="btn-primary px-3 py-2 text-xs">GitHubから読み込む</button>
+                    </form>
+                @elseif (! $canInspectRepository)
+                    <span class="rounded-full border border-violet-300/15 bg-violet-300/[0.035] px-3 py-2 text-[10px] text-violet-200">
+                        自動取得はDeveloper GitHub Evidence
+                    </span>
+                @endif
+            </div>
+        </section>
+    @endif
+
     <div class="grid gap-0 lg:grid-cols-[1fr_1fr_1.15fr]">
         <section class="border-b border-white/8 p-5 lg:border-b-0 lg:border-r">
-            <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">KNOWN STRUCTURE</p>
-            <h4 class="mt-1 text-sm font-black text-slate-100">Canoviaが把握しているGitHub構造</h4>
+            <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">CANOVIA REFERENCES</p>
+            <h4 class="mt-1 text-sm font-black text-slate-100">Canoviaへ明示的に登録したGitHub項目</h4>
 
             <div class="mt-4 grid grid-cols-3 gap-2">
                 @foreach ([
@@ -67,9 +238,9 @@
 
             @if ($overview['work_count'] === 0)
                 <div class="mt-4 rounded-xl border border-dashed border-cyan-300/15 bg-cyan-300/[0.02] p-3">
-                    <p class="text-xs font-bold text-cyan-100">Repositoryだけ登録されています</p>
+                    <p class="text-xs font-bold text-cyan-100">Canovia側の個別項目はまだありません</p>
                     <p class="mt-1 text-[11px] leading-5 text-slate-500">
-                        PR / Issue / BranchのURLを追加すると、同じRepositoryの構造としてここへまとまり、作業レーンにも反映されます。
+                        GitHub snapshotは全体把握、個別ArtifactはCanovia上でTaskや判断状態と結び付けたい項目に使います。
                     </p>
                 </div>
             @endif
@@ -77,7 +248,7 @@
 
         <section class="border-b border-white/8 p-5 lg:border-b-0 lg:border-r">
             <p class="text-[10px] font-black uppercase tracking-[0.16em] text-violet-300">CANOVIA FLOW</p>
-            <h4 class="mt-1 text-sm font-black text-slate-100">今どこで止まっているか</h4>
+            <h4 class="mt-1 text-sm font-black text-slate-100">Canoviaでは今どこで止まっているか</h4>
 
             <div class="mt-4 space-y-2">
                 @foreach ([
@@ -137,7 +308,8 @@
 
     <div class="border-t border-white/8 px-5 py-3">
         <p class="text-[10px] leading-5 text-slate-600">
-            現在の全体像はCanoviaへ登録済みのGitHub URLから構成しています。GitHub API未接続のため、Repository URLだけから未登録のBranch / PR / Issueやremote statusを推測しません。
+            GitHub snapshotは取得時点のread-only情報です。Canoviaの「今やる / レビュー待ち」等は別の判断レイヤーで、GitHubのopen / merged / CI状態から自動変更しません。
+            Private Repositoryのユーザー別アクセスはまだ接続していません。
         </p>
     </div>
 </article>

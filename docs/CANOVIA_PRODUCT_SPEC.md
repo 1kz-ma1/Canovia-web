@@ -793,6 +793,18 @@ V46.2でもGitHub API / OAuth / Webhookは導入しない。OverviewはCanovia�
 
 詳細は `docs/V46.2_GITHUB_REPOSITORY_OVERVIEW.md` を正とする。
 
+## V46.3 GitHub Repository Inspection
+
+Repository URLをCanoviaへ登録した場合、Repository Rootを先に保存したうえで、`developer_github_evidence` 利用権があるactorについてはGitHub RESTからread-only snapshotの取得を試行する。外部取得に失敗してもRepository capture自体は成功させる。
+
+snapshotは既存PlanArtifactの `metadata.github_repository_snapshot` に保持し、repository metadata / default branch / language / bounded Branch一覧 / Open PR / Open Issue / recent Actions / fetched_at等をRepository Overviewへ投影する。remote objectを自動でTaskやPlanArtifactへ大量生成せず、Canoviaの「今やる / レビュー待ち / 修正必要 / マージ待ち / 完了」もGitHub remote stateから自動変更しない。
+
+Repository Overviewから明示的な「GitHubから更新」を実行できる。refreshにはPlan edit permissionとDeveloperGithubEvidence entitlementを要求し、Task progress / Plan state / TaskEvidenceは変更しない。Repository Rootに旧github_workflow_stateが残っている場合はrefresh時に除去する。
+
+公開Repositoryはtokenなしで取得可能とし、optionalなserver-side `GITHUB_READ_TOKEN` は主にrate limit緩和用途とする。V46.3ではper-user OAuth / GitHub App installation / private repository user access / webhook / background pollingを実装しない。
+
+詳細は `docs/V46.3_GITHUB_REPOSITORY_INSPECTION.md` を正とする。
+
 ## V47 Execution Orchestration
 
 V47.0ではTaskを単独で推薦するだけでなく、Plan全体のDependency・Evidence・Goal Context・制約を保ったまま、選択Taskへ「今この主体が何をすべきか」を渡すExecution Orchestration Layerを追加する。
