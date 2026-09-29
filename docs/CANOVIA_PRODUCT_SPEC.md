@@ -896,7 +896,7 @@ zoom-out時は現在Projectionのcenter Nodeをdeparture sourceとし、遷移�
 
 既存 `canovia.map.semantic-transition.v1` session payloadには direction / depth / timestamp に加えて、短命な `from_route` / `source_node_ref` / viewport geometryのみ保持できる。Plan・Task title、description、Evidence summary、user input、AI output等の内容は保存しない。payloadはarrival時に即削除し、geometryはDB / cookie / BehaviorEvent / Projection Keyへ保存しない。
 
-arrivalではanchorがsource geometryからcanonical positionへ移動し、その後周囲のNode / Edgeが展開する。最終位置は常に既存Map layoutでありanimation overrideは残さない。`prefers-reduced-motion: reduce` ではnode-to-node animationを無効化し、canonical geometryを維持する。
+arrivalではanchorがsource geometryからcanonical positionへ移動し、その後周囲のNode / Edgeが展開する。最終位置は常に既存Map layoutでありanimation overrideは残さない。scaleは0.52..1.9、translationは±2400pxへclampし、sessionStorage改変を含む極端なgeometryでも画面を飛ばさない。`prefers-reduced-motion: reduce` ではnode-to-node animationを無効化し、canonical geometryを維持する。
 
 V47.3のgesture直後click、Focus切替、Context Inspector、V47.4 Reflection Map、Collaboration Projection、L3 Execution semantics、Living Reevaluation、Instant Navigationは維持する。Navigationをanimation完了待ちで遅延させず、AI layoutやcanonical position永続化、billing / entitlement変更は行わない。
 
