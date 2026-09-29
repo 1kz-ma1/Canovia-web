@@ -89,6 +89,13 @@ final class ExecutionOrchestrationController extends Controller
             ? $existingState['execution_request']
             : null;
 
+        if ($executionRequest) {
+            // The prepare form is another explicit human confirmation point.
+            // Keep the request contract aligned with the actor/time actually used for this Packet.
+            $executionRequest['actor_type'] = $actorType;
+            $executionRequest['available_minutes'] = $availableMinutes;
+        }
+
         $state = [
             'context_fingerprint' => (string) $context['context_fingerprint'],
             'actor_type' => $actorType,
