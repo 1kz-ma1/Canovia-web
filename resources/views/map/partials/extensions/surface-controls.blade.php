@@ -81,22 +81,21 @@
 
             <div class="canovia-map-page-builtins" data-map-page-builtins aria-label="標準ページ">
                 @foreach ($builtinMapPages as $preset)
-                    <a
-                        href="{{ $preset['url'] }}"
+                    <button
+                        type="button"
                         class="canovia-map-page-item is-builtin"
                         data-map-page-open
                         data-map-page-id="{{ $preset['id'] }}"
                         data-map-page-name="{{ $preset['label'] }}"
                         data-map-page-route="{{ $preset['url'] }}"
-                        data-instant-nav-skip
-                        @if ($preset['id'] === 'builtin:overview') data-map-global-home @endif
+                        @if ($preset['id'] === 'builtin:overview') data-map-page-global-home="1" @endif
                     >
                         <span class="canovia-map-page-item-mark" aria-hidden="true"></span>
                         <span class="canovia-map-page-item-copy">
                             <strong>{{ $preset['label'] }}</strong>
                             <small>{{ $preset['hint'] }}</small>
                         </span>
-                    </a>
+                    </button>
                 @endforeach
             </div>
 
