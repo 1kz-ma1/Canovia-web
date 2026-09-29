@@ -128,6 +128,31 @@ final class ExecutionGitHubHandoffController extends Controller
                 ->with('status', '変更候補を確認した後にPlan / TaskのContextが変わっています。現在Contextから候補を作り直してください。');
         }
 
+        $orchestrationState = $request->session()->get(
+            ExecutionRequestHandoffService::sessionKey($plan, $task),
+            [],
+        );
+        $activePacket = is_array($orchestrationState['packet'] ?? null)
+            ? $orchestrationState['packet']
+            : null;
+        $activePacketJson = $activePacket
+            ? json_encode($activePacket, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            : null;
+        $activePacketHash = is_string($activePacketJson)
+            ? hash('sha256', $activePacketJson)
+            : '';
+        $candidatePacketHash = (string) data_get($candidate, 'source.packet_hash', '');
+
+        if (
+            $candidatePacketHash === ''
+            || $activePacketHash === ''
+            || ! hash_equals($candidatePacketHash, $activePacketHash)
+        ) {
+            return redirect()
+                ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
+                ->with('status', '変更候補の元になったExecution Packetが変わっています。現在のPacketから候補を作り直してください。');
+        }
+
         $repository = PlanArtifact::query()
             ->whereKey((int) data_get($candidate, 'repository.artifact_id'))
             ->where('plan_id', $plan->id)
@@ -139,6 +164,14 @@ final class ExecutionGitHubHandoffController extends Controller
             return redirect()
                 ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
                 ->with('status', '変更候補のGitHub Repositoryが現在のPlanに見つかりません。');
+        }
+
+        if (
+            (string) $repository->url !== (string) data_get($candidate, 'repository.url', '')
+        ) {
+            return redirect()
+                ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
+                ->with('status', '確認後にRepository URLが変更されています。現在のRepositoryから候補を作り直してください。');
         }
 
         $repoFullName = (string) data_get($candidate, 'repository.repo_full_name', '');
