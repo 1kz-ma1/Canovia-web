@@ -22,6 +22,7 @@ class CompanionMutationApplyService
         private readonly PlanActivityService $activity,
         private readonly GoalContextService $goalContexts,
         private readonly FutureMemoService $futureMemos,
+        private readonly ExecutionRequestHandoffService $executionRequests,
     ) {}
 
     /**
@@ -58,6 +59,9 @@ class CompanionMutationApplyService
             'create_inbox_item' => [
                 'title', 'content',
             ],
+            'prepare_execution_request' => [
+                'instruction', 'actor_type', 'available_minutes',
+            ],
             default => [],
         };
 
@@ -86,6 +90,7 @@ class CompanionMutationApplyService
                 'update_plan', 'record_goal_fact' => $candidate->plan?->title ? 'Plan: '.$candidate->plan->title : 'Plan未選択',
                 'create_future_memo' => 'Canovia Memory',
                 'create_inbox_item' => $candidate->plan?->title ? 'Inbox / '.$candidate->plan->title : 'Inbox',
+                'prepare_execution_request' => $candidate->task?->title ? 'Execution / '.$candidate->task->title : 'Task未選択',
                 default => 'Canovia',
             },
         ];
@@ -154,6 +159,7 @@ class CompanionMutationApplyService
                 'record_goal_fact' => $this->applyGoalFact($request, $locked, $preview['changes']),
                 'create_future_memo' => $this->applyFutureMemo($request, $locked, $preview['changes']),
                 'create_inbox_item' => $this->applyInboxItem($request, $locked, $preview['changes']),
+                'prepare_execution_request' => $this->applyExecutionRequest($request, $locked, $preview['changes']),
                 default => throw ValidationException::withMessages([
                     'candidate' => 'この変更候補の種類にはまだ対応していません。',
                 ]),
@@ -562,6 +568,51 @@ class CompanionMutationApplyService
                 'title' => $item->title,
                 'status' => $item->status,
             ],
+        ];
+    }
+
+    /**
+     * @param array<string,mixed> $payload
+     * @return array<string,mixed>
+     */
+    private function applyExecutionRequest(
+        Request $request,
+        CompanionMutationCandidate $candidate,
+        array $payload,
+    ): array {
+        $task = $this->requireTask($candidate);
+        $plan = $candidate->plan;
+        $this->ownership->authorizeTask($request, $task);
+
+        $data = Validator::make($payload, [
+            'instruction' => ['required', 'string', 'max:6000'],
+            'actor_type' => ['nullable', Rule::in(array_keys(ExecutionPacketService::ACTOR_TYPES))],
+            'available_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
+        ])->validate();
+
+        $instruction = trim((string) $data['instruction']);
+        if ($instruction === '') {
+            throw ValidationException::withMessages([
+                'candidate' => '実行リクエストの内容を確認してください。',
+            ]);
+        }
+
+        $executionRequest = $this->executionRequests->confirmFromCompanion(
+            $request,
+            $candidate,
+            $plan,
+            $task,
+            $instruction,
+            (string) ($data['actor_type'] ?? 'human_ai'),
+            isset($data['available_minutes']) ? (int) $data['available_minutes'] : null,
+        );
+
+        return [
+            'message' => '実行リクエストを確認しました。Execution Orchestrationへ引き継ぎます。',
+            'target_type' => 'execution_request',
+            'target_id' => (int) $task->id,
+            'before' => null,
+            'after' => $executionRequest,
         ];
     }
 
