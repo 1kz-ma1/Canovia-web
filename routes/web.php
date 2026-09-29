@@ -52,6 +52,7 @@ use App\Http\Controllers\CareerWorkspaceController;
 use App\Http\Controllers\InterviewReviewController;
 use App\Http\Controllers\GuidedExecutionController;
 use App\Http\Controllers\ExecutionOrchestrationController;
+use App\Http\Controllers\ExecutionDistributionController;
 use App\Http\Controllers\CompanionController;
 use App\Http\Controllers\CoreFragmentBundleController;
 
@@ -281,6 +282,14 @@ Route::post('/plans/{plan}/tasks/{task}/execution-orchestration/import', [Execut
     ->name('plans.tasks.execution_orchestration.import');
 Route::post('/plans/{plan}/tasks/{task}/execution-orchestration/reset', [ExecutionOrchestrationController::class, 'reset'])
     ->name('plans.tasks.execution_orchestration.reset');
+
+// One Plan can prepare multiple task-scoped packets while keeping the same canonical Plan context.
+Route::get('/plans/{plan}/execution-distribution', [ExecutionDistributionController::class, 'show'])
+    ->name('plans.execution_distribution.show');
+Route::post('/plans/{plan}/execution-distribution/prepare', [ExecutionDistributionController::class, 'prepare'])
+    ->name('plans.execution_distribution.prepare');
+Route::post('/plans/{plan}/execution-distribution/reset', [ExecutionDistributionController::class, 'reset'])
+    ->name('plans.execution_distribution.reset');
 
 // 資格学習のActivity選択はAI演習より上位の共通入口として扱う。
 Route::get('/plans/{plan}/tasks/{task}/study-activity', [StudyActivityController::class, 'show'])
