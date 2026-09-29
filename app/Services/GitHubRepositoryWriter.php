@@ -25,7 +25,13 @@ final class GitHubRepositoryWriter
             return null;
         }
 
-        return filter_var($url, FILTER_VALIDATE_URL) ? $url : null;
+        if (! filter_var($url, FILTER_VALIDATE_URL)) {
+            return null;
+        }
+
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+
+        return in_array($host, ['github.com', 'www.github.com'], true) ? $url : null;
     }
 
     /**
@@ -322,7 +328,7 @@ final class GitHubRepositoryWriter
         }
 
         $lower = mb_strtolower($path);
-        if (str_starts_with($lower, '.github/workflows/')) {
+        if ($lower === '.github/workflows' || str_starts_with($lower, '.github/workflows/')) {
             throw new RuntimeException('.github/workflows 配下はV46.4の安全境界では変更できません。');
         }
 
