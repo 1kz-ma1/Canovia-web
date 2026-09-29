@@ -27,14 +27,17 @@ class MapPresentationFoundationV477Test extends TestCase
 
     public function test_leaf_presentation_separates_role_from_the_concrete_name(): void
     {
-        $this->assertSame('おすすめ', MapNodePresentation::for([
+        $recommended = MapNodePresentation::for([
             'type' => 'task',
             'state' => 'primary',
             'position_role' => 'action-primary',
             'eyebrow' => 'NOW · PRIMARY ACTION',
             'label' => 'V47.7を実装する',
             'subtitle' => '具体的な説明',
-        ])['eyebrow']);
+        ]);
+
+        $this->assertSame('おすすめ', $recommended['label']);
+        $this->assertNull($recommended['eyebrow']);
 
         $this->assertSame('次にやる', MapNodePresentation::for([
             'type' => 'task',
@@ -141,7 +144,10 @@ class MapPresentationFoundationV477Test extends TestCase
         $xpath = new \DOMXPath($dom);
         $canvasLabel = $xpath->query('//*[@data-map-node-id="task:'.$task->id.'"]//span[contains(@class,"canovia-map-node-label")]')->item(0);
         $this->assertNotNull($canvasLabel);
-        $this->assertSame($task->title, trim($canvasLabel->textContent));
+        $this->assertSame('おすすめ', trim($canvasLabel->textContent));
+
+        $canvasEyebrow = $xpath->query('//*[@data-map-node-id="task:'.$task->id.'"]//span[contains(@class,"canovia-map-node-eyebrow")]')->item(0);
+        $this->assertNull($canvasEyebrow);
     }
 
     public function test_collaboration_without_any_shared_plan_offers_creation_inside_the_map(): void
