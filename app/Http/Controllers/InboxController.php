@@ -366,10 +366,24 @@ class InboxController extends Controller
             ->with('success', $result['message']);
 
         if (in_array((string) $request->input('return_to'), ['space_station', 'map_station'], true)) {
+            $confirmedDestination = (string) ($result['destination'] ?? '');
+            $usesPlan = in_array($confirmedDestination, [
+                'career_capture',
+                'recall_material',
+                'task_evidence',
+                'plan_resource',
+                'execution_request',
+            ], true);
+            $usesTask = in_array($confirmedDestination, [
+                'recall_material',
+                'task_evidence',
+                'execution_request',
+            ], true);
+
             $redirect->with('space_station_route_result', [
-                'destination' => (string) ($result['destination'] ?? ''),
-                'plan_id' => $plan?->id,
-                'task_id' => $task?->id,
+                'destination' => $confirmedDestination,
+                'plan_id' => $usesPlan ? $plan?->id : null,
+                'task_id' => $usesTask ? $task?->id : null,
                 'message' => (string) ($result['message'] ?? ''),
             ]);
         }
