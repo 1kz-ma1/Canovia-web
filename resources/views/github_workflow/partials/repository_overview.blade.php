@@ -89,6 +89,7 @@
                 <div>
                     <p class="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300">GITHUB NOW</p>
                     <h4 class="mt-1 text-sm font-black text-slate-100">GitHubから取得した現在の構造</h4>
+                    <p class="mt-1 text-[10px] text-slate-600">一覧はBranch / PR / Issue 最大12件、Actions最大10件の取得範囲です。</p>
                 </div>
                 <div class="text-right text-[10px] leading-5 text-slate-600">
                     @if (filled(data_get($snapshot, 'fetched_at')))
