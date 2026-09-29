@@ -249,8 +249,26 @@
                                                     @endforeach
                                                 </select>
                                             </div>
+                                            <div class="sm:col-span-2 rounded-xl border border-violet-300/10 bg-violet-300/[0.025] p-3">
+                                                <p class="text-[10px] font-black uppercase tracking-[.12em] text-violet-300">実行リクエストにする場合</p>
+                                                <p class="mt-1 text-[10px] leading-4 text-slate-600">Plan / Taskを人が確認したあとだけ、Execution Orchestrationへ渡します。</p>
+                                                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                                                    <div>
+                                                        <label class="text-[10px] font-bold text-slate-500">実行主体</label>
+                                                        <select name="execution_actor_type" class="input-field mt-1 w-full">
+                                                            @foreach ($executionActorTypes as $actorValue => $actorLabel)
+                                                                <option value="{{ $actorValue }}" @selected(old('execution_actor_type', 'human_ai') === $actorValue)>{{ $actorLabel }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label class="text-[10px] font-bold text-slate-500">今回使える時間 <span class="font-normal text-slate-600">任意</span></label>
+                                                        <input type="number" min="5" max="1440" name="execution_available_minutes" value="{{ old('execution_available_minutes') }}" class="input-field mt-1 w-full" placeholder="例: 30">
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <p class="text-[10px] leading-4 text-slate-600">Recall教材は資格学習Plan + Taskが必要で、Candidate抽出時のみAutomatic AIを使います。Evidenceは確認事実として記録しますが、これだけでTask進捗は自動加算しません。</p>
+                                        <p class="text-[10px] leading-4 text-slate-600">実行リクエスト / Recall教材 / EvidenceはPlan + Taskの確認が必要です。実行リクエストはTaskを変更せず、現在ContextとDependencyを使うExecution Orchestrationへ引き継ぎます。EvidenceもこれだけでTask進捗は自動加算しません。</p>
                                         <button type="submit" class="btn-primary px-3 py-2 text-xs">この整理先で確定</button>
                                     </form>
                                 </details>
