@@ -55,6 +55,40 @@ class ContextCenteredExecutionMapV476Test extends TestCase
         $this->assertSame('primary', $taskNode['state']);
     }
 
+    public function test_plan_remains_the_l3_center_even_when_no_primary_task_exists(): void
+    {
+        $user = User::factory()->create([
+            'first_run_completed_at' => now(),
+        ]);
+
+        $plan = Plan::query()->create([
+            'user_id' => $user->id,
+            'owner_token' => Str::random(64),
+            'public_slug' => (string) Str::uuid(),
+            'title' => 'Taskなしでも残るPlan Context',
+            'description' => 'Primary ActionがなくてもMap Contextは存在する',
+            'category' => '個人開発',
+            'priority' => 1,
+            'priority_mode' => 'manual',
+            'start_date' => today(),
+            'deadline' => today()->addMonth(),
+            'is_public' => false,
+        ]);
+
+        $graph = $this->actingAs($user)
+            ->get(route('map.index', [
+                'level' => 'l3',
+                'intent' => 'execution',
+                'plan' => $plan->id,
+            ]))
+            ->assertOk()
+            ->viewData('graph');
+
+        $this->assertSame('plan:'.$plan->id, $graph['center_node_id']);
+        $this->assertNull($graph['primary_node_id']);
+        $this->assertFalse($graph['has_primary_action']);
+    }
+
     public function test_l3_html_marks_plan_as_center_and_primary_task_as_focusable_action(): void
     {
         [$user, $plan, $task] = $this->scenario();
