@@ -1153,6 +1153,7 @@ export function mountLivingGoalMap({
             direction,
             from_depth: Number(page.dataset.mapHierarchyDepth || 0),
             from_route: semanticRouteKey(windowRef.location.href, windowRef.location.href),
+            source_node_ref: sourceNode?.dataset?.mapNodeId || null,
             source_rect: snapshot,
             left_at: Date.now(),
         });
@@ -1755,7 +1756,10 @@ export function mountLivingGoalMap({
         let arrivalAnchor = null;
 
         if (direction === 'in') {
-            arrivalAnchor = page.querySelector?.('[data-map-node][data-map-is-center="1"]') || null;
+            const sourceNodeRef = String(semanticArrival.source_node_ref || '');
+            arrivalAnchor = (sourceNodeRef ? nodeElementById.get(sourceNodeRef) : null)
+                || page.querySelector?.('[data-map-node][data-map-is-center="1"]')
+                || null;
         } else {
             const fromRoute = String(semanticArrival.from_route || '');
             if (fromRoute) {
