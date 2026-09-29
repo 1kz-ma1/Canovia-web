@@ -2029,6 +2029,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const activePlanTab = document.querySelector('[data-roadmap-plan-tabs] .pk-v19-plan-card.is-active, [data-roadmap-plan-tabs] .roadmap-plan-tab.is-active');
     activePlanTab?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+
+    document.querySelectorAll('[data-roadmap-spatial-scroll]').forEach((scroll) => {
+        const current = scroll.querySelector('[data-roadmap-spatial-node][data-roadmap-current="1"]');
+        if (!current) return;
+
+        window.requestAnimationFrame(() => {
+            if (!scroll.isConnected || !current.isConnected) return;
+            const left = Math.max(0, current.offsetLeft - (scroll.clientWidth / 2) + (current.offsetWidth / 2));
+            const top = Math.max(0, current.offsetTop - (scroll.clientHeight / 2) + (current.offsetHeight / 2));
+            scroll.scrollTo({ left, top, behavior: 'auto' });
+        });
+    });
 });
 
 // v13: optional five-star overall score inside the existing feedback flow.
