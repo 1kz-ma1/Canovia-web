@@ -25,17 +25,17 @@ final class IntentNavigationGraphService
                 type: 'space_station',
                 eyebrow: 'SPACE STATION',
                 label: 'Space Station',
-                subtitle: 'Capture・相談・接続候補を扱う中央ハブ',
+                subtitle: '入力・解釈・接続・Actionを扱う中央ハブ',
                 action: route('inbox.index'),
                 attentionRole: 'space-station',
                 classicSurface: $this->surface(
                     'Space Station',
                     'Space Station',
-                    'テキスト・URL・スクリーンショット・PDFを受け取り、Canoviaが接続候補を示します。確定は必ずユーザーが行い、相談はCompanionへ引き継げます。',
+                    'テキスト・URL・スクリーンショット・PDFを受け取り、入力 → 解釈 → 接続候補 → Actionを1つのFlowで扱います。接続確定は必ずユーザーが行い、整理せずCompanionへ相談することもできます。',
                     [
                         $this->action('Inboxをすべて見る', route('inbox.index'), true),
                     ],
-                    ['Capture', 'Companion', 'Human Review'],
+                    ['Input', 'Interpret', 'Connect', 'Action'],
                 ),
             ),
             $this->intentNode(
