@@ -141,6 +141,21 @@ class MapDataLayersV479Test extends TestCase
         $this->assertSame(0, $next->fresh()->progress_percent);
         $this->assertSame('todo', $next->fresh()->status);
         $this->assertSame(2, $plan->fresh()->priority);
+
+        $beforeProjectionKey = (string) ($graph['projection_key'] ?? '');
+        $current->update(['progress_percent' => 55]);
+
+        $afterGraph = $this->actingAs($user)
+            ->get(route('map.index', [
+                'level' => 'l3',
+                'intent' => 'execution',
+                'plan' => $plan->id,
+            ]))
+            ->viewData('graph');
+
+        $this->assertNotSame($beforeProjectionKey, (string) ($afterGraph['projection_key'] ?? ''));
+        $afterCurrentNode = collect($afterGraph['nodes'])->firstWhere('id', 'task:'.$current->id);
+        $this->assertSame(55, data_get($afterCurrentNode, 'overlay.progress.percent'));
     }
 
     public function test_primary_task_stays_role_only_on_canvas_while_data_layers_exist(): void
