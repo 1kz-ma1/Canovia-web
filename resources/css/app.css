@@ -8727,3 +8727,134 @@ body[data-route-name="map.index"] .canovia-map-page {
     height: 100% !important;
     min-height: 0 !important;
 }
+
+
+/* --------------------------------------------------------------------------
+ * V47.5 Semantic Zoom Spatial Continuity
+ * Carry only short-lived geometry + structural route between Map projections.
+ * The selected node visually becomes the next center; sibling nodes emerge
+ * around it after the semantic parent/child transition.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .canovia-map-page.is-semantic-departure-in .canovia-map-node.is-semantic-departure-anchor,
+    .canovia-map-page.is-semantic-departure-out .canovia-map-node.is-semantic-departure-anchor {
+        z-index: 14;
+        transform:
+            translate(-50%, -50%)
+            translate3d(
+                var(--semantic-departure-x, 0px),
+                var(--semantic-departure-y, 0px),
+                0
+            )
+            scale(var(--semantic-departure-scale, 1));
+        opacity: 0.98;
+        transition:
+            transform 170ms cubic-bezier(.2,.8,.2,1),
+            opacity 170ms ease,
+            box-shadow 170ms ease;
+        box-shadow:
+            0 0 0 1px rgb(103 232 249 / 0.18),
+            0 0 2.8rem rgb(34 211 238 / 0.22),
+            0 20px 48px rgb(2 6 23 / 0.52);
+    }
+
+    .canovia-map-page.is-semantic-departure-in .canovia-map-node:not(.is-semantic-departure-anchor),
+    .canovia-map-page.is-semantic-departure-out .canovia-map-node:not(.is-semantic-departure-anchor),
+    .canovia-map-page.is-semantic-departure-in .canovia-map-edge,
+    .canovia-map-page.is-semantic-departure-out .canovia-map-edge {
+        opacity: 0.32;
+        transition: opacity 150ms ease;
+    }
+
+    .canovia-map-page.is-semantic-continuity-arrival .canovia-map-node.is-semantic-continuity-anchor {
+        z-index: 14;
+        animation: canovia-map-semantic-anchor-arrival 460ms cubic-bezier(.16,.88,.22,1) both;
+        transform-origin: center center;
+        will-change: transform, opacity;
+    }
+
+    .canovia-map-page.is-semantic-continuity-arrival .canovia-map-node:not(.is-semantic-continuity-anchor) {
+        animation: canovia-map-semantic-child-emerge 390ms 70ms cubic-bezier(.2,.8,.2,1) both;
+    }
+
+    .canovia-map-page.is-semantic-continuity-arrival .canovia-map-edge {
+        animation: canovia-map-semantic-edge-emerge 360ms 100ms ease-out both;
+    }
+
+    .canovia-map-page.is-semantic-continuity-in .canovia-map-scene::before,
+    .canovia-map-page.is-semantic-continuity-in .canovia-map-scene::after {
+        animation: canovia-map-semantic-orbit-emerge 420ms 40ms ease-out both;
+    }
+
+    @keyframes canovia-map-semantic-anchor-arrival {
+        from {
+            opacity: 0.92;
+            transform:
+                translate(-50%, -50%)
+                translate3d(
+                    var(--semantic-anchor-x, 0px),
+                    var(--semantic-anchor-y, 0px),
+                    0
+                )
+                scale(var(--semantic-anchor-scale, 1));
+        }
+        to {
+            opacity: 1;
+            transform:
+                translate(-50%, -50%)
+                translate3d(0, 0, 0)
+                scale(1);
+        }
+    }
+
+    @keyframes canovia-map-semantic-child-emerge {
+        from {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.84);
+        }
+        to {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+    }
+
+    @keyframes canovia-map-semantic-edge-emerge {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes canovia-map-semantic-orbit-emerge {
+        from {
+            opacity: 0.18;
+            transform: translate(-50%, -50%) scale(0.84);
+        }
+        to {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .canovia-map-page.is-semantic-departure-in .canovia-map-node,
+        .canovia-map-page.is-semantic-departure-out .canovia-map-node,
+        .canovia-map-page.is-semantic-departure-in .canovia-map-edge,
+        .canovia-map-page.is-semantic-departure-out .canovia-map-edge,
+        .canovia-map-page.is-semantic-continuity-arrival .canovia-map-node,
+        .canovia-map-page.is-semantic-continuity-arrival .canovia-map-edge,
+        .canovia-map-page.is-semantic-continuity-arrival .canovia-map-scene::before,
+        .canovia-map-page.is-semantic-continuity-arrival .canovia-map-scene::after {
+            animation: none !important;
+            transform: none;
+            transition: none !important;
+        }
+
+        .canovia-map-page.is-semantic-continuity-arrival .canovia-map-node {
+            transform: translate(-50%, -50%);
+            opacity: 1;
+        }
+    }
+}
