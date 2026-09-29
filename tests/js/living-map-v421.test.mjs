@@ -8,6 +8,7 @@ import {
     createFrameBatcher,
     mapActionTelemetryContext,
     mapDockHistoryState,
+    mapGlobalHomeHistoryState,
     mapHistoryDirection,
     mapReturnDecision,
     mapSemanticZoomDirection,
@@ -175,6 +176,21 @@ test('BFCache return revalidates while a fresh page only reports an already chan
         currentProjectionKey: 'same',
         previousProjectionKey: '',
     }), 'none');
+});
+
+
+test('global home clears focus and dock history while preserving unrelated browser state', () => {
+    assert.deepEqual(
+        mapGlobalHomeHistoryState({
+            canoviaMapFocus: 'task:42',
+            canoviaMapFocusDepth: 3,
+            canoviaMapDock: 'space-station',
+            unrelated: 'keep',
+        }),
+        {
+            unrelated: 'keep',
+        },
+    );
 });
 
 
