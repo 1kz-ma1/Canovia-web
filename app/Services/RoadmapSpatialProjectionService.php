@@ -58,6 +58,13 @@ final class RoadmapSpatialProjectionService
             ->groupBy(fn (array $node) => (int) ($depthMemo[(int) $node['task_id']] ?? 0))
             ->sortKeys();
 
+        $phaseCount = $phaseBuckets->count();
+        $width = max(760, (self::PHASE_START_X * 2) + max(0, $phaseCount - 1) * self::PHASE_GAP);
+        $phaseStartX = max(
+            self::PHASE_START_X,
+            (int) round(($width - max(0, $phaseCount - 1) * self::PHASE_GAP) / 2),
+        );
+
         $phases = [];
         $clusters = [];
         $projectedNodes = [];
@@ -66,7 +73,7 @@ final class RoadmapSpatialProjectionService
 
         foreach ($phaseBuckets as $depth => $phaseNodes) {
             $depth = (int) $depth;
-            $phaseX = self::PHASE_START_X + ($depth * self::PHASE_GAP);
+            $phaseX = $phaseStartX + ($depth * self::PHASE_GAP);
             $phaseId = 'roadmap:phase:'.$depth;
             $clusterGroups = $phaseNodes
                 ->groupBy(fn (array $node) => $this->dependencySignature($node, $nodesByTaskId))
@@ -178,8 +185,6 @@ final class RoadmapSpatialProjectionService
             }
         }
 
-        $phaseCount = count($phases);
-        $width = max(760, self::PHASE_START_X * 2 + max(0, $phaseCount - 1) * self::PHASE_GAP);
         $height = max(520, $maxY + 80);
         $currentTaskId = collect($projectedNodes)
             ->first(fn (array $node) => (bool) ($node['is_current'] ?? false))['task_id'] ?? null;
