@@ -140,6 +140,8 @@
                 </div>
             @endif
 
+            @include('map.partials.node-data-layers', ['node' => $node])
+
             @if (filled(data_get($directNavigation, 'url')))
                 <a
                     href="{{ data_get($directNavigation, 'url') }}"
