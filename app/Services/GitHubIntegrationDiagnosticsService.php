@@ -34,10 +34,12 @@ final class GitHubIntegrationDiagnosticsService
                 ->where('payload', 'like', '%ProcessGitHubWebhookDelivery%');
 
             $pendingGithubJobs = (clone $jobs)->count();
-            $oldestCreatedAt = (clone $jobs)->min('created_at');
+            $oldestDueAt = (clone $jobs)
+                ->where('available_at', '<=', now()->timestamp)
+                ->min('available_at');
 
-            if (is_numeric($oldestCreatedAt)) {
-                $oldestGithubJobAt = CarbonImmutable::createFromTimestamp((int) $oldestCreatedAt);
+            if (is_numeric($oldestDueAt)) {
+                $oldestGithubJobAt = CarbonImmutable::createFromTimestamp((int) $oldestDueAt);
             }
         }
 
@@ -87,7 +89,7 @@ final class GitHubIntegrationDiagnosticsService
             $stuckBefore = now()->subMinutes(5);
             $deliveryStats['stuck'] = (clone $deliveries)
                 ->whereIn('status', ['accepted', 'processing'])
-                ->where('created_at', '<=', $stuckBefore)
+                ->where('received_at', '<=', $stuckBefore)
                 ->count();
 
             $recentDeliveries = GitHubWebhookDelivery::query()
