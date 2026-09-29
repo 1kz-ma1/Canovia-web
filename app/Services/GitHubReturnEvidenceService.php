@@ -32,7 +32,6 @@ final class GitHubReturnEvidenceService
         Plan $plan,
         Task $task,
         PlanArtifact $pullRequestArtifact,
-        ?int $userId = null,
     ): array {
         if (
             (int) $task->plan_id !== (int) $plan->id
@@ -76,7 +75,6 @@ final class GitHubReturnEvidenceService
             $task,
             $pullRequestArtifact,
             $snapshot,
-            $userId,
         );
 
         return [
@@ -114,7 +112,6 @@ final class GitHubReturnEvidenceService
         Task $task,
         PlanArtifact $artifact,
         array $snapshot,
-        ?int $userId,
     ): Collection {
         $repo = (string) ($snapshot['repo_full_name'] ?? '');
         $pull = (array) ($snapshot['pull_request'] ?? []);
@@ -150,7 +147,6 @@ final class GitHubReturnEvidenceService
                 ],
                 confidence: 1.0,
                 externalKey: 'github:'.$repo.':pull:'.$number.':review:'.$reviewId,
-                userId: $userId,
                 occurredAt: $this->date($review['submitted_at'] ?? null),
             ));
         }
@@ -173,7 +169,6 @@ final class GitHubReturnEvidenceService
                 ],
                 confidence: 1.0,
                 externalKey: 'github:'.$repo.':pull:'.$number.':merged',
-                userId: $userId,
                 occurredAt: $this->date($pull['merged_at'] ?? null),
             ));
         }
@@ -202,7 +197,6 @@ final class GitHubReturnEvidenceService
                 ],
                 confidence: 1.0,
                 externalKey: 'github:'.$repo.':pull:'.$number.':ci:'.$headSha,
-                userId: $userId,
                 occurredAt: $this->latestCiDate($ci) ?? now(),
             ));
         }
