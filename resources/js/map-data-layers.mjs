@@ -93,7 +93,7 @@ function readState(storage, available, defaults) {
     try {
         return parseMapDataLayerState(
             storage?.getItem?.(MAP_DATA_LAYER_STORAGE_KEY) ?? null,
-            MAP_DATA_LAYER_KEYS,
+            available,
             defaults,
         );
     } catch (_) {
@@ -175,7 +175,7 @@ export function mountMapDataLayers({
             state,
             input.value,
             Boolean(input.checked),
-            available,
+            MAP_DATA_LAYER_KEYS,
             defaults,
         );
         persistState(windowRef.localStorage, state);
