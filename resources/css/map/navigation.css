@@ -1,1 +1,237 @@
-/* Map global navigation / hierarchy jump / mini-map styles. */
+/* --------------------------------------------------------------------------
+ * V47.8 Global Map Navigation
+ * Persistent wayfinding above every Map depth without mutating graph state.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    /* The legacy hierarchy bar remains in DOM for compatibility while the
+       user-facing global navigator owns visible wayfinding. */
+    body[data-route-name="map.index"] .canovia-map-fullscreen-hierarchy {
+        display: none;
+    }
+
+    .canovia-map-global-navigation {
+        position: absolute;
+        z-index: 48;
+        top: calc(max(0.62rem, env(safe-area-inset-top)) + 3.45rem);
+        left: max(0.75rem, env(safe-area-inset-left));
+        width: min(38rem, calc(68vw - 1rem));
+        min-width: 18rem;
+        display: grid;
+        gap: 0.42rem;
+        border: 1px solid rgb(103 232 249 / 0.18);
+        border-radius: 1rem;
+        background:
+            linear-gradient(135deg, rgb(8 15 34 / 0.92), rgb(15 23 42 / 0.82));
+        padding: 0.48rem 0.55rem;
+        box-shadow:
+            0 14px 36px rgb(2 6 23 / 0.34),
+            inset 0 1px 0 rgb(255 255 255 / 0.04);
+        backdrop-filter: blur(18px) saturate(1.12);
+        -webkit-backdrop-filter: blur(18px) saturate(1.12);
+        pointer-events: auto;
+    }
+
+    .canovia-map-global-navigation-main {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        min-width: 0;
+    }
+
+    .canovia-map-global-home {
+        display: inline-flex;
+        min-height: 2.75rem;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        gap: 0.34rem;
+        border: 1px solid rgb(103 232 249 / 0.26);
+        border-radius: 0.82rem;
+        background: rgb(14 116 144 / 0.12);
+        padding: 0.42rem 0.62rem;
+        color: rgb(207 250 254);
+        font-size: 0.72rem;
+        font-weight: 800;
+    }
+
+    a.canovia-map-global-home:hover,
+    a.canovia-map-global-home:focus-visible {
+        border-color: rgb(103 232 249 / 0.52);
+        background: rgb(14 116 144 / 0.2);
+        color: white;
+    }
+
+    .canovia-map-global-home.is-current {
+        border-color: rgb(71 85 105 / 0.54);
+        background: rgb(30 41 59 / 0.52);
+        color: rgb(148 163 184);
+    }
+
+    .canovia-map-global-location {
+        min-width: 0;
+        display: grid;
+        gap: 0.04rem;
+    }
+
+    .canovia-map-global-location-caption {
+        color: rgb(100 116 139);
+        font-size: 0.56rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+    }
+
+    .canovia-map-global-location strong {
+        overflow: hidden;
+        color: rgb(241 245 249);
+        font-size: 0.82rem;
+        line-height: 1.25;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .canovia-map-global-path {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 0.28rem;
+        overflow-x: auto;
+        scrollbar-width: none;
+        white-space: nowrap;
+    }
+
+    .canovia-map-global-path::-webkit-scrollbar {
+        display: none;
+    }
+
+    .canovia-map-global-path-link,
+    .canovia-map-global-path-current {
+        flex: 0 0 auto;
+        border-radius: 9999px;
+        padding: 0.2rem 0.42rem;
+        color: rgb(148 163 184);
+        font-size: 0.61rem;
+        line-height: 1.25;
+    }
+
+    .canovia-map-global-path-link:hover,
+    .canovia-map-global-path-link:focus-visible {
+        background: rgb(30 41 59 / 0.76);
+        color: rgb(224 242 254);
+    }
+
+    .canovia-map-global-path-link.is-current,
+    .canovia-map-global-path-current {
+        background: rgb(34 211 238 / 0.08);
+        color: rgb(165 243 252);
+    }
+
+    .canovia-map-global-path-separator {
+        flex: 0 0 auto;
+        color: rgb(71 85 105);
+        font-size: 0.7rem;
+    }
+
+    .canovia-map-global-depth {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.24rem;
+    }
+
+    .canovia-map-global-depth-step {
+        position: relative;
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 0.28rem;
+        color: rgb(71 85 105);
+        font-size: 0.56rem;
+        font-weight: 700;
+    }
+
+    .canovia-map-global-depth-step::before {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        top: 50%;
+        right: calc(100% - 0.36rem);
+        width: calc(100% - 0.18rem);
+        height: 1px;
+        background: rgb(51 65 85 / 0.7);
+        transform: translateY(-50%);
+    }
+
+    .canovia-map-global-depth-step:first-child::before {
+        display: none;
+    }
+
+    .canovia-map-global-depth-dot {
+        width: 0.46rem;
+        height: 0.46rem;
+        flex: 0 0 auto;
+        border: 1px solid rgb(71 85 105);
+        border-radius: 9999px;
+        background: rgb(15 23 42);
+    }
+
+    .canovia-map-global-depth-step.is-passed {
+        color: rgb(125 211 252);
+    }
+
+    .canovia-map-global-depth-step.is-passed .canovia-map-global-depth-dot {
+        border-color: rgb(56 189 248 / 0.72);
+        background: rgb(14 165 233 / 0.62);
+    }
+
+    .canovia-map-global-depth-step.is-current {
+        color: rgb(207 250 254);
+    }
+
+    .canovia-map-global-depth-step.is-current .canovia-map-global-depth-dot {
+        border-color: rgb(165 243 252);
+        background: rgb(34 211 238);
+        box-shadow: 0 0 0 0.22rem rgb(34 211 238 / 0.1);
+    }
+
+    @media (max-width: 767px) {
+        .canovia-map-global-navigation {
+            top: calc(max(0.45rem, env(safe-area-inset-top)) + 3.1rem);
+            left: max(0.48rem, env(safe-area-inset-left));
+            width: min(21.5rem, calc(100vw - 0.96rem));
+            min-width: 0;
+            gap: 0.32rem;
+            padding: 0.4rem;
+        }
+
+        .canovia-map-global-home {
+            min-height: 2.75rem;
+            padding-inline: 0.54rem;
+            font-size: 0.66rem;
+        }
+
+        .canovia-map-global-location strong {
+            font-size: 0.76rem;
+        }
+
+        .canovia-map-global-path {
+            gap: 0.18rem;
+        }
+
+        .canovia-map-global-path-link,
+        .canovia-map-global-path-current {
+            padding: 0.16rem 0.32rem;
+            font-size: 0.56rem;
+        }
+
+        .canovia-map-global-depth-step {
+            gap: 0.22rem;
+            font-size: 0.5rem;
+        }
+
+        .canovia-map-global-depth-step:nth-child(2) span:last-child,
+        .canovia-map-global-depth-step:nth-child(3) span:last-child {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
+}
