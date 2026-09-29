@@ -114,7 +114,7 @@ final class ExecutionOrchestrationController extends Controller
         );
 
         if (! $packets->nativeConfigured()) {
-            $state['handoff_prompt'] = $packets->prompt($context, $actorType, $availableMinutes);
+            $state['handoff_prompt'] = $packets->prompt($context, $actorType, $availableMinutes, $executionRequest);
             $request->session()->put($this->sessionKey($plan, $task), $state);
 
             return redirect()
@@ -135,7 +135,7 @@ final class ExecutionOrchestrationController extends Controller
             $state['packet'] = $generated['packet'];
             $state['native_run_id'] = $generated['run_id'];
         } catch (NativeAiExecutionException $exception) {
-            $state['handoff_prompt'] = $packets->prompt($context, $actorType, $availableMinutes);
+            $state['handoff_prompt'] = $packets->prompt($context, $actorType, $availableMinutes, $executionRequest);
             $request->session()->put($this->sessionKey($plan, $task), $state);
 
             return redirect()
