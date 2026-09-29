@@ -244,7 +244,7 @@
         background:
             radial-gradient(circle, rgb(8 15 34) 48%, transparent 51%),
             conic-gradient(
-                rgb(34 211 238) calc(var(--map-layer-progress, 0) * 1%),
+                rgb(34 211 238) var(--map-layer-progress, 0%),
                 rgb(51 65 85) 0
             );
     }
