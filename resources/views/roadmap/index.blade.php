@@ -64,6 +64,7 @@
                 <div class="flex flex-wrap items-center justify-end gap-2">
                     <a href="{{ route('plans.show', $plan) }}" class="btn-secondary px-3 py-2 text-xs" data-guide-target="plan-detail">計画詳細</a>
                     <a href="{{ route('plans.resources.index', $plan) }}" class="btn-secondary px-3 py-2 text-xs" data-guide-target="plan-resources">関連資料</a>
+                    <a href="{{ route('github_workflow.index', ['plan_id' => $plan->id]) }}" class="btn-secondary border-violet-300/20 bg-violet-300/[0.05] px-3 py-2 text-xs text-violet-100">GitHub</a>
                     <a href="{{ route('plans.collaboration.settings', $plan) }}" class="btn-secondary border-cyan-300/20 bg-cyan-300/[0.05] px-3 py-2 text-xs text-cyan-100" data-guide-target="collaboration-settings">
                         @if ($canManage ?? false)
                             {{ $plan->is_collaborative ? '共同計画を管理' : '共同計画にする' }}
