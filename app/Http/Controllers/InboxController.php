@@ -121,12 +121,18 @@ class InboxController extends Controller
             'content' => ['nullable', 'string', 'max:50000'],
             'source_url' => ['nullable', 'url', 'max:2048'],
             'source_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'intake_mode' => ['nullable', 'in:chat,capture'],
             ...$this->mapReturnRules(),
         ]);
 
         $file = $request->file('source_file');
         $content = trim((string) ($validated['content'] ?? ''));
         $sourceUrl = trim((string) ($validated['source_url'] ?? ''));
+        $intakeMode = (string) ($validated['intake_mode'] ?? 'capture');
+
+        if ($sourceUrl === '' && $content !== '') {
+            $sourceUrl = $this->extractFirstUrl($content);
+        }
 
         if (! $file && $content === '' && $sourceUrl === '') {
             throw ValidationException::withMessages([
@@ -171,7 +177,7 @@ class InboxController extends Controller
             $title = $this->inferTitle($sourceType, $content, $sourceUrl, $originalName);
         }
 
-        InboxItem::query()->create([
+        $item = InboxItem::query()->create([
             'user_id' => $userId,
             'actor_token' => $userId ? null : $actorToken,
             'plan_id' => $planId,
@@ -184,10 +190,23 @@ class InboxController extends Controller
             'mime_type' => $mimeType,
             'original_name' => $originalName,
             'byte_size' => $byteSize,
-            'metadata' => [],
+            'metadata' => $intakeMode === 'chat'
+                ? [
+                    'intake_mode' => 'chat',
+                    'capture_surface' => 'inbox',
+                ]
+                : [],
         ]);
 
-        return $this->redirectAfterAction($request)
+        $redirect = $this->redirectAfterAction($request);
+
+        if ($intakeMode === 'chat') {
+            return $redirect
+                ->with('success', '受け取りました。まだ整理しなくて大丈夫です。')
+                ->with('inbox_focus_id', (int) $item->id);
+        }
+
+        return $redirect
             ->with('success', 'Inboxへ追加しました。整理先はあとから決められます。');
     }
 
@@ -425,6 +444,17 @@ class InboxController extends Controller
         }
 
         return redirect()->route('inbox.index');
+    }
+
+    private function extractFirstUrl(string $content): string
+    {
+        if (! preg_match('~https?://[^\s<>]+~u', $content, $matches)) {
+            return '';
+        }
+
+        $candidate = rtrim((string) ($matches[0] ?? ''), ".,、。)]}」』");
+
+        return filter_var($candidate, FILTER_VALIDATE_URL) ? $candidate : '';
     }
 
     private function inferTitle(
