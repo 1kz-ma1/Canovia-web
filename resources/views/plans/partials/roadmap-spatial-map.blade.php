@@ -161,7 +161,7 @@
                             >今やることを見る</a>
                         @endif
 
-                        @if ($roadmapCanEdit && ($node['startable'] ?? false) && ! empty($node['task_id']))
+                        @if ($roadmapCanEdit && ($node['startable'] ?? false) && $dependencyState !== 'blocked' && ! empty($node['task_id']))
                             <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form>
                                 @csrf
                                 <input type="hidden" name="task_id" value="{{ $node['task_id'] }}">
