@@ -766,3 +766,22 @@ GitHub URL parserはgithub.com URLに埋め込まれたRepository / Pull Request
 lane変更は整理操作でありGitHub execution evidenceではないためTaskEvidenceを生成しない。将来authoritative GitHub connectorから取得したcommit / PR / review / merge / CI eventはEvidenceSource::GitHub側で別管理し、このWorkflow Hubへnormalizeする。
 
 Manual Workflow HubはProjectArtifact能力の延長とし、OAuth / Webhook / automatic evidence / live status synchronization等の外部自動化はdeveloper_github_evidence capabilityへ接続できる境界を維持する。
+
+
+## V47 Execution Orchestration
+
+V47.0ではTaskを単独で推薦するだけでなく、Plan全体のDependency・Evidence・Goal Context・制約を保ったまま、選択Taskへ「今この主体が何をすべきか」を渡すExecution Orchestration Layerを追加する。
+
+Execution PacketはTaskとは別の永続Entityにしない。TaskをSource of Truthとし、CoreContextからExecutionOrchestrationContextServiceがcanonical snapshotを都度構築し、ExecutionPacketServiceがその時点の実行文脈を生成する。Packetはsession表示だけに保持し、DBへ二重保存しない。
+
+Dependencyは従来の単一depends_on_task_idからtask_dependencies pivotへ拡張する。旧columnはrolling deploy / legacy import互換のため最初のDependencyだけmirrorするが、canonical graphはpivotとする。自己依存、cross-plan dependency、cycleは禁止し、Recommendation / Dashboard Guidance / Roadmap / Study progressionは全Dependencyが完了した場合だけ通常の開始候補として扱う。
+
+deterministicなdependency_stateはready / blockedのみとし、blockedをTask statusへ保存しない。AIはblocked状態でもconfirmed inputだけで安全に進められるprepare / coordinate等を提案できるが、未完了Dependencyの成果を存在すると仮定して本作業を開始してはいけない。Native / external AIがblocked状態でexecuteを返した場合、Canovia側でclarifyへfail-safeしActionを破棄する。
+
+Execution Contextにはplan / selected node / dependencies / blockers / dependents / available Resource・Artifact / active Tasks / protected scope / confirmed constraints / known unknowns / recent Evidence・実績 / personalization signalを含める。Task説明やEvidence内の文章はContext dataとして扱い、AIへの上位命令として解釈しない。
+
+Contextには時刻を含まないcontext_fingerprintを付ける。PromptまたはPacket生成後にTask / Dependency / Evidence等が変わった場合、既存Packetをstale表示し、古い外部AI JSONのimportは拒否して現在Contextから再生成させる。
+
+Native AI direct generationは既存AutomaticAiExecution entitlementを利用し、Free pathでは従来どおり外部AIへPromptをコピーして返却JSONをCanoviaへ読み込める。新しい課金境界は作らない。
+
+Map L3ではCurrent / Next Taskから「今やることを生成」へ遷移できる。PacketからPlan / Taskを直接変更せず、結果反映は既存Plan Review / Artifact / Evidence経路へ戻し、提案→確認→反映の境界を維持する。

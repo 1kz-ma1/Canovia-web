@@ -162,6 +162,29 @@ PROMPT;
             $mode = 'clarify';
         }
 
+        $actions = collect($packet['actions'] ?? [])
+            ->filter(fn ($item) => is_array($item))
+            ->take(8)
+            ->map(fn (array $item) => [
+                'title' => $this->text($item['title'] ?? '', 500),
+                'details' => $this->text($item['details'] ?? '', 1600),
+                'estimated_minutes' => max(0, min(1440, (int) ($item['estimated_minutes'] ?? 0))),
+            ])
+            ->filter(fn (array $item) => $item['title'] !== '')
+            ->values()
+            ->all();
+        $confirmationRequired = $this->stringList($packet['confirmation_required'] ?? []);
+
+        if (($context['dependency_state'] ?? 'ready') === 'blocked' && $mode === 'execute') {
+            $mode = 'clarify';
+            $actions = [];
+            array_unshift(
+                $confirmationRequired,
+                '未完了Dependencyがあるため、直接実行は採用しません。現在Contextから安全な先行作業を再確認してください。',
+            );
+            $confirmationRequired = array_values(array_unique($confirmationRequired));
+        }
+
         return [
             'schema_version' => '1.0',
             'flow' => 'execution_packet',
@@ -181,24 +204,14 @@ PROMPT;
             'role' => $this->text($packet['role'] ?? data_get($context, 'selected_node.title', ''), 1200),
             'objective' => $this->text($packet['objective'] ?? '', 1600),
             'reason' => $this->text($packet['reason'] ?? '', 2000),
-            'actions' => collect($packet['actions'] ?? [])
-                ->filter(fn ($item) => is_array($item))
-                ->take(8)
-                ->map(fn (array $item) => [
-                    'title' => $this->text($item['title'] ?? '', 500),
-                    'details' => $this->text($item['details'] ?? '', 1600),
-                    'estimated_minutes' => max(0, min(1440, (int) ($item['estimated_minutes'] ?? 0))),
-                ])
-                ->filter(fn (array $item) => $item['title'] !== '')
-                ->values()
-                ->all(),
+            'actions' => $actions,
             'inputs' => $this->stringList($packet['inputs'] ?? []),
             'outputs' => $this->stringList($packet['outputs'] ?? []),
             'dependencies' => $this->stringList($packet['dependencies'] ?? []),
             'assumptions' => $this->stringList($packet['assumptions'] ?? []),
             'do_not_touch' => $this->stringList($packet['do_not_touch'] ?? []),
             'completion_criteria' => $this->stringList($packet['completion_criteria'] ?? []),
-            'confirmation_required' => $this->stringList($packet['confirmation_required'] ?? []),
+            'confirmation_required' => $confirmationRequired,
             'next_phase' => $this->text($packet['next_phase'] ?? '', 1600),
         ];
     }
@@ -273,6 +286,7 @@ PROMPT;
     private function stringList(mixed $value): array
     {
         return collect(is_array($value) ? $value : [])
+            ->filter(fn ($item) => is_scalar($item) || $item instanceof \Stringable)
             ->map(fn ($item) => $this->text($item, 1200))
             ->filter()
             ->take(12)

@@ -156,6 +156,20 @@ final class ExecutionOrchestrationController extends Controller
         $key = $this->sessionKey($plan, $task);
         $state = $request->session()->get($key, []);
 
+        if (
+            filled($state['context_fingerprint'] ?? null)
+            && ! hash_equals(
+                (string) $context['context_fingerprint'],
+                (string) $state['context_fingerprint'],
+            )
+        ) {
+            return redirect()
+                ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
+                ->withErrors([
+                    'packet_json' => 'Prompt生成後にPlan状態が変わっています。現在ContextからPromptを再生成してください。',
+                ]);
+        }
+
         $state['context_fingerprint'] = (string) $context['context_fingerprint'];
         $state['packet'] = $packets->importExternal((string) $validated['packet_json'], $context);
 

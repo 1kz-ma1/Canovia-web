@@ -20,18 +20,23 @@ return new class extends Migration
         });
 
         $now = now();
-        DB::table('tasks')
-            ->whereNotNull('depends_on_task_id')
-            ->orderBy('id')
-            ->get(['id', 'depends_on_task_id'])
-            ->each(function ($task) use ($now) {
-                if ((int) $task->id === (int) $task->depends_on_task_id) {
+        DB::table('tasks as child')
+            ->join('tasks as prerequisite', 'prerequisite.id', '=', 'child.depends_on_task_id')
+            ->whereNotNull('child.depends_on_task_id')
+            ->whereColumn('child.plan_id', 'prerequisite.plan_id')
+            ->orderBy('child.id')
+            ->get([
+                'child.id as task_id',
+                'child.depends_on_task_id as prerequisite_task_id',
+            ])
+            ->each(function ($edge) use ($now) {
+                if ((int) $edge->task_id === (int) $edge->prerequisite_task_id) {
                     return;
                 }
 
                 DB::table('task_dependencies')->insertOrIgnore([
-                    'task_id' => (int) $task->id,
-                    'prerequisite_task_id' => (int) $task->depends_on_task_id,
+                    'task_id' => (int) $edge->task_id,
+                    'prerequisite_task_id' => (int) $edge->prerequisite_task_id,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
