@@ -75,7 +75,7 @@ class ReflectionMapV474Test extends TestCase
             ->assertOk()
             ->assertSee('L2 · REFLECTION RECORDS')
             ->assertSee('実行振り返り')
-            ->assertSee('Context Inspector');
+            ->assertSee('選んだマスの内容と操作を確認できます');
 
         $graph = $response->viewData('graph');
         $record = $graph['nodes']->first(
