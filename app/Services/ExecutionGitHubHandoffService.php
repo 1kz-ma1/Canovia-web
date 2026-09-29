@@ -6,7 +6,9 @@ use App\Models\Plan;
 use App\Models\PlanArtifact;
 use App\Models\Task;
 use App\Models\User;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Validation\ValidationException;
 
 final class ExecutionGitHubHandoffService
@@ -140,7 +142,7 @@ final class ExecutionGitHubHandoffService
             ],
             'change' => [
                 'file_path' => (string) $preview['file_path'],
-                'content' => $content,
+                'content_encrypted' => Crypt::encryptString($content),
                 'commit_message' => mb_substr($commitMessage, 0, 240),
                 'pull_request_title' => mb_substr($pullRequestTitle, 0, 240),
                 'pull_request_body' => $pullRequestBody !== ''
@@ -165,15 +167,42 @@ final class ExecutionGitHubHandoffService
 
         $request->session()->put(self::sessionKey($plan, $task), $candidate);
 
-        return $candidate;
+        return $this->hydrateCandidate($candidate);
     }
 
     /** @return array<string,mixed>|null */
     public function candidate(Request $request, Plan $plan, Task $task): ?array
     {
         $candidate = $request->session()->get(self::sessionKey($plan, $task));
+        if (! is_array($candidate)) {
+            return null;
+        }
 
-        return is_array($candidate) ? $candidate : null;
+        try {
+            return $this->hydrateCandidate($candidate);
+        } catch (DecryptException) {
+            $this->clear($request, $plan, $task);
+
+            return null;
+        }
+    }
+
+    /**
+     * @param array<string,mixed> $candidate
+     * @return array<string,mixed>
+     */
+    private function hydrateCandidate(array $candidate): array
+    {
+        $encrypted = data_get($candidate, 'change.content_encrypted');
+        if (! is_string($encrypted) || $encrypted === '') {
+            throw new DecryptException('GitHub change candidate content is missing.');
+        }
+
+        $content = Crypt::decryptString($encrypted);
+        data_set($candidate, 'change.content', $content);
+        data_forget($candidate, 'change.content_encrypted');
+
+        return $candidate;
     }
 
     public function clear(Request $request, Plan $plan, Task $task): void
