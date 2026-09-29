@@ -12,6 +12,7 @@ use App\Services\ExecutionOrchestrationContextService;
 use App\Services\ExecutionPacketService;
 use App\Services\ExecutionRequestHandoffService;
 use App\Services\FeatureAccessService;
+use App\Services\GitHubEvidenceDecisionService;
 use App\Services\GitHubRepositoryWriter;
 use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
@@ -29,6 +30,7 @@ final class ExecutionOrchestrationController extends Controller
         FeatureAccessService $access,
         ExecutionGitHubHandoffService $githubHandoff,
         GitHubRepositoryWriter $githubWriter,
+        GitHubEvidenceDecisionService $githubDecision,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
 
@@ -75,6 +77,14 @@ final class ExecutionOrchestrationController extends Controller
                 data_get($artifact->metadata, 'github_write_origin.source') === 'execution_github_handoff'
             );
 
+        $githubReturnSnapshot = $latestExecutionPullRequest
+            && is_array(data_get($latestExecutionPullRequest->metadata, 'github_return_snapshot'))
+                ? data_get($latestExecutionPullRequest->metadata, 'github_return_snapshot')
+                : null;
+        $githubDecisionCandidate = $latestExecutionPullRequest && is_array($githubReturnSnapshot)
+            ? $githubDecision->candidate($task, $latestExecutionPullRequest, $githubReturnSnapshot)
+            : null;
+
         return view('execution_orchestration.show', [
             'plan' => $plan,
             'task' => $task,
@@ -98,10 +108,8 @@ final class ExecutionOrchestrationController extends Controller
             'githubEvidenceEntitled' => $githubEvidenceDecision->allowed,
             'githubWriteConfigured' => $githubWriter->configured(),
             'latestExecutionPullRequest' => $latestExecutionPullRequest,
-            'githubReturnSnapshot' => $latestExecutionPullRequest
-                && is_array(data_get($latestExecutionPullRequest->metadata, 'github_return_snapshot'))
-                    ? data_get($latestExecutionPullRequest->metadata, 'github_return_snapshot')
-                    : null,
+            'githubReturnSnapshot' => $githubReturnSnapshot,
+            'githubDecisionCandidate' => $githubDecisionCandidate,
         ]);
     }
 
