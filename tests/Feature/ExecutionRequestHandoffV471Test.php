@@ -49,6 +49,7 @@ class ExecutionRequestHandoffV471Test extends TestCase
                 'destination' => 'execution_request',
                 'plan_id' => $plan->id,
                 'task_id' => $task->id,
+                'execution_instruction' => 'このValidationをAIと一緒に進めたい',
                 'execution_actor_type' => 'human_ai',
                 'execution_available_minutes' => 30,
             ]);
@@ -95,6 +96,7 @@ class ExecutionRequestHandoffV471Test extends TestCase
                 'destination' => 'execution_request',
                 'plan_id' => $plan->id,
                 'task_id' => $task->id,
+                'execution_instruction' => '依存関係を壊さずテスト基盤を先に作りたい',
                 'execution_actor_type' => 'ai',
                 'execution_available_minutes' => 45,
             ])
@@ -128,6 +130,7 @@ class ExecutionRequestHandoffV471Test extends TestCase
             ->post(route('inbox.route', $item), [
                 'destination' => 'execution_request',
                 'plan_id' => $plan->id,
+                'execution_instruction' => 'この作業を進めたい',
                 'execution_actor_type' => 'human_ai',
             ])
             ->assertRedirect(route('inbox.index'))
