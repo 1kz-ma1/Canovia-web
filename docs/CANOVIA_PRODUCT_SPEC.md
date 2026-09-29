@@ -766,3 +766,17 @@ GitHub URL parserはgithub.com URLに埋め込まれたRepository / Pull Request
 lane変更は整理操作でありGitHub execution evidenceではないためTaskEvidenceを生成しない。将来authoritative GitHub connectorから取得したcommit / PR / review / merge / CI eventはEvidenceSource::GitHub側で別管理し、このWorkflow Hubへnormalizeする。
 
 Manual Workflow HubはProjectArtifact能力の延長とし、OAuth / Webhook / automatic evidence / live status synchronization等の外部自動化はdeveloper_github_evidence capabilityへ接続できる境界を維持する。
+
+
+## V46.1 Conversational Inbox
+
+Inboxは「先に分類してから登録するフォーム」ではなく、曖昧な意図・URL・画像・PDFをそのままCanoviaへ渡すConversational Intakeとして扱う。
+primary capture surfaceは1つのcomposerとし、Title / Category / Plan / Taskをcapture前に要求しない。URLはcomposerへ貼り付けたHTTP(S) URLをsource_urlとして抽出し、画像 / PDFはattachmentとして扱う。
+
+Chat modeもcanonical captureは既存InboxItemを使い、`metadata.intake_mode=chat` / `capture_surface=inbox`だけを追加する。capture直後はYOU / CANOVIAのConversation previewを表示するが、preview専用のchat tableは作らない。複数ターン相談は既存Canovia CompanionへInbox Contextを引き継ぐ。
+
+Inbox Intelligenceはrouting candidateだけを作り、AIはPlan / Task IDを選ばない。candidate生成だけではcanonical dataを変更せず、既存InboxRoutingServiceまたはCompanion Mutation Candidateのhuman review後に確定する。判断できない入力はkeep_inboxへ残してよい。
+
+V47 Execution Orchestrationとはrequest contractがcanonical化された後に明示的Execution Requestとして接続する。Inbox側で担当分配・dependency解決・暫定execution payloadを先行実装しない。Inboxはintent intake / clarification、Orchestrationはconfirmed execution distributionを責務とする。
+
+詳細は `docs/V46.1_CONVERSATIONAL_INBOX.md` を正とする。
