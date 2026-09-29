@@ -127,6 +127,32 @@ class ExecutionRequestHandoffV471Test extends TestCase
         $this->assertSame(45, data_get($state, 'execution_request.available_minutes'));
     }
 
+    public function test_confirmed_request_is_not_marked_stale_before_a_packet_or_prompt_exists(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $item = $this->inboxItem($user, '最新状態を見てValidationを進めたい');
+
+        $this->actingAs($user)
+            ->post(route('inbox.route', $item), [
+                'destination' => 'execution_request',
+                'plan_id' => $plan->id,
+                'task_id' => $task->id,
+                'execution_instruction' => '最新状態を見てValidationを進めたい',
+                'execution_actor_type' => 'human_ai',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $task->update([
+            'description' => 'Contractと最新Evidenceを使って横断Validationを行う',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('plans.tasks.execution_orchestration.show', [$plan, $task]))
+            ->assertOk()
+            ->assertSee('CONFIRMED EXECUTION REQUEST')
+            ->assertDontSee('このPacket生成後にTask / Dependency / Evidenceなどの状態が変わっています。');
+    }
+
     public function test_reset_discards_packet_projection_but_keeps_confirmed_request(): void
     {
         [$user, $plan, $task] = $this->scenario();
