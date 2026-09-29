@@ -194,7 +194,18 @@ export function mountMapDataLayers({
         applyMapDataLayerState(page, control, state, available);
     };
 
+    const onApplyPreset = (event) => {
+        const requested = normalizeMapDataLayerState(
+            event?.detail?.state,
+            MAP_DATA_LAYER_KEYS,
+            defaults,
+        );
+        state = persistMapDataLayerState(windowRef.localStorage, requested);
+        applyMapDataLayerState(page, control, state, available);
+    };
+
     control.addEventListener('change', onChange);
+    documentRef.addEventListener('canovia:map-data-layers-apply', onApplyPreset);
 
     return {
         get state() {
@@ -202,6 +213,7 @@ export function mountMapDataLayers({
         },
         destroy() {
             control.removeEventListener('change', onChange);
+            documentRef.removeEventListener('canovia:map-data-layers-apply', onApplyPreset);
             delete control.dataset.mapDataLayersInitialized;
         },
     };
