@@ -123,6 +123,8 @@ class BehaviorEventController extends Controller
                 'future-plan',
                 'future-next',
                 'now',
+                'context-plan',
+                'action-primary',
                 'action-tool',
                 'past-evidence',
                 'input-inbox',
