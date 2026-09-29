@@ -58,6 +58,30 @@
             </div>
         @endif
 
+        @if ($executionRequest)
+            <section class="page-card border-emerald-300/15 p-4 sm:p-5" data-execution-request>
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[10px] font-black uppercase tracking-[.16em] text-emerald-300">CONFIRMED EXECUTION REQUEST</p>
+                        <h2 class="mt-1 text-base font-black text-slate-100">Inboxで確認した依頼を引き継いでいます</h2>
+                        <p class="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-300">{{ data_get($executionRequest, 'instruction') }}</p>
+                        <p class="mt-2 text-[10px] leading-4 text-slate-600">
+                            元: {{ data_get($executionRequest, 'source.title', 'Inbox Item') }}
+                            · 対象: {{ data_get($executionRequest, 'target_task.title', $task->title) }}
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="badge badge-green">人が確認済み</span>
+                        <span class="badge badge-slate">{{ $actorTypes[data_get($executionRequest, 'actor_type', 'human_ai')] ?? '人 + AI' }}</span>
+                        @if (data_get($executionRequest, 'available_minutes'))
+                            <span class="badge badge-slate">{{ (int) data_get($executionRequest, 'available_minutes') }}分</span>
+                        @endif
+                    </div>
+                </div>
+                <p class="mt-3 text-[10px] leading-4 text-emerald-100/60">この依頼は目的を伝えるContextです。Dependency・protected scope・確認済み事実を上書きせず、現在のPlan状態から安全なExecution Packetを組み立てます。</p>
+            </section>
+        @endif
+
         <section class="grid gap-4 lg:grid-cols-[1.15fr_.85fr]">
             <article class="page-card p-5 sm:p-6">
                 <div class="flex flex-wrap items-start justify-between gap-3">
@@ -151,6 +175,9 @@
                         <li>・Dependency / Blocker / Dependents</li>
                         <li>・Resource / Artifact / 最近のEvidence・実績</li>
                         <li>・confirmed constraint / known unknown / protected scope</li>
+                        @if ($executionRequest)
+                            <li>・Inboxで人が確認したExecution Request</li>
+                        @endif
                     </ul>
                 </details>
 
