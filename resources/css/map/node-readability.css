@@ -34,14 +34,40 @@
     -webkit-line-clamp: 2;
 }
 
-/* Reserve separate space for the existing explicit destination control. */
+/* Desktop keeps Leaf nodes visually horizontal. The explicit destination
+ * control floats above the card instead of reserving a second vertical row. */
 @media (min-width: 768px) {
-    .canovia-map-page .canovia-map-node[data-map-presentation-kind="leaf"].has-direct-navigation {
-        padding-bottom: 2.9rem;
+    .canovia-map-page .canovia-map-node[data-map-presentation-kind="leaf"] {
+        width: 8.6rem;
+        min-height: 4.35rem;
+        padding: .52rem .62rem;
+        border-radius: 1.08rem;
     }
+
+    .canovia-map-page .canovia-map-node[data-map-presentation-kind="leaf"] .canovia-map-node-focus-link {
+        min-height: 3.1rem;
+        justify-content: center;
+    }
+
+    .canovia-map-page .canovia-map-node[data-map-presentation-kind="leaf"].has-direct-navigation {
+        padding-bottom: .52rem;
+    }
+
     .canovia-map-page .canovia-map-node[data-map-presentation-kind="leaf"] .canovia-map-node-direct-open {
-        min-height: 2.75rem;
-        min-width: 2.75rem;
+        top: -.72rem;
+        right: .38rem;
+        bottom: auto;
+        min-height: 1.9rem;
+        min-width: 0;
+        padding: .26rem .5rem;
+        box-shadow:
+            0 8px 18px rgb(2 6 23 / .34),
+            inset 0 1px 0 rgb(255 255 255 / .04);
+    }
+
+    .canovia-map-page .canovia-map-node[data-map-presentation-kind="leaf"].is-primary {
+        width: 9.2rem;
+        min-height: 4.6rem;
     }
 }
 
