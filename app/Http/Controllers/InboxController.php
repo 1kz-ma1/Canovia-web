@@ -286,6 +286,7 @@ class InboxController extends Controller
             'destination' => ['required', 'in:'.implode(',', array_keys(InboxIntelligenceService::DESTINATIONS))],
             'plan_id' => ['nullable', 'integer'],
             'task_id' => ['nullable', 'integer'],
+            'execution_instruction' => ['required_if:destination,execution_request', 'nullable', 'string', 'max:6000'],
             'execution_actor_type' => ['nullable', 'in:'.implode(',', array_keys(ExecutionPacketService::ACTOR_TYPES))],
             'execution_available_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
             'future_memo_kind' => ['nullable', 'in:'.implode(',', array_keys(FutureMemo::KINDS))],
