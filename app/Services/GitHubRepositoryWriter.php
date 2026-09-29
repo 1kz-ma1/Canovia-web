@@ -471,8 +471,9 @@ final class GitHubRepositoryWriter
         }
 
         $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
 
-        return in_array($host, ['github.com', 'www.github.com'], true)
+        return $scheme === 'https' && in_array($host, ['github.com', 'www.github.com'], true)
             ? mb_substr($url, 0, 2048)
             : null;
     }
