@@ -374,7 +374,7 @@ final class GitHubWorkflowController extends Controller
             );
         } catch (\RuntimeException $exception) {
             $this->storeRepositoryConnection($artifact, [
-                'status' => 'pending',
+                'status' => 'verification_failed',
                 'requested_by_user_id' => $request->user()?->id,
                 'requested_at' => data_get($artifact->metadata, 'github_app_connection.requested_at'),
                 'last_checked_at' => now()->toIso8601String(),
