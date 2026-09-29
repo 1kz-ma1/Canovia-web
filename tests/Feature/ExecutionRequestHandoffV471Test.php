@@ -219,6 +219,12 @@ class ExecutionRequestHandoffV471Test extends TestCase
         $this->assertSame('ai', data_get($state, 'execution_request.actor_type'));
         $this->assertSame(25, data_get($state, 'execution_request.available_minutes'));
         $this->assertNull(data_get($state, 'packet'));
+
+        $this->actingAs($user)
+            ->get(route('plans.tasks.execution_orchestration.show', [$plan, $task]))
+            ->assertOk()
+            ->assertSee('Companionで確認した依頼を引き継いでいます')
+            ->assertSee('既存Contractを守ってValidationを進める');
     }
 
     private function scenario(): array
