@@ -12,6 +12,7 @@
     $stationReturnTo = $stationIsDock ? 'map_station' : 'space_station';
     $stationHierarchy = $graph['hierarchy'] ?? [];
     $stationCollaborationContext = (string) ($stationHierarchy['collaboration_context_key'] ?? '');
+    $stationReflectionContext = (string) ($stationHierarchy['reflection_context_key'] ?? '');
     $stationHash = $stationIsDock
         ? '#dock=space-station'
         : '#focus='.rawurlencode('intent:space-station');
@@ -44,6 +45,9 @@
                 <input type="hidden" name="map_plan" value="{{ $stationHierarchy['plan_id'] ?? '' }}">
                 @if ($stationCollaborationContext !== '')
                     <input type="hidden" name="map_collab_context" value="{{ $stationCollaborationContext }}">
+                @endif
+                @if ($stationReflectionContext !== '')
+                    <input type="hidden" name="map_reflection_context" value="{{ $stationReflectionContext }}">
                 @endif
             @endif
 
