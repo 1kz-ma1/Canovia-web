@@ -12,6 +12,7 @@ final class RoadmapPageDataService
         private readonly UserStateService $stateService,
         private readonly RecommendationService $recommendationService,
         private readonly RoadmapService $roadmapService,
+        private readonly RoadmapSpatialProjectionService $roadmapSpatialProjection,
         private readonly ContinuityService $continuityService,
         private readonly PlanCategoryProfileService $categoryProfiles,
     ) {}
@@ -36,6 +37,7 @@ final class RoadmapPageDataService
         $canManage = false;
         $collaborationRole = null;
         $roadmapPresentation = null;
+        $roadmapSpatial = null;
 
         if ($plan) {
             $canEdit = $this->core->canEdit($request, $plan);
@@ -51,7 +53,7 @@ final class RoadmapPageDataService
             $profile = $this->categoryProfiles->forPlan($plan);
             $roadmapPresentation = [
                 ...$profile->toArray(),
-                'active_renderer' => 'task_flow',
+                'active_renderer' => 'spatial_map',
             ];
 
             $actorToken = $this->core->actorToken($request);
@@ -69,6 +71,7 @@ final class RoadmapPageDataService
                 $recommendation?->task?->id,
                 $continuity['task_id'] ?? null,
             );
+            $roadmapSpatial = $this->roadmapSpatialProjection->build($roadmap);
         }
 
         return compact(
@@ -83,6 +86,7 @@ final class RoadmapPageDataService
             'canManage',
             'collaborationRole',
             'roadmapPresentation',
+            'roadmapSpatial',
         );
     }
 }
