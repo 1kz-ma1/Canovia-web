@@ -85,6 +85,10 @@
                 $isDone = ($node['status'] ?? null) === 'done';
                 $isCancelled = ($node['status'] ?? null) === 'cancelled';
                 $dependencyCount = collect($node['depends_on_task_ids'] ?? [])->filter()->unique()->count();
+                $dependencyState = (string) ($node['dependency_state'] ?? '');
+                $dependencyStateClass = in_array($dependencyState, ['ready', 'blocked'], true)
+                    ? 'is-'.$dependencyState
+                    : '';
                 $stateClass = match (true) {
                     $isCurrent => 'is-current',
                     $isDone => 'is-done',
@@ -94,7 +98,7 @@
                 };
             @endphp
             <details
-                class="canovia-roadmap-spatial-node {{ $stateClass }}"
+                class="canovia-roadmap-spatial-node {{ $stateClass }} {{ $dependencyStateClass }}"
                 data-map-stop
                 data-roadmap-spatial-node
                 data-roadmap-task-id="{{ $node['task_id'] }}"
@@ -118,6 +122,8 @@
                         <span>{{ $node['status_label'] }}</span>
                         <span>進捗 {{ $node['progress_percent'] }}%</span>
                         @if ($dependencyCount > 0)<span>前提 {{ $dependencyCount }}件</span>@endif
+                        @if ($dependencyState === 'ready' && $dependencyCount > 0)<span class="is-ready">開始可能</span>@endif
+                        @if ($dependencyState === 'blocked')<span class="is-blocked">前提待ち {{ count($node['blocker_task_ids'] ?? []) }}件</span>@endif
                         @if ($node['is_last_worked'] ?? false)<span>前回の続き</span>@endif
                     </div>
 
