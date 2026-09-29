@@ -44,6 +44,37 @@ class ExecutionOrchestrationDependencyV470Test extends TestCase
         app(TaskDependencyService::class)->sync($a, [$b->id]);
     }
 
+    public function test_task_update_syncs_multiple_dependencies_through_controller(): void
+    {
+        $user = User::factory()->create();
+        $plan = $this->plan($user);
+        $a = $this->task($plan, 'A');
+        $b = $this->task($plan, 'B');
+        $target = $this->task($plan, 'C');
+
+        $this->actingAs($user)
+            ->put(route('tasks.update', $target), [
+                'title' => $target->title,
+                'description' => $target->description,
+                'estimated_minutes' => 60,
+                'remaining_minutes' => 60,
+                'progress_percent' => 0,
+                'status' => 'todo',
+                'priority' => 2,
+                'activation_cost' => 2,
+                'next_action_note' => null,
+                'dependency_task_ids' => [$b->id, $a->id],
+                'resource_ids' => [],
+            ])
+            ->assertRedirect(route('plans.show', $plan))
+            ->assertSessionHasNoErrors();
+
+        $target->refresh()->load('prerequisites');
+
+        $this->assertSame([$a->id, $b->id], $target->dependencyIds());
+        $this->assertSame($a->id, (int) $target->depends_on_task_id);
+    }
+
     private function plan(User $user): Plan
     {
         return Plan::query()->create([

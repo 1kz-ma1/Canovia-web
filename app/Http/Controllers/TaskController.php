@@ -8,6 +8,7 @@ use App\Services\PlanOwnershipService;
 use App\Services\PlanActivityService;
 use App\Services\TaskDependencyService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class TaskController extends Controller
@@ -43,24 +44,29 @@ class TaskController extends Controller
             ],
         ]);
 
-        $task = Task::create([
-            'plan_id' => $plan->id,
-            'title' => $validated['title'],
-            'description' => $validated['description'] ?? null,
-            'estimated_minutes' => $validated['estimated_minutes'],
-            'remaining_minutes' => $validated['status'] === 'done' ? 0 : $validated['remaining_minutes'],
-            'progress_percent' => $validated['progress_percent'],
-            'status' => $validated['status'],
-            'priority' => $validated['priority'],
-            'activation_cost' => $validated['activation_cost'],
-            'next_action_note' => $validated['next_action_note'] ?? null,
-            'depends_on_task_id' => null,
-            'sort_order' => 0,
-        ]);
-
         $dependencyIds = $validated['dependency_task_ids']
             ?? (isset($validated['depends_on_task_id']) ? [(int) $validated['depends_on_task_id']] : []);
-        $dependencies->sync($task, $dependencyIds);
+
+        $task = DB::transaction(function () use ($plan, $validated, $dependencyIds, $dependencies) {
+            $task = Task::create([
+                'plan_id' => $plan->id,
+                'title' => $validated['title'],
+                'description' => $validated['description'] ?? null,
+                'estimated_minutes' => $validated['estimated_minutes'],
+                'remaining_minutes' => $validated['status'] === 'done' ? 0 : $validated['remaining_minutes'],
+                'progress_percent' => $validated['progress_percent'],
+                'status' => $validated['status'],
+                'priority' => $validated['priority'],
+                'activation_cost' => $validated['activation_cost'],
+                'next_action_note' => $validated['next_action_note'] ?? null,
+                'depends_on_task_id' => null,
+                'sort_order' => 0,
+            ]);
+
+            $dependencies->sync($task, $dependencyIds);
+
+            return $task;
+        });
 
         $activity->record($plan, $request->user(), 'task_created', 'task', (int) $task->id, [
             'task_title' => $task->title,
@@ -123,29 +129,31 @@ class TaskController extends Controller
 
         $beforeStatus = $task->status;
         $beforeTitle = $task->title;
-
-        $task->update([
-            'title' => $validated['title'],
-            'description' => $validated['description'] ?? null,
-            'estimated_minutes' => $validated['estimated_minutes'],
-            'remaining_minutes' => $validated['status'] === 'done' ? 0 : $validated['remaining_minutes'],
-            'progress_percent' => $validated['progress_percent'],
-            'status' => $validated['status'],
-            'priority' => $validated['priority'],
-            'activation_cost' => $validated['activation_cost'],
-            'next_action_note' => $validated['next_action_note'] ?? null,
-        ]);
-
         $dependencyIds = $validated['dependency_task_ids']
             ?? (isset($validated['depends_on_task_id']) ? [(int) $validated['depends_on_task_id']] : []);
-        $dependencies->sync($task, $dependencyIds);
-
-        $task->resources()->sync(collect($validated['resource_ids'] ?? [])
+        $resourceIds = collect($validated['resource_ids'] ?? [])
             ->map(fn ($id) => (int) $id)
             ->filter(fn ($id) => $id > 0)
             ->unique()
             ->values()
-            ->all());
+            ->all();
+
+        DB::transaction(function () use ($task, $validated, $dependencyIds, $resourceIds, $dependencies) {
+            $task->update([
+                'title' => $validated['title'],
+                'description' => $validated['description'] ?? null,
+                'estimated_minutes' => $validated['estimated_minutes'],
+                'remaining_minutes' => $validated['status'] === 'done' ? 0 : $validated['remaining_minutes'],
+                'progress_percent' => $validated['progress_percent'],
+                'status' => $validated['status'],
+                'priority' => $validated['priority'],
+                'activation_cost' => $validated['activation_cost'],
+                'next_action_note' => $validated['next_action_note'] ?? null,
+            ]);
+
+            $dependencies->sync($task, $dependencyIds);
+            $task->resources()->sync($resourceIds);
+        });
 
         $action = $beforeStatus !== 'done' && $task->status === 'done' ? 'task_completed' : 'task_updated';
         $activity->record($task->plan, $request->user(), $action, 'task', (int) $task->id, [
