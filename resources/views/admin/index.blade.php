@@ -60,6 +60,20 @@
                 </div>
             </a>
 
+            <a href="{{ route('admin.github.index') }}" class="group page-card block p-5 transition hover:-translate-y-0.5 hover:border-emerald-400/35 sm:p-6">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <span class="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-black tracking-[.12em] text-emerald-300">GITHUB INTEGRATION</span>
+                        <h2 class="mt-3 text-xl font-black text-slate-50">GitHub連携の診断</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-400">App / Webhook / Queue / Repository接続とReturn Evidenceの処理状態を確認します。</p>
+                    </div>
+                    <span class="text-2xl text-slate-600 transition group-hover:translate-x-1 group-hover:text-emerald-300" aria-hidden="true">→</span>
+                </div>
+                <div class="mt-5 rounded-2xl border border-slate-800 bg-slate-950/35 p-4 text-xs leading-5 text-slate-500">
+                    本番セットアップ後の「動いているか分からない」をここで確認できます。
+                </div>
+            </a>
+
             <a href="{{ route('admin.question_packs.index') }}" class="group page-card block p-5 transition hover:-translate-y-0.5 hover:border-violet-400/35 sm:p-6">
                 <div class="flex items-start justify-between gap-4">
                     <div>

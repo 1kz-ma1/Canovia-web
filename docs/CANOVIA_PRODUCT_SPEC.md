@@ -909,6 +909,20 @@ productionではdatabase queue workerを常時動かす必要がある。Canovia
 
 詳細は `docs/V46.10_GITHUB_WEBHOOK_RETURN_SYNC.md` を正とする。
 
+## V46.11 GitHub Integration Diagnostics
+
+V46.11では、GitHub App / Webhook / Queue / Repository接続 / Return Evidenceの本番状態をCanovia運営者が1画面で確認できるAdmin-only Diagnosticsを追加する。新規routeは `GET /admin/github` で、既存 `admin.access` boundary配下に置く。
+
+DiagnosticsはGitHub App設定済み判定、Webhook Secret設定済み判定、Queue driver、接続済みRepository数、GitHub webhook Job滞留、failed Job数、Webhook delivery状態、最近のprocessed deliveryをread-onlyで集計する。Private Key / Webhook Secret / installation token / raw webhook payload / failed job exception本文は表示しない。
+
+Worker processの生存はDB情報だけから断定せず、直近30分以内のprocessed deliveryがあれば「最近処理を確認」、5分以上のaccepted / processing deliveryまたはGitHub Queue Jobがあれば「滞留あり」、設定はあるがrecent deliveryがなければ「稼働未確認」と表示する。稼働未確認はWebhook trafficがないだけでも発生し得るため異常とは扱わない。
+
+Overall stateは setup_required / attention / unverified / healthy を使う。GitHub App / Webhook / async Queueが未設定ならsetup_required、failed / stuck signalがあればattention、接続Repositoryまたはrecent worker observationがなければunverified、必要設定と最近の処理観測が揃えばhealthyとする。これはCanovia側の観測状態であり、GitHub / Render全体のSLA保証ではない。
+
+Admin画面には現在hostから生成したWebhook endpointとQueue Worker command、本番有効化Checklistも表示する。一般ユーザーはこのAdmin surfaceを使わず、従来どおり対象RepositoryへCanovia GitHub Appをinstall / approveするだけとする。DiagnosticsからQueue retry / Webhook redelivery / GitHub App設定変更 / Task変更は行わない。
+
+詳細は `docs/V46.11_GITHUB_INTEGRATION_DIAGNOSTICS.md` を正とする。
+
 ## V47 Execution Orchestration
 
 V47.0ではTaskを単独で推薦するだけでなく、Plan全体のDependency・Evidence・Goal Context・制約を保ったまま、選択Taskへ「今この主体が何をすべきか」を渡すExecution Orchestration Layerを追加する。
