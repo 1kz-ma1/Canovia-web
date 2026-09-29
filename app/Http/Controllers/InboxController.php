@@ -11,6 +11,7 @@ use App\Models\StudyRecallCandidate;
 use App\Models\Task;
 use App\Models\WorkSession;
 use App\Services\BehaviorIdentityService;
+use App\Services\ExecutionPacketService;
 use App\Services\FeatureAccessService;
 use App\Services\InboxIntelligenceService;
 use App\Services\InboxRoutingService;
@@ -107,6 +108,7 @@ class InboxController extends Controller
             'canUseInboxAi' => $nativeAi->isConfigured()
                 && $featureAccess->canUse($request->user(), FeatureKey::AutomaticAiExecution),
             'routingDestinations' => InboxIntelligenceService::PUBLIC_DESTINATIONS,
+            'executionActorTypes' => ExecutionPacketService::ACTOR_TYPES,
         ]);
     }
 
@@ -284,6 +286,8 @@ class InboxController extends Controller
             'destination' => ['required', 'in:'.implode(',', array_keys(InboxIntelligenceService::DESTINATIONS))],
             'plan_id' => ['nullable', 'integer'],
             'task_id' => ['nullable', 'integer'],
+            'execution_actor_type' => ['nullable', 'in:'.implode(',', array_keys(ExecutionPacketService::ACTOR_TYPES))],
+            'execution_available_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
             'future_memo_kind' => ['nullable', 'in:'.implode(',', array_keys(FutureMemo::KINDS))],
             'future_memo_category' => ['nullable', 'in:'.implode(',', array_keys(FutureMemo::CATEGORIES))],
             ...$this->mapReturnRules(),
@@ -326,6 +330,16 @@ class InboxController extends Controller
             $task,
             $identity->resolve($request),
         );
+
+        if (
+            ($result['destination'] ?? null) === 'execution_request'
+            && $plan
+            && $task
+        ) {
+            return redirect()
+                ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
+                ->with('success', $result['message']);
+        }
 
         return $this->redirectAfterAction($request)
             ->with('success', $result['message']);
