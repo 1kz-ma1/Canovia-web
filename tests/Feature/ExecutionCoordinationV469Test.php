@@ -139,6 +139,22 @@ class ExecutionCoordinationV469Test extends TestCase
         $this->assertSame($beforePrompt, data_get($afterState, 'handoff_prompt'));
     }
 
+    public function test_cancelled_source_does_not_release_downstream_coordination_even_at_100_percent(): void
+    {
+        [$user, $plan, $source] = $this->scenario();
+
+        $source->update([
+            'status' => 'cancelled',
+            'progress_percent' => 100,
+            'remaining_minutes' => 0,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('plans.tasks.execution_orchestration.show', [$plan, $source]))
+            ->assertOk()
+            ->assertDontSee('EXECUTION COORDINATION');
+    }
+
     public function test_unfinished_source_does_not_show_completion_coordination_projection(): void
     {
         [$user, $plan, $source] = $this->scenario();
