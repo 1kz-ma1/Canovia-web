@@ -249,6 +249,10 @@ final class ExecutionOrchestrationController extends Controller
             $request->session()->forget($key);
         }
 
+        // A GitHub candidate is bound to the exact active Packet hash.
+        // Resetting the Packet therefore invalidates and removes the candidate.
+        $request->session()->forget(ExecutionGitHubHandoffService::sessionKey($plan, $task));
+
         return redirect()
             ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
             ->with('status', 'Execution Packetをリセットしました。確認済みの実行リクエストとTask / Planは変更していません。');
