@@ -25,8 +25,8 @@
 
             <div class="grid grid-cols-3 gap-2 sm:grid-cols-6 lg:min-w-[30rem]">
                 <div class="rounded-2xl border border-slate-800 bg-slate-900/65 p-3 text-center">
-                    <strong class="block text-lg text-slate-100">{{ $summary['total'] }}</strong>
-                    <span class="text-[10px] text-slate-500">TOTAL</span>
+                    <strong class="block text-lg text-slate-100">{{ $summary['repositories'] }}</strong>
+                    <span class="text-[10px] text-slate-500">REPO</span>
                 </div>
                 <div class="rounded-2xl border border-slate-800 bg-slate-900/65 p-3 text-center">
                     <strong class="block text-lg text-slate-100">{{ $summary['now'] }}</strong>
@@ -103,7 +103,7 @@
                     </label>
 
                     <label class="block">
-                        <span class="text-xs font-semibold text-slate-400">最初の状態</span>
+                        <span class="text-xs font-semibold text-slate-400">最初の状態 <span class="text-slate-600">PR / Issue等</span></span>
                         <select name="workflow_state" class="form-control mt-2 w-full" required>
                             @foreach ($workflowStates as $key => $label)
                                 <option value="{{ $key }}" @selected(old('workflow_state', 'now') === $key)>{{ $label }}</option>
@@ -142,13 +142,36 @@
                     <div class="sm:col-span-2">
                         <button type="submit" class="btn-primary w-full justify-center">Canoviaへ追加</button>
                         <p class="mt-2 text-[11px] leading-5 text-slate-500">
-                            Task紐付け・担当者・メモは追加後の「詳細」から設定できます。
+                            Repository URLは作業レーンに置かず「全体像」として表示します。PR / Issue / Branch等だけが状態を持ちます。Task紐付け・担当者・メモは追加後の「詳細」から設定できます。
                         </p>
                     </div>
                 </form>
             @endif
         </details>
     </section>
+
+    @if ($repository_overviews->isNotEmpty())
+        <section data-github-repository-overviews>
+            <div class="mb-3 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                    <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">REPOSITORY OVERVIEW</p>
+                    <h2 class="mt-1 text-xl font-black text-slate-100">Repositoryを起点に、全体像を見る</h2>
+                    <p class="mt-2 text-xs leading-6 text-slate-500">
+                        Repository自体を「今やる」に置かず、関連するPR / Issue / BranchとCanovia上の状態を1つのまとまりで見ます。
+                    </p>
+                </div>
+                <span class="text-xs text-slate-600">{{ $repository_overviews->count() }} repositories</span>
+            </div>
+
+            <div class="grid gap-4 {{ $repository_overviews->count() > 1 ? '2xl:grid-cols-2' : '' }}">
+                @foreach ($repository_overviews as $overview)
+                    @include('github_workflow.partials.repository_overview', [
+                        'overview' => $overview,
+                    ])
+                @endforeach
+            </div>
+        </section>
+    @endif
 
     @if ($unclassified->isNotEmpty())
         <section class="rounded-3xl border border-amber-300/15 bg-amber-300/[0.035] p-4 md:p-5" data-github-workflow-unclassified>
@@ -178,7 +201,7 @@
         <div class="mb-3 flex items-end justify-between gap-3">
             <div>
                 <p class="text-[10px] font-black uppercase tracking-[0.16em] text-violet-300">SIMPLE WORKFLOW</p>
-                <h2 class="mt-1 text-xl font-black text-slate-100">GitHubの構造ではなく、次の判断を見る</h2>
+                <h2 class="mt-1 text-xl font-black text-slate-100">PR / Issue / Branchは、次の判断で見る</h2>
             </div>
         </div>
 
