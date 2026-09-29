@@ -168,6 +168,47 @@ class GitHubRepositoryInspectionV463Test extends TestCase
         $this->assertNull($artifact->githubWorkflowState());
     }
 
+    public function test_service_token_never_exposes_a_private_repository_to_repository_inspection(): void
+    {
+        $user = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($user);
+        $this->grantAllAccess($user);
+
+        config(['services.github.read_token' => 'server-token']);
+
+        Http::fake([
+            'api.github.com/repos/private-org/secret-repo' => Http::response([
+                'full_name' => 'private-org/secret-repo',
+                'private' => true,
+                'visibility' => 'private',
+                'default_branch' => 'main',
+                'html_url' => 'https://github.com/private-org/secret-repo',
+            ], 200),
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('github_workflow.store'), [
+                'plan_id' => $plan->id,
+                'url' => 'https://github.com/private-org/secret-repo',
+                'workflow_state' => 'now',
+            ])
+            ->assertRedirect(route('github_workflow.index', ['plan_id' => $plan->id]))
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas(
+                'status',
+                '現在のGitHub読み込みは公開Repositoryだけに対応しています。Private Repositoryはユーザー別GitHub接続が必要です。',
+            );
+
+        $artifact = PlanArtifact::query()->firstOrFail();
+
+        $this->assertNull(data_get($artifact->metadata, 'github_repository_snapshot'));
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request) =>
+            $request->url() === 'https://api.github.com/repos/private-org/secret-repo'
+            && $request->hasHeader('Authorization', 'Bearer server-token')
+        );
+    }
+
     private function fakeGitHubRepository(): void
     {
         Http::fake([
