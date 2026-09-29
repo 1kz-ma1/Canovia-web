@@ -129,6 +129,16 @@
                     </div>
                 </div>
 
+                @if ($githubWebhookConfigured ?? false)
+                    <div class="mt-4 rounded-xl border border-emerald-300/10 bg-emerald-300/[0.02] p-3 text-[11px] leading-5 text-slate-500">
+                        <span class="font-bold text-emerald-200">GitHub App Webhook 受付設定済み</span>
+                        <span class="block mt-1">
+                            production queue workerが稼働している環境では、Review / Merge / optional CIの変化を署名済みWebhookからバックグラウンド同期します。
+                            下の「GitHubから結果を確認」は手動再確認として残しています。
+                        </span>
+                    </div>
+                @endif
+
                 @if ($returnWarnings !== [])
                     <div class="mt-4 rounded-xl border border-amber-300/10 bg-amber-300/[0.02] p-3">
                         <p class="text-[10px] font-black uppercase tracking-[.12em] text-amber-300">OPTIONAL SIGNALS</p>
