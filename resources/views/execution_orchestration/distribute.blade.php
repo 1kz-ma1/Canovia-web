@@ -58,7 +58,7 @@
                         @php
                             $existingTarget = $bundleTargets->get((int) $task->id);
                             $selected = $existingTarget !== null || in_array((int) $task->id, collect(old('selected_task_ids', []))->map(fn ($id) => (int) $id)->all(), true);
-                            $dependencyCount = $task->prerequisites->filter(fn ($dependency) => ! in_array($dependency->status, ['done', 'cancelled'], true) && (int) $dependency->progress_percent < 100)->count();
+                            $dependencyCount = $task->prerequisites->filter(fn ($dependency) => $dependency->status !== 'done' && (int) $dependency->progress_percent < 100)->count();
                         @endphp
                         <article class="rounded-2xl border border-white/8 bg-white/[0.025] p-4">
                             <div class="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(10rem,.7fr)_minmax(10rem,.7fr)_8rem] lg:items-end">
