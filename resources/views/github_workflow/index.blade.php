@@ -18,8 +18,8 @@
                     「今やる / レビュー待ち / 修正必要 / マージ待ち / 完了」に整理します。
                 </p>
                 <p class="mt-2 text-xs leading-6 text-slate-500">
-                    RepositoryはGitHubからread-only snapshotを取得できます。Canoviaの「今やる / レビュー待ち」等は別の判断レイヤーで、
-                    GitHub側のopen / merged / approved / CI結果から自動変更しません。
+                    RepositoryはGitHubから現在構造を読み取れます。GitHub AppをRepository管理者が接続した場合は、EditorがCanoviaからレビュー用PRまで作成できます。
+                    mainへの直接push / mergeは行わず、Canoviaの「今やる / レビュー待ち」等もGitHub remote stateから自動変更しません。
                 </p>
             </div>
 

@@ -40,6 +40,7 @@ return [
             'requires' => [ProductKey::PremiumCore->value],
             'feature_keys' => [
                 FeatureKey::DeveloperGithubEvidence->value,
+                FeatureKey::DeveloperGithubWrite->value,
             ],
         ],
         ProductKey::CreatorPack->value => [

@@ -14,4 +14,5 @@ enum FeatureKey: string
     case StudyLongTermWeaknessProfile = 'study_long_term_weakness_profile';
     case CareerNativeCaptureAnalysis = 'career_native_capture_analysis';
     case DeveloperGithubEvidence = 'developer_github_evidence';
+    case DeveloperGithubWrite = 'developer_github_write';
 }

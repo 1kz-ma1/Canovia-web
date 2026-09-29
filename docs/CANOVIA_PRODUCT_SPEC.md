@@ -805,6 +805,22 @@ Repository Overviewから明示的な「GitHubから更新」を実行できる�
 
 詳細は `docs/V46.3_GITHUB_REPOSITORY_INSPECTION.md` を正とする。
 
+## V46.4 GitHub App Review-only Write Layer
+
+V46.4ではGitHub writeをread-only inspectionから分離し、`developer_github_write` capabilityとして追加する。Repository管理者がCanovia GitHub Appを対象Repositoryへ一度installした後、Plan edit権限とDeveloperGithubWrite entitlementを持つCanovia userは、個人PATやGitHub CLIを共有せずにRepository Overviewからレビュー用変更を提出できる。
+
+認証はserver-side GitHub App ID / Private Keyから短寿命JWTを作成し、Repository installationを確認して一時installation access tokenを発行する。token / Private KeyをDB・Artifact metadata・logへ保存しない。GitHub App permissionはMetadata read、Contents read/write、Pull requests read/writeを最小要件とする。
+
+V46.4のwrite contractは1 request = 1 text file、最大200KB。CanoviaはGitHubからdefault branchを取得し、そこから必ず `canovia/*` branchを新規作成してfile create/updateを1 commit行い、そのbranchからdefault branch向けPull Requestを作る。default branch direct push、force push、merge、branch delete、file delete、Actions workflow writeは実装しない。`.github/workflows/**` は明示拒否する。
+
+Pull Request作成成功後のみGitHub PRをPlanArtifactとして `review` laneへ追加し、`github_write_origin` にrequested Canovia user / GitHub App実行 / branch / commit / file pathを記録する。Repository Rootには `github_last_write` の要約を残す。write成功だけでTaskEvidence・Task progress・Plan progress・完了状態は変更しない。
+
+V46.3のservice-owned read tokenはpublic inspection専用のまま。V46.4はRepository ownerが明示的にinstallしたGitHub App installation scopeを使うため、そのscopeに含まれるprivate Repositoryへのwriteは可能とする。個人account credentialの共有とは扱わない。
+
+Execution Orchestration / AIからの自動writeはV46.4の対象外。将来はExecution result → GitHub change candidate → Human confirmation → GitHubRepositoryWriter → PRという境界で接続する。
+
+詳細は `docs/V46.4_GITHUB_APP_WRITE_LAYER.md` を正とする。
+
 ## V47 Execution Orchestration
 
 V47.0ではTaskを単独で推薦するだけでなく、Plan全体のDependency・Evidence・Goal Context・制約を保ったまま、選択Taskへ「今この主体が何をすべきか」を渡すExecution Orchestration Layerを追加する。

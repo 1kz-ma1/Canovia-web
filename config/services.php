@@ -40,6 +40,12 @@ return [
         // Optional service-owned read token for higher rate limits.
         // Per-user private repository access is intentionally not implemented here.
         'read_token' => env('GITHUB_READ_TOKEN'),
+
+        // V46.4 GitHub App write adapter. Private keys are server-side only.
+        'app_id' => env('GITHUB_APP_ID'),
+        'app_private_key' => env('GITHUB_APP_PRIVATE_KEY'),
+        'app_private_key_base64' => env('GITHUB_APP_PRIVATE_KEY_BASE64'),
+        'app_install_url' => env('GITHUB_APP_INSTALL_URL'),
     ],
 
 ];
