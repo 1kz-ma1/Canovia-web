@@ -235,6 +235,7 @@ final class GitHubWorkflowController extends Controller
         FeatureAccessService $featureAccess,
         GitHubWorkflowService $workflow,
         GitHubRepositoryWriter $repositoryWriter,
+        PlanActivityService $activity,
     ) {
         $artifact->loadMissing('plan');
         $plan = $artifact->plan;
@@ -284,6 +285,17 @@ final class GitHubWorkflowController extends Controller
 
         $artifact->update(['metadata' => $metadata]);
 
+        $activity->record(
+            $plan,
+            $request->user(),
+            'github_app_connection_started',
+            'plan_artifact',
+            (int) $artifact->id,
+            [
+                'repo_full_name' => (string) $parsed['repo_full_name'],
+            ],
+        );
+
         return redirect()->away($installUrl);
     }
 
@@ -293,6 +305,7 @@ final class GitHubWorkflowController extends Controller
         FeatureAccessService $featureAccess,
         GitHubWorkflowService $workflow,
         GitHubRepositoryWriter $repositoryWriter,
+        PlanActivityService $activity,
     ) {
         $state = trim((string) $request->query('state', ''));
         if (! preg_match('/^[a-f0-9]{64}$/', $state)) {
@@ -392,6 +405,21 @@ final class GitHubWorkflowController extends Controller
             $setupAction,
         );
         $this->storeRepositoryConnection($artifact, $connection);
+
+        $activity->record(
+            $plan,
+            $request->user(),
+            'github_app_connection_verified',
+            'plan_artifact',
+            (int) $artifact->id,
+            [
+                'repo_full_name' => (string) $parsed['repo_full_name'],
+                'status' => (string) $connection['status'],
+                'installation_id' => (int) ($connection['installation_id'] ?? 0),
+                'target_type' => (string) ($connection['target_type'] ?? ''),
+                'account_login' => (string) ($connection['account_login'] ?? ''),
+            ],
+        );
 
         return redirect()
             ->route('github_workflow.index', ['plan_id' => $plan->id])
