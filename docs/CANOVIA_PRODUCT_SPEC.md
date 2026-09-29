@@ -887,7 +887,7 @@ direct dependentに生成済みExecution Packet / External Promptがある場合
 
 CoordinationからDistributionへ渡すのはready direct dependent、またはstale targetのうちcurrent dependency_state=readyなTask IDのsuggestionだけで、最大8件とする。suggestionはGET queryの短命なpreselectionであり、DistributionControllerはcurrent Planのactive Taskへserver-sideでintersectする。他Plan / done / cancelled / 不正IDは無視する。人がDistribution画面でtarget / actor / available minutes / generation modeを確認してsubmitするまでPacket / Promptは生成しない。
 
-Execution OrchestrationにはEXECUTION COORDINATIONを追加し、READY NEXT / STILL BLOCKED / INDIVIDUAL STALE / DISTRIBUTION STALEを表示する。個別Orchestrationまたは「次の担当候補を分配画面で確認」へ進めるが、後続Task開始、担当決定、Packet再生成、Dependency変更、Task作成は自動実行しない。
+Execution OrchestrationにはEXECUTION COORDINATIONを追加し、READY NEXT / STILL BLOCKED / INDIVIDUAL STALE / DISTRIBUTION STALEを表示する。個別Orchestrationまたは「次の担当候補を分配画面で確認」へ進めるが、後続Task開始、担当決定、Packet再生成、Dependency変更、Task作成は自動実行しない。完了・中止済みsource Taskでは新規Packet生成 / External Packet importもserver-sideで拒否し、過去の生成内容は履歴表示だけにする。
 
 詳細は `docs/V46.9_EXECUTION_COORDINATION_BRIDGE.md` を正とする。
 
