@@ -107,6 +107,6 @@ class MapSemanticInteractionV472Test extends TestCase
             ->get(route('map.index'))
             ->assertOk()
             ->assertSee('Context Inspector')
-            ->assertSee('Leaf Nodeの詳細確認と補助操作を表示します');
+            ->assertSee('選択中Nodeの詳細確認と補助操作を表示します');
     }
 }
