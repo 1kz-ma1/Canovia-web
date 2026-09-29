@@ -61,14 +61,17 @@
     </div>
 
     <div class="canovia-map-global-path" aria-label="上位の場所">
-        <a
-            href="{{ $globalHomeUrl }}"
-            class="canovia-map-global-path-link {{ $globalIsHome ? 'is-current' : '' }}"
-            data-map-semantic-zoom
-            data-map-zoom-direction="out"
-            data-route-lock-skip
-            @if ($globalIsHome) aria-current="page" @endif
-        >Canovia</a>
+        @if ($globalIsHome)
+            <span class="canovia-map-global-path-current" aria-current="page">Canovia</span>
+        @else
+            <a
+                href="{{ $globalHomeUrl }}"
+                class="canovia-map-global-path-link"
+                data-map-semantic-zoom
+                data-map-zoom-direction="out"
+                data-route-lock-skip
+            >Canovia</a>
+        @endif
 
         @foreach ($globalPathCrumbs as $crumb)
             <span class="canovia-map-global-path-separator" aria-hidden="true">›</span>
