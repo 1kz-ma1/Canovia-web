@@ -12,7 +12,7 @@ final class MapNodeVisualGrammar
 
         return match (true) {
             $type === 'space_station' => 'station',
-            in_array($type, ['satellite_plan', 'satellite_tool', 'satellite_reflection'], true) => 'satellite',
+            in_array($type, ['satellite_plan', 'satellite_tool', 'satellite_reflection', 'satellite_collaboration'], true) => 'satellite',
             $type === 'intent' => 'planet',
             in_array($type, ['domain', 'intent_context'], true) => 'planet',
             $type === 'plan' => 'moon',
