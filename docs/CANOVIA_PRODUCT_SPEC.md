@@ -1292,3 +1292,17 @@ Execution IntentではPlan.categoryによるDomain階層を通常Navigationか�
 戻る操作は明示Back controlを常設し、standalone PWAのみleft-edge swipeを補完する。Safari等ブラウザのnative edge gestureはCanovia側で奪わない。
 
 詳細は `docs/V49.7_DASHBOARD_MAP_DOCUMENT_CANVAS.md` を正とする。
+
+## V49.8 Dashboard Surface Refinement
+
+Dashboard Documentではnavigation chromeとdocument canvasを同じscroll containerへ入れない。`data-map-document-viewport` 配下を fixed `data-map-document-chrome` + pan対象 `data-map-document-scroll` + `data-map-document-canvas` に分離し、Back / canonical title / CloseまたはPrimary Actionはviewportへ固定する。
+
+MobileのPlan Dashboardはfirst paintからDocument Mode、leaf Detailはopen中だけDocument Modeとする。Document Mode中はMap Global Navigation / Page・Data Layer controls / Map gesture controls / Spatial Dockを退かせ、Fullscreen Topbarはcompact化する。Utility SurfaceやSpace Stationはleaf Dashboard Modeへ含めない。
+
+Plan Dashboard Documentは約52rem、leaf Detail Documentは約46remを基準とする。leaf DetailはSummaryを全幅、Context / MetaとActionsを下段2columnへ再配置し、固定Chromeへtemplate canonical titleを同期する。
+
+Document Viewportにはhorizontal position HUDを表示する。standalone PWAのleft-edge backはactive Documentの `scrollLeft <= 1px` の場合だけarmし、Documentを右側へpan中のhorizontal gestureをnavigationとして扱わない。
+
+Global depth labelはplan-first hierarchyへ合わせ、Executionは `全体 -> Plan -> 実行`、Plan閲覧は `全体 -> Plan -> Dashboard` とする。
+
+詳細は `docs/V49.8_DASHBOARD_SURFACE_REFINEMENT.md` を正とする。
