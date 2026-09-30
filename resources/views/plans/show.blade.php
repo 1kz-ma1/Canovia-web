@@ -299,16 +299,6 @@
     ])
 
     @if (($progress['availability_configured'] ?? false))
-                <p class="mt-1 text-xs text-slate-500">作業可能 {{ $progress['today_available_minutes'] ?? 0 }}分</p>
-            @endif
-        </div>
-        <div class="info-card p-5">
-            <p class="text-sm text-slate-500">状態</p>
-            <p class="mt-3"><span class="status-pill {{ $statusClass }}">{{ $status }}</span></p>
-        </div>
-    </section>
-
-    @if (($progress['availability_configured'] ?? false))
         <section class="mb-8 page-card p-6">
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div>
