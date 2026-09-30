@@ -12,6 +12,7 @@ import { fitMobileNodeBoxes } from './map-node-boxes.mjs';
 const PENDING_REEVALUATION_KEY = 'canovia.map.pending-reevaluation.v1';
 const SEMANTIC_TRANSITION_KEY = 'canovia.map.semantic-transition.v1';
 const GLOBAL_HOME_RESET_KEY = 'canovia.map.global-home-reset.v1';
+const SEMANTIC_CONTEXT_WINDOW_KEY = '__canoviaMapSemanticContextV1';
 
 function roleGroup(role = '') {
     if (role === 'space-station') return 'now';
@@ -523,6 +524,66 @@ export function semanticZoomDestination(
     }
 
     return candidate;
+}
+
+export function semanticMapPositionSnapshot(position = {}) {
+    const x = Number(position?.x);
+    const y = Number(position?.y);
+
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        return null;
+    }
+
+    return {
+        x: Math.round(x * 10) / 10,
+        y: Math.round(y * 10) / 10,
+    };
+}
+
+export function semanticExpansionOffset(sourcePosition, targetPosition) {
+    const source = semanticMapPositionSnapshot(sourcePosition);
+    const target = semanticMapPositionSnapshot(targetPosition);
+
+    if (!source || !target) {
+        return { x: 0, y: 0 };
+    }
+
+    return {
+        x: Math.round((source.x - target.x) * 10) / 10,
+        y: Math.round((source.y - target.y) * 10) / 10,
+    };
+}
+
+export function semanticCameraSnapshot(view = {}) {
+    const x = Number(view?.x);
+    const y = Number(view?.y);
+    const scale = Number(view?.scale);
+
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(scale)) {
+        return null;
+    }
+
+    return {
+        x: Math.round(x * 10) / 10,
+        y: Math.round(y * 10) / 10,
+        scale: Math.round(Math.max(0.68, Math.min(2.2, scale)) * 1000) / 1000,
+    };
+}
+
+export function semanticChildOrigin(anchorRect, childRect) {
+    if (!anchorRect || !childRect) {
+        return { x: 0, y: 0 };
+    }
+
+    const anchorX = Number(anchorRect.left || 0) + Number(anchorRect.width || 0) / 2;
+    const anchorY = Number(anchorRect.top || 0) + Number(anchorRect.height || 0) / 2;
+    const childX = Number(childRect.left || 0) + Number(childRect.width || 0) / 2;
+    const childY = Number(childRect.top || 0) + Number(childRect.height || 0) / 2;
+
+    return {
+        x: Math.round((anchorX - childX) * 10) / 10,
+        y: Math.round((anchorY - childY) * 10) / 10,
+    };
 }
 
 export function semanticRouteKey(value, base = 'https://canovia.local') {
