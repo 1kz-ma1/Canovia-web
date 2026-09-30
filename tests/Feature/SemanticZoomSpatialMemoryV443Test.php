@@ -56,7 +56,7 @@ class SemanticZoomSpatialMemoryV443Test extends TestCase
         $this->assertNull($graph['spatial_dock']);
     }
 
-    public function test_l1_domain_graph_is_semantic_before_attention_and_keeps_space_station_as_navigation_chrome(): void
+    public function test_l1_execution_plan_graph_is_semantic_before_attention_and_keeps_space_station_as_navigation_chrome(): void
     {
         [$user, $devPlan, , $studyPlan] = $this->scenario();
 
@@ -66,15 +66,14 @@ class SemanticZoomSpatialMemoryV443Test extends TestCase
         $context = app(MapHierarchyContextService::class)->resolve($request);
         $semantic = app(HierarchyNavigationGraphService::class)->build(MapLevel::Domain, $context);
 
-        $domainKey = app(MapHierarchyContextService::class)->domainKey($devPlan->category);
-        $semanticDomain = $semantic['nodes']->firstWhere('id', 'domain:'.$domainKey);
-        $semanticEdge = $semantic['edges']->firstWhere('target', 'domain:'.$domainKey);
+        $semanticPlan = $semantic['nodes']->firstWhere('id', 'plan:'.$devPlan->id);
+        $semanticEdge = $semantic['edges']->firstWhere('target', 'plan:'.$devPlan->id);
 
-        $this->assertIsArray($semanticDomain);
-        $this->assertArrayHasKey('attention_role', $semanticDomain);
-        $this->assertArrayNotHasKey('importance', $semanticDomain);
-        $this->assertArrayNotHasKey('position', $semanticDomain);
-        $this->assertArrayNotHasKey('state', $semanticDomain);
+        $this->assertIsArray($semanticPlan);
+        $this->assertArrayHasKey('attention_role', $semanticPlan);
+        $this->assertArrayNotHasKey('importance', $semanticPlan);
+        $this->assertArrayNotHasKey('position', $semanticPlan);
+        $this->assertArrayNotHasKey('state', $semanticPlan);
         $this->assertArrayNotHasKey('strength', $semanticEdge);
 
         $attention = app(HierarchyMapAttentionStateService::class)->apply(
@@ -82,11 +81,11 @@ class SemanticZoomSpatialMemoryV443Test extends TestCase
             $semantic['edges'],
             $semantic['center_node_id'],
         );
-        $projectedDomain = $attention['nodes']->firstWhere('id', 'domain:'.$domainKey);
+        $projectedPlan = $attention['nodes']->firstWhere('id', 'plan:'.$devPlan->id);
 
-        $this->assertSame('hierarchy-child', $projectedDomain['position_role']);
-        $this->assertArrayHasKey('position', $projectedDomain);
-        $this->assertArrayNotHasKey('attention_role', $projectedDomain);
+        $this->assertSame('hierarchy-child', $projectedPlan['position_role']);
+        $this->assertArrayHasKey('position', $projectedPlan);
+        $this->assertArrayNotHasKey('attention_role', $projectedPlan);
 
         $response = $this->actingAs($user)->get(route('map.index', [
             'level' => 'l1',
@@ -99,11 +98,14 @@ class SemanticZoomSpatialMemoryV443Test extends TestCase
             ->assertSee('data-map-hierarchy-depth="1"', false)
             ->assertSee('data-map-spatial-dock', false)
             ->assertSee('Space Station')
-            ->assertSee($devPlan->category)
-            ->assertSee($studyPlan->category);
+            ->assertSee($devPlan->title)
+            ->assertSee($studyPlan->title);
 
         $graph = $response->viewData('graph');
         $this->assertSame('hierarchy:intent:execution', $graph['center_node_id']);
+        $this->assertFalse($graph['nodes']->contains(
+            fn (array $node) => ($node['type'] ?? null) === 'domain'
+        ));
         $this->assertSame('bottom-right', data_get($graph, 'spatial_dock.position'));
         $this->assertSame(1, data_get($graph, 'hierarchy.depth'));
     }
@@ -146,20 +148,16 @@ class SemanticZoomSpatialMemoryV443Test extends TestCase
     public function test_l3_semantic_zoom_stays_scoped_to_the_selected_plan_instead_of_global_guidance(): void
     {
         [$user, $preferredPlan, $preferredTask, $selectedPlan, $selectedTask] = $this->twoPlanExecutionScenario();
-        $hierarchy = app(MapHierarchyContextService::class);
-        $domainKey = $hierarchy->domainKey($selectedPlan->category);
-
         $response = $this->actingAs($user)->get(route('map.index', [
             'level' => 'l3',
             'intent' => 'execution',
-            'domain' => $domainKey,
             'plan' => $selectedPlan->id,
         ]));
 
         $response
             ->assertOk()
             ->assertSee('data-map-level="l3"', false)
-            ->assertSee('data-map-hierarchy-depth="3"', false)
+            ->assertSee('data-map-hierarchy-depth="2"', false)
             ->assertSee('data-map-spatial-dock', false)
             ->assertSee($selectedPlan->title)
             ->assertSee($selectedTask->title);
@@ -169,6 +167,10 @@ class SemanticZoomSpatialMemoryV443Test extends TestCase
         $this->assertSame('task:'.$selectedTask->id, $graph['primary_node_id']);
         $this->assertSame($selectedPlan->id, data_get($graph, 'hierarchy.plan_id'));
         $this->assertSame($selectedPlan->title, data_get($graph, 'hierarchy.current_label'));
+        $this->assertSame(
+            route('map.index', ['level' => 'l1', 'intent' => 'execution']),
+            data_get($graph, 'hierarchy.parent_url'),
+        );
         $this->assertFalse($graph['nodes']->contains(
             fn (array $node) => ($node['id'] ?? null) === 'task:'.$preferredTask->id
         ));
