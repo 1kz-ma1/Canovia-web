@@ -1197,3 +1197,15 @@ L2はselected Shared Planをsemantic centerとして残すProject Workspaceと�
 V48.9 Review Waiting Shortcutはexplicit`collaboration_state=review` truthを維持し、L2 Purposeではなくreview itemを持つProjectだけに絞ったL1 Shared Project selectionへ入る。GitHub URL等からreview状態を推測しない。
 
 新規DB / canonical model mutation / camera persistence / AI layout / Palette drag & dropは追加しない。詳細は`docs/V49.0_CONTINUOUS_SEMANTIC_ZOOM_COLLABORATION_WORKSPACE.md`を正とする。
+
+## V49.1 Semantic Zoom Recovery / Plan-first Workspace
+
+V49.0実機確認で、物理縮小できても親Projectionへ戻れないケースを修正した。各Map pageへ `graph.hierarchy.parent_url` を `data-map-parent-url` として出し、zoom-out destinationはDOM上の戻るlinkよりserver-authoritative parent URLを優先する。既定semantic thresholdはzoom-in 1.42 / zoom-out 0.82へ調整し、少ないgesture量で粒度を切り替えられるようにした。
+
+DesktopではPlan / Collaboration Workspace Palette上のprecision pinchもMap Shellで受ける。一方ordinary wheelはPalette上ではcard scroll、Map Scene上ではcamera panとして分離する。
+
+Plan Intentは `L0 計画 -> L1 Plan -> L2 Plan Workspace` へ変更する。Plan.categoryはmetadataとして残すが、通常のPlan閲覧で独立semantic levelにはしない。Execution Intentは従来のDomain groupingを維持する。
+
+L2 Plan Workspaceはselected Planだけをspatial centerとして残し、Classic Planの進捗summary metricsと既存Roadmap partialをPaletteとして再利用する。進捗summaryはshared Blade partialへ切り出し、Classic / Mapで同じ表示contractを利用する。Map専用の類似cardコピーは作らない。
+
+詳細は `docs/V49.1_SEMANTIC_ZOOM_RECOVERY_PLAN_WORKSPACE.md` を正とする。
