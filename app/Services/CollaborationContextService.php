@@ -123,7 +123,14 @@ final class CollaborationContextService
             : null;
 
         $projects = $plans
-            ->map(fn (Plan $plan) => $this->projectSummary($request, $plan))
+            ->map(fn (Plan $plan) => $this->projectSummary($request, $plan));
+
+        if ($selectedKey === 'review') {
+            $projects = $projects
+                ->filter(fn (array $project) => (int) ($project['review_count'] ?? 0) > 0);
+        }
+
+        $projects = $projects
             ->sort(function (array $left, array $right) use ($selectedKey) {
                 if ($selectedKey === 'review') {
                     $reviewOrder = (int) ($right['review_count'] ?? 0)
