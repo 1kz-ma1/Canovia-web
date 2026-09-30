@@ -129,6 +129,23 @@ class MapSpatialPersonalizationV485Test extends TestCase
         ]));
     }
 
+    public function test_personalization_remounts_after_living_map_reprojection(): void
+    {
+        $livingMap = file_get_contents(resource_path('js/living-map.mjs'));
+        $personalization = file_get_contents(resource_path('js/map-personalization.mjs'));
+        $instant = file_get_contents(resource_path('js/instant-navigation.mjs'));
+
+        $this->assertStringContainsString("'canovia:map-reprojected'", $livingMap);
+        $this->assertStringContainsString(
+            "addEventListener('canovia:map-reprojected', mountCurrentMapPersonalization)",
+            $personalization,
+        );
+        $this->assertStringContainsString(
+            "'data-map-personalization-initialized'",
+            $instant,
+        );
+    }
+
     public function test_weak_signals_do_not_invent_personalized_shortcuts_or_reasons(): void
     {
         $user = User::factory()->create([
