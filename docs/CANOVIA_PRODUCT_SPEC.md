@@ -1310,4 +1310,4 @@ Global depth labelはplan-first hierarchyへ合わせ、Executionは `全体 -> 
 
 ### V49.8.1 Pre-device Hardening
 
-V49.8実機確認前の静的監査として、Plan Dashboardのabsolute positioningをDocument edge affordanceが上書きしないようcascadeを固定する。horizontal pan可能なDocumentだけ左右edge fadeを表示し、`is-document-scrollable / is-document-at-start / is-document-at-end` をruntime stateとして利用する。Planのユーザー向け表現はWorkspace / PaletteからDashboard / Documentへ統一し、旧Bottom Sheet由来のFeature Test aria contractも現在のDetail Dashboard文言へ更新する。
+V49.8実機確認前の静的監査として、Plan Dashboardのabsolute positioningをDocument edge affordanceが上書きしないようcascadeを固定する。horizontal pan可能なDocumentだけ左右edge fadeを表示し、`is-document-scrollable / is-document-at-start / is-document-at-end` をruntime stateとして利用する。Planのユーザー向け表現はWorkspace / PaletteからDashboard / Documentへ統一する。Plan / Detail Dashboardはtitleでlabelされたregion、Document Scrollはkeyboard focus可能なregionとし、固定Detail BackはSemantic Zoom-outへ接続する。旧Bottom Sheet由来のFeature Test aria contractも現在のDashboard構造へ更新する。
