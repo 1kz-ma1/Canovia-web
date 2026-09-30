@@ -554,6 +554,29 @@ export function semanticExpansionOffset(sourcePosition, targetPosition) {
     };
 }
 
+export function semanticExpandedPosition(
+    sourcePosition,
+    targetCenterPosition,
+    nodePosition,
+    {
+        factor = 0.62,
+    } = {},
+) {
+    const source = semanticMapPositionSnapshot(sourcePosition);
+    const center = semanticMapPositionSnapshot(targetCenterPosition);
+    const node = semanticMapPositionSnapshot(nodePosition);
+    const safeFactor = Math.max(0.35, Math.min(1, Number(factor || 0.62)));
+
+    if (!source || !center || !node) {
+        return node || source || center || { x: 50, y: 50 };
+    }
+
+    return {
+        x: Math.round((source.x + (node.x - center.x) * safeFactor) * 10) / 10,
+        y: Math.round((source.y + (node.y - center.y) * safeFactor) * 10) / 10,
+    };
+}
+
 export function semanticCameraSnapshot(view = {}) {
     const x = Number(view?.x);
     const y = Number(view?.y);
@@ -849,7 +872,7 @@ export function mountLivingGoalMap({
     let gesture = null;
     let suppressMapClickUntil = 0;
     let mapView = { x: 0, y: 0, scale: 1 };
-    let semanticExpansionOffsetState = { x: 0, y: 0 };
+    let semanticExpansionLayoutState = null;
     let viewportCache = {
         left: 0,
         top: 0,
@@ -1027,19 +1050,24 @@ export function mountLivingGoalMap({
             })), currentMapViewport(), nodeElements.find(element => element.dataset.mapIsCenter === '1')?.dataset.mapNodeId);
         }
 
-        if (
-            Math.abs(Number(semanticExpansionOffsetState.x || 0)) > 0.01
-            || Math.abs(Number(semanticExpansionOffsetState.y || 0)) > 0.01
-        ) {
-            basePositions = new Map(
-                [...basePositions.entries()].map(([nodeId, position]) => [
-                    nodeId,
-                    {
-                        x: Math.round((Number(position.x || 0) + semanticExpansionOffsetState.x) * 10) / 10,
-                        y: Math.round((Number(position.y || 0) + semanticExpansionOffsetState.y) * 10) / 10,
-                    },
-                ]),
-            );
+        if (semanticExpansionLayoutState) {
+            const anchorPosition = basePositions.get(semanticExpansionLayoutState.anchorId);
+
+            if (anchorPosition) {
+                basePositions = new Map(
+                    [...basePositions.entries()].map(([nodeId, position]) => [
+                        nodeId,
+                        semanticExpandedPosition(
+                            semanticExpansionLayoutState.sourcePosition,
+                            anchorPosition,
+                            position,
+                            {
+                                factor: semanticExpansionLayoutState.factor,
+                            },
+                        ),
+                    ]),
+                );
+            }
         }
 
         const spatialLayout = mobile ? 'mobile' : 'desktop';
@@ -1497,14 +1525,16 @@ export function mountLivingGoalMap({
             || nodeElements[0]
             || null;
         const anchorId = anchor?.dataset?.mapNodeId || null;
-        const targetPosition = anchorId ? basePositions.get(anchorId) : null;
-        const offset = semanticExpansionOffset(sourcePosition, targetPosition);
 
-        if (!anchor) {
+        if (!anchor || !anchorId) {
             return null;
         }
 
-        semanticExpansionOffsetState = offset;
+        semanticExpansionLayoutState = {
+            anchorId,
+            sourcePosition: semanticMapPositionSnapshot(sourcePosition) || { x: 50, y: 50 },
+            factor: isMobileViewport() ? 0.72 : 0.62,
+        };
         applyBaseLayout();
 
         return anchor;
