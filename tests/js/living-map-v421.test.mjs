@@ -17,6 +17,11 @@ import {
     mapSemanticZoomDirection,
     semanticZoomThresholdDirection,
     semanticZoomDestination,
+    semanticMapPositionSnapshot,
+    semanticExpansionOffset,
+    semanticExpandedPosition,
+    semanticCameraSnapshot,
+    semanticChildOrigin,
     semanticContinuityTransform,
     semanticRectSnapshot,
     semanticRouteKey,
@@ -51,6 +56,66 @@ test('semantic route key normalizes query ordering and removes hash-only UI stat
     assert.equal(
         semanticRouteKey('/map?level=l3&intent=execution&plan=12'),
         '/map?intent=execution&level=l3&plan=12',
+    );
+});
+
+test('semantic expansion keeps the selected box at its prior world position', () => {
+    assert.deepEqual(
+        semanticExpandedPosition(
+            { x: 82, y: 50 },
+            { x: 50, y: 50 },
+            { x: 50, y: 50 },
+        ),
+        { x: 82, y: 50 },
+    );
+
+    assert.deepEqual(
+        semanticExpandedPosition(
+            { x: 82, y: 50 },
+            { x: 50, y: 50 },
+            { x: 80, y: 50 },
+            { factor: 0.5 },
+        ),
+        { x: 97, y: 50 },
+    );
+});
+
+test('semantic expansion compresses child distance instead of recentering the whole projection', () => {
+    assert.deepEqual(
+        semanticExpandedPosition(
+            { x: 24, y: 23 },
+            { x: 50, y: 50 },
+            { x: 50, y: 80 },
+            { factor: 0.6 },
+        ),
+        { x: 24, y: 41 },
+    );
+
+    assert.deepEqual(
+        semanticExpansionOffset(
+            { x: 24, y: 23 },
+            { x: 50, y: 50 },
+        ),
+        { x: -26, y: -27 },
+    );
+});
+
+test('semantic transition keeps only bounded numeric camera state', () => {
+    assert.deepEqual(
+        semanticCameraSnapshot({ x: -123.456, y: 48.88, scale: 3.5 }),
+        { x: -123.5, y: 48.9, scale: 2.2 },
+    );
+    assert.equal(semanticCameraSnapshot({ x: 'nope', y: 0, scale: 1 }), null);
+    assert.deepEqual(semanticMapPositionSnapshot({ x: 24.04, y: 76.06 }), { x: 24, y: 76.1 });
+});
+
+test('semantic children originate visually from the opened box', () => {
+    assert.deepEqual(
+        semanticChildOrigin(
+            { left: 100, top: 100, width: 80, height: 80 },
+            { left: 260, top: 180, width: 60, height: 60 },
+        ),
+        { x: -150, y: -70 },
     );
 });
 

@@ -12,6 +12,7 @@ import { fitMobileNodeBoxes } from './map-node-boxes.mjs';
 const PENDING_REEVALUATION_KEY = 'canovia.map.pending-reevaluation.v1';
 const SEMANTIC_TRANSITION_KEY = 'canovia.map.semantic-transition.v1';
 const GLOBAL_HOME_RESET_KEY = 'canovia.map.global-home-reset.v1';
+const SEMANTIC_CONTEXT_WINDOW_KEY = '__canoviaMapSemanticContextV1';
 
 function roleGroup(role = '') {
     if (role === 'space-station') return 'now';
@@ -525,6 +526,89 @@ export function semanticZoomDestination(
     return candidate;
 }
 
+export function semanticMapPositionSnapshot(position = {}) {
+    const x = Number(position?.x);
+    const y = Number(position?.y);
+
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        return null;
+    }
+
+    return {
+        x: Math.round(x * 10) / 10,
+        y: Math.round(y * 10) / 10,
+    };
+}
+
+export function semanticExpansionOffset(sourcePosition, targetPosition) {
+    const source = semanticMapPositionSnapshot(sourcePosition);
+    const target = semanticMapPositionSnapshot(targetPosition);
+
+    if (!source || !target) {
+        return { x: 0, y: 0 };
+    }
+
+    return {
+        x: Math.round((source.x - target.x) * 10) / 10,
+        y: Math.round((source.y - target.y) * 10) / 10,
+    };
+}
+
+export function semanticExpandedPosition(
+    sourcePosition,
+    targetCenterPosition,
+    nodePosition,
+    {
+        factor = 0.62,
+    } = {},
+) {
+    const source = semanticMapPositionSnapshot(sourcePosition);
+    const center = semanticMapPositionSnapshot(targetCenterPosition);
+    const node = semanticMapPositionSnapshot(nodePosition);
+    const safeFactor = Math.max(0.35, Math.min(1, Number(factor || 0.62)));
+
+    if (!source || !center || !node) {
+        return node || source || center || { x: 50, y: 50 };
+    }
+
+    return {
+        x: Math.round((source.x + (node.x - center.x) * safeFactor) * 10) / 10,
+        y: Math.round((source.y + (node.y - center.y) * safeFactor) * 10) / 10,
+    };
+}
+
+export function semanticCameraSnapshot(view = {}) {
+    const x = Number(view?.x);
+    const y = Number(view?.y);
+    const scale = Number(view?.scale);
+
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(scale)) {
+        return null;
+    }
+
+    return {
+        x: Math.round(x * 10) / 10,
+        y: Math.round(y * 10) / 10,
+        scale: Math.round(Math.max(0.68, Math.min(2.2, scale)) * 1000) / 1000,
+    };
+}
+
+export function semanticChildOrigin(anchorRect, childRect) {
+    if (!anchorRect || !childRect) {
+        return { x: 0, y: 0 };
+    }
+
+    const anchorX = Number(anchorRect.left || 0) + Number(anchorRect.width || 0) / 2;
+    const anchorY = Number(anchorRect.top || 0) + Number(anchorRect.height || 0) / 2;
+    const childX = Number(childRect.left || 0) + Number(childRect.width || 0) / 2;
+    const childY = Number(childRect.top || 0) + Number(childRect.height || 0) / 2;
+
+    return {
+        x: Math.round((anchorX - childX) * 10) / 10,
+        y: Math.round((anchorY - childY) * 10) / 10,
+    };
+}
+
 export function semanticRouteKey(value, base = 'https://canovia.local') {
     try {
         const url = new URL(String(value || ''), base);
@@ -788,6 +872,7 @@ export function mountLivingGoalMap({
     let gesture = null;
     let suppressMapClickUntil = 0;
     let mapView = { x: 0, y: 0, scale: 1 };
+    let semanticExpansionLayoutState = null;
     let viewportCache = {
         left: 0,
         top: 0,
@@ -963,6 +1048,26 @@ export function mountLivingGoalMap({
                 width: element.offsetWidth,
                 height: element.offsetHeight,
             })), currentMapViewport(), nodeElements.find(element => element.dataset.mapIsCenter === '1')?.dataset.mapNodeId);
+        }
+
+        if (semanticExpansionLayoutState) {
+            const anchorPosition = basePositions.get(semanticExpansionLayoutState.anchorId);
+
+            if (anchorPosition) {
+                basePositions = new Map(
+                    [...basePositions.entries()].map(([nodeId, position]) => [
+                        nodeId,
+                        semanticExpandedPosition(
+                            semanticExpansionLayoutState.sourcePosition,
+                            anchorPosition,
+                            position,
+                            {
+                                factor: semanticExpansionLayoutState.factor,
+                            },
+                        ),
+                    ]),
+                );
+            }
         }
 
         const spatialLayout = mobile ? 'mobile' : 'desktop';
@@ -1305,6 +1410,156 @@ export function mountLivingGoalMap({
         });
     };
 
+    const renderedNodePosition = (element) => {
+        if (!element) return null;
+
+        const styleX = Number.parseFloat(element.style?.getPropertyValue?.('--map-x') || '');
+        const styleY = Number.parseFloat(element.style?.getPropertyValue?.('--map-y') || '');
+
+        return semanticMapPositionSnapshot({
+            x: Number.isFinite(styleX) ? styleX : Number(element.dataset?.mapX || 50),
+            y: Number.isFinite(styleY) ? styleY : Number(element.dataset?.mapY || 50),
+        });
+    };
+
+    const cloneSemanticContextLayer = (sourceNode) => {
+        if (!mapScene || !sourceNode || !documentRef?.createElement) return null;
+
+        const layer = documentRef.createElement('div');
+        layer.className = 'canovia-map-semantic-context-layer';
+        layer.setAttribute('data-map-semantic-context-layer', '');
+        layer.setAttribute('aria-hidden', 'true');
+
+        const edgeSvg = edgeElements[0]?.closest?.('.canovia-map-edges') || null;
+        if (edgeSvg) {
+            const edgeClone = edgeSvg.cloneNode(true);
+            edgeClone.classList.add('canovia-map-semantic-context-edges');
+            edgeClone.querySelectorAll?.('[data-map-edge]')?.forEach?.((edge) => {
+                edge.removeAttribute('data-map-edge');
+                edge.setAttribute('data-map-context-edge', '');
+            });
+            layer.append(edgeClone);
+        }
+
+        for (const element of nodeElements) {
+            if (element === sourceNode || element.classList.contains('is-focus-hidden')) {
+                continue;
+            }
+
+            const clone = element.cloneNode(true);
+            clone.removeAttribute('data-map-node');
+            clone.setAttribute('data-map-context-node', '');
+            clone.classList.add('is-semantic-context-node');
+            clone.classList.remove(
+                'is-map-center',
+                'is-map-selected',
+                'is-focus-center',
+                'is-focus-neighbor',
+                'is-semantic-departure-anchor',
+                'is-semantic-continuity-anchor',
+            );
+            clone.removeAttribute('aria-current');
+            clone.removeAttribute('aria-selected');
+            clone.removeAttribute('aria-expanded');
+
+            clone.querySelectorAll?.('a, button, input, select, textarea')?.forEach?.((control) => {
+                control.removeAttribute?.('href');
+                control.removeAttribute?.('data-map-semantic-zoom');
+                control.removeAttribute?.('data-map-direct-navigation');
+                control.removeAttribute?.('data-map-node-focus');
+                control.setAttribute?.('tabindex', '-1');
+                control.setAttribute?.('aria-hidden', 'true');
+                if ('disabled' in control) {
+                    control.disabled = true;
+                }
+            });
+
+            layer.append(clone);
+        }
+
+        return layer;
+    };
+
+    const rememberSemanticExpansionContext = (sourceNode) => {
+        const sourcePosition = renderedNodePosition(sourceNode);
+        const layer = cloneSemanticContextLayer(sourceNode);
+
+        if (!sourcePosition || !layer) {
+            windowRef[SEMANTIC_CONTEXT_WINDOW_KEY] = null;
+            return null;
+        }
+
+        const snapshot = {
+            createdAt: Date.now(),
+            fromDepth: Number(page.dataset.mapHierarchyDepth || 0),
+            sourceNodeRef: sourceNode.dataset?.mapNodeId || null,
+            sourcePosition,
+            layer,
+        };
+
+        windowRef[SEMANTIC_CONTEXT_WINDOW_KEY] = snapshot;
+
+        return snapshot;
+    };
+
+    const consumeSemanticExpansionContext = (arrival) => {
+        const snapshot = windowRef[SEMANTIC_CONTEXT_WINDOW_KEY] || null;
+        windowRef[SEMANTIC_CONTEXT_WINDOW_KEY] = null;
+
+        if (!snapshot || Date.now() - Number(snapshot.createdAt || 0) > 10000) {
+            return null;
+        }
+
+        if (
+            String(arrival?.source_node_ref || '') !== ''
+            && String(snapshot.sourceNodeRef || '') !== String(arrival.source_node_ref || '')
+        ) {
+            return null;
+        }
+
+        return snapshot;
+    };
+
+    const shiftProjectionAroundSemanticAnchor = (sourcePosition) => {
+        const anchor = page.querySelector?.('[data-map-node][data-map-is-center="1"]')
+            || nodeElements[0]
+            || null;
+        const anchorId = anchor?.dataset?.mapNodeId || null;
+
+        if (!anchor || !anchorId) {
+            return null;
+        }
+
+        semanticExpansionLayoutState = {
+            anchorId,
+            sourcePosition: semanticMapPositionSnapshot(sourcePosition) || { x: 50, y: 50 },
+            factor: isMobileViewport() ? 0.72 : 0.62,
+        };
+        applyBaseLayout();
+
+        return anchor;
+    };
+
+    const prepareSemanticChildrenFromAnchor = (anchor) => {
+        if (!anchor) return;
+
+        const anchorRect = anchor.getBoundingClientRect?.();
+        const scale = Math.max(0.68, Number(mapView.scale || 1));
+
+        anchor.classList.add('is-semantic-expansion-anchor');
+
+        for (const element of nodeElements) {
+            if (element === anchor) continue;
+
+            const childRect = element.getBoundingClientRect?.();
+            const origin = semanticChildOrigin(anchorRect, childRect);
+
+            element.style.setProperty('--semantic-child-origin-x', (origin.x / scale).toFixed(1) + 'px');
+            element.style.setProperty('--semantic-child-origin-y', (origin.y / scale).toFixed(1) + 'px');
+            element.classList.add('is-semantic-expansion-child');
+        }
+    };
+
     const markSemanticTransition = (link) => {
         const semanticLink = link?.closest?.('[data-map-semantic-zoom]')
             ?? (link?.hasAttribute?.('data-map-semantic-zoom') ? link : null);
@@ -1325,12 +1580,23 @@ export function mountLivingGoalMap({
         };
         const snapshot = semanticRectSnapshot(sourceRect, viewport);
 
+        const sourcePosition = renderedNodePosition(sourceNode);
+        const camera = semanticCameraSnapshot(mapView);
+
+        if (direction === 'in' && sourceNode) {
+            rememberSemanticExpansionContext(sourceNode);
+        } else {
+            windowRef[SEMANTIC_CONTEXT_WINDOW_KEY] = null;
+        }
+
         writeSemanticTransition(windowRef, {
             direction,
             from_depth: Number(page.dataset.mapHierarchyDepth || 0),
             from_route: semanticRouteKey(windowRef.location.href, windowRef.location.href),
             source_node_ref: sourceNode?.dataset?.mapNodeId || null,
             source_rect: snapshot,
+            source_map_position: sourcePosition,
+            camera,
             left_at: Date.now(),
         });
 
@@ -1338,14 +1604,12 @@ export function mountLivingGoalMap({
         page.classList.add(direction === 'out' ? 'is-semantic-departure-out' : 'is-semantic-departure-in');
 
         if (sourceNode && snapshot) {
-            const shellRect = mapShell?.getBoundingClientRect?.();
-            const nodeCenterX = sourceRect.left + sourceRect.width / 2;
-            const nodeCenterY = sourceRect.top + sourceRect.height / 2;
-            const shellCenterX = shellRect ? shellRect.left + shellRect.width / 2 : viewport.width / 2;
-            const shellCenterY = shellRect ? shellRect.top + shellRect.height / 2 : viewport.height / 2;
-            sourceNode.style.setProperty('--semantic-departure-x', (shellCenterX - nodeCenterX).toFixed(1) + 'px');
-            sourceNode.style.setProperty('--semantic-departure-y', (shellCenterY - nodeCenterY).toFixed(1) + 'px');
-            sourceNode.style.setProperty('--semantic-departure-scale', direction === 'in' ? '1.12' : '0.88');
+            // V49.2: opening a semantic box must not throw it toward the screen
+            // center. Keep the selected node spatially anchored and only signal
+            // that its contents are about to expand/collapse in place.
+            sourceNode.style.setProperty('--semantic-departure-x', '0px');
+            sourceNode.style.setProperty('--semantic-departure-y', '0px');
+            sourceNode.style.setProperty('--semantic-departure-scale', direction === 'in' ? '1.045' : '0.965');
             sourceNode.classList.add('is-semantic-departure-anchor');
         }
 
@@ -1453,12 +1717,16 @@ export function mountLivingGoalMap({
                 height: Number(windowRef.innerHeight || 0),
             };
 
+            windowRef[SEMANTIC_CONTEXT_WINDOW_KEY] = null;
+
             writeSemanticTransition(windowRef, {
                 direction: 'out',
                 from_depth: Number(page.dataset.mapHierarchyDepth || 0),
                 from_route: semanticRouteKey(windowRef.location.href, windowRef.location.href),
                 source_node_ref: centerNode?.dataset?.mapNodeId || null,
                 source_rect: semanticRectSnapshot(sourceRect, viewport),
+                source_map_position: renderedNodePosition(centerNode),
+                camera: semanticCameraSnapshot(mapView),
                 left_at: Date.now(),
             });
 
@@ -2145,6 +2413,7 @@ export function mountLivingGoalMap({
     );
 
     if (forceGlobalHomeReset) {
+        windowRef[SEMANTIC_CONTEXT_WINDOW_KEY] = null;
         focusHistoryDepth = 0;
         windowRef.history.replaceState(
             mapGlobalHomeHistoryState(windowRef.history.state || {}),
@@ -2178,13 +2447,51 @@ export function mountLivingGoalMap({
         clearSemanticTransition(windowRef);
         const direction = mapSemanticZoomDirection(semanticArrival.direction);
         const reducedMotion = Boolean(windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+        const camera = semanticCameraSnapshot(semanticArrival.camera);
+        const semanticContext = direction === 'in'
+            ? consumeSemanticExpansionContext(semanticArrival)
+            : null;
+        const sourcePosition = semanticMapPositionSnapshot(
+            semanticArrival.source_map_position || semanticContext?.sourcePosition || {},
+        );
+
+        if (camera) {
+            applyMapView(camera, { immediate: true });
+        }
+
         let arrivalAnchor = null;
 
         if (direction === 'in') {
-            const sourceNodeRef = String(semanticArrival.source_node_ref || '');
-            arrivalAnchor = (sourceNodeRef ? nodeElementById.get(sourceNodeRef) : null)
+            if (sourcePosition) {
+                arrivalAnchor = shiftProjectionAroundSemanticAnchor(sourcePosition);
+            }
+
+            arrivalAnchor = arrivalAnchor
                 || page.querySelector?.('[data-map-node][data-map-is-center="1"]')
+                || nodeElements[0]
                 || null;
+
+            if (semanticContext?.layer && mapScene) {
+                mapScene.prepend(semanticContext.layer);
+                page.classList.add('has-semantic-context-layer');
+            }
+
+            if (arrivalAnchor) {
+                prepareSemanticChildrenFromAnchor(arrivalAnchor);
+                page.classList.add('is-semantic-expansion-arrival');
+
+                windowRef.setTimeout(() => {
+                    arrivalAnchor?.classList?.remove('is-semantic-expansion-anchor');
+
+                    for (const element of nodeElements) {
+                        element.classList.remove('is-semantic-expansion-child');
+                        element.style.removeProperty('--semantic-child-origin-x');
+                        element.style.removeProperty('--semantic-child-origin-y');
+                    }
+
+                    page.classList.remove('is-semantic-expansion-arrival');
+                }, reducedMotion ? 0 : 560);
+            }
         } else {
             const fromRoute = String(semanticArrival.from_route || '');
             if (fromRoute) {
@@ -2195,46 +2502,46 @@ export function mountLivingGoalMap({
                     return semanticRouteKey(semanticLink.href, windowRef.location.href) === fromRoute;
                 }) || null;
             }
-        }
 
-        const sourceRect = adaptSemanticRect(semanticArrival.source_rect, {
-            width: Number(windowRef.innerWidth || 0),
-            height: Number(windowRef.innerHeight || 0),
-        });
-        const targetRect = arrivalAnchor?.getBoundingClientRect?.();
-        const continuity = !reducedMotion
-            ? semanticContinuityTransform(sourceRect, targetRect)
-            : null;
+            const sourceRect = adaptSemanticRect(semanticArrival.source_rect, {
+                width: Number(windowRef.innerWidth || 0),
+                height: Number(windowRef.innerHeight || 0),
+            });
+            const targetRect = arrivalAnchor?.getBoundingClientRect?.();
+            const continuity = !reducedMotion
+                ? semanticContinuityTransform(sourceRect, targetRect)
+                : null;
 
-        if (arrivalAnchor && continuity) {
-            arrivalAnchor.style.setProperty('--semantic-anchor-x', continuity.x.toFixed(1) + 'px');
-            arrivalAnchor.style.setProperty('--semantic-anchor-y', continuity.y.toFixed(1) + 'px');
-            arrivalAnchor.style.setProperty('--semantic-anchor-scale', String(continuity.scale));
-            arrivalAnchor.classList.add('is-semantic-continuity-anchor');
-            page.classList.add(
-                'is-semantic-continuity-arrival',
-                direction === 'out' ? 'is-semantic-continuity-out' : 'is-semantic-continuity-in',
-            );
-
-            windowRef.setTimeout(() => {
-                arrivalAnchor?.classList?.remove('is-semantic-continuity-anchor');
-                arrivalAnchor?.style?.removeProperty?.('--semantic-anchor-x');
-                arrivalAnchor?.style?.removeProperty?.('--semantic-anchor-y');
-                arrivalAnchor?.style?.removeProperty?.('--semantic-anchor-scale');
-                page.classList.remove(
+            if (arrivalAnchor && continuity) {
+                arrivalAnchor.style.setProperty('--semantic-anchor-x', continuity.x.toFixed(1) + 'px');
+                arrivalAnchor.style.setProperty('--semantic-anchor-y', continuity.y.toFixed(1) + 'px');
+                arrivalAnchor.style.setProperty('--semantic-anchor-scale', String(continuity.scale));
+                arrivalAnchor.classList.add('is-semantic-continuity-anchor');
+                page.classList.add(
                     'is-semantic-continuity-arrival',
-                    'is-semantic-continuity-in',
                     'is-semantic-continuity-out',
                 );
-            }, 520);
-        } else {
-            page.classList.add(direction === 'out' ? 'is-semantic-arrival-out' : 'is-semantic-arrival-in');
-            windowRef.setTimeout(() => {
-                page.classList.remove('is-semantic-arrival-out', 'is-semantic-arrival-in');
-            }, 420);
+
+                windowRef.setTimeout(() => {
+                    arrivalAnchor?.classList?.remove('is-semantic-continuity-anchor');
+                    arrivalAnchor?.style?.removeProperty?.('--semantic-anchor-x');
+                    arrivalAnchor?.style?.removeProperty?.('--semantic-anchor-y');
+                    arrivalAnchor?.style?.removeProperty?.('--semantic-anchor-scale');
+                    page.classList.remove(
+                        'is-semantic-continuity-arrival',
+                        'is-semantic-continuity-out',
+                    );
+                }, 520);
+            } else {
+                page.classList.add('is-semantic-arrival-out');
+                windowRef.setTimeout(() => {
+                    page.classList.remove('is-semantic-arrival-out');
+                }, 420);
+            }
         }
     } else if (semanticArrival) {
         clearSemanticTransition(windowRef);
+        windowRef[SEMANTIC_CONTEXT_WINDOW_KEY] = null;
     }
 
     if (page.dataset.mapReprojected === '1') {

@@ -8938,3 +8938,177 @@ body[data-route-name="map.index"] .canovia-map-page {
         }
     }
 }
+
+/* --------------------------------------------------------------------------
+ * V49.2 In-place Semantic Expansion
+ * Semantic zoom opens a selected context where it already lives instead of
+ * translating it to the viewport center. The previous sibling layer remains
+ * visible as ambient spatial context until the next semantic level change.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .canovia-map-semantic-context-layer {
+        position: absolute;
+        z-index: 0;
+        inset: 0;
+        overflow: visible;
+        pointer-events: none;
+        opacity: 0.42;
+        filter: saturate(0.68) brightness(0.82);
+    }
+
+    .canovia-map-semantic-context-layer .canovia-map-edges {
+        z-index: 0;
+        opacity: 0.52;
+    }
+
+    .canovia-map-semantic-context-layer .canovia-map-node {
+        z-index: 1;
+        opacity: 0.78;
+        box-shadow:
+            0 0 0 1px rgb(148 163 184 / 0.04),
+            0 9px 24px rgb(2 6 23 / 0.28);
+        filter: saturate(0.72);
+        transition: none;
+    }
+
+    .canovia-map-page.has-semantic-context-layer .canovia-map-node:not(.is-semantic-context-node) {
+        z-index: 4;
+    }
+
+    /* V47.5 pulled the selected node to the screen center. V49.2 deliberately
+       neutralizes that shell movement: the world stays put and the box opens. */
+    .canovia-map-page.is-semantic-departure-in .canovia-map-shell,
+    .canovia-map-page.is-semantic-departure-out .canovia-map-shell {
+        opacity: 1;
+        transform: none;
+        filter: none;
+        transition: none;
+    }
+
+    .canovia-map-page.is-semantic-departure-in .canovia-map-node.is-semantic-departure-anchor,
+    .canovia-map-page.is-semantic-departure-out .canovia-map-node.is-semantic-departure-anchor {
+        transform:
+            translate(-50%, -50%)
+            translate3d(0, 0, 0)
+            scale(var(--semantic-departure-scale, 1));
+        box-shadow:
+            0 0 0 1px rgb(103 232 249 / 0.22),
+            0 0 3.1rem rgb(34 211 238 / 0.26),
+            0 20px 48px rgb(2 6 23 / 0.46);
+    }
+
+    .canovia-map-page.is-semantic-departure-in .canovia-map-node:not(.is-semantic-departure-anchor),
+    .canovia-map-page.is-semantic-departure-out .canovia-map-node:not(.is-semantic-departure-anchor),
+    .canovia-map-page.is-semantic-departure-in .canovia-map-edge,
+    .canovia-map-page.is-semantic-departure-out .canovia-map-edge {
+        opacity: 0.68;
+    }
+
+    .canovia-map-page.is-semantic-expansion-arrival .canovia-map-node.is-semantic-expansion-anchor {
+        z-index: 7;
+        animation: canovia-map-semantic-box-open 460ms cubic-bezier(.16,.88,.22,1) both;
+    }
+
+    .canovia-map-page.is-semantic-expansion-arrival .canovia-map-node.is-semantic-expansion-child {
+        animation: canovia-map-semantic-box-child-expand 470ms 35ms cubic-bezier(.16,.88,.22,1) both;
+        will-change: transform, opacity;
+    }
+
+    .canovia-map-page.is-semantic-expansion-arrival .canovia-map-edge {
+        animation: canovia-map-semantic-box-edge-expand 420ms 70ms ease-out both;
+    }
+
+    .canovia-map-page.is-semantic-expansion-arrival .canovia-map-semantic-context-layer {
+        animation: canovia-map-semantic-context-settle 360ms ease-out both;
+    }
+
+    @keyframes canovia-map-semantic-box-open {
+        0% {
+            transform: translate(-50%, -50%) scale(1);
+            box-shadow:
+                0 0 0 1px rgb(103 232 249 / 0.10),
+                0 0 1.6rem rgb(34 211 238 / 0.12),
+                0 15px 34px rgb(2 6 23 / 0.40);
+        }
+        58% {
+            transform: translate(-50%, -50%) scale(1.065);
+            box-shadow:
+                0 0 0 0.36rem rgb(34 211 238 / 0.035),
+                0 0 3.4rem rgb(34 211 238 / 0.25),
+                0 19px 42px rgb(2 6 23 / 0.44);
+        }
+        100% {
+            transform: translate(-50%, -50%) scale(1);
+        }
+    }
+
+    @keyframes canovia-map-semantic-box-child-expand {
+        from {
+            opacity: 0;
+            transform:
+                translate(-50%, -50%)
+                translate3d(
+                    var(--semantic-child-origin-x, 0px),
+                    var(--semantic-child-origin-y, 0px),
+                    0
+                )
+                scale(0.58);
+            filter: blur(1.1px);
+        }
+        to {
+            opacity: 1;
+            transform:
+                translate(-50%, -50%)
+                translate3d(0, 0, 0)
+                scale(1);
+            filter: blur(0);
+        }
+    }
+
+    @keyframes canovia-map-semantic-box-edge-expand {
+        from {
+            opacity: 0;
+            stroke-dashoffset: 12;
+        }
+        to {
+            opacity: 1;
+            stroke-dashoffset: 0;
+        }
+    }
+
+    @keyframes canovia-map-semantic-context-settle {
+        from {
+            opacity: 0.62;
+            filter: saturate(0.82) brightness(0.94);
+        }
+        to {
+            opacity: 0.42;
+            filter: saturate(0.68) brightness(0.82);
+        }
+    }
+
+    @media (max-width: 767px) {
+        .canovia-map-semantic-context-layer {
+            opacity: 0.34;
+        }
+
+        .canovia-map-semantic-context-layer .canovia-map-node {
+            opacity: 0.72;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .canovia-map-page.is-semantic-expansion-arrival .canovia-map-node,
+        .canovia-map-page.is-semantic-expansion-arrival .canovia-map-edge,
+        .canovia-map-page.is-semantic-expansion-arrival .canovia-map-semantic-context-layer {
+            animation: none !important;
+            filter: none;
+        }
+
+        .canovia-map-page.is-semantic-expansion-arrival .canovia-map-node {
+            transform: translate(-50%, -50%) !important;
+            opacity: 1;
+        }
+    }
+}
+

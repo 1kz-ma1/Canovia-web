@@ -1209,3 +1209,17 @@ Plan Intentは `L0 計画 -> L1 Plan -> L2 Plan Workspace` へ変更する。Pla
 L2 Plan Workspaceはselected Planだけをspatial centerとして残し、Classic Planの進捗summary metricsと既存Roadmap partialをPaletteとして再利用する。進捗summaryはshared Blade partialへ切り出し、Classic / Mapで同じ表示contractを利用する。Map専用の類似cardコピーは作らない。
 
 詳細は `docs/V49.1_SEMANTIC_ZOOM_RECOVERY_PLAN_WORKSPACE.md` を正とする。
+
+## V49.2 In-place Semantic Expansion
+
+Single-Surface Architectureへ移行する前のUX bridgeとして、Semantic Zoomの見え方を「中央へ移動してProjectionを交換」から「選択した箱をその場で開く」へ変更する。
+
+zoom-in時にselected Nodeをviewport centerへtranslateしない。selected Nodeの現在world positionを保持し、次Projectionのcenterをその位置へ合わせた上で、childの相対配置半径をdesktop 0.62 / mobile 0.72へ圧縮する。これにより次levelの要素はselected boxの内部／周辺から展開する。
+
+zoom-in前の兄弟Node / Edgeはcurrent window memory上だけでDOM cloneし、次Projectionのambient spatial contextとして残す。ambient layerはpointer-eventsなし、current graph / focus / telemetryの対象外とする。raw title / contentをsessionStorageへserializationしない。
+
+Semantic TransitionのsessionStorage payloadへ追加するのはsource x/yとcamera x/y/scale等の数値・structural stateのみ。camera transformを次Projectionへ引き継ぎ、不要なrecenterを行わない。fallback full reloadではambient cloneは失われるが、source positionとcameraによるin-place配置は復元できる。
+
+child Nodeはselected box中心からfinal positionへ展開するanimationを使用する。zoom-outはV49.1のauthoritative parent URL契約を維持し、親Projectionへ戻るとcanonical sibling配置へ復帰する。
+
+URL hierarchy removal、全level同時DOM、ambient siblingの直接branch switching、absolute position persistence、AI layoutはV49.2のNon-goal。詳細は `docs/V49.2_IN_PLACE_SEMANTIC_EXPANSION.md` を正とする。
