@@ -30,8 +30,11 @@ final class PersonalizedSatellitePromotionService
      *     promoted:Collection<int,array<string,mixed>>
      * }
      */
-    public function promote(Collection $candidates, int $limit = self::MAX_SATELLITES): array
-    {
+    public function promote(
+        Collection $candidates,
+        int $limit = self::MAX_SATELLITES,
+        array $pinnedNodeIds = [],
+    ): array {
         $limit = max(0, min(self::MAX_SATELLITES, $limit));
 
         if ($limit === 0 || $candidates->isEmpty()) {
@@ -42,15 +45,48 @@ final class PersonalizedSatellitePromotionService
             ];
         }
 
+        $pinnedOrder = [];
+
+        foreach ($pinnedNodeIds as $index => $rawNodeId) {
+            $nodeId = trim((string) $rawNodeId);
+
+            if ($nodeId === '' || isset($pinnedOrder[$nodeId])) {
+                continue;
+            }
+
+            $pinnedOrder[$nodeId] = (int) $index;
+        }
+
         $ranked = $candidates
-            ->map(function (array $candidate) {
+            ->map(function (array $candidate) use ($pinnedOrder) {
                 $score = $this->score((array) ($candidate['signals'] ?? []));
+                $nodeId = (string) ($candidate['id'] ?? '');
+
                 $candidate['promotion_score'] = $score;
+                $candidate['is_pinned'] = array_key_exists($nodeId, $pinnedOrder);
+                $candidate['pin_order'] = $pinnedOrder[$nodeId] ?? PHP_INT_MAX;
 
                 return $candidate;
             })
-            ->filter(fn (array $candidate) => (float) ($candidate['promotion_score'] ?? 0) >= self::MIN_PROMOTION_SCORE)
+            ->filter(fn (array $candidate) => (bool) ($candidate['is_pinned'] ?? false)
+                || (float) ($candidate['promotion_score'] ?? 0) >= self::MIN_PROMOTION_SCORE)
             ->sort(function (array $left, array $right) {
+                $leftPinned = (bool) ($left['is_pinned'] ?? false);
+                $rightPinned = (bool) ($right['is_pinned'] ?? false);
+
+                if ($leftPinned !== $rightPinned) {
+                    return $leftPinned ? -1 : 1;
+                }
+
+                if ($leftPinned && $rightPinned) {
+                    $pinOrder = (int) ($left['pin_order'] ?? PHP_INT_MAX)
+                        <=> (int) ($right['pin_order'] ?? PHP_INT_MAX);
+
+                    if ($pinOrder !== 0) {
+                        return $pinOrder;
+                    }
+                }
+
                 $score = (float) ($right['promotion_score'] ?? 0)
                     <=> (float) ($left['promotion_score'] ?? 0);
 
@@ -92,6 +128,10 @@ final class PersonalizedSatellitePromotionService
         foreach ($ranked as $index => $candidate) {
             $fallbackSlot = $index + 1;
             $score = (float) ($candidate['promotion_score'] ?? 0);
+            $isPinned = (bool) ($candidate['is_pinned'] ?? false);
+            $visualScore = $isPinned
+                ? max(self::MIN_PROMOTION_SCORE, $score)
+                : $score;
             $anchor = (string) ($candidate['anchor_node_id'] ?? 'intent:plan');
             $positionRole = $this->positionRole($anchor, $fallbackSlot);
             $position = $this->position($anchor, $score, $fallbackSlot);
@@ -99,6 +139,7 @@ final class PersonalizedSatellitePromotionService
                 $anchor,
                 $score,
                 (array) ($candidate['signals'] ?? []),
+                $isPinned,
             );
 
             $nodes->push([
@@ -108,10 +149,10 @@ final class PersonalizedSatellitePromotionService
                 'eyebrow' => (string) ($candidate['eyebrow'] ?? 'SATELLITE'),
                 'label' => (string) ($candidate['label'] ?? ''),
                 'subtitle' => (string) ($candidate['subtitle'] ?? ''),
-                'importance' => round(0.58 + ($score * 0.30), 4),
+                'importance' => round(0.58 + ($visualScore * 0.30), 4),
                 'state' => 'satellite',
                 'position_role' => $positionRole,
-                'size_weight' => round(0.62 + ($score * 0.20), 4),
+                'size_weight' => round(0.62 + ($visualScore * 0.20), 4),
                 'position' => $position,
                 'personalization' => $personalization,
                 'available_action' => $candidate['available_action'] ?? null,
@@ -125,7 +166,7 @@ final class PersonalizedSatellitePromotionService
                 'source' => $anchor,
                 'target' => (string) ($candidate['id'] ?? ''),
                 'relation' => 'personalized_shortcut',
-                'strength' => round(0.30 + ($score * 0.40), 4),
+                'strength' => round(0.30 + ($visualScore * 0.40), 4),
                 'secondary' => true,
             ]);
         }
@@ -196,11 +237,28 @@ final class PersonalizedSatellitePromotionService
      *   anchor_node_id:string,
      *   reason_keys:array<int,string>,
      *   reason_labels:array<int,string>,
-     *   explanation:string
+     *   explanation:string,
+     *   pinned:bool
      * }
      */
-    private function personalization(string $anchor, float $score, array $signals): array
-    {
+    private function personalization(
+        string $anchor,
+        float $score,
+        array $signals,
+        bool $isPinned = false,
+    ): array {
+        if ($isPinned) {
+            return [
+                'mode' => 'manual_pin',
+                'strength' => 'pinned',
+                'anchor_node_id' => $anchor,
+                'reason_keys' => ['manual_pin'],
+                'reason_labels' => ['固定中'],
+                'explanation' => 'このPlanを固定しているため、利用状況に関係なく近道として表示しています。',
+                'pinned' => true,
+            ];
+        }
+
         $safe = $this->safeSignals($signals);
         $weights = self::WEIGHTS;
 
@@ -256,6 +314,7 @@ final class PersonalizedSatellitePromotionService
             'reason_keys' => $reasons->pluck('key')->values()->all(),
             'reason_labels' => $labels,
             'explanation' => $lead.'ため、よく使うContextへの近道として表示しています。',
+            'pinned' => false,
         ];
     }
 

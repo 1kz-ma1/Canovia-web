@@ -76,6 +76,7 @@
                 ? $node['personalization']
                 : null;
             $personalizationStrength = (string) ($personalization['strength'] ?? '');
+            $personalizationPinned = (bool) ($personalization['pinned'] ?? false);
         @endphp
 
         <div
@@ -95,6 +96,7 @@
             @if ($personalization)
                 data-map-personalized-node
                 data-map-personalization-strength="{{ $personalizationStrength }}"
+                @if ($personalizationPinned) data-map-personalization-pinned="1" @endif
             @endif
             @if ($isPrimary) aria-current="true" @endif
         >

@@ -26,6 +26,38 @@
             0 14px 34px rgb(2 6 23 / 0.32);
     }
 
+    .canovia-map-node[data-map-personalized-node][data-map-personalization-strength="pinned"] {
+        box-shadow:
+            0 0 0 1px rgb(253 230 138 / 0.3),
+            0 0 1.5rem rgb(251 191 36 / 0.24),
+            0 14px 34px rgb(2 6 23 / 0.32);
+    }
+
+    .canovia-map-node[data-map-personalization-pinned="1"]::after {
+        content: "PIN";
+        position: absolute;
+        top: 0.42rem;
+        right: 0.55rem;
+        border: 1px solid rgb(253 230 138 / 0.28);
+        border-radius: 9999px;
+        background: rgb(120 53 15 / 0.34);
+        padding: 0.12rem 0.28rem;
+        color: rgb(254 243 199);
+        font-size: 0.46rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        pointer-events: none;
+    }
+
+    .canovia-map-personalization-pin-form {
+        margin: 0;
+    }
+
+    .canovia-map-personalization-pin-form > button {
+        width: 100%;
+        justify-content: center;
+    }
+
     .canovia-map-node.is-personalization-hidden,
     .canovia-map-edge.is-personalization-hidden {
         display: none !important;

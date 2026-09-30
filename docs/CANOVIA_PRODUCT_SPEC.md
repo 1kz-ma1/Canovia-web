@@ -1122,3 +1122,19 @@ Shortcutのposition roleはpromotion rankではなくsemantic anchorへ固定し
 Personalization state、promotion score、signal値、理由labelはBehavior telemetryへ追加しない。Instant Navigation cacheではruntime mount guardを除去し、cached Map復帰後にもdevice-local preferenceを再適用する。DB migrationは行わない。
 
 詳細は `docs/V48.5_SPATIAL_PERSONALIZATION.md` を正とする。
+
+## V48.6 Pinned Spatial Shortcuts
+
+V48.5のExplainable Spatial Personalizationへ、ユーザー自身がPersonal Plan Shortcutを明示的に固定できるaccount-level preferenceを追加する。PinはPlan / Task / priority等のcanonical dataを変更せず、eligible candidateに対するpromotion threshold overrideとしてのみ働く。
+
+Preferenceは `users.map_personalization_preferences` のversioned JSONへstructural Node IDだけを保存する。現在のPlan Shortcutは全て `intent:plan` anchorなので、別PlanをPinした場合は既存Plan Pinを置き換える。V45.6のmax 2 / same anchor max 1 / automatic threshold 0.55は維持する。
+
+Projectionではeligible + pinnedをautomatic promotionより先に評価する。Pin後にPlanが未完了Taskを失った場合はpreferenceが残っていてもShortcutを復活させない。つまりPinはcandidate existenceを捏造しない。
+
+Pinned Shortcutは `personalization.mode=manual_pin` / `strength=pinned` とし、「固定しているため表示」と説明する。behavioral signal理由やraw scoreはPin理由として表示しない。
+
+Pinはserver-side account preference、V48.5のHideはdevice-local localStorage preferenceとする。同じNodeへ両方が適用された場合はdevice-local Hideを最終表示overrideとして優先し、「アカウントでは固定しているが、この端末では隠す」を許可する。HideはPinを解除しない。
+
+Detail Paletteから「このShortcutを固定 / 固定を解除 / この端末では非表示」を操作できる。absolute position保存、drag & drop、Shared Plan重複表示、Task-bound ToolのL0昇格、AIによるPin判断は行わない。
+
+詳細は `docs/V48.6_PINNED_SPATIAL_SHORTCUTS.md` を正とする。

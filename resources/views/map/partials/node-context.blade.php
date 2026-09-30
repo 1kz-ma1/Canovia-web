@@ -2,6 +2,10 @@
     $personalization = is_array($node['personalization'] ?? null)
         ? $node['personalization']
         : null;
+    $isPinned = (bool) ($personalization['pinned'] ?? false);
+    $canManagePin = auth()->check()
+        && ($node['type'] ?? null) === 'satellite_plan'
+        && filled($node['entity_id'] ?? null);
     $nodeReason = $personalization
         ? null
         : \App\Support\MapNodePresentation::reason($node);
@@ -19,7 +23,7 @@
                 <h3>ここにある理由</h3>
             </div>
             <span class="canovia-map-personalization-strength">
-                {{ ($personalization['strength'] ?? 'active') === 'strong' ? '強め' : '適用中' }}
+                {{ $isPinned ? '固定' : (($personalization['strength'] ?? 'active') === 'strong' ? '強め' : '適用中') }}
             </span>
         </div>
 
@@ -33,6 +37,33 @@
             </div>
         @endif
 
+        @if ($canManagePin)
+            @if ($isPinned)
+                <form
+                    method="POST"
+                    action="{{ route('map.personalization.pins.destroy', ['plan' => $node['entity_id']]) }}"
+                    class="canovia-map-personalization-pin-form"
+                >
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn-secondary w-full justify-center">
+                        固定を解除
+                    </button>
+                </form>
+            @else
+                <form
+                    method="POST"
+                    action="{{ route('map.personalization.pins.store', ['plan' => $node['entity_id']]) }}"
+                    class="canovia-map-personalization-pin-form"
+                >
+                    @csrf
+                    <button type="submit" class="btn-secondary w-full justify-center">
+                        このShortcutを固定
+                    </button>
+                </form>
+            @endif
+        @endif
+
         <button
             type="button"
             class="btn-secondary w-full justify-center"
@@ -43,7 +74,11 @@
         </button>
 
         <p class="canovia-map-personalization-note">
-            表示設定だけを変更します。Plan / Taskや優先度は変更しません。
+            @if ($isPinned)
+                固定はアカウントに保存されます。この端末だけ非表示にしても固定自体は解除されません。
+            @else
+                表示設定だけを変更します。Plan / Taskや優先度は変更しません。
+            @endif
         </p>
     </div>
 @elseif ($nodeReason)

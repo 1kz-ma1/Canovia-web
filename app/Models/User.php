@@ -11,7 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 #[Fillable(['name', 'email', 'password', 'onboarding_version', 'onboarding_completed_at', 'onboarding_skipped_at', 'first_run_completed_at', 'last_resource_provider'])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'remember_token', 'map_personalization_preferences'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -64,6 +64,7 @@ class User extends Authenticatable
             'onboarding_completed_at' => 'datetime',
             'onboarding_skipped_at' => 'datetime',
             'first_run_completed_at' => 'datetime',
+            'map_personalization_preferences' => 'array',
         ];
     }
 }
