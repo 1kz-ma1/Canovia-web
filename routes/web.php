@@ -6,6 +6,7 @@ use App\Http\Controllers\WorkLogController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\CanoviaMapController;
+use App\Http\Controllers\MapPersonalizationController;
 use App\Http\Controllers\FirstRunController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\GoalDiscoveryController;
@@ -62,6 +63,12 @@ Route::get('/welcome', [FirstRunController::class, 'show'])->name('first_run.sho
 Route::post('/welcome/start', [FirstRunController::class, 'start'])->name('first_run.start');
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/map', [CanoviaMapController::class, 'index'])->name('map.index');
+Route::post('/map/personalization/pins/{plan}', [MapPersonalizationController::class, 'store'])
+    ->middleware('auth')
+    ->name('map.personalization.pins.store');
+Route::delete('/map/personalization/pins/{plan}', [MapPersonalizationController::class, 'destroy'])
+    ->middleware('auth')
+    ->name('map.personalization.pins.destroy');
 Route::get('/instant/core-bundle', CoreFragmentBundleController::class)->name('instant.core_bundle');
 
 // 未来メモ / goal discovery
