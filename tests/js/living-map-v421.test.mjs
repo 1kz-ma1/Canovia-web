@@ -17,6 +17,9 @@ import {
     mapSemanticZoomDirection,
     semanticZoomThresholdDirection,
     semanticZoomDestination,
+    mapLodForScale,
+    mapNodeCounterScale,
+    semanticFocusMatchesNode,
     browserZoomDiverged,
     shouldCaptureMapPinch,
     semanticMapPositionSnapshot,
@@ -59,6 +62,53 @@ test('semantic route key normalizes query ordering and removes hash-only UI stat
     assert.equal(
         semanticRouteKey('/map?level=l3&intent=execution&plan=12'),
         '/map?intent=execution&level=l3&plan=12',
+    );
+});
+
+test('semantic zoom LOD reveals detail progressively before navigation threshold', () => {
+    assert.equal(mapLodForScale(0.75), 'overview');
+    assert.equal(mapLodForScale(1.00), 'context');
+    assert.equal(mapLodForScale(1.20), 'detail');
+    assert.equal(mapLodForScale(1.34), 'ready');
+    assert.equal(mapLodForScale(1.42), 'ready');
+});
+
+test('desktop node counter scale keeps cards close to screen-space size', () => {
+    const atOne = mapNodeCounterScale(1);
+    const atTwo = mapNodeCounterScale(2);
+    const atMin = mapNodeCounterScale(0.68);
+
+    assert.equal(atOne, 1);
+    assert.ok(atTwo < 0.7);
+    assert.ok(atMin > 1.2);
+
+    const renderedAtTwo = 2 * atTwo;
+    const renderedAtMin = 0.68 * atMin;
+
+    assert.ok(renderedAtTwo < 1.4);
+    assert.ok(renderedAtTwo > 1.1);
+    assert.ok(renderedAtMin > 0.85);
+    assert.ok(renderedAtMin < 1.0);
+});
+
+test('desktop semantic expansion requires the pinch focus to be on or near a node', () => {
+    const rect = { left: 100, top: 120, width: 160, height: 100 };
+
+    assert.equal(
+        semanticFocusMatchesNode(rect, { x: 180, y: 160 }),
+        true,
+    );
+    assert.equal(
+        semanticFocusMatchesNode(rect, { x: 78, y: 160 }),
+        true,
+    );
+    assert.equal(
+        semanticFocusMatchesNode(rect, { x: 30, y: 160 }),
+        false,
+    );
+    assert.equal(
+        semanticFocusMatchesNode(rect, { x: 180, y: 260 }),
+        false,
     );
 });
 

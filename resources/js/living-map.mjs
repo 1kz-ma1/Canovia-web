@@ -508,6 +508,67 @@ export function semanticZoomThresholdDirection(
     return null;
 }
 
+export function mapLodForScale(
+    scale,
+    {
+        overviewMax = 0.90,
+        contextMax = 1.16,
+        detailMax = 1.34,
+    } = {},
+) {
+    const value = Math.max(0.01, Number(scale || 1));
+
+    if (value < overviewMax) return 'overview';
+    if (value < contextMax) return 'context';
+    if (value < detailMax) return 'detail';
+
+    return 'ready';
+}
+
+export function mapNodeCounterScale(
+    scale,
+    {
+        damping = 0.72,
+        min = 0.62,
+        max = 1.32,
+    } = {},
+) {
+    const value = Math.max(0.01, Number(scale || 1));
+    const safeDamping = Math.max(0, Math.min(1, Number(damping || 0)));
+    const result = 1 / Math.pow(value, safeDamping);
+
+    return Math.round(
+        Math.max(Number(min || 0.62), Math.min(Number(max || 1.32), result)) * 1000
+    ) / 1000;
+}
+
+export function semanticFocusMatchesNode(
+    rect,
+    focus,
+    {
+        padding = 28,
+    } = {},
+) {
+    if (!rect || !focus) return false;
+
+    const left = Number(rect.left);
+    const top = Number(rect.top);
+    const width = Number(rect.width);
+    const height = Number(rect.height);
+    const x = Number(focus.x);
+    const y = Number(focus.y);
+    const safePadding = Math.max(0, Number(padding || 0));
+
+    if (![left, top, width, height, x, y].every(Number.isFinite)) {
+        return false;
+    }
+
+    return x >= left - safePadding
+        && x <= left + width + safePadding
+        && y >= top - safePadding
+        && y <= top + height + safePadding;
+}
+
 export function semanticZoomDestination(
     direction,
     {
@@ -930,6 +991,8 @@ export function mountLivingGoalMap({
     let renderedMapViewSignature = '';
     let renderedTransformed = null;
     let renderedControlSignature = '';
+    let renderedLod = '';
+    let semanticArmedNodeId = null;
 
     const refreshMapViewport = () => {
         const rect = mapShell?.getBoundingClientRect?.();
@@ -958,6 +1021,35 @@ export function mountLivingGoalMap({
         page.dataset.mapBrowserZoom = browserZoomChanged ? 'external' : 'baseline';
 
         return browserZoomChanged;
+    };
+
+    const clearSemanticArm = () => {
+        if (!semanticArmedNodeId) return;
+
+        nodeElementById.get(semanticArmedNodeId)?.classList.remove('is-semantic-armed');
+        semanticArmedNodeId = null;
+        delete page.dataset.mapSemanticArmedNode;
+    };
+
+    const syncMapLod = (view) => {
+        const lod = mapLodForScale(view.scale);
+
+        if (lod !== renderedLod) {
+            renderedLod = lod;
+            page.dataset.mapLod = lod;
+        }
+
+        const counterScale = isMobileViewport()
+            ? 1
+            : mapNodeCounterScale(view.scale);
+
+        mapScene?.style?.setProperty?.('--map-node-counter-scale', String(counterScale));
+
+        if (lod !== 'ready') {
+            clearSemanticArm();
+        }
+
+        return lod;
     };
 
     const syncViewControls = (view) => {
@@ -1017,6 +1109,7 @@ export function mountLivingGoalMap({
             mapShell?.classList.toggle('is-map-transformed', transformed);
         }
 
+        syncMapLod(view);
         syncViewControls(view);
     };
 
@@ -1706,7 +1799,13 @@ export function mountLivingGoalMap({
             || link?.dataset?.mapActionRole === 'external_tool';
     };
 
-    const semanticTargetLink = (direction, clientPoint = null) => {
+    const semanticTargetLink = (
+        direction,
+        clientPoint = null,
+        {
+            requireProximity = false,
+        } = {},
+    ) => {
         if (!mapScene) return null;
 
         const normalizedDirection = mapSemanticZoomDirection(direction);
@@ -1740,23 +1839,59 @@ export function mountLivingGoalMap({
         return links
             .map((link) => {
                 const rect = link.closest('[data-map-node]').getBoundingClientRect();
+                const matches = !requireProximity || semanticFocusMatchesNode(rect, focus);
 
                 return {
                     link,
+                    matches,
                     distance: Math.hypot(
                         rect.left + rect.width / 2 - Number(focus.x || 0),
                         rect.top + rect.height / 2 - Number(focus.y || 0),
                     ),
                 };
             })
+            .filter((candidate) => candidate.matches)
             .sort((left, right) => left.distance - right.distance)[0]?.link || null;
     };
 
-    const commitSemanticZoom = (direction, clientPoint = null) => {
+    const syncSemanticArm = (clientPoint = null) => {
+        if (isMobileViewport() || mapLodForScale(mapView.scale) !== 'ready' || !clientPoint) {
+            clearSemanticArm();
+            return null;
+        }
+
+        const link = semanticTargetLink('in', clientPoint, { requireProximity: true });
+        const node = link?.closest?.('[data-map-node]') || null;
+        const nodeId = node?.dataset?.mapNodeId || null;
+
+        if (nodeId === semanticArmedNodeId) {
+            return link || null;
+        }
+
+        clearSemanticArm();
+
+        if (node && nodeId) {
+            semanticArmedNodeId = nodeId;
+            node.classList.add('is-semantic-armed');
+            page.dataset.mapSemanticArmedNode = nodeId;
+        }
+
+        return link || null;
+    };
+
+    const commitSemanticZoom = (
+        direction,
+        clientPoint = null,
+        {
+            requireProximity = false,
+        } = {},
+    ) => {
         if (semanticZoomNavigating || disposed) return false;
 
         const normalizedDirection = mapSemanticZoomDirection(direction);
-        const link = semanticTargetLink(normalizedDirection, clientPoint);
+        const link = semanticTargetLink(normalizedDirection, clientPoint, {
+            requireProximity: normalizedDirection === 'in' && requireProximity,
+        });
         const targetUrl = semanticZoomDestination(normalizedDirection, {
             parentUrl: page.dataset.mapParentUrl || '',
             candidateUrl: link?.href || '',
@@ -1819,7 +1954,13 @@ export function mountLivingGoalMap({
         return true;
     };
 
-    const scheduleSemanticZoom = (clientPoint = null, delay = 85) => {
+    const scheduleSemanticZoom = (
+        clientPoint = null,
+        delay = 85,
+        {
+            requireProximity = false,
+        } = {},
+    ) => {
         const direction = semanticZoomThresholdDirection(mapView.scale);
 
         windowRef.clearTimeout(semanticZoomTimer);
@@ -1829,7 +1970,9 @@ export function mountLivingGoalMap({
 
         semanticZoomTimer = windowRef.setTimeout(() => {
             semanticZoomTimer = null;
-            const committed = commitSemanticZoom(direction, clientPoint);
+            const committed = commitSemanticZoom(direction, clientPoint, {
+                requireProximity,
+            });
 
             // L0 has no parent. Do not leave the whole navigation map crushed
             // at the minimum camera scale when zoom-out has nowhere to go.
@@ -1994,7 +2137,10 @@ export function mountLivingGoalMap({
         page.classList.remove('is-map-gesture-active');
 
         if (moved && finishedMode === 'pinch') {
-            scheduleSemanticZoom(semanticFocus, 55);
+            scheduleSemanticZoom(semanticFocus, 55, {
+                // Keep the already-good mobile/PWA gesture contract intact.
+                requireProximity: false,
+            });
         }
     };
 
@@ -2048,7 +2194,10 @@ export function mountLivingGoalMap({
             );
 
             applyMapView(next);
-            scheduleSemanticZoom(focusClient, 90);
+            syncSemanticArm(focusClient);
+            scheduleSemanticZoom(focusClient, 90, {
+                requireProximity: !isMobileViewport(),
+            });
             return;
         }
 
@@ -2060,6 +2209,7 @@ export function mountLivingGoalMap({
 
         if (Math.abs(Number(event.deltaX || 0)) > 0 || Math.abs(Number(event.deltaY || 0)) > 0) {
             event.preventDefault();
+            clearSemanticArm();
             applyMapView({
                 x: mapView.x - Number(event.deltaX || 0),
                 y: mapView.y - Number(event.deltaY || 0),
@@ -2082,16 +2232,12 @@ export function mountLivingGoalMap({
     };
 
     const onZoomOut = () => {
-        const view = zoomMapBy(1 / 1.28);
-        scheduleSemanticZoom(null, 80);
-
-        return view;
+        clearSemanticArm();
+        return zoomMapBy(1 / 1.28);
     };
     const onZoomIn = () => {
-        const view = zoomMapBy(1.28);
-        scheduleSemanticZoom(null, 80);
-
-        return view;
+        clearSemanticArm();
+        return zoomMapBy(1.28);
     };
     const onViewReset = () => resetMapView();
 
@@ -2122,6 +2268,7 @@ export function mountLivingGoalMap({
         mapViewBatcher.cancel();
         mapShell?.classList.remove('is-map-gesture-active', 'is-map-view-animating');
         page.classList.remove('is-map-gesture-active');
+        clearSemanticArm();
         windowRef.removeEventListener?.('resize', onViewportResize);
         mapScene?.removeEventListener('pointerdown', onScenePointerDown);
         mapScene?.removeEventListener('pointermove', onScenePointerMove);

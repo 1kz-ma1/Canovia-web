@@ -9112,3 +9112,136 @@ body[data-route-name="map.index"] .canovia-map-page {
     }
 }
 
+/* --------------------------------------------------------------------------
+ * V49.4 Semantic Zoom LOD
+ * Camera scale changes spatial distance. Node cards stay close to screen-space
+ * size and reveal detail progressively instead of behaving like magnified DOM.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .canovia-map-node-eyebrow,
+    .canovia-map-node-subtitle,
+    .canovia-map-node-direct-open {
+        transition:
+            opacity 150ms ease,
+            filter 150ms ease,
+            border-color 150ms ease,
+            background-color 150ms ease,
+            box-shadow 150ms ease;
+    }
+
+    @media (min-width: 768px) {
+        .canovia-map-page .canovia-map-node:not(.is-semantic-expansion-child):not(.is-semantic-departure-anchor):not(.is-semantic-continuity-anchor) {
+            transform:
+                translate(-50%, -50%)
+                scale(var(--map-node-counter-scale, 1));
+            transform-origin: 50% 50%;
+        }
+
+        .canovia-map-page .canovia-map-node:not(.is-semantic-expansion-child):not(.is-semantic-departure-anchor):not(.is-semantic-continuity-anchor):hover,
+        .canovia-map-page .canovia-map-node:not(.is-semantic-expansion-child):not(.is-semantic-departure-anchor):not(.is-semantic-continuity-anchor):focus-within {
+            transform:
+                translate(-50%, -50%)
+                scale(var(--map-node-counter-scale, 1))
+                scale(1.025);
+        }
+
+        .canovia-map-page .canovia-map-node.is-space-station:not(.is-semantic-expansion-child):not(.is-semantic-departure-anchor):not(.is-semantic-continuity-anchor):hover,
+        .canovia-map-page .canovia-map-node.is-space-station:not(.is-semantic-expansion-child):not(.is-semantic-departure-anchor):not(.is-semantic-continuity-anchor):focus-within,
+        .canovia-map-page .canovia-map-node.is-intent-node:not(.is-semantic-expansion-child):not(.is-semantic-departure-anchor):not(.is-semantic-continuity-anchor):hover,
+        .canovia-map-page .canovia-map-node.is-intent-node:not(.is-semantic-expansion-child):not(.is-semantic-departure-anchor):not(.is-semantic-continuity-anchor):focus-within {
+            transform:
+                translate(-50%, -50%)
+                scale(var(--map-node-counter-scale, 1))
+                scale(1.035);
+        }
+
+        .canovia-map-page .canovia-map-node.is-personalized-satellite:not(.is-semantic-expansion-child):not(.is-semantic-departure-anchor):not(.is-semantic-continuity-anchor):hover,
+        .canovia-map-page .canovia-map-node.is-personalized-satellite:not(.is-semantic-expansion-child):not(.is-semantic-departure-anchor):not(.is-semantic-continuity-anchor):focus-within {
+            transform:
+                translate(-50%, -50%)
+                scale(var(--map-node-counter-scale, 1))
+                scale(1.045);
+        }
+
+        .canovia-map-page .canovia-map-node.is-focus-hidden:not(.is-semantic-expansion-child):not(.is-semantic-departure-anchor):not(.is-semantic-continuity-anchor) {
+            transform:
+                translate(-50%, -50%)
+                scale(var(--map-node-counter-scale, 1))
+                scale(0.92);
+        }
+
+        .canovia-map-page[data-map-lod="overview"] .canovia-map-node-eyebrow,
+        .canovia-map-page[data-map-lod="overview"] .canovia-map-node-subtitle,
+        .canovia-map-page[data-map-lod="overview"] .canovia-map-node-direct-open {
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .canovia-map-page[data-map-lod="context"] .canovia-map-node-subtitle,
+        .canovia-map-page[data-map-lod="context"] .canovia-map-node-direct-open {
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .canovia-map-page[data-map-lod="context"] .canovia-map-node-eyebrow,
+        .canovia-map-page[data-map-lod="detail"] .canovia-map-node-eyebrow,
+        .canovia-map-page[data-map-lod="detail"] .canovia-map-node-subtitle,
+        .canovia-map-page[data-map-lod="ready"] .canovia-map-node-eyebrow,
+        .canovia-map-page[data-map-lod="ready"] .canovia-map-node-subtitle {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .canovia-map-page[data-map-lod="detail"] .canovia-map-node-direct-open {
+            visibility: visible;
+            opacity: 0.28;
+            pointer-events: none;
+            filter: saturate(0.72);
+        }
+
+        .canovia-map-page[data-map-lod="ready"] .canovia-map-node-direct-open {
+            visibility: visible;
+            opacity: 0.88;
+            pointer-events: auto;
+            filter: none;
+        }
+
+        .canovia-map-page[data-map-lod="ready"] .canovia-map-node.has-direct-navigation {
+            border-color: rgb(103 232 249 / 0.46);
+        }
+
+        .canovia-map-page .canovia-map-node.is-semantic-armed {
+            z-index: 8;
+            border-color: rgb(103 232 249 / 0.92);
+            box-shadow:
+                0 0 0 0.32rem rgb(34 211 238 / 0.055),
+                0 0 3.8rem rgb(34 211 238 / 0.30),
+                0 20px 46px rgb(2 6 23 / 0.52);
+        }
+
+        .canovia-map-page .canovia-map-node.is-semantic-armed .canovia-map-node-direct-open {
+            opacity: 1;
+            border-color: rgb(103 232 249 / 0.62);
+            background: rgb(8 72 96 / 0.90);
+            color: rgb(224 242 254);
+            filter: none;
+        }
+
+        .canovia-map-page .canovia-map-node.is-semantic-armed .canovia-map-node-subtitle,
+        .canovia-map-page .canovia-map-node.is-semantic-armed .canovia-map-node-eyebrow {
+            visibility: visible;
+            opacity: 1;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .canovia-map-node-eyebrow,
+        .canovia-map-node-subtitle,
+        .canovia-map-node-direct-open {
+            transition: none;
+        }
+    }
+}
+
