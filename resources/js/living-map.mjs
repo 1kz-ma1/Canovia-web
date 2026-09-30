@@ -11,6 +11,7 @@ import { fitMobileNodeBoxes } from './map-node-boxes.mjs';
 
 const PENDING_REEVALUATION_KEY = 'canovia.map.pending-reevaluation.v1';
 const SEMANTIC_TRANSITION_KEY = 'canovia.map.semantic-transition.v1';
+const GLOBAL_HOME_RESET_KEY = 'canovia.map.global-home-reset.v1';
 
 function roleGroup(role = '') {
     if (role === 'space-station') return 'now';
@@ -354,6 +355,29 @@ export function mapGlobalHomeHistoryState(currentState = {}) {
     return nextState;
 }
 
+export function mapGlobalHomeResetRequest(requestedAt = Date.now()) {
+    return {
+        version: 1,
+        requested_at: Math.max(0, Number(requestedAt || 0)),
+    };
+}
+
+export function shouldApplyGlobalHomeReset(
+    request,
+    mapLevel,
+    now = Date.now(),
+    maxAgeMs = 10000,
+) {
+    if (String(mapLevel || '') !== 'l0') return false;
+    if (!request || typeof request !== 'object' || Array.isArray(request)) return false;
+    if (Number(request.version) !== 1) return false;
+
+    const requestedAt = Number(request.requested_at || 0);
+    const age = Number(now || 0) - requestedAt;
+
+    return requestedAt > 0 && age >= 0 && age <= Math.max(0, Number(maxAgeMs || 0));
+}
+
 export function mapHistoryDirection(currentDepth, targetDepth) {
     const current = Math.max(0, Number(currentDepth || 0));
     const target = Math.max(0, Number(targetDepth || 0));
@@ -527,6 +551,40 @@ function clearSemanticTransition(windowRef) {
     try {
         windowRef.sessionStorage?.removeItem(SEMANTIC_TRANSITION_KEY);
     } catch (_) {}
+}
+
+export function requestGlobalHomeReset(windowRef) {
+    try {
+        windowRef.sessionStorage?.setItem(
+            GLOBAL_HOME_RESET_KEY,
+            JSON.stringify(mapGlobalHomeResetRequest(Date.now())),
+        );
+    } catch (_) {}
+}
+
+function consumeGlobalHomeReset(windowRef, mapLevel) {
+    let request = null;
+
+    try {
+        const raw = windowRef.sessionStorage?.getItem(GLOBAL_HOME_RESET_KEY);
+        request = raw ? JSON.parse(raw) : null;
+    } catch (_) {
+        request = null;
+    }
+
+    const now = Date.now();
+    const fresh = shouldApplyGlobalHomeReset(request, 'l0', now);
+    const apply = String(mapLevel || '') === 'l0' && fresh;
+
+    // A fresh reset request must survive any intermediate deep-map remount.
+    // Consume it only when L0 actually mounts; stale/invalid payloads are safe to drop.
+    if (String(mapLevel || '') === 'l0' || (request && !fresh)) {
+        try {
+            windowRef.sessionStorage?.removeItem(GLOBAL_HOME_RESET_KEY);
+        } catch (_) {}
+    }
+
+    return apply;
 }
 
 function mapUrlWithoutFocus(windowRef) {
@@ -1118,6 +1176,7 @@ export function mountLivingGoalMap({
     };
 
     const resetGlobalHomeContext = () => {
+        requestGlobalHomeReset(windowRef);
         clearSpatialDock();
         clearFocus();
         resetMapView({ animate: false });
@@ -1789,8 +1848,25 @@ export function mountLivingGoalMap({
     windowRef.addEventListener('popstate', onPopState);
     windowRef.addEventListener('pageshow', onPageShow);
 
-    const initialDockId = dockIdFromLocation(windowRef);
-    const initialFocusId = focusIdFromLocation(windowRef);
+    const forceGlobalHomeReset = consumeGlobalHomeReset(
+        windowRef,
+        page.dataset.mapLevel || '',
+    );
+
+    if (forceGlobalHomeReset) {
+        focusHistoryDepth = 0;
+        windowRef.history.replaceState(
+            mapGlobalHomeHistoryState(windowRef.history.state || {}),
+            '',
+            mapUrlWithoutFocus(windowRef),
+        );
+        clearSpatialDock();
+        clearFocus();
+        resetMapView({ animate: false });
+    }
+
+    const initialDockId = forceGlobalHomeReset ? null : dockIdFromLocation(windowRef);
+    const initialFocusId = forceGlobalHomeReset ? null : focusIdFromLocation(windowRef);
     if (initialDockId) {
         if (!openSpatialDock(initialDockId, { historyMode: 'none' })) {
             clearSpatialDock();

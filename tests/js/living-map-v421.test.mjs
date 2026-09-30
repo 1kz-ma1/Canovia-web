@@ -9,6 +9,8 @@ import {
     mapActionTelemetryContext,
     mapDockHistoryState,
     mapGlobalHomeHistoryState,
+    mapGlobalHomeResetRequest,
+    shouldApplyGlobalHomeReset,
     mapHistoryDirection,
     mapReturnDecision,
     mapSemanticZoomDirection,
@@ -191,6 +193,20 @@ test('global home clears focus and dock history while preserving unrelated brows
             unrelated: 'keep',
         },
     );
+});
+
+
+test('global home reset survives navigation and is applied only on fresh L0 arrival', () => {
+    const request = mapGlobalHomeResetRequest(1000);
+
+    assert.deepEqual(request, {
+        version: 1,
+        requested_at: 1000,
+    });
+    assert.equal(shouldApplyGlobalHomeReset(request, 'l3', 1200), false);
+    assert.equal(shouldApplyGlobalHomeReset(request, 'l0', 1200), true);
+    assert.equal(shouldApplyGlobalHomeReset(request, 'l0', 12001), false);
+    assert.equal(shouldApplyGlobalHomeReset(null, 'l0', 1200), false);
 });
 
 

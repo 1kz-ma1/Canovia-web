@@ -1093,3 +1093,18 @@ Human agency境界:
 - Task completion / progress変更は行わない
 
 詳細は `docs/V48.3_SPACE_STATION_INTAKE_HUB.md` を正とする。
+
+
+## V48.4 Map Pages / Presets
+
+Canovia Mapに複数の用途別Pageを導入する。Pageはcanonical Plan / Task / Evidenceを複製せず、Map structural route・Page名・Data Layer state・並び順だけを保持するpresentation/navigation presetとする。
+
+標準Pageは「全体 / 計画 / 実行 / 振り返り / 共同」。さらにユーザーは現在のMapを最大8件までカスタムPageとして端末内へ保存でき、開く・並び替え・削除が可能。
+
+Custom Page保存時は現在のData Layer stateもsnapshotする。同一Map Contextでも「作業用」「全体確認用」のように異なるOverlay構成を持てる。Page削除はcanonical dataへ影響しない。
+
+V48.4ではlocalStorageへ保存し、account sync / shared Page / drag & drop / AI automatic page generationは行わない。
+
+またV48.1 Global Home resetを強化する。遷移元でのclearだけでなく、短命reset requestをsessionStorageへ残し、L0 mount時に再度Focus / Dock / hash / view transformをclearしてinitial focus restoreをskipする。これによりInstant Navigationやcached DOM replacement後も「全体へ」で選択中Nodeが残らない。
+
+詳細は `docs/V48.4_MAP_PAGES_PRESETS.md` を正とする。
