@@ -349,6 +349,7 @@ final class PersonalizedSatellitePromotionService
             'tool' => 0,
             'plan' => 1,
             'reflection' => 2,
+            'collaboration' => 3,
             default => 9,
         };
     }
