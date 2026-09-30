@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Plan;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 
 final class MapShortcutPinProjectionService
 {
