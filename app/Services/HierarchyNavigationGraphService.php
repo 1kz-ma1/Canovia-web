@@ -140,7 +140,7 @@ final class HierarchyNavigationGraphService
                             : 'このPlanの詳細Workspaceへ入ります。'),
                     [
                         $this->action(
-                            $executionIntent ? 'Executionへ入る' : 'Plan Workspaceへ入る',
+                            $executionIntent ? 'Executionへ入る' : 'Plan Dashboardへ入る',
                             $url,
                             true,
                             'zoom-in',
@@ -193,14 +193,14 @@ final class HierarchyNavigationGraphService
             id: $centerId,
             type: 'plan',
             entityId: (int) $plan->id,
-            eyebrow: 'L2 · PLAN WORKSPACE',
+            eyebrow: 'L2 · PLAN DASHBOARD',
             label: (string) $plan->title,
-            subtitle: '進捗・Roadmap・Plan情報をPaletteで確認',
+            subtitle: '進捗・Roadmap・Plan情報をDashboardで確認',
             action: $parentUrl,
             attentionRole: 'hierarchy-parent',
             navigationKind: 'zoom-out',
             classicSurface: $this->surface(
-                'Plan Workspace',
+                'Plan Dashboard',
                 (string) $plan->title,
                 'Planの詳細情報はNodeを増やさず、Classicで使っているカードをWorkspace Paletteとして表示します。',
                 [
@@ -209,7 +209,7 @@ final class HierarchyNavigationGraphService
                 ],
                 array_values(array_filter([
                     (string) ($plan->category ?: '未分類'),
-                    'Plan Workspace',
+                    'Plan Dashboard',
                 ])),
             ),
         );
