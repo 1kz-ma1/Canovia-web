@@ -35,7 +35,9 @@ class CanoviaMapFocusSurfaceV431Test extends TestCase
             ->assertSee('data-map-context-expand-label', false)
             ->assertSee('aria-expanded="false"', false)
             ->assertSee('data-map-context-close', false)
-            ->assertSee('aria-label="選択中のマスの詳細"', false)
+            ->assertSee('role="region"', false)
+            ->assertSee('aria-labelledby="canovia-map-detail-document-title"', false)
+            ->assertSee('id="canovia-map-detail-document-title"', false)
             ->assertSee('data-map-surface-template="task:'.$task->id.'"', false);
     }
 
