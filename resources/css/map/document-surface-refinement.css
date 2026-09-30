@@ -469,24 +469,24 @@
             gap: 0.5rem;
         }
 
-        .canovia-map-context-document-title {
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-context-document-title {
             max-width: calc(100vw - 7.7rem);
             font-size: 0.82rem;
         }
 
-        .canovia-map-context-header .canovia-map-kicker {
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-context-header .canovia-map-kicker {
             font-size: 0.46rem;
         }
 
-        .canovia-map-context-tools {
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-context-tools {
             flex: 0 0 auto;
         }
 
-        .canovia-map-context-expand {
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-context-expand {
             display: none;
         }
 
-        .canovia-map-context-close {
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-context-close {
             width: 2.28rem;
             height: 2.28rem;
             background: rgb(15 23 42 / 0.72);
