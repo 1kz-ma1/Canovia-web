@@ -30,6 +30,13 @@
             <p>Mapを無理に細分化せず、共同作業に必要なClassic情報をこのProject上へ置いています。</p>
         </div>
         <div class="canovia-collaboration-workspace-actions">
+            <a
+                href="{{ route('map.index', ['level' => 'l1', 'intent' => 'collaboration']) }}"
+                class="btn-secondary"
+                data-map-semantic-zoom
+                data-map-zoom-direction="out"
+                data-route-lock-skip
+            >← 共同計画</a>
             <a href="{{ route('plans.create.manual', ['collaborative' => 1]) }}" class="btn-secondary">＋ 共同計画</a>
             @if ($workspaceCanManage)
                 <a href="{{ route('plans.collaboration.settings', $workspacePlan) }}" class="btn-secondary">共同設定</a>
