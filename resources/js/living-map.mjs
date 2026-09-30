@@ -2463,14 +2463,19 @@ export function mountLivingGoalMap({
             );
 
             applyMapView(next);
+            const mobile = isMobileViewport();
             const armedLink = syncSemanticArm(focusClient);
-            scheduleSemanticZoom(focusClient, 90, {
-                requireProximity: !isMobileViewport(),
-                inThreshold: isMobileViewport() ? 1.42 : 1.46,
-                requiredNodeId: isMobileViewport()
-                    ? null
-                    : (armedLink?.closest?.('[data-map-node]')?.dataset?.mapNodeId || null),
-            });
+
+            if (mobile || armedLink) {
+                scheduleSemanticZoom(focusClient, 90, {
+                    requireProximity: !mobile,
+                    inThreshold: mobile ? 1.42 : 1.46,
+                    requiredNodeId: mobile
+                        ? null
+                        : (armedLink?.closest?.('[data-map-node]')?.dataset?.mapNodeId || null),
+                });
+            }
+
             return;
         }
 
