@@ -12,6 +12,7 @@ final class CollaborationMapProjectionService
         private readonly CollaborationContextService $context,
         private readonly CollaborationNavigationGraphService $navigationGraph,
         private readonly HierarchyMapAttentionStateService $attention,
+        private readonly PlanOwnershipService $ownership,
     ) {}
 
     /**
@@ -32,6 +33,10 @@ final class CollaborationMapProjectionService
             ->values();
         $edges = $attention['edges']->values();
 
+        $workspace = $level === MapLevel::Plan
+            ? $this->workspacePayload($request, $context)
+            : null;
+
         return [
             'level' => $level->value,
             'nodes' => $nodes,
@@ -41,6 +46,8 @@ final class CollaborationMapProjectionService
             'primary_launch' => null,
             'has_primary_action' => false,
             'collaboration_mode' => true,
+            'collaboration_workspace_mode' => is_array($workspace),
+            'collaboration_workspace' => $workspace,
             'hierarchy' => $this->hierarchyMetadata($level, $context),
             'projection_key' => $this->projectionKey(
                 $level,
@@ -85,45 +92,86 @@ final class CollaborationMapProjectionService
                 'depth' => 1,
                 'intent' => 'collaboration',
                 'intent_label' => '共同',
-                'current_label' => '共同',
+                'current_label' => '共同計画',
                 'parent_url' => route('map.index'),
                 'collaboration_mode' => true,
                 'breadcrumbs' => [
                     ['label' => 'Canovia', 'url' => route('map.index')],
-                    ['label' => '共同', 'url' => null],
+                    ['label' => '共同計画', 'url' => null],
                 ],
             ];
         }
 
-        $selected = is_array($context['selected_context'] ?? null)
-            ? $context['selected_context']
-            : [];
-        $key = (string) ($selected['key'] ?? 'my_action');
-        $label = (string) ($selected['label'] ?? '自分が進める');
+        $plan = $context['selected_plan'] ?? null;
+        $label = $plan?->title ?: '共同計画を選択';
 
         return [
             'depth' => 2,
             'intent' => 'collaboration',
             'intent_label' => '共同',
-            'collaboration_context_key' => $key,
-            'collaboration_context_label' => $label,
-            'current_label' => $label,
+            'collaboration_context_key' => null,
+            'collaboration_context_label' => null,
+            'collaboration_project_id' => $plan?->id,
+            'current_label' => (string) $label,
             'parent_url' => route('map.index', [
                 'level' => MapLevel::Domain->value,
                 'intent' => 'collaboration',
             ]),
             'collaboration_mode' => true,
+            'collaboration_workspace_mode' => $plan !== null,
             'breadcrumbs' => [
                 ['label' => 'Canovia', 'url' => route('map.index')],
                 [
-                    'label' => '共同',
+                    'label' => '共同計画',
                     'url' => route('map.index', [
                         'level' => MapLevel::Domain->value,
                         'intent' => 'collaboration',
                     ]),
                 ],
-                ['label' => $label, 'url' => null],
+                ['label' => (string) $label, 'url' => null],
             ],
+        ];
+    }
+
+    /**
+     * @param array<string,mixed> $context
+     * @return array<string,mixed>|null
+     */
+    private function workspacePayload(Request $request, array $context): ?array
+    {
+        $plan = $context['selected_plan'] ?? null;
+        if (! $plan instanceof \App\Models\Plan) {
+            return null;
+        }
+
+        return [
+            'plan' => $plan,
+            'recent_artifacts' => $plan->artifacts->take(5)->values(),
+            'recent_activities' => $plan->activityLogs->take(12)->values(),
+            'can_manage' => $this->ownership->owns($request, $plan),
+            'can_edit' => $this->ownership->canEdit($request, $plan),
+            'role' => $this->ownership->role($request, $plan),
+        ];
+    }
+
+    /**
+     * @param array<string,mixed> $context
+     * @return array<string,mixed>|null
+     */
+    private function workspaceDigest(array $context): ?array
+    {
+        $plan = $context['selected_plan'] ?? null;
+        if (! $plan instanceof \App\Models\Plan) {
+            return null;
+        }
+
+        return [
+            'plan_id' => (int) $plan->id,
+            'member_count' => 1 + $plan->memberships->count(),
+            'artifact_count' => $plan->artifacts->count(),
+            'activity_count' => $plan->activityLogs->count(),
+            'latest_artifact' => (int) ($plan->artifacts->max(fn ($artifact) => $artifact->updated_at?->timestamp ?? 0) ?? 0),
+            'latest_activity' => (int) ($plan->activityLogs->max(fn ($activity) => $activity->created_at?->timestamp ?? 0) ?? 0),
         ];
     }
 
@@ -142,6 +190,8 @@ final class CollaborationMapProjectionService
             'intent' => 'collaboration',
             'center_node_id' => $centerNodeId,
             'selected_context' => data_get($context, 'selected_context.key'),
+            'selected_plan_id' => data_get($context, 'selected_plan.id'),
+            'workspace_digest' => $this->workspaceDigest($context),
             'nodes' => $nodes->all(),
             'edges' => $edges->all(),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
