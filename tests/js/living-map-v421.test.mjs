@@ -23,6 +23,7 @@ import {
     resolveNodeCollisions,
     mapLodForScale,
     mapNodeCounterScale,
+    documentEdgeBackDecision,
     semanticFocusMatchesNode,
     browserZoomDiverged,
     shouldCaptureMapPinch,
@@ -168,6 +169,36 @@ test('desktop node counter scale keeps cards close to screen-space size', () => 
     assert.ok(renderedAtTwo > 1.1);
     assert.ok(renderedAtMin > 0.85);
     assert.ok(renderedAtMin < 1.0);
+});
+
+test('document edge swipe requires a deliberate horizontal gesture from the left edge', () => {
+    assert.equal(documentEdgeBackDecision({
+        startX: 12,
+        startY: 300,
+        endX: 104,
+        endY: 322,
+    }), true);
+
+    assert.equal(documentEdgeBackDecision({
+        startX: 40,
+        startY: 300,
+        endX: 140,
+        endY: 310,
+    }), false);
+
+    assert.equal(documentEdgeBackDecision({
+        startX: 10,
+        startY: 300,
+        endX: 64,
+        endY: 306,
+    }), false);
+
+    assert.equal(documentEdgeBackDecision({
+        startX: 10,
+        startY: 300,
+        endX: 110,
+        endY: 390,
+    }), false);
 });
 
 test('desktop semantic expansion requires the pinch focus to be on or near a node', () => {

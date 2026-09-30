@@ -74,24 +74,20 @@ final class ExecutionMapProjectionService
         $plan = $context['plan'] ?? null;
 
         if (! $plan instanceof \App\Models\Plan) {
+            $parentUrl = route('map.index', [
+                'level' => \App\Enums\MapLevel::Domain->value,
+                'intent' => $intent,
+            ]);
+
             return [
-                'depth' => 3,
+                'depth' => $intent === 'execution' ? 2 : 3,
                 'intent' => $intent,
                 'intent_label' => $intentLabel,
                 'current_label' => 'Execution',
-                'parent_url' => route('map.index', [
-                    'level' => \App\Enums\MapLevel::Domain->value,
-                    'intent' => $intent,
-                ]),
+                'parent_url' => $parentUrl,
                 'breadcrumbs' => [
                     ['label' => 'Canovia', 'url' => route('map.index')],
-                    [
-                        'label' => $intentLabel,
-                        'url' => route('map.index', [
-                            'level' => \App\Enums\MapLevel::Domain->value,
-                            'intent' => $intent,
-                        ]),
-                    ],
+                    ['label' => $intentLabel, 'url' => $parentUrl],
                     ['label' => 'Execution', 'url' => null],
                 ],
             ];
@@ -143,6 +139,28 @@ final class ExecutionMapProjectionService
                         'label' => $collaborationLabel,
                         'url' => $parentUrl,
                     ],
+                    ['label' => (string) $plan->title, 'url' => null],
+                ],
+            ];
+        }
+
+        if ($intent === 'execution') {
+            $parentUrl = route('map.index', [
+                'level' => \App\Enums\MapLevel::Domain->value,
+                'intent' => 'execution',
+            ]);
+
+            return [
+                'depth' => 2,
+                'intent' => 'execution',
+                'intent_label' => '実行',
+                'plan_id' => (int) $plan->id,
+                'plan_label' => (string) $plan->title,
+                'current_label' => (string) $plan->title,
+                'parent_url' => $parentUrl,
+                'breadcrumbs' => [
+                    ['label' => 'Canovia', 'url' => route('map.index')],
+                    ['label' => '実行', 'url' => $parentUrl],
                     ['label' => (string) $plan->title, 'url' => null],
                 ],
             ];

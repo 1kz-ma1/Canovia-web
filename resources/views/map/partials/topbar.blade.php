@@ -24,9 +24,13 @@
                 <p class="canovia-map-description">
                     {{ $hierarchy['reflection_context_label'] ?? '振り返り' }}に該当する具体的な記録を確認し、元のPlanやTimelineへ戻れます。
                 </p>
+            @elseif ($isDomainLevel && data_get($hierarchy, 'intent') === 'execution')
+                <p class="canovia-map-description">
+                    実行したいPlanを直接選び、そのPlanのExecution Contextへ進みます。カテゴリは補足情報としてだけ扱います。
+                </p>
             @elseif ($isDomainLevel)
                 <p class="canovia-map-description">
-                    {{ $hierarchy['intent_label'] ?? '計画' }}のContextを保ったまま、Planが属する領域へSemantic Zoomします。
+                    {{ $hierarchy['intent_label'] ?? '計画' }}のContextを保ったまま、次のContextへSemantic Zoomします。
                 </p>
             @elseif ($isPlanLevel)
                 <p class="canovia-map-description">
@@ -43,7 +47,7 @@
             <summary>Mapの見方</summary>
             @if ($isIntentHub)
                 <p>
-                    中央のSpace Stationが入力・相談のHubです。周囲のIntentからDomain → Plan → Executionへ潜れます。
+                    中央のSpace Stationが入力・相談のHubです。周囲のIntentから、Plan・Execution・振り返り・共同Contextへ直接辿れます。
                 </p>
             @elseif ($isHierarchyLevel && $isCollaborationMode)
                 <p>
@@ -113,7 +117,7 @@
                     class="btn-secondary"
                     data-map-semantic-zoom
                     data-map-zoom-direction="out"
-                >Plan Mapへ戻る</a>
+                >{{ data_get($hierarchy, 'intent') === 'execution' ? 'Plan選択へ戻る' : 'Plan Mapへ戻る' }}</a>
             @else
                 <a
                     href="{{ route('map.index') }}"

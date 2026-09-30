@@ -183,8 +183,6 @@ final class HierarchyMapProjectionService
 
         $progress = $this->progress->calculate($plan);
         $roadmap = $this->roadmap->build($plan);
-        $domainKey = $this->context->domainKey($plan->category);
-
         return [
             'plan' => $plan,
             'progress' => $progress,
@@ -194,7 +192,6 @@ final class HierarchyMapProjectionService
             'execution_url' => route('map.index', [
                 'level' => MapLevel::Execution->value,
                 'intent' => 'execution',
-                'domain' => $domainKey,
                 'plan' => $plan->id,
             ]),
         ];
