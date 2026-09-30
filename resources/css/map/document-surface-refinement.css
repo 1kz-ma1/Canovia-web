@@ -72,6 +72,34 @@
         -webkit-overflow-scrolling: touch;
     }
 
+    [data-map-document-viewport]::before,
+    [data-map-document-viewport]::after {
+        content: "";
+        position: absolute;
+        z-index: 8;
+        top: 3.9rem;
+        bottom: 2.3rem;
+        width: 1.35rem;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 140ms ease;
+    }
+
+    [data-map-document-viewport]::before {
+        left: 0;
+        background: linear-gradient(90deg, rgb(2 6 23 / 0.82), transparent);
+    }
+
+    [data-map-document-viewport]::after {
+        right: 0;
+        background: linear-gradient(270deg, rgb(2 6 23 / 0.82), transparent);
+    }
+
+    [data-map-document-viewport].is-document-scrollable:not(.is-document-at-start)::before,
+    [data-map-document-viewport].is-document-scrollable:not(.is-document-at-end)::after {
+        opacity: 0.78;
+    }
+
     .canovia-map-document-position {
         --document-thumb-width: 100%;
         --document-thumb-left: 0%;
@@ -246,6 +274,7 @@
         }
 
         [data-map-document-viewport] {
+            position: relative;
             scrollbar-width: none;
             overscroll-behavior: contain;
         }
