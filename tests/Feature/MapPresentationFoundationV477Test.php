@@ -148,6 +148,15 @@ class MapPresentationFoundationV477Test extends TestCase
 
         $canvasEyebrow = $xpath->query('//*[@data-map-node-id="task:'.$task->id.'"]//span[contains(@class,"canovia-map-node-eyebrow")]')->item(0);
         $this->assertNull($canvasEyebrow);
+
+        $taskElement = $xpath->query('//*[@data-map-node-id="task:'.$task->id.'"]')->item(0);
+        $this->assertNotNull($taskElement);
+        $this->assertSame('detail', $taskElement->getAttribute('data-map-semantic-capability'));
+        $this->assertSame(
+            0,
+            $xpath->query('//*[@data-map-node-id="task:'.$task->id.'"]//*[@data-map-semantic-zoom]')->length,
+            'leaf task must open its detail palette instead of becoming a semantic zoom target'
+        );
     }
 
     public function test_collaboration_without_any_shared_plan_offers_creation_inside_the_map(): void
@@ -192,6 +201,14 @@ class MapPresentationFoundationV477Test extends TestCase
         );
         $this->assertStringContainsString(
             'data-map-node-entry-mode="{{ $nodeEntryMode }}"',
+            $blade,
+        );
+        $this->assertStringContainsString(
+            'data-map-semantic-capability="{{ $semanticCapability }}"',
+            $blade,
+        );
+        $this->assertStringContainsString(
+            "! ($isLeafPresentation && $isZoomNavigation && $zoomDirection === 'in')",
             $blade,
         );
         $this->assertStringContainsString('data-map-direct-open', $blade);

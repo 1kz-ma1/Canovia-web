@@ -63,15 +63,25 @@
             $isExternalNavigation = $directNavigationKind === 'external';
             $isDirectNavigation = $directNavigationKind === 'direct';
             $zoomDirection = $directNavigationKind === 'zoom-out' ? 'out' : 'in';
+            $isSemanticZoomIn = $isZoomNavigation
+                && $zoomDirection === 'in'
+                && ! $isLeafPresentation;
+            $isSemanticZoomOut = $isZoomNavigation && $zoomDirection === 'out';
+            $isSemanticNavigation = $isSemanticZoomIn || $isSemanticZoomOut;
+            $semanticCapability = $isSemanticZoomIn
+                ? 'expand'
+                : ($isLeafPresentation ? 'detail' : 'none');
             $usesDirectBody = filled(data_get($directNavigation, 'url'))
                 && (! $isLeafPresentation || $isSatelliteNavigation)
-                && (($isZoomNavigation && $zoomDirection === 'in')
+                && ($isSemanticZoomIn
                     || $isSatelliteNavigation
                     || $isExternalNavigation
                     || $isDirectNavigation);
             $nodeEntryMode = $usesDirectBody
-                ? (($isZoomNavigation && $zoomDirection === 'in') ? 'semantic' : 'direct')
+                ? ($isSemanticZoomIn ? 'semantic' : 'direct')
                 : 'focus';
+            $showDirectOpen = filled(data_get($directNavigation, 'url'))
+                && ! ($isLeafPresentation && $isZoomNavigation && $zoomDirection === 'in');
             $personalization = is_array($node['personalization'] ?? null)
                 ? $node['personalization']
                 : null;
@@ -80,7 +90,7 @@
         @endphp
 
         <div
-            class="canovia-map-node {{ $stateClass }} {{ $kindClass }} visual-{{ $visualKind }} {{ $isCenter ? 'is-map-center' : '' }} {{ filled(data_get($directNavigation, 'url')) ? 'has-direct-navigation' : '' }}"
+            class="canovia-map-node {{ $stateClass }} {{ $kindClass }} visual-{{ $visualKind }} {{ $isCenter ? 'is-map-center' : '' }} {{ ($usesDirectBody || $showDirectOpen) ? 'has-direct-navigation' : '' }}"
             style="--map-x: {{ data_get($node, 'position.x', 50) }}%; --map-y: {{ data_get($node, 'position.y', 50) }}%; --node-scale: {{ (float) ($node['size_weight'] ?? 0.7) }}"
             data-map-node
             data-map-node-id="{{ $node['id'] }}"
@@ -91,6 +101,7 @@
             data-map-is-center="{{ $isCenter ? '1' : '0' }}"
             data-map-node-entry-mode="{{ $nodeEntryMode }}"
             data-map-presentation-kind="{{ $presentationKind }}"
+            data-map-semantic-capability="{{ $semanticCapability }}"
             data-map-x="{{ data_get($node, 'position.x', 50) }}"
             data-map-y="{{ data_get($node, 'position.y', 50) }}"
             @if ($personalization)
@@ -103,14 +114,14 @@
             @if ($usesDirectBody)
                 <a
                     href="{{ data_get($directNavigation, 'url') }}"
-                    class="canovia-map-node-focus-link {{ $isZoomNavigation ? 'is-semantic-entry' : 'is-direct-entry' }}"
+                    class="canovia-map-node-focus-link {{ $isSemanticZoomIn ? 'is-semantic-entry' : 'is-direct-entry' }}"
                     data-map-direct-navigation
-                    data-map-action-role="{{ $isZoomNavigation ? 'zoom' : ($isSatelliteNavigation ? 'satellite' : ($isExternalNavigation ? 'external_tool' : 'direct')) }}"
+                    data-map-action-role="{{ $isSemanticZoomIn ? 'zoom' : ($isSatelliteNavigation ? 'satellite' : ($isExternalNavigation ? 'external_tool' : 'direct')) }}"
                     data-map-node-id="{{ $node['id'] }}"
                     data-map-node-type="{{ $node['type'] }}"
                     data-map-position-role="{{ $node['position_role'] }}"
                     data-map-is-primary="{{ $isPrimary ? '1' : '0' }}"
-                    @if ($isZoomNavigation)
+                    @if ($isSemanticZoomIn)
                         data-map-semantic-zoom
                         data-map-zoom-direction="{{ $zoomDirection }}"
                         data-route-lock-skip
@@ -152,18 +163,18 @@
 
             @include('map.partials.node-data-layers', ['node' => $node])
 
-            @if (filled(data_get($directNavigation, 'url')))
+            @if ($showDirectOpen)
                 <a
                     href="{{ data_get($directNavigation, 'url') }}"
-                    class="canovia-map-node-direct-open {{ $isZoomNavigation ? 'is-semantic-zoom' : '' }} {{ $isExternalNavigation ? 'is-external-tool' : '' }}"
+                    class="canovia-map-node-direct-open {{ $isSemanticNavigation ? 'is-semantic-zoom' : '' }} {{ $isExternalNavigation ? 'is-external-tool' : '' }}"
                     data-map-direct-open
                     data-map-direct-navigation
-                    data-map-action-role="{{ $isZoomNavigation ? 'zoom' : ($isSatelliteNavigation ? 'satellite' : ($isExternalNavigation ? 'external_tool' : 'direct')) }}"
+                    data-map-action-role="{{ $isSemanticNavigation ? 'zoom' : ($isSatelliteNavigation ? 'satellite' : ($isExternalNavigation ? 'external_tool' : 'direct')) }}"
                     data-map-node-id="{{ $node['id'] }}"
                     data-map-node-type="{{ $node['type'] }}"
                     data-map-position-role="{{ $node['position_role'] }}"
                     data-map-is-primary="{{ $isPrimary ? '1' : '0' }}"
-                    @if ($isZoomNavigation)
+                    @if ($isSemanticNavigation)
                         data-map-semantic-zoom
                         data-map-zoom-direction="{{ $zoomDirection }}"
                         data-route-lock-skip
@@ -174,7 +185,7 @@
                     @endif
                     title="{{ data_get($directNavigation, 'label', '開く') }}"
                     aria-label="{{ data_get($directNavigation, 'label', '開く') }}"
-                >{{ $isZoomNavigation ? ($zoomDirection === 'out' ? '戻る ↖' : '潜る ↘') : ($isSatelliteNavigation ? '移動 ↗' : ($isExternalNavigation ? '外部 ↗' : '開く ↗')) }}</a>
+                >{{ $isSemanticNavigation ? ($zoomDirection === 'out' ? '戻る ↖' : '潜る ↘') : ($isSatelliteNavigation ? '移動 ↗' : ($isExternalNavigation ? '外部 ↗' : '開く ↗')) }}</a>
             @endif
         </div>
     @endforeach

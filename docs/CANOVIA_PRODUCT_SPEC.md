@@ -1270,3 +1270,13 @@ In-place Semantic Expansion後だけlocal collision resolutionを適用する。
 追加stateはsemantic arm candidate id / candidate sinceのみでcurrent Map runtime限定。DB / sessionStorage / Telemetryへ新規永続化しない。
 
 詳細は `docs/V49.5_SEMANTIC_ZOOM_STABILIZATION.md` を正とする。
+
+## V49.6 Semantic Expansion Clarity
+
+Semantic ZoomはContainer Nodeを一段具体化する操作に限定する。 `presentation.kind=leaf` の最具体NodeはSemantic Zoom候補から除外し、tap/clickでContext Surface / Palette detailを開く。Scene Nodeには `data-map-semantic-capability=expand|detail|none` を付与し、runtimeのzoom-in candidate探索は `expand` のみを対象とする。
+
+zoom-in arrival後、selected parentはworld positionを維持したまま `is-semantic-expanded-parent` として半透明・縮退し、展開元を示すambient contextへ退く。childは `is-semantic-expanded-child` としてdesktop 0.88 / mobile 0.84程度へ一段小さく表示し、V49.4 counter-scale / V49.5 collision resolutionを維持する。
+
+Semantic zoom-out thresholdは0.82から0.70へ下げる。0.82〜0.71の縮小は同じsemantic level内のcamera zoomに留め、階層collapseには明確な縮小gestureを要求する。Mobile semantic open threshold 1.42 / Desktop 1.46は維持する。
+
+詳細は `docs/V49.6_SEMANTIC_EXPANSION_CLARITY.md` を正とする。

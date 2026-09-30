@@ -9245,3 +9245,91 @@ body[data-route-name="map.index"] .canovia-map-page {
     }
 }
 
+
+
+/* --------------------------------------------------------------------------
+ * V49.6 Semantic Expansion Clarity
+ * The opened container recedes into spatial context while its concrete
+ * children remain readable without occupying the whole viewport.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .canovia-map-page .canovia-map-node.is-semantic-expanded-parent:not(.is-semantic-expansion-anchor) {
+        z-index: 2;
+        opacity: 0.18;
+        filter: saturate(0.52) brightness(0.76);
+        pointer-events: none;
+        box-shadow:
+            0 0 0 1px rgb(148 163 184 / 0.035),
+            0 7px 18px rgb(2 6 23 / 0.18);
+        transition:
+            opacity 220ms ease,
+            filter 220ms ease,
+            transform 220ms ease;
+    }
+
+    .canovia-map-page .canovia-map-node.is-semantic-expanded-parent .canovia-map-node-label,
+    .canovia-map-page .canovia-map-node.is-semantic-expanded-parent .canovia-map-node-eyebrow,
+    .canovia-map-page .canovia-map-node.is-semantic-expanded-parent .canovia-map-node-subtitle,
+    .canovia-map-page .canovia-map-node.is-semantic-expanded-parent .canovia-map-node-direct-open {
+        opacity: 0.28;
+    }
+
+    .canovia-map-page .canovia-map-node.is-semantic-expanded-child:not(.is-semantic-expansion-child) {
+        transition:
+            transform 170ms ease,
+            opacity 170ms ease,
+            border-color 170ms ease,
+            box-shadow 170ms ease;
+    }
+
+    @media (min-width: 768px) {
+        .canovia-map-page .canovia-map-node.is-semantic-expanded-parent:not(.is-semantic-expansion-anchor):not(.is-semantic-continuity-anchor) {
+            transform:
+                translate(-50%, -50%)
+                scale(var(--map-node-counter-scale, 1))
+                scale(0.78);
+        }
+
+        .canovia-map-page .canovia-map-node.is-semantic-expanded-child:not(.is-semantic-expansion-child):not(.is-semantic-departure-anchor):not(.is-semantic-continuity-anchor) {
+            transform:
+                translate(-50%, -50%)
+                scale(var(--map-node-counter-scale, 1))
+                scale(0.88);
+        }
+
+        .canovia-map-page .canovia-map-node.is-semantic-expanded-child:not(.is-semantic-expansion-child):not(.is-semantic-departure-anchor):not(.is-semantic-continuity-anchor):hover,
+        .canovia-map-page .canovia-map-node.is-semantic-expanded-child:not(.is-semantic-expansion-child):not(.is-semantic-departure-anchor):not(.is-semantic-continuity-anchor):focus-within {
+            transform:
+                translate(-50%, -50%)
+                scale(var(--map-node-counter-scale, 1))
+                scale(0.92);
+        }
+    }
+
+    @media (max-width: 767px) {
+        .canovia-map-page .canovia-map-node.is-semantic-expanded-parent:not(.is-semantic-expansion-anchor):not(.is-semantic-continuity-anchor) {
+            transform:
+                translate(-50%, -50%)
+                scale(0.82);
+        }
+
+        .canovia-map-page .canovia-map-node.is-semantic-expanded-child:not(.is-semantic-expansion-child):not(.is-semantic-departure-anchor):not(.is-semantic-continuity-anchor) {
+            transform:
+                translate(-50%, -50%)
+                scale(0.84);
+        }
+
+        .canovia-map-page .canovia-map-node.is-semantic-expanded-child:not(.is-semantic-expansion-child):not(.is-semantic-departure-anchor):not(.is-semantic-continuity-anchor):active {
+            transform:
+                translate(-50%, -50%)
+                scale(0.88);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .canovia-map-page .canovia-map-node.is-semantic-expanded-parent,
+        .canovia-map-page .canovia-map-node.is-semantic-expanded-child {
+            transition: none;
+        }
+    }
+}
