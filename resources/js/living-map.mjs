@@ -1566,7 +1566,23 @@ export function mountLivingGoalMap({
         destroy();
         page.replaceWith(imported);
 
-        return mountLivingGoalMap({ documentRef, windowRef, fetchRef, recordBehaviorRef });
+        const mounted = mountLivingGoalMap({
+            documentRef,
+            windowRef,
+            fetchRef,
+            recordBehaviorRef,
+        });
+
+        documentRef.dispatchEvent?.(new windowRef.CustomEvent(
+            'canovia:map-reprojected',
+            {
+                detail: {
+                    projectionKey: imported.dataset.mapProjectionKey || '',
+                },
+            },
+        ));
+
+        return mounted;
     };
 
     const revalidateProjection = async () => {
