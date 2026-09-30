@@ -467,6 +467,24 @@ export function mountCanoviaInstantNavigation({
 
         event.preventDefault();
         event.stopImmediatePropagation();
+
+        const semanticZoom = link.hasAttribute('data-map-semantic-zoom');
+        const reducedMotion = Boolean(
+            windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+        );
+
+        if (semanticZoom && !reducedMotion) {
+            // Warm the next semantic projection immediately, but keep the
+            // current scene visible long enough for the selected node to
+            // visually become the next center.
+            void prefetch(target);
+            windowRef.setTimeout(() => {
+                if (disposed) return;
+                void navigate(target, { historyMode: 'push', scroll: false });
+            }, 120);
+            return;
+        }
+
         void navigate(target, { historyMode: 'push', scroll: true });
     };
 
