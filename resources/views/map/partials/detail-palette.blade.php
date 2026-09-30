@@ -4,8 +4,8 @@
     data-map-document-viewport
     data-map-document-kind="detail"
     aria-hidden="true"
-    aria-live="polite"
-    aria-label="選択中のマスの詳細"
+    role="region"
+    aria-labelledby="canovia-map-detail-document-title"
 >
     <header class="canovia-map-context-header canovia-map-document-chrome" data-map-document-chrome>
         <div class="canovia-map-context-leading">
@@ -22,7 +22,12 @@
 
             <div class="canovia-map-document-chrome-title">
                 <p class="canovia-map-kicker">DETAIL</p>
-                <strong class="canovia-map-context-document-title" data-map-document-title>詳細</strong>
+                <strong
+                    id="canovia-map-detail-document-title"
+                    class="canovia-map-context-document-title"
+                    data-map-document-title
+                    aria-live="polite"
+                >詳細</strong>
             </div>
         </div>
 
@@ -38,7 +43,13 @@
         </div>
     </header>
 
-    <div class="canovia-map-document-scroll" data-map-document-scroll>
+    <div
+        class="canovia-map-document-scroll"
+        data-map-document-scroll
+        tabindex="0"
+        role="region"
+        aria-label="詳細資料"
+    >
         <div class="canovia-map-context-card" data-map-document-canvas>
             <div data-map-context-content></div>
         </div>
