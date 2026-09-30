@@ -668,6 +668,8 @@ export function resolveNodeCollisions(
         ].every(Number.isFinite));
 
     const clampNode = (node) => {
+        if (node.locked) return;
+
         const halfWidth = node.width / 2;
         const halfHeight = node.height / 2;
         const minX = Math.min(width / 2, halfWidth + safeBounds);
@@ -1166,6 +1168,8 @@ export function mountLivingGoalMap({
     let renderedControlSignature = '';
     let renderedLod = '';
     let semanticArmedNodeId = null;
+    let semanticArmCandidateId = null;
+    let semanticArmCandidateSince = 0;
 
     const refreshMapViewport = () => {
         const rect = mapShell?.getBoundingClientRect?.();
@@ -1196,12 +1200,18 @@ export function mountLivingGoalMap({
         return browserZoomChanged;
     };
 
-    const clearSemanticArm = () => {
-        if (!semanticArmedNodeId) return;
+    const clearSemanticArm = ({ resetCandidate = true } = {}) => {
+        if (semanticArmedNodeId) {
+            nodeElementById.get(semanticArmedNodeId)?.classList.remove('is-semantic-armed');
+        }
 
-        nodeElementById.get(semanticArmedNodeId)?.classList.remove('is-semantic-armed');
         semanticArmedNodeId = null;
         delete page.dataset.mapSemanticArmedNode;
+
+        if (resetCandidate) {
+            semanticArmCandidateId = null;
+            semanticArmCandidateSince = 0;
+        }
     };
 
     const syncMapLod = (view) => {
@@ -1218,7 +1228,14 @@ export function mountLivingGoalMap({
 
         mapScene?.style?.setProperty?.('--map-node-counter-scale', String(counterScale));
 
-        if (lod !== 'ready') {
+        if (
+            semanticArmedNodeId
+            && !semanticArmDecision({
+                scale: view.scale,
+                hasCandidate: true,
+                currentlyArmed: true,
+            })
+        ) {
             clearSemanticArm();
         }
 
@@ -1390,6 +1407,36 @@ export function mountLivingGoalMap({
                                 factor: semanticExpansionLayoutState.factor,
                             },
                         ),
+                    ]),
+                );
+
+                const counterScale = mobile ? 1 : mapNodeCounterScale(mapView.scale);
+                const resolved = resolveNodeCollisions(
+                    nodes.map((node) => {
+                        const position = basePositions.get(node.id) || { x: node.x, y: node.y };
+                        const element = nodeElementById.get(node.id);
+
+                        return {
+                            id: node.id,
+                            x: position.x,
+                            y: position.y,
+                            width: Math.max(1, Number(element?.offsetWidth || 1) * counterScale),
+                            height: Math.max(1, Number(element?.offsetHeight || 1) * counterScale),
+                            locked: node.id === semanticExpansionLayoutState.anchorId,
+                        };
+                    }),
+                    currentMapViewport(),
+                    {
+                        padding: mobile ? 10 : 18,
+                        iterations: 6,
+                        boundsPadding: mobile ? 4 : 8,
+                    },
+                );
+
+                basePositions = new Map(
+                    [...basePositions.entries()].map(([nodeId, position]) => [
+                        nodeId,
+                        resolved[nodeId] || position,
                     ]),
                 );
             }
@@ -1977,6 +2024,7 @@ export function mountLivingGoalMap({
         clientPoint = null,
         {
             requireProximity = false,
+            requiredNodeId = null,
         } = {},
     ) => {
         if (!mapScene) return null;
@@ -2027,8 +2075,8 @@ export function mountLivingGoalMap({
             .sort((left, right) => left.distance - right.distance)[0]?.link || null;
     };
 
-    const syncSemanticArm = (clientPoint = null) => {
-        if (isMobileViewport() || mapLodForScale(mapView.scale) !== 'ready' || !clientPoint) {
+    const syncSemanticArm = (clientPoint = null, nowMs = Date.now()) => {
+        if (isMobileViewport() || !clientPoint) {
             clearSemanticArm();
             return null;
         }
@@ -2037,13 +2085,44 @@ export function mountLivingGoalMap({
         const node = link?.closest?.('[data-map-node]') || null;
         const nodeId = node?.dataset?.mapNodeId || null;
 
-        if (nodeId === semanticArmedNodeId) {
-            return link || null;
+        if (!nodeId) {
+            clearSemanticArm();
+            return null;
         }
 
-        clearSemanticArm();
+        if (semanticArmCandidateId !== nodeId) {
+            clearSemanticArm();
+            semanticArmCandidateId = nodeId;
+            semanticArmCandidateSince = Number(nowMs || Date.now());
+        }
 
-        if (node && nodeId) {
+        const stableForMs = Math.max(
+            0,
+            Number(nowMs || Date.now()) - Number(semanticArmCandidateSince || 0),
+        );
+        const currentlyArmed = semanticArmedNodeId === nodeId;
+        const shouldArm = semanticArmDecision({
+            scale: mapView.scale,
+            hasCandidate: true,
+            currentlyArmed,
+            stableForMs,
+        });
+
+        if (!shouldArm) {
+            if (currentlyArmed) {
+                clearSemanticArm();
+                semanticArmCandidateId = nodeId;
+                semanticArmCandidateSince = Number(nowMs || Date.now());
+            }
+
+            return null;
+        }
+
+        if (!currentlyArmed) {
+            if (semanticArmedNodeId && semanticArmedNodeId !== nodeId) {
+                nodeElementById.get(semanticArmedNodeId)?.classList.remove('is-semantic-armed');
+            }
+
             semanticArmedNodeId = nodeId;
             node.classList.add('is-semantic-armed');
             page.dataset.mapSemanticArmedNode = nodeId;
@@ -2065,6 +2144,15 @@ export function mountLivingGoalMap({
         const link = semanticTargetLink(normalizedDirection, clientPoint, {
             requireProximity: normalizedDirection === 'in' && requireProximity,
         });
+        const linkNodeId = link?.closest?.('[data-map-node]')?.dataset?.mapNodeId || null;
+        if (
+            normalizedDirection === 'in'
+            && requiredNodeId
+            && linkNodeId !== requiredNodeId
+        ) {
+            return false;
+        }
+
         const targetUrl = semanticZoomDestination(normalizedDirection, {
             parentUrl: page.dataset.mapParentUrl || '',
             candidateUrl: link?.href || '',
@@ -2132,19 +2220,28 @@ export function mountLivingGoalMap({
         delay = 85,
         {
             requireProximity = false,
+            inThreshold = 1.42,
+            requiredNodeId = null,
         } = {},
     ) => {
-        const direction = semanticZoomThresholdDirection(mapView.scale);
+        const direction = semanticZoomThresholdDirection(mapView.scale, {
+            inThreshold,
+            outThreshold: 0.82,
+        });
 
         windowRef.clearTimeout(semanticZoomTimer);
         semanticZoomTimer = null;
 
         if (!direction || semanticZoomNavigating) return false;
+        if (direction === 'in' && requiredNodeId && semanticArmedNodeId !== requiredNodeId) {
+            return false;
+        }
 
         semanticZoomTimer = windowRef.setTimeout(() => {
             semanticZoomTimer = null;
             const committed = commitSemanticZoom(direction, clientPoint, {
                 requireProximity,
+                requiredNodeId: direction === 'in' ? requiredNodeId : null,
             });
 
             // L0 has no parent. Do not leave the whole navigation map crushed
@@ -2186,12 +2283,16 @@ export function mountLivingGoalMap({
         if (points.length < 2) return;
 
         const midpoint = pointerMidpoint(points[0], points[1]);
+        const viewport = currentMapViewport();
+        const startFocus = scenePoint(midpoint);
+
         gesture = {
             mode: 'pinch',
             startDistance: Math.max(1, pointerDistance(points[0], points[1])),
             startMidpoint: midpoint,
             lastMidpoint: midpoint,
             startTransform: { ...mapView },
+            worldAnchor: mapWorldPointAtScreen(mapView, startFocus, viewport),
             moved: false,
         };
     };
@@ -2238,22 +2339,15 @@ export function mountLivingGoalMap({
             const currentMidpoint = pointerMidpoint(points[0], points[1]);
             gesture.lastMidpoint = currentMidpoint;
             const viewport = currentMapViewport();
-            const startFocus = scenePoint(gesture.startMidpoint);
             const currentFocus = scenePoint(currentMidpoint);
             const scale = gesture.startTransform.scale
                 * (currentDistance / Math.max(1, gesture.startDistance));
-            const zoomed = zoomMapViewAt(
-                gesture.startTransform,
+            const next = mapViewForWorldAnchor(
+                gesture.worldAnchor,
                 scale,
-                startFocus,
+                currentFocus,
                 viewport,
             );
-
-            const next = clampMapViewTransform({
-                x: zoomed.x + (currentFocus.x - startFocus.x),
-                y: zoomed.y + (currentFocus.y - startFocus.y),
-                scale: zoomed.scale,
-            }, viewport);
 
             gesture.moved = true;
             event.preventDefault();
@@ -2359,17 +2453,23 @@ export function mountLivingGoalMap({
             const focus = scenePoint(focusClient);
             const delta = Math.max(-60, Math.min(60, Number(event.deltaY || 0)));
             const factor = Math.exp(-delta * 0.01);
-            const next = zoomMapViewAt(
-                mapView,
+            const viewport = currentMapViewport();
+            const worldAnchor = mapWorldPointAtScreen(mapView, focus, viewport);
+            const next = mapViewForWorldAnchor(
+                worldAnchor,
                 mapView.scale * factor,
                 focus,
-                currentMapViewport(),
+                viewport,
             );
 
             applyMapView(next);
-            syncSemanticArm(focusClient);
+            const armedLink = syncSemanticArm(focusClient);
             scheduleSemanticZoom(focusClient, 90, {
                 requireProximity: !isMobileViewport(),
+                inThreshold: isMobileViewport() ? 1.42 : 1.46,
+                requiredNodeId: isMobileViewport()
+                    ? null
+                    : (armedLink?.closest?.('[data-map-node]')?.dataset?.mapNodeId || null),
             });
             return;
         }
