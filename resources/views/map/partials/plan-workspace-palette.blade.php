@@ -15,7 +15,8 @@
     data-map-plan-workspace
     data-map-document-viewport
     data-map-document-kind="plan"
-    aria-label="{{ $workspacePlan->title }}のPlan Dashboard"
+    role="region"
+    aria-labelledby="canovia-plan-dashboard-title"
 >
     <header class="canovia-plan-workspace-heading canovia-map-document-chrome" data-map-document-chrome>
         <a
@@ -31,7 +32,7 @@
         <div class="canovia-map-document-chrome-title">
             <p class="canovia-plan-workspace-kicker">PLAN DASHBOARD</p>
             <div class="canovia-map-document-title-row">
-                <h2>{{ $workspacePlan->title }}</h2>
+                <h2 id="canovia-plan-dashboard-title">{{ $workspacePlan->title }}</h2>
                 <span class="badge badge-slate">{{ $workspacePlan->category ?: '未分類' }}</span>
             </div>
         </div>
@@ -43,7 +44,13 @@
         </div>
     </header>
 
-    <div class="canovia-map-document-scroll" data-map-document-scroll>
+    <div
+        class="canovia-map-document-scroll"
+        data-map-document-scroll
+        tabindex="0"
+        role="region"
+        aria-label="{{ $workspacePlan->title }}のDashboard資料"
+    >
         <div class="canovia-plan-workspace-document" data-map-document-canvas>
             <section class="canovia-plan-document-overview">
                 <div>
