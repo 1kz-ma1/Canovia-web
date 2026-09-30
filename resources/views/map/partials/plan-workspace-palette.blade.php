@@ -25,6 +25,13 @@
         </div>
 
         <div class="canovia-plan-workspace-actions">
+            <a
+                href="{{ route('map.index', ['level' => 'l1', 'intent' => 'plan']) }}"
+                class="btn-secondary"
+                data-map-semantic-zoom
+                data-map-zoom-direction="out"
+                data-route-lock-skip
+            >← Plan一覧</a>
             @if ($workspaceExecutionUrl !== '')
                 <a href="{{ $workspaceExecutionUrl }}" class="btn-primary" data-map-plan-execution>実行Mapへ</a>
             @endif
