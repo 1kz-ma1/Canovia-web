@@ -13,6 +13,7 @@ final class IntentMapProjectionService
         private readonly SpaceStationContextService $spaceStation,
         private readonly PersonalizedSatelliteCandidateService $satelliteCandidates,
         private readonly PersonalizedSatellitePromotionService $satellitePromotion,
+        private readonly MapPersonalizationPreferenceService $personalizationPreferences,
     ) {}
 
     /**
@@ -32,9 +33,11 @@ final class IntentMapProjectionService
             $graph['edges'],
         );
         $spaceStation = $this->spaceStation->build($request);
+        $pinnedNodeIds = $this->personalizationPreferences->pinnedNodeIds($request->user());
         $satellites = $this->satellitePromotion->promote(
             $this->satelliteCandidates->candidates($request),
             2,
+            $pinnedNodeIds,
         );
 
         $nodes = $attention['nodes']
@@ -66,6 +69,9 @@ final class IntentMapProjectionService
             'personalized_satellites' => [
                 'count' => $satellites['nodes']->count(),
                 'max' => 2,
+                'pinned_count' => $satellites['nodes']->filter(
+                    fn (array $node) => (bool) data_get($node, 'personalization.pinned', false)
+                )->count(),
                 'weights' => [
                     'importance' => 0.35,
                     'usage_frequency' => 0.25,
