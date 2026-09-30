@@ -1,0 +1,247 @@
+/* V49.1 Plan Workspace: reuse Classic Plan cards as spatial palettes. */
+@layer components {
+    .canovia-map-shell.is-plan-workspace .canovia-map-scene {
+        opacity: 0.2;
+        filter: saturate(0.7) brightness(0.8);
+        transition:
+            opacity 180ms ease,
+            filter 180ms ease,
+            transform 160ms ease;
+    }
+
+    .canovia-map-shell.is-plan-workspace .canovia-map-node {
+        pointer-events: none;
+    }
+
+    .canovia-plan-workspace-palette {
+        position: absolute;
+        z-index: 18;
+        inset:
+            max(5.85rem, calc(env(safe-area-inset-top) + 5.2rem))
+            max(4rem, calc(env(safe-area-inset-right) + 3.6rem))
+            max(1rem, env(safe-area-inset-bottom))
+            max(1rem, env(safe-area-inset-left));
+        display: grid;
+        min-height: 0;
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: 0.72rem;
+        pointer-events: none;
+    }
+
+    .canovia-plan-workspace-heading {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        border: 1px solid rgb(56 189 248 / 0.18);
+        border-radius: 1.05rem;
+        background:
+            radial-gradient(circle at 8% 0%, rgb(56 189 248 / 0.09), transparent 14rem),
+            rgb(8 15 34 / 0.86);
+        padding: 0.72rem 0.82rem;
+        box-shadow:
+            0 14px 32px rgb(2 6 23 / 0.34),
+            inset 0 1px 0 rgb(255 255 255 / 0.035);
+        backdrop-filter: blur(18px) saturate(1.08);
+        -webkit-backdrop-filter: blur(18px) saturate(1.08);
+        pointer-events: auto;
+    }
+
+    .canovia-plan-workspace-kicker {
+        margin: 0;
+        color: rgb(103 232 249);
+        font-size: 0.56rem;
+        font-weight: 900;
+        letter-spacing: 0.15em;
+    }
+
+    .canovia-plan-workspace-heading h2 {
+        max-width: min(44rem, 55vw);
+        overflow: hidden;
+        color: rgb(248 250 252);
+        font-size: 1.02rem;
+        font-weight: 800;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .canovia-plan-workspace-heading p:not(.canovia-plan-workspace-kicker) {
+        margin-top: 0.24rem;
+        max-width: 46rem;
+        color: rgb(148 163 184);
+        font-size: 0.68rem;
+        line-height: 1.55;
+    }
+
+    .canovia-plan-workspace-actions {
+        display: flex;
+        flex: 0 0 auto;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0.35rem;
+    }
+
+    .canovia-plan-workspace-actions .btn-primary,
+    .canovia-plan-workspace-actions .btn-secondary {
+        min-height: 2.35rem;
+        padding: 0.45rem 0.68rem;
+        font-size: 0.64rem;
+    }
+
+    .canovia-plan-workspace-grid {
+        display: grid;
+        min-height: 0;
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: 0.72rem;
+        pointer-events: none;
+    }
+
+    .canovia-plan-palette-summary,
+    .canovia-plan-palette-roadmap {
+        pointer-events: auto;
+    }
+
+    .canovia-plan-workspace-metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.62rem;
+    }
+
+    .canovia-plan-workspace-metrics .info-card {
+        min-width: 0;
+        border-color: rgb(71 85 105 / 0.72);
+        background: rgb(8 15 34 / 0.9);
+        box-shadow:
+            0 14px 34px rgb(2 6 23 / 0.34),
+            inset 0 1px 0 rgb(255 255 255 / 0.035);
+        backdrop-filter: blur(18px) saturate(1.05);
+        -webkit-backdrop-filter: blur(18px) saturate(1.05);
+    }
+
+    .canovia-plan-palette-roadmap {
+        min-height: 0;
+        overflow: auto;
+        border-color: rgb(56 189 248 / 0.16);
+        background:
+            radial-gradient(circle at top right, rgb(56 189 248 / 0.045), transparent 16rem),
+            rgb(8 15 34 / 0.92);
+        padding: 0.85rem;
+        box-shadow:
+            0 18px 44px rgb(2 6 23 / 0.38),
+            inset 0 1px 0 rgb(255 255 255 / 0.035);
+        backdrop-filter: blur(19px) saturate(1.05);
+        -webkit-backdrop-filter: blur(19px) saturate(1.05);
+        scrollbar-width: thin;
+    }
+
+    .canovia-plan-palette-card-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.7rem;
+    }
+
+    .canovia-plan-palette-card-heading h3 {
+        margin-top: 0.08rem;
+        color: rgb(248 250 252);
+        font-size: 1rem;
+        font-weight: 800;
+    }
+
+    .canovia-plan-palette-roadmap-body {
+        min-height: 0;
+    }
+
+    .canovia-map-shell.is-plan-workspace .canovia-map-gesture-controls {
+        opacity: 0.62;
+    }
+
+    .canovia-map-shell.is-plan-workspace .canovia-map-gesture-controls:hover,
+    .canovia-map-shell.is-plan-workspace .canovia-map-gesture-controls:focus-within {
+        opacity: 1;
+    }
+
+    @media (max-width: 900px) {
+        .canovia-plan-workspace-palette {
+            right: max(3.8rem, calc(env(safe-area-inset-right) + 3.4rem));
+        }
+
+        .canovia-plan-workspace-metrics {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 767px) {
+        .canovia-plan-workspace-palette {
+            inset:
+                max(5.4rem, calc(env(safe-area-inset-top) + 4.9rem))
+                max(0.52rem, env(safe-area-inset-right))
+                max(3.25rem, calc(env(safe-area-inset-bottom) + 2.8rem))
+                max(0.52rem, env(safe-area-inset-left));
+            display: block;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            pointer-events: auto;
+            scrollbar-width: none;
+        }
+
+        .canovia-plan-workspace-palette::-webkit-scrollbar {
+            display: none;
+        }
+
+        .canovia-plan-workspace-heading {
+            position: sticky;
+            z-index: 2;
+            top: 0;
+            display: grid;
+            gap: 0.58rem;
+            margin-bottom: 0.55rem;
+            padding: 0.68rem;
+        }
+
+        .canovia-plan-workspace-heading h2 {
+            max-width: 72vw;
+            font-size: 0.92rem;
+        }
+
+        .canovia-plan-workspace-actions {
+            justify-content: flex-start;
+        }
+
+        .canovia-plan-workspace-actions .btn-primary,
+        .canovia-plan-workspace-actions .btn-secondary {
+            flex: 1 1 auto;
+        }
+
+        .canovia-plan-workspace-grid {
+            display: grid;
+            gap: 0.55rem;
+            pointer-events: auto;
+        }
+
+        .canovia-plan-workspace-metrics {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .canovia-plan-workspace-metrics .info-card {
+            padding: 0.75rem;
+        }
+
+        .canovia-plan-palette-roadmap {
+            max-height: none;
+            overflow: visible;
+            padding: 0.72rem;
+        }
+
+        .canovia-map-shell.is-plan-workspace .canovia-map-scene {
+            opacity: 0.14;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .canovia-map-shell.is-plan-workspace .canovia-map-scene {
+            transition: none;
+        }
+    }
+}
