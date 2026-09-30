@@ -12,8 +12,11 @@
 <div
     class="canovia-plan-workspace-palette"
     data-map-plan-workspace
+    data-map-document-viewport
+    data-map-document-kind="plan"
     aria-label="{{ $workspacePlan->title }}のPlan Workspace"
 >
+    <div class="canovia-plan-workspace-document" data-map-document-canvas>
     <header class="canovia-plan-workspace-heading">
         <div class="min-w-0">
             <p class="canovia-plan-workspace-kicker">PLAN WORKSPACE</p>
@@ -31,6 +34,7 @@
                 data-map-semantic-zoom
                 data-map-zoom-direction="out"
                 data-route-lock-skip
+                data-map-document-back
             >← Plan一覧</a>
             @if ($workspaceExecutionUrl !== '')
                 <a href="{{ $workspaceExecutionUrl }}" class="btn-primary" data-map-plan-execution>実行Mapへ</a>
@@ -72,6 +76,7 @@
                 ])
             </div>
         </section>
+    </div>
     </div>
 </div>
 @endif
