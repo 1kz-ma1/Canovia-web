@@ -1168,3 +1168,19 @@ Telemetryにはstructural node_type `satellite_reflection` を追加するが、
 Task-bound Tool、generic Tool usage inference、Shared Plan Shortcut、Collaboration Purpose Shortcut、AI ranking/layout、automatic PinはV48.8では追加しない。
 
 詳細は `docs/V48.8_REFLECTION_CANDIDATE_EXPANSION.md` を正とする。
+
+## V48.9 Collaboration Review Candidate
+
+Personalized Shortcutのcandidate sourceをCollaboration方向へ最小拡張し、既存Purpose「レビュー待ち」をautomatic candidateとして追加する。存在条件には `PlanArtifact.metadata.collaboration_state = review` という人が明示したstateだけを使い、GitHub PR URL・assigned user・activity・provider等からreview状態を推測しない。
+
+candidateは `satellite:collaboration:review` / `satellite_collaboration` とし、`intent:collaboration` へanchorする。destinationは `/map?level=l2&intent=collaboration&collab_context=review`。V48.5 semantic placementにより `satellite-4` / 左方向へ配置する。
+
+4軸weightと0.55 thresholdは変更しない。importanceはreview artifactを持つShared Planのeffective priority、usage_frequencyはreview item数、recencyは最新artifact updated_at、continuityは人が明示的に解除するまで継続するreview queueをbase 0.55として複数item / Planで補強する。説明labelは「重要な共同Planにレビューがある / レビュー項目がまとまっている / 最近レビュー待ちになった / レビュー待ちが継続中」を用いる。
+
+V45.6のmax 2 / same semantic anchor max 1を維持するため、review itemが存在してもsignal不足ならL0へ出さない。Collaboration Shortcutのmanual PinはV48.9では追加せず、Personal Plan Pin契約を維持する。
+
+Telemetryへstructural node type `satellite_collaboration` を追加するが、review count / artifact title / external URL / collaboration state / Plan title / promotion score / user contentは保存しない。新規migration・candidate永続化・absolute position保存は行わない。
+
+Waiting / External / My Action Shortcut、GitHub remote status inference、connector polling、automatic collaboration_state mutation、AI ranking/layoutはNon-goal。
+
+詳細は `docs/V48.9_COLLABORATION_REVIEW_CANDIDATE.md` を正とする。

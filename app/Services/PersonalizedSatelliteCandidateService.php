@@ -19,6 +19,7 @@ final class PersonalizedSatelliteCandidateService
         private readonly PlanPriorityService $priorities,
         private readonly MapHierarchyContextService $hierarchy,
         private readonly RecentReflectionShortcutCandidateService $recentReflection,
+        private readonly CollaborationReviewShortcutCandidateService $collaborationReview,
     ) {}
 
     /**
@@ -120,6 +121,11 @@ final class PersonalizedSatelliteCandidateService
         $reflection = $this->recentReflection->candidate($plans);
         if (is_array($reflection)) {
             $candidates->push($reflection);
+        }
+
+        $collaboration = $this->collaborationReview->candidate($request);
+        if (is_array($collaboration)) {
+            $candidates->push($collaboration);
         }
 
         return $candidates->values();

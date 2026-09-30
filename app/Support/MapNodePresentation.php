@@ -137,6 +137,7 @@ final class MapNodePresentation
             'space_station' => 'Space Station',
             'plan', 'satellite_plan' => 'Plan',
             'satellite_reflection' => '振り返り',
+            'satellite_collaboration' => '共同',
             'goal' => 'Goal',
             'domain' => 'Domain',
             'intent' => 'Context',
