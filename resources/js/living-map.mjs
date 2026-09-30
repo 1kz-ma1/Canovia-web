@@ -569,6 +569,179 @@ export function semanticFocusMatchesNode(
         && y <= top + height + safePadding;
 }
 
+export function semanticArmDecision({
+    scale = 1,
+    hasCandidate = false,
+    currentlyArmed = false,
+    stableForMs = 0,
+    enterScale = 1.34,
+    exitScale = 1.28,
+    dwellMs = 120,
+} = {}) {
+    if (!hasCandidate) return false;
+
+    const value = Math.max(0.01, Number(scale || 1));
+    const enter = Math.max(1, Number(enterScale || 1.34));
+    const exit = Math.min(enter, Math.max(0.01, Number(exitScale || 1.28)));
+
+    if (currentlyArmed) {
+        return value >= exit;
+    }
+
+    return value >= enter
+        && Math.max(0, Number(stableForMs || 0)) >= Math.max(0, Number(dwellMs || 0));
+}
+
+export function mapWorldPointAtScreen(
+    transform,
+    screenPoint,
+    viewport,
+    options = {},
+) {
+    const width = Math.max(1, Number(viewport?.width || 1));
+    const height = Math.max(1, Number(viewport?.height || 1));
+    const current = clampMapViewTransform(transform, viewport, options);
+    const screenX = Number(screenPoint?.x ?? width / 2) - width / 2;
+    const screenY = Number(screenPoint?.y ?? height / 2) - height / 2;
+
+    return {
+        x: Math.round(((screenX - current.x) / current.scale) * 10000) / 10000,
+        y: Math.round(((screenY - current.y) / current.scale) * 10000) / 10000,
+    };
+}
+
+export function mapViewForWorldAnchor(
+    worldPoint,
+    targetScale,
+    screenPoint,
+    viewport,
+    options = {},
+) {
+    const width = Math.max(1, Number(viewport?.width || 1));
+    const height = Math.max(1, Number(viewport?.height || 1));
+    const target = clampMapViewTransform(
+        { x: 0, y: 0, scale: targetScale },
+        viewport,
+        options,
+    );
+    const screenX = Number(screenPoint?.x ?? width / 2) - width / 2;
+    const screenY = Number(screenPoint?.y ?? height / 2) - height / 2;
+    const worldX = Number(worldPoint?.x || 0);
+    const worldY = Number(worldPoint?.y || 0);
+
+    return clampMapViewTransform({
+        x: screenX - worldX * target.scale,
+        y: screenY - worldY * target.scale,
+        scale: target.scale,
+    }, viewport, options);
+}
+
+export function resolveNodeCollisions(
+    items,
+    viewport,
+    {
+        padding = 16,
+        iterations = 5,
+        boundsPadding = 6,
+    } = {},
+) {
+    const width = Math.max(1, Number(viewport?.width || 1));
+    const height = Math.max(1, Number(viewport?.height || 1));
+    const safePadding = Math.max(0, Number(padding || 0));
+    const safeBounds = Math.max(0, Number(boundsPadding || 0));
+    const list = Array.isArray(items) ? items : [];
+
+    const nodes = list
+        .map((item) => ({
+            id: String(item?.id || ''),
+            x: (Number(item?.x || 0) / 100) * width,
+            y: (Number(item?.y || 0) / 100) * height,
+            width: Math.max(1, Number(item?.width || 1)),
+            height: Math.max(1, Number(item?.height || 1)),
+            locked: Boolean(item?.locked),
+        }))
+        .filter((item) => item.id !== '' && [
+            item.x,
+            item.y,
+            item.width,
+            item.height,
+        ].every(Number.isFinite));
+
+    const clampNode = (node) => {
+        const halfWidth = node.width / 2;
+        const halfHeight = node.height / 2;
+        const minX = Math.min(width / 2, halfWidth + safeBounds);
+        const maxX = Math.max(width / 2, width - halfWidth - safeBounds);
+        const minY = Math.min(height / 2, halfHeight + safeBounds);
+        const maxY = Math.max(height / 2, height - halfHeight - safeBounds);
+
+        node.x = Math.max(minX, Math.min(maxX, node.x));
+        node.y = Math.max(minY, Math.min(maxY, node.y));
+    };
+
+    nodes.forEach(clampNode);
+
+    const totalIterations = Math.max(1, Math.min(12, Number(iterations || 1)));
+
+    for (let iteration = 0; iteration < totalIterations; iteration += 1) {
+        let moved = false;
+
+        for (let leftIndex = 0; leftIndex < nodes.length; leftIndex += 1) {
+            for (let rightIndex = leftIndex + 1; rightIndex < nodes.length; rightIndex += 1) {
+                const left = nodes[leftIndex];
+                const right = nodes[rightIndex];
+
+                const dx = right.x - left.x;
+                const dy = right.y - left.y;
+                const overlapX = (left.width + right.width) / 2 + safePadding - Math.abs(dx);
+                const overlapY = (left.height + right.height) / 2 + safePadding - Math.abs(dy);
+
+                if (overlapX <= 0 || overlapY <= 0 || (left.locked && right.locked)) {
+                    continue;
+                }
+
+                const moveAlongX = overlapX < overlapY;
+                const delta = moveAlongX ? overlapX : overlapY;
+                const rawDirection = moveAlongX ? dx : dy;
+                const fallbackDirection = left.id.localeCompare(right.id) <= 0 ? 1 : -1;
+                const direction = rawDirection === 0 ? fallbackDirection : Math.sign(rawDirection);
+
+                if (moveAlongX) {
+                    if (left.locked) {
+                        right.x += direction * delta;
+                    } else if (right.locked) {
+                        left.x -= direction * delta;
+                    } else {
+                        left.x -= direction * delta / 2;
+                        right.x += direction * delta / 2;
+                    }
+                } else if (left.locked) {
+                    right.y += direction * delta;
+                } else if (right.locked) {
+                    left.y -= direction * delta;
+                } else {
+                    left.y -= direction * delta / 2;
+                    right.y += direction * delta / 2;
+                }
+
+                clampNode(left);
+                clampNode(right);
+                moved = true;
+            }
+        }
+
+        if (!moved) break;
+    }
+
+    return Object.fromEntries(nodes.map((node) => [
+        node.id,
+        {
+            x: Math.round((node.x / width) * 1000) / 10,
+            y: Math.round((node.y / height) * 1000) / 10,
+        },
+    ]));
+}
+
 export function semanticZoomDestination(
     direction,
     {
