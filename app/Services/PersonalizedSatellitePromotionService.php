@@ -140,6 +140,8 @@ final class PersonalizedSatellitePromotionService
                 $score,
                 (array) ($candidate['signals'] ?? []),
                 $isPinned,
+                (array) ($candidate['signal_reason_labels'] ?? []),
+                (string) ($candidate['explanation_suffix'] ?? ''),
             );
 
             $nodes->push([
@@ -246,6 +248,8 @@ final class PersonalizedSatellitePromotionService
         float $score,
         array $signals,
         bool $isPinned = false,
+        array $signalReasonLabels = [],
+        string $explanationSuffix = '',
     ): array {
         if ($isPinned) {
             return [
@@ -262,22 +266,39 @@ final class PersonalizedSatellitePromotionService
         $safe = $this->safeSignals($signals);
         $weights = self::WEIGHTS;
 
+        $defaultLabels = [
+            'importance' => '優先度が高い',
+            'usage_frequency' => '最近よく使っている',
+            'recency' => '最近開いている',
+            'continuity' => '継続して進めている',
+        ];
+
+        $labelsBySignal = collect($defaultLabels)
+            ->map(function (string $default, string $key) use ($signalReasonLabels) {
+                $custom = trim((string) ($signalReasonLabels[$key] ?? ''));
+
+                return $custom !== ''
+                    ? mb_substr($custom, 0, 80)
+                    : $default;
+            })
+            ->all();
+
         $reasons = collect([
             'importance' => [
                 'value' => $safe['importance'],
-                'label' => '優先度が高い',
+                'label' => $labelsBySignal['importance'],
             ],
             'usage_frequency' => [
                 'value' => $safe['usage_frequency'],
-                'label' => '最近よく使っている',
+                'label' => $labelsBySignal['usage_frequency'],
             ],
             'recency' => [
                 'value' => $safe['recency'],
-                'label' => '最近開いている',
+                'label' => $labelsBySignal['recency'],
             ],
             'continuity' => [
                 'value' => $safe['continuity'],
-                'label' => '継続して進めている',
+                'label' => $labelsBySignal['continuity'],
             ],
         ])
             ->map(function (array $reason, string $key) use ($weights) {
@@ -307,13 +328,17 @@ final class PersonalizedSatellitePromotionService
             ? $labels[0]
             : implode('・', $labels);
 
+        $suffix = trim($explanationSuffix) !== ''
+            ? mb_substr(trim($explanationSuffix), 0, 180)
+            : 'ため、よく使うContextへの近道として表示しています。';
+
         return [
             'mode' => 'behavioral_attention',
             'strength' => $score >= 0.78 ? 'strong' : 'active',
             'anchor_node_id' => $anchor,
             'reason_keys' => $reasons->pluck('key')->values()->all(),
             'reason_labels' => $labels,
-            'explanation' => $lead.'ため、よく使うContextへの近道として表示しています。',
+            'explanation' => $lead.$suffix,
             'pinned' => false,
         ];
     }
@@ -323,6 +348,7 @@ final class PersonalizedSatellitePromotionService
         return match ($kind) {
             'tool' => 0,
             'plan' => 1,
+            'reflection' => 2,
             default => 9,
         };
     }

@@ -38,6 +38,7 @@ class NodeVisualGrammarV453Test extends TestCase
             [['type' => 'inbox'], 'inbox-dock'],
             [['type' => 'satellite_plan'], 'satellite'],
             [['type' => 'satellite_tool'], 'satellite'],
+            [['type' => 'satellite_reflection'], 'satellite'],
             [['type' => 'collaboration_hub'], 'crew-station'],
             [['type' => 'collaboration_context'], 'crew'],
             [['type' => 'collaboration_item'], 'crew'],

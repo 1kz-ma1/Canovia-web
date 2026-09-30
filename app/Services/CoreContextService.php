@@ -111,6 +111,9 @@ final class CoreContextService
             case 'work_logs':
                 $this->loadWorkLogs();
                 break;
+            case 'task_evidences':
+                $this->loadTaskEvidences();
+                break;
             case 'availability':
                 $this->loadPlanRelations(['availabilityRules', 'availabilityOverrides']);
                 break;
@@ -179,6 +182,16 @@ final class CoreContextService
             'workLogs' => fn ($query) => $query
                 ->with('task')
                 ->latest('worked_on')
+                ->latest('id'),
+        ]);
+    }
+
+    private function loadTaskEvidences(): void
+    {
+        $this->eloquentPlans()->loadMissing([
+            'taskEvidences' => fn ($query) => $query
+                ->with('task')
+                ->latest('occurred_at')
                 ->latest('id'),
         ]);
     }

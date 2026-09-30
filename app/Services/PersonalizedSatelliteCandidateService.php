@@ -18,6 +18,7 @@ final class PersonalizedSatelliteCandidateService
         private readonly RequestBehaviorHistory $history,
         private readonly PlanPriorityService $priorities,
         private readonly MapHierarchyContextService $hierarchy,
+        private readonly RecentReflectionShortcutCandidateService $recentReflection,
     ) {}
 
     /**
@@ -31,80 +32,94 @@ final class PersonalizedSatelliteCandidateService
      */
     public function candidates(Request $request): Collection
     {
-        $plans = $this->core->plans($request, ['tasks', 'work_logs', 'availability'])
-            ->filter(fn (Plan $plan) => $this->hasActiveTask($plan))
-            ->values();
+        $plans = $this->core->plans($request, [
+            'tasks',
+            'work_logs',
+            'task_evidences',
+            'availability',
+        ])->values();
 
         if ($plans->isEmpty()) {
             return collect();
         }
 
-        $actorToken = $this->core->actorToken($request);
-        $events = $this->history->events($actorToken, 30);
-        $sessions = $this->history->completedSessions($actorToken, 30);
+        $activePlans = $plans
+            ->filter(fn (Plan $plan) => $this->hasActiveTask($plan))
+            ->values();
+
         $candidates = collect();
 
-        foreach ($plans as $plan) {
-            // L0 already has a stable Collaboration intent. A Shared Plan here
-            // duplicates that entry point instead of shortening a unique route.
-            if ((bool) $plan->is_collaborative) {
-                continue;
-            }
-            $planEvents = $events
-                ->filter(fn ($event) => (int) ($event->plan_id ?? 0) === (int) $plan->id)
-                ->values();
-            $planSessions = $sessions
-                ->filter(fn ($session) => (int) ($session->plan_id ?? 0) === (int) $plan->id)
-                ->values();
+        if ($activePlans->isNotEmpty()) {
+            $actorToken = $this->core->actorToken($request);
+            $events = $this->history->events($actorToken, 30);
+            $sessions = $this->history->completedSessions($actorToken, 30);
 
-            $signals = $this->planSignals($plan, $planEvents, $planSessions);
-            $domainKey = $this->hierarchy->domainKey($plan->category);
-            $intent = 'execution';
-            $executionUrl = route('map.index', [
-                'level' => MapLevel::Execution->value,
-                'intent' => $intent,
-                'domain' => $domainKey,
-                'plan' => $plan->id,
-            ]);
+            foreach ($activePlans as $plan) {
+                // L0 already has a stable Collaboration intent. A Shared Plan here
+                // duplicates that entry point instead of shortening a unique route.
+                if ((bool) $plan->is_collaborative) {
+                    continue;
+                }
+                $planEvents = $events
+                    ->filter(fn ($event) => (int) ($event->plan_id ?? 0) === (int) $plan->id)
+                    ->values();
+                $planSessions = $sessions
+                    ->filter(fn ($session) => (int) ($session->plan_id ?? 0) === (int) $plan->id)
+                    ->values();
 
-            $candidates->push([
-                'id' => 'satellite:plan:'.$plan->id,
-                'kind' => 'plan',
-                'node_type' => 'satellite_plan',
-                'entity_id' => (int) $plan->id,
-                'plan_id' => (int) $plan->id,
-                'task_id' => null,
-                'eyebrow' => 'PLAN',
-                'label' => (string) $plan->title,
-                'subtitle' => '継続中のPlanへのショートカット',
-                'available_action' => $executionUrl,
-                'navigation_kind' => 'satellite',
-                'anchor_node_id' => 'intent:plan',
-                'signals' => $signals,
-                'classic_surface' => [
-                    'kind' => 'Plan Shortcut',
-                    'title' => (string) $plan->title,
-                    'summary' => '継続して使っているPlanへすぐ戻るためのショートカットです。',
-                    'actions' => [
-                        [
-                            'label' => 'Executionへ移動',
-                            'url' => $executionUrl,
-                            'primary' => true,
-                            'navigation_kind' => 'satellite',
+                $signals = $this->planSignals($plan, $planEvents, $planSessions);
+                $domainKey = $this->hierarchy->domainKey($plan->category);
+                $intent = 'execution';
+                $executionUrl = route('map.index', [
+                    'level' => MapLevel::Execution->value,
+                    'intent' => $intent,
+                    'domain' => $domainKey,
+                    'plan' => $plan->id,
+                ]);
+
+                $candidates->push([
+                    'id' => 'satellite:plan:'.$plan->id,
+                    'kind' => 'plan',
+                    'node_type' => 'satellite_plan',
+                    'entity_id' => (int) $plan->id,
+                    'plan_id' => (int) $plan->id,
+                    'task_id' => null,
+                    'eyebrow' => 'PLAN',
+                    'label' => (string) $plan->title,
+                    'subtitle' => '継続中のPlanへのショートカット',
+                    'available_action' => $executionUrl,
+                    'navigation_kind' => 'satellite',
+                    'anchor_node_id' => 'intent:plan',
+                    'signals' => $signals,
+                    'classic_surface' => [
+                        'kind' => 'Plan Shortcut',
+                        'title' => (string) $plan->title,
+                        'summary' => '継続して使っているPlanへすぐ戻るためのショートカットです。',
+                        'actions' => [
+                            [
+                                'label' => 'Executionへ移動',
+                                'url' => $executionUrl,
+                                'primary' => true,
+                                'navigation_kind' => 'satellite',
+                            ],
+                            [
+                                'label' => 'Plan詳細を開く',
+                                'url' => route('plans.show', $plan),
+                                'primary' => false,
+                            ],
                         ],
-                        [
-                            'label' => 'Plan詳細を開く',
-                            'url' => route('plans.show', $plan),
-                            'primary' => false,
-                        ],
+                        'meta' => array_values(array_filter([
+                            $plan->category ?: null,
+                            'Personal Plan',
+                        ])),
                     ],
-                    'meta' => array_values(array_filter([
-                        $plan->category ?: null,
-                        'Personal Plan',
-                    ])),
-                ],
-            ]);
+                ]);
+            }
+        }
 
+        $reflection = $this->recentReflection->candidate($plans);
+        if (is_array($reflection)) {
+            $candidates->push($reflection);
         }
 
         return $candidates->values();
