@@ -1223,3 +1223,13 @@ Semantic TransitionのsessionStorage payloadへ追加するのはsource x/yとca
 child Nodeはselected box中心からfinal positionへ展開するanimationを使用する。zoom-outはV49.1のauthoritative parent URL契約を維持し、親Projectionへ戻るとcanonical sibling配置へ復帰する。
 
 URL hierarchy removal、全level同時DOM、ambient siblingの直接branch switching、absolute position persistence、AI layoutはV49.2のNon-goal。詳細は `docs/V49.2_IN_PLACE_SEMANTIC_EXPANSION.md` を正とする。
+
+## V49.3 Desktop Pinch Isolation / Expansion Spacing
+
+Desktop precision touchpad pinchとbrowser page zoomの入力競合を解消する。Map page mount中はdocument capture phaseで `Ctrl+wheel` を先に判定し、current Map Shell内・cancelable・browser zoom recovery中ではない場合だけbrowser default zoomを抑止してCanovia Map zoomへ渡す。Keyboard / browser menuによるzoomは無効化しない。
+
+Map mount時の `window.devicePixelRatio` をruntime baselineとして保持し、current DPRとの差が8%を超えた場合はbrowser page zoomが変化したものとしてMapが `Ctrl+wheel` を消費しないrecovery modeへ入る。同じpinchでbrowser倍率をbaselineへ戻せることを優先し、baseline付近へ戻るとMap pinch captureを再開する。DPR / browser倍率はTelemetry・DBへ保存しない。
+
+V49.2 In-place Semantic Expansionのlocal radiusはmobile/PWA 0.72を維持し、desktopを0.80へ拡大する。viewport heightが720px以下のdesktopでは0.84とし、低い画面でParent / Project / Create等のNodeが縦方向に重なる問題を緩和する。
+
+詳細は `docs/V49.3_DESKTOP_PINCH_ISOLATION_EXPANSION_SPACING.md` を正とする。

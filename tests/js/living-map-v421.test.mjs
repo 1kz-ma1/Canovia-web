@@ -17,8 +17,11 @@ import {
     mapSemanticZoomDirection,
     semanticZoomThresholdDirection,
     semanticZoomDestination,
+    browserZoomDiverged,
+    shouldCaptureMapPinch,
     semanticMapPositionSnapshot,
     semanticExpansionOffset,
+    semanticExpansionFactor,
     semanticExpandedPosition,
     semanticCameraSnapshot,
     semanticChildOrigin,
@@ -57,6 +60,46 @@ test('semantic route key normalizes query ordering and removes hash-only UI stat
         semanticRouteKey('/map?level=l3&intent=execution&plan=12'),
         '/map?intent=execution&level=l3&plan=12',
     );
+});
+
+test('desktop map pinch is captured only while browser zoom remains at the mount baseline', () => {
+    assert.equal(browserZoomDiverged(1, 1), false);
+    assert.equal(browserZoomDiverged(1.05, 1), false);
+    assert.equal(browserZoomDiverged(1.25, 1), true);
+
+    assert.equal(shouldCaptureMapPinch({
+        ctrlKey: true,
+        cancelable: true,
+        mapActive: true,
+        browserZoomChanged: false,
+    }), true);
+
+    assert.equal(shouldCaptureMapPinch({
+        ctrlKey: true,
+        cancelable: true,
+        mapActive: true,
+        browserZoomChanged: true,
+    }), false);
+
+    assert.equal(shouldCaptureMapPinch({
+        ctrlKey: false,
+        cancelable: true,
+        mapActive: true,
+        browserZoomChanged: false,
+    }), false);
+
+    assert.equal(shouldCaptureMapPinch({
+        ctrlKey: true,
+        cancelable: false,
+        mapActive: true,
+        browserZoomChanged: false,
+    }), false);
+});
+
+test('semantic expansion adds desktop breathing room without changing mobile PWA spacing', () => {
+    assert.equal(semanticExpansionFactor({ mobile: true, viewportHeight: 650 }), 0.72);
+    assert.equal(semanticExpansionFactor({ mobile: false, viewportHeight: 900 }), 0.80);
+    assert.equal(semanticExpansionFactor({ mobile: false, viewportHeight: 700 }), 0.84);
 });
 
 test('semantic expansion keeps the selected box at its prior world position', () => {

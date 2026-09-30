@@ -526,6 +526,41 @@ export function semanticZoomDestination(
     return candidate;
 }
 
+export function browserZoomDiverged(
+    currentDevicePixelRatio,
+    baselineDevicePixelRatio,
+    tolerance = 0.08,
+) {
+    const current = Number(currentDevicePixelRatio);
+    const baseline = Number(baselineDevicePixelRatio);
+    const safeTolerance = Math.max(0, Number(tolerance || 0));
+
+    if (
+        !Number.isFinite(current)
+        || !Number.isFinite(baseline)
+        || current <= 0
+        || baseline <= 0
+    ) {
+        return false;
+    }
+
+    return Math.abs(current / baseline - 1) > safeTolerance;
+}
+
+export function shouldCaptureMapPinch({
+    ctrlKey = false,
+    cancelable = true,
+    mapActive = true,
+    browserZoomChanged = false,
+} = {}) {
+    return Boolean(
+        ctrlKey
+        && cancelable
+        && mapActive
+        && !browserZoomChanged
+    );
+}
+
 export function semanticMapPositionSnapshot(position = {}) {
     const x = Number(position?.x);
     const y = Number(position?.y);
@@ -552,6 +587,17 @@ export function semanticExpansionOffset(sourcePosition, targetPosition) {
         x: Math.round((source.x - target.x) * 10) / 10,
         y: Math.round((source.y - target.y) * 10) / 10,
     };
+}
+
+export function semanticExpansionFactor({
+    mobile = false,
+    viewportHeight = 900,
+} = {}) {
+    if (mobile) return 0.72;
+
+    const height = Math.max(1, Number(viewportHeight || 900));
+
+    return height <= 720 ? 0.84 : 0.80;
 }
 
 export function semanticExpandedPosition(
@@ -873,6 +919,8 @@ export function mountLivingGoalMap({
     let suppressMapClickUntil = 0;
     let mapView = { x: 0, y: 0, scale: 1 };
     let semanticExpansionLayoutState = null;
+    const browserZoomBaselineDpr = Math.max(0.1, Number(windowRef.devicePixelRatio || 1));
+    let browserZoomChanged = false;
     let viewportCache = {
         left: 0,
         top: 0,
@@ -900,6 +948,17 @@ export function mountLivingGoalMap({
         width: viewportCache.width,
         height: viewportCache.height,
     });
+
+    const syncBrowserZoomState = () => {
+        browserZoomChanged = browserZoomDiverged(
+            windowRef.devicePixelRatio,
+            browserZoomBaselineDpr,
+        );
+
+        page.dataset.mapBrowserZoom = browserZoomChanged ? 'external' : 'baseline';
+
+        return browserZoomChanged;
+    };
 
     const syncViewControls = (view) => {
         const atMinimum = view.scale <= 0.681;
@@ -1533,7 +1592,10 @@ export function mountLivingGoalMap({
         semanticExpansionLayoutState = {
             anchorId,
             sourcePosition: semanticMapPositionSnapshot(sourcePosition) || { x: 50, y: 50 },
-            factor: isMobileViewport() ? 0.72 : 0.62,
+            factor: semanticExpansionFactor({
+                mobile: isMobileViewport(),
+                viewportHeight: currentMapViewport().height,
+            }),
         };
         applyBaseLayout();
 
@@ -1936,9 +1998,28 @@ export function mountLivingGoalMap({
         }
     };
 
+    const onMapPinchCapture = (event) => {
+        if (!mapShell || disposed) return;
+
+        const target = event.target;
+        const mapActive = Boolean(target && mapShell.contains?.(target));
+        const gestureControl = Boolean(target?.closest?.('[data-map-gesture-controls]'));
+
+        if (gestureControl) return;
+
+        if (shouldCaptureMapPinch({
+            ctrlKey: event.ctrlKey,
+            cancelable: event.cancelable !== false,
+            mapActive,
+            browserZoomChanged,
+        })) {
+            event.preventDefault();
+        }
+    };
+
     const onSceneWheel = (event) => {
         if (!mapScene || semanticZoomNavigating) return;
-        if (event.target.closest?.('input, select, textarea, [data-map-gesture-controls]')) return;
+        if (event.target.closest?.('[data-map-gesture-controls]')) return;
 
         const insideScene = Boolean(event.target.closest?.('[data-map-scene]'));
         const insideWorkspacePalette = Boolean(event.target.closest?.(
@@ -1948,6 +2029,11 @@ export function mountLivingGoalMap({
         refreshMapViewport();
 
         if (event.ctrlKey) {
+            // If the browser page itself already changed zoom, stop consuming
+            // pinch until the user returns to the mount-time browser zoom.
+            // This prevents the Map from trapping the recovery gesture.
+            if (browserZoomChanged || event.cancelable === false) return;
+
             event.preventDefault();
 
             const focusClient = { x: event.clientX, y: event.clientY };
@@ -1965,6 +2051,8 @@ export function mountLivingGoalMap({
             scheduleSemanticZoom(focusClient, 90);
             return;
         }
+
+        if (event.target.closest?.('input, select, textarea')) return;
 
         // Workspace cards keep ordinary scrolling. Outside cards, precision
         // touchpad two-finger scrolling pans the map camera.
@@ -2012,6 +2100,7 @@ export function mountLivingGoalMap({
         viewportTimer = windowRef.setTimeout(() => {
             if (disposed) return;
 
+            syncBrowserZoomState();
             refreshMapViewport();
             applyBaseLayout();
             applyMapView(mapView, { immediate: true });
@@ -2038,6 +2127,7 @@ export function mountLivingGoalMap({
         mapScene?.removeEventListener('pointermove', onScenePointerMove);
         mapScene?.removeEventListener('pointerup', finishScenePointer);
         mapScene?.removeEventListener('pointercancel', finishScenePointer);
+        documentRef.removeEventListener('wheel', onMapPinchCapture, { capture: true });
         mapShell?.removeEventListener('wheel', onSceneWheel);
         mapScene?.removeEventListener('dblclick', onSceneDoubleClick);
         zoomOutControl?.removeEventListener('click', onZoomOut);
@@ -2383,6 +2473,7 @@ export function mountLivingGoalMap({
         if (decision === 'updated') showUpdatedStatus();
     }
 
+    syncBrowserZoomState();
     refreshMapViewport();
     applyBaseLayout();
     applyMapView(mapView, { immediate: true });
@@ -2391,6 +2482,7 @@ export function mountLivingGoalMap({
     mapScene?.addEventListener('pointermove', onScenePointerMove, { passive: false });
     mapScene?.addEventListener('pointerup', finishScenePointer);
     mapScene?.addEventListener('pointercancel', finishScenePointer);
+    documentRef.addEventListener('wheel', onMapPinchCapture, { passive: false, capture: true });
     mapShell?.addEventListener('wheel', onSceneWheel, { passive: false });
     mapScene?.addEventListener('dblclick', onSceneDoubleClick);
     zoomOutControl?.addEventListener('click', onZoomOut);
