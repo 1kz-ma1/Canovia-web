@@ -1666,6 +1666,11 @@ export function mountLivingGoalMap({
         if (!mapScene || semanticZoomNavigating) return;
         if (event.target.closest?.('input, select, textarea, [data-map-gesture-controls]')) return;
 
+        const insideScene = Boolean(event.target.closest?.('[data-map-scene]'));
+        const insideWorkspacePalette = Boolean(event.target.closest?.(
+            '[data-map-collaboration-workspace], [data-map-plan-workspace]'
+        ));
+
         refreshMapViewport();
 
         if (event.ctrlKey) {
@@ -1687,7 +1692,10 @@ export function mountLivingGoalMap({
             return;
         }
 
-        // Precision touchpad two-finger scrolling pans the same camera.
+        // Workspace cards keep ordinary scrolling. Outside cards, precision
+        // touchpad two-finger scrolling pans the map camera.
+        if (insideWorkspacePalette || !insideScene) return;
+
         if (Math.abs(Number(event.deltaX || 0)) > 0 || Math.abs(Number(event.deltaY || 0)) > 0) {
             event.preventDefault();
             applyMapView({
@@ -1756,7 +1764,7 @@ export function mountLivingGoalMap({
         mapScene?.removeEventListener('pointermove', onScenePointerMove);
         mapScene?.removeEventListener('pointerup', finishScenePointer);
         mapScene?.removeEventListener('pointercancel', finishScenePointer);
-        mapScene?.removeEventListener('wheel', onSceneWheel);
+        mapShell?.removeEventListener('wheel', onSceneWheel);
         mapScene?.removeEventListener('dblclick', onSceneDoubleClick);
         zoomOutControl?.removeEventListener('click', onZoomOut);
         zoomInControl?.removeEventListener('click', onZoomIn);
@@ -2109,7 +2117,7 @@ export function mountLivingGoalMap({
     mapScene?.addEventListener('pointermove', onScenePointerMove, { passive: false });
     mapScene?.addEventListener('pointerup', finishScenePointer);
     mapScene?.addEventListener('pointercancel', finishScenePointer);
-    mapScene?.addEventListener('wheel', onSceneWheel, { passive: false });
+    mapShell?.addEventListener('wheel', onSceneWheel, { passive: false });
     mapScene?.addEventListener('dblclick', onSceneDoubleClick);
     zoomOutControl?.addEventListener('click', onZoomOut);
     zoomInControl?.addEventListener('click', onZoomIn);
