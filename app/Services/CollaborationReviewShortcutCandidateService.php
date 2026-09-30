@@ -25,6 +25,10 @@ final class CollaborationReviewShortcutCandidateService
     public function candidate(Request $request): ?array
     {
         $plans = $this->ownership->ownedPlans($request, [
+            'tasks',
+            'workLogs',
+            'availabilityRules',
+            'availabilityOverrides',
             'artifacts' => fn ($query) => $query
                 ->latest('updated_at')
                 ->latest('id'),
