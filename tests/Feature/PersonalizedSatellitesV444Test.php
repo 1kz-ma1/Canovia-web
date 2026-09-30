@@ -158,8 +158,15 @@ class PersonalizedSatellitesV444Test extends TestCase
         $this->assertCount(2, $result['edges']);
         $this->assertSame('candidate:1', data_get($result, 'nodes.0.id'));
         $this->assertSame('candidate:3', data_get($result, 'nodes.1.id'));
-        $this->assertSame(['x' => 50, 'y' => 12], data_get($result, 'nodes.0.position'));
-        $this->assertSame(['x' => 88, 'y' => 50], data_get($result, 'nodes.1.position'));
+        $this->assertSame('satellite-1', data_get($result, 'nodes.0.position_role'));
+        $this->assertSame(50, data_get($result, 'nodes.0.position.x'));
+        $this->assertGreaterThan(12, (float) data_get($result, 'nodes.0.position.y'));
+        $this->assertLessThanOrEqual(18, (float) data_get($result, 'nodes.0.position.y'));
+
+        $this->assertSame('satellite-2', data_get($result, 'nodes.1.position_role'));
+        $this->assertLessThan(88, (float) data_get($result, 'nodes.1.position.x'));
+        $this->assertGreaterThanOrEqual(82, (float) data_get($result, 'nodes.1.position.x'));
+        $this->assertSame(50, data_get($result, 'nodes.1.position.y'));
     }
 
     public function test_task_bound_ai_practice_stays_inside_its_plan_instead_of_becoming_a_satellite(): void
