@@ -44,7 +44,7 @@
                 'intent' => 'is-intent-node',
                 'domain', 'intent_context', 'plan' => 'is-hierarchy-node',
                 'collaboration_hub', 'collaboration_context', 'collaboration_item' => 'is-hierarchy-node is-collaboration-node',
-                'satellite_plan', 'satellite_tool', 'satellite_reflection' => 'is-personalized-satellite',
+                'satellite_plan', 'satellite_tool', 'satellite_reflection', 'satellite_collaboration' => 'is-personalized-satellite',
                 'task', 'evidence' => $isReflectionMode && $isHierarchyLevel ? 'is-hierarchy-node is-reflection-node' : '',
                 default => '',
             };
