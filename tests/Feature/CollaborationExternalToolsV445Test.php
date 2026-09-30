@@ -32,24 +32,16 @@ class CollaborationExternalToolsV445Test extends TestCase
         ]);
     }
 
-    public function test_l1_collaboration_uses_four_purpose_contexts_instead_of_provider_or_category_buckets(): void
+    public function test_l1_collaboration_lists_shared_projects_before_operational_purposes(): void
     {
         $owner = User::factory()->create(['first_run_completed_at' => now()]);
         $plan = $this->plan($owner, '共同Canovia開発', '個人開発');
         $task = $this->task($plan, '共同UIを進める');
 
-        $this->artifact($plan, '自分担当', 'canovia', 'https://example.com/work', [
-            'assigned_user_id' => $owner->id,
-            'state' => 'active',
-            'task' => $task,
-        ]);
         $this->artifact($plan, 'レビュー対象', 'canovia', 'https://example.com/review', [
             'state' => 'review',
+            'task' => $task,
         ]);
-        $this->artifact($plan, '相手待ち資料', 'google_drive', 'https://drive.google.com/file/d/waiting', [
-            'state' => 'waiting',
-        ]);
-        $this->artifact($plan, 'GitHub PR', 'github', 'https://github.com/1kz-ma1/Canovia/pull/120');
 
         $response = $this->actingAs($owner)->get(route('map.index', [
             'level' => 'l1',
@@ -59,39 +51,36 @@ class CollaborationExternalToolsV445Test extends TestCase
         $response
             ->assertOk()
             ->assertSee('data-map-level="l1"', false)
-            ->assertSee('L1 · COLLABORATION CONTEXT')
-            ->assertSee('自分が進める')
-            ->assertSee('レビュー待ち')
-            ->assertSee('相手待ち')
-            ->assertSee('外部Toolで確認');
+            ->assertSee('L1 · SHARED PROJECTS')
+            ->assertSee('共同Canovia開発')
+            ->assertSee('共同計画を作る');
 
         $graph = $response->viewData('graph');
         $ids = $graph['nodes']->pluck('id')->all();
 
         $this->assertTrue((bool) $graph['collaboration_mode']);
         $this->assertSame('collaboration:hub', $graph['center_node_id']);
-        $this->assertContains('collaboration:context:my_action', $ids);
-        $this->assertContains('collaboration:context:review', $ids);
-        $this->assertContains('collaboration:context:waiting', $ids);
-        $this->assertContains('collaboration:context:external', $ids);
+        $this->assertContains('collaboration:project:'.$plan->id, $ids);
+        $this->assertContains('collaboration:create-project', $ids);
+        $this->assertNotContains('collaboration:context:my_action', $ids);
+        $this->assertNotContains('collaboration:context:review', $ids);
         $this->assertFalse($graph['nodes']->contains(
             fn (array $node) => ($node['type'] ?? null) === 'domain'
         ));
-        $this->assertSame('Purpose', $this->depthLabelFromHtml($response->getContent(), 1));
 
         $request = Request::create('/map?level=l1&intent=collaboration', 'GET');
         $request->setUserResolver(fn () => $owner);
         $context = app(CollaborationContextService::class)->resolve($request);
         $semantic = app(CollaborationNavigationGraphService::class)
-            ->build(\App\Enums\MapLevel::Domain, $context);
+            ->build(AppEnumsMapLevel::Domain, $context);
 
-        $child = $semantic['nodes']->firstWhere('id', 'collaboration:context:review');
+        $child = $semantic['nodes']->firstWhere('id', 'collaboration:project:'.$plan->id);
         $this->assertArrayHasKey('attention_role', $child);
         $this->assertArrayNotHasKey('position', $child);
         $this->assertArrayNotHasKey('importance', $child);
     }
 
-    public function test_review_waiting_requires_explicit_human_state_while_github_pr_is_only_an_external_confirmation_target(): void
+    public function test_review_waiting_still_requires_explicit_human_state_inside_project_first_navigation(): void
     {
         $owner = User::factory()->create(['first_run_completed_at' => now()]);
         $plan = $this->plan($owner, '共同リリース', '個人開発');
@@ -111,44 +100,39 @@ class CollaborationExternalToolsV445Test extends TestCase
             'https://github.com/example/project/pull/321',
         );
 
-        $reviewResponse = $this->actingAs($owner)->get(route('map.index', [
-            'level' => 'l2',
-            'intent' => 'collaboration',
-            'collab_context' => 'review',
-        ]));
+        $request = Request::create('/map?level=l1&intent=collaboration&collab_context=review', 'GET');
+        $request->setUserResolver(fn () => $owner);
+        $context = app(CollaborationContextService::class)->resolve($request);
 
-        $reviewGraph = $reviewResponse->viewData('graph');
-        $reviewLabels = $reviewGraph['nodes']->pluck('label')->all();
-
-        $this->assertContains('明示レビュー対象', $reviewLabels);
-        $this->assertNotContains('PR #321', $reviewLabels);
+        $reviewItems = collect(data_get($context, 'selected_context.items', []));
+        $this->assertTrue($reviewItems->contains(
+            fn (array $item) => ($item['label'] ?? null) === '明示レビュー対象'
+        ));
+        $this->assertFalse($reviewItems->contains(
+            fn (array $item) => ($item['label'] ?? null) === 'PR #321'
+        ));
         $this->assertSame('review', $review->fresh()->collaborationState());
         $this->assertNull($github->fresh()->collaborationState());
 
-        $externalResponse = $this->actingAs($owner)->get(route('map.index', [
-            'level' => 'l2',
-            'intent' => 'collaboration',
-            'collab_context' => 'external',
-        ]));
+        $projects = collect($context['projects'] ?? []);
+        $project = $projects->firstWhere('id', $plan->id);
+        $this->assertSame(1, (int) data_get($project, 'review_count'));
 
-        $externalGraph = $externalResponse->viewData('graph');
-        $githubNode = $externalGraph['nodes']->first(
-            fn (array $node) => ($node['label'] ?? null) === 'PR #321'
+        $externalRequest = Request::create('/map?level=l1&intent=collaboration&collab_context=external', 'GET');
+        $externalRequest->setUserResolver(fn () => $owner);
+        $external = app(CollaborationContextService::class)->resolve($externalRequest);
+        $externalItems = collect(data_get($external, 'selected_context.items', []));
+
+        $githubItem = $externalItems->first(
+            fn (array $item) => ($item['label'] ?? null) === 'PR #321'
         );
 
-        $this->assertIsArray($githubNode);
-        $this->assertSame('external', data_get($githubNode, 'direct_navigation.kind'));
-        $this->assertSame('https://github.com/example/project/pull/321', data_get($githubNode, 'direct_navigation.url'));
-        $this->assertStringContainsString('GitHub Pull Request', (string) $githubNode['subtitle']);
-        $this->assertStringContainsString('推測せず', (string) data_get($githubNode, 'classic_surface.summary'));
-
-        $externalResponse
-            ->assertSee('data-map-action-role="external_tool"', false)
-            ->assertSee('target="_blank"', false)
-            ->assertSee('rel="noopener noreferrer"', false);
+        $this->assertIsArray($githubItem);
+        $this->assertSame('GitHub Pull Request', $githubItem['external_kind']);
+        $this->assertSame('https://github.com/example/project/pull/321', $githubItem['url']);
     }
 
-    public function test_viewer_gets_only_explicit_assignment_not_editable_task_fallback(): void
+    public function test_viewer_gets_project_visibility_but_my_action_still_requires_explicit_assignment(): void
     {
         $owner = User::factory()->create(['first_run_completed_at' => now()]);
         $viewer = User::factory()->create(['first_run_completed_at' => now()]);
@@ -162,23 +146,12 @@ class CollaborationExternalToolsV445Test extends TestCase
             'joined_at' => now(),
         ]);
 
-        $first = $this->actingAs($viewer)->get(route('map.index', [
-            'level' => 'l2',
-            'intent' => 'collaboration',
-            'collab_context' => 'my_action',
-        ]));
-        $firstGraph = $first->viewData('graph');
+        $request = Request::create('/map?level=l1&intent=collaboration&collab_context=my_action', 'GET');
+        $request->setUserResolver(fn () => $viewer);
+        $first = app(CollaborationContextService::class)->resolve($request);
 
-        $this->assertCount(2, $firstGraph['nodes']);
-        $this->assertSame('collaboration:context:my_action', $firstGraph['center_node_id']);
-        $this->assertTrue($firstGraph['nodes']->contains(
-            fn (array $node) => ($node['id'] ?? null) === 'plan:'.$plan->id
-                && data_get($node, 'direct_navigation.kind') === 'zoom-in'
-                && str_contains((string) data_get($node, 'direct_navigation.url'), 'level=l3')
-        ));
-        $this->assertFalse($firstGraph['nodes']->contains(
-            fn (array $node) => str_starts_with((string) ($node['id'] ?? ''), 'collaboration:empty:')
-        ));
+        $this->assertCount(1, collect($first['projects'] ?? []));
+        $this->assertCount(0, collect(data_get($first, 'selected_context.items', [])));
 
         $artifact = $this->artifact(
             $plan,
@@ -192,16 +165,11 @@ class CollaborationExternalToolsV445Test extends TestCase
             ],
         );
 
-        $secondGraph = $this->actingAs($viewer)
-            ->get(route('map.index', [
-                'level' => 'l2',
-                'intent' => 'collaboration',
-                'collab_context' => 'my_action',
-            ]))
-            ->viewData('graph');
+        $second = app(CollaborationContextService::class)->resolve($request);
+        $items = collect(data_get($second, 'selected_context.items', []));
 
-        $this->assertTrue($secondGraph['nodes']->contains(
-            fn (array $node) => ($node['label'] ?? null) === 'Viewer担当Artifact'
+        $this->assertTrue($items->contains(
+            fn (array $item) => ($item['label'] ?? null) === 'Viewer担当Artifact'
         ));
         $this->assertSame('active', $artifact->fresh()->collaborationState());
     }
