@@ -156,6 +156,53 @@ class MapCollaborationWorkspaceV490Test extends TestCase
         $this->assertSame('viewer', $workspace['role']);
     }
 
+    public function test_review_shortcut_project_selection_hides_projects_without_explicit_review_items(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $reviewPlan = $this->sharedPlan($owner, 'レビューありProject');
+        $plainPlan = $this->sharedPlan($owner, 'レビューなしProject');
+
+        PlanArtifact::query()->create([
+            'plan_id' => $reviewPlan->id,
+            'created_by_user_id' => $owner->id,
+            'provider' => 'canovia',
+            'artifact_type' => 'file',
+            'title' => 'Review Target',
+            'url' => 'https://example.com/review-target',
+            'metadata' => ['collaboration_state' => 'review'],
+        ]);
+
+        PlanArtifact::query()->create([
+            'plan_id' => $plainPlan->id,
+            'created_by_user_id' => $owner->id,
+            'provider' => 'github',
+            'artifact_type' => 'link',
+            'title' => 'PR without explicit review',
+            'url' => 'https://github.com/example/project/pull/1',
+            'metadata' => null,
+        ]);
+
+        $response = $this->actingAs($owner)->get(route('map.index', [
+            'level' => 'l1',
+            'intent' => 'collaboration',
+            'collab_context' => 'review',
+        ]));
+
+        $response
+            ->assertOk()
+            ->assertSee('レビュー待ちの共同計画')
+            ->assertSee('レビューありProject')
+            ->assertDontSee('レビューなしProject');
+
+        $graph = $response->viewData('graph');
+        $this->assertNotNull(
+            $graph['nodes']->firstWhere('id', 'collaboration:project:'.$reviewPlan->id)
+        );
+        $this->assertNull(
+            $graph['nodes']->firstWhere('id', 'collaboration:project:'.$plainPlan->id)
+        );
+    }
+
     public function test_collaboration_plus_opens_manual_create_with_collaboration_preselected(): void
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);
