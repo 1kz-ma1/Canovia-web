@@ -12,7 +12,7 @@
                 <section class="canovia-map-classic-content" data-map-classic-content="{{ $node['id'] }}">
                     <div class="canovia-map-dashboard-summary">
                         <p class="canovia-map-classic-kind">{{ $surfaceKind }}</p>
-                        <h2 class="canovia-map-classic-title">{{ $surface['title'] ?? $node['label'] }}</h2>
+                        <h2 class="canovia-map-classic-title" data-map-document-title-source>{{ $surface['title'] ?? $node['label'] }}</h2>
                         @if (filled($surface['summary'] ?? null))
                             <p class="canovia-map-classic-summary">{{ $surface['summary'] }}</p>
                         @endif
