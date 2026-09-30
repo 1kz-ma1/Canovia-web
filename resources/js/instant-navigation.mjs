@@ -27,6 +27,32 @@ function cacheKey(url) {
     return url.pathname + url.search;
 }
 
+export const INSTANT_RUNTIME_TRANSIENT_ATTRIBUTES = Object.freeze([
+    'data-canovia-instant-initialized',
+    'data-map-focus-initialized',
+    'data-map-data-layers-initialized',
+    'data-map-pages-initialized',
+    'data-space-station-intake-initialized',
+    'data-map-semantic-transition-marked',
+    'data-map-reprojected',
+]);
+
+export function stripInstantRuntimeTransientState(root) {
+    if (!root) return root;
+
+    for (const attribute of INSTANT_RUNTIME_TRANSIENT_ATTRIBUTES) {
+        if (root.hasAttribute?.(attribute)) {
+            root.removeAttribute(attribute);
+        }
+
+        root.querySelectorAll?.(`[${attribute}]`)?.forEach((element) => {
+            element.removeAttribute(attribute);
+        });
+    }
+
+    return root;
+}
+
 function feedbackContextFrom(documentRef) {
     const form = documentRef.querySelector('[data-feedback-dialog] form');
     if (!form) return null;
@@ -67,10 +93,7 @@ function payloadFromDocument(documentRef, url) {
         });
     }
 
-    const pageSnapshot = page.cloneNode(true);
-    pageSnapshot.querySelectorAll('[data-canovia-instant-initialized]').forEach((element) => {
-        element.removeAttribute('data-canovia-instant-initialized');
-    });
+    const pageSnapshot = stripInstantRuntimeTransientState(page.cloneNode(true));
     pageSnapshot.querySelectorAll('.is-leaving-left, .is-leaving-right').forEach((element) => {
         element.classList.remove('is-leaving-left', 'is-leaving-right');
     });
