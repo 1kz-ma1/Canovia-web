@@ -49,9 +49,9 @@ class MobileMapGestureUxV451Test extends TestCase
             ->get(route('map.index'))
             ->assertOk()
             ->assertSee('data-map-context-close', false)
-            ->assertSee('aria-label="Focusを閉じる"', false)
+            ->assertSee('aria-label="詳細を閉じる"', false)
             ->assertSee('data-map-context-expand', false)
-            ->assertSee('aria-label="Context Surfaceの表示サイズを切り替える"', false);
+            ->assertSee('aria-label="詳細パレットの表示サイズを切り替える"', false);
     }
 
     public function test_mobile_gesture_layer_does_not_change_l0_semantic_projection(): void
