@@ -101,11 +101,13 @@ test('desktop semantic arm uses dwell and hysteresis before opening', () => {
     }), false);
 });
 
-test('desktop semantic open threshold is stricter while mobile keeps V49.4 behavior', () => {
+test('semantic navigation requires deliberate zoom-out while keeping V49.5 open thresholds', () => {
     assert.equal(semanticZoomThresholdDirection(1.42, { inThreshold: 1.42 }), 'in');
     assert.equal(semanticZoomThresholdDirection(1.44, { inThreshold: 1.46 }), null);
     assert.equal(semanticZoomThresholdDirection(1.46, { inThreshold: 1.46 }), 'in');
-    assert.equal(semanticZoomThresholdDirection(0.82, { inThreshold: 1.46 }), 'out');
+    assert.equal(semanticZoomThresholdDirection(0.82, { inThreshold: 1.46 }), null);
+    assert.equal(semanticZoomThresholdDirection(0.71, { inThreshold: 1.46 }), null);
+    assert.equal(semanticZoomThresholdDirection(0.70, { inThreshold: 1.46 }), 'out');
 });
 
 test('pinch world anchor stays under the same screen point across zoom', () => {
