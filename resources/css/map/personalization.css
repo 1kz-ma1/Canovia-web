@@ -77,6 +77,13 @@
         line-height: 1.65;
     }
 
+    .canovia-map-shortcut-pin-context h3 {
+        margin-top: 0.18rem;
+        color: rgb(241 245 249);
+        font-size: 0.82rem;
+        font-weight: 850;
+    }
+
     .canovia-map-shortcut-pin-context[data-map-shortcut-pin-status="pinned"] {
         border-color: rgb(251 191 36 / 0.2);
     }
