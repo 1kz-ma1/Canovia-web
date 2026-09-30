@@ -162,6 +162,10 @@
         grid-template-rows: auto minmax(0, 1fr);
     }
 
+    .canovia-map-context-surface:not(.is-dashboard-document) > .canovia-map-document-position {
+        display: none;
+    }
+
     .canovia-map-context-leading {
         min-width: 0;
         display: flex;
@@ -176,11 +180,11 @@
             gap: 0.55rem;
         }
 
-        .canovia-map-context-surface .canovia-map-document-scroll {
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-document-scroll {
             overflow: visible;
         }
 
-        .canovia-map-context-card[data-map-document-canvas] {
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-context-card[data-map-document-canvas] {
             position: static;
             top: auto;
         }
@@ -411,7 +415,7 @@
             filter: saturate(0.78) brightness(0.86);
         }
 
-        .canovia-map-context-surface[data-map-document-viewport] {
+        .canovia-map-context-surface.is-dashboard-document[data-map-document-viewport] {
             position: fixed;
             z-index: 72;
             right: 0;
@@ -433,7 +437,7 @@
                 );
         }
 
-        .canovia-map-context-header.canovia-map-document-chrome {
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-context-header.canovia-map-document-chrome {
             position: relative;
             z-index: 8;
             top: auto;
@@ -488,7 +492,7 @@
             background: rgb(15 23 42 / 0.72);
         }
 
-        .canovia-map-context-surface .canovia-map-document-scroll {
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-document-scroll {
             padding:
                 0.58rem
                 max(0.82rem, env(safe-area-inset-right))
@@ -496,7 +500,7 @@
                 max(0.58rem, env(safe-area-inset-left));
         }
 
-        .canovia-map-context-card[data-map-document-canvas] {
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-context-card[data-map-document-canvas] {
             position: relative;
             width: 46rem;
             min-width: 46rem;
@@ -515,7 +519,7 @@
             -webkit-backdrop-filter: blur(18px) saturate(1.12);
         }
 
-        .canovia-map-context-card[data-map-document-canvas] .canovia-map-classic-content {
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-context-card[data-map-document-canvas] .canovia-map-classic-content {
             display: grid;
             grid-template-columns: minmax(28rem, 1.35fr) minmax(14rem, 0.65fr);
             grid-template-areas:
@@ -573,25 +577,25 @@
             padding: 0.8rem;
         }
 
-        .canovia-map-context-card[data-map-document-canvas] .canovia-map-classic-title {
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-context-card[data-map-document-canvas] .canovia-map-classic-title {
             max-width: 42rem;
             font-size: 1.18rem;
             line-height: 1.4;
         }
 
-        .canovia-map-context-card[data-map-document-canvas] .canovia-map-classic-summary {
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-context-card[data-map-document-canvas] .canovia-map-classic-summary {
             max-width: 42rem;
             font-size: 0.8rem;
             line-height: 1.75;
         }
 
-        .canovia-map-context-card[data-map-document-canvas] .canovia-map-node-context,
-        .canovia-map-context-card[data-map-document-canvas] .canovia-map-personalization-explanation,
-        .canovia-map-context-card[data-map-document-canvas] .canovia-map-shortcut-pin-context {
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-context-card[data-map-document-canvas] .canovia-map-node-context,
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-context-card[data-map-document-canvas] .canovia-map-personalization-explanation,
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-context-card[data-map-document-canvas] .canovia-map-shortcut-pin-context {
             margin-top: 0;
         }
 
-        .canovia-map-context-card[data-map-document-canvas] .canovia-map-classic-actions {
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-context-card[data-map-document-canvas] .canovia-map-classic-actions {
             margin-top: 0.55rem;
         }
 
