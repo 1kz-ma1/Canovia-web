@@ -66,6 +66,45 @@ function slots(group, count, { mobile = false } = {}) {
     });
 }
 
+export function mobilePersonalizedSatellitePosition(
+    node,
+    viewport = { width: 390, height: 700 },
+) {
+    const width = Math.max(1, Number(viewport?.width || 390));
+    const height = Math.max(1, Number(viewport?.height || 700));
+    const role = String(node?.positionRole || '');
+    const sourceX = Number(node?.x ?? 50);
+    const sourceY = Number(node?.y ?? 50);
+    const percentToPixels = (percent) => Math.max(
+        0,
+        Math.min(width * 0.42, width * Math.max(0, Number(percent || 0)) / 100),
+    );
+    const xPercent = (pixels) => (Number(pixels) / width) * 100;
+    const yPercent = (pixels) => (Number(pixels) / height) * 100;
+
+    if (role === 'satellite-1') {
+        const radius = percentToPixels(50 - sourceY);
+        return { x: 50, y: Math.round((50 - yPercent(radius)) * 10) / 10 };
+    }
+
+    if (role === 'satellite-2') {
+        const radius = percentToPixels(sourceX - 50);
+        return { x: Math.round((50 + xPercent(radius)) * 10) / 10, y: 50 };
+    }
+
+    if (role === 'satellite-3') {
+        const radius = percentToPixels(sourceY - 50);
+        return { x: 50, y: Math.round((50 + yPercent(radius)) * 10) / 10 };
+    }
+
+    if (role === 'satellite-4') {
+        const radius = percentToPixels(50 - sourceX);
+        return { x: Math.round((50 - xPercent(radius)) * 10) / 10, y: 50 };
+    }
+
+    return null;
+}
+
 function nowSlot(selectedRole, { mobile = false } = {}) {
     const selectedGroup = roleGroup(selectedRole);
 
@@ -158,6 +197,12 @@ export function buildMobileBaseLayout(
         };
 
         for (const node of nodes) {
+            const personalized = mobilePersonalizedSatellitePosition(node, viewport);
+            if (personalized) {
+                positions.set(node.id, personalized);
+                continue;
+            }
+
             if (rolePositions[node.positionRole]) {
                 positions.set(node.id, rolePositions[node.positionRole]);
             }
