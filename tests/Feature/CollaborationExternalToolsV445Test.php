@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\BehaviorEventType;
+use App\Enums\MapLevel;
 use App\Models\BehaviorEvent;
 use App\Models\Plan;
 use App\Models\PlanArtifact;
@@ -72,7 +73,7 @@ class CollaborationExternalToolsV445Test extends TestCase
         $request->setUserResolver(fn () => $owner);
         $context = app(CollaborationContextService::class)->resolve($request);
         $semantic = app(CollaborationNavigationGraphService::class)
-            ->build(AppEnumsMapLevel::Domain, $context);
+            ->build(MapLevel::Domain, $context);
 
         $child = $semantic['nodes']->firstWhere('id', 'collaboration:project:'.$plan->id);
         $this->assertArrayHasKey('attention_role', $child);
