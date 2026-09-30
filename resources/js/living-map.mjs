@@ -2024,7 +2024,6 @@ export function mountLivingGoalMap({
         clientPoint = null,
         {
             requireProximity = false,
-            requiredNodeId = null,
         } = {},
     ) => {
         if (!mapScene) return null;
@@ -2136,6 +2135,7 @@ export function mountLivingGoalMap({
         clientPoint = null,
         {
             requireProximity = false,
+            requiredNodeId = null,
         } = {},
     ) => {
         if (semanticZoomNavigating || disposed) return false;
