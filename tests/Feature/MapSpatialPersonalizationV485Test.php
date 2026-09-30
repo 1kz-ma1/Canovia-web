@@ -93,13 +93,17 @@ class MapSpatialPersonalizationV485Test extends TestCase
             'metadata' => [],
         ]);
 
-        $beforePlan = $plan->only(['priority', 'title', 'deadline']);
-        $beforeTask = $task->only([
-            'status',
-            'progress_percent',
-            'remaining_minutes',
-            'priority',
-        ]);
+        $beforePlan = [
+            'priority' => (int) $plan->priority,
+            'title' => (string) $plan->title,
+            'deadline' => $plan->deadline?->toDateString(),
+        ];
+        $beforeTask = [
+            'status' => (string) $task->status,
+            'progress_percent' => (int) $task->progress_percent,
+            'remaining_minutes' => (int) $task->remaining_minutes,
+            'priority' => (int) $task->priority,
+        ];
 
         $response = $this
             ->withSession(['pace_keeper.actor_token' => $actorToken])
@@ -120,13 +124,17 @@ class MapSpatialPersonalizationV485Test extends TestCase
         $plan->refresh();
         $task->refresh();
 
-        $this->assertSame($beforePlan, $plan->only(['priority', 'title', 'deadline']));
-        $this->assertSame($beforeTask, $task->only([
-            'status',
-            'progress_percent',
-            'remaining_minutes',
-            'priority',
-        ]));
+        $this->assertSame($beforePlan, [
+            'priority' => (int) $plan->priority,
+            'title' => (string) $plan->title,
+            'deadline' => $plan->deadline?->toDateString(),
+        ]);
+        $this->assertSame($beforeTask, [
+            'status' => (string) $task->status,
+            'progress_percent' => (int) $task->progress_percent,
+            'remaining_minutes' => (int) $task->remaining_minutes,
+            'priority' => (int) $task->priority,
+        ]);
     }
 
     public function test_personalization_remounts_after_living_map_reprojection(): void
