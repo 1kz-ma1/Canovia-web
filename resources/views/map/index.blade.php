@@ -45,7 +45,7 @@
     @endphp
 
     <section
-        class="canovia-map-page"
+        class="canovia-map-page {{ $isPlanWorkspace ? 'is-document-mode is-plan-document-mode' : '' }}"
         data-canovia-map-page
         data-map-level="{{ $mapLevel }}"
         data-map-hierarchy-depth="{{ (int) ($hierarchy['depth'] ?? 0) }}"
