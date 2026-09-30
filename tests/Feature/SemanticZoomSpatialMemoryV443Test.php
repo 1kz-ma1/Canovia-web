@@ -108,7 +108,7 @@ class SemanticZoomSpatialMemoryV443Test extends TestCase
         $this->assertSame(1, data_get($graph, 'hierarchy.depth'));
     }
 
-    public function test_l2_projects_only_selected_domain_plans_as_graph_children(): void
+    public function test_execution_l2_projects_only_selected_domain_plans_as_graph_children(): void
     {
         [$user, $devPlan, $devTask, $studyPlan] = $this->scenario();
         $hierarchy = app(MapHierarchyContextService::class);
@@ -116,7 +116,7 @@ class SemanticZoomSpatialMemoryV443Test extends TestCase
 
         $response = $this->actingAs($user)->get(route('map.index', [
             'level' => 'l2',
-            'intent' => 'plan',
+            'intent' => 'execution',
             'domain' => $domainKey,
         ]));
 
