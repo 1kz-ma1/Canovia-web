@@ -1258,3 +1258,15 @@ Node cardはscene camera scaleへそのまま追従させず、desktopでは `1 
 LOD / counter-scale / armed Nodeはruntime onlyで、DB・Telemetry・sessionStorageへ新規保存しない。
 
 詳細は `docs/V49.4_SEMANTIC_ZOOM_LOD.md` を正とする。
+
+## V49.5 Semantic Zoom Stabilization
+
+V49.4のcamera-selection separationを安定化し、Desktop semantic zoomへhysteresis / dwellを追加する。ready LODは1.34のまま、同じzoomable Node近傍を120ms狙った場合のみarmedにする。armed stateはscale 1.28未満まで解除せず、Desktop semantic open thresholdは1.46へ変更する。Mobile / PWAのsemantic open threshold 1.42は維持する。
+
+Pinch gestureは開始時に指中点の下にあるMap world coordinateを固定anchorとして保存し、各frameでcurrent midpoint / target scale / fixed world anchorからcamera x/yを直接逆算する。Desktop precision pinchも同じworld-anchor helperを利用し、zoom時の注視点driftを抑える。Map boundary clampが必要な場合のみanchor preservationよりboundary safetyを優先する。
+
+In-place Semantic Expansion後だけlocal collision resolutionを適用する。selected semantic parentはlocked nodeとして位置を維持し、overlapしたchild同士だけを必要最小限押し広げる。Desktopは18px padding / 6 iterations / 8px boundary、Mobileは10px / 6 / 4px。通常のL0 constellationやcanonical layoutへglobal force layoutは適用しない。
+
+追加stateはsemantic arm candidate id / candidate sinceのみでcurrent Map runtime限定。DB / sessionStorage / Telemetryへ新規永続化しない。
+
+詳細は `docs/V49.5_SEMANTIC_ZOOM_STABILIZATION.md` を正とする。

@@ -17,6 +17,10 @@ import {
     mapSemanticZoomDirection,
     semanticZoomThresholdDirection,
     semanticZoomDestination,
+    semanticArmDecision,
+    mapWorldPointAtScreen,
+    mapViewForWorldAnchor,
+    resolveNodeCollisions,
     mapLodForScale,
     mapNodeCounterScale,
     semanticFocusMatchesNode,
@@ -63,6 +67,79 @@ test('semantic route key normalizes query ordering and removes hash-only UI stat
         semanticRouteKey('/map?level=l3&intent=execution&plan=12'),
         '/map?intent=execution&level=l3&plan=12',
     );
+});
+
+test('desktop semantic arm uses dwell and hysteresis before opening', () => {
+    assert.equal(semanticArmDecision({
+        scale: 1.36,
+        hasCandidate: true,
+        stableForMs: 80,
+    }), false);
+
+    assert.equal(semanticArmDecision({
+        scale: 1.36,
+        hasCandidate: true,
+        stableForMs: 140,
+    }), true);
+
+    assert.equal(semanticArmDecision({
+        scale: 1.30,
+        hasCandidate: true,
+        currentlyArmed: true,
+    }), true);
+
+    assert.equal(semanticArmDecision({
+        scale: 1.24,
+        hasCandidate: true,
+        currentlyArmed: true,
+    }), false);
+
+    assert.equal(semanticArmDecision({
+        scale: 1.50,
+        hasCandidate: false,
+        stableForMs: 500,
+    }), false);
+});
+
+test('desktop semantic open threshold is stricter while mobile keeps V49.4 behavior', () => {
+    assert.equal(semanticZoomThresholdDirection(1.42, { inThreshold: 1.42 }), 'in');
+    assert.equal(semanticZoomThresholdDirection(1.44, { inThreshold: 1.46 }), null);
+    assert.equal(semanticZoomThresholdDirection(1.46, { inThreshold: 1.46 }), 'in');
+    assert.equal(semanticZoomThresholdDirection(0.82, { inThreshold: 1.46 }), 'out');
+});
+
+test('pinch world anchor stays under the same screen point across zoom', () => {
+    const viewport = { width: 1000, height: 800 };
+    const start = { x: 40, y: -20, scale: 1.2 };
+    const screen = { x: 700, y: 300 };
+    const world = mapWorldPointAtScreen(start, screen, viewport);
+    const next = mapViewForWorldAnchor(world, 1.8, screen, viewport);
+
+    const reconstructed = {
+        x: viewport.width / 2 + next.x + world.x * next.scale,
+        y: viewport.height / 2 + next.y + world.y * next.scale,
+    };
+
+    assert.ok(Math.abs(reconstructed.x - screen.x) < 0.001);
+    assert.ok(Math.abs(reconstructed.y - screen.y) < 0.001);
+});
+
+test('collision resolver keeps the selected parent fixed and pushes only overlapping children', () => {
+    const viewport = { width: 1000, height: 800 };
+    const resolved = resolveNodeCollisions([
+        { id: 'parent', x: 50, y: 50, width: 180, height: 100, locked: true },
+        { id: 'child:a', x: 50, y: 53, width: 160, height: 90 },
+        { id: 'child:b', x: 50, y: 56, width: 160, height: 90 },
+    ], viewport, {
+        padding: 18,
+        iterations: 6,
+        boundsPadding: 8,
+    });
+
+    assert.deepEqual(resolved.parent, { x: 50, y: 50 });
+    assert.ok(resolved['child:a'].y > 50);
+    assert.ok(resolved['child:b'].y > resolved['child:a'].y);
+    assert.ok(resolved['child:b'].y - resolved['child:a'].y > 10);
 });
 
 test('semantic zoom LOD reveals detail progressively before navigation threshold', () => {
