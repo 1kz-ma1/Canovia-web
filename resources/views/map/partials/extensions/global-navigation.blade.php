@@ -1,21 +1,26 @@
 @php
     $globalHierarchy = is_array($graph['hierarchy'] ?? null) ? $graph['hierarchy'] : [];
-    $globalDepth = max(0, min(3, (int) ($globalHierarchy['depth'] ?? 0)));
     $globalCrumbs = collect($globalHierarchy['breadcrumbs'] ?? []);
     $globalHomeUrl = route('map.index');
     $globalIsHome = $mapLevel === 'l0';
+    $globalIntent = (string) ($globalHierarchy['intent'] ?? '');
 
     $globalMode = match (true) {
         (bool) ($graph['collaboration_mode'] ?? false) => 'collaboration',
         (bool) ($graph['reflection_mode'] ?? false) => 'reflection',
+        $globalIntent === 'execution' => 'execution',
+        $globalIntent === 'plan' => 'plan',
         default => 'standard',
     };
 
     $globalDepthLabels = match ($globalMode) {
         'collaboration' => ['全体', '共同', '目的', '実行'],
         'reflection' => ['全体', '振り返り', '記録', '詳細'],
+        'execution' => ['全体', 'Plan', '実行'],
+        'plan' => ['全体', 'Plan', 'Dashboard'],
         default => ['全体', '領域', 'Plan', '実行'],
     };
+    $globalDepth = max(0, min(count($globalDepthLabels) - 1, (int) ($globalHierarchy['depth'] ?? 0)));
 
     $globalPathCrumbs = $globalCrumbs
         ->filter(fn ($crumb, $index) => $index > 0 && filled($crumb['label'] ?? null))
@@ -26,6 +31,7 @@
     class="canovia-map-global-navigation"
     data-map-global-navigation
     data-map-global-depth="{{ $globalDepth }}"
+    style="--map-global-depth-count: {{ count($globalDepthLabels) }}"
     aria-label="Map現在地"
 >
     <div class="canovia-map-global-navigation-main">
