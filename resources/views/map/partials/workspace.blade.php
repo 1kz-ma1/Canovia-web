@@ -1,6 +1,6 @@
 <div class="canovia-map-workspace" data-map-workspace>
     <div
-        class="canovia-map-shell {{ $isIntentHub ? 'is-intent-hub' : ($isHierarchyLevel ? 'is-hierarchy-map' : 'is-execution-map') }}{{ $isCollaborationMode ? ' is-collaboration-map' : '' }}{{ $isCollaborationWorkspace ? ' is-collaboration-workspace' : '' }}{{ $isReflectionMode ? ' is-reflection-map' : '' }}"
+        class="canovia-map-shell {{ $isIntentHub ? 'is-intent-hub' : ($isHierarchyLevel ? 'is-hierarchy-map' : 'is-execution-map') }}{{ $isCollaborationMode ? ' is-collaboration-map' : '' }}{{ $isCollaborationWorkspace ? ' is-collaboration-workspace' : '' }}{{ $isPlanWorkspace ? ' is-plan-workspace' : '' }}{{ $isReflectionMode ? ' is-reflection-map' : '' }}"
         data-canovia-map
         data-map-level="{{ $mapLevel }}"
     >
@@ -16,6 +16,10 @@
 
         @if ($isCollaborationWorkspace)
             @include('map.partials.collaboration-workspace-palette')
+        @endif
+
+        @if ($isPlanWorkspace)
+            @include('map.partials.plan-workspace-palette')
         @endif
 
         <div class="canovia-map-gesture-controls" data-map-gesture-controls aria-label="Map表示操作">
