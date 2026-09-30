@@ -148,7 +148,8 @@ class MapCollaborationWorkspaceV490Test extends TestCase
             ->assertOk()
             ->assertSee('閲覧Project')
             ->assertSee('閲覧者')
-            ->assertSee('参加メンバー');
+            ->assertSee('参加メンバー')
+            ->assertDontSee('共同設定');
 
         $workspace = $response->viewData('graph')['collaboration_workspace'];
         $this->assertFalse((bool) $workspace['can_manage']);
