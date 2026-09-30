@@ -1204,7 +1204,7 @@ V49.0実機確認で、物理縮小できても親Projectionへ戻れないケ�
 
 DesktopではPlan / Collaboration Workspace Palette上のprecision pinchもMap Shellで受ける。一方ordinary wheelはPalette上ではcard scroll、Map Scene上ではcamera panとして分離する。
 
-Plan Intentは `L0 計画 -> L1 Plan -> L2 Plan Workspace` へ変更する。Plan.categoryはmetadataとして残すが、通常のPlan閲覧で独立semantic levelにはしない。Execution Intentは従来のDomain groupingを維持する。
+Plan Intentは `L0 計画 -> L1 Plan -> L2 Plan Dashboard` とする。Plan.categoryはmetadataとして残すが、通常のPlan閲覧で独立semantic levelにはしない。V49.7以降Execution Intentも `L0 実行 -> L1 Plan -> Execution` とし、Domain groupingを通常Navigationから外す。
 
 L2 Plan Workspaceはselected Planだけをspatial centerとして残し、Classic Planの進捗summary metricsと既存Roadmap partialをPaletteとして再利用する。進捗summaryはshared Blade partialへ切り出し、Classic / Mapで同じ表示contractを利用する。Map専用の類似cardコピーは作らない。
 
@@ -1280,3 +1280,15 @@ zoom-in arrival後、selected parentはworld positionを維持したまま `is-s
 Semantic zoom-out thresholdは0.82から0.70へ下げる。0.82〜0.71の縮小は同じsemantic level内のcamera zoomに留め、階層collapseには明確な縮小gestureを要求する。Mobile semantic open threshold 1.42 / Desktop 1.46は維持する。
 
 詳細は `docs/V49.6_SEMANTIC_EXPANSION_CLARITY.md` を正とする。
+
+## V49.7 Dashboard Map / Document Canvas
+
+Plan / Task等の具体Contextは、Map Nodeを巨大化するのではなくDashboard DocumentとしてMap上へ開く。Mobileでは情報をviewport幅へ強制reflowせず、Plan Dashboardは約54rem、Node Detailは約52remの固定幅Document Canvasとして保持し、Document Viewportから上下左右へpanして読む。Mapは背面のspatial contextとして残す。
+
+Document Surfaceは `data-map-document-viewport` / `data-map-document-canvas` を共通contractとし、Node DetailはSummary / Context / Meta / Actionsのdashboard regionへ整理する。Plan Dashboardは既存Classicのsummary-metrics / Roadmap partialを再利用し、Map専用data modelを追加しない。
+
+Execution IntentではPlan.categoryによるDomain階層を通常Navigationから削除し、L1へPlanを直接配置する。Plan選択から `/map?level=l3&intent=execution&plan=<id>` へ進み、Execution Contextのauthoritative parentは `/map?level=l1&intent=execution` とする。表示上のsemantic depthは Intent -> Plan -> Execution の0/1/2。
+
+戻る操作は明示Back controlを常設し、standalone PWAのみleft-edge swipeを補完する。Safari等ブラウザのnative edge gestureはCanovia側で奪わない。
+
+詳細は `docs/V49.7_DASHBOARD_MAP_DOCUMENT_CANVAS.md` を正とする。
