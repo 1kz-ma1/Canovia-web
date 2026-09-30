@@ -72,6 +72,40 @@
         -webkit-overflow-scrolling: touch;
     }
 
+    .canovia-plan-workspace-palette[data-map-document-viewport]::before,
+    .canovia-plan-workspace-palette[data-map-document-viewport]::after,
+    .canovia-map-context-surface.is-dashboard-document[data-map-document-viewport]::before,
+    .canovia-map-context-surface.is-dashboard-document[data-map-document-viewport]::after {
+        content: "";
+        position: absolute;
+        z-index: 8;
+        top: 3.9rem;
+        bottom: 2.3rem;
+        width: 1.35rem;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 140ms ease;
+    }
+
+    .canovia-plan-workspace-palette[data-map-document-viewport]::before,
+    .canovia-map-context-surface.is-dashboard-document[data-map-document-viewport]::before {
+        left: 0;
+        background: linear-gradient(90deg, rgb(2 6 23 / 0.82), transparent);
+    }
+
+    .canovia-plan-workspace-palette[data-map-document-viewport]::after,
+    .canovia-map-context-surface.is-dashboard-document[data-map-document-viewport]::after {
+        right: 0;
+        background: linear-gradient(270deg, rgb(2 6 23 / 0.82), transparent);
+    }
+
+    .canovia-plan-workspace-palette[data-map-document-viewport].is-document-scrollable:not(.is-document-at-start)::before,
+    .canovia-plan-workspace-palette[data-map-document-viewport].is-document-scrollable:not(.is-document-at-end)::after,
+    .canovia-map-context-surface.is-dashboard-document[data-map-document-viewport].is-document-scrollable:not(.is-document-at-start)::before,
+    .canovia-map-context-surface.is-dashboard-document[data-map-document-viewport].is-document-scrollable:not(.is-document-at-end)::after {
+        opacity: 0.78;
+    }
+
     .canovia-map-document-position {
         --document-thumb-width: 100%;
         --document-thumb-left: 0%;
@@ -256,6 +290,7 @@
         }
 
         .canovia-plan-workspace-palette[data-map-document-viewport] {
+            position: absolute;
             inset:
                 max(0.48rem, env(safe-area-inset-top))
                 max(0.42rem, env(safe-area-inset-right))
