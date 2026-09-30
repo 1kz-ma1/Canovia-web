@@ -85,7 +85,8 @@ class MapPlanWorkspaceV491Test extends TestCase
             ->assertSee('Roadmap')
             ->assertSee($task->title)
             ->assertSee('Classic Plan')
-            ->assertSee('実行Mapへ');
+            ->assertSee('実行Mapへ')
+            ->assertSee('← Plan一覧');
 
         $graph = $response->viewData('graph');
 
