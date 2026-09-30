@@ -159,6 +159,18 @@ class MapPresentationFoundationV477Test extends TestCase
         );
     }
 
+    public function test_mobile_detail_palette_uses_document_canvas_and_exposes_hierarchy_back_control(): void
+    {
+        $blade = file_get_contents(resource_path('views/map/partials/detail-palette.blade.php'));
+        $surfaceBlade = file_get_contents(resource_path('views/map/partials/surface-templates.blade.php'));
+
+        $this->assertStringContainsString('data-map-document-viewport', $blade);
+        $this->assertStringContainsString('data-map-document-canvas', $blade);
+        $this->assertStringContainsString('data-map-document-back', $blade);
+        $this->assertStringContainsString('canovia-map-dashboard-summary', $surfaceBlade);
+        $this->assertStringContainsString('canovia-map-dashboard-actions', $surfaceBlade);
+    }
+
     public function test_collaboration_without_any_shared_plan_offers_creation_inside_the_map(): void
     {
         $user = User::factory()->create([
