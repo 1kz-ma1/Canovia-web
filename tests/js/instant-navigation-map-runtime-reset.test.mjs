@@ -53,13 +53,17 @@ test('instant snapshot strips Map runtime initialization guards before cache reu
         'data-map-data-layers-initialized',
         'data-map-data-layer-control',
     ]);
+    const personalization = fakeElement([
+        'data-map-personalization-initialized',
+        'data-canovia-map-page',
+    ]);
     const intake = fakeElement([
         'data-space-station-intake-initialized',
         'data-space-station-intake',
     ]);
     const root = fakeElement(
         ['data-canovia-instant-initialized', 'data-canovia-page'],
-        [mapPage, pageControl, layerControl, intake],
+        [mapPage, pageControl, layerControl, personalization, intake],
     );
 
     stripInstantRuntimeTransientState(root);
@@ -68,6 +72,7 @@ test('instant snapshot strips Map runtime initialization guards before cache reu
     assert.deepEqual(mapPage.attributes(), ['data-map-level']);
     assert.deepEqual(pageControl.attributes(), ['data-map-page-control']);
     assert.deepEqual(layerControl.attributes(), ['data-map-data-layer-control']);
+    assert.deepEqual(personalization.attributes(), ['data-canovia-map-page']);
     assert.deepEqual(intake.attributes(), ['data-space-station-intake']);
 
     for (const attribute of INSTANT_RUNTIME_TRANSIENT_ATTRIBUTES) {
@@ -75,6 +80,7 @@ test('instant snapshot strips Map runtime initialization guards before cache reu
         assert.equal(mapPage.hasAttribute(attribute), false);
         assert.equal(pageControl.hasAttribute(attribute), false);
         assert.equal(layerControl.hasAttribute(attribute), false);
+        assert.equal(personalization.hasAttribute(attribute), false);
         assert.equal(intake.hasAttribute(attribute), false);
     }
 });
