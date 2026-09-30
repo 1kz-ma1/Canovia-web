@@ -1442,9 +1442,12 @@ export function mountLivingGoalMap({
 
     const scheduleSemanticZoom = (clientPoint = null, delay = 85) => {
         const direction = semanticZoomThresholdDirection(mapView.scale);
-        if (!direction || semanticZoomNavigating) return false;
 
         windowRef.clearTimeout(semanticZoomTimer);
+        semanticZoomTimer = null;
+
+        if (!direction || semanticZoomNavigating) return false;
+
         semanticZoomTimer = windowRef.setTimeout(() => {
             semanticZoomTimer = null;
             commitSemanticZoom(direction, clientPoint);
