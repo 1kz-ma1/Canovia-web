@@ -137,7 +137,7 @@ final class HierarchyNavigationGraphService
                         ? mb_substr((string) $plan->description, 0, 260)
                         : ($executionIntent
                             ? 'このPlanのExecution Contextへ入ります。'
-                            : 'このPlanの詳細Workspaceへ入ります。'),
+                            : 'このPlanのDashboardへ入ります。'),
                     [
                         $this->action(
                             $executionIntent ? 'Executionへ入る' : 'Plan Dashboardへ入る',
@@ -202,7 +202,7 @@ final class HierarchyNavigationGraphService
             classicSurface: $this->surface(
                 'Plan Dashboard',
                 (string) $plan->title,
-                'Planの詳細情報はNodeを増やさず、Classicで使っているカードをWorkspace Paletteとして表示します。',
+                'Planの詳細情報はNodeを増やさず、既存の進捗・Roadmap情報をDashboard Documentとして表示します。',
                 [
                     $this->action('Plan一覧へ戻る', $parentUrl, true, 'zoom-out'),
                     $this->action('Classic Planを開く', route('plans.show', $plan)),
