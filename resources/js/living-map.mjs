@@ -276,7 +276,7 @@ export function clampMapViewTransform(
     transform,
     viewport,
     {
-        minScale = 0.82,
+        minScale = 0.68,
         maxScale = 2.2,
         overscrollRatio = 0.10,
         minPanRatio = 0.04,
@@ -488,6 +488,23 @@ function dockHash(dockId) {
 
 export function mapSemanticZoomDirection(value = 'in') {
     return value === 'out' ? 'out' : 'in';
+}
+
+export function semanticZoomThresholdDirection(
+    scale,
+    {
+        inThreshold = 1.62,
+        outThreshold = 0.72,
+    } = {},
+) {
+    const value = Number(scale || 1);
+    const zoomIn = Math.max(1, Number(inThreshold || 1.62));
+    const zoomOut = Math.min(1, Number(outThreshold || 0.72));
+
+    if (value >= zoomIn) return 'in';
+    if (value <= zoomOut) return 'out';
+
+    return null;
 }
 
 export function semanticRouteKey(value, base = 'https://canovia.local') {
@@ -743,6 +760,8 @@ export function mountLivingGoalMap({
     let updateTimer = null;
     let viewportTimer = null;
     let viewAnimationTimer = null;
+    let semanticZoomTimer = null;
+    let semanticZoomNavigating = false;
     let disposed = false;
     let basePositions = new Map(nodes.map((node) => [node.id, { x: node.x, y: node.y }]));
 
@@ -780,7 +799,7 @@ export function mountLivingGoalMap({
     });
 
     const syncViewControls = (view) => {
-        const atMinimum = view.scale <= 0.821;
+        const atMinimum = view.scale <= 0.681;
         const atMaximum = view.scale >= 2.199;
         const changed = (
             Math.abs(view.x) > 0.5
@@ -847,9 +866,7 @@ export function mountLivingGoalMap({
     const applyMapView = (next, { animate = false, immediate = false } = {}) => {
         if (!mapScene) return mapView;
 
-        mapView = isMobileViewport()
-            ? clampMapViewTransform(next, currentMapViewport())
-            : { x: 0, y: 0, scale: 1 };
+        mapView = clampMapViewTransform(next, currentMapViewport());
 
         mapViewBatcher.schedule({
             view: { ...mapView },
@@ -868,8 +885,6 @@ export function mountLivingGoalMap({
     };
 
     const zoomMapBy = (factor, focusPoint = null, { animate = true } = {}) => {
-        if (!isMobileViewport()) return mapView;
-
         const viewport = currentMapViewport();
         const point = focusPoint || {
             x: viewport.width / 2,
@@ -1381,6 +1396,7 @@ export function mountLivingGoalMap({
             mode: 'pinch',
             startDistance: Math.max(1, pointerDistance(points[0], points[1])),
             startMidpoint: midpoint,
+            lastMidpoint: midpoint,
             startTransform: { ...mapView },
             moved: false,
         };
@@ -1424,6 +1440,7 @@ export function mountLivingGoalMap({
             const points = [...activePointers.values()];
             const currentDistance = Math.max(1, pointerDistance(points[0], points[1]));
             const currentMidpoint = pointerMidpoint(points[0], points[1]);
+            gesture.lastMidpoint = currentMidpoint;
             const viewport = currentMapViewport();
             const startFocus = scenePoint(gesture.startMidpoint);
             const currentFocus = scenePoint(currentMidpoint);
@@ -1496,7 +1513,6 @@ export function mountLivingGoalMap({
     };
 
     const onSceneDoubleClick = (event) => {
-        if (!isMobileViewport()) return;
         if (event.target.closest?.('[data-map-node], a, button, input, select, textarea')) return;
 
         event.preventDefault();
