@@ -64,6 +64,7 @@ class User extends Authenticatable
             'onboarding_completed_at' => 'datetime',
             'onboarding_skipped_at' => 'datetime',
             'first_run_completed_at' => 'datetime',
+            'map_personalization_preferences' => 'array',
         ];
     }
 }
