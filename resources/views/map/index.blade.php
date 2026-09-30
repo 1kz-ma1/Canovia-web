@@ -42,6 +42,7 @@
         data-canovia-map-page
         data-map-level="{{ $mapLevel }}"
         data-map-hierarchy-depth="{{ (int) ($hierarchy['depth'] ?? 0) }}"
+        data-map-parent-url="{{ $hierarchy['parent_url'] ?? '' }}"
         data-map-projection-key="{{ $graph['projection_key'] ?? '' }}"
         data-event-url="{{ route('behavior_events.store') }}"
     >
