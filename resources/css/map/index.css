@@ -8,6 +8,7 @@
 @import './collaboration-workspace.css';
 @import './plan-workspace.css';
 @import './document-canvas.css';
+@import './document-surface-refinement.css';
 
 /*
  * Merge-safe Map CSS entry.
