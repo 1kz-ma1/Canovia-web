@@ -32,6 +32,7 @@ export const INSTANT_RUNTIME_TRANSIENT_ATTRIBUTES = Object.freeze([
     'data-map-focus-initialized',
     'data-map-data-layers-initialized',
     'data-map-pages-initialized',
+    'data-map-personalization-initialized',
     'data-space-station-intake-initialized',
     'data-map-semantic-transition-marked',
     'data-map-reprojected',

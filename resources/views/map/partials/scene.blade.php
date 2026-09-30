@@ -72,6 +72,10 @@
             $nodeEntryMode = $usesDirectBody
                 ? (($isZoomNavigation && $zoomDirection === 'in') ? 'semantic' : 'direct')
                 : 'focus';
+            $personalization = is_array($node['personalization'] ?? null)
+                ? $node['personalization']
+                : null;
+            $personalizationStrength = (string) ($personalization['strength'] ?? '');
         @endphp
 
         <div
@@ -88,6 +92,10 @@
             data-map-presentation-kind="{{ $presentationKind }}"
             data-map-x="{{ data_get($node, 'position.x', 50) }}"
             data-map-y="{{ data_get($node, 'position.y', 50) }}"
+            @if ($personalization)
+                data-map-personalized-node
+                data-map-personalization-strength="{{ $personalizationStrength }}"
+            @endif
             @if ($isPrimary) aria-current="true" @endif
         >
             @if ($usesDirectBody)

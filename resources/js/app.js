@@ -4,6 +4,7 @@ import { mountCanoviaInstantNavigation } from './instant-navigation.mjs';
 import { mountLivingGoalMap } from './living-map.mjs';
 import './map-data-layers.mjs';
 import './map-pages.mjs';
+import './map-personalization.mjs';
 import './space-station-intake.mjs';
 import {
     advanceMapTelemetryForClassicNavigation,

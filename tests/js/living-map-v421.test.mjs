@@ -13,6 +13,7 @@ import {
     shouldApplyGlobalHomeReset,
     mapHistoryDirection,
     mapReturnDecision,
+    mobilePersonalizedSatellitePosition,
     mapSemanticZoomDirection,
     semanticContinuityTransform,
     semanticRectSnapshot,
@@ -414,6 +415,30 @@ test('mobile L0 compensates for tall viewport aspect ratio without mutating desk
         { x: 24, y: 23 },
         'server/desktop attention coordinates stay immutable',
     );
+});
+
+test('mobile personalized shortcuts preserve score-sensitive distance without breaking circular layout', () => {
+    const viewport = { width: 390, height: 700 };
+    const weak = mobilePersonalizedSatellitePosition({
+        positionRole: 'satellite-1',
+        x: 50,
+        y: 12,
+    }, viewport);
+    const strong = mobilePersonalizedSatellitePosition({
+        positionRole: 'satellite-1',
+        x: 50,
+        y: 18,
+    }, viewport);
+    const right = mobilePersonalizedSatellitePosition({
+        positionRole: 'satellite-2',
+        x: 82,
+        y: 50,
+    }, viewport);
+
+    assert.deepEqual(weak, { x: 50, y: 28.8 });
+    assert.deepEqual(strong, { x: 50, y: 32.2 });
+    assert.deepEqual(right, { x: 82, y: 50 });
+    assert.ok(strong.y > weak.y, 'stronger shortcut is projected slightly closer to the center');
 });
 
 test('mobile hierarchy uses a pixel-balanced orbit around the same semantic parent', () => {

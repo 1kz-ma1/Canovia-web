@@ -65,7 +65,7 @@ final class IntentMapProjectionService
             'space_station' => $spaceStation,
             'personalized_satellites' => [
                 'count' => $satellites['nodes']->count(),
-                'max' => 4,
+                'max' => 2,
                 'weights' => [
                     'importance' => 0.35,
                     'usage_frequency' => 0.25,
