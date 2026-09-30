@@ -51,7 +51,7 @@ class MapCollaborationCandidateExpansionV489Test extends TestCase
         ));
         $this->assertSame(
             route('map.index', [
-                'level' => 'l2',
+                'level' => 'l1',
                 'intent' => 'collaboration',
                 'collab_context' => 'review',
             ]),

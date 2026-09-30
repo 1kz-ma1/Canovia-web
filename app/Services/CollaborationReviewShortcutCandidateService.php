@@ -87,7 +87,7 @@ final class CollaborationReviewShortcutCandidateService
         ];
 
         $url = route('map.index', [
-            'level' => MapLevel::Plan->value,
+            'level' => MapLevel::Domain->value,
             'intent' => 'collaboration',
             'collab_context' => 'review',
         ]);

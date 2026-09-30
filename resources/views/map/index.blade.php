@@ -14,6 +14,10 @@
         $isExecutionLevel = $mapLevel === 'l3';
         $isHierarchyLevel = $isDomainLevel || $isPlanLevel;
         $isCollaborationMode = (bool) ($graph['collaboration_mode'] ?? false);
+        $isCollaborationWorkspace = (bool) ($graph['collaboration_workspace_mode'] ?? false);
+        $collaborationWorkspace = is_array($graph['collaboration_workspace'] ?? null)
+            ? $graph['collaboration_workspace']
+            : null;
         $isReflectionMode = (bool) ($graph['reflection_mode'] ?? false);
         $primaryNodeId = $graph['primary_node_id'] ?? null;
         $centerNodeId = $graph['center_node_id'] ?? $primaryNodeId;
@@ -23,8 +27,8 @@
         $currentContextLabel = (string) ($hierarchy['current_label'] ?? ($isIntentHub ? 'Canovia Map' : 'Canovia Map'));
         $heroKicker = match (true) {
             $mapLevel === 'l0' => 'L0 · CANOVIA NAVIGATION',
-            $mapLevel === 'l1' && $isCollaborationMode => 'L1 · COLLABORATION CONTEXT',
-            $mapLevel === 'l2' && $isCollaborationMode => 'L2 · COLLABORATION ITEMS',
+            $mapLevel === 'l1' && $isCollaborationMode => 'L1 · SHARED PROJECTS',
+            $mapLevel === 'l2' && $isCollaborationMode => 'L2 · PROJECT WORKSPACE',
             $mapLevel === 'l1' && $isReflectionMode => 'L1 · REFLECTION LENS',
             $mapLevel === 'l2' && $isReflectionMode => 'L2 · REFLECTION RECORDS',
             $mapLevel === 'l1' => 'L1 · DOMAIN MAP',

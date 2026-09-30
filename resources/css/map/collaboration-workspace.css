@@ -1,0 +1,233 @@
+/* --------------------------------------------------------------------------
+ * V49.0 Collaboration Project Workspace
+ * Keep the selected Shared Plan as spatial context while operational Classic
+ * cards float above the map as palettes. No canonical state lives in CSS.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .canovia-map-shell.is-collaboration-workspace .canovia-map-scene {
+        opacity: 0.24;
+        filter: saturate(0.68) brightness(0.82);
+        transition:
+            opacity 180ms ease,
+            filter 180ms ease,
+            transform 160ms ease;
+    }
+
+    .canovia-map-shell.is-collaboration-workspace .canovia-map-node {
+        pointer-events: none;
+    }
+
+    .canovia-collaboration-workspace-palette {
+        position: absolute;
+        z-index: 18;
+        inset:
+            max(5.85rem, calc(env(safe-area-inset-top) + 5.2rem))
+            max(4rem, calc(env(safe-area-inset-right) + 3.6rem))
+            max(1rem, env(safe-area-inset-bottom))
+            max(1rem, env(safe-area-inset-left));
+        display: grid;
+        min-height: 0;
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: 0.72rem;
+        pointer-events: none;
+    }
+
+    .canovia-collaboration-workspace-heading {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        border: 1px solid rgb(139 92 246 / 0.2);
+        border-radius: 1.05rem;
+        background:
+            radial-gradient(circle at 8% 0%, rgb(139 92 246 / 0.1), transparent 14rem),
+            rgb(8 15 34 / 0.84);
+        padding: 0.72rem 0.82rem;
+        box-shadow:
+            0 14px 32px rgb(2 6 23 / 0.34),
+            inset 0 1px 0 rgb(255 255 255 / 0.035);
+        backdrop-filter: blur(18px) saturate(1.08);
+        -webkit-backdrop-filter: blur(18px) saturate(1.08);
+        pointer-events: auto;
+    }
+
+    .canovia-collaboration-workspace-kicker {
+        margin: 0;
+        color: rgb(196 181 253);
+        font-size: 0.56rem;
+        font-weight: 900;
+        letter-spacing: 0.15em;
+    }
+
+    .canovia-collaboration-workspace-heading h2 {
+        max-width: min(42rem, 52vw);
+        overflow: hidden;
+        color: rgb(248 250 252);
+        font-size: 1.02rem;
+        font-weight: 800;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .canovia-collaboration-workspace-heading p:not(.canovia-collaboration-workspace-kicker) {
+        margin-top: 0.24rem;
+        max-width: 44rem;
+        color: rgb(148 163 184);
+        font-size: 0.68rem;
+        line-height: 1.55;
+    }
+
+    .canovia-collaboration-workspace-actions {
+        display: flex;
+        flex: 0 0 auto;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0.35rem;
+        max-width: 29rem;
+    }
+
+    .canovia-collaboration-workspace-actions .btn-secondary {
+        min-height: 2.35rem;
+        padding: 0.45rem 0.68rem;
+        font-size: 0.64rem;
+    }
+
+    .canovia-collaboration-workspace-grid {
+        display: grid;
+        min-height: 0;
+        grid-template-columns: minmax(0, 1.28fr) minmax(18rem, 0.72fr);
+        grid-template-rows: minmax(0, 0.9fr) minmax(0, 1.1fr);
+        grid-template-areas:
+            "artifacts members"
+            "artifacts activity";
+        gap: 0.72rem;
+        pointer-events: none;
+    }
+
+    .canovia-collaboration-palette-card {
+        min-height: 0;
+        overflow: auto;
+        border-color: rgb(71 85 105 / 0.72);
+        background:
+            radial-gradient(circle at top right, rgb(56 189 248 / 0.045), transparent 14rem),
+            rgb(8 15 34 / 0.9);
+        padding: 0.9rem;
+        box-shadow:
+            0 18px 44px rgb(2 6 23 / 0.38),
+            inset 0 1px 0 rgb(255 255 255 / 0.035);
+        backdrop-filter: blur(19px) saturate(1.05);
+        -webkit-backdrop-filter: blur(19px) saturate(1.05);
+        pointer-events: auto;
+        scrollbar-width: thin;
+    }
+
+    .canovia-collaboration-palette-card.is-artifacts {
+        grid-area: artifacts;
+        border-color: rgb(167 139 250 / 0.2);
+    }
+
+    .canovia-collaboration-palette-card.is-members {
+        grid-area: members;
+    }
+
+    .canovia-collaboration-palette-card.is-activity {
+        grid-area: activity;
+        border-color: rgb(34 211 238 / 0.15);
+    }
+
+    .canovia-map-shell.is-collaboration-workspace .canovia-map-gesture-controls {
+        opacity: 0.54;
+    }
+
+    .canovia-map-shell.is-collaboration-workspace .canovia-map-gesture-controls:hover,
+    .canovia-map-shell.is-collaboration-workspace .canovia-map-gesture-controls:focus-within {
+        opacity: 1;
+    }
+
+    @media (max-width: 900px) {
+        .canovia-collaboration-workspace-palette {
+            right: max(3.8rem, calc(env(safe-area-inset-right) + 3.4rem));
+        }
+
+        .canovia-collaboration-workspace-grid {
+            grid-template-columns: minmax(0, 1fr) minmax(15rem, 0.75fr);
+        }
+    }
+
+    @media (max-width: 767px) {
+        .canovia-collaboration-workspace-palette {
+            inset:
+                max(5.4rem, calc(env(safe-area-inset-top) + 4.9rem))
+                max(0.52rem, env(safe-area-inset-right))
+                max(3.25rem, calc(env(safe-area-inset-bottom) + 2.8rem))
+                max(0.52rem, env(safe-area-inset-left));
+            display: block;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            pointer-events: auto;
+            scrollbar-width: none;
+        }
+
+        .canovia-collaboration-workspace-palette::-webkit-scrollbar {
+            display: none;
+        }
+
+        .canovia-collaboration-workspace-heading {
+            position: sticky;
+            z-index: 2;
+            top: 0;
+            display: grid;
+            gap: 0.58rem;
+            margin-bottom: 0.55rem;
+            padding: 0.68rem;
+        }
+
+        .canovia-collaboration-workspace-heading h2 {
+            max-width: 72vw;
+            font-size: 0.92rem;
+        }
+
+        .canovia-collaboration-workspace-heading p:not(.canovia-collaboration-workspace-kicker) {
+            font-size: 0.62rem;
+        }
+
+        .canovia-collaboration-workspace-actions {
+            max-width: none;
+            justify-content: flex-start;
+        }
+
+        .canovia-collaboration-workspace-actions .btn-secondary {
+            min-height: 2.35rem;
+            flex: 1 1 auto;
+        }
+
+        .canovia-collaboration-workspace-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-rows: none;
+            grid-template-areas:
+                "artifacts"
+                "members"
+                "activity";
+            gap: 0.55rem;
+            padding-bottom: 0.5rem;
+            pointer-events: auto;
+        }
+
+        .canovia-collaboration-palette-card {
+            max-height: none;
+            overflow: visible;
+            padding: 0.76rem;
+        }
+
+        .canovia-map-shell.is-collaboration-workspace .canovia-map-scene {
+            opacity: 0.16;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .canovia-map-shell.is-collaboration-workspace .canovia-map-scene {
+            transition: none;
+        }
+    }
+}

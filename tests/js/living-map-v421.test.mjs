@@ -15,6 +15,7 @@ import {
     mapReturnDecision,
     mobilePersonalizedSatellitePosition,
     mapSemanticZoomDirection,
+    semanticZoomThresholdDirection,
     semanticContinuityTransform,
     semanticRectSnapshot,
     semanticRouteKey,
@@ -345,6 +346,42 @@ test('semantic zoom direction fails safe to zoom-in', () => {
 });
 
 
+test('continuous semantic zoom changes hierarchy only after crossing stable thresholds', () => {
+    assert.equal(semanticZoomThresholdDirection(1), null);
+    assert.equal(semanticZoomThresholdDirection(1.61), null);
+    assert.equal(semanticZoomThresholdDirection(1.62), 'in');
+    assert.equal(semanticZoomThresholdDirection(2.2), 'in');
+    assert.equal(semanticZoomThresholdDirection(0.73), null);
+    assert.equal(semanticZoomThresholdDirection(0.72), 'out');
+    assert.equal(semanticZoomThresholdDirection(0.68), 'out');
+});
+
+
+test('semantic zoom thresholds can be tuned without changing route direction semantics', () => {
+    assert.equal(
+        semanticZoomThresholdDirection(1.4, {
+            inThreshold: 1.4,
+            outThreshold: 0.8,
+        }),
+        'in',
+    );
+    assert.equal(
+        semanticZoomThresholdDirection(0.8, {
+            inThreshold: 1.4,
+            outThreshold: 0.8,
+        }),
+        'out',
+    );
+    assert.equal(
+        semanticZoomThresholdDirection(1, {
+            inThreshold: 1.4,
+            outThreshold: 0.8,
+        }),
+        null,
+    );
+});
+
+
 test('personalized satellite focus keeps each orbit slot in its spatial direction', () => {
     const nodes = [
         { id: 'intent:space-station', positionRole: 'space-station' },
@@ -481,7 +518,7 @@ test('mobile map transform clamps zoom and pan to a bounded universe', () => {
             { x: 999, y: -999, scale: 0.5 },
             { width: 400, height: 800 },
         ),
-        { x: 16, y: -32, scale: 0.82 },
+        { x: 16, y: -32, scale: 0.68 },
     );
 
     assert.deepEqual(

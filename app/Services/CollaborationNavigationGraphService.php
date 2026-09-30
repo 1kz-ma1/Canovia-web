@@ -15,8 +15,8 @@ final class CollaborationNavigationGraphService
     public function build(MapLevel $level, array $context): array
     {
         return match ($level) {
-            MapLevel::Domain => $this->contextGraph($context),
-            MapLevel::Plan => $this->itemGraph($context),
+            MapLevel::Domain => $this->projectGraph($context),
+            MapLevel::Plan => $this->projectWorkspaceGraph($context),
             default => [
                 'nodes' => collect(),
                 'edges' => collect(),
@@ -26,40 +26,41 @@ final class CollaborationNavigationGraphService
     }
 
     /**
-     * L1: Shared Plan categories are replaced by stable purpose contexts.
+     * L1 is project-first: show Shared Plans directly, not purpose buckets.
      *
      * @param array<string,mixed> $context
      * @return array{nodes:Collection<int,array<string,mixed>>,edges:Collection<int,array<string,mixed>>,center_node_id:string}
      */
-    private function contextGraph(array $context): array
+    private function projectGraph(array $context): array
     {
         $centerId = 'collaboration:hub';
-        $sharedPlanCount = (int) ($context['shared_plan_count'] ?? 0);
-        $memberCount = (int) ($context['member_count'] ?? 0);
-        $recentActivityCount = (int) ($context['recent_activity_count'] ?? 0);
+        $projects = collect($context['projects'] ?? []);
+        $reviewFilter = (string) data_get($context, 'selected_context.key') === 'review';
+        $createUrl = route('plans.create.manual', ['collaborative' => 1]);
 
         $nodes = collect([
             $this->node(
                 id: $centerId,
                 type: 'collaboration_hub',
-                eyebrow: 'L1 · COLLABORATION',
-                label: '共同',
-                subtitle: 'サービスではなく、共同作業の状態から辿る',
+                eyebrow: 'L1 · SHARED PROJECTS',
+                label: $reviewFilter ? 'レビュー待ちの共同計画' : '共同計画',
+                subtitle: $reviewFilter
+                    ? 'レビュー待ちがあるProjectを優先表示'
+                    : '共同Planを選んでProject Workspaceへ入る',
                 action: route('map.index'),
                 attentionRole: 'hierarchy-parent',
                 navigationKind: 'zoom-out',
                 classicSurface: $this->surface(
-                    'Collaboration Hub',
-                    '共同',
-                    'Shared Planや外部Toolを、Canovia内の「次に何をするか」という目的で見渡します。外部サービスの状態は推測せず、Canoviaで確認できる事実だけを使います。',
+                    'Collaboration Projects',
+                    $reviewFilter ? 'レビュー待ちの共同計画' : '共同計画',
+                    '共同作業はPurposeからではなく、まずShared Planを選びます。Projectへ入った後は、制作物・メンバー・更新情報をWorkspace Paletteで確認します。',
                     [
                         $this->action('L0へ戻る', route('map.index'), true, 'zoom-out'),
-                        $this->action('共同Plan一覧を開く', route('my_plans.index')),
+                        $this->action('共同計画を作る', $createUrl),
                     ],
                     [
-                        $sharedPlanCount.' Shared Plan',
-                        $memberCount.' participants',
-                        $recentActivityCount.' recent changes',
+                        $projects->count().' Shared Plan',
+                        (int) ($context['recent_activity_count'] ?? 0).' recent changes',
                     ],
                 ),
             ),
@@ -67,272 +68,88 @@ final class CollaborationNavigationGraphService
 
         $edges = collect();
 
-        foreach (collect($context['contexts'] ?? []) as $index => $definition) {
-            $key = (string) ($definition['key'] ?? '');
-            if ($key === '') {
-                continue;
-            }
-
-            $nodeId = 'collaboration:context:'.$key;
-            $url = route('map.index', [
-                'level' => MapLevel::Plan->value,
-                'intent' => 'collaboration',
-                'collab_context' => $key,
-            ]);
-
-            $nodes->push($this->node(
-                id: $nodeId,
-                type: 'collaboration_context',
-                eyebrow: (string) ($definition['eyebrow'] ?? 'COLLABORATION'),
-                label: (string) ($definition['label'] ?? '共同Context'),
-                subtitle: (int) ($definition['count'] ?? 0).' Context',
-                action: $url,
-                attentionRole: 'hierarchy-child',
-                navigationKind: 'zoom-in',
-                classicSurface: $this->surface(
-                    'Collaboration Context',
-                    (string) ($definition['label'] ?? '共同Context'),
-                    (string) ($definition['summary'] ?? ''),
-                    [
-                        $this->action('このContextへ入る', $url, true, 'zoom-in'),
-                        $this->action('共同Plan一覧を開く', route('my_plans.index')),
-                    ],
-                    [
-                        (int) ($definition['count'] ?? 0).' items',
-                        'Human-reviewed state',
-                    ],
-                ),
-            ));
-
-            $edges->push($this->edge(
-                $centerId,
-                $nodeId,
-                'groups_collaboration_context',
-                'hierarchy-child',
-            ));
-        }
-
-        return [
-            'nodes' => $nodes->values(),
-            'edges' => $edges->values(),
-            'center_node_id' => $centerId,
-        ];
-    }
-
-    /**
-     * L2: show concrete Artifact/Task contexts, not provider buckets.
-     *
-     * @param array<string,mixed> $context
-     * @return array{nodes:Collection<int,array<string,mixed>>,edges:Collection<int,array<string,mixed>>,center_node_id:string}
-     */
-    private function itemGraph(array $context): array
-    {
-        $selected = is_array($context['selected_context'] ?? null)
-            ? $context['selected_context']
-            : [];
-        $key = (string) ($selected['key'] ?? 'my_action');
-        $label = (string) ($selected['label'] ?? '自分が進める');
-        $centerId = 'collaboration:context:'.$key;
-        $parentUrl = route('map.index', [
-            'level' => MapLevel::Domain->value,
-            'intent' => 'collaboration',
-        ]);
-
-        $nodes = collect([
-            $this->node(
-                id: $centerId,
-                type: 'collaboration_context',
-                eyebrow: 'L2 · PURPOSE',
-                label: $label,
-                subtitle: 'Shared Plan / Artifactを目的ベースで確認',
-                action: $parentUrl,
-                attentionRole: 'hierarchy-parent',
-                navigationKind: 'zoom-out',
-                classicSurface: $this->surface(
-                    'Collaboration Context',
-                    $label,
-                    (string) ($selected['summary'] ?? ''),
-                    [
-                        $this->action('共同Context一覧へ戻る', $parentUrl, true, 'zoom-out'),
-                        $this->action('共同Plan一覧を開く', route('my_plans.index')),
-                    ],
-                    [
-                        (int) ($selected['count'] ?? 0).' items',
-                        'L2',
-                    ],
-                ),
-            ),
-        ]);
-
-        $edges = collect();
-
-        foreach (collect($selected['items'] ?? []) as $item) {
-            $itemId = 'collaboration:item:'.str_replace(':', '-', (string) ($item['id'] ?? ''));
-            if ($itemId === 'collaboration:item:') {
-                continue;
-            }
-
-            $planId = (int) ($item['plan_id'] ?? 0);
+        foreach ($projects as $project) {
+            $planId = (int) ($project['id'] ?? 0);
             if ($planId <= 0) {
                 continue;
             }
 
-            $executionUrl = route('map.index', array_filter([
-                'level' => MapLevel::Execution->value,
+            $url = route('map.index', [
+                'level' => MapLevel::Plan->value,
                 'intent' => 'collaboration',
-                'collab_context' => $key,
-                'domain' => (string) ($item['domain_key'] ?? ''),
                 'plan' => $planId,
-            ], fn ($value) => $value !== ''));
-
-            $externalUrl = filled($item['url'] ?? null)
-                ? (string) $item['url']
-                : null;
-            $isExternalPurpose = $key === 'external' && $externalUrl !== null;
-            $primaryUrl = $isExternalPurpose ? $externalUrl : $executionUrl;
-            $primaryKind = $isExternalPurpose ? 'external' : 'zoom-in';
-            $providerLabel = (string) ($item['external_kind'] ?? $item['provider_label'] ?? 'Canovia');
-            $stateLabel = (string) ($item['collaboration_state_label'] ?? '');
-            $assigned = filled($item['assigned_user_name'] ?? null)
-                ? '担当 '.(string) $item['assigned_user_name']
-                : null;
-
-            $actions = [
-                $this->action(
-                    $isExternalPurpose ? $providerLabel.'で確認' : 'Executionへ入る',
-                    $primaryUrl,
-                    true,
-                    $primaryKind,
-                    $isExternalPurpose,
-                ),
-            ];
-
-            if (! $isExternalPurpose) {
-                $actions[] = $this->action('共同Planを開く', route('plans.show', $planId));
-            }
-
-            if ($externalUrl && ! $isExternalPurpose) {
-                $actions[] = $this->action(
-                    $providerLabel.'を開く',
-                    $externalUrl,
-                    false,
-                    'external',
-                    true,
-                );
-            }
+            ]);
+            $reviewCount = (int) ($project['review_count'] ?? 0);
+            $waitingCount = (int) ($project['waiting_count'] ?? 0);
+            $memberCount = (int) ($project['member_count'] ?? 1);
+            $roleLabel = $this->roleLabel((string) ($project['role'] ?? ''));
 
             $nodes->push($this->node(
-                id: $itemId,
-                type: 'collaboration_item',
-                entityId: isset($item['entity_id']) ? (int) $item['entity_id'] : null,
-                eyebrow: $this->itemEyebrow($key, (string) ($item['kind'] ?? 'artifact')),
-                label: (string) ($item['label'] ?? '共同Context'),
-                subtitle: (string) ($item['plan_title'] ?? 'Shared Plan').' · '.$providerLabel,
-                action: $primaryUrl,
+                id: 'collaboration:project:'.$planId,
+                type: 'plan',
+                entityId: $planId,
+                eyebrow: $reviewCount > 0 ? 'SHARED PROJECT · REVIEW' : 'SHARED PROJECT',
+                label: (string) ($project['title'] ?? '共同Plan'),
+                subtitle: implode(' · ', array_values(array_filter([
+                    $roleLabel,
+                    $memberCount.'人',
+                    $reviewCount > 0 ? 'レビュー '.$reviewCount.'件' : null,
+                    $waitingCount > 0 ? '相手待ち '.$waitingCount.'件' : null,
+                ]))),
+                action: $url,
                 attentionRole: 'hierarchy-child',
-                navigationKind: $primaryKind,
+                navigationKind: 'zoom-in',
                 classicSurface: $this->surface(
-                    'Collaboration Item',
-                    (string) ($item['label'] ?? '共同Context'),
-                    $this->itemSummary($key, $item),
-                    $actions,
+                    'Shared Project',
+                    (string) ($project['title'] ?? '共同Plan'),
+                    'この共同PlanのProject Workspaceを開きます。Map上では制作物・メンバー・最新情報をカードとして確認できます。',
+                    [
+                        $this->action('Project Workspaceへ入る', $url, true, 'zoom-in'),
+                        $this->action('Classic Planを開く', route('plans.show', $planId)),
+                    ],
                     array_values(array_filter([
-                        (string) ($item['plan_title'] ?? ''),
-                        $providerLabel,
-                        $stateLabel !== '' ? $stateLabel : null,
-                        $assigned,
-                        filled($item['task_title'] ?? null) ? 'Task '.(string) $item['task_title'] : null,
+                        $roleLabel,
+                        (string) ($project['category'] ?? ''),
+                        (int) ($project['artifact_count'] ?? 0).' artifacts',
+                        $reviewCount > 0 ? $reviewCount.' review waiting' : null,
                     ])),
                 ),
             ));
 
             $edges->push($this->edge(
                 $centerId,
-                $itemId,
-                'contains_collaboration_item',
+                'collaboration:project:'.$planId,
+                'contains_shared_project',
                 'hierarchy-child',
             ));
         }
 
-        if ($nodes->count() === 1) {
-            $sharedPlans = collect($context['plans'] ?? [])
-                ->filter(fn ($plan) => $plan instanceof Plan)
-                ->take(6)
-                ->values();
+        $nodes->push($this->node(
+            id: 'collaboration:create-project',
+            type: 'collaboration_item',
+            eyebrow: 'NEW PROJECT',
+            label: '共同計画を作る',
+            subtitle: '新しいShared Planを追加',
+            action: $createUrl,
+            attentionRole: 'hierarchy-child',
+            navigationKind: 'direct',
+            classicSurface: $this->surface(
+                'Collaboration Action',
+                '共同計画を作る',
+                '新しいPlanを共同計画プリセットで作成します。',
+                [
+                    $this->action('共同計画を作る', $createUrl, true, 'direct'),
+                ],
+                ['Create Shared Plan'],
+            ),
+        ));
 
-            foreach ($sharedPlans as $plan) {
-                $planNodeId = 'plan:'.$plan->id;
-                $executionUrl = route('map.index', [
-                    'level' => MapLevel::Execution->value,
-                    'intent' => 'collaboration',
-                    'collab_context' => $key,
-                    'plan' => $plan->id,
-                ]);
-
-                $nodes->push($this->node(
-                    id: $planNodeId,
-                    type: 'plan',
-                    entityId: (int) $plan->id,
-                    eyebrow: 'SHARED PLAN',
-                    label: (string) $plan->title,
-                    subtitle: 'この共同ContextからPlanのExecutionへ',
-                    action: $executionUrl,
-                    attentionRole: 'hierarchy-child',
-                    navigationKind: 'zoom-in',
-                    classicSurface: $this->surface(
-                        'Shared Plan',
-                        (string) $plan->title,
-                        'このContextに該当するItemはまだありません。共同Plan自体をMap上に残し、必要ならそのExecution Contextへ潜れます。',
-                        [
-                            $this->action('Executionへ入る', $executionUrl, true, 'zoom-in'),
-                            $this->action('Planを開く', route('plans.show', $plan->id)),
-                        ],
-                        array_values(array_filter([
-                            'Shared Plan',
-                            filled($plan->category) ? (string) $plan->category : null,
-                        ])),
-                    ),
-                ));
-
-                $edges->push($this->edge(
-                    $centerId,
-                    $planNodeId,
-                    'offers_shared_plan_context',
-                    'hierarchy-child',
-                ));
-            }
-
-            if ($sharedPlans->isEmpty()) {
-                $createPlanUrl = route('plans.create');
-
-                $nodes->push($this->node(
-                    id: 'collaboration:empty:create-plan',
-                    type: 'collaboration_item',
-                    eyebrow: 'NEXT OPTION',
-                    label: '共同Planを作る',
-                    subtitle: '共同作業の起点になるPlanを作成',
-                    action: $createPlanUrl,
-                    attentionRole: 'hierarchy-child',
-                    navigationKind: 'direct',
-                    classicSurface: $this->surface(
-                        'Collaboration Action',
-                        '共同Planを作る',
-                        '共同Contextに置くPlanがまだありません。Planを作成すると、このMapから共同作業へ辿れるようになります。',
-                        [
-                            $this->action('Planを作る', $createPlanUrl, true, 'direct'),
-                        ],
-                        ['Empty-state action'],
-                    ),
-                ));
-
-                $edges->push($this->edge(
-                    $centerId,
-                    'collaboration:empty:create-plan',
-                    'offers_empty_state_action',
-                    'hierarchy-child',
-                ));
-            }
-        }
+        $edges->push($this->edge(
+            $centerId,
+            'collaboration:create-project',
+            'offers_create_shared_project',
+            'hierarchy-child',
+        ));
 
         return [
             'nodes' => $nodes->values(),
@@ -342,36 +159,72 @@ final class CollaborationNavigationGraphService
     }
 
     /**
-     * @param array<string,mixed> $item
+     * L2 keeps only the selected Project as the semantic center.
+     * Rich operational information is rendered by the Workspace Palette layer.
+     *
+     * @param array<string,mixed> $context
+     * @return array{nodes:Collection<int,array<string,mixed>>,edges:Collection<int,array<string,mixed>>,center_node_id:string}
      */
-    private function itemSummary(string $contextKey, array $item): string
+    private function projectWorkspaceGraph(array $context): array
     {
-        if ($contextKey === 'review') {
-            return 'この制作物はCanovia上で「レビュー待ち」と明示されています。レビュー完了を自動推測せず、状態変更は人が行います。';
+        $plan = $context['selected_plan'] ?? null;
+
+        if (! $plan instanceof Plan) {
+            return $this->projectGraph($context);
         }
 
-        if ($contextKey === 'waiting') {
-            return 'この制作物はCanovia上で「相手待ち」と明示されています。相手の作業状況を外部サービスから推測しません。';
+        $centerId = 'collaboration:project:'.$plan->id;
+        $parentUrl = route('map.index', [
+            'level' => MapLevel::Domain->value,
+            'intent' => 'collaboration',
+        ]);
+        $project = collect($context['projects'] ?? [])
+            ->first(fn (array $candidate) => (int) ($candidate['id'] ?? 0) === (int) $plan->id);
+        $canManage = is_array($project) && (string) ($project['role'] ?? '') === 'owner';
+
+        $actions = [
+            $this->action('共同計画一覧へ戻る', $parentUrl, true, 'zoom-out'),
+        ];
+
+        if ($canManage) {
+            $actions[] = $this->action('共同設定を開く', route('plans.collaboration.settings', $plan));
         }
 
-        if ($contextKey === 'external') {
-            $kind = (string) ($item['external_kind'] ?? $item['provider_label'] ?? '外部Tool');
+        $actions[] = $this->action('Classic Planを開く', route('plans.show', $plan));
 
-            return $kind.'への確認導線です。Canoviaはリンク先のreview / merge状態を推測せず、確認先としてだけ再投影します。';
-        }
+        $node = $this->node(
+            id: $centerId,
+            type: 'plan',
+            entityId: (int) $plan->id,
+            eyebrow: 'L2 · PROJECT WORKSPACE',
+            label: (string) $plan->title,
+            subtitle: '制作物・メンバー・最新情報をWorkspace Paletteで確認',
+            action: $parentUrl,
+            attentionRole: 'hierarchy-parent',
+            navigationKind: 'zoom-out',
+            classicSurface: $this->surface(
+                'Project Workspace',
+                (string) $plan->title,
+                '共同Planの運用情報をMap上のPaletteとして表示しています。ノードを増やすのではなく、既存Classicのカード情報をWorkspaceとして再配置します。',
+                $actions,
+                ['Shared Project', 'Workspace Palette'],
+            ),
+        );
 
-        return ($item['kind'] ?? null) === 'task'
-            ? '編集可能なShared Planから、現在進められる次Actionとして投影しています。'
-            : '自分が担当者として設定されている共同制作物です。';
+        return [
+            'nodes' => collect([$node]),
+            'edges' => collect(),
+            'center_node_id' => $centerId,
+        ];
     }
 
-    private function itemEyebrow(string $contextKey, string $kind): string
+    private function roleLabel(string $role): string
     {
-        return match ($contextKey) {
-            'review' => 'REVIEW WAITING',
-            'waiting' => 'WAITING',
-            'external' => 'EXTERNAL TOOL',
-            default => $kind === 'task' ? 'NEXT ACTION' : 'MY ASSIGNMENT',
+        return match ($role) {
+            'owner' => 'オーナー',
+            'editor' => '編集者',
+            'viewer' => '閲覧者',
+            default => '共同',
         };
     }
 

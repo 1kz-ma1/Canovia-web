@@ -32,6 +32,10 @@ class PlanController extends Controller
     {
         $prefill = $request->session()->pull('plan_create_prefill', []);
 
+        if ($request->boolean('collaborative') && $request->user()) {
+            $prefill['is_collaborative'] = true;
+        }
+
         return view('plans.create', compact('prefill'));
     }
 
