@@ -115,6 +115,7 @@ class BehaviorEventController extends Controller
                 'satellite_plan',
                 'satellite_tool',
                 'satellite_reflection',
+                'satellite_collaboration',
                 'collaboration_hub',
                 'collaboration_context',
                 'collaboration_item',
