@@ -1248,6 +1248,7 @@ export function mountLivingGoalMap({
         const detailActive = Boolean(active);
         page.classList.toggle('is-detail-document-mode', detailActive);
         page.classList.toggle('is-document-mode', planDocumentMode || detailActive);
+        surface?.classList?.toggle('is-dashboard-document', detailActive);
     };
 
     const syncDocumentPosition = (scrollElement) => {
@@ -1634,8 +1635,11 @@ export function mountLivingGoalMap({
             surfaceContent.append(template.content.cloneNode(true));
         }
 
+        const presentationKind = nodeElementById.get(nodeId)?.dataset?.mapPresentationKind || '';
+        const isLeafDocument = presentationKind === 'leaf';
+
         syncDetailDocumentTitle(nodeId);
-        setDetailDocumentMode(true);
+        setDetailDocumentMode(isLeafDocument);
         resetDocumentScroll(detailDocumentScroll);
         windowRef.setTimeout(() => {
             if (!disposed) syncDocumentPosition(detailDocumentScroll);
@@ -1655,7 +1659,9 @@ export function mountLivingGoalMap({
 
         surfaceContent.replaceChildren();
         surfaceContent.append(template.content.cloneNode(true));
+        syncDetailDocumentTitle(null);
         setDetailDocumentMode(false);
+        resetDocumentScroll(detailDocumentScroll);
         setSurfaceExpanded(false);
         surface.setAttribute('aria-hidden', 'false');
         workspace.classList.add('is-context-open', 'is-spatial-dock-open');
