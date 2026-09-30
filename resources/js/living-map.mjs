@@ -495,12 +495,12 @@ export function semanticZoomThresholdDirection(
     scale,
     {
         inThreshold = 1.42,
-        outThreshold = 0.82,
+        outThreshold = 0.70,
     } = {},
 ) {
     const value = Number(scale || 1);
     const zoomIn = Math.max(1, Number(inThreshold || 1.42));
-    const zoomOut = Math.min(1, Number(outThreshold || 0.82));
+    const zoomOut = Math.min(1, Number(outThreshold || 0.70));
 
     if (value >= zoomIn) return 'in';
     if (value <= zoomOut) return 'out';
@@ -1921,7 +1921,10 @@ export function mountLivingGoalMap({
         const anchorRect = anchor.getBoundingClientRect?.();
         const scale = Math.max(0.68, Number(mapView.scale || 1));
 
-        anchor.classList.add('is-semantic-expansion-anchor');
+        anchor.classList.add(
+            'is-semantic-expansion-anchor',
+            'is-semantic-expanded-parent',
+        );
 
         for (const element of nodeElements) {
             if (element === anchor) continue;
@@ -1931,7 +1934,10 @@ export function mountLivingGoalMap({
 
             element.style.setProperty('--semantic-child-origin-x', (origin.x / scale).toFixed(1) + 'px');
             element.style.setProperty('--semantic-child-origin-y', (origin.y / scale).toFixed(1) + 'px');
-            element.classList.add('is-semantic-expansion-child');
+            element.classList.add(
+                'is-semantic-expansion-child',
+                'is-semantic-expanded-child',
+            );
         }
     };
 
@@ -2034,6 +2040,12 @@ export function mountLivingGoalMap({
         )].filter((link) => {
             const node = link.closest?.('[data-map-node]');
             if (!node || node.classList.contains('is-focus-hidden')) return false;
+            if (
+                normalizedDirection === 'in'
+                && node.dataset?.mapSemanticCapability !== 'expand'
+            ) {
+                return false;
+            }
             const rect = node.getBoundingClientRect?.();
 
             return rect && rect.width > 0 && rect.height > 0;
@@ -2226,7 +2238,7 @@ export function mountLivingGoalMap({
     ) => {
         const direction = semanticZoomThresholdDirection(mapView.scale, {
             inThreshold,
-            outThreshold: 0.82,
+            outThreshold: 0.70,
         });
 
         windowRef.clearTimeout(semanticZoomTimer);
