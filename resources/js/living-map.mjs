@@ -1499,7 +1499,13 @@ export function mountLivingGoalMap({
 
         semanticZoomTimer = windowRef.setTimeout(() => {
             semanticZoomTimer = null;
-            commitSemanticZoom(direction, clientPoint);
+            const committed = commitSemanticZoom(direction, clientPoint);
+
+            // L0 has no parent. Do not leave the whole navigation map crushed
+            // at the minimum camera scale when zoom-out has nowhere to go.
+            if (!committed && direction === 'out') {
+                resetMapView({ animate: true });
+            }
         }, Math.max(0, Number(delay || 0)));
 
         return true;
