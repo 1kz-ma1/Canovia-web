@@ -548,15 +548,18 @@ export function documentEdgeBackDecision(
         edgeWidth = 28,
         minDistance = 72,
         maxVertical = 56,
+        maxScrollLeft = 1,
     } = {},
 ) {
     const startX = Number(gesture?.startX);
     const startY = Number(gesture?.startY);
     const endX = Number(gesture?.endX);
     const endY = Number(gesture?.endY);
+    const scrollLeft = Math.max(0, Number(gesture?.scrollLeft || 0));
 
-    if (![startX, startY, endX, endY].every(Number.isFinite)) return false;
+    if (![startX, startY, endX, endY, scrollLeft].every(Number.isFinite)) return false;
     if (startX < 0 || startX > Math.max(0, Number(edgeWidth || 28))) return false;
+    if (scrollLeft > Math.max(0, Number(maxScrollLeft || 0))) return false;
 
     const dx = endX - startX;
     const dy = Math.abs(endY - startY);
@@ -564,6 +567,33 @@ export function documentEdgeBackDecision(
     return dx >= Math.max(1, Number(minDistance || 72))
         && dy <= Math.max(1, Number(maxVertical || 56))
         && dx > dy * 1.25;
+}
+
+export function documentScrollMetrics({
+    scrollLeft = 0,
+    clientWidth = 0,
+    scrollWidth = 0,
+} = {}) {
+    const viewport = Math.max(0, Number(clientWidth || 0));
+    const content = Math.max(viewport, Number(scrollWidth || 0));
+
+    if (content <= 0 || viewport <= 0) {
+        return {
+            progress: 0,
+            viewportRatio: 1,
+        };
+    }
+
+    const maxScroll = Math.max(0, content - viewport);
+    const progress = maxScroll > 0
+        ? Math.max(0, Math.min(1, Number(scrollLeft || 0) / maxScroll))
+        : 0;
+    const viewportRatio = Math.max(0.08, Math.min(1, viewport / content));
+
+    return {
+        progress: Math.round(progress * 10000) / 10000,
+        viewportRatio: Math.round(viewportRatio * 10000) / 10000,
+    };
 }
 
 export function semanticFocusMatchesNode(
@@ -1112,6 +1142,10 @@ export function mountLivingGoalMap({
     const templates = [...page.querySelectorAll('[data-map-surface-template]')];
     const globalTemplates = [...page.querySelectorAll('[data-map-global-surface-template]')];
     const spatialDock = page.querySelector('[data-map-spatial-dock]');
+    const documentScrolls = [...page.querySelectorAll('[data-map-document-scroll]')];
+    const planDocumentScroll = page.querySelector('[data-map-plan-workspace] [data-map-document-scroll]');
+    const detailDocumentScroll = surface?.querySelector?.('[data-map-document-scroll]') || null;
+    const detailDocumentTitle = surface?.querySelector?.('[data-map-document-title]') || null;
 
     const nodes = nodeElements.map((element) => ({
         id: element.dataset.mapNodeId,
@@ -1197,14 +1231,79 @@ export function mountLivingGoalMap({
     let documentBackGesture = null;
 
     const documentParentUrl = String(page.dataset.mapParentUrl || '');
+    const planDocumentMode = Boolean(
+        page.classList.contains('is-plan-document-mode')
+        || page.querySelector?.('[data-map-plan-workspace][data-map-document-viewport]')
+    );
     const standaloneDocumentNavigation = Boolean(
         windowRef.matchMedia?.('(display-mode: standalone)')?.matches
         || windowRef.navigator?.standalone === true
     );
-    const documentModeActive = () => Boolean(
-        page.querySelector?.('[data-map-plan-workspace][data-map-document-viewport]')
-        || workspace?.classList?.contains('is-context-open')
-    );
+    const documentModeActive = () => page.classList.contains('is-document-mode');
+    const activeDocumentScroll = () => page.classList.contains('is-detail-document-mode')
+        ? detailDocumentScroll
+        : planDocumentScroll;
+
+    const setDetailDocumentMode = (active) => {
+        const detailActive = Boolean(active);
+        page.classList.toggle('is-detail-document-mode', detailActive);
+        page.classList.toggle('is-document-mode', planDocumentMode || detailActive);
+    };
+
+    const syncDocumentPosition = (scrollElement) => {
+        if (!scrollElement) return;
+
+        const viewport = scrollElement.closest?.('[data-map-document-viewport]');
+        const indicator = viewport?.querySelector?.('[data-map-document-position]');
+        if (!indicator) return;
+
+        const metrics = documentScrollMetrics({
+            scrollLeft: scrollElement.scrollLeft,
+            clientWidth: scrollElement.clientWidth,
+            scrollWidth: scrollElement.scrollWidth,
+        });
+        const thumbWidth = metrics.viewportRatio * 100;
+        const thumbLeft = metrics.progress * (1 - metrics.viewportRatio) * 100;
+
+        indicator.style.setProperty('--document-thumb-width', thumbWidth.toFixed(2)+'%');
+        indicator.style.setProperty('--document-thumb-left', thumbLeft.toFixed(2)+'%');
+        indicator.classList.toggle('is-static', metrics.viewportRatio >= 0.995);
+    };
+
+    const syncAllDocumentPositions = () => {
+        for (const scrollElement of documentScrolls) {
+            syncDocumentPosition(scrollElement);
+        }
+    };
+
+    const resetDocumentScroll = (scrollElement) => {
+        if (!scrollElement) return;
+
+        if (typeof scrollElement.scrollTo === 'function') {
+            scrollElement.scrollTo({ left: 0, top: 0, behavior: 'auto' });
+        } else {
+            scrollElement.scrollLeft = 0;
+            scrollElement.scrollTop = 0;
+        }
+
+        syncDocumentPosition(scrollElement);
+    };
+
+    const syncDetailDocumentTitle = (nodeId) => {
+        if (!detailDocumentTitle) return;
+
+        const sourceTitle = surfaceContent?.querySelector?.('[data-map-document-title-source]');
+        const nodeLabel = nodeElementById.get(nodeId)
+            ?.querySelector?.('.canovia-map-node-label')
+            ?.textContent;
+        const title = String(sourceTitle?.textContent || nodeLabel || '詳細').trim();
+
+        detailDocumentTitle.textContent = title || '詳細';
+    };
+
+    const onDocumentScroll = (event) => {
+        syncDocumentPosition(event.currentTarget);
+    };
 
     const refreshMapViewport = () => {
         const rect = mapShell?.getBoundingClientRect?.();
@@ -1535,6 +1634,13 @@ export function mountLivingGoalMap({
             surfaceContent.append(template.content.cloneNode(true));
         }
 
+        syncDetailDocumentTitle(nodeId);
+        setDetailDocumentMode(true);
+        resetDocumentScroll(detailDocumentScroll);
+        windowRef.setTimeout(() => {
+            if (!disposed) syncDocumentPosition(detailDocumentScroll);
+        }, 0);
+
         setSurfaceExpanded(false);
         surface.setAttribute('aria-hidden', 'false');
         workspace.classList.add('is-context-open');
@@ -1549,6 +1655,7 @@ export function mountLivingGoalMap({
 
         surfaceContent.replaceChildren();
         surfaceContent.append(template.content.cloneNode(true));
+        setDetailDocumentMode(false);
         setSurfaceExpanded(false);
         surface.setAttribute('aria-hidden', 'false');
         workspace.classList.add('is-context-open', 'is-spatial-dock-open');
@@ -1565,6 +1672,8 @@ export function mountLivingGoalMap({
             workspace.classList.remove('is-context-open', 'is-spatial-dock-open');
         }
         surfaceContent?.replaceChildren();
+        setDetailDocumentMode(false);
+        if (detailDocumentTitle) detailDocumentTitle.textContent = '詳細';
         resetButton?.classList.add('hidden');
     };
 
@@ -2567,6 +2676,9 @@ export function mountLivingGoalMap({
     const onViewReset = () => resetMapView();
 
     const onDocumentBackPointerDown = (event) => {
+        const scrollElement = activeDocumentScroll();
+        const scrollLeft = Math.max(0, Number(scrollElement?.scrollLeft || 0));
+
         if (
             !standaloneDocumentNavigation
             || !documentParentUrl
@@ -2574,6 +2686,7 @@ export function mountLivingGoalMap({
             || event.pointerType !== 'touch'
             || event.isPrimary === false
             || Number(event.clientX || 0) > 28
+            || scrollLeft > 1
         ) {
             documentBackGesture = null;
             return;
@@ -2583,6 +2696,7 @@ export function mountLivingGoalMap({
             pointerId: event.pointerId,
             startX: Number(event.clientX || 0),
             startY: Number(event.clientY || 0),
+            scrollLeft,
         };
     };
 
@@ -2626,6 +2740,7 @@ export function mountLivingGoalMap({
             refreshMapViewport();
             applyBaseLayout();
             applyMapView(mapView, { immediate: true });
+            syncAllDocumentPositions();
 
             if (activeFocusId) {
                 openFocus(activeFocusId, { historyMode: 'none' });
@@ -2656,6 +2771,9 @@ export function mountLivingGoalMap({
         page.removeEventListener('pointerdown', onDocumentBackPointerDown);
         page.removeEventListener('pointerup', onDocumentBackPointerUp);
         page.removeEventListener('pointercancel', onDocumentBackPointerCancel);
+        for (const scrollElement of documentScrolls) {
+            scrollElement.removeEventListener('scroll', onDocumentScroll);
+        }
         zoomOutControl?.removeEventListener('click', onZoomOut);
         zoomInControl?.removeEventListener('click', onZoomIn);
         viewResetControl?.removeEventListener('click', onViewReset);
@@ -3014,6 +3132,10 @@ export function mountLivingGoalMap({
     page.addEventListener('pointerdown', onDocumentBackPointerDown);
     page.addEventListener('pointerup', onDocumentBackPointerUp);
     page.addEventListener('pointercancel', onDocumentBackPointerCancel);
+    for (const scrollElement of documentScrolls) {
+        scrollElement.addEventListener('scroll', onDocumentScroll, { passive: true });
+    }
+    syncAllDocumentPositions();
     zoomOutControl?.addEventListener('click', onZoomOut);
     zoomInControl?.addEventListener('click', onZoomIn);
     viewResetControl?.addEventListener('click', onViewReset);
