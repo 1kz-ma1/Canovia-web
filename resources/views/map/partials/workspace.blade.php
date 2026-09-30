@@ -1,6 +1,6 @@
 <div class="canovia-map-workspace" data-map-workspace>
     <div
-        class="canovia-map-shell {{ $isIntentHub ? 'is-intent-hub' : ($isHierarchyLevel ? 'is-hierarchy-map' : 'is-execution-map') }}{{ $isCollaborationMode ? ' is-collaboration-map' : '' }}{{ $isReflectionMode ? ' is-reflection-map' : '' }}"
+        class="canovia-map-shell {{ $isIntentHub ? 'is-intent-hub' : ($isHierarchyLevel ? 'is-hierarchy-map' : 'is-execution-map') }}{{ $isCollaborationMode ? ' is-collaboration-map' : '' }}{{ $isCollaborationWorkspace ? ' is-collaboration-workspace' : '' }}{{ $isReflectionMode ? ' is-reflection-map' : '' }}"
         data-canovia-map
         data-map-level="{{ $mapLevel }}"
     >
@@ -13,6 +13,10 @@
 
         @include('map.partials.extensions.canvas-overlays')
         @include('map.partials.scene')
+
+        @if ($isCollaborationWorkspace)
+            @include('map.partials.collaboration-workspace-palette')
+        @endif
 
         <div class="canovia-map-gesture-controls" data-map-gesture-controls aria-label="Map表示操作">
             <button type="button" data-map-zoom-out aria-label="Mapを縮小">−</button>
