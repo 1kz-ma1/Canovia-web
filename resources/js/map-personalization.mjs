@@ -126,16 +126,14 @@ export function mountMapPersonalization({
 
             node.classList.toggle('is-personalization-hidden', shouldHide);
             node.setAttribute('aria-hidden', shouldHide ? 'true' : 'false');
-
-            page.querySelectorAll('[data-map-edge]').forEach((edge) => {
-                const touchesNode = edge.dataset.mapEdgeSource === nodeId
-                    || edge.dataset.mapEdgeTarget === nodeId;
-
-                if (!touchesNode) return;
-
-                edge.classList.toggle('is-personalization-hidden', shouldHide);
-            });
         }
+
+        page.querySelectorAll('[data-map-edge]').forEach((edge) => {
+            const shouldHide = hidden.has(String(edge.dataset.mapEdgeSource || ''))
+                || hidden.has(String(edge.dataset.mapEdgeTarget || ''));
+
+            edge.classList.toggle('is-personalization-hidden', shouldHide);
+        });
 
         page.querySelectorAll('[data-map-personalization-hide]').forEach((button) => {
             const nodeId = String(button.dataset.mapPersonalizationNodeId || '');
