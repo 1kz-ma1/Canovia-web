@@ -92,6 +92,25 @@ class MapPersonalizedCandidateExpansionV488Test extends TestCase
         );
     }
 
+    public function test_two_recent_records_still_need_to_cross_the_existing_promotion_threshold(): void
+    {
+        $user = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($user, '低優先度で単日の実績だけあるPlan', 5);
+        $done = $this->task($plan, '同日に記録したTask', 'done', 100);
+
+        $this->workLog($plan, $done, 0);
+        $this->evidence($user, $plan, $done, 0);
+
+        $graph = $this->actingAs($user)
+            ->get(route('map.index'))
+            ->assertOk()
+            ->viewData('graph');
+
+        $this->assertNull(
+            $graph['nodes']->firstWhere('id', 'satellite:reflection:recent')
+        );
+    }
+
     public function test_plan_and_reflection_shortcuts_can_coexist_on_distinct_semantic_anchors(): void
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);
