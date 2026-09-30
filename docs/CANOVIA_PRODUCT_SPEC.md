@@ -1306,3 +1306,8 @@ Document Viewportにはhorizontal position HUDを表示する。standalone PWA�
 Global depth labelはplan-first hierarchyへ合わせ、Executionは `全体 -> Plan -> 実行`、Plan閲覧は `全体 -> Plan -> Dashboard` とする。
 
 詳細は `docs/V49.8_DASHBOARD_SURFACE_REFINEMENT.md` を正とする。
+
+
+### V49.8.1 Pre-device Hardening
+
+V49.8実機確認前の静的監査として、Plan Dashboardのabsolute positioningをDocument edge affordanceが上書きしないようcascadeを固定する。horizontal pan可能なDocumentだけ左右edge fadeを表示し、`is-document-scrollable / is-document-at-start / is-document-at-end` をruntime stateとして利用する。Planのユーザー向け表現はWorkspace / PaletteからDashboard / Documentへ統一し、旧Bottom Sheet由来のFeature Test aria contractも現在のDetail Dashboard文言へ更新する。
