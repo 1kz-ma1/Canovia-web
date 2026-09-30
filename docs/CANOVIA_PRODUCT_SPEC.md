@@ -1206,9 +1206,9 @@ DesktopではPlan / Collaboration Workspace Palette上のprecision pinchもMap S
 
 Plan Intentは `L0 計画 -> L1 Plan -> L2 Plan Dashboard` とする。Plan.categoryはmetadataとして残すが、通常のPlan閲覧で独立semantic levelにはしない。V49.7以降Execution Intentも `L0 実行 -> L1 Plan -> Execution` とし、Domain groupingを通常Navigationから外す。
 
-L2 Plan Workspaceはselected Planだけをspatial centerとして残し、Classic Planの進捗summary metricsと既存Roadmap partialをPaletteとして再利用する。進捗summaryはshared Blade partialへ切り出し、Classic / Mapで同じ表示contractを利用する。Map専用の類似cardコピーは作らない。
+L2 Plan Dashboardはselected Planだけをspatial centerとして残し、Classic Planの進捗summary metricsと既存Roadmap partialをDocument Canvas上で再利用する。進捗summaryはshared Blade partialを利用し、Classic / Mapで同じ表示contractを維持する。Map専用の類似data modelは作らない。
 
-詳細は `docs/V49.1_SEMANTIC_ZOOM_RECOVERY_PLAN_WORKSPACE.md` を正とする。
+V49.1時点の経緯は `docs/V49.1_SEMANTIC_ZOOM_RECOVERY_PLAN_WORKSPACE.md`、現在の詳細契約は `docs/V49.7_DASHBOARD_MAP_DOCUMENT_CANVAS.md` を正とする。
 
 ## V49.2 In-place Semantic Expansion
 
