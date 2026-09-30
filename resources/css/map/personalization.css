@@ -58,6 +58,34 @@
         justify-content: center;
     }
 
+    .canovia-map-shortcut-pin-context {
+        display: grid;
+        gap: 0.72rem;
+        margin-top: 1rem;
+        border: 1px solid rgb(56 189 248 / 0.16);
+        border-radius: 1rem;
+        background:
+            radial-gradient(circle at top right, rgb(14 165 233 / 0.08), transparent 11rem),
+            rgb(15 23 42 / 0.48);
+        padding: 0.9rem;
+    }
+
+    .canovia-map-shortcut-pin-context > p {
+        margin: 0;
+        color: rgb(148 163 184);
+        font-size: 0.72rem;
+        line-height: 1.65;
+    }
+
+    .canovia-map-shortcut-pin-context[data-map-shortcut-pin-status="pinned"] {
+        border-color: rgb(251 191 36 / 0.2);
+    }
+
+    .canovia-map-shortcut-pin-context[data-map-shortcut-pin-status="inactive"] {
+        border-color: rgb(100 116 139 / 0.4);
+        background: rgb(15 23 42 / 0.58);
+    }
+
     .canovia-map-node.is-personalization-hidden,
     .canovia-map-edge.is-personalization-hidden {
         display: none !important;
