@@ -10,74 +10,82 @@
         @if (! empty($surface))
             <template data-map-surface-template="{{ $node['id'] }}">
                 <section class="canovia-map-classic-content" data-map-classic-content="{{ $node['id'] }}">
-                    <p class="canovia-map-classic-kind">{{ $surfaceKind }}</p>
-                    <h2 class="canovia-map-classic-title">{{ $surface['title'] ?? $node['label'] }}</h2>
-                    @if (filled($surface['summary'] ?? null))
-                        <p class="canovia-map-classic-summary">{{ $surface['summary'] }}</p>
-                    @endif
+                    <div class="canovia-map-dashboard-summary">
+                        <p class="canovia-map-classic-kind">{{ $surfaceKind }}</p>
+                        <h2 class="canovia-map-classic-title">{{ $surface['title'] ?? $node['label'] }}</h2>
+                        @if (filled($surface['summary'] ?? null))
+                            <p class="canovia-map-classic-summary">{{ $surface['summary'] }}</p>
+                        @endif
+                    </div>
 
-                    @include('map.partials.node-context', ['node' => $node])
+                    <div class="canovia-map-dashboard-context">
+                        @include('map.partials.node-context', ['node' => $node])
+                    </div>
 
                     @if (! empty($surface['meta']))
-                        <h3 class="canovia-map-detail-label">状態・関連情報</h3>
-                        <div class="canovia-map-classic-meta">
-                            @foreach ($surface['meta'] as $meta)
-                                <span>{{ $meta }}</span>
-                            @endforeach
-                        </div>
+                        <section class="canovia-map-dashboard-meta">
+                            <h3 class="canovia-map-detail-label">状態・関連情報</h3>
+                            <div class="canovia-map-classic-meta">
+                                @foreach ($surface['meta'] as $meta)
+                                    <span>{{ $meta }}</span>
+                                @endforeach
+                            </div>
+                        </section>
                     @endif
 
-                    @if ($isIntentHub && ($node['id'] ?? null) === 'intent:space-station')
-                        @include('map.partials.space-station-surface')
-                    @else
-                        @if (! empty($surface['actions']))
-                            <h3 class="canovia-map-detail-label">次にできること</h3>
-                        @endif
-                        <div class="canovia-map-classic-actions">
-                            @foreach (($surface['actions'] ?? []) as $action)
-                                @php
-                                    $actionNavigationKind = (string) ($action['navigation_kind'] ?? '');
-                                    $actionIsZoom = str_starts_with($actionNavigationKind, 'zoom-');
-                                    $actionIsExternal = $actionNavigationKind === 'external' || (bool) ($action['external'] ?? false);
-                                    $actionZoomDirection = $actionNavigationKind === 'zoom-out' ? 'out' : 'in';
-                                @endphp
-                                <a
-                                    href="{{ $action['url'] }}"
-                                    class="{{ ($action['primary'] ?? false) ? 'btn-primary' : 'btn-secondary' }} w-full justify-center"
-                                    data-map-classic-action
-                                    data-map-action-role="{{ $actionIsZoom ? 'zoom' : ($actionIsExternal ? 'external_tool' : (($action['primary'] ?? false) ? 'primary' : 'secondary')) }}"
-                                    @if ($actionIsExternal)
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                    @endif
-                                    @if ($actionIsZoom)
-                                        data-map-semantic-zoom
-                                        data-map-zoom-direction="{{ $actionZoomDirection }}"
-                                    @endif
-                                >{{ $action['label'] }}</a>
-                            @endforeach
-                        </div>
-                        @auth
-                            @if ($isExecutionLevel && (bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
-                                <div class="canovia-map-companion-entry">
-                                    <div>
-                                        <p class="canovia-map-companion-kicker">COMPANION</p>
-                                        <p class="canovia-map-companion-copy">このNodeと直接つながるContextを引き継いで相談します。</p>
-                                    </div>
-                                    <form method="POST" action="{{ route('companion.entry') }}" data-mutation-once data-map-companion-form>
-                                        @csrf
-                                        <input type="hidden" name="entry_type" value="map">
-                                        <input type="hidden" name="map_node_id" value="{{ $node['id'] }}">
-                                        <input type="hidden" name="source_path" value="{{ $mapReturnUrl }}#focus={{ rawurlencode($node['id']) }}">
-                                        <input type="hidden" name="source_route" value="map.index">
-                                        <button type="submit" class="btn-secondary w-full justify-center" data-map-classic-action>
-                                            ✦ このContextについて相談
-                                        </button>
-                                    </form>
-                                </div>
+                    <section class="canovia-map-dashboard-actions">
+                        @if ($isIntentHub && ($node['id'] ?? null) === 'intent:space-station')
+                            @include('map.partials.space-station-surface')
+                        @else
+                            @if (! empty($surface['actions']))
+                                <h3 class="canovia-map-detail-label">次にできること</h3>
                             @endif
-                        @endauth
-                    @endif
+                            <div class="canovia-map-classic-actions">
+                                @foreach (($surface['actions'] ?? []) as $action)
+                                    @php
+                                        $actionNavigationKind = (string) ($action['navigation_kind'] ?? '');
+                                        $actionIsZoom = str_starts_with($actionNavigationKind, 'zoom-');
+                                        $actionIsExternal = $actionNavigationKind === 'external' || (bool) ($action['external'] ?? false);
+                                        $actionZoomDirection = $actionNavigationKind === 'zoom-out' ? 'out' : 'in';
+                                    @endphp
+                                    <a
+                                        href="{{ $action['url'] }}"
+                                        class="{{ ($action['primary'] ?? false) ? 'btn-primary' : 'btn-secondary' }} w-full justify-center"
+                                        data-map-classic-action
+                                        data-map-action-role="{{ $actionIsZoom ? 'zoom' : ($actionIsExternal ? 'external_tool' : (($action['primary'] ?? false) ? 'primary' : 'secondary')) }}"
+                                        @if ($actionIsExternal)
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        @endif
+                                        @if ($actionIsZoom)
+                                            data-map-semantic-zoom
+                                            data-map-zoom-direction="{{ $actionZoomDirection }}"
+                                        @endif
+                                    >{{ $action['label'] }}</a>
+                                @endforeach
+                            </div>
+                            @auth
+                                @if ($isExecutionLevel && (bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
+                                    <div class="canovia-map-companion-entry">
+                                        <div>
+                                            <p class="canovia-map-companion-kicker">COMPANION</p>
+                                            <p class="canovia-map-companion-copy">このNodeと直接つながるContextを引き継いで相談します。</p>
+                                        </div>
+                                        <form method="POST" action="{{ route('companion.entry') }}" data-mutation-once data-map-companion-form>
+                                            @csrf
+                                            <input type="hidden" name="entry_type" value="map">
+                                            <input type="hidden" name="map_node_id" value="{{ $node['id'] }}">
+                                            <input type="hidden" name="source_path" value="{{ $mapReturnUrl }}#focus={{ rawurlencode($node['id']) }}">
+                                            <input type="hidden" name="source_route" value="map.index">
+                                            <button type="submit" class="btn-secondary w-full justify-center" data-map-classic-action>
+                                                ✦ このContextについて相談
+                                            </button>
+                                        </form>
+                                    </div>
+                                @endif
+                            @endauth
+                        @endif
+                    </section>
                 </section>
             </template>
         @endif
