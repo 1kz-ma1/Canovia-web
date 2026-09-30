@@ -1,0 +1,284 @@
+/* V49.7 Dashboard Map / Document Canvas
+ * Mobile detail surfaces keep a document-sized information board instead of
+ * reflowing every region to the phone width. The Map remains spatial context.
+ */
+@layer components {
+    .canovia-plan-workspace-document {
+        display: grid;
+        min-width: 0;
+        min-height: 0;
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: 0.72rem;
+    }
+
+    .canovia-map-context-back {
+        display: inline-flex;
+        min-height: 2rem;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgb(71 85 105 / 0.72);
+        border-radius: 9999px;
+        background: rgb(15 23 42 / 0.7);
+        padding: 0.36rem 0.62rem;
+        color: rgb(186 230 253);
+        font-size: 0.62rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .canovia-map-context-back:hover,
+    .canovia-map-context-back:focus-visible {
+        border-color: rgb(103 232 249 / 0.48);
+        background: rgb(8 47 73 / 0.78);
+        color: rgb(236 254 255);
+    }
+
+    .canovia-map-dashboard-context:empty,
+    .canovia-map-dashboard-meta:empty,
+    .canovia-map-dashboard-actions:empty {
+        display: none;
+    }
+
+    @media (max-width: 767px) {
+        [data-map-document-viewport] {
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            touch-action: pan-x pan-y;
+        }
+
+        [data-map-document-viewport]::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Plan Dashboard: one landscape-like sheet floating over the Map. */
+        .canovia-plan-workspace-palette[data-map-document-viewport] {
+            inset:
+                max(5.35rem, calc(env(safe-area-inset-top) + 4.9rem))
+                0
+                max(3.05rem, calc(env(safe-area-inset-bottom) + 2.65rem))
+                0;
+            display: block;
+            overflow: auto;
+            padding:
+                0.55rem
+                max(0.55rem, env(safe-area-inset-right))
+                0.85rem
+                max(0.55rem, env(safe-area-inset-left));
+            pointer-events: auto;
+        }
+
+        .canovia-plan-workspace-document[data-map-document-canvas] {
+            width: 54rem;
+            min-width: 54rem;
+            min-height: 100%;
+            grid-template-rows: auto 1fr;
+            gap: 0.65rem;
+            padding-right: 0.75rem;
+        }
+
+        .canovia-plan-workspace-heading {
+            position: sticky;
+            z-index: 5;
+            top: 0;
+            left: 0;
+            width: 52.5rem;
+            margin-bottom: 0;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: start;
+            background:
+                radial-gradient(circle at 8% 0%, rgb(56 189 248 / 0.1), transparent 16rem),
+                rgb(8 15 34 / 0.91);
+        }
+
+        .canovia-plan-workspace-heading h2 {
+            max-width: 34rem;
+            font-size: 1rem;
+        }
+
+        .canovia-plan-workspace-actions {
+            max-width: 18rem;
+            justify-content: flex-end;
+        }
+
+        .canovia-plan-workspace-actions .btn-primary,
+        .canovia-plan-workspace-actions .btn-secondary {
+            flex: 0 0 auto;
+        }
+
+        .canovia-plan-workspace-grid {
+            display: grid;
+            min-height: 30rem;
+            grid-template-columns: 17rem minmax(34rem, 1fr);
+            grid-template-rows: auto;
+            align-items: start;
+            gap: 0.7rem;
+            pointer-events: auto;
+        }
+
+        .canovia-plan-palette-summary {
+            position: sticky;
+            left: 0;
+            align-self: start;
+        }
+
+        .canovia-plan-workspace-metrics {
+            grid-template-columns: repeat(2, minmax(7.6rem, 1fr));
+            gap: 0.5rem;
+        }
+
+        .canovia-plan-palette-roadmap {
+            min-width: 34rem;
+            max-height: none;
+            overflow: visible;
+        }
+
+        .canovia-map-shell.is-plan-workspace .canovia-map-scene {
+            opacity: 0.24;
+            filter: saturate(0.76) brightness(0.84);
+        }
+
+        /* Node detail: dashboard sheet with the Map still visible above/behind it. */
+        .canovia-map-context-surface[data-map-document-viewport] {
+            position: fixed;
+            z-index: 72;
+            right: 0;
+            bottom: max(0.35rem, env(safe-area-inset-bottom));
+            left: 0;
+            height: min(70dvh, 46rem);
+            max-height: none;
+            overflow: auto;
+            padding:
+                0.55rem
+                max(0.6rem, env(safe-area-inset-right))
+                0.9rem
+                max(0.6rem, env(safe-area-inset-left));
+            background:
+                linear-gradient(
+                    180deg,
+                    rgb(2 6 23 / 0.02),
+                    rgb(2 6 23 / 0.28) 10%,
+                    rgb(2 6 23 / 0.5)
+                );
+        }
+
+        .canovia-map-context-card[data-map-document-canvas] {
+            position: relative;
+            width: 52rem;
+            min-width: 52rem;
+            min-height: 31rem;
+            max-height: none;
+            overflow: visible;
+            border-radius: 1.35rem;
+            background:
+                radial-gradient(circle at 78% 0%, rgb(34 211 238 / 0.09), transparent 17rem),
+                rgb(8 15 34 / 0.88);
+            box-shadow:
+                0 18px 54px rgb(2 6 23 / 0.5),
+                inset 0 1px 0 rgb(255 255 255 / 0.055);
+            backdrop-filter: blur(19px) saturate(1.16);
+            -webkit-backdrop-filter: blur(19px) saturate(1.16);
+        }
+
+        .canovia-map-context-header {
+            position: sticky;
+            z-index: 5;
+            top: 0;
+            left: 0;
+            min-height: 3.8rem;
+            border-radius: 1.35rem 1.35rem 0 0;
+            background: rgb(8 15 34 / 0.94);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        .canovia-map-context-tools {
+            display: flex;
+            align-items: center;
+            gap: 0.42rem;
+        }
+
+        .canovia-map-context-expand {
+            display: none;
+        }
+
+        .canovia-map-context-close {
+            width: 2.35rem;
+            height: 2.35rem;
+        }
+
+        .canovia-map-context-card[data-map-document-canvas] .canovia-map-classic-content {
+            display: grid;
+            grid-template-columns: minmax(31rem, 1.55fr) minmax(16.5rem, 0.8fr);
+            grid-template-areas:
+                "summary actions"
+                "context actions"
+                "meta actions";
+            align-items: start;
+            gap: 0.9rem 1rem;
+            padding: 1.05rem;
+        }
+
+        .canovia-map-dashboard-summary {
+            grid-area: summary;
+            min-width: 0;
+            border: 1px solid rgb(56 189 248 / 0.12);
+            border-radius: 1rem;
+            background: rgb(15 23 42 / 0.55);
+            padding: 1rem;
+        }
+
+        .canovia-map-dashboard-context {
+            grid-area: context;
+            min-width: 0;
+        }
+
+        .canovia-map-dashboard-meta {
+            grid-area: meta;
+            min-width: 0;
+            border: 1px solid rgb(71 85 105 / 0.48);
+            border-radius: 1rem;
+            background: rgb(15 23 42 / 0.42);
+            padding: 0.85rem;
+        }
+
+        .canovia-map-dashboard-actions {
+            grid-area: actions;
+            position: sticky;
+            top: 4.55rem;
+            min-width: 0;
+            border: 1px solid rgb(56 189 248 / 0.14);
+            border-radius: 1rem;
+            background: rgb(8 15 34 / 0.76);
+            padding: 0.85rem;
+        }
+
+        .canovia-map-context-card[data-map-document-canvas] .canovia-map-classic-title {
+            max-width: 29rem;
+            font-size: 1.35rem;
+            line-height: 1.42;
+        }
+
+        .canovia-map-context-card[data-map-document-canvas] .canovia-map-classic-summary {
+            max-width: 29rem;
+            font-size: 0.82rem;
+            line-height: 1.85;
+        }
+
+        .canovia-map-context-card[data-map-document-canvas] .canovia-map-classic-actions {
+            margin-top: 0.65rem;
+        }
+
+        .canovia-map-context-card[data-map-document-canvas] .canovia-map-node-context,
+        .canovia-map-context-card[data-map-document-canvas] .canovia-map-personalization-explanation,
+        .canovia-map-context-card[data-map-document-canvas] .canovia-map-shortcut-pin-context {
+            margin-top: 0;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        [data-map-document-viewport] {
+            scroll-behavior: auto;
+        }
+    }
+}
