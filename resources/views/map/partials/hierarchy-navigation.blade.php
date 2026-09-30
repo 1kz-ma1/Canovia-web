@@ -6,6 +6,8 @@
         || (($hierarchy['intent'] ?? null) === 'collaboration' && filled($hierarchy['collaboration_context_key'] ?? null));
     $isReflectionHierarchy = (bool) ($hierarchy['reflection_mode'] ?? false)
         || (($hierarchy['intent'] ?? null) === 'reflection' && filled($hierarchy['reflection_context_key'] ?? null));
+    $isExecutionHierarchy = ($hierarchy['intent'] ?? null) === 'execution';
+    $isPlanHierarchy = ($hierarchy['intent'] ?? null) === 'plan';
     $levelLabels = $isCollaborationHierarchy
         ? [
             0 => 'Intent',
@@ -20,12 +22,24 @@
                 2 => 'Record',
                 3 => 'Detail',
             ]
-            : [
-                0 => 'Intent',
-                1 => 'Domain',
-                2 => 'Plan',
-                3 => 'Execution',
-            ]);
+            : ($isExecutionHierarchy
+                ? [
+                    0 => 'Intent',
+                    1 => 'Plan',
+                    2 => 'Execution',
+                ]
+                : ($isPlanHierarchy
+                    ? [
+                        0 => 'Intent',
+                        1 => 'Plan',
+                        2 => 'Dashboard',
+                    ]
+                    : [
+                        0 => 'Intent',
+                        1 => 'Domain',
+                        2 => 'Plan',
+                        3 => 'Execution',
+                    ])));
 @endphp
 
 <div class="canovia-map-hierarchy-bar" data-map-hierarchy-path data-map-hierarchy-depth="{{ $depth }}">
