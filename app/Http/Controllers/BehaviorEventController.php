@@ -114,6 +114,7 @@ class BehaviorEventController extends Controller
                 'intent_context',
                 'satellite_plan',
                 'satellite_tool',
+                'satellite_reflection',
                 'collaboration_hub',
                 'collaboration_context',
                 'collaboration_item',
