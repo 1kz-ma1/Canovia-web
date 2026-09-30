@@ -51,7 +51,7 @@ final class IntentNavigationGraphService
                 key: 'execution',
                 label: '実行',
                 subtitle: '今やることと実行Contextへ進む',
-                summary: 'DomainとPlanを辿って、現在のExecution ContextへSemantic Zoomします。',
+                summary: 'Planを直接選び、現在のExecution ContextへSemantic Zoomします。',
                 fallbackLabel: '今日の実行導線を開く',
                 fallbackUrl: route('navigation.index'),
                 meta: ['Task', 'Tool', 'Current Context'],
@@ -121,7 +121,7 @@ final class IntentNavigationGraphService
                 $label,
                 $summary,
                 [
-                    $this->action('領域へ入る', $zoomUrl, true, 'zoom-in'),
+                    $this->action($key === 'execution' ? 'Planを選ぶ' : '領域へ入る', $zoomUrl, true, 'zoom-in'),
                     $this->action($fallbackLabel, $fallbackUrl),
                 ],
                 $meta,
