@@ -49,6 +49,7 @@ class MapContextualShortcutPinningV487Test extends TestCase
         $this->assertTrue((bool) data_get($planNode, 'shortcut_pin.eligible'));
         $this->assertFalse((bool) data_get($planNode, 'shortcut_pin.pinned'));
         $this->assertSame('available', data_get($planNode, 'shortcut_pin.status'));
+        $beforeProjectionKey = (string) ($graph['projection_key'] ?? '');
 
         $before = [
             'priority' => (int) $plan->priority,
@@ -59,6 +60,21 @@ class MapContextualShortcutPinningV487Test extends TestCase
         $this->actingAs($user)
             ->post(route('map.personalization.pins.store', $plan))
             ->assertRedirect(route('map.index'));
+
+        $updatedContext = $this->actingAs($user)->get(route('map.index', [
+            'level' => MapLevel::Plan->value,
+            'intent' => 'plan',
+            'plan' => $plan->id,
+        ]))->viewData('graph');
+
+        $this->assertNotSame(
+            $beforeProjectionKey,
+            (string) ($updatedContext['projection_key'] ?? ''),
+        );
+        $this->assertTrue((bool) data_get(
+            $updatedContext['nodes']->firstWhere('id', 'plan:'.$plan->id),
+            'shortcut_pin.pinned',
+        ));
 
         $l0 = $this->actingAs($user)
             ->get(route('map.index'))
