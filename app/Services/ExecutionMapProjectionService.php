@@ -148,6 +148,28 @@ final class ExecutionMapProjectionService
             ];
         }
 
+        if ($intent === 'execution') {
+            $parentUrl = route('map.index', [
+                'level' => \App\Enums\MapLevel::Domain->value,
+                'intent' => 'execution',
+            ]);
+
+            return [
+                'depth' => 2,
+                'intent' => 'execution',
+                'intent_label' => '実行',
+                'plan_id' => (int) $plan->id,
+                'plan_label' => (string) $plan->title,
+                'current_label' => (string) $plan->title,
+                'parent_url' => $parentUrl,
+                'breadcrumbs' => [
+                    ['label' => 'Canovia', 'url' => route('map.index')],
+                    ['label' => '実行', 'url' => $parentUrl],
+                    ['label' => (string) $plan->title, 'url' => null],
+                ],
+            ];
+        }
+
         $parentUrl = route('map.index', [
             'level' => \App\Enums\MapLevel::Plan->value,
             'intent' => $intent,
