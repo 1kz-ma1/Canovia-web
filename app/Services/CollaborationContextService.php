@@ -117,6 +117,31 @@ final class CollaborationContextService
             ->values());
 
         $selectedKey = $this->contextKey((string) $request->query('collab_context', 'my_action'));
+        $requestedPlanId = max(0, (int) $request->query('plan', 0));
+        $selectedPlan = $requestedPlanId > 0
+            ? $plans->first(fn (Plan $plan) => (int) $plan->id === $requestedPlanId)
+            : null;
+
+        $projects = $plans
+            ->map(fn (Plan $plan) => $this->projectSummary($request, $plan))
+            ->sort(function (array $left, array $right) use ($selectedKey) {
+                if ($selectedKey === 'review') {
+                    $reviewOrder = (int) ($right['review_count'] ?? 0)
+                        <=> (int) ($left['review_count'] ?? 0);
+                    if ($reviewOrder !== 0) {
+                        return $reviewOrder;
+                    }
+                }
+
+                $activityOrder = (int) ($right['updated_at_ts'] ?? 0)
+                    <=> (int) ($left['updated_at_ts'] ?? 0);
+
+                return $activityOrder !== 0
+                    ? $activityOrder
+                    : strcmp((string) ($left['title'] ?? ''), (string) ($right['title'] ?? ''));
+            })
+            ->values();
+
         $recentActivityCount = $plans
             ->flatMap(fn (Plan $plan) => $plan->activityLogs)
             ->filter(fn ($activity) => $activity->created_at?->gte(now()->subDays(14)))
@@ -124,6 +149,8 @@ final class CollaborationContextService
 
         return [
             'plans' => $plans,
+            'projects' => $projects,
+            'selected_plan' => $selectedPlan,
             'contexts' => collect(self::CONTEXTS)->map(function (array $definition, string $key) use ($items) {
                 return [
                     'key' => $key,
@@ -147,6 +174,44 @@ final class CollaborationContextService
     public function contextKey(string $value): string
     {
         return array_key_exists($value, self::CONTEXTS) ? $value : 'my_action';
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function projectSummary(Request $request, Plan $plan): array
+    {
+        $reviewCount = $plan->artifacts
+            ->filter(fn (PlanArtifact $artifact) => $artifact->collaborationState() === 'review')
+            ->count();
+        $waitingCount = $plan->artifacts
+            ->filter(fn (PlanArtifact $artifact) => $artifact->collaborationState() === 'waiting')
+            ->count();
+        $latestArtifact = $plan->artifacts->max(fn (PlanArtifact $artifact) => $artifact->updated_at?->timestamp ?? 0);
+        $latestActivity = $plan->activityLogs->max(fn ($activity) => $activity->created_at?->timestamp ?? 0);
+        $latestTask = $plan->tasks->max(fn (Task $task) => $task->updated_at?->timestamp ?? 0);
+
+        return [
+            'id' => (int) $plan->id,
+            'title' => (string) $plan->title,
+            'category' => (string) ($plan->category ?? ''),
+            'role' => $this->ownership->role($request, $plan),
+            'can_edit' => $this->ownership->canEdit($request, $plan),
+            'review_count' => $reviewCount,
+            'waiting_count' => $waitingCount,
+            'artifact_count' => $plan->artifacts->count(),
+            'member_count' => 1 + $plan->memberships->count(),
+            'active_task_count' => $plan->tasks
+                ->filter(fn (Task $task) => ! in_array($task->status, ['done', 'cancelled'], true)
+                    && (int) $task->progress_percent < 100)
+                ->count(),
+            'updated_at_ts' => max(
+                (int) ($plan->updated_at?->timestamp ?? 0),
+                (int) $latestArtifact,
+                (int) $latestActivity,
+                (int) $latestTask,
+            ),
+        ];
     }
 
     /**
