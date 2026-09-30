@@ -1430,7 +1430,7 @@ export function mountLivingGoalMap({
         layer.setAttribute('data-map-semantic-context-layer', '');
         layer.setAttribute('aria-hidden', 'true');
 
-        const edgeSvg = mapScene.querySelector?.('.canovia-map-edges');
+        const edgeSvg = edgeElements[0]?.closest?.('.canovia-map-edges') || null;
         if (edgeSvg) {
             const edgeClone = edgeSvg.cloneNode(true);
             edgeClone.classList.add('canovia-map-semantic-context-edges');
