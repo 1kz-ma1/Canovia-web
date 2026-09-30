@@ -48,7 +48,7 @@ final class HierarchyNavigationGraphService
         $plans = collect($context['plans'] ?? [])
             ->sort(function (Plan $left, Plan $right) {
                 $priority = max(1, min(5, (int) $left->priority))
-                    <=> max(1, min(5, (int) $right->priority);
+                    <=> max(1, min(5, (int) $right->priority));
                 if ($priority !== 0) {
                     return $priority;
                 }
