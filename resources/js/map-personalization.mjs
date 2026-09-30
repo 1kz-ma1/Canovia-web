@@ -107,7 +107,11 @@ export function mountMapPersonalization({
     ];
     const status = page.querySelector('[data-map-personalization-hidden-status]');
     const count = page.querySelector('[data-map-personalization-hidden-count]');
-    const storage = windowRef.localStorage;
+    let storage = null;
+
+    try {
+        storage = windowRef.localStorage;
+    } catch (_) {}
 
     // L0 may currently have no promoted shortcut. Keep the reset surface alive
     // so a stale local hide preference can still be cleared.
@@ -199,4 +203,5 @@ export function mountMapPersonalization({
 if (globalThis.document?.addEventListener) {
     globalThis.document.addEventListener('DOMContentLoaded', mountCurrentMapPersonalization);
     globalThis.document.addEventListener('canovia:page-ready', mountCurrentMapPersonalization);
+    globalThis.document.addEventListener('canovia:map-reprojected', mountCurrentMapPersonalization);
 }
