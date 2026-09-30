@@ -101,9 +101,11 @@ final class MapPersonalizationPreferenceService
         ]);
     }
 
-    private function planNodeId(Plan $plan): string
+    public function planNodeId(Plan|int $plan): string
     {
-        return 'satellite:plan:'.(int) $plan->id;
+        $planId = $plan instanceof Plan ? (int) $plan->id : (int) $plan;
+
+        return 'satellite:plan:'.$planId;
     }
 
     /**

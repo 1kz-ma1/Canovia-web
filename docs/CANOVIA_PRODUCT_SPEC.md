@@ -1138,3 +1138,17 @@ Pinはserver-side account preference、V48.5のHideはdevice-local localStorage 
 Detail Paletteから「このShortcutを固定 / 固定を解除 / この端末では非表示」を操作できる。absolute position保存、drag & drop、Shared Plan重複表示、Task-bound ToolのL0昇格、AIによるPin判断は行わない。
 
 詳細は `docs/V48.6_PINNED_SPATIAL_SHORTCUTS.md` を正とする。
+
+## V48.7 Contextual Shortcut Pinning
+
+V48.6のserver-side Pin contractをcanonical Plan Contextから操作可能にする。これまでPin操作は既にL0へpromotionされたPersonalized Shortcutからしか到達できず、signalが弱くShortcutが存在しないPlanをUIから固定できなかった。
+
+`MapShortcutPinProjectionService` はlevel-specific Map Projection後のtype=plan Nodeへpresentation-onlyの `shortcut_pin` metadataを付加する。対象はuser自身のPersonal Planだけで、Shared Planには付与しない。
+
+状態は `available / pinned / inactive` の3つとする。未完了Taskを持つPersonal PlanはL2/L3のDetail Paletteから「このPlanを全体へ固定」できる。Pin済みなら同じContextから解除できる。Pin後に全Taskが完了・cancelledとなった場合はV48.6どおりL0 Shortcutを復活させず、Plan Contextではinactiveとして「固定設定は残っているが現在は全体Mapの表示対象外」と示し、人が解除できる。
+
+Pin / Unpin後はL0へ戻してProjection結果を即確認する。Plan Context上のshortcut pin stateはProjection keyにも含め、Living Map / Instant NavigationでstaleなPin表示を残さない。
+
+新しいcandidate種、Task-bound ToolのL0昇格、Shared Plan Shortcut、AIによるPin判断、absolute position保存、canonical Plan / Task mutationは行わない。
+
+詳細は `docs/V48.7_CONTEXTUAL_SHORTCUT_PINNING.md` を正とする。
