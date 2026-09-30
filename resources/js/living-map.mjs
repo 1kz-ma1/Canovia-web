@@ -589,6 +589,17 @@ export function semanticExpansionOffset(sourcePosition, targetPosition) {
     };
 }
 
+export function semanticExpansionFactor({
+    mobile = false,
+    viewportHeight = 900,
+} = {}) {
+    if (mobile) return 0.72;
+
+    const height = Math.max(1, Number(viewportHeight || 900));
+
+    return height <= 720 ? 0.84 : 0.80;
+}
+
 export function semanticExpandedPosition(
     sourcePosition,
     targetCenterPosition,
@@ -1581,7 +1592,10 @@ export function mountLivingGoalMap({
         semanticExpansionLayoutState = {
             anchorId,
             sourcePosition: semanticMapPositionSnapshot(sourcePosition) || { x: 50, y: 50 },
-            factor: isMobileViewport() ? 0.72 : 0.80,
+            factor: semanticExpansionFactor({
+                mobile: isMobileViewport(),
+                viewportHeight: currentMapViewport().height,
+            }),
         };
         applyBaseLayout();
 
