@@ -31,7 +31,9 @@
         </div>
         <div class="canovia-collaboration-workspace-actions">
             <a href="{{ route('plans.create.manual', ['collaborative' => 1]) }}" class="btn-secondary">＋ 共同計画</a>
-            <a href="{{ route('plans.collaboration.settings', $workspacePlan) }}" class="btn-secondary">共同設定</a>
+            @if ($workspaceCanManage)
+                <a href="{{ route('plans.collaboration.settings', $workspacePlan) }}" class="btn-secondary">共同設定</a>
+            @endif
             <a href="{{ route('plans.show', $workspacePlan) }}" class="btn-secondary">Classic Plan</a>
         </div>
     </header>
