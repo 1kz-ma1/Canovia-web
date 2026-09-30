@@ -81,6 +81,8 @@ class MapPlanWorkspaceV491Test extends TestCase
             ->assertOk()
             ->assertSee('L2 · PLAN WORKSPACE')
             ->assertSee('data-map-plan-workspace', false)
+            ->assertSee('data-map-document-viewport', false)
+            ->assertSee('data-map-document-canvas', false)
             ->assertSee('data-plan-summary-metrics', false)
             ->assertSee('Roadmap')
             ->assertSee($task->title)
@@ -131,7 +133,7 @@ class MapPlanWorkspaceV491Test extends TestCase
             ->assertSee('data-map-parent-url="'.e($parent).'"', false);
     }
 
-    public function test_execution_intent_keeps_domain_grouping_separate_from_plan_browsing(): void
+    public function test_execution_intent_places_plans_directly_and_returns_there_from_execution(): void
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);
         $dev = $this->plan($user, '開発Plan', '個人開発', 1);
@@ -139,22 +141,41 @@ class MapPlanWorkspaceV491Test extends TestCase
         $this->task($dev, '開発Task');
         $this->task($study, '学習Task');
 
-        $graph = $this->actingAs($user)
-            ->get(route('map.index', [
-                'level' => 'l1',
-                'intent' => 'execution',
-            ]))
-            ->assertOk()
-            ->viewData('graph');
+        $response = $this->actingAs($user)->get(route('map.index', [
+            'level' => 'l1',
+            'intent' => 'execution',
+        ]));
 
-        $this->assertTrue($graph['nodes']->contains(
+        $response
+            ->assertOk()
+            ->assertSee('L1 · EXECUTION PLANS')
+            ->assertSee($dev->title)
+            ->assertSee($study->title);
+
+        $graph = $response->viewData('graph');
+        $nodeIds = $graph['nodes']->pluck('id')->all();
+
+        $this->assertSame('hierarchy:intent:execution', $graph['center_node_id']);
+        $this->assertContains('plan:'.$dev->id, $nodeIds);
+        $this->assertContains('plan:'.$study->id, $nodeIds);
+        $this->assertFalse($graph['nodes']->contains(
             fn (array $node) => ($node['type'] ?? null) === 'domain'
-                && ($node['label'] ?? null) === '個人開発'
         ));
-        $this->assertTrue($graph['nodes']->contains(
-            fn (array $node) => ($node['type'] ?? null) === 'domain'
-                && ($node['label'] ?? null) === '資格学習'
-        ));
+
+        $devNode = $graph['nodes']->firstWhere('id', 'plan:'.$dev->id);
+        $executionUrl = route('map.index', [
+            'level' => 'l3',
+            'intent' => 'execution',
+            'plan' => $dev->id,
+        ]);
+        $this->assertSame($executionUrl, data_get($devNode, 'direct_navigation.url'));
+
+        $execution = $this->actingAs($user)->get($executionUrl)->assertOk()->viewData('graph');
+        $this->assertSame(2, data_get($execution, 'hierarchy.depth'));
+        $this->assertSame(
+            route('map.index', ['level' => 'l1', 'intent' => 'execution']),
+            data_get($execution, 'hierarchy.parent_url'),
+        );
     }
 
     private function plan(User $user, string $title, string $category, int $priority): Plan
