@@ -29,6 +29,17 @@ class GlobalHomeResetFocusV481Test extends TestCase
         $this->assertStringContainsString('const initialDockId = forceGlobalHomeReset ? null : dockIdFromLocation(windowRef);', $runtime);
     }
 
+    public function test_instant_navigation_cache_does_not_preserve_map_runtime_mount_guards(): void
+    {
+        $runtime = file_get_contents(resource_path('js/instant-navigation.mjs'));
+
+        $this->assertStringContainsString('stripInstantRuntimeTransientState(page.cloneNode(true))', $runtime);
+        $this->assertStringContainsString("'data-map-focus-initialized'", $runtime);
+        $this->assertStringContainsString("'data-map-pages-initialized'", $runtime);
+        $this->assertStringContainsString("'data-map-data-layers-initialized'", $runtime);
+        $this->assertStringContainsString("'data-map-semantic-transition-marked'", $runtime);
+    }
+
     public function test_global_home_runtime_resets_selection_dock_view_and_focus_history_before_navigation(): void
     {
         $runtime = file_get_contents(resource_path('js/living-map.mjs'));
