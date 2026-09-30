@@ -118,8 +118,8 @@ final class RecentReflectionShortcutCandidateService
                     ],
                 ],
                 'meta' => [
-                    $records->count().' recent records',
-                    $activeDays.' active days',
+                    '直近 '.$records->count().'件',
+                    $activeDays.'日分の積み上げ',
                 ],
             ],
         ];
