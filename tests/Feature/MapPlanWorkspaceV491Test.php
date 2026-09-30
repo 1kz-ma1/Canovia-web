@@ -79,7 +79,7 @@ class MapPlanWorkspaceV491Test extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('L2 · PLAN WORKSPACE')
+            ->assertSee('L2 · PLAN DASHBOARD')
             ->assertSee('data-map-plan-workspace', false)
             ->assertSee('data-map-document-viewport', false)
             ->assertSee('data-map-document-chrome', false)
