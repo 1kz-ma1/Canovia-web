@@ -849,6 +849,7 @@ export function mountLivingGoalMap({
     let gesture = null;
     let suppressMapClickUntil = 0;
     let mapView = { x: 0, y: 0, scale: 1 };
+    let semanticExpansionOffsetState = { x: 0, y: 0 };
     let viewportCache = {
         left: 0,
         top: 0,
@@ -1024,6 +1025,21 @@ export function mountLivingGoalMap({
                 width: element.offsetWidth,
                 height: element.offsetHeight,
             })), currentMapViewport(), nodeElements.find(element => element.dataset.mapIsCenter === '1')?.dataset.mapNodeId);
+        }
+
+        if (
+            Math.abs(Number(semanticExpansionOffsetState.x || 0)) > 0.01
+            || Math.abs(Number(semanticExpansionOffsetState.y || 0)) > 0.01
+        ) {
+            basePositions = new Map(
+                [...basePositions.entries()].map(([nodeId, position]) => [
+                    nodeId,
+                    {
+                        x: Math.round((Number(position.x || 0) + semanticExpansionOffsetState.x) * 10) / 10,
+                        y: Math.round((Number(position.y || 0) + semanticExpansionOffsetState.y) * 10) / 10,
+                    },
+                ]),
+            );
         }
 
         const spatialLayout = mobile ? 'mobile' : 'desktop';
@@ -1484,27 +1500,12 @@ export function mountLivingGoalMap({
         const targetPosition = anchorId ? basePositions.get(anchorId) : null;
         const offset = semanticExpansionOffset(sourcePosition, targetPosition);
 
-        if (!anchor || (Math.abs(offset.x) < 0.01 && Math.abs(offset.y) < 0.01)) {
-            return anchor;
+        if (!anchor) {
+            return null;
         }
 
-        const shifted = new Map();
-
-        for (const node of nodes) {
-            const current = basePositions.get(node.id) || { x: node.x, y: node.y };
-            const position = {
-                x: Math.round((Number(current.x || 0) + offset.x) * 10) / 10,
-                y: Math.round((Number(current.y || 0) + offset.y) * 10) / 10,
-            };
-            shifted.set(node.id, position);
-
-            const element = nodeElementById.get(node.id);
-            element?.style.setProperty('--map-x', String(position.x) + '%');
-            element?.style.setProperty('--map-y', String(position.y) + '%');
-        }
-
-        basePositions = shifted;
-        syncEdges(basePositions);
+        semanticExpansionOffsetState = offset;
+        applyBaseLayout();
 
         return anchor;
     };
