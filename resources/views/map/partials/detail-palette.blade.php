@@ -14,6 +14,8 @@
                     href="{{ $hierarchy['parent_url'] }}"
                     class="canovia-map-document-back canovia-map-context-back"
                     data-map-document-back
+                    data-map-semantic-zoom
+                    data-map-zoom-direction="out"
                     data-route-lock-skip
                 ><span aria-hidden="true">←</span><span>{{ $isExecutionLevel && data_get($hierarchy, 'intent') === 'execution' ? 'Plan選択' : '戻る' }}</span></a>
             @endif
