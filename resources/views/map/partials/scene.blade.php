@@ -90,7 +90,7 @@
         @endphp
 
         <div
-            class="canovia-map-node {{ $stateClass }} {{ $kindClass }} visual-{{ $visualKind }} {{ $isCenter ? 'is-map-center' : '' }} {{ filled(data_get($directNavigation, 'url')) ? 'has-direct-navigation' : '' }}"
+            class="canovia-map-node {{ $stateClass }} {{ $kindClass }} visual-{{ $visualKind }} {{ $isCenter ? 'is-map-center' : '' }} {{ ($usesDirectBody || $showDirectOpen) ? 'has-direct-navigation' : '' }}"
             style="--map-x: {{ data_get($node, 'position.x', 50) }}%; --map-y: {{ data_get($node, 'position.y', 50) }}%; --node-scale: {{ (float) ($node['size_weight'] ?? 0.7) }}"
             data-map-node
             data-map-node-id="{{ $node['id'] }}"
