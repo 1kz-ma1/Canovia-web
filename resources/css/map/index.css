@@ -6,6 +6,7 @@
 @import './space-station.css';
 @import './personalization.css';
 @import './collaboration-workspace.css';
+@import './plan-workspace.css';
 
 /*
  * Merge-safe Map CSS entry.

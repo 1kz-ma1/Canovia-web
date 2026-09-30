@@ -12,6 +12,9 @@ final class HierarchyMapProjectionService
         private readonly MapHierarchyContextService $context,
         private readonly HierarchyNavigationGraphService $navigationGraph,
         private readonly HierarchyMapAttentionStateService $attention,
+        private readonly PlanProgressService $progress,
+        private readonly RoadmapService $roadmap,
+        private readonly PlanOwnershipService $ownership,
     ) {}
 
     /**
@@ -31,6 +34,10 @@ final class HierarchyMapProjectionService
             ->map(fn (array $node) => $this->withDirectNavigation($node))
             ->values();
         $edges = $attention['edges']->values();
+        $workspace = $level === MapLevel::Plan
+            && (string) ($context['intent'] ?? '') === 'plan'
+            ? $this->planWorkspacePayload($request, $context)
+            : null;
 
         return [
             'level' => $level->value,
@@ -40,6 +47,8 @@ final class HierarchyMapProjectionService
             'primary_node_id' => null,
             'primary_launch' => null,
             'has_primary_action' => false,
+            'plan_workspace_mode' => is_array($workspace),
+            'plan_workspace' => $workspace,
             'hierarchy' => $this->hierarchyMetadata($level, $context),
             'projection_key' => $this->projectionKey(
                 $level,
@@ -47,6 +56,7 @@ final class HierarchyMapProjectionService
                 $edges,
                 $attention['center_node_id'],
                 $context,
+                $workspace,
             ),
         ];
     }
@@ -97,6 +107,28 @@ final class HierarchyMapProjectionService
             ];
         }
 
+        if ($level === MapLevel::Plan && $intent === 'plan' && $plan instanceof \App\Models\Plan) {
+            $parentUrl = route('map.index', [
+                'level' => MapLevel::Domain->value,
+                'intent' => 'plan',
+            ]);
+
+            return [
+                'depth' => 2,
+                'intent' => 'plan',
+                'intent_label' => '計画',
+                'plan_id' => (int) $plan->id,
+                'plan_label' => (string) $plan->title,
+                'current_label' => (string) $plan->title,
+                'parent_url' => $parentUrl,
+                'breadcrumbs' => [
+                    ['label' => 'Canovia', 'url' => route('map.index')],
+                    ['label' => '計画', 'url' => $parentUrl],
+                    ['label' => (string) $plan->title, 'url' => null],
+                ],
+            ];
+        }
+
         $domainKey = is_array($domain) ? (string) ($domain['key'] ?? '') : '';
         $domainLabel = is_array($domain) ? (string) ($domain['label'] ?? '未分類') : '未分類';
 
@@ -128,6 +160,78 @@ final class HierarchyMapProjectionService
 
     /**
      * @param array<string,mixed> $context
+     * @return array<string,mixed>|null
+     */
+    private function planWorkspacePayload(Request $request, array $context): ?array
+    {
+        $plan = $context['selected_plan'] ?? null;
+        if (! $plan instanceof \App\Models\Plan) {
+            return null;
+        }
+
+        $plan->loadMissing([
+            'tasks.prerequisite',
+            'tasks.prerequisites',
+            'tasks.resources',
+            'workLogs' => fn ($query) => $query
+                ->with('task')
+                ->latest('worked_on')
+                ->latest('id'),
+            'availabilityRules',
+            'availabilityOverrides',
+        ]);
+
+        $progress = $this->progress->calculate($plan);
+        $roadmap = $this->roadmap->build($plan);
+        $domainKey = $this->context->domainKey($plan->category);
+
+        return [
+            'plan' => $plan,
+            'progress' => $progress,
+            'roadmap' => $roadmap,
+            'can_edit' => $this->ownership->canEdit($request, $plan),
+            'can_manage' => $this->ownership->owns($request, $plan),
+            'execution_url' => route('map.index', [
+                'level' => MapLevel::Execution->value,
+                'intent' => 'execution',
+                'domain' => $domainKey,
+                'plan' => $plan->id,
+            ]),
+        ];
+    }
+
+    /**
+     * @param array<string,mixed>|null $workspace
+     * @return array<string,mixed>|null
+     */
+    private function planWorkspaceDigest(?array $workspace): ?array
+    {
+        if (! is_array($workspace)) {
+            return null;
+        }
+
+        $plan = $workspace['plan'] ?? null;
+        if (! $plan instanceof \App\Models\Plan) {
+            return null;
+        }
+
+        return [
+            'plan_id' => (int) $plan->id,
+            'plan_updated_at' => (int) ($plan->updated_at?->timestamp ?? 0),
+            'task_count' => $plan->tasks->count(),
+            'latest_task' => (int) ($plan->tasks->max(fn ($task) => $task->updated_at?->timestamp ?? 0) ?? 0),
+            'work_log_count' => $plan->workLogs->count(),
+            'latest_work_log' => (int) ($plan->workLogs->max(fn ($log) => $log->updated_at?->timestamp ?? 0) ?? 0),
+            'progress' => [
+                'weighted' => data_get($workspace, 'progress.weighted_progress_percent'),
+                'remaining' => data_get($workspace, 'progress.remaining_minutes_by_progress'),
+                'status' => data_get($workspace, 'progress.status'),
+            ],
+        ];
+    }
+
+    /**
+     * @param array<string,mixed> $context
      */
     private function projectionKey(
         MapLevel $level,
@@ -135,6 +239,7 @@ final class HierarchyMapProjectionService
         Collection $edges,
         ?string $centerNodeId,
         array $context,
+        ?array $workspace = null,
     ): string {
         return hash('sha256', (string) json_encode([
             'level' => $level->value,
@@ -142,6 +247,7 @@ final class HierarchyMapProjectionService
             'intent' => $context['intent'] ?? null,
             'domain_key' => data_get($context, 'selected_domain.key'),
             'selected_plan_id' => data_get($context, 'selected_plan.id'),
+            'plan_workspace_digest' => $this->planWorkspaceDigest($workspace),
             'nodes' => $nodes->all(),
             'edges' => $edges->all(),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));

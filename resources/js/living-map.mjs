@@ -493,18 +493,36 @@ export function mapSemanticZoomDirection(value = 'in') {
 export function semanticZoomThresholdDirection(
     scale,
     {
-        inThreshold = 1.62,
-        outThreshold = 0.72,
+        inThreshold = 1.42,
+        outThreshold = 0.82,
     } = {},
 ) {
     const value = Number(scale || 1);
-    const zoomIn = Math.max(1, Number(inThreshold || 1.62));
-    const zoomOut = Math.min(1, Number(outThreshold || 0.72));
+    const zoomIn = Math.max(1, Number(inThreshold || 1.42));
+    const zoomOut = Math.min(1, Number(outThreshold || 0.82));
 
     if (value >= zoomIn) return 'in';
     if (value <= zoomOut) return 'out';
 
     return null;
+}
+
+export function semanticZoomDestination(
+    direction,
+    {
+        parentUrl = '',
+        candidateUrl = '',
+    } = {},
+) {
+    const normalizedDirection = mapSemanticZoomDirection(direction);
+    const parent = String(parentUrl || '').trim();
+    const candidate = String(candidateUrl || '').trim();
+
+    if (normalizedDirection === 'out' && parent !== '') {
+        return parent;
+    }
+
+    return candidate;
 }
 
 export function semanticRouteKey(value, base = 'https://canovia.local') {
@@ -1411,22 +1429,53 @@ export function mountLivingGoalMap({
     const commitSemanticZoom = (direction, clientPoint = null) => {
         if (semanticZoomNavigating || disposed) return false;
 
-        const link = semanticTargetLink(direction, clientPoint);
-        if (!(link instanceof windowRef.HTMLAnchorElement)) return false;
+        const normalizedDirection = mapSemanticZoomDirection(direction);
+        const link = semanticTargetLink(normalizedDirection, clientPoint);
+        const targetUrl = semanticZoomDestination(normalizedDirection, {
+            parentUrl: page.dataset.mapParentUrl || '',
+            candidateUrl: link?.href || '',
+        });
+
+        if (!targetUrl) return false;
 
         semanticZoomNavigating = true;
         windowRef.clearTimeout(semanticZoomTimer);
         semanticZoomTimer = null;
 
-        markSemanticTransition(link);
-        trackInstantMapLink(link);
+        if (link instanceof windowRef.HTMLAnchorElement) {
+            markSemanticTransition(link);
+            trackInstantMapLink(link);
+        } else if (normalizedDirection === 'out') {
+            const centerNode = page.querySelector?.('[data-map-node][data-map-is-center="1"]');
+            const sourceRect = centerNode?.getBoundingClientRect?.();
+            const viewport = {
+                width: Number(windowRef.innerWidth || 0),
+                height: Number(windowRef.innerHeight || 0),
+            };
+
+            writeSemanticTransition(windowRef, {
+                direction: 'out',
+                from_depth: Number(page.dataset.mapHierarchyDepth || 0),
+                from_route: semanticRouteKey(windowRef.location.href, windowRef.location.href),
+                source_node_ref: centerNode?.dataset?.mapNodeId || null,
+                source_rect: semanticRectSnapshot(sourceRect, viewport),
+                left_at: Date.now(),
+            });
+
+            trackTelemetry('map_classic_action_opened', {
+                action_role: 'zoom',
+                node_type: centerNode?.dataset?.mapNodeType || null,
+                position_role: centerNode?.dataset?.mapPositionRole || null,
+                is_primary: centerNode?.dataset?.mapIsPrimary === '1',
+            }, true);
+        }
 
         windowRef.setTimeout(() => {
             if (disposed) return;
 
             const instant = windowRef.CanoviaInstantNavigation;
             if (instant && typeof instant.navigate === 'function') {
-                void instant.navigate(link.href, {
+                void instant.navigate(targetUrl, {
                     historyMode: 'push',
                     scroll: false,
                     fallback: true,
@@ -1434,7 +1483,7 @@ export function mountLivingGoalMap({
                 return;
             }
 
-            windowRef.location.assign(link.href);
+            windowRef.location.assign(targetUrl);
         }, 90);
 
         return true;
@@ -1450,7 +1499,13 @@ export function mountLivingGoalMap({
 
         semanticZoomTimer = windowRef.setTimeout(() => {
             semanticZoomTimer = null;
-            commitSemanticZoom(direction, clientPoint);
+            const committed = commitSemanticZoom(direction, clientPoint);
+
+            // L0 has no parent. Do not leave the whole navigation map crushed
+            // at the minimum camera scale when zoom-out has nowhere to go.
+            if (!committed && direction === 'out') {
+                resetMapView({ animate: true });
+            }
         }, Math.max(0, Number(delay || 0)));
 
         return true;
@@ -1617,6 +1672,11 @@ export function mountLivingGoalMap({
         if (!mapScene || semanticZoomNavigating) return;
         if (event.target.closest?.('input, select, textarea, [data-map-gesture-controls]')) return;
 
+        const insideScene = Boolean(event.target.closest?.('[data-map-scene]'));
+        const insideWorkspacePalette = Boolean(event.target.closest?.(
+            '[data-map-collaboration-workspace], [data-map-plan-workspace]'
+        ));
+
         refreshMapViewport();
 
         if (event.ctrlKey) {
@@ -1638,7 +1698,10 @@ export function mountLivingGoalMap({
             return;
         }
 
-        // Precision touchpad two-finger scrolling pans the same camera.
+        // Workspace cards keep ordinary scrolling. Outside cards, precision
+        // touchpad two-finger scrolling pans the map camera.
+        if (insideWorkspacePalette || !insideScene) return;
+
         if (Math.abs(Number(event.deltaX || 0)) > 0 || Math.abs(Number(event.deltaY || 0)) > 0) {
             event.preventDefault();
             applyMapView({
@@ -1707,7 +1770,7 @@ export function mountLivingGoalMap({
         mapScene?.removeEventListener('pointermove', onScenePointerMove);
         mapScene?.removeEventListener('pointerup', finishScenePointer);
         mapScene?.removeEventListener('pointercancel', finishScenePointer);
-        mapScene?.removeEventListener('wheel', onSceneWheel);
+        mapShell?.removeEventListener('wheel', onSceneWheel);
         mapScene?.removeEventListener('dblclick', onSceneDoubleClick);
         zoomOutControl?.removeEventListener('click', onZoomOut);
         zoomInControl?.removeEventListener('click', onZoomIn);
@@ -2060,7 +2123,7 @@ export function mountLivingGoalMap({
     mapScene?.addEventListener('pointermove', onScenePointerMove, { passive: false });
     mapScene?.addEventListener('pointerup', finishScenePointer);
     mapScene?.addEventListener('pointercancel', finishScenePointer);
-    mapScene?.addEventListener('wheel', onSceneWheel, { passive: false });
+    mapShell?.addEventListener('wheel', onSceneWheel, { passive: false });
     mapScene?.addEventListener('dblclick', onSceneDoubleClick);
     zoomOutControl?.addEventListener('click', onZoomOut);
     zoomInControl?.addEventListener('click', onZoomIn);

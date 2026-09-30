@@ -18,15 +18,185 @@ final class HierarchyNavigationGraphService
      */
     public function build(MapLevel $level, array $context): array
     {
+        $planIntent = (string) ($context['intent'] ?? 'plan') === 'plan';
+
         return match ($level) {
-            MapLevel::Domain => $this->domainGraph($context),
-            MapLevel::Plan => $this->planGraph($context),
+            MapLevel::Domain => $planIntent
+                ? $this->planIndexGraph($context)
+                : $this->domainGraph($context),
+            MapLevel::Plan => $planIntent
+                ? $this->planWorkspaceGraph($context)
+                : $this->planGraph($context),
             default => [
                 'nodes' => collect(),
                 'edges' => collect(),
                 'center_node_id' => null,
             ],
         };
+    }
+
+    /**
+     * L1 Plan intent is plan-first. Categories stay canonical Plan metadata but
+     * no longer consume a semantic zoom level.
+     *
+     * @param array<string,mixed> $context
+     * @return array{nodes:Collection<int,array<string,mixed>>,edges:Collection<int,array<string,mixed>>,center_node_id:string}
+     */
+    private function planIndexGraph(array $context): array
+    {
+        $centerId = 'hierarchy:intent:plan';
+        $plans = collect($context['plans'] ?? [])
+            ->sort(function (Plan $left, Plan $right) {
+                $priority = max(1, min(5, (int) $left->priority))
+                    <=> max(1, min(5, (int) $right->priority);
+                if ($priority !== 0) {
+                    return $priority;
+                }
+
+                $deadline = ($left->deadline?->timestamp ?? PHP_INT_MAX)
+                    <=> ($right->deadline?->timestamp ?? PHP_INT_MAX);
+                if ($deadline !== 0) {
+                    return $deadline;
+                }
+
+                return (int) $left->id <=> (int) $right->id;
+            })
+            ->values();
+
+        $nodes = collect([
+            $this->node(
+                id: $centerId,
+                type: 'intent_context',
+                eyebrow: 'L1 · PLANS',
+                label: '計画',
+                subtitle: 'Planを直接選んで詳細Workspaceへ入る',
+                action: route('map.index'),
+                attentionRole: 'hierarchy-parent',
+                navigationKind: 'zoom-out',
+                classicSurface: $this->surface(
+                    'Plan Index',
+                    '計画',
+                    'カテゴリを1階層として挟まず、アクセスできるPlanを直接配置しています。',
+                    [
+                        $this->action('L0へ戻る', route('map.index'), true, 'zoom-out'),
+                        $this->action('新しいPlanを作る', route('plans.create')),
+                    ],
+                    [$plans->count().' Plan'],
+                ),
+            ),
+        ]);
+
+        $edges = collect();
+
+        /** @var Plan $plan */
+        foreach ($plans as $plan) {
+            $nodeId = 'plan:'.$plan->id;
+            $url = route('map.index', [
+                'level' => MapLevel::Plan->value,
+                'intent' => 'plan',
+                'plan' => $plan->id,
+            ]);
+            $activeTasks = $plan->tasks
+                ->filter(fn ($task) => ! in_array($task->status, ['done', 'cancelled'], true)
+                    && (int) $task->progress_percent < 100)
+                ->count();
+
+            $nodes->push($this->node(
+                id: $nodeId,
+                type: 'plan',
+                entityId: (int) $plan->id,
+                eyebrow: $plan->displayIcon().' PLAN',
+                label: (string) $plan->title,
+                subtitle: implode(' · ', array_values(array_filter([
+                    (string) ($plan->category ?: '未分類'),
+                    $activeTasks.' active',
+                    $plan->deadline ? $plan->deadline->format('m/d') : null,
+                ]))),
+                action: $url,
+                attentionRole: 'hierarchy-child',
+                navigationKind: 'zoom-in',
+                classicSurface: $this->surface(
+                    'Plan',
+                    (string) $plan->title,
+                    filled($plan->description)
+                        ? mb_substr((string) $plan->description, 0, 260)
+                        : 'このPlanの詳細Workspaceへ入ります。',
+                    [
+                        $this->action('Plan Workspaceへ入る', $url, true, 'zoom-in'),
+                        $this->action('Classic Planを開く', route('plans.show', $plan)),
+                    ],
+                    array_values(array_filter([
+                        (string) ($plan->category ?: '未分類'),
+                        $activeTasks.' active tasks',
+                        (bool) $plan->is_collaborative ? 'Shared Plan' : 'Personal Plan',
+                    ])),
+                ),
+            ));
+
+            $edges->push($this->edge($centerId, $nodeId, 'contains_plan', 'hierarchy-child'));
+        }
+
+        return [
+            'nodes' => $nodes->values(),
+            'edges' => $edges->values(),
+            'center_node_id' => $centerId,
+        ];
+    }
+
+    /**
+     * L2 Plan intent is a detail workspace. Rich Plan information is projected
+     * as a palette, so the graph keeps only the selected Plan as spatial context.
+     *
+     * @param array<string,mixed> $context
+     * @return array{nodes:Collection<int,array<string,mixed>>,edges:Collection<int,array<string,mixed>>,center_node_id:string|null}
+     */
+    private function planWorkspaceGraph(array $context): array
+    {
+        $plan = $context['selected_plan'] ?? null;
+        if (! $plan instanceof Plan) {
+            return [
+                'nodes' => collect(),
+                'edges' => collect(),
+                'center_node_id' => null,
+            ];
+        }
+
+        $parentUrl = route('map.index', [
+            'level' => MapLevel::Domain->value,
+            'intent' => 'plan',
+        ]);
+        $centerId = 'plan:'.$plan->id;
+
+        $node = $this->node(
+            id: $centerId,
+            type: 'plan',
+            entityId: (int) $plan->id,
+            eyebrow: 'L2 · PLAN WORKSPACE',
+            label: (string) $plan->title,
+            subtitle: '進捗・Roadmap・Plan情報をPaletteで確認',
+            action: $parentUrl,
+            attentionRole: 'hierarchy-parent',
+            navigationKind: 'zoom-out',
+            classicSurface: $this->surface(
+                'Plan Workspace',
+                (string) $plan->title,
+                'Planの詳細情報はNodeを増やさず、Classicで使っているカードをWorkspace Paletteとして表示します。',
+                [
+                    $this->action('Plan一覧へ戻る', $parentUrl, true, 'zoom-out'),
+                    $this->action('Classic Planを開く', route('plans.show', $plan)),
+                ],
+                array_values(array_filter([
+                    (string) ($plan->category ?: '未分類'),
+                    'Plan Workspace',
+                ])),
+            ),
+        );
+
+        return [
+            'nodes' => collect([$node]),
+            'edges' => collect(),
+            'center_node_id' => $centerId,
+        ];
     }
 
     /**

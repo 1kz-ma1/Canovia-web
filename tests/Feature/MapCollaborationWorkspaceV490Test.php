@@ -103,7 +103,8 @@ class MapCollaborationWorkspaceV490Test extends TestCase
             ->assertSee('Map Workspace PR')
             ->assertSee('Map Editor')
             ->assertSee('共同設定')
-            ->assertSee('Classic Plan');
+            ->assertSee('Classic Plan')
+            ->assertSee('← 共同計画');
 
         $graph = $response->viewData('graph');
 

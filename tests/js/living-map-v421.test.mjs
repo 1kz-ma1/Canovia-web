@@ -16,6 +16,7 @@ import {
     mobilePersonalizedSatellitePosition,
     mapSemanticZoomDirection,
     semanticZoomThresholdDirection,
+    semanticZoomDestination,
     semanticContinuityTransform,
     semanticRectSnapshot,
     semanticRouteKey,
@@ -346,14 +347,40 @@ test('semantic zoom direction fails safe to zoom-in', () => {
 });
 
 
-test('continuous semantic zoom changes hierarchy only after crossing stable thresholds', () => {
+test('continuous semantic zoom changes hierarchy after reachable map-like thresholds', () => {
     assert.equal(semanticZoomThresholdDirection(1), null);
-    assert.equal(semanticZoomThresholdDirection(1.61), null);
-    assert.equal(semanticZoomThresholdDirection(1.62), 'in');
+    assert.equal(semanticZoomThresholdDirection(1.41), null);
+    assert.equal(semanticZoomThresholdDirection(1.42), 'in');
     assert.equal(semanticZoomThresholdDirection(2.2), 'in');
-    assert.equal(semanticZoomThresholdDirection(0.73), null);
-    assert.equal(semanticZoomThresholdDirection(0.72), 'out');
+    assert.equal(semanticZoomThresholdDirection(0.83), null);
+    assert.equal(semanticZoomThresholdDirection(0.82), 'out');
     assert.equal(semanticZoomThresholdDirection(0.68), 'out');
+});
+
+test('zoom-out prefers the authoritative hierarchy parent even when a node link is missing or stale', () => {
+    assert.equal(
+        semanticZoomDestination('out', {
+            parentUrl: '/map?level=l1&intent=plan',
+            candidateUrl: '',
+        }),
+        '/map?level=l1&intent=plan',
+    );
+
+    assert.equal(
+        semanticZoomDestination('out', {
+            parentUrl: '/map?level=l1&intent=plan',
+            candidateUrl: '/map?level=l2&intent=plan&domain=stale',
+        }),
+        '/map?level=l1&intent=plan',
+    );
+
+    assert.equal(
+        semanticZoomDestination('in', {
+            parentUrl: '/map',
+            candidateUrl: '/map?level=l2&intent=plan&plan=12',
+        }),
+        '/map?level=l2&intent=plan&plan=12',
+    );
 });
 
 
