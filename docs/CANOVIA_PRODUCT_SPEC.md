@@ -1184,3 +1184,16 @@ Telemetryへstructural node type `satellite_collaboration` を追加するが、
 Waiting / External / My Action Shortcut、GitHub remote status inference、connector polling、automatic collaboration_state mutation、AI ranking/layoutはNon-goal。
 
 詳細は `docs/V48.9_COLLABORATION_REVIEW_CANDIDATE.md` を正とする。
+## V49.0 Continuous Semantic Zoom / Collaboration Project Workspace
+
+Map hierarchyをclickによる画面切替ではなく、camera scaleで情報粒度が変わる地図型interactionへ拡張する。URL / L0〜L3 Projectionは維持し、巨大な単一DOMにはしない。desktop trackpadのtwo-finger scrollでpan、Ctrl+wheelとして届くpinchでpointer中心zoom、mobileではPointer Events pinchを使用する。camera scaleは0.68〜2.20、semantic thresholdは1.62以上でzoom-in、0.72以下でzoom-outとする。
+
+Container click / tapも同じSemantic Zoomとして扱う。V47.5 geometry continuityを維持しつつ、cached projectionでもselected Nodeがcenterへ移動する動きを知覚できるよう、Reduced Motion以外ではdestinationをprefetchして最大120msだけdepartureを見せてProjectionを交換する。camera pan / scaleはruntime-onlyで永続化しない。
+
+CollaborationはPurpose-firstからProject-firstへ変更する。L0「共同」からL1で閲覧可能なShared Planを直接表示し、Shared Planが1件でもselection levelを維持する。L1には常に「＋ 共同計画を作る」を置き、既存Plan createへ`collaborative=1` presetで遷移する。
+
+L2はselected Shared Planをsemantic centerとして残すProject Workspaceとする。Task / Artifact等を無理にMap Node化せず、Classic Collaborationの「制作ファイル / 成果物」「参加メンバー」「最新情報」の3カードをshared Blade partialへ切り出してMap上のPaletteとして再利用する。Desktopでは成果物を大きく右へメンバー/最新情報、Mobileでは1列scrollへ落とし、Map Sceneは低opacityで背後に残す。
+
+V48.9 Review Waiting Shortcutはexplicit`collaboration_state=review` truthを維持し、L2 Purposeではなくreview itemを持つProjectだけに絞ったL1 Shared Project selectionへ入る。GitHub URL等からreview状態を推測しない。
+
+新規DB / canonical model mutation / camera persistence / AI layout / Palette drag & dropは追加しない。詳細は`docs/V49.0_CONTINUOUS_SEMANTIC_ZOOM_COLLABORATION_WORKSPACE.md`を正とする。
