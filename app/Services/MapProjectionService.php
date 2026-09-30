@@ -14,6 +14,7 @@ final class MapProjectionService
         private readonly CollaborationMapProjectionService $collaboration,
         private readonly ReflectionMapProjectionService $reflection,
         private readonly ExecutionMapProjectionService $execution,
+        private readonly MapShortcutPinProjectionService $shortcutPins,
         private readonly MapSpatialMemoryService $spatialMemory,
         private readonly MapDataLayerProjectionService $dataLayers,
     ) {}
@@ -48,6 +49,7 @@ final class MapProjectionService
             MapLevel::Execution => $this->execution->build($request),
         };
 
+        $projection = $this->shortcutPins->decorate($request, $projection);
         $projection = $this->spatialMemory->decorate($request, $level, $projection);
 
         return $this->dataLayers->decorate($projection);
