@@ -18,11 +18,13 @@ final class HierarchyNavigationGraphService
      */
     public function build(MapLevel $level, array $context): array
     {
-        $planIntent = (string) ($context['intent'] ?? 'plan') === 'plan';
+        $intent = (string) ($context['intent'] ?? 'plan');
+        $planIntent = $intent === 'plan';
+        $executionIntent = $intent === 'execution';
 
         return match ($level) {
-            MapLevel::Domain => $planIntent
-                ? $this->planIndexGraph($context)
+            MapLevel::Domain => ($planIntent || $executionIntent)
+                ? $this->planIndexGraph($context, $intent)
                 : $this->domainGraph($context),
             MapLevel::Plan => $planIntent
                 ? $this->planWorkspaceGraph($context)
@@ -36,15 +38,16 @@ final class HierarchyNavigationGraphService
     }
 
     /**
-     * L1 Plan intent is plan-first. Categories stay canonical Plan metadata but
-     * no longer consume a semantic zoom level.
+     * L1 Plan / Execution intents are plan-first. Categories stay canonical
+     * Plan metadata but no longer consume a semantic zoom level.
      *
      * @param array<string,mixed> $context
      * @return array{nodes:Collection<int,array<string,mixed>>,edges:Collection<int,array<string,mixed>>,center_node_id:string}
      */
-    private function planIndexGraph(array $context): array
+    private function planIndexGraph(array $context, string $intent = 'plan'): array
     {
-        $centerId = 'hierarchy:intent:plan';
+        $executionIntent = $intent === 'execution';
+        $centerId = 'hierarchy:intent:'.$intent;
         $plans = collect($context['plans'] ?? [])
             ->sort(function (Plan $left, Plan $right) {
                 $priority = max(1, min(5, (int) $left->priority))
@@ -67,19 +70,25 @@ final class HierarchyNavigationGraphService
             $this->node(
                 id: $centerId,
                 type: 'intent_context',
-                eyebrow: 'L1 · PLANS',
-                label: '計画',
-                subtitle: 'Planを直接選んで詳細Workspaceへ入る',
+                eyebrow: $executionIntent ? 'L1 · EXECUTION PLANS' : 'L1 · PLANS',
+                label: $executionIntent ? '実行' : '計画',
+                subtitle: $executionIntent
+                    ? 'Planを直接選んでExecution Contextへ入る'
+                    : 'Planを直接選んで詳細Workspaceへ入る',
                 action: route('map.index'),
                 attentionRole: 'hierarchy-parent',
                 navigationKind: 'zoom-out',
                 classicSurface: $this->surface(
-                    'Plan Index',
-                    '計画',
-                    'カテゴリを1階層として挟まず、アクセスできるPlanを直接配置しています。',
+                    $executionIntent ? 'Execution Plan Index' : 'Plan Index',
+                    $executionIntent ? '実行' : '計画',
+                    $executionIntent
+                        ? '実行したいPlanをカテゴリで分けず直接配置しています。Planを選ぶとそのExecution Contextへ入ります。'
+                        : 'カテゴリを1階層として挟まず、アクセスできるPlanを直接配置しています。',
                     [
                         $this->action('L0へ戻る', route('map.index'), true, 'zoom-out'),
-                        $this->action('新しいPlanを作る', route('plans.create')),
+                        $executionIntent
+                            ? $this->action('今日の実行導線を開く', route('navigation.index'))
+                            : $this->action('新しいPlanを作る', route('plans.create')),
                     ],
                     [$plans->count().' Plan'],
                 ),
@@ -91,11 +100,17 @@ final class HierarchyNavigationGraphService
         /** @var Plan $plan */
         foreach ($plans as $plan) {
             $nodeId = 'plan:'.$plan->id;
-            $url = route('map.index', [
-                'level' => MapLevel::Plan->value,
-                'intent' => 'plan',
-                'plan' => $plan->id,
-            ]);
+            $url = $executionIntent
+                ? route('map.index', [
+                    'level' => MapLevel::Execution->value,
+                    'intent' => 'execution',
+                    'plan' => $plan->id,
+                ])
+                : route('map.index', [
+                    'level' => MapLevel::Plan->value,
+                    'intent' => 'plan',
+                    'plan' => $plan->id,
+                ]);
             $activeTasks = $plan->tasks
                 ->filter(fn ($task) => ! in_array($task->status, ['done', 'cancelled'], true)
                     && (int) $task->progress_percent < 100)
@@ -120,9 +135,16 @@ final class HierarchyNavigationGraphService
                     (string) $plan->title,
                     filled($plan->description)
                         ? mb_substr((string) $plan->description, 0, 260)
-                        : 'このPlanの詳細Workspaceへ入ります。',
+                        : ($executionIntent
+                            ? 'このPlanのExecution Contextへ入ります。'
+                            : 'このPlanの詳細Workspaceへ入ります。'),
                     [
-                        $this->action('Plan Workspaceへ入る', $url, true, 'zoom-in'),
+                        $this->action(
+                            $executionIntent ? 'Executionへ入る' : 'Plan Workspaceへ入る',
+                            $url,
+                            true,
+                            'zoom-in',
+                        ),
                         $this->action('Classic Planを開く', route('plans.show', $plan)),
                     ],
                     array_values(array_filter([
