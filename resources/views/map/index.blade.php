@@ -15,6 +15,10 @@
         $isHierarchyLevel = $isDomainLevel || $isPlanLevel;
         $isCollaborationMode = (bool) ($graph['collaboration_mode'] ?? false);
         $isCollaborationWorkspace = (bool) ($graph['collaboration_workspace_mode'] ?? false);
+        $isPlanWorkspace = (bool) ($graph['plan_workspace_mode'] ?? false);
+        $planWorkspace = is_array($graph['plan_workspace'] ?? null)
+            ? $graph['plan_workspace']
+            : null;
         $collaborationWorkspace = is_array($graph['collaboration_workspace'] ?? null)
             ? $graph['collaboration_workspace']
             : null;
@@ -29,6 +33,8 @@
             $mapLevel === 'l0' => 'L0 · CANOVIA NAVIGATION',
             $mapLevel === 'l1' && $isCollaborationMode => 'L1 · SHARED PROJECTS',
             $mapLevel === 'l2' && $isCollaborationMode => 'L2 · PROJECT WORKSPACE',
+            $mapLevel === 'l1' && data_get($hierarchy, 'intent') === 'plan' => 'L1 · PLANS',
+            $mapLevel === 'l2' && $isPlanWorkspace => 'L2 · PLAN WORKSPACE',
             $mapLevel === 'l1' && $isReflectionMode => 'L1 · REFLECTION LENS',
             $mapLevel === 'l2' && $isReflectionMode => 'L2 · REFLECTION RECORDS',
             $mapLevel === 'l1' => 'L1 · DOMAIN MAP',
