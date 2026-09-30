@@ -1152,3 +1152,19 @@ Pin / Unpin後はL0へ戻してProjection結果を即確認する。Plan Context
 新しいcandidate種、Task-bound ToolのL0昇格、Shared Plan Shortcut、AIによるPin判断、absolute position保存、canonical Plan / Task mutationは行わない。
 
 詳細は `docs/V48.7_CONTEXTUAL_SHORTCUT_PINNING.md` を正とする。
+
+## V48.8 Reflection Candidate Expansion
+
+Personalized Shortcutのcandidate sourceをPersonal Planだけから最小拡張し、既存Reflection Lens「最近の実績」をautomatic candidateとして追加する。L0を埋める目的ではなく、canonical WorkLog / TaskEvidenceが直近14日で最低2件存在し、既存4軸signalを0.55 thresholdで評価した結果が十分強い場合だけpromotionする。
+
+Recent Reflection Shortcutは `satellite:reflection:recent` / `satellite_reflection` とし、`intent:reflection` へanchorする。destinationは `/map?level=l2&intent=reflection&reflection_context=recent`。V48.5のsemantic placementにより `satellite-3` / 下方向へ安定配置される。
+
+4軸weightは importance 0.35 / usage_frequency 0.25 / recency 0.20 / continuity 0.20 のまま変更しない。Reflection candidateではrecent recordに含まれるPlan priority、record数、最新record時刻、distinct active day数を各軸へ決定的に正規化する。Candidate固有のsignal意味に合わせ、「重要なPlanの実績がある / 実績がまとまっている / 最近実績が増えた / 継続して積み上がっている」という説明labelを使用する。Plan Shortcutの既存説明は変更しない。
+
+V45.6のmax 2 / same semantic anchor max 1を維持するため、強いPersonal Plan ShortcutとRecent Reflection Shortcutは最大2件で共存できる。同じReflection anchorへ将来候補が増えてもL0には最上位1件だけを出す。
+
+Telemetryにはstructural node_type `satellite_reflection` を追加するが、promotion score / record count / Plan title / Reflection label / Evidence summary等は保存しない。candidate row、score history、absolute positionの永続化は行わず、request時にcanonical recordから再計算する。
+
+Task-bound Tool、generic Tool usage inference、Shared Plan Shortcut、Collaboration Purpose Shortcut、AI ranking/layout、automatic PinはV48.8では追加しない。
+
+詳細は `docs/V48.8_REFLECTION_CANDIDATE_EXPANSION.md` を正とする。
