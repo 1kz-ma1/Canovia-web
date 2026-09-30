@@ -178,6 +178,19 @@ final class CollaborationNavigationGraphService
             'level' => MapLevel::Domain->value,
             'intent' => 'collaboration',
         ]);
+        $project = collect($context['projects'] ?? [])
+            ->first(fn (array $candidate) => (int) ($candidate['id'] ?? 0) === (int) $plan->id);
+        $canManage = is_array($project) && (string) ($project['role'] ?? '') === 'owner';
+
+        $actions = [
+            $this->action('共同計画一覧へ戻る', $parentUrl, true, 'zoom-out'),
+        ];
+
+        if ($canManage) {
+            $actions[] = $this->action('共同設定を開く', route('plans.collaboration.settings', $plan));
+        }
+
+        $actions[] = $this->action('Classic Planを開く', route('plans.show', $plan));
 
         $node = $this->node(
             id: $centerId,
@@ -193,11 +206,7 @@ final class CollaborationNavigationGraphService
                 'Project Workspace',
                 (string) $plan->title,
                 '共同Planの運用情報をMap上のPaletteとして表示しています。ノードを増やすのではなく、既存Classicのカード情報をWorkspaceとして再配置します。',
-                [
-                    $this->action('共同計画一覧へ戻る', $parentUrl, true, 'zoom-out'),
-                    $this->action('共同設定を開く', route('plans.collaboration.settings', $plan)),
-                    $this->action('Classic Planを開く', route('plans.show', $plan)),
-                ],
+                $actions,
                 ['Shared Project', 'Workspace Palette'],
             ),
         );
