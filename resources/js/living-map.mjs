@@ -3114,6 +3114,7 @@ export function mountLivingGoalMap({
         refreshMapViewport();
         applyBaseLayout();
         applyMapView(mapView, { immediate: true });
+        syncAllDocumentPositions();
         const pending = readPending(windowRef);
         if (!pending) return;
 
@@ -3151,6 +3152,9 @@ export function mountLivingGoalMap({
         scrollElement.addEventListener('scroll', onDocumentScroll, { passive: true });
     }
     syncAllDocumentPositions();
+    windowRef.setTimeout(() => {
+        if (!disposed) syncAllDocumentPositions();
+    }, 0);
     zoomOutControl?.addEventListener('click', onZoomOut);
     zoomInControl?.addEventListener('click', onZoomIn);
     viewResetControl?.addEventListener('click', onViewReset);
