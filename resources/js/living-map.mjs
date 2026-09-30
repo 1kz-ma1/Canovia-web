@@ -1612,7 +1612,7 @@ export function mountLivingGoalMap({
 
     const onSceneWheel = (event) => {
         if (!mapScene || semanticZoomNavigating) return;
-        if (event.target.closest?.('a, button, input, select, textarea, [data-map-gesture-controls]')) return;
+        if (event.target.closest?.('input, select, textarea, [data-map-gesture-controls]')) return;
 
         refreshMapViewport();
 
