@@ -72,6 +72,11 @@
         -webkit-overflow-scrolling: touch;
     }
 
+    .canovia-map-document-scroll:focus-visible {
+        outline: 1px solid rgb(103 232 249 / 0.52);
+        outline-offset: -1px;
+    }
+
     .canovia-plan-workspace-palette[data-map-document-viewport]::before,
     .canovia-plan-workspace-palette[data-map-document-viewport]::after,
     .canovia-map-context-surface.is-dashboard-document[data-map-document-viewport]::before,
