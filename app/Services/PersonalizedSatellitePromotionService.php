@@ -90,9 +90,16 @@ final class PersonalizedSatellitePromotionService
         $edges = collect();
 
         foreach ($ranked as $index => $candidate) {
-            $slot = $index + 1;
+            $fallbackSlot = $index + 1;
             $score = (float) ($candidate['promotion_score'] ?? 0);
-            $position = $this->slotPosition($slot);
+            $anchor = (string) ($candidate['anchor_node_id'] ?? 'intent:plan');
+            $positionRole = $this->positionRole($anchor, $fallbackSlot);
+            $position = $this->position($anchor, $score, $fallbackSlot);
+            $personalization = $this->personalization(
+                $anchor,
+                $score,
+                (array) ($candidate['signals'] ?? []),
+            );
 
             $nodes->push([
                 'id' => (string) ($candidate['id'] ?? ''),
@@ -103,9 +110,10 @@ final class PersonalizedSatellitePromotionService
                 'subtitle' => (string) ($candidate['subtitle'] ?? ''),
                 'importance' => round(0.58 + ($score * 0.30), 4),
                 'state' => 'satellite',
-                'position_role' => 'satellite-'.$slot,
+                'position_role' => $positionRole,
                 'size_weight' => round(0.62 + ($score * 0.20), 4),
                 'position' => $position,
+                'personalization' => $personalization,
                 'available_action' => $candidate['available_action'] ?? null,
                 'classic_surface' => $candidate['classic_surface'] ?? [],
                 'navigation_kind' => $candidate['navigation_kind'] ?? 'satellite',
@@ -113,7 +121,6 @@ final class PersonalizedSatellitePromotionService
                 'promotion_signals' => $this->safeSignals((array) ($candidate['signals'] ?? [])),
             ]);
 
-            $anchor = (string) ($candidate['anchor_node_id'] ?? 'intent:plan');
             $edges->push([
                 'source' => $anchor,
                 'target' => (string) ($candidate['id'] ?? ''),
@@ -145,17 +152,111 @@ final class PersonalizedSatellitePromotionService
         return round(max(0, min(1, $score)), 4);
     }
 
-    /**
-     * @return array{x:int,y:int}
-     */
-    private function slotPosition(int $slot): array
+    private function positionRole(string $anchor, int $fallbackSlot): string
     {
-        return match ($slot) {
-            1 => ['x' => 50, 'y' => 12],
-            2 => ['x' => 88, 'y' => 50],
-            3 => ['x' => 50, 'y' => 88],
-            default => ['x' => 12, 'y' => 50],
+        return match ($anchor) {
+            'intent:plan' => 'satellite-1',
+            'intent:execution' => 'satellite-2',
+            'intent:reflection' => 'satellite-3',
+            'intent:collaboration' => 'satellite-4',
+            default => 'satellite-'.max(1, min(4, $fallbackSlot)),
         };
+    }
+
+    /**
+     * Personalization can change visual distance, but never saves an absolute
+     * position. Stronger evidence pulls the shortcut slightly toward the center.
+     *
+     * @return array{x:float|int,y:float|int}
+     */
+    private function position(string $anchor, float $score, int $fallbackSlot): array
+    {
+        $strength = max(0.0, min(1.0, ($score - self::MIN_PROMOTION_SCORE) / (1 - self::MIN_PROMOTION_SCORE)));
+        $inset = round(6 * $strength, 2);
+
+        return match ($anchor) {
+            'intent:plan' => ['x' => 50, 'y' => round(12 + $inset, 2)],
+            'intent:execution' => ['x' => round(88 - $inset, 2), 'y' => 50],
+            'intent:reflection' => ['x' => 50, 'y' => round(88 - $inset, 2)],
+            'intent:collaboration' => ['x' => round(12 + $inset, 2), 'y' => 50],
+            default => match (max(1, min(4, $fallbackSlot))) {
+                1 => ['x' => 50, 'y' => 12],
+                2 => ['x' => 88, 'y' => 50],
+                3 => ['x' => 50, 'y' => 88],
+                default => ['x' => 12, 'y' => 50],
+            },
+        };
+    }
+
+    /**
+     * @param array<string,mixed> $signals
+     * @return array{
+     *   mode:string,
+     *   strength:string,
+     *   anchor_node_id:string,
+     *   reason_keys:array<int,string>,
+     *   reason_labels:array<int,string>,
+     *   explanation:string
+     * }
+     */
+    private function personalization(string $anchor, float $score, array $signals): array
+    {
+        $safe = $this->safeSignals($signals);
+        $weights = self::WEIGHTS;
+
+        $reasons = collect([
+            'importance' => [
+                'value' => $safe['importance'],
+                'label' => '優先度が高い',
+            ],
+            'usage_frequency' => [
+                'value' => $safe['usage_frequency'],
+                'label' => '最近よく使っている',
+            ],
+            'recency' => [
+                'value' => $safe['recency'],
+                'label' => '最近開いている',
+            ],
+            'continuity' => [
+                'value' => $safe['continuity'],
+                'label' => '継続して進めている',
+            ],
+        ])
+            ->map(function (array $reason, string $key) use ($weights) {
+                $reason['key'] = $key;
+                $reason['contribution'] = (float) $reason['value'] * (float) ($weights[$key] ?? 0);
+
+                return $reason;
+            })
+            ->filter(fn (array $reason) => (float) $reason['value'] >= 0.45)
+            ->sortByDesc('contribution')
+            ->take(2)
+            ->values();
+
+        if ($reasons->isEmpty()) {
+            $reasons = collect([
+                [
+                    'key' => 'continuity',
+                    'label' => '継続中のContext',
+                    'value' => $safe['continuity'],
+                    'contribution' => $safe['continuity'] * self::WEIGHTS['continuity'],
+                ],
+            ]);
+        }
+
+        $labels = $reasons->pluck('label')->values()->all();
+        $lead = count($labels) === 1
+            ? $labels[0]
+            : implode('・', $labels);
+
+        return [
+            'mode' => 'behavioral_attention',
+            'strength' => $score >= 0.78 ? 'strong' : 'active',
+            'anchor_node_id' => $anchor,
+            'reason_keys' => $reasons->pluck('key')->values()->all(),
+            'reason_labels' => $labels,
+            'explanation' => $lead.'ため、よく使うContextへの近道として表示しています。',
+        ];
     }
 
     private function kindOrder(string $kind): int
