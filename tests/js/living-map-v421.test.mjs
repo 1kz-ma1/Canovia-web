@@ -24,6 +24,7 @@ import {
     mapLodForScale,
     mapNodeCounterScale,
     documentEdgeBackDecision,
+    documentScrollMetrics,
     semanticFocusMatchesNode,
     browserZoomDiverged,
     shouldCaptureMapPinch,
@@ -171,19 +172,29 @@ test('desktop node counter scale keeps cards close to screen-space size', () => 
     assert.ok(renderedAtMin < 1.0);
 });
 
-test('document edge swipe requires a deliberate horizontal gesture from the left edge', () => {
+test('document edge swipe requires the document to already be at its left edge', () => {
     assert.equal(documentEdgeBackDecision({
         startX: 12,
         startY: 300,
         endX: 104,
         endY: 322,
+        scrollLeft: 0,
     }), true);
+
+    assert.equal(documentEdgeBackDecision({
+        startX: 12,
+        startY: 300,
+        endX: 104,
+        endY: 322,
+        scrollLeft: 18,
+    }), false);
 
     assert.equal(documentEdgeBackDecision({
         startX: 40,
         startY: 300,
         endX: 140,
         endY: 310,
+        scrollLeft: 0,
     }), false);
 
     assert.equal(documentEdgeBackDecision({
@@ -191,6 +202,7 @@ test('document edge swipe requires a deliberate horizontal gesture from the left
         startY: 300,
         endX: 64,
         endY: 306,
+        scrollLeft: 0,
     }), false);
 
     assert.equal(documentEdgeBackDecision({
@@ -198,7 +210,28 @@ test('document edge swipe requires a deliberate horizontal gesture from the left
         startY: 300,
         endX: 110,
         endY: 390,
+        scrollLeft: 0,
     }), false);
+});
+
+test('document position indicator reflects visible width and horizontal progress', () => {
+    assert.deepEqual(documentScrollMetrics({
+        scrollLeft: 195,
+        clientWidth: 390,
+        scrollWidth: 780,
+    }), {
+        progress: 0.5,
+        viewportRatio: 0.5,
+    });
+
+    assert.deepEqual(documentScrollMetrics({
+        scrollLeft: 0,
+        clientWidth: 390,
+        scrollWidth: 390,
+    }), {
+        progress: 0,
+        viewportRatio: 1,
+    });
 });
 
 test('desktop semantic expansion requires the pinch focus to be on or near a node', () => {
