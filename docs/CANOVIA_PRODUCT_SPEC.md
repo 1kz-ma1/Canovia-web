@@ -1108,3 +1108,17 @@ V48.4ではlocalStorageへ保存し、account sync / shared Page / drag & drop /
 またV48.1 Global Home resetを強化する。遷移元でのclearだけでなく、短命reset requestをsessionStorageへ残し、L0 mount時に再度Focus / Dock / hash / view transformをclearしてinitial focus restoreをskipする。これによりInstant Navigationやcached DOM replacement後も「全体へ」で選択中Nodeが残らない。
 
 詳細は `docs/V48.4_MAP_PAGES_PRESETS.md` を正とする。
+
+## V48.5 Explainable Spatial Personalization
+
+Personalized Shortcutを単なるrank順Satelliteから、既存Behavior / Priority / Recency / Continuity signalに基づく説明可能なSpatial Attentionへ進める。L0固定Intentは変更せず、V45.6のthreshold 0.55 / max 2 / same anchor max 1を維持する。
+
+Shortcutのposition roleはpromotion rankではなくsemantic anchorへ固定し、Plan=上、Execution=右、Reflection=下、Collaboration=左とする。同じContextはrankが変わっても意味方向を維持する。promotion scoreはabsolute座標保存には使わず、anchor slot内でのcenter distanceを小さく変えるだけとし、strong signalほど少しcenter側へ寄せる。Mobileはこのradiusをpixel-balanced layoutへ変換し、既存mobile box fittingを最後に適用する。
+
+各Shortcutにはpresentation-onlyのpersonalization metadataを付加し、既存4軸signalのweighted contribution上位最大2件から「優先度が高い / 最近よく使っている / 最近開いている / 継続して進めている」等の理由を決定的に表示する。AI reasoningは生成せず、Canvas本文へsignalを詰め込まずDetail Paletteの「ここにある理由」で確認する。
+
+ユーザーはShortcutを「この端末では非表示」にできる。設定はversioned localStorage `canovia.map.personalization.v1` へstructural Node IDだけを保存し、Plan / Task / priority / promotion scoreを変更しない。L0では非表示件数とresetだけをcompact表示する。manual pinはserver promotionとの契約が未定義なためV48.5では実装しない。
+
+Personalization state、promotion score、signal値、理由labelはBehavior telemetryへ追加しない。Instant Navigation cacheではruntime mount guardを除去し、cached Map復帰後にもdevice-local preferenceを再適用する。DB migrationは行わない。
+
+詳細は `docs/V48.5_SPATIAL_PERSONALIZATION.md` を正とする。
