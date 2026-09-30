@@ -49,11 +49,14 @@ class MapPinnedSpatialShortcutsV486Test extends TestCase
             'pinned_node_ids' => ['satellite:plan:'.$plan->id],
         ], $user->map_personalization_preferences);
 
-        $graph = $this->actingAs($user)
+        $response = $this->actingAs($user)
             ->get(route('map.index'))
             ->assertOk()
-            ->viewData('graph');
+            ->assertSee('data-map-personalization-pinned="1"', false)
+            ->assertSee('固定を解除')
+            ->assertSee('この端末では非表示');
 
+        $graph = $response->viewData('graph');
         $shortcut = $graph['nodes']->firstWhere('id', 'satellite:plan:'.$plan->id);
 
         $this->assertIsArray($shortcut);
