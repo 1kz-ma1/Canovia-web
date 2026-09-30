@@ -118,6 +118,14 @@
         -webkit-backdrop-filter: blur(18px) saturate(1.05);
     }
 
+    .canovia-plan-workspace-metrics .text-slate-900 {
+        color: rgb(248 250 252);
+    }
+
+    .canovia-plan-workspace-metrics .text-slate-500 {
+        color: rgb(148 163 184);
+    }
+
     .canovia-plan-palette-roadmap {
         min-height: 0;
         overflow: auto;
