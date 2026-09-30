@@ -1233,3 +1233,28 @@ Map mount時の `window.devicePixelRatio` をruntime baselineとして保持し�
 V49.2 In-place Semantic Expansionのlocal radiusはmobile/PWA 0.72を維持し、desktopを0.80へ拡大する。viewport heightが720px以下のdesktopでは0.84とし、低い画面でParent / Project / Create等のNodeが縦方向に重なる問題を緩和する。
 
 詳細は `docs/V49.3_DESKTOP_PINCH_ISOLATION_EXPANSION_SPACING.md` を正とする。
+
+## V49.4 Semantic Zoom LOD / Camera-Selection Separation
+
+Continuous Semantic Zoomの操作予測性を改善するため、camera zoomとsemantic selectionを分離する。
+
+Desktop precision pinchでは、camera scale自体は常に連続更新するが、zoom-inのsemantic targetはpinch中心がzoomable Nodeのbounding box + 28px以内にある場合だけ候補とする。空白位置へのpinchはcamera zoomだけを行う。Click / tapは明示selectionとして従来どおりNodeを開く。Mobile / PWAのpinch candidate契約はV49.3時点で問題がないため変更しない。
+
++/- controlsとdouble-clickはcamera zoom専用とし、それだけではsemantic levelを切り替えない。
+
+Camera scaleからdesktop LODを算出する。
+
+- overview: < 0.90
+- context: 0.90〜1.16
+- detail: 1.16〜1.34
+- ready: >= 1.34
+
+overviewではlabel中心、contextでeyebrow、detailでsubtitleとdirect-open preview、readyでfull actionを表示する。既存semantic zoom-in threshold 1.42の前にready区間を設け、Nodeを開く予兆を表示する。
+
+Desktop ready LODでpinch focusがNode近傍に入ると `is-semantic-armed` として強調し、どの箱が開くかをthreshold到達前に明示する。
+
+Node cardはscene camera scaleへそのまま追従させず、desktopでは `1 / scale^0.72` のcounter-scale（0.62〜1.32）を適用する。これにより空間距離は大きく変わる一方、Node UIのscreen-space sizeはcamera 2xで約1.24x、camera 0.68xで約0.90xに抑える。Mobile / PWAではcounter-scaleを適用しない。
+
+LOD / counter-scale / armed Nodeはruntime onlyで、DB・Telemetry・sessionStorageへ新規保存しない。
+
+詳細は `docs/V49.4_SEMANTIC_ZOOM_LOD.md` を正とする。
