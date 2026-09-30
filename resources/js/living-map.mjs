@@ -493,18 +493,36 @@ export function mapSemanticZoomDirection(value = 'in') {
 export function semanticZoomThresholdDirection(
     scale,
     {
-        inThreshold = 1.62,
-        outThreshold = 0.72,
+        inThreshold = 1.42,
+        outThreshold = 0.82,
     } = {},
 ) {
     const value = Number(scale || 1);
-    const zoomIn = Math.max(1, Number(inThreshold || 1.62));
-    const zoomOut = Math.min(1, Number(outThreshold || 0.72));
+    const zoomIn = Math.max(1, Number(inThreshold || 1.42));
+    const zoomOut = Math.min(1, Number(outThreshold || 0.82));
 
     if (value >= zoomIn) return 'in';
     if (value <= zoomOut) return 'out';
 
     return null;
+}
+
+export function semanticZoomDestination(
+    direction,
+    {
+        parentUrl = '',
+        candidateUrl = '',
+    } = {},
+) {
+    const normalizedDirection = mapSemanticZoomDirection(direction);
+    const parent = String(parentUrl || '').trim();
+    const candidate = String(candidateUrl || '').trim();
+
+    if (normalizedDirection === 'out' && parent !== '') {
+        return parent;
+    }
+
+    return candidate;
 }
 
 export function semanticRouteKey(value, base = 'https://canovia.local') {
@@ -1411,22 +1429,53 @@ export function mountLivingGoalMap({
     const commitSemanticZoom = (direction, clientPoint = null) => {
         if (semanticZoomNavigating || disposed) return false;
 
-        const link = semanticTargetLink(direction, clientPoint);
-        if (!(link instanceof windowRef.HTMLAnchorElement)) return false;
+        const normalizedDirection = mapSemanticZoomDirection(direction);
+        const link = semanticTargetLink(normalizedDirection, clientPoint);
+        const targetUrl = semanticZoomDestination(normalizedDirection, {
+            parentUrl: page.dataset.mapParentUrl || '',
+            candidateUrl: link?.href || '',
+        });
+
+        if (!targetUrl) return false;
 
         semanticZoomNavigating = true;
         windowRef.clearTimeout(semanticZoomTimer);
         semanticZoomTimer = null;
 
-        markSemanticTransition(link);
-        trackInstantMapLink(link);
+        if (link instanceof windowRef.HTMLAnchorElement) {
+            markSemanticTransition(link);
+            trackInstantMapLink(link);
+        } else if (normalizedDirection === 'out') {
+            const centerNode = page.querySelector?.('[data-map-node][data-map-is-center="1"]');
+            const sourceRect = centerNode?.getBoundingClientRect?.();
+            const viewport = {
+                width: Number(windowRef.innerWidth || 0),
+                height: Number(windowRef.innerHeight || 0),
+            };
+
+            writeSemanticTransition(windowRef, {
+                direction: 'out',
+                from_depth: Number(page.dataset.mapHierarchyDepth || 0),
+                from_route: semanticRouteKey(windowRef.location.href, windowRef.location.href),
+                source_node_ref: centerNode?.dataset?.mapNodeId || null,
+                source_rect: semanticRectSnapshot(sourceRect, viewport),
+                left_at: Date.now(),
+            });
+
+            trackTelemetry('map_classic_action_opened', {
+                action_role: 'zoom',
+                node_type: centerNode?.dataset?.mapNodeType || null,
+                position_role: centerNode?.dataset?.mapPositionRole || null,
+                is_primary: centerNode?.dataset?.mapIsPrimary === '1',
+            }, true);
+        }
 
         windowRef.setTimeout(() => {
             if (disposed) return;
 
             const instant = windowRef.CanoviaInstantNavigation;
             if (instant && typeof instant.navigate === 'function') {
-                void instant.navigate(link.href, {
+                void instant.navigate(targetUrl, {
                     historyMode: 'push',
                     scroll: false,
                     fallback: true,
@@ -1434,7 +1483,7 @@ export function mountLivingGoalMap({
                 return;
             }
 
-            windowRef.location.assign(link.href);
+            windowRef.location.assign(targetUrl);
         }, 90);
 
         return true;
