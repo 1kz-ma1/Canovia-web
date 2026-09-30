@@ -18,6 +18,7 @@ final class PersonalizedSatelliteCandidateService
         private readonly RequestBehaviorHistory $history,
         private readonly PlanPriorityService $priorities,
         private readonly MapHierarchyContextService $hierarchy,
+        private readonly RecentReflectionShortcutCandidateService $recentReflection,
     ) {}
 
     /**
@@ -31,20 +32,27 @@ final class PersonalizedSatelliteCandidateService
      */
     public function candidates(Request $request): Collection
     {
-        $plans = $this->core->plans($request, ['tasks', 'work_logs', 'availability'])
-            ->filter(fn (Plan $plan) => $this->hasActiveTask($plan))
-            ->values();
+        $plans = $this->core->plans($request, [
+            'tasks',
+            'work_logs',
+            'task_evidences',
+            'availability',
+        ])->values();
 
         if ($plans->isEmpty()) {
             return collect();
         }
+
+        $activePlans = $plans
+            ->filter(fn (Plan $plan) => $this->hasActiveTask($plan))
+            ->values();
 
         $actorToken = $this->core->actorToken($request);
         $events = $this->history->events($actorToken, 30);
         $sessions = $this->history->completedSessions($actorToken, 30);
         $candidates = collect();
 
-        foreach ($plans as $plan) {
+        foreach ($activePlans as $plan) {
             // L0 already has a stable Collaboration intent. A Shared Plan here
             // duplicates that entry point instead of shortening a unique route.
             if ((bool) $plan->is_collaborative) {
@@ -105,6 +113,11 @@ final class PersonalizedSatelliteCandidateService
                 ],
             ]);
 
+        }
+
+        $reflection = $this->recentReflection->candidate($plans);
+        if (is_array($reflection)) {
+            $candidates->push($reflection);
         }
 
         return $candidates->values();
