@@ -1989,11 +1989,9 @@ export function mountLivingGoalMap({
 
         const target = event.target;
         const mapActive = Boolean(target && mapShell.contains?.(target));
-        const interactive = Boolean(target?.closest?.(
-            'input, select, textarea, [data-map-gesture-controls]'
-        ));
+        const gestureControl = Boolean(target?.closest?.('[data-map-gesture-controls]'));
 
-        if (interactive) return;
+        if (gestureControl) return;
 
         if (shouldCaptureMapPinch({
             ctrlKey: event.ctrlKey,
@@ -2007,7 +2005,7 @@ export function mountLivingGoalMap({
 
     const onSceneWheel = (event) => {
         if (!mapScene || semanticZoomNavigating) return;
-        if (event.target.closest?.('input, select, textarea, [data-map-gesture-controls]')) return;
+        if (event.target.closest?.('[data-map-gesture-controls]')) return;
 
         const insideScene = Boolean(event.target.closest?.('[data-map-scene]'));
         const insideWorkspacePalette = Boolean(event.target.closest?.(
@@ -2039,6 +2037,8 @@ export function mountLivingGoalMap({
             scheduleSemanticZoom(focusClient, 90);
             return;
         }
+
+        if (event.target.closest?.('input, select, textarea')) return;
 
         // Workspace cards keep ordinary scrolling. Outside cards, precision
         // touchpad two-finger scrolling pans the map camera.
