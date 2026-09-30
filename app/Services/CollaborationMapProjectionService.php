@@ -147,7 +147,7 @@ final class CollaborationMapProjectionService
         return [
             'plan' => $plan,
             'recent_artifacts' => $plan->artifacts->take(5)->values(),
-            'recent_activities' => $plan->activityLogs->take(12)->values(),
+            'recent_activities' => $plan->activityLogs->take(20)->values(),
             'can_manage' => $this->ownership->owns($request, $plan),
             'can_edit' => $this->ownership->canEdit($request, $plan),
             'role' => $this->ownership->role($request, $plan),
