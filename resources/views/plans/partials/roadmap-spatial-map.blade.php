@@ -20,6 +20,16 @@
     data-roadmap-spatial-mode="{{ $roadmapSurfaceMode }}"
     data-roadmap-spatial-auto-center="{{ $roadmapDashboardOverview ? '0' : '1' }}"
 >
+    @if ($roadmapDashboardOverview)
+        <div class="canovia-roadmap-depth-legend" data-roadmap-depth-legend role="group" aria-label="Roadmapの奥行き">
+            <span data-roadmap-legend-state="current"><i aria-hidden="true"></i>現在</span>
+            <span data-roadmap-legend-state="ready"><i aria-hidden="true"></i>開始可能</span>
+            <span data-roadmap-legend-state="future"><i aria-hidden="true"></i>先</span>
+            <span data-roadmap-legend-state="blocked"><i aria-hidden="true"></i>前提待ち</span>
+            <span data-roadmap-legend-state="done"><i aria-hidden="true"></i>完了</span>
+        </div>
+    @endif
+
     <div
         class="canovia-roadmap-spatial-stage"
         data-roadmap-map
@@ -30,8 +40,9 @@
 
         @foreach ($spatialPhases as $phase)
             <section
-                class="canovia-roadmap-phase"
+                class="canovia-roadmap-phase depth-{{ $phase['depth_role'] ?? 'neutral' }}"
                 data-roadmap-phase="{{ $phase['id'] }}"
+                data-roadmap-depth-role="{{ $phase['depth_role'] ?? 'neutral' }}"
                 style="--phase-x: {{ (int) $phase['x'] }}px;"
                 aria-label="{{ $phase['label'] }} · {{ $phase['task_count'] }}Task"
             >
@@ -54,8 +65,9 @@
 
         @foreach ($spatialClusters as $cluster)
             <div
-                class="canovia-roadmap-cluster {{ ($cluster['is_parallel'] ?? false) ? 'is-parallel' : '' }}"
+                class="canovia-roadmap-cluster depth-{{ $cluster['depth_role'] ?? 'neutral' }} {{ ($cluster['is_parallel'] ?? false) ? 'is-parallel' : '' }}"
                 data-roadmap-cluster="{{ $cluster['id'] }}"
+                data-roadmap-depth-role="{{ $cluster['depth_role'] ?? 'neutral' }}"
                 style="
                     --cluster-x: {{ (int) $cluster['x'] }}px;
                     --cluster-y: {{ (int) $cluster['y'] }}px;
@@ -92,7 +104,8 @@
                 </defs>
                 @foreach ($spatialEdges as $edge)
                     <line
-                        class="canovia-roadmap-spatial-edge is-{{ $edge['relation'] }}"
+                        class="canovia-roadmap-spatial-edge is-{{ $edge['relation'] }} depth-{{ $edge['depth_role'] ?? 'neutral' }}"
+                        data-roadmap-depth-role="{{ $edge['depth_role'] ?? 'neutral' }}"
                         x1="{{ (int) $edge['x1'] }}"
                         y1="{{ (int) $edge['y1'] }}"
                         x2="{{ (int) $edge['x2'] }}"
@@ -125,9 +138,11 @@
                 };
             @endphp
             <details
-                class="canovia-roadmap-spatial-node {{ $stateClass }} {{ $dependencyStateClass }}"
+                class="canovia-roadmap-spatial-node {{ $stateClass }} {{ $dependencyStateClass }} depth-{{ $node['depth_role'] ?? 'neutral' }}"
                 data-map-stop
                 data-roadmap-spatial-node
+                data-roadmap-visual-state="{{ $node['visual_state'] ?? 'future' }}"
+                data-roadmap-depth-role="{{ $node['depth_role'] ?? 'neutral' }}"
                 data-roadmap-task-id="{{ $node['task_id'] }}"
                 data-roadmap-current="{{ $isCurrent ? '1' : '0' }}"
                 style="--task-x: {{ (int) $node['x'] }}px; --task-y: {{ (int) $node['y'] }}px;"
