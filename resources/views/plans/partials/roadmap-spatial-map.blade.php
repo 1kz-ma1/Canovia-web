@@ -35,6 +35,16 @@
                 style="--phase-x: {{ (int) $phase['x'] }}px;"
                 aria-label="{{ $phase['label'] }} · {{ $phase['task_count'] }}Task"
             >
+                @if ($roadmapDashboardOverview)
+                    <button
+                        type="button"
+                        class="canovia-roadmap-region-hitbox is-phase"
+                        data-roadmap-region-focus
+                        data-roadmap-region-type="phase"
+                        data-roadmap-region-id="{{ $phase['id'] }}"
+                        aria-label="{{ $phase['label'] }}全体へズーム"
+                    ></button>
+                @endif
                 <div class="canovia-roadmap-phase-heading">
                     <strong>{{ $phase['label'] }}</strong>
                     <span>{{ $phase['task_count'] }} Task</span>
@@ -52,8 +62,18 @@
                     --cluster-width: {{ (int) $cluster['width'] }}px;
                     --cluster-height: {{ (int) $cluster['height'] }}px;
                 "
-                aria-hidden="true"
+                @unless ($roadmapDashboardOverview) aria-hidden="true" @endunless
             >
+                @if ($roadmapDashboardOverview)
+                    <button
+                        type="button"
+                        class="canovia-roadmap-region-hitbox is-cluster"
+                        data-roadmap-region-focus
+                        data-roadmap-region-type="cluster"
+                        data-roadmap-region-id="{{ $cluster['id'] }}"
+                        aria-label="{{ $cluster['label'] }}へズーム"
+                    ></button>
+                @endif
                 <span>{{ $cluster['label'] }}</span>
             </div>
         @endforeach
@@ -114,8 +134,11 @@
                 @if ($isCurrent && ! $roadmapDashboardOverview) open @endif
             >
                 <summary
-                    aria-label="{{ $roadmapDashboardOverview ? $node['title'].' · '.$node['status_label'].' · 進捗 '.$node['progress_percent'].'%' : $node['title'].'の詳細' }}"
-                    @if ($roadmapDashboardOverview) tabindex="-1" @endif
+                    aria-label="{{ $roadmapDashboardOverview ? $node['title'].'の詳細を開く · '.$node['status_label'].' · 進捗 '.$node['progress_percent'].'%' : $node['title'].'の詳細' }}"
+                    @if ($roadmapDashboardOverview)
+                        data-roadmap-task-detail-open
+                        data-roadmap-task-template="roadmap-task:{{ $node['task_id'] }}"
+                    @endif
                 >
                     <span class="canovia-roadmap-task-orbit" aria-hidden="true">
                         <span>{{ $isDone ? '✓' : ($isCurrent ? '●' : '○') }}</span>

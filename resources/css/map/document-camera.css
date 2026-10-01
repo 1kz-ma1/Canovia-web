@@ -150,3 +150,22 @@
         }
     }
 }
+
+
+@layer components {
+    [data-map-document-viewport].is-document-pinching
+    .canovia-map-document-stage > [data-map-document-canvas] {
+        transition: none;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    [data-map-document-viewport].is-document-pinching .canovia-map-document-scroll {
+        overscroll-behavior: none;
+        cursor: grabbing;
+    }
+
+    [data-map-document-viewport][data-map-document-region-focus] .canovia-map-document-camera-fit {
+        border-color: rgb(103 232 249 / 0.18);
+    }
+}

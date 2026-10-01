@@ -116,6 +116,8 @@ class RoadmapSpatialMapV480Test extends TestCase
             ->assertSee('data-roadmap-spatial-mode="standard"', false)
             ->assertSee('data-roadmap-spatial-auto-center="1"', false)
             ->assertSee('data-roadmap-spatial-node', false)
+            ->assertDontSee('data-roadmap-region-focus', false)
+            ->assertDontSee('data-roadmap-task-detail-open', false)
             ->assertSee('data-roadmap-edge-relation="dependency"', false)
             ->assertSee('data-roadmap-view-panel="list"', false)
             ->assertSee('MapでPlanを見る')

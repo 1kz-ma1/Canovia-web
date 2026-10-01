@@ -27,6 +27,9 @@ import {
     documentScrollMetrics,
     documentFitScale,
     documentZoomScale,
+    documentPinchScale,
+    documentRegionFocusScale,
+    documentAnchorScroll,
     semanticFocusMatchesNode,
     browserZoomDiverged,
     shouldCaptureMapPinch,
@@ -277,6 +280,75 @@ test('document explicit zoom grows from fit and never shrinks below fit', () => 
         maxScale: 1.6,
         factor: 1.25,
     }), 1.6);
+});
+
+test('document pinch preserves fit floor and scales from finger distance', () => {
+    assert.equal(documentPinchScale(0.5, 100, 150, {
+        minScale: 0.4,
+        maxScale: 1.6,
+    }), 0.75);
+
+    assert.equal(documentPinchScale(0.5, 100, 50, {
+        minScale: 0.4,
+        maxScale: 1.6,
+    }), 0.4);
+
+    assert.equal(documentPinchScale(1.4, 100, 160, {
+        minScale: 0.4,
+        maxScale: 1.6,
+    }), 1.6);
+});
+
+test('document anchor scroll keeps the same natural point under the gesture center', () => {
+    assert.deepEqual(documentAnchorScroll({
+        naturalX: 400,
+        naturalY: 300,
+        scale: 1,
+        screenX: 200,
+        screenY: 150,
+        contentWidth: 800,
+        contentHeight: 600,
+        viewportWidth: 400,
+        viewportHeight: 300,
+    }), {
+        left: 200,
+        top: 150,
+    });
+
+    assert.deepEqual(documentAnchorScroll({
+        naturalX: 50,
+        naturalY: 40,
+        scale: 1.5,
+        screenX: 200,
+        screenY: 160,
+        contentWidth: 800,
+        contentHeight: 600,
+        viewportWidth: 400,
+        viewportHeight: 300,
+    }), {
+        left: 0,
+        top: 0,
+    });
+});
+
+test('roadmap container focus fits a region without exceeding the document camera ceiling', () => {
+    assert.equal(documentRegionFocusScale({
+        viewportWidth: 400,
+        viewportHeight: 600,
+        regionWidth: 200,
+        regionHeight: 300,
+        minScale: 0.4,
+        maxScale: 1.6,
+    }), 1.6);
+
+    assert.equal(documentRegionFocusScale({
+        viewportWidth: 400,
+        viewportHeight: 600,
+        regionWidth: 800,
+        regionHeight: 900,
+        minScale: 0.4,
+        maxScale: 1.6,
+    }), 0.41);
 });
 
 test('desktop semantic expansion requires the pinch focus to be on or near a node', () => {

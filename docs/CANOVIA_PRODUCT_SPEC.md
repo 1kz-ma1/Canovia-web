@@ -1316,6 +1316,6 @@ V49.8実機確認前の静的監査として、Plan Dashboardのabsolute positio
 
 Plan DashboardのRoadmapは既存 `RoadmapSpatialProjectionService` をPrimaryとして使い、`RoadmapService -> Spatial Projection -> Dashboard` のread-only projectionとする。Dashboardでは `dashboard-overview` modeを使い、List切替、Current自動センタリング、Task detail展開を持ち込まず、Phase / Cluster / Task / Dependencyの構造把握を優先する。Spatial StageはDashboard frameへ自動fitし、最初にRoadmap全体構造を一望できる状態をPrimaryとする。`/roadmap` 本体のstandard interactionは維持する。
 
-V49.9は段階導入とする。Phase 1ではSpatial Roadmap PrimaryとRoadmap全体fitを導入済み。Phase 2ではPlan / leaf Detail Documentをfit-first Cameraへ移行し、Fixed Chromeの外側でDocument Stage / Canvasだけをscaleする。`− / 全体 / ＋` をPrimary controlとし、fit scaleを最小、160%を最大、倍率stepを1.25倍とする。Camera stateはruntimeのみで永続化しない。Phase 3でpinch / region focus、Phase 4で2.5D depth polishを行う。Document内部でも `Container = zoom / Leaf = detail` を最終interaction contractとする。
+V49.9は段階導入とする。Phase 1ではSpatial Roadmap PrimaryとRoadmap全体fit、Phase 2ではPlan / leaf Detail Documentのfit-first Cameraを導入済み。Phase 3ではtouch pinch / trackpad pinch / pointer-anchor zoom / Roadmap Phase・Cluster region focus / Roadmap Task leaf detailを追加する。Document上のgestureは背面Mapへ伝播させず、single-finger panはDocument Scroll、2本指はDocument Cameraとする。Roadmapは `Phase / Cluster = Container = zoom`、`Task = Leaf = detail` を採用し、Task Detailは既存Map Detail Surfaceへhidden templateを流し込んで再利用する。Task DetailはHistoryへ1段積み、browser Back / PWA edge-back / fixed Back / Close / Escapeで同じclose contractを使う。Camera / pinch / region focus stateはruntimeのみで永続化しない。Phase 4で2.5D depth polishを行う。
 
 詳細は `docs/V49.9_SPATIAL_ROADMAP_FIT_DOCUMENT.md` を正とする。

@@ -642,6 +642,74 @@ export function documentZoomScale(
     return Math.round(Math.max(lower, Math.min(upper, next)) * 10000) / 10000;
 }
 
+export function documentPinchScale(
+    startScale,
+    startDistance,
+    currentDistance,
+    {
+        minScale = 0.1,
+        maxScale = 1.6,
+    } = {},
+) {
+    const lower = Math.max(0.05, Number(minScale || 0.1));
+    const upper = Math.max(lower, Number(maxScale || 1.6));
+    const baseScale = Math.max(lower, Math.min(upper, Number(startScale || lower)));
+    const baseDistance = Math.max(1, Number(startDistance || 1));
+    const distance = Math.max(1, Number(currentDistance || 1));
+    const next = baseScale * (distance / baseDistance);
+
+    return Math.round(Math.max(lower, Math.min(upper, next)) * 10000) / 10000;
+}
+
+export function documentRegionFocusScale({
+    viewportWidth = 0,
+    viewportHeight = 0,
+    regionWidth = 0,
+    regionHeight = 0,
+    paddingX = 72,
+    paddingY = 72,
+    minScale = 0.1,
+    maxScale = 1.6,
+} = {}) {
+    return documentFitScale({
+        viewportWidth,
+        viewportHeight,
+        documentWidth: regionWidth,
+        documentHeight: regionHeight,
+        paddingX,
+        paddingY,
+        minScale,
+        maxScale,
+    });
+}
+
+export function documentAnchorScroll({
+    naturalX = 0,
+    naturalY = 0,
+    scale = 1,
+    screenX = 0,
+    screenY = 0,
+    contentWidth = 0,
+    contentHeight = 0,
+    viewportWidth = 0,
+    viewportHeight = 0,
+} = {}) {
+    const safeScale = Math.max(0.01, Number(scale || 1));
+    const maxLeft = Math.max(0, Number(contentWidth || 0) * safeScale - Number(viewportWidth || 0));
+    const maxTop = Math.max(0, Number(contentHeight || 0) * safeScale - Number(viewportHeight || 0));
+
+    return {
+        left: Math.round(Math.max(
+            0,
+            Math.min(maxLeft, Number(naturalX || 0) * safeScale - Number(screenX || 0)),
+        ) * 10) / 10,
+        top: Math.round(Math.max(
+            0,
+            Math.min(maxTop, Number(naturalY || 0) * safeScale - Number(screenY || 0)),
+        ) * 10) / 10,
+    };
+}
+
 export function semanticFocusMatchesNode(
     rect,
     focus,
@@ -1276,6 +1344,10 @@ export function mountLivingGoalMap({
     let semanticArmCandidateId = null;
     let semanticArmCandidateSince = 0;
     let documentBackGesture = null;
+    let activeRoadmapTaskId = null;
+    const documentPointers = new Map();
+    let documentPinchGesture = null;
+    let suppressDocumentClickUntil = 0;
 
     const documentParentUrl = String(page.dataset.mapParentUrl || '');
     const planDocumentMode = Boolean(
@@ -1433,6 +1505,8 @@ export function mountLivingGoalMap({
             mode = 'manual',
             preserveCenter = true,
             resetScroll = false,
+            anchor = null,
+            immediateScroll = false,
         } = {},
     ) => {
         const camera = resolveDocumentCamera(scrollElement);
@@ -1472,6 +1546,20 @@ export function mountLivingGoalMap({
             if (resetScroll || camera.mode === 'fit') {
                 scrollElement.scrollLeft = 0;
                 scrollElement.scrollTop = 0;
+            } else if (anchor && Number.isFinite(Number(anchor.naturalX)) && Number.isFinite(Number(anchor.naturalY))) {
+                const nextScroll = documentAnchorScroll({
+                    naturalX: Number(anchor.naturalX),
+                    naturalY: Number(anchor.naturalY),
+                    scale: camera.scale,
+                    screenX: Number(anchor.screenX || 0),
+                    screenY: Number(anchor.screenY || 0),
+                    contentWidth: measurement.width,
+                    contentHeight: measurement.height,
+                    viewportWidth: measurement.viewportWidth,
+                    viewportHeight: measurement.viewportHeight,
+                });
+                scrollElement.scrollLeft = nextScroll.left;
+                scrollElement.scrollTop = nextScroll.top;
             } else if (preserveCenter) {
                 const nextWidth = measurement.width * camera.scale;
                 const nextHeight = measurement.height * camera.scale;
@@ -1490,7 +1578,9 @@ export function mountLivingGoalMap({
             syncDocumentPosition(scrollElement);
         };
 
-        if (typeof windowRef.requestAnimationFrame === 'function') {
+        if (immediateScroll) {
+            settleScroll();
+        } else if (typeof windowRef.requestAnimationFrame === 'function') {
             windowRef.requestAnimationFrame(settleScroll);
         } else {
             windowRef.setTimeout(settleScroll, 0);
@@ -1499,16 +1589,20 @@ export function mountLivingGoalMap({
         return true;
     };
 
-    const fitDocumentCamera = (scrollElement, { resetScroll = true } = {}) => (
-        applyDocumentCameraScale(scrollElement, 1, {
+    const fitDocumentCamera = (scrollElement, { resetScroll = true } = {}) => {
+        const camera = resolveDocumentCamera(scrollElement);
+        clearDocumentRegionFocus(camera?.viewport);
+
+        return applyDocumentCameraScale(scrollElement, 1, {
             mode: 'fit',
             preserveCenter: false,
             resetScroll,
-        })
-    );
+        });
+    };
 
     const stepDocumentCamera = (scrollElement, direction) => {
         const camera = resolveDocumentCamera(scrollElement);
+        clearDocumentRegionFocus(camera?.viewport);
         const measurement = measureDocumentCamera(camera);
         if (!camera || !measurement) return false;
 
@@ -1525,6 +1619,89 @@ export function mountLivingGoalMap({
             mode: nextMode,
             preserveCenter: nextMode !== 'fit',
             resetScroll: nextMode === 'fit',
+        });
+    };
+
+    const clearDocumentRegionFocus = (viewport) => {
+        if (!viewport) return;
+        viewport.querySelectorAll?.('.is-roadmap-region-focused')?.forEach?.((element) => {
+            element.classList.remove('is-roadmap-region-focused');
+        });
+        delete viewport.dataset.mapDocumentRegionFocus;
+    };
+
+    const zoomDocumentAtPoint = (scrollElement, targetScale, clientX, clientY, { immediate = false } = {}) => {
+        const camera = resolveDocumentCamera(scrollElement);
+        const measurement = measureDocumentCamera(camera);
+        if (!camera || !measurement) return false;
+
+        const rect = scrollElement.getBoundingClientRect?.();
+        if (!rect) return false;
+
+        const screenX = Number(clientX || 0) - Number(rect.left || 0);
+        const screenY = Number(clientY || 0) - Number(rect.top || 0);
+        const currentScale = Math.max(0.01, Number(camera.scale || measurement.fitScale));
+        const naturalX = (Number(scrollElement.scrollLeft || 0) + screenX) / currentScale;
+        const naturalY = (Number(scrollElement.scrollTop || 0) + screenY) / currentScale;
+        const scale = Math.max(measurement.fitScale, Math.min(1.6, Number(targetScale || camera.scale)));
+        const mode = Math.abs(scale - measurement.fitScale) <= 0.005 ? 'fit' : 'manual';
+
+        return applyDocumentCameraScale(scrollElement, scale, {
+            mode,
+            preserveCenter: false,
+            resetScroll: mode === 'fit',
+            anchor: mode === 'fit' ? null : { naturalX, naturalY, screenX, screenY },
+            immediateScroll: immediate,
+        });
+    };
+
+    const focusDocumentRegion = (regionElement) => {
+        const scrollElement = regionElement?.closest?.('[data-map-document-scroll]');
+        const camera = resolveDocumentCamera(scrollElement);
+        const measurement = measureDocumentCamera(camera);
+        if (!scrollElement || !camera || !measurement) return false;
+
+        const regionRect = regionElement.getBoundingClientRect?.();
+        const canvasRect = camera.canvas.getBoundingClientRect?.();
+        if (!regionRect || !canvasRect || regionRect.width <= 0 || regionRect.height <= 0) return false;
+
+        const currentScale = Math.max(0.01, Number(camera.scale || measurement.fitScale));
+        const naturalRegionWidth = regionRect.width / currentScale;
+        const naturalRegionHeight = regionRect.height / currentScale;
+        const naturalX = (
+            regionRect.left - canvasRect.left + regionRect.width / 2
+        ) / currentScale;
+        const naturalY = (
+            regionRect.top - canvasRect.top + regionRect.height / 2
+        ) / currentScale;
+
+        const targetScale = documentRegionFocusScale({
+            viewportWidth: measurement.viewportWidth,
+            viewportHeight: measurement.viewportHeight,
+            regionWidth: naturalRegionWidth,
+            regionHeight: naturalRegionHeight,
+            paddingX: 72,
+            paddingY: 72,
+            minScale: measurement.fitScale,
+            maxScale: 1.6,
+        });
+
+        clearDocumentRegionFocus(camera.viewport);
+        regionElement.classList.add('is-roadmap-region-focused');
+        const regionType = String(regionElement.dataset.roadmapRegionType || 'region');
+        const regionId = String(regionElement.dataset.roadmapRegionId || '');
+        camera.viewport.dataset.mapDocumentRegionFocus = regionType+':'+regionId;
+
+        return applyDocumentCameraScale(scrollElement, targetScale, {
+            mode: Math.abs(targetScale - measurement.fitScale) <= 0.005 ? 'fit' : 'manual',
+            preserveCenter: false,
+            resetScroll: false,
+            anchor: {
+                naturalX,
+                naturalY,
+                screenX: measurement.viewportWidth / 2,
+                screenY: measurement.viewportHeight / 2,
+            },
         });
     };
 
@@ -1944,7 +2121,9 @@ export function mountLivingGoalMap({
             surfaceContent.append(template.content.cloneNode(true));
         }
 
-        const presentationKind = nodeElementById.get(nodeId)?.dataset?.mapPresentationKind || '';
+        const presentationKind = nodeElementById.get(nodeId)?.dataset?.mapPresentationKind
+            || template?.dataset?.mapPresentationKind
+            || '';
         const isLeafDocument = presentationKind === 'leaf';
 
         syncDetailDocumentTitle(nodeId);
@@ -1986,6 +2165,9 @@ export function mountLivingGoalMap({
     };
 
     const hideSurface = () => {
+        activeRoadmapTaskId = null;
+        delete page.dataset.mapRoadmapTask;
+
         if (surface && workspace) {
             setSurfaceExpanded(false);
             surface.setAttribute('aria-hidden', 'true');
@@ -1995,6 +2177,44 @@ export function mountLivingGoalMap({
         setDetailDocumentMode(false);
         if (detailDocumentTitle) detailDocumentTitle.textContent = '詳細';
         resetButton?.classList.add('hidden');
+    };
+
+    const roadmapTaskTemplateFromLocation = () => {
+        const hash = String(windowRef.location?.hash || '');
+        if (!hash.startsWith('#roadmap-task=')) return null;
+
+        try {
+            return decodeURIComponent(hash.slice('#roadmap-task='.length)) || null;
+        } catch (_) {
+            return null;
+        }
+    };
+
+    const roadmapTaskHash = (templateId) => '#roadmap-task='+encodeURIComponent(String(templateId || ''));
+
+    const clearRoadmapTaskDetail = () => {
+        activeRoadmapTaskId = null;
+        delete page.dataset.mapRoadmapTask;
+        hideSurface();
+    };
+
+    const openRoadmapTaskDetail = (templateId, { historyMode = 'push' } = {}) => {
+        const normalized = String(templateId || '');
+        const template = templateFor(normalized);
+        if (!normalized || !template?.content) return false;
+
+        activeRoadmapTaskId = normalized;
+        page.dataset.mapRoadmapTask = normalized;
+        renderSurface(normalized);
+
+        if (historyMode === 'push' && windowRef.location.hash !== roadmapTaskHash(normalized)) {
+            windowRef.history.pushState({
+                ...(windowRef.history.state || {}),
+                canoviaMapRoadmapTask: normalized,
+            }, '', roadmapTaskHash(normalized));
+        }
+
+        return true;
     };
 
     const clearSpatialDock = () => {
@@ -2209,6 +2429,20 @@ export function mountLivingGoalMap({
     };
 
     const closeContext = () => {
+        if (activeRoadmapTaskId) {
+            const shouldGoBack = Boolean(windowRef.history.state?.canoviaMapRoadmapTask);
+            clearRoadmapTaskDetail();
+
+            if (shouldGoBack) {
+                windowRef.history.back();
+            } else if (roadmapTaskTemplateFromLocation()) {
+                const nextState = { ...(windowRef.history.state || {}) };
+                delete nextState.canoviaMapRoadmapTask;
+                windowRef.history.replaceState(nextState, '', mapUrlWithoutFocus(windowRef));
+            }
+            return;
+        }
+
         if (activeDockId) {
             const shouldGoBack = Boolean(windowRef.history.state?.canoviaMapDock);
             clearSpatialDock();
@@ -2995,6 +3229,198 @@ export function mountLivingGoalMap({
     };
     const onViewReset = () => resetMapView();
 
+    const documentTouchPoints = (scrollElement) => (
+        [...documentPointers.values()].filter((point) => point.scroll === scrollElement)
+    );
+
+    const documentTouchDistance = (a, b) => Math.hypot(
+        Number(b?.x || 0) - Number(a?.x || 0),
+        Number(b?.y || 0) - Number(a?.y || 0),
+    );
+
+    const documentTouchMidpoint = (a, b) => ({
+        x: (Number(a?.x || 0) + Number(b?.x || 0)) / 2,
+        y: (Number(a?.y || 0) + Number(b?.y || 0)) / 2,
+    });
+
+    const beginDocumentPinch = (scrollElement) => {
+        const touches = documentTouchPoints(scrollElement);
+        if (touches.length < 2) return false;
+
+        const [a, b] = touches.slice(-2);
+        const distance = documentTouchDistance(a, b);
+        const camera = resolveDocumentCamera(scrollElement);
+        const measurement = measureDocumentCamera(camera);
+        const rect = scrollElement.getBoundingClientRect?.();
+        if (!camera || !measurement || !rect || distance < 8) return false;
+
+        const midpoint = documentTouchMidpoint(a, b);
+        const screenX = midpoint.x - Number(rect.left || 0);
+        const screenY = midpoint.y - Number(rect.top || 0);
+        const currentScale = Math.max(0.01, Number(camera.scale || measurement.fitScale));
+
+        clearDocumentRegionFocus(camera.viewport);
+        documentBackGesture = null;
+        documentPinchGesture = {
+            scroll: scrollElement,
+            pointerIds: [a.pointerId, b.pointerId],
+            startDistance: distance,
+            startScale: currentScale,
+            naturalX: (Number(scrollElement.scrollLeft || 0) + screenX) / currentScale,
+            naturalY: (Number(scrollElement.scrollTop || 0) + screenY) / currentScale,
+        };
+        camera.viewport.classList.add('is-document-pinching');
+
+        return true;
+    };
+
+    const onDocumentPointerDown = (event) => {
+        if (event.pointerType !== 'touch') return;
+
+        const scrollElement = event.currentTarget;
+        documentPointers.set(event.pointerId, {
+            pointerId: event.pointerId,
+            scroll: scrollElement,
+            x: Number(event.clientX || 0),
+            y: Number(event.clientY || 0),
+        });
+
+        if (documentTouchPoints(scrollElement).length >= 2) {
+            beginDocumentPinch(scrollElement);
+        }
+    };
+
+    const onDocumentPointerMove = (event) => {
+        const point = documentPointers.get(event.pointerId);
+        if (!point) return;
+
+        point.x = Number(event.clientX || 0);
+        point.y = Number(event.clientY || 0);
+        documentPointers.set(event.pointerId, point);
+
+        const pinch = documentPinchGesture;
+        if (!pinch || pinch.scroll !== point.scroll || !pinch.pointerIds.includes(event.pointerId)) return;
+
+        const touches = pinch.pointerIds
+            .map((pointerId) => documentPointers.get(pointerId))
+            .filter(Boolean);
+        if (touches.length < 2) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const [a, b] = touches;
+        const camera = resolveDocumentCamera(pinch.scroll);
+        const measurement = measureDocumentCamera(camera);
+        const rect = pinch.scroll.getBoundingClientRect?.();
+        if (!camera || !measurement || !rect) return;
+
+        const midpoint = documentTouchMidpoint(a, b);
+        const scale = documentPinchScale(
+            pinch.startScale,
+            pinch.startDistance,
+            documentTouchDistance(a, b),
+            {
+                minScale: measurement.fitScale,
+                maxScale: 1.6,
+            },
+        );
+        const mode = Math.abs(scale - measurement.fitScale) <= 0.005 ? 'fit' : 'manual';
+
+        applyDocumentCameraScale(pinch.scroll, scale, {
+            mode,
+            preserveCenter: false,
+            resetScroll: false,
+            anchor: mode === 'fit'
+                ? null
+                : {
+                    naturalX: pinch.naturalX,
+                    naturalY: pinch.naturalY,
+                    screenX: midpoint.x - Number(rect.left || 0),
+                    screenY: midpoint.y - Number(rect.top || 0),
+                },
+            immediateScroll: true,
+        });
+
+        suppressDocumentClickUntil = Date.now() + 280;
+    };
+
+    const finishDocumentPointer = (event) => {
+        const point = documentPointers.get(event.pointerId);
+        if (!point) return;
+
+        const pinch = documentPinchGesture;
+        documentPointers.delete(event.pointerId);
+
+        if (pinch?.pointerIds?.includes(event.pointerId)) {
+            const camera = resolveDocumentCamera(pinch.scroll);
+            camera?.viewport?.classList?.remove('is-document-pinching');
+            documentPinchGesture = null;
+
+            if (documentTouchPoints(pinch.scroll).length >= 2) {
+                beginDocumentPinch(pinch.scroll);
+            }
+        }
+    };
+
+    const onDocumentWheel = (event) => {
+        if (!event.ctrlKey || event.cancelable === false) return;
+
+        const scrollElement = event.currentTarget;
+        const camera = resolveDocumentCamera(scrollElement);
+        const measurement = measureDocumentCamera(camera);
+        if (!camera || !measurement) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        clearDocumentRegionFocus(camera.viewport);
+
+        const delta = Math.max(-60, Math.min(60, Number(event.deltaY || 0)));
+        const factor = Math.exp(-delta * 0.01);
+        const targetScale = Math.max(
+            measurement.fitScale,
+            Math.min(1.6, camera.scale * factor),
+        );
+
+        zoomDocumentAtPoint(
+            scrollElement,
+            targetScale,
+            Number(event.clientX || 0),
+            Number(event.clientY || 0),
+            { immediate: true },
+        );
+    };
+
+    const onDocumentDoubleClick = (event) => {
+        if (
+            event.target.closest?.(
+                'a, button, input, select, textarea, [data-roadmap-task-detail-open], [data-roadmap-region-focus]'
+            )
+        ) {
+            return;
+        }
+
+        const scrollElement = event.currentTarget;
+        const camera = resolveDocumentCamera(scrollElement);
+        const measurement = measureDocumentCamera(camera);
+        if (!camera || !measurement) return;
+
+        event.preventDefault();
+        clearDocumentRegionFocus(camera.viewport);
+        const targetScale = documentZoomScale(camera.scale, 'in', {
+            minScale: measurement.fitScale,
+            maxScale: 1.6,
+            factor: 1.25,
+        });
+
+        zoomDocumentAtPoint(
+            scrollElement,
+            targetScale,
+            Number(event.clientX || 0),
+            Number(event.clientY || 0),
+        );
+    };
+
     const onDocumentBackPointerDown = (event) => {
         const scrollElement = activeDocumentScroll();
         const scrollLeft = Math.max(0, Number(scrollElement?.scrollLeft || 0));
@@ -3005,6 +3431,8 @@ export function mountLivingGoalMap({
             || !documentModeActive()
             || event.pointerType !== 'touch'
             || event.isPrimary === false
+            || documentPinchGesture
+            || documentPointers.size >= 2
             || Number(event.clientX || 0) > 28
             || scrollLeft > 1
         ) {
@@ -3031,6 +3459,11 @@ export function mountLivingGoalMap({
             endX: Number(event.clientX || 0),
             endY: Number(event.clientY || 0),
         })) {
+            return;
+        }
+
+        if (activeRoadmapTaskId) {
+            closeContext();
             return;
         }
 
@@ -3094,7 +3527,15 @@ export function mountLivingGoalMap({
         page.removeEventListener('pointercancel', onDocumentBackPointerCancel);
         for (const scrollElement of documentScrolls) {
             scrollElement.removeEventListener('scroll', onDocumentScroll);
+            scrollElement.removeEventListener('pointerdown', onDocumentPointerDown);
+            scrollElement.removeEventListener('pointermove', onDocumentPointerMove);
+            scrollElement.removeEventListener('pointerup', finishDocumentPointer);
+            scrollElement.removeEventListener('pointercancel', finishDocumentPointer);
+            scrollElement.removeEventListener('wheel', onDocumentWheel);
+            scrollElement.removeEventListener('dblclick', onDocumentDoubleClick);
         }
+        documentPointers.clear();
+        documentPinchGesture = null;
         zoomOutControl?.removeEventListener('click', onZoomOut);
         zoomInControl?.removeEventListener('click', onZoomIn);
         viewResetControl?.removeEventListener('click', onViewReset);
@@ -3234,6 +3675,35 @@ export function mountLivingGoalMap({
     }
 
     function onPageClick(event) {
+        const documentTarget = event.target.closest?.('[data-map-document-scroll]');
+        if (documentTarget && Date.now() < suppressDocumentClickUntil) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+        }
+
+        const roadmapTask = event.target.closest?.('[data-roadmap-task-detail-open]');
+        if (roadmapTask && page.contains(roadmapTask)) {
+            event.preventDefault();
+            const templateId = roadmapTask.dataset.roadmapTaskTemplate || '';
+            openRoadmapTaskDetail(templateId);
+            return;
+        }
+
+        const roadmapRegion = event.target.closest?.('[data-roadmap-region-focus]');
+        if (roadmapRegion && page.contains(roadmapRegion)) {
+            event.preventDefault();
+            focusDocumentRegion(roadmapRegion);
+            return;
+        }
+
+        const localDocumentBack = event.target.closest?.('[data-map-document-back]');
+        if (localDocumentBack && activeRoadmapTaskId && surface?.contains?.(localDocumentBack)) {
+            event.preventDefault();
+            closeContext();
+            return;
+        }
+
         const cameraControl = event.target.closest?.(
             '[data-map-document-zoom-out], [data-map-document-fit], [data-map-document-zoom-in]'
         );
@@ -3402,10 +3872,26 @@ export function mountLivingGoalMap({
     }
 
     function onKeyDown(event) {
-        if (event.key === 'Escape' && (activeFocusId || activeDockId)) closeContext();
+        if (event.key === 'Escape' && (activeRoadmapTaskId || activeFocusId || activeDockId)) {
+            closeContext();
+        }
     }
 
     function onPopState(event) {
+        const roadmapTaskTemplate = String(
+            event?.state?.canoviaMapRoadmapTask
+            || roadmapTaskTemplateFromLocation()
+            || ''
+        );
+        if (roadmapTaskTemplate) {
+            openRoadmapTaskDetail(roadmapTaskTemplate, { historyMode: 'none' });
+            return;
+        }
+
+        if (activeRoadmapTaskId) {
+            clearRoadmapTaskDetail();
+        }
+
         const targetDepth = Math.max(0, Number(event?.state?.canoviaMapFocusDepth || 0));
         if (mapHistoryDirection(focusHistoryDepth, targetDepth) === 'back') {
             trackTelemetry('map_back_used', {}, true);
@@ -3475,6 +3961,12 @@ export function mountLivingGoalMap({
     page.addEventListener('pointercancel', onDocumentBackPointerCancel);
     for (const scrollElement of documentScrolls) {
         scrollElement.addEventListener('scroll', onDocumentScroll, { passive: true });
+        scrollElement.addEventListener('pointerdown', onDocumentPointerDown);
+        scrollElement.addEventListener('pointermove', onDocumentPointerMove, { passive: false });
+        scrollElement.addEventListener('pointerup', finishDocumentPointer);
+        scrollElement.addEventListener('pointercancel', finishDocumentPointer);
+        scrollElement.addEventListener('wheel', onDocumentWheel, { passive: false });
+        scrollElement.addEventListener('dblclick', onDocumentDoubleClick);
     }
     syncAllDocumentPositions();
     windowRef.setTimeout(() => {
@@ -3515,9 +4007,14 @@ export function mountLivingGoalMap({
         resetMapView({ animate: false });
     }
 
+    const initialRoadmapTaskTemplate = forceGlobalHomeReset ? null : roadmapTaskTemplateFromLocation();
     const initialDockId = forceGlobalHomeReset ? null : dockIdFromLocation(windowRef);
     const initialFocusId = forceGlobalHomeReset ? null : focusIdFromLocation(windowRef);
-    if (initialDockId) {
+    if (initialRoadmapTaskTemplate) {
+        if (!openRoadmapTaskDetail(initialRoadmapTaskTemplate, { historyMode: 'none' })) {
+            clearRoadmapTaskDetail();
+        }
+    } else if (initialDockId) {
         if (!openSpatialDock(initialDockId, { historyMode: 'none' })) {
             clearSpatialDock();
             removeInvalidDockHash();

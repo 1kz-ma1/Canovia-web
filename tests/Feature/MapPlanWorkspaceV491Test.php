@@ -98,11 +98,17 @@ class MapPlanWorkspaceV491Test extends TestCase
             ->assertSee('data-roadmap-spatial-mode="dashboard-overview"', false)
             ->assertSee('data-roadmap-spatial-auto-center="0"', false)
             ->assertSee('data-roadmap-spatial-map', false)
+            ->assertSee('data-roadmap-region-focus', false)
+            ->assertSee('data-roadmap-region-type="phase"', false)
+            ->assertSee('data-roadmap-region-type="cluster"', false)
+            ->assertSee('data-roadmap-task-detail-open', false)
+            ->assertSee('data-map-surface-template="roadmap-task:'.$task->id.'"', false)
+            ->assertSee('data-map-presentation-kind="leaf"', false)
             ->assertDontSee('data-roadmap-view-panel="list"', false)
             ->assertSee('Roadmap')
             ->assertSee($task->title)
             ->assertSee('Classic Plan')
-            ->assertSee('実行Mapへ')
+            ->assertSee('実行へ')
             ->assertSee('← Plan一覧');
 
         $graph = $response->viewData('graph');

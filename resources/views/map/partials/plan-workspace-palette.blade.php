@@ -113,4 +113,10 @@
         </span>
     </div>
 </div>
+
+@include('map.partials.roadmap-task-surface-templates', [
+    'workspaceRoadmapSpatial' => $workspaceRoadmapSpatial,
+    'workspacePlan' => $workspacePlan,
+    'workspaceCanEdit' => $workspaceCanEdit,
+])
 @endif
