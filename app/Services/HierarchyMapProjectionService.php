@@ -14,6 +14,7 @@ final class HierarchyMapProjectionService
         private readonly HierarchyMapAttentionStateService $attention,
         private readonly PlanProgressService $progress,
         private readonly RoadmapService $roadmap,
+        private readonly RoadmapSpatialProjectionService $roadmapSpatial,
         private readonly PlanOwnershipService $ownership,
     ) {}
 
@@ -183,10 +184,13 @@ final class HierarchyMapProjectionService
 
         $progress = $this->progress->calculate($plan);
         $roadmap = $this->roadmap->build($plan);
+        $roadmapSpatial = $this->roadmapSpatial->build($roadmap);
+
         return [
             'plan' => $plan,
             'progress' => $progress,
             'roadmap' => $roadmap,
+            'roadmap_spatial' => $roadmapSpatial,
             'can_edit' => $this->ownership->canEdit($request, $plan),
             'can_manage' => $this->ownership->owns($request, $plan),
             'execution_url' => route('map.index', [
@@ -224,6 +228,7 @@ final class HierarchyMapProjectionService
                 'remaining' => data_get($workspace, 'progress.remaining_minutes_by_progress'),
                 'status' => data_get($workspace, 'progress.status'),
             ],
+            'roadmap_spatial_key' => data_get($workspace, 'roadmap_spatial.projection_key'),
         ];
     }
 
