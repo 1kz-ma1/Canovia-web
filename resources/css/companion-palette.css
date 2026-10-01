@@ -71,6 +71,7 @@
         background: rgb(3 7 18 / 0.96);
         padding: 0;
         color: rgb(226 232 240);
+        pointer-events: auto;
         box-shadow:
             0 30px 90px rgb(2 6 23 / 0.7),
             0 0 54px rgb(124 58 237 / 0.08);
@@ -251,13 +252,6 @@
         color: rgb(203 213 225);
     }
 
-    .canovia-companion-palette-phase-note {
-        margin-top: 0.85rem;
-        color: rgb(71 85 105);
-        font-size: 0.5rem;
-        line-height: 1.55;
-        text-align: center;
-    }
 
     @media (min-width: 768px) {
         .canovia-companion-shell {
