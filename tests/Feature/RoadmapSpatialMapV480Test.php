@@ -95,6 +95,76 @@ class RoadmapSpatialMapV480Test extends TestCase
         $this->assertSame('ready', $afterNodes[$childD->id]['dependency_state']);
     }
 
+    public function test_spatial_projection_assigns_semantic_depth_roles_from_execution_state(): void
+    {
+        $user = User::factory()->create([
+            'first_run_completed_at' => now(),
+        ]);
+        $plan = $this->plan($user, 'Depth semantics');
+
+        $current = $this->task($plan, 'Current', 1, 'doing', 30);
+        $ready = $this->task($plan, 'Ready', 2, 'todo', 0);
+        $blocked = $this->task($plan, 'Blocked', 3, 'todo', 0, dependsOn: $current);
+
+        $doneRoot = $this->task($plan, 'Done root', 4, 'done', 100);
+        $doneMid = $this->task($plan, 'Done mid', 5, 'done', 100, dependsOn: $doneRoot);
+        $future = $this->task($plan, 'Future', 6, 'todo', 0, dependsOn: $doneMid);
+
+        $roadmap = app(RoadmapService::class)->build(
+            $plan->fresh('tasks'),
+            $current->id,
+        );
+        $spatial = app(RoadmapSpatialProjectionService::class)->build($roadmap);
+        $nodes = collect($spatial['nodes'])->keyBy('task_id');
+
+        $this->assertSame('current', $nodes[$current->id]['visual_state']);
+        $this->assertSame('foreground', $nodes[$current->id]['depth_role']);
+
+        $this->assertSame('ready', $nodes[$ready->id]['visual_state']);
+        $this->assertSame('near', $nodes[$ready->id]['depth_role']);
+
+        $this->assertSame('blocked', $nodes[$blocked->id]['visual_state']);
+        $this->assertSame('recessed', $nodes[$blocked->id]['depth_role']);
+
+        $this->assertSame('done', $nodes[$doneRoot->id]['visual_state']);
+        $this->assertSame('deep', $nodes[$doneRoot->id]['depth_role']);
+        $this->assertSame('done', $nodes[$doneMid->id]['visual_state']);
+        $this->assertSame('deep', $nodes[$doneMid->id]['depth_role']);
+
+        $this->assertSame('future', $nodes[$future->id]['visual_state']);
+        $this->assertSame('neutral', $nodes[$future->id]['depth_role']);
+
+        $phases = collect($spatial['phases'])->keyBy('depth');
+        $this->assertSame('foreground', $phases[0]['depth_role']);
+        $this->assertSame('recessed', $phases[1]['depth_role']);
+        $this->assertSame('neutral', $phases[2]['depth_role']);
+
+        $edges = collect($spatial['edges'])
+            ->where('relation', 'dependency')
+            ->keyBy(fn (array $edge) => $edge['source'].'>'.$edge['target']);
+
+        $this->assertSame(
+            'foreground',
+            $edges['task:'.$current->id.'>task:'.$blocked->id]['depth_role'],
+        );
+        $this->assertSame(
+            'deep',
+            $edges['task:'.$doneRoot->id.'>task:'.$doneMid->id]['depth_role'],
+        );
+        $this->assertSame(
+            'neutral',
+            $edges['task:'.$doneMid->id.'>task:'.$future->id]['depth_role'],
+        );
+
+        $currentCluster = collect($spatial['clusters'])
+            ->firstWhere('id', $nodes[$current->id]['cluster_id']);
+        $blockedCluster = collect($spatial['clusters'])
+            ->firstWhere('id', $nodes[$blocked->id]['cluster_id']);
+
+        $this->assertSame('foreground', $currentCluster['depth_role']);
+        $this->assertSame('recessed', $blockedCluster['depth_role']);
+    }
+
     public function test_roadmap_page_uses_spatial_map_as_primary_and_keeps_list_as_secondary_view(): void
     {
         $user = User::factory()->create([
@@ -118,6 +188,8 @@ class RoadmapSpatialMapV480Test extends TestCase
             ->assertSee('data-roadmap-spatial-node', false)
             ->assertDontSee('data-roadmap-region-focus', false)
             ->assertDontSee('data-roadmap-task-detail-open', false)
+            ->assertDontSee('data-roadmap-depth-legend', false)
+            ->assertSee('data-roadmap-depth-role=', false)
             ->assertSee('data-roadmap-edge-relation="dependency"', false)
             ->assertSee('data-roadmap-view-panel="list"', false)
             ->assertSee('MapでPlanを見る')
@@ -193,9 +265,28 @@ class RoadmapSpatialMapV480Test extends TestCase
             '[data-roadmap-spatial-mode="dashboard-overview"]',
             $script,
         );
+        $roadmapCss = file_get_contents(resource_path('css/map/roadmap.css'));
+        $spatialBlade = file_get_contents(resource_path('views/plans/partials/roadmap-spatial-map.blade.php'));
+
         $this->assertStringContainsString(
             '--roadmap-overview-scale',
-            file_get_contents(resource_path('css/map/roadmap.css')),
+            $roadmapCss,
+        );
+        $this->assertStringContainsString(
+            'V49.9 Phase 4 — Semantic 2.5D depth',
+            $roadmapCss,
+        );
+        $this->assertStringContainsString(
+            '--roadmap-depth-scale',
+            $roadmapCss,
+        );
+        $this->assertStringContainsString(
+            'data-roadmap-depth-legend',
+            $spatialBlade,
+        );
+        $this->assertStringContainsString(
+            'data-roadmap-visual-state',
+            $spatialBlade,
         );
     }
 
