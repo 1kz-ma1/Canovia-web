@@ -1,0 +1,128 @@
+/* V50.1 Dashboard Document Foundation
+ * Generic dashboard canvases can fit the whole information board first, then
+ * let the user zoom and pan without turning the surface into a vertical feed.
+ *
+ * Map-owned documents keep their existing Map styles/runtime. These selectors
+ * apply to reusable non-Map Dashboard Documents.
+ */
+@layer components {
+    [data-dashboard-document]:not([data-dashboard-document-owner="map"]) {
+        --dashboard-document-scale: 1;
+        --dashboard-document-stage-width: auto;
+        --dashboard-document-stage-height: auto;
+        position: relative;
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    [data-dashboard-document]:not([data-dashboard-document-owner="map"])
+    [data-dashboard-document-scroll] {
+        min-width: 0;
+        min-height: 0;
+        overflow: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+        scrollbar-color: rgb(56 189 248 / 0.22) transparent;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x pan-y;
+    }
+
+    [data-dashboard-document]:not([data-dashboard-document-owner="map"])
+    [data-dashboard-document-stage] {
+        position: relative;
+        width: var(--dashboard-document-stage-width);
+        height: var(--dashboard-document-stage-height);
+        min-width: 1px;
+        min-height: 1px;
+        margin-inline: auto;
+        flex: 0 0 auto;
+    }
+
+    [data-dashboard-document]:not([data-dashboard-document-owner="map"]).is-dashboard-document-camera-ready
+    [data-dashboard-document-stage]
+    > [data-dashboard-document-canvas] {
+        position: absolute;
+        inset: 0 auto auto 0;
+        transform: scale(var(--dashboard-document-scale, 1));
+        transform-origin: top left;
+        transition: transform 150ms ease;
+        will-change: transform;
+    }
+
+    .canovia-dashboard-document-camera {
+        display: inline-flex;
+        min-height: 2.15rem;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 0.18rem;
+        border: 1px solid rgb(71 85 105 / 0.58);
+        border-radius: 9999px;
+        background: rgb(2 6 23 / 0.62);
+        padding: 0.18rem;
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03);
+    }
+
+    .canovia-dashboard-document-camera-button,
+    .canovia-dashboard-document-camera-fit {
+        display: inline-grid;
+        height: 1.78rem;
+        min-width: 1.78rem;
+        place-items: center;
+        border: 0;
+        border-radius: 9999px;
+        background: transparent;
+        color: rgb(203 213 225);
+        font-size: 0.66rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .canovia-dashboard-document-camera-fit {
+        min-width: 2.55rem;
+        padding-inline: 0.42rem;
+        font-size: 0.56rem;
+        letter-spacing: 0.03em;
+    }
+
+    .canovia-dashboard-document-camera-button:hover,
+    .canovia-dashboard-document-camera-button:focus-visible,
+    .canovia-dashboard-document-camera-fit:hover,
+    .canovia-dashboard-document-camera-fit:focus-visible,
+    .canovia-dashboard-document-camera-fit.is-active {
+        background: rgb(14 116 144 / 0.22);
+        color: rgb(207 250 254);
+        outline: none;
+    }
+
+    .canovia-dashboard-document-camera-button:disabled {
+        opacity: 0.28;
+        cursor: default;
+    }
+
+    .canovia-dashboard-document-camera-label {
+        min-width: 2.35rem;
+        padding-inline: 0.18rem;
+        color: rgb(125 211 252);
+        font-size: 0.5rem;
+        font-weight: 800;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+    }
+
+    [data-dashboard-document].is-dashboard-document-pinching
+    [data-dashboard-document-stage]
+    > [data-dashboard-document-canvas] {
+        transition: none;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        [data-dashboard-document]:not([data-dashboard-document-owner="map"])
+        [data-dashboard-document-stage]
+        > [data-dashboard-document-canvas] {
+            transition: none;
+        }
+    }
+}
