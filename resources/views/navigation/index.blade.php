@@ -1,14 +1,14 @@
 @extends('layouts.app')
 
-@section('title', '今日 | Canovia')
+@section('title', '実行 | Canovia')
 
 @section('content')
     <div class="mx-auto max-w-3xl space-y-5 md:space-y-6">
         <header class="pk-v18-page-hero pk-v18-today-hero">
             <div class="relative z-10 min-w-0">
-                <p class="pk-v18-eyebrow">TODAY / TAKE ACTION</p>
-                <h1>今日の一歩を決めよう。</h1>
-                <p>迷ったら、Canoviaと一緒に今できる一歩だけ。</p>
+                <p class="pk-v18-eyebrow">EXECUTION / TAKE ACTION</p>
+                <h1>今、実行する一歩を決めよう。</h1>
+                <p>今は既存のおすすめTaskを入口にし、後続PhaseでPlan種別ごとの実行Workspaceへ拡張します。</p>
             </div>
             <div class="pk-v18-page-guide" aria-hidden="true">
                 <span>いっしょに
