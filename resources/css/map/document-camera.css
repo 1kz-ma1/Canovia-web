@@ -1,0 +1,152 @@
+/* V49.9 Phase 2 — Fit-first Document Camera
+ * Fixed chrome remains screen-sized. Only the document canvas is scaled.
+ * The stage owns the scaled layout dimensions so pan/scroll geometry stays
+ * consistent with what the user sees.
+ */
+@layer components {
+    .canovia-map-document-camera {
+        display: inline-flex;
+        min-height: 2.15rem;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 0.18rem;
+        border: 1px solid rgb(71 85 105 / 0.58);
+        border-radius: 9999px;
+        background: rgb(2 6 23 / 0.62);
+        padding: 0.18rem;
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03);
+    }
+
+    .canovia-map-document-camera-button,
+    .canovia-map-document-camera-fit {
+        display: inline-grid;
+        height: 1.78rem;
+        min-width: 1.78rem;
+        place-items: center;
+        border: 0;
+        border-radius: 9999px;
+        background: transparent;
+        color: rgb(203 213 225);
+        font-size: 0.66rem;
+        font-weight: 800;
+        line-height: 1;
+        transition:
+            background 120ms ease,
+            color 120ms ease,
+            opacity 120ms ease;
+    }
+
+    .canovia-map-document-camera-fit {
+        min-width: 2.55rem;
+        padding-inline: 0.42rem;
+        font-size: 0.56rem;
+        letter-spacing: 0.03em;
+    }
+
+    .canovia-map-document-camera-button:hover,
+    .canovia-map-document-camera-button:focus-visible,
+    .canovia-map-document-camera-fit:hover,
+    .canovia-map-document-camera-fit:focus-visible,
+    .canovia-map-document-camera-fit.is-active {
+        background: rgb(14 116 144 / 0.22);
+        color: rgb(207 250 254);
+        outline: none;
+    }
+
+    .canovia-map-document-camera-button:disabled {
+        opacity: 0.28;
+        cursor: default;
+    }
+
+    .canovia-map-document-camera-label {
+        min-width: 2.35rem;
+        padding-inline: 0.18rem;
+        color: rgb(125 211 252);
+        font-size: 0.5rem;
+        font-weight: 800;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .canovia-map-context-surface:not(.is-dashboard-document) .canovia-map-document-camera {
+        display: none;
+    }
+
+    .canovia-map-document-stage {
+        position: relative;
+        min-width: 1px;
+        min-height: 1px;
+        margin-inline: auto;
+    }
+
+    [data-map-document-viewport].is-document-camera-ready .canovia-map-document-stage {
+        width: var(--document-stage-width, auto);
+        height: var(--document-stage-height, auto);
+        flex: 0 0 auto;
+    }
+
+    [data-map-document-viewport].is-document-camera-ready
+    .canovia-map-document-stage > [data-map-document-canvas] {
+        position: absolute;
+        inset: 0 auto auto 0;
+        transform: scale(var(--document-scale, 1));
+        transform-origin: top left;
+        transition: transform 150ms ease;
+        will-change: transform;
+    }
+
+    [data-map-document-viewport].is-document-camera-fit .canovia-map-document-stage {
+        filter: drop-shadow(0 12px 24px rgb(2 6 23 / 0.22));
+    }
+
+    .canovia-map-context-surface.is-dashboard-document .canovia-map-document-scroll {
+        overflow: auto;
+    }
+
+    @media (max-width: 767px) {
+        .canovia-plan-workspace-actions {
+            align-items: center;
+            gap: 0.32rem;
+        }
+
+        .canovia-plan-workspace-actions .canovia-map-document-camera {
+            min-height: 2rem;
+        }
+
+        .canovia-map-document-camera-button,
+        .canovia-map-document-camera-fit {
+            height: 1.62rem;
+            min-width: 1.62rem;
+        }
+
+        .canovia-map-document-camera-fit {
+            min-width: 2.2rem;
+            padding-inline: 0.3rem;
+            font-size: 0.5rem;
+        }
+
+        .canovia-map-document-camera-label {
+            min-width: 2rem;
+            font-size: 0.46rem;
+        }
+
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-context-tools {
+            gap: 0.28rem;
+        }
+
+        .canovia-map-context-surface.is-dashboard-document .canovia-map-document-camera {
+            min-height: 2rem;
+        }
+
+        [data-map-document-viewport].is-document-camera-ready .canovia-map-document-scroll {
+            overscroll-behavior: contain;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        [data-map-document-viewport].is-document-camera-ready
+        .canovia-map-document-stage > [data-map-document-canvas] {
+            transition: none;
+        }
+    }
+}
