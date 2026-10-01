@@ -73,6 +73,13 @@ class CanoviaMapTelemetryV424Test extends TestCase
         $this->assertSame('task', data_get($event->metadata, 'node_type'));
         $this->assertTrue((bool) data_get($event->metadata, 'is_primary'));
         $this->assertArrayNotHasKey('private_text', $event->metadata);
+
+        $client = file_get_contents(resource_path('js/living-map.mjs'));
+        $this->assertStringContainsString("trackTelemetry('map_surface_viewed')", $client);
+        $this->assertContains(
+            BehaviorEventType::MapSurfaceViewed->value,
+            BehaviorEventType::clientRecordable(),
+        );
     }
 
     public function test_work_start_with_map_flow_records_server_authoritative_execution_event(): void
