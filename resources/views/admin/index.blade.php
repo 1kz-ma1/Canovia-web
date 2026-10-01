@@ -221,17 +221,19 @@
 
                     @if ($activeSurfaceRoles->isNotEmpty())
                         <div class="mt-3 overflow-hidden rounded-xl border border-slate-800 bg-slate-950/25">
-                            <div class="grid grid-cols-[minmax(0,1.5fr)_repeat(4,minmax(4.5rem,.7fr))] gap-2 border-b border-slate-800 px-3 py-2 text-[9px] font-black uppercase tracking-[.08em] text-slate-600">
+                            <div class="grid grid-cols-[minmax(0,1.5fr)_repeat(5,minmax(4.1rem,.65fr))] gap-2 border-b border-slate-800 px-3 py-2 text-[9px] font-black uppercase tracking-[.08em] text-slate-600">
                                 <span>Surface Role</span>
+                                <span>View</span>
                                 <span>Flow</span>
                                 <span>Focus</span>
                                 <span>→Classic</span>
                                 <span>Back</span>
                             </div>
                             @foreach ($activeSurfaceRoles as $role => $roleMetrics)
-                                <div class="grid grid-cols-[minmax(0,1.5fr)_repeat(4,minmax(4.5rem,.7fr))] gap-2 border-b border-slate-900/80 px-3 py-2 text-[10px] last:border-b-0">
+                                <div class="grid grid-cols-[minmax(0,1.5fr)_repeat(5,minmax(4.1rem,.65fr))] gap-2 border-b border-slate-900/80 px-3 py-2 text-[10px] last:border-b-0">
                                     <span class="truncate font-bold text-slate-300">{{ $mapSurfaceRoleLabels[$role] ?? $role }}</span>
                                     <span class="text-slate-400">{{ (int) ($roleMetrics['views'] ?? 0) }}</span>
+                                    <span class="text-slate-400">{{ (int) ($roleMetrics['flows'] ?? 0) }}</span>
                                     <span class="text-cyan-200">{{ number_format((float) ($roleMetrics['focus_rate'] ?? 0), 1) }}%</span>
                                     <span class="text-sky-200">{{ number_format((float) ($roleMetrics['classic_action_rate'] ?? 0), 1) }}%</span>
                                     <span class="text-slate-400">{{ number_format((float) ($roleMetrics['back_per_flow'] ?? 0), 2) }}</span>
