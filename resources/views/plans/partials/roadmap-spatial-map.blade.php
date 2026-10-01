@@ -21,7 +21,7 @@
     data-roadmap-spatial-auto-center="{{ $roadmapDashboardOverview ? '0' : '1' }}"
 >
     @if ($roadmapDashboardOverview)
-        <div class="canovia-roadmap-depth-legend" data-roadmap-depth-legend aria-label="Roadmapの奥行き">
+        <div class="canovia-roadmap-depth-legend" data-roadmap-depth-legend role="group" aria-label="Roadmapの奥行き">
             <span data-roadmap-legend-state="current"><i aria-hidden="true"></i>現在</span>
             <span data-roadmap-legend-state="ready"><i aria-hidden="true"></i>開始可能</span>
             <span data-roadmap-legend-state="future"><i aria-hidden="true"></i>先</span>
