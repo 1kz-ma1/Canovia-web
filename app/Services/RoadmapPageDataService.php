@@ -13,6 +13,7 @@ final class RoadmapPageDataService
         private readonly RecommendationService $recommendationService,
         private readonly RoadmapService $roadmapService,
         private readonly RoadmapSpatialProjectionService $roadmapSpatialProjection,
+        private readonly ConstellationProjectionService $constellationProjection,
         private readonly ContinuityService $continuityService,
         private readonly PlanCategoryProfileService $categoryProfiles,
     ) {}
@@ -26,7 +27,26 @@ final class RoadmapPageDataService
         ]);
 
         $selectedPlanId ??= (int) $request->integer('plan_id');
-        $plan = $selectedPlanId > 0 ? $plans->firstWhere('id', $selectedPlanId) : $plans->first();
+        $plan = $selectedPlanId > 0 ? $plans->firstWhere('id', $selectedPlanId) : null;
+
+        $constellationPlans = $plans
+            ->sortBy(fn ($candidate) => (int) $candidate->id)
+            ->values();
+
+        $constellations = collect();
+        foreach ($constellationPlans as $index => $candidate) {
+            $baseRoadmap = $this->roadmapService->build($candidate);
+            $baseSpatial = $this->roadmapSpatialProjection->build($baseRoadmap);
+
+            $constellations->push(
+                $this->constellationProjection->project(
+                    $candidate,
+                    $baseRoadmap,
+                    $baseSpatial,
+                    $index,
+                ),
+            );
+        }
 
         $roadmap = null;
         $recommendation = null;
@@ -72,11 +92,30 @@ final class RoadmapPageDataService
                 $continuity['task_id'] ?? null,
             );
             $roadmapSpatial = $this->roadmapSpatialProjection->build($roadmap);
+
+            $selectedIndex = $constellationPlans
+                ->search(fn ($candidate) => (int) $candidate->id === (int) $plan->id);
+
+            if ($selectedIndex !== false) {
+                $selectedProjection = $this->constellationProjection->project(
+                    $plan,
+                    $roadmap,
+                    $roadmapSpatial,
+                    (int) $selectedIndex,
+                );
+
+                $constellations = $constellations
+                    ->map(fn (array $constellation) => (int) $constellation['plan_id'] === (int) $plan->id
+                        ? $selectedProjection
+                        : $constellation)
+                    ->values();
+            }
         }
 
         return compact(
             'plans',
             'plan',
+            'constellations',
             'roadmap',
             'recommendation',
             'continuity',

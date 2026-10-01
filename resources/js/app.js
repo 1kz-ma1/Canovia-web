@@ -3,6 +3,7 @@ import { mountInstantStartServiceWorker } from './instant-start.mjs';
 import { mountCanoviaInstantNavigation } from './instant-navigation.mjs';
 import { mountLivingGoalMap } from './living-map.mjs';
 import { mountDashboardDocuments } from './dashboard-document.mjs';
+import { mountConstellationRoadmap } from './constellation-roadmap.mjs';
 import './map-data-layers.mjs';
 import './map-pages.mjs';
 import './map-personalization.mjs';
@@ -3566,6 +3567,7 @@ function mountCompanionPalette(root = document) {
 
 function initializeInstantCorePage() {
     mountCompanionPalette();
+    mountConstellationRoadmap();
     mountDashboardDocuments();
     fitDashboardRoadmapOverviews();
     window.requestAnimationFrame(() => fitDashboardRoadmapOverviews());
@@ -3589,6 +3591,7 @@ document.addEventListener('canovia:page-ready', initializeInstantCorePage);
 
 document.addEventListener('DOMContentLoaded', () => {
     mountCompanionPalette();
+    mountConstellationRoadmap();
     mountDashboardDocuments();
     if (document.body?.dataset.focusMode === '1') return;
     mountCanoviaInstantNavigation();

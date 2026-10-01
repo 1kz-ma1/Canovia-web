@@ -1373,3 +1373,16 @@ AI Companionは5番目のNavigationではなく横断Control Surfaceとする。
 Primary Nav keyは `desktop/mobile-home / constellation / execution / timeline` を正とする。HomeボタンはLegacy Home Surface Preferenceに関係なくClassic Action Home `/` へ入る。Legacy Mapは削除しないがPrimary Home扱いしない。Roadmap `/roadmap` はConstellationの暫定入口、Navigation `/navigate` はExecutionの暫定入口とする。
 
 後続順は Constellation Roadmap → Execution Workspace → Action Home → Timeline/Achievement → Companion Deep Integration。詳細は `docs/V51.0_PRIMARY_NAVIGATION_COMPANION_SHELL.md` を正とする。
+
+
+## V51.1 Constellation Roadmap
+
+Roadmap `/roadmap` はUniverse-first Constellation Surfaceとする。初期状態ではPlanを自動選択せず、中央Space Stationと周囲のPlan Constellationを表示する。Plan選択時のみ星座を軽く拡大し、完成度・状態・Main Starごとの `完了/総数` を表示する。
+
+TaskはMain Starへ1:1対応させない。`ConstellationProjectionService` がcanonical Roadmap順序を維持しながらTaskをcost-balancedなTask Groupへ圧縮する。Main Star数とRichnessはTask countだけでなくestimated minutesとcross-group structureも使うが、scoreはユーザーへ公開しない。Main Star位置はSpatial Roadmapのdependency depthを基準とし、dependencyをStar間edgeへ集約する。両端Star完成時にedgeを発光させる。
+
+Main Star選択時のみTask Listを表示し、Task title/status/progress/remainingを確認できる。「今何を優先するか」はRoadmapへ持たせずExecution Surfaceへhandoffする。Space StationはPlan作成・一覧管理・選択中Plan更新/詳細の操作拠点とする。
+
+MobileではUniverseを画面幅へ無理に縮小せず、minimum sizeを持つpannable Stageとして扱う。既存`RoadmapSpatialProjectionService` はPlan Dashboardやdependency inputとして維持する。
+
+詳細は `docs/V51.1_CONSTELLATION_ROADMAP.md` を正とする。

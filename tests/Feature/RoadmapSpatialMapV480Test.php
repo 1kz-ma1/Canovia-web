@@ -165,7 +165,7 @@ class RoadmapSpatialMapV480Test extends TestCase
         $this->assertSame('recessed', $blockedCluster['depth_role']);
     }
 
-    public function test_roadmap_page_uses_spatial_map_as_primary_and_keeps_list_as_secondary_view(): void
+    public function test_roadmap_page_uses_constellation_as_primary_while_spatial_projection_remains_available(): void
     {
         $user = User::factory()->create([
             'first_run_completed_at' => now(),
@@ -173,7 +173,7 @@ class RoadmapSpatialMapV480Test extends TestCase
         $plan = $this->plan($user, 'Roadmap UI');
 
         $root = $this->task($plan, '並行作業の起点', 1, 'doing', 20);
-        $blocked = $this->task($plan, '後続Task', 2, 'todo', 0, dependsOn: $root);
+        $this->task($plan, '後続Task', 2, 'todo', 0, dependsOn: $root);
 
         $response = $this->actingAs($user)->get(route('roadmap.index', [
             'plan_id' => $plan->id,
@@ -181,38 +181,18 @@ class RoadmapSpatialMapV480Test extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('data-roadmap-renderer-active="spatial_map"', false)
-            ->assertSee('data-roadmap-spatial-map', false)
-            ->assertSee('data-roadmap-spatial-mode="standard"', false)
-            ->assertSee('data-roadmap-spatial-auto-center="1"', false)
-            ->assertSee('data-roadmap-spatial-node', false)
-            ->assertDontSee('data-roadmap-region-focus', false)
-            ->assertDontSee('data-roadmap-task-detail-open', false)
-            ->assertDontSee('data-roadmap-depth-legend', false)
-            ->assertSee('data-roadmap-depth-role=', false)
-            ->assertSee('data-roadmap-edge-relation="dependency"', false)
-            ->assertSee('data-roadmap-view-panel="list"', false)
-            ->assertSee('MapでPlanを見る')
-            ->assertSee('一覧で見る')
-            ->assertSee('並行作業の起点')
-            ->assertSee('後続Task');
+            ->assertSee('data-constellation-universe', false)
+            ->assertSee('data-plan-constellation', false)
+            ->assertSee('is-selected', false)
+            ->assertSee('data-constellation-star-open', false)
+            ->assertSee('data-constellation-star-template', false)
+            ->assertSee('SELECTED CONSTELLATION')
+            ->assertDontSee('data-roadmap-spatial-map', false)
+            ->assertDontSee('data-roadmap-view-panel="list"', false);
 
         $this->assertIsArray($response->viewData('roadmapSpatial'));
         $this->assertNotEmpty(data_get($response->viewData('roadmapSpatial'), 'nodes'));
-
-        $dom = new \DOMDocument;
-        @$dom->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
-        $xpath = new \DOMXPath($dom);
-
-        $blockedForms = $xpath->query(
-            '//*[@data-roadmap-task-id="'.$blocked->id.'"]//form[@data-work-start-form]'
-        );
-        $this->assertSame(0, $blockedForms->length);
-
-        $blockedExecutionLinks = $xpath->query(
-            '//*[@data-roadmap-task-id="'.$blocked->id.'"]//a[contains(normalize-space(.),"今やることを見る")]'
-        );
-        $this->assertSame(1, $blockedExecutionLinks->length);
+        $this->assertNotEmpty($response->viewData('constellations'));
     }
 
     public function test_dependency_cycle_degrades_to_a_bounded_spatial_layout(): void
