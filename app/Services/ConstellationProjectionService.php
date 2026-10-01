@@ -115,7 +115,6 @@ final class ConstellationProjectionService
                 $status = match (true) {
                     $count > 0 && $done === $count => 'complete',
                     $isCurrent => 'current',
-                    $blockedCount > 0 && $done < $count => 'blocked',
                     $done > 0 || $group->contains(fn (array $node) => ($node['status'] ?? null) === 'doing') => 'active',
                     default => 'future',
                 };
@@ -164,7 +163,6 @@ final class ConstellationProjectionService
 
         $stars = $this->positionStars(
             $stars,
-            collect($edges),
             (int) $plan->id,
         );
 
@@ -196,7 +194,6 @@ final class ConstellationProjectionService
 
         $status = match (true) {
             $taskCount > 0 && $doneCount === $taskCount => 'complete',
-            $stars->contains(fn (array $star) => $star['status'] === 'blocked') => 'attention',
             $doneCount > 0 || $stars->contains(fn (array $star) => $star['status'] === 'current') => 'active',
             default => 'not_started',
         };
@@ -215,7 +212,6 @@ final class ConstellationProjectionService
             'status' => $status,
             'status_label' => match ($status) {
                 'complete' => '完成',
-                'attention' => '前提待ちあり',
                 'active' => '進行中',
                 default => '未着手',
             },
@@ -394,12 +390,10 @@ final class ConstellationProjectionService
 
     /**
      * @param Collection<int,array<string,mixed>> $stars
-     * @param Collection<int,array<string,mixed>> $edges
      * @return Collection<int,array<string,mixed>>
      */
     private function positionStars(
         Collection $stars,
-        Collection $edges,
         int $planId,
     ): Collection {
         $depths = $stars
