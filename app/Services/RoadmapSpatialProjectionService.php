@@ -415,7 +415,7 @@ final class RoadmapSpatialProjectionService
      */
     private function aggregateDepthRole(array $roles): string
     {
-        foreach (['foreground', 'near', 'neutral', 'recessed', 'deep'] as $role) {
+        foreach (['foreground', 'near', 'recessed', 'neutral', 'deep'] as $role) {
             if (in_array($role, $roles, true)) {
                 return $role;
             }
@@ -430,12 +430,12 @@ final class RoadmapSpatialProjectionService
             return 'foreground';
         }
 
-        if ($sourceRole === 'near' || $targetRole === 'near') {
-            return 'near';
-        }
-
         if ($targetRole === 'recessed' || $sourceRole === 'recessed') {
             return 'recessed';
+        }
+
+        if ($sourceRole === 'near' || $targetRole === 'near') {
+            return 'near';
         }
 
         if ($sourceRole === 'deep' && $targetRole === 'deep') {
