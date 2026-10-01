@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\BehaviorEventType;
+use App\Enums\MapSurfaceRole;
 use App\Models\BehaviorEvent;
 use App\Models\Plan;
 use App\Models\Task;
@@ -84,6 +85,7 @@ class BehaviorEventController extends Controller
 
         $mapClientTypes = [
             BehaviorEventType::MapViewed,
+            BehaviorEventType::MapSurfaceViewed,
             BehaviorEventType::MapNodeFocused,
             BehaviorEventType::MapBackUsed,
             BehaviorEventType::MapClassicActionOpened,
@@ -154,6 +156,13 @@ class BehaviorEventController extends Controller
                 'device' => in_array(($metadata['device'] ?? null), ['mobile', 'desktop'], true)
                     ? $metadata['device']
                     : 'unknown',
+                'surface_role' => in_array(
+                    ($metadata['surface_role'] ?? null),
+                    MapSurfaceRole::telemetryValues(),
+                    true,
+                )
+                    ? $metadata['surface_role']
+                    : 'hierarchy_context',
                 'node_type' => in_array(($metadata['node_type'] ?? null), $nodeTypes, true)
                     ? $metadata['node_type']
                     : null,

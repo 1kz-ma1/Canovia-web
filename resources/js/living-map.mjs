@@ -1301,6 +1301,7 @@ export function mountLivingGoalMap({
             metadata: mapTelemetryMetadata(flow, {
                 surface: mapClientSurface(windowRef),
                 device: mapClientDevice(windowRef),
+                surface_role: page.dataset.mapSurfaceRole || 'hierarchy_context',
                 ...extra,
             }, nowMs),
         });
@@ -1309,6 +1310,7 @@ export function mountLivingGoalMap({
     if (telemetryStart.isNew) {
         trackTelemetry('map_viewed');
     }
+    trackTelemetry('map_surface_viewed');
 
     let activeFocusId = null;
     let activeDockId = null;

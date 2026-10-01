@@ -29,6 +29,8 @@
         $hierarchy = is_array($graph['hierarchy'] ?? null) ? $graph['hierarchy'] : [];
         $mapReturnUrl = request()->getRequestUri();
         $currentContextLabel = (string) ($hierarchy['current_label'] ?? ($isIntentHub ? 'Canovia Map' : 'Canovia Map'));
+        $surfaceContext = is_array($mapSurfaceContext ?? null) ? $mapSurfaceContext : [];
+        $complexitySnapshot = is_array($mapComplexitySnapshot ?? null) ? $mapComplexitySnapshot : [];
         $heroKicker = match (true) {
             $mapLevel === 'l0' => 'L0 · CANOVIA NAVIGATION',
             $mapLevel === 'l1' && $isCollaborationMode => 'L1 · SHARED PROJECTS',
@@ -51,6 +53,18 @@
         data-map-hierarchy-depth="{{ (int) ($hierarchy['depth'] ?? 0) }}"
         data-map-parent-url="{{ $hierarchy['parent_url'] ?? '' }}"
         data-map-projection-key="{{ $graph['projection_key'] ?? '' }}"
+        data-map-surface-role="{{ $surfaceContext['role'] ?? 'hierarchy_context' }}"
+        data-map-surface-scope="{{ $surfaceContext['scope'] ?? 'contextual' }}"
+        data-map-complexity-schema="{{ (int) ($complexitySnapshot['schema_version'] ?? 1) }}"
+        data-map-complexity-node-count="{{ (int) ($complexitySnapshot['node_count'] ?? 0) }}"
+        data-map-complexity-edge-count="{{ (int) ($complexitySnapshot['edge_count'] ?? 0) }}"
+        data-map-complexity-plan-count="{{ (int) ($complexitySnapshot['plan_count'] ?? 0) }}"
+        data-map-complexity-task-count="{{ (int) ($complexitySnapshot['task_count'] ?? 0) }}"
+        data-map-complexity-dependency-count="{{ (int) ($complexitySnapshot['dependency_count'] ?? 0) }}"
+        data-map-complexity-cluster-count="{{ (int) ($complexitySnapshot['cluster_count'] ?? 0) }}"
+        data-map-complexity-parallel-cluster-count="{{ (int) ($complexitySnapshot['parallel_cluster_count'] ?? 0) }}"
+        data-map-complexity-phase-count="{{ (int) ($complexitySnapshot['phase_count'] ?? 0) }}"
+        data-map-complexity-blocked-count="{{ (int) ($complexitySnapshot['blocked_count'] ?? 0) }}"
         data-event-url="{{ route('behavior_events.store') }}"
     >
         @include('map.partials.topbar')

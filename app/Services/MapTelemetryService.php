@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\BehaviorEventType;
+use App\Enums\MapSurfaceRole;
 use App\Models\BehaviorEvent;
 use Illuminate\Support\Collection;
 
@@ -18,6 +19,7 @@ final class MapTelemetryService
 
         $types = [
             BehaviorEventType::MapViewed,
+            BehaviorEventType::MapSurfaceViewed,
             BehaviorEventType::MapNodeFocused,
             BehaviorEventType::MapBackUsed,
             BehaviorEventType::MapClassicActionOpened,
@@ -98,7 +100,73 @@ final class MapTelemetryService
             'home_median_start_latency_ms' => ($median = $this->median($homeLatencySeconds)) !== null
                 ? $median * 1000
                 : null,
+            'surface_roles' => $this->surfaceRoleSummary($events),
         ];
+    }
+
+    /**
+     * @param Collection<int,BehaviorEvent> $events
+     * @return array<string,array{views:int,flows:int,focus_rate:float,classic_action_rate:float,back_per_flow:float}>
+     */
+    private function surfaceRoleSummary(Collection $events): array
+    {
+        $roles = [...MapSurfaceRole::telemetryValues(), 'unknown'];
+
+        return collect($roles)
+            ->mapWithKeys(function (string $role) use ($events) {
+                $surfaceViews = $events->filter(function (BehaviorEvent $event) use ($role) {
+                    if ($event->event_type !== BehaviorEventType::MapSurfaceViewed) {
+                        return false;
+                    }
+
+                    $eventRole = (string) data_get($event->metadata, 'surface_role', 'unknown');
+                    $eventRole = $eventRole !== '' ? $eventRole : 'unknown';
+
+                    return $eventRole === $role;
+                });
+
+                $flowIds = $surfaceViews
+                    ->pluck('metadata')
+                    ->map(fn ($metadata) => (string) data_get($metadata, 'flow_id', ''))
+                    ->filter()
+                    ->unique()
+                    ->values();
+
+                $focusedFlows = $events
+                    ->filter(fn (BehaviorEvent $event) => $event->event_type === BehaviorEventType::MapNodeFocused
+                        && (string) data_get($event->metadata, 'surface_role', 'unknown') === $role
+                        && $flowIds->contains((string) data_get($event->metadata, 'flow_id', '')))
+                    ->pluck('metadata')
+                    ->map(fn ($metadata) => (string) data_get($metadata, 'flow_id', ''))
+                    ->filter()
+                    ->unique();
+
+                $actionFlows = $events
+                    ->filter(fn (BehaviorEvent $event) => $event->event_type === BehaviorEventType::MapClassicActionOpened
+                        && (string) data_get($event->metadata, 'surface_role', 'unknown') === $role
+                        && $flowIds->contains((string) data_get($event->metadata, 'flow_id', '')))
+                    ->pluck('metadata')
+                    ->map(fn ($metadata) => (string) data_get($metadata, 'flow_id', ''))
+                    ->filter()
+                    ->unique();
+
+                $backCount = $events
+                    ->filter(fn (BehaviorEvent $event) => $event->event_type === BehaviorEventType::MapBackUsed
+                        && (string) data_get($event->metadata, 'surface_role', 'unknown') === $role
+                        && $flowIds->contains((string) data_get($event->metadata, 'flow_id', '')))
+                    ->count();
+
+                $flowCount = $flowIds->count();
+
+                return [$role => [
+                    'views' => $surfaceViews->count(),
+                    'flows' => $flowCount,
+                    'focus_rate' => $this->rate($focusedFlows->count(), $flowCount),
+                    'classic_action_rate' => $this->rate($actionFlows->count(), $focusedFlows->count()),
+                    'back_per_flow' => $flowCount > 0 ? round($backCount / $flowCount, 2) : 0.0,
+                ]];
+            })
+            ->all();
     }
 
     /**

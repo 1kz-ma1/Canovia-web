@@ -1319,3 +1319,20 @@ Plan DashboardのRoadmapは既存 `RoadmapSpatialProjectionService` をPrimary�
 V49.9は段階導入とする。Phase 1ではSpatial Roadmap PrimaryとRoadmap全体fit、Phase 2ではPlan / leaf Detail Documentのfit-first Camera、Phase 3ではtouch / trackpad pinch・pointer-anchor zoom・Roadmap Container focus・Task leaf detailを導入済み。Phase 4ではSpatial Roadmapへsemantic 2.5D depthを追加する。Taskは `Current=foreground / Ready=near / Future=neutral / Blocked=recessed / Done=deep` とし、Cluster / Phaseは内部Task roleを集約、Dependency / Lineage Edgeにもdepth roleを付与する。BlockedはFutureよりaggregate上の優先度を高くし、進行阻害を視覚上埋もれさせない。2.5Dはscale / offset / opacity / shadow / saturation / z-indexで表現し、WebGL等のreal 3D engineは導入しない。Dashboardには状態Legendを固定表示する。すべてread-only projection / presentation stateで、DB永続化は追加しない。
 
 詳細は `docs/V49.9_SPATIAL_ROADMAP_FIT_DOCUMENT.md` を正とする。
+
+
+## V50.0 Contextual Map Foundation
+
+Map UIをCanovia全体の標準Navigationへ置き換えることは前提にしない。Classicは入力・編集・一覧・日常操作、Dashboardは1つのContextの理解と判断、Mapは複雑な構造・関係・Dependency・Parallelism・Blockerを理解・探索するSpatial Surfaceとして責務を分離する。Mapを使わなくても主要機能を利用できる状態を維持し、Mapは明確な構造理解価値があるContextで使う。
+
+現在のMap requestへdescriptive `MapSurfaceRole` を付与する。roleは `global_navigation / plan_context / collaboration_context / reflection_context / execution_context / hierarchy_context`。Global Navigationだけscope=`global`、その他はscope=`contextual`。RoleはView選択を決定しない。
+
+`MapComplexitySnapshotService` はGraph / Spatial Roadmapからnode / edge / plan / task / dependency / cluster / parallel cluster / phase / blockedの件数と構造booleanだけをrequest時に生成する。score / threshold / preferred_view / recommendationは持たせず、DBへ保存しない。
+
+既存Map Telemetryへwhitelist済みstructural metadata `surface_role` を追加し、Complexity countやuser contentは送信しない。既存 `map_viewed` はFlow開始、`map_surface_viewed` は各Surface入場として分離する。MapTelemetryServiceはSurface Role別にviews / flows / focus_rate / classic_action_rate / back_per_flowを集計する。Adminは用途別検証へ変更するが、Map / Classicの優先SurfaceをTelemetryから自動決定しない。
+
+既存Semantic Zoom / Spatial Memory / Plan Dashboard / Spatial Roadmap / Document Camera / Collaboration Projection等はGlobal Map専用技術として破棄せず、Contextual Spatial Surfaceの共通資産として再利用する。
+
+Inbox Command Center、Automatic View score / threshold、Automatic / Classic / Map preference、AI view selection、Global Map削除はV50.0では実装しない。
+
+詳細は `docs/V50.0_CONTEXTUAL_MAP_FOUNDATION.md` を正とする。
