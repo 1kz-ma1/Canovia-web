@@ -1310,6 +1310,7 @@ export function mountLivingGoalMap({
     if (telemetryStart.isNew) {
         trackTelemetry('map_viewed');
     }
+    trackTelemetry('map_surface_viewed');
 
     let activeFocusId = null;
     let activeDockId = null;
