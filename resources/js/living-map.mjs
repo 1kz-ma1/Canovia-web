@@ -2435,6 +2435,10 @@ export function mountLivingGoalMap({
 
             if (shouldGoBack) {
                 windowRef.history.back();
+            } else if (roadmapTaskTemplateFromLocation()) {
+                const nextState = { ...(windowRef.history.state || {}) };
+                delete nextState.canoviaMapRoadmapTask;
+                windowRef.history.replaceState(nextState, '', mapUrlWithoutFocus(windowRef));
             }
             return;
         }
