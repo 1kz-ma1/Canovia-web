@@ -642,6 +642,74 @@ export function documentZoomScale(
     return Math.round(Math.max(lower, Math.min(upper, next)) * 10000) / 10000;
 }
 
+export function documentPinchScale(
+    startScale,
+    startDistance,
+    currentDistance,
+    {
+        minScale = 0.1,
+        maxScale = 1.6,
+    } = {},
+) {
+    const lower = Math.max(0.05, Number(minScale || 0.1));
+    const upper = Math.max(lower, Number(maxScale || 1.6));
+    const baseScale = Math.max(lower, Math.min(upper, Number(startScale || lower)));
+    const baseDistance = Math.max(1, Number(startDistance || 1));
+    const distance = Math.max(1, Number(currentDistance || 1));
+    const next = baseScale * (distance / baseDistance);
+
+    return Math.round(Math.max(lower, Math.min(upper, next)) * 10000) / 10000;
+}
+
+export function documentRegionFocusScale({
+    viewportWidth = 0,
+    viewportHeight = 0,
+    regionWidth = 0,
+    regionHeight = 0,
+    paddingX = 72,
+    paddingY = 72,
+    minScale = 0.1,
+    maxScale = 1.6,
+} = {}) {
+    return documentFitScale({
+        viewportWidth,
+        viewportHeight,
+        documentWidth: regionWidth,
+        documentHeight: regionHeight,
+        paddingX,
+        paddingY,
+        minScale,
+        maxScale,
+    });
+}
+
+export function documentAnchorScroll({
+    naturalX = 0,
+    naturalY = 0,
+    scale = 1,
+    screenX = 0,
+    screenY = 0,
+    contentWidth = 0,
+    contentHeight = 0,
+    viewportWidth = 0,
+    viewportHeight = 0,
+} = {}) {
+    const safeScale = Math.max(0.01, Number(scale || 1));
+    const maxLeft = Math.max(0, Number(contentWidth || 0) * safeScale - Number(viewportWidth || 0));
+    const maxTop = Math.max(0, Number(contentHeight || 0) * safeScale - Number(viewportHeight || 0));
+
+    return {
+        left: Math.round(Math.max(
+            0,
+            Math.min(maxLeft, Number(naturalX || 0) * safeScale - Number(screenX || 0)),
+        ) * 10) / 10,
+        top: Math.round(Math.max(
+            0,
+            Math.min(maxTop, Number(naturalY || 0) * safeScale - Number(screenY || 0)),
+        ) * 10) / 10,
+    };
+}
+
 export function semanticFocusMatchesNode(
     rect,
     focus,
@@ -1276,6 +1344,10 @@ export function mountLivingGoalMap({
     let semanticArmCandidateId = null;
     let semanticArmCandidateSince = 0;
     let documentBackGesture = null;
+    let activeRoadmapTaskId = null;
+    const documentPointers = new Map();
+    let documentPinchGesture = null;
+    let suppressDocumentClickUntil = 0;
 
     const documentParentUrl = String(page.dataset.mapParentUrl || '');
     const planDocumentMode = Boolean(
@@ -1433,6 +1505,8 @@ export function mountLivingGoalMap({
             mode = 'manual',
             preserveCenter = true,
             resetScroll = false,
+            anchor = null,
+            immediateScroll = false,
         } = {},
     ) => {
         const camera = resolveDocumentCamera(scrollElement);
@@ -1472,6 +1546,20 @@ export function mountLivingGoalMap({
             if (resetScroll || camera.mode === 'fit') {
                 scrollElement.scrollLeft = 0;
                 scrollElement.scrollTop = 0;
+            } else if (anchor && Number.isFinite(Number(anchor.naturalX)) && Number.isFinite(Number(anchor.naturalY))) {
+                const nextScroll = documentAnchorScroll({
+                    naturalX: Number(anchor.naturalX),
+                    naturalY: Number(anchor.naturalY),
+                    scale: camera.scale,
+                    screenX: Number(anchor.screenX || 0),
+                    screenY: Number(anchor.screenY || 0),
+                    contentWidth: measurement.width,
+                    contentHeight: measurement.height,
+                    viewportWidth: measurement.viewportWidth,
+                    viewportHeight: measurement.viewportHeight,
+                });
+                scrollElement.scrollLeft = nextScroll.left;
+                scrollElement.scrollTop = nextScroll.top;
             } else if (preserveCenter) {
                 const nextWidth = measurement.width * camera.scale;
                 const nextHeight = measurement.height * camera.scale;
@@ -1490,7 +1578,9 @@ export function mountLivingGoalMap({
             syncDocumentPosition(scrollElement);
         };
 
-        if (typeof windowRef.requestAnimationFrame === 'function') {
+        if (immediateScroll) {
+            settleScroll();
+        } else if (typeof windowRef.requestAnimationFrame === 'function') {
             windowRef.requestAnimationFrame(settleScroll);
         } else {
             windowRef.setTimeout(settleScroll, 0);
@@ -1499,16 +1589,20 @@ export function mountLivingGoalMap({
         return true;
     };
 
-    const fitDocumentCamera = (scrollElement, { resetScroll = true } = {}) => (
-        applyDocumentCameraScale(scrollElement, 1, {
+    const fitDocumentCamera = (scrollElement, { resetScroll = true } = {}) => {
+        const camera = resolveDocumentCamera(scrollElement);
+        clearDocumentRegionFocus(camera?.viewport);
+
+        return applyDocumentCameraScale(scrollElement, 1, {
             mode: 'fit',
             preserveCenter: false,
             resetScroll,
-        })
-    );
+        });
+    };
 
     const stepDocumentCamera = (scrollElement, direction) => {
         const camera = resolveDocumentCamera(scrollElement);
+        clearDocumentRegionFocus(camera?.viewport);
         const measurement = measureDocumentCamera(camera);
         if (!camera || !measurement) return false;
 
@@ -1525,6 +1619,89 @@ export function mountLivingGoalMap({
             mode: nextMode,
             preserveCenter: nextMode !== 'fit',
             resetScroll: nextMode === 'fit',
+        });
+    };
+
+    const clearDocumentRegionFocus = (viewport) => {
+        if (!viewport) return;
+        viewport.querySelectorAll?.('.is-roadmap-region-focused')?.forEach?.((element) => {
+            element.classList.remove('is-roadmap-region-focused');
+        });
+        delete viewport.dataset.mapDocumentRegionFocus;
+    };
+
+    const zoomDocumentAtPoint = (scrollElement, targetScale, clientX, clientY, { immediate = false } = {}) => {
+        const camera = resolveDocumentCamera(scrollElement);
+        const measurement = measureDocumentCamera(camera);
+        if (!camera || !measurement) return false;
+
+        const rect = scrollElement.getBoundingClientRect?.();
+        if (!rect) return false;
+
+        const screenX = Number(clientX || 0) - Number(rect.left || 0);
+        const screenY = Number(clientY || 0) - Number(rect.top || 0);
+        const currentScale = Math.max(0.01, Number(camera.scale || measurement.fitScale));
+        const naturalX = (Number(scrollElement.scrollLeft || 0) + screenX) / currentScale;
+        const naturalY = (Number(scrollElement.scrollTop || 0) + screenY) / currentScale;
+        const scale = Math.max(measurement.fitScale, Math.min(1.6, Number(targetScale || camera.scale)));
+        const mode = Math.abs(scale - measurement.fitScale) <= 0.005 ? 'fit' : 'manual';
+
+        return applyDocumentCameraScale(scrollElement, scale, {
+            mode,
+            preserveCenter: false,
+            resetScroll: mode === 'fit',
+            anchor: mode === 'fit' ? null : { naturalX, naturalY, screenX, screenY },
+            immediateScroll: immediate,
+        });
+    };
+
+    const focusDocumentRegion = (regionElement) => {
+        const scrollElement = regionElement?.closest?.('[data-map-document-scroll]');
+        const camera = resolveDocumentCamera(scrollElement);
+        const measurement = measureDocumentCamera(camera);
+        if (!scrollElement || !camera || !measurement) return false;
+
+        const regionRect = regionElement.getBoundingClientRect?.();
+        const canvasRect = camera.canvas.getBoundingClientRect?.();
+        if (!regionRect || !canvasRect || regionRect.width <= 0 || regionRect.height <= 0) return false;
+
+        const currentScale = Math.max(0.01, Number(camera.scale || measurement.fitScale));
+        const naturalRegionWidth = regionRect.width / currentScale;
+        const naturalRegionHeight = regionRect.height / currentScale;
+        const naturalX = (
+            regionRect.left - canvasRect.left + regionRect.width / 2
+        ) / currentScale;
+        const naturalY = (
+            regionRect.top - canvasRect.top + regionRect.height / 2
+        ) / currentScale;
+
+        const targetScale = documentRegionFocusScale({
+            viewportWidth: measurement.viewportWidth,
+            viewportHeight: measurement.viewportHeight,
+            regionWidth: naturalRegionWidth,
+            regionHeight: naturalRegionHeight,
+            paddingX: 72,
+            paddingY: 72,
+            minScale: measurement.fitScale,
+            maxScale: 1.6,
+        });
+
+        clearDocumentRegionFocus(camera.viewport);
+        regionElement.classList.add('is-roadmap-region-focused');
+        const regionType = String(regionElement.dataset.roadmapRegionType || 'region');
+        const regionId = String(regionElement.dataset.roadmapRegionId || '');
+        camera.viewport.dataset.mapDocumentRegionFocus = regionType+':'+regionId;
+
+        return applyDocumentCameraScale(scrollElement, targetScale, {
+            mode: Math.abs(targetScale - measurement.fitScale) <= 0.005 ? 'fit' : 'manual',
+            preserveCenter: false,
+            resetScroll: false,
+            anchor: {
+                naturalX,
+                naturalY,
+                screenX: measurement.viewportWidth / 2,
+                screenY: measurement.viewportHeight / 2,
+            },
         });
     };
 
@@ -1944,7 +2121,9 @@ export function mountLivingGoalMap({
             surfaceContent.append(template.content.cloneNode(true));
         }
 
-        const presentationKind = nodeElementById.get(nodeId)?.dataset?.mapPresentationKind || '';
+        const presentationKind = nodeElementById.get(nodeId)?.dataset?.mapPresentationKind
+            || template?.dataset?.mapPresentationKind
+            || '';
         const isLeafDocument = presentationKind === 'leaf';
 
         syncDetailDocumentTitle(nodeId);
