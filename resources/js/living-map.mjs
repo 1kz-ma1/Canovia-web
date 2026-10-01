@@ -2165,6 +2165,9 @@ export function mountLivingGoalMap({
     };
 
     const hideSurface = () => {
+        activeRoadmapTaskId = null;
+        delete page.dataset.mapRoadmapTask;
+
         if (surface && workspace) {
             setSurfaceExpanded(false);
             surface.setAttribute('aria-hidden', 'true');
@@ -3638,6 +3641,35 @@ export function mountLivingGoalMap({
     }
 
     function onPageClick(event) {
+        const documentTarget = event.target.closest?.('[data-map-document-scroll]');
+        if (documentTarget && Date.now() < suppressDocumentClickUntil) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+        }
+
+        const roadmapTask = event.target.closest?.('[data-roadmap-task-detail-open]');
+        if (roadmapTask && page.contains(roadmapTask)) {
+            event.preventDefault();
+            const templateId = roadmapTask.dataset.roadmapTaskTemplate || '';
+            openRoadmapTaskDetail(templateId);
+            return;
+        }
+
+        const roadmapRegion = event.target.closest?.('[data-roadmap-region-focus]');
+        if (roadmapRegion && page.contains(roadmapRegion)) {
+            event.preventDefault();
+            focusDocumentRegion(roadmapRegion);
+            return;
+        }
+
+        const localDocumentBack = event.target.closest?.('[data-map-document-back]');
+        if (localDocumentBack && activeRoadmapTaskId && surface?.contains?.(localDocumentBack)) {
+            event.preventDefault();
+            clearRoadmapTaskDetail();
+            return;
+        }
+
         const cameraControl = event.target.closest?.(
             '[data-map-document-zoom-out], [data-map-document-fit], [data-map-document-zoom-in]'
         );
@@ -3806,7 +3838,9 @@ export function mountLivingGoalMap({
     }
 
     function onKeyDown(event) {
-        if (event.key === 'Escape' && (activeFocusId || activeDockId)) closeContext();
+        if (event.key === 'Escape' && (activeRoadmapTaskId || activeFocusId || activeDockId)) {
+            closeContext();
+        }
     }
 
     function onPopState(event) {
