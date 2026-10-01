@@ -21,6 +21,7 @@ enum BehaviorEventType: string
 
     // V42.4 Living Map validation telemetry.
     case MapViewed = 'map_viewed';
+    case MapSurfaceViewed = 'map_surface_viewed';
     case MapNodeFocused = 'map_node_focused';
     case MapBackUsed = 'map_back_used';
     case MapClassicActionOpened = 'map_classic_action_opened';
@@ -54,6 +55,7 @@ enum BehaviorEventType: string
             self::PlanTabViewed->value,
             self::TaskViewed->value,
             self::MapViewed->value,
+            self::MapSurfaceViewed->value,
             self::MapNodeFocused->value,
             self::MapBackUsed->value,
             self::MapClassicActionOpened->value,
