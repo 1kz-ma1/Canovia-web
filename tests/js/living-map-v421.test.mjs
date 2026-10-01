@@ -25,6 +25,8 @@ import {
     mapNodeCounterScale,
     documentEdgeBackDecision,
     documentScrollMetrics,
+    documentFitScale,
+    documentZoomScale,
     semanticFocusMatchesNode,
     browserZoomDiverged,
     shouldCaptureMapPinch,
@@ -232,6 +234,49 @@ test('document position indicator reflects visible width and horizontal progress
         progress: 0,
         viewportRatio: 1,
     });
+});
+
+test('document fit scale shows the whole page without enlarging beyond 100 percent', () => {
+    assert.equal(documentFitScale({
+        viewportWidth: 400,
+        viewportHeight: 600,
+        documentWidth: 800,
+        documentHeight: 500,
+    }), 0.5);
+
+    assert.equal(documentFitScale({
+        viewportWidth: 900,
+        viewportHeight: 700,
+        documentWidth: 600,
+        documentHeight: 500,
+    }), 1);
+
+    assert.equal(documentFitScale({
+        viewportWidth: 400,
+        viewportHeight: 600,
+        documentWidth: 600,
+        documentHeight: 1200,
+    }), 0.5);
+});
+
+test('document explicit zoom grows from fit and never shrinks below fit', () => {
+    assert.equal(documentZoomScale(0.4, 'in', {
+        minScale: 0.4,
+        maxScale: 1.6,
+        factor: 1.25,
+    }), 0.5);
+
+    assert.equal(documentZoomScale(0.5, 'out', {
+        minScale: 0.4,
+        maxScale: 1.6,
+        factor: 1.25,
+    }), 0.4);
+
+    assert.equal(documentZoomScale(1.5, 'in', {
+        minScale: 0.4,
+        maxScale: 1.6,
+        factor: 1.25,
+    }), 1.6);
 });
 
 test('desktop semantic expansion requires the pinch focus to be on or near a node', () => {

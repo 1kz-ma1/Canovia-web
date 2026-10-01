@@ -32,6 +32,7 @@
         </div>
 
         <div class="canovia-map-context-tools">
+            @include('map.partials.document-camera-controls')
             <button
                 type="button"
                 class="canovia-map-context-expand"
@@ -50,8 +51,10 @@
         role="region"
         aria-label="詳細資料"
     >
-        <div class="canovia-map-context-card" data-map-document-canvas>
-            <div data-map-context-content></div>
+        <div class="canovia-map-document-stage" data-map-document-stage>
+            <div class="canovia-map-context-card" data-map-document-canvas>
+                <div data-map-context-content></div>
+            </div>
         </div>
     </div>
 

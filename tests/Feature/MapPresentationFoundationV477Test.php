@@ -167,7 +167,9 @@ class MapPresentationFoundationV477Test extends TestCase
         $this->assertStringContainsString('data-map-document-viewport', $blade);
         $this->assertStringContainsString('data-map-document-chrome', $blade);
         $this->assertStringContainsString('data-map-document-scroll', $blade);
+        $this->assertStringContainsString('data-map-document-stage', $blade);
         $this->assertStringContainsString('data-map-document-canvas', $blade);
+        $this->assertStringContainsString('document-camera-controls', $blade);
         $this->assertStringContainsString('data-map-document-back', $blade);
         $this->assertStringContainsString('data-map-document-title', $blade);
         $this->assertStringContainsString('data-map-document-position', $blade);

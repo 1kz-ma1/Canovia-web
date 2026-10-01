@@ -596,6 +596,52 @@ export function documentScrollMetrics({
     };
 }
 
+export function documentFitScale({
+    viewportWidth = 0,
+    viewportHeight = 0,
+    documentWidth = 0,
+    documentHeight = 0,
+    paddingX = 0,
+    paddingY = 0,
+    minScale = 0.1,
+    maxScale = 1,
+} = {}) {
+    const viewportW = Math.max(0, Number(viewportWidth || 0) - Math.max(0, Number(paddingX || 0)));
+    const viewportH = Math.max(0, Number(viewportHeight || 0) - Math.max(0, Number(paddingY || 0)));
+    const documentW = Math.max(0, Number(documentWidth || 0));
+    const documentH = Math.max(0, Number(documentHeight || 0));
+
+    if (viewportW <= 0 || viewportH <= 0 || documentW <= 0 || documentH <= 0) {
+        return 1;
+    }
+
+    const lower = Math.max(0.05, Number(minScale || 0.1));
+    const upper = Math.max(lower, Number(maxScale || 1));
+    const scale = Math.min(viewportW / documentW, viewportH / documentH, upper);
+
+    return Math.round(Math.max(lower, scale) * 10000) / 10000;
+}
+
+export function documentZoomScale(
+    currentScale,
+    direction,
+    {
+        minScale = 0.1,
+        maxScale = 1.6,
+        factor = 1.25,
+    } = {},
+) {
+    const lower = Math.max(0.05, Number(minScale || 0.1));
+    const upper = Math.max(lower, Number(maxScale || 1.6));
+    const current = Math.max(lower, Math.min(upper, Number(currentScale || lower)));
+    const stepFactor = Math.max(1.01, Number(factor || 1.25));
+    const next = direction === 'out'
+        ? current / stepFactor
+        : current * stepFactor;
+
+    return Math.round(Math.max(lower, Math.min(upper, next)) * 10000) / 10000;
+}
+
 export function semanticFocusMatchesNode(
     rect,
     focus,
@@ -1146,6 +1192,7 @@ export function mountLivingGoalMap({
     const planDocumentScroll = page.querySelector('[data-map-plan-workspace] [data-map-document-scroll]');
     const detailDocumentScroll = surface?.querySelector?.('[data-map-document-scroll]') || null;
     const detailDocumentTitle = surface?.querySelector?.('[data-map-document-title]') || null;
+    const documentCameraStates = new Map();
 
     const nodes = nodeElements.map((element) => ({
         id: element.dataset.mapNodeId,
@@ -1249,6 +1296,259 @@ export function mountLivingGoalMap({
         page.classList.toggle('is-detail-document-mode', detailActive);
         page.classList.toggle('is-document-mode', planDocumentMode || detailActive);
         surface?.classList?.toggle('is-dashboard-document', detailActive);
+
+        if (!detailActive) {
+            resetDocumentCamera(detailDocumentScroll);
+        }
+    };
+
+    const resolveDocumentCamera = (scrollElement) => {
+        if (!scrollElement) return null;
+
+        const existing = documentCameraStates.get(scrollElement);
+        if (existing) return existing;
+
+        const viewport = scrollElement.closest?.('[data-map-document-viewport]');
+        const stage = scrollElement.querySelector?.('[data-map-document-stage]');
+        const canvas = stage?.querySelector?.('[data-map-document-canvas]') || null;
+
+        if (!viewport || !stage || !canvas) return null;
+
+        const camera = {
+            viewport,
+            scroll: scrollElement,
+            stage,
+            canvas,
+            scale: 1,
+            fitScale: 1,
+            mode: 'fit',
+            naturalWidth: 0,
+            naturalHeight: 0,
+        };
+        documentCameraStates.set(scrollElement, camera);
+
+        return camera;
+    };
+
+    const resetDocumentCamera = (scrollElement) => {
+        if (!scrollElement) return;
+
+        const camera = resolveDocumentCamera(scrollElement);
+        if (!camera) return;
+
+        camera.scale = 1;
+        camera.fitScale = 1;
+        camera.mode = 'fit';
+        camera.naturalWidth = 0;
+        camera.naturalHeight = 0;
+        camera.stage.style.removeProperty('--document-stage-width');
+        camera.stage.style.removeProperty('--document-stage-height');
+        camera.canvas.style.removeProperty('--document-scale');
+        camera.viewport.classList.remove('is-document-camera-ready', 'is-document-camera-fit');
+        delete camera.viewport.dataset.mapDocumentCameraMode;
+        delete camera.viewport.dataset.mapDocumentScale;
+        delete camera.viewport.dataset.mapDocumentFitScale;
+        syncDocumentCameraControls(camera);
+    };
+
+    const documentCameraPadding = (scrollElement) => {
+        const style = windowRef.getComputedStyle?.(scrollElement);
+        if (!style) return { x: 0, y: 0 };
+
+        return {
+            x: Math.max(0,
+                (Number.parseFloat(style.paddingLeft) || 0)
+                + (Number.parseFloat(style.paddingRight) || 0)
+            ),
+            y: Math.max(0,
+                (Number.parseFloat(style.paddingTop) || 0)
+                + (Number.parseFloat(style.paddingBottom) || 0)
+            ),
+        };
+    };
+
+    const measureDocumentCamera = (camera) => {
+        if (!camera) return null;
+
+        const width = Math.max(0, Number(camera.canvas.offsetWidth || camera.canvas.scrollWidth || 0));
+        const height = Math.max(0, Number(camera.canvas.offsetHeight || camera.canvas.scrollHeight || 0));
+        const viewportWidth = Math.max(0, Number(camera.scroll.clientWidth || 0));
+        const viewportHeight = Math.max(0, Number(camera.scroll.clientHeight || 0));
+
+        if (width <= 0 || height <= 0 || viewportWidth <= 0 || viewportHeight <= 0) {
+            return null;
+        }
+
+        const padding = documentCameraPadding(camera.scroll);
+        const fitScale = documentFitScale({
+            viewportWidth,
+            viewportHeight,
+            documentWidth: width,
+            documentHeight: height,
+            paddingX: padding.x,
+            paddingY: padding.y,
+            minScale: 0.1,
+            maxScale: 1,
+        });
+
+        camera.naturalWidth = width;
+        camera.naturalHeight = height;
+        camera.fitScale = fitScale;
+
+        return {
+            width,
+            height,
+            viewportWidth,
+            viewportHeight,
+            fitScale,
+        };
+    };
+
+    const syncDocumentCameraControls = (camera) => {
+        if (!camera) return;
+
+        const label = camera.viewport.querySelector?.('[data-map-document-zoom-label]');
+        const zoomOut = camera.viewport.querySelector?.('[data-map-document-zoom-out]');
+        const zoomIn = camera.viewport.querySelector?.('[data-map-document-zoom-in]');
+        const fit = camera.viewport.querySelector?.('[data-map-document-fit]');
+
+        if (label) label.textContent = Math.round(camera.scale * 100)+'%';
+        if (zoomOut) zoomOut.disabled = camera.scale <= camera.fitScale + 0.005;
+        if (zoomIn) zoomIn.disabled = camera.scale >= 1.595;
+        if (fit) {
+            const active = camera.mode === 'fit';
+            fit.classList.toggle('is-active', active);
+            fit.setAttribute('aria-pressed', active ? 'true' : 'false');
+        }
+
+        camera.viewport.dataset.mapDocumentCameraMode = camera.mode;
+        camera.viewport.dataset.mapDocumentScale = camera.scale.toFixed(4);
+        camera.viewport.dataset.mapDocumentFitScale = camera.fitScale.toFixed(4);
+    };
+
+    const applyDocumentCameraScale = (
+        scrollElement,
+        requestedScale,
+        {
+            mode = 'manual',
+            preserveCenter = true,
+            resetScroll = false,
+        } = {},
+    ) => {
+        const camera = resolveDocumentCamera(scrollElement);
+        const measurement = measureDocumentCamera(camera);
+        if (!camera || !measurement) return false;
+
+        const previousScale = Math.max(0.01, Number(camera.scale || measurement.fitScale));
+        const previousWidth = measurement.width * previousScale;
+        const previousHeight = measurement.height * previousScale;
+        const centerRatioX = previousWidth > 0
+            ? Math.max(0, Math.min(1, (scrollElement.scrollLeft + measurement.viewportWidth / 2) / previousWidth))
+            : 0.5;
+        const centerRatioY = previousHeight > 0
+            ? Math.max(0, Math.min(1, (scrollElement.scrollTop + measurement.viewportHeight / 2) / previousHeight))
+            : 0.5;
+
+        const scale = mode === 'fit'
+            ? measurement.fitScale
+            : Math.max(measurement.fitScale, Math.min(1.6, Number(requestedScale || measurement.fitScale)));
+
+        camera.scale = Math.round(scale * 10000) / 10000;
+        camera.mode = mode === 'fit' || Math.abs(camera.scale - measurement.fitScale) <= 0.005
+            ? 'fit'
+            : 'manual';
+
+        camera.stage.style.setProperty('--document-stage-width', (measurement.width * camera.scale).toFixed(2)+'px');
+        camera.stage.style.setProperty('--document-stage-height', (measurement.height * camera.scale).toFixed(2)+'px');
+        camera.canvas.style.setProperty('--document-scale', camera.scale.toFixed(4));
+        camera.viewport.classList.add('is-document-camera-ready');
+        camera.viewport.classList.toggle('is-document-camera-fit', camera.mode === 'fit');
+
+        syncDocumentCameraControls(camera);
+
+        const settleScroll = () => {
+            if (disposed || !scrollElement.isConnected) return;
+
+            if (resetScroll || camera.mode === 'fit') {
+                scrollElement.scrollLeft = 0;
+                scrollElement.scrollTop = 0;
+            } else if (preserveCenter) {
+                const nextWidth = measurement.width * camera.scale;
+                const nextHeight = measurement.height * camera.scale;
+                const maxLeft = Math.max(0, nextWidth - measurement.viewportWidth);
+                const maxTop = Math.max(0, nextHeight - measurement.viewportHeight);
+                scrollElement.scrollLeft = Math.max(
+                    0,
+                    Math.min(maxLeft, centerRatioX * nextWidth - measurement.viewportWidth / 2),
+                );
+                scrollElement.scrollTop = Math.max(
+                    0,
+                    Math.min(maxTop, centerRatioY * nextHeight - measurement.viewportHeight / 2),
+                );
+            }
+
+            syncDocumentPosition(scrollElement);
+        };
+
+        if (typeof windowRef.requestAnimationFrame === 'function') {
+            windowRef.requestAnimationFrame(settleScroll);
+        } else {
+            windowRef.setTimeout(settleScroll, 0);
+        }
+
+        return true;
+    };
+
+    const fitDocumentCamera = (scrollElement, { resetScroll = true } = {}) => (
+        applyDocumentCameraScale(scrollElement, 1, {
+            mode: 'fit',
+            preserveCenter: false,
+            resetScroll,
+        })
+    );
+
+    const stepDocumentCamera = (scrollElement, direction) => {
+        const camera = resolveDocumentCamera(scrollElement);
+        const measurement = measureDocumentCamera(camera);
+        if (!camera || !measurement) return false;
+
+        const nextScale = documentZoomScale(camera.scale, direction, {
+            minScale: measurement.fitScale,
+            maxScale: 1.6,
+            factor: 1.25,
+        });
+        const nextMode = Math.abs(nextScale - measurement.fitScale) <= 0.005
+            ? 'fit'
+            : 'manual';
+
+        return applyDocumentCameraScale(scrollElement, nextScale, {
+            mode: nextMode,
+            preserveCenter: nextMode !== 'fit',
+            resetScroll: nextMode === 'fit',
+        });
+    };
+
+    const refreshDocumentCameras = () => {
+        for (const scrollElement of documentScrolls) {
+            const camera = resolveDocumentCamera(scrollElement);
+            if (!camera || scrollElement.clientWidth <= 0 || scrollElement.clientHeight <= 0) continue;
+            if (
+                camera.viewport.dataset.mapDocumentKind === 'detail'
+                && !camera.viewport.classList.contains('is-dashboard-document')
+            ) {
+                continue;
+            }
+
+            if (camera.mode === 'fit') {
+                fitDocumentCamera(scrollElement, { resetScroll: false });
+            } else {
+                applyDocumentCameraScale(scrollElement, camera.scale, {
+                    mode: 'manual',
+                    preserveCenter: true,
+                    resetScroll: false,
+                });
+            }
+        }
     };
 
     const syncDocumentPosition = (scrollElement) => {
@@ -1651,7 +1951,12 @@ export function mountLivingGoalMap({
         setDetailDocumentMode(isLeafDocument);
         resetDocumentScroll(detailDocumentScroll);
         windowRef.setTimeout(() => {
-            if (!disposed) syncDocumentPosition(detailDocumentScroll);
+            if (disposed) return;
+            if (isLeafDocument) {
+                fitDocumentCamera(detailDocumentScroll);
+            } else {
+                syncDocumentPosition(detailDocumentScroll);
+            }
         }, 0);
 
         setSurfaceExpanded(false);
@@ -2755,6 +3060,7 @@ export function mountLivingGoalMap({
             refreshMapViewport();
             applyBaseLayout();
             applyMapView(mapView, { immediate: true });
+            refreshDocumentCameras();
             syncAllDocumentPositions();
 
             if (activeFocusId) {
@@ -2928,6 +3234,24 @@ export function mountLivingGoalMap({
     }
 
     function onPageClick(event) {
+        const cameraControl = event.target.closest?.(
+            '[data-map-document-zoom-out], [data-map-document-fit], [data-map-document-zoom-in]'
+        );
+        if (cameraControl && page.contains(cameraControl)) {
+            event.preventDefault();
+            const viewport = cameraControl.closest?.('[data-map-document-viewport]');
+            const scrollElement = viewport?.querySelector?.('[data-map-document-scroll]') || null;
+
+            if (cameraControl.matches('[data-map-document-fit]')) {
+                fitDocumentCamera(scrollElement);
+            } else if (cameraControl.matches('[data-map-document-zoom-out]')) {
+                stepDocumentCamera(scrollElement, 'out');
+            } else {
+                stepDocumentCamera(scrollElement, 'in');
+            }
+            return;
+        }
+
         const closeControl = event.target.closest?.('[data-map-context-close]');
         if (closeControl && page.contains(closeControl)) {
             event.preventDefault();
@@ -3114,6 +3438,7 @@ export function mountLivingGoalMap({
         refreshMapViewport();
         applyBaseLayout();
         applyMapView(mapView, { immediate: true });
+        refreshDocumentCameras();
         syncAllDocumentPositions();
         const pending = readPending(windowRef);
         if (!pending) return;
@@ -3153,7 +3478,10 @@ export function mountLivingGoalMap({
     }
     syncAllDocumentPositions();
     windowRef.setTimeout(() => {
-        if (!disposed) syncAllDocumentPositions();
+        if (disposed) return;
+        if (planDocumentScroll) fitDocumentCamera(planDocumentScroll);
+        refreshDocumentCameras();
+        syncAllDocumentPositions();
     }, 0);
     zoomOutControl?.addEventListener('click', onZoomOut);
     zoomInControl?.addEventListener('click', onZoomIn);

@@ -1,0 +1,30 @@
+<div
+    class="canovia-map-document-camera"
+    data-map-document-camera
+    role="group"
+    aria-label="資料の拡大縮小"
+>
+    <button
+        type="button"
+        class="canovia-map-document-camera-button"
+        data-map-document-zoom-out
+        aria-label="資料を縮小"
+    >−</button>
+    <button
+        type="button"
+        class="canovia-map-document-camera-fit"
+        data-map-document-fit
+        aria-label="資料全体を表示"
+    >全体</button>
+    <button
+        type="button"
+        class="canovia-map-document-camera-button"
+        data-map-document-zoom-in
+        aria-label="資料を拡大"
+    >＋</button>
+    <output
+        class="canovia-map-document-camera-label"
+        data-map-document-zoom-label
+        aria-label="現在の表示倍率"
+    >100%</output>
+</div>
