@@ -170,9 +170,9 @@ class CanoviaMapTelemetryV424Test extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertSee('LIVING MAP VALIDATION')
-            ->assertSee('MapをPrimary Home候補として検証')
-            ->assertSee('Primary Homeへの昇格は自動化しません');
+            ->assertSee('MAP SURFACE VALIDATION')
+            ->assertSee('Map Surfaceを用途別に検証')
+            ->assertSee('Map / Classicの優先SurfaceはこのTelemetryから自動決定しません');
     }
 
     private function scenario(): array
