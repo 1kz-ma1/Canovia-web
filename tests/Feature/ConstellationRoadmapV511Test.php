@@ -121,7 +121,30 @@ class ConstellationRoadmapV511Test extends TestCase
         $this->assertSame($first->id, $selected->viewData('plan')->id);
         $this->assertNotNull($selected->viewData('roadmap'));
         $this->assertNotNull($selected->viewData('roadmapSpatial'));
-        $this->assertSame($second->id, $overview->viewData('plans')->last()->id);
+        $this->assertSame(
+            [$first->id, $second->id],
+            $overview->viewData('constellations')->pluck('plan_id')->all(),
+        );
+    }
+
+    public function test_new_plan_appends_to_stable_constellation_orbit_without_moving_existing_plans(): void
+    {
+        [$user, $first] = $this->scenario('Stable First', 5, 60);
+
+        $before = $this->actingAs($user)->get(route('roadmap.index'));
+        $firstBefore = $before->viewData('constellations')
+            ->firstWhere('plan_id', $first->id);
+
+        [, $second] = $this->scenario('Stable Second', 5, 60, $user);
+
+        $after = $this->actingAs($user)->get(route('roadmap.index'));
+        $firstAfter = $after->viewData('constellations')
+            ->firstWhere('plan_id', $first->id);
+        $secondAfter = $after->viewData('constellations')
+            ->firstWhere('plan_id', $second->id);
+
+        $this->assertSame($firstBefore['orbit'], $firstAfter['orbit']);
+        $this->assertNotSame($firstAfter['orbit'], $secondAfter['orbit']);
     }
 
     public function test_constellation_runtime_opens_star_task_list_and_mounts_after_full_and_instant_navigation(): void
