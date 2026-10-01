@@ -3539,9 +3539,9 @@ function initializeInstantCorePage() {
 document.addEventListener('canovia:page-ready', initializeInstantCorePage);
 
 document.addEventListener('DOMContentLoaded', () => {
+    mountDashboardDocuments();
     if (document.body?.dataset.focusMode === '1') return;
     mountCanoviaInstantNavigation();
-    mountDashboardDocuments();
     mountLivingGoalMap({ recordBehaviorRef: recordBehavior });
 });
 
