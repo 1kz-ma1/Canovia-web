@@ -29,8 +29,12 @@ final class RoadmapPageDataService
         $selectedPlanId ??= (int) $request->integer('plan_id');
         $plan = $selectedPlanId > 0 ? $plans->firstWhere('id', $selectedPlanId) : null;
 
+        $constellationPlans = $plans
+            ->sortBy(fn ($candidate) => (int) $candidate->id)
+            ->values();
+
         $constellations = collect();
-        foreach ($plans->values() as $index => $candidate) {
+        foreach ($constellationPlans as $index => $candidate) {
             $baseRoadmap = $this->roadmapService->build($candidate);
             $baseSpatial = $this->roadmapSpatialProjection->build($baseRoadmap);
 
@@ -89,8 +93,7 @@ final class RoadmapPageDataService
             );
             $roadmapSpatial = $this->roadmapSpatialProjection->build($roadmap);
 
-            $selectedIndex = $plans
-                ->values()
+            $selectedIndex = $constellationPlans
                 ->search(fn ($candidate) => (int) $candidate->id === (int) $plan->id);
 
             if ($selectedIndex !== false) {
