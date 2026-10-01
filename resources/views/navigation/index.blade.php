@@ -8,7 +8,7 @@
             <div class="relative z-10 min-w-0">
                 <p class="pk-v18-eyebrow">EXECUTION / TAKE ACTION</p>
                 <h1>今、実行する一歩を決めよう。</h1>
-                <p>今は既存のおすすめTaskを入口にし、後続PhaseでPlan種別ごとの実行Workspaceへ拡張します。</p>
+                <p>おすすめTaskから、そのまま実行へ入れます。必要なときだけ条件を変えて選び直せます。</p>
             </div>
             <div class="pk-v18-page-guide" aria-hidden="true">
                 <span>いっしょに
