@@ -1351,3 +1351,14 @@ V49.9でMap最下層に実装したDocument Cameraのcamera mathを `resources/j
 Dashboard DocumentはMapではなく、必要な場合だけSpatial Roadmap等のContextual Mapを一Regionとして内包する。大量Form / Table / Settings / Chat / Task listなど順次操作が適する画面はClassic / Scrollを維持する。
 
 詳細は `docs/V50.1_DASHBOARD_DOCUMENT_FOUNDATION.md` を正とする。
+
+
+## V50.2 Plan Dashboard Information Board
+
+V50.1 Dashboard Document FoundationをPlan Dashboardへ適用し、Plan詳細を縦スクロール中心ではなく一枚の12-column Information Boardとして構成する。配置はOverview 4 + Progress 8、Next Action 4 + Attention 4 + Activity 4、Spatial Roadmap 12 / 2 rowsをPrimaryとする。MobileでもRegionを一列へreflowせず、70remの安定したDocument geometryを初期fitして必要箇所へzoomする。
+
+`PlanDashboardBoardService` はPlan / Progress / canonical Roadmap / Spatial Roadmapからread-only Board projectionを生成する。Current/doing/readyをNext Actionへ、ready Task最大3件、blocked Task最大3件、最新WorkLog最大4件、ready/blocked/parallel等のsignalsを提供する。Attentionはblocked、Plan status、current、readyの順で決定論的に作り、V50.2ではAI生成やAI Insight表記を行わない。
+
+Next / Ready / Blockedは既存Roadmap Task Detailへ接続し、Spatial RoadmapもBoard内のStructure Regionとして既存V49.9 interactionを維持する。追加DB / layout persistence / user customizationは行わない。
+
+詳細は `docs/V50.2_PLAN_DASHBOARD_INFORMATION_BOARD.md` を正とする。
