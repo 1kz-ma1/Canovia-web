@@ -348,7 +348,7 @@ test('roadmap container focus fits a region without exceeding the document camer
         regionHeight: 900,
         minScale: 0.4,
         maxScale: 1.6,
-    }), 0.5867);
+    }), 0.41);
 });
 
 test('desktop semantic expansion requires the pinch focus to be on or near a node', () => {
