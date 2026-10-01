@@ -9,6 +9,7 @@
 @import './plan-workspace.css';
 @import './document-canvas.css';
 @import './document-surface-refinement.css';
+@import './document-camera.css';
 
 /*
  * Merge-safe Map CSS entry.
