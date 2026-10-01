@@ -1336,3 +1336,18 @@ Map UIをCanovia全体の標準Navigationへ置き換えることは前提にし
 Inbox Command Center、Automatic View score / threshold、Automatic / Classic / Map preference、AI view selection、Global Map削除はV50.0では実装しない。
 
 詳細は `docs/V50.0_CONTEXTUAL_MAP_FOUNDATION.md` を正とする。
+
+
+## V50.1 Dashboard Document Foundation
+
+Canoviaの主要Surface責務を、Classic=入力・編集・一覧・日常操作、Dashboard Document=複数情報の俯瞰・比較・判断、Map=構造・関係・Dependency・Parallelismの探索、として分離する。
+
+V49.9でMap最下層に実装したDocument Cameraのcamera mathを `resources/js/dashboard-document.mjs` へ抽出し、Map以外のDashboardでも利用できる共通基盤とする。Dashboard DocumentはFixed Chrome + Document Scroll + Stage + Canvasの構造を持ち、初期全体fit、explicit zoom、touch/trackpad pinch、panを提供する。Camera stateは永続化しない。
+
+共通Blade Surfaceとして `<x-dashboard-document>` と `<x-dashboard-document-region>` を提供する。Canvasは12-column information boardを標準とし、複数情報を縦一列へ強制reflowせず、一枚の配置関係を保ったまま全体fit / zoomできる。
+
+既存Plan Dashboard / leaf Detailは移行期間中 `data-dashboard-document-owner="map"` とし、Generic Dashboard runtimeはmountしない。Map runtimeとの二重gesture処理を避けつつ、generic DOM contractを先に共有する。旧Map camera controls partialはshared Dashboard controlsへのcompatibility wrapperとする。
+
+Dashboard DocumentはMapではなく、必要な場合だけSpatial Roadmap等のContextual Mapを一Regionとして内包する。大量Form / Table / Settings / Chat / Task listなど順次操作が適する画面はClassic / Scrollを維持する。
+
+詳細は `docs/V50.1_DASHBOARD_DOCUMENT_FOUNDATION.md` を正とする。
