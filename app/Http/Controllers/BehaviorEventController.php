@@ -85,6 +85,7 @@ class BehaviorEventController extends Controller
 
         $mapClientTypes = [
             BehaviorEventType::MapViewed,
+            BehaviorEventType::MapSurfaceViewed,
             BehaviorEventType::MapNodeFocused,
             BehaviorEventType::MapBackUsed,
             BehaviorEventType::MapClassicActionOpened,
