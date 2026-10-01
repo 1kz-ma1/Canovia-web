@@ -241,36 +241,11 @@
     </main>
 
     <div data-canovia-companion-slot>
-    @auth
-        @if (! $focusMode && ! request()->routeIs('companion.*') && ! request()->routeIs('map.*') && (bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
-            <form
-                method="POST"
-                action="{{ route('companion.entry') }}"
-                class="fixed bottom-24 right-4 z-40 md:bottom-6 md:right-6"
-                data-mutation-once
-            >
-                @csrf
-                <input type="hidden" name="entry_type" value="{{ $companionEntryType }}">
-                @if ($companionEntryPlan)
-                    <input type="hidden" name="plan_id" value="{{ $companionEntryPlan->id }}">
-                @endif
-                @if ($companionEntryTask)
-                    <input type="hidden" name="task_id" value="{{ $companionEntryTask->id }}">
-                @endif
-                <input type="hidden" name="source_path" value="{{ $companionSourcePath }}">
-                <input type="hidden" name="source_route" value="{{ $companionSourceRoute }}">
-                <button
-                    type="submit"
-                    class="inline-flex items-center gap-2 rounded-full border border-violet-300/25 bg-slate-950/95 px-4 py-3 text-xs font-black text-violet-100 shadow-[0_16px_45px_rgba(15,23,42,.55)] backdrop-blur-xl transition hover:border-violet-300/45 hover:bg-violet-300/10"
-                    aria-label="Canovia Companionを現在の文脈で開く"
-                    title="Companion"
-                >
-                    <span aria-hidden="true">✦</span>
-                    <span class="hidden sm:inline">Companion</span>
-                </button>
-            </form>
-        @endif
-    @endauth
+        @auth
+            @if (! $focusMode && ! request()->routeIs('companion.*') && (bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
+                @include('layouts.partials.companion-palette')
+            @endif
+        @endauth
     </div>
 
     @unless ($focusMode)
