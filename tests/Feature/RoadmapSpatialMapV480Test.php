@@ -187,6 +187,14 @@ class RoadmapSpatialMapV480Test extends TestCase
             "[data-roadmap-spatial-node][data-roadmap-current=\"1\"]",
             $script,
         );
+        $this->assertStringContainsString(
+            '[data-roadmap-spatial-mode="dashboard-overview"]',
+            $script,
+        );
+        $this->assertStringContainsString(
+            '--roadmap-overview-scale',
+            file_get_contents(resource_path('css/map/roadmap.css')),
+        );
     }
 
     private function plan(User $user, string $title): Plan
