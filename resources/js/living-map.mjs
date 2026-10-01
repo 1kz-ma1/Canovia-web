@@ -8,6 +8,21 @@ import {
 } from './map-telemetry.mjs';
 
 import { fitMobileNodeBoxes } from './map-node-boxes.mjs';
+import {
+    documentFitScale,
+    documentZoomScale,
+    documentPinchScale,
+    documentRegionFocusScale,
+    documentAnchorScroll,
+} from './dashboard-document.mjs';
+
+export {
+    documentFitScale,
+    documentZoomScale,
+    documentPinchScale,
+    documentRegionFocusScale,
+    documentAnchorScroll,
+};
 
 const PENDING_REEVALUATION_KEY = 'canovia.map.pending-reevaluation.v1';
 const SEMANTIC_TRANSITION_KEY = 'canovia.map.semantic-transition.v1';
@@ -593,120 +608,6 @@ export function documentScrollMetrics({
     return {
         progress: Math.round(progress * 10000) / 10000,
         viewportRatio: Math.round(viewportRatio * 10000) / 10000,
-    };
-}
-
-export function documentFitScale({
-    viewportWidth = 0,
-    viewportHeight = 0,
-    documentWidth = 0,
-    documentHeight = 0,
-    paddingX = 0,
-    paddingY = 0,
-    minScale = 0.1,
-    maxScale = 1,
-} = {}) {
-    const viewportW = Math.max(0, Number(viewportWidth || 0) - Math.max(0, Number(paddingX || 0)));
-    const viewportH = Math.max(0, Number(viewportHeight || 0) - Math.max(0, Number(paddingY || 0)));
-    const documentW = Math.max(0, Number(documentWidth || 0));
-    const documentH = Math.max(0, Number(documentHeight || 0));
-
-    if (viewportW <= 0 || viewportH <= 0 || documentW <= 0 || documentH <= 0) {
-        return 1;
-    }
-
-    const lower = Math.max(0.05, Number(minScale || 0.1));
-    const upper = Math.max(lower, Number(maxScale || 1));
-    const scale = Math.min(viewportW / documentW, viewportH / documentH, upper);
-
-    return Math.round(Math.max(lower, scale) * 10000) / 10000;
-}
-
-export function documentZoomScale(
-    currentScale,
-    direction,
-    {
-        minScale = 0.1,
-        maxScale = 1.6,
-        factor = 1.25,
-    } = {},
-) {
-    const lower = Math.max(0.05, Number(minScale || 0.1));
-    const upper = Math.max(lower, Number(maxScale || 1.6));
-    const current = Math.max(lower, Math.min(upper, Number(currentScale || lower)));
-    const stepFactor = Math.max(1.01, Number(factor || 1.25));
-    const next = direction === 'out'
-        ? current / stepFactor
-        : current * stepFactor;
-
-    return Math.round(Math.max(lower, Math.min(upper, next)) * 10000) / 10000;
-}
-
-export function documentPinchScale(
-    startScale,
-    startDistance,
-    currentDistance,
-    {
-        minScale = 0.1,
-        maxScale = 1.6,
-    } = {},
-) {
-    const lower = Math.max(0.05, Number(minScale || 0.1));
-    const upper = Math.max(lower, Number(maxScale || 1.6));
-    const baseScale = Math.max(lower, Math.min(upper, Number(startScale || lower)));
-    const baseDistance = Math.max(1, Number(startDistance || 1));
-    const distance = Math.max(1, Number(currentDistance || 1));
-    const next = baseScale * (distance / baseDistance);
-
-    return Math.round(Math.max(lower, Math.min(upper, next)) * 10000) / 10000;
-}
-
-export function documentRegionFocusScale({
-    viewportWidth = 0,
-    viewportHeight = 0,
-    regionWidth = 0,
-    regionHeight = 0,
-    paddingX = 72,
-    paddingY = 72,
-    minScale = 0.1,
-    maxScale = 1.6,
-} = {}) {
-    return documentFitScale({
-        viewportWidth,
-        viewportHeight,
-        documentWidth: regionWidth,
-        documentHeight: regionHeight,
-        paddingX,
-        paddingY,
-        minScale,
-        maxScale,
-    });
-}
-
-export function documentAnchorScroll({
-    naturalX = 0,
-    naturalY = 0,
-    scale = 1,
-    screenX = 0,
-    screenY = 0,
-    contentWidth = 0,
-    contentHeight = 0,
-    viewportWidth = 0,
-    viewportHeight = 0,
-} = {}) {
-    const safeScale = Math.max(0.01, Number(scale || 1));
-    const maxLeft = Math.max(0, Number(contentWidth || 0) * safeScale - Number(viewportWidth || 0));
-    const maxTop = Math.max(0, Number(contentHeight || 0) * safeScale - Number(viewportHeight || 0));
-
-    return {
-        left: Math.round(Math.max(
-            0,
-            Math.min(maxLeft, Number(naturalX || 0) * safeScale - Number(screenX || 0)),
-        ) * 10) / 10,
-        top: Math.round(Math.max(
-            0,
-            Math.min(maxTop, Number(naturalY || 0) * safeScale - Number(screenY || 0)),
-        ) * 10) / 10,
     };
 }
 
