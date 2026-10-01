@@ -2179,13 +2179,26 @@ export function mountLivingGoalMap({
         resetButton?.classList.add('hidden');
     };
 
+    const roadmapTaskTemplateFromLocation = () => {
+        const hash = String(windowRef.location?.hash || '');
+        if (!hash.startsWith('#roadmap-task=')) return null;
+
+        try {
+            return decodeURIComponent(hash.slice('#roadmap-task='.length)) || null;
+        } catch (_) {
+            return null;
+        }
+    };
+
+    const roadmapTaskHash = (templateId) => '#roadmap-task='+encodeURIComponent(String(templateId || ''));
+
     const clearRoadmapTaskDetail = () => {
         activeRoadmapTaskId = null;
         delete page.dataset.mapRoadmapTask;
         hideSurface();
     };
 
-    const openRoadmapTaskDetail = (templateId) => {
+    const openRoadmapTaskDetail = (templateId, { historyMode = 'push' } = {}) => {
         const normalized = String(templateId || '');
         const template = templateFor(normalized);
         if (!normalized || !template?.content) return false;
@@ -2193,6 +2206,13 @@ export function mountLivingGoalMap({
         activeRoadmapTaskId = normalized;
         page.dataset.mapRoadmapTask = normalized;
         renderSurface(normalized);
+
+        if (historyMode === 'push' && windowRef.location.hash !== roadmapTaskHash(normalized)) {
+            windowRef.history.pushState({
+                ...(windowRef.history.state || {}),
+                canoviaMapRoadmapTask: normalized,
+            }, '', roadmapTaskHash(normalized));
+        }
 
         return true;
     };
@@ -2410,7 +2430,12 @@ export function mountLivingGoalMap({
 
     const closeContext = () => {
         if (activeRoadmapTaskId) {
+            const shouldGoBack = Boolean(windowRef.history.state?.canoviaMapRoadmapTask);
             clearRoadmapTaskDetail();
+
+            if (shouldGoBack) {
+                windowRef.history.back();
+            }
             return;
         }
 
@@ -3433,6 +3458,11 @@ export function mountLivingGoalMap({
             return;
         }
 
+        if (activeRoadmapTaskId) {
+            closeContext();
+            return;
+        }
+
         const instant = windowRef.CanoviaInstantNavigation;
         if (instant && typeof instant.navigate === 'function') {
             void instant.navigate(documentParentUrl, {
@@ -3666,7 +3696,7 @@ export function mountLivingGoalMap({
         const localDocumentBack = event.target.closest?.('[data-map-document-back]');
         if (localDocumentBack && activeRoadmapTaskId && surface?.contains?.(localDocumentBack)) {
             event.preventDefault();
-            clearRoadmapTaskDetail();
+            closeContext();
             return;
         }
 
@@ -3844,6 +3874,20 @@ export function mountLivingGoalMap({
     }
 
     function onPopState(event) {
+        const roadmapTaskTemplate = String(
+            event?.state?.canoviaMapRoadmapTask
+            || roadmapTaskTemplateFromLocation()
+            || ''
+        );
+        if (roadmapTaskTemplate) {
+            openRoadmapTaskDetail(roadmapTaskTemplate, { historyMode: 'none' });
+            return;
+        }
+
+        if (activeRoadmapTaskId) {
+            clearRoadmapTaskDetail();
+        }
+
         const targetDepth = Math.max(0, Number(event?.state?.canoviaMapFocusDepth || 0));
         if (mapHistoryDirection(focusHistoryDepth, targetDepth) === 'back') {
             trackTelemetry('map_back_used', {}, true);
@@ -3959,9 +4003,14 @@ export function mountLivingGoalMap({
         resetMapView({ animate: false });
     }
 
+    const initialRoadmapTaskTemplate = forceGlobalHomeReset ? null : roadmapTaskTemplateFromLocation();
     const initialDockId = forceGlobalHomeReset ? null : dockIdFromLocation(windowRef);
     const initialFocusId = forceGlobalHomeReset ? null : focusIdFromLocation(windowRef);
-    if (initialDockId) {
+    if (initialRoadmapTaskTemplate) {
+        if (!openRoadmapTaskDetail(initialRoadmapTaskTemplate, { historyMode: 'none' })) {
+            clearRoadmapTaskDetail();
+        }
+    } else if (initialDockId) {
         if (!openSpatialDock(initialDockId, { historyMode: 'none' })) {
             clearSpatialDock();
             removeInvalidDockHash();
