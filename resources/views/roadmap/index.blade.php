@@ -30,6 +30,7 @@
                 data-selected-plan-id="{{ $plan?->id }}"
                 aria-label="Plan Constellation"
             >
+                <div class="canovia-constellation-stage" data-constellation-stage>
                 <div class="canovia-constellation-space-dust" aria-hidden="true"></div>
 
                 <button
@@ -204,6 +205,7 @@
                         </div>
                     </aside>
                 @endif
+                </div>
             </section>
 
             <dialog class="canovia-star-task-dialog" data-constellation-star-dialog aria-label="星のTask一覧">
