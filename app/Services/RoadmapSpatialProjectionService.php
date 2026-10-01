@@ -54,6 +54,12 @@ final class RoadmapSpatialProjectionService
             $this->dependencyDepth((int) $taskId, $nodesByTaskId, $depthMemo, []);
         }
 
+        $currentSourceNode = $sourceNodes
+            ->first(fn (array $node) => (bool) ($node['is_current'] ?? false));
+        $currentDepth = is_array($currentSourceNode)
+            ? (int) ($depthMemo[(int) ($currentSourceNode['task_id'] ?? 0)] ?? 0)
+            : null;
+
         $phaseBuckets = $sourceNodes
             ->groupBy(fn (array $node) => (int) ($depthMemo[(int) $node['task_id']] ?? 0))
             ->sortKeys();
@@ -121,6 +127,12 @@ final class RoadmapSpatialProjectionService
                     $dependencyState = in_array(($node['status'] ?? null), ['done', 'cancelled'], true)
                         ? null
                         : ($dependencyIds === [] || $blockerIds === [] ? 'ready' : 'blocked');
+                    $visualState = $this->visualState(
+                        $node,
+                        $dependencyState,
+                        $depth,
+                        $currentDepth,
+                    );
 
                     $projectedNodes[] = [
                         ...$node,
@@ -130,6 +142,8 @@ final class RoadmapSpatialProjectionService
                         'dependency_depth' => $depth,
                         'dependency_state' => $dependencyState,
                         'blocker_task_ids' => $blockerIds,
+                        'visual_state' => $visualState,
+                        'depth_role' => $this->depthRole($visualState),
                         'x' => $phaseX,
                         'y' => $taskY,
                     ];
@@ -152,6 +166,49 @@ final class RoadmapSpatialProjectionService
             $phaseIndex++;
         }
 
+        $projectedNodeCollection = collect($projectedNodes);
+
+        $clusters = collect($clusters)
+            ->map(function (array $cluster) use ($projectedNodeCollection) {
+                $members = $projectedNodeCollection
+                    ->where('cluster_id', $cluster['id'])
+                    ->values();
+
+                return [
+                    ...$cluster,
+                    'depth_role' => $this->aggregateDepthRole(
+                        $members->pluck('depth_role')->filter()->values()->all(),
+                    ),
+                    'state_counts' => $members
+                        ->groupBy('visual_state')
+                        ->map(fn (Collection $nodes) => $nodes->count())
+                        ->all(),
+                ];
+            })
+            ->values()
+            ->all();
+
+        $phases = collect($phases)
+            ->map(function (array $phase) use ($projectedNodeCollection) {
+                $members = $projectedNodeCollection
+                    ->where('phase_id', $phase['id'])
+                    ->values();
+
+                return [
+                    ...$phase,
+                    'depth_role' => $this->aggregateDepthRole(
+                        $members->pluck('depth_role')->filter()->values()->all(),
+                    ),
+                    'state_counts' => $members
+                        ->groupBy('visual_state')
+                        ->map(fn (Collection $nodes) => $nodes->count())
+                        ->all(),
+                ];
+            })
+            ->values()
+            ->all();
+
+        $projectedNodesById = $projectedNodeCollection->keyBy('id');
         $edges = [];
         $dependencyPairs = [];
 
@@ -170,10 +227,16 @@ final class RoadmapSpatialProjectionService
 
                 $pairKey = $dependencyId.'>'.$taskId;
                 $dependencyPairs[$pairKey] = true;
+                $sourceId = 'task:'.$dependencyId;
+                $targetId = 'task:'.$taskId;
                 $edges[] = [
-                    'source' => 'task:'.$dependencyId,
-                    'target' => 'task:'.$taskId,
+                    'source' => $sourceId,
+                    'target' => $targetId,
                     'relation' => 'dependency',
+                    'depth_role' => $this->edgeDepthRole(
+                        (string) data_get($projectedNodesById->get($sourceId), 'depth_role', 'neutral'),
+                        (string) data_get($projectedNodesById->get($targetId), 'depth_role', 'neutral'),
+                    ),
                     'x1' => $sourcePosition['x'],
                     'y1' => $sourcePosition['y'],
                     'x2' => $targetPosition['x'],
@@ -192,10 +255,16 @@ final class RoadmapSpatialProjectionService
                 }
 
                 $sourcePosition = $positions[$sourceTaskId];
+                $sourceId = 'task:'.$sourceTaskId;
+                $targetId = 'task:'.$taskId;
                 $edges[] = [
-                    'source' => 'task:'.$sourceTaskId,
-                    'target' => 'task:'.$taskId,
+                    'source' => $sourceId,
+                    'target' => $targetId,
                     'relation' => 'lineage',
+                    'depth_role' => $this->edgeDepthRole(
+                        (string) data_get($projectedNodesById->get($sourceId), 'depth_role', 'neutral'),
+                        (string) data_get($projectedNodesById->get($targetId), 'depth_role', 'neutral'),
+                    ),
                     'x1' => $sourcePosition['x'],
                     'y1' => $sourcePosition['y'],
                     'x2' => $targetPosition['x'],
@@ -293,6 +362,87 @@ final class RoadmapSpatialProjectionService
     {
         return ($node['status'] ?? null) === 'done'
             || (int) ($node['progress_percent'] ?? 0) >= 100;
+    }
+
+    /**
+     * @param array<string,mixed> $node
+     */
+    private function visualState(
+        array $node,
+        ?string $dependencyState,
+        int $depth,
+        ?int $currentDepth,
+    ): string {
+        if ((bool) ($node['is_current'] ?? false)) {
+            return 'current';
+        }
+
+        if (in_array(($node['status'] ?? null), ['done', 'cancelled'], true)) {
+            return 'done';
+        }
+
+        if ($dependencyState === 'blocked') {
+            return 'blocked';
+        }
+
+        if (($node['status'] ?? null) === 'doing') {
+            return 'ready';
+        }
+
+        if (
+            $dependencyState === 'ready'
+            && ($currentDepth === null || $depth <= $currentDepth + 1)
+        ) {
+            return 'ready';
+        }
+
+        return 'future';
+    }
+
+    private function depthRole(string $visualState): string
+    {
+        return match ($visualState) {
+            'current' => 'foreground',
+            'ready' => 'near',
+            'blocked' => 'recessed',
+            'done' => 'deep',
+            default => 'neutral',
+        };
+    }
+
+    /**
+     * @param array<int,string> $roles
+     */
+    private function aggregateDepthRole(array $roles): string
+    {
+        foreach (['foreground', 'near', 'neutral', 'recessed', 'deep'] as $role) {
+            if (in_array($role, $roles, true)) {
+                return $role;
+            }
+        }
+
+        return 'neutral';
+    }
+
+    private function edgeDepthRole(string $sourceRole, string $targetRole): string
+    {
+        if ($sourceRole === 'foreground' || $targetRole === 'foreground') {
+            return 'foreground';
+        }
+
+        if ($sourceRole === 'near' || $targetRole === 'near') {
+            return 'near';
+        }
+
+        if ($targetRole === 'recessed' || $sourceRole === 'recessed') {
+            return 'recessed';
+        }
+
+        if ($sourceRole === 'deep' && $targetRole === 'deep') {
+            return 'deep';
+        }
+
+        return 'neutral';
     }
 
     /**
