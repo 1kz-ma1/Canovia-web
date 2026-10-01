@@ -492,8 +492,10 @@
     }
 
     .canovia-roadmap-spatial-shell.is-dashboard-overview {
+        --roadmap-overview-scale: 1;
         height: 22rem;
         min-height: 22rem;
+        overflow: hidden;
         border-radius: 1rem;
         background:
             radial-gradient(circle at 18% 18%, rgb(34 211 238 / 0.065), transparent 15rem),
@@ -508,7 +510,15 @@
     }
 
     .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-spatial-stage {
-        min-height: 32.5rem;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        min-width: 0;
+        min-height: 0;
+        transform:
+            translate(-50%, -50%)
+            scale(var(--roadmap-overview-scale));
+        transform-origin: center;
     }
 
     .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-spatial-node {
