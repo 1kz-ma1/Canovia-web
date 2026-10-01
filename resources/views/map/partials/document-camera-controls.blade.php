@@ -1,1 +1,1 @@
-@include('dashboard.partials.document-camera-controls')
+@include('dashboard.partials.document-camera-controls', ['mapCompatibility' => true])
