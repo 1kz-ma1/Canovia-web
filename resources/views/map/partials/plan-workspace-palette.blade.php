@@ -39,6 +39,7 @@
         </div>
 
         <div class="canovia-plan-workspace-actions">
+            @include('map.partials.document-camera-controls')
             @if ($workspaceExecutionUrl !== '')
                 <a href="{{ $workspaceExecutionUrl }}" class="btn-primary" data-map-plan-execution>実行へ</a>
             @endif
@@ -52,7 +53,8 @@
         role="region"
         aria-label="{{ $workspacePlan->title }}のDashboard資料"
     >
-        <div class="canovia-plan-workspace-document" data-map-document-canvas>
+        <div class="canovia-map-document-stage" data-map-document-stage>
+            <div class="canovia-plan-workspace-document" data-map-document-canvas>
             <section class="canovia-plan-document-overview">
                 <div>
                     <p class="canovia-plan-workspace-kicker">OVERVIEW</p>
@@ -99,6 +101,7 @@
                         ])
                     </div>
                 </section>
+            </div>
             </div>
         </div>
     </div>
