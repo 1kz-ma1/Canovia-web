@@ -24,7 +24,7 @@ class CanoviaHomeSurfaceV432Test extends TestCase
         ]);
     }
 
-    public function test_classic_and_map_share_one_home_shell_entry_with_surface_switcher(): void
+    public function test_legacy_home_surface_switcher_remains_but_primary_home_navigation_is_classic(): void
     {
         [$user] = $this->scenario();
 
@@ -35,6 +35,10 @@ class CanoviaHomeSurfaceV432Test extends TestCase
             ->assertSee('data-home-surface="map"', false)
             ->assertSee('aria-label="Classic Home"', false)
             ->assertSee('data-canovia-nav-key="desktop-home"', false)
+            ->assertSee('href="'.route('home').'"', false)
+            ->assertSee('data-canovia-nav-key="desktop-constellation"', false)
+            ->assertSee('data-canovia-nav-key="desktop-execution"', false)
+            ->assertDontSee('data-canovia-nav-key="desktop-inbox"', false)
             ->assertDontSee('data-canovia-nav-key="desktop-map"', false)
             ->assertDontSee('data-canovia-nav-key="mobile-map"', false);
 
@@ -43,13 +47,14 @@ class CanoviaHomeSurfaceV432Test extends TestCase
             ->assertSee('data-home-surface-switcher', false)
             ->assertSee('data-map-home-fallback', false)
             ->assertSee('data-home-surface="map"', false)
-            ->assertSee('aria-current="page"', false)
             ->assertSee('data-canovia-nav-key="desktop-home"', false)
+            ->assertSee('data-canovia-nav-key="desktop-constellation"', false)
+            ->assertSee('data-canovia-nav-key="desktop-execution"', false)
             ->assertDontSee('data-canovia-nav-key="desktop-map"', false)
             ->assertDontSee('data-canovia-nav-key="mobile-map"', false);
     }
 
-    public function test_map_supports_instant_fragment_layout_as_home_surface_without_detached_companion(): void
+    public function test_legacy_map_instant_fragment_is_no_longer_marked_as_primary_home(): void
     {
         [$user] = $this->scenario();
 
@@ -59,9 +64,10 @@ class CanoviaHomeSurfaceV432Test extends TestCase
 
         $response->assertOk()
             ->assertSee('id="canovia-instant-meta"', false)
-            ->assertSee('"mobileSection":"ホーム"', false)
+            ->assertSee('"mobileSection":"Context Map"', false)
             ->assertSee('"desktop-home"', false)
-            ->assertSee('nav-link-active', false)
+            ->assertSee('"desktop-constellation"', false)
+            ->assertSee('"desktop-execution"', false)
             ->assertSee('data-canovia-page', false)
             ->assertSee('data-canovia-companion-slot', false)
             ->assertDontSee('desktop-app-header', false)
