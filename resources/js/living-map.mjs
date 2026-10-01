@@ -2176,6 +2176,24 @@ export function mountLivingGoalMap({
         resetButton?.classList.add('hidden');
     };
 
+    const clearRoadmapTaskDetail = () => {
+        activeRoadmapTaskId = null;
+        delete page.dataset.mapRoadmapTask;
+        hideSurface();
+    };
+
+    const openRoadmapTaskDetail = (templateId) => {
+        const normalized = String(templateId || '');
+        const template = templateFor(normalized);
+        if (!normalized || !template?.content) return false;
+
+        activeRoadmapTaskId = normalized;
+        page.dataset.mapRoadmapTask = normalized;
+        renderSurface(normalized);
+
+        return true;
+    };
+
     const clearSpatialDock = () => {
         activeDockId = null;
         page.dataset.mapDock = '';
@@ -2388,6 +2406,11 @@ export function mountLivingGoalMap({
     };
 
     const closeContext = () => {
+        if (activeRoadmapTaskId) {
+            clearRoadmapTaskDetail();
+            return;
+        }
+
         if (activeDockId) {
             const shouldGoBack = Boolean(windowRef.history.state?.canoviaMapDock);
             clearSpatialDock();
@@ -3174,6 +3197,198 @@ export function mountLivingGoalMap({
     };
     const onViewReset = () => resetMapView();
 
+    const documentTouchPoints = (scrollElement) => (
+        [...documentPointers.values()].filter((point) => point.scroll === scrollElement)
+    );
+
+    const documentTouchDistance = (a, b) => Math.hypot(
+        Number(b?.x || 0) - Number(a?.x || 0),
+        Number(b?.y || 0) - Number(a?.y || 0),
+    );
+
+    const documentTouchMidpoint = (a, b) => ({
+        x: (Number(a?.x || 0) + Number(b?.x || 0)) / 2,
+        y: (Number(a?.y || 0) + Number(b?.y || 0)) / 2,
+    });
+
+    const beginDocumentPinch = (scrollElement) => {
+        const touches = documentTouchPoints(scrollElement);
+        if (touches.length < 2) return false;
+
+        const [a, b] = touches.slice(-2);
+        const distance = documentTouchDistance(a, b);
+        const camera = resolveDocumentCamera(scrollElement);
+        const measurement = measureDocumentCamera(camera);
+        const rect = scrollElement.getBoundingClientRect?.();
+        if (!camera || !measurement || !rect || distance < 8) return false;
+
+        const midpoint = documentTouchMidpoint(a, b);
+        const screenX = midpoint.x - Number(rect.left || 0);
+        const screenY = midpoint.y - Number(rect.top || 0);
+        const currentScale = Math.max(0.01, Number(camera.scale || measurement.fitScale));
+
+        clearDocumentRegionFocus(camera.viewport);
+        documentBackGesture = null;
+        documentPinchGesture = {
+            scroll: scrollElement,
+            pointerIds: [a.pointerId, b.pointerId],
+            startDistance: distance,
+            startScale: currentScale,
+            naturalX: (Number(scrollElement.scrollLeft || 0) + screenX) / currentScale,
+            naturalY: (Number(scrollElement.scrollTop || 0) + screenY) / currentScale,
+        };
+        camera.viewport.classList.add('is-document-pinching');
+
+        return true;
+    };
+
+    const onDocumentPointerDown = (event) => {
+        if (event.pointerType !== 'touch') return;
+
+        const scrollElement = event.currentTarget;
+        documentPointers.set(event.pointerId, {
+            pointerId: event.pointerId,
+            scroll: scrollElement,
+            x: Number(event.clientX || 0),
+            y: Number(event.clientY || 0),
+        });
+
+        if (documentTouchPoints(scrollElement).length >= 2) {
+            beginDocumentPinch(scrollElement);
+        }
+    };
+
+    const onDocumentPointerMove = (event) => {
+        const point = documentPointers.get(event.pointerId);
+        if (!point) return;
+
+        point.x = Number(event.clientX || 0);
+        point.y = Number(event.clientY || 0);
+        documentPointers.set(event.pointerId, point);
+
+        const pinch = documentPinchGesture;
+        if (!pinch || pinch.scroll !== point.scroll || !pinch.pointerIds.includes(event.pointerId)) return;
+
+        const touches = pinch.pointerIds
+            .map((pointerId) => documentPointers.get(pointerId))
+            .filter(Boolean);
+        if (touches.length < 2) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const [a, b] = touches;
+        const camera = resolveDocumentCamera(pinch.scroll);
+        const measurement = measureDocumentCamera(camera);
+        const rect = pinch.scroll.getBoundingClientRect?.();
+        if (!camera || !measurement || !rect) return;
+
+        const midpoint = documentTouchMidpoint(a, b);
+        const scale = documentPinchScale(
+            pinch.startScale,
+            pinch.startDistance,
+            documentTouchDistance(a, b),
+            {
+                minScale: measurement.fitScale,
+                maxScale: 1.6,
+            },
+        );
+        const mode = Math.abs(scale - measurement.fitScale) <= 0.005 ? 'fit' : 'manual';
+
+        applyDocumentCameraScale(pinch.scroll, scale, {
+            mode,
+            preserveCenter: false,
+            resetScroll: false,
+            anchor: mode === 'fit'
+                ? null
+                : {
+                    naturalX: pinch.naturalX,
+                    naturalY: pinch.naturalY,
+                    screenX: midpoint.x - Number(rect.left || 0),
+                    screenY: midpoint.y - Number(rect.top || 0),
+                },
+            immediateScroll: true,
+        });
+
+        suppressDocumentClickUntil = Date.now() + 280;
+    };
+
+    const finishDocumentPointer = (event) => {
+        const point = documentPointers.get(event.pointerId);
+        if (!point) return;
+
+        const pinch = documentPinchGesture;
+        documentPointers.delete(event.pointerId);
+
+        if (pinch?.pointerIds?.includes(event.pointerId)) {
+            const camera = resolveDocumentCamera(pinch.scroll);
+            camera?.viewport?.classList?.remove('is-document-pinching');
+            documentPinchGesture = null;
+
+            if (documentTouchPoints(pinch.scroll).length >= 2) {
+                beginDocumentPinch(pinch.scroll);
+            }
+        }
+    };
+
+    const onDocumentWheel = (event) => {
+        if (!event.ctrlKey || event.cancelable === false) return;
+
+        const scrollElement = event.currentTarget;
+        const camera = resolveDocumentCamera(scrollElement);
+        const measurement = measureDocumentCamera(camera);
+        if (!camera || !measurement) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        clearDocumentRegionFocus(camera.viewport);
+
+        const delta = Math.max(-60, Math.min(60, Number(event.deltaY || 0)));
+        const factor = Math.exp(-delta * 0.01);
+        const targetScale = Math.max(
+            measurement.fitScale,
+            Math.min(1.6, camera.scale * factor),
+        );
+
+        zoomDocumentAtPoint(
+            scrollElement,
+            targetScale,
+            Number(event.clientX || 0),
+            Number(event.clientY || 0),
+            { immediate: true },
+        );
+    };
+
+    const onDocumentDoubleClick = (event) => {
+        if (
+            event.target.closest?.(
+                'a, button, input, select, textarea, [data-roadmap-task-detail-open], [data-roadmap-region-focus]'
+            )
+        ) {
+            return;
+        }
+
+        const scrollElement = event.currentTarget;
+        const camera = resolveDocumentCamera(scrollElement);
+        const measurement = measureDocumentCamera(camera);
+        if (!camera || !measurement) return;
+
+        event.preventDefault();
+        clearDocumentRegionFocus(camera.viewport);
+        const targetScale = documentZoomScale(camera.scale, 'in', {
+            minScale: measurement.fitScale,
+            maxScale: 1.6,
+            factor: 1.25,
+        });
+
+        zoomDocumentAtPoint(
+            scrollElement,
+            targetScale,
+            Number(event.clientX || 0),
+            Number(event.clientY || 0),
+        );
+    };
+
     const onDocumentBackPointerDown = (event) => {
         const scrollElement = activeDocumentScroll();
         const scrollLeft = Math.max(0, Number(scrollElement?.scrollLeft || 0));
@@ -3184,6 +3399,8 @@ export function mountLivingGoalMap({
             || !documentModeActive()
             || event.pointerType !== 'touch'
             || event.isPrimary === false
+            || documentPinchGesture
+            || documentPointers.size >= 2
             || Number(event.clientX || 0) > 28
             || scrollLeft > 1
         ) {
@@ -3273,7 +3490,15 @@ export function mountLivingGoalMap({
         page.removeEventListener('pointercancel', onDocumentBackPointerCancel);
         for (const scrollElement of documentScrolls) {
             scrollElement.removeEventListener('scroll', onDocumentScroll);
+            scrollElement.removeEventListener('pointerdown', onDocumentPointerDown);
+            scrollElement.removeEventListener('pointermove', onDocumentPointerMove);
+            scrollElement.removeEventListener('pointerup', finishDocumentPointer);
+            scrollElement.removeEventListener('pointercancel', finishDocumentPointer);
+            scrollElement.removeEventListener('wheel', onDocumentWheel);
+            scrollElement.removeEventListener('dblclick', onDocumentDoubleClick);
         }
+        documentPointers.clear();
+        documentPinchGesture = null;
         zoomOutControl?.removeEventListener('click', onZoomOut);
         zoomInControl?.removeEventListener('click', onZoomIn);
         viewResetControl?.removeEventListener('click', onViewReset);
@@ -3654,6 +3879,12 @@ export function mountLivingGoalMap({
     page.addEventListener('pointercancel', onDocumentBackPointerCancel);
     for (const scrollElement of documentScrolls) {
         scrollElement.addEventListener('scroll', onDocumentScroll, { passive: true });
+        scrollElement.addEventListener('pointerdown', onDocumentPointerDown);
+        scrollElement.addEventListener('pointermove', onDocumentPointerMove, { passive: false });
+        scrollElement.addEventListener('pointerup', finishDocumentPointer);
+        scrollElement.addEventListener('pointercancel', finishDocumentPointer);
+        scrollElement.addEventListener('wheel', onDocumentWheel, { passive: false });
+        scrollElement.addEventListener('dblclick', onDocumentDoubleClick);
     }
     syncAllDocumentPositions();
     windowRef.setTimeout(() => {
