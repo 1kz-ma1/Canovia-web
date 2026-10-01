@@ -83,10 +83,6 @@
                         最近の会話を見る
                     </a>
                 </div>
-
-                <p class="canovia-companion-palette-phase-note">
-                    V51.0ではPaletteを横断入口として固定します。チャット本体は後続PhaseでこのPalette内へ統合します。
-                </p>
             </section>
         </div>
     </dialog>
