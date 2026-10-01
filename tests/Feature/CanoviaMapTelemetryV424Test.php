@@ -118,14 +118,14 @@ class CanoviaMapTelemetryV424Test extends TestCase
         foreach ([
             [BehaviorEventType::MapViewed, $flowA, ['surface_role' => 'plan_context']],
             [BehaviorEventType::MapSurfaceViewed, $flowA, ['surface_role' => 'plan_context']],
-            [BehaviorEventType::MapNodeFocused, $flowA, ['is_primary' => true, 'elapsed_ms' => 2000, 'step_count' => 1]],
-            [BehaviorEventType::MapClassicActionOpened, $flowA, ['elapsed_ms' => 3000, 'step_count' => 2]],
+            [BehaviorEventType::MapNodeFocused, $flowA, ['surface_role' => 'plan_context', 'is_primary' => true, 'elapsed_ms' => 2000, 'step_count' => 1]],
+            [BehaviorEventType::MapClassicActionOpened, $flowA, ['surface_role' => 'plan_context', 'elapsed_ms' => 3000, 'step_count' => 2]],
             [BehaviorEventType::MapExecutionStarted, $flowA, ['elapsed_ms' => 10000, 'step_count' => 3]],
             [BehaviorEventType::MapViewed, $flowB, ['surface_role' => 'global_navigation']],
             [BehaviorEventType::MapSurfaceViewed, $flowB, ['surface_role' => 'global_navigation']],
-            [BehaviorEventType::MapNodeFocused, $flowB, ['is_primary' => false, 'elapsed_ms' => 4000, 'step_count' => 1]],
-            [BehaviorEventType::MapClassicHomeOpened, $flowB, ['elapsed_ms' => 5000, 'step_count' => 2]],
-            [BehaviorEventType::MapBackUsed, $flowB, ['elapsed_ms' => 4500, 'step_count' => 2]],
+            [BehaviorEventType::MapNodeFocused, $flowB, ['surface_role' => 'global_navigation', 'is_primary' => false, 'elapsed_ms' => 4000, 'step_count' => 1]],
+            [BehaviorEventType::MapClassicHomeOpened, $flowB, ['surface_role' => 'global_navigation', 'elapsed_ms' => 5000, 'step_count' => 2]],
+            [BehaviorEventType::MapBackUsed, $flowB, ['surface_role' => 'global_navigation', 'elapsed_ms' => 4500, 'step_count' => 2]],
         ] as [$type, $flow, $extra]) {
             BehaviorEvent::query()->create([
                 'actor_token' => $actor,
