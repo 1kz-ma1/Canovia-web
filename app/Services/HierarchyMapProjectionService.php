@@ -237,6 +237,12 @@ final class HierarchyMapProjectionService
                 'status' => data_get($workspace, 'progress.status'),
             ],
             'roadmap_spatial_key' => data_get($workspace, 'roadmap_spatial.projection_key'),
+            'dashboard_board' => [
+                'schema_version' => data_get($workspace, 'dashboard_board.schema_version'),
+                'next_task_id' => data_get($workspace, 'dashboard_board.next.task_id'),
+                'blocked_count' => data_get($workspace, 'dashboard_board.signals.blocked_count'),
+                'activity_count' => count(data_get($workspace, 'dashboard_board.activity', [])),
+            ],
         ];
     }
 
