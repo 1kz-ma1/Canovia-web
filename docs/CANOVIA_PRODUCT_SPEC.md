@@ -1329,7 +1329,7 @@ Map UIをCanovia全体の標準Navigationへ置き換えることは前提にし
 
 `MapComplexitySnapshotService` はGraph / Spatial Roadmapからnode / edge / plan / task / dependency / cluster / parallel cluster / phase / blockedの件数と構造booleanだけをrequest時に生成する。score / threshold / preferred_view / recommendationは持たせず、DBへ保存しない。
 
-既存Map Telemetryへwhitelist済みstructural metadata `surface_role` のみ追加し、Complexity countやuser contentは送信しない。MapTelemetryServiceはSurface Role別にviews / focus_rate / classic_action_rate / back_per_flowを集計する。Adminは用途別検証へ変更するが、Map / Classicの優先SurfaceをTelemetryから自動決定しない。
+既存Map Telemetryへwhitelist済みstructural metadata `surface_role` を追加し、Complexity countやuser contentは送信しない。既存 `map_viewed` はFlow開始、`map_surface_viewed` は各Surface入場として分離する。MapTelemetryServiceはSurface Role別にviews / flows / focus_rate / classic_action_rate / back_per_flowを集計する。Adminは用途別検証へ変更するが、Map / Classicの優先SurfaceをTelemetryから自動決定しない。
 
 既存Semantic Zoom / Spatial Memory / Plan Dashboard / Spatial Roadmap / Document Camera / Collaboration Projection等はGlobal Map専用技術として破棄せず、Contextual Spatial Surfaceの共通資産として再利用する。
 
