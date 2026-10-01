@@ -30,15 +30,10 @@ final class RoadmapPageDataService
         $plan = $selectedPlanId > 0 ? $plans->firstWhere('id', $selectedPlanId) : null;
 
         $constellations = collect();
-        $baseRoadmaps = [];
-        $baseSpatials = [];
-
         foreach ($plans->values() as $index => $candidate) {
             $baseRoadmap = $this->roadmapService->build($candidate);
             $baseSpatial = $this->roadmapSpatialProjection->build($baseRoadmap);
 
-            $baseRoadmaps[(int) $candidate->id] = $baseRoadmap;
-            $baseSpatials[(int) $candidate->id] = $baseSpatial;
             $constellations->push(
                 $this->constellationProjection->project(
                     $candidate,
