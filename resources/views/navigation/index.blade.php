@@ -6,18 +6,34 @@
     <div class="mx-auto max-w-3xl space-y-5 md:space-y-6">
         <header class="pk-v18-page-hero pk-v18-today-hero">
             <div class="relative z-10 min-w-0">
-                <p class="pk-v18-eyebrow">EXECUTION / TAKE ACTION</p>
-                <h1>今、実行する一歩を決めよう。</h1>
-                <p>おすすめTaskから、そのまま実行へ入れます。必要なときだけ条件を変えて選び直せます。</p>
+                <p class="pk-v18-eyebrow">
+                    EXECUTION /
+                    {{ $selectedExecutionModeDefinition['eyebrow'] ?? 'MODE SELECT' }}
+                </p>
+                <h1>
+                    @if ($selectedExecutionModeDefinition)
+                        {{ $selectedExecutionModeDefinition['label'] }}Workspace
+                    @else
+                        実行方法を選ぶ。
+                    @endif
+                </h1>
+                <p>
+                    @if ($selectedExecutionModeDefinition)
+                        {{ $selectedExecutionModeDefinition['description'] }}
+                    @else
+                        Planの種類に合わせて、実行に使うWorkspaceを切り替えます。
+                    @endif
+                </p>
             </div>
             <div class="pk-v18-page-guide" aria-hidden="true">
                 <span>いっしょに
 進もう ✦</span>
                 <img src="/brand/mascot-guide.webp" alt="">
             </div>
-            @if (($draft['step'] ?? 'recommendation') !== 'recommendation')
+            @if ($selectedExecutionMode && ($draft['step'] ?? 'recommendation') !== 'recommendation')
                 <form method="POST" action="{{ route('navigation.reset') }}" class="relative z-20 shrink-0">
                     @csrf
+                    <input type="hidden" name="mode" value="{{ $selectedExecutionMode }}">
                     <button class="pk-v18-action-chip">戻す</button>
                 </form>
             @endif
@@ -37,11 +53,80 @@
             <p class="text-[11px] leading-5 text-slate-500" data-offline-timer-note>接続中はここから終了・記録できます。</p>
         </section>
 
+        @if (empty($availableExecutionModes))
+            <section class="execution-mode-empty page-card">
+                <p class="pk-v18-eyebrow">EXECUTION</p>
+                <h2>実行できるPlanがまだありません</h2>
+                <p>Planを作ると、その内容に合うExecution Workspaceがここに現れます。</p>
+                <a href="{{ route('plans.create') }}" class="btn-primary">Planを作る</a>
+            </section>
+        @elseif (! $selectedExecutionMode)
+            <section class="execution-mode-picker" data-execution-mode-picker>
+                <div class="execution-mode-picker-heading">
+                    <p class="pk-v18-eyebrow">CHOOSE WORKSPACE</p>
+                    <h2>どの種類の作業を進めますか？</h2>
+                    <p>複数の実行方法があるときだけ選びます。選択後も上部から切り替えられます。</p>
+                </div>
+
+                <div class="execution-mode-grid">
+                    @foreach ($availableExecutionModes as $modeKey => $mode)
+                        <a
+                            href="{{ route('navigation.index', ['mode' => $modeKey]) }}"
+                            class="execution-mode-card"
+                            data-execution-mode="{{ $modeKey }}"
+                        >
+                            <span class="execution-mode-card-icon" aria-hidden="true">{{ $mode['icon'] }}</span>
+                            <div>
+                                <span>{{ $mode['eyebrow'] }}</span>
+                                <strong>{{ $mode['label'] }}</strong>
+                                <p>{{ $mode['description'] }}</p>
+                            </div>
+                            <small>{{ $mode['plan_count'] }} Plan</small>
+                        </a>
+                    @endforeach
+                </div>
+            </section>
+        @else
+            <nav class="execution-mode-switcher" data-execution-mode-switcher aria-label="Execution Workspaceを切り替える">
+                @foreach ($availableExecutionModes as $modeKey => $mode)
+                    <a
+                        href="{{ route('navigation.index', ['mode' => $modeKey]) }}"
+                        class="{{ $selectedExecutionMode === $modeKey ? 'is-active' : '' }}"
+                        data-execution-mode="{{ $modeKey }}"
+                        aria-current="{{ $selectedExecutionMode === $modeKey ? 'page' : 'false' }}"
+                    >
+                        <span aria-hidden="true">{{ $mode['icon'] }}</span>
+                        <strong>{{ $mode['label'] }}</strong>
+                        <small>{{ $mode['plan_count'] }}</small>
+                    </a>
+                @endforeach
+            </nav>
+
+            @if ($modePlans->count() > 1)
+                <section class="execution-plan-switcher" aria-label="このWorkspaceのPlan">
+                    <a
+                        href="{{ route('navigation.index', ['mode' => $selectedExecutionMode, 'all' => 1]) }}"
+                        class="{{ $scopePlan ? '' : 'is-active' }}"
+                    >すべて</a>
+                    @foreach ($modePlans as $modePlan)
+                        <a
+                            href="{{ route('navigation.index', ['plan_id' => $modePlan->id]) }}"
+                            class="{{ $scopePlan?->id === $modePlan->id ? 'is-active' : '' }}"
+                        >
+                            <span aria-hidden="true">{{ $modePlan->displayIcon() }}</span>
+                            {{ $modePlan->title }}
+                        </a>
+                    @endforeach
+                </section>
+            @endif
+        @endif
+
+        @if ($selectedExecutionMode)
         @if ($scopePlan)
             <div class="rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-3 text-sm text-slate-200">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                     <p><span class="font-semibold text-sky-300">{{ $scopePlan->title }}</span> から選んでいます。</p>
-                    <a href="{{ route('navigation.index', ['all' => 1]) }}" class="whitespace-nowrap text-sm font-semibold text-sky-300 hover:text-sky-200">すべての計画から選ぶ</a>
+                    <a href="{{ route('navigation.index', ['mode' => $selectedExecutionMode, 'all' => 1]) }}" class="whitespace-nowrap text-sm font-semibold text-sky-300 hover:text-sky-200">このWorkspaceの全Planから選ぶ</a>
                 </div>
             </div>
         @endif
@@ -85,7 +170,7 @@
                                     <span class="form-label">進めたい計画</span>
                                     <select name="preferred_plan_id" class="form-control" required>
                                         <option value="">選択</option>
-                                        @foreach ($plans as $plan)
+                                        @foreach ($modePlans as $plan)
                                             <option value="{{ $plan->id }}">{{ $plan->title }}</option>
                                         @endforeach
                                     </select>
@@ -138,13 +223,36 @@
                                     <p class="mt-1 text-xs leading-5 text-slate-400">開始ボタンを押した瞬間から計測します。まず{{ $recommendation->recommendedMinutes }}分を目安に。</p>
                                 </div>
 
-                                <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form class="mobile-sticky-primary mt-4">
-                                    @csrf
-                                    <input type="hidden" name="task_id" value="{{ $recommendation->task->id }}">
-                                    <input type="hidden" name="intended_minutes" value="{{ $recommendation->recommendedMinutes }}">
-                                    <input type="hidden" name="source" value="navigation">
-                                    <button class="pk-v18-start-cta w-full justify-center" data-onboarding-target="today-start">このまま開始</button>
-                                </form>
+                                <div class="execution-primary-actions mobile-sticky-primary mt-4" data-execution-handoff="{{ $recommendationAction['action_id'] ?? 'timer' }}">
+                                    @if (($recommendationAction['action_id'] ?? 'timer') !== 'timer')
+                                        <a
+                                            href="{{ route($recommendationAction['route_name'], $recommendationAction['route_parameters']) }}"
+                                            class="pk-v18-start-cta w-full justify-center"
+                                            data-onboarding-target="today-start"
+                                        >
+                                            {{ $recommendationAction['label'] }}
+                                        </a>
+                                        <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form>
+                                            @csrf
+                                            <input type="hidden" name="task_id" value="{{ $recommendation->task->id }}">
+                                            <input type="hidden" name="intended_minutes" value="{{ $recommendation->recommendedMinutes }}">
+                                            <input type="hidden" name="source" value="navigation">
+                                            <button class="btn-secondary w-full justify-center">Timerで始める</button>
+                                        </form>
+                                    @else
+                                        <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form>
+                                            @csrf
+                                            <input type="hidden" name="task_id" value="{{ $recommendation->task->id }}">
+                                            <input type="hidden" name="intended_minutes" value="{{ $recommendation->recommendedMinutes }}">
+                                            <input type="hidden" name="source" value="navigation">
+                                            <button class="pk-v18-start-cta w-full justify-center" data-onboarding-target="today-start">{{ $recommendationAction['label'] ?? 'このまま開始' }}</button>
+                                        </form>
+                                    @endif
+                                </div>
+
+                                @if (! empty($recommendationAction['description']))
+                                    <p class="execution-handoff-note">{{ $recommendationAction['description'] }}</p>
+                                @endif
                             </section>
 
                             <div class="mt-4" data-candidate-carousel data-event-url="{{ route('behavior_events.store') }}">
@@ -159,7 +267,7 @@
                                                 <p class="text-sm font-bold text-slate-100">横にスワイプして選ぶ</p>
                                                 <p class="mt-0.5 text-xs text-slate-500">おすすめ以外の候補だけを表示します。</p>
                                             </div>
-                                            <a href="{{ route('navigation.index', ['configure' => 1]) }}" class="whitespace-nowrap text-xs font-semibold text-sky-300">条件変更</a>
+                                            <a href="{{ route('navigation.index', ['mode' => $selectedExecutionMode, 'configure' => 1]) }}" class="whitespace-nowrap text-xs font-semibold text-sky-300">条件変更</a>
                                         </div>
 
                                         <div class="candidate-track" data-candidate-track>
@@ -186,13 +294,25 @@
                                                         </ul>
                                                     @endif
 
-                                                    <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form class="mt-5">
-                                                        @csrf
-                                                        <input type="hidden" name="task_id" value="{{ $candidate->task->id }}">
-                                                        <input type="hidden" name="intended_minutes" value="{{ $candidate->recommendedMinutes }}">
-                                                        <input type="hidden" name="source" value="navigation">
-                                                        <button class="btn-secondary w-full justify-center">これを始める</button>
-                                                    </form>
+                                                    @php
+                                                        $candidateAction = $recommendationActions->get((int) $candidate->task->id);
+                                                    @endphp
+                                                    <div class="mt-5 grid gap-2" data-execution-handoff="{{ $candidateAction['action_id'] ?? 'timer' }}">
+                                                        @if (($candidateAction['action_id'] ?? 'timer') !== 'timer')
+                                                            <a
+                                                                href="{{ route($candidateAction['route_name'], $candidateAction['route_parameters']) }}"
+                                                                class="btn-secondary w-full justify-center"
+                                                            >{{ $candidateAction['label'] }}</a>
+                                                        @else
+                                                            <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form>
+                                                                @csrf
+                                                                <input type="hidden" name="task_id" value="{{ $candidate->task->id }}">
+                                                                <input type="hidden" name="intended_minutes" value="{{ $candidate->recommendedMinutes }}">
+                                                                <input type="hidden" name="source" value="navigation">
+                                                                <button class="btn-secondary w-full justify-center">これを始める</button>
+                                                            </form>
+                                                        @endif
+                                                    </div>
                                                 </article>
                                             @endforeach
                                         </div>
@@ -203,7 +323,7 @@
                                         </div>
                                     </section>
                                 @else
-                                    <a href="{{ route('navigation.index', ['configure' => 1]) }}" class="text-sm font-semibold text-sky-300 hover:text-sky-200">条件を変えて選ぶ</a>
+                                    <a href="{{ route('navigation.index', ['mode' => $selectedExecutionMode, 'configure' => 1]) }}" class="text-sm font-semibold text-sky-300 hover:text-sky-200">条件を変えて選ぶ</a>
                                 @endif
                             </div>
 
@@ -211,8 +331,8 @@
                                 どの候補を見て、どれを開始したかも次回のおすすめ改善に使われます。
                             </p>
                         @else
-                            <h2 class="text-xl font-bold text-slate-100">今すぐ始められるタスクが見つかりませんでした</h2>
-                            <p class="mt-2 text-slate-400">条件を変えるか、タスクを追加してからもう一度試してください。</p>
+                            <h2 class="text-xl font-bold text-slate-100">{{ $selectedExecutionModeDefinition['label'] ?? '' }}Workspaceで今すぐ始められるTaskが見つかりませんでした</h2>
+                            <p class="mt-2 text-slate-400">このWorkspace内で条件を変えるか、PlanへTaskを追加してください。</p>
                             <div class="mt-5 grid gap-3 sm:flex sm:flex-wrap">
                                 <form method="POST" action="{{ route('navigation.reset') }}">
                                     @csrf
@@ -225,6 +345,7 @@
                 </div>
             @endif
         </main>
+        @endif
     </div>
 @endsection
 
