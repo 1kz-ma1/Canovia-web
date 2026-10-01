@@ -1362,3 +1362,14 @@ V50.1 Dashboard Document FoundationをPlan Dashboardへ適用し、Plan詳細を
 Next / Ready / Blockedは既存Roadmap Task Detailへ接続し、Spatial RoadmapもBoard内のStructure Regionとして既存V49.9 interactionを維持する。追加DB / layout persistence / user customizationは行わない。
 
 詳細は `docs/V50.2_PLAN_DASHBOARD_INFORMATION_BOARD.md` を正とする。
+
+
+## V51.0 Primary Navigation & Companion Shell
+
+Primary Navigationを `Home / Constellation / Execution / Timeline` の4 Surfaceへ整理する。Homeは「今何をすればいいか」、Constellationは「全体と現在地」、Executionは「実際にどう進めるか」、Timelineは「何が起きたか」に答える。Inboxは機能を維持したままPrimary Navigationから外し、役割再検討中とする。
+
+AI Companionは5番目のNavigationではなく横断Control Surfaceとする。Bottom Navigationより上の右下Floating Orbから大型Paletteを開き、現在のPlan / Task / Global Contextを確認して既存Companion Threadへ接続する。V51.0ではPalette shellを実装し、chat本体の埋め込みは後続Phaseとする。
+
+Primary Nav keyは `desktop/mobile-home / constellation / execution / timeline` を正とする。HomeボタンはLegacy Home Surface Preferenceに関係なくClassic Action Home `/` へ入る。Legacy Mapは削除しないがPrimary Home扱いしない。Roadmap `/roadmap` はConstellationの暫定入口、Navigation `/navigate` はExecutionの暫定入口とする。
+
+後続順は Constellation Roadmap → Execution Workspace → Action Home → Timeline/Achievement → Companion Deep Integration。詳細は `docs/V51.0_PRIMARY_NAVIGATION_COMPANION_SHELL.md` を正とする。

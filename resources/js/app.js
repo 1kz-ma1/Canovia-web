@@ -2208,59 +2208,63 @@ document.addEventListener('DOMContentLoaded', () => {
         'roadmap-nav': {
             selector: '[data-onboarding-target="roadmap-nav"]',
             number: 5,
-            title: '先を見るときはロードマップ',
-            copy: 'いまいる場所と、この先のタスクをここで確認できます。押して見てみましょう。',
+            title: '全体像は星座で見る',
+            copy: 'Plan全体の形と現在地を確認する場所です。Taskの細かい実行判断とは分けて扱います。',
             event: 'click',
-            next: 'inbox-nav',
-        },
-        'inbox-nav': {
-            selector: '[data-onboarding-target="inbox-nav"]',
-            number: 6,
-            title: '現実から入ってくるものはInboxへ',
-            copy: '思いつき、URL、スクリーンショット、PDFなど、まだ整理先が決まっていないものはここへ渡せます。',
-            event: 'click',
-            next: 'inbox-capture',
-        },
-        'inbox-capture': {
-            selector: '[data-onboarding-target="inbox-capture"]',
-            number: 7,
-            title: '分類はあとで大丈夫',
-            copy: 'まずCanoviaへ渡し、整理先はあとから決められます。今やるTaskはホーム、その先はロードマップ、外から入る情報はInboxです。',
-            event: 'next',
             next: null,
             actionLabel: '完了',
         },
-        // Legacy stage aliases keep an onboarding already in progress readable.
-        'today-nav': {
-            selector: '[data-onboarding-target="inbox-nav"]',
+        // Legacy stage aliases keep an onboarding already in progress readable
+        // after Inbox left the primary navigation in V51.0.
+        'inbox-nav': {
+            selector: '[data-onboarding-target="execution-nav"]',
             number: 6,
-            title: '現実から入ってくるものはInboxへ',
-            copy: '旧「今日」の役割はHomeへ統合されました。新しい情報はInboxへ渡せます。',
+            title: 'Primary Navigationを整理しました',
+            copy: 'Inboxは独立機能として残しつつ、主要ナビゲーションはHome・星座・実行・Timelineへ整理されました。',
             event: 'click',
-            next: 'inbox-capture',
+            next: null,
+            actionLabel: '完了',
+        },
+        'inbox-capture': {
+            selector: '[data-onboarding-target="execution-nav"]',
+            number: 7,
+            title: '実行は専用Surfaceへ',
+            copy: '今やるTaskを進めるときは実行を使います。内容はPlanの種類に合わせて今後最適化されます。',
+            event: 'click',
+            next: null,
+            actionLabel: '完了',
+        },
+        'today-nav': {
+            selector: '[data-onboarding-target="execution-nav"]',
+            number: 6,
+            title: '「実行」',
+            copy: '旧「今日」のおすすめ導線は実行Surfaceへ引き継がれます。',
+            event: 'click',
+            next: null,
+            actionLabel: '完了',
         },
         'today-start': {
-            selector: '[data-onboarding-target="inbox-capture"]',
+            selector: '[data-onboarding-target="execution-nav"]',
             number: 7,
-            title: '分類はあとで大丈夫',
-            copy: 'まずCanoviaへ渡し、整理先はあとから決められます。',
-            event: 'next',
+            title: '実行する場所',
+            copy: 'おすすめTaskを始めるときは実行Surfaceを使います。',
+            event: 'click',
             next: null,
             actionLabel: '完了',
         },
         'replay-today': {
-            selector: '[data-onboarding-target="inbox-nav"]',
+            selector: '[data-onboarding-target="execution-nav"]',
             number: 1,
-            title: '「Inbox」',
-            copy: 'まだ整理先が決まっていない情報を、とりあえずCanoviaへ渡す場所です。',
+            title: '「実行」',
+            copy: '今やることを決め、実際の作業へ入る場所です。',
             actionLabel: '次へ',
             next: 'replay-roadmap',
         },
         'replay-roadmap': {
             selector: '[data-onboarding-target="roadmap-nav"]',
             number: 2,
-            title: '「ロードマップ」',
-            copy: '現在地とこの先を確認する場所です。MapとListはいつでも切り替えられます。',
+            title: '「星座」',
+            copy: 'Plan全体の形・完成度・現在地を確認する場所です。',
             actionLabel: '完了',
             next: null,
         },
@@ -3516,7 +3520,52 @@ async function captureInstantOfflineSnapshot() {
     } catch (_) {}
 }
 
+function mountCompanionPalette(root = document) {
+    const shells = root.matches?.('[data-companion-shell]')
+        ? [root]
+        : [...root.querySelectorAll?.('[data-companion-shell]') || []];
+
+    shells.forEach((shell) => {
+        if (shell.dataset.companionPaletteMounted === '1') return;
+
+        const trigger = shell.querySelector('[data-companion-palette-open]');
+        const dialog = shell.querySelector('[data-companion-palette]');
+        const close = shell.querySelector('[data-companion-palette-close]');
+        if (!trigger || !dialog) return;
+
+        const syncExpanded = () => {
+            trigger.setAttribute('aria-expanded', dialog.open ? 'true' : 'false');
+        };
+
+        const openPalette = () => {
+            if (typeof dialog.showModal === 'function') {
+                if (!dialog.open) dialog.showModal();
+            } else {
+                dialog.setAttribute('open', '');
+            }
+            syncExpanded();
+        };
+
+        const closePalette = () => {
+            if (typeof dialog.close === 'function' && dialog.open) dialog.close();
+            else dialog.removeAttribute('open');
+            syncExpanded();
+        };
+
+        trigger.addEventListener('click', openPalette);
+        close?.addEventListener('click', closePalette);
+        dialog.addEventListener('close', syncExpanded);
+        dialog.addEventListener('cancel', () => window.requestAnimationFrame(syncExpanded));
+        dialog.addEventListener('click', (event) => {
+            if (event.target === dialog) closePalette();
+        });
+
+        shell.dataset.companionPaletteMounted = '1';
+    });
+}
+
 function initializeInstantCorePage() {
+    mountCompanionPalette();
     mountDashboardDocuments();
     fitDashboardRoadmapOverviews();
     window.requestAnimationFrame(() => fitDashboardRoadmapOverviews());
@@ -3539,6 +3588,7 @@ function initializeInstantCorePage() {
 document.addEventListener('canovia:page-ready', initializeInstantCorePage);
 
 document.addEventListener('DOMContentLoaded', () => {
+    mountCompanionPalette();
     mountDashboardDocuments();
     if (document.body?.dataset.focusMode === '1') return;
     mountCanoviaInstantNavigation();
