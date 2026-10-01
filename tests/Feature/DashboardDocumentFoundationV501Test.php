@@ -33,12 +33,37 @@ class DashboardDocumentFoundationV501Test extends TestCase
             2,
             substr_count($app, 'mountDashboardDocuments();'),
         );
+
+        $mountPosition = strpos(
+            $app,
+            "document.addEventListener('DOMContentLoaded', () => {\n    mountDashboardDocuments();",
+        );
+        $focusModePosition = strpos(
+            $app,
+            "if (document.body?.dataset.focusMode === '1') return;",
+        );
+
+        $this->assertNotFalse($mountPosition);
+        $this->assertNotFalse($focusModePosition);
+        $this->assertLessThan($focusModePosition, $mountPosition);
+
+        $this->assertStringContainsString(
+            'activeDashboardDocuments',
+            $dashboardRuntime,
+        );
+        $this->assertStringContainsString(
+            'if (!state.root?.isConnected) state.destroy?.();',
+            $dashboardRuntime,
+        );
     }
 
     public function test_shared_dashboard_document_surface_has_fixed_chrome_camera_and_canvas_contract(): void
     {
         $component = file_get_contents(
             resource_path('views/components/dashboard-document.blade.php'),
+        );
+        $region = file_get_contents(
+            resource_path('views/components/dashboard-document-region.blade.php'),
         );
         $controls = file_get_contents(
             resource_path('views/dashboard/partials/document-camera-controls.blade.php'),
@@ -52,6 +77,11 @@ class DashboardDocumentFoundationV501Test extends TestCase
         $this->assertStringContainsString('data-dashboard-document-stage', $component);
         $this->assertStringContainsString('data-dashboard-document-canvas', $component);
 
+        $this->assertStringContainsString('data-dashboard-document-region', $region);
+        $this->assertStringContainsString('--dashboard-region-span', $region);
+        $this->assertStringContainsString('--dashboard-region-rows', $region);
+        $this->assertStringContainsString('data-dashboard-region-emphasis', $region);
+
         $this->assertStringContainsString('data-dashboard-document-camera', $controls);
         $this->assertStringContainsString('data-dashboard-document-zoom-out', $controls);
         $this->assertStringContainsString('data-dashboard-document-fit', $controls);
@@ -59,6 +89,8 @@ class DashboardDocumentFoundationV501Test extends TestCase
         $this->assertStringContainsString('data-dashboard-document-zoom-label', $controls);
 
         $this->assertStringContainsString('canovia-dashboard-document-canvas', $css);
+        $this->assertStringContainsString('canovia-dashboard-document-grid', $css);
+        $this->assertStringContainsString('grid-template-columns: repeat(12', $css);
         $this->assertStringContainsString('--dashboard-document-natural-width', $css);
         $this->assertStringContainsString("@import './dashboard-document.css';", $appCss);
     }
