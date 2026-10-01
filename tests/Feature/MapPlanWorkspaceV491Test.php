@@ -89,6 +89,11 @@ class MapPlanWorkspaceV491Test extends TestCase
             ->assertSee('aria-labelledby="canovia-plan-dashboard-title"', false)
             ->assertSee('id="canovia-plan-dashboard-title"', false)
             ->assertSee('data-plan-summary-metrics', false)
+            ->assertSee('data-roadmap-fixed-view="map"', false)
+            ->assertSee('data-roadmap-spatial-mode="dashboard-overview"', false)
+            ->assertSee('data-roadmap-spatial-auto-center="0"', false)
+            ->assertSee('data-roadmap-spatial-map', false)
+            ->assertDontSee('data-roadmap-view-panel="list"', false)
             ->assertSee('Roadmap')
             ->assertSee($task->title)
             ->assertSee('Classic Plan')
@@ -98,6 +103,8 @@ class MapPlanWorkspaceV491Test extends TestCase
         $graph = $response->viewData('graph');
 
         $this->assertTrue((bool) ($graph['plan_workspace_mode'] ?? false));
+        $this->assertNotEmpty(data_get($graph, 'plan_workspace.roadmap_spatial.nodes'));
+        $this->assertNotEmpty(data_get($graph, 'plan_workspace.roadmap_spatial.projection_key'));
         $this->assertSame('plan:'.$plan->id, $graph['center_node_id']);
         $this->assertCount(1, $graph['nodes']);
         $this->assertSame($plan->id, data_get($graph, 'hierarchy.plan_id'));
