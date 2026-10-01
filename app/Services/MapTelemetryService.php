@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\BehaviorEventType;
+use App\Enums\MapSurfaceRole;
 use App\Models\BehaviorEvent;
 use Illuminate\Support\Collection;
 
@@ -98,7 +99,50 @@ final class MapTelemetryService
             'home_median_start_latency_ms' => ($median = $this->median($homeLatencySeconds)) !== null
                 ? $median * 1000
                 : null,
+            'surface_roles' => $this->surfaceRoleSummary($flows),
         ];
+    }
+
+    /**
+     * @param Collection<string,Collection<int,BehaviorEvent>> $flows
+     * @return array<string,array{views:int,focus_rate:float,classic_action_rate:float,back_per_flow:float}>
+     */
+    private function surfaceRoleSummary(Collection $flows): array
+    {
+        $roles = [...MapSurfaceRole::telemetryValues(), 'unknown'];
+
+        return collect($roles)
+            ->mapWithKeys(function (string $role) use ($flows) {
+                $roleFlows = $flows->filter(function (Collection $events) use ($role) {
+                    return $events->contains(function (BehaviorEvent $event) use ($role) {
+                        if ($event->event_type !== BehaviorEventType::MapViewed) {
+                            return false;
+                        }
+
+                        $eventRole = (string) data_get($event->metadata, 'surface_role', 'unknown');
+                        $eventRole = $eventRole !== '' ? $eventRole : 'unknown';
+
+                        return $eventRole === $role;
+                    });
+                });
+
+                $views = $roleFlows->count();
+                $focused = $this->flowIdsWith($roleFlows, BehaviorEventType::MapNodeFocused)->count();
+                $actions = $this->flowIdsWith($roleFlows, BehaviorEventType::MapClassicActionOpened)->count();
+                $backCount = $roleFlows->sum(
+                    fn (Collection $events) => $events
+                        ->where('event_type', BehaviorEventType::MapBackUsed)
+                        ->count(),
+                );
+
+                return [$role => [
+                    'views' => $views,
+                    'focus_rate' => $this->rate($focused, $views),
+                    'classic_action_rate' => $this->rate($actions, $focused),
+                    'back_per_flow' => $views > 0 ? round($backCount / $views, 2) : 0.0,
+                ]];
+            })
+            ->all();
     }
 
     /**
