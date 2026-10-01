@@ -355,8 +355,11 @@ class NavigationController extends Controller
 
     public function reset(Request $request)
     {
+        $mode = trim((string) $request->input('mode', ''));
         $request->session()->forget(self::SESSION_KEY);
 
-        return redirect()->route('navigation.index');
+        return $mode !== ''
+            ? redirect()->route('navigation.index', ['mode' => $mode])
+            : redirect()->route('navigation.index');
     }
 }
