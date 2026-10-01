@@ -2217,10 +2217,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Legacy stage aliases keep an onboarding already in progress readable
         // after Inbox left the primary navigation in V51.0.
         'inbox-nav': {
-            selector: '[data-companion-palette-open]',
+            selector: '[data-onboarding-target="execution-nav"]',
             number: 6,
-            title: 'AIはどの画面からでも呼べます',
-            copy: '右下のCompanionは5番目のページではなく、現在の文脈を引き継ぐ横断窓口です。',
+            title: 'Primary Navigationを整理しました',
+            copy: 'Inboxは独立機能として残しつつ、主要ナビゲーションはHome・星座・実行・Timelineへ整理されました。',
             event: 'click',
             next: null,
             actionLabel: '完了',
