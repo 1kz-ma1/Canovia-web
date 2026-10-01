@@ -160,17 +160,29 @@
         <section class="rounded-[1.6rem] border border-cyan-300/15 bg-slate-950/45 p-5 sm:p-6" data-map-validation-telemetry>
             <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p class="text-[10px] font-black uppercase tracking-[.16em] text-cyan-300">LIVING MAP VALIDATION</p>
-                    <h2 class="mt-2 text-xl font-black text-slate-50">MapをPrimary Home候補として検証</h2>
+                    <p class="text-[10px] font-black uppercase tracking-[.16em] text-cyan-300">MAP SURFACE VALIDATION</p>
+                    <h2 class="mt-2 text-xl font-black text-slate-50">Map Surfaceを用途別に検証</h2>
                     <p class="mt-2 max-w-3xl text-xs leading-6 text-slate-500">
-                        Flow単位でFocus・Classic遷移・Companion・実際のWork開始を追います。
-                        Homeの開始時間は既存dashboard起点WorkStartedとの参考比較で、A/Bテストではありません。
+                        Flow単位でFocus・Classic遷移・Companion・実際のWork開始を追い、
+                        Global / Plan / Collaboration / Reflection / ExecutionなどSurface Roleごとの差も確認します。
                     </p>
                 </div>
                 <div class="rounded-full border border-slate-800 bg-slate-950/55 px-3 py-1.5 text-[10px] font-bold text-slate-500">
                     30日Flow {{ $mapTelemetry30d['views'] }}
                 </div>
             </div>
+
+            @php
+                $mapSurfaceRoleLabels = [
+                    'global_navigation' => 'Global Navigation',
+                    'plan_context' => 'Plan Context',
+                    'collaboration_context' => 'Collaboration Context',
+                    'reflection_context' => 'Reflection Context',
+                    'execution_context' => 'Execution Context',
+                    'hierarchy_context' => 'Hierarchy Context',
+                    'unknown' => 'Legacy / Unknown',
+                ];
+            @endphp
 
             @foreach ([7 => $mapTelemetry7d, 30 => $mapTelemetry30d] as $days => $metrics)
                 <div class="mt-5">
@@ -201,6 +213,32 @@
                             <p class="mt-1 text-xl font-black text-emerald-100">{{ number_format($metrics['execution_rate'], 1) }}%</p>
                         </div>
                     </div>
+
+                    @php
+                        $activeSurfaceRoles = collect($metrics['surface_roles'] ?? [])
+                            ->filter(fn ($roleMetrics) => (int) ($roleMetrics['views'] ?? 0) > 0);
+                    @endphp
+
+                    @if ($activeSurfaceRoles->isNotEmpty())
+                        <div class="mt-3 overflow-hidden rounded-xl border border-slate-800 bg-slate-950/25">
+                            <div class="grid grid-cols-[minmax(0,1.5fr)_repeat(4,minmax(4.5rem,.7fr))] gap-2 border-b border-slate-800 px-3 py-2 text-[9px] font-black uppercase tracking-[.08em] text-slate-600">
+                                <span>Surface Role</span>
+                                <span>Flow</span>
+                                <span>Focus</span>
+                                <span>→Classic</span>
+                                <span>Back</span>
+                            </div>
+                            @foreach ($activeSurfaceRoles as $role => $roleMetrics)
+                                <div class="grid grid-cols-[minmax(0,1.5fr)_repeat(4,minmax(4.5rem,.7fr))] gap-2 border-b border-slate-900/80 px-3 py-2 text-[10px] last:border-b-0">
+                                    <span class="truncate font-bold text-slate-300">{{ $mapSurfaceRoleLabels[$role] ?? $role }}</span>
+                                    <span class="text-slate-400">{{ (int) ($roleMetrics['views'] ?? 0) }}</span>
+                                    <span class="text-cyan-200">{{ number_format((float) ($roleMetrics['focus_rate'] ?? 0), 1) }}%</span>
+                                    <span class="text-sky-200">{{ number_format((float) ($roleMetrics['classic_action_rate'] ?? 0), 1) }}%</span>
+                                    <span class="text-slate-400">{{ number_format((float) ($roleMetrics['back_per_flow'] ?? 0), 2) }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
 
                     <div class="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                         <div class="rounded-xl border border-slate-800 bg-slate-950/25 p-3">
@@ -234,7 +272,7 @@
             @endforeach
 
             <p class="mt-4 text-[10px] leading-5 text-slate-600">
-                Primary Homeへの昇格は自動化しません。十分なFlow数と実利用を確認し、到達時間・fallback・Back・Work開始を合わせて判断します。
+                Map / Classicの優先SurfaceはこのTelemetryから自動決定しません。Surface Roleごとの実利用を比較し、具体的な出し分けルールは別途検証します。
             </p>
         </section>
 
