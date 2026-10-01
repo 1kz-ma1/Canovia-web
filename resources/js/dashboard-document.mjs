@@ -1,4 +1,5 @@
 const mountedDashboardDocuments = new WeakMap();
+const activeDashboardDocuments = new Set();
 
 export function documentFitScale({
     viewportWidth = 0,
@@ -425,6 +426,7 @@ function mountDashboardDocument(root, windowRef = window) {
         scroll.removeEventListener('dblclick', onDoubleClick);
         windowRef.removeEventListener('resize', refresh);
         mountedDashboardDocuments.delete(root);
+        activeDashboardDocuments.delete(state);
     };
 
     root.addEventListener('click', onClick);
@@ -440,6 +442,7 @@ function mountDashboardDocument(root, windowRef = window) {
     state.refresh = refresh;
     state.destroy = destroy;
     mountedDashboardDocuments.set(root, state);
+    activeDashboardDocuments.add(state);
 
     windowRef.requestAnimationFrame?.(() => {
         if (!state.disposed) fit();
@@ -449,6 +452,10 @@ function mountDashboardDocument(root, windowRef = window) {
 }
 
 export function mountDashboardDocuments(root = document, { windowRef = window } = {}) {
+    for (const state of [...activeDashboardDocuments]) {
+        if (!state.root?.isConnected) state.destroy?.();
+    }
+
     const documents = root.matches?.('[data-dashboard-document]')
         ? [root]
         : [...root.querySelectorAll?.('[data-dashboard-document]') || []];
