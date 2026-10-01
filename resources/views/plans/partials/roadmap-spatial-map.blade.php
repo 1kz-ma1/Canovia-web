@@ -3,6 +3,8 @@
     $roadmapCanManage = $roadmapCanManage ?? false;
     $roadmapPlan = $roadmapPlan ?? null;
     $roadmapRecommendedMinutes = $roadmapRecommendedMinutes ?? null;
+    $roadmapSurfaceMode = $roadmapSurfaceMode ?? 'standard';
+    $roadmapDashboardOverview = $roadmapSurfaceMode === 'dashboard-overview';
     $roadmapSpatial = is_array($roadmapSpatial ?? null) ? $roadmapSpatial : [];
     $spatialNodes = collect($roadmapSpatial['nodes'] ?? []);
     $spatialEdges = collect($roadmapSpatial['edges'] ?? []);
@@ -12,7 +14,12 @@
     $stageHeight = max(520, (int) ($roadmapSpatial['height'] ?? 520));
 @endphp
 
-<div class="canovia-roadmap-spatial-shell" data-roadmap-spatial-scroll>
+<div
+    class="canovia-roadmap-spatial-shell {{ $roadmapDashboardOverview ? 'is-dashboard-overview' : '' }}"
+    data-roadmap-spatial-scroll
+    data-roadmap-spatial-mode="{{ $roadmapSurfaceMode }}"
+    data-roadmap-spatial-auto-center="{{ $roadmapDashboardOverview ? '0' : '1' }}"
+>
     <div
         class="canovia-roadmap-spatial-stage"
         data-roadmap-map
@@ -104,9 +111,12 @@
                 data-roadmap-task-id="{{ $node['task_id'] }}"
                 data-roadmap-current="{{ $isCurrent ? '1' : '0' }}"
                 style="--task-x: {{ (int) $node['x'] }}px; --task-y: {{ (int) $node['y'] }}px;"
-                @if ($isCurrent) open @endif
+                @if ($isCurrent && ! $roadmapDashboardOverview) open @endif
             >
-                <summary aria-label="{{ $node['title'] }}の詳細">
+                <summary
+                    aria-label="{{ $roadmapDashboardOverview ? $node['title'].' · '.$node['status_label'].' · 進捗 '.$node['progress_percent'].'%' : $node['title'].'の詳細' }}"
+                    @if ($roadmapDashboardOverview) tabindex="-1" @endif
+                >
                     <span class="canovia-roadmap-task-orbit" aria-hidden="true">
                         <span>{{ $isDone ? '✓' : ($isCurrent ? '●' : '○') }}</span>
                     </span>
