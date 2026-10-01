@@ -15,3 +15,5 @@
  * Merge-safe Map CSS entry.
  * Add feature-specific styles to the owned file above instead of app.css.
  */
+
+@import './plan-dashboard-board.css';

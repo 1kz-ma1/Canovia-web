@@ -15,6 +15,7 @@ final class HierarchyMapProjectionService
         private readonly PlanProgressService $progress,
         private readonly RoadmapService $roadmap,
         private readonly RoadmapSpatialProjectionService $roadmapSpatial,
+        private readonly PlanDashboardBoardService $planDashboardBoard,
         private readonly PlanOwnershipService $ownership,
     ) {}
 
@@ -185,12 +186,19 @@ final class HierarchyMapProjectionService
         $progress = $this->progress->calculate($plan);
         $roadmap = $this->roadmap->build($plan);
         $roadmapSpatial = $this->roadmapSpatial->build($roadmap);
+        $board = $this->planDashboardBoard->build(
+            $plan,
+            $progress,
+            $roadmap,
+            $roadmapSpatial,
+        );
 
         return [
             'plan' => $plan,
             'progress' => $progress,
             'roadmap' => $roadmap,
             'roadmap_spatial' => $roadmapSpatial,
+            'dashboard_board' => $board,
             'can_edit' => $this->ownership->canEdit($request, $plan),
             'can_manage' => $this->ownership->owns($request, $plan),
             'execution_url' => route('map.index', [
@@ -229,6 +237,12 @@ final class HierarchyMapProjectionService
                 'status' => data_get($workspace, 'progress.status'),
             ],
             'roadmap_spatial_key' => data_get($workspace, 'roadmap_spatial.projection_key'),
+            'dashboard_board' => [
+                'schema_version' => data_get($workspace, 'dashboard_board.schema_version'),
+                'next_task_id' => data_get($workspace, 'dashboard_board.next.task_id'),
+                'blocked_count' => data_get($workspace, 'dashboard_board.signals.blocked_count'),
+                'activity_count' => count(data_get($workspace, 'dashboard_board.activity', [])),
+            ],
         ];
     }
 
