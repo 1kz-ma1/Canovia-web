@@ -62,7 +62,7 @@
                     --cluster-width: {{ (int) $cluster['width'] }}px;
                     --cluster-height: {{ (int) $cluster['height'] }}px;
                 "
-                aria-hidden="true"
+                @unless ($roadmapDashboardOverview) aria-hidden="true" @endunless
             >
                 @if ($roadmapDashboardOverview)
                     <button
