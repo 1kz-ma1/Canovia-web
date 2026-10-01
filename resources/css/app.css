@@ -2,6 +2,7 @@
 @import './dashboard-document.css';
 @import './companion-palette.css';
 @import './constellation-roadmap.css';
+@import './execution-workspace.css';
 @import './map/index.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
