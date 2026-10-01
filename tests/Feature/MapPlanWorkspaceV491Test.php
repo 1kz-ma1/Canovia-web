@@ -94,6 +94,14 @@ class MapPlanWorkspaceV491Test extends TestCase
             ->assertSee('aria-labelledby="canovia-plan-dashboard-title"', false)
             ->assertSee('id="canovia-plan-dashboard-title"', false)
             ->assertSee('data-plan-summary-metrics', false)
+            ->assertSee('data-plan-dashboard-board', false)
+            ->assertSee('data-plan-board-region="overview"', false)
+            ->assertSee('data-plan-board-region="progress"', false)
+            ->assertSee('data-plan-board-region="next"', false)
+            ->assertSee('data-plan-board-region="attention"', false)
+            ->assertSee('data-plan-board-region="activity"', false)
+            ->assertSee('data-plan-board-region="roadmap"', false)
+            ->assertSee('data-dashboard-document-grid', false)
             ->assertSee('data-roadmap-fixed-view="map"', false)
             ->assertSee('data-roadmap-spatial-mode="dashboard-overview"', false)
             ->assertSee('data-roadmap-spatial-auto-center="0"', false)
@@ -124,6 +132,8 @@ class MapPlanWorkspaceV491Test extends TestCase
         $this->assertTrue((bool) ($graph['plan_workspace_mode'] ?? false));
         $this->assertNotEmpty(data_get($graph, 'plan_workspace.roadmap_spatial.nodes'));
         $this->assertNotEmpty(data_get($graph, 'plan_workspace.roadmap_spatial.projection_key'));
+        $this->assertSame(1, data_get($graph, 'plan_workspace.dashboard_board.schema_version'));
+        $this->assertSame($task->id, data_get($graph, 'plan_workspace.dashboard_board.next.task_id'));
         $this->assertSame('plan:'.$plan->id, $graph['center_node_id']);
         $this->assertCount(1, $graph['nodes']);
         $this->assertSame($plan->id, data_get($graph, 'hierarchy.plan_id'));
