@@ -21,6 +21,7 @@
     </a>
 
     <a href="{{ route('navigation.index') }}" data-canovia-nav-key="mobile-execution"
+       data-onboarding-target="execution-nav"
        class="mobile-tabbar-link mobile-tabbar-primary {{ request()->routeIs('navigation.*') || request()->routeIs('work_sessions.*') || request()->routeIs('plans.tasks.guided_execution.*') || request()->routeIs('plans.tasks.execution_orchestration.*') || request()->routeIs('plans.tasks.study_*') ? 'is-active' : '' }}"
        aria-current="{{ request()->routeIs('navigation.*') || request()->routeIs('work_sessions.*') || request()->routeIs('plans.tasks.guided_execution.*') || request()->routeIs('plans.tasks.execution_orchestration.*') || request()->routeIs('plans.tasks.study_*') ? 'page' : 'false' }}">
         <span class="pk-tab-icon pk-tab-icon-today" aria-hidden="true">
