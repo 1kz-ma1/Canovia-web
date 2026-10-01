@@ -926,9 +926,16 @@
     .canovia-roadmap-spatial-shell.is-dashboard-overview
     .canovia-roadmap-spatial-node.depth-deep
     > summary {
+        opacity: 0.92;
         box-shadow:
             inset 0 1px 0 rgb(255 255 255 / 0.016),
             0 5px 12px rgb(2 6 23 / 0.16);
+    }
+
+    .canovia-roadmap-spatial-shell.is-dashboard-overview
+    .canovia-roadmap-spatial-node.depth-deep.is-cancelled
+    > summary {
+        opacity: 0.74;
     }
 
     /* Cluster depth */
