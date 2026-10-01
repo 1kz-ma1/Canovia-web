@@ -260,7 +260,7 @@ class InboxIntelligenceGuideV4113Test extends TestCase
         $this->assertStringContainsString("title: '全体像は星座で見る'", $script);
         $this->assertStringContainsString("next: null", $script);
         $this->assertStringContainsString("'inbox-nav': {", $script);
-        $this->assertStringContainsString("selector: '[data-companion-palette-open]'", $script);
+        $this->assertStringContainsString("title: 'Primary Navigationを整理しました'", $script);
         $this->assertStringContainsString("'today-nav': {", $script);
         $this->assertStringContainsString("selector: '[data-onboarding-target=\"execution-nav\"]'", $script);
         $this->assertStringContainsString('Inbox、Recall、AI演習、共同計画', $guide);
