@@ -110,10 +110,12 @@ class CanoviaMapTelemetryV424Test extends TestCase
 
         foreach ([
             [BehaviorEventType::MapViewed, $flowA, ['surface_role' => 'plan_context']],
+            [BehaviorEventType::MapSurfaceViewed, $flowA, ['surface_role' => 'plan_context']],
             [BehaviorEventType::MapNodeFocused, $flowA, ['is_primary' => true, 'elapsed_ms' => 2000, 'step_count' => 1]],
             [BehaviorEventType::MapClassicActionOpened, $flowA, ['elapsed_ms' => 3000, 'step_count' => 2]],
             [BehaviorEventType::MapExecutionStarted, $flowA, ['elapsed_ms' => 10000, 'step_count' => 3]],
             [BehaviorEventType::MapViewed, $flowB, ['surface_role' => 'global_navigation']],
+            [BehaviorEventType::MapSurfaceViewed, $flowB, ['surface_role' => 'global_navigation']],
             [BehaviorEventType::MapNodeFocused, $flowB, ['is_primary' => false, 'elapsed_ms' => 4000, 'step_count' => 1]],
             [BehaviorEventType::MapClassicHomeOpened, $flowB, ['elapsed_ms' => 5000, 'step_count' => 2]],
             [BehaviorEventType::MapBackUsed, $flowB, ['elapsed_ms' => 4500, 'step_count' => 2]],
@@ -152,11 +154,13 @@ class CanoviaMapTelemetryV424Test extends TestCase
         $this->assertSame(8000, $summary['home_median_start_latency_ms']);
 
         $this->assertSame(1, data_get($summary, 'surface_roles.plan_context.views'));
+        $this->assertSame(1, data_get($summary, 'surface_roles.plan_context.flows'));
         $this->assertSame(100.0, data_get($summary, 'surface_roles.plan_context.focus_rate'));
         $this->assertSame(100.0, data_get($summary, 'surface_roles.plan_context.classic_action_rate'));
         $this->assertSame(0.0, data_get($summary, 'surface_roles.plan_context.back_per_flow'));
 
         $this->assertSame(1, data_get($summary, 'surface_roles.global_navigation.views'));
+        $this->assertSame(1, data_get($summary, 'surface_roles.global_navigation.flows'));
         $this->assertSame(100.0, data_get($summary, 'surface_roles.global_navigation.focus_rate'));
         $this->assertSame(0.0, data_get($summary, 'surface_roles.global_navigation.classic_action_rate'));
         $this->assertSame(1.0, data_get($summary, 'surface_roles.global_navigation.back_per_flow'));
