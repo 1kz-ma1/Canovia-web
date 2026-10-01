@@ -1796,6 +1796,9 @@ function applyUiPreferences() {
 }
 
 function resolveRoadmapView(root) {
+    const fixedView = root.dataset.roadmapFixedView;
+    if (fixedView === 'map' || fixedView === 'list') return fixedView;
+
     const planId = root.dataset.roadmapPlanId || 'preview';
     const key = `pacekeeper.roadmap.v19.view.${planId}`;
     const stored = localStorage.getItem(key);
@@ -2034,6 +2037,7 @@ document.addEventListener('DOMContentLoaded', () => {
     activePlanTab?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
 
     document.querySelectorAll('[data-roadmap-spatial-scroll]').forEach((scroll) => {
+        if (scroll.dataset.roadmapSpatialAutoCenter === '0') return;
         const current = scroll.querySelector('[data-roadmap-spatial-node][data-roadmap-current="1"]');
         if (!current) return;
 
