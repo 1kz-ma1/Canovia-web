@@ -245,7 +245,7 @@ class InboxIntelligenceGuideV4113Test extends TestCase
         $this->assertSame('processed', $item->fresh()->status);
     }
 
-    public function test_guide_v2_and_new_onboarding_use_home_roadmap_inbox_roles(): void
+    public function test_guide_v2_keeps_inbox_capabilities_while_primary_onboarding_uses_execution_constellation_and_companion(): void
     {
         $catalog = config('canovia_guides');
         $script = file_get_contents(resource_path('js/app.js'));
@@ -257,10 +257,12 @@ class InboxIntelligenceGuideV4113Test extends TestCase
         $this->assertArrayHasKey('inbox_organize', $catalog['guides']);
         $this->assertArrayHasKey('recall', $catalog['guides']);
         $this->assertArrayNotHasKey('today_action', $catalog['guides']);
-        $this->assertStringContainsString("next: 'inbox-nav'", $script);
+        $this->assertStringContainsString("title: '全体像は星座で見る'", $script);
+        $this->assertStringContainsString("next: null", $script);
         $this->assertStringContainsString("'inbox-nav': {", $script);
-        $this->assertStringContainsString("'inbox-capture': {", $script);
+        $this->assertStringContainsString("selector: '[data-companion-palette-open]'", $script);
         $this->assertStringContainsString("'today-nav': {", $script);
+        $this->assertStringContainsString("selector: '[data-onboarding-target=\"execution-nav\"]'", $script);
         $this->assertStringContainsString('Inbox、Recall、AI演習、共同計画', $guide);
     }
 
