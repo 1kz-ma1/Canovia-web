@@ -3,6 +3,7 @@
     $workspacePlan = $workspace['plan'] ?? null;
     $workspaceProgress = is_array($workspace['progress'] ?? null) ? $workspace['progress'] : [];
     $workspaceRoadmap = is_array($workspace['roadmap'] ?? null) ? $workspace['roadmap'] : ['nodes' => []];
+    $workspaceRoadmapSpatial = is_array($workspace['roadmap_spatial'] ?? null) ? $workspace['roadmap_spatial'] : null;
     $workspaceCanEdit = (bool) ($workspace['can_edit'] ?? false);
     $workspaceCanManage = (bool) ($workspace['can_manage'] ?? false);
     $workspaceExecutionUrl = (string) ($workspace['execution_url'] ?? '');
@@ -87,10 +88,12 @@
                     <div class="canovia-plan-palette-roadmap-body">
                         @include('plans.partials.roadmap', [
                             'roadmap' => $workspaceRoadmap,
+                            'roadmapSpatial' => $workspaceRoadmapSpatial,
                             'roadmapPlan' => $workspacePlan,
                             'roadmapCanEdit' => $workspaceCanEdit,
                             'roadmapCanManage' => $workspaceCanManage,
                             'roadmapMode' => 'plan',
+                            'roadmapSurfaceMode' => 'dashboard-overview',
                             'roadmapRecommendedMinutes' => null,
                             'roadmapRecommendationReasons' => [],
                         ])
