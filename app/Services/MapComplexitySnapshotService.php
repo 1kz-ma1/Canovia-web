@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Collection;
-
 final class MapComplexitySnapshotService
 {
     /**
