@@ -1314,7 +1314,7 @@ V49.8実機確認前の静的監査として、Plan Dashboardのabsolute positio
 
 ## V49.9 Spatial Roadmap / Fit Document
 
-Plan DashboardのRoadmapは既存 `RoadmapSpatialProjectionService` をPrimaryとして使い、`RoadmapService -> Spatial Projection -> Dashboard` のread-only projectionとする。Dashboardでは `dashboard-overview` modeを使い、List切替、Current自動センタリング、Task detail展開を持ち込まず、Phase / Cluster / Task / Dependencyの構造把握を優先する。`/roadmap` 本体のstandard interactionは維持する。
+Plan DashboardのRoadmapは既存 `RoadmapSpatialProjectionService` をPrimaryとして使い、`RoadmapService -> Spatial Projection -> Dashboard` のread-only projectionとする。Dashboardでは `dashboard-overview` modeを使い、List切替、Current自動センタリング、Task detail展開を持ち込まず、Phase / Cluster / Task / Dependencyの構造把握を優先する。Spatial StageはDashboard frameへ自動fitし、最初にRoadmap全体構造を一望できる状態をPrimaryとする。`/roadmap` 本体のstandard interactionは維持する。
 
 V49.9は段階導入とし、Phase 1でSpatial Roadmap Primary、Phase 2でDocument全体fit + explicit zoom camera、Phase 3でpinch / region focus、Phase 4で2.5D depth polishを行う。Document内部でも `Container = zoom / Leaf = detail` を最終interaction contractとする。
 
