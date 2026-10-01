@@ -34,18 +34,12 @@ class DashboardDocumentFoundationV501Test extends TestCase
             substr_count($app, 'mountDashboardDocuments();'),
         );
 
-        $mountPosition = strpos(
+        $this->assertStringContainsString(
+            "document.addEventListener('DOMContentLoaded', () => {\n"
+            ."    mountDashboardDocuments();\n"
+            ."    if (document.body?.dataset.focusMode === '1') return;",
             $app,
-            "document.addEventListener('DOMContentLoaded', () => {\n    mountDashboardDocuments();",
         );
-        $focusModePosition = strpos(
-            $app,
-            "if (document.body?.dataset.focusMode === '1') return;",
-        );
-
-        $this->assertNotFalse($mountPosition);
-        $this->assertNotFalse($focusModePosition);
-        $this->assertLessThan($focusModePosition, $mountPosition);
 
         $this->assertStringContainsString(
             'activeDashboardDocuments',
