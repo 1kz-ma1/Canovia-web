@@ -3373,6 +3373,7 @@ function initializeInstantRoadmapPage() {
     });
 
     page.querySelectorAll('[data-roadmap-spatial-scroll]').forEach((scroll) => {
+        if (scroll.dataset.roadmapSpatialAutoCenter === '0') return;
         const current = scroll.querySelector('[data-roadmap-spatial-node][data-roadmap-current="1"]');
         if (!current) return;
 
