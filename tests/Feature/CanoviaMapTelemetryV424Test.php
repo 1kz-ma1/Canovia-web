@@ -35,6 +35,11 @@ class CanoviaMapTelemetryV424Test extends TestCase
             ->get(route('map.index', ['level' => 'l3']))
             ->assertOk()
             ->assertSee('data-event-url="'.route('behavior_events.store').'"', false)
+            ->assertSee('data-map-surface-role="execution_context"', false)
+            ->assertSee('data-map-surface-scope="contextual"', false)
+            ->assertSee('data-map-complexity-schema="1"', false)
+            ->assertSee('data-map-complexity-node-count=', false)
+            ->assertSee('data-map-complexity-task-count=', false)
             ->assertSee('data-map-home-fallback', false)
             ->assertSee('data-map-is-primary="1"', false)
             ->assertSee('data-map-action-role="primary"', false);
@@ -48,6 +53,7 @@ class CanoviaMapTelemetryV424Test extends TestCase
                     'flow_id' => $flowId,
                     'surface' => 'pwa',
                     'device' => 'mobile',
+                    'surface_role' => 'plan_context',
                     'node_type' => 'task',
                     'position_role' => 'now',
                     'is_primary' => true,
@@ -63,6 +69,7 @@ class CanoviaMapTelemetryV424Test extends TestCase
             ->firstOrFail();
 
         $this->assertSame($flowId, data_get($event->metadata, 'flow_id'));
+        $this->assertSame('plan_context', data_get($event->metadata, 'surface_role'));
         $this->assertSame('task', data_get($event->metadata, 'node_type'));
         $this->assertTrue((bool) data_get($event->metadata, 'is_primary'));
         $this->assertArrayNotHasKey('private_text', $event->metadata);
@@ -102,11 +109,11 @@ class CanoviaMapTelemetryV424Test extends TestCase
         $actor = Str::random(64);
 
         foreach ([
-            [BehaviorEventType::MapViewed, $flowA, []],
+            [BehaviorEventType::MapViewed, $flowA, ['surface_role' => 'plan_context']],
             [BehaviorEventType::MapNodeFocused, $flowA, ['is_primary' => true, 'elapsed_ms' => 2000, 'step_count' => 1]],
             [BehaviorEventType::MapClassicActionOpened, $flowA, ['elapsed_ms' => 3000, 'step_count' => 2]],
             [BehaviorEventType::MapExecutionStarted, $flowA, ['elapsed_ms' => 10000, 'step_count' => 3]],
-            [BehaviorEventType::MapViewed, $flowB, []],
+            [BehaviorEventType::MapViewed, $flowB, ['surface_role' => 'global_navigation']],
             [BehaviorEventType::MapNodeFocused, $flowB, ['is_primary' => false, 'elapsed_ms' => 4000, 'step_count' => 1]],
             [BehaviorEventType::MapClassicHomeOpened, $flowB, ['elapsed_ms' => 5000, 'step_count' => 2]],
             [BehaviorEventType::MapBackUsed, $flowB, ['elapsed_ms' => 4500, 'step_count' => 2]],
@@ -143,6 +150,16 @@ class CanoviaMapTelemetryV424Test extends TestCase
         $this->assertSame(3, $summary['median_execution_steps']);
         $this->assertSame(0.5, $summary['back_per_flow']);
         $this->assertSame(8000, $summary['home_median_start_latency_ms']);
+
+        $this->assertSame(1, data_get($summary, 'surface_roles.plan_context.views'));
+        $this->assertSame(100.0, data_get($summary, 'surface_roles.plan_context.focus_rate'));
+        $this->assertSame(100.0, data_get($summary, 'surface_roles.plan_context.classic_action_rate'));
+        $this->assertSame(0.0, data_get($summary, 'surface_roles.plan_context.back_per_flow'));
+
+        $this->assertSame(1, data_get($summary, 'surface_roles.global_navigation.views'));
+        $this->assertSame(100.0, data_get($summary, 'surface_roles.global_navigation.focus_rate'));
+        $this->assertSame(0.0, data_get($summary, 'surface_roles.global_navigation.classic_action_rate'));
+        $this->assertSame(1.0, data_get($summary, 'surface_roles.global_navigation.back_per_flow'));
     }
 
     public function test_admin_dashboard_exposes_map_validation_summary_without_auto_promotion_verdict(): void
