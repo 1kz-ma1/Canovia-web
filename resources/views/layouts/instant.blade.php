@@ -18,22 +18,22 @@
     };
 
     $mobileSection = match ($surface) {
-        'map' => 'ホーム',
+        'map' => 'Context Map',
         'inbox' => 'Inbox',
-        'roadmap' => 'ロードマップ',
+        'roadmap' => '星座',
         'timeline' => 'タイムライン',
         'calendar' => 'カレンダー',
         default => 'ホーム',
     };
 
-    $desktopHomeActive = in_array($surface, ['home', 'map', 'calendar'], true);
-    $desktopInboxActive = $surface === 'inbox';
-    $desktopRoadmapActive = $surface === 'roadmap';
+    $desktopHomeActive = in_array($surface, ['home', 'calendar'], true);
+    $desktopConstellationActive = $surface === 'roadmap';
+    $desktopExecutionActive = false;
     $desktopTimelineActive = $surface === 'timeline';
 
-    $mobileHomeActive = in_array($surface, ['home', 'map', 'calendar'], true);
-    $mobileInboxActive = $surface === 'inbox';
-    $mobileRoadmapActive = $surface === 'roadmap';
+    $mobileHomeActive = in_array($surface, ['home', 'calendar'], true);
+    $mobileConstellationActive = $surface === 'roadmap';
+    $mobileExecutionActive = false;
     $mobileTimelineActive = $surface === 'timeline';
 
     $feedbackPlan = request()->route('plan');
@@ -73,12 +73,12 @@
                 'className' => 'nav-link pk-nav-link whitespace-nowrap'.($desktopHomeActive ? ' nav-link-active' : ''),
                 'ariaCurrent' => null,
             ],
-            'desktop-inbox' => [
-                'className' => 'nav-link pk-nav-link whitespace-nowrap'.($desktopInboxActive ? ' nav-link-active' : ''),
+            'desktop-constellation' => [
+                'className' => 'nav-link pk-nav-link whitespace-nowrap'.($desktopConstellationActive ? ' nav-link-active' : ''),
                 'ariaCurrent' => null,
             ],
-            'desktop-roadmap' => [
-                'className' => 'nav-link pk-nav-link whitespace-nowrap'.($desktopRoadmapActive ? ' nav-link-active' : ''),
+            'desktop-execution' => [
+                'className' => 'nav-link pk-nav-link whitespace-nowrap'.($desktopExecutionActive ? ' nav-link-active' : ''),
                 'ariaCurrent' => null,
             ],
             'desktop-timeline' => [
@@ -93,13 +93,13 @@
                 'className' => 'mobile-tabbar-link'.($mobileHomeActive ? ' is-active' : ''),
                 'ariaCurrent' => $mobileHomeActive ? 'page' : 'false',
             ],
-            'mobile-inbox' => [
-                'className' => 'mobile-tabbar-link mobile-tabbar-primary'.($mobileInboxActive ? ' is-active' : ''),
-                'ariaCurrent' => $mobileInboxActive ? 'page' : 'false',
+            'mobile-constellation' => [
+                'className' => 'mobile-tabbar-link'.($mobileConstellationActive ? ' is-active' : ''),
+                'ariaCurrent' => $mobileConstellationActive ? 'page' : 'false',
             ],
-            'mobile-roadmap' => [
-                'className' => 'mobile-tabbar-link'.($mobileRoadmapActive ? ' is-active' : ''),
-                'ariaCurrent' => $mobileRoadmapActive ? 'page' : 'false',
+            'mobile-execution' => [
+                'className' => 'mobile-tabbar-link mobile-tabbar-primary'.($mobileExecutionActive ? ' is-active' : ''),
+                'ariaCurrent' => $mobileExecutionActive ? 'page' : 'false',
             ],
             'mobile-timeline' => [
                 'className' => 'mobile-tabbar-link'.($mobileTimelineActive ? ' is-active' : ''),
@@ -146,33 +146,8 @@
 
     <div data-canovia-companion-slot>
         @auth
-            @if ($surface !== 'map' && (bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
-                <form
-                    method="POST"
-                    action="{{ route('companion.entry') }}"
-                    class="fixed bottom-24 right-4 z-40 md:bottom-6 md:right-6"
-                    data-mutation-once
-                >
-                    @csrf
-                    <input type="hidden" name="entry_type" value="{{ $companionEntryType }}">
-                    @if ($companionEntryPlan)
-                        <input type="hidden" name="plan_id" value="{{ $companionEntryPlan->id }}">
-                    @endif
-                    @if ($companionEntryTask)
-                        <input type="hidden" name="task_id" value="{{ $companionEntryTask->id }}">
-                    @endif
-                    <input type="hidden" name="source_path" value="{{ $companionSourcePath }}">
-                    <input type="hidden" name="source_route" value="{{ $companionSourceRoute }}">
-                    <button
-                        type="submit"
-                        class="inline-flex items-center gap-2 rounded-full border border-violet-300/25 bg-slate-950/95 px-4 py-3 text-xs font-black text-violet-100 shadow-[0_16px_45px_rgba(15,23,42,.55)] backdrop-blur-xl transition hover:border-violet-300/45 hover:bg-violet-300/10"
-                        aria-label="Canovia Companionを現在の文脈で開く"
-                        title="Companion"
-                    >
-                        <span aria-hidden="true">✦</span>
-                        <span class="hidden sm:inline">Companion</span>
-                    </button>
-                </form>
+            @if ((bool) data_get(config('features.flags.'.\App\Enums\FeatureKey::CanoviaCompanion->value), 'enabled', false))
+                @include('layouts.partials.companion-palette')
             @endif
         @endauth
     </div>
