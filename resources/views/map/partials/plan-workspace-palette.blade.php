@@ -16,6 +16,9 @@
     data-map-plan-workspace
     data-map-document-viewport
     data-map-document-kind="plan"
+    data-dashboard-document
+    data-dashboard-document-owner="map"
+    data-dashboard-document-kind="plan"
     role="region"
     aria-labelledby="canovia-plan-dashboard-title"
 >
@@ -49,12 +52,13 @@
     <div
         class="canovia-map-document-scroll"
         data-map-document-scroll
+        data-dashboard-document-scroll
         tabindex="0"
         role="region"
         aria-label="{{ $workspacePlan->title }}のDashboard資料"
     >
-        <div class="canovia-map-document-stage" data-map-document-stage>
-            <div class="canovia-plan-workspace-document" data-map-document-canvas>
+        <div class="canovia-map-document-stage" data-map-document-stage data-dashboard-document-stage>
+            <div class="canovia-plan-workspace-document" data-map-document-canvas data-dashboard-document-canvas>
             <section class="canovia-plan-document-overview">
                 <div>
                     <p class="canovia-plan-workspace-kicker">OVERVIEW</p>

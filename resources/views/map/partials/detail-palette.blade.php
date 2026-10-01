@@ -3,6 +3,9 @@
     data-map-context-surface
     data-map-document-viewport
     data-map-document-kind="detail"
+    data-dashboard-document
+    data-dashboard-document-owner="map"
+    data-dashboard-document-kind="detail"
     aria-hidden="true"
     role="region"
     aria-labelledby="canovia-map-detail-document-title"
@@ -47,12 +50,13 @@
     <div
         class="canovia-map-document-scroll"
         data-map-document-scroll
+        data-dashboard-document-scroll
         tabindex="0"
         role="region"
         aria-label="詳細資料"
     >
-        <div class="canovia-map-document-stage" data-map-document-stage>
-            <div class="canovia-map-context-card" data-map-document-canvas>
+        <div class="canovia-map-document-stage" data-map-document-stage data-dashboard-document-stage>
+            <div class="canovia-map-context-card" data-map-document-canvas data-dashboard-document-canvas>
                 <div data-map-context-content></div>
             </div>
         </div>
