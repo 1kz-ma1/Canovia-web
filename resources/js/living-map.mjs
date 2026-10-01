@@ -1265,10 +1265,19 @@ export function mountLivingGoalMap({
         });
         const thumbWidth = metrics.viewportRatio * 100;
         const thumbLeft = metrics.progress * (1 - metrics.viewportRatio) * 100;
+        const maxScroll = Math.max(
+            0,
+            Number(scrollElement.scrollWidth || 0) - Number(scrollElement.clientWidth || 0),
+        );
+        const scrollLeft = Math.max(0, Number(scrollElement.scrollLeft || 0));
 
         indicator.style.setProperty('--document-thumb-width', thumbWidth.toFixed(2)+'%');
         indicator.style.setProperty('--document-thumb-left', thumbLeft.toFixed(2)+'%');
         indicator.classList.toggle('is-static', metrics.viewportRatio >= 0.995);
+
+        viewport?.classList?.toggle('is-document-at-start', scrollLeft <= 1);
+        viewport?.classList?.toggle('is-document-at-end', maxScroll <= 1 || scrollLeft >= maxScroll - 1);
+        viewport?.classList?.toggle('is-document-scrollable', maxScroll > 1);
     };
 
     const syncAllDocumentPositions = () => {
@@ -3105,6 +3114,7 @@ export function mountLivingGoalMap({
         refreshMapViewport();
         applyBaseLayout();
         applyMapView(mapView, { immediate: true });
+        syncAllDocumentPositions();
         const pending = readPending(windowRef);
         if (!pending) return;
 
@@ -3142,6 +3152,9 @@ export function mountLivingGoalMap({
         scrollElement.addEventListener('scroll', onDocumentScroll, { passive: true });
     }
     syncAllDocumentPositions();
+    windowRef.setTimeout(() => {
+        if (!disposed) syncAllDocumentPositions();
+    }, 0);
     zoomOutControl?.addEventListener('click', onZoomOut);
     zoomInControl?.addEventListener('click', onZoomIn);
     viewResetControl?.addEventListener('click', onViewReset);

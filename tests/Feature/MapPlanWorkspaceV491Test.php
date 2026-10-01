@@ -79,13 +79,15 @@ class MapPlanWorkspaceV491Test extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('L2 · PLAN WORKSPACE')
+            ->assertSee('L2 · PLAN DASHBOARD')
             ->assertSee('data-map-plan-workspace', false)
             ->assertSee('data-map-document-viewport', false)
             ->assertSee('data-map-document-chrome', false)
             ->assertSee('data-map-document-scroll', false)
             ->assertSee('data-map-document-canvas', false)
             ->assertSee('data-map-document-position', false)
+            ->assertSee('aria-labelledby="canovia-plan-dashboard-title"', false)
+            ->assertSee('id="canovia-plan-dashboard-title"', false)
             ->assertSee('data-plan-summary-metrics', false)
             ->assertSee('Roadmap')
             ->assertSee($task->title)
