@@ -1296,6 +1296,10 @@ export function mountLivingGoalMap({
         page.classList.toggle('is-detail-document-mode', detailActive);
         page.classList.toggle('is-document-mode', planDocumentMode || detailActive);
         surface?.classList?.toggle('is-dashboard-document', detailActive);
+
+        if (!detailActive) {
+            resetDocumentCamera(detailDocumentScroll);
+        }
     };
 
     const resolveDocumentCamera = (scrollElement) => {
@@ -1324,6 +1328,27 @@ export function mountLivingGoalMap({
         documentCameraStates.set(scrollElement, camera);
 
         return camera;
+    };
+
+    const resetDocumentCamera = (scrollElement) => {
+        if (!scrollElement) return;
+
+        const camera = resolveDocumentCamera(scrollElement);
+        if (!camera) return;
+
+        camera.scale = 1;
+        camera.fitScale = 1;
+        camera.mode = 'fit';
+        camera.naturalWidth = 0;
+        camera.naturalHeight = 0;
+        camera.stage.style.removeProperty('--document-stage-width');
+        camera.stage.style.removeProperty('--document-stage-height');
+        camera.canvas.style.removeProperty('--document-scale');
+        camera.viewport.classList.remove('is-document-camera-ready', 'is-document-camera-fit');
+        delete camera.viewport.dataset.mapDocumentCameraMode;
+        delete camera.viewport.dataset.mapDocumentScale;
+        delete camera.viewport.dataset.mapDocumentFitScale;
+        syncDocumentCameraControls(camera);
     };
 
     const documentCameraPadding = (scrollElement) => {
@@ -1507,6 +1532,12 @@ export function mountLivingGoalMap({
         for (const scrollElement of documentScrolls) {
             const camera = resolveDocumentCamera(scrollElement);
             if (!camera || scrollElement.clientWidth <= 0 || scrollElement.clientHeight <= 0) continue;
+            if (
+                camera.viewport.dataset.mapDocumentKind === 'detail'
+                && !camera.viewport.classList.contains('is-dashboard-document')
+            ) {
+                continue;
+            }
 
             if (camera.mode === 'fit') {
                 fitDocumentCamera(scrollElement, { resetScroll: false });
