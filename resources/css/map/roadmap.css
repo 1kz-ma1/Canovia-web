@@ -475,3 +475,126 @@
         }
     }
 }
+
+
+/* --------------------------------------------------------------------------
+ * V49.9 Phase 1 — Plan Dashboard Spatial Roadmap
+ * The embedded Dashboard is an overview surface, not a second full Roadmap
+ * application. Preserve structure while suppressing detail expansion.
+ * -------------------------------------------------------------------------- */
+@layer components {
+    .plan-identity-shell.is-dashboard-overview {
+        min-width: 0;
+    }
+
+    .plan-identity-shell.is-dashboard-overview [data-roadmap-view-panel="map"] {
+        min-width: 0;
+    }
+
+    .canovia-roadmap-spatial-shell.is-dashboard-overview {
+        height: 22rem;
+        min-height: 22rem;
+        border-radius: 1rem;
+        background:
+            radial-gradient(circle at 18% 18%, rgb(34 211 238 / 0.065), transparent 15rem),
+            radial-gradient(circle at 78% 24%, rgb(139 92 246 / 0.06), transparent 16rem),
+            linear-gradient(rgb(148 163 184 / 0.018) 1px, transparent 1px),
+            linear-gradient(90deg, rgb(148 163 184 / 0.018) 1px, transparent 1px),
+            rgb(2 6 23 / 0.82);
+        background-size: auto, auto, 2rem 2rem, 2rem 2rem, auto;
+        box-shadow:
+            inset 0 1px 0 rgb(255 255 255 / 0.028),
+            0 14px 34px rgb(2 6 23 / 0.24);
+    }
+
+    .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-spatial-stage {
+        min-height: 32.5rem;
+    }
+
+    .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-spatial-node {
+        width: 9.7rem;
+        pointer-events: none;
+    }
+
+    .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-spatial-node.is-current {
+        width: 10.25rem;
+    }
+
+    .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-spatial-node > summary {
+        min-height: 4.15rem;
+        cursor: default;
+        gap: 0.48rem;
+        border-radius: 0.9rem;
+        padding: 0.48rem;
+    }
+
+    .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-spatial-node > summary:hover,
+    .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-spatial-node > summary:focus-visible {
+        transform: none;
+    }
+
+    .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-task-orbit {
+        width: 1.72rem;
+        height: 1.72rem;
+        font-size: 0.56rem;
+    }
+
+    .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-task-copy {
+        gap: 0.08rem;
+    }
+
+    .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-task-copy strong {
+        display: -webkit-box;
+        overflow: hidden;
+        font-size: 0.62rem;
+        line-height: 1.35;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+    }
+
+    .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-task-copy > span {
+        font-size: 0.5rem;
+    }
+
+    .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-task-copy small {
+        font-size: 0.46rem;
+    }
+
+    .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-task-detail {
+        display: none !important;
+    }
+
+    .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-phase-heading {
+        opacity: 0.72;
+        transform: translateX(-50%) scale(0.9);
+        transform-origin: top center;
+    }
+
+    .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-cluster {
+        opacity: 0.72;
+    }
+
+    .canovia-roadmap-spatial-shell.is-dashboard-overview + .canovia-roadmap-spatial-caption {
+        margin-top: 0.32rem;
+        font-size: 0.54rem;
+    }
+
+    @media (max-width: 767px) {
+        .canovia-roadmap-spatial-shell.is-dashboard-overview {
+            height: 18rem;
+            min-height: 18rem;
+            border-radius: 0.9rem;
+            scroll-snap-type: none;
+        }
+
+        .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-spatial-node,
+        .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-spatial-node.is-current {
+            width: 9rem;
+        }
+
+        .canovia-roadmap-spatial-shell.is-dashboard-overview .canovia-roadmap-spatial-node > summary {
+            min-height: 3.8rem;
+            padding: 0.44rem;
+        }
+    }
+}
