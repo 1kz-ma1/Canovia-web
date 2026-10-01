@@ -113,6 +113,8 @@ class RoadmapSpatialMapV480Test extends TestCase
             ->assertOk()
             ->assertSee('data-roadmap-renderer-active="spatial_map"', false)
             ->assertSee('data-roadmap-spatial-map', false)
+            ->assertSee('data-roadmap-spatial-mode="standard"', false)
+            ->assertSee('data-roadmap-spatial-auto-center="1"', false)
             ->assertSee('data-roadmap-spatial-node', false)
             ->assertSee('data-roadmap-edge-relation="dependency"', false)
             ->assertSee('data-roadmap-view-panel="list"', false)
@@ -184,6 +186,14 @@ class RoadmapSpatialMapV480Test extends TestCase
         $this->assertStringContainsString(
             "[data-roadmap-spatial-node][data-roadmap-current=\"1\"]",
             $script,
+        );
+        $this->assertStringContainsString(
+            '[data-roadmap-spatial-mode="dashboard-overview"]',
+            $script,
+        );
+        $this->assertStringContainsString(
+            '--roadmap-overview-scale',
+            file_get_contents(resource_path('css/map/roadmap.css')),
         );
     }
 

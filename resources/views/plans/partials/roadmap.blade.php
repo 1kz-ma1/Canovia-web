@@ -6,9 +6,18 @@
     $roadmapAccent = $roadmapPlan?->accentKey() ?? 'sky';
     $roadmapWorld = $roadmapPlan?->roadmapWorld() ?? 'default';
     $roadmapSpatial = $roadmapSpatial ?? null;
+    $roadmapSurfaceMode = $roadmapSurfaceMode ?? 'standard';
+    $roadmapDashboardOverview = $roadmapSurfaceMode === 'dashboard-overview';
 @endphp
 
-<div class="plan-identity-shell" data-plan-accent="{{ $roadmapAccent }}" data-roadmap-view-root data-roadmap-plan-id="{{ $roadmapPlanId }}">
+<div
+    class="plan-identity-shell {{ $roadmapDashboardOverview ? 'is-dashboard-overview' : '' }}"
+    data-plan-accent="{{ $roadmapAccent }}"
+    data-roadmap-view-root
+    data-roadmap-plan-id="{{ $roadmapPlanId }}"
+    @if ($roadmapDashboardOverview) data-roadmap-fixed-view="map" @endif
+>
+    @unless ($roadmapDashboardOverview)
     <div class="pk-v19-roadmap-toolbar">
         <div class="roadmap-view-switch" role="group" aria-label="ロードマップ表示切替">
             <button type="button" class="roadmap-view-button is-active" data-roadmap-view-button="map" aria-pressed="true">
@@ -22,6 +31,7 @@
             <span aria-hidden="true">⌗</span> 全体を表示
         </button>
     </div>
+    @endunless
 
     <div data-roadmap-view-panel="map">
         @if (is_array($roadmapSpatial))
@@ -32,6 +42,7 @@
                 'roadmapCanEdit' => $roadmapCanEdit ?? false,
                 'roadmapCanManage' => $roadmapCanManage ?? false,
                 'roadmapMode' => $roadmapMode,
+                'roadmapSurfaceMode' => $roadmapSurfaceMode,
                 'roadmapRecommendedMinutes' => $roadmapRecommendedMinutes ?? null,
             ])
         @else
@@ -47,14 +58,16 @@
         @endif
     </div>
 
-    <div data-roadmap-view-panel="list" hidden>
-        @include('plans.partials.roadmap-list', [
-            'roadmap' => $roadmap,
-            'roadmapPlan' => $roadmapPlan,
-            'roadmapCanEdit' => $roadmapCanEdit ?? false,
-            'roadmapMode' => $roadmapMode,
-            'roadmapRecommendedMinutes' => $roadmapRecommendedMinutes ?? null,
-            'roadmapRecommendationReasons' => $roadmapRecommendationReasons ?? [],
-        ])
-    </div>
+    @unless ($roadmapDashboardOverview)
+        <div data-roadmap-view-panel="list" hidden>
+            @include('plans.partials.roadmap-list', [
+                'roadmap' => $roadmap,
+                'roadmapPlan' => $roadmapPlan,
+                'roadmapCanEdit' => $roadmapCanEdit ?? false,
+                'roadmapMode' => $roadmapMode,
+                'roadmapRecommendedMinutes' => $roadmapRecommendedMinutes ?? null,
+                'roadmapRecommendationReasons' => $roadmapRecommendationReasons ?? [],
+            ])
+        </div>
+    @endunless
 </div>

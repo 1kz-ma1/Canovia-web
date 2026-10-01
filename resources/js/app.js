@@ -1796,12 +1796,37 @@ function applyUiPreferences() {
 }
 
 function resolveRoadmapView(root) {
+    const fixedView = root.dataset.roadmapFixedView;
+    if (fixedView === 'map' || fixedView === 'list') return fixedView;
+
     const planId = root.dataset.roadmapPlanId || 'preview';
     const key = `pacekeeper.roadmap.v19.view.${planId}`;
     const stored = localStorage.getItem(key);
     if (stored === 'map' || stored === 'list') return stored;
     return 'map';
 }
+
+function fitDashboardRoadmapOverviews(root = document) {
+    root.querySelectorAll?.('[data-roadmap-spatial-mode="dashboard-overview"]').forEach((shell) => {
+        const stage = shell.querySelector('[data-roadmap-spatial-map]');
+        if (!stage || shell.clientWidth <= 0 || shell.clientHeight <= 0) return;
+
+        const stageWidth = Math.max(1, Number.parseFloat(getComputedStyle(stage).width) || stage.offsetWidth || 1);
+        const stageHeight = Math.max(1, Number.parseFloat(getComputedStyle(stage).height) || stage.offsetHeight || 1);
+        const padding = 14;
+        const availableWidth = Math.max(1, shell.clientWidth - (padding * 2));
+        const availableHeight = Math.max(1, shell.clientHeight - (padding * 2));
+        const scale = Math.max(0.12, Math.min(1, availableWidth / stageWidth, availableHeight / stageHeight));
+
+        shell.style.setProperty('--roadmap-overview-scale', scale.toFixed(4));
+        shell.dataset.roadmapOverviewFit = scale.toFixed(4);
+    });
+}
+
+
+window.addEventListener('resize', () => {
+    window.requestAnimationFrame(() => fitDashboardRoadmapOverviews());
+}, { passive: true });
 
 function setRoadmapView(root, view, persist = true) {
     const planId = root.dataset.roadmapPlanId || 'preview';
@@ -1821,6 +1846,8 @@ function setRoadmapView(root, view, persist = true) {
 
 document.addEventListener('DOMContentLoaded', () => {
     applyUiPreferences();
+    fitDashboardRoadmapOverviews();
+    window.requestAnimationFrame(() => fitDashboardRoadmapOverviews());
 
     const futureMemoHint = document.querySelector('[data-future-memo-home-hint]');
     if (futureMemoHint) {
@@ -2034,6 +2061,7 @@ document.addEventListener('DOMContentLoaded', () => {
     activePlanTab?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
 
     document.querySelectorAll('[data-roadmap-spatial-scroll]').forEach((scroll) => {
+        if (scroll.dataset.roadmapSpatialAutoCenter === '0') return;
         const current = scroll.querySelector('[data-roadmap-spatial-node][data-roadmap-current="1"]');
         if (!current) return;
 
@@ -3369,6 +3397,7 @@ function initializeInstantRoadmapPage() {
     });
 
     page.querySelectorAll('[data-roadmap-spatial-scroll]').forEach((scroll) => {
+        if (scroll.dataset.roadmapSpatialAutoCenter === '0') return;
         const current = scroll.querySelector('[data-roadmap-spatial-node][data-roadmap-current="1"]');
         if (!current) return;
 
@@ -3487,6 +3516,9 @@ async function captureInstantOfflineSnapshot() {
 }
 
 function initializeInstantCorePage() {
+    fitDashboardRoadmapOverviews();
+    window.requestAnimationFrame(() => fitDashboardRoadmapOverviews());
+
     document.querySelectorAll('[data-auto-toast]').forEach((toast) => {
         window.setTimeout(() => {
             if (!toast.isConnected) return;

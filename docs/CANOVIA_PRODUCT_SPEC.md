@@ -1311,3 +1311,11 @@ Global depth labelはplan-first hierarchyへ合わせ、Executionは `全体 -> 
 ### V49.8.1 Pre-device Hardening
 
 V49.8実機確認前の静的監査として、Plan Dashboardのabsolute positioningをDocument edge affordanceが上書きしないようcascadeを固定する。horizontal pan可能なDocumentだけ左右edge fadeを表示し、`is-document-scrollable / is-document-at-start / is-document-at-end` をruntime stateとして利用する。Planのユーザー向け表現はWorkspace / PaletteからDashboard / Documentへ統一する。Plan / Detail Dashboardはtitleでlabelされたregion、Document Scrollはkeyboard focus可能なregionとし、固定Detail BackはSemantic Zoom-outへ接続する。旧Bottom Sheet由来のFeature Test aria contractも現在のDashboard構造へ更新する。
+
+## V49.9 Spatial Roadmap / Fit Document
+
+Plan DashboardのRoadmapは既存 `RoadmapSpatialProjectionService` をPrimaryとして使い、`RoadmapService -> Spatial Projection -> Dashboard` のread-only projectionとする。Dashboardでは `dashboard-overview` modeを使い、List切替、Current自動センタリング、Task detail展開を持ち込まず、Phase / Cluster / Task / Dependencyの構造把握を優先する。Spatial StageはDashboard frameへ自動fitし、最初にRoadmap全体構造を一望できる状態をPrimaryとする。`/roadmap` 本体のstandard interactionは維持する。
+
+V49.9は段階導入とし、Phase 1でSpatial Roadmap Primary、Phase 2でDocument全体fit + explicit zoom camera、Phase 3でpinch / region focus、Phase 4で2.5D depth polishを行う。Document内部でも `Container = zoom / Leaf = detail` を最終interaction contractとする。
+
+詳細は `docs/V49.9_SPATIAL_ROADMAP_FIT_DOCUMENT.md` を正とする。
