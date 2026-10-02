@@ -185,7 +185,7 @@ class ExecutionWorkspaceModesV512Test extends TestCase
         $response
             ->assertOk()
             ->assertSee('開発Workspace')
-            ->assertSee('このPlanに限定して提案中');
+            ->assertSee('から選んでいます。');
 
         $this->assertSame(
             ExecutionModeService::DEVELOPMENT,
