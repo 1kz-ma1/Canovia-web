@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Plan;
 use App\Models\PlanActivityLog;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
 
 final class TimelinePageDataService
@@ -18,10 +19,15 @@ final class TimelinePageDataService
         $plans = $this->core->plans($request, [
             'tasks',
             'work_logs',
-            'activity_logs',
         ]);
 
-        $plans->each(fn (Plan $plan) => $plan->loadMissing('adjustments'));
+        if ($plans->contains(fn (Plan $plan) => (bool) $plan->is_collaborative)) {
+            $this->core->plans($request, ['activity_logs']);
+        }
+
+        if ($plans->isNotEmpty()) {
+            (new EloquentCollection($plans->all()))->loadMissing('adjustments');
+        }
 
         $achievementConstellation = $plans
             ->filter(fn (Plan $plan) => $this->achievements->isCompleted($plan))
