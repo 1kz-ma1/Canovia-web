@@ -4,11 +4,76 @@ namespace App\Services;
 
 use App\Models\Plan;
 use App\Models\WorkSession;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 
 class ContinuityService
 {
     public function forPlans(Collection $plans, string $actorToken): ?array
+    {
+        $session = $this->latestSessionForPlans($plans, $actorToken);
+        $session?->loadMissing(['plan', 'task']);
+
+        return $session ? $this->fromSession($session) : null;
+    }
+
+    /**
+     * Home needs active/pending sessions and continuity at the same time.
+     * Query the two session scopes separately to preserve their semantics, then
+     * hydrate Plan/Task relations once across the combined model set.
+     *
+     * @return array{
+     *   active_work_session:?WorkSession,
+     *   pending_plan_updates:Collection,
+     *   continuity:?array
+     * }
+     */
+    public function homeContext(Collection $plans, string $actorToken): array
+    {
+        $dashboardSessions = WorkSession::query()
+            ->where('actor_token', $actorToken)
+            ->where(function ($query) {
+                $query->whereIn('status', ['active', 'paused'])
+                    ->orWhere(function ($pendingQuery) {
+                        $pendingQuery
+                            ->where('needs_plan_update', true)
+                            ->whereIn('status', ['completed', 'interrupted']);
+                    });
+            })
+            ->get();
+
+        $latestSession = $this->latestSessionForPlans($plans, $actorToken);
+
+        $sessionsToHydrate = $dashboardSessions
+            ->when($latestSession, fn (Collection $sessions) => $sessions->push($latestSession))
+            ->unique('id')
+            ->values();
+
+        if ($sessionsToHydrate->isNotEmpty()) {
+            (new EloquentCollection($sessionsToHydrate->all()))
+                ->loadMissing(['plan', 'task']);
+        }
+
+        $pendingPlanUpdates = $dashboardSessions
+            ->filter(fn (WorkSession $session) => (bool) $session->needs_plan_update
+                && in_array($session->status, ['completed', 'interrupted'], true))
+            ->sortByDesc(fn (WorkSession $session) => $session->ended_at?->timestamp ?? 0)
+            ->take(5)
+            ->values();
+
+        $activeWorkSession = $dashboardSessions
+            ->filter(fn (WorkSession $session) => in_array($session->status, ['active', 'paused'], true))
+            ->sortByDesc(fn (WorkSession $session) => $session->started_at?->timestamp ?? 0)
+            ->first();
+
+        return [
+            'active_work_session' => $activeWorkSession,
+            'pending_plan_updates' => $pendingPlanUpdates,
+            'continuity' => $latestSession ? $this->fromSession($latestSession) : null,
+        ];
+    }
+
+    private function latestSessionForPlans(Collection $plans, string $actorToken): ?WorkSession
     {
         $accountPlanIds = $plans
             ->filter(fn (Plan $plan) => $plan->user_id !== null)
@@ -27,7 +92,7 @@ class ContinuityService
             return null;
         }
 
-        $session = WorkSession::with(['plan', 'task'])
+        return WorkSession::query()
             ->where(function ($query) use ($accountPlanIds, $guestPlanIds, $actorToken) {
                 if ($accountPlanIds !== []) {
                     $query->whereIn('plan_id', $accountPlanIds);
@@ -44,8 +109,6 @@ class ContinuityService
             })
             ->latest('started_at')
             ->first();
-
-        return $session ? $this->fromSession($session) : null;
     }
 
     public function forPlan(Plan $plan, string $actorToken): ?array
