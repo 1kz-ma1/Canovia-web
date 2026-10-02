@@ -1386,3 +1386,16 @@ Main Star選択時のみTask Listを表示し、Task title/status/progress/remai
 MobileではUniverseを画面幅へ無理に縮小せず、minimum sizeを持つpannable Stageとして扱う。既存`RoadmapSpatialProjectionService` はPlan Dashboardやdependency inputとして維持する。
 
 詳細は `docs/V51.1_CONSTELLATION_ROADMAP.md` を正とする。
+
+
+## V51.2 Execution Workspace Modes
+
+Execution `/navigate` はMode-aware orchestration layerとする。Execution ModeはPlanへ保存せず、`ExecutionModeService` が既存categoryとspecialized capability boundaryから `study / development / career / general` をrequest時に導出する。
+
+複数Modeがある場合のみMode Pickerを表示し、選択後はSwitcherで切替可能とする。1 Modeのみなら自動選択する。Constellation等から `plan_id` 付きで入った場合は、そのPlanのModeを自動選択しPlan scopeを維持する。
+
+RecommendationService自体は変更せず、入力候補をselected Mode内Planへ限定する。同一Modeに複数Planがある場合のみPlan switcherを表示し、preferred PlanのUI/server validationもMode内に限定する。
+
+Task決定後はStudy -> Study Activity、Development -> Execution Orchestration、Career -> Career Workspace、General -> WorkSession Timerへhandoffする。specialized handoffがあるPrimary RecommendationにもTimer fallbackを残す。
+
+詳細は `docs/V51.2_EXECUTION_WORKSPACE_MODES.md` を正とする。

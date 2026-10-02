@@ -6,6 +6,7 @@ use App\Enums\BehaviorEventType;
 use App\Models\Task;
 use App\Services\BehaviorEventLogger;
 use App\Services\BehaviorIdentityService;
+use App\Services\ExecutionModeService;
 use App\Services\NavigationFlowService;
 use App\Services\PlanOwnershipService;
 use App\Services\RecommendationService;
@@ -28,6 +29,7 @@ class NavigationController extends Controller
         UserStateService $stateService,
         NavigationFlowService $flowService,
         RecommendationService $recommendationService,
+        ExecutionModeService $executionModes,
         BehaviorEventLogger $logger,
     ) {
         $actorToken = $identity->resolve($request);
@@ -36,11 +38,26 @@ class NavigationController extends Controller
             'workLogs' => fn ($query) => $query->latest('worked_on')->latest('id'),
         ]);
         $plans = $plans->filter(fn ($plan) => $ownership->canEdit($request, $plan))->values();
+        $availableExecutionModes = $executionModes->availableModes($plans);
+        $requestedMode = trim((string) $request->query('mode', ''));
+        if (! array_key_exists($requestedMode, $availableExecutionModes)) {
+            $requestedMode = '';
+        }
+
         $baseline = $behaviorService->baseline($actorToken);
         $state = $stateService->calculate($actorToken, $baseline, $plans);
 
         if ($request->boolean('all')) {
-            $request->session()->forget(self::SESSION_KEY);
+            $currentDraft = $request->session()->get(self::SESSION_KEY, []);
+            $executionMode = is_array($currentDraft) ? ($currentDraft['execution_mode'] ?? null) : null;
+            $request->session()->put(self::SESSION_KEY, [
+                'step' => 'recommendation',
+                'intent' => 'decide',
+                'minutes' => 0,
+                'selection_steps' => 0,
+                'excluded_task_ids' => [],
+                'execution_mode' => $requestedMode !== '' ? $requestedMode : $executionMode,
+            ]);
         } elseif ($request->filled('plan_id')) {
             $contextPlan = $plans->firstWhere('id', (int) $request->integer('plan_id'));
 
@@ -52,6 +69,7 @@ class NavigationController extends Controller
                     'intent' => 'decide',
                     'minutes' => 0,
                     'scope_plan_id' => $contextPlan->id,
+                    'execution_mode' => $executionModes->modeForPlan($contextPlan),
                     'selection_steps' => 0,
                     'excluded_task_ids' => [],
                 ]);
@@ -68,8 +86,33 @@ class NavigationController extends Controller
                 'selection_steps' => 0,
                 'excluded_task_ids' => [],
             ];
-            $request->session()->put(self::SESSION_KEY, $draft);
         }
+
+        if ($requestedMode !== '' && ($draft['execution_mode'] ?? null) !== $requestedMode) {
+            $draft = [
+                'step' => 'recommendation',
+                'intent' => 'decide',
+                'minutes' => 0,
+                'execution_mode' => $requestedMode,
+                'selection_steps' => 0,
+                'excluded_task_ids' => [],
+            ];
+        }
+
+        $selectedExecutionMode = $draft['execution_mode'] ?? null;
+        if (! is_string($selectedExecutionMode) || ! array_key_exists($selectedExecutionMode, $availableExecutionModes)) {
+            $selectedExecutionMode = count($availableExecutionModes) === 1
+                ? array_key_first($availableExecutionModes)
+                : null;
+        }
+
+        if ($selectedExecutionMode !== null) {
+            $draft['execution_mode'] = $selectedExecutionMode;
+        } else {
+            unset($draft['execution_mode'], $draft['scope_plan_id']);
+        }
+
+        $request->session()->put(self::SESSION_KEY, $draft);
 
         if ($request->boolean('configure')) {
             $scopePlanId = $draft['scope_plan_id'] ?? null;
@@ -82,19 +125,29 @@ class NavigationController extends Controller
             if ($scopePlanId) {
                 $draft['scope_plan_id'] = (int) $scopePlanId;
             }
+            if ($selectedExecutionMode !== null) {
+                $draft['execution_mode'] = $selectedExecutionMode;
+            }
 
             $request->session()->put(self::SESSION_KEY, $draft);
         }
+
+        $modePlans = $executionModes->plansForMode($plans, $selectedExecutionMode);
         $scopePlan = ! empty($draft['scope_plan_id'])
-            ? $plans->firstWhere('id', (int) $draft['scope_plan_id'])
+            ? $modePlans->firstWhere('id', (int) $draft['scope_plan_id'])
             : null;
+
+        if (! empty($draft['scope_plan_id']) && ! $scopePlan) {
+            unset($draft['scope_plan_id']);
+            $request->session()->put(self::SESSION_KEY, $draft);
+        }
         $recommendation = null;
         $recommendations = collect();
 
-        if (($draft['step'] ?? null) === 'recommendation') {
+        if (($draft['step'] ?? null) === 'recommendation' && $selectedExecutionMode !== null) {
             $recommendationPlans = $scopePlan && ($draft['intent'] ?? null) !== 'preferred'
                 ? collect([$scopePlan])
-                : $plans;
+                : $modePlans;
             $candidateExclusions = collect($draft['excluded_task_ids'] ?? [])->map(fn ($id) => (int) $id)->values()->all();
 
             // Keep the first recommendation decisive, but prepare up to two nearby alternatives
@@ -133,14 +186,33 @@ class NavigationController extends Controller
             }
         }
 
+        $recommendationAction = $recommendation
+            ? $executionModes->actionFor($recommendation->plan, $recommendation->task)
+            : null;
+        $recommendationActions = $recommendations
+            ->mapWithKeys(fn ($candidate) => [
+                (int) $candidate->task->id => $executionModes->actionFor(
+                    $candidate->plan,
+                    $candidate->task,
+                ),
+            ]);
+
         return view('navigation.index', [
             'plans' => $plans,
+            'modePlans' => $modePlans,
+            'availableExecutionModes' => $availableExecutionModes,
+            'selectedExecutionMode' => $selectedExecutionMode,
+            'selectedExecutionModeDefinition' => $selectedExecutionMode !== null
+                ? ($availableExecutionModes[$selectedExecutionMode] ?? null)
+                : null,
             'state' => $state,
             'draft' => $draft,
             'intentOptions' => $flowService->intentOptions($state),
             'timeOptions' => $flowService->timeOptions($state),
             'recommendation' => $recommendation,
             'recommendations' => $recommendations,
+            'recommendationAction' => $recommendationAction,
+            'recommendationActions' => $recommendationActions,
             'scopePlan' => $scopePlan,
         ]);
     }
@@ -164,6 +236,7 @@ class NavigationController extends Controller
         ]);
         $existingDraft = $request->session()->get(self::SESSION_KEY, []);
         $scopePlanId = is_array($existingDraft) ? ($existingDraft['scope_plan_id'] ?? null) : null;
+        $executionMode = is_array($existingDraft) ? ($existingDraft['execution_mode'] ?? null) : null;
 
         $nextDraft = [
             'step' => 'time',
@@ -176,6 +249,9 @@ class NavigationController extends Controller
         if ($scopePlanId && $validated['intent'] !== 'preferred') {
             $nextDraft['scope_plan_id'] = (int) $scopePlanId;
         }
+        if (is_string($executionMode) && $executionMode !== '') {
+            $nextDraft['execution_mode'] = $executionMode;
+        }
 
         $request->session()->put(self::SESSION_KEY, $nextDraft);
         $logger->record($actorToken, BehaviorEventType::NavigationStarted, $request, metadata: [
@@ -185,7 +261,13 @@ class NavigationController extends Controller
         return redirect()->route('navigation.index');
     }
 
-    public function chooseTime(Request $request, PlanOwnershipService $ownership, BehaviorIdentityService $identity, BehaviorEventLogger $logger)
+    public function chooseTime(
+        Request $request,
+        PlanOwnershipService $ownership,
+        BehaviorIdentityService $identity,
+        BehaviorEventLogger $logger,
+        ExecutionModeService $executionModes,
+    )
     {
         $draft = $request->session()->get(self::SESSION_KEY);
 
@@ -199,8 +281,18 @@ class NavigationController extends Controller
         ]);
 
         if (($draft['intent'] ?? null) === 'preferred') {
-            $plan = $ownership->ownedPlans($request)
+            $preferredPlans = $ownership->ownedPlans($request)
                 ->filter(fn ($candidate) => $ownership->canEdit($request, $candidate))
+                ->values();
+
+            if (is_string($draft['execution_mode'] ?? null)) {
+                $preferredPlans = $executionModes->plansForMode(
+                    $preferredPlans,
+                    $draft['execution_mode'],
+                );
+            }
+
+            $plan = $preferredPlans
                 ->firstWhere('id', (int) ($validated['preferred_plan_id'] ?? 0));
 
             if (! $plan) {
@@ -263,8 +355,11 @@ class NavigationController extends Controller
 
     public function reset(Request $request)
     {
+        $mode = trim((string) $request->input('mode', ''));
         $request->session()->forget(self::SESSION_KEY);
 
-        return redirect()->route('navigation.index');
+        return $mode !== ''
+            ? redirect()->route('navigation.index', ['mode' => $mode])
+            : redirect()->route('navigation.index');
     }
 }
