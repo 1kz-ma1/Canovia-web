@@ -132,6 +132,14 @@ final class CoreContextService
             case 'memberships':
                 $this->loadPlanRelations(['memberships']);
                 break;
+            case 'activity_logs':
+                $this->loadPlanRelations([
+                    'activityLogs' => fn ($query) => $query
+                        ->with('user:id,name')
+                        ->latest('created_at')
+                        ->latest('id'),
+                ]);
+                break;
         }
 
         $this->loaded[$feature] = true;
