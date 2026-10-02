@@ -3570,6 +3570,7 @@ function initializeInstantCorePage() {
     mountCompanionPalette();
     mountConstellationRoadmap();
     mountDashboardDocuments();
+    mountStandalonePlanDashboards();
     fitDashboardRoadmapOverviews();
     window.requestAnimationFrame(() => fitDashboardRoadmapOverviews());
 
@@ -3594,6 +3595,7 @@ document.addEventListener('DOMContentLoaded', () => {
     mountCompanionPalette();
     mountConstellationRoadmap();
     mountDashboardDocuments();
+    mountStandalonePlanDashboards();
     if (document.body?.dataset.focusMode === '1') return;
     mountCanoviaInstantNavigation();
     mountLivingGoalMap({ recordBehaviorRef: recordBehavior });
