@@ -654,8 +654,17 @@ export function mountCanoviaInstantNavigation({
 
         const currentKey = cacheKey(normalizedUrl(windowRef.location.href, windowRef));
         const pending = urls.filter((href) => cacheKey(normalizedUrl(href, windowRef)) !== currentKey);
-        const bundled = pending.filter((href) => CORE_BUNDLE_SURFACES.has(normalizedUrl(href, windowRef).pathname));
-        const individual = pending.filter((href) => !CORE_BUNDLE_SURFACES.has(normalizedUrl(href, windowRef).pathname));
+
+        // Home is expensive and usually already captured as the current page.
+        // When arriving through a deep link, do not spend its server cost in
+        // the background without intent; pointer/focus/touch still prefetches
+        // Home immediately through onIntent().
+        const idlePending = pending.filter(
+            (href) => normalizedUrl(href, windowRef).pathname !== '/'
+        );
+
+        const bundled = idlePending.filter((href) => CORE_BUNDLE_SURFACES.has(normalizedUrl(href, windowRef).pathname));
+        const individual = idlePending.filter((href) => !CORE_BUNDLE_SURFACES.has(normalizedUrl(href, windowRef).pathname));
 
         const warm = async () => {
             if (disposed) return;
