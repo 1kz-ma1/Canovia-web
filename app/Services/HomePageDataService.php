@@ -10,6 +10,8 @@ final class HomePageDataService
     private const STATE_SNAPSHOT_INTERVAL_SECONDS = 600;
 
     private const STATE_SNAPSHOT_SESSION_KEY = 'action_home.state_snapshot_at';
+
+    private const STATE_SNAPSHOT_DATE_SESSION_KEY = 'action_home.state_snapshot_date';
     public function __construct(
         private readonly CoreContextService $core,
         private readonly BehaviorEventLogger $eventLogger,
@@ -76,10 +78,10 @@ final class HomePageDataService
 
         if (! $prefetch && $this->stateSnapshotDue($request)) {
             $this->stateService->captureDaily($actorToken, $state);
-            $request->session()->put(
-                self::STATE_SNAPSHOT_SESSION_KEY,
-                (int) now()->timestamp,
-            );
+            $request->session()->put([
+                self::STATE_SNAPSHOT_SESSION_KEY => (int) now()->timestamp,
+                self::STATE_SNAPSHOT_DATE_SESSION_KEY => today()->toDateString(),
+            ]);
         }
 
         $dashboard = $this->dashboardService->build(
@@ -142,8 +144,9 @@ final class HomePageDataService
     private function stateSnapshotDue(Request $request): bool
     {
         $capturedAt = $request->session()->get(self::STATE_SNAPSHOT_SESSION_KEY);
+        $capturedDate = $request->session()->get(self::STATE_SNAPSHOT_DATE_SESSION_KEY);
 
-        if (! is_numeric($capturedAt)) {
+        if (! is_numeric($capturedAt) || $capturedDate !== today()->toDateString()) {
             return true;
         }
 
