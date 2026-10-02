@@ -8,8 +8,6 @@ use App\Models\CompanionMutationCandidate;
 use App\Models\CompanionThread;
 use App\Models\Plan;
 use App\Models\Task;
-use App\Services\CompanionContextService;
-use App\Services\CompanionContinuityService;
 use App\Services\CompanionConversationService;
 use App\Services\CompanionEntryService;
 use App\Services\CompanionMutationApplyService;
@@ -150,6 +148,7 @@ class CompanionController extends Controller
         }
         if ($task && (! $plan || (int) $task->plan_id !== (int) $plan->id)) {
             $task = null;
+            $companionThread->setRelation('task', null);
         }
 
         return view('companion.show', [
