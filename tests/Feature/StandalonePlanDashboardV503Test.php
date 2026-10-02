@@ -80,11 +80,15 @@ class StandalonePlanDashboardV503Test extends TestCase
         $controller = file_get_contents(app_path('Http/Controllers/PlanDashboardController.php'));
         $projection = file_get_contents(app_path('Services/HierarchyMapProjectionService.php'));
         $runtime = file_get_contents(resource_path('js/dashboard-document.mjs'));
+        $appCss = file_get_contents(resource_path('css/app.css'));
+        $mapCss = file_get_contents(resource_path('css/map/index.css'));
 
         $this->assertStringContainsString('PlanDashboardWorkspaceService', $controller);
         $this->assertStringContainsString('PlanDashboardWorkspaceService', $projection);
         $this->assertStringContainsString("data-roadmap-region-focus", $runtime);
         $this->assertStringContainsString('state.focusElement = focusElement', $runtime);
+        $this->assertStringContainsString("@import './plan-dashboard-board.css';", $appCss);
+        $this->assertStringNotContainsString("plan-dashboard-board.css", $mapCss);
     }
 
     private function plan(User $user, string $title): Plan
