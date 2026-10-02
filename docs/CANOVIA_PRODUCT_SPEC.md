@@ -1553,3 +1553,16 @@ Behavior sampleがanalysis threshold未満の場合、利用されないUserStat
 Core Bundle endpoint / JSON contract / direct fragment fallbackは変更しない。内部query削減後のproduction telemetryを見て、bundle head-of-line blockingやprefetch分割は次段階で判断する。
 
 詳細は `docs/V51.9.2_HOME_CORE_BUNDLE_COST_REDUCTION.md` を正とする。
+
+
+## V51.9.3 DB Connection & Query Roundtrip Reduction
+
+V51.9.2 production telemetryで、iOS PWAのcache hit UIはHome 92ms / Constellation 73msまで下がっている一方、server側では各requestの最初のusers SELECTが約275〜295ms、その後の単純SELECTも約78〜85msであることを確認した。
+
+MySQL/MariaDB connectionは `DB_PERSISTENT` 環境変数で `PDO::ATTR_PERSISTENT` をopt-inできる。defaultはfalseとし、productionのみtrueへ切替可能にする。rollbackは `DB_PERSISTENT=false`。DB schema / credentials / data sourceは変更しない。
+
+ExecutionではPlanごとの `PlanProgressService::calculate()` により `availabilityRules / availabilityOverrides` がN+1化していたため、NavigationControllerで両relationを全Plan分eager loadする。Plan数に関係なくavailability SELECTは各relation 1回に固定する。
+
+TimelineでもAchievement Projection経由で同じN+1が発生するため、CoreContextのTimeline featureへ `availability` を追加してbatch loadする。Core BundleではCalendarが既にavailabilityをloadしておりShared CoreContextで再利用される。
+
+詳細は `docs/V51.9.3_DB_ROUNDTRIP_REDUCTION.md` を正とする。
