@@ -89,6 +89,7 @@
                             <button type="submit" class="btn-primary min-h-12 w-full justify-center">◷ 集中タイマーで進める</button>
                         </form>
                     @endif
+                    <a href="{{ route('plans.dashboard', $plan) }}" class="btn-secondary min-h-11 w-full justify-center md:w-auto md:flex-none">Dashboard</a>
                     @if (! empty($planTools))
                         <a href="#canovia-tools" class="btn-secondary min-h-11 w-full justify-center md:w-auto md:flex-none">Tools</a>
                     @endif
