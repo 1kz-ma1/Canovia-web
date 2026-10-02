@@ -17,7 +17,6 @@ use App\Services\FeatureFlagService;
 use App\Services\NativeAiGateway;
 use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class CompanionController extends Controller
