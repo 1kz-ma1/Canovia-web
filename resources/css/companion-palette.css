@@ -297,10 +297,10 @@
     }
 
     .canovia-companion-thread {
-        display: grid;
+        display: flex;
         min-height: 100%;
+        flex-direction: column;
         gap: 0.72rem;
-        grid-template-rows: auto auto auto minmax(12rem, 1fr) auto;
     }
 
     .canovia-companion-thread-context {
@@ -414,6 +414,7 @@
         display: grid;
         min-height: 12rem;
         max-height: 23rem;
+        flex: 1 1 auto;
         gap: 0.55rem;
         overflow-y: auto;
         overscroll-behavior: contain;
