@@ -40,15 +40,46 @@
                     class="canovia-constellation-selected-workspace"
                     data-constellation-selected-workspace
                     data-selected-plan-id="{{ $selectedConstellation['plan_id'] }}"
+                    data-previous-plan-url="{{ $previousPlan ? route('roadmap.index', ['plan_id' => $previousPlan->id]) : '' }}"
+                    data-next-plan-url="{{ $nextPlan ? route('roadmap.index', ['plan_id' => $nextPlan->id]) : '' }}"
                 >
                     <section class="canovia-constellation-focus-palette" data-constellation-focus-palette>
-                        <div class="canovia-constellation-focus-graph-shell">
+                        <div class="canovia-constellation-focus-graph-shell" data-constellation-swipe-zone>
                             <div class="canovia-constellation-space-dust" aria-hidden="true"></div>
+
+                            <nav class="canovia-constellation-plan-switcher" data-constellation-plan-switcher aria-label="Plan星座を切り替える">
+                                @if ($previousPlan)
+                                    <a
+                                        href="{{ route('roadmap.index', ['plan_id' => $previousPlan->id]) }}"
+                                        data-constellation-previous-plan
+                                        aria-label="前のPlan: {{ $previousPlan->title }}"
+                                    >
+                                        <span aria-hidden="true">‹</span>
+                                        <small>前のPlan</small>
+                                    </a>
+                                @else
+                                    <span class="is-disabled" aria-hidden="true"><span>‹</span><small>前のPlan</small></span>
+                                @endif
+
+                                @if ($nextPlan)
+                                    <a
+                                        href="{{ route('roadmap.index', ['plan_id' => $nextPlan->id]) }}"
+                                        data-constellation-next-plan
+                                        aria-label="次のPlan: {{ $nextPlan->title }}"
+                                    >
+                                        <small>次のPlan</small>
+                                        <span aria-hidden="true">›</span>
+                                    </a>
+                                @else
+                                    <span class="is-disabled" aria-hidden="true"><small>次のPlan</small><span>›</span></span>
+                                @endif
+                            </nav>
                             <div
                                 class="canovia-plan-constellation is-selected is-focus"
                                 data-plan-constellation
                                 data-plan-id="{{ $selectedConstellation['plan_id'] }}"
                                 data-pattern="{{ $selectedConstellation['pattern'] }}"
+                                data-constellation-shape="{{ $selectedConstellation['shape_key'] ?? 'chain' }}"
                                 data-richness="{{ $selectedConstellation['richness_tier'] }}"
                                 aria-label="{{ $selectedConstellation['title'] }}の星座"
                             >
@@ -108,6 +139,24 @@
                             data-selected-star-id="{{ $initialStar['id'] ?? '' }}"
                             aria-live="polite"
                         >
+                            @if ($selectedStars->isNotEmpty())
+                                <div class="canovia-constellation-star-rail" data-constellation-star-rail aria-label="Task Group">
+                                    @foreach ($selectedStars as $star)
+                                        <button
+                                            type="button"
+                                            class="{{ $initialStar && $initialStar['id'] === $star['id'] ? 'is-selected' : '' }}"
+                                            data-constellation-star-jump="{{ $star['id'] }}"
+                                            data-star-current="{{ $star['is_current'] ? '1' : '0' }}"
+                                            data-star-complete="{{ $star['is_complete'] ? '1' : '0' }}"
+                                            aria-pressed="{{ $initialStar && $initialStar['id'] === $star['id'] ? 'true' : 'false' }}"
+                                        >
+                                            <span>{{ $star['index'] }}</span>
+                                            <strong>{{ $star['completed_count'] }}/{{ $star['task_count'] }}</strong>
+                                        </button>
+                                    @endforeach
+                                </div>
+                            @endif
+
                             <div data-constellation-star-panel-body>
                                 @if ($initialStar)
                                     @include('roadmap.partials.star-task-group', [
@@ -209,6 +258,7 @@
                                 data-plan-constellation
                                 data-plan-id="{{ $constellation['plan_id'] }}"
                                 data-pattern="{{ $constellation['pattern'] }}"
+                                data-constellation-shape="{{ $constellation['shape_key'] ?? 'chain' }}"
                                 data-richness="{{ $constellation['richness_tier'] }}"
                                 style="--constellation-x: {{ $displayX }}%; --constellation-y: {{ $displayY }}%;"
                                 aria-label="{{ $constellation['title'] }}を選択"
