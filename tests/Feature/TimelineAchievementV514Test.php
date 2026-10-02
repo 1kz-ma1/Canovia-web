@@ -68,6 +68,7 @@ class TimelineAchievementV514Test extends TestCase
         $user = User::factory()->create();
 
         $completed = $this->createPlan($user, '達成済み');
+        $completed->update(['accent_key' => 'violet']);
         $this->createTask($completed, 'Done', 'done', 100);
 
         $active = $this->createPlan($user, '進行中');
@@ -79,6 +80,7 @@ class TimelineAchievementV514Test extends TestCase
             ->assertOk()
             ->assertSee('data-achievement-constellation', false)
             ->assertSee('data-achievement-plan-id="'.$completed->id.'"', false)
+            ->assertSee('data-plan-accent="violet"', false)
             ->assertDontSee('data-achievement-plan-id="'.$active->id.'"', false)
             ->assertSee(route('achievements.show', $completed), false);
     }
