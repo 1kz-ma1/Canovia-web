@@ -59,6 +59,7 @@ use App\Http\Controllers\ExecutionGitHubHandoffController;
 use App\Http\Controllers\ExecutionDistributionController;
 use App\Http\Controllers\CompanionController;
 use App\Http\Controllers\CoreFragmentBundleController;
+use App\Http\Controllers\ClientPerformanceController;
 
 Route::get('/welcome', [FirstRunController::class, 'show'])->name('first_run.show');
 Route::post('/welcome/start', [FirstRunController::class, 'start'])->name('first_run.start');
@@ -71,6 +72,9 @@ Route::delete('/map/personalization/pins/{plan}', [MapPersonalizationController:
     ->middleware('auth')
     ->name('map.personalization.pins.destroy');
 Route::get('/instant/core-bundle', CoreFragmentBundleController::class)->name('instant.core_bundle');
+Route::post('/performance/client', ClientPerformanceController::class)
+    ->middleware('throttle:120,1')
+    ->name('performance.client');
 
 // 未来メモ / goal discovery
 Route::get('/future-memos', [FutureMemoController::class, 'index'])->name('future_memos.index');
