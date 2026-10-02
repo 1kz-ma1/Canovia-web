@@ -9,14 +9,14 @@
         request()->routeIs('plans.tasks.guided_execution.*'),
         request()->routeIs('plans.tasks.execution_orchestration.*'),
         request()->routeIs('plans.tasks.study_*') => '実行',
-        request()->routeIs('roadmap.*'), request()->routeIs('achievements.*') => '星座',
-        request()->routeIs('timeline.*') => 'タイムライン',
+        request()->routeIs('roadmap.*') => '星座',
+        request()->routeIs('timeline.*'), request()->routeIs('achievements.*') => 'タイムライン',
         request()->routeIs('calendar.*') => 'カレンダー',
         request()->routeIs('future_memos.*') => '未来メモ',
         request()->routeIs('feedback.*') => 'Canovia Future',
         request()->routeIs('github_workflow.*') => 'GitHub',
         request()->routeIs('companion.*') => 'Companion',
-        request()->routeIs('chat.*'), request()->routeIs('achievements.*'), request()->routeIs('plans.review_assistant.*') => '計画を更新',
+        request()->routeIs('chat.*'), request()->routeIs('plans.review_assistant.*') => '計画を更新',
         request()->routeIs('public_plans.*') => '共有プラン',
         request()->routeIs('plans.*'), request()->routeIs('tasks.*'), request()->routeIs('my_plans.*') => '計画',
         default => 'ホーム',
@@ -135,9 +135,9 @@
 
                 <nav class="pk-desktop-nav flex flex-wrap items-center gap-1 rounded-2xl border border-slate-800 bg-slate-900/75 p-1 text-sm shadow-lg shadow-slate-950/20" aria-label="メインナビゲーション">
                     <a href="{{ route('home') }}" data-canovia-nav-key="desktop-home" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('home') || request()->routeIs('calendar.*') || request()->routeIs('my_plans.*') || request()->routeIs('plans.show') || request()->routeIs('plans.dashboard') || request()->routeIs('plans.edit') || request()->routeIs('tasks.*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6.8 15.7c-1.8 1.7-2.7 3.4-2.5 4.9 1.5.2 3.2-.7 4.9-2.5M14.5 4.2c2.8-.9 5.2-.9 5.3-.8.1.1.1 2.5-.8 5.3-1 3.2-3.5 6.1-7.2 7.8L7.9 12.6c1.7-3.7 4.6-6.2 6.6-8.4Z"/><path d="m9.1 15 4 4M7.4 12.1l-2.7.6-1.5 2.6 4.2.8M14.8 16.3l.8 4.2 2.6-1.5.6-2.7"/><circle cx="15.2" cy="8.8" r="1.6"/></svg><i></i></span><span>ホーム</span></a>
-                    <a href="{{ route('roadmap.index') }}" data-canovia-nav-key="desktop-constellation" data-onboarding-target="roadmap-nav" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('roadmap.*') || request()->routeIs('achievements.*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="15" r="1.6"/><circle cx="11.5" cy="6.5" r="1.8"/><circle cx="18" cy="11" r="1.7"/><circle cx="15.8" cy="19" r="1.5"/><path d="m7.2 13.8 3.1-5.6m2.8-.7 3.5 2.4m.9 2.7-1.1 4.8m-9-.9 7 2.1"/></svg><i></i></span><span>星座</span></a>
+                    <a href="{{ route('roadmap.index') }}" data-canovia-nav-key="desktop-constellation" data-onboarding-target="roadmap-nav" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('roadmap.*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="15" r="1.6"/><circle cx="11.5" cy="6.5" r="1.8"/><circle cx="18" cy="11" r="1.7"/><circle cx="15.8" cy="19" r="1.5"/><path d="m7.2 13.8 3.1-5.6m2.8-.7 3.5 2.4m.9 2.7-1.1 4.8m-9-.9 7 2.1"/></svg><i></i></span><span>星座</span></a>
                     <a href="{{ route('navigation.index') }}" data-canovia-nav-key="desktop-execution" data-onboarding-target="execution-nav" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('navigation.*') || request()->routeIs('work_sessions.*') || request()->routeIs('plans.tasks.guided_execution.*') || request()->routeIs('plans.tasks.execution_orchestration.*') || request()->routeIs('plans.tasks.study_*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h10"/><path d="m12 8 4 4-4 4"/><circle cx="5" cy="12" r="2"/><path d="m18.5 6.5 1.8-1.8m-1.8 12.8 1.8 1.8"/></svg><i></i></span><span>実行</span></a>
-                    <a href="{{ route('timeline.index') }}" data-canovia-nav-key="desktop-timeline" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('timeline.*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon pk-nav-icon-timeline" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="M10 7v3.5l2.4 1.5M14.8 15.5h4.4a1.8 1.8 0 0 1 1.8 1.8v1.8a1.8 1.8 0 0 1-1.8 1.8h-1.7l-1.8 1.4.2-1.4h-1.1a1.8 1.8 0 0 1-1.8-1.8v-1.8"/></svg><i></i></span><span>タイムライン</span></a>
+                    <a href="{{ route('timeline.index') }}" data-canovia-nav-key="desktop-timeline" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('timeline.*') || request()->routeIs('achievements.*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon pk-nav-icon-timeline" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="M10 7v3.5l2.4 1.5M14.8 15.5h4.4a1.8 1.8 0 0 1 1.8 1.8v1.8a1.8 1.8 0 0 1-1.8 1.8h-1.7l-1.8 1.4.2-1.4h-1.1a1.8 1.8 0 0 1-1.8-1.8v-1.8"/></svg><i></i></span><span>タイムライン</span></a>
                 </nav>
 
                 <div class="hidden items-center gap-2 lg:flex">

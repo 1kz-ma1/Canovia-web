@@ -6,6 +6,7 @@ use App\Models\Plan;
 use App\Models\PlanAdjustment;
 use App\Models\Task;
 use App\Models\WorkLog;
+use App\Services\AchievementProjectionService;
 use App\Services\PlanProgressService;
 use App\Services\PlanTimelineService;
 use Carbon\Carbon;
@@ -107,7 +108,7 @@ class ChatController extends Controller
         ]);
     }
 
-    public function achievements(Request $request, PlanProgressService $progressService)
+    public function achievements(Request $request, AchievementProjectionService $achievements)
     {
         $plans = $this->ownedPlans($request, [
             'tasks',
@@ -116,21 +117,10 @@ class ChatController extends Controller
         ]);
 
         $completedPlans = $plans
-            ->filter(fn (Plan $plan) => $this->isCompletedPlan($plan, $progressService))
-            ->map(function (Plan $plan) use ($progressService) {
-                $completedAt = $this->completedAt($plan);
-
-                return [
-                    'plan' => $plan,
-                    'progress' => $progressService->calculate($plan),
-                    'completed_at' => $completedAt,
-                    'actual_minutes' => (int) $plan->workLogs->sum('actual_minutes'),
-                    'completed_tasks' => $plan->tasks->where('status', 'done')->count(),
-                    'adjustment_count' => $plan->adjustments->count(),
-                ];
-            })
-            ->sortByDesc(fn (array $item) => $item['completed_at']?->timestamp ?? 0)
-            ->values();
+            ->filter(fn (Plan $plan) => $achievements->isCompleted($plan))
+            ->sortByDesc(fn (Plan $plan) => $achievements->completedAt($plan)?->timestamp ?? 0)
+            ->values()
+            ->map(fn (Plan $plan, int $index) => $achievements->project($plan, $index));
 
         return view('achievements.index', [
             'completedPlans' => $completedPlans,
@@ -140,7 +130,7 @@ class ChatController extends Controller
     public function achievement(
         Request $request,
         Plan $plan,
-        PlanProgressService $progressService,
+        AchievementProjectionService $achievements,
         PlanTimelineService $timelineService
     ) {
         $plan = $this->findOwnedPlan($request, $plan->id, [
@@ -149,14 +139,15 @@ class ChatController extends Controller
             'adjustments',
         ]);
 
-        if (! $this->isCompletedPlan($plan, $progressService)) {
+        if (! $achievements->isCompleted($plan)) {
             abort(404);
         }
 
-        $completedAt = $this->completedAt($plan);
-        $totalMinutes = (int) $plan->workLogs->sum('actual_minutes');
-        $doneTasks = $plan->tasks->where('status', 'done')->count();
-        $adjustmentCount = $plan->adjustments->count();
+        $achievement = $achievements->project($plan);
+        $completedAt = $achievement['completed_at'];
+        $totalMinutes = $achievement['actual_minutes'];
+        $doneTasks = $achievement['completed_tasks'];
+        $adjustmentCount = $achievement['adjustment_count'];
         $durationDays = $completedAt
             ? max(1, (int) floor($plan->start_date->startOfDay()->diffInDays($completedAt->copy()->startOfDay())) + 1)
             : null;
@@ -167,7 +158,7 @@ class ChatController extends Controller
 
         return view('achievements.show', [
             'plan' => $plan,
-            'progress' => $progressService->calculate($plan),
+            'progress' => $achievement['progress'],
             'timeline' => $timelineService->build($plan)->take(20),
             'completedAt' => $completedAt,
             'totalMinutes' => $totalMinutes,
@@ -1273,27 +1264,6 @@ PROMPT;
         return $plan;
     }
 
-    private function isCompletedPlan(Plan $plan, PlanProgressService $progressService): bool
-    {
-        $progress = $progressService->calculate($plan);
-
-        return $progress['weighted_progress_percent'] >= 100
-            || ($plan->tasks->where('status', 'done')->isNotEmpty()
-                && $plan->tasks->every(fn ($task) => in_array($task->status, ['done', 'cancelled'], true)));
-    }
-
-    private function completedAt(Plan $plan): ?Carbon
-    {
-        $candidates = collect([
-            $plan->tasks->max('updated_at'),
-            $plan->workLogs->max('created_at'),
-            $plan->adjustments->max('applied_at'),
-            $plan->adjustments->max('created_at'),
-        ])->filter()->map(fn ($value) => Carbon::parse($value));
-
-        return $candidates->sortByDesc(fn (Carbon $date) => $date->timestamp)->first()
-            ?? $plan->deadline?->copy();
-    }
 
     private function resolveTaskStatus(int $progress, string $currentStatus, int $actualMinutes): string
     {
