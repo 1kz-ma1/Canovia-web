@@ -1481,3 +1481,20 @@ Selected WorkspaceにはTask Group railを追加し、Main Star tapと同じsele
 Selected WorkspaceにはOverviewと同じPlan順序のPrevious / Next navigationを追加する。Focus graph上ではinteractive element外から始まった水平swipeもPlan切替として扱い、72px未満の横移動または48pxを超える縦移動は無視する。
 
 DB migration、draggable geometry、persisted custom position、physics/WebGLは導入しない。詳細は `docs/V51.7_CONSTELLATION_SHAPE_GRAMMAR.md` を正とする。
+
+
+## V51.8 Stability & Interaction Performance
+
+iOSアプリ化へ進む前に、Web/PWAの体感遅延をserver / client両面から分解できるようにする。
+
+既存 `canovia.performance` server logに加え、Core Surfaceでは `POST /performance/client` へ安全な数値metricsだけを送信し、`canovia.client_performance` structured logとして記録する。DB保存はしない。対象は `/ /map /inbox /roadmap /timeline /calendar /navigate` のみで、query string、Plan/Task title、user入力は送らない。
+
+Instant Navigationは cache / prefetch / network source、wait、fetch、HTML parse、DOM replace、Surface mount、2 animation frames後までを計測する。対応ブラウザではlong task / layout shiftも同じinteraction windowへ集計する。iOS / Android / other、web / PWA、mobile / desktopを区別し、V52 Native shell導入後の比較基準にする。
+
+常時1秒ごとに全pageで走っていたWork Timer DOM scanを廃止し、`[data-work-timer]` が存在しdocumentがvisibleな場合だけTickerを動かす。Instant NavigationでtimerのないSurfaceへ移動した場合とbackground移行時は停止する。
+
+Instant Navigation後のoffline IndexedDB snapshot保存はidleへ移し、次の入力と競合させない。cached / prefetched fragment表示後に必要なserver-side navigate revalidateもrender直後ではなくidleへ送る。実訪問semanticsとcache refreshは維持する。
+
+Dashboard Roadmap overviewが存在しないSurfaceでは2回目のrequestAnimationFrame fitを予約しない。
+
+詳細は `docs/V51.8_STABILITY_INTERACTION_PERFORMANCE.md` を正とする。
