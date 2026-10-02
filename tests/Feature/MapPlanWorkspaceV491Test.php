@@ -41,7 +41,9 @@ class MapPlanWorkspaceV491Test extends TestCase
             ->assertOk()
             ->assertSee('L1 · PLANS')
             ->assertSee($dev->title)
-            ->assertSee($study->title);
+            ->assertSee($study->title)
+            ->assertSee('data-map-node-entry-mode="direct"', false)
+            ->assertSee('href="'.e(route('plans.dashboard', $dev)).'"', false);
 
         $graph = $response->viewData('graph');
         $nodeIds = $graph['nodes']->pluck('id')->all();
