@@ -23,7 +23,7 @@ final class ActionHomeProjectionService
      *   pending_update_count:int
      * }
      */
-    public function build(Collection $plans, array $dashboard, ?User $actor): array
+    public function build(Collection $plans, array $dashboard, ?User $actor, array $previousStatuses = []): array
     {
         $signals = collect();
         $pendingUpdates = collect($dashboard['pending_plan_updates'] ?? []);
@@ -64,11 +64,18 @@ final class ActionHomeProjectionService
                 continue;
             }
 
+            $previousStatus = $previousStatuses[(string) $plan->id] ?? null;
+            $statusChanged = is_string($previousStatus)
+                && $previousStatus !== ''
+                && $previousStatus !== $status;
+
             $signals->push([
-                'kind' => 'plan_attention',
+                'kind' => $statusChanged ? 'plan_status_changed' : 'plan_attention',
                 'severity' => 'alert',
-                'eyebrow' => 'PLAN STATUS',
-                'title' => $plan->title.' · '.$status,
+                'eyebrow' => $statusChanged ? 'STATUS CHANGED' : 'PLAN STATUS',
+                'title' => $statusChanged
+                    ? $plan->title.' · '.$previousStatus.' → '.$status
+                    : $plan->title.' · '.$status,
                 'body' => $this->attentionBody($status, $progress),
                 'plan' => $plan,
                 'actor_name' => null,
