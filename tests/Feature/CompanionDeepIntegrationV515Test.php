@@ -61,10 +61,12 @@ class CompanionDeepIntegrationV515Test extends TestCase
         $palette
             ->assertOk()
             ->assertJsonPath('thread_id', $thread->id)
-            ->assertJsonPath('handoff_url', null)
-            ->assertSee('data-companion-palette-thread', false)
-            ->assertSee('data-companion-palette-compose', false)
-            ->assertSee($task->title);
+            ->assertJsonPath('handoff_url', null);
+
+        $paletteHtml = (string) $palette->json('html');
+        $this->assertStringContainsString('data-companion-palette-thread', $paletteHtml);
+        $this->assertStringContainsString('data-companion-palette-compose', $paletteHtml);
+        $this->assertStringContainsString($task->title, $paletteHtml);
 
         $normal = $this->actingAs($user)
             ->post(route('companion.entry'), [
@@ -114,10 +116,12 @@ class CompanionDeepIntegrationV515Test extends TestCase
 
         $response
             ->assertOk()
-            ->assertJsonPath('thread_id', $thread->id)
-            ->assertSee('次のActionを具体化する候補があります。')
-            ->assertSee('data-companion-palette-candidate', false)
-            ->assertSee('反映する');
+            ->assertJsonPath('thread_id', $thread->id);
+
+        $responseHtml = (string) $response->json('html');
+        $this->assertStringContainsString('次のActionを具体化する候補があります。', $responseHtml);
+        $this->assertStringContainsString('data-companion-palette-candidate', $responseHtml);
+        $this->assertStringContainsString('反映する', $responseHtml);
 
         $candidate = CompanionMutationCandidate::firstOrFail();
         $this->assertSame(CompanionMutationCandidate::STATUS_PENDING, $candidate->status);
@@ -154,8 +158,12 @@ class CompanionDeepIntegrationV515Test extends TestCase
 
         $apply
             ->assertOk()
-            ->assertJsonPath('thread_id', $thread->id)
-            ->assertSee('反映済み');
+            ->assertJsonPath('thread_id', $thread->id);
+
+        $this->assertStringContainsString(
+            '反映済み',
+            (string) $apply->json('html'),
+        );
 
         $this->assertSame(
             CompanionMutationCandidate::STATUS_APPLIED,
@@ -181,8 +189,12 @@ class CompanionDeepIntegrationV515Test extends TestCase
 
         $dismiss
             ->assertOk()
-            ->assertJsonPath('thread_id', $thread->id)
-            ->assertSee('見送り');
+            ->assertJsonPath('thread_id', $thread->id);
+
+        $this->assertStringContainsString(
+            '見送り',
+            (string) $dismiss->json('html'),
+        );
 
         $this->assertSame(
             CompanionMutationCandidate::STATUS_DISMISSED,
