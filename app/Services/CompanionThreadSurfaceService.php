@@ -35,6 +35,11 @@ final class CompanionThreadSurfaceService
         $plan = $thread->plan;
         $task = $thread->task;
 
+        if ($task && (! $plan || (int) $task->plan_id !== (int) $plan->id)) {
+            $task = null;
+            $thread->setRelation('task', null);
+        }
+
         $candidatePreviews = $thread->mutationCandidates
             ->mapWithKeys(fn (CompanionMutationCandidate $candidate) => [
                 (int) $candidate->id => $this->mutationApply->reviewPreview($candidate),
