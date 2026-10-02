@@ -62,6 +62,7 @@
             $isSatelliteNavigation = $directNavigationKind === 'satellite';
             $isExternalNavigation = $directNavigationKind === 'external';
             $isDirectNavigation = $directNavigationKind === 'direct';
+            $isDashboardNavigation = $directNavigationKind === 'dashboard';
             $zoomDirection = $directNavigationKind === 'zoom-out' ? 'out' : 'in';
             $isSemanticZoomIn = $isZoomNavigation
                 && $zoomDirection === 'in'
@@ -76,7 +77,8 @@
                 && ($isSemanticZoomIn
                     || $isSatelliteNavigation
                     || $isExternalNavigation
-                    || $isDirectNavigation);
+                    || $isDirectNavigation
+                    || $isDashboardNavigation);
             $nodeEntryMode = $usesDirectBody
                 ? ($isSemanticZoomIn ? 'semantic' : 'direct')
                 : 'focus';
