@@ -12,11 +12,7 @@ final class HierarchyMapProjectionService
         private readonly MapHierarchyContextService $context,
         private readonly HierarchyNavigationGraphService $navigationGraph,
         private readonly HierarchyMapAttentionStateService $attention,
-        private readonly PlanProgressService $progress,
-        private readonly RoadmapService $roadmap,
-        private readonly RoadmapSpatialProjectionService $roadmapSpatial,
-        private readonly PlanDashboardBoardService $planDashboardBoard,
-        private readonly PlanOwnershipService $ownership,
+        private readonly PlanDashboardWorkspaceService $planDashboardWorkspace,
     ) {}
 
     /**
@@ -171,42 +167,9 @@ final class HierarchyMapProjectionService
             return null;
         }
 
-        $plan->loadMissing([
-            'tasks.prerequisite',
-            'tasks.prerequisites',
-            'tasks.resources',
-            'workLogs' => fn ($query) => $query
-                ->with('task')
-                ->latest('worked_on')
-                ->latest('id'),
-            'availabilityRules',
-            'availabilityOverrides',
-        ]);
+        $workspace = $this->planDashboardWorkspace->build($request, $plan);
 
-        $progress = $this->progress->calculate($plan);
-        $roadmap = $this->roadmap->build($plan);
-        $roadmapSpatial = $this->roadmapSpatial->build($roadmap);
-        $board = $this->planDashboardBoard->build(
-            $plan,
-            $progress,
-            $roadmap,
-            $roadmapSpatial,
-        );
-
-        return [
-            'plan' => $plan,
-            'progress' => $progress,
-            'roadmap' => $roadmap,
-            'roadmap_spatial' => $roadmapSpatial,
-            'dashboard_board' => $board,
-            'can_edit' => $this->ownership->canEdit($request, $plan),
-            'can_manage' => $this->ownership->owns($request, $plan),
-            'execution_url' => route('map.index', [
-                'level' => MapLevel::Execution->value,
-                'intent' => 'execution',
-                'plan' => $plan->id,
-            ]),
-        ];
+        return ($workspace['can_view'] ?? false) ? $workspace : null;
     }
 
     /**
