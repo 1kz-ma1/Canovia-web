@@ -107,6 +107,22 @@ class TimelineAchievementV514Test extends TestCase
             ->assertSee('共有判定');
     }
 
+
+    public function test_achievement_detail_belongs_to_timeline_navigation(): void
+    {
+        $user = User::factory()->create();
+        $plan = $this->createPlan($user, 'Timeline配下の達成');
+        $this->createTask($plan, 'Done', 'done', 100);
+
+        $response = $this->actingAs($user)->get(route('achievements.show', $plan));
+
+        $response
+            ->assertOk()
+            ->assertSee('data-canovia-nav-key="desktop-timeline"', false)
+            ->assertSee('data-canovia-nav-key="mobile-timeline"', false)
+            ->assertSee('>タイムライン<', false);
+    }
+
     public function test_incomplete_plan_does_not_create_completion_event(): void
     {
         $user = User::factory()->create();
