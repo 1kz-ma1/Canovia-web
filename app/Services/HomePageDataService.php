@@ -7,6 +7,11 @@ use Illuminate\Http\Request;
 
 final class HomePageDataService
 {
+    private const STATE_SNAPSHOT_INTERVAL_SECONDS = 600;
+
+    private const STATE_SNAPSHOT_SESSION_KEY = 'action_home.state_snapshot_at';
+
+    private const STATE_SNAPSHOT_DATE_SESSION_KEY = 'action_home.state_snapshot_date';
     public function __construct(
         private readonly CoreContextService $core,
         private readonly BehaviorEventLogger $eventLogger,
@@ -71,9 +76,18 @@ final class HomePageDataService
         $baseline = $this->behaviorService->baseline($actorToken);
         $state = $this->stateService->calculate($actorToken, $baseline, $editablePlans);
 
-        if (! $prefetch) {
+        if (! $prefetch && $this->stateSnapshotDue($request)) {
             $this->stateService->captureDaily($actorToken, $state);
+            $request->session()->put([
+                self::STATE_SNAPSHOT_SESSION_KEY => (int) now()->timestamp,
+                self::STATE_SNAPSHOT_DATE_SESSION_KEY => today()->toDateString(),
+            ]);
         }
+
+        $workSessionContext = $this->continuityService->homeContext(
+            $editablePlans,
+            $actorToken,
+        );
 
         $dashboard = $this->dashboardService->build(
             $plans,
@@ -83,9 +97,10 @@ final class HomePageDataService
             $request->session()->get('dashboard.recommendation_excluded', []),
             $editablePlans->pluck('id')->all(),
             $request->user(),
+            $workSessionContext,
         );
 
-        $dashboard['continuity'] = $this->continuityService->forPlans($editablePlans, $actorToken);
+        $dashboard['continuity'] = $workSessionContext['continuity'] ?? null;
         $dashboard['calendar_week'] = $this->calendarService->weekSummary($plans);
 
         $previousPlanStatuses = (array) $request->session()->get('action_home.plan_statuses', []);
@@ -130,5 +145,18 @@ final class HomePageDataService
         }
 
         return compact('dashboard', 'collaborationPlans', 'actionHome');
+    }
+
+    private function stateSnapshotDue(Request $request): bool
+    {
+        $capturedAt = $request->session()->get(self::STATE_SNAPSHOT_SESSION_KEY);
+        $capturedDate = $request->session()->get(self::STATE_SNAPSHOT_DATE_SESSION_KEY);
+
+        if (! is_numeric($capturedAt) || $capturedDate !== today()->toDateString()) {
+            return true;
+        }
+
+        return ((int) now()->timestamp - (int) $capturedAt)
+            >= self::STATE_SNAPSHOT_INTERVAL_SECONDS;
     }
 }

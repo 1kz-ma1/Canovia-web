@@ -1534,3 +1534,22 @@ Instant Navigationのautomatic idle prefetchからHomeを除外する。通常�
 Core Bundle自体の分割はV51.9.1では行わず、Redis session化後の再計測で判断する。
 
 詳細は `docs/V51.9.1_SERVER_COST_REDUCTION.md` を正とする。
+
+
+## V51.9.2 Home / Core Bundle Cost Reduction
+
+V51.9.1でdatabase session固定費をRedisへ移した後、Home / Timeline / Core Bundle内のSQL roundtripを削減する。
+
+TimelineのPlan adjustment取得はPlanごとの `loadMissing('adjustments')` を禁止し、全PlanをEloquent Collectionへまとめて1 queryでbatch loadする。共同Planが存在しない場合は `activity_logs` featureをloadしない。
+
+`BehaviorEventLogger::recordOnce()` / `recordOnceSafely()` は同じsession内の直近記録timestampをRedis sessionへ保持する。同一event / Plan / Task / dedupe window内ではbehavior_eventsへのexists queryを省略する。Session markerがない場合は従来どおりDB dedupeを行う。
+
+Homeの `UserStateSnapshot` 永続化は表示state計算とは分離し、同一session・同日では10分に1回までに抑える。日付変更時は即captureし、prefetchでは従来どおりcaptureしない。
+
+Homeのactive/pending WorkSessionとContinuity latest WorkSessionは検索scopeを維持したまま同一contextへまとめ、取得したSession群のPlan / Task relationをbatch hydrateする。DashboardPresentationServiceはpreloaded contextを受け取り重複WorkSession relation queryを行わない。
+
+Behavior sampleがanalysis threshold未満の場合、利用されないUserStateSnapshot trend SELECTは行わない。
+
+Core Bundle endpoint / JSON contract / direct fragment fallbackは変更しない。内部query削減後のproduction telemetryを見て、bundle head-of-line blockingやprefetch分割は次段階で判断する。
+
+詳細は `docs/V51.9.2_HOME_CORE_BUNDLE_COST_REDUCTION.md` を正とする。
