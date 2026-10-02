@@ -15,6 +15,7 @@ final class HomePageDataService
         private readonly DashboardPresentationService $dashboardService,
         private readonly ContinuityService $continuityService,
         private readonly CalendarPresentationService $calendarService,
+        private readonly ActionHomeProjectionService $actionHome,
     ) {}
 
     public function build(Request $request, bool $prefetch = false): array
@@ -30,6 +31,7 @@ final class HomePageDataService
             'availability',
             'work_logs',
             'memberships',
+            'activity_logs',
         ]);
 
         if (! $prefetch) {
@@ -70,6 +72,7 @@ final class HomePageDataService
 
         $dashboard['continuity'] = $this->continuityService->forPlans($editablePlans, $actorToken);
         $dashboard['calendar_week'] = $this->calendarService->weekSummary($plans);
+        $actionHome = $this->actionHome->build($plans, $dashboard, $request->user());
 
         $primaryGuidance = $dashboard['guidance_deck']->first();
 
@@ -93,6 +96,6 @@ final class HomePageDataService
             );
         }
 
-        return compact('dashboard', 'collaborationPlans');
+        return compact('dashboard', 'collaborationPlans', 'actionHome');
     }
 }
