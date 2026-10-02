@@ -9,6 +9,7 @@ use App\Http\Controllers\CanoviaMapController;
 use App\Http\Controllers\MapPersonalizationController;
 use App\Http\Controllers\FirstRunController;
 use App\Http\Controllers\PlanController;
+use App\Http\Controllers\PlanDashboardController;
 use App\Http\Controllers\GoalDiscoveryController;
 use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\AdminTemplateController;
@@ -235,6 +236,7 @@ Route::get('/goal-discovery/{goalContext}', [GoalDiscoveryController::class, 'sh
 Route::post('/goal-discovery/{goalContext}/answer', [GoalDiscoveryController::class, 'answer'])->middleware('throttle:30,1')->name('goal_discovery.answer');
 Route::get('/plans/create/manual', [PlanController::class, 'create'])->name('plans.create.manual');
 Route::post('/plans', [PlanController::class, 'store'])->name('plans.store');
+Route::get('/plans/{plan}/dashboard', PlanDashboardController::class)->name('plans.dashboard');
 Route::get('/plans/{plan}', [PlanController::class, 'show'])->name('plans.show');
 Route::get('/plans/{plan}/edit', [PlanController::class, 'edit'])->name('plans.edit');
 Route::put('/plans/{plan}', [PlanController::class, 'update'])->name('plans.update');
