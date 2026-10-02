@@ -68,7 +68,6 @@
                         data-companion-palette-async-form
                     >
                         @csrf
-                        <input type="hidden" name="surface" value="palette">
                         <input type="hidden" name="entry_type" value="{{ $companionEntryType }}">
                         @if ($companionEntryPlan)
                             <input type="hidden" name="plan_id" value="{{ $companionEntryPlan->id }}">
