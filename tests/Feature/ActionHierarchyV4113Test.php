@@ -103,7 +103,7 @@ class ActionHierarchyV4113Test extends TestCase
             ->assertDontSee('集中タイマー（任意）');
     }
 
-    public function test_study_focus_contains_context_but_no_duplicate_execution_link(): void
+    public function test_home_keeps_study_action_without_embedding_study_focus_surface(): void
     {
         [$user] = $this->scenario(
             '応用情報 科目A',
@@ -113,14 +113,14 @@ class ActionHierarchyV4113Test extends TestCase
         );
 
         $response = $this->actingAs($user)->get(route('home'))->assertOk();
-        $xpath = $this->xpath($response->getContent());
 
-        $surface = $xpath->query('//*[@data-surface-id="study_focus"]')->item(0);
-        $this->assertNotNull($surface);
-        $this->assertSame(0, $xpath->query('.//a | .//form', $surface)->length);
+        $response
+            ->assertSee('AI演習で進める')
+            ->assertDontSee('data-surface-id="study_focus"', false)
+            ->assertDontSee('data-dashboard-panel=', false);
     }
 
-    public function test_task_list_shows_following_tasks_not_current_task_again(): void
+    public function test_home_does_not_expand_following_task_list_into_action_surface(): void
     {
         [$user, $plan, $current] = $this->scenario(
             'AP対策',
@@ -145,13 +145,9 @@ class ActionHierarchyV4113Test extends TestCase
         $response = $this->actingAs($user)->get(route('home'))->assertOk();
         $xpath = $this->xpath($response->getContent());
 
-        $surface = $xpath->query('//*[@data-surface-id="task_list"]')->item(0);
-        $this->assertNotNull($surface);
-        $text = trim($surface->textContent);
-
-        $this->assertStringContainsString('このあと', $text);
-        $this->assertStringContainsString('次のTask', $text);
-        $this->assertStringNotContainsString($current->title, $text);
+        $this->assertSame(0, $xpath->query('//*[@data-surface-id="task_list"]')->length);
+        $this->assertStringContainsString($current->title, $response->getContent());
+        $this->assertStringNotContainsString('このあと', $response->getContent());
     }
 
     public function test_task_tools_hide_timer_when_a_specialized_primary_exists(): void
