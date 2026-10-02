@@ -46,8 +46,7 @@ class CompanionDeepIntegrationV515Test extends TestCase
         [$user, $plan, $task] = $this->scenario();
         $this->grantPremium($user);
 
-        $palette = $this->actingAs($user)
-            ->withHeader('X-Canovia-Companion-Surface', 'palette')
+        $normal = $this->actingAs($user)
             ->post(route('companion.entry'), [
                 'entry_type' => 'task',
                 'plan_id' => $plan->id,
@@ -58,6 +57,18 @@ class CompanionDeepIntegrationV515Test extends TestCase
 
         $thread = CompanionThread::firstOrFail();
 
+        $normal->assertRedirect(route('companion.show', $thread));
+
+        $palette = $this->actingAs($user)
+            ->withHeader('X-Canovia-Companion-Surface', 'palette')
+            ->post(route('companion.entry'), [
+                'entry_type' => 'task',
+                'plan_id' => $plan->id,
+                'task_id' => $task->id,
+                'source_path' => '/plans/'.$plan->id,
+                'source_route' => 'plans.show',
+            ]);
+
         $palette
             ->assertOk()
             ->assertJsonPath('thread_id', $thread->id)
@@ -67,17 +78,6 @@ class CompanionDeepIntegrationV515Test extends TestCase
         $this->assertStringContainsString('data-companion-palette-thread', $paletteHtml);
         $this->assertStringContainsString('data-companion-palette-compose', $paletteHtml);
         $this->assertStringContainsString($task->title, $paletteHtml);
-
-        $normal = $this->actingAs($user)
-            ->post(route('companion.entry'), [
-                'entry_type' => 'task',
-                'plan_id' => $plan->id,
-                'task_id' => $task->id,
-                'source_path' => '/plans/'.$plan->id,
-                'source_route' => 'plans.show',
-            ]);
-
-        $normal->assertRedirect(route('companion.show', $thread));
         $this->assertDatabaseCount('companion_threads', 1);
     }
 
