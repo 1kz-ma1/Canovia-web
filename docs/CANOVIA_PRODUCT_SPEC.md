@@ -1427,3 +1427,14 @@ ActionHomeProjectionServiceはDBを変更せず、pending Plan update、PlanProg
 共同計画のsignalは過去14日の他ユーザー操作から最大4件を取り、Homeには変化だけを表示する。参加等のmanagement actionはcollapsed disclosureへ残し、共同計画一覧そのものはHomeのPrimary contentにしない。Recent Activityも最大3件のpreviewに限定し、全履歴はTimelineへ渡す。
 
 詳細は docs/V51.3_ACTION_HOME.md を正とする。
+
+
+## V51.4 Timeline / Achievement Constellation
+
+Primary TimelineはWorkLog一覧から、Work / Collaboration / Plan Completedを同じ時系列へ投影するReflection Surfaceへ拡張する。
+
+Completion判定は`AchievementProjectionService`へ集約し、既存AchievementsとTimelineで同じsource of truthを使う。Completed PlanはTimeline上部のcompact Achievement Constellationへ1 Plan = 1 Starで表示し、starから既存Achievement detailへ遷移する。
+
+Timeline eventとAchievement Constellationは既存canonical dataからrequest時にread-only生成する。V51.4ではDB migration、read/unread、achievement ranking、immutable historical constellation snapshotは追加しない。
+
+詳細は `docs/V51.4_TIMELINE_ACHIEVEMENT_CONSTELLATION.md` を正とする。
