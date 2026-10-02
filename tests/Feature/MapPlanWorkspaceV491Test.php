@@ -54,13 +54,9 @@ class MapPlanWorkspaceV491Test extends TestCase
         ));
 
         $devNode = $graph['nodes']->firstWhere('id', 'plan:'.$dev->id);
-        $this->assertSame('zoom-in', data_get($devNode, 'direct_navigation.kind'));
+        $this->assertSame('dashboard', data_get($devNode, 'direct_navigation.kind'));
         $this->assertSame(
-            route('map.index', [
-                'level' => 'l2',
-                'intent' => 'plan',
-                'plan' => $dev->id,
-            ]),
+            route('plans.dashboard', $dev),
             data_get($devNode, 'direct_navigation.url'),
         );
     }
