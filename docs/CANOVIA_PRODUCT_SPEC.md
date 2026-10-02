@@ -1498,3 +1498,24 @@ Instant Navigation後のoffline IndexedDB snapshot保存はidleへ移し、次�
 Dashboard Roadmap overviewが存在しないSurfaceでは2回目のrequestAnimationFrame fitを予約しない。
 
 詳細は `docs/V51.8_STABILITY_INTERACTION_PERFORMANCE.md` を正とする。
+
+
+## V51.9 Navigation Bottleneck Removal
+
+V51.8のiOS PWA実機計測でExecution `/navigate` のserver DB N+1を特定した。
+
+実測では最大:
+
+- 13.98秒
+- 158 query
+- Task query 143回
+- 同型Task SELECT 142回
+- 同型Task SELECT合計 約11.99秒
+
+原因は `RecommendationService` がcandidate Taskごとに `Task::dependencyIds()` を呼ぶ一方、NavigationControllerがlegacy singular `prerequisite` のみをeager loadし、canonical many-to-many `prerequisites` をloadしていなかったこと。
+
+NavigationControllerはExecution用Plan取得時に `tasks.prerequisite` と `tasks.prerequisites` を同時eager loadする。Recommendation score / dependency semanticsは変更しない。
+
+多数Taskとcanonical task_dependenciesを持つPlanでもTask SELECT数がTask数に比例して増えないことをFeature regression testで固定する。
+
+詳細は `docs/V51.9_NAVIGATION_BOTTLENECK_REMOVAL.md` を正とする。
