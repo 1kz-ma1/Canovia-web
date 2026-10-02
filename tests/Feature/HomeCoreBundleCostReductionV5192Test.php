@@ -7,6 +7,8 @@ use App\Models\Plan;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\UserStateSnapshot;
+use App\Models\WorkSession;
+use App\Services\ContinuityService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -146,6 +148,59 @@ class HomeCoreBundleCostReductionV5192Test extends TestCase
         } finally {
             Carbon::setTestNow();
         }
+    }
+
+    public function test_home_work_session_context_batches_plan_and_task_hydration(): void
+    {
+        $user = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($user, 'Continuity');
+        $task = $this->task($plan, 'Continue Task');
+        $actorToken = Str::random(64);
+
+        $session = WorkSession::query()->create([
+            'actor_token' => $actorToken,
+            'browser_session_id' => 'browser-v5192',
+            'plan_id' => $plan->id,
+            'task_id' => $task->id,
+            'status' => 'active',
+            'intended_minutes' => 30,
+            'started_at' => now()->subMinute(),
+            'source' => 'dashboard',
+        ]);
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        $context = app(ContinuityService::class)->homeContext(
+            collect([$plan]),
+            $actorToken,
+        );
+
+        $queries = collect(DB::getQueryLog())
+            ->pluck('query')
+            ->map(fn ($sql) => mb_strtolower((string) $sql))
+            ->values();
+
+        DB::disableQueryLog();
+
+        $this->assertSame($session->id, $context['active_work_session']?->id);
+        $this->assertSame($task->id, data_get($context, 'continuity.task_id'));
+        $this->assertCount(0, $context['pending_plan_updates']);
+
+        $this->assertSame(
+            2,
+            $queries->filter(fn (string $sql) => $this->selectsFrom($sql, 'work_sessions'))->count(),
+        );
+        $this->assertSame(
+            1,
+            $queries->filter(fn (string $sql) => $this->selectsFrom($sql, 'plans'))->count(),
+            'The latest active session must reuse the same hydrated Plan relation instance.',
+        );
+        $this->assertSame(
+            1,
+            $queries->filter(fn (string $sql) => $this->selectsFrom($sql, 'tasks'))->count(),
+            'The latest active session must reuse the same hydrated Task relation instance.',
+        );
     }
 
     public function test_v5192_source_contract_keeps_batch_and_session_fast_paths(): void
