@@ -190,7 +190,6 @@
                                                 data-companion-palette-async-form
                                             >
                                                 @csrf
-                                                <input type="hidden" name="surface" value="palette">
                                                 <input type="hidden" name="apply_request_id" value="{{ $candidateApplyRequestIds[$candidate->id] ?? '' }}">
                                                 <button type="submit">
                                                     {{ $candidate->type === 'prepare_execution_request' ? '確認して準備' : '反映する' }}
@@ -204,7 +203,6 @@
                                             data-companion-palette-async-form
                                         >
                                             @csrf
-                                            <input type="hidden" name="surface" value="palette">
                                             <button type="submit" class="is-secondary">見送る</button>
                                         </form>
                                     </div>
@@ -231,7 +229,6 @@
             data-companion-palette-compose
         >
             @csrf
-            <input type="hidden" name="surface" value="palette">
             <input type="hidden" name="request_id" value="{{ $messageRequestId }}">
             <input type="hidden" name="source_path" value="{{ $companionSourcePath }}">
             <textarea
