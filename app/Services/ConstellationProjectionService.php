@@ -45,7 +45,7 @@ final class ConstellationProjectionService
 
         if ($nodes->isEmpty()) {
             return [
-                'schema_version' => 1,
+                'schema_version' => 2,
                 'plan_id' => (int) $plan->id,
                 'title' => (string) $plan->title,
                 'accent' => $plan->accentKey(),
@@ -209,7 +209,7 @@ final class ConstellationProjectionService
         };
 
         $projection = [
-            'schema_version' => 1,
+            'schema_version' => 2,
             'plan_id' => (int) $plan->id,
             'title' => (string) $plan->title,
             'accent' => $plan->accentKey(),
