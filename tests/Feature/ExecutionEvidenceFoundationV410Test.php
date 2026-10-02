@@ -113,18 +113,22 @@ class ExecutionEvidenceFoundationV410Test extends TestCase
         $this->assertSame('初稿を作る', $task->fresh()->milestones->first()->title);
     }
 
-    public function test_dashboard_plan_panel_is_a_plan_hub_not_an_embedded_roadmap(): void
+    public function test_action_home_keeps_plan_specific_execution_surfaces_out_of_home(): void
     {
         $view = file_get_contents(resource_path('views/dashboard/index.blade.php'));
         $currentTask = file_get_contents(resource_path('views/dashboard/surfaces/current-task.blade.php'));
         $planTools = file_get_contents(resource_path('views/dashboard/surfaces/plan-tools.blade.php'));
 
-        $this->assertStringContainsString('$surfaceModules', $view);
+        $this->assertStringContainsString('data-action-home', $view);
+        $this->assertStringContainsString('data-action-home-guidance', $view);
+        $this->assertStringNotContainsString('$surfaceModules', $view);
+        $this->assertStringNotContainsString('data-dashboard-panel=', $view);
+
+        // Plan-specific execution assets remain available outside Home.
         $this->assertStringContainsString('CURRENT TASK', $currentTask);
         $this->assertStringContainsString('PLAN TOOLS', $planTools);
         $this->assertStringContainsString('集中タイマーで進める', $currentTask);
         $this->assertStringContainsString('時間は目安', $currentTask);
-        $this->assertStringNotContainsString("'roadmapMode' => 'dashboard'", $view);
         $this->assertStringContainsString("route('roadmap.index', ['plan_id' =>", $planTools);
     }
 
