@@ -1,0 +1,52 @@
+name: V51.9.1 temporary validation
+
+on:
+  push:
+    branches:
+      - feature/v51-9-1-server-cost-reduction
+
+permissions:
+  contents: read
+
+jobs:
+  server-cost:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: V51.9.1 and performance regressions
+        run: >
+          php artisan test
+          tests/Feature/ServerCostReductionV5191Test.php
+          tests/Feature/NavigationBottleneckRemovalV519Test.php
+          tests/Feature/InteractionPerformanceV518Test.php
+          tests/Feature/PerformanceStep2V4119Test.php
+          tests/Feature/SharedCoreContextV4122Test.php
+          tests/Feature/InstantNavigationV4120Test.php
+          tests/Feature/InstantNavigationFragmentV4121Test.php
+          tests/Feature/PrimaryNavigationCompanionV510Test.php
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build frontend
+        run: npm run build
