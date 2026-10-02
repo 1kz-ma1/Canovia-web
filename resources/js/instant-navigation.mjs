@@ -14,6 +14,18 @@ const CORE_BUNDLE_SURFACES = new Map([
     ['/calendar', 'calendar'],
 ]);
 
+function runtimeNow(windowRef) {
+    return windowRef.performance?.now?.() ?? Date.now();
+}
+
+function afterTwoFrames(windowRef, callback) {
+    const raf = typeof windowRef.requestAnimationFrame === 'function'
+        ? windowRef.requestAnimationFrame.bind(windowRef)
+        : (fn) => windowRef.setTimeout(fn, 16);
+
+    raf(() => raf(callback));
+}
+
 function normalizedUrl(value, windowRef) {
     const url = new URL(value, windowRef.location.href);
     for (const key of ['_pk_network', '_canovia_network', '_canovia_update', '_canovia_stable']) {
@@ -157,7 +169,7 @@ export function mountCanoviaInstantNavigation({
     const bundleInflight = new Map();
     let disposed = false;
     let navigationSerial = 0;
-    let prefetchTimer = null;
+    const revalidateHandles = new Set();
 
     const isCoreUrl = (value) => {
         let url;
@@ -189,6 +201,7 @@ export function mountCanoviaInstantNavigation({
 
         if (inflight.has(inflightKey)) return inflight.get(inflightKey);
 
+        const fetchStartedAt = runtimeNow(windowRef);
         const request = fetchRef(url.pathname + url.search, {
             method: 'GET',
             credentials: 'same-origin',
@@ -205,12 +218,27 @@ export function mountCanoviaInstantNavigation({
                 });
             }
 
-            const payload = parsePayload(await response.text(), responseUrl);
+            const html = await response.text();
+            const fetchCompletedAt = runtimeNow(windowRef);
+            const parseStartedAt = fetchCompletedAt;
+            const payload = parsePayload(html, responseUrl);
+            const parseCompletedAt = runtimeNow(windowRef);
+
             if (!payload) {
                 throw Object.assign(new Error('instant-navigation-payload-missing'), {
                     fallbackUrl: response.url || url.href,
                 });
             }
+
+            payload.transport = {
+                mode,
+                fetch_ms: Math.max(0, fetchCompletedAt - fetchStartedAt),
+                parse_ms: Math.max(0, parseCompletedAt - parseStartedAt),
+                response_bytes: Math.max(
+                    0,
+                    Number(response.headers?.get?.('content-length')) || html.length,
+                ),
+            };
 
             cache.set(cacheKey(responseUrl), payload);
             return payload;
@@ -281,8 +309,18 @@ export function mountCanoviaInstantNavigation({
             Object.entries(body.fragments).forEach(([path, html]) => {
                 if (typeof html !== 'string') return;
                 const targetUrl = normalizedUrl(path, windowRef);
+                const parseStartedAt = runtimeNow(windowRef);
                 const payload = parsePayload(html, targetUrl);
+                const parseCompletedAt = runtimeNow(windowRef);
                 if (!payload) return;
+
+                payload.transport = {
+                    mode: 'prefetch',
+                    fetch_ms: 0,
+                    parse_ms: Math.max(0, parseCompletedAt - parseStartedAt),
+                    response_bytes: html.length,
+                };
+
                 cache.set(cacheKey(targetUrl), payload);
                 loaded.set(cacheKey(targetUrl), payload);
             });
@@ -354,7 +392,83 @@ export function mountCanoviaInstantNavigation({
     };
 
     const revalidate = (url) => {
-        void fetchPayload(url, 'navigate').catch(() => {});
+        if (disposed) return;
+
+        const run = () => {
+            revalidateHandles.delete(handle);
+            if (disposed) return;
+            void fetchPayload(url, 'navigate').catch(() => {});
+        };
+
+        let handle;
+        if (typeof windowRef.requestIdleCallback === 'function') {
+            handle = {
+                type: 'idle',
+                id: windowRef.requestIdleCallback(run, { timeout: 1200 }),
+            };
+        } else {
+            handle = {
+                type: 'timeout',
+                id: windowRef.setTimeout(run, 420),
+            };
+        }
+
+        revalidateHandles.add(handle);
+    };
+
+    const renderMeasured = (payload, {
+        historyMode,
+        scroll,
+        startedAt,
+        waitMs,
+        source,
+    }) => {
+        let mountMs = 0;
+        const onSurfaceMounted = (event) => {
+            mountMs = Math.max(0, Number(event.detail?.mount_ms) || 0);
+        };
+
+        documentRef.addEventListener('canovia:surface-mounted', onSurfaceMounted, { once: true });
+
+        const renderStartedAt = runtimeNow(windowRef);
+        const rendered = render(payload, { historyMode, scroll });
+        const renderCompletedAt = runtimeNow(windowRef);
+
+        if (!rendered) {
+            documentRef.removeEventListener('canovia:surface-mounted', onSurfaceMounted);
+            return false;
+        }
+
+        afterTwoFrames(windowRef, () => {
+            if (disposed) return;
+
+            const completedAt = runtimeNow(windowRef);
+            const targetUrl = normalizedUrl(payload.url, windowRef);
+            const transport = payload.transport || {};
+
+            documentRef.dispatchEvent(new windowRef.CustomEvent(
+                'canovia:instant-navigation-performance',
+                {
+                    detail: {
+                        path: targetUrl.pathname,
+                        route_name: payload.routeName || null,
+                        source,
+                        started_at: startedAt,
+                        completed_at: completedAt,
+                        total_ms: Math.max(0, completedAt - startedAt),
+                        wait_ms: Math.max(0, waitMs),
+                        fetch_ms: source === 'cache' ? 0 : Math.max(0, Number(transport.fetch_ms) || 0),
+                        parse_ms: source === 'cache' ? 0 : Math.max(0, Number(transport.parse_ms) || 0),
+                        response_bytes: Math.max(0, Number(transport.response_bytes) || 0),
+                        render_ms: Math.max(0, renderCompletedAt - renderStartedAt),
+                        mount_ms: mountMs,
+                        frame_ready_ms: Math.max(0, completedAt - renderCompletedAt),
+                    },
+                },
+            ));
+        });
+
+        return true;
     };
 
     const withUncachedFeedback = async (callback, { spatial = false } = {}) => {
@@ -387,6 +501,7 @@ export function mountCanoviaInstantNavigation({
         scroll = true,
         fallback = true,
     } = {}) => {
+        const startedAt = runtimeNow(windowRef);
         const url = normalizedUrl(value, windowRef);
         if (!isCoreUrl(url)) {
             if (fallback) windowRef.location.assign(url.href);
@@ -400,12 +515,20 @@ export function mountCanoviaInstantNavigation({
 
         const cached = cache.get(key);
         if (cached) {
-            render(cached, { historyMode, scroll });
+            const rendered = renderMeasured(cached, {
+                historyMode,
+                scroll,
+                startedAt,
+                waitMs: 0,
+                source: 'cache',
+            });
             revalidate(url);
-            return true;
+            return rendered;
         }
 
         const prefetched = inflight.get(`prefetch:${key}`) || bundleInflight.get(key);
+        const waitStartedAt = runtimeNow(windowRef);
+
         try {
             let payload = await withUncachedFeedback(() => (
                 prefetched
@@ -418,10 +541,19 @@ export function mountCanoviaInstantNavigation({
             }
 
             if (serial !== navigationSerial || disposed) return false;
-            render(payload, { historyMode, scroll });
+
+            const source = prefetched ? 'prefetch' : 'network';
+            const waitMs = Math.max(0, runtimeNow(windowRef) - waitStartedAt);
+            const rendered = renderMeasured(payload, {
+                historyMode,
+                scroll,
+                startedAt,
+                waitMs,
+                source,
+            });
 
             if (prefetched) revalidate(url);
-            return true;
+            return rendered;
         } catch (error) {
             if (fallback) windowRef.location.assign(error?.fallbackUrl || url.href);
             return false;
@@ -556,7 +688,16 @@ export function mountCanoviaInstantNavigation({
         cache,
         dispose() {
             disposed = true;
-            if (prefetchTimer) windowRef.clearTimeout(prefetchTimer);
+
+            revalidateHandles.forEach((handle) => {
+                if (handle.type === 'idle' && typeof windowRef.cancelIdleCallback === 'function') {
+                    windowRef.cancelIdleCallback(handle.id);
+                } else {
+                    windowRef.clearTimeout(handle.id);
+                }
+            });
+            revalidateHandles.clear();
+
             documentRef.removeEventListener('click', onClick, true);
             documentRef.removeEventListener('pointerover', onIntent, true);
             documentRef.removeEventListener('focusin', onIntent, true);
