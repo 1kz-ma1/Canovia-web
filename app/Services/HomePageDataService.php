@@ -7,6 +7,9 @@ use Illuminate\Http\Request;
 
 final class HomePageDataService
 {
+    private const STATE_SNAPSHOT_INTERVAL_SECONDS = 600;
+
+    private const STATE_SNAPSHOT_SESSION_KEY = 'action_home.state_snapshot_at';
     public function __construct(
         private readonly CoreContextService $core,
         private readonly BehaviorEventLogger $eventLogger,
@@ -71,8 +74,12 @@ final class HomePageDataService
         $baseline = $this->behaviorService->baseline($actorToken);
         $state = $this->stateService->calculate($actorToken, $baseline, $editablePlans);
 
-        if (! $prefetch) {
+        if (! $prefetch && $this->stateSnapshotDue($request)) {
             $this->stateService->captureDaily($actorToken, $state);
+            $request->session()->put(
+                self::STATE_SNAPSHOT_SESSION_KEY,
+                (int) now()->timestamp,
+            );
         }
 
         $dashboard = $this->dashboardService->build(
@@ -130,5 +137,17 @@ final class HomePageDataService
         }
 
         return compact('dashboard', 'collaborationPlans', 'actionHome');
+    }
+
+    private function stateSnapshotDue(Request $request): bool
+    {
+        $capturedAt = $request->session()->get(self::STATE_SNAPSHOT_SESSION_KEY);
+
+        if (! is_numeric($capturedAt)) {
+            return true;
+        }
+
+        return ((int) now()->timestamp - (int) $capturedAt)
+            >= self::STATE_SNAPSHOT_INTERVAL_SECONDS;
     }
 }
