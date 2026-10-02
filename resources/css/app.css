@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './dashboard-document.css';
+@import './plan-dashboard-board.css';
 @import './plan-dashboard.css';
 @import './companion-palette.css';
 @import './constellation-roadmap.css';
