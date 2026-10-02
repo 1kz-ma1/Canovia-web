@@ -35,14 +35,16 @@
                         @php($position = $achievement['constellation'])
                         <a
                             href="{{ route('achievements.show', $plan) }}"
-                            class="group absolute -translate-x-1/2 -translate-y-1/2 text-center"
+                            class="group plan-identity-shell absolute -translate-x-1/2 -translate-y-1/2 text-center"
                             style="left: {{ $position['x'] }}%; top: {{ $position['y'] }}%;"
+                            data-plan-accent="{{ $plan->accentKey() }}"
                             data-achievement-star
                             data-achievement-plan-id="{{ $plan->id }}"
                             aria-label="{{ $plan->title }}の達成記録を見る"
                         >
                             <span
-                                class="mx-auto block h-4 w-4 rounded-full border border-emerald-200/70 bg-emerald-300 shadow-[0_0_24px_rgba(110,231,183,.5)] transition group-hover:scale-125"
+                                class="mx-auto block h-4 w-4 rounded-full border transition group-hover:scale-125"
+                                style="border-color: rgb(var(--plan-accent) / .7); background: rgb(var(--plan-accent)); box-shadow: 0 0 24px rgb(var(--plan-accent) / .5);"
                                 aria-hidden="true"
                             ></span>
                             <span class="mt-2 block max-w-28 truncate text-[11px] font-bold text-slate-300 group-hover:text-white">
