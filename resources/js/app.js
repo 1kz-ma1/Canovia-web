@@ -3,6 +3,7 @@ import { mountInstantStartServiceWorker } from './instant-start.mjs';
 import { mountCanoviaInstantNavigation } from './instant-navigation.mjs';
 import { mountLivingGoalMap } from './living-map.mjs';
 import { mountDashboardDocuments } from './dashboard-document.mjs';
+import { mountStandalonePlanDashboards } from './plan-dashboard.mjs';
 import { mountConstellationRoadmap } from './constellation-roadmap.mjs';
 import './map-data-layers.mjs';
 import './map-pages.mjs';
