@@ -84,6 +84,11 @@ final class HomePageDataService
             ]);
         }
 
+        $workSessionContext = $this->continuityService->homeContext(
+            $editablePlans,
+            $actorToken,
+        );
+
         $dashboard = $this->dashboardService->build(
             $plans,
             $actorToken,
@@ -92,9 +97,10 @@ final class HomePageDataService
             $request->session()->get('dashboard.recommendation_excluded', []),
             $editablePlans->pluck('id')->all(),
             $request->user(),
+            $workSessionContext,
         );
 
-        $dashboard['continuity'] = $this->continuityService->forPlans($editablePlans, $actorToken);
+        $dashboard['continuity'] = $workSessionContext['continuity'] ?? null;
         $dashboard['calendar_week'] = $this->calendarService->weekSummary($plans);
 
         $previousPlanStatuses = (array) $request->session()->get('action_home.plan_statuses', []);
