@@ -13,6 +13,7 @@ use Throwable;
 
 class BehaviorEventLogger
 {
+    private const ONCE_SESSION_PREFIX = 'canovia.behavior_once.';
     public function record(
         string $actorToken,
         BehaviorEventType $type,
@@ -42,6 +43,10 @@ class BehaviorEventLogger
         array $metadata = [],
         int $withinMinutes = 30,
     ): ?BehaviorEvent {
+        if ($this->recordedRecentlyInSession($request, $type, $plan, $task, $withinMinutes)) {
+            return null;
+        }
+
         $exists = BehaviorEvent::query()
             ->where('actor_token', $actorToken)
             ->where('event_type', $type->value)
@@ -53,7 +58,16 @@ class BehaviorEventLogger
             ->where('occurred_at', '>=', now()->subMinutes($withinMinutes))
             ->exists();
 
-        return $exists ? null : $this->record($actorToken, $type, $request, $plan, $task, $metadata);
+        if ($exists) {
+            $this->markRecordedInSession($request, $type, $plan, $task);
+
+            return null;
+        }
+
+        $event = $this->record($actorToken, $type, $request, $plan, $task, $metadata);
+        $this->markRecordedInSession($request, $type, $plan, $task);
+
+        return $event;
     }
 
     public function recordSafely(
@@ -103,6 +117,10 @@ class BehaviorEventLogger
         array $metadata = [],
         int $withinMinutes = 30,
     ): ?BehaviorEvent {
+        if ($this->recordedRecentlyInSession($request, $type, $plan, $task, $withinMinutes)) {
+            return null;
+        }
+
         try {
             $exists = BehaviorEvent::query()
                 ->where('actor_token', $actorToken)
@@ -116,6 +134,8 @@ class BehaviorEventLogger
                 ->exists();
 
             if ($exists) {
+                $this->markRecordedInSession($request, $type, $plan, $task);
+
                 return null;
             }
         } catch (Throwable $exception) {
@@ -125,7 +145,56 @@ class BehaviorEventLogger
             ]);
         }
 
-        return $this->recordSafely($actorToken, $type, $request, $plan, $task, $metadata);
+        $event = $this->recordSafely($actorToken, $type, $request, $plan, $task, $metadata);
+        if ($event) {
+            $this->markRecordedInSession($request, $type, $plan, $task);
+        }
+
+        return $event;
+    }
+
+    private function recordedRecentlyInSession(
+        Request $request,
+        BehaviorEventType $type,
+        ?Plan $plan,
+        ?Task $task,
+        int $withinMinutes,
+    ): bool {
+        $recordedAt = $request->session()->get($this->onceSessionKey($type, $plan, $task));
+
+        if (! is_numeric($recordedAt)) {
+            return false;
+        }
+
+        $windowSeconds = max(1, $withinMinutes) * 60;
+
+        return ((int) now()->timestamp - (int) $recordedAt) <= $windowSeconds;
+    }
+
+    private function markRecordedInSession(
+        Request $request,
+        BehaviorEventType $type,
+        ?Plan $plan,
+        ?Task $task,
+    ): void {
+        $request->session()->put(
+            $this->onceSessionKey($type, $plan, $task),
+            (int) now()->timestamp,
+        );
+    }
+
+    private function onceSessionKey(
+        BehaviorEventType $type,
+        ?Plan $plan,
+        ?Task $task,
+    ): string {
+        $scope = implode('|', [
+            $type->value,
+            (string) ($plan?->id ?? 0),
+            (string) ($task?->id ?? 0),
+        ]);
+
+        return self::ONCE_SESSION_PREFIX.hash('sha256', $scope);
     }
 
     private function safeLog(string $level, string $message, array $context): void
