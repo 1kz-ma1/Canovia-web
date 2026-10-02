@@ -1399,3 +1399,16 @@ RecommendationService自体は変更せず、入力候補をselected Mode内Plan
 Task決定後はStudy -> Study Activity、Development -> Execution Orchestration、Career -> Career Workspace、General -> WorkSession Timerへhandoffする。specialized handoffがあるPrimary RecommendationにもTimer fallbackを残す。
 
 詳細は `docs/V51.2_EXECUTION_WORKSPACE_MODES.md` を正とする。
+
+
+## V51.3 Action Home
+
+Primary HomeはPlan browserではなく「今、何をすればいい？」へ答えるAction / Alert Surfaceとする。表示優先順はActive Work Session、Next Action、Important Changes、Continuity、utility、small Timeline preview、collapsed daily context。
+
+既存Dashboard Guidanceのobjective priorityとspecialized execution actionは維持するが、Plan tabs、全Planカード一覧、per-Plan Dashboard panel、Plan-specific Surface Modules、Roadmap詳細をPrimary Homeから外す。Plan全体はConstellation、実行方法の選択はExecution、履歴はTimelineへhandoffする。
+
+ActionHomeProjectionServiceはDBを変更せず、pending Plan update、PlanProgressServiceのattention status（遅れ気味 / 期限切れ / 作業時間不足）、共同計画の他メンバーによるPlanActivityLogをread-only signalへ投影する。Home sessionには直近Plan statusだけをaction_home.plan_statusesとして保持し、次回表示時にattention statusへ変化した場合はSTATUS CHANGEDとして状態遷移を明示する。Instant Navigation prefetchではこのsnapshotを更新しない。
+
+共同計画のsignalは過去14日の他ユーザー操作から最大4件を取り、Homeには変化だけを表示する。参加等のmanagement actionはcollapsed disclosureへ残し、共同計画一覧そのものはHomeのPrimary contentにしない。Recent Activityも最大3件のpreviewに限定し、全履歴はTimelineへ渡す。
+
+詳細は docs/V51.3_ACTION_HOME.md を正とする。
