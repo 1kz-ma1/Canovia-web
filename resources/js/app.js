@@ -3825,7 +3825,10 @@ document.addEventListener('DOMContentLoaded', () => {
     mountConstellationRoadmap();
     mountDashboardDocuments();
     mountStandalonePlanDashboards();
-    mountLivingGoalMap({ recordBehaviorRef: recordBehavior });
+
+    if (document.body?.dataset.focusMode !== '1') {
+        mountLivingGoalMap({ recordBehaviorRef: recordBehavior });
+    }
 
     document.dispatchEvent(new CustomEvent('canovia:surface-mounted', {
         detail: {
