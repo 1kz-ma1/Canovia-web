@@ -1,3 +1,13 @@
+const CORE_PERFORMANCE_PATHS = new Set([
+    '/',
+    '/map',
+    '/inbox',
+    '/roadmap',
+    '/timeline',
+    '/calendar',
+    '/navigate',
+]);
+
 const MAX_PERFORMANCE_ENTRIES = 80;
 
 function clientSurface(windowRef) {
@@ -54,6 +64,7 @@ export function mountCanoviaInteractionPerformance({
     const endpoint = documentRef.querySelector('meta[name="canovia-client-performance-url"]')?.content;
     const csrfToken = documentRef.querySelector('meta[name="csrf-token"]')?.content;
     if (!endpoint || !csrfToken) return null;
+    if (!CORE_PERFORMANCE_PATHS.has(windowRef.location.pathname)) return null;
 
     const performanceRef = windowRef.performance;
     const longTasks = [];
