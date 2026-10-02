@@ -41,7 +41,9 @@ class MapPlanWorkspaceV491Test extends TestCase
             ->assertOk()
             ->assertSee('L1 · PLANS')
             ->assertSee($dev->title)
-            ->assertSee($study->title);
+            ->assertSee($study->title)
+            ->assertSee('data-map-node-entry-mode="direct"', false)
+            ->assertSee('href="'.e(route('plans.dashboard', $dev)).'"', false);
 
         $graph = $response->viewData('graph');
         $nodeIds = $graph['nodes']->pluck('id')->all();
@@ -54,13 +56,9 @@ class MapPlanWorkspaceV491Test extends TestCase
         ));
 
         $devNode = $graph['nodes']->firstWhere('id', 'plan:'.$dev->id);
-        $this->assertSame('zoom-in', data_get($devNode, 'direct_navigation.kind'));
+        $this->assertSame('dashboard', data_get($devNode, 'direct_navigation.kind'));
         $this->assertSame(
-            route('map.index', [
-                'level' => 'l2',
-                'intent' => 'plan',
-                'plan' => $dev->id,
-            ]),
+            route('plans.dashboard', $dev),
             data_get($devNode, 'direct_navigation.url'),
         );
     }

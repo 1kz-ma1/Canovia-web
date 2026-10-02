@@ -1364,6 +1364,21 @@ Next / Ready / Blockedは既存Roadmap Task Detailへ接続し、Spatial Roadmap
 詳細は `docs/V50.2_PLAN_DASHBOARD_INFORMATION_BOARD.md` を正とする。
 
 
+
+## V50.3 Standalone Plan Dashboard
+
+Plan DashboardをMap-owned Documentから独立したDashboard Document Surfaceへ昇格する。正規routeは `/plans/{plan}/dashboard`（`plans.dashboard`）。Plan intentのMap L1 Plan nodeはこのDashboardへ直接遷移し、MapはDashboardの所有者ではなくlauncherとなる。旧Map L2 Plan Dashboard URLはmigration compatibilityとして残す。
+
+`PlanDashboardWorkspaceService` がPlan / Progress / canonical Roadmap / Spatial Roadmap / Information Board / ownership / execution URLをrequest-timeに共通生成し、Standalone ControllerとMap compatibility surfaceの双方が利用する。private Planはrelations load前に `canView` を判定する。V50.2の6 Region markupはshared partialへ抽出し、Standalone / compatibilityで二重実装しない。
+
+Standalone Dashboardはgeneric `Dashboard Document` runtimeでinitial fit / zoom / pinch / panを行い、Phase / Clusterの `data-roadmap-region-focus` もgeneric runtimeで扱う。Spatial RoadmapはDashboard全体ではなくStructure Regionであり続ける。
+
+Task Detailは既存Roadmap Task templateを再利用し、`plan-dashboard.mjs` が `#roadmap-task=...` のhash/back state、Close / Backdrop / Escape、focus restorationを担当する。Detailを開閉してもouter Document Cameraのscale / scrollは維持する。
+
+Classic Planは編集・詳細管理Surfaceとして維持し、Dashboard actionを追加してClassicとDashboardを相互移動可能にする。追加DB、layout persistence、Automatic Surface selection、Legacy Map L2削除は行わない。
+
+詳細は `docs/V50.3_STANDALONE_PLAN_DASHBOARD.md` を正とする。
+
 ## V51.0 Primary Navigation & Companion Shell
 
 Primary Navigationを `Home / Constellation / Execution / Timeline` の4 Surfaceへ整理する。Homeは「今何をすればいいか」、Constellationは「全体と現在地」、Executionは「実際にどう進めるか」、Timelineは「何が起きたか」に答える。Inboxは機能を維持したままPrimary Navigationから外し、役割再検討中とする。

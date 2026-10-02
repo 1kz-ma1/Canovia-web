@@ -1,6 +1,6 @@
-/* V50.2 Plan Dashboard Information Board
- * Keep the Plan Dashboard as one stable information board. The Document
- * Camera owns responsive fit; regions do not collapse into a vertical feed.
+/* V50.2/V50.3 Plan Dashboard Information Board
+ * Shared by the standalone Dashboard Document and the legacy Map compatibility
+ * surface. This stylesheet is intentionally outside the Map namespace.
  */
 @layer components {
     .canovia-plan-workspace-document[data-dashboard-document-canvas] {

@@ -106,11 +106,7 @@ final class HierarchyNavigationGraphService
                     'intent' => 'execution',
                     'plan' => $plan->id,
                 ])
-                : route('map.index', [
-                    'level' => MapLevel::Plan->value,
-                    'intent' => 'plan',
-                    'plan' => $plan->id,
-                ]);
+                : route('plans.dashboard', $plan);
             $activeTasks = $plan->tasks
                 ->filter(fn ($task) => ! in_array($task->status, ['done', 'cancelled'], true)
                     && (int) $task->progress_percent < 100)
@@ -129,7 +125,7 @@ final class HierarchyNavigationGraphService
                 ]))),
                 action: $url,
                 attentionRole: 'hierarchy-child',
-                navigationKind: 'zoom-in',
+                navigationKind: $executionIntent ? 'zoom-in' : 'dashboard',
                 classicSurface: $this->surface(
                     'Plan',
                     (string) $plan->title,
@@ -143,7 +139,7 @@ final class HierarchyNavigationGraphService
                             $executionIntent ? 'Executionへ入る' : 'Plan Dashboardへ入る',
                             $url,
                             true,
-                            'zoom-in',
+                            $executionIntent ? 'zoom-in' : 'dashboard',
                         ),
                         $this->action('Classic Planを開く', route('plans.show', $plan)),
                     ],
