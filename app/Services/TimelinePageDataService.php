@@ -35,8 +35,8 @@ final class TimelinePageDataService
 
         $workEvents = $plans->flatMap(function (Plan $plan) {
             return $plan->workLogs->map(function ($log) use ($plan) {
-                $occurredAt = $log->created_at
-                    ?? $log->worked_on?->copy()->endOfDay();
+                $occurredAt = $log->worked_on?->copy()->endOfDay()
+                    ?? $log->created_at;
 
                 return [
                     'kind' => 'work',
