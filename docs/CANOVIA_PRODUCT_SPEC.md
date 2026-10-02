@@ -1451,3 +1451,18 @@ Paletteは既存CompanionEntryService / CompanionConversationService / Companion
 DB migrationなし。既存Companion Thread / Message / Candidateだけを利用し、Human Confirm、mutation whitelist、idempotency、ownership / entitlementを変更しない。
 
 詳細は `docs/V51.5_COMPANION_DEEP_INTEGRATION.md` を正とする。
+
+
+## V51.6 Surface Refinement Phase 1
+
+実機で確認したConstellation / Executionの情報密度と操作距離を改善する。
+
+Constellation overviewはraw orbitの安定位置を維持しつつ、表示時だけPlan数に応じて中心からの距離を圧縮する。1〜6 Planでは巨大な52rem固定Stageを使わずviewport内へ収め、7 Plan以上のみwide stageを許可する。
+
+Plan選択後はUniverse内で小さくzoomする方式を廃止し、Selected Constellation Workspaceへ切り替える。上段Focus Paletteで選択Planの星座を大きく表示し、Main Star tapでTask Groupを同一Palette内へ表示する。下段Detail PaletteはPlan completion / Task / Main Star / statusとExecution / Plan detail / Plan update handoffを担当する。旧左下InspectorとStar Task dialogはSelected flowから外す。
+
+ExecutionはPrimary recommendationを維持しつつ、「別候補を見る」buttonを廃止する。同じExecution Modeの別Planから各1件のおすすめTaskを優先して横スライドRailへ常時表示し、不足時のみ同Mode内から補完する。
+
+Study / Development / Careerのspecialized executionではTimer buttonを表示しない。TimerはGeneral executionのprimary execution patternとしてのみ表示する。既存active/offline work session resumeは継続する。
+
+詳細は `docs/V51.6_SURFACE_REFINEMENT_PHASE1.md` を正とする。Constellation shape grammarの多様化はPhase 2で扱う。
