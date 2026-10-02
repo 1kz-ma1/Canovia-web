@@ -44,6 +44,11 @@ class ContinuityService
 
         $latestSession = $this->latestSessionForPlans($plans, $actorToken);
 
+        if ($latestSession) {
+            $latestSession = $dashboardSessions->firstWhere('id', $latestSession->id)
+                ?? $latestSession;
+        }
+
         $sessionsToHydrate = $dashboardSessions
             ->when($latestSession, fn (Collection $sessions) => $sessions->push($latestSession))
             ->unique('id')
