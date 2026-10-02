@@ -25,7 +25,7 @@
                     @if (! empty($task['next_action_note']))
                         <p>次: {{ $task['next_action_note'] }}</p>
                     @elseif (! empty($task['description']))
-                        <p>{{ IlluminateSupportStr::limit($task['description'], 120, '…') }}</p>
+                        <p>{{ \Illuminate\Support\Str::limit($task['description'], 120, '…') }}</p>
                     @endif
                 </div>
             </article>
