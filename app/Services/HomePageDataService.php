@@ -72,7 +72,25 @@ final class HomePageDataService
 
         $dashboard['continuity'] = $this->continuityService->forPlans($editablePlans, $actorToken);
         $dashboard['calendar_week'] = $this->calendarService->weekSummary($plans);
-        $actionHome = $this->actionHome->build($plans, $dashboard, $request->user());
+
+        $previousPlanStatuses = (array) $request->session()->get('action_home.plan_statuses', []);
+        $actionHome = $this->actionHome->build(
+            $plans,
+            $dashboard,
+            $request->user(),
+            $previousPlanStatuses,
+        );
+
+        if (! $prefetch) {
+            $request->session()->put(
+                'action_home.plan_statuses',
+                collect($dashboard['plan_tabs'])
+                    ->mapWithKeys(fn (array $item) => [
+                        (string) $item['plan']->id => (string) data_get($item, 'progress.status', ''),
+                    ])
+                    ->all(),
+            );
+        }
 
         $primaryGuidance = $dashboard['guidance_deck']->first();
 
