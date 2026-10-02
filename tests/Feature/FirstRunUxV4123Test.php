@@ -157,7 +157,7 @@ class FirstRunUxV4123Test extends TestCase
         $response->assertSee('btn-secondary min-h-11 w-full justify-center', false);
     }
 
-    public function test_today_card_exposes_plan_drill_down_without_overriding_inner_actions(): void
+    public function test_action_home_keeps_plan_context_without_turning_recommendation_into_plan_drill_down(): void
     {
         [$user, $plan] = $this->scenario();
 
@@ -165,15 +165,15 @@ class FirstRunUxV4123Test extends TestCase
             ->get(route('home'))
             ->assertOk();
 
-        $response->assertSee('data-plan-card-url="'.route('plans.show', $plan).'"', false);
-        $response->assertSee('href="'.route('plans.show', $plan).'" class="plan-identity-chip', false);
+        $response
+            ->assertSee('data-action-home-guidance', false)
+            ->assertSee($plan->title)
+            ->assertDontSee('data-plan-card-url=', false)
+            ->assertDontSee('href="'.route('plans.show', $plan).'" class="plan-identity-chip', false);
 
+        // Legacy click delegation remains available for non-Home surfaces that still use the contract.
         $source = file_get_contents(resource_path('js/app.js'));
         $this->assertStringContainsString("[data-plan-card-url]", $source);
-        $this->assertStringContainsString(
-            "a, button, form, input, select, textarea, label, summary, details",
-            $source,
-        );
     }
 
     public function test_legacy_intro_is_no_longer_dismissible_with_close_or_skip(): void
