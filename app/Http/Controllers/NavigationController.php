@@ -34,7 +34,10 @@ class NavigationController extends Controller
     ) {
         $actorToken = $identity->resolve($request);
         $plans = $ownership->ownedPlans($request, [
-            'tasks' => fn ($query) => $query->with('prerequisite')->orderBy('sort_order')->orderBy('id'),
+            'tasks' => fn ($query) => $query
+                ->with(['prerequisite', 'prerequisites'])
+                ->orderBy('sort_order')
+                ->orderBy('id'),
             'workLogs' => fn ($query) => $query->latest('worked_on')->latest('id'),
         ]);
         $plans = $plans->filter(fn ($plan) => $ownership->canEdit($request, $plan))->values();
