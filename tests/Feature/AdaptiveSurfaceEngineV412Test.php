@@ -150,22 +150,22 @@ class AdaptiveSurfaceEngineV412Test extends TestCase
         $this->assertContains('delivery_focus', $after->pluck('id')->all());
     }
 
-    public function test_dashboard_uses_registered_surface_views_instead_of_hardcoded_plan_cards(): void
+    public function test_action_home_does_not_embed_plan_specific_surface_modules(): void
     {
         $view = file_get_contents(resource_path('views/dashboard/index.blade.php'));
-
         $disclosure = file_get_contents(resource_path('views/dashboard/surfaces/disclosure.blade.php'));
-        $this->assertStringContainsString("@include('dashboard.surfaces.disclosure'", $view);
-        $this->assertStringContainsString("@include(\$surface->view", $disclosure);
-        $this->assertStringContainsString("\$surfaceModules", $view);
-        $this->assertStringNotContainsString('data-plan-hub-current>', $view);
 
+        $this->assertStringContainsString('data-action-home', $view);
+        $this->assertStringNotContainsString("@include('dashboard.surfaces.disclosure'", $view);
+        $this->assertStringNotContainsString("\$surfaceModules", $view);
+        $this->assertStringNotContainsString('data-dashboard-panel=', $view);
+
+        // Registered surfaces remain reusable assets for Plan/Execution contexts.
+        $this->assertStringContainsString("@include(\$surface->view", $disclosure);
         $career = file_get_contents(resource_path('views/dashboard/surfaces/career-pipeline.blade.php'));
         $interview = file_get_contents(resource_path('views/dashboard/surfaces/career-interview-focus.blade.php'));
-
         $this->assertStringContainsString('CAREER PIPELINE', $career);
         $this->assertStringContainsString('INTERVIEW FOCUS', $interview);
-        $this->assertStringContainsString('面接対策が落ち着けば', $interview);
     }
 
     public function test_future_ai_decision_can_only_reorder_registered_surfaces(): void
@@ -202,7 +202,7 @@ class AdaptiveSurfaceEngineV412Test extends TestCase
         $this->assertNotContains('evil_html_module', $ids);
     }
 
-    public function test_home_renders_career_surfaces_and_hides_interview_card_when_no_interview_task_remains(): void
+    public function test_home_hands_career_work_to_execution_without_rendering_pipeline_detail(): void
     {
         $user = User::factory()->create();
         $plan = Plan::create([
@@ -219,22 +219,15 @@ class AdaptiveSurfaceEngineV412Test extends TestCase
             'is_public' => false,
         ]);
         $this->task($plan, '応募候補企業をリサーチする', 1);
-        $interview = $this->task($plan, 'A社 一次面接対策', 2, status: 'doing', progress: 30);
+        $this->task($plan, 'A社 一次面接対策', 2, status: 'doing', progress: 30);
 
         $this->actingAs($user)
             ->get(route('home'))
             ->assertOk()
-            ->assertSee('CAREER PIPELINE')
-            ->assertSee('INTERVIEW FOCUS')
-            ->assertSee('応募・選考の流れ');
-
-        $interview->update(['status' => 'done', 'progress_percent' => 100, 'remaining_minutes' => 0]);
-
-        $this->actingAs($user)
-            ->get(route('home'))
-            ->assertOk()
-            ->assertSee('CAREER PIPELINE')
-            ->assertDontSee('INTERVIEW FOCUS');
+            ->assertSee('Careerで進める')
+            ->assertDontSee('CAREER PIPELINE')
+            ->assertDontSee('INTERVIEW FOCUS')
+            ->assertDontSee('応募・選考の流れ');
     }
 
     public function test_roadmap_copy_changes_with_career_profile_while_spatial_map_is_primary(): void

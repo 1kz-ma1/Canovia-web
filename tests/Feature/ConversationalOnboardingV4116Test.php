@@ -278,7 +278,8 @@ class ConversationalOnboardingV4116Test extends TestCase
         $this->actingAs($user)
             ->get(route('home'))
             ->assertOk()
-            ->assertSee('Canoviaと始める')
+            ->assertSee('data-action-home-create-prompt', false)
+            ->assertSee('計画を作る')
             ->assertDontSee('目標を一緒に探す');
 
         InboxItem::query()->create([
