@@ -50,6 +50,8 @@
             </section>
 
             <section class="canovia-companion-palette-body">
+                <div class="canovia-companion-palette-status" data-companion-palette-status hidden></div>
+                <div data-companion-palette-session>
                 <div class="canovia-companion-palette-prompt">
                     <span aria-hidden="true">✦</span>
                     <div>
@@ -63,6 +65,7 @@
                         method="POST"
                         action="{{ route('companion.entry') }}"
                         data-mutation-once
+                        data-companion-palette-async-form
                     >
                         @csrf
                         <input type="hidden" name="entry_type" value="{{ $companionEntryType }}">
@@ -82,6 +85,7 @@
                     <a href="{{ route('companion.index') }}" class="canovia-companion-palette-secondary">
                         最近の会話を見る
                     </a>
+                </div>
                 </div>
             </section>
         </div>

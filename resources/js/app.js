@@ -3533,7 +3533,9 @@ function mountCompanionPalette(root = document) {
         const trigger = shell.querySelector('[data-companion-palette-open]');
         const dialog = shell.querySelector('[data-companion-palette]');
         const close = shell.querySelector('[data-companion-palette-close]');
-        if (!trigger || !dialog) return;
+        const session = shell.querySelector('[data-companion-palette-session]');
+        const status = shell.querySelector('[data-companion-palette-status]');
+        if (!trigger || !dialog || !session) return;
 
         const syncExpanded = () => {
             trigger.setAttribute('aria-expanded', dialog.open ? 'true' : 'false');
@@ -3554,12 +3556,147 @@ function mountCompanionPalette(root = document) {
             syncExpanded();
         };
 
+        const setStatus = (message = '', tone = 'info', handoffUrl = null) => {
+            if (!status) return;
+
+            status.replaceChildren();
+            if (!message && !handoffUrl) {
+                status.hidden = true;
+                delete status.dataset.tone;
+                return;
+            }
+
+            const text = document.createElement('span');
+            text.textContent = message || '更新しました。';
+            status.appendChild(text);
+
+            if (handoffUrl) {
+                const link = document.createElement('a');
+                link.href = handoffUrl;
+                link.textContent = 'Executionを開く';
+                status.appendChild(link);
+            }
+
+            status.dataset.tone = tone;
+            status.hidden = false;
+        };
+
+        const focusComposer = () => {
+            const composer = session.querySelector('[data-companion-palette-compose] textarea');
+            if (composer instanceof HTMLTextAreaElement) {
+                window.requestAnimationFrame(() => composer.focus({ preventScroll: true }));
+            }
+
+            const messages = session.querySelector('[data-companion-palette-messages]');
+            if (messages instanceof HTMLElement) {
+                window.requestAnimationFrame(() => {
+                    messages.scrollTop = messages.scrollHeight;
+                });
+            }
+        };
+
+        const responseMessage = (payload, fallback) => {
+            const direct = typeof payload?.message === 'string' ? payload.message.trim() : '';
+            if (direct) return direct;
+
+            const errors = payload?.errors;
+            if (errors && typeof errors === 'object') {
+                for (const value of Object.values(errors)) {
+                    if (Array.isArray(value) && typeof value[0] === 'string') {
+                        return value[0];
+                    }
+                }
+            }
+
+            return fallback;
+        };
+
+        const setFormBusy = (form, busy) => {
+            form.dataset.companionPaletteBusy = busy ? '1' : '0';
+            form.setAttribute('aria-busy', busy ? 'true' : 'false');
+            form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach((button) => {
+                if ('disabled' in button) button.disabled = busy;
+            });
+        };
+
+        const submitPaletteForm = async (form) => {
+            if (!(form instanceof HTMLFormElement)) return;
+            if (form.dataset.companionPaletteBusy === '1') return;
+
+            setFormBusy(form, true);
+            setStatus('Companionが整理しています…', 'pending');
+
+            try {
+                const headers = {
+                    'Accept': 'application/json',
+                    'X-Canovia-Companion-Surface': 'palette',
+                };
+                if (csrfToken) headers['X-CSRF-TOKEN'] = csrfToken;
+
+                const response = await fetch(form.action, {
+                    method: (form.getAttribute('method') || 'POST').toUpperCase(),
+                    headers,
+                    credentials: 'same-origin',
+                    body: new FormData(form),
+                });
+
+                const payload = await response.json().catch(() => null);
+
+                if (!response.ok) {
+                    throw new Error(responseMessage(
+                        payload,
+                        'Companionとの通信に失敗しました。もう一度試してください。',
+                    ));
+                }
+
+                if (typeof payload?.html === 'string') {
+                    session.innerHTML = payload.html;
+                }
+
+                setStatus(
+                    responseMessage(payload, ''),
+                    'success',
+                    typeof payload?.handoff_url === 'string' ? payload.handoff_url : null,
+                );
+                focusComposer();
+            } catch (error) {
+                setStatus(
+                    error?.message || 'Companionとの通信に失敗しました。もう一度試してください。',
+                    'error',
+                );
+            } finally {
+                if (form.isConnected) setFormBusy(form, false);
+            }
+        };
+
         trigger.addEventListener('click', openPalette);
         close?.addEventListener('click', closePalette);
         dialog.addEventListener('close', syncExpanded);
         dialog.addEventListener('cancel', () => window.requestAnimationFrame(syncExpanded));
+
+        dialog.addEventListener('submit', (event) => {
+            const form = event.target.closest?.('[data-companion-palette-async-form]');
+            if (!(form instanceof HTMLFormElement)) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+            void submitPaletteForm(form);
+        });
+
         dialog.addEventListener('click', (event) => {
-            if (event.target === dialog) closePalette();
+            if (event.target === dialog) {
+                closePalette();
+                return;
+            }
+
+            const suggestion = event.target.closest?.('[data-companion-palette-suggest]');
+            if (!suggestion) return;
+
+            const textarea = session.querySelector('[data-companion-palette-compose] textarea');
+            if (!(textarea instanceof HTMLTextAreaElement)) return;
+
+            textarea.value = suggestion.dataset.companionPaletteSuggest || '';
+            textarea.focus();
         });
 
         shell.dataset.companionPaletteMounted = '1';

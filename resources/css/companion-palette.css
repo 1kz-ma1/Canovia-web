@@ -253,6 +253,423 @@
     }
 
 
+    .canovia-companion-palette-status {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.7rem;
+        margin-bottom: 0.7rem;
+        border: 1px solid rgb(71 85 105 / 0.5);
+        border-radius: 0.8rem;
+        background: rgb(15 23 42 / 0.66);
+        padding: 0.6rem 0.72rem;
+        color: rgb(203 213 225);
+        font-size: 0.65rem;
+        line-height: 1.5;
+    }
+
+    .canovia-companion-palette-status[hidden] {
+        display: none;
+    }
+
+    .canovia-companion-palette-status[data-tone="pending"] {
+        border-color: rgb(103 232 249 / 0.2);
+        color: rgb(165 243 252);
+    }
+
+    .canovia-companion-palette-status[data-tone="success"] {
+        border-color: rgb(110 231 183 / 0.24);
+        color: rgb(167 243 208);
+    }
+
+    .canovia-companion-palette-status[data-tone="error"] {
+        border-color: rgb(251 113 133 / 0.3);
+        color: rgb(254 205 211);
+    }
+
+    .canovia-companion-palette-status a {
+        flex: 0 0 auto;
+        border-radius: 9999px;
+        background: rgb(255 255 255 / 0.06);
+        padding: 0.28rem 0.5rem;
+        color: inherit;
+        font-weight: 900;
+    }
+
+    .canovia-companion-thread {
+        display: flex;
+        min-height: 100%;
+        flex-direction: column;
+        gap: 0.72rem;
+    }
+
+    .canovia-companion-thread-context {
+        display: flex;
+        min-width: 0;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.7rem;
+        border: 1px solid rgb(139 92 246 / 0.14);
+        border-radius: 0.9rem;
+        background: rgb(76 29 149 / 0.07);
+        padding: 0.68rem 0.72rem;
+    }
+
+    .canovia-companion-thread-context > div:first-child {
+        min-width: 0;
+    }
+
+    .canovia-companion-thread-context > div:first-child span {
+        display: block;
+        color: rgb(196 181 253);
+        font-size: 0.48rem;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+    }
+
+    .canovia-companion-thread-context strong {
+        display: block;
+        margin-top: 0.15rem;
+        overflow: hidden;
+        color: rgb(241 245 249);
+        font-size: 0.76rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .canovia-companion-thread-context-meta {
+        display: flex;
+        flex: 0 0 auto;
+        gap: 0.35rem;
+    }
+
+    .canovia-companion-thread-context-meta span {
+        border-radius: 9999px;
+        background: rgb(15 23 42 / 0.64);
+        padding: 0.22rem 0.38rem;
+        color: rgb(148 163 184);
+        font-size: 0.5rem;
+        font-weight: 800;
+    }
+
+    .canovia-companion-palette-shortcuts {
+        display: flex;
+        gap: 0.38rem;
+        overflow-x: auto;
+        padding-bottom: 0.08rem;
+        scrollbar-width: none;
+    }
+
+    .canovia-companion-palette-shortcuts::-webkit-scrollbar {
+        display: none;
+    }
+
+    .canovia-companion-palette-shortcuts a {
+        flex: 0 0 auto;
+        border: 1px solid rgb(71 85 105 / 0.46);
+        border-radius: 9999px;
+        background: rgb(15 23 42 / 0.48);
+        padding: 0.32rem 0.52rem;
+        color: rgb(203 213 225);
+        font-size: 0.55rem;
+        font-weight: 850;
+    }
+
+    .canovia-companion-palette-continuity {
+        display: grid;
+        gap: 0.42rem;
+    }
+
+    .canovia-companion-palette-continuity > div {
+        border-left: 2px solid rgb(167 139 250 / 0.45);
+        border-radius: 0.55rem;
+        background: rgb(30 27 75 / 0.16);
+        padding: 0.48rem 0.58rem;
+    }
+
+    .canovia-companion-palette-continuity span {
+        color: rgb(167 139 250);
+        font-size: 0.46rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+    }
+
+    .canovia-companion-palette-continuity p {
+        margin-top: 0.08rem;
+        color: rgb(148 163 184);
+        font-size: 0.58rem;
+        line-height: 1.5;
+    }
+
+    .canovia-companion-palette-continuity button,
+    .canovia-companion-palette-continuity a {
+        display: inline-flex;
+        margin-top: 0.3rem;
+        color: rgb(165 243 252);
+        font-size: 0.54rem;
+        font-weight: 900;
+    }
+
+    .canovia-companion-palette-messages {
+        display: grid;
+        min-height: 12rem;
+        max-height: 23rem;
+        flex: 1 1 auto;
+        gap: 0.55rem;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 0.08rem 0.12rem 0.35rem;
+        scroll-behavior: smooth;
+    }
+
+    .canovia-companion-palette-message {
+        width: min(92%, 34rem);
+        border: 1px solid rgb(71 85 105 / 0.42);
+        border-radius: 1rem;
+        background: rgb(15 23 42 / 0.46);
+        padding: 0.68rem 0.72rem;
+    }
+
+    .canovia-companion-palette-message.is-user {
+        justify-self: end;
+        border-color: rgb(34 211 238 / 0.18);
+        background: rgb(8 145 178 / 0.06);
+    }
+
+    .canovia-companion-palette-message.is-assistant {
+        justify-self: start;
+        border-color: rgb(167 139 250 / 0.18);
+        background: rgb(124 58 237 / 0.05);
+    }
+
+    .canovia-companion-palette-message > span {
+        color: rgb(148 163 184);
+        font-size: 0.46rem;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+    }
+
+    .canovia-companion-palette-message.is-user > span {
+        color: rgb(103 232 249);
+    }
+
+    .canovia-companion-palette-message.is-assistant > span {
+        color: rgb(196 181 253);
+    }
+
+    .canovia-companion-palette-message > p {
+        margin-top: 0.28rem;
+        white-space: pre-wrap;
+        color: rgb(226 232 240);
+        font-size: 0.69rem;
+        line-height: 1.65;
+    }
+
+    .canovia-companion-palette-empty {
+        display: grid;
+        place-items: center;
+        min-height: 12rem;
+        border: 1px dashed rgb(71 85 105 / 0.45);
+        border-radius: 1rem;
+        padding: 1rem;
+        text-align: center;
+    }
+
+    .canovia-companion-palette-empty strong {
+        color: rgb(226 232 240);
+        font-size: 0.72rem;
+    }
+
+    .canovia-companion-palette-empty p {
+        margin-top: 0.3rem;
+        max-width: 26rem;
+        color: rgb(100 116 139);
+        font-size: 0.6rem;
+        line-height: 1.55;
+    }
+
+    .canovia-companion-palette-candidates {
+        display: grid;
+        gap: 0.48rem;
+        margin-top: 0.62rem;
+        border-top: 1px solid rgb(255 255 255 / 0.06);
+        padding-top: 0.62rem;
+    }
+
+    .canovia-companion-palette-candidate {
+        border: 1px solid rgb(251 191 36 / 0.18);
+        border-radius: 0.78rem;
+        background: rgb(120 53 15 / 0.08);
+        padding: 0.58rem;
+    }
+
+    .canovia-companion-palette-candidate.is-applied {
+        border-color: rgb(110 231 183 / 0.16);
+        background: rgb(6 78 59 / 0.08);
+    }
+
+    .canovia-companion-palette-candidate.is-dismissed {
+        border-color: rgb(71 85 105 / 0.35);
+        background: rgb(15 23 42 / 0.3);
+        opacity: 0.72;
+    }
+
+    .canovia-companion-palette-candidate-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.45rem;
+    }
+
+    .canovia-companion-palette-candidate-heading span {
+        border-radius: 9999px;
+        background: rgb(251 191 36 / 0.1);
+        padding: 0.16rem 0.34rem;
+        color: rgb(253 230 138);
+        font-size: 0.46rem;
+        font-weight: 900;
+    }
+
+    .canovia-companion-palette-candidate-heading small {
+        color: rgb(100 116 139);
+        font-size: 0.46rem;
+    }
+
+    .canovia-companion-palette-candidate > strong {
+        display: block;
+        margin-top: 0.34rem;
+        color: rgb(241 245 249);
+        font-size: 0.67rem;
+    }
+
+    .canovia-companion-palette-candidate > p {
+        margin-top: 0.18rem;
+        color: rgb(148 163 184);
+        font-size: 0.57rem;
+        line-height: 1.5;
+    }
+
+    .canovia-companion-palette-candidate > small {
+        display: block;
+        margin-top: 0.24rem;
+        color: rgb(100 116 139);
+        font-size: 0.5rem;
+    }
+
+    .canovia-companion-palette-candidate dl {
+        display: grid;
+        gap: 0.3rem;
+        margin-top: 0.48rem;
+        border-radius: 0.58rem;
+        background: rgb(2 6 23 / 0.32);
+        padding: 0.46rem;
+    }
+
+    .canovia-companion-palette-candidate dl > div {
+        display: grid;
+        grid-template-columns: minmax(5rem, 0.38fr) minmax(0, 1fr);
+        gap: 0.42rem;
+    }
+
+    .canovia-companion-palette-candidate dt {
+        color: rgb(100 116 139);
+        font-size: 0.51rem;
+        font-weight: 800;
+    }
+
+    .canovia-companion-palette-candidate dd {
+        overflow-wrap: anywhere;
+        color: rgb(203 213 225);
+        font-size: 0.56rem;
+    }
+
+    .canovia-companion-palette-blocked {
+        color: rgb(100 116 139) !important;
+        font-size: 0.5rem !important;
+    }
+
+    .canovia-companion-palette-candidate-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.38rem;
+        margin-top: 0.52rem;
+    }
+
+    .canovia-companion-palette-candidate-actions button {
+        min-height: 2rem;
+        border: 1px solid rgb(196 181 253 / 0.28);
+        border-radius: 0.66rem;
+        background: rgb(109 40 217 / 0.52);
+        padding: 0.34rem 0.56rem;
+        color: white;
+        font-size: 0.56rem;
+        font-weight: 900;
+    }
+
+    .canovia-companion-palette-candidate-actions button.is-secondary {
+        border-color: rgb(71 85 105 / 0.5);
+        background: rgb(15 23 42 / 0.54);
+        color: rgb(203 213 225);
+    }
+
+    .canovia-companion-palette-compose {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.48rem;
+        position: sticky;
+        bottom: 0;
+        border-top: 1px solid rgb(71 85 105 / 0.38);
+        background: rgb(6 13 31 / 0.96);
+        padding-top: 0.66rem;
+    }
+
+    .canovia-companion-palette-compose textarea {
+        min-height: 3.1rem;
+        max-height: 8rem;
+        resize: vertical;
+        border: 1px solid rgb(71 85 105 / 0.62);
+        border-radius: 0.8rem;
+        background: rgb(15 23 42 / 0.7);
+        padding: 0.6rem 0.68rem;
+        color: rgb(241 245 249);
+        font-size: 0.7rem;
+        line-height: 1.5;
+        outline: none;
+    }
+
+    .canovia-companion-palette-compose textarea:focus {
+        border-color: rgb(167 139 250 / 0.55);
+        box-shadow: 0 0 0 3px rgb(139 92 246 / 0.1);
+    }
+
+    .canovia-companion-palette-compose button {
+        align-self: end;
+        min-height: 3.1rem;
+        border: 1px solid rgb(196 181 253 / 0.32);
+        border-radius: 0.8rem;
+        background: linear-gradient(135deg, rgb(109 40 217 / 0.82), rgb(14 116 144 / 0.7));
+        padding: 0.55rem 0.74rem;
+        color: white;
+        font-size: 0.64rem;
+        font-weight: 900;
+    }
+
+    .canovia-companion-palette-compose button:disabled,
+    .canovia-companion-palette-candidate-actions button:disabled {
+        cursor: wait;
+        opacity: 0.56;
+    }
+
+    .canovia-companion-palette-unavailable {
+        border: 1px solid rgb(71 85 105 / 0.45);
+        border-radius: 0.8rem;
+        background: rgb(15 23 42 / 0.45);
+        padding: 0.72rem;
+        color: rgb(148 163 184);
+        font-size: 0.62rem;
+    }
+
+
     @media (min-width: 768px) {
         .canovia-companion-shell {
             right: 1.4rem;

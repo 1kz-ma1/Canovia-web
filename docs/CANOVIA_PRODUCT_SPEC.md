@@ -1438,3 +1438,16 @@ Completion判定は`AchievementProjectionService`へ集約し、既存Achievemen
 Timeline eventとAchievement Constellationは既存canonical dataからrequest時にread-only生成する。V51.4ではDB migration、read/unread、achievement ranking、immutable historical constellation snapshotは追加しない。
 
 詳細は `docs/V51.4_TIMELINE_ACHIEVEMENT_CONSTELLATION.md` を正とする。
+
+
+## V51.5 Companion Deep Integration
+
+Floating Companion Paletteを単なる入口からCross-Surface Control Surfaceへ拡張する。Primary Navigationは引き続きHome / Constellation / Execution / Timelineの4 Surfaceで、Companionを5番目のページにはしない。
+
+Paletteは既存CompanionEntryService / CompanionConversationService / CompanionMutationApplyServiceを再利用し、既存endpointへPalette request headerを付けて会話・Candidate review・apply / dismissを非同期実行する。Full Companion pageとPaletteはCompanionThreadSurfaceServiceの同じContext / Continuity / Candidate Preview projectionを使う。
+
+通常の会話やCandidate確認では現在Surfaceから強制遷移しない。Execution Request Candidateを確認した場合も自動遷移せず、Execution Orchestrationへのhandoff linkだけを返す。JavaScript無効時は既存Full Companionへのredirect fallbackを維持する。
+
+DB migrationなし。既存Companion Thread / Message / Candidateだけを利用し、Human Confirm、mutation whitelist、idempotency、ownership / entitlementを変更しない。
+
+詳細は `docs/V51.5_COMPANION_DEEP_INTEGRATION.md` を正とする。

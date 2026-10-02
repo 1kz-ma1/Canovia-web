@@ -89,8 +89,8 @@ class PrimaryNavigationCompanionV510Test extends TestCase
         $this->actingAs($user)
             ->get(route('navigation.index'))
             ->assertOk()
-            ->assertSee('EXECUTION / TAKE ACTION')
-            ->assertSee('今、実行する一歩を決めよう。')
+            ->assertSee('EXECUTION /')
+            ->assertSee('実行方法を選ぶ。')
             ->assertSee('data-canovia-nav-key="desktop-execution"', false)
             ->assertSee('nav-link-active', false);
     }

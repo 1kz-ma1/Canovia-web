@@ -8,17 +8,15 @@ use App\Models\CompanionMutationCandidate;
 use App\Models\CompanionThread;
 use App\Models\Plan;
 use App\Models\Task;
-use App\Services\CompanionContextService;
-use App\Services\CompanionContinuityService;
 use App\Services\CompanionConversationService;
 use App\Services\CompanionEntryService;
 use App\Services\CompanionMutationApplyService;
+use App\Services\CompanionThreadSurfaceService;
 use App\Services\FeatureAccessService;
 use App\Services\FeatureFlagService;
 use App\Services\NativeAiGateway;
 use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class CompanionController extends Controller
@@ -55,12 +53,19 @@ class CompanionController extends Controller
     public function entry(
         Request $request,
         CompanionEntryService $entry,
+        CompanionThreadSurfaceService $surface,
         FeatureFlagService $flags,
         FeatureAccessService $access,
         NativeAiGateway $nativeAi,
     ) {
         $availability = $this->availability($request->user(), $flags, $access, $nativeAi);
         if (! $availability['canUseCompanion']) {
+            if ($this->isPaletteRequest($request)) {
+                return response()->json([
+                    'message' => 'Canovia Companionは現在このアカウントでは利用できません。',
+                ], 403);
+            }
+
             return redirect()->route('companion.index');
         }
 
@@ -72,9 +77,21 @@ class CompanionController extends Controller
             'map_node_id' => ['nullable', 'string', 'max:160', 'regex:/^[A-Za-z0-9:_-]+$/'],
             'source_path' => ['nullable', 'string', 'max:500'],
             'source_route' => ['nullable', 'string', 'max:150'],
+            'surface' => ['nullable', 'string', 'in:palette'],
         ]);
 
         $thread = $entry->open($request, $validated);
+
+        if ($this->isPaletteRequest($request)) {
+            return $this->paletteResponse(
+                $request,
+                $thread,
+                $surface,
+                $flags,
+                $access,
+                $nativeAi,
+            );
+        }
 
         return redirect()->route('companion.show', $thread);
     }
@@ -115,9 +132,7 @@ class CompanionController extends Controller
         Request $request,
         CompanionThread $companionThread,
         PlanOwnershipService $ownership,
-        CompanionContextService $context,
-        CompanionContinuityService $continuity,
-        CompanionMutationApplyService $mutationApply,
+        CompanionThreadSurfaceService $surface,
         FeatureFlagService $flags,
         FeatureAccessService $access,
         NativeAiGateway $nativeAi,
@@ -132,52 +147,11 @@ class CompanionController extends Controller
         }
         if ($task && (! $plan || (int) $task->plan_id !== (int) $plan->id)) {
             $task = null;
+            $companionThread->setRelation('task', null);
         }
 
-        $companionThread->load([
-            'messages.mutationCandidates',
-            'plan',
-            'task',
-        ]);
-
-        $candidatePreviews = $companionThread->mutationCandidates
-            ->mapWithKeys(fn (CompanionMutationCandidate $candidate) => [
-                (int) $candidate->id => $mutationApply->reviewPreview($candidate),
-            ])
-            ->all();
-
-        $candidateApplyRequestIds = $companionThread->mutationCandidates
-            ->where('status', CompanionMutationCandidate::STATUS_PENDING)
-            ->mapWithKeys(fn (CompanionMutationCandidate $candidate) => [
-                (int) $candidate->id => (string) Str::uuid(),
-            ])
-            ->all();
-
-        $contextSnapshot = $context->snapshot(
-            $request->user(),
-            $plan,
-            $task,
-            is_array($companionThread->context_scope) ? $companionThread->context_scope : null,
-        );
-        $continuitySignals = $continuity->signals($companionThread, $contextSnapshot);
-        $contextSnapshot['continuity'] = $continuity->promptContext($continuitySignals);
-
-        $continuityRequestIds = collect($continuitySignals)
-            ->where('action', 'ask')
-            ->mapWithKeys(fn (array $signal) => [
-                (string) $signal['key'] => (string) Str::uuid(),
-            ])
-            ->all();
-
         return view('companion.show', [
-            'thread' => $companionThread,
-            'contextSnapshot' => $contextSnapshot,
-            'continuitySignals' => $continuitySignals,
-            'continuityRequestIds' => $continuityRequestIds,
-            'messageRequestId' => (string) Str::uuid(),
-            'companionSourcePath' => data_get($companionThread->context_scope, 'source_path') ?: request()->path(),
-            'candidatePreviews' => $candidatePreviews,
-            'candidateApplyRequestIds' => $candidateApplyRequestIds,
+            ...$surface->build($companionThread, $request->user()),
             ...$this->availability($request->user(), $flags, $access, $nativeAi),
         ]);
     }
@@ -190,6 +164,7 @@ class CompanionController extends Controller
         FeatureAccessService $access,
         NativeAiGateway $nativeAi,
         CompanionConversationService $conversation,
+        CompanionThreadSurfaceService $surface,
     ) {
         $this->authorizeThread($request, $companionThread);
         $this->authorizeAvailable($request, $flags, $access, $nativeAi);
@@ -198,6 +173,7 @@ class CompanionController extends Controller
             'content' => ['required', 'string', 'min:1', 'max:6000'],
             'request_id' => ['required', 'uuid'],
             'source_path' => ['nullable', 'string', 'max:500'],
+            'surface' => ['nullable', 'string', 'in:palette'],
         ]);
 
         $plan = $companionThread->plan;
@@ -221,9 +197,28 @@ class CompanionController extends Controller
                 sourcePath: $validated['source_path'] ?? null,
             );
         } catch (NativeAiExecutionException $exception) {
+            if ($this->isPaletteRequest($request)) {
+                return response()->json([
+                    'message' => $exception->getMessage(),
+                    'errors' => ['content' => [$exception->getMessage()]],
+                ], 422);
+            }
+
             return back()
                 ->withErrors(['content' => $exception->getMessage()])
                 ->withInput();
+        }
+
+        if ($this->isPaletteRequest($request)) {
+            return $this->paletteResponse(
+                $request,
+                $companionThread,
+                $surface,
+                $flags,
+                $access,
+                $nativeAi,
+                'CompanionがCanoviaの文脈を使って整理しました。',
+            );
         }
 
         return redirect()
@@ -237,7 +232,9 @@ class CompanionController extends Controller
         CompanionMutationCandidate $candidate,
         FeatureAccessService $access,
         FeatureFlagService $flags,
+        NativeAiGateway $nativeAi,
         CompanionMutationApplyService $mutationApply,
+        CompanionThreadSurfaceService $surface,
     ) {
         $this->authorizeThread($request, $companionThread);
         $this->authorizeCandidate($request, $companionThread, $candidate);
@@ -246,6 +243,7 @@ class CompanionController extends Controller
 
         $validated = $request->validate([
             'apply_request_id' => ['required', 'uuid'],
+            'surface' => ['nullable', 'string', 'in:palette'],
         ]);
 
         $result = $mutationApply->apply(
@@ -254,16 +252,34 @@ class CompanionController extends Controller
             (string) $validated['apply_request_id'],
         );
 
+        $handoffUrl = null;
         if (
             ($result['target_type'] ?? null) === 'execution_request'
             && (int) $candidate->plan_id > 0
             && (int) $candidate->task_id > 0
         ) {
+            $handoffUrl = route('plans.tasks.execution_orchestration.show', [
+                (int) $candidate->plan_id,
+                (int) $candidate->task_id,
+            ]);
+        }
+
+        if ($this->isPaletteRequest($request)) {
+            return $this->paletteResponse(
+                $request,
+                $companionThread,
+                $surface,
+                $flags,
+                $access,
+                $nativeAi,
+                (string) $result['message'],
+                $handoffUrl,
+            );
+        }
+
+        if ($handoffUrl) {
             return redirect()
-                ->route('plans.tasks.execution_orchestration.show', [
-                    (int) $candidate->plan_id,
-                    (int) $candidate->task_id,
-                ])
+                ->to($handoffUrl)
                 ->with('success', $result['message']);
         }
 
@@ -276,9 +292,17 @@ class CompanionController extends Controller
         Request $request,
         CompanionThread $companionThread,
         CompanionMutationCandidate $candidate,
+        CompanionThreadSurfaceService $surface,
+        FeatureFlagService $flags,
+        FeatureAccessService $access,
+        NativeAiGateway $nativeAi,
     ) {
         $this->authorizeThread($request, $companionThread);
         $this->authorizeCandidate($request, $companionThread, $candidate);
+
+        $request->validate([
+            'surface' => ['nullable', 'string', 'in:palette'],
+        ]);
 
         if ($candidate->status === CompanionMutationCandidate::STATUS_PENDING) {
             $candidate->update([
@@ -287,9 +311,54 @@ class CompanionController extends Controller
             ]);
         }
 
+        if ($this->isPaletteRequest($request)) {
+            return $this->paletteResponse(
+                $request,
+                $companionThread,
+                $surface,
+                $flags,
+                $access,
+                $nativeAi,
+                'この変更候補は見送りました。',
+            );
+        }
+
         return redirect()
             ->route('companion.show', $companionThread)
             ->with('status', 'この変更候補は見送りました。');
+    }
+
+    private function paletteResponse(
+        Request $request,
+        CompanionThread $thread,
+        CompanionThreadSurfaceService $surface,
+        FeatureFlagService $flags,
+        FeatureAccessService $access,
+        NativeAiGateway $nativeAi,
+        ?string $message = null,
+        ?string $handoffUrl = null,
+    ) {
+        $data = [
+            ...$surface->build(
+                $thread,
+                $request->user(),
+                $request->input('source_path') ?: null,
+            ),
+            ...$this->availability($request->user(), $flags, $access, $nativeAi),
+        ];
+
+        return response()->json([
+            'thread_id' => (int) $thread->id,
+            'html' => view('companion.partials.palette-thread', $data)->render(),
+            'message' => $message,
+            'handoff_url' => $handoffUrl,
+        ]);
+    }
+
+    private function isPaletteRequest(Request $request): bool
+    {
+        return $request->input('surface') === 'palette'
+            || $request->header('X-Canovia-Companion-Surface') === 'palette';
     }
 
     private function authorizeThread(Request $request, CompanionThread $thread): void
