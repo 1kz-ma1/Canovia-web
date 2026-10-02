@@ -16,7 +16,7 @@
         request()->routeIs('feedback.*') => 'Canovia Future',
         request()->routeIs('github_workflow.*') => 'GitHub',
         request()->routeIs('companion.*') => 'Companion',
-        request()->routeIs('chat.*'), request()->routeIs('achievements.*'), request()->routeIs('plans.review_assistant.*') => '計画を更新',
+        request()->routeIs('chat.*'), request()->routeIs('plans.review_assistant.*') => '計画を更新',
         request()->routeIs('public_plans.*') => '共有プラン',
         request()->routeIs('plans.*'), request()->routeIs('tasks.*'), request()->routeIs('my_plans.*') => '計画',
         default => 'ホーム',
