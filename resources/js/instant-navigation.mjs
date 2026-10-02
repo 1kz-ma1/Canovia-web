@@ -530,6 +530,7 @@ export function mountCanoviaInstantNavigation({
         const waitStartedAt = runtimeNow(windowRef);
 
         try {
+            let usedPrefetch = Boolean(prefetched);
             let payload = await withUncachedFeedback(() => (
                 prefetched
                     ? prefetched
@@ -537,12 +538,13 @@ export function mountCanoviaInstantNavigation({
             ), { spatial });
 
             if (!payload) {
+                usedPrefetch = false;
                 payload = await withUncachedFeedback(() => fetchPayload(url, 'navigate'), { spatial });
             }
 
             if (serial !== navigationSerial || disposed) return false;
 
-            const source = prefetched ? 'prefetch' : 'network';
+            const source = usedPrefetch ? 'prefetch' : 'network';
             const waitMs = Math.max(0, runtimeNow(windowRef) - waitStartedAt);
             const rendered = renderMeasured(payload, {
                 historyMode,
@@ -552,7 +554,7 @@ export function mountCanoviaInstantNavigation({
                 source,
             });
 
-            if (prefetched) revalidate(url);
+            if (usedPrefetch) revalidate(url);
             return rendered;
         } catch (error) {
             if (fallback) windowRef.location.assign(error?.fallbackUrl || url.href);
