@@ -188,8 +188,9 @@
                             @php
                                 $alternativeRecommendations = collect($recommendations ?? [])
                                     ->reject(fn ($candidate) => (int) $candidate->task->id === (int) $recommendation->task->id)
-                                    ->take(2)
+                                    ->take(3)
                                     ->values();
+                                $primaryUsesTimer = ($recommendationAction['action_id'] ?? 'timer') === 'timer';
                             @endphp
                             <section class="pk-v18-today-card plan-identity-shell" data-plan-accent="{{ $recommendation->plan->accentKey() }}">
                                 <div class="flex items-start justify-between gap-3">
@@ -218,13 +219,20 @@
                                     </ul>
                                 @endif
 
-                                <div class="mt-5 rounded-2xl border border-emerald-400/15 bg-emerald-500/5 px-4 py-4 text-center">
-                                    <p class="text-lg font-black text-slate-100">準備ができたら開始</p>
-                                    <p class="mt-1 text-xs leading-5 text-slate-400">開始ボタンを押した瞬間から計測します。まず{{ $recommendation->recommendedMinutes }}分を目安に。</p>
-                                </div>
+                                @if ($primaryUsesTimer)
+                                    <div class="mt-5 rounded-2xl border border-emerald-400/15 bg-emerald-500/5 px-4 py-4 text-center">
+                                        <p class="text-lg font-black text-slate-100">準備ができたら開始</p>
+                                        <p class="mt-1 text-xs leading-5 text-slate-400">開始ボタンを押した瞬間から計測します。まず{{ $recommendation->recommendedMinutes }}分を目安に。</p>
+                                    </div>
+                                @else
+                                    <div class="mt-5 rounded-2xl border border-cyan-400/15 bg-cyan-500/5 px-4 py-4 text-center">
+                                        <p class="text-lg font-black text-slate-100">このTaskをWorkspaceへ引き継ぐ</p>
+                                        <p class="mt-1 text-xs leading-5 text-slate-400">Task Contextを保ったまま、{{ $selectedExecutionModeDefinition['label'] ?? '専用' }}Workspaceで進めます。</p>
+                                    </div>
+                                @endif
 
                                 <div class="execution-primary-actions mobile-sticky-primary mt-4" data-execution-handoff="{{ $recommendationAction['action_id'] ?? 'timer' }}">
-                                    @if (($recommendationAction['action_id'] ?? 'timer') !== 'timer')
+                                    @if (! $primaryUsesTimer)
                                         <a
                                             href="{{ route($recommendationAction['route_name'], $recommendationAction['route_parameters']) }}"
                                             class="pk-v18-start-cta w-full justify-center"
@@ -232,15 +240,8 @@
                                         >
                                             {{ $recommendationAction['label'] }}
                                         </a>
-                                        <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form>
-                                            @csrf
-                                            <input type="hidden" name="task_id" value="{{ $recommendation->task->id }}">
-                                            <input type="hidden" name="intended_minutes" value="{{ $recommendation->recommendedMinutes }}">
-                                            <input type="hidden" name="source" value="navigation">
-                                            <button class="btn-secondary w-full justify-center">Timerで始める</button>
-                                        </form>
                                     @else
-                                        <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form>
+                                        <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form data-execution-primary-timer>
                                             @csrf
                                             <input type="hidden" name="task_id" value="{{ $recommendation->task->id }}">
                                             <input type="hidden" name="intended_minutes" value="{{ $recommendation->recommendedMinutes }}">
@@ -255,50 +256,58 @@
                                 @endif
                             </section>
 
-                            <div class="mt-4" data-candidate-carousel data-event-url="{{ route('behavior_events.store') }}">
-                                @if ($alternativeRecommendations->isNotEmpty())
-                                    <button type="button" class="btn-secondary w-full justify-center sm:w-auto" data-candidate-toggle aria-expanded="false">
-                                        別候補を見る
-                                    </button>
-
-                                    <section class="candidate-carousel-shell" data-candidate-shell aria-label="別のTask候補">
-                                        <div class="mb-2 flex items-center justify-between gap-3">
-                                            <div>
-                                                <p class="text-sm font-bold text-slate-100">横にスワイプして選ぶ</p>
-                                                <p class="mt-0.5 text-xs text-slate-500">おすすめ以外の候補だけを表示します。</p>
-                                            </div>
-                                            <a href="{{ route('navigation.index', ['mode' => $selectedExecutionMode, 'configure' => 1]) }}" class="whitespace-nowrap text-xs font-semibold text-sky-300">条件変更</a>
+                            @if ($alternativeRecommendations->isNotEmpty())
+                                <section
+                                    class="execution-recommendation-rail"
+                                    data-candidate-carousel
+                                    data-candidate-always-open
+                                    data-execution-recommendation-rail
+                                    data-event-url="{{ route('behavior_events.store') }}"
+                                    aria-label="同じWorkspaceのおすすめTask"
+                                >
+                                    <div class="execution-recommendation-rail-heading">
+                                        <div>
+                                            <p class="pk-v18-eyebrow">SAME WORKSPACE</p>
+                                            <h3>同じ実行タイプの候補</h3>
+                                            <p>他PlanのおすすめTaskを優先して並べています。横にスライドして切り替えられます。</p>
                                         </div>
+                                        <a href="{{ route('navigation.index', ['mode' => $selectedExecutionMode, 'configure' => 1]) }}">条件変更</a>
+                                    </div>
 
-                                        <div class="candidate-track" data-candidate-track>
+                                    <div class="candidate-carousel-shell is-open" data-candidate-shell>
+                                        <div class="candidate-track execution-recommendation-track" data-candidate-track data-execution-recommendation-track>
                                             @foreach ($alternativeRecommendations as $candidate)
-                                                <article class="candidate-card plan-identity-shell"
-                                                         data-plan-accent="{{ $candidate->plan->accentKey() }}"
-                                                         data-candidate-card
-                                                         data-task-id="{{ $candidate->task->id }}"
-                                                         data-plan-id="{{ $candidate->plan->id }}">
+                                                @php
+                                                    $candidateAction = $recommendationActions->get((int) $candidate->task->id);
+                                                    $candidateUsesTimer = ($candidateAction['action_id'] ?? 'timer') === 'timer';
+                                                @endphp
+                                                <article
+                                                    class="candidate-card execution-recommendation-card plan-identity-shell"
+                                                    data-plan-accent="{{ $candidate->plan->accentKey() }}"
+                                                    data-candidate-card
+                                                    data-task-id="{{ $candidate->task->id }}"
+                                                    data-plan-id="{{ $candidate->plan->id }}"
+                                                    data-execution-alternative-plan-id="{{ $candidate->plan->id }}"
+                                                >
                                                     <div class="flex items-start justify-between gap-3">
                                                         <div class="min-w-0">
-                                                            <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">候補 {{ $loop->iteration }}</p>
+                                                            <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                                                                {{ (int) $candidate->plan->id === (int) $recommendation->plan->id ? '同じPlan' : '他Plan' }}
+                                                            </p>
                                                             <h3 class="mt-2 text-base font-bold text-slate-100">{{ $candidate->task->title }}</h3>
                                                             <p class="mt-1 plan-identity-chip truncate text-xs"><span aria-hidden="true">{{ $candidate->plan->displayIcon() }}</span>{{ $candidate->plan->title }}</p>
                                                         </div>
                                                         <span class="badge badge-slate shrink-0">{{ $candidate->recommendedMinutes }}分</span>
                                                     </div>
 
-                                                    @if ($candidate->reasons)
-                                                        <ul class="mt-4 space-y-1 text-xs leading-5 text-slate-400">
-                                                            @foreach ($candidate->reasons as $reason)
-                                                                <li>・{{ $reason }}</li>
-                                                            @endforeach
-                                                        </ul>
+                                                    @if ($candidate->task->next_action_note)
+                                                        <p class="execution-recommendation-next">次: {{ $candidate->task->next_action_note }}</p>
+                                                    @elseif ($candidate->reasons)
+                                                        <p class="execution-recommendation-next">{{ $candidate->reasons[0] ?? '' }}</p>
                                                     @endif
 
-                                                    @php
-                                                        $candidateAction = $recommendationActions->get((int) $candidate->task->id);
-                                                    @endphp
-                                                    <div class="mt-5 grid gap-2" data-execution-handoff="{{ $candidateAction['action_id'] ?? 'timer' }}">
-                                                        @if (($candidateAction['action_id'] ?? 'timer') !== 'timer')
+                                                    <div class="mt-4" data-execution-handoff="{{ $candidateAction['action_id'] ?? 'timer' }}">
+                                                        @if (! $candidateUsesTimer)
                                                             <a
                                                                 href="{{ route($candidateAction['route_name'], $candidateAction['route_parameters']) }}"
                                                                 class="btn-secondary w-full justify-center"
@@ -316,16 +325,15 @@
                                                 </article>
                                             @endforeach
                                         </div>
+
                                         <div class="candidate-pagination" aria-hidden="true">
                                             @foreach ($alternativeRecommendations as $candidate)
                                                 <button type="button" class="candidate-dot {{ $loop->first ? 'is-active' : '' }}" data-candidate-dot></button>
                                             @endforeach
                                         </div>
-                                    </section>
-                                @else
-                                    <a href="{{ route('navigation.index', ['mode' => $selectedExecutionMode, 'configure' => 1]) }}" class="text-sm font-semibold text-sky-300 hover:text-sky-200">条件を変えて選ぶ</a>
-                                @endif
-                            </div>
+                                    </div>
+                                </section>
+                            @endif
 
                             <p class="mt-4 text-xs leading-5 text-slate-500">
                                 どの候補を見て、どれを開始したかも次回のおすすめ改善に使われます。
