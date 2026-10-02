@@ -11,8 +11,8 @@
 
     <a href="{{ route('roadmap.index') }}" data-canovia-nav-key="mobile-constellation"
        data-onboarding-target="roadmap-nav"
-       class="mobile-tabbar-link {{ request()->routeIs('roadmap.*') || request()->routeIs('achievements.*') ? 'is-active' : '' }}"
-       aria-current="{{ request()->routeIs('roadmap.*') || request()->routeIs('achievements.*') ? 'page' : 'false' }}">
+       class="mobile-tabbar-link {{ request()->routeIs('roadmap.*') ? 'is-active' : '' }}"
+       aria-current="{{ request()->routeIs('roadmap.*') ? 'page' : 'false' }}">
         <span class="pk-tab-icon pk-tab-icon-roadmap" aria-hidden="true">
             <svg viewBox="0 0 32 32"><circle cx="8" cy="20" r="2.3"/><circle cx="15.5" cy="9" r="2.6"/><circle cx="24" cy="15.5" r="2.4"/><circle cx="21" cy="25" r="2"/><path d="M9.7 18.3 14 11.2M18 10.2l4.3 3.7M23.2 17.6l-1.5 5.3M10.2 20.8l8.9 3.5"/></svg>
             <i></i><b></b>
@@ -32,8 +32,8 @@
     </a>
 
     <a href="{{ route('timeline.index') }}" data-canovia-nav-key="mobile-timeline"
-       class="mobile-tabbar-link {{ request()->routeIs('timeline.*') ? 'is-active' : '' }}"
-       aria-current="{{ request()->routeIs('timeline.*') ? 'page' : 'false' }}">
+       class="mobile-tabbar-link {{ request()->routeIs('timeline.*') || request()->routeIs('achievements.*') ? 'is-active' : '' }}"
+       aria-current="{{ request()->routeIs('timeline.*') || request()->routeIs('achievements.*') ? 'page' : 'false' }}">
         <span class="pk-tab-icon pk-tab-icon-timeline" aria-hidden="true">
             <svg viewBox="0 0 32 32"><circle cx="13" cy="13" r="8"/><path d="M13 9v4.7l3 1.8M19.3 20h5.1a2 2 0 0 1 2 2v1.8a2 2 0 0 1-2 2h-1.9l-2.2 1.7.3-1.7h-1.3a2 2 0 0 1-2-2V22"/></svg>
             <i></i><b></b>
