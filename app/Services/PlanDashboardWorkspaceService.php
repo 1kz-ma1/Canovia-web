@@ -20,6 +20,16 @@ final class PlanDashboardWorkspaceService
      */
     public function build(Request $request, Plan $plan): array
     {
+        $canView = $this->ownership->canView($request, $plan);
+        if (! $canView) {
+            return [
+                'plan' => $plan,
+                'can_view' => false,
+                'can_edit' => false,
+                'can_manage' => false,
+            ];
+        }
+
         $plan->loadMissing([
             'tasks.prerequisite',
             'tasks.prerequisites',
@@ -47,7 +57,7 @@ final class PlanDashboardWorkspaceService
                 $roadmap,
                 $roadmapSpatial,
             ),
-            'can_view' => $this->ownership->canView($request, $plan),
+            'can_view' => true,
             'can_edit' => $this->ownership->canEdit($request, $plan),
             'can_manage' => $this->ownership->owns($request, $plan),
             'execution_url' => route('map.index', [
