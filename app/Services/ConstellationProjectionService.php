@@ -504,7 +504,7 @@ final class ConstellationProjectionService
     private function arcPosition(float $progress, int $direction): array
     {
         $x = 16 + ($progress * 68);
-        $curve = sin($progress * M_PI);
+        $curve = sin($progress * pi());
         $y = $direction === 1
             ? 68 - ($curve * 38)
             : 32 + ($curve * 38);
@@ -518,7 +518,7 @@ final class ConstellationProjectionService
     private function orbitStarPosition(int $index, int $count, int $seed): array
     {
         $offset = deg2rad(($seed % 120) - 60);
-        $angle = $offset + (($index / max(1, $count)) * M_PI * 2);
+        $angle = $offset + (($index / max(1, $count)) * pi() * 2);
 
         return [
             50 + (cos($angle) * 31),
