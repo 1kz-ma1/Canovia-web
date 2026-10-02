@@ -1123,6 +1123,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        if (carousel.hasAttribute('data-candidate-always-open') && cards.length > 0) {
+            setActive(0);
+        }
+
         if (track && cards.length > 0 && 'IntersectionObserver' in window) {
             const observer = new IntersectionObserver((entries) => {
                 const visible = entries
