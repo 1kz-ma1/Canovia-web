@@ -64,10 +64,15 @@ final class RoadmapPageDataService
             $canManage = $this->core->owns($request, $plan);
             $collaborationRole = $this->core->role($request, $plan);
 
-            $planIndex = $plans->values()->search(fn ($candidate) => $candidate->id === $plan->id);
+            $planIndex = $constellationPlans
+                ->search(fn ($candidate) => (int) $candidate->id === (int) $plan->id);
             if ($planIndex !== false) {
-                $previousPlan = $planIndex > 0 ? $plans->values()->get($planIndex - 1) : null;
-                $nextPlan = $planIndex < ($plans->count() - 1) ? $plans->values()->get($planIndex + 1) : null;
+                $previousPlan = $planIndex > 0
+                    ? $constellationPlans->get($planIndex - 1)
+                    : null;
+                $nextPlan = $planIndex < ($constellationPlans->count() - 1)
+                    ? $constellationPlans->get($planIndex + 1)
+                    : null;
             }
 
             $profile = $this->categoryProfiles->forPlan($plan);
