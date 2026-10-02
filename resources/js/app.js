@@ -1,6 +1,7 @@
 import { normalizeAiJsonText, buildAiJsonRepairPrompt } from './ai-json.mjs';
 import { mountInstantStartServiceWorker } from './instant-start.mjs';
 import { mountCanoviaInstantNavigation } from './instant-navigation.mjs';
+import { mountCanoviaInteractionPerformance } from './interaction-performance.mjs';
 import { mountLivingGoalMap } from './living-map.mjs';
 import { mountDashboardDocuments } from './dashboard-document.mjs';
 import { mountStandalonePlanDashboards } from './plan-dashboard.mjs';
@@ -361,6 +362,40 @@ function updateTimers() {
     });
 }
 
+let canoviaWorkTimerInterval = null;
+
+function stopWorkTimerTicker() {
+    if (canoviaWorkTimerInterval === null) return;
+    window.clearInterval(canoviaWorkTimerInterval);
+    canoviaWorkTimerInterval = null;
+}
+
+function syncWorkTimerTicker() {
+    const hasTimer = Boolean(document.querySelector('[data-work-timer]'));
+    const shouldRun = hasTimer && document.visibilityState === 'visible';
+
+    if (!shouldRun) {
+        stopWorkTimerTicker();
+        return;
+    }
+
+    updateTimers();
+    if (canoviaWorkTimerInterval !== null) return;
+
+    canoviaWorkTimerInterval = window.setInterval(() => {
+        if (document.visibilityState !== 'visible' || !document.querySelector('[data-work-timer]')) {
+            stopWorkTimerTicker();
+            return;
+        }
+
+        updateTimers();
+    }, 1000);
+}
+
+document.addEventListener('visibilitychange', syncWorkTimerTicker);
+document.addEventListener('canovia:before-page-replace', stopWorkTimerTicker);
+document.addEventListener('canovia:page-ready', syncWorkTimerTicker);
+
 
 const CANOVIA_TIMER_AWAY_THRESHOLD_MS = 15 * 60 * 1000;
 const CANOVIA_TIMER_HEARTBEAT_MS = 60 * 1000;
@@ -620,8 +655,7 @@ function mountWorkTimerSafety() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    updateTimers();
-    window.setInterval(updateTimers, 1000);
+    syncWorkTimerTicker();
 
     const reviewRoot = document.getElementById('workSessionReview');
     if (reviewRoot) {
@@ -1814,6 +1848,8 @@ function resolveRoadmapView(root) {
 }
 
 function fitDashboardRoadmapOverviews(root = document) {
+    let fitted = 0;
+
     root.querySelectorAll?.('[data-roadmap-spatial-mode="dashboard-overview"]').forEach((shell) => {
         const stage = shell.querySelector('[data-roadmap-spatial-map]');
         if (!stage || shell.clientWidth <= 0 || shell.clientHeight <= 0) return;
@@ -1827,7 +1863,10 @@ function fitDashboardRoadmapOverviews(root = document) {
 
         shell.style.setProperty('--roadmap-overview-scale', scale.toFixed(4));
         shell.dataset.roadmapOverviewFit = scale.toFixed(4);
+        fitted += 1;
     });
+
+    return fitted;
 }
 
 
@@ -1853,8 +1892,10 @@ function setRoadmapView(root, view, persist = true) {
 
 document.addEventListener('DOMContentLoaded', () => {
     applyUiPreferences();
-    fitDashboardRoadmapOverviews();
-    window.requestAnimationFrame(() => fitDashboardRoadmapOverviews());
+    const fittedRoadmapOverviews = fitDashboardRoadmapOverviews();
+    if (fittedRoadmapOverviews > 0) {
+        window.requestAnimationFrame(() => fitDashboardRoadmapOverviews());
+    }
 
     const futureMemoHint = document.querySelector('[data-future-memo-home-hint]');
     if (futureMemoHint) {
@@ -3526,6 +3567,36 @@ async function captureInstantOfflineSnapshot() {
     } catch (_) {}
 }
 
+let offlineSnapshotScheduleHandle = null;
+let offlineSnapshotScheduleMode = null;
+
+function scheduleInstantOfflineSnapshotCapture() {
+    if (offlineSnapshotScheduleHandle !== null) {
+        if (offlineSnapshotScheduleMode === 'idle' && typeof window.cancelIdleCallback === 'function') {
+            window.cancelIdleCallback(offlineSnapshotScheduleHandle);
+        } else {
+            window.clearTimeout(offlineSnapshotScheduleHandle);
+        }
+        offlineSnapshotScheduleHandle = null;
+        offlineSnapshotScheduleMode = null;
+    }
+
+    const run = () => {
+        offlineSnapshotScheduleHandle = null;
+        offlineSnapshotScheduleMode = null;
+        void captureInstantOfflineSnapshot();
+    };
+
+    if (typeof window.requestIdleCallback === 'function') {
+        offlineSnapshotScheduleMode = 'idle';
+        offlineSnapshotScheduleHandle = window.requestIdleCallback(run, { timeout: 1200 });
+        return;
+    }
+
+    offlineSnapshotScheduleMode = 'timeout';
+    offlineSnapshotScheduleHandle = window.setTimeout(run, 280);
+}
+
 function mountCompanionPalette(root = document) {
     const shells = root.matches?.('[data-companion-shell]')
         ? [root]
@@ -3707,13 +3778,18 @@ function mountCompanionPalette(root = document) {
     });
 }
 
-function initializeInstantCorePage() {
+function initializeInstantCorePage(event) {
+    const mountStartedAt = performance.now();
+
     mountCompanionPalette();
     mountConstellationRoadmap();
     mountDashboardDocuments();
     mountStandalonePlanDashboards();
-    fitDashboardRoadmapOverviews();
-    window.requestAnimationFrame(() => fitDashboardRoadmapOverviews());
+
+    const fittedRoadmapOverviews = fitDashboardRoadmapOverviews();
+    if (fittedRoadmapOverviews > 0) {
+        window.requestAnimationFrame(() => fitDashboardRoadmapOverviews());
+    }
 
     document.querySelectorAll('[data-auto-toast]').forEach((toast) => {
         window.setTimeout(() => {
@@ -3727,19 +3803,44 @@ function initializeInstantCorePage() {
     initializeInstantDashboardPage();
     initializeInstantRoadmapPage();
     mountLivingGoalMap({ recordBehaviorRef: recordBehavior });
-    void captureInstantOfflineSnapshot();
+    scheduleInstantOfflineSnapshotCapture();
+
+    document.dispatchEvent(new CustomEvent('canovia:surface-mounted', {
+        detail: {
+            instant: event?.detail?.instant === true,
+            path: window.location.pathname,
+            route_name: document.body?.dataset.routeName || null,
+            mount_ms: Math.max(0, performance.now() - mountStartedAt),
+        },
+    }));
 }
 
 document.addEventListener('canovia:page-ready', initializeInstantCorePage);
 
 document.addEventListener('DOMContentLoaded', () => {
+    mountCanoviaInteractionPerformance();
+
+    const mountStartedAt = performance.now();
     mountCompanionPalette();
     mountConstellationRoadmap();
     mountDashboardDocuments();
     mountStandalonePlanDashboards();
+
+    if (document.body?.dataset.focusMode !== '1') {
+        mountLivingGoalMap({ recordBehaviorRef: recordBehavior });
+    }
+
+    document.dispatchEvent(new CustomEvent('canovia:surface-mounted', {
+        detail: {
+            instant: false,
+            path: window.location.pathname,
+            route_name: document.body?.dataset.routeName || null,
+            mount_ms: Math.max(0, performance.now() - mountStartedAt),
+        },
+    }));
+
     if (document.body?.dataset.focusMode === '1') return;
     mountCanoviaInstantNavigation();
-    mountLivingGoalMap({ recordBehaviorRef: recordBehavior });
 });
 
 

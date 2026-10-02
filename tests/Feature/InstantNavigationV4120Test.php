@@ -87,7 +87,8 @@ class InstantNavigationV4120Test extends TestCase
         $this->assertStringContainsString("'/calendar'", $runtime);
         $this->assertStringContainsString("windowRef.history.pushState", $runtime);
         $this->assertStringContainsString("if (!corePaths.has(initialUrl.pathname)) return null;", $runtime);
-        $this->assertStringContainsString("removeAttribute('data-canovia-instant-initialized')", $runtime);
+        $this->assertStringContainsString("'data-canovia-instant-initialized'", $runtime);
+        $this->assertStringContainsString('element.removeAttribute(attribute)', $runtime);
         $this->assertStringContainsString('canovia:before-instant-navigation', $runtime);
         $this->assertStringContainsString('canovia:before-page-replace', $runtime);
     }
