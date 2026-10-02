@@ -181,7 +181,8 @@ class RoadmapSpatialMapV480Test extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('data-constellation-universe', false)
+            ->assertSee('data-constellation-selected-workspace', false)
+            ->assertSee('data-constellation-focus-palette', false)
             ->assertSee('data-plan-constellation', false)
             ->assertSee('is-selected', false)
             ->assertSee('data-constellation-star-open', false)

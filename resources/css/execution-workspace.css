@@ -201,6 +201,82 @@
         text-align: center;
     }
 
+    .execution-recommendation-rail {
+        margin-top: 0.9rem;
+        border: 1px solid rgb(51 65 85 / 0.58);
+        border-radius: 1.15rem;
+        background:
+            radial-gradient(circle at 18% 10%, rgb(14 116 144 / 0.08), transparent 12rem),
+            rgb(2 6 23 / 0.38);
+        padding: 0.82rem;
+    }
+
+    .execution-recommendation-rail-heading {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 0.8rem;
+    }
+
+    .execution-recommendation-rail-heading h3 {
+        margin-top: 0.12rem;
+        color: rgb(241 245 249);
+        font-size: 0.86rem;
+        font-weight: 900;
+    }
+
+    .execution-recommendation-rail-heading > div > p:last-child {
+        margin-top: 0.2rem;
+        max-width: 32rem;
+        color: rgb(100 116 139);
+        font-size: 0.55rem;
+        line-height: 1.5;
+    }
+
+    .execution-recommendation-rail-heading > a {
+        flex: 0 0 auto;
+        color: rgb(125 211 252);
+        font-size: 0.56rem;
+        font-weight: 900;
+        text-decoration: none;
+    }
+
+    .execution-recommendation-rail .candidate-carousel-shell {
+        display: block;
+        margin-top: 0.65rem;
+    }
+
+    .execution-recommendation-track {
+        gap: 0.62rem;
+        scroll-padding-inline: 0.02rem;
+        scroll-snap-type: x mandatory;
+    }
+
+    .execution-recommendation-card {
+        min-width: min(24rem, 88%);
+        scroll-snap-align: start;
+        border-color: rgb(71 85 105 / 0.52);
+        background: rgb(15 23 42 / 0.54);
+    }
+
+    .execution-recommendation-card:first-child {
+        margin-left: 0;
+    }
+
+    .execution-recommendation-next {
+        margin-top: 0.65rem;
+        border-left: 2px solid rgb(var(--plan-accent) / 0.38);
+        padding-left: 0.58rem;
+        color: rgb(148 163 184);
+        font-size: 0.61rem;
+        line-height: 1.55;
+    }
+
+    .execution-recommendation-card [data-execution-handoff] > a,
+    .execution-recommendation-card [data-execution-handoff] button {
+        min-height: 2.65rem;
+    }
+
     @media (max-width: 639px) {
         .execution-mode-grid {
             grid-template-columns: 1fr;

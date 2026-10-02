@@ -113,7 +113,11 @@ class ConstellationRoadmapV511Test extends TestCase
             ->assertSee('is-selected', false)
             ->assertSee('data-constellation-star-open', false)
             ->assertSee('data-constellation-star-template', false)
-            ->assertSee('data-constellation-inspector', false)
+            ->assertSee('data-constellation-selected-workspace', false)
+            ->assertSee('data-constellation-focus-palette', false)
+            ->assertSee('data-constellation-star-panel', false)
+            ->assertSee('data-constellation-detail-palette', false)
+            ->assertDontSee('data-constellation-inspector', false)
             ->assertSee('SELECTED CONSTELLATION')
             ->assertSee('このPlanを実行')
             ->assertSee('Plan詳細');

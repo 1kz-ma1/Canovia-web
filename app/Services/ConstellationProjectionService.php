@@ -143,6 +143,8 @@ final class ConstellationProjectionService
                         ->map(fn (array $node) => [
                             'task_id' => (int) $node['task_id'],
                             'title' => (string) ($node['title'] ?? 'Task'),
+                            'description' => trim((string) ($node['description'] ?? '')),
+                            'next_action_note' => trim((string) ($node['next_action_note'] ?? '')),
                             'status' => (string) ($node['status'] ?? 'todo'),
                             'status_label' => (string) ($node['status_label'] ?? 'Task'),
                             'progress_percent' => (int) ($node['progress_percent'] ?? 0),

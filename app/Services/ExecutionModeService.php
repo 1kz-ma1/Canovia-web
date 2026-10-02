@@ -95,7 +95,7 @@ final class ExecutionModeService
                 'description' => '問題演習・想起・教材学習から、このTaskに合う学習Activityを選びます。',
                 'route_name' => 'plans.tasks.study_activity.show',
                 'route_parameters' => [$plan->id, $task->id],
-                'supports_timer' => true,
+                'supports_timer' => false,
             ],
             self::DEVELOPMENT => [
                 'mode' => $mode,
@@ -104,7 +104,7 @@ final class ExecutionModeService
                 'description' => 'Task Context・GitHub・Execution Packetを使って実装作業へ入ります。',
                 'route_name' => 'plans.tasks.execution_orchestration.show',
                 'route_parameters' => [$plan->id, $task->id],
-                'supports_timer' => true,
+                'supports_timer' => false,
             ],
             self::CAREER => [
                 'mode' => $mode,
@@ -113,7 +113,7 @@ final class ExecutionModeService
                 'description' => '応募・選考・面接・Captureを、このPlanのCareer Pipelineで進めます。',
                 'route_name' => 'plans.career.index',
                 'route_parameters' => [$plan->id],
-                'supports_timer' => true,
+                'supports_timer' => false,
             ],
             default => [
                 'mode' => self::GENERAL,

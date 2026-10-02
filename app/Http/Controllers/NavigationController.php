@@ -148,32 +148,81 @@ class NavigationController extends Controller
             $recommendationPlans = $scopePlan && ($draft['intent'] ?? null) !== 'preferred'
                 ? collect([$scopePlan])
                 : $modePlans;
-            $candidateExclusions = collect($draft['excluded_task_ids'] ?? [])->map(fn ($id) => (int) $id)->values()->all();
+            $candidateExclusions = collect($draft['excluded_task_ids'] ?? [])
+                ->map(fn ($id) => (int) $id)
+                ->values()
+                ->all();
 
-            // Keep the first recommendation decisive, but prepare up to two nearby alternatives
-            // for the mobile swipe deck. Each next candidate excludes the ones before it.
-            for ($index = 0; $index < 3; $index++) {
-                $candidate = $recommendationService->recommend(
-                    $recommendationPlans,
-                    $state,
-                    timeBudgetMinutes: ! empty($draft['minutes']) ? (int) $draft['minutes'] : null,
-                    excludedTaskIds: $candidateExclusions,
-                    intent: $draft['intent'] ?? null,
-                    actorToken: $actorToken,
-                    preferredPlanId: $draft['preferred_plan_id'] ?? null,
-                );
-
-                if (! $candidate) {
-                    break;
-                }
-
-                $recommendations->push($candidate);
-                $candidateExclusions[] = (int) $candidate->task->id;
-            }
-
-            $recommendation = $recommendations->first();
+            $recommendation = $recommendationService->recommend(
+                $recommendationPlans,
+                $state,
+                timeBudgetMinutes: ! empty($draft['minutes']) ? (int) $draft['minutes'] : null,
+                excludedTaskIds: $candidateExclusions,
+                intent: $draft['intent'] ?? null,
+                actorToken: $actorToken,
+                preferredPlanId: $draft['preferred_plan_id'] ?? null,
+            );
 
             if ($recommendation) {
+                $recommendations->push($recommendation);
+                $candidateExclusions[] = (int) $recommendation->task->id;
+
+                // The rail is an execution-mode sibling view, not a hidden "try again"
+                // action. Prefer one actionable Task from each other Plan so users can
+                // horizontally compare equivalent execution types without leaving Execution.
+                $otherPlanCandidates = $modePlans
+                    ->reject(fn ($candidatePlan) => (int) $candidatePlan->id === (int) $recommendation->plan->id)
+                    ->map(function ($candidatePlan) use (
+                        $recommendationService,
+                        $state,
+                        $draft,
+                        $actorToken,
+                        &$candidateExclusions,
+                    ) {
+                        $candidate = $recommendationService->recommend(
+                            collect([$candidatePlan]),
+                            $state,
+                            timeBudgetMinutes: ! empty($draft['minutes']) ? (int) $draft['minutes'] : null,
+                            excludedTaskIds: $candidateExclusions,
+                            intent: $draft['intent'] ?? null,
+                            actorToken: $actorToken,
+                        );
+
+                        if ($candidate) {
+                            $candidateExclusions[] = (int) $candidate->task->id;
+                        }
+
+                        return $candidate;
+                    })
+                    ->filter()
+                    ->sortByDesc(fn ($candidate) => $candidate->priorityScore)
+                    ->take(4)
+                    ->values();
+
+                $recommendations = $recommendations
+                    ->concat($otherPlanCandidates)
+                    ->values();
+
+                // When there are not enough sibling Plans, fill the rail from the
+                // same mode without duplicating Tasks already shown.
+                while ($recommendations->count() < 4) {
+                    $candidate = $recommendationService->recommend(
+                        $modePlans,
+                        $state,
+                        timeBudgetMinutes: ! empty($draft['minutes']) ? (int) $draft['minutes'] : null,
+                        excludedTaskIds: $candidateExclusions,
+                        intent: $draft['intent'] ?? null,
+                        actorToken: $actorToken,
+                    );
+
+                    if (! $candidate) {
+                        break;
+                    }
+
+                    $recommendations->push($candidate);
+                    $candidateExclusions[] = (int) $candidate->task->id;
+                }
+
                 $logger->recordOnce(
                     $actorToken,
                     BehaviorEventType::RecommendationShown,
