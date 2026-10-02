@@ -32,6 +32,7 @@ function mountPlanDashboard(root, windowRef = window) {
         content,
         title,
         activeTemplateId: null,
+        lastOpener: null,
         disposed: false,
     };
 
@@ -43,17 +44,23 @@ function mountPlanDashboard(root, windowRef = window) {
             .find((template) => template.dataset.mapSurfaceTemplate === normalized) || null;
     };
 
-    const clear = () => {
+    const clear = ({ restoreFocus = true } = {}) => {
+        const opener = state.lastOpener;
         state.activeTemplateId = null;
+        state.lastOpener = null;
         delete root.dataset.planDashboardTask;
         content.replaceChildren();
         if (title) title.textContent = 'Task Detail';
         overlay.setAttribute('aria-hidden', 'true');
         overlay.classList.remove('is-open');
         root.classList.remove('is-plan-dashboard-task-open');
+
+        if (restoreFocus && opener?.isConnected) {
+            opener.focus?.({ preventScroll: true });
+        }
     };
 
-    const open = (templateId, { historyMode = 'push' } = {}) => {
+    const open = (templateId, { historyMode = 'push', opener = null } = {}) => {
         const normalized = String(templateId || '');
         const template = templateFor(normalized);
         if (!normalized || !template?.content) return false;
@@ -65,10 +72,17 @@ function mountPlanDashboard(root, windowRef = window) {
         if (title) title.textContent = sourceTitle || 'Task Detail';
 
         state.activeTemplateId = normalized;
+        state.lastOpener = opener || state.lastOpener;
         root.dataset.planDashboardTask = normalized;
         overlay.setAttribute('aria-hidden', 'false');
         overlay.classList.add('is-open');
         root.classList.add('is-plan-dashboard-task-open');
+
+        windowRef.requestAnimationFrame?.(() => {
+            overlay.querySelector?.('[data-plan-dashboard-task-detail-close]')?.focus?.({
+                preventScroll: true,
+            });
+        });
 
         if (historyMode === 'push' && windowRef.location.hash !== taskHash(normalized)) {
             windowRef.history.pushState({
@@ -121,7 +135,7 @@ function mountPlanDashboard(root, windowRef = window) {
         if (opener && root.contains(opener)) {
             event.preventDefault();
             event.stopPropagation();
-            open(opener.dataset.roadmapTaskTemplate || '');
+            open(opener.dataset.roadmapTaskTemplate || '', { opener });
             return;
         }
 
