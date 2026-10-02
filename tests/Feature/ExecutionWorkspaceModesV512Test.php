@@ -97,14 +97,18 @@ class ExecutionWorkspaceModesV512Test extends TestCase
 
         $this->assertSame('plans.tasks.study_activity.show', $study['route_name']);
         $this->assertSame([$studyPlan->id, $studyTask->id], $study['route_parameters']);
+        $this->assertFalse($study['supports_timer']);
 
         $this->assertSame('plans.tasks.execution_orchestration.show', $development['route_name']);
         $this->assertSame([$devPlan->id, $devTask->id], $development['route_parameters']);
+        $this->assertFalse($development['supports_timer']);
 
         $this->assertSame('plans.career.index', $career['route_name']);
         $this->assertSame([$careerPlan->id], $career['route_parameters']);
+        $this->assertFalse($career['supports_timer']);
 
         $this->assertSame('timer', $general['action_id']);
+        $this->assertTrue($general['supports_timer']);
         $this->assertNull($general['route_name']);
     }
 
@@ -249,7 +253,10 @@ class ExecutionWorkspaceModesV512Test extends TestCase
         $this->assertStringContainsString('data-execution-mode-switcher', $view);
         $this->assertStringContainsString('$modePlans as $plan', $view);
         $this->assertStringContainsString('data-execution-handoff', $view);
-        $this->assertStringContainsString('Timerで始める', $view);
+        $this->assertStringContainsString('data-execution-recommendation-rail', $view);
+        $this->assertStringContainsString('data-execution-primary-timer', $view);
+        $this->assertStringNotContainsString('Timerで始める', $view);
+        $this->assertStringNotContainsString('data-candidate-toggle', $view);
 
         $this->assertStringContainsString('.execution-mode-grid', $css);
         $this->assertStringContainsString('.execution-mode-switcher', $css);
