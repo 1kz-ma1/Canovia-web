@@ -178,6 +178,65 @@ function mountDashboardDocument(root, windowRef = window) {
         return { width, height, viewportWidth, viewportHeight };
     };
 
+    const clearRegionFocus = () => {
+        root.querySelectorAll?.('.is-roadmap-region-focused, .is-dashboard-document-region-focused')?.forEach?.((element) => {
+            element.classList.remove('is-roadmap-region-focused', 'is-dashboard-document-region-focused');
+        });
+        delete root.dataset.dashboardDocumentRegionFocus;
+    };
+
+    const focusElement = (element) => {
+        if (!element) return false;
+        const measurement = measure();
+        const regionRect = element.getBoundingClientRect?.();
+        const canvasRect = canvas.getBoundingClientRect?.();
+        if (
+            !measurement
+            || !regionRect
+            || !canvasRect
+            || regionRect.width <= 0
+            || regionRect.height <= 0
+        ) return false;
+
+        const currentScale = Math.max(0.01, state.scale || state.fitScale);
+        const naturalRegionWidth = regionRect.width / currentScale;
+        const naturalRegionHeight = regionRect.height / currentScale;
+        const naturalX = (
+            regionRect.left - canvasRect.left + regionRect.width / 2
+        ) / currentScale;
+        const naturalY = (
+            regionRect.top - canvasRect.top + regionRect.height / 2
+        ) / currentScale;
+
+        const targetScale = documentRegionFocusScale({
+            viewportWidth: measurement.viewportWidth,
+            viewportHeight: measurement.viewportHeight,
+            regionWidth: naturalRegionWidth,
+            regionHeight: naturalRegionHeight,
+            paddingX: 72,
+            paddingY: 72,
+            minScale: state.fitScale,
+            maxScale: 1.6,
+        });
+
+        clearRegionFocus();
+        element.classList.add('is-roadmap-region-focused', 'is-dashboard-document-region-focused');
+        root.dataset.dashboardDocumentRegionFocus = [
+            element.dataset.roadmapRegionType || 'region',
+            element.dataset.roadmapRegionId || '',
+        ].join(':');
+
+        return applyScale(targetScale, {
+            preserveCenter: false,
+            anchor: {
+                naturalX,
+                naturalY,
+                screenX: measurement.viewportWidth / 2,
+                screenY: measurement.viewportHeight / 2,
+            },
+        });
+    };
+
     const syncControls = () => {
         const label = root.querySelector('[data-dashboard-document-zoom-label]');
         const zoomOut = root.querySelector('[data-dashboard-document-zoom-out]');
@@ -300,14 +359,24 @@ function mountDashboardDocument(root, windowRef = window) {
     };
 
     const onClick = (event) => {
+        const regionFocus = event.target.closest?.('[data-roadmap-region-focus]');
+        if (regionFocus && root.contains(regionFocus)) {
+            event.preventDefault();
+            focusElement(regionFocus);
+            return;
+        }
+
         if (event.target.closest('[data-dashboard-document-fit]')) {
             event.preventDefault();
+            clearRegionFocus();
             fit();
         } else if (event.target.closest('[data-dashboard-document-zoom-out]')) {
             event.preventDefault();
+            clearRegionFocus();
             step('out');
         } else if (event.target.closest('[data-dashboard-document-zoom-in]')) {
             event.preventDefault();
+            clearRegionFocus();
             step('in');
         }
     };
@@ -316,6 +385,7 @@ function mountDashboardDocument(root, windowRef = window) {
         if (!event.ctrlKey || event.cancelable === false) return;
         event.preventDefault();
         event.stopPropagation();
+        clearRegionFocus();
 
         const factor = Math.exp(-Math.max(-60, Math.min(60, Number(event.deltaY || 0))) * 0.01);
         zoomAt(
@@ -361,6 +431,7 @@ function mountDashboardDocument(root, windowRef = window) {
 
         if (!state.pinch || state.pointers.size < 2) return;
         event.preventDefault();
+        clearRegionFocus();
         event.stopPropagation();
 
         const [a, b] = [...state.pointers.values()].slice(0, 2);
@@ -397,6 +468,7 @@ function mountDashboardDocument(root, windowRef = window) {
     const onDoubleClick = (event) => {
         if (event.target.closest('a, button, input, select, textarea')) return;
         event.preventDefault();
+        clearRegionFocus();
         const next = documentZoomScale(state.scale, 'in', {
             minScale: state.fitScale,
             maxScale: 1.6,
@@ -439,6 +511,8 @@ function mountDashboardDocument(root, windowRef = window) {
     windowRef.addEventListener('resize', refresh, { passive: true });
 
     state.fit = fit;
+    state.focusElement = focusElement;
+    state.clearRegionFocus = clearRegionFocus;
     state.refresh = refresh;
     state.destroy = destroy;
     mountedDashboardDocuments.set(root, state);
