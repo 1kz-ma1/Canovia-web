@@ -1519,3 +1519,18 @@ NavigationControllerはExecution用Plan取得時に `tasks.prerequisite` と `ta
 多数Taskとcanonical task_dependenciesを持つPlanでもTask SELECT数がTask数に比例して増えないことをFeature regression testで固定する。
 
 詳細は `docs/V51.9_NAVIGATION_BOTTLENECK_REMOVAL.md` を正とする。
+
+
+## V51.9.1 Server Cost Reduction
+
+V51.8/V51.9 production telemetryで確認したserver固定費を削減する。
+
+production sessionはRender SingaporeのKey Valueへ移し、`SESSION_DRIVER=redis` / `SESSION_CONNECTION=default` / private internal `REDIS_URL` / persistent phpredis connectionを使用する。free Key Valueはdisk persistenceなしのため、restart時にlogin/session stateが失効する可能性は許容する。Plan/Task/Evidence等のdomain dataはDBをsource of truthとして維持する。rollbackは `SESSION_DRIVER=database`。
+
+Home common pathでは career / memberships / activity_logs を無条件loadしない。Career profileのPlanがある場合だけcareer relationを、共同Planがある場合だけmembership/activity relationをhydrateする。該当SurfaceのUI semanticsは変えない。
+
+Instant Navigationのautomatic idle prefetchからHomeを除外する。通常のHome起点ではcurrent page cacheが既に存在し、deep link起点ではユーザー意図なしに高コストHome projectionをbackground実行しない。pointerover / focusin / touchstartによるintent prefetchと通常navigationは維持する。
+
+Core Bundle自体の分割はV51.9.1では行わず、Redis session化後の再計測で判断する。
+
+詳細は `docs/V51.9.1_SERVER_COST_REDUCTION.md` を正とする。

@@ -16,6 +16,7 @@ final class HomePageDataService
         private readonly ContinuityService $continuityService,
         private readonly CalendarPresentationService $calendarService,
         private readonly ActionHomeProjectionService $actionHome,
+        private readonly PlanCategoryProfileService $categoryProfiles,
     ) {}
 
     public function build(Request $request, bool $prefetch = false): array
@@ -27,12 +28,26 @@ final class HomePageDataService
             'task_artifacts',
             'plan_resources',
             'plan_artifacts',
-            'career',
             'availability',
             'work_logs',
-            'memberships',
-            'activity_logs',
         ]);
+
+        // Home previously paid the DB cost for specialized relations on every
+        // request even when the account had no matching Plan. Keep the common
+        // path lean, then hydrate only the optional surfaces that can render.
+        $hasCareerPlan = $plans->contains(
+            fn ($plan) => $this->categoryProfiles->forPlan($plan)->key === 'career'
+        );
+        if ($hasCareerPlan) {
+            $this->core->plans($request, ['career']);
+        }
+
+        $hasCollaborativePlan = $plans->contains(
+            fn ($plan) => (bool) $plan->is_collaborative
+        );
+        if ($hasCollaborativePlan) {
+            $this->core->plans($request, ['memberships', 'activity_logs']);
+        }
 
         if (! $prefetch) {
             $this->eventLogger->recordOnce(
