@@ -80,7 +80,7 @@
                                     </p>
 
                                     @if ($event['kind'] === 'plan_completed')
-                                        <span class="badge badge-emerald">ACHIEVEMENT</span>
+                                        <span class="badge badge-green">ACHIEVEMENT</span>
                                     @elseif ($event['kind'] === 'collaboration')
                                         <span class="badge badge-slate">COLLABORATION</span>
                                     @endif
