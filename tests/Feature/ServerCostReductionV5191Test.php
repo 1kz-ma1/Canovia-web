@@ -112,10 +112,11 @@ class ServerCostReductionV5191Test extends TestCase
 
     private function startsFromTable(string $sql, string $table): bool
     {
-        return preg_match(
-            '/^select\s+.+?\s+from\s+["]?'.preg_quote($table, '/').'["]?\b/i',
-            $sql,
-        ) === 1;
+        if (! preg_match('/\bfrom\s+["]?([a-z0-9_]+)["]?/i', $sql, $matches)) {
+            return false;
+        }
+
+        return strtolower((string) ($matches[1] ?? '')) === strtolower($table);
     }
 
     private function plan(User $user, string $title, string $category, bool $collaborative): Plan
