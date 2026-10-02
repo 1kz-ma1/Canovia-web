@@ -1466,3 +1466,18 @@ ExecutionはPrimary recommendationを維持しつつ、「別候補を見る」b
 Study / Development / Careerのspecialized executionではTimer buttonを表示しない。TimerはGeneral executionのprimary execution patternとしてのみ表示する。既存active/offline work session resumeは継続する。
 
 詳細は `docs/V51.6_SURFACE_REFINEMENT_PHASE1.md` を正とする。Constellation shape grammarの多様化はPhase 2で扱う。
+
+
+## V51.7 Constellation Shape Grammar
+
+ConstellationをPlan識別のvisual signatureとして扱う。既存dependency `pattern` は意味情報として維持し、表示geometry専用の `shape_key` を分離する。projection schemaは2とする。
+
+Shape familyは `singular / binary / arc / ladder / orbit / zigzag / branch / fan / cluster`。Main Star数、dependency pattern、Plan ID seedから決定論的に選び、同じPlanを開き直しただけでは形・座標を変えない。Task構造変更でMain Star数が変わった場合の再投影は許容する。shapeはscoreやPlan評価には使わない。
+
+OverviewとSelected Workspaceは同じshape_key / Star座標を共有し、Selected時だけ表示scaleを大きくする。
+
+Selected WorkspaceにはTask Group railを追加し、Main Star tapと同じselected stateを共有する。星が小さい・密集している場合も、星域番号と完了数からTask Groupを直接切り替えられる。
+
+Selected WorkspaceにはOverviewと同じPlan順序のPrevious / Next navigationを追加する。Focus graph上ではinteractive element外から始まった水平swipeもPlan切替として扱い、72px未満の横移動または48pxを超える縦移動は無視する。
+
+DB migration、draggable geometry、persisted custom position、physics/WebGLは導入しない。詳細は `docs/V51.7_CONSTELLATION_SHAPE_GRAMMAR.md` を正とする。

@@ -45,11 +45,12 @@ final class ConstellationProjectionService
 
         if ($nodes->isEmpty()) {
             return [
-                'schema_version' => 1,
+                'schema_version' => 2,
                 'plan_id' => (int) $plan->id,
                 'title' => (string) $plan->title,
                 'accent' => $plan->accentKey(),
                 'pattern' => 'empty',
+                'shape_key' => 'empty',
                 'richness_tier' => 1,
                 'completion_percent' => 0,
                 'completed_count' => 0,
@@ -163,9 +164,17 @@ final class ConstellationProjectionService
             $taskToStar,
         );
 
+        $pattern = $this->pattern(collect($edges));
+        $shapeKey = $this->shapeKey(
+            $pattern,
+            $stars->count(),
+            (int) $plan->id,
+        );
+
         $stars = $this->positionStars(
             $stars,
             (int) $plan->id,
+            $shapeKey,
         );
 
         $currentStar = $stars->firstWhere('is_current', true)
@@ -187,7 +196,6 @@ final class ConstellationProjectionService
             $currentStar = $stars->firstWhere('id', $currentStar['id']);
         }
 
-        $pattern = $this->pattern(collect($edges));
         $richnessTier = $this->richnessTier(
             $taskCount,
             $estimatedMinutes,
@@ -201,11 +209,12 @@ final class ConstellationProjectionService
         };
 
         $projection = [
-            'schema_version' => 1,
+            'schema_version' => 2,
             'plan_id' => (int) $plan->id,
             'title' => (string) $plan->title,
             'accent' => $plan->accentKey(),
             'pattern' => $pattern,
+            'shape_key' => $shapeKey,
             'richness_tier' => $richnessTier,
             'completion_percent' => $completionPercent,
             'completed_count' => $doneCount,
@@ -397,56 +406,182 @@ final class ConstellationProjectionService
     private function positionStars(
         Collection $stars,
         int $planId,
+        string $shapeKey,
     ): Collection {
-        $depths = $stars
-            ->pluck('dependency_depth')
-            ->map(fn ($depth) => (int) $depth)
-            ->unique()
-            ->sort()
-            ->values();
-
-        $depthIndex = $depths
-            ->mapWithKeys(fn (int $depth, int $index) => [$depth => $index]);
-
-        $maxDepthIndex = max(0, $depths->count() - 1);
-
-        return $stars
-            ->groupBy('dependency_depth')
-            ->flatMap(function (Collection $depthStars, $depth) use (
-                $depthIndex,
-                $maxDepthIndex,
-                $planId,
-            ) {
-                $depthStars = $depthStars->values();
-                $column = (int) ($depthIndex[(int) $depth] ?? 0);
-                $x = $maxDepthIndex === 0
-                    ? 50
-                    : 12 + (($column / $maxDepthIndex) * 76);
-
-                $count = $depthStars->count();
-
-                return $depthStars->map(function (array $star, int $index) use (
-                    $x,
-                    $count,
-                    $planId,
-                ) {
-                    $y = $count === 1
-                        ? 50
-                        : 20 + (($index / max(1, $count - 1)) * 60);
-
-                    $hash = abs(crc32($planId.':'.$star['id']));
-                    $jitterX = (($hash % 9) - 4) * 0.7;
-                    $jitterY = (((int) floor($hash / 10) % 9) - 4) * 0.7;
-
-                    return [
-                        ...$star,
-                        'x' => round(max(8, min(92, $x + $jitterX)), 2),
-                        'y' => round(max(12, min(88, $y + $jitterY)), 2),
-                    ];
-                });
-            })
+        $stars = $stars
             ->sortBy('index')
             ->values();
+        $count = $stars->count();
+
+        return $stars
+            ->map(function (array $star, int $index) use (
+                $count,
+                $planId,
+                $shapeKey,
+            ) {
+                [$x, $y] = $this->shapePosition(
+                    $shapeKey,
+                    $index,
+                    $count,
+                    $planId,
+                );
+
+                return [
+                    ...$star,
+                    'x' => round(max(8, min(92, $x)), 2),
+                    'y' => round(max(10, min(90, $y)), 2),
+                ];
+            })
+            ->values();
+    }
+
+    /**
+     * Geometry is presentation-only. The dependency pattern remains available
+     * separately, while shape_key makes visually similar Plans easier to
+     * recognize at a glance.
+     */
+    private function shapeKey(
+        string $pattern,
+        int $starCount,
+        int $planId,
+    ): string {
+        if ($starCount <= 1) {
+            return 'singular';
+        }
+
+        if ($starCount === 2) {
+            return 'binary';
+        }
+
+        $seed = abs($planId);
+
+        return match ($pattern) {
+            'branch' => ['branch', 'fan'][$seed % 2],
+            'converge' => ['fan', 'arc'][$seed % 2],
+            'web' => ['cluster', 'orbit'][$seed % 2],
+            default => ['arc', 'ladder', 'orbit', 'zigzag'][$seed % 4],
+        };
+    }
+
+    /**
+     * @return array{0:float,1:float}
+     */
+    private function shapePosition(
+        string $shapeKey,
+        int $index,
+        int $count,
+        int $planId,
+    ): array {
+        $progress = $count <= 1 ? 0.5 : $index / max(1, $count - 1);
+        $seed = abs(crc32('constellation:'.$planId));
+        $direction = ($seed % 2) === 0 ? 1 : -1;
+
+        return match ($shapeKey) {
+            'singular' => [50.0, 50.0],
+            'binary' => $direction === 1
+                ? [30 + ($index * 40), 50]
+                : [50, 28 + ($index * 44)],
+            'arc' => $this->arcPosition($progress, $direction),
+            'ladder' => [
+                $index % 2 === 0 ? 34.0 : 66.0,
+                15 + ($progress * 70),
+            ],
+            'orbit' => $this->orbitStarPosition($index, $count, $seed),
+            'zigzag' => [
+                $index % 2 === 0 ? 24.0 : 76.0,
+                14 + ($progress * 72),
+            ],
+            'branch' => $this->branchPosition($index, $count, $direction),
+            'fan' => $this->fanPosition($index, $count, $direction),
+            'cluster' => $this->clusterPosition($index, $count, $seed),
+            default => [50.0, 15 + ($progress * 70)],
+        };
+    }
+
+    /**
+     * @return array{0:float,1:float}
+     */
+    private function arcPosition(float $progress, int $direction): array
+    {
+        $x = 16 + ($progress * 68);
+        $curve = sin($progress * pi());
+        $y = $direction === 1
+            ? 68 - ($curve * 38)
+            : 32 + ($curve * 38);
+
+        return [$x, $y];
+    }
+
+    /**
+     * @return array{0:float,1:float}
+     */
+    private function orbitStarPosition(int $index, int $count, int $seed): array
+    {
+        $offset = deg2rad(($seed % 120) - 60);
+        $angle = $offset + (($index / max(1, $count)) * pi() * 2);
+
+        return [
+            50 + (cos($angle) * 31),
+            50 + (sin($angle) * 34),
+        ];
+    }
+
+    /**
+     * @return array{0:float,1:float}
+     */
+    private function branchPosition(int $index, int $count, int $direction): array
+    {
+        if ($index === 0) {
+            return [50, 14];
+        }
+
+        $level = (int) ceil($index / 2);
+        $levels = max(1, (int) ceil(($count - 1) / 2));
+        $side = $index % 2 === 1 ? -1 : 1;
+        $side *= $direction;
+        $spread = 18 + (min(3, $level) * 4);
+
+        return [
+            50 + ($side * $spread),
+            20 + (($level / $levels) * 62),
+        ];
+    }
+
+    /**
+     * @return array{0:float,1:float}
+     */
+    private function fanPosition(int $index, int $count, int $direction): array
+    {
+        if ($index === 0) {
+            return $direction === 1 ? [50, 14] : [50, 86];
+        }
+
+        $remaining = max(1, $count - 1);
+        $slot = ($index - 1) / max(1, $remaining - 1);
+        $x = 18 + ($slot * 64);
+        $y = $direction === 1 ? 72 + (abs($slot - 0.5) * 10) : 28 - (abs($slot - 0.5) * 10);
+
+        return [$x, $y];
+    }
+
+    /**
+     * @return array{0:float,1:float}
+     */
+    private function clusterPosition(int $index, int $count, int $seed): array
+    {
+        if ($index === 0) {
+            return [50, 50];
+        }
+
+        $goldenAngle = deg2rad(137.508);
+        $rotation = deg2rad($seed % 360);
+        $angle = $rotation + ($index * $goldenAngle);
+        $radius = 16 + (($index / max(1, $count - 1)) * 22);
+
+        return [
+            50 + (cos($angle) * $radius),
+            50 + (sin($angle) * ($radius * 0.92)),
+        ];
     }
 
     /**

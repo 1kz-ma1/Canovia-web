@@ -1044,6 +1044,182 @@
         }
     }
 
+    /* V51.7 Constellation Shape Grammar */
+    .canovia-plan-constellation[data-constellation-shape="orbit"] .canovia-plan-constellation-graph::after,
+    .canovia-plan-constellation[data-constellation-shape="cluster"] .canovia-plan-constellation-graph::after,
+    .canovia-plan-constellation[data-constellation-shape="branch"] .canovia-plan-constellation-graph::after,
+    .canovia-plan-constellation[data-constellation-shape="fan"] .canovia-plan-constellation-graph::after {
+        position: absolute;
+        inset: 10%;
+        border: 1px solid rgb(56 189 248 / 0.035);
+        border-radius: 9999px;
+        content: '';
+        pointer-events: none;
+    }
+
+    .canovia-plan-constellation[data-constellation-shape="branch"] .canovia-plan-constellation-graph::after,
+    .canovia-plan-constellation[data-constellation-shape="fan"] .canovia-plan-constellation-graph::after {
+        inset: 12% 24%;
+        border-color: transparent;
+        border-left-color: rgb(56 189 248 / 0.045);
+        border-right-color: rgb(139 92 246 / 0.035);
+        border-radius: 45%;
+    }
+
+    .canovia-plan-constellation[data-constellation-shape="cluster"] .canovia-plan-constellation-graph::after {
+        inset: 18%;
+        border-style: dashed;
+        border-color: rgb(139 92 246 / 0.045);
+    }
+
+    .canovia-constellation-plan-switcher {
+        position: absolute;
+        z-index: 18;
+        top: 0.65rem;
+        left: 0.65rem;
+        right: 0.65rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.65rem;
+        pointer-events: none;
+    }
+
+    .canovia-constellation-plan-switcher a,
+    .canovia-constellation-plan-switcher > span {
+        display: inline-flex;
+        min-height: 2.15rem;
+        align-items: center;
+        gap: 0.32rem;
+        border: 1px solid rgb(71 85 105 / 0.48);
+        border-radius: 9999px;
+        background: rgb(2 6 23 / 0.7);
+        padding: 0.34rem 0.55rem;
+        color: rgb(186 230 253);
+        text-decoration: none;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        pointer-events: auto;
+    }
+
+    .canovia-constellation-plan-switcher a:hover,
+    .canovia-constellation-plan-switcher a:focus-visible {
+        border-color: rgb(103 232 249 / 0.48);
+        outline: none;
+        background: rgb(8 47 73 / 0.66);
+    }
+
+    .canovia-constellation-plan-switcher > span.is-disabled {
+        opacity: 0.28;
+        pointer-events: none;
+    }
+
+    .canovia-constellation-plan-switcher a > span,
+    .canovia-constellation-plan-switcher > span > span {
+        color: rgb(207 250 254);
+        font-size: 1.05rem;
+        line-height: 1;
+    }
+
+    .canovia-constellation-plan-switcher small {
+        color: rgb(148 163 184);
+        font-size: 0.48rem;
+        font-weight: 900;
+        white-space: nowrap;
+    }
+
+    .canovia-constellation-star-rail {
+        display: flex;
+        gap: 0.42rem;
+        overflow-x: auto;
+        margin: -0.1rem -0.15rem 0.65rem;
+        padding: 0.1rem 0.15rem 0.35rem;
+        scrollbar-width: none;
+        scroll-snap-type: x proximity;
+    }
+
+    .canovia-constellation-star-rail::-webkit-scrollbar {
+        display: none;
+    }
+
+    .canovia-constellation-star-rail button {
+        display: inline-grid;
+        min-width: 3rem;
+        min-height: 2.7rem;
+        flex: 0 0 auto;
+        grid-template-columns: auto auto;
+        align-items: center;
+        justify-content: center;
+        gap: 0.3rem;
+        border: 1px solid rgb(51 65 85 / 0.54);
+        border-radius: 0.82rem;
+        background: rgb(15 23 42 / 0.48);
+        padding: 0.4rem 0.5rem;
+        color: rgb(148 163 184);
+        scroll-snap-align: center;
+    }
+
+    .canovia-constellation-star-rail button > span {
+        display: grid;
+        width: 1.25rem;
+        height: 1.25rem;
+        place-items: center;
+        border-radius: 9999px;
+        background: rgb(30 41 59 / 0.8);
+        color: rgb(148 163 184);
+        font-size: 0.48rem;
+        font-weight: 900;
+    }
+
+    .canovia-constellation-star-rail button > strong {
+        font-size: 0.52rem;
+        font-weight: 900;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .canovia-constellation-star-rail button[data-star-current="1"] {
+        border-color: rgb(56 189 248 / 0.28);
+        color: rgb(186 230 253);
+    }
+
+    .canovia-constellation-star-rail button[data-star-complete="1"] > span {
+        background: rgb(186 230 253);
+        color: rgb(8 47 73);
+    }
+
+    .canovia-constellation-star-rail button.is-selected {
+        border-color: rgb(103 232 249 / 0.52);
+        background: rgb(8 47 73 / 0.5);
+        color: rgb(224 242 254);
+        box-shadow: 0 0 1rem rgb(34 211 238 / 0.08);
+    }
+
+    [data-constellation-swipe-zone] {
+        touch-action: pan-y;
+    }
+
+    @media (max-width: 767px) {
+        .canovia-constellation-plan-switcher {
+            top: 0.45rem;
+            left: 0.45rem;
+            right: 0.45rem;
+        }
+
+        .canovia-constellation-plan-switcher a,
+        .canovia-constellation-plan-switcher > span {
+            min-height: 1.9rem;
+            padding: 0.28rem 0.42rem;
+        }
+
+        .canovia-constellation-plan-switcher small {
+            font-size: 0.42rem;
+        }
+
+        .canovia-constellation-star-rail {
+            margin-bottom: 0.48rem;
+        }
+    }
+
     @media (prefers-reduced-motion: reduce) {
         .canovia-main-star[data-star-current="1"]::before {
             animation: none;
