@@ -59,7 +59,7 @@
                 <div class="timeline-day-heading">
                     <span class="timeline-dot" aria-hidden="true"></span>
                     <h2 class="font-black text-slate-100">
-                        {{ $date === '日付不明' ? $date : CarbonCarbon::parse($date)->isoFormat('M/D (ddd)') }}
+                        {{ $date === '日付不明' ? $date : \Carbon\Carbon::parse($date)->isoFormat('M/D (ddd)') }}
                     </h2>
                 </div>
 
