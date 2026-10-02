@@ -68,7 +68,7 @@ class ChatController extends Controller
         $planItems = $ownedPlans
             ->map(fn (Plan $plan) => [
                 'plan' => $plan,
-                'progress' => $achievement['progress'],
+                'progress' => $progressService->calculate($plan),
             ]);
 
         $inProgressTasks = $ownedPlans
@@ -158,7 +158,7 @@ class ChatController extends Controller
 
         return view('achievements.show', [
             'plan' => $plan,
-            'progress' => $progressService->calculate($plan),
+            'progress' => $achievement['progress'],
             'timeline' => $timelineService->build($plan)->take(20),
             'completedAt' => $completedAt,
             'totalMinutes' => $totalMinutes,
