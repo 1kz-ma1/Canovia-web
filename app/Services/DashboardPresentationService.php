@@ -35,6 +35,7 @@ class DashboardPresentationService
         array $excludedTaskIds = [],
         array $editablePlanIds = [],
         ?User $actor = null,
+        ?array $workSessionContext = null,
     ): array {
         $plans = collect($plans->all());
         $historyDays = max(7, (int) config('recommendations.baseline_days', 28));
@@ -221,34 +222,33 @@ class DashboardPresentationService
             ->sortByDesc(fn ($item) => $item['progress']['daily_required_minutes'])
             ->take(3)
             ->values();
-        $dashboardSessions = WorkSession::with(['plan', 'task'])
-            ->where('actor_token', $actorToken)
-            ->where(function ($query) {
-                $query->whereIn('status', ['active', 'paused'])
-                    ->orWhere(function ($pendingQuery) {
-                        $pendingQuery
-                            ->where('needs_plan_update', true)
-                            ->whereIn('status', ['completed', 'interrupted']);
-                    });
-            })
-            ->get();
-        $pendingPlanUpdates = $dashboardSessions
-            ->filter(fn ($session) => (bool) $session->needs_plan_update
-                && in_array($session->status, ['completed', 'interrupted'], true))
-            ->sortByDesc(fn ($session) => $session->ended_at?->timestamp ?? 0)
-            ->take(5)
-            ->values();
-        $activeWorkSession = $dashboardSessions
-            ->filter(fn ($session) => in_array($session->status, ['active', 'paused'], true))
-            ->sortByDesc(fn ($session) => $session->started_at?->timestamp ?? 0)
-            ->first();
-        $trend = UserStateSnapshot::query()
-            ->where('actor_token', $actorToken)
-            ->latest('snapshot_date')
-            ->take(14)
-            ->get()
-            ->sortBy('snapshot_date')
-            ->values();
+        if ($workSessionContext !== null) {
+            $pendingPlanUpdates = collect($workSessionContext['pending_plan_updates'] ?? [])->values();
+            $activeWorkSession = $workSessionContext['active_work_session'] ?? null;
+        } else {
+            $dashboardSessions = WorkSession::with(['plan', 'task'])
+                ->where('actor_token', $actorToken)
+                ->where(function ($query) {
+                    $query->whereIn('status', ['active', 'paused'])
+                        ->orWhere(function ($pendingQuery) {
+                            $pendingQuery
+                                ->where('needs_plan_update', true)
+                                ->whereIn('status', ['completed', 'interrupted']);
+                        });
+                })
+                ->get();
+
+            $pendingPlanUpdates = $dashboardSessions
+                ->filter(fn ($session) => (bool) $session->needs_plan_update
+                    && in_array($session->status, ['completed', 'interrupted'], true))
+                ->sortByDesc(fn ($session) => $session->ended_at?->timestamp ?? 0)
+                ->take(5)
+                ->values();
+            $activeWorkSession = $dashboardSessions
+                ->filter(fn ($session) => in_array($session->status, ['active', 'paused'], true))
+                ->sortByDesc(fn ($session) => $session->started_at?->timestamp ?? 0)
+                ->first();
+        }
         $behaviorEvents = $this->history->events($actorToken, 60);
         $workStartedEvents = $behaviorEvents
             ->where('event_type', BehaviorEventType::WorkStarted)
@@ -262,6 +262,17 @@ class DashboardPresentationService
             ->count();
         $analysisReady = $baseline->sampleCount >= (int) config('recommendations.analysis_min_samples', 5)
             && $activeDays >= (int) config('recommendations.analysis_min_days', 3);
+
+        $trend = $analysisReady
+            ? UserStateSnapshot::query()
+                ->where('actor_token', $actorToken)
+                ->latest('snapshot_date')
+                ->take(14)
+                ->get()
+                ->sortBy('snapshot_date')
+                ->values()
+            : collect();
+
         $trendReady = $analysisReady && $trend->count() >= (int) config('recommendations.trend_min_days', 3);
 
         $streakDays = $this->streakDays($workStartedEvents);
