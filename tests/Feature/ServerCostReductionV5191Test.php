@@ -82,7 +82,6 @@ class ServerCostReductionV5191Test extends TestCase
         foreach ([
             'career_applications',
             'career_captures',
-            'plan_members',
             'plan_activity_logs',
         ] as $table) {
             $this->assertTrue(
@@ -90,6 +89,11 @@ class ServerCostReductionV5191Test extends TestCase
                 "Home must still load {$table} when the matching specialized surface is relevant.",
             );
         }
+
+        $this->assertFalse(
+            $queries->contains(fn (string $sql) => $this->startsFromTable($sql, 'plan_members')),
+            'Primary Home no longer renders the legacy collaborationPlans membership projection.',
+        );
     }
 
     public function test_idle_prefetch_does_not_speculatively_pay_home_server_cost(): void
