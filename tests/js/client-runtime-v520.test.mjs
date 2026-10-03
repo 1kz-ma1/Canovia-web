@@ -116,8 +116,9 @@ test('native messages use the versioned canovia WKWebView handler', () => {
     });
 });
 
-test('native shell never registers the PWA service worker', async () => {
+test('native shell never registers PWA service worker and clears stale registrations', async () => {
     let registrations = 0;
+    let unregisters = 0;
     const { windowRef } = fakeWindow({
         injected: { platform: 'ios' },
     });
@@ -131,12 +132,21 @@ test('native shell never registers the PWA service worker', async () => {
                     registrations += 1;
                     return {};
                 },
+                getRegistrations: async () => [
+                    {
+                        unregister: async () => {
+                            unregisters += 1;
+                            return true;
+                        },
+                    },
+                ],
             },
         },
     });
 
     assert.equal(result, null);
     assert.equal(registrations, 0);
+    assert.equal(unregisters, 1);
 });
 
 test('bridge publishes ready state without exposing session secrets', () => {
