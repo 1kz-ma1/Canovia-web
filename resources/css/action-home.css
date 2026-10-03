@@ -1,87 +1,193 @@
 @layer components {
-    .canovia-action-home-signals {
-        border-color: rgb(125 211 252 / 0.16);
-        background:
-            radial-gradient(circle at top right, rgb(14 165 233 / 0.08), transparent 20rem),
-            rgb(15 23 42 / 0.82);
+    .pk-v18-focus-deck {
+        min-width: 0;
     }
 
-    .canovia-action-signal {
+    .pk-v18-focus-track {
+        display: flex;
+        gap: 0.7rem;
+        overflow-x: auto;
+        padding: 0.05rem 0 0.3rem;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+        overscroll-behavior-inline: contain;
+    }
+
+    .pk-v18-focus-track::-webkit-scrollbar {
+        display: none;
+    }
+
+    .pk-v18-focus-card {
+        flex: 0 0 min(90%, 34rem);
+        min-width: 0;
+        scroll-snap-align: start;
+    }
+
+    .pk-v18-focus-alternative {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 1rem;
-        border: 1px solid rgb(71 85 105 / 0.66);
-        border-radius: 1rem;
-        background: rgb(2 6 23 / 0.32);
-        padding: 0.9rem 1rem;
+        border: 1px solid rgb(71 85 105 / 0.52);
+        border-radius: 1.2rem;
+        background: rgb(8 18 44 / 0.68);
+        padding: 0.95rem 1rem;
+    }
+
+    .pk-v18-focus-alternative h2 {
+        margin-top: 0.2rem;
+        color: rgb(241 245 249);
+        font-size: 0.95rem;
+        font-weight: 800;
+        line-height: 1.45;
+    }
+
+    .pk-v18-focus-alternative p:last-child {
+        margin-top: 0.2rem;
+        color: rgb(148 163 184);
+        font-size: 0.7rem;
+    }
+
+    .pk-v18-focus-swipe-hint {
+        margin-top: 0.2rem;
+        padding-inline: 0.2rem;
+        color: rgb(100 116 139);
+        font-size: 0.62rem;
+        text-align: center;
+    }
+
+    .canovia-action-home-signals {
+        border-color: rgb(100 116 139 / 0.18);
+        background: rgb(8 18 44 / 0.54);
+        box-shadow: none;
+    }
+
+    .canovia-action-home-signal-count {
+        flex: 0 0 auto;
+        border: 1px solid rgb(71 85 105 / 0.48);
+        border-radius: 9999px;
+        padding: 0.28rem 0.55rem;
+        color: rgb(148 163 184);
+        font-size: 0.66rem;
+        font-weight: 800;
+    }
+
+    .canovia-action-home-signals-track {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.55rem;
+        margin-top: 0.7rem;
+    }
+
+    .canovia-action-signal {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        min-width: 0;
+        border: 1px solid rgb(71 85 105 / 0.48);
+        border-radius: 0.9rem;
+        background: rgb(2 6 23 / 0.22);
+        padding: 0.72rem 0.78rem;
     }
 
     .canovia-action-signal.is-alert {
-        border-color: rgb(248 113 113 / 0.30);
-        background: rgb(127 29 29 / 0.10);
+        border-color: rgb(248 113 113 / 0.18);
+        background: rgb(127 29 29 / 0.055);
     }
 
     .canovia-action-signal.is-attention {
-        border-color: rgb(251 191 36 / 0.28);
-        background: rgb(120 53 15 / 0.10);
+        border-color: rgb(251 191 36 / 0.18);
+        background: rgb(120 53 15 / 0.055);
     }
 
     .canovia-action-signal.is-info {
-        border-color: rgb(34 211 238 / 0.24);
-        background: rgb(8 145 178 / 0.08);
+        border-color: rgb(34 211 238 / 0.16);
+        background: rgb(8 145 178 / 0.045);
     }
 
     .canovia-action-signal-kicker {
         color: rgb(125 211 252);
-        font-size: 0.62rem;
+        font-size: 0.58rem;
         font-weight: 900;
-        letter-spacing: 0.12em;
+        letter-spacing: 0.11em;
     }
 
     .canovia-action-signal.is-alert .canovia-action-signal-kicker {
-        color: rgb(252 165 165);
+        color: rgb(248 180 180);
     }
 
     .canovia-action-signal.is-attention .canovia-action-signal-kicker {
-        color: rgb(253 230 138);
+        color: rgb(245 222 150);
     }
 
     .canovia-action-signal h3 {
-        margin-top: 0.2rem;
-        color: rgb(241 245 249);
-        font-size: 0.88rem;
-        font-weight: 900;
+        margin-top: 0.16rem;
+        color: rgb(226 232 240);
+        font-size: 0.82rem;
+        font-weight: 800;
+        line-height: 1.4;
     }
 
     .canovia-action-signal p:not(.canovia-action-signal-kicker) {
-        margin-top: 0.25rem;
+        margin-top: 0.2rem;
         color: rgb(148 163 184);
-        font-size: 0.72rem;
-        line-height: 1.55;
+        font-size: 0.68rem;
+        line-height: 1.45;
     }
 
     .canovia-action-signal small {
         display: block;
-        margin-top: 0.3rem;
+        margin-top: 0.22rem;
         color: rgb(100 116 139);
-        font-size: 0.62rem;
+        font-size: 0.58rem;
     }
 
     .canovia-action-signal-link {
         flex: 0 0 auto;
         border-radius: 9999px;
-        border: 1px solid rgb(125 211 252 / 0.26);
-        padding: 0.52rem 0.72rem;
+        border: 1px solid rgb(125 211 252 / 0.22);
+        padding: 0.44rem 0.62rem;
         color: rgb(186 230 253);
-        font-size: 0.7rem;
+        font-size: 0.66rem;
         font-weight: 800;
         white-space: nowrap;
     }
 
     .canovia-action-signal-link:hover {
-        border-color: rgb(125 211 252 / 0.55);
-        background: rgb(14 165 233 / 0.10);
+        border-color: rgb(125 211 252 / 0.45);
+        background: rgb(14 165 233 / 0.08);
+    }
+
+    .canovia-action-signal-dismiss-form {
+        position: absolute;
+        top: 0.42rem;
+        right: 0.42rem;
+        z-index: 1;
+    }
+
+    .canovia-action-signal-dismiss {
+        display: grid;
+        place-items: center;
+        width: 1.65rem;
+        height: 1.65rem;
+        border: 1px solid rgb(71 85 105 / 0.44);
+        border-radius: 9999px;
+        background: rgb(15 23 42 / 0.72);
+        color: rgb(148 163 184);
+        font-size: 1rem;
+        line-height: 1;
+    }
+
+    .canovia-action-signal-dismiss:hover,
+    .canovia-action-signal-dismiss:focus-visible {
+        border-color: rgb(125 211 252 / 0.38);
+        color: rgb(226 232 240);
+    }
+
+    .canovia-action-signal-dismiss-form + .min-w-0 {
+        padding-right: 1.7rem;
     }
 
     .canovia-action-home-continuity {
@@ -98,14 +204,50 @@
 }
 
 @media (max-width: 640px) {
-    .canovia-action-signal,
-    .canovia-action-home-continuity {
+    .pk-v18-focus-card {
+        flex-basis: 92%;
+    }
+
+    .pk-v18-focus-alternative,
+    .pk-v18-active-session {
+        min-height: 9rem;
+    }
+
+    .canovia-action-home-signals-track {
+        display: flex;
+        gap: 0.55rem;
+        overflow-x: auto;
+        padding-bottom: 0.2rem;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+        overscroll-behavior-inline: contain;
+    }
+
+    .canovia-action-home-signals-track::-webkit-scrollbar {
+        display: none;
+    }
+
+    .canovia-action-signal {
+        flex: 0 0 min(84%, 21rem);
+        min-height: 9.2rem;
         align-items: flex-start;
         flex-direction: column;
+        scroll-snap-align: start;
     }
 
     .canovia-action-signal-link {
         width: 100%;
         text-align: center;
+    }
+
+    .canovia-action-home-continuity {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+@media (min-width: 768px) {
+    .pk-v18-focus-card {
+        flex-basis: min(58%, 36rem);
     }
 }
