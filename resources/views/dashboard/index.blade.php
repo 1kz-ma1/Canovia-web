@@ -8,6 +8,12 @@
         $guidanceDeck = $dashboard['guidance_deck'] ?? collect();
         $primaryGuidance = $guidanceDeck->first();
         $activeSession = $dashboard['active_work_session'];
+        $focusAlternatives = $activeSession
+            ? $guidanceDeck
+                ->reject(fn ($guidance) => (int) data_get($guidance, 'plan.id', 0) === (int) $activeSession->plan_id)
+                ->take(4)
+                ->values()
+            : collect();
         $todayRemaining = max(0, $dashboard['total_daily_required_minutes'] - $dashboard['today_minutes']);
         $calendarWeek = $dashboard['calendar_week'] ?? null;
         $continuity = $dashboard['continuity'] ?? null;
@@ -57,13 +63,40 @@
         @endif
 
         @if ($activeSession)
-            <section class="pk-v18-active-session plan-identity-shell" data-plan-accent="{{ $activeSession->plan?->accentKey() ?? 'sky' }}" data-action-home-active-session>
-                <div class="min-w-0">
-                    <p class="pk-v18-card-kicker">{{ $activeSession->status === 'paused' ? 'PAUSED' : 'IN FOCUS' }}</p>
-                    <h2>{{ $activeSession->task?->title ?? '作業中のタスク' }}</h2>
-                    <p>{{ $activeSession->plan?->displayIcon() }} {{ $activeSession->plan?->title }}</p>
+            <section class="pk-v18-focus-deck" data-action-home-focus-deck>
+                <div class="pk-v18-focus-track" aria-label="作業中と他Planの候補">
+                    <article class="pk-v18-active-session pk-v18-focus-card plan-identity-shell" data-plan-accent="{{ $activeSession->plan?->accentKey() ?? 'sky' }}" data-action-home-active-session>
+                        <div class="min-w-0">
+                            <p class="pk-v18-card-kicker">{{ $activeSession->status === 'paused' ? 'PAUSED' : 'IN FOCUS' }}</p>
+                            <h2>{{ $activeSession->task?->title ?? '作業中のタスク' }}</h2>
+                            <p>{{ $activeSession->plan?->displayIcon() }} {{ $activeSession->plan?->title }}</p>
+                        </div>
+                        <a href="{{ route('work_sessions.active', $activeSession) }}" class="btn-primary">作業へ戻る</a>
+                    </article>
+
+                    @foreach ($focusAlternatives as $focusGuidance)
+                        @php
+                            $focusPlan = $focusGuidance['plan'];
+                            $focusTask = $focusGuidance['task'];
+                        @endphp
+                        <article
+                            class="pk-v18-focus-card pk-v18-focus-alternative plan-identity-shell"
+                            data-plan-accent="{{ $focusPlan->accentKey() }}"
+                            data-action-home-focus-alternative
+                        >
+                            <div class="min-w-0">
+                                <p class="pk-v18-card-kicker">OTHER PLAN</p>
+                                <h2>{{ $focusTask->title }}</h2>
+                                <p>{{ $focusPlan->displayIcon() }} {{ $focusPlan->title }}</p>
+                            </div>
+                            <a href="{{ route('navigation.index', ['plan_id' => $focusPlan->id]) }}" class="btn-secondary">このPlanを見る</a>
+                        </article>
+                    @endforeach
                 </div>
-                <a href="{{ route('work_sessions.active', $activeSession) }}" class="btn-primary">作業へ戻る</a>
+
+                @if ($focusAlternatives->isNotEmpty())
+                    <p class="pk-v18-focus-swipe-hint">横にスワイプすると、他のPlanも確認できます。</p>
+                @endif
             </section>
         @endif
 
@@ -172,17 +205,33 @@
         @endif
 
         @if ($signals->isNotEmpty())
-            <section class="page-card canovia-action-home-signals p-4 sm:p-5" aria-labelledby="action-home-signals-title" data-action-home-signals>
-                <div class="flex items-start justify-between gap-3">
+            <section class="page-card canovia-action-home-signals p-3 sm:p-4" aria-labelledby="action-home-signals-title" data-action-home-signals>
+                <div class="flex items-center justify-between gap-3">
                     <div>
-                        <p class="pk-v18-card-kicker">NEEDS ATTENTION</p>
-                        <h2 id="action-home-signals-title" class="mt-1 text-base font-black text-slate-100 sm:text-lg">確認したい変化</h2>
+                        <p class="pk-v18-card-kicker">CHECK</p>
+                        <h2 id="action-home-signals-title" class="mt-0.5 text-sm font-black text-slate-200 sm:text-base">確認したい変化</h2>
                     </div>
-                    <span class="badge badge-slate">{{ $signals->count() }}件</span>
+                    <span class="canovia-action-home-signal-count" data-action-home-signal-count>{{ $signals->count() }}件</span>
                 </div>
-                <div class="mt-4 grid gap-2">
+                <div class="canovia-action-home-signals-track">
                     @foreach ($signals as $signal)
-                        <article class="canovia-action-signal is-{{ $signal['severity'] ?? 'info' }}" data-action-home-signal="{{ $signal['kind'] }}">
+                        <article
+                            class="canovia-action-signal is-{{ $signal['severity'] ?? 'info' }}"
+                            data-action-home-signal="{{ $signal['kind'] }}"
+                            data-action-home-signal-card
+                        >
+                            @if (! empty($signal['dismiss_url']))
+                                <form method="POST" action="{{ $signal['dismiss_url'] }}" class="canovia-action-signal-dismiss-form" data-action-home-dismiss-form>
+                                    @csrf
+                                    <button
+                                        type="submit"
+                                        class="canovia-action-signal-dismiss"
+                                        aria-label="{{ $signal['dismiss_label'] ?? 'この通知を閉じる' }}"
+                                        title="この通知だけ閉じる（実績は残します）"
+                                    >×</button>
+                                </form>
+                            @endif
+
                             <div class="min-w-0">
                                 <p class="canovia-action-signal-kicker">{{ $signal['eyebrow'] }}</p>
                                 <h3>{{ $signal['title'] }}</h3>
