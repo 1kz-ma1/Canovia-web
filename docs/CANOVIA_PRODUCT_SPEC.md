@@ -1734,3 +1734,40 @@ State before
 とする。V53.0では契約のみ固定し、永続化schema・OpenAI routing・Study/Developer readiness・自動Task mutation・新UIは導入しない。
 
 詳細は `docs/V53.0_INTELLIGENCE_CONTRACT.md` を正とする。
+
+
+## V53.1 State / Evidence Foundation
+
+V53.0で定義したIntelligence contractを、既存Evidenceと永続Stateへ接続する。
+
+既存 `TaskEvidence` を新しい生Evidence tableへ複製せず、`TaskEvidenceAdapter` で `EvidenceObservation` へ正規化する。任意metadataはそのままIntelligenceへコピーせず、score / weakness / CI stateなど、判断意味が明確な既知fieldだけを境界越しに渡す。
+
+Studyを最初のvalidation domainとし、`StudyStateBuilder` はPractice / Recall Evidenceから以下をStateとして構成する。
+
+- Evidence count
+- Practice attempt count
+- Recall review count
+- latest / average / best score
+- observed strengths / weaknesses
+
+Task progressはStudy Stateのsource of truthとして取り込まない。
+
+fingerprintは二層に分ける。
+
+```text
+state_fingerprint
+= semantic State
+= capturedAtを含まない
+
+state_reference
+= one observed snapshot
+= semantic State + capturedAt
+```
+
+これにより同一snapshot retryはidempotentにしつつ、同じStateを後で再観測した履歴は別snapshotとして保存できる。
+
+`intelligence_state_snapshots` はnormalized metrics / facts / Evidence traceだけを保持し、questions / answers / provider payload / raw webhook / arbitrary free textを既定では保存しない。
+
+Evidence traceはexact normalized Evidence hashと既存source record originの両方を保持し、判断の再現性とauditabilityを両立する。
+
+V53.1ではReadiness / Decision / Next Actionはまだ計算しない。詳細は `docs/V53.1_STATE_EVIDENCE_FOUNDATION.md` を正とする。
