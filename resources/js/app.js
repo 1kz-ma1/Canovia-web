@@ -795,6 +795,49 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '/';
     });
 
+    const visualViewport = window.visualViewport;
+    let mobileViewportBaseline = Math.max(
+        window.innerHeight || 0,
+        Number(visualViewport?.height) || 0,
+    );
+
+    const isEditableElement = (element) => Boolean(
+        element
+        && (
+            element.matches?.('input, textarea, select')
+            || element.isContentEditable
+        )
+    );
+
+    const syncVirtualKeyboardState = () => {
+        const viewportHeight = Number(visualViewport?.height) || window.innerHeight || 0;
+        const editing = isEditableElement(document.activeElement);
+
+        if (!editing) {
+            mobileViewportBaseline = Math.max(mobileViewportBaseline, viewportHeight);
+        }
+
+        const keyboardOpen = Boolean(
+            editing
+            && visualViewport
+            && mobileViewportBaseline - viewportHeight > 120
+        );
+
+        document.documentElement.dataset.canoviaKeyboard = keyboardOpen ? 'open' : 'closed';
+    };
+
+    document.addEventListener('focusin', () => window.requestAnimationFrame(syncVirtualKeyboardState));
+    document.addEventListener('focusout', () => window.setTimeout(syncVirtualKeyboardState, 80));
+    visualViewport?.addEventListener('resize', syncVirtualKeyboardState, { passive: true });
+    visualViewport?.addEventListener('scroll', syncVirtualKeyboardState, { passive: true });
+    window.addEventListener('orientationchange', () => {
+        window.setTimeout(() => {
+            mobileViewportBaseline = Number(window.visualViewport?.height) || window.innerHeight || mobileViewportBaseline;
+            syncVirtualKeyboardState();
+        }, 220);
+    });
+    syncVirtualKeyboardState();
+
     document.querySelectorAll('[data-auto-toast]').forEach((toast) => {
         window.setTimeout(() => {
             toast.style.opacity = '0';
