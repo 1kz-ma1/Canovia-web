@@ -1616,3 +1616,20 @@ Active WorkSession中のIn Focusはsingle cardではなくhorizontal Plan deck�
 Action Home signal schemaはv2。Plan update signalのみoptional `dismiss_url / dismiss_label` を持つ。
 
 詳細は `docs/V51.9.7_ACTION_HOME_DENSITY.md` を正とする。
+
+
+## V51.9.8 Web Real-device Finish
+
+Web版のiPhone実機仕上げとして、mobile shell / safe area / horizontal rail / virtual keyboard / Constellation swipe interruptionを統一する。
+
+Mobile shellは `--canovia-mobile-dock-clearance: calc(7rem + env(safe-area-inset-bottom))` を基準にmain bottom paddingと `html.scroll-padding-bottom` を同期する。header/tabbar左右には `safe-area-inset-left/right` を反映し、landscape notchでもphysical safe areaへUIを入れない。
+
+VisualViewportが使える環境ではeditable elementへfocus中かつviewportがbaselineより120px超縮小した場合をvirtual keyboard openとし、固定mobile tabbarを非表示・非interactive化する。VisualViewport非対応時は既存挙動へfallbackする。
+
+Home Guidance / Active Focus / Attention、Execution Mode / Plan / Recommendation、Constellation Task Groupのhorizontal railはiOS touch scroll契約を統一し、`-webkit-overflow-scrolling: touch`、inline overscroll containment、pan-x/pan-y、card系scroll-snap-stopを適用する。
+
+Selected ConstellationのPlan swipeはsingle-touchのみ扱い、multi-touch / touchcancelでgesture stateを必ずresetする。
+
+長いTask / Next Action textは主要mobile cardで `overflow-wrap:anywhere` + `text-wrap:pretty` により横overflowを防ぐ。
+
+詳細は `docs/V51.9.8_WEB_REAL_DEVICE_FINISH.md` を正とする。

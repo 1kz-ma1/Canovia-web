@@ -9340,3 +9340,84 @@ body[data-route-name="map.index"] .canovia-map-page {
         }
     }
 }
+
+
+/* ==========================================================================
+   V51.9.8 Web real-device finish
+   ========================================================================== */
+:root {
+    --canovia-mobile-dock-clearance: calc(7rem + env(safe-area-inset-bottom));
+}
+
+@media (max-width: 767px) {
+    html {
+        scroll-padding-bottom: var(--canovia-mobile-dock-clearance);
+    }
+
+    .mobile-app-header-inner {
+        padding-left: max(1rem, env(safe-area-inset-left));
+        padding-right: max(1rem, env(safe-area-inset-right));
+    }
+
+    .mobile-tabbar {
+        right: max(0.75rem, env(safe-area-inset-right));
+        left: max(0.75rem, env(safe-area-inset-left));
+        transition:
+            opacity 140ms ease,
+            transform 140ms ease;
+    }
+
+    .app-main:not(.focus-main) {
+        padding-right: max(1rem, env(safe-area-inset-right));
+        padding-bottom: var(--canovia-mobile-dock-clearance);
+        padding-left: max(1rem, env(safe-area-inset-left));
+    }
+
+    html[data-canovia-keyboard="open"] .mobile-tabbar {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(calc(100% + 1.25rem));
+    }
+
+    html[data-canovia-keyboard="open"] .app-main:not(.focus-main) {
+        padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+    }
+
+    .pk-v395-guidance-track,
+    .pk-v18-focus-track,
+    .canovia-action-home-signals-track,
+    .execution-mode-switcher,
+    .execution-plan-switcher,
+    .execution-recommendation-track,
+    .canovia-constellation-star-rail {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-inline: contain;
+        touch-action: pan-x pan-y;
+    }
+
+    .pk-v395-guidance-card,
+    .pk-v18-focus-card,
+    .canovia-action-signal,
+    .execution-recommendation-card,
+    .canovia-constellation-star-rail button {
+        scroll-snap-stop: always;
+    }
+
+    .pk-v395-guidance-card h3,
+    .pk-v18-focus-card h2,
+    .canovia-action-signal h3,
+    .execution-recommendation-card h3,
+    .execution-recommendation-next,
+    .canovia-star-task-item strong,
+    .canovia-constellation-detail-heading h2 {
+        min-width: 0;
+        overflow-wrap: anywhere;
+        text-wrap: pretty;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mobile-tabbar {
+        transition: none;
+    }
+}
