@@ -150,7 +150,7 @@ class BehaviorEventController extends Controller
 
             $safeMetadata = array_filter([
                 'flow_id' => $flowId,
-                'surface' => in_array(($metadata['surface'] ?? null), ['web', 'pwa'], true)
+                'surface' => in_array(($metadata['surface'] ?? null), ['web', 'pwa', 'native'], true)
                     ? $metadata['surface']
                     : 'unknown',
                 'device' => in_array(($metadata['device'] ?? null), ['mobile', 'desktop'], true)
