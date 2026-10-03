@@ -170,6 +170,8 @@ export function mountCanoviaInstantNavigation({
     let disposed = false;
     let navigationSerial = 0;
     const revalidateHandles = new Set();
+    const revalidateByKey = new Map();
+    let touchIntent = null;
 
     const isCoreUrl = (value) => {
         let url;
@@ -179,6 +181,33 @@ export function mountCanoviaInstantNavigation({
             return false;
         }
         return url.origin === windowRef.location.origin && corePaths.has(url.pathname);
+    };
+
+    const currentScrollPosition = () => ({
+        x: Math.max(0, Number(windowRef.scrollX) || 0),
+        y: Math.max(0, Number(windowRef.scrollY) || 0),
+    });
+
+    const rememberCurrentScroll = () => {
+        const state = {
+            ...(windowRef.history.state || {}),
+            canoviaInstant: true,
+            canoviaScroll: currentScrollPosition(),
+        };
+
+        windowRef.history.replaceState(state, '', windowRef.location.href);
+    };
+
+    const resolveScrollTarget = (scroll) => {
+        if (scroll === false) return null;
+        if (scroll && typeof scroll === 'object') {
+            return {
+                x: Math.max(0, Number(scroll.x) || 0),
+                y: Math.max(0, Number(scroll.y) || 0),
+            };
+        }
+
+        return { x: 0, y: 0 };
     };
 
     const captureCurrent = () => {
@@ -372,13 +401,28 @@ export function mountCanoviaInstantNavigation({
 
         syncFeedbackContext(documentRef, payload.feedbackContext);
 
+        const scrollTarget = resolveScrollTarget(scroll);
+
         if (historyMode === 'push') {
-            windowRef.history.pushState({ canoviaInstant: true }, '', payload.url);
+            windowRef.history.pushState({
+                canoviaInstant: true,
+                canoviaScroll: scrollTarget || { x: 0, y: 0 },
+            }, '', payload.url);
         } else if (historyMode === 'replace') {
-            windowRef.history.replaceState({ canoviaInstant: true }, '', payload.url);
+            windowRef.history.replaceState({
+                ...(windowRef.history.state || {}),
+                canoviaInstant: true,
+                canoviaScroll: scrollTarget || currentScrollPosition(),
+            }, '', payload.url);
         }
 
-        if (scroll) windowRef.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        if (scrollTarget) {
+            windowRef.scrollTo({
+                top: scrollTarget.y,
+                left: scrollTarget.x,
+                behavior: 'auto',
+            });
+        }
 
         documentRef.dispatchEvent(new windowRef.CustomEvent('canovia:page-ready', {
             detail: {
@@ -394,10 +438,15 @@ export function mountCanoviaInstantNavigation({
     const revalidate = (url) => {
         if (disposed) return;
 
+        const target = normalizedUrl(url, windowRef);
+        const key = cacheKey(target);
+        if (revalidateByKey.has(key)) return;
+
         const run = () => {
             revalidateHandles.delete(handle);
+            revalidateByKey.delete(key);
             if (disposed) return;
-            void fetchPayload(url, 'navigate').catch(() => {});
+            void fetchPayload(target, 'navigate').catch(() => {});
         };
 
         let handle;
@@ -414,6 +463,7 @@ export function mountCanoviaInstantNavigation({
         }
 
         revalidateHandles.add(handle);
+        revalidateByKey.set(key, handle);
     };
 
     const renderMeasured = (payload, {
@@ -506,6 +556,10 @@ export function mountCanoviaInstantNavigation({
         if (!isCoreUrl(url)) {
             if (fallback) windowRef.location.assign(url.href);
             return false;
+        }
+
+        if (historyMode === 'push') {
+            rememberCurrentScroll();
         }
 
         const key = cacheKey(url);
@@ -622,27 +676,103 @@ export function mountCanoviaInstantNavigation({
         void navigate(target, { historyMode: 'push', scroll: true });
     };
 
-    const onIntent = (event) => {
+    const onPointerIntent = (event) => {
+        if (event.pointerType === 'touch') return;
         const link = linkForEvent(event);
         if (link) void prefetch(link.href);
     };
 
-    const onPopState = () => {
+    const onFocusIntent = (event) => {
+        const link = linkForEvent(event);
+        if (link) void prefetch(link.href);
+    };
+
+    const clearTouchIntent = ({ prefetchNow = false } = {}) => {
+        const intent = touchIntent;
+        touchIntent = null;
+
+        if (!intent) return;
+        if (intent.timer !== null) windowRef.clearTimeout(intent.timer);
+        if (prefetchNow && !intent.prefetched && intent.link?.isConnected !== false) {
+            void prefetch(intent.link.href);
+        }
+    };
+
+    const onTouchStart = (event) => {
+        clearTouchIntent();
+
+        if ((event.touches?.length ?? 0) !== 1) return;
+
+        const link = linkForEvent(event);
+        const touch = event.touches?.[0];
+        if (!link || !touch) return;
+
+        const intent = {
+            link,
+            startX: touch.clientX,
+            startY: touch.clientY,
+            prefetched: false,
+            timer: null,
+        };
+
+        intent.timer = windowRef.setTimeout(() => {
+            if (touchIntent !== intent) return;
+            intent.prefetched = true;
+            intent.timer = null;
+            void prefetch(link.href);
+        }, 90);
+
+        touchIntent = intent;
+    };
+
+    const onTouchMove = (event) => {
+        if (!touchIntent) return;
+        const touch = event.touches?.[0];
+        if (!touch) {
+            clearTouchIntent();
+            return;
+        }
+
+        const deltaX = touch.clientX - touchIntent.startX;
+        const deltaY = touch.clientY - touchIntent.startY;
+        if (Math.hypot(deltaX, deltaY) > 12) clearTouchIntent();
+    };
+
+    const onTouchEnd = () => {
+        clearTouchIntent({ prefetchNow: true });
+    };
+
+    const onTouchCancel = () => {
+        clearTouchIntent();
+    };
+
+    const onPopState = (event) => {
         void navigate(windowRef.location.href, {
             historyMode: 'none',
-            scroll: true,
+            scroll: event.state?.canoviaScroll || { x: 0, y: 0 },
             fallback: true,
         });
     };
 
     documentRef.addEventListener('click', onClick, true);
-    documentRef.addEventListener('pointerover', onIntent, true);
-    documentRef.addEventListener('focusin', onIntent, true);
-    documentRef.addEventListener('touchstart', onIntent, { capture: true, passive: true });
+    documentRef.addEventListener('pointerover', onPointerIntent, true);
+    documentRef.addEventListener('focusin', onFocusIntent, true);
+    documentRef.addEventListener('touchstart', onTouchStart, { capture: true, passive: true });
+    documentRef.addEventListener('touchmove', onTouchMove, { capture: true, passive: true });
+    documentRef.addEventListener('touchend', onTouchEnd, { capture: true, passive: true });
+    documentRef.addEventListener('touchcancel', onTouchCancel, { capture: true, passive: true });
     windowRef.addEventListener('popstate', onPopState);
 
+    if ('scrollRestoration' in windowRef.history) {
+        windowRef.history.scrollRestoration = 'manual';
+    }
+
     captureCurrent();
-    windowRef.history.replaceState({ ...(windowRef.history.state || {}), canoviaInstant: true }, '', windowRef.location.href);
+    windowRef.history.replaceState({
+        ...(windowRef.history.state || {}),
+        canoviaInstant: true,
+        canoviaScroll: currentScrollPosition(),
+    }, '', windowRef.location.href);
 
     const scheduleIdlePrefetch = () => {
         const connection = windowRef.navigator?.connection;
@@ -708,11 +838,16 @@ export function mountCanoviaInstantNavigation({
                 }
             });
             revalidateHandles.clear();
+            revalidateByKey.clear();
+            clearTouchIntent();
 
             documentRef.removeEventListener('click', onClick, true);
-            documentRef.removeEventListener('pointerover', onIntent, true);
-            documentRef.removeEventListener('focusin', onIntent, true);
-            documentRef.removeEventListener('touchstart', onIntent, true);
+            documentRef.removeEventListener('pointerover', onPointerIntent, true);
+            documentRef.removeEventListener('focusin', onFocusIntent, true);
+            documentRef.removeEventListener('touchstart', onTouchStart, true);
+            documentRef.removeEventListener('touchmove', onTouchMove, true);
+            documentRef.removeEventListener('touchend', onTouchEnd, true);
+            documentRef.removeEventListener('touchcancel', onTouchCancel, true);
             windowRef.removeEventListener('popstate', onPopState);
         },
     };
