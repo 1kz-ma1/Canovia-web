@@ -2,6 +2,11 @@ import { normalizeAiJsonText, buildAiJsonRepairPrompt } from './ai-json.mjs';
 import { mountInstantStartServiceWorker } from './instant-start.mjs';
 import { mountCanoviaInstantNavigation } from './instant-navigation.mjs';
 import { mountCanoviaInteractionPerformance } from './interaction-performance.mjs';
+import {
+    canoviaClientSurface,
+    isCanoviaNativeRuntime,
+    mountCanoviaNativeBridge,
+} from './client-runtime.mjs';
 import { mountLivingGoalMap } from './living-map.mjs';
 import { mountDashboardDocuments } from './dashboard-document.mjs';
 import { mountStandalonePlanDashboards } from './plan-dashboard.mjs';
@@ -135,12 +140,6 @@ function recordBehavior(root, eventType, payload = {}) {
         keepalive: true,
         body: JSON.stringify({ event_type: eventType, ...payload }),
     }).catch(() => {});
-}
-
-function canoviaClientSurface() {
-    return window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true
-        ? 'pwa'
-        : 'web';
 }
 
 function canoviaClientDevice() {
@@ -788,6 +787,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const mobileBack = document.querySelector('[data-mobile-back]');
     mobileBack?.addEventListener('click', () => {
+        if (
+            isCanoviaNativeRuntime(window)
+            && window.CanoviaNativeBridge?.handleBack?.()
+        ) {
+            return;
+        }
+
         if (window.history.length > 1) {
             window.history.back();
             return;
@@ -2212,7 +2218,9 @@ window.addEventListener('appinstalled', () => {
 });
 
 function pacekeeperIsStandalone() {
-    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    return isCanoviaNativeRuntime(window)
+        || window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true;
 }
 
 function pacekeeperVisibleTarget(selector) {
@@ -3897,6 +3905,7 @@ function initializeInstantCorePage(event) {
 document.addEventListener('canovia:page-ready', initializeInstantCorePage);
 
 document.addEventListener('DOMContentLoaded', () => {
+    mountCanoviaNativeBridge();
     mountCanoviaInteractionPerformance();
 
     const mountStartedAt = performance.now();

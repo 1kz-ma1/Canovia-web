@@ -27,7 +27,7 @@ final class ClientPerformanceController extends Controller
                 'history',
                 'programmatic',
             ])],
-            'surface' => ['required', Rule::in(['web', 'pwa'])],
+            'surface' => ['required', Rule::in(['web', 'pwa', 'native'])],
             'device' => ['required', Rule::in(['mobile', 'desktop'])],
             'platform' => ['required', Rule::in(['ios', 'android', 'other'])],
             'metrics' => ['required', 'array'],

@@ -1,3 +1,5 @@
+import { isCanoviaNativeRuntime } from './client-runtime.mjs';
+
 const SERVICE_WORKER_URL = '/sw.js';
 
 function postWorkerMessage(worker, message) {
@@ -20,6 +22,18 @@ function markCurrentPageAsNetworkSuccess(serviceWorker, registration) {
  */
 export async function mountInstantStartServiceWorker({ navigatorRef = globalThis.navigator, windowRef = globalThis.window } = {}) {
     const serviceWorker = navigatorRef?.serviceWorker;
+
+    if (isCanoviaNativeRuntime(windowRef)) {
+        try {
+            const registrations = await serviceWorker?.getRegistrations?.();
+            await Promise.all(
+                (registrations || []).map((registration) => registration.unregister?.())
+            );
+        } catch (_) {}
+
+        return null;
+    }
+
     if (!serviceWorker || !windowRef?.isSecureContext) return null;
 
     try {
