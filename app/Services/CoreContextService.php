@@ -6,6 +6,7 @@ use App\Models\Plan;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 final class CoreContextService
 {
@@ -164,8 +165,35 @@ final class CoreContextService
             return;
         }
 
+        $tasksById = $tasks->keyBy(fn ($task) => (int) $task->id);
+        $taskIds = $tasksById->keys()->all();
+
+        $dependencyIdsByTask = DB::table('task_dependencies')
+            ->whereIn('task_id', $taskIds)
+            ->get(['task_id', 'prerequisite_task_id'])
+            ->groupBy(fn ($edge) => (int) $edge->task_id);
+
+        foreach ($tasks as $task) {
+            $legacyDependency = $task->depends_on_task_id
+                ? $tasksById->get((int) $task->depends_on_task_id)
+                : null;
+
+            $canonicalDependencies = collect(
+                $dependencyIdsByTask->get((int) $task->id, collect())
+            )
+                ->map(fn ($edge) => $tasksById->get((int) $edge->prerequisite_task_id))
+                ->filter()
+                ->values();
+
+            $task->setRelation('prerequisite', $legacyDependency);
+            $task->setRelation(
+                'prerequisites',
+                new EloquentCollection($canonicalDependencies->all()),
+            );
+        }
+
         (new EloquentCollection($tasks->all()))
-            ->loadMissing(['prerequisite', 'prerequisites', 'resources']);
+            ->loadMissing(['resources']);
     }
 
     private function loadTaskArtifacts(): void

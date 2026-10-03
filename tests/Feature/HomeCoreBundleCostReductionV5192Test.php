@@ -192,14 +192,14 @@ class HomeCoreBundleCostReductionV5192Test extends TestCase
             $queries->filter(fn (string $sql) => $this->selectsFrom($sql, 'work_sessions'))->count(),
         );
         $this->assertSame(
-            1,
+            0,
             $queries->filter(fn (string $sql) => $this->selectsFrom($sql, 'plans'))->count(),
-            'The latest active session must reuse the same hydrated Plan relation instance.',
+            'Home continuity must reuse the Plan model passed into the context.',
         );
         $this->assertSame(
             1,
             $queries->filter(fn (string $sql) => $this->selectsFrom($sql, 'tasks'))->count(),
-            'The latest active session must reuse the same hydrated Task relation instance.',
+            'When Plan.tasks was not preloaded, task hydration must still fall back safely.',
         );
     }
 

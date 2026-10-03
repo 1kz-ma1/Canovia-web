@@ -1577,3 +1577,14 @@ CoreContextで `tasks` が既にload済みの状態から `work_logs` をloadす
 V51.9.2 production Home 23 query shapeでは、plan_members 1 query + WorkLog.task再取得用tasks 1 queryの削減を狙う。
 
 詳細は `docs/V51.9.4_HOME_QUERY_COLLAPSE.md` を正とする。
+
+
+## V51.9.5 Model Reuse & Dependency Hydration
+
+Home ContinuityはCoreContextで既にload済みのPlan / Task modelをWorkSession relationへ再利用する。matching modelが存在する場合は `setRelation()` し、current context外のSessionのみ従来どおりDB hydrationへfallbackする。これにより典型HomeではContinuity用plans/tasks SELECTを発生させない。
+
+CoreContextの `task_dependencies` featureは、既にload済みのTask modelを依存先Taskとして再利用する。canonical source of truthである `task_dependencies` pivotを1 queryで読み、legacy `prerequisite` とcanonical `prerequisites` relationを既存Task modelから構成する。Task resourcesは従来どおりloadする。
+
+V51.9.4後の典型Homeからさらに約3 DB roundtrip削減を狙う。V51.9.2 production baseline 23 queryに対し、同account shapeで約18 queryが目安。
+
+詳細は `docs/V51.9.5_MODEL_REUSE.md` を正とする。
