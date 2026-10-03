@@ -147,7 +147,7 @@ class TrackAiPlanFunnel
     private function baseMetadata(Request $request): array
     {
         $surface = (string) $request->input('_client_surface', '');
-        if (! in_array($surface, ['web', 'pwa'], true)) {
+        if (! in_array($surface, ['web', 'pwa', 'native'], true)) {
             $surface = 'unknown';
         }
 
