@@ -787,6 +787,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const mobileBack = document.querySelector('[data-mobile-back]');
     mobileBack?.addEventListener('click', () => {
+        if (
+            isCanoviaNativeRuntime(window)
+            && window.CanoviaNativeBridge?.handleBack?.()
+        ) {
+            return;
+        }
+
         if (window.history.length > 1) {
             window.history.back();
             return;
