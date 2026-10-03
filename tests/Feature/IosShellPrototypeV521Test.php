@@ -76,7 +76,7 @@ class IosShellPrototypeV521Test extends TestCase
         $this->assertStringContainsString('WKWebsiteDataStore.default()', $readme);
         $this->assertStringContainsString('brew install xcodegen', $readme);
         $this->assertStringContainsString('make project', $readme);
-        $this->assertStringContainsString('既存のSafari/PWA login', str_replace('ログイン', 'login', $readme));
+        $this->assertStringContainsString('an existing Safari/PWA login', $readme);
         $this->assertStringContainsString('Universal Links / Associated Domains', $readme);
     }
 }
