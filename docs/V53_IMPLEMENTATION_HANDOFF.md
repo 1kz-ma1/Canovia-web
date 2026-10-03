@@ -189,7 +189,7 @@ Permanent spec:
 
 ### V53.1 — State / Evidence Foundation
 
-Status: **IN PROGRESS**
+Status: **IMPLEMENTED — PR PENDING**
 
 Branch:
 
@@ -368,7 +368,10 @@ Current implementation:
 - existing TaskEvidence is normalized rather than duplicated
 - Study is the first concrete StateBuilder
 - durable State storage is now introduced with controlled normalized fields
-- next before V53.1 completion: validation, Product Spec sync, PR
+- validation: complete
+- Product Spec sync: complete
+- temporary validation workflow: removed after success
+- PR: pending creation
 
 ## Completion / deletion rule
 
