@@ -1566,3 +1566,14 @@ ExecutionではPlanごとの `PlanProgressService::calculate()` により `avail
 TimelineでもAchievement Projection経由で同じN+1が発生するため、CoreContextのTimeline featureへ `availability` を追加してbatch loadする。Core BundleではCalendarが既にavailabilityをloadしておりShared CoreContextで再利用される。
 
 詳細は `docs/V51.9.3_DB_ROUNDTRIP_REDUCTION.md` を正とする。
+
+
+## V51.9.4 Home Query Collapse
+
+Primary Homeから未使用のlegacy `collaborationPlans` membership projectionを削除する。Action Homeの共同作業Signalに必要な `activity_logs` は維持するが、Homeでは `memberships` をloadせず、共同Planがあるaccountでも `plan_members` SELECTを発生させない。
+
+CoreContextで `tasks` が既にload済みの状態から `work_logs` をloadする場合、WorkLog.taskのためにTaskを再SELECTしない。Plan.tasksをtask_idでindexし、WorkLogへrelationとしてreuseする。tasks未loadのcallerでは従来どおり `with('task')` を維持する。
+
+V51.9.2 production Home 23 query shapeでは、plan_members 1 query + WorkLog.task再取得用tasks 1 queryの削減を狙う。
+
+詳細は `docs/V51.9.4_HOME_QUERY_COLLAPSE.md` を正とする。

@@ -186,12 +186,41 @@ final class CoreContextService
 
     private function loadWorkLogs(): void
     {
+        $tasksAlreadyLoaded = $this->plans?->every(
+            fn (Plan $plan) => $plan->relationLoaded('tasks')
+        ) ?? false;
+
+        if (! $tasksAlreadyLoaded) {
+            $this->eloquentPlans()->loadMissing([
+                'workLogs' => fn ($query) => $query
+                    ->with('task')
+                    ->latest('worked_on')
+                    ->latest('id'),
+            ]);
+
+            return;
+        }
+
         $this->eloquentPlans()->loadMissing([
             'workLogs' => fn ($query) => $query
-                ->with('task')
                 ->latest('worked_on')
                 ->latest('id'),
         ]);
+
+        foreach ($this->plans as $plan) {
+            $tasksById = $plan->tasks->keyBy(
+                fn ($task) => (int) $task->id
+            );
+
+            foreach ($plan->workLogs as $workLog) {
+                $workLog->setRelation(
+                    'task',
+                    $workLog->task_id !== null
+                        ? $tasksById->get((int) $workLog->task_id)
+                        : null,
+                );
+            }
+        }
     }
 
     private function loadTaskEvidences(): void

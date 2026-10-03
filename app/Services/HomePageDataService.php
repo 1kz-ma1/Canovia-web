@@ -51,7 +51,7 @@ final class HomePageDataService
             fn ($plan) => (bool) $plan->is_collaborative
         );
         if ($hasCollaborativePlan) {
-            $this->core->plans($request, ['memberships', 'activity_logs']);
+            $this->core->plans($request, ['activity_logs']);
         }
 
         if (! $prefetch) {
@@ -64,14 +64,6 @@ final class HomePageDataService
         }
 
         $editablePlans = $this->core->editablePlans($request);
-        $collaborationPlans = $plans
-            ->filter(fn ($plan) => (bool) $plan->is_collaborative)
-            ->map(fn ($plan) => [
-                'plan' => $plan,
-                'role' => $this->core->role($request, $plan),
-                'member_count' => 1 + $plan->memberships->count(),
-            ])
-            ->values();
 
         $baseline = $this->behaviorService->baseline($actorToken);
         $state = $this->stateService->calculate($actorToken, $baseline, $editablePlans);
@@ -144,7 +136,7 @@ final class HomePageDataService
             );
         }
 
-        return compact('dashboard', 'collaborationPlans', 'actionHome');
+        return compact('dashboard', 'actionHome');
     }
 
     private function stateSnapshotDue(Request $request): bool
