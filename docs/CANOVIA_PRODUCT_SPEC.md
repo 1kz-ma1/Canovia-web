@@ -1669,3 +1669,68 @@ file/photo inputはV52.0ではWKWebView標準pickerを維持し、Nativeへ `fil
 Interaction Performance / AI Funnel / Map telemetryのsurface whitelistへ `native` を追加し、Web/PWA/nativeの実測比較を可能にする。
 
 詳細は `docs/V52.0_IOS_READINESS_FOUNDATION.md` を正とする。
+
+
+## V53.0 Canovia Intelligence Contract
+
+Canoviaの中心を、固定されたTask進行から「現実のStateをEvidenceで更新し、その時点の最善Actionを判断する」実行ループへ拡張する。
+
+正規ループ:
+
+```text
+Goal
+→ Current State
+→ Gap / Readiness
+→ Decision
+→ Next Action
+→ Evidence
+→ Outcome
+→ State update / Replan
+```
+
+Taskは廃止しない。Taskは長期計画・透明性・実行管理に有効だが、Intelligence Coreのsource of truthにはしない。
+
+```text
+Task != Intelligence State
+Task != Decision source of truth
+Task = Actionを表現する一つのProjection
+```
+
+V53.0の共通語彙は以下。
+
+- State: 現在の現実を正規化した状態
+- Evidence: 現実に起きたことの観測
+- Readiness: 目標成果へ到達できる準備状態
+- Decision: State / Readinessから選んだ次判断
+- Action: Decisionから生成された実行候補
+- Outcome: Action実行後にEvidenceから観測された結果
+- Confidence: 観測・推定・判断の確信度 0.0〜1.0
+
+共通処理境界:
+
+```text
+StateBuilder
+→ ReadinessEvaluator
+→ DecisionEngine
+→ ActionGenerator
+→ OutcomeInterpreter
+→ next State
+```
+
+Study / Development固有ルールはCoreへ直接埋め込まず、後続V53フェーズで同一契約のdomain implementationとして追加する。
+
+既存の `TaskEvidence`、`GuidedExecution`、`GitHubEvidenceDecisionService`、Study Practice / Recall、`NativeAiRun` は破棄せず、新しいIntelligence境界へ段階的に接続する。
+
+将来自前推論へ活用できる主要データ関係は単なる会話ログではなく、
+
+```text
+State before
+→ Decision
+→ Action
+→ Outcome
+→ State after
+```
+
+とする。V53.0では契約のみ固定し、永続化schema・OpenAI routing・Study/Developer readiness・自動Task mutation・新UIは導入しない。
+
+詳細は `docs/V53.0_INTELLIGENCE_CONTRACT.md` を正とする。
