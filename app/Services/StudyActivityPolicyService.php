@@ -29,6 +29,7 @@ class StudyActivityPolicyService
             '問題',
             '過去問',
             '模試',
+            '模擬試験',
             '計算',
             '理解確認',
             '確認問題',
@@ -93,6 +94,7 @@ class StudyActivityPolicyService
             '問題' => 18,
             '過去問' => 28,
             '模試' => 28,
+            '模擬試験' => 28,
             '計算' => 18,
             '理解確認' => 22,
             '確認問題' => 22,
@@ -135,7 +137,7 @@ class StudyActivityPolicyService
         // A direct practice intent wins over incidental memorization words such
         // as "暗記問題". Conversely, a pure TOEIC vocabulary Task should not
         // be pulled into AI question generation just because the Plan is a test.
-        if ($this->containsAny($context, ['過去問', '模試', '演習問題', '問題演習'])) {
+        if ($this->containsAny($context, ['過去問', '模試', '模擬試験', '演習問題', '問題演習'])) {
             $scores[self::QUESTION_PRACTICE] += 25;
         }
 
