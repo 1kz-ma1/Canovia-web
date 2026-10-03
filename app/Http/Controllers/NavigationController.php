@@ -27,7 +27,6 @@ class NavigationController extends Controller
         PlanOwnershipService $ownership,
         UserBehaviorService $behaviorService,
         UserStateService $stateService,
-        NavigationFlowService $flowService,
         RecommendationService $recommendationService,
         ExecutionModeService $executionModes,
         BehaviorEventLogger $logger,
@@ -117,25 +116,20 @@ class NavigationController extends Controller
             unset($draft['execution_mode'], $draft['scope_plan_id']);
         }
 
-        $request->session()->put(self::SESSION_KEY, $draft);
-
-        if ($request->boolean('configure')) {
-            $scopePlanId = $draft['scope_plan_id'] ?? null;
-            $draft = [
-                'step' => 'intent',
-                'selection_steps' => 0,
-                'excluded_task_ids' => [],
-            ];
-
-            if ($scopePlanId) {
-                $draft['scope_plan_id'] = (int) $scopePlanId;
-            }
-            if ($selectedExecutionMode !== null) {
-                $draft['execution_mode'] = $selectedExecutionMode;
-            }
-
-            $request->session()->put(self::SESSION_KEY, $draft);
+        // Real-device refinement: candidate swiping is now the lightweight
+        // way to change what to execute. Retire the old multi-step condition
+        // flow from the primary Execution surface, including stale sessions
+        // that may still contain intent/time steps.
+        if (($draft['step'] ?? 'recommendation') !== 'recommendation') {
+            $draft['step'] = 'recommendation';
+            $draft['intent'] = 'decide';
+            $draft['minutes'] = 0;
+            $draft['selection_steps'] = 0;
+            $draft['excluded_task_ids'] = [];
+            unset($draft['preferred_plan_id'], $draft['started_at']);
         }
+
+        $request->session()->put(self::SESSION_KEY, $draft);
 
         $modePlans = $executionModes->plansForMode($plans, $selectedExecutionMode);
         $scopePlan = ! empty($draft['scope_plan_id'])
@@ -172,18 +166,48 @@ class NavigationController extends Controller
                 $recommendations->push($recommendation);
                 $candidateExclusions[] = (int) $recommendation->task->id;
 
-                // The rail is an execution-mode sibling view, not a hidden "try again"
-                // action. Prefer one actionable Task from each other Plan so users can
-                // horizontally compare equivalent execution types without leaving Execution.
+                // The rail is Plan-to-Plan comparison only. Never fill it with
+                // another Task from the primary Plan just to reach a fixed card count.
+                // Candidates must also lead to the same concrete handoff. In Study
+                // mode this prevents Recall/Resource/admin Tasks from appearing beside
+                // an AI-question-practice recommendation.
+                $primaryCompatibilityKey = (string) (
+                    $executionModes
+                        ->actionFor($recommendation->plan, $recommendation->task)['compatibility_key']
+                    ?? 'timer'
+                );
+
                 $otherPlanCandidates = $modePlans
                     ->reject(fn ($candidatePlan) => (int) $candidatePlan->id === (int) $recommendation->plan->id)
                     ->map(function ($candidatePlan) use (
                         $recommendationService,
+                        $executionModes,
+                        $primaryCompatibilityKey,
                         $state,
                         $draft,
                         $actorToken,
                         &$candidateExclusions,
                     ) {
+                        $compatibleTaskIds = $candidatePlan->tasks
+                            ->filter(function (Task $candidateTask) use (
+                                $candidatePlan,
+                                $executionModes,
+                                $primaryCompatibilityKey,
+                            ) {
+                                $action = $executionModes->actionFor($candidatePlan, $candidateTask);
+
+                                return (string) ($action['compatibility_key'] ?? 'timer')
+                                    === $primaryCompatibilityKey;
+                            })
+                            ->pluck('id')
+                            ->map(fn ($id) => (int) $id)
+                            ->values()
+                            ->all();
+
+                        if ($compatibleTaskIds === []) {
+                            return null;
+                        }
+
                         $candidate = $recommendationService->recommend(
                             collect([$candidatePlan]),
                             $state,
@@ -191,6 +215,7 @@ class NavigationController extends Controller
                             excludedTaskIds: $candidateExclusions,
                             intent: $draft['intent'] ?? null,
                             actorToken: $actorToken,
+                            candidateTaskIds: $compatibleTaskIds,
                         );
 
                         if ($candidate) {
@@ -201,32 +226,12 @@ class NavigationController extends Controller
                     })
                     ->filter()
                     ->sortByDesc(fn ($candidate) => $candidate->priorityScore)
-                    ->take(4)
+                    ->take(3)
                     ->values();
 
                 $recommendations = $recommendations
                     ->concat($otherPlanCandidates)
                     ->values();
-
-                // When there are not enough sibling Plans, fill the rail from the
-                // same mode without duplicating Tasks already shown.
-                while ($recommendations->count() < 4) {
-                    $candidate = $recommendationService->recommend(
-                        $modePlans,
-                        $state,
-                        timeBudgetMinutes: ! empty($draft['minutes']) ? (int) $draft['minutes'] : null,
-                        excludedTaskIds: $candidateExclusions,
-                        intent: $draft['intent'] ?? null,
-                        actorToken: $actorToken,
-                    );
-
-                    if (! $candidate) {
-                        break;
-                    }
-
-                    $recommendations->push($candidate);
-                    $candidateExclusions[] = (int) $candidate->task->id;
-                }
 
                 $logger->recordOnce(
                     $actorToken,
@@ -261,8 +266,6 @@ class NavigationController extends Controller
                 : null,
             'state' => $state,
             'draft' => $draft,
-            'intentOptions' => $flowService->intentOptions($state),
-            'timeOptions' => $flowService->timeOptions($state),
             'recommendation' => $recommendation,
             'recommendations' => $recommendations,
             'recommendationAction' => $recommendationAction,
