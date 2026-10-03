@@ -251,7 +251,7 @@ class ExecutionWorkspaceModesV512Test extends TestCase
 
         $this->assertStringContainsString('data-execution-mode-picker', $view);
         $this->assertStringContainsString('data-execution-mode-switcher', $view);
-        $this->assertStringContainsString('$modePlans as $plan', $view);
+        $this->assertStringContainsString('$modePlans as $modePlan', $view);
         $this->assertStringContainsString('data-execution-handoff', $view);
         $this->assertStringContainsString('data-execution-recommendation-rail', $view);
         $this->assertStringContainsString('data-execution-primary-timer', $view);

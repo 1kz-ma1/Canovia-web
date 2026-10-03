@@ -30,13 +30,6 @@
 進もう ✦</span>
                 <img src="/brand/mascot-guide.webp" alt="">
             </div>
-            @if ($selectedExecutionMode && ($draft['step'] ?? 'recommendation') !== 'recommendation')
-                <form method="POST" action="{{ route('navigation.reset') }}" class="relative z-20 shrink-0">
-                    @csrf
-                    <input type="hidden" name="mode" value="{{ $selectedExecutionMode }}">
-                    <button class="pk-v18-action-chip">戻す</button>
-                </form>
-            @endif
         </header>
 
         <section class="pk-offline-resume-card hidden" data-offline-timer-card aria-live="polite">
@@ -132,62 +125,16 @@
         @endif
 
         <main class="assistant-chat-shell pk-v18-guidance-shell">
-            @if (($draft['step'] ?? 'recommendation') === 'intent')
-                <div class="assistant-message-row assistant-message-left">
-                    <div class="assistant-avatar pk-assistant-avatar"><img src="/brand/logo-mark.svg" alt="" width="26" height="26"></div>
-                    <div class="assistant-bubble assistant-bubble-support assistant-wide-bubble">
-                        <p class="text-sm font-semibold text-sky-300">条件を変える</p>
-                        <h2 class="mt-2 text-xl font-bold text-slate-100">今日はどう進めたい？</h2>
-                        <p class="mt-2 text-sm text-slate-400">必要なときだけ条件を指定してください。</p>
-                        <div class="chat-action-grid mt-5">
-                            @foreach ($intentOptions as $value => $label)
-                                <form method="POST" action="{{ route('navigation.intent') }}">
-                                    @csrf
-                                    <input type="hidden" name="intent" value="{{ $value }}">
-                                    <button class="chat-action-card w-full text-left"><span class="font-bold text-slate-100">{{ $label }}</span></button>
-                                </form>
-                            @endforeach
-                        </div>
-                    </div>
-                </div>
-            @elseif (($draft['step'] ?? null) === 'time')
-                <div class="assistant-message-row assistant-message-left">
-                    <div class="assistant-avatar pk-assistant-avatar"><img src="/brand/logo-mark.svg" alt="" width="26" height="26"></div>
-                    <div class="assistant-bubble assistant-bubble-support assistant-wide-bubble">
-                        <h2 class="text-xl font-bold text-slate-100">どれくらい時間がありますか？</h2>
-                        <form method="POST" action="{{ route('navigation.time') }}" class="mt-5 space-y-5">
-                            @csrf
-                            <div class="grid grid-cols-2 gap-3">
-                                @foreach ($timeOptions as $value => $label)
-                                    <label class="chat-choice-card">
-                                        <input type="radio" name="minutes" value="{{ $value }}" required>
-                                        <span class="font-bold text-slate-100">{{ $label }}</span>
-                                    </label>
-                                @endforeach
-                            </div>
-                            @if (($draft['intent'] ?? null) === 'preferred')
-                                <label>
-                                    <span class="form-label">進めたい計画</span>
-                                    <select name="preferred_plan_id" class="form-control" required>
-                                        <option value="">選択</option>
-                                        @foreach ($modePlans as $plan)
-                                            <option value="{{ $plan->id }}">{{ $plan->title }}</option>
-                                        @endforeach
-                                    </select>
-                                </label>
-                            @endif
-                            <button class="btn-primary w-full sm:w-auto">この条件で見る</button>
-                        </form>
-                    </div>
-                </div>
-            @else
                 <div class="assistant-message-row assistant-message-left">
                     <div class="assistant-avatar pk-assistant-avatar"><img src="/brand/logo-mark.svg" alt="" width="26" height="26"></div>
                     <div class="assistant-bubble assistant-bubble-support assistant-wide-bubble">
                         @if ($recommendation)
                             @php
                                 $alternativeRecommendations = collect($recommendations ?? [])
-                                    ->reject(fn ($candidate) => (int) $candidate->task->id === (int) $recommendation->task->id)
+                                    ->reject(fn ($candidate) =>
+                                        (int) $candidate->task->id === (int) $recommendation->task->id
+                                        || (int) $candidate->plan->id === (int) $recommendation->plan->id
+                                    )
                                     ->take(3)
                                     ->values();
                                 $primaryUsesTimer = ($recommendationAction['action_id'] ?? 'timer') === 'timer';
@@ -268,10 +215,9 @@
                                     <div class="execution-recommendation-rail-heading">
                                         <div>
                                             <p class="pk-v18-eyebrow">SAME WORKSPACE</p>
-                                            <h3>同じ実行タイプの候補</h3>
-                                            <p>他PlanのおすすめTaskを優先して並べています。横にスライドして切り替えられます。</p>
+                                            <h3>他Planの同じ実行タイプ</h3>
+                                            <p>同じWorkspaceでそのまま実行できるTaskだけを、Planごとに1件ずつ並べています。</p>
                                         </div>
-                                        <a href="{{ route('navigation.index', ['mode' => $selectedExecutionMode, 'configure' => 1]) }}">条件変更</a>
                                     </div>
 
                                     <div class="candidate-carousel-shell is-open" data-candidate-shell>
@@ -291,9 +237,7 @@
                                                 >
                                                     <div class="flex items-start justify-between gap-3">
                                                         <div class="min-w-0">
-                                                            <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-                                                                {{ (int) $candidate->plan->id === (int) $recommendation->plan->id ? '同じPlan' : '他Plan' }}
-                                                            </p>
+                                                            <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">他Plan</p>
                                                             <h3 class="mt-2 text-base font-bold text-slate-100">{{ $candidate->task->title }}</h3>
                                                             <p class="mt-1 plan-identity-chip truncate text-xs"><span aria-hidden="true">{{ $candidate->plan->displayIcon() }}</span>{{ $candidate->plan->title }}</p>
                                                         </div>
@@ -340,18 +284,16 @@
                             </p>
                         @else
                             <h2 class="text-xl font-bold text-slate-100">{{ $selectedExecutionModeDefinition['label'] ?? '' }}Workspaceで今すぐ始められるTaskが見つかりませんでした</h2>
-                            <p class="mt-2 text-slate-400">このWorkspace内で条件を変えるか、PlanへTaskを追加してください。</p>
-                            <div class="mt-5 grid gap-3 sm:flex sm:flex-wrap">
+                            <p class="mt-2 text-slate-400">Planへ実行可能なTaskを追加するか、上のWorkspaceを切り替えてください。</p>
+                            <div class="mt-5">
                                 <form method="POST" action="{{ route('navigation.reset') }}">
                                     @csrf
                                     <button class="btn-primary w-full sm:w-auto">おすすめを戻す</button>
                                 </form>
-                                <a href="{{ route('navigation.index', ['configure' => 1]) }}" class="btn-secondary w-full sm:w-auto">条件を変える</a>
                             </div>
                         @endif
                     </div>
                 </div>
-            @endif
         </main>
         @endif
     </div>

@@ -1588,3 +1588,16 @@ CoreContextの `task_dependencies` featureは、既にload済みのTask modelを
 V51.9.4後の典型Homeからさらに約3 DB roundtrip削減を狙う。V51.9.2 production baseline 23 queryに対し、同account shapeで約18 queryが目安。
 
 詳細は `docs/V51.9.5_MODEL_REUSE.md` を正とする。
+
+
+## V51.9.6 Real-device UI Refinement
+
+iPhone実機確認を反映し、Execution Candidate RailはPrimary Planの別Taskを含めず、Other Planごとに最大1 Taskを横比較する。固定枚数を埋めるsame-Plan fallbackは廃止する。
+
+候補互換性はExecution Modeだけでなく具体的handoffで判定する。`ExecutionModeService::actionFor()` は `compatibility_key` を返し、Candidate RailはPrimaryと同じkeyのTaskだけを候補にする。StudyではQuestion Practice / Recall / Resource Studyを分離する。資格学習Plan内でも、Task自身に学習実行Signalがない申込・予約等の管理TaskはStudy Workspaceへ送らずTimerへfallbackする。
+
+Primary Execution Surfaceから旧「条件変更」link、Intent選択、Time選択UIを退役する。既存sessionに旧stepが残る場合はrecommendationへ正規化する。旧POST endpointは互換性のため残す。
+
+Mobile Selected ConstellationはTask Group確認を優先し、focus paletteを `clamp(34rem, 70dvh, 41rem)`、graph/task比率を45%/55%へ変更する。Task panelは独立scrollを維持する。
+
+詳細は `docs/V51.9.6_REAL_DEVICE_UI_REFINEMENT.md` を正とする。

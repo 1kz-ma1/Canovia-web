@@ -19,6 +19,12 @@ class BehaviorTrackingTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withoutVite();
+    }
+
     protected function tearDown(): void
     {
         Carbon::setTestNow();
@@ -274,7 +280,7 @@ class BehaviorTrackingTest extends TestCase
             ->withCookie($this->ownerCookie($plan), $plan->owner_token)
             ->get(route('home'))
             ->assertOk()
-            ->assertSee('次の行動を決める');
+            ->assertSee('今やること');
 
         $this->assertDatabaseHas('user_state_snapshots', ['actor_token' => $actorToken]);
     }
@@ -343,11 +349,11 @@ class BehaviorTrackingTest extends TestCase
         $this->withCookie($this->ownerCookie($plan), $plan->owner_token)
             ->get(route('navigation.index'))
             ->assertOk()
-            ->assertSee('今日のおすすめ')
+            ->assertSee('おすすめ')
             ->assertSee($task->title)
             ->assertSee('このまま開始')
-            ->assertSee('別のTaskにする')
-            ->assertDontSee('今日はどうしたい？');
+            ->assertDontSee('条件を変える')
+            ->assertDontSee('今日はどう進めたい？');
 
         $this->assertDatabaseHas('behavior_events', [
             'event_type' => BehaviorEventType::RecommendationShown->value,
@@ -355,7 +361,7 @@ class BehaviorTrackingTest extends TestCase
         ]);
     }
 
-    public function test_navigation_configuration_is_secondary_and_can_be_opened_on_demand(): void
+    public function test_legacy_navigation_configuration_query_no_longer_opens_a_secondary_flow(): void
     {
         $plan = $this->createPlan('Config plan');
         $this->createTask($plan, 'Config task');
@@ -363,8 +369,8 @@ class BehaviorTrackingTest extends TestCase
         $this->withCookie($this->ownerCookie($plan), $plan->owner_token)
             ->get(route('navigation.index', ['configure' => 1]))
             ->assertOk()
-            ->assertSee('条件を変える')
-            ->assertSee('今日はどう進めたい？');
+            ->assertDontSee('条件を変える')
+            ->assertDontSee('今日はどう進めたい？');
     }
 
     private function createPlan(string $title): Plan

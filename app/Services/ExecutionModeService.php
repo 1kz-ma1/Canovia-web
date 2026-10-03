@@ -15,6 +15,7 @@ final class ExecutionModeService
 
     public function __construct(
         private readonly PlanCategoryProfileService $profiles,
+        private readonly StudyActivityPolicyService $studyActivities,
     ) {}
 
     /**
@@ -87,8 +88,18 @@ final class ExecutionModeService
     {
         $mode = $this->modeForPlan($plan);
 
-        return match ($mode) {
-            self::STUDY => [
+        if ($mode === self::STUDY) {
+            if (! $this->studyActivities->supportsTask($task)) {
+                return $this->timerAction($mode);
+            }
+
+            $activityKey = (string) data_get(
+                $this->studyActivities->forPlanTask($plan, $task),
+                'primary.key',
+                StudyActivityPolicyService::QUESTION_PRACTICE,
+            );
+
+            return [
                 'mode' => $mode,
                 'action_id' => 'study_activity',
                 'label' => '学習Workspaceで進める',
@@ -96,7 +107,11 @@ final class ExecutionModeService
                 'route_name' => 'plans.tasks.study_activity.show',
                 'route_parameters' => [$plan->id, $task->id],
                 'supports_timer' => false,
-            ],
+                'compatibility_key' => 'study:'.$activityKey,
+            ];
+        }
+
+        return match ($mode) {
             self::DEVELOPMENT => [
                 'mode' => $mode,
                 'action_id' => 'execution_orchestration',
@@ -105,6 +120,7 @@ final class ExecutionModeService
                 'route_name' => 'plans.tasks.execution_orchestration.show',
                 'route_parameters' => [$plan->id, $task->id],
                 'supports_timer' => false,
+                'compatibility_key' => self::DEVELOPMENT,
             ],
             self::CAREER => [
                 'mode' => $mode,
@@ -114,17 +130,24 @@ final class ExecutionModeService
                 'route_name' => 'plans.career.index',
                 'route_parameters' => [$plan->id],
                 'supports_timer' => false,
+                'compatibility_key' => self::CAREER,
             ],
-            default => [
-                'mode' => self::GENERAL,
-                'action_id' => 'timer',
-                'label' => 'このまま開始',
-                'description' => 'Taskを開始して作業時間を記録します。',
-                'route_name' => null,
-                'route_parameters' => [],
-                'supports_timer' => true,
-            ],
+            default => $this->timerAction(self::GENERAL),
         };
+    }
+
+    private function timerAction(string $mode): array
+    {
+        return [
+            'mode' => $mode,
+            'action_id' => 'timer',
+            'label' => 'このまま開始',
+            'description' => 'Taskを開始して作業時間を記録します。',
+            'route_name' => null,
+            'route_parameters' => [],
+            'supports_timer' => true,
+            'compatibility_key' => 'timer',
+        ];
     }
 
     /**

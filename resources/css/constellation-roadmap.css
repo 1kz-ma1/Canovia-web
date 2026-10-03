@@ -1006,9 +1006,9 @@
         }
 
         .canovia-constellation-focus-palette {
-            height: clamp(30rem, 61dvh, 35rem);
+            height: clamp(34rem, 70dvh, 41rem);
             grid-template-columns: 1fr;
-            grid-template-rows: minmax(16rem, 56%) minmax(0, 44%);
+            grid-template-rows: minmax(14.5rem, 45%) minmax(0, 55%);
         }
 
         .canovia-constellation-focus-graph-shell {
@@ -1027,7 +1027,9 @@
         }
 
         .canovia-constellation-star-panel {
-            padding: 0.72rem;
+            min-height: 0;
+            overscroll-behavior: contain;
+            padding: 0.62rem 0.72rem 0.72rem;
         }
 
         .canovia-constellation-star-panel .canovia-star-task-actions {
@@ -1216,7 +1218,7 @@
         }
 
         .canovia-constellation-star-rail {
-            margin-bottom: 0.48rem;
+            margin-bottom: 0.38rem;
         }
     }
 

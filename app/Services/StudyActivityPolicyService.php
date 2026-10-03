@@ -12,6 +12,62 @@ class StudyActivityPolicyService
     public const RESOURCE_STUDY = 'resource_study';
 
     /**
+     * A qualification Plan can contain administrative Tasks (booking, applying,
+     * publishing, etc.). Those Tasks should stay executable, but they should not
+     * be presented as if AI practice / recall / resource study were a fit.
+     */
+    public function supportsTask(Task $task): bool
+    {
+        $context = mb_strtolower(implode(' ', [
+            (string) $task->title,
+            (string) ($task->description ?? ''),
+            (string) ($task->next_action_note ?? ''),
+        ]));
+
+        return $this->containsAny($context, [
+            '演習',
+            '問題',
+            '過去問',
+            '模試',
+            '模擬試験',
+            '計算',
+            '理解確認',
+            '確認問題',
+            '復習',
+            '誤答',
+            '曖昧',
+            '解く',
+            '採点',
+            '対策',
+            'sql',
+            'ネットワーク',
+            'データベース',
+            '科目a',
+            '科目b',
+            '単語',
+            '語彙',
+            '熟語',
+            '暗記',
+            '記憶',
+            '覚える',
+            'フラッシュカード',
+            'flashcard',
+            'スペル',
+            '参考書',
+            '教科書',
+            '教材',
+            '解説',
+            '動画',
+            '講義',
+            'インプット',
+            '読む',
+            '学習',
+            '勉強',
+            '練習',
+        ]);
+    }
+
+    /**
      * Decide the learning activity from the actual Task, not merely from the
      * fact that the Plan belongs to the qualification-study category.
      *
@@ -38,6 +94,7 @@ class StudyActivityPolicyService
             '問題' => 18,
             '過去問' => 28,
             '模試' => 28,
+            '模擬試験' => 28,
             '計算' => 18,
             '理解確認' => 22,
             '確認問題' => 22,
@@ -80,7 +137,7 @@ class StudyActivityPolicyService
         // A direct practice intent wins over incidental memorization words such
         // as "暗記問題". Conversely, a pure TOEIC vocabulary Task should not
         // be pulled into AI question generation just because the Plan is a test.
-        if ($this->containsAny($context, ['過去問', '模試', '演習問題', '問題演習'])) {
+        if ($this->containsAny($context, ['過去問', '模試', '模擬試験', '演習問題', '問題演習'])) {
             $scores[self::QUESTION_PRACTICE] += 25;
         }
 
