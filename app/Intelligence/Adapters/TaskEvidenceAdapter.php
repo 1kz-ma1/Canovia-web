@@ -60,7 +60,6 @@ final class TaskEvidenceAdapter
                 ),
                 'strengths' => $this->stringList($metadata['strengths'] ?? []),
                 'weaknesses' => $this->stringList($metadata['weaknesses'] ?? []),
-                'next_step' => $this->nullableString($metadata['next_step'] ?? null),
             ],
             'study_recall_reviewed' => [
                 'rating' => $this->nullableString($metadata['rating'] ?? null),
