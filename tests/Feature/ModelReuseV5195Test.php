@@ -162,15 +162,15 @@ class ModelReuseV5195Test extends TestCase
         $continuity = file_get_contents(app_path('Services/ContinuityService.php'));
 
         $this->assertStringContainsString("DB::table('task_dependencies')", $core);
-        $this->assertStringContainsString("$task->setRelation('prerequisite'", $core);
+        $this->assertStringContainsString('$task->setRelation(\'prerequisite\'', $core);
         $this->assertStringContainsString("'prerequisites'", $core);
 
         $this->assertStringContainsString(
-            "$plansById = $plans->keyBy(fn (Plan $plan) => (int) $plan->id)",
+            '$plansById = $plans->keyBy(fn (Plan $plan) => (int) $plan->id)',
             $continuity,
         );
-        $this->assertStringContainsString("$session->setRelation('plan', $plan)", $continuity);
-        $this->assertStringContainsString("$session->setRelation(", $continuity);
+        $this->assertStringContainsString('$session->setRelation(\'plan\', $plan)', $continuity);
+        $this->assertStringContainsString('$session->setRelation(', $continuity);
     }
 
     /**
