@@ -1,3 +1,5 @@
+import { canoviaClientSurface } from './client-runtime.mjs';
+
 const FLOW_KEY = 'canovia.map.telemetry-flow.v1';
 const MAX_FLOW_AGE_MS = 30 * 60 * 1000;
 
@@ -91,9 +93,7 @@ export function clearMapTelemetryFlow(windowRef = globalThis.window) {
 }
 
 export function mapClientSurface(windowRef = globalThis.window) {
-    return windowRef?.matchMedia?.('(display-mode: standalone)').matches || windowRef?.navigator?.standalone === true
-        ? 'pwa'
-        : 'web';
+    return canoviaClientSurface(windowRef);
 }
 
 export function mapClientDevice(windowRef = globalThis.window) {
