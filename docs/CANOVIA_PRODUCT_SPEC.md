@@ -1669,3 +1669,20 @@ file/photo inputはV52.0ではWKWebView標準pickerを維持し、Nativeへ `fil
 Interaction Performance / AI Funnel / Map telemetryのsurface whitelistへ `native` を追加し、Web/PWA/nativeの実測比較を可能にする。
 
 詳細は `docs/V52.0_IOS_READINESS_FOUNDATION.md` を正とする。
+
+
+## V52.1 iOS Shell Prototype
+
+`ios/CanoviaNative` にSwiftUI + WKWebView prototypeを置く。XcodeGenの `project.yml` をproject source of truthとし、generated `.xcodeproj` はcommitしない。
+
+Native shellはproduction Canovia `https://pacekeeper-d3mm.onrender.com` をone persistent WKWebViewで読み込む。`WKWebsiteDataStore.default()` を使用し、Laravel session cookieをNative側へコピーしない。Safari/PWAとのcookie共有は前提にせず、prototype初回はNative app内loginを許容する。
+
+WKWebViewへ `CanoviaNative/iOS/<version>` User-Agent suffixとdocument-start `window.__CANOVIA_NATIVE__` を設定する。V52.0 bridgeの `canovia` handlerへweak proxyで接続する。
+
+iOS edge swipeは `allowsBackForwardNavigationGestures=true` でWeb historyへ直接接続する。external http(s)は `SFSafariViewController`、same-origin target=_blankはWeb側contractによりcurrent WKWebViewへ残す。
+
+prototype deep linkは `canovia://open?path=/roadmap` を使用し、same-origin pathだけをWeb bridgeへ渡す。Universal Links / Associated Domainsは次段階。
+
+HTML file inputはWKWebView標準pickerをsource of truthとし、V52.1ではNative custom camera/file pickerを作らない。
+
+詳細は `docs/V52.1_IOS_SHELL_PROTOTYPE.md` を正とする。
