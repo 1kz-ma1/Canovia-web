@@ -1601,3 +1601,18 @@ Primary Execution Surfaceから旧「条件変更」link、Intent選択、Time�
 Mobile Selected ConstellationはTask Group確認を優先し、focus paletteを `clamp(34rem, 70dvh, 41rem)`、graph/task比率を45%/55%へ変更する。Task panelは独立scrollを維持する。
 
 詳細は `docs/V51.9.6_REAL_DEVICE_UI_REFINEMENT.md` を正とする。
+
+
+## V51.9.7 Action Home Density & Plan Swipe
+
+Action Homeの「確認したい変化」はPrimary Actionより弱いsecondary attention railとして扱う。Mobileでは縦積みをやめhorizontal scroll + snapへ変更し、card widthを `min(84%, 21rem)` とする。色・border・typographyもquiet化する。
+
+Plan update signalにはquick dismiss `×` を追加する。dismissはWorkSession / WorkLog / 実績履歴を削除せず、`needs_plan_update=false` と `metadata.plan_update_dismissed_at` だけを記録する。`plan_updated_at` は変更しない。UIはfetchでcardを即removeし、失敗時だけ通常form submitへfallbackする。
+
+Plan status signalのCTAは `実行を見直す` を廃止し、遅れ気味/期限切れは `次のTaskを見る`、作業時間不足は `優先Taskを見る` とする。
+
+Active WorkSession中のIn Focusはsingle cardではなくhorizontal Plan deckに戻す。先頭にactive session、続けてDashboard Guidanceからactive Planを除外したOther Plan候補を最大4件表示する。他Plan cardはPlan scoped Executionへ遷移する。Active WorkSessionを自動終了・自動切替はしない。
+
+Action Home signal schemaはv2。Plan update signalのみoptional `dismiss_url / dismiss_label` を持つ。
+
+詳細は `docs/V51.9.7_ACTION_HOME_DENSITY.md` を正とする。
