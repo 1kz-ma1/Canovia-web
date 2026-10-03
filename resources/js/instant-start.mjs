@@ -21,9 +21,19 @@ function markCurrentPageAsNetworkSuccess(serviceWorker, registration) {
  * are not changed by PWA support.
  */
 export async function mountInstantStartServiceWorker({ navigatorRef = globalThis.navigator, windowRef = globalThis.window } = {}) {
-    if (isCanoviaNativeRuntime(windowRef)) return null;
-
     const serviceWorker = navigatorRef?.serviceWorker;
+
+    if (isCanoviaNativeRuntime(windowRef)) {
+        try {
+            const registrations = await serviceWorker?.getRegistrations?.();
+            await Promise.all(
+                (registrations || []).map((registration) => registration.unregister?.())
+            );
+        } catch (_) {}
+
+        return null;
+    }
+
     if (!serviceWorker || !windowRef?.isSecureContext) return null;
 
     try {
