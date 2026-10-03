@@ -168,7 +168,7 @@ Optional rewarded ads may later fund extra expensive AI operations, but normal e
 
 ### V53.0 — Intelligence Contract
 
-Status: **IMPLEMENTED — PR PENDING**
+Status: **MERGED**
 
 Purpose:
 
@@ -189,13 +189,35 @@ Permanent spec:
 
 ### V53.1 — State / Evidence Foundation
 
-Planned:
+Status: **IN PROGRESS**
 
-- normalize existing Evidence into Intelligence Evidence
-- introduce durable State snapshot strategy only after adapter needs are understood
-- create stable fingerprints / trace references
-- keep raw provider payloads outside Intelligence records
-- Study first as the validation domain
+Branch:
+
+`feature/v53-1-state-evidence-foundation`
+
+Permanent spec:
+
+`docs/V53.1_STATE_EVIDENCE_FOUNDATION.md`
+
+Implemented so far:
+
+- `TaskEvidenceAdapter`
+- canonical JSON normalization
+- Evidence / State / snapshot fingerprints
+- stable Evidence trace references
+- StudyStateBuilder
+- durable `intelligence_state_snapshots`
+- StateSnapshotStore with idempotent exact-snapshot persistence
+- raw provider/free-form payload exclusion
+- V53.1 contract tests
+
+Important semantics:
+
+- `state_fingerprint` excludes captured time and represents semantic State
+- `state_reference` includes snapshot time and represents one observation
+- same snapshot retry must dedupe
+- same semantic State observed later must create a new snapshot
+- Task progress is not imported as Study State truth
 
 ### V53.2 — Decision & Readiness Engine
 
@@ -327,7 +349,8 @@ V53.0 implementation checkpoint:
 - validation / regression run: complete
 - validation run: GitHub Actions #37144761375
 - temporary validation workflow: removed after success
-- PR: pending creation
+- PR #208: merged
+- merge commit: b2e6ad6f46968cdf5d4b554b42b6b1ce25e2e578
 - database migration: intentionally none
 - user-facing UI change: intentionally none
 
@@ -339,11 +362,13 @@ Validation result:
 - V46.8 GitHub Evidence regression: success
 - V52.0 iOS readiness regression: success
 
-Next implementation after V53.0 merge:
+Current implementation:
 
-- V53.1 State / Evidence Foundation
-- begin with adapters from existing evidence sources rather than introducing duplicate raw evidence storage
-- validate the first durable State strategy against Study before broadening the schema
+- V53.1 State / Evidence Foundation is in progress
+- existing TaskEvidence is normalized rather than duplicated
+- Study is the first concrete StateBuilder
+- durable State storage is now introduced with controlled normalized fields
+- next before V53.1 completion: validation, Product Spec sync, PR
 
 ## Completion / deletion rule
 
