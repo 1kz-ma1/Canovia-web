@@ -160,7 +160,7 @@ final class ActionHomeProjectionService
             });
 
         return [
-            'schema_version' => 1,
+            'schema_version' => 2,
             'signals' => $signals,
             'attention_count' => $attentionPlans->count(),
             'collaboration_count' => $collaborationSignals->count(),
