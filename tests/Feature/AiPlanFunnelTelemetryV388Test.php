@@ -14,6 +14,12 @@ class AiPlanFunnelTelemetryV388Test extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withoutVite();
+    }
+
     public function test_initial_plan_import_failure_is_recorded_without_json_body(): void
     {
         $user = User::factory()->create();
