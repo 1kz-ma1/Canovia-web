@@ -134,6 +134,11 @@ function mountPlanSwipe(page) {
     };
 
     zone.addEventListener('touchstart', (event) => {
+        if ((event.touches?.length ?? 0) !== 1) {
+            reset();
+            return;
+        }
+
         const touch = event.touches?.[0];
         if (!touch) return;
 
@@ -141,6 +146,8 @@ function mountPlanSwipe(page) {
         startX = touch.clientX;
         startY = touch.clientY;
     }, { passive: true });
+
+    zone.addEventListener('touchcancel', reset, { passive: true });
 
     zone.addEventListener('touchend', (event) => {
         if (ignored || startX === null || startY === null) {
