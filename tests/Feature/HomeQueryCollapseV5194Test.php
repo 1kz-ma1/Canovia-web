@@ -136,7 +136,7 @@ class HomeQueryCollapseV5194Test extends TestCase
             $home,
         );
         $this->assertStringContainsString('$tasksAlreadyLoaded', $core);
-        $this->assertStringContainsString("$workLog->setRelation(", $core);
+        $this->assertStringContainsString('$workLog->setRelation(', $core);
     }
 
     /**
@@ -162,10 +162,11 @@ class HomeQueryCollapseV5194Test extends TestCase
                     return false;
                 }
 
-                return preg_match(
-                    '/\\bfrom\\s+["]?'.preg_quote($table, '/').'["]?\\b/i',
-                    $sql,
-                ) === 1;
+                if (! preg_match('/\\bfrom\\s+["]?([a-z0-9_]+)["]?/i', $sql, $matches)) {
+                    return false;
+                }
+
+                return strtolower((string) ($matches[1] ?? '')) === strtolower($table);
             })
             ->count();
     }
