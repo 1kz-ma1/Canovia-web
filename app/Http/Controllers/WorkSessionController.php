@@ -317,6 +317,37 @@ class WorkSessionController extends Controller
             ->with('status', '作業結果の判断は、共通の計画更新フローへ統合されました。');
     }
 
+    public function dismissPlanUpdate(
+        Request $request,
+        WorkSession $workSession,
+        BehaviorIdentityService $identity,
+        PlanOwnershipService $ownership,
+    ) {
+        $this->authorizeSession($request, $workSession, $identity, $ownership);
+
+        if (! in_array($workSession->status, ['completed', 'interrupted'], true)) {
+            abort(409, '終了済みの作業結果だけを確認対象から外せます。');
+        }
+
+        $metadata = is_array($workSession->metadata) ? $workSession->metadata : [];
+        $metadata['plan_update_dismissed_at'] = now()->toIso8601String();
+
+        $workSession->forceFill([
+            'needs_plan_update' => false,
+            'metadata' => $metadata,
+        ])->save();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'work_session_id' => $workSession->id,
+                'history_preserved' => true,
+            ]);
+        }
+
+        return back()->with('status', 'この作業結果を確認対象から外しました。実績は残っています。');
+    }
+
     public function interrupt(
         Request $request,
         WorkSession $workSession,
