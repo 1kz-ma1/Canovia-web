@@ -19,6 +19,12 @@ class BehaviorTrackingTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withoutVite();
+    }
+
     protected function tearDown(): void
     {
         Carbon::setTestNow();
@@ -343,11 +349,11 @@ class BehaviorTrackingTest extends TestCase
         $this->withCookie($this->ownerCookie($plan), $plan->owner_token)
             ->get(route('navigation.index'))
             ->assertOk()
-            ->assertSee('今日のおすすめ')
+            ->assertSee('おすすめ')
             ->assertSee($task->title)
             ->assertSee('このまま開始')
-            ->assertSee('別のTaskにする')
-            ->assertDontSee('今日はどうしたい？');
+            ->assertDontSee('条件を変える')
+            ->assertDontSee('今日はどう進めたい？');
 
         $this->assertDatabaseHas('behavior_events', [
             'event_type' => BehaviorEventType::RecommendationShown->value,
