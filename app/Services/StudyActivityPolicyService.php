@@ -12,6 +12,61 @@ class StudyActivityPolicyService
     public const RESOURCE_STUDY = 'resource_study';
 
     /**
+     * A qualification Plan can contain administrative Tasks (booking, applying,
+     * publishing, etc.). Those Tasks should stay executable, but they should not
+     * be presented as if AI practice / recall / resource study were a fit.
+     */
+    public function supportsTask(Task $task): bool
+    {
+        $context = mb_strtolower(implode(' ', [
+            (string) $task->title,
+            (string) ($task->description ?? ''),
+            (string) ($task->next_action_note ?? ''),
+        ]));
+
+        return $this->containsAny($context, [
+            '演習',
+            '問題',
+            '過去問',
+            '模試',
+            '計算',
+            '理解確認',
+            '確認問題',
+            '復習',
+            '誤答',
+            '曖昧',
+            '解く',
+            '採点',
+            '対策',
+            'sql',
+            'ネットワーク',
+            'データベース',
+            '科目a',
+            '科目b',
+            '単語',
+            '語彙',
+            '熟語',
+            '暗記',
+            '記憶',
+            '覚える',
+            'フラッシュカード',
+            'flashcard',
+            'スペル',
+            '参考書',
+            '教科書',
+            '教材',
+            '解説',
+            '動画',
+            '講義',
+            'インプット',
+            '読む',
+            '学習',
+            '勉強',
+            '練習',
+        ]);
+    }
+
+    /**
      * Decide the learning activity from the actual Task, not merely from the
      * fact that the Plan belongs to the qualification-study category.
      *
