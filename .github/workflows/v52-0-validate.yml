@@ -1,0 +1,59 @@
+name: V52.0 temporary validation
+
+on:
+  push:
+    branches:
+      - feature/v52-0-ios-readiness-foundation
+
+permissions:
+  contents: read
+
+jobs:
+  ios-readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: V52.0 and Web/PWA regressions
+        run: >
+          php artisan test
+          tests/Feature/IosReadinessFoundationV520Test.php
+          tests/Feature/InteractionSmoothnessV5110Test.php
+          tests/Feature/InteractionPerformanceV518Test.php
+          tests/Feature/InstantNavigationV4120Test.php
+          tests/Feature/InstantNavigationFragmentV4121Test.php
+          tests/Feature/WebRealDeviceFinishV5198Test.php
+          tests/Feature/AiPlanFunnelTelemetryV388Test.php
+          tests/Feature/CanoviaMapTelemetryV424Test.php
+          tests/Feature/PerformanceStep2V4119Test.php
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Native runtime JS tests
+        run: >
+          node --test
+          tests/js/client-runtime-v520.test.mjs
+          tests/js/instant-start-v391.test.mjs
+
+      - name: Install frontend dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build frontend
+        run: npm run build
