@@ -120,7 +120,7 @@ class InteractionPerformanceV518Test extends TestCase
     {
         $instant = file_get_contents(resource_path('js/instant-navigation.mjs'));
 
-        $this->assertStringContainsString("fetchPayload(url, 'navigate')", $instant);
+        $this->assertStringContainsString("fetchPayload(target, 'navigate')", $instant);
         $this->assertStringContainsString('requestIdleCallback(run, { timeout: 1200 })', $instant);
         $this->assertStringContainsString('revalidateHandles', $instant);
     }
