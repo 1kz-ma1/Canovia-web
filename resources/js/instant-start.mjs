@@ -1,3 +1,5 @@
+import { isCanoviaNativeRuntime } from './client-runtime.mjs';
+
 const SERVICE_WORKER_URL = '/sw.js';
 
 function postWorkerMessage(worker, message) {
@@ -19,6 +21,8 @@ function markCurrentPageAsNetworkSuccess(serviceWorker, registration) {
  * are not changed by PWA support.
  */
 export async function mountInstantStartServiceWorker({ navigatorRef = globalThis.navigator, windowRef = globalThis.window } = {}) {
+    if (isCanoviaNativeRuntime(windowRef)) return null;
+
     const serviceWorker = navigatorRef?.serviceWorker;
     if (!serviceWorker || !windowRef?.isSecureContext) return null;
 
