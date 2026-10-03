@@ -1633,3 +1633,16 @@ Selected ConstellationのPlan swipeはsingle-touchのみ扱い、multi-touch / t
 長いTask / Next Action textは主要mobile cardで `overflow-wrap:anywhere` + `text-wrap:pretty` により横overflowを防ぐ。
 
 詳細は `docs/V51.9.8_WEB_REAL_DEVICE_FINISH.md` を正とする。
+
+
+## V51.10 Interaction Smoothness
+
+V51.8のiOS PWA実測ではcache hitがHome 92〜108ms、Constellation 73〜92ms、Surface mount 0〜5ms、Long Task 0まで下がっている一方、tap直前のprefetch待ちが約1.6〜2.3秒になるcaseを確認した。V51.10ではDOM mountの再設計ではなくnavigation orchestrationを優先する。
+
+Instant Navigationはhistory entryごとに `canoviaScroll:{x,y}` を保持し、push前に現在scrollをreplaceStateへ保存する。Back/Forwardでは `popstate.state.canoviaScroll` を復元し、core runtime中は `history.scrollRestoration='manual'` とする。
+
+touch intent prefetchは即時 `touchstart` fetchを廃止し、single touchのcore linkだけを対象に90ms静止後prefetchする。12pxを超えるtouchmoveではcancelし、horizontal rail / vertical page scrollの開始で不要network workを発生させにくくする。短いtapはtouchend時にprefetchを開始し、直後のclick navigationが同じinflight requestをreuseする。touch pointeroverはignoreする。
+
+cache / prefetch表示後のnavigate revalidate semanticsは維持するが、`revalidateByKey` により同一URLのpending idle revalidateを1件へcoalesceする。
+
+詳細は `docs/V51.10_INTERACTION_SMOOTHNESS.md` を正とする。
