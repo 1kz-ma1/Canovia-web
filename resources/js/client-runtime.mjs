@@ -196,16 +196,25 @@ export function mountCanoviaNativeBridge({
         if (!link) return;
 
         const external = externalHttpUrl(link.href, windowRef);
-        if (!external) return;
+        if (external) {
+            event.preventDefault();
 
-        event.preventDefault();
+            const handled = postCanoviaNativeMessage('openExternal', {
+                url: external.href,
+            }, windowRef);
 
-        const handled = postCanoviaNativeMessage('openExternal', {
-            url: external.href,
-        }, windowRef);
+            if (!handled) {
+                windowRef.location.assign(external.href);
+            }
+            return;
+        }
 
-        if (!handled) {
-            windowRef.location.assign(external.href);
+        if (link.target === '_blank') {
+            const sameOrigin = safeSameOriginUrl(link.href, windowRef);
+            if (!sameOrigin) return;
+
+            event.preventDefault();
+            openPath(sameOrigin.href);
         }
     };
 
