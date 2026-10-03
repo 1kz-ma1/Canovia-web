@@ -39,8 +39,8 @@ final class ActionHomeProjectionService
             $signals->push([
                 'kind' => 'plan_update',
                 'severity' => 'attention',
-                'eyebrow' => 'UPDATE REQUIRED',
-                'title' => '作業結果を計画へ反映できます',
+                'eyebrow' => 'UPDATE',
+                'title' => '作業結果を反映できます',
                 'body' => ($session->task?->title ?? $plan->title)
                     .' · '.max(1, (int) ceil(((int) ($session->actual_seconds ?? 0)) / 60)).'分の実績',
                 'plan' => $plan,
@@ -51,6 +51,8 @@ final class ActionHomeProjectionService
                     'work_session_id' => $session->id,
                 ]),
                 'action_label' => '計画へ反映',
+                'dismiss_url' => route('work_sessions.dismiss_plan_update', $session),
+                'dismiss_label' => 'この通知を閉じる',
                 'priority' => 0,
             ]);
         }
@@ -81,7 +83,7 @@ final class ActionHomeProjectionService
                 'actor_name' => null,
                 'occurred_at' => null,
                 'action_url' => route('navigation.index', ['plan_id' => $plan->id]),
-                'action_label' => '実行を見直す',
+                'action_label' => $status === '作業時間不足' ? '優先Taskを見る' : '次のTaskを見る',
                 'priority' => 1,
             ]);
         }
@@ -158,7 +160,7 @@ final class ActionHomeProjectionService
             });
 
         return [
-            'schema_version' => 1,
+            'schema_version' => 2,
             'signals' => $signals,
             'attention_count' => $attentionPlans->count(),
             'collaboration_count' => $collaborationSignals->count(),

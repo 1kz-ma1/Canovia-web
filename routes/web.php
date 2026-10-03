@@ -208,6 +208,7 @@ Route::post('/work-sessions/{workSession}/resume', [WorkSessionController::class
 Route::post('/work-sessions/{workSession}/complete', [WorkSessionController::class, 'complete'])->name('work_sessions.complete');
 Route::get('/work-sessions/{workSession}/review', [WorkSessionController::class, 'review'])->name('work_sessions.review');
 Route::post('/work-sessions/{workSession}/review', [WorkSessionController::class, 'storeReview'])->name('work_sessions.review.store');
+Route::post('/work-sessions/{workSession}/dismiss-plan-update', [WorkSessionController::class, 'dismissPlanUpdate'])->name('work_sessions.dismiss_plan_update');
 Route::post('/work-sessions/{workSession}/interrupt', [WorkSessionController::class, 'interrupt'])->name('work_sessions.interrupt');
 
 // ダッシュボード共通のAI JSON入力

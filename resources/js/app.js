@@ -2635,7 +2635,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dashboard = document.getElementById('behaviorDashboard');
     if (dashboard) {
         const hero = dashboard.querySelector('.pk-v22-hero-stage');
-        const active = dashboard.querySelector('.pk-v18-active-session');
+        const active = dashboard.querySelector('[data-action-home-focus-deck], .pk-v18-active-session');
         const recommendation = dashboard.querySelector('.pk-v18-recommendation');
         let anchor = hero;
         if (anchor && active) {
@@ -3288,7 +3288,7 @@ function initializeInstantDashboardPage() {
     root.dataset.canoviaInstantInitialized = '1';
 
     const hero = root.querySelector('.pk-v22-hero-stage');
-    const active = root.querySelector('.pk-v18-active-session');
+    const active = root.querySelector('[data-action-home-focus-deck], .pk-v18-active-session');
     const recommendation = root.querySelector('.pk-v18-recommendation');
     let anchor = hero;
     if (anchor && active) {
@@ -3368,6 +3368,42 @@ function initializeInstantDashboardPage() {
     });
     root.querySelectorAll('[data-work-start-form]').forEach((form) => {
         form.addEventListener('submit', () => { workStarted = true; });
+    });
+
+    root.querySelectorAll('[data-action-home-dismiss-form]').forEach((form) => {
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const button = form.querySelector('button[type="submit"]');
+            if (button) button.disabled = true;
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+                    },
+                    credentials: 'same-origin',
+                    body: new FormData(form),
+                });
+
+                if (!response.ok) throw new Error('action-home-dismiss-failed');
+
+                const card = form.closest('[data-action-home-signal-card]');
+                const section = form.closest('[data-action-home-signals]');
+                card?.remove();
+
+                const remaining = section?.querySelectorAll('[data-action-home-signal-card]').length ?? 0;
+                const count = section?.querySelector('[data-action-home-signal-count]');
+                if (count) count.textContent = `${remaining}件`;
+                if (section && remaining === 0) section.remove();
+            } catch (_) {
+                // Preserve a no-JS / network fallback. The server action is
+                // idempotent and keeps the WorkLog/history intact.
+                form.submit();
+            }
+        });
     });
 
     const idleInterval = window.setInterval(() => {
