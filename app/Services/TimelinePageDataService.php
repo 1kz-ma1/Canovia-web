@@ -19,6 +19,7 @@ final class TimelinePageDataService
         $plans = $this->core->plans($request, [
             'tasks',
             'work_logs',
+            'availability',
         ]);
 
         if ($plans->contains(fn (Plan $plan) => (bool) $plan->is_collaborative)) {

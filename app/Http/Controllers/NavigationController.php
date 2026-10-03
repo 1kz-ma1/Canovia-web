@@ -39,6 +39,8 @@ class NavigationController extends Controller
                 ->orderBy('sort_order')
                 ->orderBy('id'),
             'workLogs' => fn ($query) => $query->latest('worked_on')->latest('id'),
+            'availabilityRules',
+            'availabilityOverrides',
         ]);
         $plans = $plans->filter(fn ($plan) => $ownership->canEdit($request, $plan))->values();
         $availableExecutionModes = $executionModes->availableModes($plans);
