@@ -1,0 +1,52 @@
+name: V53.1 Validate
+
+on:
+  push:
+    branches:
+      - feature/v53-1-state-evidence-foundation
+
+jobs:
+  state-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Lint Intelligence PHP
+        run: find app/Intelligence app/Models/IntelligenceStateSnapshot.php database/migrations/2026_10_04_000100_create_intelligence_state_snapshots_table.php -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: V53.0 contract regression
+        run: php artisan test tests/Unit/IntelligenceContractV530Test.php
+
+      - name: V53.1 state evidence test
+        run: php artisan test tests/Feature/IntelligenceStateEvidenceV531Test.php
+
+      - name: Execution Evidence regression
+        run: php artisan test tests/Feature/ExecutionEvidenceFoundationV410Test.php
+
+      - name: Study Practice regression
+        run: php artisan test tests/Feature/StudyPracticeLearningLoopV393Test.php
+
+      - name: GitHub Evidence regression
+        run: php artisan test tests/Feature/GitHubEvidenceDecisionV468Test.php
