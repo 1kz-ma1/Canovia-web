@@ -2,7 +2,6 @@ import Combine
 import Foundation
 import WebKit
 
-@MainActor
 final class CanoviaWebViewModel: NSObject, ObservableObject {
     @Published private(set) var bridgeReady = false
     @Published private(set) var canGoBack = false
@@ -170,15 +169,12 @@ final class CanoviaWebViewModel: NSObject, ObservableObject {
 }
 
 extension CanoviaWebViewModel: WKScriptMessageHandler {
-    nonisolated func userContentController(
+    func userContentController(
         _ userContentController: WKUserContentController,
         didReceive message: WKScriptMessage
     ) {
         guard message.name == "canovia" else { return }
-
-        Task { @MainActor [weak self] in
-            self?.handleBridgeMessage(message.body)
-        }
+        handleBridgeMessage(message.body)
     }
 }
 
