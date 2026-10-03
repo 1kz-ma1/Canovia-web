@@ -30,13 +30,6 @@
 進もう ✦</span>
                 <img src="/brand/mascot-guide.webp" alt="">
             </div>
-            @if ($selectedExecutionMode && ($draft['step'] ?? 'recommendation') !== 'recommendation')
-                <form method="POST" action="{{ route('navigation.reset') }}" class="relative z-20 shrink-0">
-                    @csrf
-                    <input type="hidden" name="mode" value="{{ $selectedExecutionMode }}">
-                    <button class="pk-v18-action-chip">戻す</button>
-                </form>
-            @endif
         </header>
 
         <section class="pk-offline-resume-card hidden" data-offline-timer-card aria-live="polite">
