@@ -1646,3 +1646,26 @@ touch intent prefetchは即時 `touchstart` fetchを廃止し、single touchのc
 cache / prefetch表示後のnavigate revalidate semanticsは維持するが、`revalidateByKey` により同一URLのpending idle revalidateを1件へcoalesceする。
 
 詳細は `docs/V51.10_INTERACTION_SMOOTHNESS.md` を正とする。
+
+
+## V52.0 iOS Readiness Foundation
+
+Canovia iOSは `SwiftUI shell + WKWebView + existing Laravel/Blade/JS` を採用し、Web appをsource of truthのまま維持する。Native shellはOS境界だけを担当し、認証・Plan/Task state・mutation business logicをNativeへ二重実装しない。
+
+`resources/js/client-runtime.mjs` をruntime source of truthとし、surfaceを `web / pwa / native` に分類する。Nativeはdocument-start `window.__CANOVIA_NATIVE__` injectionをprimary、User-Agent suffix `CanoviaNative/iOS/<version>` をfallbackとして検出する。
+
+WKWebView bridgeは `window.webkit.messageHandlers.canovia`、message schema version 1。Web→Nativeは `ready / navigationState / openExternal / fileInputRequested / requestClose`、Native→Webは `CanoviaNativeBridge.receive()` の `back / openPath / appBecameActive` を正規契約とする。
+
+Nativeのsessionは独自tokenへ移さず、persistent WKWebsiteDataStore上のLaravel session cookie + existing CSRFを維持する。Bridgeへcookie/session/CSRF本文は送らない。
+
+Native runtimeではPWA Service Workerを登録せず、WKWebsiteDataStoreにstale registrationがあればunregisterする。PWAとNativeのcache/navigation ownershipを二重化しない。
+
+cross-origin http/https linkは `openExternal` でNativeへ渡す。same-origin `target=_blank` はcurrent WebView内で開き、新規WKWebViewを要求しない。
+
+Deep LinkはCanovia same-origin pathだけをNativeから `openPath` へ渡す。Core SurfaceはInstant Navigation、non-coreはnormal navigationへfallbackする。
+
+file/photo inputはV52.0ではWKWebView標準pickerを維持し、Nativeへ `fileInputRequested` metadataだけを通知する。
+
+Interaction Performance / AI Funnel / Map telemetryのsurface whitelistへ `native` を追加し、Web/PWA/nativeの実測比較を可能にする。
+
+詳細は `docs/V52.0_IOS_READINESS_FOUNDATION.md` を正とする。
