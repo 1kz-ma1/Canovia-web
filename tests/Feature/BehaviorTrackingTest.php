@@ -280,7 +280,7 @@ class BehaviorTrackingTest extends TestCase
             ->withCookie($this->ownerCookie($plan), $plan->owner_token)
             ->get(route('home'))
             ->assertOk()
-            ->assertSee('次の行動を決める');
+            ->assertSee('今やること');
 
         $this->assertDatabaseHas('user_state_snapshots', ['actor_token' => $actorToken]);
     }
