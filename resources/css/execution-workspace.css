@@ -233,14 +233,6 @@
         line-height: 1.5;
     }
 
-    .execution-recommendation-rail-heading > a {
-        flex: 0 0 auto;
-        color: rgb(125 211 252);
-        font-size: 0.56rem;
-        font-weight: 900;
-        text-decoration: none;
-    }
-
     .execution-recommendation-rail .candidate-carousel-shell {
         display: block;
         margin-top: 0.65rem;
