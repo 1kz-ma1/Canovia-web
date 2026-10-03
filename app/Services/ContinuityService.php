@@ -55,6 +55,25 @@ class ContinuityService
             ->values();
 
         if ($sessionsToHydrate->isNotEmpty()) {
+            $plansById = $plans->keyBy(fn (Plan $plan) => (int) $plan->id);
+
+            foreach ($sessionsToHydrate as $session) {
+                $plan = $plansById->get((int) $session->plan_id);
+
+                if ($plan) {
+                    $session->setRelation('plan', $plan);
+
+                    if ($session->task_id === null) {
+                        $session->setRelation('task', null);
+                    } elseif ($plan->relationLoaded('tasks')) {
+                        $session->setRelation(
+                            'task',
+                            $plan->tasks->firstWhere('id', (int) $session->task_id),
+                        );
+                    }
+                }
+            }
+
             (new EloquentCollection($sessionsToHydrate->all()))
                 ->loadMissing(['plan', 'task']);
         }
