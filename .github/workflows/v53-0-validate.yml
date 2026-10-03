@@ -1,0 +1,37 @@
+name: V53.0 Validate
+
+on:
+  push:
+    branches:
+      - feature/v53-0-intelligence-contract
+
+jobs:
+  intelligence-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Lint Intelligence PHP
+        run: find app/Intelligence -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: V53.0 contract test
+        run: php artisan test tests/Unit/IntelligenceContractV530Test.php
+
+      - name: Entitlement regression
+        run: php artisan test tests/Feature/FeatureAccessV406Test.php
+
+      - name: GitHub Evidence regression
+        run: php artisan test tests/Feature/GitHubEvidenceDecisionV468Test.php
+
+      - name: iOS readiness regression
+        run: php artisan test tests/Feature/IosReadinessFoundationV520Test.php
