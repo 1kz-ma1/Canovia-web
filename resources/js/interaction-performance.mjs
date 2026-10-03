@@ -1,3 +1,5 @@
+import { canoviaClientPlatform, canoviaClientSurface } from './client-runtime.mjs';
+
 const CORE_PERFORMANCE_PATHS = new Set([
     '/',
     '/map',
@@ -10,24 +12,10 @@ const CORE_PERFORMANCE_PATHS = new Set([
 
 const MAX_PERFORMANCE_ENTRIES = 80;
 
-function clientSurface(windowRef) {
-    return windowRef.matchMedia?.('(display-mode: standalone)').matches
-        || windowRef.navigator?.standalone === true
-        ? 'pwa'
-        : 'web';
-}
-
 function clientDevice(windowRef) {
     return /iPhone|iPad|iPod|Android|Mobile/i.test(windowRef.navigator?.userAgent || '')
         ? 'mobile'
         : 'desktop';
-}
-
-function clientPlatform(windowRef) {
-    const userAgent = windowRef.navigator?.userAgent || '';
-    if (/iPhone|iPad|iPod/i.test(userAgent)) return 'ios';
-    if (/Android/i.test(userAgent)) return 'android';
-    return 'other';
 }
 
 function safePath(value, windowRef) {
@@ -192,9 +180,9 @@ export function mountCanoviaInteractionPerformance({
             path: safePath(path, windowRef),
             route: route || documentRef.body?.dataset.routeName || null,
             source,
-            surface: clientSurface(windowRef),
+            surface: canoviaClientSurface(windowRef),
             device: clientDevice(windowRef),
-            platform: clientPlatform(windowRef),
+            platform: canoviaClientPlatform(windowRef),
             metrics,
         });
 
