@@ -355,7 +355,7 @@ class BehaviorTrackingTest extends TestCase
         ]);
     }
 
-    public function test_navigation_configuration_is_secondary_and_can_be_opened_on_demand(): void
+    public function test_legacy_navigation_configuration_query_no_longer_opens_a_secondary_flow(): void
     {
         $plan = $this->createPlan('Config plan');
         $this->createTask($plan, 'Config task');
@@ -363,8 +363,8 @@ class BehaviorTrackingTest extends TestCase
         $this->withCookie($this->ownerCookie($plan), $plan->owner_token)
             ->get(route('navigation.index', ['configure' => 1]))
             ->assertOk()
-            ->assertSee('条件を変える')
-            ->assertSee('今日はどう進めたい？');
+            ->assertDontSee('条件を変える')
+            ->assertDontSee('今日はどう進めたい？');
     }
 
     private function createPlan(string $title): Plan
