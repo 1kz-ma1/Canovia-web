@@ -1,0 +1,29 @@
+name: CanoviaNative
+
+options:
+  bundleIdPrefix: app.canovia
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  CanoviaNative:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Sources
+    settings:
+      base:
+        PRODUCT_NAME: Canovia
+        PRODUCT_BUNDLE_IDENTIFIER: app.canovia.prototype
+        INFOPLIST_FILE: Resources/Info.plist
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+    scheme:
+      gatherCoverageData: false
