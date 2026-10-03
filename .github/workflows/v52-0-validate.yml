@@ -27,6 +27,24 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Native runtime JS tests
+        run: >
+          node --test
+          tests/js/client-runtime-v520.test.mjs
+          tests/js/instant-start-v391.test.mjs
+
       - name: V52.0 and Web/PWA regressions
         run: >
           php artisan test
@@ -39,21 +57,3 @@ jobs:
           tests/Feature/AiPlanFunnelTelemetryV388Test.php
           tests/Feature/CanoviaMapTelemetryV424Test.php
           tests/Feature/PerformanceStep2V4119Test.php
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-
-      - name: Native runtime JS tests
-        run: >
-          node --test
-          tests/js/client-runtime-v520.test.mjs
-          tests/js/instant-start-v391.test.mjs
-
-      - name: Install frontend dependencies
-        run: npm ci --ignore-scripts
-
-      - name: Build frontend
-        run: npm run build
