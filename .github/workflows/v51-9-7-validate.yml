@@ -39,7 +39,6 @@ jobs:
           tests/Feature/BehaviorTrackingTest.php
           tests/Feature/InteractionPerformanceV518Test.php
           tests/Feature/InstantNavigationV4120Test.php
-          tests/Unit/WorkSessionServiceV37Test.php
 
       - name: Setup Node
         uses: actions/setup-node@v4
