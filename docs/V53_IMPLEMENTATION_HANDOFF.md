@@ -364,14 +364,30 @@ Validation result:
 
 Current implementation:
 
-- V53.1 State / Evidence Foundation is in progress
+- V53.1 State / Evidence Foundation is implemented
 - existing TaskEvidence is normalized rather than duplicated
 - Study is the first concrete StateBuilder
-- durable State storage is now introduced with controlled normalized fields
-- validation: complete
-- Product Spec sync: complete
-- temporary validation workflow: removed after success
+- durable State storage is introduced with controlled normalized fields
+- Product Spec and permanent V53.1 spec are synchronized
 - PR: pending creation
+
+V53.1 validation checkpoint:
+
+- GitHub Actions run: #37159953066
+- Intelligence PHP lint: success
+- V53.0 contract regression: success
+- V53.1 State / Evidence tests: success
+- Execution Evidence regression: success
+- Study Practice regression: success
+- GitHub Evidence regression: success
+- temporary validation workflow removed after success
+
+Next after V53.1 merge:
+
+- V53.2 Decision & Readiness Engine
+- consume normalized StateSnapshot, not Task progress, as the primary input
+- keep Study as the first validation domain
+- persist explainable Readiness / Decision trace suitable for later Outcome evaluation
 
 ## Completion / deletion rule
 
