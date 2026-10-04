@@ -64,8 +64,8 @@ class StudyPracticeController extends Controller
 
         $actorToken = $identity->resolve($request);
         $attemptQuery = $this->attemptQuery($request, $plan, $task, $actorToken);
-        $recentAttempts = (clone $attemptQuery)->latest('created_at')->latest('id')->take(8)->get();
-        $studyProgression = $progressionService->resolve($plan, $task, $recentAttempts);
+        $historyLimit = max(4, (int) config('study.exam_convergence.history_attempt_limit', 16));
+        $recentAttempts = (clone $attemptQuery)->latest('created_at')->latest('id')->take($historyLimit)->get();
         $currentAttempt = ! empty($state['attempt_id'])
             ? (clone $attemptQuery)->whereKey((int) $state['attempt_id'])->first()
             : null;
@@ -194,6 +194,12 @@ class StudyPracticeController extends Controller
         $practiceStrategy = $currentPracticeSession
             ? (array) data_get($currentPracticeSession->selection_context, 'strategy', $orchestration['strategy'])
             : $orchestration['strategy'];
+        $studyProgression = $progressionService->resolve(
+            $plan,
+            $task,
+            $recentAttempts->take(8)->values(),
+            (array) ($practiceStrategy['learning_phase'] ?? []),
+        );
         $practiceProvider = $currentPracticeSession
             ? [
                 'provider' => $currentPracticeSession->question_provider,
@@ -282,7 +288,8 @@ class StudyPracticeController extends Controller
 
         $actorToken = $identity->resolve($request);
         $attemptQuery = $this->attemptQuery($request, $plan, $task, $actorToken);
-        $recentAttempts = (clone $attemptQuery)->latest('created_at')->latest('id')->take(5)->get();
+        $historyLimit = max(4, (int) config('study.exam_convergence.history_attempt_limit', 16));
+        $recentAttempts = (clone $attemptQuery)->latest('created_at')->latest('id')->take($historyLimit)->get();
 
         try {
             $practiceSession = $orchestrator->prepare(
