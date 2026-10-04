@@ -132,7 +132,15 @@ class HomeQueryCollapseV5194Test extends TestCase
         $this->assertStringNotContainsString("'memberships', 'activity_logs'", $home);
         $this->assertStringNotContainsString('$collaborationPlans =', $home);
         $this->assertStringContainsString(
-            "return compact('dashboard', 'actionHome');",
+            "'dashboard',",
+            $home,
+        );
+        $this->assertStringContainsString(
+            "'actionHome',",
+            $home,
+        );
+        $this->assertStringContainsString(
+            "'intelligencePresentation',",
             $home,
         );
         $this->assertStringContainsString('$tasksAlreadyLoaded', $core);
