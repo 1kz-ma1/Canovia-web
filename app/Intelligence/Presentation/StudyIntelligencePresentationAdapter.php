@@ -51,6 +51,10 @@ final class StudyIntelligencePresentationAdapter
             requiresTaskProjection: (
                 (string) data_get($action->metadata, 'route_kind')
             ) === 'project_task',
+            workspaceUrl: route('workspace.study.index', [
+                'plan_id' => $plan->id,
+            ]),
+            workspaceLabel: 'Study Workspace',
         );
     }
 
