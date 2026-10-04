@@ -190,7 +190,7 @@ Important semantics:
 
 ### V54.3 — Study Workspace
 
-Status: **IMPLEMENTED — PR #221 OPEN**
+Status: **MERGED — PR #221**
 
 Branch:
 
@@ -227,13 +227,30 @@ Implemented:
 
 ### V54.4 — Development Workspace
 
-Planned:
+Status: **IN PROGRESS**
 
-- Development Home
-- Release Readiness / Biggest Gate / Current Action
-- Quality Gate summary
-- GitHub / Evidence / history navigation
-- GitHub-first empty state
+Branch:
+
+`feature/v54-4-development-workspace`
+
+Permanent spec:
+
+`docs/V54.4_DEVELOPMENT_WORKSPACE.md`
+
+Implementation contract:
+
+- canonical Development Home at `GET /workspace/development`
+- one selected accessible Development Plan evaluated at a time
+- deterministic default Plan selection: priority → deadline → ID
+- optional explicit `plan_id` selection
+- no Development Plan → Plan creation empty state
+- no Release Evidence → GitHub-first empty state
+- Release Readiness / Biggest Release Gap / Current Action
+- seven Quality Gate summary
+- bounded Release Candidate context
+- GitHub / Evidence / History navigation
+- existing V53.7 / V53.8 Development Intelligence remains authoritative
+- no new GitHub fetch or AI traffic on Workspace GET
 
 ### V54.5 — Overview
 
