@@ -139,7 +139,7 @@ Important semantics:
 
 ### V54.2 — Mode Context & Persistence
 
-Status: **IMPLEMENTED — PR PENDING**
+Status: **IMPLEMENTED — PR #220 OPEN**
 
 Branch:
 
@@ -164,6 +164,7 @@ Implemented:
 - V54.2 PHP and JS tests
 - latest implementation validation run: #37184162982
 - V54.1 / V54.0 / V53.9 / Home regressions passed
+- PR #220 created against main as a stacked PR on #219
 
 V54.2 precedence:
 
