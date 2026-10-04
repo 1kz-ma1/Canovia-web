@@ -62,6 +62,10 @@ final class CareerIntelligencePresentationAdapter
             targetTask: null,
             requiresTaskProjection: false,
             qualitativeReadiness: true,
+            workspaceUrl: route('workspace.career.index', [
+                'plan_id' => $plan->id,
+            ]),
+            workspaceLabel: 'Career Workspace',
         );
     }
 
