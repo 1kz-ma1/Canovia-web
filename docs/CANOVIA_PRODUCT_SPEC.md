@@ -4054,3 +4054,143 @@ Task Contextを保ったまま、<mode>の実行フローで進めます。
 - provider trafficなし
 
 詳細は `docs/V55.5_EXECUTION_MODE_TERMINOLOGY.md` を正とする。
+
+
+## V55.6 Execution Ecosystem Foundation
+
+V55.6は、Canoviaを「すべての実行手段を内蔵するサービス」ではなく、目標・計画・実行手段・結果を接続するオーケストレーションレイヤーへ拡張するための内部Foundationである。
+
+Canonical flow:
+
+```text
+Workspace / Intelligence
+→ Current Action / Task
+→ Execution Mode
+→ Execution Capability
+→ Execution Resolver
+→ Execution Provider
+→ Operation Surface
+→ ExecutionActivity
+→ TaskEvidence
+→ Existing Intelligence / Replan
+```
+
+### Execution Capability
+
+初期Capability:
+
+- `study.practice`
+- `study.recall`
+- `study.resource`
+- `coding.repository`
+- `general.task`
+
+Studyは既存 `StudyActivityPolicyService` をauthorityとしてCapabilityへ変換する。
+
+Development profileは `coding.repository`、その他は現時点では `general.task` へ解決する。
+
+AIによるCapability判定は行わない。
+
+### Execution Provider
+
+`ExecutionProviderCatalog` interfaceの背後にcode-defined `ExecutionProviderRegistry` を置く。
+
+初期Provider:
+
+- `canovia.study.practice` / native
+- `canovia.study.recall` / native
+- `canovia.study.resource` / native
+- `canovia.development` / native
+- `github` / external
+- `canovia.general` / native
+
+External ProviderがCatalogへ存在するだけでは自動選択しない。
+
+### Provider resolution
+
+`ExecutionResolver` のV55.6順序:
+
+```text
+1. valid Plan preference
+2. enabled Native provider
+3. current execution fallback
+```
+
+Recommendation、Sponsored、Monetization、AI scoreはResolverへ入れない。
+
+### PlanExecutionPreference
+
+`plan_execution_preferences` を追加する。
+
+```text
+plan_id
+capability
+provider_key
+user_selected
+```
+
+`plan_id + capability` は一意。
+
+V55.6ではPlan scopeのみ。Task override / User defaultは将来拡張とする。
+
+### ExecutionActivity
+
+外部ProviderがCanovia内部のPlan / Task構造を理解しなくても活動結果を返せるよう、Task未紐付けを許す `execution_activities` を追加する。
+
+```text
+Provider
+→ ExecutionActivity
+→ Canovia linking
+→ TaskEvidence
+```
+
+`ExecutionActivity != TaskEvidence` を設計原則とする。
+
+Activityは「Providerが報告した事実」、TaskEvidenceは「Canovia Taskへ紐付いた観測事実」を表す。
+
+`provider_key + external_key` でidempotentに受信できる。
+
+### Activity → Evidence
+
+`ExecutionActivityProjector` interfaceを追加し、V55.6では `TaskEvidenceExecutionActivityProjector` が既存 `TaskEvidenceService` へ投影する。
+
+generic Evidence type:
+
+```text
+execution_activity_observed
+```
+
+External Providerは `EvidenceSource::External`、Native Providerは `EvidenceSource::Native`。
+
+Provider trace用のActivity metadataはTaskEvidenceへ自動コピーしない。
+
+Activity受信・完了だけではTask progress / statusを変更しない。
+
+### UX boundary
+
+V55.6ではvisible UIを変更しない。
+
+変更しない:
+
+- Plan creation redirect
+- Study / Development / Career Workspace onboarding
+- `/navigate`
+- Current Action CTA
+- specialized route
+- Timer fallback
+
+将来のExecution Setupは、実際に複数Provider候補が存在する場合だけPlanning / Workspace側で提示し、通常実行は一つのStart actionを維持する。
+
+### Runtime / cost
+
+V55.6は:
+
+- AI traffic追加なし
+- external provider request追加なし
+- GitHub request追加なし
+- GET page query追加なし
+- automatic progress mutationなし
+
+詳細は `docs/V55.6_EXECUTION_ECOSYSTEM_FOUNDATION.md` を正とする。
+
+Execution Ecosystem全体の将来構想・Marketplace / Developer Portal / Monetization等の原案は `docs/EXECUTION_ECOSYSTEM_DRAFT.md` に一時資料として保持する。

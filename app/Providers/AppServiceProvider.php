@@ -6,9 +6,13 @@ use App\Services\Entitlements\FreeEntitlementResolver;
 use App\Services\Entitlements\GiftProductGrantEntitlementResolver;
 use App\Services\Entitlements\ProductGrantEntitlementResolver;
 use App\Services\Entitlements\SponsorProductGrantEntitlementResolver;
+use App\Contracts\ExecutionActivityProjector;
+use App\Contracts\ExecutionProviderCatalog;
 use App\Services\AdminAccessService;
 use App\Services\AdminPreviewContext;
 use App\Services\FeatureAccessService;
+use App\Services\ExecutionProviderRegistry;
+use App\Services\TaskEvidenceExecutionActivityProjector;
 use App\Services\CoreContextService;
 use App\Services\PlanOwnershipService;
 use App\Services\RequestBehaviorHistory;
@@ -28,6 +32,15 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(RequestBehaviorHistory::class);
         $this->app->scoped(PlanOwnershipService::class);
         $this->app->scoped(CoreContextService::class);
+        $this->app->singleton(ExecutionProviderRegistry::class);
+        $this->app->singleton(
+            ExecutionProviderCatalog::class,
+            fn ($app) => $app->make(ExecutionProviderRegistry::class),
+        );
+        $this->app->singleton(
+            ExecutionActivityProjector::class,
+            fn ($app) => $app->make(TaskEvidenceExecutionActivityProjector::class),
+        );
         $this->app->tag(
             [
                 SponsorProductGrantEntitlementResolver::class,
