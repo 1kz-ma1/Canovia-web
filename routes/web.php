@@ -63,10 +63,12 @@ use App\Http\Controllers\ExecutionDistributionController;
 use App\Http\Controllers\CompanionController;
 use App\Http\Controllers\CoreFragmentBundleController;
 use App\Http\Controllers\ClientPerformanceController;
+use App\Http\Controllers\WorkspaceModeController;
 
 Route::get('/welcome', [FirstRunController::class, 'show'])->name('first_run.show');
 Route::post('/welcome/start', [FirstRunController::class, 'start'])->name('first_run.start');
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/workspace/{workspaceMode}', [WorkspaceModeController::class, 'enter'])->name('workspace_modes.enter');
 Route::get('/map', [CanoviaMapController::class, 'index'])->name('map.index');
 Route::post('/map/personalization/pins/{plan}', [MapPersonalizationController::class, 'store'])
     ->middleware('auth')
