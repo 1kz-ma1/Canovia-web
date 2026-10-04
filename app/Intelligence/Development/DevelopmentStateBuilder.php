@@ -276,9 +276,14 @@ final class DevelopmentStateBuilder implements StateBuilder
                     $facts['pull_request_number'] = $item->facts['pull_request_number'] ?? null;
                     $facts['pull_request_state'] = $item->facts['pull_request_state'] ?? null;
                     $facts['pull_request_draft'] = (bool) ($item->facts['draft'] ?? false);
-                    $observeImplementationSha(
-                        $item->facts['head_sha'] ?? null,
-                    );
+                    if (
+                        ! (bool) ($item->facts['merged'] ?? false)
+                        || $currentImplementationSha === null
+                    ) {
+                        $observeImplementationSha(
+                            $item->facts['head_sha'] ?? null,
+                        );
+                    }
                     $facts['branch'] = $item->facts['head_ref'] ?? $facts['branch'];
 
                     $gates['implementation'] = $this->gate(
