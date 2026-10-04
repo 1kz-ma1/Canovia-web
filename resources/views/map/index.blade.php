@@ -1,6 +1,6 @@
 @extends(($instantFragment ?? false) || in_array(request()->header('X-Canovia-Instant-Navigation'), ['prefetch', 'navigate'], true) ? 'layouts.instant' : 'layouts.app')
 
-@section('title', 'Canovia Map | Canovia')
+@section('title', 'Canovia Explore | Canovia')
 
 @section('content')
     @php
@@ -28,11 +28,11 @@
         $primaryLaunch = $graph['primary_launch'] ?? null;
         $hierarchy = is_array($graph['hierarchy'] ?? null) ? $graph['hierarchy'] : [];
         $mapReturnUrl = request()->getRequestUri();
-        $currentContextLabel = (string) ($hierarchy['current_label'] ?? ($isIntentHub ? 'Canovia Map' : 'Canovia Map'));
+        $currentContextLabel = (string) ($hierarchy['current_label'] ?? ($isIntentHub ? 'Canovia Explore' : 'Canovia Explore'));
         $surfaceContext = is_array($mapSurfaceContext ?? null) ? $mapSurfaceContext : [];
         $complexitySnapshot = is_array($mapComplexitySnapshot ?? null) ? $mapComplexitySnapshot : [];
         $heroKicker = match (true) {
-            $mapLevel === 'l0' => 'L0 · CANOVIA NAVIGATION',
+            $mapLevel === 'l0' => 'L0 · CANOVIA EXPLORE',
             $mapLevel === 'l1' && $isCollaborationMode => 'L1 · SHARED PROJECTS',
             $mapLevel === 'l2' && $isCollaborationMode => 'L2 · PROJECT WORKSPACE',
             $mapLevel === 'l1' && data_get($hierarchy, 'intent') === 'plan' => 'L1 · PLANS',

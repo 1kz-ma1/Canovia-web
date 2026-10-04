@@ -1,28 +1,31 @@
 @php
-    $homeSurface = $activeSurface ?? (request()->routeIs('map.*') ? 'map' : 'classic');
+    $canoviaSurface = $activeSurface ?? (request()->routeIs('map.*') ? 'explore' : 'home');
+    if ($canoviaSurface === 'classic') $canoviaSurface = 'home';
+    if ($canoviaSurface === 'map') $canoviaSurface = 'explore';
 @endphp
 
-<nav class="canovia-home-surface-switcher" aria-label="ホーム表示" data-home-surface-switcher>
-    <span class="canovia-home-surface-label">HOME SURFACE</span>
+<nav class="canovia-home-surface-switcher" aria-label="Canovia Surface" data-canovia-surface-nav>
+    <span class="canovia-home-surface-label">SURFACES</span>
     <div class="canovia-home-surface-options">
         <a
             href="{{ route('home') }}"
-            class="canovia-home-surface-option {{ $homeSurface === 'classic' ? 'is-active' : '' }}"
-            data-home-surface="classic"
+            class="canovia-home-surface-option {{ $canoviaSurface === 'home' ? 'is-active' : '' }}"
+            data-canovia-surface="home"
             data-route-lock-skip
-            aria-label="Classic Home"
-            @if ($homeSurface === 'classic') aria-current="page" @endif
-            @if ($homeSurface === 'map') data-map-home-fallback @endif
-        >Classic</a>
+            aria-label="Action Home"
+            @if ($canoviaSurface === 'home') aria-current="page" @endif
+            @if ($canoviaSurface === 'explore') data-map-home-fallback @endif
+        >Home</a>
         <a
             href="{{ route('map.index') }}"
-            class="canovia-home-surface-option {{ $homeSurface === 'map' ? 'is-active' : '' }}"
-            data-home-surface="map"
+            class="canovia-home-surface-option {{ $canoviaSurface === 'explore' ? 'is-active' : '' }}"
+            data-canovia-surface="explore"
             data-route-lock-skip
-            @if ($homeSurface === 'map') aria-current="page" @endif
+            aria-label="Canovia Explore"
+            @if ($canoviaSurface === 'explore') aria-current="page" @endif
         >
-            <span>Map</span>
-            <span class="canovia-home-surface-beta">BETA</span>
+            <span>Explore</span>
+            <span class="canovia-home-surface-beta">MAP</span>
         </a>
     </div>
 </nav>

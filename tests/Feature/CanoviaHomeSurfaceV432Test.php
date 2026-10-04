@@ -24,16 +24,20 @@ class CanoviaHomeSurfaceV432Test extends TestCase
         ]);
     }
 
-    public function test_legacy_home_surface_switcher_remains_but_primary_home_navigation_is_classic(): void
+    public function test_home_and_explore_are_distinct_surfaces_without_map_becoming_primary_navigation(): void
     {
         [$user] = $this->scenario();
 
         $home = $this->actingAs($user)->get(route('home'));
         $home->assertOk()
-            ->assertSee('data-home-surface-switcher', false)
-            ->assertSee('data-home-surface="classic"', false)
-            ->assertSee('data-home-surface="map"', false)
-            ->assertSee('aria-label="Classic Home"', false)
+            ->assertSee('data-canovia-surface-nav', false)
+            ->assertSee('SURFACES')
+            ->assertSee('>Home<', false)
+            ->assertSee('>Explore<', false)
+            ->assertDontSee('HOME SURFACE')
+            ->assertSee('data-canovia-surface="home"', false)
+            ->assertSee('data-canovia-surface="explore"', false)
+            ->assertSee('aria-label="Action Home"', false)
             ->assertSee('data-canovia-nav-key="desktop-home"', false)
             ->assertSee('href="'.route('home').'"', false)
             ->assertSee('data-canovia-nav-key="desktop-constellation"', false)
@@ -44,9 +48,9 @@ class CanoviaHomeSurfaceV432Test extends TestCase
 
         $map = $this->actingAs($user)->get(route('map.index'));
         $map->assertOk()
-            ->assertSee('data-home-surface-switcher', false)
+            ->assertSee('data-canovia-surface-nav', false)
             ->assertSee('data-map-home-fallback', false)
-            ->assertSee('data-home-surface="map"', false)
+            ->assertSee('data-canovia-surface="explore"', false)
             ->assertSee('data-canovia-nav-key="desktop-home"', false)
             ->assertSee('data-canovia-nav-key="desktop-constellation"', false)
             ->assertSee('data-canovia-nav-key="desktop-execution"', false)
@@ -54,7 +58,7 @@ class CanoviaHomeSurfaceV432Test extends TestCase
             ->assertDontSee('data-canovia-nav-key="mobile-map"', false);
     }
 
-    public function test_legacy_map_instant_fragment_is_no_longer_marked_as_primary_home(): void
+    public function test_explore_instant_fragment_is_not_marked_as_primary_home(): void
     {
         [$user] = $this->scenario();
 
@@ -64,7 +68,7 @@ class CanoviaHomeSurfaceV432Test extends TestCase
 
         $response->assertOk()
             ->assertSee('id="canovia-instant-meta"', false)
-            ->assertSee('"mobileSection":"Context Map"', false)
+            ->assertSee('"mobileSection":"Explore"', false)
             ->assertSee('"desktop-home"', false)
             ->assertSee('"desktop-constellation"', false)
             ->assertSee('"desktop-execution"', false)
@@ -104,8 +108,8 @@ class CanoviaHomeSurfaceV432Test extends TestCase
             'user_id' => $user->id,
             'owner_token' => Str::random(64),
             'public_slug' => (string) Str::uuid(),
-            'title' => 'Home Surfaceを整理する',
-            'description' => 'ClassicとMapを同じHome領域として扱う',
+            'title' => 'Explore Surfaceを整理する',
+            'description' => 'HomeとExploreの責務を分ける',
             'category' => '個人開発',
             'priority' => 1,
             'priority_mode' => 'manual',

@@ -18,7 +18,7 @@
     };
 
     $mobileSection = match ($surface) {
-        'map' => 'Context Map',
+        'map' => 'Explore',
         'inbox' => 'Inbox',
         'roadmap' => '星座',
         'timeline' => 'タイムライン',
