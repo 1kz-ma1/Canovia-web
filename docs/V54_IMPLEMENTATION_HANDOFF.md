@@ -190,7 +190,7 @@ Important semantics:
 
 ### V54.3 — Study Workspace
 
-Status: **IMPLEMENTED — PR PENDING**
+Status: **IMPLEMENTED — PR #221 OPEN**
 
 Branch:
 
@@ -223,6 +223,7 @@ Implemented:
 - no new AI traffic
 - final validation run: #37186624276
 - V54.2 / V54.1 / V54.0 / V53.9 / V53.6 / V53.5 / Home regressions passed
+- PR #221 created against main
 
 ### V54.4 — Development Workspace
 
