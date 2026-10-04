@@ -174,7 +174,7 @@ class IntelligenceContractV530Test extends TestCase
     public function test_initial_domains_are_explicit_without_domain_logic_in_the_core_contract(): void
     {
         $this->assertSame(
-            ['general', 'study', 'development'],
+            ['general', 'study', 'development', 'career'],
             array_map(
                 fn (IntelligenceDomain $domain) => $domain->value,
                 IntelligenceDomain::cases(),
