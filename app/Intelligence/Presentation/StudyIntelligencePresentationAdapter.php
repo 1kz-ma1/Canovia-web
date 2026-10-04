@@ -34,6 +34,7 @@ final class StudyIntelligencePresentationAdapter
             action: $action,
             eyebrow: 'STUDY INTELLIGENCE',
             headline: '試験に向けた現在地',
+            sourceNote: 'Task進捗ではなく、確定した試験範囲とPractice / Recall Evidenceから判断しています。',
             readinessLabel: 'Exam Readiness',
             stateLabel: $this->stateLabel($readiness->level->value),
             gapLabel: $this->gapLabel($result->decision->reasonCode),
