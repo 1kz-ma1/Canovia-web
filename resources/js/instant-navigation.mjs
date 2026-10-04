@@ -120,10 +120,66 @@ function payloadFromDocument(documentRef, url) {
         mobileSection: fragmentMeta?.mobileSection
             || documentRef.querySelector('[data-mobile-section-label]')?.textContent
             || '',
+        workspaceMode: fragmentMeta?.workspaceMode || {
+            key: page.dataset.workspaceMode || 'overview',
+            label: page.dataset.workspaceModeLabel || 'Overview',
+            source: 'page',
+        },
         nav,
         feedbackContext: fragmentMeta?.feedbackContext || feedbackContextFrom(documentRef),
         capturedAt: Date.now(),
     };
+}
+
+function syncWorkspaceModeContext(documentRef, context) {
+    if (!context || typeof context !== 'object') return;
+
+    const key = String(context.key || '').trim();
+    const label = String(context.label || '').trim();
+
+    if (!key) return;
+
+    if (documentRef.body) {
+        documentRef.body.dataset.workspaceMode = key;
+    }
+
+    const page = documentRef.querySelector('[data-canovia-page]');
+    if (page) {
+        page.dataset.workspaceMode = key;
+        if (label) page.dataset.workspaceModeLabel = label;
+    }
+
+    documentRef.querySelectorAll('[data-workspace-mode-bar]').forEach((bar) => {
+        bar.dataset.currentWorkspaceMode = key;
+        if (context.source) bar.dataset.workspaceModeSource = String(context.source);
+
+        const labelElement = bar.querySelector('[data-workspace-mode-label]');
+        if (labelElement && label) labelElement.textContent = label;
+
+        bar.querySelectorAll('[data-workspace-mode-current-icon]').forEach((icon) => {
+            icon.classList.toggle(
+                'hidden',
+                icon.dataset.workspaceModeCurrentIcon !== key,
+            );
+        });
+
+        bar.querySelectorAll('[data-workspace-mode-option]').forEach((option) => {
+            const active = option.dataset.workspaceModeOption === key;
+            option.classList.toggle('is-active', active);
+            if (active) option.setAttribute('aria-current', 'true');
+            else option.removeAttribute('aria-current');
+        });
+
+        bar.querySelectorAll('[data-workspace-mode-current-mark]').forEach((mark) => {
+            mark.classList.toggle(
+                'hidden',
+                mark.dataset.workspaceModeCurrentMark !== key,
+            );
+        });
+
+        const details = bar.querySelector('details[open]');
+        if (details) details.removeAttribute('open');
+    });
 }
 
 function syncFeedbackContext(documentRef, context) {
@@ -384,6 +440,7 @@ export function mountCanoviaInstantNavigation({
         page.dataset.canoviaInstantRendered = '1';
         documentRef.title = payload.title || 'Canovia';
         if (documentRef.body) documentRef.body.dataset.routeName = payload.routeName || '';
+        syncWorkspaceModeContext(documentRef, payload.workspaceMode);
 
         const companionSlot = documentRef.querySelector('[data-canovia-companion-slot]');
         if (companionSlot) companionSlot.innerHTML = payload.companionHtml || '';
