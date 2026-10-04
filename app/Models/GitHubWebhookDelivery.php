@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 final class GitHubWebhookDelivery extends Model
 {
+    protected $table = 'github_webhook_deliveries';
+
     protected $fillable = [
         'delivery_id',
         'event_name',
