@@ -113,19 +113,32 @@ class StudyAdaptiveActionV536Test extends TestCase
         $this->assertSame(0, $task->remaining_minutes);
         $this->assertSame(0, $task->progress_percent);
 
-        $projection = IntelligenceActionProjection::query()
+        $projections = IntelligenceActionProjection::query()
             ->where('plan_id', $plan->id)
-            ->where('status', IntelligenceActionProjection::STATUS_ACTIVE)
-            ->firstOrFail();
+            ->orderBy('id')
+            ->get();
 
-        $this->assertSame($task->id, $projection->projected_task_id);
+        $this->assertCount(2, $projections);
+        $this->assertSame($task->id, $projections[0]->projected_task_id);
+        $this->assertSame(
+            IntelligenceActionProjection::STATUS_SUPERSEDED,
+            $projections[0]->status,
+        );
+        $this->assertSame(
+            IntelligenceActionProjection::STATUS_ACTIVE,
+            $projections[1]->status,
+        );
+        $this->assertSame(
+            $task->id,
+            data_get($projections[1]->metadata, 'target_task_id'),
+        );
 
         $this->actingAs($user)
             ->post(route('plans.study_action.execute', $plan))
             ->assertRedirect(route('plans.tasks.study_practice.show', [$plan, $task]));
 
         $this->assertDatabaseCount('tasks', 1);
-        $this->assertDatabaseCount('intelligence_action_projections', 1);
+        $this->assertDatabaseCount('intelligence_action_projections', 2);
     }
 
     public function test_new_evidence_supersedes_previous_action_when_best_action_changes(): void
