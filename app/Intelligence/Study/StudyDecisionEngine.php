@@ -2,7 +2,7 @@
 
 namespace App\Intelligence\Study;
 
-use App\Intelligence\Contracts\DecisionEngine;
+use App\Intelligence\Contracts\CandidateDecisionEngine;
 use App\Intelligence\Data\Confidence;
 use App\Intelligence\Data\Decision;
 use App\Intelligence\Data\DecisionCandidate;
@@ -13,7 +13,7 @@ use App\Intelligence\Enums\ReadinessLevel;
 use App\Intelligence\Support\IntelligenceFingerprint;
 use InvalidArgumentException;
 
-final class StudyDecisionEngine implements DecisionEngine
+final class StudyDecisionEngine implements CandidateDecisionEngine
 {
     public function decide(
         StateSnapshot $state,
