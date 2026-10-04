@@ -3937,3 +3937,120 @@ V55.4は:
 - Current Action selection変更なし
 
 詳細は `docs/V55.4_MAP_EXPLORATION_SURFACE.md` を正とする。
+
+
+## V55.5 Execution Mode Terminology & Surface Handoff Clarity
+
+V55.5はiOS前UX Completionとして、global Workspace Modeと旧V51.2 Execution Workspaceの語彙衝突を解消する。
+
+現在のauthority:
+
+```text
+Workspace Mode
+→ domain state / Readiness / Gap / Decision / Current Action
+
+Execution Mode
+→ selected Taskをどう実行するか
+```
+
+Workspace Mode:
+
+- Overview
+- Study
+- Development
+- Career
+
+Execution Mode:
+
+- study
+- development
+- career
+- general
+
+`/navigate` の内部route/query/session contractは変更しない。
+
+```text
+mode=study|development|career|general
+session: execution_mode
+```
+
+user-facing UIだけを:
+
+```text
+Execution Workspace
+→ Execution Mode / 実行タイプ
+```
+
+へ更新する。
+
+Execution header:
+
+```text
+学習モード
+開発モード
+キャリアモード
+汎用モード
+```
+
+Picker:
+
+```text
+CHOOSE MODE
+```
+
+Plan scope:
+
+```text
+この実行タイプのPlan
+この実行タイプの全Planから選ぶ
+```
+
+specialized handoff:
+
+Study:
+```text
+学習Activityで進める
+```
+
+Development:
+```text
+開発フローで進める
+```
+
+Career:
+```text
+Career管理で進める
+```
+
+General:
+```text
+このまま開始
+```
+
+Task handoff copy:
+
+```text
+このTaskを専用フローへ引き継ぐ
+Task Contextを保ったまま、<mode>の実行フローで進めます。
+```
+
+変更しない:
+
+- ExecutionModeService class name
+- mode keys / query
+- recommendation scoping
+- destination route
+- timer fallback
+- compatibility_key
+- session draft
+- CSS class names
+- telemetry
+
+追加:
+
+- DB queryなし
+- migrationなし
+- AI trafficなし
+- provider trafficなし
+
+詳細は `docs/V55.5_EXECUTION_MODE_TERMINOLOGY.md` を正とする。
