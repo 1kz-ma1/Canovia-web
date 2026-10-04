@@ -195,6 +195,114 @@ class BehaviorEventController extends Controller
             return response()->noContent();
         }
 
+        $workspaceModeClientTypes = [
+            BehaviorEventType::WorkspaceModeSelected,
+            BehaviorEventType::WorkspaceModeAutoContext,
+        ];
+
+        if (in_array($type, $workspaceModeClientTypes, true)) {
+            $workspaceModes = ['overview', 'study', 'development'];
+            $workspaceSources = [
+                'explicit',
+                'manual_preference',
+                'route_hint',
+                'plan_profile',
+                'default',
+            ];
+
+            $safeMetadata = array_filter([
+                'selected_mode' => $type === BehaviorEventType::WorkspaceModeSelected
+                    && in_array(
+                        ($metadata['selected_mode'] ?? null),
+                        [...$workspaceModes, 'auto'],
+                        true,
+                    )
+                        ? $metadata['selected_mode']
+                        : null,
+                'from_mode' => in_array(
+                    ($metadata['from_mode'] ?? null),
+                    $workspaceModes,
+                    true,
+                )
+                    ? $metadata['from_mode']
+                    : null,
+                'from_source' => in_array(
+                    ($metadata['from_source'] ?? null),
+                    $workspaceSources,
+                    true,
+                )
+                    ? $metadata['from_source']
+                    : null,
+                'mode' => $type === BehaviorEventType::WorkspaceModeAutoContext
+                    && in_array(
+                        ($metadata['mode'] ?? null),
+                        $workspaceModes,
+                        true,
+                    )
+                        ? $metadata['mode']
+                        : null,
+                'source' => $type === BehaviorEventType::WorkspaceModeAutoContext
+                    && in_array(
+                        ($metadata['source'] ?? null),
+                        ['route_hint', 'plan_profile', 'default'],
+                        true,
+                    )
+                        ? $metadata['source']
+                        : null,
+                'surface' => in_array(
+                    ($metadata['surface'] ?? null),
+                    ['web', 'pwa', 'native'],
+                    true,
+                )
+                    ? $metadata['surface']
+                    : 'unknown',
+                'device' => in_array(
+                    ($metadata['device'] ?? null),
+                    ['mobile', 'desktop'],
+                    true,
+                )
+                    ? $metadata['device']
+                    : 'unknown',
+                'platform' => in_array(
+                    ($metadata['platform'] ?? null),
+                    ['ios', 'android', 'other'],
+                    true,
+                )
+                    ? $metadata['platform']
+                    : 'other',
+            ], fn ($value) => $value !== null);
+
+            if (
+                $type === BehaviorEventType::WorkspaceModeSelected
+                && ! isset($safeMetadata['selected_mode'])
+            ) {
+                throw ValidationException::withMessages([
+                    'metadata.selected_mode' => 'Workspace選択を確認してください。',
+                ]);
+            }
+
+            if (
+                $type === BehaviorEventType::WorkspaceModeAutoContext
+                && (
+                    ! isset($safeMetadata['mode'])
+                    || ! isset($safeMetadata['source'])
+                )
+            ) {
+                throw ValidationException::withMessages([
+                    'metadata.mode' => 'Workspace文脈を確認してください。',
+                ]);
+            }
+
+            $logger->recordSafely(
+                $actorToken,
+                $type,
+                $request,
+                metadata: $safeMetadata,
+            );
+
+            return response()->noContent();
+        }
+
         $funnelClientTypes = [
             BehaviorEventType::PlanGenerationPromptCopyClicked,
             BehaviorEventType::PlanUpdatePromptCopyClicked,
