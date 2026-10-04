@@ -521,6 +521,15 @@ final class GitHubDevelopmentEvidenceService
         array $target,
         array $snapshot,
     ): ?\App\Models\TaskEvidence {
+        $branchSnapshot = (array) ($snapshot['branch_snapshot'] ?? []);
+        if (is_array($branchSnapshot['branch'] ?? null)) {
+            $this->recordBranch(
+                $task,
+                $artifactIds,
+                $branchSnapshot,
+            );
+        }
+
         $commitSnapshot = (array) ($snapshot['commit_snapshot'] ?? []);
         $commit = (array) ($commitSnapshot['commit'] ?? []);
         $repo = (string) (
