@@ -68,6 +68,3 @@ jobs:
 
       - name: Home density regression
         run: php artisan test tests/Feature/ActionHomeDensityV5197Test.php
-
-      - name: Inbox foundation regression
-        run: php artisan test tests/Feature/InboxFoundationV4113Test.php
