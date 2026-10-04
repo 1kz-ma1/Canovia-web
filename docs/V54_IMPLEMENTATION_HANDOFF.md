@@ -98,7 +98,7 @@ Next after V54.0 merge:
 
 ### V54.1 — Fixed Mode Bar
 
-Status: **IMPLEMENTED — PR PENDING**
+Status: **MERGED — PR #219**
 
 Branch:
 
@@ -139,7 +139,7 @@ Important semantics:
 
 ### V54.2 — Mode Context & Persistence
 
-Status: **IMPLEMENTED — PR #220 OPEN**
+Status: **MERGED — PR #220**
 
 Branch:
 
@@ -190,13 +190,31 @@ Important semantics:
 
 ### V54.3 — Study Workspace
 
-Planned:
+Status: **IN PROGRESS**
 
-- Study Home
-- Exam Readiness / Biggest Gap / Current Action
-- Coverage / Mastery / Retention / remaining load
-- Study-specific navigation
-- capture-first empty state
+Branch:
+
+`feature/v54-3-study-workspace`
+
+Permanent spec:
+
+`docs/V54.3_STUDY_WORKSPACE.md`
+
+Implementation contract:
+
+- canonical Study Home at `GET /workspace/study`
+- Study Mode entry redirects/renders Study Home rather than Scope directly
+- one selected accessible Study Plan is evaluated at a time
+- deterministic default Plan selection: priority → deadline → ID
+- optional explicit `plan_id` selection
+- no Study Plan → Plan creation empty state
+- no confirmed Scope → capture-first empty state
+- confirmed Scope → Exam Readiness / Biggest Gap / Current Action
+- Coverage / Mastery / Retention / Remaining Load
+- priority remaining Scope list
+- Current Action / Readiness / Scope / Practice / Recall / History navigation
+- existing V53 Study Intelligence remains authoritative
+- no new AI traffic
 
 ### V54.4 — Development Workspace
 
