@@ -35,6 +35,15 @@
                     $primaryTopics = collect($weaknessPriority['primary_topics'] ?? []);
                     $secondaryTopics = collect($weaknessPriority['secondary_topics'] ?? []);
                     $monitorTopics = collect($weaknessPriority['monitor_topics'] ?? []);
+                    $learningPhase = is_array($practiceStrategy['learning_phase'] ?? null) ? $practiceStrategy['learning_phase'] : [];
+                    $weaknessControl = is_array($practiceStrategy['weakness_control'] ?? null) ? $practiceStrategy['weakness_control'] : [];
+                    $topicStates = collect($weaknessControl['topic_states'] ?? []);
+                    $activePhaseTopics = collect($weaknessControl['active_topics'] ?? []);
+                    $graduatedPhaseTopics = collect($weaknessControl['graduated_topics'] ?? []);
+                    $cappedPhaseTopics = collect($weaknessControl['capped_topics'] ?? []);
+                    $phaseKey = (string) ($learningPhase['phase'] ?? 'general_practice');
+                    $phaseLabel = (string) ($learningPhase['label'] ?? '総合演習');
+                    $daysUntilExam = $learningPhase['days_until_exam'] ?? null;
                 @endphp
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
@@ -43,6 +52,10 @@
                         <p class="mt-1 text-xs leading-5 text-slate-400">{{ $practiceStrategy['reason'] ?? '' }}</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
+                        <span class="badge badge-slate">現在：{{ $phaseLabel }}</span>
+                        @if ($daysUntilExam !== null)
+                            <span class="badge badge-slate">試験まで {{ (int) $daysUntilExam }}日</span>
+                        @endif
                         @if (! empty($examProfile['label']))
                             <span class="badge badge-slate">{{ $examProfile['label'] }}</span>
                         @endif
@@ -71,11 +84,41 @@
                     @if ($monitorTopics->isNotEmpty())
                         <p class="mt-3 text-[11px] leading-5 text-slate-500">監視中：{{ $monitorTopics->implode(' / ') }}。最近の出題量や確度を見て、必要なら後の演習で再確認します。</p>
                     @endif
+                    @if ($activePhaseTopics->isNotEmpty())
+                        <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                            @foreach ($topicStates->whereIn('topic', $activePhaseTopics)->take(4) as $topicState)
+                                <div class="rounded-xl border border-cyan-300/10 bg-slate-950/20 px-3 py-2">
+                                    <p class="text-xs font-bold text-slate-200">{{ $topicState['topic'] }}</p>
+                                    <p class="mt-1 text-[10px] leading-4 text-slate-500">
+                                        補完Evidence: {{ (int) ($topicState['targeted_sessions'] ?? 0) }} Session / 推定{{ (int) ($topicState['targeted_question_budget'] ?? 0) }}問
+                                        · 卒業までSessionあと{{ (int) ($topicState['remaining_sessions_to_graduation'] ?? 0) }}
+                                        / 推定{{ (int) ($topicState['remaining_question_budget_to_graduation'] ?? 0) }}問
+                                    </p>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
                 @elseif (collect($practiceStrategy['focus_topics'] ?? [])->isNotEmpty())
                     <div class="mt-3 flex flex-wrap gap-2">
                         @foreach (($practiceStrategy['focus_topics'] ?? []) as $topic)
                             <span class="badge badge-slate">{{ $topic }}</span>
                         @endforeach
+                    </div>
+                @endif
+
+                @if ($phaseKey === 'general_practice')
+                    <div class="mt-3 rounded-xl border border-emerald-300/10 bg-emerald-300/[0.035] px-3 py-2">
+                        <p class="text-xs font-bold text-emerald-100">弱点だけに寄せず、総合演習で全体成績を再確認します。</p>
+                        @if ($graduatedPhaseTopics->isNotEmpty())
+                            <p class="mt-1 text-[10px] leading-4 text-slate-500">集中補完を卒業：{{ $graduatedPhaseTopics->take(4)->implode(' / ') }}</p>
+                        @endif
+                        @if ($cappedPhaseTopics->isNotEmpty())
+                            <p class="mt-1 text-[10px] leading-4 text-slate-500">深掘り上限により総合演習へ戻したTopic：{{ $cappedPhaseTopics->take(4)->implode(' / ') }}</p>
+                        @endif
+                    </div>
+                @elseif ($phaseKey === 'exam_mode')
+                    <div class="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/[0.04] px-3 py-2">
+                        <p class="text-xs font-bold text-amber-100">本番バランスを優先します。新しい細かい弱点探索より、AP科目A相当の総合確認を進めます。</p>
                     </div>
                 @endif
 
