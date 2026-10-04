@@ -169,6 +169,15 @@ class TaskEvidenceService
                 'evidence_summary' => $attempt->evidence_summary,
                 'strengths' => $attempt->strengths ?? [],
                 'weaknesses' => $attempt->weaknesses ?? [],
+                'weakness_topics' => collect(data_get($attempt->assessment, 'question_feedback', []))
+                    ->filter(fn ($item) => is_array($item))
+                    ->flatMap(fn (array $item) => (array) ($item['weakness_topics'] ?? []))
+                    ->filter(fn ($item) => is_scalar($item) && trim((string) $item) !== '')
+                    ->map(fn ($item) => mb_substr(trim((string) $item), 0, 191))
+                    ->unique()
+                    ->take(24)
+                    ->values()
+                    ->all(),
                 'next_action' => $attempt->next_action,
                 'next_step' => data_get($attempt->assessment, 'next_step'),
             ],
