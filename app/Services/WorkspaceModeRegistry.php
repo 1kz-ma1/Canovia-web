@@ -71,7 +71,7 @@ final class WorkspaceModeRegistry
                     ],
                     [
                         'key' => 'capture_study_scope',
-                        'title' => '試験範囲を確定する',
+                        'title' => '試験範囲から始める',
                         'description' => 'Readinessの基準になる試験範囲を追加し、人の確認後にStudy Stateへ反映します。',
                         'action_key' => 'capture_study_scope',
                         'action_label' => '試験範囲を追加',
