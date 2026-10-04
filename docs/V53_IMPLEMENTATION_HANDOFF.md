@@ -255,7 +255,7 @@ Important semantics:
 
 ### V53.3 — Reasoning Router
 
-Status: **IN PROGRESS**
+Status: **IMPLEMENTED — PR PENDING**
 
 Branch:
 
@@ -463,7 +463,23 @@ Current V53.3 checkpoint:
 - existing AutomaticAiExecution entitlement boundary reused
 - OpenAI may only select from Canovia-approved candidates
 - reasoning observability and successful-request reuse implemented
-- next before V53.3 completion: validation, Product Spec sync, PR
+- Product Spec and permanent V53.3 spec synchronized
+- validation complete
+- temporary validation workflow removed after success
+- PR: pending creation
+
+V53.3 validation checkpoint:
+
+- GitHub Actions run: #37169302773
+- V53.3 PHP lint: success
+- V53.0 contract regression: success
+- V53.1 State / Evidence regression: success
+- V53.2 Decision / Readiness regression: success
+- V53.3 Reasoning Router tests: success
+- Native AI regression: success
+- Feature Access regression: success
+- Study Practice regression: success
+- GitHub Evidence regression: success
 
 Next after V53.3 merge:
 
