@@ -48,9 +48,9 @@ class CanoviaHomeSurfaceV432Test extends TestCase
 
         $map = $this->actingAs($user)->get(route('map.index'));
         $map->assertOk()
-            ->assertSee('data-home-surface-switcher', false)
+            ->assertSee('data-canovia-surface-nav', false)
             ->assertSee('data-map-home-fallback', false)
-            ->assertSee('data-home-surface="map"', false)
+            ->assertSee('data-canovia-surface="explore"', false)
             ->assertSee('data-canovia-nav-key="desktop-home"', false)
             ->assertSee('data-canovia-nav-key="desktop-constellation"', false)
             ->assertSee('data-canovia-nav-key="desktop-execution"', false)
