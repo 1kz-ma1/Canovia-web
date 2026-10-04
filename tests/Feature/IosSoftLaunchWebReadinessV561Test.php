@@ -31,11 +31,13 @@ class IosSoftLaunchWebReadinessV561Test extends TestCase
         $this->get(route('legal.privacy'))
             ->assertOk()
             ->assertSee('プライバシーポリシー')
-            ->assertSee('アカウント削除');
+            ->assertSee('アカウント削除')
+            ->assertSee('data-onboarding-auto="0"', false);
 
         $this->get(route('legal.support'))
             ->assertOk()
             ->assertSee('Canoviaサポート')
+            ->assertSee('data-onboarding-auto="0"', false)
             ->assertSee('support@canovia.example')
             ->assertSee(route('legal.privacy'), false);
     }
