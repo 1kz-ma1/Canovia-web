@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FeatureKey;
+use App\Intelligence\Development\DevelopmentAdaptiveActionService;
 use App\Models\Plan;
 use App\Models\PlanArtifact;
 use App\Models\Task;
@@ -14,6 +15,7 @@ use App\Services\GitHubEvidenceDecisionService;
 use App\Services\GitHubRepositoryWriter;
 use App\Services\GitHubReturnEvidenceService;
 use App\Services\PlanActivityService;
+use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -322,6 +324,8 @@ final class ExecutionGitHubHandoffController extends Controller
         FeatureAccessService $access,
         GitHubReturnEvidenceService $returns,
         PlanActivityService $activity,
+        PlanCategoryProfileService $profiles,
+        DevelopmentAdaptiveActionService $developmentActions,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
         $access->authorizeUse(
@@ -370,6 +374,10 @@ final class ExecutionGitHubHandoffController extends Controller
                 'evidence_count' => (int) ($result['evidence_count'] ?? 0),
             ],
         );
+
+        if ($profiles->forPlan($plan)->key === 'development') {
+            $developmentActions->tryRefresh($plan, now());
+        }
 
         return redirect()
             ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
