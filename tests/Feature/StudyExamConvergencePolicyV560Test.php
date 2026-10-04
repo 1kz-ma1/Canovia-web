@@ -193,9 +193,50 @@ class StudyExamConvergencePolicyV560Test extends TestCase
         $this->attempt($user, $plan, $task, 'general_practice', 80, 'DNS', true, 5);
 
         $result = $this->policy($plan, $task, 'DNS');
+        $strategy = app(StudyPracticeStrategyService::class)->build(
+            $plan,
+            $task,
+            $this->attempts($task),
+        );
 
         $this->assertSame('graduated', $this->topic($result, 'DNS')['status']);
         $this->assertNotContains('DNS', $result['reopened_topics']);
+        $this->assertSame(
+            StudyExamConvergencePolicyService::PHASE_GENERAL_PRACTICE,
+            $result['phase'],
+        );
+        $this->assertNotSame('weakness_reinforcement', $strategy['key']);
+        $this->assertSame([], $strategy['focus_topics']);
+    }
+
+    public function test_graduating_one_topic_forces_general_before_another_active_weakness(): void
+    {
+        [$user, $plan, $task] = $this->scenario('2026-11-10');
+
+        $this->detectWeakness($user, $plan, $task, 'Database', 1);
+        $this->detectWeakness($user, $plan, $task, 'Network', 2);
+        $this->detectWeakness($user, $plan, $task, 'Database', 3);
+        $this->detectWeakness($user, $plan, $task, 'Network', 4);
+        $this->attempt($user, $plan, $task, 'weakness_reinforcement', 90, 'Database', false, 5);
+        $this->attempt($user, $plan, $task, 'weakness_reinforcement', 92, 'Database', false, 6);
+
+        $result = app(StudyExamConvergencePolicyService::class)->resolve(
+            $plan,
+            $task,
+            $this->attempts($task),
+            [
+                'ranked' => [
+                    ['topic' => 'Network', 'priority_score' => 1.0],
+                    ['topic' => 'Database', 'priority_score' => 0.8],
+                ],
+                'primary_topics' => ['Network'],
+                'secondary_topics' => [],
+            ],
+        );
+
+        $this->assertSame('graduated', $this->topic($result, 'Database')['status']);
+        $this->assertSame('active', $this->topic($result, 'Network')['status']);
+        $this->assertTrue($result['general_return_required']);
         $this->assertSame(
             StudyExamConvergencePolicyService::PHASE_GENERAL_PRACTICE,
             $result['phase'],
