@@ -221,7 +221,7 @@ Important semantics:
 
 ### V53.2 — Decision & Readiness Engine
 
-Status: **IMPLEMENTED — PR PENDING**
+Status: **MERGED**
 
 Branch:
 
@@ -255,14 +255,42 @@ Important semantics:
 
 ### V53.3 — Reasoning Router
 
-Planned:
+Status: **IN PROGRESS**
 
-- provider-neutral reasoning contract
-- deterministic/domain/OpenAI routing
-- cost / latency / quality telemetry
-- structured outputs
-- future Canovia-model insertion point
-- conversation AI and decision AI remain separate concerns
+Branch:
+
+`feature/v53-3-reasoning-router`
+
+Permanent spec:
+
+`docs/V53.3_REASONING_ROUTER.md`
+
+Implemented so far:
+
+- `CandidateDecisionEngine`
+- `DecisionReasoningProvider`
+- `OpenAiDecisionReasoningProvider`
+- `ReasoningRouter`
+- `ReasoningRunStore`
+- `ReasoningCostEstimator`
+- `ReasonedDecisionOrchestrator`
+- durable `intelligence_reasoning_runs`
+- deterministic / auto / openai modes
+- existing FeatureAccessService entitlement reuse
+- exact-candidate Structured Output selection
+- deterministic fallback on provider failure
+- successful exact-reasoning reuse to avoid duplicate AI cost
+- latency / token / optional cost / baseline-agreement telemetry
+- V53.3 behavior tests
+
+Important semantics:
+
+- default mode remains deterministic
+- OpenAI cannot invent a new candidate
+- final confidence cannot exceed candidate confidence
+- provider/model telemetry is not part of semantic Decision identity
+- provider failure is not cached as successful reasoning
+- conversation AI remains separate from Decision reasoning
 
 ### V53.4 — Study Capture
 
@@ -406,6 +434,8 @@ V53.1 validation checkpoint:
 
 Current V53.2 checkpoint:
 
+- PR #210 merged
+- merge commit: 0e0e848f056c4ecca44b8f03943fb74c54bff1a0
 - normalized StateSnapshot is the primary input
 - explainable Gap / Readiness implemented
 - deterministic Decision candidates implemented
@@ -413,7 +443,6 @@ Current V53.2 checkpoint:
 - Product Spec and permanent V53.2 spec synchronized
 - validation complete
 - temporary validation workflow removed after success
-- PR: pending creation
 
 V53.2 validation checkpoint:
 
@@ -426,13 +455,23 @@ V53.2 validation checkpoint:
 - Study Practice regression: success
 - GitHub Evidence regression: success
 
-Next after V53.2 merge:
+Current V53.3 checkpoint:
 
-- V53.3 Reasoning Router
-- keep deterministic V53.2 policy as baseline/fallback
-- add provider-neutral reasoning interfaces
-- separate natural conversation from decision reasoning
-- add cost / latency / quality observability before OpenAI becomes part of the decision path
+- deterministic V53.2 policy remains baseline/fallback
+- provider-neutral reasoning interfaces implemented
+- existing NativeAiGateway reused; no second OpenAI client
+- existing AutomaticAiExecution entitlement boundary reused
+- OpenAI may only select from Canovia-approved candidates
+- reasoning observability and successful-request reuse implemented
+- next before V53.3 completion: validation, Product Spec sync, PR
+
+Next after V53.3 merge:
+
+- V53.4 Study Capture
+- photo / screenshot / PDF input
+- structured subject / unit / range / deadline extraction
+- reviewable import before State mutation
+- ordinary school tests as the first capture acceptance case
 
 ## Completion / deletion rule
 
