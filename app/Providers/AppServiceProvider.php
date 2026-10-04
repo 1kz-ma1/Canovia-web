@@ -32,7 +32,15 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(RequestBehaviorHistory::class);
         $this->app->scoped(PlanOwnershipService::class);
         $this->app->scoped(CoreContextService::class);
-        $this->app->singleton(ExecutionProviderRegistry::class);
+        $this->app->singleton(
+            ExecutionProviderRegistry::class,
+            fn () => new ExecutionProviderRegistry(
+                (bool) config(
+                    'canovia.execution_setup_validation_enabled',
+                    false,
+                ),
+            ),
+        );
         $this->app->singleton(
             ExecutionProviderCatalog::class,
             fn ($app) => $app->make(ExecutionProviderRegistry::class),
