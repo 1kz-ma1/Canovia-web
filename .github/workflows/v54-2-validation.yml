@@ -33,6 +33,9 @@ jobs:
       - name: Build frontend
         run: npm run build
 
+      - name: V54.2 Workspace Mode JS
+        run: node --test tests/js/workspace-mode-context-v542.test.mjs
+
       - name: Lint V54.2 PHP
         run: find app/Http/Controllers/WorkspaceModeController.php app/Services/WorkspaceModeResolver.php app/Services/WorkspaceModePreference.php app/Enums/WorkspaceModeSource.php database/migrations/2026_10_04_000700_add_workspace_mode_preference_to_users_table.php -name '*.php' -print0 | xargs -0 -n1 php -l
 
