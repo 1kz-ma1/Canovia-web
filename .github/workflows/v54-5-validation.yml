@@ -1,0 +1,73 @@
+name: V54.5 Validate
+
+on:
+  push:
+    branches:
+      - feature/v54-5-overview-workspace
+
+jobs:
+  overview-workspace:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Lint V54.5 PHP
+        run: find app/Http/Controllers/OverviewWorkspaceController.php app/Http/Controllers/WorkspaceModeController.php app/Services/WorkspaceModeResolver.php tests/Feature/OverviewWorkspaceV545Test.php -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Compile Blade
+        run: php artisan view:cache
+
+      - name: V54.5 Overview Workspace
+        run: php artisan test tests/Feature/OverviewWorkspaceV545Test.php
+
+      - name: V54.4 Development Workspace regression
+        run: php artisan test tests/Feature/DevelopmentWorkspaceV544Test.php
+
+      - name: V54.3 Study Workspace regression
+        run: php artisan test tests/Feature/StudyWorkspaceV543Test.php
+
+      - name: V54.2 Mode persistence regression
+        run: php artisan test tests/Feature/WorkspaceModePersistenceV542Test.php
+
+      - name: V54.1 Mode Bar regression
+        run: php artisan test tests/Feature/WorkspaceModeBarV541Test.php
+
+      - name: V54.0 Registry regression
+        run: php artisan test tests/Unit/WorkspaceModeRegistryV540Test.php
+
+      - name: V54.0 Resolver regression
+        run: php artisan test tests/Feature/WorkspaceModeResolverV540Test.php
+
+      - name: V53.9 Intelligence UX regression
+        run: php artisan test tests/Feature/IntelligenceUxV539Test.php
+
+      - name: Home query regression
+        run: php artisan test tests/Feature/HomeQueryCollapseV5194Test.php
+
+      - name: Home density regression
+        run: php artisan test tests/Feature/ActionHomeDensityV5197Test.php
+
+      - name: Inbox foundation regression
+        run: php artisan test tests/Feature/InboxFoundationV4113Test.php
