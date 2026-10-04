@@ -97,7 +97,7 @@ Next after V54.0 merge:
 
 ### V54.1 — Fixed Mode Bar
 
-Status: **IMPLEMENTED — VALIDATION IN PROGRESS**
+Status: **IMPLEMENTED — PR PENDING**
 
 Branch:
 
@@ -122,6 +122,9 @@ Implemented:
 - Instant Navigation current Mode synchronization
 - app/page data attributes for current Mode
 - V54.1 feature tests
+- final validation run: #37182453095
+- V54.0 / V53.9 / Home regressions passed
+- temporary validation workflow removed after success
 
 Important semantics:
 
