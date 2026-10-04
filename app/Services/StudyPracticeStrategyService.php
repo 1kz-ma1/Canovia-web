@@ -281,15 +281,77 @@ class StudyPracticeStrategyService
             ->unique()
             ->values();
 
-        $primary = $active->take(2)->values();
-        $secondary = $active->skip(2)->take(3)->values();
+        $activeKeys = $active
+            ->map(fn ($topic) => $this->topicKey($topic))
+            ->flip();
 
-        $primaryCount = $primary->isNotEmpty()
-            ? max(1, (int) round($targetQuestionCount * 0.50))
-            : 0;
-        $secondaryCount = $secondary->isNotEmpty()
-            ? max(1, (int) round($targetQuestionCount * 0.30))
-            : 0;
+        $primary = collect($weakness['primary_topics'] ?? [])
+            ->filter(fn ($topic) => is_string($topic))
+            ->filter(
+                fn ($topic) =>
+                    isset($activeKeys[$this->topicKey($topic)]),
+            )
+            ->unique()
+            ->take(2)
+            ->values();
+
+        $primaryKeys = $primary
+            ->map(fn ($topic) => $this->topicKey($topic))
+            ->flip();
+
+        $secondary = collect($weakness['secondary_topics'] ?? [])
+            ->filter(fn ($topic) => is_string($topic))
+            ->filter(
+                fn ($topic) =>
+                    isset($activeKeys[$this->topicKey($topic)])
+                    && ! isset($primaryKeys[$this->topicKey($topic)]),
+            )
+            ->unique()
+            ->take(3)
+            ->values();
+
+        $assignedKeys = $primary
+            ->merge($secondary)
+            ->map(fn ($topic) => $this->topicKey($topic))
+            ->flip();
+
+        // If convergence history still requires a Topic but V41.4 has already
+        // reduced its current priority after one good result, keep it as a
+        // Secondary verification instead of promoting it back to Primary.
+        $remaining = $active
+            ->reject(
+                fn ($topic) =>
+                    isset($assignedKeys[$this->topicKey($topic)]),
+            )
+            ->take(max(0, 3 - $secondary->count()));
+
+        $secondary = $secondary
+            ->merge($remaining)
+            ->unique()
+            ->take(3)
+            ->values();
+
+        if ($primary->isNotEmpty()) {
+            $primaryCount = max(
+                1,
+                (int) round($targetQuestionCount * 0.50),
+            );
+            $secondaryCount = $secondary->isNotEmpty()
+                ? max(
+                    1,
+                    (int) round($targetQuestionCount * 0.30),
+                )
+                : 0;
+        } elseif ($secondary->isNotEmpty()) {
+            $primaryCount = 0;
+            $secondaryCount = max(
+                1,
+                (int) round($targetQuestionCount * 0.40),
+            );
+        } else {
+            $primaryCount = 0;
+            $secondaryCount = 0;
+        }
 
         if (
             $targetQuestionCount >= 2
@@ -319,7 +381,10 @@ class StudyPracticeStrategyService
             ),
         ];
 
-        $activeKeys = $active
+        $primaryKeys = $primary
+            ->map(fn ($topic) => $this->topicKey($topic))
+            ->flip();
+        $secondaryKeys = $secondary
             ->map(fn ($topic) => $this->topicKey($topic))
             ->flip();
 
@@ -327,15 +392,16 @@ class StudyPracticeStrategyService
             ->filter(fn ($item) => is_array($item))
             ->map(function (array $item) use (
                 $activeKeys,
-                $primary,
-                $secondary,
+                $primaryKeys,
+                $secondaryKeys,
             ) {
-                $topic = (string) ($item['topic'] ?? '');
-                $key = $this->topicKey($topic);
+                $key = $this->topicKey(
+                    (string) ($item['topic'] ?? ''),
+                );
 
                 $item['tier'] = match (true) {
-                    $primary->contains($topic) => 'primary',
-                    $secondary->contains($topic) => 'secondary',
+                    isset($primaryKeys[$key]) => 'primary',
+                    isset($secondaryKeys[$key]) => 'secondary',
                     isset($activeKeys[$key]) => 'monitor',
                     default => 'resolved',
                 };
@@ -352,7 +418,7 @@ class StudyPracticeStrategyService
             'secondary_topics' => $secondary->all(),
             'monitor_topics' => [],
             'question_mix' => $questionMix,
-            'has_confirmed_weakness' => $active->isNotEmpty(),
+            'has_confirmed_weakness' => $primary->isNotEmpty(),
             'has_any_weakness_signal' => $active->isNotEmpty(),
         ];
     }
