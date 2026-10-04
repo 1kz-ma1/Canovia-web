@@ -29,12 +29,12 @@
         </div>
 
         <div class="grid min-w-0 {{ $presentation->hasDistinctStateDisplay() ? 'grid-cols-3 xl:min-w-[24rem]' : 'grid-cols-2 xl:min-w-[16rem]' }} gap-2">
-            <div class="rounded-2xl border border-white/8 bg-slate-950/45 p-3 text-center">
+            <div class="rounded-2xl border border-white/8 bg-slate-950/45 p-3 text-center" data-intelligence-readiness-display="{{ $presentation->qualitativeReadiness ? 'qualitative' : 'numeric' }}">
                 <strong class="block text-xl text-slate-100">{{ $presentation->readinessDisplay() }}</strong>
                 <span class="text-[10px] text-slate-500">{{ $presentation->readinessLabel }}</span>
             </div>
             @if ($presentation->hasDistinctStateDisplay())
-                <div class="rounded-2xl border border-white/8 bg-slate-950/45 p-3 text-center">
+                <div class="rounded-2xl border border-white/8 bg-slate-950/45 p-3 text-center" data-intelligence-current-state>
                     <strong class="block text-sm text-slate-100">{{ $presentation->stateLabel }}</strong>
                     <span class="text-[10px] text-slate-500">CURRENT STATE</span>
                 </div>
