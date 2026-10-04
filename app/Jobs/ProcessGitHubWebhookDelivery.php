@@ -33,9 +33,9 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
 
     public function handle(
         GitHubReturnEvidenceService $returns,
-        GitHubDevelopmentEvidenceService $developmentEvidence,
         GitHubWorkflowService $workflow,
         FeatureAccessService $access,
+        ?GitHubDevelopmentEvidenceService $developmentEvidence = null,
     ): void {
         $delivery = GitHubWebhookDelivery::query()->find($this->deliveryId);
         if (! $delivery instanceof GitHubWebhookDelivery) {
@@ -136,10 +136,12 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
                 }
             }
 
-            $developmentCounts = $developmentEvidence->syncDelivery($delivery);
-            $matchedArtifacts += (int) $developmentCounts['matched_artifacts'];
-            $syncedTasks += (int) $developmentCounts['synced_tasks'];
-            $skippedEntitlement += (int) $developmentCounts['skipped_entitlement'];
+            if ($developmentEvidence) {
+                $developmentCounts = $developmentEvidence->syncDelivery($delivery);
+                $matchedArtifacts += (int) $developmentCounts['matched_artifacts'];
+                $syncedTasks += (int) $developmentCounts['synced_tasks'];
+                $skippedEntitlement += (int) $developmentCounts['skipped_entitlement'];
+            }
         } catch (Throwable $exception) {
             $delivery->update([
                 'matched_artifacts' => $matchedArtifacts,
