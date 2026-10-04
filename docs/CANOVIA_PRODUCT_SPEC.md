@@ -4791,3 +4791,111 @@ Study Intelligenceのexam-date semanticsも同じ `StudyExamDateService` へ統�
 Telemetry eventは将来候補として仕様へ残すが、V56.0 MVPでは新しいTelemetry subsystemを追加しない。
 
 詳細は `docs/V56.0_STUDY_EXAM_CONVERGENCE_POLICY.md` を正とする。
+
+
+## V56.1 iOS Soft Launch Web Readiness
+
+V56.1は、SwiftUI + WKWebView構成を維持したまま、iOS Soft LaunchでApp Store審査に必要になるWeb側の公開・Account境界を整える。
+
+### Public review surfaces
+
+新規public routes:
+
+```text
+GET /privacy
+GET /support
+```
+
+- Privacyは未ログインでも閲覧可能
+- Supportは未ログインでも閲覧可能
+- Legal surfaceではGuest onboardingを自動表示しない
+- desktop footer / Settings / AccountからPrivacy・Supportへ到達可能
+
+Productionでは:
+
+```text
+CANOVIA_SUPPORT_EMAIL
+CANOVIA_OPERATOR_NAME
+```
+
+を設定する。
+
+Support email未設定はSoft Launch release blockerとして扱う。
+
+### Account deletion
+
+Account作成機能を持つCanoviaは、iOSアプリ内からAccount全体の削除を開始できるようにする。
+
+```text
+DELETE /account
+```
+
+条件:
+
+- authenticated user
+- current password確認
+- current account email再入力
+- destructive actionを明示
+
+単なるdisable/deactivateにはしない。
+
+### Deletion semantics
+
+`users` rowだけを削除すると、`plans.user_id` 等の `nullOnDelete` により本人データがownerlessとして残り得る。
+
+V56.1では:
+
+```text
+owned Plan ids
+→ private file paths収集
+→ file-backed user rows削除
+→ owned Plans削除
+→ Plan cascade
+→ nullable user-owned rowsをchild-first削除
+→ User削除
+→ private Storage削除
+→ session invalidation
+```
+
+とする。
+
+本人所有Planに含まれるTask / Study / Career / Evidence / IntelligenceはPlan cascadeを利用する。
+
+他ユーザー所有の共同Planそのものは削除しない。
+
+### Private uploads
+
+Account deletionでは少なくとも:
+
+- Inbox storage_path
+- Study Recall source storage_path
+- Career Capture screenshot_path
+
+を収集し、DB削除成功後にprivate Storageから削除する。
+
+### iOS metadata relationship
+
+App Store Connectで使用するURLはcanonical Canovia originを基準に:
+
+```text
+Privacy Policy URL = /privacy
+Support URL        = /support
+```
+
+とする。
+
+iOS Native側はAccount stateや削除logicを二重実装せず、Web Account surfaceをそのまま利用する。
+
+### Non-goals
+
+V56.1では追加しない:
+
+- Sign in with Apple
+- subscriptions
+- native account model
+- data export
+- App Store submission automation
+- push notification
+- iOS native settings rewrite
+
+詳細は `docs/V56.1_IOS_SOFT_LAUNCH_WEB_READINESS.md` を正とする。
