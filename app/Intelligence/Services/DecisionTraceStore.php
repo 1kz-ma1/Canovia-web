@@ -78,6 +78,13 @@ final class DecisionTraceStore
                         'candidate_types',
                         'selected_priority',
                         'weakness_count',
+                        'target_scope_item_id',
+                        'target_task_id',
+                        'subject',
+                        'unit',
+                        'remaining_unit',
+                        'mastery_score_percent',
+                        'retention_score_percent',
                     ],
                 ),
                 'metadata' => Arr::only($metadata, [
