@@ -210,7 +210,7 @@
                                     data-candidate-always-open
                                     data-execution-recommendation-rail
                                     data-event-url="{{ route('behavior_events.store') }}"
-                                    aria-label="同じWorkspaceのおすすめTask"
+                                    aria-label="同じ実行タイプのおすすめTask"
                                 >
                                     <div class="execution-recommendation-rail-heading">
                                         <div>
