@@ -88,7 +88,7 @@ class WorkspaceModeOnboardingV547Test extends TestCase
             ->assertSee('data-workspace-mode-onboarding="development"', false)
             ->assertSee('data-workspace-mode-onboarding-step="create_plan"', false)
             ->assertSee(
-                route('plans.create', ['workspace_mode' => 'development']),
+                route('plans.create.manual', ['workspace_mode' => 'development']),
                 false,
             );
 
