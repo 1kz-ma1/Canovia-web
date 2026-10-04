@@ -745,26 +745,7 @@ external_id
 
 ---
 
-## 27. Investigation Notes
-
-Repository-fit findings are intentionally left blank in the first commit.
-
-The next update to this temporary document should record:
-
-- current execution/evidence architecture
-- model placement decision
-- capability/provider contract
-- MVP database boundary
-- Study / Development integration points
-- compatibility and migration impact
-- explicit non-goals for V55.6
-
-
----
-
-# Repository Investigation / Proposed V55.6 Boundary
-
-## 27. Existing Architecture Findings
+## 27. Repository Investigation Findings
 
 ### 27.1 Product-level direction is already compatible
 
