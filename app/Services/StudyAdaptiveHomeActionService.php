@@ -32,6 +32,7 @@ final class StudyAdaptiveHomeActionService
             ->filter(
                 fn (Plan $candidate) =>
                     $this->profiles->forPlan($candidate)->key === 'study'
+                    && ! $this->isCompletedPlan($candidate)
             )
             ->sort(fn (Plan $left, Plan $right) => $this->comparePlans($left, $right))
             ->first();
@@ -91,6 +92,24 @@ final class StudyAdaptiveHomeActionService
                 (string) data_get($action->metadata, 'route_kind')
             ) === 'project_task',
         ];
+    }
+
+    private function isCompletedPlan(Plan $plan): bool
+    {
+        $tasks = $plan->relationLoaded('tasks')
+            ? $plan->tasks
+            : $plan->tasks()->get([
+                'id',
+                'status',
+                'progress_percent',
+            ]);
+
+        return $tasks->isNotEmpty()
+            && $tasks->every(
+                fn ($task) =>
+                    in_array($task->status, ['done', 'cancelled'], true)
+                    || (int) $task->progress_percent >= 100
+            );
     }
 
     private function comparePlans(Plan $left, Plan $right): int
