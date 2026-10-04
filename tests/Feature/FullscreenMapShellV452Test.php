@@ -39,9 +39,9 @@ class FullscreenMapShellV452Test extends TestCase
 
         $html = $response->getContent();
 
-        $this->assertSame(1, substr_count($html, 'data-home-surface-switcher'));
+        $this->assertSame(1, substr_count($html, 'data-canovia-surface-nav'));
         $this->assertLessThan(
-            strpos($html, 'data-home-surface-switcher'),
+            strpos($html, 'data-canovia-surface-nav'),
             strpos($html, 'data-map-fullscreen-topbar'),
         );
         $this->assertLessThan(
@@ -110,7 +110,7 @@ class FullscreenMapShellV452Test extends TestCase
             ->assertOk()
             ->assertSee('id="canovia-instant-meta"', false)
             ->assertSee('data-map-fullscreen-topbar', false)
-            ->assertSee('data-home-surface-switcher', false)
+            ->assertSee('data-canovia-surface-nav', false)
             ->assertSee('<body data-route-name="map.index">', false);
 
         $instant = file_get_contents(resource_path('js/instant-navigation.mjs'));
