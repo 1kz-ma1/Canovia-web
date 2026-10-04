@@ -36,6 +36,8 @@ final class DevelopmentQualityGateService
         string $requestId,
         ?int $userId = null,
         ?string $actorToken = null,
+        ?string $targetSha = null,
+        ?int $deploymentId = null,
     ): TaskEvidence {
         $gate = trim($gate);
         $status = trim($status);
@@ -70,6 +72,12 @@ final class DevelopmentQualityGateService
                 'quality_gate' => $gate,
                 'gate_status' => $status,
                 'confirmation_source' => 'human',
+                'target_sha' => filled($targetSha)
+                    ? mb_strtolower(mb_substr(trim((string) $targetSha), 0, 64))
+                    : null,
+                'deployment_id' => $deploymentId && $deploymentId > 0
+                    ? $deploymentId
+                    : null,
             ],
             confidence: 0.9,
             externalKey: implode(':', [
