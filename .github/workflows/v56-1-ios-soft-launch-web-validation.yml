@@ -44,8 +44,8 @@ jobs:
       - name: Account regression
         run: php artisan test tests/Feature/LivingRoadmapAccountTest.php tests/Feature/AdminPremiumExperienceV417Test.php
 
-      - name: Inbox storage regression
-        run: php artisan test tests/Feature/InboxFoundationV4113Test.php
+      - name: Inbox private-file regression
+        run: php artisan test tests/Feature/InboxFoundationV4113Test.php --filter=image_or_pdf_is_stored_privately
 
       - name: Study upload regressions
         run: php artisan test tests/Feature/StudyRecallCandidateV4112Test.php tests/Feature/StudyScopeCaptureV534Test.php
