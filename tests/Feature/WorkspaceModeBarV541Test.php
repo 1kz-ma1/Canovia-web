@@ -83,9 +83,9 @@ class WorkspaceModeBarV541Test extends TestCase
             ->get(route('workspace_modes.enter', [
                 'workspaceMode' => 'development',
             ]))
-            ->assertRedirect(route('github_workflow.index', [
-                'plan_id' => $development->id,
-            ]));
+            ->assertOk()
+            ->assertSee('data-development-workspace', false)
+            ->assertSee($development->title);
 
         $this->actingAs($user)
             ->get(route('workspace_modes.enter', [
