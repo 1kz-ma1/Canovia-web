@@ -7,4 +7,5 @@ enum IntelligenceDomain: string
     case General = 'general';
     case Study = 'study';
     case Development = 'development';
+    case Career = 'career';
 }

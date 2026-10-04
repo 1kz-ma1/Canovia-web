@@ -90,6 +90,10 @@ final class DecisionTraceStore
                         'readiness_score',
                         'pull_request_number',
                         'deployment_environment',
+                        'target_capture_id',
+                        'target_application_id',
+                        'target_selection_event_id',
+                        'career_stage',
                     ],
                 ),
                 'metadata' => Arr::only($metadata, [
