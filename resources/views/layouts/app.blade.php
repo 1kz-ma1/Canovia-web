@@ -14,6 +14,8 @@
         request()->routeIs('calendar.*') => 'カレンダー',
         request()->routeIs('future_memos.*') => '未来メモ',
         request()->routeIs('feedback.*') => 'Canovia Future',
+        request()->routeIs('legal.privacy') => 'プライバシー',
+        request()->routeIs('legal.support') => 'サポート',
         request()->routeIs('github_workflow.*') => 'GitHub',
         request()->routeIs('companion.*') => 'Companion',
         request()->routeIs('chat.*'), request()->routeIs('plans.review_assistant.*') => '計画を更新',
@@ -53,7 +55,10 @@
     $companionSourcePath = request()->getRequestUri();
 
     $onboardingVersion = (int) config('canovia.onboarding_version', 1);
-    $onboardingAuto = ! $focusMode && (! auth()->check() || (int) auth()->user()->onboarding_version < $onboardingVersion);
+    $isPublicLegalSurface = request()->routeIs('legal.*');
+    $onboardingAuto = ! $focusMode
+        && ! $isPublicLegalSurface
+        && (! auth()->check() || (int) auth()->user()->onboarding_version < $onboardingVersion);
     $releaseNotes = \App\Support\ReleaseNotes::all();
     $latestReleaseKey = (string) data_get($releaseNotes->first(), 'key', '');
     $currentUser = auth()->user();
