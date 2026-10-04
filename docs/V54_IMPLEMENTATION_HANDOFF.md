@@ -190,7 +190,7 @@ Important semantics:
 
 ### V54.3 — Study Workspace
 
-Status: **IN PROGRESS**
+Status: **IMPLEMENTED — PR PENDING**
 
 Branch:
 
@@ -200,21 +200,29 @@ Permanent spec:
 
 `docs/V54.3_STUDY_WORKSPACE.md`
 
-Implementation contract:
+Implemented:
 
 - canonical Study Home at `GET /workspace/study`
-- Study Mode entry redirects/renders Study Home rather than Scope directly
+- Study Mode entry now lands on Study Home rather than Scope directly
 - one selected accessible Study Plan is evaluated at a time
 - deterministic default Plan selection: priority → deadline → ID
-- optional explicit `plan_id` selection
-- no Study Plan → Plan creation empty state
+- explicit accessible Study Plan selection through `plan_id`
+- invalid/inaccessible/non-Study explicit Plan returns 404
+- no Study Plan → Plan creation empty state inside Study Workspace
 - no confirmed Scope → capture-first empty state
+- no fake numeric Readiness before confirmed Scope
 - confirmed Scope → Exam Readiness / Biggest Gap / Current Action
 - Coverage / Mastery / Retention / Remaining Load
-- priority remaining Scope list
+- deadline pressure / remaining Study Units
+- bounded priority remaining Scope list
 - Current Action / Readiness / Scope / Practice / Recall / History navigation
+- Practice / Recall navigation reuses target/active Task and never creates one on GET
+- bounded Study Intelligence history
+- `workspace.study.*` strong route hint
 - existing V53 Study Intelligence remains authoritative
 - no new AI traffic
+- final validation run: #37186624276
+- V54.2 / V54.1 / V54.0 / V53.9 / V53.6 / V53.5 / Home regressions passed
 
 ### V54.4 — Development Workspace
 
