@@ -77,23 +77,81 @@ final class TaskEvidenceAdapter
                 'active_seconds' => $this->nullableInt($metadata['active_seconds'] ?? null),
                 'interrupted' => $evidence->type === 'focus_session_interrupted',
             ],
+            'pull_request_observed' => [
+                ...$this->githubBaseFacts($metadata),
+                'pull_request_number' => $this->nullableInt(
+                    $metadata['pull_request_number'] ?? $metadata['pull_request'] ?? null,
+                ),
+                'pull_request_state' => $this->nullableString(
+                    $metadata['state'] ?? null,
+                ),
+                'draft' => (bool) ($metadata['draft'] ?? false),
+                'merged' => (bool) ($metadata['merged'] ?? false),
+                'head_sha' => $this->nullableString($metadata['head_sha'] ?? null),
+                'head_ref' => $this->nullableString($metadata['head_ref'] ?? null),
+                'base_ref' => $this->nullableString($metadata['base_ref'] ?? null),
+            ],
             'pull_request_ci_observed' => [
+                ...$this->githubBaseFacts($metadata),
                 'pull_request_number' => $this->nullableInt(
                     $metadata['pull_request_number'] ?? $metadata['pull_request'] ?? null,
                 ),
                 'ci_state' => $this->nullableString($metadata['ci_state'] ?? null),
+                'head_sha' => $this->nullableString($metadata['head_sha'] ?? null),
             ],
             'pull_request_merged' => [
+                ...$this->githubBaseFacts($metadata),
                 'pull_request_number' => $this->nullableInt(
                     $metadata['pull_request_number'] ?? $metadata['pull_request'] ?? null,
                 ),
                 'merge_commit_sha' => $this->nullableString($metadata['merge_commit_sha'] ?? null),
+                'head_sha' => $this->nullableString($metadata['head_sha'] ?? null),
+                'head_ref' => $this->nullableString($metadata['head_ref'] ?? null),
+                'base_ref' => $this->nullableString($metadata['base_ref'] ?? null),
             ],
             'pull_request_review_submitted' => [
+                ...$this->githubBaseFacts($metadata),
                 'pull_request_number' => $this->nullableInt(
                     $metadata['pull_request_number'] ?? $metadata['pull_request'] ?? null,
                 ),
                 'review_state' => $this->nullableString($metadata['review_state'] ?? null),
+            ],
+            'github_issue_observed' => [
+                ...$this->githubBaseFacts($metadata),
+                'issue_number' => $this->nullableInt($metadata['issue_number'] ?? null),
+                'issue_state' => $this->nullableString($metadata['issue_state'] ?? null),
+                'state_reason' => $this->nullableString($metadata['state_reason'] ?? null),
+                'locked' => (bool) ($metadata['locked'] ?? false),
+                'assignee_count' => max(0, (int) ($metadata['assignee_count'] ?? 0)),
+            ],
+            'github_branch_observed' => [
+                ...$this->githubBaseFacts($metadata),
+                'branch' => $this->nullableString($metadata['branch'] ?? null),
+                'head_sha' => $this->nullableString($metadata['head_sha'] ?? null),
+                'protected' => (bool) ($metadata['protected'] ?? false),
+            ],
+            'github_commit_observed' => [
+                ...$this->githubBaseFacts($metadata),
+                'commit_sha' => $this->nullableString($metadata['commit_sha'] ?? null),
+                'branch' => $this->nullableString($metadata['branch'] ?? null),
+                'parent_count' => max(0, (int) ($metadata['parent_count'] ?? 0)),
+                'verified' => (bool) ($metadata['verified'] ?? false),
+            ],
+            'github_deployment_observed' => [
+                ...$this->githubBaseFacts($metadata),
+                'deployment_id' => $this->nullableInt($metadata['deployment_id'] ?? null),
+                'deployment_sha' => $this->nullableString($metadata['deployment_sha'] ?? null),
+                'ref' => $this->nullableString($metadata['ref'] ?? null),
+                'environment' => $this->nullableString($metadata['environment'] ?? null),
+                'deployment_status' => $this->nullableString(
+                    $metadata['deployment_status'] ?? null,
+                ),
+                'production_environment' => (bool) (
+                    $metadata['production_environment'] ?? false
+                ),
+                'transient_environment' => (bool) (
+                    $metadata['transient_environment'] ?? false
+                ),
             ],
             'artifact_state_observed' => [
                 'provider' => $this->nullableString($metadata['provider'] ?? null),
@@ -106,6 +164,22 @@ final class TaskEvidenceAdapter
             ],
             default => [],
         };
+    }
+
+    /**
+     * @param array<string,mixed> $metadata
+     * @return array<string,mixed>
+     */
+    private function githubBaseFacts(array $metadata): array
+    {
+        return [
+            'plan_artifact_id' => $this->nullableInt(
+                $metadata['plan_artifact_id'] ?? null,
+            ),
+            'repo_full_name' => $this->nullableString(
+                $metadata['repo_full_name'] ?? null,
+            ),
+        ];
     }
 
     private function boundedPercent(mixed $value): ?int
