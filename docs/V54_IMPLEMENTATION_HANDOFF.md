@@ -97,14 +97,44 @@ Next after V54.0 merge:
 
 ### V54.1 — Fixed Mode Bar
 
-Planned:
+Status: **IMPLEMENTED — PR PENDING**
 
-- global fixed Mode control
-- registry-driven dropdown
-- current Mode indicator
-- desktop/mobile responsive treatment
-- safe-area handling
+Branch:
+
+`feature/v54-1-fixed-mode-bar`
+
+Permanent spec:
+
+`docs/V54.1_FIXED_WORKSPACE_MODE_BAR.md`
+
+Implemented:
+
+- fixed second-row Workspace Mode Bar inside desktop/mobile sticky app header
+- dropdown options sourced only from `WorkspaceModeRegistry`
+- Overview / Study / Development semantic icons and descriptions
+- `WorkspaceModeController` entry route
+- deterministic Study/Development Plan selection on Mode entry
+- ephemeral `workspace_mode` query context for empty Mode entry
+- no DB/session/localStorage persistence yet
 - Focus Mode exclusion
+- responsive mobile touch targets and viewport-constrained menu
+- Instant Navigation fragment metadata
+- Instant Navigation current Mode synchronization
+- app/page data attributes for current Mode
+- V54.1 feature tests
+- final validation run: #37182453095
+- V54.0 / V53.9 / Home regressions passed
+- temporary validation workflow removed after success
+- PR #219 created against main
+
+Important semantics:
+
+- Mode Bar is navigation, not a Plan filter
+- Mode selection is not persisted in V54.1
+- Study entry opens an existing Study surface when possible
+- Development entry opens an existing Development surface when possible
+- Mode list remains registry-driven for future expansion
+- Career/Creative/General remain valid Plan profiles but are not public Mode entries yet
 
 ### V54.2 — Mode Context & Persistence
 

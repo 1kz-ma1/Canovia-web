@@ -76,6 +76,14 @@
     $homeSurfacePreference = app(\App\Services\HomeSurfacePreference::class);
     $preferredHomeSurface = $homeSurfacePreference->value(request());
     $preferredHomeUrl = $homeSurfacePreference->url(request());
+
+    $workspaceModeRegistry = app(\App\Services\WorkspaceModeRegistry::class);
+    $workspaceModeContext = app(\App\Services\WorkspaceModeResolver::class)
+        ->resolve(request());
+    $workspaceModeDefinition = $workspaceModeRegistry->definition(
+        $workspaceModeContext->mode,
+    );
+    $workspaceModeOptions = $workspaceModeRegistry->all();
 @endphp
 <!DOCTYPE html>
 <html lang="ja">
@@ -120,7 +128,7 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body data-focus-mode="{{ $focusMode ? '1' : '0' }}" data-onboarding-version="{{ $onboardingVersion }}" data-onboarding-auto="{{ $onboardingAuto ? '1' : '0' }}" data-onboarding-authenticated="{{ auth()->check() ? '1' : '0' }}" data-pwa-install-url="{{ route('pwa.install.prepare') }}" data-route-name="{{ request()->route()?->getName() }}" data-home-surface="{{ $preferredHomeSurface }}" data-home-classic-url="{{ route('home') }}" data-home-map-url="{{ route('map.index') }}" class="pk-cosmic-shell min-h-screen bg-slate-950 text-slate-100 antialiased {{ $focusMode ? 'pace-focus-mode' : '' }}">
+<body data-focus-mode="{{ $focusMode ? '1' : '0' }}" data-workspace-mode="{{ $workspaceModeDefinition->mode->value }}" data-onboarding-version="{{ $onboardingVersion }}" data-onboarding-auto="{{ $onboardingAuto ? '1' : '0' }}" data-onboarding-authenticated="{{ auth()->check() ? '1' : '0' }}" data-pwa-install-url="{{ route('pwa.install.prepare') }}" data-route-name="{{ request()->route()?->getName() }}" data-home-surface="{{ $preferredHomeSurface }}" data-home-classic-url="{{ route('home') }}" data-home-map-url="{{ route('map.index') }}" class="pk-cosmic-shell min-h-screen bg-slate-950 text-slate-100 antialiased {{ $focusMode ? 'pace-focus-mode' : '' }}">
     <div class="pk-cosmic-backdrop pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
         <span class="pk-space-glow pk-space-glow-a"></span>
         <span class="pk-space-glow pk-space-glow-b"></span>
@@ -162,6 +170,12 @@
                     @endauth
                 </div>
             </div>
+            @include('layouts.partials.workspace-mode-bar', [
+                'workspaceModeRegistry' => $workspaceModeRegistry,
+                'workspaceModeContext' => $workspaceModeContext,
+                'workspaceModeDefinition' => $workspaceModeDefinition,
+                'workspaceModeOptions' => $workspaceModeOptions,
+            ])
         </header>
 
         <header class="mobile-app-header md:hidden">
@@ -217,11 +231,17 @@
                     <a href="{{ route('auth.register.form') }}" class="account-state-dot" title="この端末だけに保存中" aria-label="アカウントを作る"></a>
                 @endauth
             </div>
+            @include('layouts.partials.workspace-mode-bar', [
+                'workspaceModeRegistry' => $workspaceModeRegistry,
+                'workspaceModeContext' => $workspaceModeContext,
+                'workspaceModeDefinition' => $workspaceModeDefinition,
+                'workspaceModeOptions' => $workspaceModeOptions,
+            ])
         </header>
     @endunless
 
     <main class="app-main mx-auto min-h-[calc(100vh-120px)] max-w-7xl px-4 py-5 sm:px-5 md:px-6 md:py-10 {{ $focusMode ? 'focus-main' : '' }}" data-canovia-main>
-        <div data-canovia-page data-canovia-route="{{ request()->route()?->getName() }}">
+        <div data-canovia-page data-canovia-route="{{ request()->route()?->getName() }}" data-workspace-mode="{{ $workspaceModeDefinition->mode->value }}" data-workspace-mode-label="{{ $workspaceModeDefinition->label }}">
         @if (session('status'))
             <div class="assistant-notice assistant-notice-info mb-6" data-auto-toast>{{ session('status') }}</div>
         @endif
