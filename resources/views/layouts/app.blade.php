@@ -2,7 +2,7 @@
     $focusMode = request()->routeIs('work_sessions.active');
     $isCoreScreen = request()->routeIs('home') || request()->routeIs('map.index') || request()->routeIs('inbox.index') || request()->routeIs('navigation.index') || request()->routeIs('roadmap.index') || request()->routeIs('timeline.index') || request()->routeIs('calendar.index');
     $mobileSection = match (true) {
-        request()->routeIs('map.*') => 'Context Map',
+        request()->routeIs('map.*') => 'Explore',
         request()->routeIs('inbox.*') => 'Inbox',
         request()->routeIs('navigation.*'),
         request()->routeIs('work_sessions.*'),
