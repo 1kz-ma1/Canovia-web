@@ -227,7 +227,7 @@ Implemented:
 
 ### V54.4 — Development Workspace
 
-Status: **IMPLEMENTED — PR PENDING**
+Status: **IMPLEMENTED — PR #222 OPEN**
 
 Branch:
 
@@ -260,6 +260,7 @@ Implemented:
 - no new GitHub fetch or AI traffic
 - final validation run: #37189203048
 - V54.3 / V54.2 / V54.1 / V54.0 / V53.9 / V53.8 / V53.7 / GitHub Workflow / Home regressions passed
+- PR #222 created against main
 
 ### V54.5 — Overview
 
