@@ -1,10 +1,11 @@
 @php
     $setup = is_array($modeOnboarding ?? null) ? $modeOnboarding : null;
-    $isStudy = ($setup['mode'] ?? null) === 'study';
-    $accent = $isStudy ? 'amber' : 'cyan';
-    $accentText = $isStudy ? 'text-amber-300' : 'text-cyan-300';
-    $accentBorder = $isStudy ? 'border-amber-300/20' : 'border-cyan-300/20';
-    $accentBg = $isStudy ? 'bg-amber-300/[0.025]' : 'bg-cyan-300/[0.025]';
+    $modeKey = (string) ($setup['mode'] ?? '');
+    [$accentText, $accentBorder, $accentBg] = match ($modeKey) {
+        'study' => ['text-amber-300', 'border-amber-300/20', 'bg-amber-300/[0.025]'],
+        'career' => ['text-emerald-300', 'border-emerald-300/20', 'bg-emerald-300/[0.025]'],
+        default => ['text-cyan-300', 'border-cyan-300/20', 'bg-cyan-300/[0.025]'],
+    };
 @endphp
 
 @if ($setup)
