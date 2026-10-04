@@ -2089,3 +2089,53 @@ Task status / progress / remaining_minutes / Canovia workflow laneはV53.7では
 `DevelopmentEvidenceCollector` をV53.8の入力境界とし、Webhook / GitHub REST / provider payloadの内部事情をDevelopment State Builderへ漏らさない。
 
 詳細は `docs/V53.7_DEVELOPER_EVIDENCE_SYNC.md` を正とする。
+
+
+## V53.8 Developer Readiness
+
+V53.7で正規化したDevelopment Evidenceを、Task単位のRelease State / Readiness / Decision / Current Actionへ変換する。
+
+```text
+Development Evidence
+→ same-Task Quality Gates
+→ Release Readiness
+→ largest Gap
+→ Decision
+→ Current Action
+```
+
+V1 Quality Gateは以下の7つとする。
+
+- implementation
+- CI / automated test
+- review
+- merge
+- production deploy
+- verification
+- specification synchronization
+
+Readiness scoreのweightは20 / 20 / 15 / 15 / 15 / 10 / 5。ただしscoreだけではReadyにしない。7 Gateすべてがpassedの場合だけReadyとし、failed Gateが1つでもあればBlocked、それ以外はDevelopingとする。Development Evidenceがなければscore=null / Unknown。
+
+Release Gateは必ずTaskごとに相関させる。別TaskのCI / Deploy / Verificationを寄せ集めて1つのReady判定を作らない。
+
+Task progress / status / remaining_minutesはDevelopment Stateのsource of truthにしない。
+
+Reviewはreviewerごとの最新APPROVED / CHANGES_REQUESTEDを匿名化したkeyで追跡し、未解決のCHANGES_REQUESTEDが1件でもあればReview Gateをfailedとする。コメントだけで既存Approvalを消さない。
+
+Production Deployだけをrelease deploy passedとして扱い、staging成功はpendingとする。Deployment SHAが現在の実装/release SHAと一致しなくなった場合、古いDeployはstaleとしてpendingへ戻す。
+
+実機・本番確認と仕様同期はGitHubから推測せず、`development_quality_gate_confirmed` のHuman Confirmationだけを使う。
+
+Verificationは現在のProduction Deployment ID + deployed SHAへbindする。新しいDeployが出たら以前のVerificationはstaleとなり再確認が必要。
+
+Spec Syncは現在の実装/release SHAへbindする。新しいCommit/SHAへ変わったら以前のSpec Syncはstaleとなる。`not_required`も明示的なHuman Decisionとしてのみ扱う。
+
+新しいimplementation SHAを観測した場合、旧CI / Review / Merge / Deploy等のdownstream release stateを新しい変更へ自動継承しない。PR headからmerge commitへの正当なmerge transitionだけは、直前headで成立したCI / Reviewを保持する。
+
+Development Decision / Actionはdeterministic baselineとし、V53.8による新しいOpenAI trafficは発生させない。
+
+Current ActionはGitHub webhook、manual GitHub Return、Verification / Spec Sync confirmation後に再評価する。同じsemantic State + Actionは既存Action projectionを再利用し、State変化で判断が変わった場合だけsupersedeする。
+
+GitHub WorkflowにはV53.8診断SurfaceとしてRelease Readiness / confidence / Release candidate Task / Current Action / 7 Gateを表示する。最終的なStudy / Development共通Intelligence UXはV53.9で整理する。
+
+詳細は `docs/V53.8_DEVELOPER_READINESS.md` を正とする。
