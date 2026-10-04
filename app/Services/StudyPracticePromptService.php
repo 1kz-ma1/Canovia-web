@@ -82,6 +82,47 @@ class StudyPracticePromptService
         $secondaryTopics = collect($weaknessPriority['secondary_topics'] ?? [])->filter()->implode(' / ');
         $monitorTopics = collect($weaknessPriority['monitor_topics'] ?? [])->filter()->implode(' / ');
 
+        $learningPhase = is_array($strategy['learning_phase'] ?? null)
+            ? $strategy['learning_phase']
+            : [];
+        $phaseKey = (string) ($learningPhase['phase'] ?? 'general_practice');
+        $phaseLabel = (string) ($learningPhase['label'] ?? '総合演習');
+        $phaseReason = (string) ($learningPhase['reason'] ?? '');
+        $daysUntilExam = $learningPhase['days_until_exam'] ?? null;
+        $activeTopics = collect($learningPhase['active_topics'] ?? [])
+            ->filter()
+            ->implode(' / ');
+        $graduatedTopics = collect($learningPhase['graduated_topics'] ?? [])
+            ->filter()
+            ->implode(' / ');
+        $cappedTopics = collect($learningPhase['capped_topics'] ?? [])
+            ->filter()
+            ->implode(' / ');
+        $phaseRules = match ($phaseKey) {
+            'weakness_reinforcement' => implode("\n", [
+                '- Canoviaがactive_topicsとして指定したTopicの範囲内だけを集中補完する。',
+                '- 関連しているだけの兄弟Topic・周辺Topicへ勝手に補完範囲を拡張しない。',
+                '- 同じTopic内で問題形式を変えることはよいが、Canoviaのquestion mixを越えて集中させない。',
+                '- graduated / capped Topicを意図的な重点対象へ戻さない。',
+            ]),
+            'exam_mode' => implode("\n", [
+                '- 本番に近い分野バランス・頻度・4択形式を優先する。',
+                '- 直前の弱点へ偏らず、AP科目A全体から広く出題する。',
+                '- 新しい細かい弱点探索や低頻度の枝葉へ深入りしない。',
+                '- 本番より難しい算術・小数計算を難易度調整として増やさない。',
+                '- 弱点はこのSession後に要約するため、出題自体を弱点ドリル化しない。',
+            ]),
+            'diagnosis' => implode("\n", [
+                '- 最初から特定Topicへ固定せず、試験範囲を広く診断する。',
+                '- 一つの誤答を理由に残りの問題を同系統へ寄せない。',
+            ]),
+            default => implode("\n", [
+                '- 直前まで補完していた弱点へ意図的に偏らず、試験範囲を横断する。',
+                '- graduated / capped Topicは自然に出題されてもよいが、集中ドリルへ戻さない。',
+                '- 全体成績を再測定できる分野バランスを優先する。',
+            ]),
+        };
+
         $examFormatRules = $isApSubjectA
             ? implode("\n", [
                 '- AP科目Aの本番想定として、原則はsingle_choiceの4択にする。',
@@ -129,6 +170,16 @@ task_id: {$task->id}
 試験プロファイル: {$examProfileLabel}
 ※この方針はCanoviaが学習履歴とTask状態から決めたものです。外部AI側で別の学習方針へ置き換えないでください。
 
+【Canovia Study Phase】
+Phase: {$phaseKey} / {$phaseLabel}
+Phase理由: {$phaseReason}
+試験までの日数: {$daysUntilExam}
+今回集中してよいTopic: {$activeTopics}
+卒業済みTopic: {$graduatedTopics}
+深掘り上限到達Topic: {$cappedTopics}
+{$phaseRules}
+※Phase遷移・弱点卒業・再オープン判断はCanovia Policyの責務です。AI側で延長・解除・再開しないでください。
+
 【弱点優先度】
 {$priorityLines}
 
@@ -149,6 +200,8 @@ task_id: {$task->id}
 
 【目的】
 - このTaskの達成に直接役立つ問題を{$targetQuestionCount}問前後作る
+- Canovia Study Phaseを最優先し、AIが「まだ別パターンを作れる」という理由だけで弱点補完を拡張しない
+- weakness_reinforcement以外では、直前弱点を意図的な出題中心にしない
 - 繰り返し確認された弱点を優先する一方、単発ミスだけで出題を固定しない
 - 過去のAI演習でweaknessesがある場合でも、Canoviaの優先度・出題配分に従い、全問をその弱点だけへ寄せない
 - 重点弱点・他の弱点・横断診断を上記の配分に近づける
@@ -273,6 +326,7 @@ task_id: {$task->id}
 - calculation_slipは「式・考え方は正しいが算術だけを誤った」と確認できる場合に使う
 - carelessは知識不足ではなく明確な転記・選択・読み落とし等だと回答過程から判断できる場合だけ使う
 - weakness_topicsには、その誤答が本当に補強対象になり得る知識・概念だけを短く入れる
+- weakness_topicsは「Database」「Network」のような広すぎるカテゴリより、誤答を説明できる最小の実用的Topic（例: DNS, CNAME, 正規化, LEFT OUTER JOIN, MTBF/MTTR）を優先する
 - misconceptionsには具体的な誤解内容を短い文字列で入れる
 - 単発の計算ミスやcarelessだけを、恒常的な「弱点」と断定しない。Canoviaが履歴と合わせて優先度を決める
 - score_percentは0〜100の整数
@@ -280,6 +334,8 @@ task_id: {$task->id}
 - recommended_task_progress_percentは、今回の結果だけでなく現在進捗も踏まえた0〜100の整数
 - next_actionは次に取るべき具体的な学習Actionを1つに絞る
 - next_stepは「この評価を見た直後にCanovia上で何をすべきか」を構造化して必ず返す
+- next_stepは提案であり、Weakness Reinforcementを続けるか・卒業するか・General Practiceへ戻すかはCanovia Policyが決める
+- 「まだ別パターンを出題できる」こと自体をpractice継続理由にしない
 - next_step.kindは practice / review / continue_task / complete_task / plan_update のいずれか
 - complete_taskはTask完了の候補Signalであり、Canovia側が履歴を確認して追加の仕上げ確認を要求する場合がある
 - practiceを選ぶ場合はfocus_topicsとquestion_countも具体化する。ただしこれは候補であり、次回はCanoviaが他の弱点・横断診断と再配分する
