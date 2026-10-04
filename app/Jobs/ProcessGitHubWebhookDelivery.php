@@ -6,6 +6,7 @@ use App\Enums\FeatureKey;
 use App\Models\GitHubWebhookDelivery;
 use App\Models\PlanArtifact;
 use App\Services\FeatureAccessService;
+use App\Services\GitHubDevelopmentEvidenceService;
 use App\Services\GitHubReturnEvidenceService;
 use App\Services\GitHubWorkflowService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -32,6 +33,7 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
 
     public function handle(
         GitHubReturnEvidenceService $returns,
+        GitHubDevelopmentEvidenceService $developmentEvidence,
         GitHubWorkflowService $workflow,
         FeatureAccessService $access,
     ): void {
@@ -57,8 +59,15 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
             ->filter(fn (int $number) => $number > 0)
             ->unique()
             ->values();
+        $routingTargets = collect((array) $delivery->routing_targets)
+            ->filter(fn ($target) => is_array($target))
+            ->values();
 
-        if ($repoFullName === '' || $installationId <= 0 || $pullRequestNumbers->isEmpty()) {
+        if (
+            $repoFullName === ''
+            || $installationId <= 0
+            || ($pullRequestNumbers->isEmpty() && $routingTargets->isEmpty())
+        ) {
             $delivery->update([
                 'status' => 'ignored',
                 'processed_at' => now(),
@@ -126,6 +135,11 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
                     $syncedTasks++;
                 }
             }
+
+            $developmentCounts = $developmentEvidence->syncDelivery($delivery);
+            $matchedArtifacts += (int) $developmentCounts['matched_artifacts'];
+            $syncedTasks += (int) $developmentCounts['synced_tasks'];
+            $skippedEntitlement += (int) $developmentCounts['skipped_entitlement'];
         } catch (Throwable $exception) {
             $delivery->update([
                 'matched_artifacts' => $matchedArtifacts,
