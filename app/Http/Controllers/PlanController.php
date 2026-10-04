@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Plan;
 use App\Models\GoalContext;
+use App\Enums\WorkspaceMode;
 use App\Services\BehaviorIdentityService;
 use App\Services\ContinuityService;
 use App\Services\ExecutionActionPolicyService;
@@ -22,22 +23,42 @@ use App\Services\UserBehaviorService;
 use App\Services\UserStateService;
 use App\Services\GoalContextService;
 use App\Services\GoalContextAccessService;
+use App\Services\WorkspaceModeRegistry;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 
 class PlanController extends Controller
 {
-    public function create(Request $request)
-    {
+    public function create(
+        Request $request,
+        WorkspaceModeRegistry $workspaceModes,
+    ) {
         $prefill = $request->session()->pull('plan_create_prefill', []);
+        $workspaceModeContext = $this->workspaceModeCreateContext(
+            $request->query('workspace_mode'),
+            $workspaceModes,
+        );
 
         if ($request->boolean('collaborative') && $request->user()) {
             $prefill['is_collaborative'] = true;
         }
 
-        return view('plans.create', compact('prefill'));
+        if (
+            is_array($workspaceModeContext)
+            && empty($prefill['category'])
+        ) {
+            $prefill['category'] = $workspaceModeContext[
+                'suggested_plan_category'
+            ];
+        }
+
+        return view(
+            'plans.create',
+            compact('prefill', 'workspaceModeContext'),
+        );
     }
 
     public function store(
@@ -46,7 +67,18 @@ class PlanController extends Controller
         BehaviorIdentityService $identity,
         GoalContextService $goalContexts,
         GoalContextAccessService $goalContextAccess,
+        PlanCategoryProfileService $categoryProfiles,
+        WorkspaceModeRegistry $workspaceModes,
     ) {
+        $workspaceModeKeys = $workspaceModes->all()
+            ->filter(fn ($definition) =>
+                $definition->mode !== WorkspaceMode::Overview
+                && $definition->onboardingSteps !== []
+            )
+            ->map(fn ($definition) => $definition->mode->value)
+            ->values()
+            ->all();
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -62,6 +94,11 @@ class PlanController extends Controller
             'is_collaborative' => ['nullable'],
             'create_request_id' => ['nullable', 'uuid'],
             'goal_context_id' => ['nullable', 'integer'],
+            'workspace_mode' => [
+                'nullable',
+                'string',
+                Rule::in($workspaceModeKeys),
+            ],
         ]);
 
         $goalContext = null;
@@ -72,6 +109,18 @@ class PlanController extends Controller
             if ($goalContext->plan_id !== null) {
                 $existingPlan = Plan::query()->find((int) $goalContext->plan_id);
                 if ($existingPlan) {
+                    $workspaceRedirect = $this->workspaceModeRedirect(
+                        $existingPlan,
+                        $validated['workspace_mode'] ?? null,
+                        $categoryProfiles,
+                        $workspaceModes,
+                        alreadyExists: true,
+                    );
+
+                    if ($workspaceRedirect instanceof RedirectResponse) {
+                        return $workspaceRedirect;
+                    }
+
                     return redirect()
                         ->route('plans.ai_task_assistant.show', $existingPlan)
                         ->with('status', 'この目標はすでにPlanへ接続済みです。続きから開きました。');
@@ -140,6 +189,18 @@ class PlanController extends Controller
                 );
             }
 
+            $workspaceRedirect = $this->workspaceModeRedirect(
+                $plan,
+                $validated['workspace_mode'] ?? null,
+                $categoryProfiles,
+                $workspaceModes,
+                alreadyExists: true,
+            );
+
+            if ($workspaceRedirect instanceof RedirectResponse) {
+                return $workspaceRedirect;
+            }
+
             return redirect()->route('plans.ai_task_assistant.show', $plan)
                 ->with('status', 'この計画はすでに作成済みです。重複を作らず、続きから開きました。');
         }
@@ -166,8 +227,102 @@ class PlanController extends Controller
             );
         }
 
+        $workspaceRedirect = $this->workspaceModeRedirect(
+            $plan,
+            $validated['workspace_mode'] ?? null,
+            $categoryProfiles,
+            $workspaceModes,
+        );
+
+        if ($workspaceRedirect instanceof RedirectResponse) {
+            return $workspaceRedirect;
+        }
+
         return redirect()->route('plans.ai_task_assistant.show', $plan)
             ->with('status', '計画の基本情報を作成しました。続けてAIで初期タスクを生成できます。');
+    }
+
+    /**
+     * @return array<string,string>|null
+     */
+    private function workspaceModeCreateContext(
+        mixed $rawMode,
+        WorkspaceModeRegistry $workspaceModes,
+    ): ?array {
+        $key = trim((string) $rawMode);
+        if ($key === '') {
+            return null;
+        }
+
+        $mode = WorkspaceMode::tryFrom($key);
+        abort_unless(
+            $mode instanceof WorkspaceMode
+            && $mode !== WorkspaceMode::Overview,
+            404,
+        );
+
+        $definition = $workspaceModes->definition($mode);
+        abort_if(
+            $definition->suggestedPlanCategory === null
+            || $definition->onboardingSteps === [],
+            404,
+        );
+
+        return [
+            'key' => $mode->value,
+            'label' => $definition->label,
+            'description' => $definition->description,
+            'suggested_plan_category' =>
+                $definition->suggestedPlanCategory,
+            'return_url' => match ($mode) {
+                WorkspaceMode::Study => route('workspace.study.index'),
+                WorkspaceMode::Development =>
+                    route('workspace.development.index'),
+                WorkspaceMode::Overview =>
+                    route('workspace.overview.index'),
+            },
+        ];
+    }
+
+    private function workspaceModeRedirect(
+        Plan $plan,
+        mixed $rawMode,
+        PlanCategoryProfileService $categoryProfiles,
+        WorkspaceModeRegistry $workspaceModes,
+        bool $alreadyExists = false,
+    ): ?RedirectResponse {
+        $mode = WorkspaceMode::tryFrom(trim((string) $rawMode));
+        if (! $mode instanceof WorkspaceMode || $mode === WorkspaceMode::Overview) {
+            return null;
+        }
+
+        $definition = $workspaceModes->definition($mode);
+        $profile = $categoryProfiles->forPlan($plan);
+
+        if (! $definition->supportsProfile($profile->key)) {
+            return null;
+        }
+
+        $message = $alreadyExists
+            ? 'このPlanはすでに作成済みです。元のWorkspaceで続きから開きました。'
+            : match ($mode) {
+                WorkspaceMode::Study =>
+                    '学習Planを作成しました。次は試験範囲を確定します。',
+                WorkspaceMode::Development =>
+                    '開発Planを作成しました。次はGitHub Evidenceをつなぎます。',
+                WorkspaceMode::Overview =>
+                    'Planを作成しました。',
+            };
+
+        $route = match ($mode) {
+            WorkspaceMode::Study => 'workspace.study.index',
+            WorkspaceMode::Development => 'workspace.development.index',
+            WorkspaceMode::Overview => 'workspace.overview.index',
+        };
+
+        return redirect()
+            ->route($route, ['plan_id' => $plan->id])
+            ->with('status', $message);
     }
 
     public function show(
