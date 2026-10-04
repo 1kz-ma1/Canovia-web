@@ -40,7 +40,7 @@ class WorkspaceModePersistenceV542Test extends TestCase
             ->post(route('workspace_modes.select', [
                 'workspaceMode' => WorkspaceMode::Study->value,
             ]))
-            ->assertRedirect(route('plans.study_scope.index', $study));
+            ->assertRedirect(route('workspace.study.index'));
 
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
