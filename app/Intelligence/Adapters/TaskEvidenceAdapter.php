@@ -153,6 +153,17 @@ final class TaskEvidenceAdapter
                     $metadata['transient_environment'] ?? false
                 ),
             ],
+            'development_quality_gate_confirmed' => [
+                'quality_gate' => $this->nullableString(
+                    $metadata['quality_gate'] ?? null,
+                ),
+                'gate_status' => $this->nullableString(
+                    $metadata['gate_status'] ?? null,
+                ),
+                'confirmation_source' => $this->nullableString(
+                    $metadata['confirmation_source'] ?? null,
+                ),
+            ],
             'artifact_state_observed' => [
                 'provider' => $this->nullableString($metadata['provider'] ?? null),
                 'artifact_type' => $this->nullableString($metadata['artifact_type'] ?? null),
