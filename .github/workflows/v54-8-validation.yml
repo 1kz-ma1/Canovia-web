@@ -67,7 +67,7 @@ jobs:
         run: php artisan test tests/Unit/WorkspaceModeRegistryV540Test.php
 
       - name: V54.0 Resolver regression
-        run: php artisan test tests/Unit/WorkspaceModeResolverV540Test.php
+        run: php artisan test tests/Feature/WorkspaceModeResolverV540Test.php
 
       - name: V51.9.8 real-device regression
         run: php artisan test tests/Feature/WebRealDeviceFinishV5198Test.php
