@@ -283,7 +283,7 @@
                                 どの候補を見て、どれを開始したかも次回のおすすめ改善に使われます。
                             </p>
                         @else
-                            <h2 class="text-xl font-bold text-slate-100">{{ $selectedExecutionModeDefinition['label'] ?? '' }}Workspaceで今すぐ始められるTaskが見つかりませんでした</h2>
+                            <h2 class="text-xl font-bold text-slate-100">{{ $selectedExecutionModeDefinition['label'] ?? '' }}モードで今すぐ始められるTaskが見つかりませんでした</h2>
                             <p class="mt-2 text-slate-400">Planへ実行可能なTaskを追加するか、上の実行タイプを切り替えてください。</p>
                             <div class="mt-5">
                                 <form method="POST" action="{{ route('navigation.reset') }}">
