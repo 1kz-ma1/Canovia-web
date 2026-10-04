@@ -86,13 +86,13 @@ Route::delete('/workspace/preference', [WorkspaceModeController::class, 'reset']
 Route::post('/plans/{plan}/tasks/{task}/execution-setup', [ExecutionSetupController::class, 'store'])
     ->name('plans.tasks.execution_setup.store');
 Route::post('/execution/providers/{providerKey}/connections', [ProviderConnectionController::class, 'store'])
-    ->middleware('auth')
+    ->middleware(['auth', 'throttle:12,1'])
     ->name('execution.provider_connections.store');
 Route::delete('/execution/provider-connections/{connection}', [ProviderConnectionController::class, 'destroy'])
     ->middleware('auth')
     ->name('execution.provider_connections.destroy');
 Route::post('/plans/{plan}/tasks/{task}/provider-connections/{connection}/execution-context', [ProviderExecutionContextController::class, 'store'])
-    ->middleware('auth')
+    ->middleware(['auth', 'throttle:60,1'])
     ->name('execution.provider_contexts.store');
 Route::get('/execution-validation/study/{plan}/tasks/{task}', [ExecutionValidationProviderController::class, 'show'])
     ->name('execution.validation.study_practice');
