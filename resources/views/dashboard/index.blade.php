@@ -468,11 +468,13 @@
             'remaining_minutes' => $dashboard['remaining_minutes'],
             'streak_days' => $dashboard['streak_days'],
             'signal_count' => $signals->count(),
-            'intelligence_action' => $intelligenceAction ? [
-                'kind' => $intelligenceAction['action']->kind,
-                'title' => $intelligenceAction['action']->title,
-                'intent' => $intelligenceAction['action']->intent,
-                'readiness_score' => $intelligenceAction['readiness']->score,
+            'intelligence_action' => $intelligencePresentation ? [
+                'domain' => $intelligencePresentation->domain->value,
+                'kind' => $intelligencePresentation->action->kind,
+                'title' => $intelligencePresentation->action->title,
+                'intent' => $intelligencePresentation->action->intent,
+                'readiness_score' => $intelligencePresentation->readiness->score,
+                'gap_label' => $intelligencePresentation->gapLabel,
             ] : null,
         ],
         'continuity' => $dashboard['continuity'] ?? null,
