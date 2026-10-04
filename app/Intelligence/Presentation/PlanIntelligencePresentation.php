@@ -37,6 +37,8 @@ final readonly class PlanIntelligencePresentation
         public ?Task $targetTask = null,
         public bool $requiresTaskProjection = false,
         public bool $qualitativeReadiness = false,
+        public ?string $workspaceUrl = null,
+        public string $workspaceLabel = 'Workspace',
     ) {}
 
     public function readinessDisplay(): string
