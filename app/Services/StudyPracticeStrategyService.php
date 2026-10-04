@@ -118,8 +118,9 @@ class StudyPracticeStrategyService
         );
 
         // Mastery verification is already a broad diagnostic check, not a
-        // weakness drill. Keep it during General Practice for compatibility,
-        // but Exam Mode remains authoritative in the final exam window.
+        // weakness drill. Keep it during General Practice for compatibility
+        // and count it as broad evidence through learning_phase. Exam Mode
+        // remains authoritative in the final exam window.
         $masteryVerification = (
             ($progression['kind'] ?? null) === 'verify_mastery'
             && $phase
@@ -181,35 +182,9 @@ class StudyPracticeStrategyService
             $focusTopics = [];
             $questionMix = $this->broadMix($targetQuestionCount);
         } else {
-            $forcedGeneral = (bool) (
-                $learningPhase['general_return_required'] ?? false
-            );
-            $daysUntilExam = $learningPhase['days_until_exam'] ?? null;
-            $generalPracticeDays = (int) data_get(
-                $learningPhase,
-                'policy.general_practice_days',
-                30,
-            );
-            $deadlineGeneral = is_int($daysUntilExam)
-                && $daysUntilExam >= 0
-                && $daysUntilExam <= $generalPracticeDays;
-
-            if ($forcedGeneral || $deadlineGeneral) {
-                $key = 'general_practice';
-                $label = '総合演習';
-                $reason = (string) $learningPhase['reason'];
-            } elseif ($latestScore !== null && $latestScore >= 85) {
-                // Keep the established V40/V41 presentation while the
-                // canonical V56.0 phase remains GENERAL_PRACTICE.
-                $key = 'retention_and_transfer';
-                $label = '定着・応用確認';
-                $reason = '直近の理解度が高いため、同じ暗記確認より本番形式での定着と応用を重視します。';
-            } else {
-                $key = 'task_mastery';
-                $label = 'Task定着確認';
-                $reason = '集中補完を続ける根拠がないため、Task全体から理解の穴を確認します。';
-            }
-
+            $key = 'general_practice';
+            $label = '総合演習';
+            $reason = (string) $learningPhase['reason'];
             $focusTopics = [];
             $questionMix = $this->broadMix($targetQuestionCount);
         }
@@ -284,77 +259,15 @@ class StudyPracticeStrategyService
             ->unique()
             ->values();
 
-        $activeKeys = $active
-            ->map(fn ($topic) => $this->topicKey($topic))
-            ->flip();
+        $primary = $active->take(2)->values();
+        $secondary = $active->skip(2)->take(3)->values();
 
-        $primary = collect($weakness['primary_topics'] ?? [])
-            ->filter(fn ($topic) => is_string($topic))
-            ->filter(
-                fn ($topic) =>
-                    isset($activeKeys[$this->topicKey($topic)]),
-            )
-            ->unique()
-            ->take(2)
-            ->values();
-
-        $primaryKeys = $primary
-            ->map(fn ($topic) => $this->topicKey($topic))
-            ->flip();
-
-        $secondary = collect($weakness['secondary_topics'] ?? [])
-            ->filter(fn ($topic) => is_string($topic))
-            ->filter(
-                fn ($topic) =>
-                    isset($activeKeys[$this->topicKey($topic)])
-                    && ! isset($primaryKeys[$this->topicKey($topic)]),
-            )
-            ->unique()
-            ->take(3)
-            ->values();
-
-        $assignedKeys = $primary
-            ->merge($secondary)
-            ->map(fn ($topic) => $this->topicKey($topic))
-            ->flip();
-
-        // If convergence history still requires a Topic but V41.4 has already
-        // reduced its current priority after one good result, keep it as a
-        // Secondary verification instead of promoting it back to Primary.
-        $remaining = $active
-            ->reject(
-                fn ($topic) =>
-                    isset($assignedKeys[$this->topicKey($topic)]),
-            )
-            ->take(max(0, 3 - $secondary->count()));
-
-        $secondary = $secondary
-            ->merge($remaining)
-            ->unique()
-            ->take(3)
-            ->values();
-
-        if ($primary->isNotEmpty()) {
-            $primaryCount = max(
-                1,
-                (int) round($targetQuestionCount * 0.50),
-            );
-            $secondaryCount = $secondary->isNotEmpty()
-                ? max(
-                    1,
-                    (int) round($targetQuestionCount * 0.30),
-                )
-                : 0;
-        } elseif ($secondary->isNotEmpty()) {
-            $primaryCount = 0;
-            $secondaryCount = max(
-                1,
-                (int) round($targetQuestionCount * 0.40),
-            );
-        } else {
-            $primaryCount = 0;
-            $secondaryCount = 0;
-        }
+        $primaryCount = $primary->isNotEmpty()
+            ? max(1, (int) round($targetQuestionCount * 0.50))
+            : 0;
+        $secondaryCount = $secondary->isNotEmpty()
+            ? max(1, (int) round($targetQuestionCount * 0.30))
+            : 0;
 
         if (
             $targetQuestionCount >= 2
@@ -384,10 +297,7 @@ class StudyPracticeStrategyService
             ),
         ];
 
-        $primaryKeys = $primary
-            ->map(fn ($topic) => $this->topicKey($topic))
-            ->flip();
-        $secondaryKeys = $secondary
+        $activeKeys = $active
             ->map(fn ($topic) => $this->topicKey($topic))
             ->flip();
 
@@ -395,16 +305,15 @@ class StudyPracticeStrategyService
             ->filter(fn ($item) => is_array($item))
             ->map(function (array $item) use (
                 $activeKeys,
-                $primaryKeys,
-                $secondaryKeys,
+                $primary,
+                $secondary,
             ) {
-                $key = $this->topicKey(
-                    (string) ($item['topic'] ?? ''),
-                );
+                $topic = (string) ($item['topic'] ?? '');
+                $key = $this->topicKey($topic);
 
                 $item['tier'] = match (true) {
-                    isset($primaryKeys[$key]) => 'primary',
-                    isset($secondaryKeys[$key]) => 'secondary',
+                    $primary->contains($topic) => 'primary',
+                    $secondary->contains($topic) => 'secondary',
                     isset($activeKeys[$key]) => 'monitor',
                     default => 'resolved',
                 };
@@ -421,7 +330,7 @@ class StudyPracticeStrategyService
             'secondary_topics' => $secondary->all(),
             'monitor_topics' => [],
             'question_mix' => $questionMix,
-            'has_confirmed_weakness' => $primary->isNotEmpty(),
+            'has_confirmed_weakness' => $active->isNotEmpty(),
             'has_any_weakness_signal' => $active->isNotEmpty(),
         ];
     }
