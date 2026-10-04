@@ -35,6 +35,15 @@ final class WorkspaceModeResolver
             );
         }
 
+        $queryMode = $this->queryMode($request);
+        if ($queryMode instanceof WorkspaceMode) {
+            return new WorkspaceModeContextData(
+                mode: $queryMode,
+                source: WorkspaceModeSource::Explicit,
+                routeName: $routeName,
+            );
+        }
+
         $routeMode = $this->routeHint($routeName);
         if ($routeMode instanceof WorkspaceMode) {
             $plan = $this->routePlan($request);
@@ -79,6 +88,28 @@ final class WorkspaceModeResolver
             source: WorkspaceModeSource::Default,
             routeName: $routeName,
         );
+    }
+
+    private function queryMode(Request $request): ?WorkspaceMode
+    {
+        $value = mb_strtolower(trim((string) $request->query(
+            'workspace_mode',
+            '',
+        )));
+
+        if ($value === '') {
+            return null;
+        }
+
+        $mode = WorkspaceMode::tryFrom($value);
+
+        return $mode && in_array(
+            $mode->value,
+            $this->registry->publicKeys(),
+            true,
+        )
+            ? $mode
+            : null;
     }
 
     private function routeHint(?string $routeName): ?WorkspaceMode
