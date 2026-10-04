@@ -210,6 +210,7 @@ final class GitHubDevelopmentEvidenceService
             ->filter(
                 fn (PlanArtifact $artifact) =>
                     $connectedPlanIds->contains((int) $artifact->plan_id)
+                    && $artifact->tasks->isNotEmpty()
                     && ($this->workflow->parseUrl((string) $artifact->url)['kind'] ?? null)
                         !== 'repository'
             )
