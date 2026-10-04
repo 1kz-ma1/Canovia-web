@@ -21,6 +21,12 @@
         'unknown' => '未確認',
     ];
     $focusTaskId = (int) data_get($state?->facts, 'focus_task_id', 0);
+    $focusState = data_get($state?->facts, 'focus_task_state');
+    $focusState = is_array($focusState) ? $focusState : [];
+    $deployPassed = data_get($focusState, 'gates.deploy.status') === 'passed';
+    $implementationPassed = data_get($focusState, 'gates.implementation.status') === 'passed';
+    $verificationStale = (bool) data_get($focusState, 'verification_stale', false);
+    $specSyncStale = (bool) data_get($focusState, 'spec_sync_stale', false);
 @endphp
 
 @if ($development_action)
@@ -93,29 +99,51 @@
                 </div>
 
                 @if ($gate === 'verification' && $development_focus_task && $can_edit_development_readiness)
-                    <div class="mt-3 flex flex-wrap gap-2">
-                        @foreach (['passed' => '確認済み', 'failed' => '問題あり'] as $value => $buttonLabel)
-                            <form method="POST" action="{{ route('plans.development_readiness.quality_gate.confirm', [$selected_plan, $development_focus_task]) }}">
-                                @csrf
-                                <input type="hidden" name="quality_gate" value="verification">
-                                <input type="hidden" name="gate_status" value="{{ $value }}">
-                                <input type="hidden" name="confirmation_request_id" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
-                                <button type="submit" class="btn-secondary px-2 py-1 text-[10px]">{{ $buttonLabel }}</button>
-                            </form>
-                        @endforeach
-                    </div>
+                    @if ($deployPassed)
+                        @if ($verificationStale)
+                            <p class="mt-2 text-[10px] leading-5 text-amber-300">
+                                Deployが変わったため、現在のProductionで再確認が必要です。
+                            </p>
+                        @endif
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            @foreach (['passed' => '確認済み', 'failed' => '問題あり'] as $value => $buttonLabel)
+                                <form method="POST" action="{{ route('plans.development_readiness.quality_gate.confirm', [$selected_plan, $development_focus_task]) }}">
+                                    @csrf
+                                    <input type="hidden" name="quality_gate" value="verification">
+                                    <input type="hidden" name="gate_status" value="{{ $value }}">
+                                    <input type="hidden" name="confirmation_request_id" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                                    <button type="submit" class="btn-secondary px-2 py-1 text-[10px]">{{ $buttonLabel }}</button>
+                                </form>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="mt-2 text-[10px] leading-5 text-slate-600">
+                            Production Deploy確認後に、このReleaseを実機・本番で確認します。
+                        </p>
+                    @endif
                 @elseif ($gate === 'spec_sync' && $development_focus_task && $can_edit_development_readiness)
-                    <div class="mt-3 flex flex-wrap gap-2">
-                        @foreach (['passed' => '同期済み', 'failed' => '未同期', 'not_required' => '対象外'] as $value => $buttonLabel)
-                            <form method="POST" action="{{ route('plans.development_readiness.quality_gate.confirm', [$selected_plan, $development_focus_task]) }}">
-                                @csrf
-                                <input type="hidden" name="quality_gate" value="spec_sync">
-                                <input type="hidden" name="gate_status" value="{{ $value }}">
-                                <input type="hidden" name="confirmation_request_id" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
-                                <button type="submit" class="btn-secondary px-2 py-1 text-[10px]">{{ $buttonLabel }}</button>
-                            </form>
-                        @endforeach
-                    </div>
+                    @if ($implementationPassed)
+                        @if ($specSyncStale)
+                            <p class="mt-2 text-[10px] leading-5 text-amber-300">
+                                実装SHAが変わったため、現在の実装に対して再確認が必要です。
+                            </p>
+                        @endif
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            @foreach (['passed' => '同期済み', 'failed' => '未同期', 'not_required' => '対象外'] as $value => $buttonLabel)
+                                <form method="POST" action="{{ route('plans.development_readiness.quality_gate.confirm', [$selected_plan, $development_focus_task]) }}">
+                                    @csrf
+                                    <input type="hidden" name="quality_gate" value="spec_sync">
+                                    <input type="hidden" name="gate_status" value="{{ $value }}">
+                                    <input type="hidden" name="confirmation_request_id" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                                    <button type="submit" class="btn-secondary px-2 py-1 text-[10px]">{{ $buttonLabel }}</button>
+                                </form>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="mt-2 text-[10px] leading-5 text-slate-600">
+                            実装Evidenceが確認できてから仕様同期を確定します。
+                        </p>
+                    @endif
                 @endif
             </div>
         @endforeach
