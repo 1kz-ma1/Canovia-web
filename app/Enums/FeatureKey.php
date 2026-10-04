@@ -11,6 +11,7 @@ enum FeatureKey: string
     case AutomaticAiExecution = 'automatic_ai_execution';
     case CanoviaCompanion = 'canovia_companion';
     case ConversationalOnboarding = 'conversational_onboarding';
+    case StudyScopeCapture = 'study_scope_capture';
     case StudyLongTermWeaknessProfile = 'study_long_term_weakness_profile';
     case CareerNativeCaptureAnalysis = 'career_native_capture_analysis';
     case DeveloperGithubEvidence = 'developer_github_evidence';
