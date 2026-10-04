@@ -6,6 +6,7 @@ use App\Intelligence\Development\DevelopmentAdaptiveActionService;
 use App\Intelligence\Enums\IntelligenceDomain;
 use App\Intelligence\Presentation\DevelopmentIntelligencePresentationAdapter;
 use App\Intelligence\Presentation\IntelligencePresentationHistoryService;
+use App\Intelligence\Presentation\IntelligenceStateChangeFeedbackService;
 use App\Models\Plan;
 use App\Models\Task;
 use App\Services\PlanCategoryProfileService;
@@ -24,6 +25,7 @@ final class DevelopmentWorkspaceController extends Controller
         DevelopmentAdaptiveActionService $developmentActions,
         DevelopmentIntelligencePresentationAdapter $presentationAdapter,
         IntelligencePresentationHistoryService $history,
+        IntelligenceStateChangeFeedbackService $stateChanges,
     ) {
         $developmentPlans = $ownership->ownedPlans($request, [
             'tasks',
@@ -49,6 +51,7 @@ final class DevelopmentWorkspaceController extends Controller
                 'intelligenceHistory' => [],
                 'hasReleaseEvidence' => false,
                 'developmentFocusTask' => null,
+                'intelligenceStateChange' => null,
             ]);
         }
 
@@ -78,6 +81,10 @@ final class DevelopmentWorkspaceController extends Controller
             'developmentFocusTask' => $focusTaskId > 0
                 ? $this->task($plan, $focusTaskId)
                 : null,
+            'intelligenceStateChange' => $stateChanges->latestForPlan(
+                $plan,
+                IntelligenceDomain::Development,
+            ),
         ]);
     }
 
