@@ -1,0 +1,58 @@
+name: V55.5 Validate
+
+on:
+  push:
+    branches:
+      - feature/v55-5-primary-surface-handoff-polish
+
+jobs:
+  execution-mode-terminology:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Lint V55.5 PHP
+        run: php -l app/Services/ExecutionModeService.php && php -l tests/Feature/ExecutionModeTerminologyV555Test.php && php -l tests/Feature/ExecutionWorkspaceModesV512Test.php
+
+      - name: Compile Blade
+        run: php artisan view:cache
+
+      - name: V55.5 Execution Mode terminology
+        run: php artisan test tests/Feature/ExecutionModeTerminologyV555Test.php
+
+      - name: V51.2 Execution Mode regression
+        run: php artisan test tests/Feature/ExecutionWorkspaceModesV512Test.php
+
+      - name: V51.9.6 real-device regression
+        run: php artisan test tests/Feature/RealDeviceUiRefinementV5196Test.php
+
+      - name: V55.3 Current Action Home regression
+        run: php artisan test tests/Feature/CurrentActionHomeUxV553Test.php
+
+      - name: V54.1 Workspace Mode Bar regression
+        run: php artisan test tests/Feature/WorkspaceModeBarV541Test.php
+
+      - name: V54.8 Workspace polish regression
+        run: php artisan test tests/Feature/WorkspaceModePolishTelemetryV548Test.php
