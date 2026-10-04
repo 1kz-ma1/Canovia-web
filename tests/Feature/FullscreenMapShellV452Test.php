@@ -111,7 +111,8 @@ class FullscreenMapShellV452Test extends TestCase
             ->assertSee('id="canovia-instant-meta"', false)
             ->assertSee('data-map-fullscreen-topbar', false)
             ->assertSee('data-canovia-surface-nav', false)
-            ->assertSee('<body data-route-name="map.index">', false);
+            ->assertSee('data-route-name="map.index"', false)
+            ->assertSee('data-canovia-surface="explore"', false);
 
         $instant = file_get_contents(resource_path('js/instant-navigation.mjs'));
         $this->assertStringContainsString(
