@@ -3,6 +3,7 @@
 namespace App\Intelligence\Presentation;
 
 use App\Intelligence\Enums\IntelligenceDomain;
+use App\Intelligence\Enums\ReadinessLevel;
 use App\Models\IntelligenceActionProjection;
 use App\Models\IntelligenceDecisionTrace;
 use App\Models\Plan;
@@ -46,10 +47,12 @@ final class IntelligenceStateChangeFeedbackService
             ? (int) $scoreAfter - (int) $scoreBefore
             : null;
 
-        $levelBefore = $previous->readiness_level?->value
-            ?? (string) $previous->getRawOriginal('readiness_level');
-        $levelAfter = $current->readiness_level?->value
-            ?? (string) $current->getRawOriginal('readiness_level');
+        $levelBefore = $previous->readiness_level instanceof ReadinessLevel
+            ? $previous->readiness_level->value
+            : (string) $previous->getRawOriginal('readiness_level');
+        $levelAfter = $current->readiness_level instanceof ReadinessLevel
+            ? $current->readiness_level->value
+            : (string) $current->getRawOriginal('readiness_level');
 
         $levelChanged = $levelBefore !== $levelAfter;
         $decisionChanged = (string) $previous->reason_code
