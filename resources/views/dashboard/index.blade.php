@@ -175,10 +175,7 @@
                                     </a>
                                 @endif
 
-                                @if (
-                                    $intelligencePresentation->workspaceUrl
-                                    && $intelligencePresentation->workspaceUrl !== $intelligencePresentation->actionUrl
-                                )
+                                @if ($intelligencePresentation->hasWorkspaceHandoff())
                                     <a
                                         href="{{ $intelligencePresentation->workspaceUrl }}"
                                         class="btn-secondary px-3 py-2 text-xs"
