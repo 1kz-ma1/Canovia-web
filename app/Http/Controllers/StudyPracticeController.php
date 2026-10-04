@@ -21,6 +21,7 @@ use App\Services\PracticeQuestionDemandRecorder;
 use App\Services\StudyPracticeOrchestrator;
 use App\Services\StudyPracticePromptService;
 use App\Services\StudyPracticeReliabilityService;
+use App\Services\StudyPracticeStrategyService;
 use App\Services\StudyActivityPolicyService;
 use App\Services\StudyTaskProgressionService;
 use App\Services\TaskEvidenceService;
@@ -64,8 +65,8 @@ class StudyPracticeController extends Controller
 
         $actorToken = $identity->resolve($request);
         $attemptQuery = $this->attemptQuery($request, $plan, $task, $actorToken);
-        $recentAttempts = (clone $attemptQuery)->latest('created_at')->latest('id')->take(8)->get();
-        $studyProgression = $progressionService->resolve($plan, $task, $recentAttempts);
+        $historyLimit = max(4, (int) config('study.exam_convergence.history_attempt_limit', 16));
+        $recentAttempts = (clone $attemptQuery)->latest('created_at')->latest('id')->take($historyLimit)->get();
         $currentAttempt = ! empty($state['attempt_id'])
             ? (clone $attemptQuery)->whereKey((int) $state['attempt_id'])->first()
             : null;
@@ -194,6 +195,12 @@ class StudyPracticeController extends Controller
         $practiceStrategy = $currentPracticeSession
             ? (array) data_get($currentPracticeSession->selection_context, 'strategy', $orchestration['strategy'])
             : $orchestration['strategy'];
+        $studyProgression = $progressionService->resolve(
+            $plan,
+            $task,
+            $recentAttempts->take(8)->values(),
+            (array) ($practiceStrategy['learning_phase'] ?? []),
+        );
         $practiceProvider = $currentPracticeSession
             ? [
                 'provider' => $currentPracticeSession->question_provider,
@@ -282,7 +289,8 @@ class StudyPracticeController extends Controller
 
         $actorToken = $identity->resolve($request);
         $attemptQuery = $this->attemptQuery($request, $plan, $task, $actorToken);
-        $recentAttempts = (clone $attemptQuery)->latest('created_at')->latest('id')->take(5)->get();
+        $historyLimit = max(4, (int) config('study.exam_convergence.history_attempt_limit', 16));
+        $recentAttempts = (clone $attemptQuery)->latest('created_at')->latest('id')->take($historyLimit)->get();
 
         try {
             $practiceSession = $orchestrator->prepare(
@@ -368,7 +376,8 @@ class StudyPracticeController extends Controller
 
         $actorToken = $identity->resolve($request);
         $attemptQuery = $this->attemptQuery($request, $plan, $task, $actorToken);
-        $recentAttempts = (clone $attemptQuery)->latest('created_at')->latest('id')->take(5)->get();
+        $historyLimit = max(4, (int) config('study.exam_convergence.history_attempt_limit', 16));
+        $recentAttempts = (clone $attemptQuery)->latest('created_at')->latest('id')->take($historyLimit)->get();
 
         try {
             $practiceSession = $orchestrator->prepare(
@@ -479,7 +488,8 @@ class StudyPracticeController extends Controller
 
         $actorToken = $identity->resolve($request);
         $attemptQuery = $this->attemptQuery($request, $plan, $task, $actorToken);
-        $recentAttempts = (clone $attemptQuery)->latest('created_at')->latest('id')->take(5)->get();
+        $historyLimit = max(4, (int) config('study.exam_convergence.history_attempt_limit', 16));
+        $recentAttempts = (clone $attemptQuery)->latest('created_at')->latest('id')->take($historyLimit)->get();
         $practiceSession = $orchestrator->prepare(
             $plan,
             $task,
@@ -984,6 +994,7 @@ class StudyPracticeController extends Controller
         BehaviorIdentityService $identity,
         EvidenceProgressService $evidenceProgress,
         StudyTaskProgressionService $progressionService,
+        StudyPracticeStrategyService $strategyService,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
         $this->authorizeStudyPlan($plan);
@@ -996,7 +1007,7 @@ class StudyPracticeController extends Controller
         $alreadyApplied = false;
         $progressionDecision = null;
 
-        DB::transaction(function () use ($request, $plan, $task, $validated, $actorToken, $evidenceProgress, $progressionService, &$alreadyApplied, &$progressionDecision) {
+        DB::transaction(function () use ($request, $plan, $task, $validated, $actorToken, $evidenceProgress, $progressionService, $strategyService, &$alreadyApplied, &$progressionDecision) {
             $attempt = $this->attemptQuery($request, $plan, $task, $actorToken)
                 ->whereKey((int) $validated['attempt_id'])
                 ->where('request_hash', $validated['request_hash'])
@@ -1048,12 +1059,34 @@ class StudyPracticeController extends Controller
                 : null;
             $progressAfter ??= max($progressBefore, (int) $attempt->recommended_task_progress_percent);
 
-            $recentAttempts = $this->attemptQuery($request, $plan, $lockedTask, $actorToken)
+            $historyLimit = max(
+                4,
+                (int) config(
+                    'study.exam_convergence.history_attempt_limit',
+                    16,
+                ),
+            );
+            $recentAttempts = $this->attemptQuery(
+                $request,
+                $plan,
+                $lockedTask,
+                $actorToken,
+            )
                 ->latest('created_at')
                 ->latest('id')
-                ->take(8)
+                ->take($historyLimit)
                 ->get();
-            $progressionDecision = $progressionService->resolve($plan, $lockedTask, $recentAttempts);
+            $strategy = $strategyService->build(
+                $plan,
+                $lockedTask,
+                $recentAttempts,
+            );
+            $progressionDecision = $progressionService->resolve(
+                $plan,
+                $lockedTask,
+                $recentAttempts->take(8)->values(),
+                (array) ($strategy['learning_phase'] ?? []),
+            );
 
             if (($progressionDecision['kind'] ?? null) === 'verify_mastery' && $progressAfter >= 100) {
                 $progressAfter = max($progressBefore, 99);
@@ -1075,6 +1108,8 @@ class StudyPracticeController extends Controller
                 'verify_mastery' => '完了前の仕上げ確認を行う',
                 'advance_task' => '次のTask「'.data_get($progressionDecision, 'next_task.title', '次のTask').'」へ進む',
                 'plan_complete' => 'このPlanの学習完了を確認する',
+                'general_practice_return' => '総合演習で全体成績を再確認する',
+                'exam_mode' => '本番形式の総合演習を進める',
                 default => $attempt->next_action ?: $lockedTask->next_action_note,
             };
 
@@ -1106,12 +1141,34 @@ class StudyPracticeController extends Controller
 
         if (! is_array($progressionDecision)) {
             $task->refresh();
-            $recentAttempts = $this->attemptQuery($request, $plan, $task, $actorToken)
+            $historyLimit = max(
+                4,
+                (int) config(
+                    'study.exam_convergence.history_attempt_limit',
+                    16,
+                ),
+            );
+            $recentAttempts = $this->attemptQuery(
+                $request,
+                $plan,
+                $task,
+                $actorToken,
+            )
                 ->latest('created_at')
                 ->latest('id')
-                ->take(8)
+                ->take($historyLimit)
                 ->get();
-            $progressionDecision = $progressionService->resolve($plan, $task, $recentAttempts);
+            $strategy = $strategyService->build(
+                $plan,
+                $task,
+                $recentAttempts,
+            );
+            $progressionDecision = $progressionService->resolve(
+                $plan,
+                $task,
+                $recentAttempts->take(8)->values(),
+                (array) ($strategy['learning_phase'] ?? []),
+            );
         }
 
         if ($request->boolean('continue_after_apply')) {
@@ -1127,6 +1184,18 @@ class StudyPracticeController extends Controller
                 return redirect()
                     ->route('plans.tasks.study_practice.show', [$plan, $task])
                     ->with('status', '前回の結果を引き継いで、弱点補強を続けます。');
+            }
+
+            if (($progressionDecision['kind'] ?? null) === 'general_practice_return') {
+                return redirect()
+                    ->route('plans.tasks.study_practice.show', [$plan, $task])
+                    ->with('status', '弱点補完を区切り、次は総合演習で全体成績を再確認します。');
+            }
+
+            if (($progressionDecision['kind'] ?? null) === 'exam_mode') {
+                return redirect()
+                    ->route('plans.tasks.study_practice.show', [$plan, $task])
+                    ->with('status', '試験日が近いため、次は本番形式の総合演習を優先します。');
             }
 
             if (($progressionDecision['kind'] ?? null) === 'advance_task' && data_get($progressionDecision, 'next_task.id')) {

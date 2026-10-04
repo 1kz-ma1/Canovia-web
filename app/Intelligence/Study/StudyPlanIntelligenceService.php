@@ -7,7 +7,7 @@ use App\Intelligence\Data\StudyIntelligenceResult;
 use App\Intelligence\Enums\IntelligenceDomain;
 use App\Intelligence\Services\StateSnapshotStore;
 use App\Models\Plan;
-use App\Models\StudyScopeCapture;
+use App\Services\StudyExamDateService;
 use App\Models\StudyScopeItem;
 use App\Models\Task;
 use App\Models\TaskEvidence;
@@ -23,6 +23,7 @@ final class StudyPlanIntelligenceService
         private readonly StudyIntelligenceStateBuilder $stateBuilder,
         private readonly StudyExamReadinessEvaluator $readinessEvaluator,
         private readonly StateSnapshotStore $stateStore,
+        private readonly StudyExamDateService $examDates,
     ) {}
 
     public function evaluate(
@@ -71,7 +72,7 @@ final class StudyPlanIntelligenceService
             ->values()
             ->all();
 
-        $deadline = $this->examDeadline($plan);
+        $deadline = $this->examDates->resolve($plan);
 
         $state = $this->stateBuilder->build(
             IntelligenceDomain::Study,
@@ -179,54 +180,6 @@ final class StudyPlanIntelligenceService
             ])
             ->values()
             ->all();
-    }
-
-    /**
-     * @return array{exam_date:?string,source:?string,conflict:bool}
-     */
-    private function examDeadline(Plan $plan): array
-    {
-        $dates = StudyScopeCapture::query()
-            ->where('plan_id', $plan->id)
-            ->where('status', 'confirmed')
-            ->whereNotNull('exam_date')
-            ->pluck('exam_date')
-            ->map(fn ($date) => method_exists($date, 'format')
-                ? $date->format('Y-m-d')
-                : substr((string) $date, 0, 10))
-            ->filter()
-            ->unique()
-            ->values();
-
-        if ($dates->count() === 1) {
-            return [
-                'exam_date' => (string) $dates->first(),
-                'source' => 'confirmed_scope_capture',
-                'conflict' => false,
-            ];
-        }
-
-        if ($dates->count() > 1) {
-            return [
-                'exam_date' => null,
-                'source' => 'conflicting_scope_captures',
-                'conflict' => true,
-            ];
-        }
-
-        if ($plan->deadline) {
-            return [
-                'exam_date' => $plan->deadline->format('Y-m-d'),
-                'source' => 'plan_deadline',
-                'conflict' => false,
-            ];
-        }
-
-        return [
-            'exam_date' => null,
-            'source' => null,
-            'conflict' => false,
-        ];
     }
 
     private function normalize(string $value): string
