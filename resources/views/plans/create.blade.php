@@ -45,10 +45,10 @@
 
         @if ($workspaceModeContext ?? null)
             <section
-                class="rounded-2xl border {{ $workspaceModeContext['key'] === 'study' ? 'border-amber-300/20 bg-amber-300/[0.025]' : 'border-cyan-300/20 bg-cyan-300/[0.025]' }} p-4"
+                class="rounded-2xl border {{ $workspaceModeContext['key'] === 'study' ? 'border-amber-300/20 bg-amber-300/[0.025]' : ($workspaceModeContext['key'] === 'career' ? 'border-emerald-300/20 bg-emerald-300/[0.025]' : 'border-cyan-300/20 bg-cyan-300/[0.025]') }} p-4"
                 data-plan-create-workspace-mode="{{ $workspaceModeContext['key'] }}"
             >
-                <p class="text-[10px] font-black uppercase tracking-[0.16em] {{ $workspaceModeContext['key'] === 'study' ? 'text-amber-300' : 'text-cyan-300' }}">
+                <p class="text-[10px] font-black uppercase tracking-[0.16em] {{ $workspaceModeContext['key'] === 'study' ? 'text-amber-300' : ($workspaceModeContext['key'] === 'career' ? 'text-emerald-300' : 'text-cyan-300') }}">
                     {{ strtoupper($workspaceModeContext['key']) }} WORKSPACE
                 </p>
                 <p class="mt-2 text-sm font-black text-slate-100">{{ $workspaceModeContext['label'] }} WorkspaceからPlanを作成中</p>
@@ -247,6 +247,15 @@
                             <div class="flex gap-3">
                                 <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-700 text-[10px] font-black text-slate-400">3</span>
                                 <p class="text-xs leading-5 text-slate-400">Release ReadinessとCurrent Actionを確認</p>
+                            </div>
+                        @elseif (($workspaceModeContext['key'] ?? null) === 'career')
+                            <div class="flex gap-3">
+                                <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-700 text-[10px] font-black text-slate-400">2</span>
+                                <p class="text-xs leading-5 text-slate-400">Career Workspaceへ戻って求人・応募・選考の事実を1件追加</p>
+                            </div>
+                            <div class="flex gap-3">
+                                <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-700 text-[10px] font-black text-slate-400">3</span>
+                                <p class="text-xs leading-5 text-slate-400">Process ReadinessとCurrent Actionを確認</p>
                             </div>
                         @else
                             <div class="flex gap-3">
