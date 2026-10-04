@@ -126,7 +126,9 @@ final class StudyExamConvergencePolicyService
         );
 
         [$phase, $reason] = match (true) {
-            $daysUntilExam !== null && $daysUntilExam <= $examDays => [
+            $daysUntilExam !== null
+                && $daysUntilExam >= 0
+                && $daysUntilExam <= $examDays => [
                 self::PHASE_EXAM_MODE,
                 "試験まで{$daysUntilExam}日のため、新しい細部探索より本番バランスを優先します。",
             ],
@@ -134,7 +136,9 @@ final class StudyExamConvergencePolicyService
                 self::PHASE_GENERAL_PRACTICE,
                 '弱点補完の卒業または深掘り上限に到達したため、次は総合演習で全体を再測定します。',
             ],
-            $daysUntilExam !== null && $daysUntilExam <= $generalDays => [
+            $daysUntilExam !== null
+                && $daysUntilExam >= 0
+                && $daysUntilExam <= $generalDays => [
                 self::PHASE_GENERAL_PRACTICE,
                 "試験まで{$daysUntilExam}日のため、局所補強より総合演習を優先します。",
             ],
