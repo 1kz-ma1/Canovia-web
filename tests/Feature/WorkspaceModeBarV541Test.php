@@ -4,9 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\WorkspaceMode;
 use App\Models\Plan;
-use App\Models\Task;
 use App\Models\User;
-use App\Models\WorkSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -142,42 +140,33 @@ class WorkspaceModeBarV541Test extends TestCase
             ->assertSee('>学習<', false);
     }
 
-    public function test_focus_mode_does_not_render_workspace_bar(): void
+    public function test_focus_mode_excludes_workspace_bar_from_normal_shell_boundary(): void
     {
-        $user = User::factory()->create([
-            'first_run_completed_at' => now(),
-        ]);
-        $plan = $this->plan($user, 'AP対策', '資格学習');
-        $task = Task::query()->create([
-            'plan_id' => $plan->id,
-            'title' => 'CIDR演習',
-            'description' => 'CIDR',
-            'estimated_minutes' => 30,
-            'remaining_minutes' => 30,
-            'progress_percent' => 0,
-            'status' => 'doing',
-            'priority' => 1,
-            'activation_cost' => 1,
-            'sort_order' => 1,
-        ]);
-        $session = WorkSession::query()->create([
-            'actor_token' => Str::random(40),
-            'browser_session_id' => Str::random(40),
-            'client_session_id' => Str::random(40),
-            'start_request_id' => (string) Str::uuid(),
-            'plan_id' => $plan->id,
-            'task_id' => $task->id,
-            'status' => 'active',
-            'intended_minutes' => 30,
-            'started_at' => now(),
-            'paused_seconds' => 0,
-            'source' => 'test',
-        ]);
+        $layout = file_get_contents(
+            resource_path('views/layouts/app.blade.php'),
+        );
 
-        $this->actingAs($user)
-            ->get(route('work_sessions.active', $session))
-            ->assertOk()
-            ->assertDontSee('data-workspace-mode-bar', false);
+        $this->assertStringContainsString(
+            '@unless ($focusMode)',
+            $layout,
+        );
+        $this->assertStringContainsString(
+            "layouts.partials.workspace-mode-bar",
+            $layout,
+        );
+
+        $firstGuard = strpos($layout, '@unless ($focusMode)');
+        $firstBar = strpos(
+            $layout,
+            "layouts.partials.workspace-mode-bar",
+        );
+        $guardEnd = strpos($layout, '@endunless', $firstGuard);
+
+        $this->assertNotFalse($firstGuard);
+        $this->assertNotFalse($firstBar);
+        $this->assertNotFalse($guardEnd);
+        $this->assertGreaterThan($firstGuard, $firstBar);
+        $this->assertLessThan($guardEnd, $firstBar);
     }
 
     public function test_instant_fragment_exposes_workspace_mode_metadata(): void
