@@ -34,7 +34,7 @@ class MobileMapUsabilityPolishV455Test extends TestCase
             ->assertSee('data-map-gesture-controls', false)
             ->assertSee('data-route-lock-skip', false)
             ->assertSee('data-map-semantic-zoom', false)
-            ->assertSee('data-home-surface-switcher', false);
+            ->assertSee('data-canovia-surface-nav', false);
     }
 
     public function test_space_station_keeps_secondary_capture_inputs_collapsed_by_default(): void
