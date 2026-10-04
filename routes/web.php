@@ -69,6 +69,8 @@ Route::get('/welcome', [FirstRunController::class, 'show'])->name('first_run.sho
 Route::post('/welcome/start', [FirstRunController::class, 'start'])->name('first_run.start');
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/workspace/{workspaceMode}', [WorkspaceModeController::class, 'enter'])->name('workspace_modes.enter');
+Route::post('/workspace/{workspaceMode}/select', [WorkspaceModeController::class, 'select'])->name('workspace_modes.select');
+Route::delete('/workspace/preference', [WorkspaceModeController::class, 'reset'])->name('workspace_modes.preference.reset');
 Route::get('/map', [CanoviaMapController::class, 'index'])->name('map.index');
 Route::post('/map/personalization/pins/{plan}', [MapPersonalizationController::class, 'store'])
     ->middleware('auth')

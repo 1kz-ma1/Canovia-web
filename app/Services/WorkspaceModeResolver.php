@@ -15,11 +15,13 @@ final class WorkspaceModeResolver
     public function __construct(
         private readonly WorkspaceModeRegistry $registry,
         private readonly PlanCategoryProfileService $profiles,
+        private readonly WorkspaceModePreference $preference,
     ) {}
 
     /**
-     * V54.0 resolves current Workspace context but does not persist a manual
-     * choice yet. V54.2 will own persistence and precedence over auto context.
+     * Workspace context resolution keeps explicit/deep-link semantics above
+     * manual preference, then uses the persisted preference for contextless
+     * surfaces before falling back to Overview.
      */
     public function resolve(
         Request $request,
@@ -79,6 +81,15 @@ final class WorkspaceModeResolver
                 source: WorkspaceModeSource::PlanProfile,
                 planId: (int) $plan->id,
                 profileKey: $profile->key,
+                routeName: $routeName,
+            );
+        }
+
+        $manualMode = $this->preference->selected($request);
+        if ($manualMode instanceof WorkspaceMode) {
+            return new WorkspaceModeContextData(
+                mode: $manualMode,
+                source: WorkspaceModeSource::ManualPreference,
                 routeName: $routeName,
             );
         }

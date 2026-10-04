@@ -9710,3 +9710,90 @@ body[data-route-name="map.index"] .canovia-map-page {
         transition: none;
     }
 }
+
+
+/* V54.2 Workspace Mode persistence */
+.workspace-mode-option-form {
+    margin: 0;
+}
+
+button.workspace-mode-option {
+    width: 100%;
+    appearance: none;
+    cursor: pointer;
+    background: transparent;
+    font: inherit;
+    text-align: left;
+}
+
+.workspace-mode-preference-mark {
+    flex: 0 0 auto;
+    border: 1px solid rgb(var(--workspace-accent) / 0.34);
+    border-radius: 999px;
+    background: rgb(var(--workspace-accent) / 0.10);
+    padding: 0.18rem 0.42rem;
+    color: rgb(var(--workspace-accent));
+    font-size: 0.55rem;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+}
+
+.workspace-mode-auto-row {
+    margin: 0.45rem 0.65rem 0.25rem;
+    border-top: 1px solid rgb(51 65 85 / 0.60);
+    padding-top: 0.45rem;
+}
+
+.workspace-mode-auto-row form {
+    margin: 0;
+}
+
+.workspace-mode-auto-action {
+    width: 100%;
+    appearance: none;
+    cursor: pointer;
+    border: 0;
+    border-radius: 0.75rem;
+    background: transparent;
+    padding: 0.45rem 0.5rem;
+    text-align: left;
+}
+
+.workspace-mode-auto-action:hover,
+.workspace-mode-auto-action:focus-visible {
+    background: rgb(30 41 59 / 0.72);
+    outline: none;
+}
+
+.workspace-mode-auto-action strong,
+.workspace-mode-auto-action span {
+    display: block;
+}
+
+.workspace-mode-auto-action strong {
+    color: rgb(203 213 225);
+    font-size: 0.68rem;
+    font-weight: 850;
+}
+
+.workspace-mode-auto-action span {
+    margin-top: 0.12rem;
+    color: rgb(100 116 139);
+    font-size: 0.58rem;
+    line-height: 1.4;
+}
+
+.workspace-mode-auto-row .workspace-mode-menu-note {
+    margin: 0;
+    border-top: 0;
+    padding-top: 0;
+}
+
+html[data-theme-resolved="light"] .workspace-mode-auto-action strong {
+    color: rgb(30 41 59);
+}
+
+html[data-theme-resolved="light"] .workspace-mode-auto-action:hover,
+html[data-theme-resolved="light"] .workspace-mode-auto-action:focus-visible {
+    background: rgb(241 245 249);
+}
