@@ -84,6 +84,11 @@ class Task extends Model
         return $this->hasMany(TaskEvidence::class)->latest('occurred_at')->latest('id');
     }
 
+    public function executionActivities()
+    {
+        return $this->hasMany(ExecutionActivity::class)->latest('created_at')->latest('id');
+    }
+
     public function milestones()
     {
         return $this->hasMany(TaskMilestone::class)->orderBy('sort_order')->orderBy('id');
