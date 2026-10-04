@@ -398,10 +398,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         list.querySelectorAll('[data-study-scope-row]').forEach(wireRemove);
 
+        let nextIndex = list.querySelectorAll('[data-study-scope-row]').length;
+
         add?.addEventListener('click', () => {
             const fragment = template.content.cloneNode(true);
             const row = fragment.querySelector('[data-study-scope-row]');
-            const index = list.querySelectorAll('[data-study-scope-row]').length;
+            const index = nextIndex++;
 
             row.querySelectorAll('[data-field]').forEach((input) => {
                 const field = input.getAttribute('data-field');
