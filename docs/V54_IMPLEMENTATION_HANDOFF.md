@@ -338,7 +338,7 @@ Implemented:
 
 ### V54.7 — Mode-specific Onboarding
 
-Status: **IMPLEMENTED — PR PENDING**
+Status: **IMPLEMENTED — PR #225 OPEN**
 
 Branch:
 
@@ -380,6 +380,7 @@ Implemented:
 - final validation run: #37194412233
 - V54.6 / V54.5 / V54.4 / V54.3 / V54.2 / V54.0 regressions passed
 - First-run Gate / Plan idempotency / Goal Context / Plan visual creation regressions passed
+- PR #225 created against main
 
 ### V54.8 — Polish / telemetry / iOS
 
