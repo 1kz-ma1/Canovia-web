@@ -1,0 +1,82 @@
+name: V55.6 Validate
+
+on:
+  push:
+    branches:
+      - feature/v55-6-execution-ecosystem-foundation
+
+jobs:
+  execution-ecosystem-foundation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Lint V55.6 PHP
+        run: |
+          php -l app/Execution/ExecutionCapability.php
+          php -l app/Enums/ExecutionProviderKind.php
+          php -l app/Data/ExecutionProviderDefinitionData.php
+          php -l app/Data/ExecutionResolutionData.php
+          php -l app/Contracts/ExecutionProviderCatalog.php
+          php -l app/Contracts/ExecutionActivityProjector.php
+          php -l app/Models/ExecutionActivity.php
+          php -l app/Models/PlanExecutionPreference.php
+          php -l app/Services/ExecutionProviderRegistry.php
+          php -l app/Services/ExecutionCapabilityResolver.php
+          php -l app/Services/ExecutionResolver.php
+          php -l app/Services/ExecutionActivityService.php
+          php -l app/Services/TaskEvidenceExecutionActivityProjector.php
+          php -l app/Providers/AppServiceProvider.php
+          php -l database/migrations/2026_10_05_000100_create_plan_execution_preferences_table.php
+          php -l database/migrations/2026_10_05_000200_create_execution_activities_table.php
+          php -l tests/Unit/ExecutionProviderRegistryV556Test.php
+          php -l tests/Feature/ExecutionEcosystemFoundationV556Test.php
+
+      - name: Compile Blade
+        run: php artisan view:cache
+
+      - name: V55.6 provider registry
+        run: php artisan test tests/Unit/ExecutionProviderRegistryV556Test.php
+
+      - name: V55.6 execution ecosystem foundation
+        run: php artisan test tests/Feature/ExecutionEcosystemFoundationV556Test.php
+
+      - name: V55.5 Execution Mode regression
+        run: php artisan test tests/Feature/ExecutionModeTerminologyV555Test.php
+
+      - name: V54.3 Study Workspace regression
+        run: php artisan test tests/Feature/StudyWorkspaceV543Test.php
+
+      - name: V54.4 Development Workspace regression
+        run: php artisan test tests/Feature/DevelopmentWorkspaceV544Test.php
+
+      - name: V53.7 Developer Evidence regression
+        run: php artisan test tests/Feature/DeveloperEvidenceSyncV537Test.php
+
+      - name: V41 Execution Evidence regression
+        run: php artisan test tests/Feature/ExecutionEvidenceFoundationV410Test.php
+
+      - name: V41.1 Native Evidence regression
+        run: php artisan test tests/Feature/NativeEvidenceSignalsV411Test.php
