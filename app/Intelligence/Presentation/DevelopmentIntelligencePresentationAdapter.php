@@ -198,9 +198,13 @@ final class DevelopmentIntelligencePresentationAdapter
             );
         }
 
+        $anchor = $routeKind === 'development_gate_confirmation'
+            ? 'development-quality-gates'
+            : 'github-workflow-board';
+
         return route('github_workflow.index', [
             'plan_id' => $plan->id,
-        ]).'#development-intelligence';
+        ]).'#'.$anchor;
     }
 
     private function targetTask(Plan $plan, mixed $value): ?Task
