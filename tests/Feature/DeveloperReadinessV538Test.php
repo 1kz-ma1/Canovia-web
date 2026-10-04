@@ -406,6 +406,153 @@ class DeveloperReadinessV538Test extends TestCase
             ->assertForbidden();
     }
 
+    public function test_new_production_deployment_invalidates_previous_verification_confirmation(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $this->releaseThroughDeploy($user, $task);
+        $this->confirmGate($user, $task, 'verification', 'passed');
+
+        $before = app(DevelopmentPlanIntelligenceService::class)
+            ->evaluate($plan);
+
+        $this->assertSame(
+            'passed',
+            data_get(
+                $before->readiness->components,
+                'gates.verification.status',
+            ),
+        );
+
+        $this->evidence($user, $task, 'github_deployment_observed', [
+            'repo_full_name' => '1kz-ma1/Canovia-web',
+            'deployment_id' => 9901,
+            'deployment_sha' => str_repeat('2', 40),
+            'ref' => 'main',
+            'environment' => 'production',
+            'deployment_status' => 'success',
+            'production_environment' => true,
+            'transient_environment' => false,
+        ], now()->addMinute()->toIso8601String());
+
+        $after = app(DevelopmentPlanIntelligenceService::class)
+            ->evaluate($plan);
+
+        $this->assertSame(
+            'passed',
+            data_get($after->readiness->components, 'gates.deploy.status'),
+        );
+        $this->assertSame(
+            'pending',
+            data_get(
+                $after->readiness->components,
+                'gates.verification.status',
+            ),
+        );
+        $this->assertTrue((bool) data_get(
+            $after->state->facts,
+            'focus_task_state.verification_stale',
+        ));
+        $this->assertNotSame('ready', $after->readiness->level->value);
+    }
+
+    public function test_new_commit_invalidates_old_release_chain_and_spec_confirmation(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $this->readyChain($user, $task);
+
+        $ready = app(DevelopmentAdaptiveActionService::class)
+            ->evaluate($plan);
+        $this->assertSame('ready', $ready->intelligence->readiness->level->value);
+
+        $this->evidence($user, $task, 'github_commit_observed', [
+            'repo_full_name' => '1kz-ma1/Canovia-web',
+            'commit_sha' => str_repeat('3', 40),
+            'branch' => 'feature/v53-8-follow-up',
+        ], now()->addMinute()->toIso8601String());
+
+        $after = app(DevelopmentAdaptiveActionService::class)
+            ->evaluate($plan);
+
+        $this->assertSame(
+            'passed',
+            data_get(
+                $after->intelligence->readiness->components,
+                'gates.implementation.status',
+            ),
+        );
+        $this->assertSame(
+            'unknown',
+            data_get(
+                $after->intelligence->readiness->components,
+                'gates.ci.status',
+            ),
+        );
+        $this->assertSame(
+            'unknown',
+            data_get(
+                $after->intelligence->readiness->components,
+                'gates.merge.status',
+            ),
+        );
+        $this->assertSame(
+            'pending',
+            data_get(
+                $after->intelligence->readiness->components,
+                'gates.verification.status',
+            ),
+        );
+        $this->assertSame(
+            'pending',
+            data_get(
+                $after->intelligence->readiness->components,
+                'gates.spec_sync.status',
+            ),
+        );
+        $this->assertTrue((bool) data_get(
+            $after->intelligence->state->facts,
+            'focus_task_state.spec_sync_stale',
+        ));
+        $this->assertTrue((bool) data_get(
+            $after->intelligence->state->facts,
+            'focus_task_state.verification_stale',
+        ));
+        $this->assertSame('establish_ci', $after->decision->type);
+        $this->assertNotSame('ready', $after->intelligence->readiness->level->value);
+    }
+
+    public function test_verification_controller_rejects_confirmation_before_production_deploy(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+
+        $this->evidence($user, $task, 'github_commit_observed', [
+            'repo_full_name' => '1kz-ma1/Canovia-web',
+            'commit_sha' => str_repeat('4', 40),
+            'branch' => 'feature/not-deployed',
+        ], '2026-10-04T07:00:00Z');
+
+        $this->actingAs($user)
+            ->post(
+                route(
+                    'plans.development_readiness.quality_gate.confirm',
+                    [$plan, $task],
+                ),
+                [
+                    'quality_gate' => 'verification',
+                    'gate_status' => 'passed',
+                    'confirmation_request_id' => (string) Str::uuid(),
+                ],
+            )
+            ->assertRedirect()
+            ->assertSessionHasErrors('quality_gate');
+
+        $this->assertSame(
+            0,
+            TaskEvidence::query()
+                ->where('type', 'development_quality_gate_confirmed')
+                ->count(),
+        );
+    }
+
     public function test_same_semantic_state_does_not_duplicate_current_action_on_reopen(): void
     {
         [$user, $plan, $task] = $this->scenario();
