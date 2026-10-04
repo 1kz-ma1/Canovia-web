@@ -172,6 +172,49 @@ class StudyExamConvergencePolicyV560Test extends TestCase
         $this->assertSame([90, 76], $state['latest_targeted_scores']);
     }
 
+    public function test_blocking_topic_error_prevents_graduation_even_with_high_scores(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+
+        $this->broadMiss($user, $plan, $task, 'DNS', now()->subHours(4));
+        $this->broadMiss($user, $plan, $task, 'DNS', now()->subHours(3));
+        $this->reinforcement(
+            $user,
+            $plan,
+            $task,
+            'DNS',
+            92,
+            now()->subHours(2),
+        );
+        $this->attempt(
+            $user,
+            $plan,
+            $task,
+            phase: 'weakness_reinforcement',
+            strategyKey: 'weakness_reinforcement',
+            score: 94,
+            weaknesses: ['DNS'],
+            blockingTopics: ['DNS'],
+            createdAt: now()->subHour(),
+            questionCount: 5,
+            focusTopic: 'DNS',
+        );
+
+        $strategy = $this->strategy($plan, $task);
+        $state = collect(data_get(
+            $strategy,
+            'weakness_control.topic_states',
+            [],
+        ))->firstWhere('topic', 'DNS');
+
+        $this->assertSame('active', $state['status']);
+        $this->assertTrue($state['blocking_error_in_latest_targeted']);
+        $this->assertSame('weakness_reinforcement', data_get(
+            $strategy,
+            'learning_phase.phase',
+        ));
+    }
+
     public function test_reinforcement_cap_stops_infinite_deep_dive_and_forces_general_practice(): void
     {
         [$user, $plan, $task] = $this->scenario();
@@ -399,6 +442,10 @@ class StudyExamConvergencePolicyV560Test extends TestCase
             'secondary' => 0,
             'diagnostic' => 10,
         ], $strategy['question_mix']);
+        $this->assertSame(
+            'general_practice_return',
+            data_get($strategy, 'progression.kind'),
+        );
     }
 
     public function test_prompt_makes_phase_control_authoritative_over_ai_variants(): void
