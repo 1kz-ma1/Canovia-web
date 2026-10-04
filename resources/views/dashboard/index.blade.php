@@ -155,15 +155,17 @@
                                 <span class="badge badge-green">最優先</span>
                             </div>
 
-                            <div class="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                            <div class="mt-3 grid {{ $intelligencePresentation->hasDistinctStateDisplay() ? 'grid-cols-2' : 'grid-cols-1' }} gap-2 text-[11px]">
                                 <div class="rounded-xl border border-white/8 bg-slate-950/25 px-3 py-2">
                                     <span class="block text-slate-500">{{ $intelligencePresentation->readinessLabel }}</span>
                                     <strong class="mt-0.5 block text-slate-100">{{ $intelligencePresentation->readinessDisplay() }}</strong>
                                 </div>
-                                <div class="rounded-xl border border-white/8 bg-slate-950/25 px-3 py-2">
-                                    <span class="block text-slate-500">現在地</span>
-                                    <strong class="mt-0.5 block text-slate-100">{{ $intelligencePresentation->stateLabel }}</strong>
-                                </div>
+                                @if ($intelligencePresentation->hasDistinctStateDisplay())
+                                    <div class="rounded-xl border border-white/8 bg-slate-950/25 px-3 py-2">
+                                        <span class="block text-slate-500">現在地</span>
+                                        <strong class="mt-0.5 block text-slate-100">{{ $intelligencePresentation->stateLabel }}</strong>
+                                    </div>
+                                @endif
                             </div>
 
                             <div class="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/[0.04] px-3 py-2.5">
