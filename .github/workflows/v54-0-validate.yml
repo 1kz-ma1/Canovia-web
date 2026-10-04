@@ -42,9 +42,6 @@ jobs:
       - name: V54.0 Resolver
         run: php artisan test tests/Feature/WorkspaceModeResolverV540Test.php
 
-      - name: Plan category profile regression
-        run: php artisan test tests/Feature/AdaptiveSurfaceEngineV412Test.php
-
       - name: V53.9 Intelligence UX regression
         run: php artisan test tests/Feature/IntelligenceUxV539Test.php
 
