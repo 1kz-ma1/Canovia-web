@@ -6,6 +6,7 @@ use App\Contracts\ExecutionActivityProjector;
 use App\Contracts\ExecutionProviderCatalog;
 use App\Enums\EvidenceSource;
 use App\Enums\ExecutionProviderKind;
+use App\Execution\ExecutionCapability;
 use App\Models\ExecutionActivity;
 use App\Models\Task;
 use App\Models\TaskEvidence;
@@ -43,24 +44,13 @@ final class TaskEvidenceExecutionActivityProjector implements ExecutionActivityP
             ? EvidenceSource::External
             : EvidenceSource::Native;
 
+        [$evidenceType, $metadata] = $this->evidencePayload($activity);
+
         return $this->evidence->record(
             $task,
             $source,
-            'execution_activity_observed',
-            [
-                'execution_activity_id' => (int) $activity->id,
-                'provider_key' => (string) $activity->provider_key,
-                'capability' => (string) $activity->capability,
-                'activity_type' => (string) $activity->type,
-                'activity_status' => (string) $activity->status,
-                'title' => (string) $activity->title,
-                'duration_seconds' => $activity->duration_seconds !== null
-                    ? (int) $activity->duration_seconds
-                    : null,
-                'metrics' => is_array($activity->metrics)
-                    ? $activity->metrics
-                    : [],
-            ],
+            $evidenceType,
+            $metadata,
             confidence: 1.0,
             externalKey: 'execution-activity:'.$activity->id,
             userId: $activity->user_id ? (int) $activity->user_id : null,
@@ -72,5 +62,98 @@ final class TaskEvidenceExecutionActivityProjector implements ExecutionActivityP
                 ?? $activity->created_at
                 ?? now(),
         );
+    }
+
+    /**
+     * Map only explicitly normalized Activity semantics into domain Evidence.
+     *
+     * Provider metadata is intentionally ignored. Domain Evidence can only be
+     * created from known capability/type/status plus allowlisted metrics.
+     *
+     * @return array{0:string,1:array<string,mixed>}
+     */
+    private function evidencePayload(
+        ExecutionActivity $activity,
+    ): array {
+        $metrics = is_array($activity->metrics)
+            ? $activity->metrics
+            : [];
+
+        $score = $this->boundedPercent($metrics['score_percent'] ?? null);
+
+        if (
+            (string) $activity->capability === ExecutionCapability::STUDY_PRACTICE
+            && (string) $activity->type === 'study_practice_completed'
+            && (string) $activity->status === 'completed'
+            && $score !== null
+        ) {
+            return [
+                'study_practice_assessed',
+                [
+                    'execution_activity_id' => (int) $activity->id,
+                    'provider_key' => (string) $activity->provider_key,
+                    'score_percent' => $score,
+                    'strengths' => $this->stringList(
+                        $metrics['strengths'] ?? [],
+                    ),
+                    'weaknesses' => $this->stringList(
+                        $metrics['weaknesses'] ?? [],
+                    ),
+                    'weakness_topics' => $this->stringList(
+                        $metrics['weakness_topics'] ?? [],
+                    ),
+                    'evidence_summary' =>
+                        'External Practice result '.$score.'%.',
+                ],
+            ];
+        }
+
+        return [
+            'execution_activity_observed',
+            [
+                'execution_activity_id' => (int) $activity->id,
+                'provider_key' => (string) $activity->provider_key,
+                'capability' => (string) $activity->capability,
+                'activity_type' => (string) $activity->type,
+                'activity_status' => (string) $activity->status,
+                'title' => (string) $activity->title,
+                'duration_seconds' => $activity->duration_seconds !== null
+                    ? (int) $activity->duration_seconds
+                    : null,
+                'metrics' => $metrics,
+            ],
+        ];
+    }
+
+    private function boundedPercent(mixed $value): ?int
+    {
+        $value = filter_var($value, FILTER_VALIDATE_INT);
+
+        if ($value === false) {
+            return null;
+        }
+
+        return max(0, min(100, (int) $value));
+    }
+
+    /**
+     * @return array<int,string>
+     */
+    private function stringList(mixed $value): array
+    {
+        return collect(is_array($value) ? $value : [])
+            ->filter(
+                fn ($item) =>
+                    is_scalar($item)
+                    && trim((string) $item) !== '',
+            )
+            ->map(
+                fn ($item) =>
+                    mb_substr(trim((string) $item), 0, 191),
+            )
+            ->unique()
+            ->take(24)
+            ->values()
+            ->all();
     }
 }

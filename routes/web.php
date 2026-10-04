@@ -85,6 +85,8 @@ Route::post('/plans/{plan}/tasks/{task}/execution-setup', [ExecutionSetupControl
     ->name('plans.tasks.execution_setup.store');
 Route::get('/execution-validation/study/{plan}/tasks/{task}', [ExecutionValidationProviderController::class, 'show'])
     ->name('execution.validation.study_practice');
+Route::post('/execution-validation/study/{plan}/tasks/{task}/result', [ExecutionValidationProviderController::class, 'storeStudyPracticeResult'])
+    ->name('execution.validation.study_practice.result');
 Route::get('/map', [CanoviaMapController::class, 'index'])->name('map.index');
 Route::post('/map/personalization/pins/{plan}', [MapPersonalizationController::class, 'store'])
     ->middleware('auth')

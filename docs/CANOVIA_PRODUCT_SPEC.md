@@ -176,6 +176,10 @@ V41.16まで実装済み。次の大きな検討:
 
 需要確認後に実装判断する領域。
 
+長期構想・未実装設計は `docs/future/` に分離して保存する。Future文書は現行仕様より優先されず、存在するだけでは実装対象にならない。実装へ昇格する際はlatest `main` を再調査し、versioned implementation spec / 本Product Specへ必要事項を同期する。運用ルールは `docs/future/README.md` を正とする。
+
+Developer Pro / AI Development Orchestrationの長期構想は `docs/future/DEVELOPER_PRO_AI_DEVELOPMENT_ORCHESTRATION.md` を参照する。現時点ではCanovia Core Loop完成・iOS Soft Launchを優先し、このFuture Spec追加だけを理由に実装開始しない。
+
 - Coin購入 / Coin消費 / Earn Coin
 - Gift
 - Sponsored Access
@@ -4344,3 +4348,120 @@ Validation flag OFF、Provider無効化、stale external preference等の場合�
 - Task progress自動変更なし
 
 詳細は `docs/V55.7_EXECUTION_SETUP_VALIDATION.md` を正とする。
+
+
+## V55.8 External Activity Integration Validation
+
+V55.8はExecution Ecosystemの最初のreturn loop validationである。
+
+Canonical flow:
+
+```text
+Study Current Action
+→ selected External Provider
+→ launch
+→ normalized provider result
+→ ExecutionActivity
+→ explicit Task link
+→ TaskEvidence
+→ TaskEvidenceAdapter
+→ Study Intelligence
+→ refreshed Current Action / Readiness
+```
+
+Validation Provider resultは、現在はCanovia内の非本番Surfaceから返す。
+
+新規route:
+
+```text
+POST /execution-validation/study/{plan}/tasks/{task}/result
+```
+
+このrouteは `CANOVIA_EXECUTION_SETUP_VALIDATION_ENABLED=true` の時だけ利用でき、authenticated Canovia user + Task edit permissionを要求する。
+
+これは将来のprovider authentication設計ではない。
+
+### Domain Evidence mapping
+
+V55.6のgeneric Activity Evidenceを維持しつつ、以下を満たす場合だけStudy domain Evidenceへ昇格する。
+
+```text
+capability = study.practice
+type = study_practice_completed
+status = completed
+valid score_percent
+```
+
+その場合:
+
+```text
+ExecutionActivity
+→ study_practice_assessed
+→ EvidenceSource::External
+```
+
+へ投影する。
+
+その他のActivityは引き続き:
+
+```text
+execution_activity_observed
+```
+
+とする。
+
+### Intelligence boundary
+
+TaskEvidenceへ渡すStudy factsはallowlistする。
+
+- score_percent
+- strengths
+- weaknesses
+- weakness_topics
+- provider_key
+- execution_activity_id
+
+ExecutionActivity.metadataや任意provider payloadはIntelligenceへコピーしない。
+
+Study Intelligenceは既存 `study_practice_assessed` contractをそのまま再利用し、並行scoring engineを追加しない。
+
+### Progress boundary
+
+```text
+external score
+!= Task progress
+
+Activity completed
+!= Task completed
+```
+
+Task progress / status / remaining_minutesは自動変更しない。
+
+### Idempotency
+
+```text
+provider_key + external_key
+→ one ExecutionActivity
+
+execution-activity:{activity_id}
+→ one TaskEvidence
+```
+
+同じprovider resultの再送は同一Activity / Evidenceを更新し、重複作成しない。
+
+### Current scope
+
+追加しない:
+
+- public provider Activity API
+- OAuth / Account Link
+- provider webhook authentication
+- real external provider
+- Marketplace
+- Developer Portal
+- Developer Pro implementation
+- automatic progress / completion
+
+Developer Proは `docs/future/DEVELOPER_PRO_AI_DEVELOPMENT_ORCHESTRATION.md` のFuture Designとしてのみ保持する。
+
+詳細は `docs/V55.8_EXTERNAL_ACTIVITY_INTEGRATION_VALIDATION.md` を正とする。

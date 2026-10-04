@@ -4,7 +4,7 @@
 
 The canonical implementation is always the latest `main` branch of:
 
-`1kz-ma1/Canovia`
+`1kz-ma1/Canovia-web`
 
 Before starting an implementation, bug fix, or specification update:
 
@@ -12,6 +12,21 @@ Before starting an implementation, bug fix, or specification update:
 2. confirm the current implementation and relevant docs
 3. create a dedicated branch from the latest `main`
 4. implement and verify on that branch
+
+## Specification authority
+
+Current implementation decisions should follow:
+
+```text
+latest main implementation
+→ docs/CANOVIA_PRODUCT_SPEC.md
+→ relevant implemented/versioned specifications
+→ docs/future/*
+```
+
+`docs/future/` is long-term design context, not an implementation queue. A Future Design must be explicitly promoted and revalidated against latest `main` before implementation begins.
+
+See `docs/future/README.md` for the full boundary.
 
 ## Merge policy
 
