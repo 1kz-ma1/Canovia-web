@@ -70,6 +70,8 @@ use App\Http\Controllers\DevelopmentWorkspaceController;
 use App\Http\Controllers\OverviewWorkspaceController;
 use App\Http\Controllers\ExecutionSetupController;
 use App\Http\Controllers\ExecutionValidationProviderController;
+use App\Http\Controllers\ProviderConnectionController;
+use App\Http\Controllers\ProviderExecutionContextController;
 
 Route::get('/welcome', [FirstRunController::class, 'show'])->name('first_run.show');
 Route::post('/welcome/start', [FirstRunController::class, 'start'])->name('first_run.start');
@@ -83,6 +85,15 @@ Route::post('/workspace/{workspaceMode}/select', [WorkspaceModeController::class
 Route::delete('/workspace/preference', [WorkspaceModeController::class, 'reset'])->name('workspace_modes.preference.reset');
 Route::post('/plans/{plan}/tasks/{task}/execution-setup', [ExecutionSetupController::class, 'store'])
     ->name('plans.tasks.execution_setup.store');
+Route::post('/execution/providers/{providerKey}/connections', [ProviderConnectionController::class, 'store'])
+    ->middleware('auth')
+    ->name('execution.provider_connections.store');
+Route::delete('/execution/provider-connections/{connection}', [ProviderConnectionController::class, 'destroy'])
+    ->middleware('auth')
+    ->name('execution.provider_connections.destroy');
+Route::post('/plans/{plan}/tasks/{task}/provider-connections/{connection}/execution-context', [ProviderExecutionContextController::class, 'store'])
+    ->middleware('auth')
+    ->name('execution.provider_contexts.store');
 Route::get('/execution-validation/study/{plan}/tasks/{task}', [ExecutionValidationProviderController::class, 'show'])
     ->name('execution.validation.study_practice');
 Route::post('/execution-validation/study/{plan}/tasks/{task}/result', [ExecutionValidationProviderController::class, 'storeStudyPracticeResult'])
