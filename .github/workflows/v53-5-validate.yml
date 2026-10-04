@@ -48,11 +48,11 @@ jobs:
       - name: V53.3 Reasoning Router regression
         run: php artisan test tests/Feature/IntelligenceReasoningRouterV533Test.php
 
-      - name: V53.4 Study Scope Capture regression
-        run: php artisan test tests/Feature/StudyScopeCaptureV534Test.php
-
       - name: V53.5 Study Intelligence
         run: php artisan test tests/Feature/StudyIntelligenceV535Test.php
+
+      - name: V53.4 Study Scope Capture regression
+        run: php artisan test tests/Feature/StudyScopeCaptureV534Test.php
 
       - name: Feature Access regression
         run: php artisan test tests/Feature/FeatureAccessV406Test.php
