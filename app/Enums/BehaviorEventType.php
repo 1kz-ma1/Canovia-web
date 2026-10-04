@@ -19,6 +19,11 @@ enum BehaviorEventType: string
     case NavigationStarted = 'navigation_started';
     case NavigationCompleted = 'navigation_completed';
 
+    // V54.8 Workspace Mode observability. Metadata is strictly whitelisted
+    // in BehaviorEventController and never contains Plan/Task/user text.
+    case WorkspaceModeSelected = 'workspace_mode_selected';
+    case WorkspaceModeAutoContext = 'workspace_mode_auto_context';
+
     // V42.4 Living Map validation telemetry.
     case MapViewed = 'map_viewed';
     case MapSurfaceViewed = 'map_surface_viewed';
@@ -54,6 +59,8 @@ enum BehaviorEventType: string
             self::DashboardIdle->value,
             self::PlanTabViewed->value,
             self::TaskViewed->value,
+            self::WorkspaceModeSelected->value,
+            self::WorkspaceModeAutoContext->value,
             self::MapViewed->value,
             self::MapSurfaceViewed->value,
             self::MapNodeFocused->value,
