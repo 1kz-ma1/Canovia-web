@@ -37,6 +37,8 @@ final readonly class PlanIntelligencePresentation
         public ?Task $targetTask = null,
         public bool $requiresTaskProjection = false,
         public bool $qualitativeReadiness = false,
+        public ?string $workspaceUrl = null,
+        public string $workspaceLabel = 'Workspace',
     ) {}
 
     public function readinessDisplay(): string
@@ -53,6 +55,12 @@ final readonly class PlanIntelligencePresentation
     public function hasDistinctStateDisplay(): bool
     {
         return ! $this->qualitativeReadiness;
+    }
+
+    public function hasWorkspaceHandoff(): bool
+    {
+        return filled($this->workspaceUrl)
+            && $this->workspaceUrl !== $this->actionUrl;
     }
 
     public function confidenceDisplay(): string

@@ -129,7 +129,9 @@
                             <h2>今やること</h2>
                         </div>
                     </div>
-                    <a href="{{ route('navigation.index') }}" class="text-xs font-bold text-sky-300">実行を開く →</a>
+                    <a href="{{ route('navigation.index') }}" class="text-xs font-bold text-sky-300">
+                        {{ $intelligencePresentation ? 'ほかの候補を見る' : '実行を開く' }} →
+                    </a>
                 </div>
 
                 <div class="pk-v395-guidance-track" aria-label="計画ごとの次Action">
@@ -155,44 +157,50 @@
                                 <span class="badge badge-green">最優先</span>
                             </div>
 
-                            <div class="mt-3 grid {{ $intelligencePresentation->hasDistinctStateDisplay() ? 'grid-cols-2' : 'grid-cols-1' }} gap-2 text-[11px]">
-                                <div class="rounded-xl border border-white/8 bg-slate-950/25 px-3 py-2" data-intelligence-readiness-display="{{ $intelligencePresentation->qualitativeReadiness ? 'qualitative' : 'numeric' }}">
-                                    <span class="block text-slate-500">{{ $intelligencePresentation->readinessLabel }}</span>
-                                    <strong class="mt-0.5 block text-slate-100">{{ $intelligencePresentation->readinessDisplay() }}</strong>
-                                </div>
-                                @if ($intelligencePresentation->hasDistinctStateDisplay())
-                                    <div class="rounded-xl border border-white/8 bg-slate-950/25 px-3 py-2" data-intelligence-current-state>
-                                        <span class="block text-slate-500">現在地</span>
-                                        <strong class="mt-0.5 block text-slate-100">{{ $intelligencePresentation->stateLabel }}</strong>
-                                    </div>
-                                @endif
-                            </div>
+                            <p class="mt-2 text-xs leading-5 text-slate-400" data-current-action-intent>
+                                {{ $iaAction->intent }}
+                            </p>
 
-                            <div class="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/[0.04] px-3 py-2.5">
-                                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-amber-200">BIGGEST GAP</p>
-                                <p class="mt-1 text-xs font-bold text-slate-200">{{ $intelligencePresentation->gapLabel }}</p>
-                                <p class="mt-1 text-[11px] leading-4 text-slate-500">{{ $intelligencePresentation->gapDetail }}</p>
-                            </div>
-
-                            <div class="mt-3 flex gap-2">
+                            <div class="mt-3 flex gap-2" data-current-action-ctas>
                                 @if ($intelligencePresentation->actionMethod === 'POST')
                                     <form method="POST" action="{{ $intelligencePresentation->actionUrl }}" class="flex-1">
                                         @csrf
-                                        <button type="submit" class="btn-primary w-full px-3 py-2 text-xs" data-onboarding-target="today-start">
+                                        <button type="submit" class="btn-primary w-full px-3 py-2 text-xs" data-onboarding-target="today-start" data-current-action-primary>
                                             {{ $intelligencePresentation->actionLabel }}
                                         </button>
                                     </form>
                                 @else
-                                    <a href="{{ $intelligencePresentation->actionUrl }}" class="btn-primary flex-1 px-3 py-2 text-center text-xs" data-onboarding-target="today-start">
+                                    <a href="{{ $intelligencePresentation->actionUrl }}" class="btn-primary flex-1 px-3 py-2 text-center text-xs" data-onboarding-target="today-start" data-current-action-primary>
                                         {{ $intelligencePresentation->actionLabel }}
                                     </a>
                                 @endif
-                                <a href="{{ $intelligencePresentation->detailUrl }}" class="btn-secondary px-3 py-2 text-xs">現在地</a>
+
+                                @if ($intelligencePresentation->hasWorkspaceHandoff())
+                                    <a
+                                        href="{{ $intelligencePresentation->workspaceUrl }}"
+                                        class="btn-secondary px-3 py-2 text-xs"
+                                        data-current-action-workspace
+                                    >{{ $intelligencePresentation->workspaceLabel }}</a>
+                                @endif
+                            </div>
+
+                            <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 rounded-xl border border-white/8 bg-slate-950/20 px-3 py-2 text-[10px] text-slate-500" data-current-action-context>
+                                <span>
+                                    {{ $intelligencePresentation->readinessLabel }}
+                                    <strong class="text-slate-300" data-intelligence-readiness-display="{{ $intelligencePresentation->qualitativeReadiness ? 'qualitative' : 'numeric' }}">{{ $intelligencePresentation->readinessDisplay() }}</strong>
+                                </span>
+                                @if ($intelligencePresentation->hasDistinctStateDisplay())
+                                    <span data-intelligence-current-state>
+                                        現在地 <strong class="text-slate-300">{{ $intelligencePresentation->stateLabel }}</strong>
+                                    </span>
+                                @endif
+                                <span>
+                                    Gap <strong class="text-amber-200">{{ $intelligencePresentation->gapLabel }}</strong>
+                                </span>
                             </div>
 
                             <details class="pk-action-details mt-3" data-guidance-reasons>
                                 <summary>なぜ今これ？</summary>
-                                <p class="mt-3 text-xs leading-5 text-slate-300">{{ $iaAction->intent }}</p>
                                 <div class="mt-3 rounded-xl border border-emerald-300/15 bg-emerald-300/[0.04] px-3 py-2.5">
                                     <p class="text-[11px] font-bold text-emerald-200">Canoviaの判断</p>
                                     <p class="mt-1 text-[11px] leading-4 text-slate-400">{{ $iaDecision->summary }}</p>
