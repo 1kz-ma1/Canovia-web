@@ -167,6 +167,12 @@ final class TaskEvidenceAdapter
                 'confirmation_source' => $this->nullableString(
                     $metadata['confirmation_source'] ?? null,
                 ),
+                'target_sha' => $this->nullableString(
+                    $metadata['target_sha'] ?? null,
+                ),
+                'deployment_id' => $this->nullableInt(
+                    $metadata['deployment_id'] ?? null,
+                ),
             ],
             'artifact_state_observed' => [
                 'provider' => $this->nullableString($metadata['provider'] ?? null),
