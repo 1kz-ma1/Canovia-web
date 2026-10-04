@@ -1,0 +1,81 @@
+name: V55.9 Validate
+
+on:
+  push:
+    branches:
+      - feature/v55-9-provider-connection-activity-intake
+
+jobs:
+  provider-connection-activity-intake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Lint V55.9 PHP
+        run: |
+          php -l app/Models/ProviderConnection.php
+          php -l app/Data/ProviderConnectionCredentialsData.php
+          php -l app/Data/ProviderExecutionContextData.php
+          php -l app/Services/ProviderConnectionService.php
+          php -l app/Services/ProviderExecutionContextService.php
+          php -l app/Services/ProviderActivityIntakeService.php
+          php -l app/Http/Controllers/ProviderConnectionController.php
+          php -l app/Http/Controllers/ProviderExecutionContextController.php
+          php -l app/Http/Controllers/ProviderActivityIntakeController.php
+          php -l database/migrations/2026_10_05_000300_create_provider_connections_table.php
+          php -l routes/web.php
+          php -l routes/api.php
+          php -l tests/Feature/ProviderConnectionActivityIntakeV559Test.php
+
+      - name: Compile Blade
+        run: php artisan view:cache
+
+      - name: Migration smoke
+        run: php artisan migrate --force
+
+      - name: V55.9 provider connection activity intake
+        run: php artisan test tests/Feature/ProviderConnectionActivityIntakeV559Test.php
+
+      - name: V55.8 activity integration regression
+        run: php artisan test tests/Feature/ExecutionActivityIntegrationV558Test.php
+
+      - name: V55.7 execution setup regression
+        run: php artisan test tests/Feature/ExecutionSetupValidationV557Test.php tests/Unit/ExecutionProviderValidationRegistryV557Test.php
+
+      - name: V55.6 execution ecosystem regression
+        run: php artisan test tests/Feature/ExecutionEcosystemFoundationV556Test.php tests/Unit/ExecutionProviderRegistryV556Test.php
+
+      - name: V53.5 Study Intelligence regression
+        run: php artisan test tests/Feature/StudyIntelligenceV535Test.php
+
+      - name: GitHub stateless webhook regression
+        run: php artisan test tests/Feature/GitHubWebhookReturnSyncV4610Test.php
+
+      - name: Future design boundary smoke check
+        run: |
+          test -f docs/future/README.md
+          test -f docs/future/DEVELOPER_PRO_AI_DEVELOPMENT_ORCHESTRATION.md
+          grep -q "Future Design" docs/future/README.md
+          grep -q "not implemented by this document" docs/future/DEVELOPER_PRO_AI_DEVELOPMENT_ORCHESTRATION.md
