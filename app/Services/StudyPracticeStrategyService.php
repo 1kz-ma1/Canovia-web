@@ -179,9 +179,34 @@ class StudyPracticeStrategyService
             $focusTopics = [];
             $questionMix = $this->broadMix($targetQuestionCount);
         } else {
-            $key = 'general_practice';
-            $label = '総合演習';
-            $reason = (string) $learningPhase['reason'];
+            $forcedGeneral = (bool) (
+                $learningPhase['general_return_required'] ?? false
+            );
+            $daysUntilExam = $learningPhase['days_until_exam'] ?? null;
+            $generalPracticeDays = (int) data_get(
+                $learningPhase,
+                'policy.general_practice_days',
+                30,
+            );
+            $deadlineGeneral = is_int($daysUntilExam)
+                && $daysUntilExam <= $generalPracticeDays;
+
+            if ($forcedGeneral || $deadlineGeneral) {
+                $key = 'general_practice';
+                $label = '総合演習';
+                $reason = (string) $learningPhase['reason'];
+            } elseif ($latestScore !== null && $latestScore >= 85) {
+                // Keep the established V40/V41 presentation while the
+                // canonical V56.0 phase remains GENERAL_PRACTICE.
+                $key = 'retention_and_transfer';
+                $label = '定着・応用確認';
+                $reason = '直近の理解度が高いため、同じ暗記確認より本番形式での定着と応用を重視します。';
+            } else {
+                $key = 'task_mastery';
+                $label = 'Task定着確認';
+                $reason = '集中補完を続ける根拠がないため、Task全体から理解の穴を確認します。';
+            }
+
             $focusTopics = [];
             $questionMix = $this->broadMix($targetQuestionCount);
         }
