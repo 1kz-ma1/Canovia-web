@@ -1771,3 +1771,66 @@ state_reference
 Evidence traceはexact normalized Evidence hashと既存source record originの両方を保持し、判断の再現性とauditabilityを両立する。
 
 V53.1ではReadiness / Decision / Next Actionはまだ計算しない。詳細は `docs/V53.1_STATE_EVIDENCE_FOUNDATION.md` を正とする。
+
+
+## V53.2 Decision & Readiness Engine
+
+V53.1で正規化・永続化した `StateSnapshot` を入力に、説明可能なReadinessとDecisionを deterministic に生成する。
+
+Study Readiness V1は最終的な合格確率ではなく、現在Canoviaが持つEvidenceから判断できる範囲の準備状態を表す。
+
+Evidence不足時は数値を捏造しない。
+
+```text
+Practice Evidenceなし
+→ readiness score = null
+→ level = unknown
+→ confidence = 0.20
+→ baseline Evidence収集をDecision
+```
+
+Practice Evidenceがある場合はlatest / average scoreを中心に、観測弱点を小さく補正し、practice回数とrecall Evidence量からconfidenceを決める。
+
+Study V1のGap code:
+
+- practice_evidence_missing
+- practice_evidence_thin
+- mastery_below_target
+- retention_unverified
+- observed_weaknesses
+
+Readyは以下をすべて満たす場合のみ。
+
+- readiness score >= 80
+- practice attempt >= 3
+- recall Evidence >= 1
+- observed weaknessなし
+
+Decisionは候補を先に生成し、priority → confidence → stable type順で決定する。
+
+主なcandidate:
+
+- collect_baseline_evidence
+- reinforce_observed_gap
+- expand_practice_sample
+- verify_retention
+- advance_scope
+- continue_observation
+
+Decision inputはsemantic Stateだけでなくexact State snapshot referenceをfingerprintへ含める。同じStateを後で再観測した場合は新しいDecision traceとして履歴を残し、同一snapshot retryはidempotentにする。
+
+`intelligence_decision_traces` へState / Readiness / Decision関係を保存し、将来の
+
+```text
+State before
+→ Decision
+→ Action
+→ Outcome
+→ State after
+```
+
+の評価・自前モデル用データ基盤につなげる。
+
+V53.2ではOpenAIを使用しない。V53.3 Reasoning Routerでdeterministic / domain rule / OpenAI / future Canovia modelを同じDecision境界の後ろで選択可能にする。
+
+詳細は `docs/V53.2_DECISION_READINESS_ENGINE.md` を正とする。
