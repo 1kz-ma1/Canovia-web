@@ -465,16 +465,47 @@ Important semantics:
 
 ### V53.8 — Developer Readiness
 
-Planned:
+Status: **IMPLEMENTED — PR PENDING**
 
-- implementation readiness
-- tests
-- review
-- deploy
-- verification
-- spec synchronization
-- release readiness
-- next action based on missing quality gates
+Branch:
+
+`feature/v53-8-developer-readiness`
+
+Permanent spec:
+
+`docs/V53.8_DEVELOPER_READINESS.md`
+
+Implemented:
+
+- `DevelopmentStateBuilder`
+- `DevelopmentReleaseReadinessEvaluator`
+- Task-correlated Release candidate selection
+- seven release Quality Gates
+- deterministic Development Decision candidates
+- one Development Current Action
+- durable State / Decision / Action reuse through generic V53 stores
+- explicit Verification / Spec Sync Human Confirmation Evidence
+- release SHA / Deployment-bound manual confirmation
+- stale Verification invalidation after new Production Deploy
+- stale Spec Sync invalidation after implementation SHA change
+- new implementation generation invalidates old downstream release gates
+- per-reviewer latest Review Decision using anonymized reviewer key
+- Production-only deploy pass semantics
+- GitHub webhook / manual Return / manual gate Action refresh hooks
+- minimal Release Readiness diagnostic surface in GitHub Workflow
+- no Task progress/status mutation
+- no new OpenAI traffic
+
+Important semantics:
+
+- gates from different Tasks are never combined into one Ready release
+- Readiness score is explanatory, not a substitute for required gates
+- all seven V1 gates must pass for Ready
+- Commit / Merge / Deploy remain Evidence, not legacy progress percentages
+- Verification belongs to one concrete Production Deployment
+- Spec Sync belongs to one concrete implementation/release SHA
+- a newer release identity can revoke stale prior readiness
+- Task remains inspectable correlation context, not Development truth
 
 ### V53.9 — Intelligence UX
 
@@ -679,15 +710,33 @@ Current V53.7 checkpoint:
 - validation complete
 - validation run: #37174537348
 - temporary validation workflow removed after success
+- PR #215: open at V53.8 branch creation time
+
+Current V53.8 checkpoint:
+
+- Task-correlated Development State implemented
+- Release Readiness V1 with implementation / CI / Review / Merge / Production Deploy / Verification / Spec Sync
+- deterministic largest-gap Decision and one Current Action implemented
+- Human Verification / Spec Sync Evidence implemented
+- manual gate Evidence is bound to current release SHA / Deployment ID
+- stale Verification / Spec Sync is automatically invalidated
+- new implementation SHA does not inherit old downstream release gates
+- Review decisions are resolved per anonymized reviewer key
+- GitHub Workflow exposes minimal Release Readiness diagnostics
+- GitHub webhook / manual Return / manual quality confirmation refresh Current Action
+- Task progress/status/remaining time remain untouched
+- permanent V53.8 spec and Product Spec synchronized
+- validation run before final docs sync: #37176102557
+- final latest-head validation: pending
+- temporary validation workflow: still present until final validation
 - PR: pending creation
 
-Next after V53.7 merge:
+Next after V53.8:
 
-- V53.8 Developer Readiness
-- build Development State from normalized GitHub Evidence
-- evaluate implementation / review / CI / merge / deploy / verification quality gates
-- produce release-relative Readiness and largest missing gate
-- then generate Development Current Action without equating activity to completion
+- V53.9 Intelligence UX
+- unify Study / Development presentation around State / Readiness / Gap / Current Action / Why
+- keep Task / Evidence / Decision history inspectable as detail
+- finish durable docs and remove this temporary handoff at the end of V53
 
 ## Completion / deletion rule
 
