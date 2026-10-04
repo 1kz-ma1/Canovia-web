@@ -38,6 +38,9 @@
                                 @case('development')
                                     <svg viewBox="0 0 24 24"><path d="m8.5 7-5 5 5 5"/><path d="m15.5 7 5 5-5 5"/><path d="m14 4-4 16"/></svg>
                                     @break
+                                @case('career')
+                                    <svg viewBox="0 0 24 24"><path d="M8 7V5.5A2.5 2.5 0 0 1 10.5 3h3A2.5 2.5 0 0 1 16 5.5V7"/><path d="M4 7h16a1 1 0 0 1 1 1v10.5A2.5 2.5 0 0 1 18.5 21h-13A2.5 2.5 0 0 1 3 18.5V8a1 1 0 0 1 1-1Z"/><path d="M3 12h18M10 12v2h4v-2"/></svg>
+                                    @break
                                 @default
                                     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><path d="m5.6 5.6 2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1"/></svg>
                             @endswitch
@@ -86,6 +89,9 @@
                                         @break
                                     @case('development')
                                         <svg viewBox="0 0 24 24"><path d="m8.5 7-5 5 5 5"/><path d="m15.5 7 5 5-5 5"/><path d="m14 4-4 16"/></svg>
+                                        @break
+                                    @case('career')
+                                        <svg viewBox="0 0 24 24"><path d="M8 7V5.5A2.5 2.5 0 0 1 10.5 3h3A2.5 2.5 0 0 1 16 5.5V7"/><path d="M4 7h16a1 1 0 0 1 1 1v10.5A2.5 2.5 0 0 1 18.5 21h-13A2.5 2.5 0 0 1 3 18.5V8a1 1 0 0 1 1-1Z"/><path d="M3 12h18M10 12v2h4v-2"/></svg>
                                         @break
                                     @default
                                         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><path d="m5.6 5.6 2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1"/></svg>
