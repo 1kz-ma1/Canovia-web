@@ -227,7 +227,7 @@ Implemented:
 
 ### V54.4 — Development Workspace
 
-Status: **IMPLEMENTED — PR #222 OPEN**
+Status: **MERGED — PR #222**
 
 Branch:
 
@@ -264,13 +264,28 @@ Implemented:
 
 ### V54.5 — Overview
 
-Planned:
+Status: **IN PROGRESS**
 
-- thin cross-Mode command surface
-- highest-priority global Action
-- Mode Readiness summaries
-- Inbox
-- important state changes
+Branch:
+
+`feature/v54-5-overview-workspace`
+
+Permanent spec:
+
+`docs/V54.5_OVERVIEW_WORKSPACE.md`
+
+Implementation contract:
+
+- canonical Overview at `GET /workspace/overview`
+- existing Home selection remains global Action authority
+- one primary global Action only
+- at most one Study and one Development summary
+- setup-needed summaries suppress fake numeric Readiness
+- bounded Inbox pending summary
+- bounded important Action Home signals
+- no new ranking / Readiness / notification model
+- no AI or GitHub provider traffic
+- root Home remains compatible
 
 ### V54.6 — State Change Feedback
 
