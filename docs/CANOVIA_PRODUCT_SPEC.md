@@ -176,6 +176,10 @@ V41.16まで実装済み。次の大きな検討:
 
 需要確認後に実装判断する領域。
 
+長期構想・未実装設計は `docs/future/` に分離して保存する。Future文書は現行仕様より優先されず、存在するだけでは実装対象にならない。実装へ昇格する際はlatest `main` を再調査し、versioned implementation spec / 本Product Specへ必要事項を同期する。運用ルールは `docs/future/README.md` を正とする。
+
+Developer Pro / AI Development Orchestrationの長期構想は `docs/future/DEVELOPER_PRO_AI_DEVELOPMENT_ORCHESTRATION.md` を参照する。現時点ではCanovia Core Loop完成・iOS Soft Launchを優先し、このFuture Spec追加だけを理由に実装開始しない。
+
 - Coin購入 / Coin消費 / Earn Coin
 - Gift
 - Sponsored Access
