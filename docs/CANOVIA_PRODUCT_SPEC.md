@@ -2334,3 +2334,74 @@ Mode Barはcurrent Modeとは別にstored preferenceを保持し、表示上は 
 V54.2はV53 Intelligence、Task progress、Plan category、課金、AI trafficを変更しない。
 
 詳細は `docs/V54.2_MODE_CONTEXT_AND_PERSISTENCE.md` を正とする。
+
+
+## V54.3 Study Workspace
+
+Study Modeに専用Homeを追加し、Modeを単なる表示切替ではなく目的別の作業面として成立させる。
+
+Canonical route:
+
+```text
+GET /workspace/study
+→ workspace.study.index
+```
+
+Study Mode選択後はStudy Scopeへ直行せず、Study Homeへ入る。
+
+Study Homeの主表示順:
+
+```text
+Exam Readiness
+→ Biggest Gap
+→ Current Action
+→ Coverage / Mastery / Retention / Remaining Load
+→ Scope / Practice / Recall / History
+```
+
+数値・Gap・Actionは新しく計算しない。既存V53 Study Intelligence / Adaptive Action / Presentation Adapterをそのままauthorityとして使用する。
+
+Study Planが複数ある場合は既存Plan priority semanticsを使い、priority → deadline → Plan IDでdefault Planを決定する。ユーザーは `?plan_id=...` で別のaccessible Study Planを明示選択できる。明示PlanがinaccessibleまたはStudy profileでない場合は404とする。
+
+Study Planが存在しない場合もgeneric Homeへ戻さず、Study Workspace内で「学習Planを作る」empty stateを表示する。
+
+Study Planは存在するがconfirmed Scopeがない場合はcapture-firstとし、numeric Readinessを意味のある値のように表示しない。
+
+```text
+Study Scope Capture
+→ Human Confirmation
+→ Practice / Recall Evidence
+→ Study State
+→ Exam Readiness
+→ Gap
+→ Current Action
+```
+
+confirmed Scope後は既存Stateから以下を表示する。
+
+- Exam Readiness / state / confidence
+- exam date / days until exam
+- deadline pressure
+- Coverage
+- Mastery
+- Retention
+- Remaining Load
+- remaining Study Units
+- priority remaining Scope
+
+Study-specific navigation:
+
+- Current Action
+- Readiness
+- Study Scope
+- Practice
+- Recall
+- History
+
+Practice / Recallはcurrent Intelligence target Taskを優先し、なければactive Task、最後に既存Taskを使う。Taskがなければ導線をdisabled表示し、GET表示だけでTaskを自動生成しない。
+
+`workspace.study.*` はstrong Study route hintとして扱い、V54.2のmanual preferenceが別ModeでもStudy Homeのsemantic contextをStudyとして表示する。保存済みpreference自体は変更しない。
+
+V54.3は新規AI traffic、Study scoring変更、Task progress変更、Plan category変更、billing変更を行わない。
+
+詳細は `docs/V54.3_STUDY_WORKSPACE.md` を正とする。
