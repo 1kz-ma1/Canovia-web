@@ -300,7 +300,7 @@ Implemented:
 
 ### V54.6 — State Change Feedback
 
-Status: **IMPLEMENTED — PR PENDING**
+Status: **IMPLEMENTED — PR #224 OPEN**
 
 Branch:
 
@@ -334,6 +334,7 @@ Implemented:
 - no new AI / GitHub provider request
 - final validation run: #37190551431
 - V54.5 / V54.4 / V54.3 / V54.2 / V54.1 / V54.0 / V53.9 / V53.8 / V53.6 regressions passed
+- PR #224 created against main
 
 ### V54.7 — Mode-specific Onboarding
 
