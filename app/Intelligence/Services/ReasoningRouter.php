@@ -12,6 +12,7 @@ use App\Intelligence\Data\ReasoningRequest;
 use App\Intelligence\Data\RoutedDecisionResult;
 use App\Intelligence\Providers\OpenAiDecisionReasoningProvider;
 use App\Intelligence\Support\CanonicalJson;
+use App\Models\IntelligenceReasoningRun;
 use App\Models\User;
 use App\Services\FeatureAccessService;
 use Throwable;
@@ -271,7 +272,7 @@ final class ReasoningRouter
 
     private function decisionFromCachedRun(
         ReasoningRequest $request,
-        App\Models\IntelligenceReasoningRun $cached,
+        IntelligenceReasoningRun $cached,
     ): Decision {
         $candidate = $this->candidateByType(
             $request->candidates,
