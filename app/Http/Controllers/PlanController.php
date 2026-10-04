@@ -278,6 +278,8 @@ class PlanController extends Controller
                 WorkspaceMode::Study => route('workspace.study.index'),
                 WorkspaceMode::Development =>
                     route('workspace.development.index'),
+                WorkspaceMode::Career =>
+                    route('workspace.career.index'),
                 WorkspaceMode::Overview =>
                     route('workspace.overview.index'),
             },
@@ -310,6 +312,8 @@ class PlanController extends Controller
                     '学習Planを作成しました。次は試験範囲を確定します。',
                 WorkspaceMode::Development =>
                     '開発Planを作成しました。次はGitHub Evidenceをつなぎます。',
+                WorkspaceMode::Career =>
+                    'Career Planを作成しました。次は現実のCareer情報を1件追加します。',
                 WorkspaceMode::Overview =>
                     'Planを作成しました。',
             };
@@ -317,6 +321,7 @@ class PlanController extends Controller
         $route = match ($mode) {
             WorkspaceMode::Study => 'workspace.study.index',
             WorkspaceMode::Development => 'workspace.development.index',
+            WorkspaceMode::Career => 'workspace.career.index',
             WorkspaceMode::Overview => 'workspace.overview.index',
         };
 
