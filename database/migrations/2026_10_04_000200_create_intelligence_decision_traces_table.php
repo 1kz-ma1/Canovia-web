@@ -26,6 +26,7 @@ return new class extends Migration
             $table->decimal('readiness_confidence', 5, 4);
             $table->json('readiness_components');
             $table->json('readiness_gaps');
+            $table->json('readiness_metadata')->nullable();
             $table->string('decision_reference', 128)->unique();
             $table->string('decision_type', 64)->index();
             $table->string('reason_code', 64)->index();
