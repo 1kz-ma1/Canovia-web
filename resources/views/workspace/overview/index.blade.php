@@ -141,6 +141,20 @@
         @endif
     </section>
 
+    @if (($intelligenceChanges ?? collect())->isNotEmpty())
+        <div class="space-y-3" data-overview-intelligence-changes>
+            <div class="px-1">
+                <p class="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300">INTELLIGENCE CHANGES</p>
+                <h2 class="mt-1 text-lg font-black text-slate-50">Evidenceで判断がどう変わったか</h2>
+            </div>
+            @foreach ($intelligenceChanges as $change)
+                @include('intelligence.partials.state-change', [
+                    'feedback' => $change,
+                ])
+            @endforeach
+        </div>
+    @endif
+
     <section id="overview-modes" class="grid gap-4 lg:grid-cols-2" data-overview-mode-summaries>
         @foreach ($modeSummaries as $summary)
             @php
