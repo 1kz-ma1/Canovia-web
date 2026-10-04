@@ -1046,6 +1046,10 @@
     --workspace-accent: 34 211 238;
 }
 
+.workspace-mode-bar[data-current-workspace-mode="career"] {
+    --workspace-accent: 52 211 153;
+}
+
 .workspace-mode-bar-inner {
     display: flex;
     width: 100%;
