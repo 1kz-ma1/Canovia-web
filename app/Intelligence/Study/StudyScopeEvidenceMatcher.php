@@ -358,7 +358,11 @@ final class StudyScopeEvidenceMatcher
     {
         $value = mb_strtolower(trim($value));
         $value = preg_replace('/[\s　]+/u', ' ', $value) ?? $value;
-        $value = preg_replace('/[「」『』【】\[\]()（）,:：;；・\/\\]+/u', ' ', $value) ?? $value;
+        $value = str_replace(
+            ['「', '」', '『', '』', '【', '】', '[', ']', '(', ')', '（', '）', ',', ':', '：', ';', '；', '・', '/', '\\'],
+            ' ',
+            $value,
+        );
 
         return trim(preg_replace('/\s+/u', ' ', $value) ?? $value);
     }
