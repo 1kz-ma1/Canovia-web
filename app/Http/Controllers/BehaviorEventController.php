@@ -201,7 +201,7 @@ class BehaviorEventController extends Controller
         ];
 
         if (in_array($type, $workspaceModeClientTypes, true)) {
-            $workspaceModes = ['overview', 'study', 'development'];
+            $workspaceModes = ['overview', 'study', 'development', 'career'];
             $workspaceSources = [
                 'explicit',
                 'manual_preference',
