@@ -219,7 +219,7 @@ class StudyPracticeOrchestrationV401Test extends TestCase
         $this->actingAs($user)
             ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
             ->assertOk()
-            ->assertSee('定着・応用確認')
+            ->assertSee('総合演習')
             ->assertDontSee('弱点補強');
     }
 
