@@ -11,6 +11,7 @@ use App\Services\ExecutionActionPolicyService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanCollaborationService;
 use App\Services\PlanActivityService;
+use App\Services\PlanCategoryProfileService;
 use App\Services\PlanProgressService;
 use App\Services\PlanPriorityService;
 use App\Services\PlanTimelineService;
