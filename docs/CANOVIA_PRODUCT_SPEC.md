@@ -2199,3 +2199,55 @@ Goal
 Taskは、このloopを実行・可視化・相関するためのoptional durable projectionであり、Intelligence source of truthではない。
 
 詳細は `docs/V53.9_INTELLIGENCE_UX.md` を正とする。
+
+
+## V54.0 Workspace Mode Contract
+
+V53で共通化したIntelligence Coreの上に、目的別のWorkspace Modeを置く。
+
+```text
+State / Evidence / Readiness / Decision / Action
+                    ↓
+          Intelligence Presentation
+                    ↓
+              Workspace Mode
+        ↙             ↓             ↘
+    Overview         Study      Development
+```
+
+Workspace ModeはPlan categoryそのものではない。
+
+既存Plan category profileは `study / development / career / creative / general` を維持する。V54.0で公開するWorkspace Modeは `overview / study / development` の3つだけとし、career / creative / generalは専用Modeを実装するまでOverviewへフォールバックする。
+
+固定Mode UIは今後増えるMode数に依存して横幅が増えないよう、横並びタブではなくdropdownを前提とする。Mode optionはBladeへ直書きせず `WorkspaceModeRegistry` を正とする。
+
+各Mode definitionは以下を持つ。
+
+- stable Mode key
+- label
+- semantic icon key
+- description
+- accent tone
+- home strategy
+- supported Plan profile keys
+- semantic navigation keys
+- empty-state title / description / action key
+
+Study navigation contractは Current Action / Readiness / Study Scope / Practice / Recall / History、Developmentは Current Action / Release Readiness / GitHub / Evidence / Historyを基本とする。
+
+`WorkspaceModeResolver` のV54.0 precedence:
+
+```text
+explicit caller Mode
+→ strong domain route hint
+→ current Plan profile
+→ Overview
+```
+
+Plan routeだけでなくTask / WorkSessionからも関連Plan profileを解決できる。
+
+V54.0ではmanual Mode choiceを永続化しない。V54.2でユーザー明示選択を保存し、最終的には「ユーザー明示選択 > 文脈推定 > Overview」を安定したUXとして実装する。
+
+V54.0はV53 Intelligence計算、Task progress、Plan category、課金、AI trafficを変更しない。
+
+詳細は `docs/V54.0_WORKSPACE_MODE_CONTRACT.md` を正とする。
