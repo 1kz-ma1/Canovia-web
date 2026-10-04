@@ -77,6 +77,117 @@
         @endif
     </section>
 
+    @if ($studyIntelligence)
+        @php
+            $studyState = $studyIntelligence->state;
+            $studyReadiness = $studyIntelligence->readiness;
+            $studyMetrics = $studyState->metrics;
+            $studyFacts = $studyState->facts;
+            $readinessLevelLabel = match ($studyReadiness->level->value) {
+                'ready' => '準備できている',
+                'blocked' => '不足が大きい',
+                'developing' => '準備中',
+                default => '判定保留',
+            };
+            $pressureLabel = match ((string) data_get($studyFacts, 'deadline_pressure', 'unknown')) {
+                'low' => '余裕あり',
+                'medium' => 'やや詰まり気味',
+                'high' => '負荷高め',
+                'overdue' => '期限超過',
+                default => '未判定',
+            };
+            $priorityScope = collect(data_get($studyFacts, 'priority_remaining_scope', []));
+        @endphp
+
+        <section class="page-card border-emerald-300/20 p-5 sm:p-6">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                    <p class="text-xs font-black uppercase tracking-[0.16em] text-emerald-300">STUDY INTELLIGENCE V1</p>
+                    <h2 class="mt-1 text-xl font-black text-slate-50">この試験に向けた現在地</h2>
+                    <p class="mt-2 text-xs leading-5 text-slate-500">
+                        Task進捗ではなく、確定した試験範囲とPractice / Recall Evidenceから計算しています。
+                    </p>
+                </div>
+                <div class="text-right">
+                    <p class="text-3xl font-black text-slate-50">
+                        {{ $studyReadiness->score !== null ? $studyReadiness->score : '—' }}
+                        <span class="text-sm text-slate-500">/100</span>
+                    </p>
+                    <p class="mt-1 text-xs font-bold text-emerald-300">{{ $readinessLevelLabel }}</p>
+                    <p class="mt-1 text-[11px] text-slate-500">推定信頼度 {{ $studyReadiness->confidence->percent() }}%</p>
+                </div>
+            </div>
+
+            <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                @foreach ([
+                    ['label' => 'Coverage', 'value' => data_get($studyMetrics, 'coverage_percent'), 'suffix' => '%'],
+                    ['label' => 'Mastery', 'value' => data_get($studyMetrics, 'mastery_score_percent'), 'suffix' => '%'],
+                    ['label' => 'Retention', 'value' => data_get($studyMetrics, 'retention_score_percent'), 'suffix' => '%'],
+                    ['label' => 'Speed', 'value' => null, 'suffix' => ''],
+                    ['label' => '残り負荷', 'value' => data_get($studyMetrics, 'remaining_effort_percent'), 'suffix' => '%'],
+                ] as $metric)
+                    <div class="rounded-2xl border border-white/8 bg-slate-950/25 p-3">
+                        <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">{{ $metric['label'] }}</p>
+                        <p class="mt-1 text-lg font-black text-slate-100">
+                            @if ($metric['label'] === 'Speed')
+                                未計測
+                            @elseif ($metric['value'] !== null)
+                                {{ (int) $metric['value'] }}{{ $metric['suffix'] }}
+                            @else
+                                —
+                            @endif
+                        </p>
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="mt-4 grid gap-3 sm:grid-cols-3">
+                <div class="rounded-xl border border-white/8 bg-white/[0.025] p-3">
+                    <p class="text-[11px] text-slate-500">確定範囲</p>
+                    <p class="mt-1 text-sm font-bold text-slate-100">{{ (int) data_get($studyMetrics, 'confirmed_scope_count', 0) }}件</p>
+                </div>
+                <div class="rounded-xl border border-white/8 bg-white/[0.025] p-3">
+                    <p class="text-[11px] text-slate-500">残りStudy Units</p>
+                    <p class="mt-1 text-sm font-bold text-slate-100">
+                        {{ data_get($studyMetrics, 'remaining_effort_units') !== null ? number_format((float) data_get($studyMetrics, 'remaining_effort_units'), 2) : '—' }}
+                    </p>
+                    <p class="mt-1 text-[10px] text-slate-500">分数ではなく、範囲1件=1を基準にした相対負荷</p>
+                </div>
+                <div class="rounded-xl border border-white/8 bg-white/[0.025] p-3">
+                    <p class="text-[11px] text-slate-500">期限負荷</p>
+                    <p class="mt-1 text-sm font-bold text-slate-100">{{ $pressureLabel }}</p>
+                    @if (data_get($studyMetrics, 'days_until_exam') !== null)
+                        <p class="mt-1 text-[10px] text-slate-500">試験まで {{ (int) data_get($studyMetrics, 'days_until_exam') }}日</p>
+                    @endif
+                </div>
+            </div>
+
+            @if ($priorityScope->isNotEmpty())
+                <div class="mt-5">
+                    <p class="text-xs font-black text-slate-300">残り負荷が大きい範囲</p>
+                    <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                        @foreach ($priorityScope->take(4) as $item)
+                            <div class="rounded-xl border border-white/8 bg-slate-950/20 p-3">
+                                <p class="text-sm font-bold text-slate-100">
+                                    {{ $item['subject'] ?? '科目未設定' }}{{ ! empty($item['unit']) ? ' · '.$item['unit'] : '' }}
+                                </p>
+                                <p class="mt-1 text-[11px] text-slate-500">
+                                    残り {{ number_format((float) ($item['remaining_unit'] ?? 0), 2) }} units
+                                    · Mastery {{ isset($item['mastery_score_percent']) ? $item['mastery_score_percent'].'%' : '未計測' }}
+                                    · Retention {{ isset($item['retention_score_percent']) ? $item['retention_score_percent'].'%' : '未計測' }}
+                                </p>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
+            <p class="mt-4 text-xs leading-5 text-slate-500">
+                Speedは現在のPractice Session時間からは採点・待機時間を分離できないため、V53.5では推測せず未計測にしています。
+            </p>
+        </section>
+    @endif
+
     <section class="space-y-4">
         @forelse ($captures as $capture)
             @php
@@ -351,7 +462,7 @@
                             </button>
                         </div>
                         <p class="text-xs leading-5 text-slate-500">
-                            確定するとStudy Scopeとして保存します。この段階ではTask生成・Task進捗・Intelligence Stateは変更しません。
+                            確定するとStudy Scopeとして保存し、Study Intelligence Stateを再計算します。Task生成・Task進捗は変更しません。
                         </p>
                     </form>
                 @else
