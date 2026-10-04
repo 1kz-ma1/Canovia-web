@@ -73,10 +73,6 @@
             default => 'Super Admin',
         }
         : ($hasPremiumCore ? 'Premium' : 'Free');
-    $homeSurfacePreference = app(\App\Services\HomeSurfacePreference::class);
-    $preferredHomeSurface = $homeSurfacePreference->value(request());
-    $preferredHomeUrl = $homeSurfacePreference->url(request());
-
     $workspaceModeRegistry = app(\App\Services\WorkspaceModeRegistry::class);
     $workspaceModeContext = app(\App\Services\WorkspaceModeResolver::class)
         ->resolve(request());
@@ -128,7 +124,7 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body data-focus-mode="{{ $focusMode ? '1' : '0' }}" data-workspace-mode="{{ $workspaceModeDefinition->mode->value }}" data-workspace-mode-source="{{ $workspaceModeContext->source->value }}" data-onboarding-version="{{ $onboardingVersion }}" data-onboarding-auto="{{ $onboardingAuto ? '1' : '0' }}" data-onboarding-authenticated="{{ auth()->check() ? '1' : '0' }}" data-pwa-install-url="{{ route('pwa.install.prepare') }}" data-route-name="{{ request()->route()?->getName() }}" data-home-surface="{{ $preferredHomeSurface }}" data-home-classic-url="{{ route('home') }}" data-home-map-url="{{ route('map.index') }}" class="pk-cosmic-shell min-h-screen bg-slate-950 text-slate-100 antialiased {{ $focusMode ? 'pace-focus-mode' : '' }}">
+<body data-focus-mode="{{ $focusMode ? '1' : '0' }}" data-workspace-mode="{{ $workspaceModeDefinition->mode->value }}" data-workspace-mode-source="{{ $workspaceModeContext->source->value }}" data-onboarding-version="{{ $onboardingVersion }}" data-onboarding-auto="{{ $onboardingAuto ? '1' : '0' }}" data-onboarding-authenticated="{{ auth()->check() ? '1' : '0' }}" data-pwa-install-url="{{ route('pwa.install.prepare') }}" data-route-name="{{ request()->route()?->getName() }}" data-canovia-surface="{{ request()->routeIs('map.*') ? 'explore' : 'home' }}" class="pk-cosmic-shell min-h-screen bg-slate-950 text-slate-100 antialiased {{ $focusMode ? 'pace-focus-mode' : '' }}">
     <div class="pk-cosmic-backdrop pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
         <span class="pk-space-glow pk-space-glow-a"></span>
         <span class="pk-space-glow pk-space-glow-b"></span>
@@ -377,23 +373,6 @@
                         </div>
                     </fieldset>
 
-                    <fieldset class="mt-5">
-                        <legend class="text-sm font-bold text-slate-200">ホームの既定表示</legend>
-                        <p class="mt-1 text-xs leading-5 text-slate-500">
-                            ホームボタンやログイン後に最初に開くSurfaceを、この端末だけで選べます。
-                        </p>
-                        <div class="ui-choice-grid mt-3" data-home-surface-preference-options>
-                            <button type="button" class="ui-choice {{ $preferredHomeSurface === 'classic' ? 'is-active' : '' }}" data-home-surface-preference="classic" aria-pressed="{{ $preferredHomeSurface === 'classic' ? 'true' : 'false' }}">
-                                <strong>Classic</strong><small>標準 · 安定版</small>
-                            </button>
-                            <button type="button" class="ui-choice {{ $preferredHomeSurface === 'map' ? 'is-active' : '' }}" data-home-surface-preference="map" aria-pressed="{{ $preferredHomeSurface === 'map' ? 'true' : 'false' }}">
-                                <strong>Map</strong><small>試験中 · Context Map</small>
-                            </button>
-                        </div>
-                        <p class="mt-2 text-[11px] leading-5 text-slate-500">
-                            この設定は入口だけに影響します。Classicはいつでも <code>/</code>、Mapは <code>/map</code> から直接開けます。
-                        </p>
-                    </fieldset>
                 </details>
 
                 <div class="mt-5 grid gap-2 sm:grid-cols-2">
