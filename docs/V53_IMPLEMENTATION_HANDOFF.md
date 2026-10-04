@@ -189,7 +189,7 @@ Permanent spec:
 
 ### V53.1 — State / Evidence Foundation
 
-Status: **IMPLEMENTED — PR PENDING**
+Status: **MERGED**
 
 Branch:
 
@@ -221,14 +221,37 @@ Important semantics:
 
 ### V53.2 — Decision & Readiness Engine
 
-Planned:
+Status: **IN PROGRESS**
 
-- deterministic readiness primitives
-- explainable gap representation
-- decision candidate selection
-- confidence handling
-- decision trace suitable for future evaluation
-- no provider-specific reasoning in feature code
+Branch:
+
+`feature/v53-2-decision-readiness-engine`
+
+Permanent spec:
+
+`docs/V53.2_DECISION_READINESS_ENGINE.md`
+
+Implemented so far:
+
+- `StudyReadinessEvaluator`
+- structured Study gap codes
+- conservative readiness confidence policy
+- `DecisionCandidate`
+- `StudyDecisionEngine`
+- deterministic candidate ordering / selection
+- readiness / decision fingerprints
+- durable `intelligence_decision_traces`
+- `DecisionTraceStore`
+- generic `DecisionOrchestrator`
+- V53.2 behavior tests
+
+Important semantics:
+
+- no usable practice Evidence => readiness score remains null
+- Ready requires score >=80, at least 3 practice attempts, recall Evidence and no observed weakness
+- Decision input pins the exact State snapshot, not only semantic State
+- arbitrary provider payloads are not persisted in Decision traces
+- V53.2 remains provider-neutral and deterministic
 
 ### V53.3 — Reasoning Router
 
@@ -364,12 +387,11 @@ Validation result:
 
 Current implementation:
 
-- V53.1 State / Evidence Foundation is implemented
-- existing TaskEvidence is normalized rather than duplicated
-- Study is the first concrete StateBuilder
-- durable State storage is introduced with controlled normalized fields
-- Product Spec and permanent V53.1 spec are synchronized
-- PR: pending creation
+- V53.1 State / Evidence Foundation is merged
+- PR #209 merged with commit d5f6ddf92b9a64b9e04d6d9d3cb5ef84a7aa4b36
+- V53.2 Decision & Readiness Engine is in progress
+- Study remains the first validation domain
+- deterministic Readiness and Decision are implemented before adding OpenAI routing
 
 V53.1 validation checkpoint:
 
@@ -382,12 +404,13 @@ V53.1 validation checkpoint:
 - GitHub Evidence regression: success
 - temporary validation workflow removed after success
 
-Next after V53.1 merge:
+Current V53.2 checkpoint:
 
-- V53.2 Decision & Readiness Engine
-- consume normalized StateSnapshot, not Task progress, as the primary input
-- keep Study as the first validation domain
-- persist explainable Readiness / Decision trace suitable for later Outcome evaluation
+- normalized StateSnapshot is the primary input
+- explainable Gap / Readiness implemented
+- deterministic Decision candidates implemented
+- durable Decision trace implemented
+- next before V53.2 completion: validation, Product Spec sync, PR
 
 ## Completion / deletion rule
 
