@@ -229,7 +229,7 @@ class StudyScopeCaptureV534Test extends TestCase
 
         $this->actingAs($user)
             ->post(route('plans.study_scope.store', $plan), [
-                'source_file' => UploadedFile::fake()->image('range.webp', 640, 640),
+                'source_file' => UploadedFile::fake()->image('range.png', 640, 640),
             ])
             ->assertRedirect(route('plans.study_scope.index', $plan));
 
