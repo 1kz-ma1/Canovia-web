@@ -151,6 +151,17 @@ final class WorkspaceModeOnboardingService
             ];
         }
 
+        if (
+            $actionKey === 'capture_career_signal'
+            && $plan instanceof Plan
+        ) {
+            return [
+                'url' => route('plans.career.index', $plan),
+                'method' => 'GET',
+                'label' => $defaultLabel,
+            ];
+        }
+
         return null;
     }
 }
