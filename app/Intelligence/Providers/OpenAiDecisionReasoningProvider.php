@@ -9,6 +9,7 @@ use App\Intelligence\Data\Confidence;
 use App\Intelligence\Data\ReasoningProviderSelection;
 use App\Intelligence\Data\ReasoningRequest;
 use App\Intelligence\Support\CanonicalJson;
+use App\Intelligence\Support\IntelligenceFingerprint;
 use App\Models\Plan;
 use App\Services\NativeAiGateway;
 
@@ -132,7 +133,7 @@ final class OpenAiDecisionReasoningProvider implements DecisionReasoningProvider
                 'domain' => $request->state->domain->value,
                 'candidate_count' => count($request->candidates),
                 'state_reference' => substr(
-                    App\Intelligence\Support\IntelligenceFingerprint::stateReference($request->state),
+                    IntelligenceFingerprint::stateReference($request->state),
                     0,
                     128,
                 ),
