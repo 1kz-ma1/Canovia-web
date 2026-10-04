@@ -123,7 +123,7 @@ class ExecutionSetupValidationV557Test extends TestCase
             )
             ->assertOk()
             ->assertSee('data-execution-validation-provider', false)
-            ->assertSee('External Practice Providerへの引き継ぎを検証中')
+            ->assertSee('外部Practice Providerへの引き継ぎを検証中')
             ->assertSee($launchTask->title);
     }
 
