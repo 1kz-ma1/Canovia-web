@@ -99,18 +99,32 @@ class ExecutionSetupValidationV557Test extends TestCase
             ],
         );
 
-        $this->actingAs($user)
-            ->post(route('plans.study_action.execute', $plan))
-            ->assertRedirect(
-                route('execution.validation.study_practice', [$plan, $task]),
-            );
+        $response = $this->actingAs($user)
+            ->post(route('plans.study_action.execute', $plan));
+
+        $launchTask = Task::query()
+            ->where('plan_id', $plan->id)
+            ->latest('id')
+            ->firstOrFail();
+
+        $response->assertRedirect(
+            route(
+                'execution.validation.study_practice',
+                [$plan, $launchTask],
+            ),
+        );
 
         $this->actingAs($user)
-            ->get(route('execution.validation.study_practice', [$plan, $task]))
+            ->get(
+                route(
+                    'execution.validation.study_practice',
+                    [$plan, $launchTask],
+                ),
+            )
             ->assertOk()
             ->assertSee('data-execution-validation-provider', false)
             ->assertSee('External Practice Providerへの引き継ぎを検証中')
-            ->assertSee($task->title);
+            ->assertSee($launchTask->title);
     }
 
     public function test_user_can_change_back_to_native_and_keep_one_tap_start(): void
@@ -141,11 +155,17 @@ class ExecutionSetupValidationV557Test extends TestCase
             'user_selected' => 1,
         ]);
 
-        $this->actingAs($user)
-            ->post(route('plans.study_action.execute', $plan))
-            ->assertRedirect(
-                route('plans.tasks.study_practice.show', [$plan, $task]),
-            );
+        $response = $this->actingAs($user)
+            ->post(route('plans.study_action.execute', $plan));
+
+        $launchTask = Task::query()
+            ->where('plan_id', $plan->id)
+            ->latest('id')
+            ->firstOrFail();
+
+        $response->assertRedirect(
+            route('plans.tasks.study_practice.show', [$plan, $launchTask]),
+        );
     }
 
     public function test_validation_provider_is_absent_when_feature_flag_is_disabled(): void
@@ -160,11 +180,17 @@ class ExecutionSetupValidationV557Test extends TestCase
             ->assertDontSee('data-execution-setup', false)
             ->assertDontSee('External Practice Partner (Validation)');
 
-        $this->actingAs($user)
-            ->post(route('plans.study_action.execute', $plan))
-            ->assertRedirect(
-                route('plans.tasks.study_practice.show', [$plan, $task]),
-            );
+        $response = $this->actingAs($user)
+            ->post(route('plans.study_action.execute', $plan));
+
+        $launchTask = Task::query()
+            ->where('plan_id', $plan->id)
+            ->latest('id')
+            ->firstOrFail();
+
+        $response->assertRedirect(
+            route('plans.tasks.study_practice.show', [$plan, $launchTask]),
+        );
     }
 
     private function readyPracticePlan(): array
