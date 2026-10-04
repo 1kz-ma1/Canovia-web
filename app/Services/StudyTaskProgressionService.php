@@ -17,8 +17,13 @@ class StudyTaskProgressionService
      * @param Collection<int,mixed> $recentAttempts newest first
      * @return array<string,mixed>
      */
-    public function resolve(Plan $plan, Task $task, Collection $recentAttempts): array
-    {
+    public function resolve(
+        Plan $plan,
+        Task $task,
+        Collection $recentAttempts,
+        array $learningPhase = [],
+    ): array {
+
         $attempts = $recentAttempts->take(8)->values();
         $latest = $attempts->first();
 
@@ -57,6 +62,56 @@ class StudyTaskProgressionService
             }
 
             if ($nextKind === 'practice') {
+                $phase = (string) ($learningPhase['phase'] ?? '');
+
+                if (
+                    $phase
+                    === StudyExamConvergencePolicyService::PHASE_EXAM_MODE
+                ) {
+                    return [
+                        'kind' => 'exam_mode',
+                        'label' => '本番形式の総合演習へ進む',
+                        'reason' => (string) (
+                            $learningPhase['reason']
+                            ?? '試験直前は局所補強より本番形式を優先します。'
+                        ),
+                        'verification' => null,
+                        'next_task' => null,
+                    ];
+                }
+
+                if (
+                    $phase
+                    === StudyExamConvergencePolicyService::PHASE_GENERAL_PRACTICE
+                ) {
+                    return [
+                        'kind' => 'general_practice_return',
+                        'label' => '総合演習へ戻る',
+                        'reason' => (string) (
+                            $learningPhase['reason']
+                            ?? 'Canoviaの学習Phase Policyにより全体再評価を優先します。'
+                        ),
+                        'verification' => null,
+                        'next_task' => null,
+                    ];
+                }
+
+                if (
+                    $phase
+                    === StudyExamConvergencePolicyService::PHASE_DIAGNOSIS
+                ) {
+                    return [
+                        'kind' => 'continue_current',
+                        'label' => 'まず全体の理解度を確認する',
+                        'reason' => (string) (
+                            $learningPhase['reason']
+                            ?? '弱点固定の前に現在地を診断します。'
+                        ),
+                        'verification' => null,
+                        'next_task' => null,
+                    ];
+                }
+
                 return [
                     'kind' => 'reinforce_current',
                     'label' => (string) data_get($latest->assessment, 'next_step.label', 'このTaskの弱点補強を続ける'),
