@@ -1,10 +1,10 @@
 # Canovia Execution Ecosystem — Temporary Design Draft
 
-> Status: temporary implementation brief  
+> Status: retained concept / investigation brief  
 > Created: 2026-10-04  
-> Base: main after V55.5  
-> Purpose: preserve the product concept and repository-fit investigation before implementation.  
-> This document is not yet the canonical product specification. Promote validated decisions to `docs/CANOVIA_PRODUCT_SPEC.md` and/or a versioned V55.6 specification when implementation scope is fixed.
+> Implemented foundation: V55.6  
+> Purpose: preserve the broader Execution Ecosystem concept, future phases, monetization ideas, and repository-fit investigation.  
+> Canonical implemented V55.6 contract: `docs/V55.6_EXECUTION_ECOSYSTEM_FOUNDATION.md`. Product-level authority remains `docs/CANOVIA_PRODUCT_SPEC.md`.
 
 ---
 
