@@ -156,12 +156,12 @@
                             </div>
 
                             <div class="mt-3 grid {{ $intelligencePresentation->hasDistinctStateDisplay() ? 'grid-cols-2' : 'grid-cols-1' }} gap-2 text-[11px]">
-                                <div class="rounded-xl border border-white/8 bg-slate-950/25 px-3 py-2">
+                                <div class="rounded-xl border border-white/8 bg-slate-950/25 px-3 py-2" data-intelligence-readiness-display="{{ $intelligencePresentation->qualitativeReadiness ? 'qualitative' : 'numeric' }}">
                                     <span class="block text-slate-500">{{ $intelligencePresentation->readinessLabel }}</span>
                                     <strong class="mt-0.5 block text-slate-100">{{ $intelligencePresentation->readinessDisplay() }}</strong>
                                 </div>
                                 @if ($intelligencePresentation->hasDistinctStateDisplay())
-                                    <div class="rounded-xl border border-white/8 bg-slate-950/25 px-3 py-2">
+                                    <div class="rounded-xl border border-white/8 bg-slate-950/25 px-3 py-2" data-intelligence-current-state>
                                         <span class="block text-slate-500">現在地</span>
                                         <strong class="mt-0.5 block text-slate-100">{{ $intelligencePresentation->stateLabel }}</strong>
                                     </div>
