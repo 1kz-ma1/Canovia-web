@@ -31,6 +31,7 @@ class FeatureAccessV406Test extends TestCase
             FeatureKey::QuestionPack,
             FeatureKey::ProjectArtifact,
             FeatureKey::ConversationalOnboarding,
+            FeatureKey::StudyScopeCapture,
         ] as $feature) {
             foreach ([null, $user] as $actor) {
                 $decision = $service->resolveAccess($actor, $feature);

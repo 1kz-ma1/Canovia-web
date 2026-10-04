@@ -48,6 +48,7 @@ use App\Http\Controllers\PlanArtifactController;
 use App\Http\Controllers\GitHubWorkflowController;
 use App\Http\Controllers\StudyPracticeController;
 use App\Http\Controllers\StudyActivityController;
+use App\Http\Controllers\StudyScopeCaptureController;
 use App\Http\Controllers\StudyRecallController;
 use App\Http\Controllers\StudyRecallCandidateController;
 use App\Http\Controllers\FutureMemoController;
@@ -336,6 +337,20 @@ Route::post('/plans/{plan}/execution-distribution/prepare', [ExecutionDistributi
     ->name('plans.execution_distribution.prepare');
 Route::post('/plans/{plan}/execution-distribution/reset', [ExecutionDistributionController::class, 'reset'])
     ->name('plans.execution_distribution.reset');
+
+// V53.4 Study Scope Capture: Plan-level test range intake and human confirmation.
+Route::get('/plans/{plan}/study-scope', [StudyScopeCaptureController::class, 'index'])
+    ->name('plans.study_scope.index');
+Route::post('/plans/{plan}/study-scope', [StudyScopeCaptureController::class, 'store'])
+    ->middleware('throttle:8,1')
+    ->name('plans.study_scope.store');
+Route::post('/plans/{plan}/study-scope/{capture}/analyze', [StudyScopeCaptureController::class, 'analyze'])
+    ->middleware('throttle:6,1')
+    ->name('plans.study_scope.analyze');
+Route::post('/plans/{plan}/study-scope/{capture}/confirm', [StudyScopeCaptureController::class, 'confirm'])
+    ->name('plans.study_scope.confirm');
+Route::delete('/plans/{plan}/study-scope/{capture}', [StudyScopeCaptureController::class, 'destroy'])
+    ->name('plans.study_scope.destroy');
 
 // 資格学習のActivity選択はAI演習より上位の共通入口として扱う。
 Route::get('/plans/{plan}/tasks/{task}/study-activity', [StudyActivityController::class, 'show'])

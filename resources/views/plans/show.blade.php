@@ -96,6 +96,9 @@
                     @if ($canManage ?? false)
                         <a href="{{ route('plans.review_assistant.show', $plan) }}" class="{{ $needsPlanUpdate ? 'btn-primary' : 'btn-secondary' }} min-h-11 w-full justify-center md:w-auto md:flex-none">計画を更新</a>
                     @endif
+                    @if (($planCategoryProfile->key ?? null) === 'study')
+                        <a href="{{ route('plans.study_scope.index', $plan) }}" class="btn-secondary min-h-11 w-full justify-center md:w-auto md:flex-none">試験範囲</a>
+                    @endif
                     <a href="{{ route('plans.resources.index', $plan) }}" class="btn-secondary min-h-11 w-full justify-center md:w-auto md:flex-none">関連資料{{ $plan->resources->isNotEmpty() ? ' · '.$plan->resources->count() : '' }}</a>
                     @if ($showArtifactEntry)
                         <a href="{{ route('plans.artifacts.index', $plan) }}" class="btn-secondary min-h-11 w-full justify-center md:w-auto md:flex-none">制作ファイル{{ $plan->artifacts->isNotEmpty() ? ' · '.$plan->artifacts->count() : '' }}</a>

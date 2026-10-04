@@ -11,6 +11,7 @@ use App\Services\ExecutionActionPolicyService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanCollaborationService;
 use App\Services\PlanActivityService;
+use App\Services\PlanCategoryProfileService;
 use App\Services\PlanProgressService;
 use App\Services\PlanPriorityService;
 use App\Services\PlanTimelineService;
@@ -184,6 +185,7 @@ class PlanController extends Controller
         PlanToolService $toolService,
         ExecutionActionPolicyService $executionActions,
         PlanPriorityService $priorityService,
+        PlanCategoryProfileService $categoryProfiles,
     ) {
         $canView = $ownership->canView($request, $plan);
         $canEdit = $ownership->canEdit($request, $plan);
@@ -249,6 +251,7 @@ class PlanController extends Controller
         $primaryPlanAction = $executionActions->primary($planTools);
         $studyToolCategoryMismatch = trim((string) $plan->category) !== '資格学習'
             && $toolService->looksLikeStudyPlan($plan);
+        $planCategoryProfile = $categoryProfiles->forPlan($plan);
 
         return view('plans.show', compact(
             'plan',
@@ -267,6 +270,7 @@ class PlanController extends Controller
             'primaryPlanAction',
             'studyToolCategoryMismatch',
             'priorityEvaluation',
+            'planCategoryProfile',
         ));
     }
 

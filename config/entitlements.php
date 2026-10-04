@@ -53,6 +53,12 @@ return [
             // Ongoing Companion conversation remains Premium.
             'free' => true,
         ],
+        FeatureKey::StudyScopeCapture->value => [
+            'label' => 'Study Scope Capture',
+            // V53.4: reading and confirming the test range is part of the
+            // Free Canovia loop. Higher-frequency reasoning remains separate.
+            'free' => true,
+        ],
         FeatureKey::StudyLongTermWeaknessProfile->value => [
             'label' => 'Study Long-term Weakness Profile',
             'free' => false,

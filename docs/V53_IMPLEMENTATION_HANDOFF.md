@@ -255,7 +255,7 @@ Important semantics:
 
 ### V53.3 — Reasoning Router
 
-Status: **IMPLEMENTED — PR PENDING**
+Status: **MERGED**
 
 Branch:
 
@@ -294,13 +294,44 @@ Important semantics:
 
 ### V53.4 — Study Capture
 
-Planned:
+Status: **IMPLEMENTED — PR PENDING**
 
+Branch:
+
+`feature/v53-4-study-capture`
+
+Permanent spec:
+
+`docs/V53.4_STUDY_SCOPE_CAPTURE.md`
+
+Implemented:
+
+- Free `study_scope_capture` capability
 - image / screenshot / PDF test-range capture
-- extract subjects / units / pages / deadlines
-- reviewable structured import
-- minimal manual input
-- ordinary school tests must work, not only professional exams
+- private source reuse through existing `InboxItem`
+- `StudyScopeCapture` draft/review lifecycle
+- `StudyScopeItem` confirmed scope facts
+- structured Native AI extraction
+- subjects / units / pages / date extraction
+- ambiguity preservation instead of forced inference
+- source preview and review/edit UI
+- manual fallback when Native AI is unavailable or fails
+- Human Confirmation before confirmed scope mutation
+- Plan-level Study Scope entry
+- Study category-profile support beyond certification-only categories
+- confirmed-scope edit/reconfirm
+- unconfirmed capture discard / private file cleanup
+
+Important semantics:
+
+- Study Capture is Free core
+- AI draft is not Study truth
+- no Task creation from V53.4
+- no Task progress mutation
+- no Intelligence State mutation
+- confirmed `StudyScopeItem` is the V53.5 input
+- full OCR transcript is not persisted
+- uncertain dates keep source text and normalized date null
 
 ### V53.5 — Study Intelligence
 
@@ -457,6 +488,8 @@ V53.2 validation checkpoint:
 
 Current V53.3 checkpoint:
 
+- PR #211 merged
+- merge commit: c6563d04903960f380d60fcb80987472f5b8c15d
 - deterministic V53.2 policy remains baseline/fallback
 - provider-neutral reasoning interfaces implemented
 - existing NativeAiGateway reused; no second OpenAI client
@@ -466,7 +499,6 @@ Current V53.3 checkpoint:
 - Product Spec and permanent V53.3 spec synchronized
 - validation complete
 - temporary validation workflow removed after success
-- PR: pending creation
 
 V53.3 validation checkpoint:
 
@@ -481,13 +513,28 @@ V53.3 validation checkpoint:
 - Study Practice regression: success
 - GitHub Evidence regression: success
 
-Next after V53.3 merge:
+Current V53.4 checkpoint:
 
-- V53.4 Study Capture
-- photo / screenshot / PDF input
-- structured subject / unit / range / deadline extraction
-- reviewable import before State mutation
-- ordinary school tests as the first capture acceptance case
+- source files reuse existing private Inbox storage
+- Native AI output is a reviewable Draft only
+- Human Confirmation creates confirmed StudyScopeItem facts
+- provider failure preserves source and allows manual confirmation
+- ordinary school test categories are accepted through Study profile
+- Product Spec and permanent V53.4 spec synchronized
+- validation complete
+- temporary validation workflow removed after success
+- validation run: #37170118250
+- PR: pending creation
+
+Next after V53.4 merge:
+
+- V53.5 Study Intelligence
+- consume confirmed StudyScopeItem only
+- combine confirmed scope with Practice / Recall Evidence
+- add coverage / mastery / retention / speed
+- estimate remaining effort conservatively
+- strengthen Readiness toward exam-relative meaning
+- do not default back to generating a large static Task list
 
 ## Completion / deletion rule
 
