@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\ProductKey;
+use App\Intelligence\Data\ReasoningRequest;
 use App\Intelligence\Data\StateSnapshot;
 use App\Intelligence\Enums\IntelligenceDomain;
+use App\Intelligence\Providers\OpenAiDecisionReasoningProvider;
 use App\Intelligence\Services\ReasonedDecisionOrchestrator;
 use App\Intelligence\Study\StudyDecisionEngine;
 use App\Intelligence\Study\StudyReadinessEvaluator;
@@ -135,6 +137,47 @@ class IntelligenceReasoningRouterV533Test extends TestCase
 
         Http::assertNothingSent();
         $this->assertDatabaseCount('native_ai_runs', 0);
+    }
+
+    public function test_openai_provider_selects_from_the_canovia_candidate_contract_directly(): void
+    {
+        [$user, $plan] = $this->context();
+
+        Http::fake([
+            'https://api.openai.com/v1/responses' => Http::response(
+                $this->responseBody([
+                    'selected_type' => 'verify_retention',
+                    'confidence' => 0.90,
+                    'reason_codes' => ['retention_unverified'],
+                ]),
+                200,
+            ),
+        ]);
+
+        $state = $this->uncertainStudyState($plan->id);
+        $evaluator = app(StudyReadinessEvaluator::class);
+        $engine = app(StudyDecisionEngine::class);
+        $readiness = $evaluator->evaluate($state);
+        $candidates = $engine->candidates($state, $readiness);
+        $baseline = $engine->decide($state, $readiness);
+
+        $selection = app(OpenAiDecisionReasoningProvider::class)->select(
+            new ReasoningRequest(
+                state: $state,
+                readiness: $readiness,
+                candidates: $candidates,
+                baselineDecision: $baseline,
+                userId: $user->id,
+                planId: $plan->id,
+            ),
+        );
+
+        $this->assertSame('verify_retention', $selection->selectedType);
+        $this->assertSame(0.9, $selection->confidence->value);
+        $this->assertSame('openai', $selection->provider);
+        $this->assertSame('gpt-5.6-luna', $selection->model);
+        $this->assertNotNull($selection->nativeAiRunId);
+        $this->assertSame(['retention_unverified'], $selection->reasonCodes);
     }
 
     public function test_premium_openai_route_selects_only_existing_candidate_and_records_cost_latency_and_disagreement(): void
