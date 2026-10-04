@@ -141,7 +141,8 @@ final class WorkspaceModeResolver
         }
 
         if (
-            str_starts_with($routeName, 'github_workflow.')
+            str_starts_with($routeName, 'workspace.development.')
+            || str_starts_with($routeName, 'github_workflow.')
             || str_starts_with($routeName, 'plans.development_readiness.')
             || str_starts_with(
                 $routeName,
