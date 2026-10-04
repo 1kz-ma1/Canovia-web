@@ -1,0 +1,70 @@
+name: V53.9 Validate
+
+on:
+  push:
+    branches:
+      - feature/v53-9-intelligence-ux
+
+jobs:
+  intelligence-ux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Lint V53.9 PHP
+        run: find app/Intelligence/Presentation app/Services/IntelligenceHomeActionService.php app/Services/HomePageDataService.php app/Http/Controllers/StudyScopeCaptureController.php app/Http/Controllers/GitHubWorkflowController.php -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Compile Blade
+        run: php artisan view:cache
+
+      - name: V53.9 Intelligence UX
+        run: php artisan test tests/Feature/IntelligenceUxV539Test.php
+
+      - name: V53.8 Developer Readiness regression
+        run: php artisan test tests/Feature/DeveloperReadinessV538Test.php
+
+      - name: V53.7 Developer Evidence regression
+        run: php artisan test tests/Feature/DeveloperEvidenceSyncV537Test.php
+
+      - name: V53.6 Study Adaptive Action regression
+        run: php artisan test tests/Feature/StudyAdaptiveActionV536Test.php
+
+      - name: V53.5 Study Intelligence regression
+        run: php artisan test tests/Feature/StudyIntelligenceV535Test.php
+
+      - name: GitHub Workflow regression
+        run: php artisan test tests/Feature/GitHubWorkflowHubV460Test.php
+
+      - name: Action Home regression
+        run: php artisan test tests/Feature/ActionHomeV513Test.php
+
+      - name: Home density regression
+        run: php artisan test tests/Feature/ActionHomeDensityV5197Test.php
+
+      - name: Home query regression
+        run: php artisan test tests/Feature/HomeQueryCollapseV5194Test.php
+
+      - name: Feature Access regression
+        run: php artisan test tests/Feature/FeatureAccessV406Test.php
