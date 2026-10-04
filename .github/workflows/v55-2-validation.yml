@@ -1,0 +1,58 @@
+name: V55.2 Validate
+
+on:
+  push:
+    branches:
+      - feature/v55-2-qualitative-readiness-ux
+
+jobs:
+  qualitative-readiness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Lint V55.2 PHP
+        run: php -l app/Intelligence/Presentation/PlanIntelligencePresentation.php && php -l app/Intelligence/Presentation/CareerIntelligencePresentationAdapter.php && php -l tests/Feature/QualitativeReadinessUxV552Test.php
+
+      - name: Compile Blade
+        run: php artisan view:cache
+
+      - name: V55.2 Qualitative Readiness UX
+        run: php artisan test tests/Feature/QualitativeReadinessUxV552Test.php
+
+      - name: V55.1 Career Workspace regression
+        run: php artisan test tests/Feature/CareerWorkspaceModeV551Test.php
+
+      - name: V55.0 Career Intelligence regression
+        run: php artisan test tests/Feature/CareerIntelligenceV550Test.php
+
+      - name: V53.9 Intelligence UX regression
+        run: php artisan test tests/Feature/IntelligenceUxV539Test.php
+
+      - name: V54.5 Overview regression
+        run: php artisan test tests/Feature/OverviewWorkspaceV545Test.php
+
+      - name: Action Home density regression
+        run: php artisan test tests/Feature/ActionHomeDensityV5197Test.php
