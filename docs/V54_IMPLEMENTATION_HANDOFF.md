@@ -264,7 +264,7 @@ Implemented:
 
 ### V54.5 — Overview
 
-Status: **IMPLEMENTED — PR #223 OPEN**
+Status: **MERGED — PR #223**
 
 Branch:
 
@@ -300,12 +300,26 @@ Implemented:
 
 ### V54.6 — State Change Feedback
 
-Planned:
+Status: **IN PROGRESS**
 
-- before/after Readiness changes
-- Current Action change feedback
-- Evidence → Decision explanation
-- only changes that affect user next action
+Branch:
+
+`feature/v54-6-state-change-feedback`
+
+Permanent spec:
+
+`docs/V54.6_STATE_CHANGE_FEEDBACK.md`
+
+Implementation contract:
+
+- compare latest two persisted Decision traces per Plan/domain
+- no new event table
+- meaningful only when level / Gap / Action changes or Readiness moves >= 5pt
+- safe Evidence type labels only
+- shared feedback card in Study / Development
+- Overview shows at most two recent changes
+- GET never persists Intelligence
+- no AI / GitHub provider request
 
 ### V54.7 — Mode-specific Onboarding
 
