@@ -2488,3 +2488,122 @@ Workspace GETではGitHub API request、Task / Artifact / Evidence生成、Intel
 V54.4は新規AI traffic、Release scoring変更、Plan category変更、billing変更を行わない。
 
 詳細は `docs/V54.4_DEVELOPMENT_WORKSPACE.md` を正とする。
+
+
+## V54.5 Overview Workspace
+
+Overview ModeはStudy / Developmentの専門Workspaceとは異なり、Canovia全体の薄い司令塔として扱う。
+
+Canonical route:
+
+```text
+GET /workspace/overview
+→ workspace.overview.index
+```
+
+Overviewで答える問いは4つだけとする。
+
+```text
+今いちばん優先するActionは何か
+Study / Developmentは今どんな状態か
+Inboxに何が待っているか
+重要な状態変化はあるか
+```
+
+### Global Current Action
+
+Overview独自のpriority modelは作らない。
+
+既存 `HomePageDataService` / `IntelligenceHomeActionService` の選定結果をauthorityとして再利用する。
+
+- Intelligence-supported Planが既存Homeルールで最優先ならIntelligence Action
+- それ以外は既存Dashboard Guidance
+- Plan priority semanticsは既存ルールを維持
+- Overview GETではHome projectionをprefetch/non-recording modeで利用
+
+そのためOverview表示だけでは以下を増やさない。
+
+- DashboardViewed telemetry
+- RecommendationShown telemetry
+- periodic behavior state snapshot
+- Intelligence State / Decision / Action history
+
+### Mode summaries
+
+OverviewではStudy / Developmentそれぞれ代表Planを最大1件だけ表示する。
+
+代表Plan:
+
+```text
+priority
+→ deadline
+→ Plan ID
+```
+
+Study:
+
+- confirmed Scopeあり → Exam Readiness / State / Biggest Gap / Current Action
+- Scopeなし → セットアップ中
+- fake numeric Readinessは表示しない
+
+Development:
+
+- focus Release Candidateあり → Release Readiness / State / Biggest Gap / Current Action
+- Development Evidenceなし → セットアップ中
+- fake numeric Readinessは表示しない
+
+詳細は各専用Workspaceへ送る。
+
+### Inbox
+
+Overviewはcurrent identityに属する `new / review` Inboxだけを扱う。
+
+- pending count
+- latest 4 items
+- source type
+- associated Plan when available
+- Inbox CTA
+
+Identity semanticsは既存Inbox / Space Stationと一致させる。
+
+AI routingはOverview表示では実行しない。
+
+### Important changes
+
+Overviewは既存 `ActionHomeProjectionService` signalsを再利用し、最大4件だけ表示する。
+
+対象例:
+
+- pending Plan update
+- Plan attention / status change
+- collaboration activity
+
+新しいnotification systemは作らない。
+
+V54.6で扱うReadiness before/after feedbackとは分離する。
+
+### Workspace semantics
+
+`workspace.overview.*` はstrong Overview contextとする。
+
+保存済みStudy / Development preferenceが存在してもOverview deep linkではOverviewを表示し、保存済みpreference自体は変更しない。
+
+root `/` HomeはV54.5では置き換えない。
+
+### Performance boundary
+
+Overviewは:
+
+- existing Home projection × 1
+- Study Intelligence representative × 最大1
+- Development Intelligence representative × 最大1
+- Inbox latest × 最大4
+- important signals × 最大4
+
+に限定する。
+
+全Study/Development PlanをIntelligence評価しない。
+
+V54.5は新規AI traffic、GitHub API traffic、scoring変更、Task進捗変更、billing変更を行わない。
+
+詳細は `docs/V54.5_OVERVIEW_WORKSPACE.md` を正とする。
