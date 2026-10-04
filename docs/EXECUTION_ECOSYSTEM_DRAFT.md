@@ -1614,18 +1614,45 @@ Validated:
 
 Canonical implementation spec: `docs/V55.7_EXECUTION_SETUP_VALIDATION.md`
 
-### Later — Activity Integration API
+### V55.8 — External Activity Integration Validation — implemented
 
-Only after the internal Activity model and linking semantics are stable:
+Study Practiceで最初のreturn loopを実装済み。
+
+```text
+Validation Provider launch
+→ normalized simulated provider result
+→ idempotent ExecutionActivity
+→ explicit Task link
+→ study_practice_assessed TaskEvidence
+→ TaskEvidenceAdapter
+→ existing Study Intelligence
+```
+
+Validated:
+
+- provider result redelivery is idempotent
+- raw Activity metadata does not cross into Intelligence
+- only completed Study Practice with a valid score becomes domain Evidence
+- generic/non-completed Activity remains execution_activity_observed
+- External score affects Study Intelligence through existing rules
+- Task progress/status are not automatically mutated
+
+Canonical implementation spec: `docs/V55.8_EXTERNAL_ACTIVITY_INTEGRATION_VALIDATION.md`
+
+### Later — Authenticated Provider Activity API
+
+Next externalization step:
 
 ```text
 authenticated provider event
 → validate
 → normalize
 → idempotent ExecutionActivity
-→ link
-→ TaskEvidence
+→ safe Task association
+→ existing projection
 ```
+
+Define ProviderConnection/auth/replay/privacy boundaries before exposing a public API.
 
 ### Later — Launch Integration
 
