@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Data\ExecutionLaunchDecisionData;
 use App\Models\Plan;
 use App\Models\Task;
+use LogicException;
 
 final class ExecutionLaunchResolver
 {
@@ -35,10 +36,14 @@ final class ExecutionLaunchResolver
             );
         }
 
+        if ($provider === null) {
+            throw new LogicException(
+                'Study execution requires a resolvable provider.',
+            );
+        }
+
         return new ExecutionLaunchDecisionData(
-            provider: $provider
-                ?? app(ExecutionProviderRegistry::class)
-                    ->find('canovia.study.practice'),
+            provider: $provider,
             routeName: $fallbackRouteName,
             parameters: [$plan, $task],
         );
