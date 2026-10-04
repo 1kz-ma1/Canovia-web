@@ -227,7 +227,7 @@ Implemented:
 
 ### V54.4 — Development Workspace
 
-Status: **IMPLEMENTED — PR #222 OPEN**
+Status: **MERGED — PR #222**
 
 Branch:
 
@@ -264,13 +264,39 @@ Implemented:
 
 ### V54.5 — Overview
 
-Planned:
+Status: **IMPLEMENTED — PR #223 OPEN**
 
-- thin cross-Mode command surface
-- highest-priority global Action
-- Mode Readiness summaries
-- Inbox
-- important state changes
+Branch:
+
+`feature/v54-5-overview-workspace`
+
+Permanent spec:
+
+`docs/V54.5_OVERVIEW_WORKSPACE.md`
+
+Implemented:
+
+- canonical Overview at `GET /workspace/overview`
+- Overview Mode entry now lands on dedicated Overview Workspace
+- root Home remains unchanged and compatible
+- `workspace.overview.*` is a strong Overview route hint
+- stored Study / Development preference does not override explicit Overview context
+- existing Home projection remains global Action authority
+- Home projection is reused in prefetch/non-recording mode
+- one primary global Action only
+- Intelligence-backed and ordinary Dashboard Guidance actions both supported
+- at most one Study and one Development summary
+- representative Plan selection: priority → deadline → ID
+- setup-needed summaries suppress fake numeric Readiness
+- bounded pending Inbox count + latest four identity-scoped items
+- bounded important Action Home signals
+- no new ranking / Readiness / notification model
+- no Intelligence history persistence on Overview GET
+- no DashboardViewed / RecommendationShown telemetry from Overview GET
+- no new AI or GitHub provider traffic
+- final validation run: #37189794441
+- V54.4 / V54.3 / V54.2 / V54.1 / V54.0 / V53.9 / Home regressions passed
+- PR #223 created against main
 
 ### V54.6 — State Change Feedback
 

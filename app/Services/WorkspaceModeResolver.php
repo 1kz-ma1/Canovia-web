@@ -131,6 +131,10 @@ final class WorkspaceModeResolver
             return null;
         }
 
+        if (str_starts_with($routeName, 'workspace.overview.')) {
+            return WorkspaceMode::Overview;
+        }
+
         if (
             str_starts_with($routeName, 'workspace.study.')
             || str_starts_with($routeName, 'plans.study_scope.')

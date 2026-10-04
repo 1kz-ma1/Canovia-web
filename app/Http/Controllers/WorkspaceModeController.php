@@ -95,7 +95,7 @@ final class WorkspaceModeController extends Controller
         PlanPriorityService $priorities,
     ): RedirectResponse {
         if ($mode === WorkspaceMode::Overview) {
-            return redirect()->route('home');
+            return redirect()->route('workspace.overview.index');
         }
 
         if ($mode === WorkspaceMode::Study) {
@@ -154,7 +154,7 @@ final class WorkspaceModeController extends Controller
                     'workspace.development.index',
                     ['plan_id' => $plan->id],
                 ),
-                WorkspaceMode::Overview => redirect()->route('home'),
+                WorkspaceMode::Overview => redirect()->route('workspace.overview.index'),
             };
         }
 
