@@ -177,6 +177,8 @@ final class DevelopmentStateBuilder implements StateBuilder
         ];
 
         $latestTs = 0;
+        $reviewObserved = false;
+        $reviewDecisions = [];
 
         foreach ($items as $item) {
             $latestTs = max($latestTs, $item->occurredAt->getTimestamp());
@@ -246,18 +248,24 @@ final class DevelopmentStateBuilder implements StateBuilder
                     break;
 
                 case 'pull_request_review_submitted':
+                    $reviewObserved = true;
                     $state = strtoupper((string) ($item->facts['review_state'] ?? ''));
-                    $gates['review'] = $this->gate(
-                        match ($state) {
-                            'APPROVED' => 'passed',
-                            'CHANGES_REQUESTED' => 'failed',
-                            'COMMENTED' => 'pending',
-                            'DISMISSED' => 'pending',
-                            default => 'unknown',
-                        },
-                        $item->type,
-                        $occurredAt,
+                    $reviewKey = (string) (
+                        $item->facts['reviewer_key']
+                        ?? ('review:'.(int) ($item->facts['review_id'] ?? 0))
                     );
+
+                    if ($state === 'DISMISSED') {
+                        unset($reviewDecisions[$reviewKey]);
+                        break;
+                    }
+
+                    if (in_array($state, ['APPROVED', 'CHANGES_REQUESTED'], true)) {
+                        $reviewDecisions[$reviewKey] = [
+                            'state' => $state,
+                            'occurred_at' => $occurredAt,
+                        ];
+                    }
                     break;
 
                 case 'pull_request_ci_observed':
@@ -343,6 +351,41 @@ final class DevelopmentStateBuilder implements StateBuilder
                     }
                     break;
             }
+        }
+
+        if ($reviewDecisions !== []) {
+            $changeRequests = collect($reviewDecisions)
+                ->where('state', 'CHANGES_REQUESTED');
+
+            if ($changeRequests->isNotEmpty()) {
+                $latest = $changeRequests
+                    ->sortByDesc('occurred_at')
+                    ->first();
+
+                $gates['review'] = $this->gate(
+                    'failed',
+                    'pull_request_review_submitted',
+                    is_array($latest) ? ($latest['occurred_at'] ?? null) : null,
+                );
+            } else {
+                $approvals = collect($reviewDecisions)
+                    ->where('state', 'APPROVED');
+                $latest = $approvals
+                    ->sortByDesc('occurred_at')
+                    ->first();
+
+                $gates['review'] = $this->gate(
+                    'passed',
+                    'pull_request_review_submitted',
+                    is_array($latest) ? ($latest['occurred_at'] ?? null) : null,
+                );
+            }
+        } elseif ($reviewObserved) {
+            $gates['review'] = $this->gate(
+                'pending',
+                'pull_request_review_submitted',
+                null,
+            );
         }
 
         $failed = collect(self::GATES)
