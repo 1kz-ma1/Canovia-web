@@ -53,7 +53,7 @@ class WorkspaceModeOnboardingV547Test extends TestCase
             ->assertOk()
             ->assertSee('data-study-workspace-capture-first', false)
             ->assertSee('data-workspace-mode-onboarding-step="capture_study_scope"', false)
-            ->assertSee('試験範囲を確定する')
+            ->assertSee('試験範囲から始める')
             ->assertDontSee('data-study-workspace-readiness', false);
 
         $this->scope($plan, 'ネットワーク', 'CIDR');
