@@ -2039,3 +2039,53 @@ Study ScopeではCurrent Action、why-now、Readiness、confidence、最近のAc
 V53.6のStudy Action policyはdeterministicで、mergeにより新しいOpenAI traffic/costを発生させない。
 
 詳細は `docs/V53.6_ADAPTIVE_ACTION.md` を正とする。
+
+
+## V53.7 Developer Evidence Sync
+
+DevelopmentではGitHub activityをTask進捗へ直接変換せず、まずauthoritative Evidenceとして正規化する。
+
+```text
+signed GitHub webhook
+→ minimal routing
+→ GitHub App REST authoritative re-fetch
+→ explicitly linked Artifact / Task
+→ TaskEvidence
+→ EvidenceObservation
+→ V53.8 Development State
+```
+
+Webhook payloadは「変化があった」というtriggerに限定し、Issue / Branch / Commit / PR / Review / CI / Merge / Deploymentの実状態はGitHub App経由で再取得する。raw webhook bodyをIntelligence truthへ入れない。
+
+V53.7で扱うDevelopment Evidence:
+
+- `pull_request_observed`
+- `pull_request_review_submitted`
+- `pull_request_ci_observed`
+- `pull_request_merged`
+- `github_issue_observed`
+- `github_branch_observed`
+- `github_commit_observed`
+- `github_deployment_observed`
+
+非PR eventは、同じRepository / installationへ接続済みで、対象GitHub ArtifactがTaskへ明示linkされている場合だけ同期する。Repository全体のactivityをPlan内の全Taskへ展開しない。
+
+Issueはnumber/state/state reason/locked/assignee count、Branchはname/head SHA/protection、CommitはSHA/親数/署名確認、DeploymentはID/SHA/ref/environment/status/production flag等のbounded factだけを扱う。Issue本文・title、commit message、diff/files、source code、Deployment payload/description等はIntelligenceへ取り込まない。
+
+GitHub Appの新しい自動観測には対応するpermission/event subscriptionが必要で、IssueはIssues read、Branch/CommitはContents read、DeploymentはDeployments readを利用する。既存PR/Review/CI権限境界は維持する。
+
+`FeatureAccessService -> DeveloperGithubEvidence` をそのまま利用し、V53.7独自のPremium判定を作らない。新しい非PR同期ではEntitlement確認前にremote APIを読まない。
+
+GitHub eventはEvidenceであり進捗ではない。
+
+```text
+Commit observed ≠ 50%
+PR merged       ≠ 100%
+Deploy success  ≠ requirement complete
+```
+
+Task status / progress / remaining_minutes / Canovia workflow laneはV53.7では変更しない。
+
+`DevelopmentEvidenceCollector` をV53.8の入力境界とし、Webhook / GitHub REST / provider payloadの内部事情をDevelopment State Builderへ漏らさない。
+
+詳細は `docs/V53.7_DEVELOPER_EVIDENCE_SYNC.md` を正とする。
