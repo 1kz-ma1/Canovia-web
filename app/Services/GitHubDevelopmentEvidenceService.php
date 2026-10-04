@@ -24,7 +24,7 @@ final class GitHubDevelopmentEvidenceService
      * webhook. The webhook is only a routing signal; every fact is re-read from
      * GitHub before TaskEvidence is written.
      *
-     * @return array{matched_artifacts:int,synced_tasks:int,skipped_entitlement:int}
+     * @return array{matched_artifacts:int,synced_tasks:int,skipped_entitlement:int,plan_ids:array<int,int>}
      */
     public function syncDelivery(
         GitHubWebhookDelivery $delivery,
@@ -97,6 +97,7 @@ final class GitHubDevelopmentEvidenceService
 
         $counts = $this->emptyCounts();
         $syncedTaskKeys = [];
+        $syncedPlanIds = [];
 
         foreach ($targets as $target) {
             $preCandidates = $this->preCandidates(
@@ -186,9 +187,15 @@ final class GitHubDevelopmentEvidenceService
                 if (! isset($syncedTaskKeys[$syncKey])) {
                     $counts['synced_tasks']++;
                     $syncedTaskKeys[$syncKey] = true;
+                    $syncedPlanIds[(int) $task->plan_id] = true;
                 }
             }
         }
+
+        $counts['plan_ids'] = array_values(array_map(
+            'intval',
+            array_keys($syncedPlanIds),
+        ));
 
         return $counts;
     }
@@ -686,7 +693,7 @@ final class GitHubDevelopmentEvidenceService
     }
 
     /**
-     * @return array{matched_artifacts:int,synced_tasks:int,skipped_entitlement:int}
+     * @return array{matched_artifacts:int,synced_tasks:int,skipped_entitlement:int,plan_ids:array<int,int>}
      */
     private function emptyCounts(): array
     {
@@ -694,6 +701,7 @@ final class GitHubDevelopmentEvidenceService
             'matched_artifacts' => 0,
             'synced_tasks' => 0,
             'skipped_entitlement' => 0,
+            'plan_ids' => [],
         ];
     }
 }

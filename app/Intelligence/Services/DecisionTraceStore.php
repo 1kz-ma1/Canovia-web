@@ -85,6 +85,11 @@ final class DecisionTraceStore
                         'remaining_unit',
                         'mastery_score_percent',
                         'retention_score_percent',
+                        'target_gate',
+                        'gate_status',
+                        'readiness_score',
+                        'pull_request_number',
+                        'deployment_environment',
                     ],
                 ),
                 'metadata' => Arr::only($metadata, [

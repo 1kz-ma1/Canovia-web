@@ -78,6 +78,7 @@ class TaskEvidence extends Model
             'github_branch_observed' => 'GitHub Branch',
             'github_commit_observed' => 'GitHub Commit',
             'github_deployment_observed' => 'GitHub Deploy',
+            'development_quality_gate_confirmed' => '開発品質確認',
             default => '活動',
         };
     }
@@ -174,6 +175,20 @@ class TaskEvidence extends Model
                 '%sへのDeployを「%s」として確認しました。',
                 trim((string) data_get($this->metadata, 'environment')) ?: '対象環境',
                 (string) data_get($this->metadata, 'deployment_status', 'created'),
+            ),
+            'development_quality_gate_confirmed' => sprintf(
+                '%sを「%s」として明示確認しました。',
+                match ((string) data_get($this->metadata, 'quality_gate')) {
+                    'verification' => '実機・本番確認',
+                    'spec_sync' => '仕様同期',
+                    default => '品質Gate',
+                },
+                match ((string) data_get($this->metadata, 'gate_status')) {
+                    'passed' => '確認済み',
+                    'failed' => '問題あり',
+                    'not_required' => '対象外',
+                    default => '未確認',
+                },
             ),
             'pull_request_review_submitted' => sprintf(
                 'PR #%dで%sが「%s」を送信しました。',

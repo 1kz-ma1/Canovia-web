@@ -46,6 +46,7 @@ use App\Http\Controllers\PlanResourceController;
 use App\Http\Controllers\PlanResourceAssistantController;
 use App\Http\Controllers\PlanArtifactController;
 use App\Http\Controllers\GitHubWorkflowController;
+use App\Http\Controllers\DevelopmentReadinessController;
 use App\Http\Controllers\StudyPracticeController;
 use App\Http\Controllers\StudyActivityController;
 use App\Http\Controllers\StudyScopeCaptureController;
@@ -295,6 +296,9 @@ Route::middleware('feature.access:'.FeatureKey::ProjectArtifact->value)->group(f
     Route::post('/github-workflow/artifacts/{artifact}/github-app/check', [GitHubWorkflowController::class, 'checkRepositoryConnection'])
         ->middleware('throttle:6,1')
         ->name('github_workflow.app.check');
+    Route::post('/plans/{plan}/development-readiness/tasks/{task}/quality-gate', [DevelopmentReadinessController::class, 'confirmQualityGate'])
+        ->middleware('throttle:12,1')
+        ->name('plans.development_readiness.quality_gate.confirm');
 });
 
 // 資格学習のActivity選択はAI演習より上位の共通入口として扱う。

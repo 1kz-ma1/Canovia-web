@@ -114,7 +114,11 @@ final class TaskEvidenceAdapter
                 'pull_request_number' => $this->nullableInt(
                     $metadata['pull_request_number'] ?? $metadata['pull_request'] ?? null,
                 ),
+                'review_id' => $this->nullableInt($metadata['review_id'] ?? null),
                 'review_state' => $this->nullableString($metadata['review_state'] ?? null),
+                'reviewer_key' => $this->hashedString(
+                    $metadata['reviewer'] ?? null,
+                ),
             ],
             'github_issue_observed' => [
                 ...$this->githubBaseFacts($metadata),
@@ -151,6 +155,23 @@ final class TaskEvidenceAdapter
                 ),
                 'transient_environment' => (bool) (
                     $metadata['transient_environment'] ?? false
+                ),
+            ],
+            'development_quality_gate_confirmed' => [
+                'quality_gate' => $this->nullableString(
+                    $metadata['quality_gate'] ?? null,
+                ),
+                'gate_status' => $this->nullableString(
+                    $metadata['gate_status'] ?? null,
+                ),
+                'confirmation_source' => $this->nullableString(
+                    $metadata['confirmation_source'] ?? null,
+                ),
+                'target_sha' => $this->nullableString(
+                    $metadata['target_sha'] ?? null,
+                ),
+                'deployment_id' => $this->nullableInt(
+                    $metadata['deployment_id'] ?? null,
                 ),
             ],
             'artifact_state_observed' => [
@@ -194,6 +215,19 @@ final class TaskEvidenceAdapter
         $value = filter_var($value, FILTER_VALIDATE_INT);
 
         return $value === false ? null : (int) $value;
+    }
+
+    private function hashedString(mixed $value): ?string
+    {
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $value = mb_strtolower(trim((string) $value));
+
+        return $value === ''
+            ? null
+            : hash('sha256', $value);
     }
 
     private function nullableString(mixed $value): ?string
