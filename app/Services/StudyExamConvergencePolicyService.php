@@ -111,6 +111,12 @@ final class StudyExamConvergencePolicyService
         // Preserve V41.4 semantics for a single suspected weakness: it may
         // receive a small Secondary re-check, but it is not yet a confirmed
         // intervention. Graduation/re-entry state remains history-owned here.
+        $topicStatusByKey = $states
+            ->mapWithKeys(fn (array $item) => [
+                $this->key((string) ($item['topic'] ?? ''))
+                    => (string) ($item['status'] ?? 'monitoring'),
+            ]);
+
         $candidateTopics = collect(
             $weaknessPriority['primary_topics'] ?? [],
         )
@@ -120,6 +126,16 @@ final class StudyExamConvergencePolicyService
                     is_string($topic)
                     && trim($topic) !== '',
             )
+            ->reject(function (string $topic) use ($topicStatusByKey) {
+                return in_array(
+                    (string) $topicStatusByKey->get(
+                        $this->key($topic),
+                        'monitoring',
+                    ),
+                    ['graduated', 'capped'],
+                    true,
+                );
+            })
             ->unique()
             ->take(5)
             ->values();
@@ -142,7 +158,9 @@ final class StudyExamConvergencePolicyService
         );
 
         [$phase, $reason] = match (true) {
-            $daysUntilExam !== null && $daysUntilExam <= $examDays => [
+            $daysUntilExam !== null
+                && $daysUntilExam >= 0
+                && $daysUntilExam <= $examDays => [
                 self::PHASE_EXAM_MODE,
                 "試験まで{$daysUntilExam}日のため、新しい細部探索より本番バランスを優先します。",
             ],
@@ -150,7 +168,9 @@ final class StudyExamConvergencePolicyService
                 self::PHASE_GENERAL_PRACTICE,
                 '弱点補完の卒業または深掘り上限に到達したため、次は総合演習で全体を再測定します。',
             ],
-            $daysUntilExam !== null && $daysUntilExam <= $generalDays => [
+            $daysUntilExam !== null
+                && $daysUntilExam >= 0
+                && $daysUntilExam <= $generalDays => [
                 self::PHASE_GENERAL_PRACTICE,
                 "試験まで{$daysUntilExam}日のため、局所補強より総合演習を優先します。",
             ],
