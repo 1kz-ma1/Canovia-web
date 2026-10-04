@@ -101,7 +101,7 @@ final class WorkspaceModeOnboardingService
     ): ?array {
         if ($actionKey === 'create_plan') {
             return [
-                'url' => route('plans.create', [
+                'url' => route('plans.create.manual', [
                     'workspace_mode' => $mode->value,
                 ]),
                 'method' => 'GET',
