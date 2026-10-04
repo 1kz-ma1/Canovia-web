@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FeatureKey;
+use App\Intelligence\Enums\IntelligenceDomain;
+use App\Intelligence\Presentation\IntelligencePresentationHistoryService;
+use App\Intelligence\Presentation\StudyIntelligencePresentationAdapter;
 use App\Intelligence\Study\StudyAdaptiveActionService;
 use App\Intelligence\Study\StudyPlanIntelligenceService;
-use App\Models\IntelligenceActionProjection;
 use App\Exceptions\NativeAiExecutionException;
 use App\Models\InboxItem;
 use App\Models\Plan;
@@ -34,6 +36,8 @@ class StudyScopeCaptureController extends Controller
         FeatureAccessService $featureAccess,
         NativeAiGateway $nativeAi,
         StudyAdaptiveActionService $studyActions,
+        StudyIntelligencePresentationAdapter $presentationAdapter,
+        IntelligencePresentationHistoryService $history,
     ) {
         $ownership->authorizeView($request, $plan);
         $this->authorizeStudyPlan($plan, $profiles);
@@ -51,13 +55,14 @@ class StudyScopeCaptureController extends Controller
             ? $adaptiveAction->intelligence
             : null;
 
-        $recentActions = IntelligenceActionProjection::query()
-            ->where('plan_id', $plan->id)
-            ->where('domain', 'study')
-            ->latest('updated_at')
-            ->latest('id')
-            ->take(6)
-            ->get();
+        $intelligencePresentation = $presentationAdapter->adapt(
+            $plan,
+            $adaptiveAction,
+        );
+        $intelligenceHistory = $history->forPlan(
+            $plan,
+            IntelligenceDomain::Study,
+        );
 
         return view('study_scope.index', [
             'plan' => $plan,
@@ -65,7 +70,8 @@ class StudyScopeCaptureController extends Controller
             'canEdit' => $ownership->canEdit($request, $plan),
             'studyIntelligence' => $intelligence,
             'studyAdaptiveAction' => $adaptiveAction,
-            'recentIntelligenceActions' => $recentActions,
+            'intelligencePresentation' => $intelligencePresentation,
+            'intelligenceHistory' => $intelligenceHistory,
             'canAnalyze' => $nativeAi->isConfigured()
                 && $featureAccess->canUse(
                     $request->user(),

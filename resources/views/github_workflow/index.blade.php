@@ -212,7 +212,7 @@
             </div>
         </div>
 
-        <div class="grid gap-4 xl:grid-cols-5" data-github-workflow-board>
+        <div id="github-workflow-board" class="grid gap-4 xl:grid-cols-5" data-github-workflow-board>
             @foreach ($lanes as $lane)
                 <section
                     class="min-w-0 rounded-3xl border border-slate-800 bg-slate-950/40 p-3"

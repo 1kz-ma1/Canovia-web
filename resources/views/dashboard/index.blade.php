@@ -7,14 +7,14 @@
         $state = $dashboard['state'];
         $guidanceDeck = $dashboard['guidance_deck'] ?? collect();
         $primaryGuidance = $guidanceDeck->first();
-        $intelligenceAction = $intelligenceAction ?? null;
-        $intelligencePlanId = (int) data_get($intelligenceAction, 'plan.id', 0);
-        $taskGuidanceDeck = $intelligenceAction
+        $intelligencePresentation = $intelligencePresentation ?? null;
+        $intelligencePlanId = (int) ($intelligencePresentation?->plan?->id ?? 0);
+        $taskGuidanceDeck = $intelligencePresentation
             ? $guidanceDeck
                 ->reject(fn ($guidance) => (int) data_get($guidance, 'plan.id', 0) === $intelligencePlanId)
                 ->values()
             : $guidanceDeck;
-        $primaryDisplayPlan = data_get($intelligenceAction, 'plan')
+        $primaryDisplayPlan = $intelligencePresentation?->plan
             ?? data_get($primaryGuidance, 'plan');
         $activeSession = $dashboard['active_work_session'];
         $focusAlternatives = $activeSession
@@ -119,7 +119,7 @@
                     <a href="{{ route('plans.create') }}" class="btn-primary" data-onboarding-target="create-plan">計画を作る</a>
                 </div>
             </section>
-        @elseif (! $activeSession && ($guidanceDeck->isNotEmpty() || $intelligenceAction))
+        @elseif (! $activeSession && ($guidanceDeck->isNotEmpty() || $intelligencePresentation))
             <section class="pk-v18-recommendation pk-v395-guidance plan-identity-shell" data-plan-accent="{{ $primaryDisplayPlan?->accentKey() ?? 'sky' }}" data-action-home-guidance>
                 <div class="pk-v18-recommendation-titlebar">
                     <div class="flex items-center gap-2">
@@ -133,44 +133,69 @@
                 </div>
 
                 <div class="pk-v395-guidance-track" aria-label="計画ごとの次Action">
-                    @if ($intelligenceAction)
+                    @if ($intelligencePresentation)
                         @php
-                            $iaPlan = $intelligenceAction['plan'];
-                            $iaAction = $intelligenceAction['action'];
-                            $iaDecision = $intelligenceAction['decision'];
-                            $iaReadiness = $intelligenceAction['readiness'];
+                            $iaPlan = $intelligencePresentation->plan;
+                            $iaAction = $intelligencePresentation->action;
+                            $iaDecision = $intelligencePresentation->decision;
+                            $iaReadiness = $intelligencePresentation->readiness;
                         @endphp
-                        <article class="pk-v395-guidance-card plan-identity-shell" data-plan-accent="{{ $iaPlan->accentKey() }}" data-intelligence-action>
+                        <article
+                            class="pk-v395-guidance-card plan-identity-shell"
+                            data-plan-accent="{{ $iaPlan->accentKey() }}"
+                            data-intelligence-action
+                            data-intelligence-domain="{{ $intelligencePresentation->domain->value }}"
+                        >
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
                                     <span class="plan-identity-chip text-[11px]"><span aria-hidden="true">{{ $iaPlan->displayIcon() }}</span>{{ $iaPlan->title }}</span>
-                                    <h3 class="mt-2 text-base font-black leading-6 text-white">{{ $iaAction->title }}</h3>
+                                    <p class="mt-2 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-300">{{ $intelligencePresentation->eyebrow }}</p>
+                                    <h3 class="mt-1 text-base font-black leading-6 text-white">{{ $iaAction->title }}</h3>
                                 </div>
                                 <span class="badge badge-green">最優先</span>
                             </div>
 
-                            <p class="mt-2 text-xs text-slate-400">
-                                Intelligence Action
-                                @if ($iaReadiness->score !== null)
-                                    · 準備度 {{ $iaReadiness->score }}/100
-                                @endif
-                                · 信頼度 {{ $iaReadiness->confidence->percent() }}%
-                            </p>
+                            <div class="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                                <div class="rounded-xl border border-white/8 bg-slate-950/25 px-3 py-2">
+                                    <span class="block text-slate-500">{{ $intelligencePresentation->readinessLabel }}</span>
+                                    <strong class="mt-0.5 block text-slate-100">{{ $intelligencePresentation->readinessDisplay() }}</strong>
+                                </div>
+                                <div class="rounded-xl border border-white/8 bg-slate-950/25 px-3 py-2">
+                                    <span class="block text-slate-500">現在地</span>
+                                    <strong class="mt-0.5 block text-slate-100">{{ $intelligencePresentation->stateLabel }}</strong>
+                                </div>
+                            </div>
 
-                            <form method="POST" action="{{ $intelligenceAction['execute_url'] }}" class="mt-3">
-                                @csrf
-                                <button type="submit" class="btn-primary w-full px-3 py-2 text-xs" data-onboarding-target="today-start">
-                                    {{ $intelligenceAction['action_label'] }}
-                                </button>
-                            </form>
+                            <div class="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/[0.04] px-3 py-2.5">
+                                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-amber-200">BIGGEST GAP</p>
+                                <p class="mt-1 text-xs font-bold text-slate-200">{{ $intelligencePresentation->gapLabel }}</p>
+                                <p class="mt-1 text-[11px] leading-4 text-slate-500">{{ $intelligencePresentation->gapDetail }}</p>
+                            </div>
+
+                            <div class="mt-3 flex gap-2">
+                                @if ($intelligencePresentation->actionMethod === 'POST')
+                                    <form method="POST" action="{{ $intelligencePresentation->actionUrl }}" class="flex-1">
+                                        @csrf
+                                        <button type="submit" class="btn-primary w-full px-3 py-2 text-xs" data-onboarding-target="today-start">
+                                            {{ $intelligencePresentation->actionLabel }}
+                                        </button>
+                                    </form>
+                                @else
+                                    <a href="{{ $intelligencePresentation->actionUrl }}" class="btn-primary flex-1 px-3 py-2 text-center text-xs" data-onboarding-target="today-start">
+                                        {{ $intelligencePresentation->actionLabel }}
+                                    </a>
+                                @endif
+                                <a href="{{ $intelligencePresentation->detailUrl }}" class="btn-secondary px-3 py-2 text-xs">現在地</a>
+                            </div>
 
                             <details class="pk-action-details mt-3" data-guidance-reasons>
-                                <summary>なぜこのAction？</summary>
+                                <summary>なぜ今これ？</summary>
                                 <p class="mt-3 text-xs leading-5 text-slate-300">{{ $iaAction->intent }}</p>
                                 <div class="mt-3 rounded-xl border border-emerald-300/15 bg-emerald-300/[0.04] px-3 py-2.5">
                                     <p class="text-[11px] font-bold text-emerald-200">Canoviaの判断</p>
                                     <p class="mt-1 text-[11px] leading-4 text-slate-400">{{ $iaDecision->summary }}</p>
-                                    @if ($intelligenceAction['requires_task_projection'])
+                                    <p class="mt-2 text-[10px] leading-4 text-slate-500">判断信頼度 {{ $intelligencePresentation->confidenceDisplay() }}</p>
+                                    @if ($intelligencePresentation->requiresTaskProjection)
                                         <p class="mt-2 text-[10px] leading-4 text-slate-500">
                                             このActionに使える既存Taskがないため、実行を選んだ時だけTaskへ投影します。
                                         </p>
@@ -194,8 +219,8 @@
                                     <h3 class="mt-2 text-base font-black leading-6 text-white">{{ $guidanceTask->title }}</h3>
                                 </div>
                                 @php
-                                    $guidanceDisplayIndex = $intelligenceAction ? $guidanceIndex + 2 : $guidanceIndex + 1;
-                                    $guidanceIsPrimary = ! $intelligenceAction && $guidanceIndex === 0;
+                                    $guidanceDisplayIndex = $intelligencePresentation ? $guidanceIndex + 2 : $guidanceIndex + 1;
+                                    $guidanceIsPrimary = ! $intelligencePresentation && $guidanceIndex === 0;
                                 @endphp
                                 <span class="badge {{ $guidanceIsPrimary ? 'badge-green' : 'badge-slate' }}">{{ $guidanceIsPrimary ? '最優先' : '候補 '.$guidanceDisplayIndex }}</span>
                             </div>
@@ -225,10 +250,10 @@
                                         @csrf
                                         <input type="hidden" name="task_id" value="{{ $guidanceTask->id }}">
                                         <input type="hidden" name="source" value="dashboard">
-                                        <button type="submit" class="btn-primary w-full px-3 py-2 text-xs" @if(! $intelligenceAction && $guidanceIndex === 0) data-onboarding-target="today-start" @endif>◷ 集中タイマーで進める</button>
+                                        <button type="submit" class="btn-primary w-full px-3 py-2 text-xs" @if(! $intelligencePresentation && $guidanceIndex === 0) data-onboarding-target="today-start" @endif>◷ 集中タイマーで進める</button>
                                     </form>
                                 @else
-                                    <a href="{{ route('navigation.index', ['plan_id' => $guidancePlan->id]) }}" class="btn-primary flex-1 px-3 py-2 text-xs" @if(! $intelligenceAction && $guidanceIndex === 0) data-onboarding-target="today-start" @endif>実行方法を選ぶ</a>
+                                    <a href="{{ route('navigation.index', ['plan_id' => $guidancePlan->id]) }}" class="btn-primary flex-1 px-3 py-2 text-xs" @if(! $intelligencePresentation && $guidanceIndex === 0) data-onboarding-target="today-start" @endif>実行方法を選ぶ</a>
                                 @endif
                             </div>
 
@@ -258,7 +283,7 @@
                     @endforeach
                 </div>
 
-                @if ($taskGuidanceDeck->count() + ($intelligenceAction ? 1 : 0) > 1)
+                @if ($taskGuidanceDeck->count() + ($intelligencePresentation ? 1 : 0) > 1)
                     <p class="mt-2 text-center text-[10px] text-slate-500">横にスワイプすると、ほかのPlanの候補も確認できます。</p>
                 @endif
             </section>
@@ -443,11 +468,13 @@
             'remaining_minutes' => $dashboard['remaining_minutes'],
             'streak_days' => $dashboard['streak_days'],
             'signal_count' => $signals->count(),
-            'intelligence_action' => $intelligenceAction ? [
-                'kind' => $intelligenceAction['action']->kind,
-                'title' => $intelligenceAction['action']->title,
-                'intent' => $intelligenceAction['action']->intent,
-                'readiness_score' => $intelligenceAction['readiness']->score,
+            'intelligence_action' => $intelligencePresentation ? [
+                'domain' => $intelligencePresentation->domain->value,
+                'kind' => $intelligencePresentation->action->kind,
+                'title' => $intelligencePresentation->action->title,
+                'intent' => $intelligencePresentation->action->intent,
+                'readiness_score' => $intelligencePresentation->readiness->score,
+                'gap_label' => $intelligencePresentation->gapLabel,
             ] : null,
         ],
         'continuity' => $dashboard['continuity'] ?? null,

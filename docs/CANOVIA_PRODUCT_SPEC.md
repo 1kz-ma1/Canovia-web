@@ -2139,3 +2139,63 @@ Current ActionはGitHub webhook、manual GitHub Return、Verification / Spec Syn
 GitHub WorkflowにはV53.8診断SurfaceとしてRelease Readiness / confidence / Release candidate Task / Current Action / 7 Gateを表示する。最終的なStudy / Development共通Intelligence UXはV53.9で整理する。
 
 詳細は `docs/V53.8_DEVELOPER_READINESS.md` を正とする。
+
+
+## V53.9 Intelligence UX
+
+Study / Developmentのdomain-specific Intelligenceを、共通Presentation contractでHomeと詳細Surfaceへ出す。
+
+正規の表示順序:
+
+```text
+Current State
+→ Readiness
+→ Biggest Gap
+→ Current Action
+→ Why now?
+```
+
+Task / Evidence / Decision historyは消さず、判断の根拠を確認する詳細として残す。Task treeをユーザーが維持し続けないとCanoviaが現在状態を理解できない設計には戻さない。
+
+`PlanIntelligencePresentation` をStudy / Development共通のUI境界とし、domain固有ruleはAdapter側へ閉じ込める。shared Blade surfaceはStudyのMastery ruleやDevelopmentのRelease Gate ruleを解釈しない。
+
+Homeは `IntelligenceHomeActionService` で最大1 PlanだけをIntelligence評価する。既存Dashboard Guidanceの最優先PlanがStudy/DevelopmentならそのPlanを使い、別のIntelligence Planがtask guidanceを置き換えるのは既存Plan priority上で本当に上位の場合だけとする。
+
+V53.6の暫定ルール「全current Task完了ならStudy Home Intelligenceを出さない」はV53.9で撤回する。
+
+```text
+all current Tasks done
+≠ Goal achieved
+≠ Exam Ready
+≠ Release Ready
+```
+
+Plan自体の明示的completion conceptが将来必要なら、Task全完了とは独立してmodelingする。
+
+Home Intelligence cardはPlan / Current Action / Readiness / Current State / Biggest Gap / CTA / Whyを表示し、そのPlanの重複Task guidanceは同時に先頭へ出さない。他Plan候補は既存horizontal guidanceとして残す。
+
+Study detailは共通Summaryの下にconfirmed scope / remaining Study Units / deadline pressure / Speed未計測 / priority scope等を残す。Development detailは共通Summaryの下に7 Release Quality GatesとVerification / Spec Sync確認を残す。
+
+判断履歴には既存 `intelligence_state_snapshots` / `intelligence_decision_traces` / `intelligence_action_projections` を再利用し、新しいhistory tableは作らない。表示はbounded summary / Evidence countに限定し、raw provider payloadやprivate Evidence本文を出さない。
+
+Study ActionのTask projectionは引き続きexplicit/user-triggered。閲覧だけではTaskを作らない。Development V53.9も自動Task生成を追加しない。
+
+Home offline snapshotはdomain / action kind / title / intent / readiness score / gap labelだけを保持し、State全体・Decision trace・Evidence referencesはserialiseしない。
+
+V53.9はpresentation/orchestration layerであり、新しいOpenAI trafficやReasoning Router escalation policyを追加しない。
+
+V53シリーズ完了後の共通プロダクトモデル:
+
+```text
+Goal
+→ State
+→ Readiness / Gap
+→ Decision
+→ Action
+→ Evidence
+→ State update
+```
+
+Taskは、このloopを実行・可視化・相関するためのoptional durable projectionであり、Intelligence source of truthではない。
+
+詳細は `docs/V53.9_INTELLIGENCE_UX.md` を正とする。

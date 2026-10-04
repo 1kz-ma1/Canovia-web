@@ -22,7 +22,7 @@ final class HomePageDataService
         private readonly CalendarPresentationService $calendarService,
         private readonly ActionHomeProjectionService $actionHome,
         private readonly PlanCategoryProfileService $categoryProfiles,
-        private readonly StudyAdaptiveHomeActionService $studyAdaptiveHome,
+        private readonly IntelligenceHomeActionService $intelligenceHome,
     ) {}
 
     public function build(Request $request, bool $prefetch = false): array
@@ -116,26 +116,27 @@ final class HomePageDataService
         }
 
         $primaryGuidance = $dashboard['guidance_deck']->first();
-        $intelligenceAction = $this->studyAdaptiveHome->primary(
+        $intelligencePresentation = $this->intelligenceHome->primary(
             $editablePlans,
             $dashboard['guidance_deck'],
         );
 
-        if ($intelligenceAction && ! $prefetch) {
+        if ($intelligencePresentation && ! $prefetch) {
             $this->eventLogger->recordOnce(
                 $actorToken,
                 BehaviorEventType::RecommendationShown,
                 $request,
-                $intelligenceAction['plan'],
-                $intelligenceAction['target_task'],
+                $intelligencePresentation->plan,
+                $intelligencePresentation->targetTask,
                 [
-                    'source' => 'study_intelligence_action',
+                    'source' => 'intelligence_action',
+                    'domain' => $intelligencePresentation->domain->value,
                     'selection' => 'state_readiness_decision',
-                    'decision_type' => (string) $intelligenceAction['decision']->type,
-                    'reason_code' => (string) $intelligenceAction['decision']->reasonCode,
-                    'action_kind' => (string) $intelligenceAction['action']->kind,
-                    'readiness_score' => $intelligenceAction['readiness']->score,
-                    'readiness_confidence' => $intelligenceAction['readiness']->confidence->value,
+                    'decision_type' => (string) $intelligencePresentation->decision->type,
+                    'reason_code' => (string) $intelligencePresentation->decision->reasonCode,
+                    'action_kind' => (string) $intelligencePresentation->action->kind,
+                    'readiness_score' => $intelligencePresentation->readiness->score,
+                    'readiness_confidence' => $intelligencePresentation->readiness->confidence->value,
                 ],
                 withinMinutes: 2,
             );
@@ -159,7 +160,11 @@ final class HomePageDataService
             );
         }
 
-        return compact('dashboard', 'actionHome', 'intelligenceAction');
+        return compact(
+            'dashboard',
+            'actionHome',
+            'intelligencePresentation',
+        );
     }
 
     private function stateSnapshotDue(Request $request): bool

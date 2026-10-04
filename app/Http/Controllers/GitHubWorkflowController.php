@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Enums\FeatureKey;
 use App\Intelligence\Development\DevelopmentAdaptiveActionService;
+use App\Intelligence\Enums\IntelligenceDomain;
+use App\Intelligence\Presentation\DevelopmentIntelligencePresentationAdapter;
+use App\Intelligence\Presentation\IntelligencePresentationHistoryService;
 use App\Models\PlanArtifact;
 use App\Models\Task;
 use App\Services\BehaviorIdentityService;
@@ -28,11 +31,15 @@ final class GitHubWorkflowController extends Controller
         GitHubRepositoryWriter $repositoryWriter,
         PlanCategoryProfileService $profiles,
         DevelopmentAdaptiveActionService $developmentActions,
+        DevelopmentIntelligencePresentationAdapter $presentationAdapter,
+        IntelligencePresentationHistoryService $history,
     ) {
         $dashboard = $workflow->dashboard($request);
         $selectedPlan = $dashboard['selected_plan'] ?? null;
         $developmentAction = null;
         $developmentFocusTask = null;
+        $intelligencePresentation = null;
+        $intelligenceHistory = [];
         $canEditDevelopment = false;
 
         if (
@@ -50,6 +57,15 @@ final class GitHubWorkflowController extends Controller
                 $developmentFocusTask = $selectedPlan->tasks
                     ->firstWhere('id', $focusTaskId);
             }
+
+            $intelligencePresentation = $presentationAdapter->adapt(
+                $selectedPlan,
+                $developmentAction,
+            );
+            $intelligenceHistory = $history->forPlan(
+                $selectedPlan,
+                IntelligenceDomain::Development,
+            );
 
             $canEditDevelopment = collect($dashboard['editable_plans'] ?? [])
                 ->contains(fn ($plan) =>
@@ -72,6 +88,8 @@ final class GitHubWorkflowController extends Controller
                 && $repositoryWriter->installUrl() !== null,
             'development_action' => $developmentAction,
             'development_focus_task' => $developmentFocusTask,
+            'intelligencePresentation' => $intelligencePresentation,
+            'intelligenceHistory' => $intelligenceHistory,
             'can_edit_development_readiness' => $canEditDevelopment,
         ]);
     }

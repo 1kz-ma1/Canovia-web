@@ -356,8 +356,9 @@ class DeveloperReadinessV538Test extends TestCase
         $this->actingAs($user)
             ->get(route('github_workflow.index', ['plan_id' => $plan->id]))
             ->assertOk()
-            ->assertSee('DEVELOPMENT INTELLIGENCE / V53.8')
+            ->assertSee('DEVELOPMENT INTELLIGENCE')
             ->assertSee('Release Readiness')
+            ->assertSee('RELEASE QUALITY GATES')
             ->assertSee('実機・本番確認')
             ->assertSee('仕様同期');
 

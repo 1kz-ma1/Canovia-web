@@ -77,66 +77,13 @@
         @endif
     </section>
 
-    @if ($studyAdaptiveAction && $studyAdaptiveAction->primaryAction())
-        @php
-            $currentStudyAction = $studyAdaptiveAction->primaryAction();
-            $currentStudyDecision = $studyAdaptiveAction->decision;
-            $currentStudyReadiness = $studyAdaptiveAction->intelligence->readiness;
-        @endphp
-        <section class="page-card border-cyan-300/20 bg-cyan-300/[0.025] p-5 sm:p-6" data-study-adaptive-action>
-            <div class="flex flex-wrap items-start justify-between gap-4">
-                <div class="max-w-3xl">
-                    <p class="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">CURRENT ACTION</p>
-                    <h2 class="mt-1 text-xl font-black text-slate-50">{{ $currentStudyAction->title }}</h2>
-                    <p class="mt-2 text-sm leading-6 text-slate-300">{{ $currentStudyAction->intent }}</p>
-                </div>
-                @if ($canEdit)
-                    <form method="POST" action="{{ route('plans.study_action.execute', $plan) }}">
-                        @csrf
-                        <button type="submit" class="btn-primary min-h-11">このActionで進める</button>
-                    </form>
-                @endif
-            </div>
-
-            <details class="pk-action-details mt-4">
-                <summary>なぜ今これ？</summary>
-                <div class="mt-3 grid gap-3 sm:grid-cols-3">
-                    <div class="rounded-xl border border-white/8 bg-slate-950/25 p-3">
-                        <p class="text-[11px] text-slate-500">判断</p>
-                        <p class="mt-1 text-sm font-bold text-slate-100">{{ $currentStudyDecision->summary }}</p>
-                    </div>
-                    <div class="rounded-xl border border-white/8 bg-slate-950/25 p-3">
-                        <p class="text-[11px] text-slate-500">準備度</p>
-                        <p class="mt-1 text-sm font-bold text-slate-100">
-                            {{ $currentStudyReadiness->score !== null ? $currentStudyReadiness->score.'/100' : '未判定' }}
-                        </p>
-                    </div>
-                    <div class="rounded-xl border border-white/8 bg-slate-950/25 p-3">
-                        <p class="text-[11px] text-slate-500">判断信頼度</p>
-                        <p class="mt-1 text-sm font-bold text-slate-100">{{ $currentStudyAction->confidence->percent() }}%</p>
-                    </div>
-                </div>
-
-                @if ($recentIntelligenceActions->isNotEmpty())
-                    <div class="mt-4 border-t border-white/8 pt-4">
-                        <p class="text-xs font-black text-slate-300">最近のAction変化</p>
-                        <div class="mt-2 space-y-2">
-                            @foreach ($recentIntelligenceActions as $historyAction)
-                                <div class="flex items-start justify-between gap-3 rounded-xl border border-white/8 bg-slate-950/20 p-3">
-                                    <div class="min-w-0">
-                                        <p class="text-sm font-bold text-slate-200">{{ $historyAction->title }}</p>
-                                        <p class="mt-1 text-[11px] leading-4 text-slate-500">{{ $historyAction->intent }}</p>
-                                    </div>
-                                    <span class="badge {{ $historyAction->status === 'active' ? 'badge-green' : 'badge-slate' }}">
-                                        {{ $historyAction->status === 'active' ? '現在' : '変更済み' }}
-                                    </span>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
-            </details>
-        </section>
+    @if ($intelligencePresentation ?? null)
+        @include('intelligence.partials.summary', [
+            'intelligencePresentation' => $intelligencePresentation,
+            'intelligenceHistory' => $intelligenceHistory ?? [],
+            'canExecuteIntelligence' => $canEdit,
+            'intelligenceAnchor' => 'study-intelligence',
+        ])
     @endif
 
     @if ($studyIntelligence)
@@ -145,12 +92,6 @@
             $studyReadiness = $studyIntelligence->readiness;
             $studyMetrics = $studyState->metrics;
             $studyFacts = $studyState->facts;
-            $readinessLevelLabel = match ($studyReadiness->level->value) {
-                'ready' => '準備できている',
-                'blocked' => '不足が大きい',
-                'developing' => '準備中',
-                default => '判定保留',
-            };
             $pressureLabel = match ((string) data_get($studyFacts, 'deadline_pressure', 'unknown')) {
                 'low' => '余裕あり',
                 'medium' => 'やや詰まり気味',
@@ -161,49 +102,16 @@
             $priorityScope = collect(data_get($studyFacts, 'priority_remaining_scope', []));
         @endphp
 
-        <section class="page-card border-emerald-300/20 p-5 sm:p-6">
-            <div class="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                    <p class="text-xs font-black uppercase tracking-[0.16em] text-emerald-300">STUDY INTELLIGENCE V1</p>
-                    <h2 class="mt-1 text-xl font-black text-slate-50">この試験に向けた現在地</h2>
-                    <p class="mt-2 text-xs leading-5 text-slate-500">
-                        Task進捗ではなく、確定した試験範囲とPractice / Recall Evidenceから計算しています。
-                    </p>
-                </div>
-                <div class="text-right">
-                    <p class="text-3xl font-black text-slate-50">
-                        {{ $studyReadiness->score !== null ? $studyReadiness->score : '—' }}
-                        <span class="text-sm text-slate-500">/100</span>
-                    </p>
-                    <p class="mt-1 text-xs font-bold text-emerald-300">{{ $readinessLevelLabel }}</p>
-                    <p class="mt-1 text-[11px] text-slate-500">推定信頼度 {{ $studyReadiness->confidence->percent() }}%</p>
-                </div>
+        <section class="page-card border-emerald-300/20 p-5 sm:p-6" data-study-intelligence-detail>
+            <div>
+                <p class="text-xs font-black uppercase tracking-[0.16em] text-emerald-300">STUDY EVIDENCE DETAIL</p>
+                <h2 class="mt-1 text-lg font-black text-slate-50">学習状態の内訳</h2>
+                <p class="mt-2 text-xs leading-5 text-slate-500">
+                    上の判断を構成している範囲・残り負荷・期限Contextを確認できます。
+                </p>
             </div>
 
-            <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                @foreach ([
-                    ['label' => 'Coverage', 'value' => data_get($studyMetrics, 'coverage_percent'), 'suffix' => '%'],
-                    ['label' => 'Mastery', 'value' => data_get($studyMetrics, 'mastery_score_percent'), 'suffix' => '%'],
-                    ['label' => 'Retention', 'value' => data_get($studyMetrics, 'retention_score_percent'), 'suffix' => '%'],
-                    ['label' => 'Speed', 'value' => null, 'suffix' => ''],
-                    ['label' => '残り負荷', 'value' => data_get($studyMetrics, 'remaining_effort_percent'), 'suffix' => '%'],
-                ] as $metric)
-                    <div class="rounded-2xl border border-white/8 bg-slate-950/25 p-3">
-                        <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">{{ $metric['label'] }}</p>
-                        <p class="mt-1 text-lg font-black text-slate-100">
-                            @if ($metric['label'] === 'Speed')
-                                未計測
-                            @elseif ($metric['value'] !== null)
-                                {{ (int) $metric['value'] }}{{ $metric['suffix'] }}
-                            @else
-                                —
-                            @endif
-                        </p>
-                    </div>
-                @endforeach
-            </div>
-
-            <div class="mt-4 grid gap-3 sm:grid-cols-3">
+            <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <div class="rounded-xl border border-white/8 bg-white/[0.025] p-3">
                     <p class="text-[11px] text-slate-500">確定範囲</p>
                     <p class="mt-1 text-sm font-bold text-slate-100">{{ (int) data_get($studyMetrics, 'confirmed_scope_count', 0) }}件</p>
@@ -221,6 +129,11 @@
                     @if (data_get($studyMetrics, 'days_until_exam') !== null)
                         <p class="mt-1 text-[10px] text-slate-500">試験まで {{ (int) data_get($studyMetrics, 'days_until_exam') }}日</p>
                     @endif
+                </div>
+                <div class="rounded-xl border border-white/8 bg-white/[0.025] p-3">
+                    <p class="text-[11px] text-slate-500">Speed</p>
+                    <p class="mt-1 text-sm font-bold text-slate-100">未計測</p>
+                    <p class="mt-1 text-[10px] text-slate-500">authoritativeな解答時間が取れるまでscoreへ入れません。</p>
                 </div>
             </div>
 
