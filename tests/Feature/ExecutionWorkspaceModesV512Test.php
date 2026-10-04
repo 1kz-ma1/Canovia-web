@@ -151,7 +151,7 @@ class ExecutionWorkspaceModesV512Test extends TestCase
             ->assertOk()
             ->assertSee('data-execution-mode-switcher', false)
             ->assertSee('DEVELOPMENT')
-            ->assertSee('開発Workspace');
+            ->assertSee('開発モード');
 
         $this->assertSame(
             ExecutionModeService::DEVELOPMENT,
@@ -184,7 +184,7 @@ class ExecutionWorkspaceModesV512Test extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('開発Workspace')
+            ->assertSee('開発モード')
             ->assertSee('から選んでいます。');
 
         $this->assertSame(
@@ -210,7 +210,7 @@ class ExecutionWorkspaceModesV512Test extends TestCase
             ->assertOk()
             ->assertDontSee('data-execution-mode-picker', false)
             ->assertSee('data-execution-mode-switcher', false)
-            ->assertSee('学習Workspace');
+            ->assertSee('学習モード');
 
         $this->assertSame(
             ExecutionModeService::STUDY,

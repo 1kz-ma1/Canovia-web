@@ -12,7 +12,7 @@
                 </p>
                 <h1>
                     @if ($selectedExecutionModeDefinition)
-                        {{ $selectedExecutionModeDefinition['label'] }}Workspace
+                        {{ $selectedExecutionModeDefinition['label'] }}モード
                     @else
                         実行方法を選ぶ。
                     @endif
@@ -21,7 +21,7 @@
                     @if ($selectedExecutionModeDefinition)
                         {{ $selectedExecutionModeDefinition['description'] }}
                     @else
-                        Planの種類に合わせて、実行に使うWorkspaceを切り替えます。
+                        Planの種類に合わせて、実行タイプを切り替えます。
                     @endif
                 </p>
             </div>
@@ -50,13 +50,13 @@
             <section class="execution-mode-empty page-card">
                 <p class="pk-v18-eyebrow">EXECUTION</p>
                 <h2>実行できるPlanがまだありません</h2>
-                <p>Planを作ると、その内容に合うExecution Workspaceがここに現れます。</p>
+                <p>Planを作ると、その内容に合う実行タイプがここに現れます。</p>
                 <a href="{{ route('plans.create') }}" class="btn-primary">Planを作る</a>
             </section>
         @elseif (! $selectedExecutionMode)
             <section class="execution-mode-picker" data-execution-mode-picker>
                 <div class="execution-mode-picker-heading">
-                    <p class="pk-v18-eyebrow">CHOOSE WORKSPACE</p>
+                    <p class="pk-v18-eyebrow">CHOOSE MODE</p>
                     <h2>どの種類の作業を進めますか？</h2>
                     <p>複数の実行方法があるときだけ選びます。選択後も上部から切り替えられます。</p>
                 </div>
@@ -80,7 +80,7 @@
                 </div>
             </section>
         @else
-            <nav class="execution-mode-switcher" data-execution-mode-switcher aria-label="Execution Workspaceを切り替える">
+            <nav class="execution-mode-switcher" data-execution-mode-switcher aria-label="Execution Modeを切り替える">
                 @foreach ($availableExecutionModes as $modeKey => $mode)
                     <a
                         href="{{ route('navigation.index', ['mode' => $modeKey]) }}"
@@ -96,7 +96,7 @@
             </nav>
 
             @if ($modePlans->count() > 1)
-                <section class="execution-plan-switcher" aria-label="このWorkspaceのPlan">
+                <section class="execution-plan-switcher" aria-label="この実行タイプのPlan">
                     <a
                         href="{{ route('navigation.index', ['mode' => $selectedExecutionMode, 'all' => 1]) }}"
                         class="{{ $scopePlan ? '' : 'is-active' }}"
@@ -119,7 +119,7 @@
             <div class="rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-3 text-sm text-slate-200">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                     <p><span class="font-semibold text-sky-300">{{ $scopePlan->title }}</span> から選んでいます。</p>
-                    <a href="{{ route('navigation.index', ['mode' => $selectedExecutionMode, 'all' => 1]) }}" class="whitespace-nowrap text-sm font-semibold text-sky-300 hover:text-sky-200">このWorkspaceの全Planから選ぶ</a>
+                    <a href="{{ route('navigation.index', ['mode' => $selectedExecutionMode, 'all' => 1]) }}" class="whitespace-nowrap text-sm font-semibold text-sky-300 hover:text-sky-200">この実行タイプの全Planから選ぶ</a>
                 </div>
             </div>
         @endif
@@ -173,8 +173,8 @@
                                     </div>
                                 @else
                                     <div class="mt-5 rounded-2xl border border-cyan-400/15 bg-cyan-500/5 px-4 py-4 text-center">
-                                        <p class="text-lg font-black text-slate-100">このTaskをWorkspaceへ引き継ぐ</p>
-                                        <p class="mt-1 text-xs leading-5 text-slate-400">Task Contextを保ったまま、{{ $selectedExecutionModeDefinition['label'] ?? '専用' }}Workspaceで進めます。</p>
+                                        <p class="text-lg font-black text-slate-100">このTaskを専用フローへ引き継ぐ</p>
+                                        <p class="mt-1 text-xs leading-5 text-slate-400">Task Contextを保ったまま、{{ $selectedExecutionModeDefinition['label'] ?? '専用' }}の実行フローで進めます。</p>
                                     </div>
                                 @endif
 
@@ -210,13 +210,13 @@
                                     data-candidate-always-open
                                     data-execution-recommendation-rail
                                     data-event-url="{{ route('behavior_events.store') }}"
-                                    aria-label="同じWorkspaceのおすすめTask"
+                                    aria-label="同じ実行タイプのおすすめTask"
                                 >
                                     <div class="execution-recommendation-rail-heading">
                                         <div>
-                                            <p class="pk-v18-eyebrow">SAME WORKSPACE</p>
+                                            <p class="pk-v18-eyebrow">SAME MODE</p>
                                             <h3>他Planの同じ実行タイプ</h3>
-                                            <p>同じWorkspaceでそのまま実行できるTaskだけを、Planごとに1件ずつ並べています。</p>
+                                            <p>同じ実行タイプでそのまま進められるTaskだけを、Planごとに1件ずつ並べています。</p>
                                         </div>
                                     </div>
 
@@ -283,8 +283,8 @@
                                 どの候補を見て、どれを開始したかも次回のおすすめ改善に使われます。
                             </p>
                         @else
-                            <h2 class="text-xl font-bold text-slate-100">{{ $selectedExecutionModeDefinition['label'] ?? '' }}Workspaceで今すぐ始められるTaskが見つかりませんでした</h2>
-                            <p class="mt-2 text-slate-400">Planへ実行可能なTaskを追加するか、上のWorkspaceを切り替えてください。</p>
+                            <h2 class="text-xl font-bold text-slate-100">{{ $selectedExecutionModeDefinition['label'] ?? '' }}モードで今すぐ始められるTaskが見つかりませんでした</h2>
+                            <p class="mt-2 text-slate-400">Planへ実行可能なTaskを追加するか、上の実行タイプを切り替えてください。</p>
                             <div class="mt-5">
                                 <form method="POST" action="{{ route('navigation.reset') }}">
                                     @csrf
