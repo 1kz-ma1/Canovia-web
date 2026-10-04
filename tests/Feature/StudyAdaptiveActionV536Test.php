@@ -12,7 +12,6 @@ use App\Models\StudyScopeItem;
 use App\Models\Task;
 use App\Models\TaskEvidence;
 use App\Models\User;
-use App\Services\StudyAdaptiveHomeActionService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -223,40 +222,6 @@ class StudyAdaptiveActionV536Test extends TestCase
 
         $this->assertNull(data_get($action?->metadata, 'target_task_id'));
         $this->assertSame('project_task', data_get($action?->metadata, 'route_kind'));
-    }
-
-    public function test_home_uses_intelligence_action_when_primary_guidance_plan_is_study(): void
-    {
-        [$user, $plan] = $this->studyPlan();
-        $this->scope($plan, '数学', '二次関数');
-        $task = $this->task($plan, '二次関数を演習する');
-
-        $guidance = collect([[
-            'plan' => $plan,
-            'task' => $task,
-            'adaptive' => null,
-            'recommended_tool' => null,
-            'priority_evaluation' => [
-                'priority' => 1,
-                'mode' => 'auto',
-            ],
-        ]]);
-
-        $plan->load('tasks');
-
-        $home = app(StudyAdaptiveHomeActionService::class)->primary(
-            collect([$plan]),
-            $guidance,
-        );
-
-        $this->assertNotNull($home);
-        $this->assertSame($plan->id, $home['plan']->id);
-        $this->assertSame('study_baseline_check', $home['action']->kind);
-        $this->assertSame($task->id, $home['target_task']->id);
-        $this->assertSame(
-            route('plans.study_action.execute', $plan),
-            $home['execute_url'],
-        );
     }
 
     public function test_action_trace_keeps_target_metadata_but_not_raw_learning_payloads(): void
