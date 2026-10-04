@@ -154,7 +154,7 @@ final class StudyReadinessEvaluator implements ReadinessEvaluator
             $base += 0.08;
         }
 
-        return min(0.9, $base);
+        return round(min(0.9, $base), 4);
     }
 
     private function gap(
