@@ -42,6 +42,7 @@ class WorkspaceModeBarV541Test extends TestCase
             ->assertSee('Overview')
             ->assertSee('学習')
             ->assertSee('開発')
+            ->assertSee('Career')
             ->assertSee(
                 route('workspace_modes.select', [
                     'workspaceMode' => WorkspaceMode::Study->value,
@@ -51,6 +52,12 @@ class WorkspaceModeBarV541Test extends TestCase
             ->assertSee(
                 route('workspace_modes.select', [
                     'workspaceMode' => WorkspaceMode::Development->value,
+                ]),
+                false,
+            )
+            ->assertSee(
+                route('workspace_modes.select', [
+                    'workspaceMode' => WorkspaceMode::Career->value,
                 ]),
                 false,
             );
@@ -70,6 +77,12 @@ class WorkspaceModeBarV541Test extends TestCase
             '個人開発',
             priority: 1,
         );
+        $career = $this->plan(
+            $user,
+            'エンジニア就活',
+            '就活・キャリア',
+            priority: 1,
+        );
 
         $this->actingAs($user)
             ->get(route('workspace_modes.enter', [
@@ -86,6 +99,14 @@ class WorkspaceModeBarV541Test extends TestCase
             ->assertOk()
             ->assertSee('data-development-workspace', false)
             ->assertSee($development->title);
+
+        $this->actingAs($user)
+            ->get(route('workspace_modes.enter', [
+                'workspaceMode' => 'career',
+            ]))
+            ->assertOk()
+            ->assertSee('data-career-workspace', false)
+            ->assertSee($career->title);
 
         $this->actingAs($user)
             ->get(route('workspace_modes.enter', [
@@ -180,14 +201,14 @@ class WorkspaceModeBarV541Test extends TestCase
             ->assertSee('data-workspace-mode="development"', false);
     }
 
-    public function test_invalid_mode_entry_is_not_a_public_workspace(): void
+    public function test_unknown_mode_entry_is_not_a_public_workspace(): void
     {
         $user = User::factory()->create([
             'first_run_completed_at' => now(),
         ]);
 
         $this->actingAs($user)
-            ->get('/workspace/career')
+            ->get('/workspace/unknown')
             ->assertNotFound();
     }
 
