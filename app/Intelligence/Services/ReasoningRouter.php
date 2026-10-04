@@ -265,9 +265,6 @@ final class ReasoningRouter
             metadata: [
                 ...$candidate->metadata,
                 'policy_version' => 'reasoning_router_v1',
-                'reasoning_provider' => $selection->provider,
-                'reasoning_model' => $selection->model,
-                'provider_reason_codes' => $selection->reasonCodes,
             ],
         );
     }
@@ -297,7 +294,6 @@ final class ReasoningRouter
             metadata: [
                 ...$candidate->metadata,
                 'policy_version' => 'reasoning_router_v1',
-                'reused_cached_reasoning' => true,
             ],
         );
     }
