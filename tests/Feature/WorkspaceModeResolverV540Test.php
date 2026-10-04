@@ -188,11 +188,13 @@ class WorkspaceModeResolverV540Test extends TestCase
         $route = new Route(['GET'], '/', fn () => null);
         $route->name($name);
 
+        $request = Request::create('/', 'GET');
+        $route->bind($request);
+
         foreach ($parameters as $key => $value) {
             $route->setParameter($key, $value);
         }
 
-        $request = Request::create('/', 'GET');
         $request->setRouteResolver(fn () => $route);
 
         return $request;
