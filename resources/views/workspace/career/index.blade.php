@@ -80,7 +80,7 @@
                 <div class="rounded-3xl border border-emerald-300/15 bg-gradient-to-br from-emerald-300/[0.08] to-transparent p-5 sm:p-6">
                     <p class="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">PROCESS READINESS</p>
                     <div class="mt-3">
-                        <strong class="text-4xl font-black tracking-tight text-slate-50">{{ $presentation?->stateLabel ?? '未観測' }}</strong>
+                        <strong class="text-4xl font-black tracking-tight text-slate-50">{{ $presentation?->readinessDisplay() ?? '未観測' }}</strong>
                     </div>
                     <p class="mt-3 text-sm leading-6 text-slate-400">
                         現在のCareer Processを判断できる構造化Stateが観測されています。
