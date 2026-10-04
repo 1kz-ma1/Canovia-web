@@ -135,7 +135,7 @@ class StudyScopeCaptureV534Test extends TestCase
         });
     }
 
-    public function test_human_confirmation_creates_scope_items_but_does_not_generate_tasks_or_state(): void
+    public function test_human_confirmation_creates_scope_items_and_projects_state_without_generating_tasks(): void
     {
         $user = User::factory()->create();
         $plan = $this->plan($user, '学校の試験勉強');
@@ -210,10 +210,17 @@ class StudyScopeCaptureV534Test extends TestCase
         $this->assertSame('英語', $capture->items[1]->subject);
         $this->assertSame('processed', $capture->inboxItem->status);
 
-        // Confirmation creates scope facts only. V53.5 will consume them later.
+        // V53.5 may project confirmed scope into State, but it still must not
+        // generate Tasks, progress mutations, or Decisions.
         $this->assertDatabaseCount('tasks', 0);
-        $this->assertDatabaseCount('intelligence_state_snapshots', 0);
+        $this->assertDatabaseCount('intelligence_state_snapshots', 1);
         $this->assertDatabaseCount('intelligence_decision_traces', 0);
+
+        $snapshot = IntelligenceStateSnapshot::firstOrFail();
+        $this->assertSame('study_plan', $snapshot->scope_type);
+        $this->assertSame(2, data_get($snapshot->metrics, 'confirmed_scope_count'));
+        $this->assertSame(0, data_get($snapshot->metrics, 'observed_scope_count'));
+        $this->assertSame(0, data_get($snapshot->metrics, 'coverage_percent'));
     }
 
     public function test_provider_failure_keeps_source_and_manual_confirmation_still_works(): void
