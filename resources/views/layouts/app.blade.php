@@ -124,7 +124,7 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body data-focus-mode="{{ $focusMode ? '1' : '0' }}" data-workspace-mode="{{ $workspaceModeDefinition->mode->value }}" data-workspace-mode-source="{{ $workspaceModeContext->source->value }}" data-onboarding-version="{{ $onboardingVersion }}" data-onboarding-auto="{{ $onboardingAuto ? '1' : '0' }}" data-onboarding-authenticated="{{ auth()->check() ? '1' : '0' }}" data-pwa-install-url="{{ route('pwa.install.prepare') }}" data-route-name="{{ request()->route()?->getName() }}" data-canovia-surface="{{ request()->routeIs('map.*') ? 'explore' : 'home' }}" class="pk-cosmic-shell min-h-screen bg-slate-950 text-slate-100 antialiased {{ $focusMode ? 'pace-focus-mode' : '' }}">
+<body data-focus-mode="{{ $focusMode ? '1' : '0' }}" data-workspace-mode="{{ $workspaceModeDefinition->mode->value }}" data-workspace-mode-source="{{ $workspaceModeContext->source->value }}" data-onboarding-version="{{ $onboardingVersion }}" data-onboarding-auto="{{ $onboardingAuto ? '1' : '0' }}" data-onboarding-authenticated="{{ auth()->check() ? '1' : '0' }}" data-pwa-install-url="{{ route('pwa.install.prepare') }}" data-route-name="{{ request()->route()?->getName() }}" data-canovia-surface="{{ request()->routeIs('map.*') ? 'explore' : (request()->routeIs('home') ? 'home' : 'app') }}" class="pk-cosmic-shell min-h-screen bg-slate-950 text-slate-100 antialiased {{ $focusMode ? 'pace-focus-mode' : '' }}">
     <div class="pk-cosmic-backdrop pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
         <span class="pk-space-glow pk-space-glow-a"></span>
         <span class="pk-space-glow pk-space-glow-b"></span>
