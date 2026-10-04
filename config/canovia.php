@@ -24,4 +24,10 @@ return [
         env('CANOVIA_REDIRECT_LEGACY_HOSTS', false),
         FILTER_VALIDATE_BOOL
     ),
+
+    // V55.7: non-production UX validation only. No external API/OAuth is used.
+    'execution_setup_validation_enabled' => filter_var(
+        env('CANOVIA_EXECUTION_SETUP_VALIDATION_ENABLED', false),
+        FILTER_VALIDATE_BOOL
+    ),
 ];
