@@ -10,12 +10,16 @@ use Illuminate\Support\Collection;
 
 final class ExecutionProviderRegistry implements ExecutionProviderCatalog
 {
+    public function __construct(
+        private readonly bool $includeValidationProviders = false,
+    ) {}
+
     /**
      * @return Collection<int,ExecutionProviderDefinitionData>
      */
     public function all(): Collection
     {
-        return collect([
+        $providers = [
             new ExecutionProviderDefinitionData(
                 key: 'canovia.study.practice',
                 name: 'Canovia Question Practice',
@@ -52,7 +56,18 @@ final class ExecutionProviderRegistry implements ExecutionProviderCatalog
                 kind: ExecutionProviderKind::Native,
                 capabilities: [ExecutionCapability::GENERAL_TASK],
             ),
-        ]);
+        ];
+
+        if ($this->includeValidationProviders) {
+            $providers[] = new ExecutionProviderDefinitionData(
+                key: 'validation.study.practice.external',
+                name: 'External Practice Partner (Validation)',
+                kind: ExecutionProviderKind::External,
+                capabilities: [ExecutionCapability::STUDY_PRACTICE],
+            );
+        }
+
+        return collect($providers);
     }
 
     public function find(string $providerKey): ?ExecutionProviderDefinitionData
