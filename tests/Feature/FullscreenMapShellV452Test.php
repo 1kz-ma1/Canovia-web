@@ -21,7 +21,7 @@ class FullscreenMapShellV452Test extends TestCase
         ]);
     }
 
-    public function test_map_places_surface_switcher_inside_fullscreen_top_bar_once(): void
+    public function test_map_places_home_explore_surface_navigation_inside_fullscreen_top_bar_once(): void
     {
         $user = User::factory()->create([
             'first_run_completed_at' => now(),
@@ -32,9 +32,9 @@ class FullscreenMapShellV452Test extends TestCase
         $response
             ->assertOk()
             ->assertSee('data-map-fullscreen-topbar', false)
-            ->assertSee('data-home-surface-switcher', false)
-            ->assertSee('data-home-surface="classic"', false)
-            ->assertSee('data-home-surface="map"', false)
+            ->assertSee('data-canovia-surface-nav', false)
+            ->assertSee('data-canovia-surface="home"', false)
+            ->assertSee('data-canovia-surface="explore"', false)
             ->assertSee('data-map-hierarchy-path', false);
 
         $html = $response->getContent();
