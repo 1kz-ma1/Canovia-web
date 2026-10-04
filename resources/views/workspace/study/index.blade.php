@@ -158,6 +158,10 @@
             </div>
         </section>
 
+        @include('intelligence.partials.state-change', [
+            'feedback' => $intelligenceStateChange ?? null,
+        ])
+
         <section class="grid gap-4 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)]">
             <article class="page-card border-amber-300/15 p-5 sm:p-6" data-study-workspace-gap>
                 <p class="text-[10px] font-black uppercase tracking-[0.16em] text-amber-200">BIGGEST GAP</p>

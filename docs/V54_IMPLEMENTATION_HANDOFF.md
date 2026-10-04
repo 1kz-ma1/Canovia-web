@@ -264,7 +264,7 @@ Implemented:
 
 ### V54.5 — Overview
 
-Status: **IMPLEMENTED — PR #223 OPEN**
+Status: **MERGED — PR #223**
 
 Branch:
 
@@ -300,12 +300,41 @@ Implemented:
 
 ### V54.6 — State Change Feedback
 
-Planned:
+Status: **IMPLEMENTED — PR #224 OPEN**
 
-- before/after Readiness changes
-- Current Action change feedback
-- Evidence → Decision explanation
-- only changes that affect user next action
+Branch:
+
+`feature/v54-6-state-change-feedback`
+
+Permanent spec:
+
+`docs/V54.6_STATE_CHANGE_FEEDBACK.md`
+
+Implemented:
+
+- shared `IntelligenceStateChangeFeedbackService`
+- compares latest two persisted Decision traces per Plan/domain
+- reads corresponding persisted State snapshots and Action projections
+- no new event / notification table
+- meaningful only when:
+  - Readiness level changes
+  - Decision reason / Biggest Gap changes
+  - Current Action fingerprint changes
+  - Readiness score moves by at least 5pt
+- smaller score-only changes are suppressed
+- before → after Readiness and level presentation
+- Decision / Gap before → after when changed
+- Current Action before → after when changed
+- safe newly-added Evidence labels only
+- raw provider payload / commit message / issue body / answers never rendered
+- shared State Change card in Study Workspace
+- shared State Change card in Development Workspace
+- Overview shows at most two recent representative Mode changes
+- Workspace GET never persists Intelligence history
+- no new AI / GitHub provider request
+- final validation run: #37190551431
+- V54.5 / V54.4 / V54.3 / V54.2 / V54.1 / V54.0 / V53.9 / V53.8 / V53.6 regressions passed
+- PR #224 created against main
 
 ### V54.7 — Mode-specific Onboarding
 
