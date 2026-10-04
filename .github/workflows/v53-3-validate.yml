@@ -1,0 +1,61 @@
+name: V53.3 Validate
+
+on:
+  push:
+    branches:
+      - feature/v53-3-reasoning-router
+
+jobs:
+  reasoning-router:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Lint V53.3 PHP
+        run: find app/Intelligence app/Models/IntelligenceReasoningRun.php database/migrations/2026_10_04_000300_create_intelligence_reasoning_runs_table.php config/intelligence.php -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: V53.0 contract regression
+        run: php artisan test tests/Unit/IntelligenceContractV530Test.php
+
+      - name: V53.1 state evidence regression
+        run: php artisan test tests/Feature/IntelligenceStateEvidenceV531Test.php
+
+      - name: V53.2 decision readiness regression
+        run: php artisan test tests/Feature/IntelligenceDecisionReadinessV532Test.php
+
+      - name: V53.3 reasoning router test
+        run: php artisan test tests/Feature/IntelligenceReasoningRouterV533Test.php
+
+      - name: Native AI regression
+        run: php artisan test tests/Feature/NativeAiPracticeV418Test.php
+
+      - name: Feature access regression
+        run: php artisan test tests/Feature/FeatureAccessV406Test.php
+
+      - name: Study Practice regression
+        run: php artisan test tests/Feature/StudyPracticeLearningLoopV393Test.php
+
+      - name: GitHub Evidence regression
+        run: php artisan test tests/Feature/GitHubEvidenceDecisionV468Test.php
