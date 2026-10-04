@@ -1,0 +1,61 @@
+name: V54.2 Validate
+
+on:
+  push:
+    branches:
+      - feature/v54-2-mode-context-persistence
+
+jobs:
+  mode-context-persistence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Lint V54.2 PHP
+        run: find app/Http/Controllers/WorkspaceModeController.php app/Services/WorkspaceModeResolver.php app/Services/WorkspaceModePreference.php app/Enums/WorkspaceModeSource.php database/migrations/2026_10_04_000700_add_workspace_mode_preference_to_users_table.php -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Compile Blade
+        run: php artisan view:cache
+
+      - name: V54.2 Mode persistence
+        run: php artisan test tests/Feature/WorkspaceModePersistenceV542Test.php
+
+      - name: V54.1 Fixed Mode Bar regression
+        run: php artisan test tests/Feature/WorkspaceModeBarV541Test.php
+
+      - name: V54.0 Registry regression
+        run: php artisan test tests/Unit/WorkspaceModeRegistryV540Test.php
+
+      - name: V54.0 Resolver regression
+        run: php artisan test tests/Feature/WorkspaceModeResolverV540Test.php
+
+      - name: V53.9 Intelligence UX regression
+        run: php artisan test tests/Feature/IntelligenceUxV539Test.php
+
+      - name: Home query regression
+        run: php artisan test tests/Feature/HomeQueryCollapseV5194Test.php
+
+      - name: Home density regression
+        run: php artisan test tests/Feature/ActionHomeDensityV5197Test.php
