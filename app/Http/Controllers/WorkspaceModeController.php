@@ -102,6 +102,10 @@ final class WorkspaceModeController extends Controller
             return redirect()->route('workspace.study.index');
         }
 
+        if ($mode === WorkspaceMode::Development) {
+            return redirect()->route('workspace.development.index');
+        }
+
         $profileKey = $mode->value;
         $plans = $ownership->ownedPlans($request, [
             'tasks',
@@ -147,7 +151,7 @@ final class WorkspaceModeController extends Controller
                     ['plan_id' => $plan->id],
                 ),
                 WorkspaceMode::Development => redirect()->route(
-                    'github_workflow.index',
+                    'workspace.development.index',
                     ['plan_id' => $plan->id],
                 ),
                 WorkspaceMode::Overview => redirect()->route('home'),

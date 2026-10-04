@@ -2405,3 +2405,86 @@ Practice / Recallはcurrent Intelligence target Taskを優先し、なければa
 V54.3は新規AI traffic、Study scoring変更、Task progress変更、Plan category変更、billing変更を行わない。
 
 詳細は `docs/V54.3_STUDY_WORKSPACE.md` を正とする。
+
+
+## V54.4 Development Workspace
+
+Development Modeに専用Homeを追加し、Release判断に特化したWorkspaceとして成立させる。
+
+Canonical route:
+
+```text
+GET /workspace/development
+→ workspace.development.index
+```
+
+Development Mode選択後はGitHub Workflowへ直行せず、Development Homeへ入る。
+
+主表示順:
+
+```text
+Release Readiness
+→ Biggest Release Gap
+→ Current Action
+→ Quality Gates
+→ GitHub / Evidence / History
+```
+
+Release scoringやGap判定を新設せず、既存V53.7 / V53.8 Development Intelligence / Adaptive Action / Presentation Adapterをauthorityとして使用する。
+
+Development Planが複数ある場合は既存Plan priority semanticsで priority → deadline → Plan ID の順にdefault Planを決定する。ユーザーは `?plan_id=...` で別のaccessible Development Planを明示選択できる。inaccessible / non-Development / invalid Plan IDは404とする。
+
+Development Planがない場合もOverviewへ戻さず、Development Workspace内で「開発Planを作る」empty stateを表示する。
+
+Release Evidenceがまだない場合はGitHub-firstとし、numeric Release Readinessを意味のある値のように表示しない。
+
+```text
+GitHub / Task link
+→ authoritative GitHub Evidence
+→ Development State
+→ Release Readiness
+→ Gap
+→ Current Action
+```
+
+Release Candidateが観測された後は既存Readinessから以下を表示する。
+
+- Release Readiness / state / confidence
+- passed / failed / pending / unknown Gate counts
+- Biggest Release Gap
+- Current Action
+- Release Candidate Task
+- PR number
+- branch
+- bounded short SHA
+- deployment environment
+- stale Verification / Spec Sync warnings
+
+Quality Gate summary:
+
+- implementation
+- CI / Test
+- Review
+- Merge
+- Production Deploy
+- Verification
+- Spec Sync
+
+Development Home上ではGateをread-onlyで表示する。GitHub接続、Evidence管理、Verification / Spec Sync確認などのmutationは既存GitHub Workflow / Execution surfaceへ送る。
+
+Development-specific navigation:
+
+- Current Action
+- Release Readiness
+- Quality Gates
+- GitHub
+- Evidence
+- History
+
+`workspace.development.*` はstrong Development route hintとして扱い、別Modeのmanual preferenceが保存されていてもDevelopment HomeではDevelopment contextを表示する。保存済みpreference自体は変更しない。
+
+Workspace GETではGitHub API request、Task / Artifact / Evidence生成、Intelligence history保存を行わない。
+
+V54.4は新規AI traffic、Release scoring変更、Plan category変更、billing変更を行わない。
+
+詳細は `docs/V54.4_DEVELOPMENT_WORKSPACE.md` を正とする。
