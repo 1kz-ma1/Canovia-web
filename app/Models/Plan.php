@@ -117,6 +117,16 @@ class Plan extends Model
         return $this->hasMany(StudyPracticeAttempt::class);
     }
 
+    public function studyScopeCaptures()
+    {
+        return $this->hasMany(StudyScopeCapture::class);
+    }
+
+    public function studyScopeItems()
+    {
+        return $this->hasMany(StudyScopeItem::class);
+    }
+
     public function taskEvidences()
     {
         return $this->hasMany(TaskEvidence::class);
