@@ -71,6 +71,10 @@ class StudyAdaptiveActionController extends Controller
                     'source' => 'intelligence_action_projection',
                 ],
             );
+
+            // Task projection changes execution reality. Re-evaluate immediately
+            // so the persisted current Action no longer says a Task must be created.
+            $actions->tryRefresh($plan, now());
         }
 
         return redirect()
