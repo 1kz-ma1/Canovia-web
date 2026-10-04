@@ -264,7 +264,7 @@ Implemented:
 
 ### V54.5 — Overview
 
-Status: **IMPLEMENTED — PR PENDING**
+Status: **IMPLEMENTED — PR #223 OPEN**
 
 Branch:
 
@@ -296,6 +296,7 @@ Implemented:
 - no new AI or GitHub provider traffic
 - final validation run: #37189794441
 - V54.4 / V54.3 / V54.2 / V54.1 / V54.0 / V53.9 / Home regressions passed
+- PR #223 created against main
 
 ### V54.6 — State Change Feedback
 
