@@ -9,6 +9,7 @@ use App\Models\Task;
 use App\Services\PlanActivityService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
+use App\Services\ExecutionLaunchResolver;
 use Illuminate\Http\Request;
 
 class StudyAdaptiveActionController extends Controller
@@ -21,6 +22,7 @@ class StudyAdaptiveActionController extends Controller
         StudyAdaptiveActionService $actions,
         StudyActionTaskProjector $projector,
         PlanActivityService $activity,
+        ExecutionLaunchResolver $launches,
     ) {
         $ownership->authorizeEdit($request, $plan);
         abort_unless($profiles->forPlan($plan)->key === 'study', 404);
@@ -48,11 +50,17 @@ class StudyAdaptiveActionController extends Controller
             $targetTask
             && in_array($routeKind, ['study_practice', 'study_recall'], true)
         ) {
-            return redirect()->route(
+            $launch = $launches->forStudyAction(
+                $plan,
+                $targetTask,
                 $routeKind === 'study_recall'
                     ? 'plans.tasks.study_recall.show'
                     : 'plans.tasks.study_practice.show',
-                [$plan, $targetTask],
+            );
+
+            return redirect()->route(
+                $launch->routeName,
+                $launch->parameters,
             );
         }
 
@@ -77,8 +85,14 @@ class StudyAdaptiveActionController extends Controller
             $actions->tryRefresh($plan, now());
         }
 
+        $launch = $launches->forStudyAction(
+            $plan,
+            $task,
+            'plans.tasks.study_practice.show',
+        );
+
         return redirect()
-            ->route('plans.tasks.study_practice.show', [$plan, $task])
+            ->route($launch->routeName, $launch->parameters)
             ->with(
                 'status',
                 $projection['created']

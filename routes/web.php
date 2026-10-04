@@ -68,6 +68,8 @@ use App\Http\Controllers\WorkspaceModeController;
 use App\Http\Controllers\StudyWorkspaceController;
 use App\Http\Controllers\DevelopmentWorkspaceController;
 use App\Http\Controllers\OverviewWorkspaceController;
+use App\Http\Controllers\ExecutionSetupController;
+use App\Http\Controllers\ExecutionValidationProviderController;
 
 Route::get('/welcome', [FirstRunController::class, 'show'])->name('first_run.show');
 Route::post('/welcome/start', [FirstRunController::class, 'start'])->name('first_run.start');
@@ -79,6 +81,10 @@ Route::get('/workspace/career', CareerModeWorkspaceController::class)->name('wor
 Route::get('/workspace/{workspaceMode}', [WorkspaceModeController::class, 'enter'])->name('workspace_modes.enter');
 Route::post('/workspace/{workspaceMode}/select', [WorkspaceModeController::class, 'select'])->name('workspace_modes.select');
 Route::delete('/workspace/preference', [WorkspaceModeController::class, 'reset'])->name('workspace_modes.preference.reset');
+Route::post('/plans/{plan}/tasks/{task}/execution-setup', [ExecutionSetupController::class, 'store'])
+    ->name('plans.tasks.execution_setup.store');
+Route::get('/execution-validation/study/{plan}/tasks/{task}', [ExecutionValidationProviderController::class, 'show'])
+    ->name('execution.validation.study_practice');
 Route::get('/map', [CanoviaMapController::class, 'index'])->name('map.index');
 Route::post('/map/personalization/pins/{plan}', [MapPersonalizationController::class, 'store'])
     ->middleware('auth')
