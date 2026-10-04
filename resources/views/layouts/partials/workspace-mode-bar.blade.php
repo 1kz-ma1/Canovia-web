@@ -18,6 +18,7 @@
     data-current-workspace-mode="{{ $workspaceModeDefinition->mode->value }}"
     data-workspace-mode-source="{{ $workspaceModeContext->source->value }}"
     data-workspace-mode-preference="{{ $workspaceModePreference?->value ?? 'auto' }}"
+    data-workspace-mode-event-url="{{ route('behavior_events.store') }}"
 >
     <div class="workspace-mode-bar-inner">
         <span class="workspace-mode-kicker">WORKSPACE</span>
@@ -117,7 +118,7 @@
 
                 <div class="workspace-mode-auto-row">
                     @if ($workspaceModePreference)
-                        <form method="POST" action="{{ route('workspace_modes.preference.reset') }}">
+                        <form method="POST" action="{{ route('workspace_modes.preference.reset') }}" data-workspace-mode-reset-form>
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="workspace-mode-auto-action">
