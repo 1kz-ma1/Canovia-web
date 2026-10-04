@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FeatureKey;
+use App\Intelligence\Development\DevelopmentAdaptiveActionService;
 use App\Models\PlanArtifact;
 use App\Models\Task;
 use App\Services\BehaviorIdentityService;
@@ -11,6 +12,7 @@ use App\Services\GitHubRepositoryInspector;
 use App\Services\GitHubRepositoryWriter;
 use App\Services\GitHubWorkflowService;
 use App\Services\PlanActivityService;
+use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\TaskEvidenceService;
 use Illuminate\Http\Request;
@@ -24,9 +26,39 @@ final class GitHubWorkflowController extends Controller
         GitHubWorkflowService $workflow,
         FeatureAccessService $featureAccess,
         GitHubRepositoryWriter $repositoryWriter,
+        PlanCategoryProfileService $profiles,
+        DevelopmentAdaptiveActionService $developmentActions,
     ) {
+        $dashboard = $workflow->dashboard($request);
+        $selectedPlan = $dashboard['selected_plan'] ?? null;
+        $developmentAction = null;
+        $developmentFocusTask = null;
+        $canEditDevelopment = false;
+
+        if (
+            $selectedPlan
+            && $profiles->forPlan($selectedPlan)->key === 'development'
+        ) {
+            $developmentAction = $developmentActions->evaluate($selectedPlan);
+            $focusTaskId = (int) data_get(
+                $developmentAction->intelligence->state->facts,
+                'focus_task_id',
+                0,
+            );
+
+            if ($focusTaskId > 0) {
+                $developmentFocusTask = $selectedPlan->tasks
+                    ->firstWhere('id', $focusTaskId);
+            }
+
+            $canEditDevelopment = collect($dashboard['editable_plans'] ?? [])
+                ->contains(fn ($plan) =>
+                    (int) $plan->id === (int) $selectedPlan->id
+                );
+        }
+
         return view('github_workflow.index', [
-            ...$workflow->dashboard($request),
+            ...$dashboard,
             'can_repository_inspect' => $featureAccess->canUse(
                 $request->user(),
                 FeatureKey::DeveloperGithubEvidence,
@@ -38,6 +70,9 @@ final class GitHubWorkflowController extends Controller
             'github_write_configured' => $repositoryWriter->configured(),
             'github_app_connect_available' => $repositoryWriter->configured()
                 && $repositoryWriter->installUrl() !== null,
+            'development_action' => $developmentAction,
+            'development_focus_task' => $developmentFocusTask,
+            'can_edit_development_readiness' => $canEditDevelopment,
         ]);
     }
 
