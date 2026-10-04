@@ -108,38 +108,6 @@ final class StudyExamConvergencePolicyService
                 && ! (bool) $item['broad_practice_after_transition'],
         );
 
-        // Preserve V41.4 semantics for a single suspected weakness: it may
-        // receive a small Secondary re-check, but it is not yet a confirmed
-        // intervention. Graduation/re-entry state remains history-owned here.
-        $topicStatusByKey = $states
-            ->mapWithKeys(fn (array $item) => [
-                $this->key((string) ($item['topic'] ?? ''))
-                    => (string) ($item['status'] ?? 'monitoring'),
-            ]);
-
-        $candidateTopics = collect(
-            $weaknessPriority['primary_topics'] ?? [],
-        )
-            ->merge($weaknessPriority['secondary_topics'] ?? [])
-            ->filter(
-                fn ($topic) =>
-                    is_string($topic)
-                    && trim($topic) !== '',
-            )
-            ->reject(function (string $topic) use ($topicStatusByKey) {
-                return in_array(
-                    (string) $topicStatusByKey->get(
-                        $this->key($topic),
-                        'monitoring',
-                    ),
-                    ['graduated', 'capped'],
-                    true,
-                );
-            })
-            ->unique()
-            ->take(5)
-            ->values();
-
         $deadline = $this->examDates->resolve($plan);
         $daysUntilExam = $this->examDates->daysUntil($plan);
         $generalDays = max(
@@ -182,10 +150,6 @@ final class StudyExamConvergencePolicyService
                 self::PHASE_WEAKNESS_REINFORCEMENT,
                 '繰り返しEvidenceがある未卒業の弱点だけを短く補完します。',
             ],
-            $candidateTopics->isNotEmpty() => [
-                self::PHASE_WEAKNESS_REINFORCEMENT,
-                '単発Signalを弱点へ固定せず、横断診断を残した短い再確認で本当に補完が必要か確かめます。',
-            ],
             default => [
                 self::PHASE_GENERAL_PRACTICE,
                 '集中補完を続ける根拠がないため、総合演習へ戻して全体成績を確認します。',
@@ -209,12 +173,7 @@ final class StudyExamConvergencePolicyService
             'exam_date_conflict' => $deadline['conflict'],
             'days_until_exam' => $daysUntilExam,
             'active_topics' => $phase === self::PHASE_WEAKNESS_REINFORCEMENT
-                ? $active->pluck('topic')
-                    ->merge($candidateTopics)
-                    ->unique()
-                    ->take(5)
-                    ->values()
-                    ->all()
+                ? $active->pluck('topic')->take(5)->values()->all()
                 : [],
             'graduated_topics' => $graduated,
             'capped_topics' => $capped,
