@@ -13,6 +13,7 @@
     $modeSummaries = collect([
         $studySummary ?? [],
         $developmentSummary ?? [],
+        $careerSummary ?? [],
     ]);
 @endphp
 
@@ -53,12 +54,12 @@
                         class="rounded-2xl border border-white/8 bg-slate-950/25 p-4 transition hover:border-white/15 hover:bg-slate-950/40"
                         data-overview-first-use-workspace="{{ $choice['key'] }}"
                     >
-                        <p class="text-[10px] font-black uppercase tracking-[0.14em] {{ $choice['key'] === 'study' ? 'text-amber-300' : 'text-cyan-300' }}">
+                        <p class="text-[10px] font-black uppercase tracking-[0.14em] {{ $choice['key'] === 'study' ? 'text-amber-300' : ($choice['key'] === 'career' ? 'text-emerald-300' : 'text-cyan-300') }}">
                             {{ strtoupper($choice['key']) }}
                         </p>
                         <h3 class="mt-2 text-base font-black text-slate-100">{{ $choice['label'] }} Workspace</h3>
                         <p class="mt-2 text-xs leading-5 text-slate-500">{{ $choice['description'] }}</p>
-                        <span class="mt-4 inline-flex text-xs font-black {{ $choice['key'] === 'study' ? 'text-amber-300' : 'text-cyan-300' }}">このWorkspaceから始める →</span>
+                        <span class="mt-4 inline-flex text-xs font-black {{ $choice['key'] === 'study' ? 'text-amber-300' : ($choice['key'] === 'career' ? 'text-emerald-300' : 'text-cyan-300') }}">このWorkspaceから始める →</span>
                     </a>
                 @endforeach
             </div>
@@ -76,12 +77,18 @@
 
         @if ($primaryPresentation)
             @php
-                $domainLabel = $primaryPresentation->domain->value === 'study'
-                    ? '学習'
-                    : '開発';
-                $workspaceUrl = $primaryPresentation->domain->value === 'study'
-                    ? route('workspace.study.index', ['plan_id' => $primaryPresentation->plan->id])
-                    : route('workspace.development.index', ['plan_id' => $primaryPresentation->plan->id]);
+                $domainLabel = match ($primaryPresentation->domain->value) {
+                    'study' => '学習',
+                    'development' => '開発',
+                    'career' => 'Career',
+                    default => 'Overview',
+                };
+                $workspaceUrl = match ($primaryPresentation->domain->value) {
+                    'study' => route('workspace.study.index', ['plan_id' => $primaryPresentation->plan->id]),
+                    'development' => route('workspace.development.index', ['plan_id' => $primaryPresentation->plan->id]),
+                    'career' => route('workspace.career.index', ['plan_id' => $primaryPresentation->plan->id]),
+                    default => route('workspace.overview.index'),
+                };
             @endphp
 
             <div class="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(17rem,0.75fr)]">
@@ -184,27 +191,41 @@
         </div>
     @endif
 
-    <section id="overview-modes" class="grid gap-4 lg:grid-cols-2" data-overview-mode-summaries>
+    <section id="overview-modes" class="grid gap-4 lg:grid-cols-3" data-overview-mode-summaries>
         @foreach ($modeSummaries as $summary)
             @php
                 $mode = (string) ($summary['mode'] ?? '');
                 $isStudy = $mode === 'study';
+                $isCareer = $mode === 'career';
                 $plan = $summary['plan'] ?? null;
                 $presentation = $summary['presentation'] ?? null;
                 $setupNeeded = (bool) ($summary['setup_needed'] ?? true);
                 $empty = (bool) ($summary['empty'] ?? true);
                 $workspaceUrl = (string) ($summary['workspace_url'] ?? '#');
-                $modeLabel = $isStudy ? '学習' : '開発';
-                $readinessLabel = $isStudy ? 'Exam Readiness' : 'Release Readiness';
+                $modeLabel = match ($mode) {
+                    'study' => '学習',
+                    'development' => '開発',
+                    'career' => 'Career',
+                    default => 'Mode',
+                };
+                $readinessLabel = match ($mode) {
+                    'study' => 'Exam Readiness',
+                    'development' => 'Release Readiness',
+                    'career' => 'Process Readiness',
+                    default => 'Readiness',
+                };
+                $accentText = $isStudy
+                    ? 'text-amber-300'
+                    : ($isCareer ? 'text-emerald-300' : 'text-cyan-300');
             @endphp
 
             <article class="page-card p-5 sm:p-6" data-overview-mode="{{ $mode }}" data-overview-mode-setup-needed="{{ $setupNeeded ? 'true' : 'false' }}">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-[10px] font-black uppercase tracking-[0.16em] {{ $isStudy ? 'text-amber-300' : 'text-cyan-300' }}">{{ strtoupper($mode) }} MODE</p>
+                        <p class="text-[10px] font-black uppercase tracking-[0.16em] {{ $accentText }}">{{ strtoupper($mode) }} MODE</p>
                         <h2 class="mt-1 text-lg font-black text-slate-50">{{ $modeLabel }}の現在地</h2>
                     </div>
-                    <a href="{{ $workspaceUrl }}" class="text-xs font-bold {{ $isStudy ? 'text-amber-300' : 'text-cyan-300' }}">Workspace →</a>
+                    <a href="{{ $workspaceUrl }}" class="text-xs font-bold {{ $accentText }}">Workspace →</a>
                 </div>
 
                 @if ($empty)
@@ -221,7 +242,7 @@
                         <p class="mt-4 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{{ $readinessLabel }}</p>
                         <p class="mt-1 text-xl font-black text-slate-100">セットアップ中</p>
                         <p class="mt-2 text-xs leading-5 text-slate-500">
-                            {{ $isStudy ? '確定した試験範囲がまだありません。' : 'Release判断に使えるDevelopment Evidenceがまだありません。' }}
+                            {{ $isStudy ? '確定した試験範囲がまだありません。' : ($isCareer ? 'Career判断に使える現実情報がまだありません。' : 'Release判断に使えるDevelopment Evidenceがまだありません。') }}
                         </p>
                     </div>
                 @elseif ($presentation)
@@ -232,7 +253,7 @@
                                 {{ $plan->title }}
                             </span>
                             <p class="mt-4 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{{ $readinessLabel }}</p>
-                            <p class="mt-1 text-2xl font-black text-slate-100">{{ $presentation->readinessDisplay() }}</p>
+                            <p class="mt-1 text-2xl font-black text-slate-100">{{ $isCareer ? $presentation->stateLabel : $presentation->readinessDisplay() }}</p>
                             <p class="mt-1 text-xs font-bold text-slate-400">{{ $presentation->stateLabel }}</p>
                         </div>
                         <div class="rounded-2xl border border-white/8 bg-slate-950/25 p-4">
