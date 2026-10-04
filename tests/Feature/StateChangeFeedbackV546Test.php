@@ -294,7 +294,7 @@ class StateChangeFeedbackV546Test extends TestCase
             2,
             substr_count(
                 $response->getContent(),
-                'data-intelligence-state-change',
+                'data-intelligence-state-change-kind="',
             ),
         );
     }
