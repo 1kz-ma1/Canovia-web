@@ -171,14 +171,69 @@ final class DevelopmentStateBuilder implements StateBuilder
             'head_sha' => null,
             'branch' => null,
             'deployment_id' => null,
+            'deployment_sha' => null,
             'deployment_environment' => null,
             'deployment_production' => false,
+            'deployment_stale' => false,
+            'verification_stale' => false,
+            'spec_sync_stale' => false,
             'spec_sync_not_required' => false,
         ];
 
         $latestTs = 0;
         $reviewObserved = false;
         $reviewDecisions = [];
+        $manualGateConfirmations = [];
+        $currentImplementationSha = null;
+
+        $observeImplementationSha = function (
+            mixed $value,
+            bool $mergeTransition = false,
+        ) use (
+            &$currentImplementationSha,
+            &$facts,
+            &$gates,
+            &$reviewDecisions,
+            &$reviewObserved,
+        ): void {
+            $sha = mb_strtolower(trim((string) $value));
+
+            if (! preg_match('/^[a-f0-9]{7,64}$/', $sha)) {
+                return;
+            }
+
+            if (
+                $currentImplementationSha !== null
+                && ! $this->sameSha($currentImplementationSha, $sha)
+            ) {
+                if ($mergeTransition) {
+                    foreach (['deploy', 'verification', 'spec_sync'] as $gate) {
+                        $gates[$gate] = $this->gate(
+                            'unknown',
+                            null,
+                            null,
+                        );
+                    }
+                } else {
+                    foreach (
+                        ['ci', 'review', 'merge', 'deploy', 'verification', 'spec_sync']
+                        as $gate
+                    ) {
+                        $gates[$gate] = $this->gate(
+                            'unknown',
+                            null,
+                            null,
+                        );
+                    }
+
+                    $reviewDecisions = [];
+                    $reviewObserved = false;
+                }
+            }
+
+            $currentImplementationSha = $sha;
+            $facts['head_sha'] = $sha;
+        };
 
         foreach ($items as $item) {
             $latestTs = max($latestTs, $item->occurredAt->getTimestamp());
@@ -192,7 +247,9 @@ final class DevelopmentStateBuilder implements StateBuilder
 
                 case 'github_branch_observed':
                     $facts['branch'] = $item->facts['branch'] ?? $facts['branch'];
-                    $facts['head_sha'] = $item->facts['head_sha'] ?? $facts['head_sha'];
+                    $observeImplementationSha(
+                        $item->facts['head_sha'] ?? null,
+                    );
 
                     if ($gates['implementation']['status'] === 'unknown') {
                         $gates['implementation'] = $this->gate(
@@ -205,7 +262,9 @@ final class DevelopmentStateBuilder implements StateBuilder
 
                 case 'github_commit_observed':
                     $facts['branch'] = $item->facts['branch'] ?? $facts['branch'];
-                    $facts['head_sha'] = $item->facts['commit_sha'] ?? $facts['head_sha'];
+                    $observeImplementationSha(
+                        $item->facts['commit_sha'] ?? null,
+                    );
                     $gates['implementation'] = $this->gate(
                         'passed',
                         $item->type,
@@ -217,7 +276,9 @@ final class DevelopmentStateBuilder implements StateBuilder
                     $facts['pull_request_number'] = $item->facts['pull_request_number'] ?? null;
                     $facts['pull_request_state'] = $item->facts['pull_request_state'] ?? null;
                     $facts['pull_request_draft'] = (bool) ($item->facts['draft'] ?? false);
-                    $facts['head_sha'] = $item->facts['head_sha'] ?? $facts['head_sha'];
+                    $observeImplementationSha(
+                        $item->facts['head_sha'] ?? null,
+                    );
                     $facts['branch'] = $item->facts['head_ref'] ?? $facts['branch'];
 
                     $gates['implementation'] = $this->gate(
@@ -269,6 +330,9 @@ final class DevelopmentStateBuilder implements StateBuilder
                     break;
 
                 case 'pull_request_ci_observed':
+                    $observeImplementationSha(
+                        $item->facts['head_sha'] ?? null,
+                    );
                     $ci = strtolower((string) ($item->facts['ci_state'] ?? ''));
                     $gates['ci'] = $this->gate(
                         match ($ci) {
@@ -280,7 +344,6 @@ final class DevelopmentStateBuilder implements StateBuilder
                         $item->type,
                         $occurredAt,
                     );
-                    $facts['head_sha'] = $item->facts['head_sha'] ?? $facts['head_sha'];
                     break;
 
                 case 'pull_request_merged':
@@ -295,9 +358,12 @@ final class DevelopmentStateBuilder implements StateBuilder
                         $occurredAt,
                     );
                     $facts['pull_request_number'] = $item->facts['pull_request_number'] ?? $facts['pull_request_number'];
-                    $facts['head_sha'] = $item->facts['merge_commit_sha']
-                        ?? $item->facts['head_sha']
-                        ?? $facts['head_sha'];
+                    $observeImplementationSha(
+                        $item->facts['merge_commit_sha']
+                            ?? $item->facts['head_sha']
+                            ?? null,
+                        true,
+                    );
                     break;
 
                 case 'github_deployment_observed':
@@ -309,6 +375,7 @@ final class DevelopmentStateBuilder implements StateBuilder
                     );
 
                     $facts['deployment_id'] = $item->facts['deployment_id'] ?? null;
+                    $facts['deployment_sha'] = $item->facts['deployment_sha'] ?? null;
                     $facts['deployment_environment'] = $item->facts['environment'] ?? null;
                     $facts['deployment_production'] = $production;
 
@@ -340,15 +407,16 @@ final class DevelopmentStateBuilder implements StateBuilder
                         break;
                     }
 
-                    $gates[$gate] = $this->gate(
-                        $status === 'not_required' ? 'passed' : $status,
-                        $item->type,
-                        $occurredAt,
-                    );
-
-                    if ($gate === 'spec_sync') {
-                        $facts['spec_sync_not_required'] = $status === 'not_required';
-                    }
+                    $manualGateConfirmations[$gate] = [
+                        'status' => $status,
+                        'occurred_at' => $occurredAt,
+                        'target_sha' => mb_strtolower(trim((string) (
+                            $item->facts['target_sha'] ?? ''
+                        ))),
+                        'deployment_id' => (int) (
+                            $item->facts['deployment_id'] ?? 0
+                        ),
+                    ];
                     break;
             }
         }
@@ -386,6 +454,82 @@ final class DevelopmentStateBuilder implements StateBuilder
                 'pull_request_review_submitted',
                 null,
             );
+        }
+
+        $deploymentSha = mb_strtolower(trim((string) (
+            $facts['deployment_sha'] ?? ''
+        )));
+        $headSha = mb_strtolower(trim((string) (
+            $facts['head_sha'] ?? ''
+        )));
+
+        if (
+            ($gates['deploy']['status'] ?? 'unknown') !== 'unknown'
+            && $deploymentSha !== ''
+            && $headSha !== ''
+            && ! $this->sameSha($deploymentSha, $headSha)
+        ) {
+            $facts['deployment_stale'] = true;
+            $gates['deploy'] = $this->gate(
+                'pending',
+                'github_deployment_observed',
+                $gates['deploy']['occurred_at'] ?? null,
+            );
+        }
+
+        $verification = $manualGateConfirmations['verification'] ?? null;
+        if (is_array($verification)) {
+            $validVerification = ($gates['deploy']['status'] ?? null) === 'passed'
+                && (int) ($facts['deployment_id'] ?? 0) > 0
+                && (int) ($verification['deployment_id'] ?? 0)
+                    === (int) ($facts['deployment_id'] ?? 0)
+                && $deploymentSha !== ''
+                && $this->sameSha(
+                    (string) ($verification['target_sha'] ?? ''),
+                    $deploymentSha,
+                );
+
+            if ($validVerification) {
+                $gates['verification'] = $this->gate(
+                    (string) $verification['status'],
+                    'development_quality_gate_confirmed',
+                    $verification['occurred_at'] ?? null,
+                );
+            } else {
+                $facts['verification_stale'] = true;
+                $gates['verification'] = $this->gate(
+                    'pending',
+                    'development_quality_gate_confirmed',
+                    $verification['occurred_at'] ?? null,
+                );
+            }
+        }
+
+        $specSync = $manualGateConfirmations['spec_sync'] ?? null;
+        if (is_array($specSync)) {
+            $validSpecSync = ($gates['implementation']['status'] ?? null) === 'passed'
+                && $headSha !== ''
+                && $this->sameSha(
+                    (string) ($specSync['target_sha'] ?? ''),
+                    $headSha,
+                );
+
+            if ($validSpecSync) {
+                $status = (string) ($specSync['status'] ?? '');
+                $gates['spec_sync'] = $this->gate(
+                    $status === 'not_required' ? 'passed' : $status,
+                    'development_quality_gate_confirmed',
+                    $specSync['occurred_at'] ?? null,
+                );
+                $facts['spec_sync_not_required'] = $status === 'not_required';
+            } else {
+                $facts['spec_sync_stale'] = true;
+                $gates['spec_sync'] = $this->gate(
+                    'pending',
+                    'development_quality_gate_confirmed',
+                    $specSync['occurred_at'] ?? null,
+                );
+            }
         }
 
         $failed = collect(self::GATES)
@@ -431,6 +575,20 @@ final class DevelopmentStateBuilder implements StateBuilder
             'source_type' => $sourceType,
             'occurred_at' => $occurredAt,
         ];
+    }
+
+    private function sameSha(string $left, string $right): bool
+    {
+        $left = mb_strtolower(trim($left));
+        $right = mb_strtolower(trim($right));
+
+        return $left !== ''
+            && $right !== ''
+            && (
+                hash_equals($left, $right)
+                || str_starts_with($left, $right)
+                || str_starts_with($right, $left)
+            );
     }
 
     private function capturedAt(mixed $value): DateTimeImmutable
