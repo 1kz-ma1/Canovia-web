@@ -132,7 +132,8 @@ final class WorkspaceModeResolver
         }
 
         if (
-            str_starts_with($routeName, 'plans.study_scope.')
+            str_starts_with($routeName, 'workspace.study.')
+            || str_starts_with($routeName, 'plans.study_scope.')
             || str_starts_with($routeName, 'plans.study_action.')
             || str_starts_with($routeName, 'plans.tasks.study_')
         ) {
