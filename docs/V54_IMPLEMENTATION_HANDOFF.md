@@ -35,13 +35,14 @@ UI specialization happens through Workspace Modes.
 - public Mode options must come from a registry, not hard-coded header tabs
 - future Mode growth must not require horizontal header expansion
 - fixed Mode selector will be dropdown-based
-- user manual choice must eventually outrank automatic inference
+- user manual choice must outrank ambiguous/contextless inference
+- unambiguous deep links must preserve their semantic Workspace even when a different preference is stored
 - automatic context changes must not feel like random UI mode switching
 - no new AI traffic is required for Workspace Mode UI
 
 ## V54.0 — Workspace Mode Contract
 
-Status: **IMPLEMENTED — PR PENDING**
+Status: **MERGED — PR #218**
 
 Branch:
 
@@ -138,14 +139,53 @@ Important semantics:
 
 ### V54.2 — Mode Context & Persistence
 
-Planned:
+Status: **IMPLEMENTED — PR PENDING**
 
-- manual selection action
-- logged-in preference
-- guest/session fallback
-- user selection precedence
-- contextual auto inference
-- stable deep-link behavior
+Branch:
+
+`feature/v54-2-mode-context-persistence`
+
+Permanent spec:
+
+`docs/V54.2_MODE_CONTEXT_AND_PERSISTENCE.md`
+
+Implemented:
+
+- persistent manual Mode selection from the fixed Mode Bar
+- authenticated preference in `users.workspace_mode_preference`
+- guest fallback in Laravel session
+- explicit reset to automatic behavior
+- registry validation for persisted public Mode keys
+- `WorkspaceModeSource::ManualPreference`
+- stable deep-link semantics: route/profile context overrides stored preference without erasing it
+- contextless surfaces use the stored preference before Overview fallback
+- retained Mode Bar displays fixed / route-following / Plan-following state
+- Instant Navigation synchronizes the visible context label
+- V54.2 PHP and JS tests
+- latest implementation validation run: #37184075308
+- V54.1 / V54.0 / V53.9 / Home regressions passed
+
+V54.2 precedence:
+
+```text
+explicit caller Mode
+→ valid ephemeral workspace_mode query
+→ strong domain route hint
+→ current Plan / Task / WorkSession profile
+→ persisted manual preference
+→ Overview
+```
+
+Important semantics:
+
+- manual preference is the default Workspace on ambiguous/contextless surfaces
+- a concrete deep link remains semantically truthful even when another Workspace is preferred
+- contextual override never erases the stored preference
+- `GET /workspace/{mode}` remains ephemeral navigation
+- Mode Bar selection uses `POST /workspace/{mode}/select`
+- reset uses `DELETE /workspace/preference`
+- `null` preference means automatic behavior
+- no localStorage duplication
 
 ### V54.3 — Study Workspace
 
