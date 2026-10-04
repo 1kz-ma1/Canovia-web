@@ -24,6 +24,7 @@ final readonly class PlanIntelligencePresentation
         public ActionProposal $action,
         public string $eyebrow,
         public string $headline,
+        public string $sourceNote,
         public string $readinessLabel,
         public string $stateLabel,
         public string $gapLabel,
