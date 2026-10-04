@@ -60,6 +60,10 @@ final class DecisionTraceStore
                 'readiness_confidence' => $readiness->confidence->value,
                 'readiness_components' => CanonicalJson::normalize($readiness->components),
                 'readiness_gaps' => CanonicalJson::normalize($readiness->gaps),
+                'readiness_metadata' => Arr::only(
+                    CanonicalJson::normalize($readiness->metadata),
+                    ['policy', 'target_score_percent', 'meaning'],
+                ),
                 'decision_type' => $decision->type,
                 'reason_code' => $decision->reasonCode,
                 'decision_summary' => mb_substr($decision->summary, 0, 255),
