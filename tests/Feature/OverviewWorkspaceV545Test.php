@@ -46,6 +46,7 @@ class OverviewWorkspaceV545Test extends TestCase
             ->assertSee('data-overview-primary-action', false)
             ->assertSee('data-overview-mode="study"', false)
             ->assertSee('data-overview-mode="development"', false)
+            ->assertSee('data-overview-mode="career"', false)
             ->assertSee('data-current-workspace-mode="overview"', false)
             ->assertSee('data-workspace-mode-source="route_hint"', false)
             ->assertSee('まだ優先Actionはありません。');
