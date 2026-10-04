@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Intelligence\Career\CareerAdaptiveActionService;
 use App\Models\CareerCapture;
 use App\Models\CareerCapturePayload;
 use App\Models\Plan;
@@ -9,6 +10,10 @@ use Illuminate\Support\Facades\DB;
 
 class CareerCaptureService
 {
+    public function __construct(
+        private readonly CareerAdaptiveActionService $careerIntelligence,
+    ) {}
+
     /**
      * Shared intake boundary for screenshots today and email/calendar/AI
      * connectors later.
@@ -38,7 +43,7 @@ class CareerCaptureService
             throw new \InvalidArgumentException('Career screenshot payload exceeds 3MB.');
         }
 
-        return DB::transaction(function () use (
+        $capture = DB::transaction(function () use (
             $plan,
             $sourceType,
             $sourceUrl,
@@ -79,5 +84,9 @@ class CareerCaptureService
 
             return $capture;
         });
+
+        $this->careerIntelligence->tryRefresh($plan);
+
+        return $capture;
     }
 }
