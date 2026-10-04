@@ -121,7 +121,9 @@
                 <aside class="rounded-3xl border border-white/8 bg-slate-950/25 p-5">
                     <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{{ $primaryPresentation->readinessLabel }}</p>
                     <p class="mt-2 text-3xl font-black text-slate-100">{{ $primaryPresentation->readinessDisplay() }}</p>
-                    <p class="mt-1 text-xs font-bold text-slate-400">{{ $primaryPresentation->stateLabel }}</p>
+                    @if ($primaryPresentation->hasDistinctStateDisplay())
+                        <p class="mt-1 text-xs font-bold text-slate-400">{{ $primaryPresentation->stateLabel }}</p>
+                    @endif
                     <div class="mt-4 border-t border-white/8 pt-4">
                         <p class="text-[10px] font-black uppercase tracking-[0.14em] text-amber-200">BIGGEST GAP</p>
                         <p class="mt-1 text-sm font-black text-slate-100">{{ $primaryPresentation->gapLabel }}</p>
@@ -253,7 +255,7 @@
                                 {{ $plan->title }}
                             </span>
                             <p class="mt-4 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{{ $readinessLabel }}</p>
-                            <p class="mt-1 text-2xl font-black text-slate-100">{{ $isCareer ? $presentation->stateLabel : $presentation->readinessDisplay() }}</p>
+                            <p class="mt-1 text-2xl font-black text-slate-100">{{ $presentation->readinessDisplay() }}</p>
                             <p class="mt-1 text-xs font-bold text-slate-400">{{ $presentation->stateLabel }}</p>
                         </div>
                         <div class="rounded-2xl border border-white/8 bg-slate-950/25 p-4">
