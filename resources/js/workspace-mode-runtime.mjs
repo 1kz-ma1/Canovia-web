@@ -222,7 +222,15 @@ export function mountWorkspaceModeRuntime({
 
     const onViewportChange = () => closeOpenSwitchers(documentRef);
 
-    documentRef.addEventListener('toggle', onToggle, true);
+    const switchers = [
+        ...documentRef.querySelectorAll(
+            '[data-workspace-mode-bar] details.workspace-mode-switcher',
+        ),
+    ];
+    switchers.forEach((details) => {
+        details.addEventListener('toggle', onToggle);
+    });
+
     documentRef.addEventListener('pointerdown', onPointerDown, true);
     documentRef.addEventListener('keydown', onKeyDown, true);
     documentRef.addEventListener('submit', onSubmit, true);
@@ -242,7 +250,9 @@ export function mountWorkspaceModeRuntime({
             onPageLifecycle();
         },
         dispose() {
-            documentRef.removeEventListener('toggle', onToggle, true);
+            switchers.forEach((details) => {
+                details.removeEventListener('toggle', onToggle);
+            });
             documentRef.removeEventListener('pointerdown', onPointerDown, true);
             documentRef.removeEventListener('keydown', onKeyDown, true);
             documentRef.removeEventListener('submit', onSubmit, true);
