@@ -36,12 +36,16 @@ final class DevelopmentStateBuilder implements StateBuilder
 
         $observations = collect($evidence)
             ->filter(fn ($item) => $item instanceof EvidenceObservation)
-            ->sortBy([
-                fn (EvidenceObservation $left, EvidenceObservation $right) =>
-                    $left->occurredAt <=> $right->occurredAt,
-                fn (EvidenceObservation $left, EvidenceObservation $right) =>
-                    strcmp($left->reference, $right->reference),
-            ])
+            ->sort(function (
+                EvidenceObservation $left,
+                EvidenceObservation $right,
+            ): int {
+                $time = $left->occurredAt <=> $right->occurredAt;
+
+                return $time !== 0
+                    ? $time
+                    : strcmp($left->reference, $right->reference);
+            })
             ->values();
 
         $taskStates = $observations
