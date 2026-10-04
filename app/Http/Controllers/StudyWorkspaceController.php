@@ -14,6 +14,7 @@ use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanPriorityService;
 use App\Services\WorkspaceModeOnboardingService;
+use App\Services\ExecutionSetupService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -25,6 +26,7 @@ final class StudyWorkspaceController extends Controller
         PlanCategoryProfileService $profiles,
         PlanPriorityService $priorities,
         StudyAdaptiveActionService $studyActions,
+        ExecutionSetupService $executionSetup,
         StudyIntelligencePresentationAdapter $presentationAdapter,
         IntelligencePresentationHistoryService $history,
         IntelligenceStateChangeFeedbackService $stateChanges,
@@ -55,6 +57,7 @@ final class StudyWorkspaceController extends Controller
                 'hasConfirmedScope' => false,
                 'navigationTask' => null,
                 'intelligenceStateChange' => null,
+                'executionSetup' => null,
                 'modeOnboarding' => $onboarding->build(
                     WorkspaceMode::Study,
                     [],
@@ -79,6 +82,10 @@ final class StudyWorkspaceController extends Controller
             ])
             ->exists();
         $canEdit = $ownership->canEdit($request, $plan);
+        $navigationTask = $this->navigationTask(
+            $plan,
+            $presentation?->targetTask,
+        );
 
         $completedSteps = ['create_plan'];
         if ($hasConfirmedScope) {
@@ -87,6 +94,21 @@ final class StudyWorkspaceController extends Controller
         if ($hasStudyEvidence) {
             $completedSteps[] = 'record_study_evidence';
         }
+
+        $modeOnboarding = $onboarding->build(
+            WorkspaceMode::Study,
+            $completedSteps,
+            $plan,
+            $presentation,
+            $canEdit,
+        );
+
+        $executionSetupData = (
+            $modeOnboarding === null
+            && $navigationTask instanceof Task
+        )
+            ? $executionSetup->inspect($plan, $navigationTask)
+            : null;
 
         return view('workspace.study.index', [
             'studyPlans' => $studyPlans,
@@ -99,21 +121,13 @@ final class StudyWorkspaceController extends Controller
                 IntelligenceDomain::Study,
             ),
             'hasConfirmedScope' => $hasConfirmedScope,
-            'navigationTask' => $this->navigationTask(
-                $plan,
-                $presentation?->targetTask,
-            ),
+            'navigationTask' => $navigationTask,
             'intelligenceStateChange' => $stateChanges->latestForPlan(
                 $plan,
                 IntelligenceDomain::Study,
             ),
-            'modeOnboarding' => $onboarding->build(
-                WorkspaceMode::Study,
-                $completedSteps,
-                $plan,
-                $presentation,
-                $canEdit,
-            ),
+            'executionSetup' => $executionSetupData,
+            'modeOnboarding' => $modeOnboarding,
         ]);
     }
 
