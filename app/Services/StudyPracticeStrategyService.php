@@ -117,11 +117,13 @@ class StudyPracticeStrategyService
             ?? StudyExamConvergencePolicyService::PHASE_GENERAL_PRACTICE
         );
 
-        // Task completion verification is a short, broad safety check,
-        // not weakness drilling. Keep it even when the convergence policy
-        // would otherwise prefer General Practice or Exam Mode.
+        // Mastery verification is already a broad diagnostic check, not a
+        // weakness drill. Keep it during General Practice for compatibility,
+        // but Exam Mode remains authoritative in the final exam window.
         $masteryVerification = (
             ($progression['kind'] ?? null) === 'verify_mastery'
+            && $phase
+                !== StudyExamConvergencePolicyService::PHASE_EXAM_MODE
         );
 
         $targetQuestionCount = $masteryVerification
