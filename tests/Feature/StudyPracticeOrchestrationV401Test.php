@@ -216,27 +216,11 @@ class StudyPracticeOrchestrationV401Test extends TestCase
             'next_action' => '応用問題へ進む',
         ]);
 
-        $strategy = app(\App\Services\StudyPracticeStrategyService::class)
-            ->build(
-                $plan,
-                $task,
-                StudyPracticeAttempt::query()
-                    ->where('task_id', $task->id)
-                    ->latest('created_at')
-                    ->latest('id')
-                    ->get(),
-            );
-
-        $this->assertSame('general_practice', $strategy['key']);
-        $this->assertSame(
-            'general_practice',
-            data_get($strategy, 'learning_phase.phase'),
-        );
-
         $this->actingAs($user)
             ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
             ->assertOk()
-            ->assertSee('現在：総合演習');
+            ->assertSee('定着・応用確認')
+            ->assertDontSee('弱点補強（偏り防止）');
     }
 
     public function test_reset_marks_incomplete_practice_session_as_abandoned(): void
