@@ -1,0 +1,47 @@
+name: V56.0 Final Follow-up Validate
+
+on:
+  push:
+    branches:
+      - fix/v56-0-post-merge-convergence-regressions
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: Lint
+        run: |
+          php -l app/Http/Controllers/StudyPracticeController.php
+          php -l app/Services/StudyPracticeStrategyService.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V56.0
+        run: php artisan test tests/Feature/StudyExamConvergencePolicyV560Test.php
+      - name: V41.4
+        run: php artisan test tests/Feature/StudyPracticeCalibrationV414Test.php
+      - name: V41.10
+        run: php artisan test tests/Feature/StudyTaskProgressionV4110Test.php
+      - name: V40.1
+        run: php artisan test tests/Feature/StudyPracticeOrchestrationV401Test.php
+      - name: Guided
+        run: php artisan test tests/Feature/StudyPracticeGuidedFlowV4074Test.php
+      - name: Question Bank
+        run: php artisan test tests/Feature/QuestionBankV402Test.php tests/Feature/HybridQuestionAssemblyV4182Test.php
+      - name: Native AI
+        run: php artisan test tests/Feature/NativeAiPracticeV418Test.php
+      - name: Intelligence
+        run: php artisan test tests/Feature/StudyIntelligenceV535Test.php tests/Feature/StudyAdaptiveActionV536Test.php
+      - name: Workspace
+        run: php artisan test tests/Feature/StudyWorkspaceV543Test.php
