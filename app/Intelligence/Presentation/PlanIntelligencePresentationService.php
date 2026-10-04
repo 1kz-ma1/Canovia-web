@@ -2,6 +2,7 @@
 
 namespace App\Intelligence\Presentation;
 
+use App\Intelligence\Career\CareerAdaptiveActionService;
 use App\Intelligence\Development\DevelopmentAdaptiveActionService;
 use App\Intelligence\Study\StudyAdaptiveActionService;
 use App\Models\Plan;
@@ -13,8 +14,10 @@ final class PlanIntelligencePresentationService
         private readonly PlanCategoryProfileService $profiles,
         private readonly StudyAdaptiveActionService $study,
         private readonly DevelopmentAdaptiveActionService $development,
+        private readonly CareerAdaptiveActionService $career,
         private readonly StudyIntelligencePresentationAdapter $studyAdapter,
         private readonly DevelopmentIntelligencePresentationAdapter $developmentAdapter,
+        private readonly CareerIntelligencePresentationAdapter $careerAdapter,
     ) {}
 
     public function forPlan(Plan $plan): ?PlanIntelligencePresentation
@@ -28,6 +31,10 @@ final class PlanIntelligencePresentationService
                 $plan,
                 $this->development->evaluate($plan),
             ),
+            'career' => $this->careerAdapter->adapt(
+                $plan,
+                $this->career->evaluate($plan),
+            ),
             default => null,
         };
     }
@@ -36,7 +43,7 @@ final class PlanIntelligencePresentationService
     {
         return in_array(
             $this->profiles->forPlan($plan)->key,
-            ['study', 'development'],
+            ['study', 'development', 'career'],
             true,
         );
     }
