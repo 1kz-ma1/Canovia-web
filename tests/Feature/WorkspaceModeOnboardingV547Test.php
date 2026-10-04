@@ -42,7 +42,7 @@ class WorkspaceModeOnboardingV547Test extends TestCase
             ->assertSee('data-workspace-mode-onboarding="study"', false)
             ->assertSee('data-workspace-mode-onboarding-step="create_plan"', false)
             ->assertSee(
-                route('plans.create', ['workspace_mode' => 'study']),
+                route('plans.create.manual', ['workspace_mode' => 'study']),
                 false,
             );
 
@@ -128,7 +128,7 @@ class WorkspaceModeOnboardingV547Test extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->get(route('plans.create', ['workspace_mode' => 'study']))
+            ->get(route('plans.create.manual', ['workspace_mode' => 'study']))
             ->assertOk()
             ->assertSee('data-plan-create-workspace-mode="study"', false)
             ->assertSee('name="workspace_mode" value="study"', false)
@@ -163,7 +163,7 @@ class WorkspaceModeOnboardingV547Test extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->get(route('plans.create', [
+            ->get(route('plans.create.manual', [
                 'workspace_mode' => 'development',
             ]))
             ->assertOk()
@@ -229,11 +229,11 @@ class WorkspaceModeOnboardingV547Test extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->get(route('plans.create', ['workspace_mode' => 'overview']))
+            ->get(route('plans.create.manual', ['workspace_mode' => 'overview']))
             ->assertNotFound();
 
         $this->actingAs($user)
-            ->get(route('plans.create', ['workspace_mode' => 'unknown']))
+            ->get(route('plans.create.manual', ['workspace_mode' => 'unknown']))
             ->assertNotFound();
     }
 
