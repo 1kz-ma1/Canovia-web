@@ -43,13 +43,13 @@ class WorkspaceModeBarV541Test extends TestCase
             ->assertSee('学習')
             ->assertSee('開発')
             ->assertSee(
-                route('workspace_modes.enter', [
+                route('workspace_modes.select', [
                     'workspaceMode' => WorkspaceMode::Study->value,
                 ]),
                 false,
             )
             ->assertSee(
-                route('workspace_modes.enter', [
+                route('workspace_modes.select', [
                     'workspaceMode' => WorkspaceMode::Development->value,
                 ]),
                 false,

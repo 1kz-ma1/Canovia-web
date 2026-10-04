@@ -7,6 +7,8 @@ use App\Models\Plan;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanPriorityService;
+use App\Services\WorkspaceModePreference;
+use App\Services\WorkspaceModeRegistry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -15,16 +17,83 @@ final class WorkspaceModeController extends Controller
     public function enter(
         Request $request,
         string $workspaceMode,
+        WorkspaceModeRegistry $registry,
         PlanOwnershipService $ownership,
         PlanCategoryProfileService $profiles,
         PlanPriorityService $priorities,
     ): RedirectResponse {
+        $mode = $this->publicMode($workspaceMode, $registry);
+
+        return $this->redirectForMode(
+            $request,
+            $mode,
+            $ownership,
+            $profiles,
+            $priorities,
+        );
+    }
+
+    public function select(
+        Request $request,
+        string $workspaceMode,
+        WorkspaceModeRegistry $registry,
+        WorkspaceModePreference $preference,
+        PlanOwnershipService $ownership,
+        PlanCategoryProfileService $profiles,
+        PlanPriorityService $priorities,
+    ): RedirectResponse {
+        $mode = $this->publicMode($workspaceMode, $registry);
+
+        $preference->remember($request, $mode);
+
+        return $this->redirectForMode(
+            $request,
+            $mode,
+            $ownership,
+            $profiles,
+            $priorities,
+        );
+    }
+
+    public function reset(
+        Request $request,
+        WorkspaceModePreference $preference,
+    ): RedirectResponse {
+        $preference->clear($request);
+
+        return redirect()
+            ->route('home')
+            ->with('status', 'Workspaceを自動判定に戻しました。');
+    }
+
+    private function publicMode(
+        string $workspaceMode,
+        WorkspaceModeRegistry $registry,
+    ): WorkspaceMode {
         $mode = WorkspaceMode::tryFrom(
             mb_strtolower(trim($workspaceMode)),
         );
 
-        abort_unless($mode instanceof WorkspaceMode, 404);
+        abort_unless(
+            $mode instanceof WorkspaceMode
+                && in_array(
+                    $mode->value,
+                    $registry->publicKeys(),
+                    true,
+                ),
+            404,
+        );
 
+        return $mode;
+    }
+
+    private function redirectForMode(
+        Request $request,
+        WorkspaceMode $mode,
+        PlanOwnershipService $ownership,
+        PlanCategoryProfileService $profiles,
+        PlanPriorityService $priorities,
+    ): RedirectResponse {
         if ($mode === WorkspaceMode::Overview) {
             return redirect()->route('home');
         }

@@ -2299,3 +2299,38 @@ Instant Navigationではglobal headerがDOMに残るため、fragment metadata�
 Mode BarはPlan filterではなくWorkspace navigationである。Task progress、Plan category、V53 Intelligence calculation、課金、AI trafficは変更しない。
 
 詳細は `docs/V54.1_FIXED_WORKSPACE_MODE_BAR.md` を正とする。
+
+
+## V54.2 Mode Context & Persistence
+
+Workspace Modeの手動選択を永続化する。ただし、保存されたModeによって明確なPlan/deep-linkの意味を上書きしない。
+
+Preference state:
+
+```text
+null → automatic
+overview | study | development → manual preference
+```
+
+Authenticated userは `users.workspace_mode_preference`、GuestはLaravel session `canovia_workspace_mode_preference` を使用する。public Mode keyの正当性は `WorkspaceModeRegistry` を基準に検証し、localStorage/cookieへ同じ状態を複製しない。
+
+V54.2 resolver precedence:
+
+```text
+explicit caller Mode
+→ valid ephemeral workspace_mode query
+→ strong domain route hint
+→ current Plan / Task / WorkSession profile
+→ persisted manual preference
+→ Overview
+```
+
+このprecedenceは「ユーザーの固定を無視する」ためではなく、具体的なdeep linkのsemantic truthを守るためのもの。たとえばDevelopmentを固定した状態でStudy Planを開いた場合、その画面ではStudyを表示するが、保存済みDevelopment preferenceは維持し、Homeへ戻ればDevelopmentへ復帰する。
+
+Mode Barの通常選択は `POST /workspace/{workspaceMode}/select` で保存し、`DELETE /workspace/preference` でautomaticへ戻す。V54.1の `GET /workspace/{workspaceMode}` はephemeral navigationとして残す。
+
+Mode Barはcurrent Modeとは別にstored preferenceを保持し、表示上は `固定中` / `画面に追従` / `Planに追従` / `自動` を区別する。Instant NavigationでもMode sourceとvisible context labelを同期し、retained headerの表示が古くならないようにする。
+
+V54.2はV53 Intelligence、Task progress、Plan category、課金、AI trafficを変更しない。
+
+詳細は `docs/V54.2_MODE_CONTEXT_AND_PERSISTENCE.md` を正とする。

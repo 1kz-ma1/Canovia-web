@@ -131,6 +131,19 @@ function payloadFromDocument(documentRef, url) {
     };
 }
 
+export function workspaceModeContextLabel(source) {
+    switch (String(source || '').trim()) {
+        case 'manual_preference':
+            return '固定中';
+        case 'route_hint':
+            return '画面に追従';
+        case 'plan_profile':
+            return 'Planに追従';
+        default:
+            return '自動';
+    }
+}
+
 function syncWorkspaceModeContext(documentRef, context) {
     if (!context || typeof context !== 'object') return;
 
@@ -155,6 +168,11 @@ function syncWorkspaceModeContext(documentRef, context) {
 
         const labelElement = bar.querySelector('[data-workspace-mode-label]');
         if (labelElement && label) labelElement.textContent = label;
+
+        const contextLabelElement = bar.querySelector('[data-workspace-mode-context-label]');
+        if (contextLabelElement) {
+            contextLabelElement.textContent = workspaceModeContextLabel(context.source);
+        }
 
         bar.querySelectorAll('[data-workspace-mode-current-icon]').forEach((icon) => {
             icon.classList.toggle(
