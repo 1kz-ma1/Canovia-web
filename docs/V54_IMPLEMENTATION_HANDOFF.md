@@ -227,7 +227,7 @@ Implemented:
 
 ### V54.4 — Development Workspace
 
-Status: **IN PROGRESS**
+Status: **IMPLEMENTED — PR PENDING**
 
 Branch:
 
@@ -237,20 +237,29 @@ Permanent spec:
 
 `docs/V54.4_DEVELOPMENT_WORKSPACE.md`
 
-Implementation contract:
+Implemented:
 
 - canonical Development Home at `GET /workspace/development`
+- Development Mode entry now lands on Development Home
 - one selected accessible Development Plan evaluated at a time
 - deterministic default Plan selection: priority → deadline → ID
-- optional explicit `plan_id` selection
-- no Development Plan → Plan creation empty state
+- explicit accessible Development Plan selection through `plan_id`
+- invalid/inaccessible/non-Development explicit Plan returns 404
+- no Development Plan → Plan creation empty state inside Development Workspace
 - no Release Evidence → GitHub-first empty state
+- no fake numeric Readiness before Release Evidence exists
 - Release Readiness / Biggest Release Gap / Current Action
-- seven Quality Gate summary
-- bounded Release Candidate context
-- GitHub / Evidence / History navigation
+- seven read-only Quality Gate summary
+- bounded Release Candidate Task / PR / branch / SHA / deployment context
+- stale Verification / Spec Sync warnings
+- Current Action / Release Readiness / Quality Gates / GitHub / Evidence / History navigation
+- mutation operations remain on existing GitHub Workflow / Execution surfaces
+- `workspace.development.*` strong route hint
 - existing V53.7 / V53.8 Development Intelligence remains authoritative
-- no new GitHub fetch or AI traffic on Workspace GET
+- Workspace GET creates no Task / Artifact / Evidence / Intelligence history
+- no new GitHub fetch or AI traffic
+- final validation run: #37189203048
+- V54.3 / V54.2 / V54.1 / V54.0 / V53.9 / V53.8 / V53.7 / GitHub Workflow / Home regressions passed
 
 ### V54.5 — Overview
 
