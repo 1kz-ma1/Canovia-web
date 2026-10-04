@@ -84,7 +84,7 @@ class GitHubWorkflowHubV460Test extends TestCase
             ->assertSee('data-github-workflow-lane="changes"', false)
             ->assertSee('data-github-workflow-lane="merge"', false)
             ->assertSee('data-github-workflow-lane="done"', false)
-            ->assertSee('RepositoryはGitHubからread-only snapshotを取得できます')
+            ->assertSee('RepositoryはGitHubから現在構造を読み取れます')
             ->assertSee('PR without Canovia state')
             ->assertSee('PR for review');
 
@@ -274,7 +274,7 @@ class GitHubWorkflowHubV460Test extends TestCase
         $this->assertNull($artifact->githubWorkflowState());
     }
 
-    public function test_roadmap_and_artifact_surface_link_to_plan_filtered_github_hub(): void
+    public function test_artifact_surface_links_to_plan_filtered_github_hub_without_reintroducing_it_into_roadmap(): void
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);
         $plan = $this->plan($user, 'Canovia開発');
@@ -285,7 +285,9 @@ class GitHubWorkflowHubV460Test extends TestCase
 
         $roadmap
             ->assertOk()
-            ->assertSee(route('github_workflow.index', ['plan_id' => $plan->id]));
+            ->assertDontSee(
+                route('github_workflow.index', ['plan_id' => $plan->id]),
+            );
 
         $artifacts = $this->actingAs($user)
             ->get(route('plans.artifacts.index', $plan));
