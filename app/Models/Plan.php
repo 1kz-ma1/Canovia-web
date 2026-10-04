@@ -132,6 +132,16 @@ class Plan extends Model
         return $this->hasMany(TaskEvidence::class);
     }
 
+    public function executionPreferences()
+    {
+        return $this->hasMany(PlanExecutionPreference::class);
+    }
+
+    public function executionActivities()
+    {
+        return $this->hasMany(ExecutionActivity::class);
+    }
+
     public function intelligenceActionProjections()
     {
         return $this->hasMany(IntelligenceActionProjection::class);
