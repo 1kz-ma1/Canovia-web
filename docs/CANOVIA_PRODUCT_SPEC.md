@@ -1995,3 +1995,47 @@ Study Activity / AI Practice / Recall / Recall candidateはexact `category === �
 Study Scope画面にはV53.5検証用の最小diagnosticとしてReadiness / Coverage / Mastery / Retention / Speed未計測 / 残りStudy Units / deadline pressureを表示する。最終Intelligence UXはV53.9、Next ActionはV53.6で扱う。
 
 詳細は `docs/V53.5_STUDY_INTELLIGENCE.md` を正とする。
+
+
+## V53.6 Adaptive Study Action
+
+V53.5のStudy State / Exam Readinessを、現在の一つのActionへ変換する。
+
+```text
+Study State
+→ Exam Readiness / Gap
+→ Decision
+→ Current Action
+→ Execute
+→ Evidence
+→ State / Action refresh
+```
+
+TaskはIntelligenceのsource of truthではなく、必要時の実行Projectionとして扱う。
+
+Study Decision V1はconfirmed scope、scope別remaining unit、Coverage、Mastery、Retention、deadline pressure、exam-date conflictからcandidateを生成・順位付けする。主なcandidateは `capture_scope / reduce_deadline_risk / establish_scope_baseline / reinforce_scope_mastery / verify_scope_retention / resolve_exam_date / maintain_readiness / continue_study`。
+
+`StudyAdaptiveActionGenerator` は選択Decisionから一つのCurrent Actionを生成し、title / why-now intent / confidence / success signals / target scope / target Task / execution routeを保持する。Actionに時間を捏造せず、estimatedMinutesはnullとする。
+
+`intelligence_action_projections` はCurrent Actionと変化履歴を永続化する。same semantic State + same semantic Actionは再表示しても同一Actionとして再利用し、判断が変わった時だけ旧Actionを `superseded`、新Actionを `active` とする。
+
+Task作成はAction生成時には行わない。
+
+```text
+Action
+├─ 合う未完了Taskあり → 既存Taskを再利用
+├─ Scope / 日付確認 → Study Scopeへ
+└─ 合うTaskなし → ユーザーが実行を選んだ時だけTaskへProjection
+```
+
+新規Projection Taskはprogress=0、estimated/remaining minutes=0から開始する。これは時間が0分という推定ではなく、V53.6が根拠のない時間を生成しないためのlegacy Task shape上の値である。Task作成直後はState/Decision/Actionを再評価し、「Task化が必要」という古いActionを残さない。
+
+Scope Human Confirmation、Practice assessment、Recall reviewはStateだけでなくCurrent Actionまでrefreshする。Primary mutationが成功した後のIntelligence projection失敗は元操作をrollbackしない。
+
+Homeは段階的にAction-firstへ移行する。現在最優先のPlanがStudyなら同Planの旧Task guidanceよりStudy Intelligence Actionを先頭に置き、Readiness / confidence / なぜこのActionかを表示する。他Plan候補は残す。Taskをまだ持たないStudy PlanでもPlan priorityが本当に上位ならActionを表示できる。完了済みStudy Planには新Actionを表示しない。他domainはV53.7以降のdomain intelligence実装まで既存task-based guidanceを維持する。
+
+Study ScopeではCurrent Action、why-now、Readiness、confidence、最近のAction変化を確認できる。
+
+V53.6のStudy Action policyはdeterministicで、mergeにより新しいOpenAI traffic/costを発生させない。
+
+詳細は `docs/V53.6_ADAPTIVE_ACTION.md` を正とする。
