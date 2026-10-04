@@ -53,6 +53,10 @@ final class DevelopmentIntelligencePresentationAdapter
             metrics: $this->metrics($result),
             targetTask: $targetTask,
             requiresTaskProjection: false,
+            workspaceUrl: route('workspace.development.index', [
+                'plan_id' => $plan->id,
+            ]),
+            workspaceLabel: 'Development Workspace',
         );
     }
 
