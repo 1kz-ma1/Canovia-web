@@ -6,7 +6,7 @@
 
             @if ($isIntentHub)
                 <p class="canovia-map-description">
-                    Space Stationを中心に、計画・実行・振り返り・共同へ辿るCanovia全体のNavigation Layerです。
+                    全体像・関係性・過去・共同・実行Contextを、Space Stationから空間的に辿るCanovia Exploreです。
                 </p>
             @elseif ($isDomainLevel && $isCollaborationMode)
                 <p class="canovia-map-description">
@@ -47,7 +47,7 @@
             <summary>Mapの見方</summary>
             @if ($isIntentHub)
                 <p>
-                    中央のSpace Stationが入力・相談のHubです。周囲のIntentから、Plan・Execution・振り返り・共同Contextへ直接辿れます。
+                    Homeが「今やること」を決める場所なのに対し、Exploreは全体像と関係性を辿る場所です。中央のSpace StationからPlan・Execution・振り返り・共同Contextへ探索できます。
                 </p>
             @elseif ($isHierarchyLevel && $isCollaborationMode)
                 <p>
@@ -74,7 +74,7 @@
     </div>
 
     <div class="canovia-map-fullscreen-surface-switch">
-        @include('layouts.partials.home-surface-switcher', ['activeSurface' => 'map'])
+        @include('layouts.partials.home-surface-switcher', ['activeSurface' => 'explore'])
     </div>
 
     <div class="canovia-map-hero-actions">
@@ -84,7 +84,7 @@
                 class="btn-primary"
                 data-map-semantic-zoom
                 data-map-zoom-direction="in"
-            >実行へ潜る</a>
+            >実行Contextを探索</a>
             <button type="button" class="btn-secondary hidden" data-map-focus-reset>全体を見る</button>
             <a href="{{ route('my_plans.index') }}" class="btn-secondary">計画一覧</a>
         @elseif ($isExecutionLevel)
