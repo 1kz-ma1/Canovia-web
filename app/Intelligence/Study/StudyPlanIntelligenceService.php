@@ -35,12 +35,25 @@ final class StudyPlanIntelligenceService
             ->where('plan_id', $plan->id)
             ->orderBy('sort_order')
             ->orderBy('id')
-            ->get(['id', 'title', 'description', 'next_action_note'])
+            ->get([
+                'id',
+                'title',
+                'description',
+                'next_action_note',
+                'status',
+                'progress_percent',
+                'priority',
+                'sort_order',
+            ])
             ->map(fn (Task $task) => [
                 'id' => (int) $task->id,
                 'title' => $task->title,
                 'description' => $task->description,
                 'next_action_note' => $task->next_action_note,
+                'status' => $task->status,
+                'progress_percent' => (int) $task->progress_percent,
+                'priority' => (int) $task->priority,
+                'sort_order' => (int) $task->sort_order,
             ])
             ->values()
             ->all();

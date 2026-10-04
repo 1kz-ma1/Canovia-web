@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FeatureKey;
+use App\Intelligence\Study\StudyAdaptiveActionService;
 use App\Intelligence\Study\StudyPlanIntelligenceService;
+use App\Models\IntelligenceActionProjection;
 use App\Exceptions\NativeAiExecutionException;
 use App\Models\InboxItem;
 use App\Models\Plan;
@@ -31,7 +33,7 @@ class StudyScopeCaptureController extends Controller
         PlanCategoryProfileService $profiles,
         FeatureAccessService $featureAccess,
         NativeAiGateway $nativeAi,
-        StudyPlanIntelligenceService $studyIntelligence,
+        StudyAdaptiveActionService $studyActions,
     ) {
         $ownership->authorizeView($request, $plan);
         $this->authorizeStudyPlan($plan, $profiles);
@@ -42,17 +44,28 @@ class StudyScopeCaptureController extends Controller
             ->latest('id')
             ->get();
 
+        $adaptiveAction = $studyActions->evaluate($plan);
         $intelligence = $captures->contains(
             fn (StudyScopeCapture $capture) => $capture->status === 'confirmed'
         )
-            ? $studyIntelligence->evaluate($plan)
+            ? $adaptiveAction->intelligence
             : null;
+
+        $recentActions = IntelligenceActionProjection::query()
+            ->where('plan_id', $plan->id)
+            ->where('domain', 'study')
+            ->latest('updated_at')
+            ->latest('id')
+            ->take(6)
+            ->get();
 
         return view('study_scope.index', [
             'plan' => $plan,
             'captures' => $captures,
             'canEdit' => $ownership->canEdit($request, $plan),
             'studyIntelligence' => $intelligence,
+            'studyAdaptiveAction' => $adaptiveAction,
+            'recentIntelligenceActions' => $recentActions,
             'canAnalyze' => $nativeAi->isConfigured()
                 && $featureAccess->canUse(
                     $request->user(),
@@ -236,7 +249,7 @@ class StudyScopeCaptureController extends Controller
         StudyScopeCapture $capture,
         PlanOwnershipService $ownership,
         PlanCategoryProfileService $profiles,
-        StudyPlanIntelligenceService $studyIntelligence,
+        StudyAdaptiveActionService $studyActions,
     ) {
         $ownership->authorizeEdit($request, $plan);
         $this->authorizeStudyPlan($plan, $profiles);
@@ -352,7 +365,7 @@ class StudyScopeCaptureController extends Controller
             }
         });
 
-        $studyIntelligence->tryPersistSnapshot($plan, now());
+        $studyActions->tryRefresh($plan, now());
 
         return redirect()
             ->route('plans.study_scope.index', $plan)

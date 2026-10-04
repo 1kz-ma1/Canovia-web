@@ -22,6 +22,7 @@ final class HomePageDataService
         private readonly CalendarPresentationService $calendarService,
         private readonly ActionHomeProjectionService $actionHome,
         private readonly PlanCategoryProfileService $categoryProfiles,
+        private readonly StudyAdaptiveHomeActionService $studyAdaptiveHome,
     ) {}
 
     public function build(Request $request, bool $prefetch = false): array
@@ -115,8 +116,30 @@ final class HomePageDataService
         }
 
         $primaryGuidance = $dashboard['guidance_deck']->first();
+        $intelligenceAction = $this->studyAdaptiveHome->primary(
+            $editablePlans,
+            $dashboard['guidance_deck'],
+        );
 
-        if ($primaryGuidance && ! $prefetch) {
+        if ($intelligenceAction && ! $prefetch) {
+            $this->eventLogger->recordOnce(
+                $actorToken,
+                BehaviorEventType::RecommendationShown,
+                $request,
+                $intelligenceAction['plan'],
+                $intelligenceAction['target_task'],
+                [
+                    'source' => 'study_intelligence_action',
+                    'selection' => 'state_readiness_decision',
+                    'decision_type' => (string) $intelligenceAction['decision']->type,
+                    'reason_code' => (string) $intelligenceAction['decision']->reasonCode,
+                    'action_kind' => (string) $intelligenceAction['action']->kind,
+                    'readiness_score' => $intelligenceAction['readiness']->score,
+                    'readiness_confidence' => $intelligenceAction['readiness']->confidence->value,
+                ],
+                withinMinutes: 2,
+            );
+        } elseif ($primaryGuidance && ! $prefetch) {
             $adaptive = $primaryGuidance['adaptive'];
             $this->eventLogger->recordOnce(
                 $actorToken,
@@ -136,7 +159,7 @@ final class HomePageDataService
             );
         }
 
-        return compact('dashboard', 'actionHome');
+        return compact('dashboard', 'actionHome', 'intelligenceAction');
     }
 
     private function stateSnapshotDue(Request $request): bool

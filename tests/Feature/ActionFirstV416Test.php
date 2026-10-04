@@ -38,10 +38,17 @@ class ActionFirstV416Test extends TestCase
 
         $response = $this->actingAs($user)->get(route('home'))->assertOk();
 
-        $response
-            ->assertSee('Careerで進める')
-            ->assertDontSee('CAREER PIPELINE')
-            ->assertDontSee('INTERVIEW FOCUS');
+        $response->assertSee('Careerで進める');
+
+        $xpath = $this->xpath($response->getContent());
+        $this->assertSame(
+            0,
+            $xpath->query('//*[@data-surface-id="career_pipeline"]')->length,
+        );
+        $this->assertSame(
+            0,
+            $xpath->query('//*[@data-surface-id="career_interview_focus"]')->length,
+        );
     }
 
     public function test_home_does_not_mutate_evidence_or_progress(): void

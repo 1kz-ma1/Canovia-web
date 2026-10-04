@@ -335,7 +335,7 @@ Important semantics:
 
 ### V53.5 — Study Intelligence
 
-Status: **IMPLEMENTED — PR PENDING**
+Status: **MERGED**
 
 Branch:
 
@@ -379,13 +379,46 @@ Important semantics:
 
 ### V53.6 — Adaptive Action
 
-Planned:
+Status: **IMPLEMENTED — PR PENDING**
 
-- Action-first Home
-- explain why now
-- Task as optional/durable projection
-- retire or change Actions when Evidence changes
-- user can inspect Plan / Task / Evidence / Decision history for trust
+Branch:
+
+`feature/v53-6-adaptive-action`
+
+Permanent spec:
+
+`docs/V53.6_ADAPTIVE_ACTION.md`
+
+Implemented:
+
+- `StudyAdaptiveDecisionEngine`
+- `StudyAdaptiveActionGenerator`
+- `StudyAdaptiveActionService`
+- durable `intelligence_action_projections`
+- semantic Action fingerprint/reference
+- active → superseded Action history
+- existing Task reuse
+- explicit/user-triggered Task projection only
+- immediate Action refresh after Task projection
+- Study Scope / Practice / Recall mutation hooks refresh Current Action
+- Study Current Action + why-now + history surface
+- Study Intelligence Action first on Home when the Study Plan is truly highest priority
+- completed Study Plans excluded from Home Action
+- existing non-Study Home guidance preserved
+
+Important semantics:
+
+- Action may exist without Task
+- Task is optional/durable execution projection
+- merely viewing an Action never creates a Task
+- a matching unfinished Task is reused
+- completed/cancelled Tasks are not reused
+- if no matching Task exists, Task is created only after explicit execute
+- projected Task time estimate remains 0 rather than invented
+- same semantic State/Action does not duplicate Action history
+- changed State can supersede the previous Action
+- Task progress remains outside Study State truth
+- V53.6 remains deterministic; no new OpenAI traffic
 
 ### V53.7 — Developer Evidence Sync
 
@@ -560,6 +593,8 @@ Current V53.4 checkpoint:
 
 Current V53.5 checkpoint:
 
+- PR #213 merged
+- merge commit: fb4444d5038ed22b947eed4988c02336ad070fb8
 - confirmed StudyScopeItem is the scope source of truth
 - Practice / Recall TaskEvidence is normalized through the existing Evidence boundary
 - conservative scope-to-Evidence matching implemented
@@ -571,20 +606,35 @@ Current V53.5 checkpoint:
 - State snapshot refresh hooks added to Scope confirm / Practice / Recall
 - school-test Study profiles can use Study Activity / Practice / Recall
 - diagnostic Study Intelligence surface added
-- Product Spec and permanent V53.5 spec synchronized
-- validation complete
 - validation run: #37171521259
+- temporary validation workflow removed after success
+
+Current V53.6 checkpoint:
+
+- Study Readiness gaps are ranked into deterministic Decision candidates
+- one current ActionProposal is generated from the selected Decision
+- durable Action projections and supersession history implemented
+- Action identity is semantic State + semantic Action, so page reopen does not create duplicate history
+- suitable unfinished Tasks are reused
+- Task creation is explicit/user-triggered only
+- Task projection immediately refreshes State/Decision/Action
+- Study Scope confirmation / Practice / Recall refresh the current Action
+- Home shows Study Intelligence Action first only when that Study Plan genuinely owns current priority
+- completed Study Plans do not invent a new Home Action
+- other domains keep existing task guidance
+- Study Scope explains current Action / why now / confidence / recent Action changes
+- Product Spec and permanent V53.6 spec synchronized
+- validation complete
+- validation run: #37172974165
 - temporary validation workflow removed after success
 - PR: pending creation
 
-Next after V53.5 merge:
+Next after V53.6 merge:
 
-- V53.6 Adaptive Action
-- rank the biggest current Gap / remaining scope
-- produce a small current Action set
-- explain why the Action is best now
-- keep Task as optional / durable projection
-- retire or change Actions when new Evidence changes State
+- V53.7 Developer Evidence Sync
+- normalize GitHub Issue / Branch / Commit / PR / Review / CI / Merge / Deploy as Development Evidence
+- reuse generic State / Readiness / Decision / Action boundaries
+- do not map GitHub events directly to progress
 
 ## Completion / deletion rule
 

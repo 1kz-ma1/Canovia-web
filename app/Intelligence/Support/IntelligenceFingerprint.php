@@ -2,6 +2,7 @@
 
 namespace App\Intelligence\Support;
 
+use App\Intelligence\Data\ActionProposal;
 use App\Intelligence\Data\Decision;
 use App\Intelligence\Data\EvidenceObservation;
 use App\Intelligence\Data\ReadinessAssessment;
@@ -96,6 +97,28 @@ final class IntelligenceFingerprint
     public static function decisionReference(Decision $decision): string
     {
         return 'decision:'.self::decision($decision);
+    }
+
+    public static function action(ActionProposal $action): string
+    {
+        return self::hash([
+            'kind' => $action->kind,
+            'title' => $action->title,
+            'intent' => $action->intent,
+            'estimated_minutes' => $action->estimatedMinutes,
+            'success_signals' => self::stableList($action->successSignals),
+            'metadata' => $action->metadata,
+        ]);
+    }
+
+    public static function actionReference(
+        StateSnapshot $state,
+        ActionProposal $action,
+    ): string {
+        return 'action:'.self::hash([
+            'state_fingerprint' => self::state($state),
+            'action_fingerprint' => self::action($action),
+        ]);
     }
 
     private static function hash(array $payload): string

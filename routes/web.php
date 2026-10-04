@@ -49,6 +49,7 @@ use App\Http\Controllers\GitHubWorkflowController;
 use App\Http\Controllers\StudyPracticeController;
 use App\Http\Controllers\StudyActivityController;
 use App\Http\Controllers\StudyScopeCaptureController;
+use App\Http\Controllers\StudyAdaptiveActionController;
 use App\Http\Controllers\StudyRecallController;
 use App\Http\Controllers\StudyRecallCandidateController;
 use App\Http\Controllers\FutureMemoController;
@@ -351,6 +352,9 @@ Route::post('/plans/{plan}/study-scope/{capture}/confirm', [StudyScopeCaptureCon
     ->name('plans.study_scope.confirm');
 Route::delete('/plans/{plan}/study-scope/{capture}', [StudyScopeCaptureController::class, 'destroy'])
     ->name('plans.study_scope.destroy');
+
+Route::post('/plans/{plan}/study-action/execute', [StudyAdaptiveActionController::class, 'execute'])
+    ->name('plans.study_action.execute');
 
 // 資格学習のActivity選択はAI演習より上位の共通入口として扱う。
 Route::get('/plans/{plan}/tasks/{task}/study-activity', [StudyActivityController::class, 'show'])

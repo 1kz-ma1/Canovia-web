@@ -14,7 +14,7 @@ use App\Services\FeatureAccessService;
 use App\Services\NativeAiGateway;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanCategoryProfileService;
-use App\Intelligence\Study\StudyPlanIntelligenceService;
+use App\Intelligence\Study\StudyAdaptiveActionService;
 use App\Services\StudyRecallSchedulerService;
 use App\Services\TaskEvidenceService;
 use Illuminate\Http\Request;
@@ -26,7 +26,7 @@ class StudyRecallController extends Controller
 {
     public function __construct(
         private readonly PlanCategoryProfileService $categoryProfiles,
-        private readonly StudyPlanIntelligenceService $studyIntelligence,
+        private readonly StudyAdaptiveActionService $studyActions,
     ) {}
     public function show(
         Request $request,
@@ -217,7 +217,7 @@ class StudyRecallController extends Controller
             occurredAt: $review->reviewed_at,
         );
 
-        $this->studyIntelligence->tryPersistSnapshot(
+        $this->studyActions->tryRefresh(
             $plan,
             $review->reviewed_at ?? now(),
         );

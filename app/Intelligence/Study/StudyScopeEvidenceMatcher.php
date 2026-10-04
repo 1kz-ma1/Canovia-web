@@ -56,6 +56,62 @@ final class StudyScopeEvidenceMatcher
                 $matchConfidence = 0.0;
                 $linkedEvidenceCount = 0;
 
+                $candidateTaskMatches = $taskMap
+                    ->map(function (array $task) use (
+                        $subject,
+                        $unit,
+                        $rangeTokens,
+                        $subjectUnique,
+                    ) {
+                        if (
+                            in_array((string) ($task['status'] ?? ''), ['done', 'cancelled'], true)
+                            || (int) ($task['progress_percent'] ?? 0) >= 100
+                        ) {
+                            return null;
+                        }
+
+                        $taskText = $this->normalize(implode(' ', array_filter([
+                            $task['title'] ?? null,
+                            $task['description'] ?? null,
+                            $task['next_action_note'] ?? null,
+                        ], fn ($value) => is_scalar($value) && trim((string) $value) !== '')));
+
+                        $confidence = $this->matchConfidence(
+                            subject: $subject,
+                            unit: $unit,
+                            rangeTokens: $rangeTokens,
+                            subjectUnique: $subjectUnique,
+                            taskText: $taskText,
+                            evidenceLabels: [],
+                        );
+
+                        if ($confidence < 0.70) {
+                            return null;
+                        }
+
+                        return [
+                            'task_id' => (int) $task['id'],
+                            'confidence' => $confidence,
+                            'priority' => max(1, min(5, (int) ($task['priority'] ?? 3))),
+                            'sort_order' => (int) ($task['sort_order'] ?? PHP_INT_MAX),
+                        ];
+                    })
+                    ->filter()
+                    ->sort(function (array $left, array $right) {
+                        $confidence = $right['confidence'] <=> $left['confidence'];
+                        if ($confidence !== 0) {
+                            return $confidence;
+                        }
+
+                        $priority = $left['priority'] <=> $right['priority'];
+                        if ($priority !== 0) {
+                            return $priority;
+                        }
+
+                        return $left['sort_order'] <=> $right['sort_order'];
+                    })
+                    ->values();
+
                 foreach ($orderedEvidence as $observation) {
                     $taskId = (int) data_get($observation->facts, 'task_id', 0);
                     if ($taskId <= 0) {
@@ -140,6 +196,15 @@ final class StudyScopeEvidenceMatcher
                     'observed' => $linkedEvidenceCount > 0,
                     'linked_evidence_count' => $linkedEvidenceCount,
                     'task_ids' => array_values(array_unique($taskIds)),
+                    'candidate_task_ids' => $candidateTaskMatches
+                        ->pluck('task_id')
+                        ->values()
+                        ->all(),
+                    'candidate_task_match_confidence' => $candidateTaskMatches
+                        ->mapWithKeys(fn (array $match) => [
+                            (string) $match['task_id'] => round((float) $match['confidence'], 4),
+                        ])
+                        ->all(),
                     'match_confidence' => round($matchConfidence, 4),
                     'practice_count' => count($practiceScores),
                     'recall_count' => count($recallScores),

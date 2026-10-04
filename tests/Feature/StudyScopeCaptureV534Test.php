@@ -210,11 +210,12 @@ class StudyScopeCaptureV534Test extends TestCase
         $this->assertSame('英語', $capture->items[1]->subject);
         $this->assertSame('processed', $capture->inboxItem->status);
 
-        // V53.5 may project confirmed scope into State, but it still must not
-        // generate Tasks, progress mutations, or Decisions.
+        // V53.6 now continues the confirmed-scope projection through Decision
+        // and current Action, while Task creation remains explicitly user-triggered.
         $this->assertDatabaseCount('tasks', 0);
         $this->assertDatabaseCount('intelligence_state_snapshots', 1);
-        $this->assertDatabaseCount('intelligence_decision_traces', 0);
+        $this->assertDatabaseCount('intelligence_decision_traces', 1);
+        $this->assertDatabaseCount('intelligence_action_projections', 1);
 
         $snapshot = IntelligenceStateSnapshot::firstOrFail();
         $this->assertSame('study_plan', $snapshot->scope_type);

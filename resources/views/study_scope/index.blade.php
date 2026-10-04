@@ -77,6 +77,68 @@
         @endif
     </section>
 
+    @if ($studyAdaptiveAction && $studyAdaptiveAction->primaryAction())
+        @php
+            $currentStudyAction = $studyAdaptiveAction->primaryAction();
+            $currentStudyDecision = $studyAdaptiveAction->decision;
+            $currentStudyReadiness = $studyAdaptiveAction->intelligence->readiness;
+        @endphp
+        <section class="page-card border-cyan-300/20 bg-cyan-300/[0.025] p-5 sm:p-6" data-study-adaptive-action>
+            <div class="flex flex-wrap items-start justify-between gap-4">
+                <div class="max-w-3xl">
+                    <p class="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">CURRENT ACTION</p>
+                    <h2 class="mt-1 text-xl font-black text-slate-50">{{ $currentStudyAction->title }}</h2>
+                    <p class="mt-2 text-sm leading-6 text-slate-300">{{ $currentStudyAction->intent }}</p>
+                </div>
+                @if ($canEdit)
+                    <form method="POST" action="{{ route('plans.study_action.execute', $plan) }}">
+                        @csrf
+                        <button type="submit" class="btn-primary min-h-11">このActionで進める</button>
+                    </form>
+                @endif
+            </div>
+
+            <details class="pk-action-details mt-4">
+                <summary>なぜ今これ？</summary>
+                <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                    <div class="rounded-xl border border-white/8 bg-slate-950/25 p-3">
+                        <p class="text-[11px] text-slate-500">判断</p>
+                        <p class="mt-1 text-sm font-bold text-slate-100">{{ $currentStudyDecision->summary }}</p>
+                    </div>
+                    <div class="rounded-xl border border-white/8 bg-slate-950/25 p-3">
+                        <p class="text-[11px] text-slate-500">準備度</p>
+                        <p class="mt-1 text-sm font-bold text-slate-100">
+                            {{ $currentStudyReadiness->score !== null ? $currentStudyReadiness->score.'/100' : '未判定' }}
+                        </p>
+                    </div>
+                    <div class="rounded-xl border border-white/8 bg-slate-950/25 p-3">
+                        <p class="text-[11px] text-slate-500">判断信頼度</p>
+                        <p class="mt-1 text-sm font-bold text-slate-100">{{ $currentStudyAction->confidence->percent() }}%</p>
+                    </div>
+                </div>
+
+                @if ($recentIntelligenceActions->isNotEmpty())
+                    <div class="mt-4 border-t border-white/8 pt-4">
+                        <p class="text-xs font-black text-slate-300">最近のAction変化</p>
+                        <div class="mt-2 space-y-2">
+                            @foreach ($recentIntelligenceActions as $historyAction)
+                                <div class="flex items-start justify-between gap-3 rounded-xl border border-white/8 bg-slate-950/20 p-3">
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-bold text-slate-200">{{ $historyAction->title }}</p>
+                                        <p class="mt-1 text-[11px] leading-4 text-slate-500">{{ $historyAction->intent }}</p>
+                                    </div>
+                                    <span class="badge {{ $historyAction->status === 'active' ? 'badge-green' : 'badge-slate' }}">
+                                        {{ $historyAction->status === 'active' ? '現在' : '変更済み' }}
+                                    </span>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            </details>
+        </section>
+    @endif
+
     @if ($studyIntelligence)
         @php
             $studyState = $studyIntelligence->state;
