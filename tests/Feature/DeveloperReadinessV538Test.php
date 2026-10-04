@@ -138,9 +138,6 @@ class DeveloperReadinessV538Test extends TestCase
             'production_environment' => true,
             'transient_environment' => false,
         ], '2026-10-04T01:30:00Z');
-        $this->confirmGate($user, $taskB, 'verification', 'passed');
-        $this->confirmGate($user, $taskB, 'spec_sync', 'passed');
-
         $result = app(DevelopmentPlanIntelligenceService::class)
             ->evaluate($plan, new CarbonImmutable('2026-10-04T12:00:00+09:00'));
 
@@ -290,12 +287,15 @@ class DeveloperReadinessV538Test extends TestCase
 
         $requestId = (string) Str::uuid();
         $service = app(DevelopmentQualityGateService::class);
+        $refs = $this->currentReleaseRefs($task);
         $service->confirm(
             $task,
             'verification',
             'passed',
             $requestId,
             userId: $user->id,
+            targetSha: $refs['deployment_sha'],
+            deploymentId: $refs['deployment_id'],
         );
         $service->confirm(
             $task,
@@ -303,6 +303,8 @@ class DeveloperReadinessV538Test extends TestCase
             'passed',
             $requestId,
             userId: $user->id,
+            targetSha: $refs['deployment_sha'],
+            deploymentId: $refs['deployment_id'],
         );
 
         $this->assertSame(
@@ -327,12 +329,14 @@ class DeveloperReadinessV538Test extends TestCase
                 ->count(),
         );
 
+        $refs = $this->currentReleaseRefs($task);
         $service->confirm(
             $task,
             'spec_sync',
             'not_required',
             (string) Str::uuid(),
             userId: $user->id,
+            targetSha: $refs['head_sha'],
         );
 
         $ready = $actions->refresh(
@@ -498,13 +502,51 @@ class DeveloperReadinessV538Test extends TestCase
         string $gate,
         string $status,
     ): void {
+        $refs = $this->currentReleaseRefs($task);
+
         app(DevelopmentQualityGateService::class)->confirm(
             $task,
             $gate,
             $status,
             (string) Str::uuid(),
             userId: $user->id,
+            targetSha: $gate === 'verification'
+                ? $refs['deployment_sha']
+                : $refs['head_sha'],
+            deploymentId: $gate === 'verification'
+                ? $refs['deployment_id']
+                : null,
         );
+    }
+
+    /**
+     * @return array{head_sha:string,deployment_sha:string,deployment_id:?int}
+     */
+    private function currentReleaseRefs(Task $task): array
+    {
+        $plan = $task->plan()->firstOrFail();
+        $result = app(DevelopmentPlanIntelligenceService::class)
+            ->evaluate($plan);
+
+        $taskState = collect(data_get(
+            $result->state->facts,
+            'task_states',
+            [],
+        ))->firstWhere('task_id', (int) $task->id);
+
+        $this->assertIsArray($taskState);
+
+        return [
+            'head_sha' => (string) data_get($taskState, 'head_sha', ''),
+            'deployment_sha' => (string) data_get(
+                $taskState,
+                'deployment_sha',
+                '',
+            ),
+            'deployment_id' => data_get($taskState, 'deployment_id') !== null
+                ? (int) data_get($taskState, 'deployment_id')
+                : null,
+        ];
     }
 
     private function evidence(
