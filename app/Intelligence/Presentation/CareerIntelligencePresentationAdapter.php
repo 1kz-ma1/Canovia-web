@@ -61,6 +61,7 @@ final class CareerIntelligencePresentationAdapter
             metrics: $this->metrics($result),
             targetTask: null,
             requiresTaskProjection: false,
+            qualitativeReadiness: true,
         );
     }
 

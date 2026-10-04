@@ -36,13 +36,23 @@ final readonly class PlanIntelligencePresentation
         public array $metrics = [],
         public ?Task $targetTask = null,
         public bool $requiresTaskProjection = false,
+        public bool $qualitativeReadiness = false,
     ) {}
 
     public function readinessDisplay(): string
     {
+        if ($this->qualitativeReadiness) {
+            return $this->stateLabel;
+        }
+
         return $this->readiness->score === null
             ? '未判定'
             : $this->readiness->score.'/100';
+    }
+
+    public function hasDistinctStateDisplay(): bool
+    {
+        return ! $this->qualitativeReadiness;
     }
 
     public function confidenceDisplay(): string

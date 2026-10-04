@@ -3539,3 +3539,99 @@ Canoviaは以下を行わない。
 - employerへの自動送信
 
 詳細は `docs/V55.1_CAREER_WORKSPACE_MODE.md` を正とする。
+
+
+## V55.2 Qualitative Readiness UX
+
+V55.2はiOS前のUX Completionにおける最初のsemantic cleanupである。
+
+V53.9の共通 `PlanIntelligencePresentation` はStudy / Developmentの数値Readinessを前提に作られていた。
+
+V55.1でCareerが同じpresentationへ入った結果、Careerの正しいState:
+
+```text
+readiness.score = null
+state = 観測中
+```
+
+に対して、共通UIが:
+
+```text
+Process Readiness
+未判定
+
+現在地
+観測中
+```
+
+と二重・矛盾表示する可能性があった。
+
+V55.2ではView側のCareer例外分岐を増やさず、presentation contract自体へ `qualitativeReadiness` を追加する。
+
+### Numeric Readiness
+
+Study / Development:
+
+```text
+qualitativeReadiness = false
+readinessDisplay = score / 100
+Current State = separate
+```
+
+scoreが本当に未観測の場合だけ `未判定` を表示する。
+
+### Qualitative Readiness
+
+Career:
+
+```text
+qualitativeReadiness = true
+readinessDisplay = stateLabel
+Current State = duplicateなのでcompact surfaceでは分離表示しない
+```
+
+Career表示:
+
+- Career signalなし → `未観測`
+- Career signalあり → `観測中`
+
+数値scoreは生成しない。
+
+### Shared surfaces
+
+同じReadiness semanticsを:
+
+- Action Home Intelligence card
+- Overview Global Current Action
+- Overview Mode summary
+- shared Intelligence summary
+- Career Workspace
+
+で利用する。
+
+Viewは `domain === career` を見てReadinessの意味を決めない。
+
+adapterがdomain-specific labelを提供し、presentationがnumeric / qualitativeの表示契約を持つ。
+
+### Density rule
+
+qualitative ReadinessとCurrent Stateが同じ意味の場合、status tileを1つに統合する。
+
+これにより重複statusよりCurrent Action / Biggest Gapを視覚的に優先する。
+
+Study / Developmentの既存2要素表示は変更しない。
+
+### Safety / cost boundary
+
+V55.2では:
+
+- Career scoreを追加しない
+- hiring probabilityを推定しない
+- State / Decision policyを変更しない
+- persistenceを変更しない
+- DB queryを追加しない
+- migrationを追加しない
+- AI trafficを追加しない
+- provider trafficを追加しない
+
+詳細は `docs/V55.2_QUALITATIVE_READINESS_UX.md` を正とする。
