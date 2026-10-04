@@ -41,7 +41,7 @@ UI specialization happens through Workspace Modes.
 
 ## V54.0 — Workspace Mode Contract
 
-Status: **IMPLEMENTED — VALIDATION PENDING**
+Status: **IMPLEMENTED — PR PENDING**
 
 Branch:
 
@@ -67,6 +67,9 @@ Implemented:
 - Plan / Task / WorkSession profile inference
 - explicit caller override boundary for future persistence layer
 - registry / resolver tests
+- final validation run: #37181633651
+- V53.9 / V53.8 / V53.6 regressions passed
+- temporary validation workflow removed after success
 
 V54.0 intentionally does not render or persist the Mode selector.
 
