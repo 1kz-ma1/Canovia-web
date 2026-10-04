@@ -72,13 +72,13 @@ class WorkspaceModeBarV541Test extends TestCase
         );
 
         $this->actingAs($user)
-            ->get(route('workspace_modes.select', [
+            ->get(route('workspace_modes.enter', [
                 'workspaceMode' => 'study',
             ]))
             ->assertRedirect(route('plans.study_scope.index', $study));
 
         $this->actingAs($user)
-            ->get(route('workspace_modes.select', [
+            ->get(route('workspace_modes.enter', [
                 'workspaceMode' => 'development',
             ]))
             ->assertRedirect(route('github_workflow.index', [
@@ -86,7 +86,7 @@ class WorkspaceModeBarV541Test extends TestCase
             ]));
 
         $this->actingAs($user)
-            ->get(route('workspace_modes.select', [
+            ->get(route('workspace_modes.enter', [
                 'workspaceMode' => 'overview',
             ]))
             ->assertRedirect(route('home'));
@@ -99,7 +99,7 @@ class WorkspaceModeBarV541Test extends TestCase
         ]);
 
         $redirect = $this->actingAs($user)
-            ->get(route('workspace_modes.select', [
+            ->get(route('workspace_modes.enter', [
                 'workspaceMode' => 'study',
             ]));
 
