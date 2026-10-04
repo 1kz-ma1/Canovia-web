@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Intelligence\Enums\IntelligenceDomain;
+use App\Intelligence\Presentation\IntelligenceStateChangeFeedbackService;
 use App\Intelligence\Presentation\PlanIntelligencePresentation;
 use App\Intelligence\Presentation\PlanIntelligencePresentationService;
 use App\Models\InboxItem;
@@ -25,6 +27,7 @@ final class OverviewWorkspaceController extends Controller
         PlanPriorityService $priorities,
         PlanIntelligencePresentationService $presentations,
         BehaviorIdentityService $identity,
+        IntelligenceStateChangeFeedbackService $stateChanges,
     ) {
         $homeData = $home->build($request, prefetch: true);
         $plans = $ownership->ownedPlans($request, [
@@ -54,6 +57,27 @@ final class OverviewWorkspaceController extends Controller
             ->whereIn('status', ['new', 'review'])
             ->latest('id');
 
+        $intelligenceChanges = collect([
+            $studyPlan instanceof Plan
+                ? $stateChanges->latestForPlan(
+                    $studyPlan,
+                    IntelligenceDomain::Study,
+                )
+                : null,
+            $developmentPlan instanceof Plan
+                ? $stateChanges->latestForPlan(
+                    $developmentPlan,
+                    IntelligenceDomain::Development,
+                )
+                : null,
+        ])->filter()
+            ->sortByDesc(
+                fn (array $change) =>
+                    $change['occurred_at']?->timestamp ?? 0,
+            )
+            ->take(2)
+            ->values();
+
         $primaryIntelligence = $homeData['intelligencePresentation'] ?? null;
         $primaryGuidance = collect(
             data_get($homeData, 'dashboard.guidance_deck', []),
@@ -80,6 +104,7 @@ final class OverviewWorkspaceController extends Controller
             'importantSignals' => collect(
                 data_get($homeData, 'actionHome.signals', []),
             )->take(4)->values(),
+            'intelligenceChanges' => $intelligenceChanges,
         ]);
     }
 
