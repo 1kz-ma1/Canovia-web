@@ -106,6 +106,10 @@ final class WorkspaceModeController extends Controller
             return redirect()->route('workspace.development.index');
         }
 
+        if ($mode === WorkspaceMode::Career) {
+            return redirect()->route('workspace.career.index');
+        }
+
         $profileKey = $mode->value;
         $plans = $ownership->ownedPlans($request, [
             'tasks',
@@ -154,6 +158,10 @@ final class WorkspaceModeController extends Controller
                     'workspace.development.index',
                     ['plan_id' => $plan->id],
                 ),
+                WorkspaceMode::Career => redirect()->route(
+                    'workspace.career.index',
+                    ['plan_id' => $plan->id],
+                ),
                 WorkspaceMode::Overview => redirect()->route('workspace.overview.index'),
             };
         }
@@ -162,9 +170,12 @@ final class WorkspaceModeController extends Controller
             ->route('home', ['workspace_mode' => $mode->value])
             ->with(
                 'status',
-                $mode === WorkspaceMode::Study
-                    ? '学習Workspaceを始めるには、学習Planを作成してください。'
-                    : '開発Workspaceを始めるには、開発Planを作成してください。',
+                match ($mode) {
+                    WorkspaceMode::Study => '学習Workspaceを始めるには、学習Planを作成してください。',
+                    WorkspaceMode::Development => '開発Workspaceを始めるには、開発Planを作成してください。',
+                    WorkspaceMode::Career => 'Career Workspaceを始めるには、Career Planを作成してください。',
+                    WorkspaceMode::Overview => 'Overviewを開きました。',
+                },
             );
     }
 }

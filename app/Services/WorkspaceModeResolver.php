@@ -144,6 +144,12 @@ final class WorkspaceModeResolver
             return WorkspaceMode::Study;
         }
 
+        if (str_starts_with($routeName, 'workspace.career.')
+            || str_starts_with($routeName, 'plans.career.')
+        ) {
+            return WorkspaceMode::Career;
+        }
+
         if (
             str_starts_with($routeName, 'workspace.development.')
             || str_starts_with($routeName, 'github_workflow.')

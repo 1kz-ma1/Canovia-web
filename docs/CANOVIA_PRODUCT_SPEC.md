@@ -3267,3 +3267,275 @@ V55.0ではCareerをまだPublic Workspace Modeへ追加しない。
 次のV55.1で、V54のWorkspace Mode registry / persistence / onboarding / telemetry契約へCareerを載せる。
 
 詳細は `docs/V55.0_CAREER_INTELLIGENCE_FOUNDATION.md` を正とする。
+
+
+## V55.1 Career Workspace Mode
+
+V55.1でCareerをV54 Workspace Mode systemへ正式追加する。
+
+Public Workspace Modes:
+
+```text
+Overview
+Study
+Development
+Career
+```
+
+Careerのreasoning authorityはV55.0 Career Intelligenceをそのまま使う。
+
+```text
+Career Reality / Evidence
+→ Career State
+→ qualitative Process Readiness
+→ Gap
+→ Decision
+→ Current Action
+```
+
+### Canonical Career Workspace
+
+```text
+GET /workspace/career
+route = workspace.career.index
+```
+
+責務:
+
+- representative Career Plan選択
+- Process Readiness
+- Biggest Process Gap
+- Current Action
+- latest State Change
+- Career Intelligence history
+- existing Career operational surfaceへの導線
+
+既存:
+
+```text
+/plans/{plan}/career
+route = plans.career.index
+```
+
+は以下のoperation authorityとして残す。
+
+- Career Capture
+- Application pipeline
+- interview scheduling
+- result recording
+- Interview Review
+
+つまり:
+
+```text
+Career Workspace
+→ 判断面
+
+plans.career.index
+→ 操作面
+```
+
+### Registry / Resolver
+
+`WorkspaceMode::Career` を追加する。
+
+Registry:
+
+- label = Career
+- icon = career
+- accent = emerald
+- supported profile = career
+- suggested Plan category = 就活・キャリア
+
+Navigation keys:
+
+- current_action
+- process_readiness
+- career_inbox
+- pipeline
+- interviews
+- history
+
+Strong route hints:
+
+- `workspace.career.*`
+- `plans.career.*`
+
+Career Plan deep linkはprofile `career` からCareer Modeへ解決する。
+
+Career manual preferenceも保存可能。
+
+Creative / Generalは引き続きOverview fallback。
+
+### Self-completing Career onboarding
+
+Career onboarding:
+
+```text
+Career Plan
+→ first real Career signal
+→ normal Career Intelligence
+```
+
+Steps:
+
+1. `create_plan`
+2. `capture_career_signal`
+
+Career signalはV55.0 Stateの:
+
+```text
+has_career_signal = true
+```
+
+で判定する。
+
+signal sourceは以下のいずれでもよい。
+
+- Career Capture
+- Career Application
+- Selection Event
+- supported Career TaskEvidence
+
+1件でも現実Stateが入ればonboardingは自動で消える。
+
+Application整理やInterview Reviewはonboardingに含めない。
+それらは通常のCurrent Actionが判断する。
+
+### Mode-aware Career Plan creation
+
+Career Workspaceから:
+
+```text
+/plans/create/manual?workspace_mode=career
+```
+
+を開く。
+
+初期category:
+
+```text
+就活・キャリア
+```
+
+profileがcareerのまま作成された場合:
+
+```text
+create
+→ /workspace/career?plan_id=...
+→ capture_career_signal
+```
+
+ユーザーがcategoryを変更した場合はCareerへ強制redirectしない。
+
+### Qualitative presentation
+
+Careerは共通 `PlanIntelligencePresentation` を使う。
+
+ただし数値Readinessは表示しない。
+
+```text
+readiness.score = null
+```
+
+Career Workspace表示:
+
+- signalなし → 未観測
+- signalあり → 観測中
+
+label:
+
+```text
+Process Readiness
+```
+
+metrics:
+
+- Capture
+- Application
+- Interview
+- Review Due
+
+これは内定確率・市場価値・候補者スコアではない。
+
+### Action routing
+
+`career_interview_review`:
+
+```text
+→ plans.career.interview_reviews.show
+```
+
+その他:
+
+```text
+→ plans.career.index
+```
+
+自動応募・自動送信は行わない。
+
+### State Change Feedback
+
+CareerもV54.6 generic historyへ参加する。
+
+safe Evidence labels:
+
+- Interview Review
+- Selection Result
+
+Career level labels:
+
+- unknown → 未観測
+- developing → 観測中
+- blocked → 要整理
+- ready → 整理済み
+
+会社名・役職・面接回答はState Changeへ出さない。
+
+### Overview
+
+OverviewはCareerについても:
+
+- representative Plan
+- Mode summary
+- State Change candidate
+- first-use choice
+
+を持つ。
+
+representative ordering:
+
+```text
+priority
+→ deadline
+→ ID
+```
+
+Intelligence ChangesはStudy / Development / Career全体から新しい順に最大2件のまま。
+
+first-use chooserはStudy / Development / Careerのいずれかのspecialized Planが存在すれば消える。
+
+### Telemetry / Mode Bar
+
+V54.8 telemetry safe Mode allowlistへ `career` を追加する。
+
+追加fieldはない。
+
+Mode BarにはCareerを追加し、emerald accentと専用briefcase iconを使う。
+
+### Safety boundary
+
+Career WorkspaceでもV55.0 safety boundaryを維持する。
+
+Canoviaは以下を行わない。
+
+- hiring probability推定
+- market value計算
+- user ranking
+- employer rating
+- offer承諾 / 辞退判断
+- protected trait推論
+- auto application submission
+- employerへの自動送信
+
+詳細は `docs/V55.1_CAREER_WORKSPACE_MODE.md` を正とする。

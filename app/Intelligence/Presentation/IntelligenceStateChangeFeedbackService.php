@@ -227,6 +227,8 @@ final class IntelligenceStateChangeFeedbackService
             'pull_request_review_submitted' => 'Review',
             'github_deployment_observed' => 'Production Deploy',
             'development_quality_gate_confirmed' => 'Quality Gate確認',
+            'interview_review_completed' => 'Interview Review',
+            'interview_result_recorded' => 'Selection Result',
             default => 'Evidence',
         };
     }
@@ -287,6 +289,15 @@ final class IntelligenceStateChangeFeedbackService
                 'blocked' => '立て直しが必要',
                 'developing' => '準備中',
                 default => '判定準備中',
+            };
+        }
+
+        if ($domain === IntelligenceDomain::Career) {
+            return match ($level) {
+                'ready' => '整理済み',
+                'blocked' => '要整理',
+                'developing' => '観測中',
+                default => '未観測',
             };
         }
 

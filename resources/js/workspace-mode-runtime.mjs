@@ -3,7 +3,7 @@ import {
     canoviaClientSurface,
 } from './client-runtime.mjs';
 
-const PUBLIC_MODES = new Set(['overview', 'study', 'development']);
+const PUBLIC_MODES = new Set(['overview', 'study', 'development', 'career']);
 const AUTO_CONTEXT_SOURCES = new Set(['route_hint', 'plan_profile', 'default']);
 const CONTEXT_SOURCES = new Set([
     'explicit',

@@ -52,6 +52,12 @@ final class OverviewWorkspaceController extends Controller
             $profiles,
             $priorities,
         );
+        $careerPlan = $this->topPlan(
+            $plans,
+            'career',
+            $profiles,
+            $priorities,
+        );
 
         $actorToken = $identity->resolve($request);
         $userId = $request->user()?->id;
@@ -73,6 +79,12 @@ final class OverviewWorkspaceController extends Controller
                     IntelligenceDomain::Development,
                 )
                 : null,
+            $careerPlan instanceof Plan
+                ? $stateChanges->latestForPlan(
+                    $careerPlan,
+                    IntelligenceDomain::Career,
+                )
+                : null,
         ])->filter()
             ->sortByDesc(
                 fn (array $change) =>
@@ -82,7 +94,11 @@ final class OverviewWorkspaceController extends Controller
             ->values();
 
         $firstUseModeChoices = collect();
-        if (! $studyPlan instanceof Plan && ! $developmentPlan instanceof Plan) {
+        if (
+            ! $studyPlan instanceof Plan
+            && ! $developmentPlan instanceof Plan
+            && ! $careerPlan instanceof Plan
+        ) {
             $firstUseModeChoices = $workspaceModes->all()
                 ->reject(fn ($definition) =>
                     $definition->mode === WorkspaceMode::Overview
@@ -121,6 +137,11 @@ final class OverviewWorkspaceController extends Controller
             'developmentSummary' => $this->modeSummary(
                 'development',
                 $developmentPlan,
+                $presentations,
+            ),
+            'careerSummary' => $this->modeSummary(
+                'career',
+                $careerPlan,
                 $presentations,
             ),
             'pendingInboxCount' => (clone $pendingInbox)->count(),
@@ -193,9 +214,21 @@ final class OverviewWorkspaceController extends Controller
         ?Plan $plan,
         PlanIntelligencePresentationService $presentations,
     ): array {
-        $workspaceUrl = $mode === 'study'
-            ? route('workspace.study.index', $plan ? ['plan_id' => $plan->id] : [])
-            : route('workspace.development.index', $plan ? ['plan_id' => $plan->id] : []);
+        $workspaceUrl = match ($mode) {
+            'study' => route(
+                'workspace.study.index',
+                $plan ? ['plan_id' => $plan->id] : [],
+            ),
+            'development' => route(
+                'workspace.development.index',
+                $plan ? ['plan_id' => $plan->id] : [],
+            ),
+            'career' => route(
+                'workspace.career.index',
+                $plan ? ['plan_id' => $plan->id] : [],
+            ),
+            default => route('workspace.overview.index'),
+        };
 
         if (! $plan instanceof Plan) {
             return [
@@ -221,16 +254,23 @@ final class OverviewWorkspaceController extends Controller
             ];
         }
 
-        $setupNeeded = $mode === 'study'
-            ? (int) data_get(
+        $setupNeeded = match ($mode) {
+            'study' => (int) data_get(
                 $presentation->state->metrics,
                 'confirmed_scope_count',
                 0,
-            ) <= 0
-            : ! is_array(data_get(
+            ) <= 0,
+            'development' => ! is_array(data_get(
                 $presentation->state->facts,
                 'focus_task_state',
-            ));
+            )),
+            'career' => ! (bool) data_get(
+                $presentation->state->facts,
+                'has_career_signal',
+                false,
+            ),
+            default => false,
+        };
 
         return [
             'mode' => $mode,

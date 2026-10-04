@@ -253,6 +253,10 @@ class WorkspaceModeOnboardingV547Test extends TestCase
                 'data-overview-first-use-workspace="development"',
                 false,
             )
+            ->assertSee(
+                'data-overview-first-use-workspace="career"',
+                false,
+            )
             ->assertDontSee(
                 'data-overview-first-use-workspace="overview"',
                 false,

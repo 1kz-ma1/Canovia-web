@@ -146,12 +146,37 @@ class WorkspaceModePersistenceV542Test extends TestCase
         );
     }
 
-    public function test_non_public_mode_cannot_be_persisted(): void
+    public function test_career_mode_can_be_persisted_as_a_public_workspace(): void
     {
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->post('/workspace/career/select')
+            ->post(route('workspace_modes.select', [
+                'workspaceMode' => WorkspaceMode::Career->value,
+            ]))
+            ->assertRedirect(route('workspace.career.index'));
+
+        $this->assertSame(
+            'career',
+            $user->fresh()->workspace_mode_preference,
+        );
+
+        $this->actingAs($user)
+            ->get(route('home'))
+            ->assertOk()
+            ->assertSee('data-current-workspace-mode="career"', false)
+            ->assertSee(
+                'data-workspace-mode-source="manual_preference"',
+                false,
+            );
+    }
+
+    public function test_unknown_mode_cannot_be_persisted(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post('/workspace/unknown/select')
             ->assertNotFound();
 
         $this->assertNull(

@@ -13,7 +13,7 @@ class WorkspaceModeRegistryV540Test extends TestCase
         $registry = new WorkspaceModeRegistry();
 
         $this->assertSame(
-            ['overview', 'study', 'development'],
+            ['overview', 'study', 'development', 'career'],
             $registry->publicKeys(),
         );
 
@@ -22,7 +22,7 @@ class WorkspaceModeRegistryV540Test extends TestCase
             array_values(array_unique($registry->publicKeys())),
         );
 
-        $this->assertNull($registry->forProfile('career'));
+        $this->assertSame(WorkspaceMode::Career, $registry->forProfile('career')?->mode);
         $this->assertNull($registry->forProfile('creative'));
         $this->assertNull($registry->forProfile('general'));
     }
@@ -34,6 +34,7 @@ class WorkspaceModeRegistryV540Test extends TestCase
         $overview = $registry->definition(WorkspaceMode::Overview);
         $study = $registry->definition(WorkspaceMode::Study);
         $development = $registry->definition(WorkspaceMode::Development);
+        $career = $registry->definition(WorkspaceMode::Career);
 
         $this->assertSame([], $overview->supportedProfileKeys);
         $this->assertSame(['study'], $study->supportedProfileKeys);
@@ -41,6 +42,7 @@ class WorkspaceModeRegistryV540Test extends TestCase
             ['development'],
             $development->supportedProfileKeys,
         );
+        $this->assertSame(['career'], $career->supportedProfileKeys);
 
         $this->assertContains('study_scope', $study->navigationKeys);
         $this->assertContains('practice', $study->navigationKeys);
@@ -49,6 +51,8 @@ class WorkspaceModeRegistryV540Test extends TestCase
             $development->navigationKeys,
         );
         $this->assertContains('github', $development->navigationKeys);
+        $this->assertContains('pipeline', $career->navigationKeys);
+        $this->assertContains('interviews', $career->navigationKeys);
 
         $this->assertSame(
             'capture_study_scope',
@@ -58,9 +62,14 @@ class WorkspaceModeRegistryV540Test extends TestCase
             'connect_github',
             $development->emptyStateActionKey,
         );
+        $this->assertSame(
+            'capture_career_signal',
+            $career->emptyStateActionKey,
+        );
 
         $this->assertSame('資格学習', $study->suggestedPlanCategory);
         $this->assertSame('個人開発', $development->suggestedPlanCategory);
+        $this->assertSame('就活・キャリア', $career->suggestedPlanCategory);
         $this->assertSame([], $overview->onboardingSteps);
         $this->assertSame(
             ['create_plan', 'capture_study_scope', 'record_study_evidence'],
@@ -69,6 +78,10 @@ class WorkspaceModeRegistryV540Test extends TestCase
         $this->assertSame(
             ['create_plan', 'connect_github_evidence'],
             array_column($development->onboardingSteps, 'key'),
+        );
+        $this->assertSame(
+            ['create_plan', 'capture_career_signal'],
+            array_column($career->onboardingSteps, 'key'),
         );
     }
 
@@ -84,7 +97,11 @@ class WorkspaceModeRegistryV540Test extends TestCase
             WorkspaceMode::Development,
             $registry->forProfile('development')?->mode,
         );
-        $this->assertFalse($registry->supportsProfile('career'));
+        $this->assertSame(
+            WorkspaceMode::Career,
+            $registry->forProfile('career')?->mode,
+        );
+        $this->assertTrue($registry->supportsProfile('career'));
         $this->assertFalse($registry->supportsProfile(''));
     }
 }
