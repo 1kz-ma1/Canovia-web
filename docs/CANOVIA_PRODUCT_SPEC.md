@@ -1893,3 +1893,55 @@ baseline agreementは品質そのものではなくevaluation signalであり、
 自然会話AIとDecision reasoningは別責務のまま維持する。
 
 詳細は `docs/V53.3_REASONING_ROUTER.md` を正とする。
+
+
+## V53.4 Study Scope Capture
+
+Studyの最初の獲得導線として、テスト範囲の画像・スクリーンショット・PDFからreviewableなStudy Scopeを作る。
+
+```text
+画像 / スクショ / PDF
+→ Structured Extraction
+→ Human Review
+→ Confirmed Study Scope
+```
+
+対象は資格試験だけに限定しない。Plan Category Profileが `study` のPlanを対象とし、定期テスト・学校の試験・大学試験等も扱う。
+
+Study Scope CaptureはFree core capabilityとして `study_scope_capture` を追加する。テスト範囲を読み取る入力境界はCanovia本体の価値であり、Premium専用にはしない。高頻度Reasoningや長期分析は別Capabilityで扱う。
+
+元ファイルは既存private `InboxItem` storageを再利用し、Study専用の別ファイル保存基盤を作らない。
+
+`StudyScopeCapture` はAI draft / review lifecycleを保持し、`StudyScopeItem` はHuman Confirmation済みの範囲だけを保持する。
+
+AI抽出対象:
+
+- exam title
+- source date text
+- normalized exam date
+- subject
+- unit
+- range text
+- page start / end
+- short source excerpt
+- confidence
+- ambiguities
+
+AIは資料にない科目・単元・ページ・日付を補完しない。年が不明な「10月15日」等は `exam_date_text` へ残し、`exam_date` はnullのままHuman Reviewへ渡す。
+
+Human Confirmation前は、
+
+- StudyScopeItemを作らない
+- Taskを作らない
+- Task progressを変えない
+- Intelligence Stateを変えない
+
+Human Confirmation後だけconfirmed scope factsとして保存し、V53.5はこのconfirmed dataだけを入力に使う。
+
+Native AIが失敗・未設定でも元ファイルは保持し、手動で科目・単元・範囲・ページ・日付を入力して確定できる。Captureがprovider availabilityに依存して消失しないことを保証する。
+
+全文OCR transcriptは永続化せず、構造化範囲・短い根拠抜粋・曖昧点だけを保存する。
+
+Planの学習カテゴリには「試験範囲」導線を追加し、元ファイル確認、抽出信頼度、曖昧点、範囲行追加/削除、再解析、確認・修正・確定を1画面で行える。
+
+詳細は `docs/V53.4_STUDY_SCOPE_CAPTURE.md` を正とする。
