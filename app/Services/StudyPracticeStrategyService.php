@@ -189,6 +189,7 @@ class StudyPracticeStrategyService
                 30,
             );
             $deadlineGeneral = is_int($daysUntilExam)
+                && $daysUntilExam >= 0
                 && $daysUntilExam <= $generalPracticeDays;
 
             if ($forcedGeneral || $deadlineGeneral) {
