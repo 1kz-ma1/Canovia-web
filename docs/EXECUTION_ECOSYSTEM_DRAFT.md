@@ -1639,20 +1639,46 @@ Validated:
 
 Canonical implementation spec: `docs/V55.8_EXTERNAL_ACTIVITY_INTEGRATION_VALIDATION.md`
 
-### Later — Authenticated Provider Activity API
+### V55.9 — Provider Connection / Authenticated Activity Intake — implemented
 
-Next externalization step:
+The first provider-neutral authenticated return path is implemented.
 
 ```text
-authenticated provider event
-→ validate
-→ normalize
+user-owned ProviderConnection
+→ one-time connection secret
+→ encrypted secret at rest
+→ short-lived opaque execution_context
+→ HMAC-signed stateless Activity request
+→ server-side user/provider/capability/Task resolution
 → idempotent ExecutionActivity
-→ safe Task association
-→ existing projection
+→ existing Evidence projection
 ```
 
-Define ProviderConnection/auth/replay/privacy boundaries before exposing a public API.
+Validated:
+
+- native providers cannot create external ProviderConnections
+- revoked connections cannot authenticate
+- stale timestamp / invalid signature are rejected before persistence
+- execution_context cannot be reused across connections
+- payload-supplied routing IDs are ignored
+- arbitrary provider metrics do not cross the normalization boundary
+- Study Practice result reaches existing Study Intelligence
+- Task progress/status remain unchanged
+
+Canonical implementation spec: `docs/V55.9_PROVIDER_CONNECTION_AUTHENTICATED_ACTIVITY_INTAKE.md`
+
+### Later — Real Provider Connection Validation
+
+Use one real external provider to validate:
+
+```text
+provider-specific connection handshake
+→ generic ProviderConnection
+→ launch with execution_context
+→ signed Activity return
+```
+
+Do not generalize into Marketplace/Developer Portal until a real provider contract proves the abstraction.
 
 ### Later — Launch Integration
 

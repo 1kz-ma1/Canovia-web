@@ -4465,3 +4465,148 @@ execution-activity:{activity_id}
 Developer Proは `docs/future/DEVELOPER_PRO_AI_DEVELOPMENT_ORCHESTRATION.md` のFuture Designとしてのみ保持する。
 
 詳細は `docs/V55.8_EXTERNAL_ACTIVITY_INTEGRATION_VALIDATION.md` を正とする。
+
+
+## V55.9 Provider Connection / Authenticated Activity Intake
+
+V55.9はExecution Ecosystemの最初のprovider-neutral authenticated return pathを追加する。
+
+```text
+External Provider
+→ ProviderConnection
+→ signed stateless Activity API
+→ opaque execution_context
+→ server-side Task association
+→ ExecutionActivity
+→ TaskEvidence
+→ existing Intelligence
+```
+
+### ProviderConnection
+
+新規 `provider_connections` tableを追加する。
+
+ConnectionはCanovia user所有で、enabled external providerだけ作成可能。
+
+保存:
+
+- user_id
+- provider_key
+- public_id
+- encrypted secret ciphertext
+- status
+- last_used_at
+- revoked_at
+
+plaintext secretはConnection作成時に1回だけ返し、DBへ平文保存しない。
+
+### Signed Activity API
+
+Endpoint:
+
+```text
+POST /api/execution/activities
+```
+
+Headers:
+
+```text
+X-Canovia-Connection
+X-Canovia-Timestamp
+X-Canovia-Signature
+```
+
+Signature:
+
+```text
+HMAC-SHA256(
+  secret,
+  "<unix_timestamp>.<raw_request_body>"
+)
+```
+
+timestamp toleranceは±300秒。
+
+raw body / signature / plaintext secretは永続化しない。
+
+### Opaque execution_context
+
+CanoviaがTask実行前に短命tokenを発行する。
+
+```text
+POST /plans/{plan}/tasks/{task}/provider-connections/{connection}/execution-context
+```
+
+条件:
+
+- authenticated user
+- Task edit permission
+- Connection owner一致
+- selected Execution Provider一致
+- active Connection
+- provider supports capability
+
+token TTLは30分。
+
+Provider payloadから `user_id / provider_key / capability / plan_id / task_id` を信用しない。これらはConnection + encrypted contextからserver-sideで確定する。
+
+### Activity schema v1
+
+Envelope:
+
+```text
+schema_version = 1.0
+execution_context = opaque token
+activity = normalized provider result
+```
+
+現在Study Practice completionだけdomain metricsをallowlistする。
+
+- score_percent
+- strengths
+- weaknesses
+- weakness_topics
+
+unknown extra metricsは破棄する。
+
+### Idempotency / replay
+
+```text
+timestamp window
++
+provider_key + external_key
+```
+
+でreplay impactを制限する。
+
+同じexternal_keyの再送は既存ExecutionActivity / TaskEvidenceを更新し、重複作成しない。
+
+### Security boundary
+
+Connection revoke後はAPI認証不可。
+
+execution_contextは発行Connectionへboundし、別Connectionで再利用不可。
+
+Provider/Task/User/Capabilityはcaller payloadから決定しない。
+
+### Existing integrations
+
+GitHub App / GitHub webhookは既存provider-specific connectionとしてそのまま維持する。
+
+V55.9 ProviderConnectionへ自動移行しない。
+
+### Non-goals
+
+V55.9では実装しない:
+
+- OAuth platform
+- real provider onboarding
+- Marketplace
+- Developer Portal
+- provider SDK
+- strict nonce ledger
+- automatic Task matching AI
+- automatic progress/completion
+- Developer Pro runtime
+
+詳細は `docs/V55.9_PROVIDER_CONNECTION_AUTHENTICATED_ACTIVITY_INTAKE.md` を正とする。
