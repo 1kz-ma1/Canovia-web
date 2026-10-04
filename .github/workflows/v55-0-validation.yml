@@ -64,4 +64,4 @@ jobs:
         run: php artisan test tests/Feature/StudyAdaptiveActionV536Test.php
 
       - name: Inbox Career routing regression
-        run: php artisan test tests/Feature/InboxFoundationV4113Test.php
+        run: php artisan test tests/Feature/InboxIntelligenceGuideV4113Test.php --filter=test_human_can_route_url_to_career_capture
