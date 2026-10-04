@@ -3030,3 +3030,240 @@ V54.8では:
 V54.0〜V54.8をもってWorkspace Mode foundation / specialized Workspace / feedback / onboarding / real-device closeoutを完了とする。
 
 詳細は `docs/V54.8_WORKSPACE_MODE_POLISH_TELEMETRY_IOS.md` を正とする。
+
+
+## V55.0 Career Intelligence Foundation
+
+V55.0は、既存CareerのReality / Evidenceを共通Intelligence Coreへ接続する。
+
+Careerにはすでに以下の構造化された現実データがある。
+
+- Career Capture
+- Career Application
+- Selection Event
+- Interview Review
+- interview review / result TaskEvidence
+
+V55.0はこれらを:
+
+```text
+Reality / Evidence
+→ Career State
+→ qualitative Process Readiness
+→ Gap
+→ Decision
+→ Current Action
+```
+
+へ接続する。
+
+### Careerは就職成功確率を評価しない
+
+Career Readinessは内定確率・市場価値・候補者評価ではない。
+
+V55.0では必ず:
+
+```text
+readiness.score = null
+```
+
+とする。
+
+CanoviaがCareer Intelligenceで判断するのは、現在記録されている選考プロセスがどの程度観測可能で、次にどのプロセスActionを処理すべきかまで。
+
+以下は判断しない。
+
+- 内定確率
+- 市場価値
+- 候補者ランキング
+- 企業の良し悪し
+- 給与の妥当性
+- オファー承諾 / 辞退
+- 退職判断
+- protected traitに基づく適性
+
+### Intelligence domain
+
+`IntelligenceDomain::Career` を追加する。
+
+既存generic Intelligence tablesをそのまま利用する。
+
+- `intelligence_state_snapshots`
+- `intelligence_decision_traces`
+- `intelligence_action_projections`
+
+新規migrationは不要。
+
+Career scope:
+
+```text
+domain = career
+scope_type = career_plan
+scope_id = Plan ID
+```
+
+### Privacy boundary
+
+Career Intelligence Stateへコピーするのは構造化されたID / enum / date / countのみ。
+
+CareerCapture:
+
+- id
+- status
+- linked application id
+- captured_at
+
+CareerApplication:
+
+- id
+- stage
+- status
+- known result enum
+- next_event_at
+
+CareerSelectionEvent:
+
+- id
+- application id
+- task id
+- type / stage / status
+- scheduled_at / completed_at
+- known result enum
+- review status
+
+以下はIntelligence履歴へコピーしない。
+
+- company name
+- role title
+- company URL
+- screenshot
+- raw Career Capture text
+- selection event notes
+- Interview Review answer text
+- Review insights free text
+
+`TaskEvidenceAdapter` も `interview_review_completed` / `interview_result_recorded` から安全なIDs・stage・resultだけを正規化する。
+
+### Career State
+
+主なmetrics:
+
+- capture count
+- pending capture count
+- application count
+- active / waiting / offer application count
+- scheduled interview count
+- review due count
+- result waiting count
+- completed review count
+- Career TaskEvidence count
+- hours until next interview
+
+主なfacts:
+
+- pipeline stage counts
+- pending capture IDs
+- active / preparing application IDs
+- offer application IDs
+- next interview
+- review due
+- result waiting event IDs
+
+### Qualitative Process Readiness
+
+Career signalがない場合:
+
+```text
+score = null
+level = unknown
+gap = career_signal_missing
+```
+
+Career signalがある場合:
+
+```text
+score = null
+level = developing
+```
+
+Readiness metadata:
+
+```text
+policy = career_process_readiness_v1
+meaning = career_process_observability_not_employability
+```
+
+可能なGap:
+
+- interview_review_due
+- pending_capture_unorganized
+- application_pipeline_missing
+
+### Career Decision priority
+
+Deterministic policy:
+
+1. 面接後Review
+2. 72時間以内の直近面接準備
+3. active Offerの条件整理
+4. 未整理Career Capture
+5. Application未構造化
+6. preparing / candidate Applicationの次Action
+7. result waitingを含むPipeline確認
+8. Career signalなしなら現実情報を1件Capture
+
+LLM reasoningは使用しない。
+
+オファーについてCanoviaが出せるActionは:
+
+```text
+オファー条件を整理する
+```
+
+まで。
+
+```text
+この企業を選ぶ
+承諾する
+辞退する
+```
+
+は出さない。
+
+### Persistence
+
+`CareerAdaptiveActionService` が既存generic storesを利用する。
+
+```text
+CareerPlanIntelligenceService
+→ CareerDecisionEngine
+→ CareerActionGenerator
+→ StateSnapshotStore
+→ DecisionTraceStore
+→ ActionProjectionStore
+```
+
+GET Career Workspaceでは履歴を作らない。
+
+Career mutationが成功した後だけfail-safeに `tryRefresh()` する。
+
+対象:
+
+- Capture create / delete
+- Application create / update
+- Capture link
+- Selection Event create / cancel
+- Selection result
+- completed Interview Review
+
+共通 `CareerCaptureService` にrefreshを置くため、Career Workspace直入力だけでなくInboxからCareer Captureへroutingした場合も同じIntelligence loopへ入る。
+
+### V55.0 boundary
+
+V55.0ではCareerをまだPublic Workspace Modeへ追加しない。
+
+既存Career UIはそのまま維持する。
+
+次のV55.1で、V54のWorkspace Mode registry / persistence / onboarding / telemetry契約へCareerを載せる。
+
+詳細は `docs/V55.0_CAREER_INTELLIGENCE_FOUNDATION.md` を正とする。
