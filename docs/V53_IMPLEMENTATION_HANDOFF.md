@@ -729,7 +729,8 @@ Current V53.8 checkpoint:
 - validation run before final docs sync: #37176102557
 - final latest-head validation: #37176271547
 - temporary validation workflow removed after success
-- PR: pending creation
+- PR #216 created as stacked PR on V53.7 branch
+- PR #215 remains the prerequisite V53.7 PR
 
 Next after V53.8:
 
