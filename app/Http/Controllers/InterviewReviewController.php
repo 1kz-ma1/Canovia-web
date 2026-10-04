@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\EvidenceSource;
+use App\Intelligence\Career\CareerAdaptiveActionService;
 use App\Models\CareerSelectionEvent;
 use App\Models\InterviewReview;
 use App\Models\InterviewReviewAnswer;
@@ -18,6 +19,10 @@ use Illuminate\Validation\ValidationException;
 
 class InterviewReviewController extends Controller
 {
+    public function __construct(
+        private readonly CareerAdaptiveActionService $careerIntelligence,
+    ) {}
+
     public function show(
         Request $request,
         Plan $plan,
@@ -182,6 +187,10 @@ class InterviewReviewController extends Controller
 
             return $review->fresh('answers');
         });
+
+        if ($completed) {
+            $this->careerIntelligence->tryRefresh($plan);
+        }
 
         return redirect()
             ->route('plans.career.interview_reviews.show', [$plan, $event])
