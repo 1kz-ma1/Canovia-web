@@ -57,6 +57,12 @@ final readonly class PlanIntelligencePresentation
         return ! $this->qualitativeReadiness;
     }
 
+    public function hasWorkspaceHandoff(): bool
+    {
+        return filled($this->workspaceUrl)
+            && $this->workspaceUrl !== $this->actionUrl;
+    }
+
     public function confidenceDisplay(): string
     {
         return $this->readiness->confidence->percent().'%';
