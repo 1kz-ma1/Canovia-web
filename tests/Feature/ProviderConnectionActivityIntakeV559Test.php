@@ -451,10 +451,9 @@ class ProviderConnectionActivityIntakeV559Test extends TestCase
 
         $token = (string) $response->json('execution_context');
         $this->assertNotSame('', $token);
-        $this->assertStringNotContainsString(
-            (string) $task->id,
-            $token,
-        );
+        $this->assertNull($response->json('plan_id'));
+        $this->assertNull($response->json('task_id'));
+        $this->assertNull($response->json('user_id'));
 
         return $token;
     }
