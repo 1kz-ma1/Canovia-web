@@ -1,4 +1,4 @@
-@if (($executionSetup ?? null)?->hasChoice())
+@if (($canEdit ?? false) && ($executionSetup ?? null)?->hasChoice())
     @php
         $selectedProvider = $executionSetup->selectedProvider;
         $showChoices = $executionSetup->needsSetup();
