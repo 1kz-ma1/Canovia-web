@@ -66,8 +66,20 @@
     $companionSourcePath = $instantPath ?? request()->getRequestUri();
     $feedbackPath = ltrim(parse_url($instantPath ?? request()->getRequestUri(), PHP_URL_PATH) ?: '/', '/');
 
+    $workspaceModeRegistry = app(\App\Services\WorkspaceModeRegistry::class);
+    $workspaceModeContext = app(\App\Services\WorkspaceModeResolver::class)
+        ->resolve(request());
+    $workspaceModeDefinition = $workspaceModeRegistry->definition(
+        $workspaceModeContext->mode,
+    );
+
     $instantMeta = [
         'mobileSection' => $mobileSection,
+        'workspaceMode' => [
+            'key' => $workspaceModeDefinition->mode->value,
+            'label' => $workspaceModeDefinition->label,
+            'source' => $workspaceModeContext->source->value,
+        ],
         'nav' => [
             'desktop-home' => [
                 'className' => 'nav-link pk-nav-link whitespace-nowrap'.($desktopHomeActive ? ' nav-link-active' : ''),
@@ -119,10 +131,10 @@
     <meta charset="UTF-8">
     <title>@yield('title', 'Canovia')</title>
 </head>
-<body data-route-name="{{ $routeName }}">
+<body data-route-name="{{ $routeName }}" data-workspace-mode="{{ $workspaceModeDefinition->mode->value }}">
     <script type="application/json" id="canovia-instant-meta">{!! json_encode($instantMeta, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
 
-    <div data-canovia-page data-canovia-route="{{ $routeName }}">
+    <div data-canovia-page data-canovia-route="{{ $routeName }}" data-workspace-mode="{{ $workspaceModeDefinition->mode->value }}" data-workspace-mode-label="{{ $workspaceModeDefinition->label }}">
         @if (session('status'))
             <div class="assistant-notice assistant-notice-info mb-6" data-auto-toast>{{ session('status') }}</div>
         @endif
