@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\EvidenceSource;
+use App\Intelligence\Career\CareerAdaptiveActionService;
 use App\Models\CareerApplication;
 use App\Models\CareerCapture;
 use App\Models\CareerSelectionEvent;
@@ -19,6 +20,10 @@ use Illuminate\Validation\Rule;
 
 class CareerWorkspaceController extends Controller
 {
+    public function __construct(
+        private readonly CareerAdaptiveActionService $careerIntelligence,
+    ) {}
+
     public function index(
         Request $request,
         Plan $plan,
@@ -129,6 +134,7 @@ class CareerWorkspaceController extends Controller
         }
 
         $capture->delete();
+        $this->careerIntelligence->tryRefresh($plan);
 
         return redirect()
             ->route('plans.career.index', $plan)
@@ -177,6 +183,8 @@ class CareerWorkspaceController extends Controller
             ]);
         }
 
+        $this->careerIntelligence->tryRefresh($plan);
+
         return redirect()
             ->route('plans.career.index', $plan)
             ->with('success', '応募先を追加しました。');
@@ -208,6 +216,7 @@ class CareerWorkspaceController extends Controller
 
         $validated['result'] = trim((string) ($validated['result'] ?? '')) ?: null;
         $application->update($validated);
+        $this->careerIntelligence->tryRefresh($plan);
 
         return redirect()
             ->route('plans.career.index', $plan)
@@ -237,6 +246,7 @@ class CareerWorkspaceController extends Controller
             'career_application_id' => $application->id,
             'status' => 'linked',
         ]);
+        $this->careerIntelligence->tryRefresh($plan);
 
         return redirect()
             ->route('plans.career.index', $plan)
@@ -297,6 +307,7 @@ class CareerWorkspaceController extends Controller
             'next_event_at' => $event->scheduled_at,
             'result' => null,
         ]);
+        $this->careerIntelligence->tryRefresh($plan);
 
         return redirect()
             ->route('plans.career.index', $plan)
@@ -324,6 +335,8 @@ class CareerWorkspaceController extends Controller
         ) {
             $event->application->update(['next_event_at' => null]);
         }
+
+        $this->careerIntelligence->tryRefresh($plan);
 
         return redirect()
             ->route('plans.career.index', $plan)
@@ -399,6 +412,8 @@ class CareerWorkspaceController extends Controller
                 );
             }
         });
+
+        $this->careerIntelligence->tryRefresh($plan);
 
         return redirect()
             ->route('plans.career.index', $plan)
