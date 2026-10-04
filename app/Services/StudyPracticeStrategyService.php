@@ -117,16 +117,14 @@ class StudyPracticeStrategyService
             ?? StudyExamConvergencePolicyService::PHASE_GENERAL_PRACTICE
         );
 
+        // Mastery verification is already a broad diagnostic check, not a
+        // weakness drill. Keep it during General Practice for compatibility
+        // and count it as broad evidence through learning_phase. Exam Mode
+        // remains authoritative in the final exam window.
         $masteryVerification = (
             ($progression['kind'] ?? null) === 'verify_mastery'
-            && ! in_array(
-                $phase,
-                [
-                    StudyExamConvergencePolicyService::PHASE_GENERAL_PRACTICE,
-                    StudyExamConvergencePolicyService::PHASE_EXAM_MODE,
-                ],
-                true,
-            )
+            && $phase
+                !== StudyExamConvergencePolicyService::PHASE_EXAM_MODE
         );
 
         $targetQuestionCount = $masteryVerification
