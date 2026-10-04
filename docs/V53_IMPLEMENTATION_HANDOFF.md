@@ -294,7 +294,7 @@ Important semantics:
 
 ### V53.4 — Study Capture
 
-Status: **IMPLEMENTED — PR PENDING**
+Status: **MERGED**
 
 Branch:
 
@@ -328,23 +328,54 @@ Important semantics:
 - AI draft is not Study truth
 - no Task creation from V53.4
 - no Task progress mutation
-- no Intelligence State mutation
+- V53.4 itself did not project Intelligence State; V53.5 now projects only Human-confirmed scope after confirmation
 - confirmed `StudyScopeItem` is the V53.5 input
 - full OCR transcript is not persisted
 - uncertain dates keep source text and normalized date null
 
 ### V53.5 — Study Intelligence
 
-Planned:
+Status: **IMPLEMENTED — PR PENDING**
 
-- mastery
-- coverage
-- retention
-- speed
-- estimated effort remaining
-- exam readiness
-- diagnostic and practice feedback
-- adaptive remaining work
+Branch:
+
+`feature/v53-5-study-intelligence`
+
+Permanent spec:
+
+`docs/V53.5_STUDY_INTELLIGENCE.md`
+
+Implemented:
+
+- `StudyScopeEvidenceMatcher`
+- `StudyRemainingWorkEstimator`
+- `StudyIntelligenceStateBuilder`
+- `StudyExamReadinessEvaluator`
+- `StudyPlanIntelligenceService`
+- confirmed scope semantic dedupe
+- conservative scope → Evidence matching
+- Coverage from safely observed confirmed scope
+- Mastery from linked Practice Evidence
+- Retention from linked Recall Evidence
+- Speed explicitly unmeasured rather than guessed
+- normalized remaining Study Units / remaining load %
+- deadline pressure and conflicting exam-date handling
+- exam-relative Readiness
+- snapshot refresh after Scope confirm / Practice / Recall Evidence
+- ephemeral GET evaluation without snapshot spam
+- Study diagnostic surface
+- Study Activity / Practice / Recall expanded from certification-only to all Study-profile Plans
+
+Important semantics:
+
+- Task progress remains outside Study State truth
+- AI Draft scope remains outside Study State truth
+- subject-only Evidence is not spread across multiple same-subject units
+- conflicting confirmed exam dates are surfaced instead of guessed
+- remaining effort is Study Units, not fake minutes
+- Speed remains null until authoritative active-solving timing exists
+- V53.5 calculations are deterministic and do not require OpenAI
+- no automatic Task generation or Task progress mutation
 
 ### V53.6 — Adaptive Action
 
@@ -515,6 +546,8 @@ V53.3 validation checkpoint:
 
 Current V53.4 checkpoint:
 
+- PR #212 merged
+- merge commit: 9b8e05fe5fe3bf10903f69f691ae6d564ee76820
 - source files reuse existing private Inbox storage
 - Native AI output is a reviewable Draft only
 - Human Confirmation creates confirmed StudyScopeItem facts
@@ -524,17 +557,33 @@ Current V53.4 checkpoint:
 - validation complete
 - temporary validation workflow removed after success
 - validation run: #37170118250
+
+Current V53.5 checkpoint:
+
+- confirmed StudyScopeItem is the scope source of truth
+- Practice / Recall TaskEvidence is normalized through the existing Evidence boundary
+- conservative scope-to-Evidence matching implemented
+- Coverage / Mastery / Retention implemented
+- Speed intentionally remains unmeasured
+- remaining work is expressed as normalized Study Units, not minutes
+- confirmed exam-date conflict is explicit
+- exam-relative Readiness implemented
+- State snapshot refresh hooks added to Scope confirm / Practice / Recall
+- school-test Study profiles can use Study Activity / Practice / Recall
+- diagnostic Study Intelligence surface added
+- Product Spec and permanent V53.5 spec synchronized
+- validation complete
+- validation run: #37171521259
 - PR: pending creation
 
-Next after V53.4 merge:
+Next after V53.5 merge:
 
-- V53.5 Study Intelligence
-- consume confirmed StudyScopeItem only
-- combine confirmed scope with Practice / Recall Evidence
-- add coverage / mastery / retention / speed
-- estimate remaining effort conservatively
-- strengthen Readiness toward exam-relative meaning
-- do not default back to generating a large static Task list
+- V53.6 Adaptive Action
+- rank the biggest current Gap / remaining scope
+- produce a small current Action set
+- explain why the Action is best now
+- keep Task as optional / durable projection
+- retire or change Actions when new Evidence changes State
 
 ## Completion / deletion rule
 
