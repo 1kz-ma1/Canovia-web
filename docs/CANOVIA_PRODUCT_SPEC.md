@@ -4194,3 +4194,153 @@ V55.6は:
 詳細は `docs/V55.6_EXECUTION_ECOSYSTEM_FOUNDATION.md` を正とする。
 
 Execution Ecosystem全体の将来構想・Marketplace / Developer Portal / Monetization等の原案は `docs/EXECUTION_ECOSYSTEM_DRAFT.md` に一時資料として保持する。
+
+
+## V55.7 Execution Setup Validation
+
+V55.7はV55.6 Execution Ecosystem Foundationの最初のvisible UX validationである。
+
+原則:
+
+```text
+Planning / Workspace
+→ provider choiceが複数ある時だけ設定を提示
+
+Normal Start
+→ 一つのCTA
+→ saved preference / Native default
+→ provider resolve
+→ launch
+```
+
+### Validation provider
+
+非本番Validation用に、feature flag配下でのみ:
+
+```text
+validation.study.practice.external
+kind = external
+capability = study.practice
+```
+
+をProvider Catalogへ追加する。
+
+flag:
+
+```text
+CANOVIA_EXECUTION_SETUP_VALIDATION_ENABLED=false
+```
+
+default false。
+
+OFF時は既存Native挙動から変化しない。
+
+### Study onboarding precedence
+
+Execution SetupはStudy Plan作成直後には出さない。
+
+既存:
+
+```text
+create Plan
+→ capture Study Scope
+→ record first Study Evidence
+```
+
+を完了した後にのみ評価する。
+
+### Setup visibility
+
+`ExecutionSetupService` がPlan + TaskのCapabilityを解決し、enabled providerが2件以上ある場合だけchoiceを成立させる。
+
+明示Preferenceがない場合:
+
+- Study Workspaceで初回Setupを表示
+- 選択しなくてもNative Start可能
+
+明示Preferenceがある場合:
+
+- 大型Setup promptを消す
+- 現在のProviderをcompact表示
+- `実行方法を変更` から再選択可能
+
+編集権限のないユーザーには変更UIを表示しない。
+
+### Preference
+
+V55.6の:
+
+```text
+plan_execution_preferences
+```
+
+を再利用する。
+
+scope:
+
+```text
+Plan + Capability
+```
+
+を維持する。
+
+Task ID単位にしないため、Study IntelligenceがStart時にTaskを新規投影しても同CapabilityならPreferenceが継承される。
+
+### One-tap Start
+
+既存canonical Study Start:
+
+```text
+POST /plans/{plan}/study-action/execute
+```
+
+へProvider resolutionを接続する。
+
+このためStudy Workspaceだけでなく、同じactionUrlを使うHome / OverviewからのCurrent Actionも同じProvider設定を利用する。
+
+`ExecutionLaunchResolver` を追加し:
+
+```text
+ExecutionResolver decision
+→ Native: existing Study route
+→ Validation External: validation handoff route
+```
+
+とする。
+
+### Validation external surface
+
+Validation Providerは実際の外部サービスへ接続しない。
+
+確認するのは:
+
+```text
+saved preference
+→ resolver
+→ launch handoff
+```
+
+のみ。
+
+行わない:
+
+- OAuth
+- external API
+- external app launch
+- Activity callback
+- Evidence creation
+- Task progress mutation
+
+### Native fallback
+
+Validation flag OFF、Provider無効化、stale external preference等の場合も、V55.6 Resolver ruleによりNativeへfallbackする。
+
+### Database / cost
+
+- migration追加なし
+- AI traffic追加なし
+- external network request追加なし
+- Intelligence scoring変更なし
+- Task progress自動変更なし
+
+詳細は `docs/V55.7_EXECUTION_SETUP_VALIDATION.md` を正とする。
