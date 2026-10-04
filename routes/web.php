@@ -72,6 +72,10 @@ use App\Http\Controllers\ExecutionSetupController;
 use App\Http\Controllers\ExecutionValidationProviderController;
 use App\Http\Controllers\ProviderConnectionController;
 use App\Http\Controllers\ProviderExecutionContextController;
+use App\Http\Controllers\LegalController;
+
+Route::get('/privacy', [LegalController::class, 'privacy'])->name('legal.privacy');
+Route::get('/support', [LegalController::class, 'support'])->name('legal.support');
 
 Route::get('/welcome', [FirstRunController::class, 'show'])->name('first_run.show');
 Route::post('/welcome/start', [FirstRunController::class, 'start'])->name('first_run.start');
@@ -146,6 +150,9 @@ Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->middl
 Route::get('/reset-password/{token}', [AuthController::class, 'showResetPassword'])->middleware('guest')->name('password.reset');
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware(['guest', 'throttle:6,1'])->name('password.update');
 Route::get('/account', [AuthController::class, 'account'])->middleware('auth')->name('auth.account');
+Route::delete('/account', [AuthController::class, 'destroyAccount'])
+    ->middleware(['auth', 'throttle:3,1'])
+    ->name('auth.account.destroy');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('auth.logout');
 Route::post('/offline/work-sessions/sync', [OfflineWorkSessionController::class, 'sync'])->name('offline.work_sessions.sync');
 Route::get('/feedback', [CanoviaFutureController::class, 'index'])->name('feedback.index');
