@@ -55,6 +55,19 @@ final class DevelopmentQualityGateService
             ]);
         }
 
+        $targetSha = mb_strtolower(trim((string) $targetSha));
+        if (! preg_match('/^[a-f0-9]{7,64}$/', $targetSha)) {
+            throw ValidationException::withMessages([
+                'quality_gate' => '現在の実装SHAを確認できないため、Quality Gateを確定できません。',
+            ]);
+        }
+
+        if ($gate === 'verification' && (! $deploymentId || $deploymentId <= 0)) {
+            throw ValidationException::withMessages([
+                'quality_gate' => '現在のProduction Deploymentを確認できないため、実機・本番確認を確定できません。',
+            ]);
+        }
+
         if (! preg_match(
             '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i',
             $requestId,
@@ -72,9 +85,7 @@ final class DevelopmentQualityGateService
                 'quality_gate' => $gate,
                 'gate_status' => $status,
                 'confirmation_source' => 'human',
-                'target_sha' => filled($targetSha)
-                    ? mb_strtolower(mb_substr(trim((string) $targetSha), 0, 64))
-                    : null,
+                'target_sha' => mb_substr($targetSha, 0, 64),
                 'deployment_id' => $deploymentId && $deploymentId > 0
                     ? $deploymentId
                     : null,
