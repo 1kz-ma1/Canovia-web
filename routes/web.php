@@ -66,10 +66,12 @@ use App\Http\Controllers\ClientPerformanceController;
 use App\Http\Controllers\WorkspaceModeController;
 use App\Http\Controllers\StudyWorkspaceController;
 use App\Http\Controllers\DevelopmentWorkspaceController;
+use App\Http\Controllers\OverviewWorkspaceController;
 
 Route::get('/welcome', [FirstRunController::class, 'show'])->name('first_run.show');
 Route::post('/welcome/start', [FirstRunController::class, 'start'])->name('first_run.start');
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/workspace/overview', OverviewWorkspaceController::class)->name('workspace.overview.index');
 Route::get('/workspace/study', StudyWorkspaceController::class)->name('workspace.study.index');
 Route::get('/workspace/development', DevelopmentWorkspaceController::class)->name('workspace.development.index');
 Route::get('/workspace/{workspaceMode}', [WorkspaceModeController::class, 'enter'])->name('workspace_modes.enter');
