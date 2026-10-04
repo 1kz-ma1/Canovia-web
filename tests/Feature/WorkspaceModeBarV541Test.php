@@ -75,7 +75,9 @@ class WorkspaceModeBarV541Test extends TestCase
             ->get(route('workspace_modes.enter', [
                 'workspaceMode' => 'study',
             ]))
-            ->assertRedirect(route('plans.study_scope.index', $study));
+            ->assertOk()
+            ->assertSee('data-study-workspace', false)
+            ->assertSee($study->title);
 
         $this->actingAs($user)
             ->get(route('workspace_modes.enter', [
@@ -98,27 +100,16 @@ class WorkspaceModeBarV541Test extends TestCase
             'first_run_completed_at' => now(),
         ]);
 
-        $redirect = $this->actingAs($user)
+        $this->actingAs($user)
             ->get(route('workspace_modes.enter', [
                 'workspaceMode' => 'study',
-            ]));
-
-        $redirect
-            ->assertRedirect(route('home', [
-                'workspace_mode' => 'study',
             ]))
-            ->assertSessionHas(
-                'status',
-                '学習Workspaceを始めるには、学習Planを作成してください。',
-            );
-
-        $this->actingAs($user)
-            ->get(route('home', ['workspace_mode' => 'study']))
             ->assertOk()
+            ->assertSee('data-study-workspace-no-plan', false)
             ->assertSee('data-workspace-mode="study"', false)
             ->assertSee('data-current-workspace-mode="study"', false);
 
-        // V54.1 selection is intentionally not persistent.
+        // GET Study Workspace entry remains navigation-only.
         $this->actingAs($user)
             ->get(route('home'))
             ->assertOk()
