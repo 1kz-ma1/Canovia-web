@@ -19,17 +19,21 @@ class WorkspaceModeResolverV540Test extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_generic_plan_route_resolves_study_and_development_from_profile(): void
+    public function test_generic_plan_route_resolves_public_specialized_profiles(): void
     {
         $user = User::factory()->create();
         $study = $this->plan($user, 'AP対策', '資格学習');
         $development = $this->plan($user, 'Canovia開発', '個人開発');
+        $career = $this->plan($user, '就職活動', '就活');
 
         $studyContext = app(WorkspaceModeResolver::class)->resolve(
             $this->request('plans.show', ['plan' => $study]),
         );
         $developmentContext = app(WorkspaceModeResolver::class)->resolve(
             $this->request('plans.show', ['plan' => $development]),
+        );
+        $careerContext = app(WorkspaceModeResolver::class)->resolve(
+            $this->request('plans.show', ['plan' => $career]),
         );
 
         $this->assertSame(WorkspaceMode::Study, $studyContext->mode);
@@ -49,15 +53,25 @@ class WorkspaceModeResolverV540Test extends TestCase
             $developmentContext->source,
         );
         $this->assertSame('development', $developmentContext->profileKey);
+
+        $this->assertSame(
+            WorkspaceMode::Career,
+            $careerContext->mode,
+        );
+        $this->assertSame(
+            WorkspaceModeSource::PlanProfile,
+            $careerContext->source,
+        );
+        $this->assertSame('career', $careerContext->profileKey);
     }
 
     public function test_unpublished_profile_modes_fall_back_to_overview_without_reclassifying_plan(): void
     {
         $user = User::factory()->create();
-        $career = $this->plan($user, '就職活動', '就活');
+        $creative = $this->plan($user, '卒業制作', '制作活動');
 
         $context = app(WorkspaceModeResolver::class)->resolve(
-            $this->request('plans.show', ['plan' => $career]),
+            $this->request('plans.show', ['plan' => $creative]),
         );
 
         $this->assertSame(WorkspaceMode::Overview, $context->mode);
@@ -65,8 +79,8 @@ class WorkspaceModeResolverV540Test extends TestCase
             WorkspaceModeSource::PlanProfile,
             $context->source,
         );
-        $this->assertSame('career', $context->profileKey);
-        $this->assertSame('就活', $career->fresh()->category);
+        $this->assertSame('creative', $context->profileKey);
+        $this->assertSame('制作活動', $creative->fresh()->category);
     }
 
     public function test_domain_routes_can_resolve_mode_without_a_plan_parameter(): void
@@ -78,6 +92,9 @@ class WorkspaceModeResolverV540Test extends TestCase
         );
         $development = $resolver->resolve(
             $this->request('github_workflow.index'),
+        );
+        $career = $resolver->resolve(
+            $this->request('plans.career.index'),
         );
 
         $this->assertSame(WorkspaceMode::Study, $study->mode);
@@ -93,6 +110,12 @@ class WorkspaceModeResolverV540Test extends TestCase
         $this->assertSame(
             WorkspaceModeSource::RouteHint,
             $development->source,
+        );
+
+        $this->assertSame(WorkspaceMode::Career, $career->mode);
+        $this->assertSame(
+            WorkspaceModeSource::RouteHint,
+            $career->source,
         );
     }
 
