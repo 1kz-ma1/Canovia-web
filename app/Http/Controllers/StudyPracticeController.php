@@ -16,7 +16,7 @@ use App\Services\FeatureAccessService;
 use App\Services\NativeAiGateway;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanCategoryProfileService;
-use App\Intelligence\Study\StudyPlanIntelligenceService;
+use App\Intelligence\Study\StudyAdaptiveActionService;
 use App\Services\PracticeQuestionDemandRecorder;
 use App\Services\StudyPracticeOrchestrator;
 use App\Services\StudyPracticePromptService;
@@ -34,7 +34,7 @@ class StudyPracticeController extends Controller
 {
     public function __construct(
         private readonly PlanCategoryProfileService $categoryProfiles,
-        private readonly StudyPlanIntelligenceService $studyIntelligence,
+        private readonly StudyAdaptiveActionService $studyActions,
     ) {}
     public function show(
         Request $request,
@@ -840,7 +840,7 @@ class StudyPracticeController extends Controller
                 );
                 $state['attempt_id'] = $attempt->id;
                 $evidenceService->recordStudyPracticeAssessment($attempt);
-                $this->studyIntelligence->tryPersistSnapshot(
+                $this->studyActions->tryRefresh(
                     $plan,
                     $attempt->created_at ?? now(),
                 );
@@ -956,7 +956,7 @@ class StudyPracticeController extends Controller
         $state['assessment'] = $assessment;
         $state['attempt_id'] = $attempt->id;
         $evidenceService->recordStudyPracticeAssessment($attempt);
-                $this->studyIntelligence->tryPersistSnapshot(
+                $this->studyActions->tryRefresh(
                     $plan,
                     $attempt->created_at ?? now(),
                 );
