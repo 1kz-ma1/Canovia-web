@@ -205,7 +205,9 @@ class IntelligenceUxV539Test extends TestCase
             ->assertSee('data-intelligence-domain="development"', false)
             ->assertSee('Release Evidenceがまだない')
             ->assertSee('Release Readiness')
-            ->assertSee('BIGGEST GAP');
+            ->assertSee('data-current-action-context', false)
+            ->assertSee('Development Workspace')
+            ->assertDontSee('BIGGEST GAP');
     }
 
     private function plan(
