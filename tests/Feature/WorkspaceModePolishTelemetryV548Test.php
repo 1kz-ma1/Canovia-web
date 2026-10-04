@@ -29,6 +29,7 @@ class WorkspaceModePolishTelemetryV548Test extends TestCase
     {
         $user = User::factory()->create([
             'first_run_completed_at' => now(),
+            'workspace_mode_preference' => 'development',
         ]);
 
         $this->actingAs($user)
