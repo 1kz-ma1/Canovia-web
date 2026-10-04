@@ -39,6 +39,7 @@ final class DevelopmentIntelligencePresentationAdapter
             action: $action,
             eyebrow: 'DEVELOPMENT INTELLIGENCE',
             headline: 'Releaseに向けた現在地',
+            sourceNote: 'Task進捗ではなく、同じTaskへ結びついたGitHub Evidenceと明示確認からRelease状態を判断しています。',
             readinessLabel: 'Release Readiness',
             stateLabel: $this->stateLabel($readiness->level->value),
             gapLabel: $this->gapLabel($result->decision->reasonCode),
