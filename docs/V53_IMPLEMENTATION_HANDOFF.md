@@ -379,7 +379,7 @@ Important semantics:
 
 ### V53.6 — Adaptive Action
 
-Status: **IMPLEMENTED — PR PENDING**
+Status: **MERGED**
 
 Branch:
 
@@ -422,12 +422,46 @@ Important semantics:
 
 ### V53.7 — Developer Evidence Sync
 
-Planned:
+Status: **IMPLEMENTED — PR PENDING**
 
-- GitHub event → normalized Evidence
-- Issue / Branch / Commit / PR / Review / CI / Merge / Deploy
-- automatic observation rather than manual refresh as the long-term goal
-- do not map events directly to progress without confidence / quality semantics
+Branch:
+
+`feature/v53-7-developer-evidence-sync`
+
+Permanent spec:
+
+`docs/V53.7_DEVELOPER_EVIDENCE_SYNC.md`
+
+Implemented:
+
+- existing V46 GitHub Return/Webhook path reused instead of rebuilt
+- signed webhook remains routing-only, never Development truth
+- durable bounded `routing_targets` for Issue / Push / Branch / Deployment
+- authoritative GitHub App REST re-fetch for Issue / Branch / Commit / Deployment
+- `pull_request_observed` added beside existing Review / CI / Merge Evidence
+- `github_issue_observed`
+- `github_branch_observed`
+- `github_commit_observed`
+- `github_deployment_observed`
+- explicit Artifact → Task link required before non-PR sync
+- entitlement checked before new non-PR GitHub API read
+- deployment routed only to linked PR / Branch / Commit whose authoritative SHA/ref matches
+- controlled GitHub facts added to `TaskEvidenceAdapter`
+- `DevelopmentEvidenceCollector` added as V53.8 input boundary
+- no Task progress/status mutation
+- no source code / Issue body / commit message / diff / Deployment payload imported into Intelligence
+- latent `GitHubWebhookDelivery` Eloquent table-name mismatch fixed
+
+Important semantics:
+
+- GitHub webhook = change notification / routing signal
+- GitHub REST re-fetch = authoritative provider state
+- TaskEvidence = bounded local observation
+- Evidence does not equal progress
+- merge does not equal 100%
+- deploy success does not equal requirement complete
+- repository activity is never fanned out to unrelated Tasks
+- V53.8 owns Development State / Release Readiness / Action interpretation
 
 ### V53.8 — Developer Readiness
 
@@ -611,6 +645,8 @@ Current V53.5 checkpoint:
 
 Current V53.6 checkpoint:
 
+- PR #214 merged
+- merge commit: 06a3761b71067a1d9b9cb2dc1484beaf049a1941
 - Study Readiness gaps are ranked into deterministic Decision candidates
 - one current ActionProposal is generated from the selected Decision
 - durable Action projections and supersession history implemented
@@ -627,14 +663,30 @@ Current V53.6 checkpoint:
 - validation complete
 - validation run: #37172974165
 - temporary validation workflow removed after success
+
+Current V53.7 checkpoint:
+
+- GitHub webhook routing expanded to Issue / Push / Branch / Deployment
+- raw webhook payload remains outside persistence
+- Issue / Branch / Commit / Deployment are re-fetched through GitHub App REST
+- PR current state now emits `pull_request_observed`
+- explicit linked Artifact / Task is required before non-PR Evidence sync
+- DeveloperGithubEvidence entitlement is checked before new remote read
+- Task progress/status/remaining time are never mutated by V53.7
+- Development GitHub facts are normalized through TaskEvidenceAdapter
+- DevelopmentEvidenceCollector is the stable V53.8 input
+- Product Spec and permanent V53.7 spec synchronized
+- validation complete
+- validation run: #37174394808
 - PR: pending creation
 
-Next after V53.6 merge:
+Next after V53.7 merge:
 
-- V53.7 Developer Evidence Sync
-- normalize GitHub Issue / Branch / Commit / PR / Review / CI / Merge / Deploy as Development Evidence
-- reuse generic State / Readiness / Decision / Action boundaries
-- do not map GitHub events directly to progress
+- V53.8 Developer Readiness
+- build Development State from normalized GitHub Evidence
+- evaluate implementation / review / CI / merge / deploy / verification quality gates
+- produce release-relative Readiness and largest missing gate
+- then generate Development Current Action without equating activity to completion
 
 ## Completion / deletion rule
 
