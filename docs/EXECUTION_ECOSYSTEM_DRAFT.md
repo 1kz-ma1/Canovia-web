@@ -758,3 +758,932 @@ The next update to this temporary document should record:
 - Study / Development integration points
 - compatibility and migration impact
 - explicit non-goals for V55.6
+
+
+---
+
+# Repository Investigation / Proposed V55.6 Boundary
+
+## 27. Existing Architecture Findings
+
+### 27.1 Product-level direction is already compatible
+
+The current canonical product specification already states that Canovia should not embed every execution environment.
+
+The existing product loop is effectively:
+
+```text
+Input
+→ Plan
+→ Task / Current Action
+→ Specialized Execution / Guided Execution / Timer
+→ Evidence / WorkLog
+→ Intelligence / Plan update
+→ Next Action
+```
+
+The Execution Ecosystem is therefore not a replacement architecture.
+
+It should be treated as an extension of the existing execution/evidence boundary so that the specialized execution step can resolve to either:
+
+```text
+Canovia Native
+or
+External Provider
+```
+
+without changing the higher-level Goal / Plan / Intelligence model.
+
+### 27.2 Workspace Mode and Execution Mode are already separated
+
+V55.5 established the current semantic boundary:
+
+```text
+Workspace Mode
+→ domain state / Readiness / Gap / Decision / Current Action
+
+Execution Mode
+→ how the selected Task is executed
+
+Operation surface
+→ where the actual work happens
+```
+
+Current Execution Mode keys remain:
+
+- study
+- development
+- career
+- general
+
+The Execution Ecosystem must sit **below Execution Mode**, not replace it.
+
+Proposed layering:
+
+```text
+Workspace
+→ Current Action / Task
+→ Execution Mode
+→ Required Capability
+→ Execution Resolver
+→ Execution Provider
+→ Operation Surface
+→ Activity / Evidence
+→ Intelligence
+```
+
+### 27.3 Runtime already follows the "one primary action" principle
+
+`PlanToolService` builds Task-level execution tools.
+
+`ExecutionActionPolicyService` then reduces those choices to one primary execution action, with Timer as fallback.
+
+The current runtime already avoids repeatedly asking the user which tool to use.
+
+Therefore the Execution Ecosystem should preserve the current contract:
+
+> one Task → one primary Start action at execution time
+
+Provider choice belongs in setup/configuration, not in the normal Start flow.
+
+### 27.4 Study already has a deterministic execution-kind resolver
+
+`StudyActivityPolicyService` currently classifies a Task into:
+
+- `question_practice`
+- `recall`
+- `resource_study`
+
+with deterministic fit scoring.
+
+This is a natural source for initial execution capability requirements.
+
+The existing Study classifier should not be replaced by a second provider-specific classifier.
+
+Instead:
+
+```text
+StudyActivityPolicy
+→ execution requirement / capability
+→ provider resolution
+```
+
+### 27.5 Evidence is already the canonical fact boundary
+
+`TaskEvidence` stores factual observations about real Task execution.
+
+Important current properties:
+
+- Task-bound
+- Plan-bound
+- provider/source aware
+- idempotent through `external_key`
+- confidence aware
+- metadata stored separately
+- downstream Intelligence receives only normalized allowlisted facts
+
+Existing sources already reserve:
+
+- native
+- github
+- file
+- image
+- calendar
+- external
+
+GitHub integration is the strongest precedent:
+
+```text
+GitHub
+→ authoritative provider observation
+→ TaskEvidence
+→ TaskEvidenceAdapter
+→ normalized EvidenceObservation
+→ Development Intelligence
+```
+
+The Execution Ecosystem should reuse this path instead of creating a second progress/evidence system.
+
+### 27.6 Existing ExecutionAdapter is an evidence seam, not yet a provider catalog
+
+The current `ExecutionAdapter` contract exposes:
+
+- key
+- Task support
+- possible EvidenceSource values
+
+Its documented responsibility is to turn external-environment state changes into Evidence.
+
+No production implementation was found during this investigation.
+
+Do not delete or repurpose this contract in V55.6.
+
+Provider selection / launch orchestration should be introduced beside it, leaving this existing compatibility seam intact.
+
+### 27.7 PlanActivityLog is not Execution Activity
+
+`PlanActivityLog` is currently a collaborative-plan audit/timeline log.
+
+It only records when a Plan is collaborative and is not a generic execution-result store.
+
+Therefore the future provider-neutral Activity model must not reuse `PlanActivityLog`.
+
+---
+
+## 28. Critical Domain Decision: ExecutionActivity != TaskEvidence
+
+The original ecosystem concept requires an external provider to be able to report:
+
+```text
+who
+did what
+for how long
+with what result
+```
+
+without understanding Canovia Plan / Task IDs.
+
+Current `TaskEvidence` cannot represent that intake state directly because both `plan_id` and `task_id` are required.
+
+Therefore the recommended boundary is:
+
+```text
+External / Native Provider Result
+        ↓
+ExecutionActivity
+(provider-neutral factual intake;
+Plan / Task may still be unknown)
+        ↓
+Canovia linking / matching
+        ↓
+TaskEvidence
+(Task-bound canonical observation)
+        ↓
+Existing Intelligence adapters
+        ↓
+State / Readiness / Progress candidate / Replan
+```
+
+This keeps two responsibilities separate.
+
+### ExecutionActivity
+
+Represents:
+
+> What did an execution provider report?
+
+It may exist before Canovia knows which Task should receive it.
+
+### TaskEvidence
+
+Represents:
+
+> What factual observation is now attached to this Canovia Task?
+
+It remains the canonical downstream boundary for Intelligence.
+
+### Important consequence
+
+Do **not** make external providers create `TaskEvidence` directly.
+
+Provider payloads must not cross directly into Intelligence.
+
+The existing `TaskEvidenceAdapter` allowlist boundary remains authoritative.
+
+---
+
+## 29. Capability Model
+
+### 29.1 Capability keys should be semantic, not UI mode keys
+
+Do not use:
+
+```text
+study
+development
+career
+general
+```
+
+as provider capabilities.
+
+Those are Execution / Workspace domain modes.
+
+Capability keys describe what kind of work can actually be performed.
+
+Initial candidate keys:
+
+```text
+study.practice
+study.recall
+study.resource
+coding.repository
+general.task
+```
+
+Future examples:
+
+```text
+study.practice.exam
+study.practice.database
+typing.practice
+language.vocabulary
+fitness.running
+```
+
+### 29.2 Do not over-granularize V55.6
+
+V55.6 should not create topic-level capabilities such as:
+
+```text
+study.practice.database.join
+```
+
+until a real provider-selection use case requires them.
+
+Hierarchical string keys leave room for later refinement without making the initial resolver complex.
+
+### 29.3 Initial capability mapping
+
+Recommended deterministic mapping:
+
+```text
+StudyActivityPolicy::QUESTION_PRACTICE
+→ study.practice
+
+StudyActivityPolicy::RECALL
+→ study.recall
+
+StudyActivityPolicy::RESOURCE_STUDY
+→ study.resource
+
+Development profile / repository execution
+→ coding.repository
+
+fallback
+→ general.task
+```
+
+No AI call is required.
+
+---
+
+## 30. Provider Catalog: Registry First, Database Later
+
+### Decision
+
+Do not create a marketplace-style `execution_providers` database table in the first foundation release.
+
+V55.6 has:
+
+- no Developer Portal
+- no external self-service registration
+- no marketplace
+- no review/publish flow
+- no real third-party provider onboarding
+
+A DB-backed provider catalog now would create lifecycle/admin requirements before they are needed.
+
+### Recommended first abstraction
+
+Introduce a provider catalog/registry interface with code-defined provider definitions.
+
+Conceptually:
+
+```php
+ExecutionProviderDefinition
+
+key
+name
+kind            // native | external
+capabilities[]
+enabled
+launch metadata // reserved / optional in V55.6
+```
+
+Use stable string keys.
+
+Possible initial definitions:
+
+```text
+canovia.study.practice
+canovia.study.recall
+canovia.study.resource
+github
+canovia.general
+```
+
+The exact final keys should be fixed during implementation tests, but the important rule is:
+
+> Provider key identifies a concrete execution implementation/path, not merely a company category.
+
+### Why a registry is preferred now
+
+This matches the existing `WorkspaceModeRegistry` pattern and lets V55.6 validate the orchestration contract without building marketplace administration.
+
+Future architecture can replace the implementation behind the same catalog interface:
+
+```text
+Static native registry
+        +
+Published external provider records
+        ↓
+Composite ExecutionProviderCatalog
+```
+
+Consumers continue resolving by stable provider key.
+
+---
+
+## 31. Plan Execution Preference
+
+A small persistent preference is justified because the central UX rule is:
+
+> choose during setup; do not ask again during normal execution.
+
+Recommended table:
+
+```text
+plan_execution_preferences
+
+id
+plan_id
+capability
+provider_key
+user_selected
+created_at
+updated_at
+```
+
+Constraint:
+
+```text
+unique(plan_id, capability)
+```
+
+### Why Plan-scoped first
+
+The current product and specialized Intelligence loops are Plan-scoped.
+
+A Plan-level preference gives enough persistence for MVP without prematurely introducing:
+
+- global user preference inheritance
+- Task-specific overrides
+- organization policy
+- provider ranking profiles
+
+Future precedence can be added without changing the base record:
+
+```text
+Task override
+→ Plan preference
+→ User default
+→ Resolver default
+```
+
+Only Plan preference is needed now.
+
+### Provider key rather than provider FK
+
+Use a stable `provider_key` initially.
+
+This keeps preferences compatible with the code-backed registry now and a DB-backed provider catalog later.
+
+---
+
+## 32. ExecutionActivity Draft Model
+
+A provider-neutral Activity intake record is recommended as part of the foundation, but without a public external API yet.
+
+Candidate model:
+
+```text
+execution_activities
+
+id
+user_id nullable
+actor_token nullable
+
+provider_key
+capability
+external_key nullable
+
+type
+title
+status
+
+started_at nullable
+completed_at nullable
+duration_seconds nullable
+
+metrics json nullable
+metadata json nullable
+
+plan_id nullable
+task_id nullable
+task_evidence_id nullable
+linked_at nullable
+
+created_at
+updated_at
+```
+
+### Rules
+
+1. `plan_id` and `task_id` are nullable at intake.
+2. Provider payloads are normalized before storage; arbitrary raw payload must not be exposed to Intelligence.
+3. A stable external key should support idempotent ingestion.
+4. Linking to a Task is a Canovia responsibility.
+5. Projection to TaskEvidence must be explicit and idempotent.
+6. Activity receipt alone must not change Task progress/status.
+7. `task_evidence_id` provides traceability after projection.
+
+### Activity status and linking are separate concepts
+
+`status` describes the external activity itself, for example:
+
+- started
+- completed
+- interrupted
+
+Whether Canovia linked the activity is represented by nullable Task/Evidence linkage rather than overloading the activity status.
+
+---
+
+## 33. Resolver Boundary
+
+Introduce a deterministic `ExecutionResolver`.
+
+Input:
+
+```text
+Plan
+Task
+required capability
+available provider definitions
+Plan preference
+provider availability
+```
+
+Initial policy:
+
+```text
+1. Valid explicit Plan preference exists
+   → use it
+
+2. Suitable Canovia Native provider exists
+   → use Native
+
+3. Suitable connected external provider exists
+   → use it only when policy explicitly allows it
+
+4. No provider-specific path
+   → preserve current ExecutionModeService / Timer fallback
+```
+
+### Important MVP constraint
+
+Do not introduce provider ranking AI.
+
+Do not let sponsorship or monetization affect this resolver.
+
+Recommendation data and advertising data must remain separate inputs forever.
+
+---
+
+## 34. Relationship to Existing ExecutionModeService
+
+Do not replace `ExecutionModeService` in V55.6.
+
+Current responsibility:
+
+```text
+Plan / Task
+→ study | development | career | general
+→ specialized operation family
+```
+
+New responsibility:
+
+```text
+Task execution requirement
+→ capability
+→ provider
+```
+
+Target long-term composition:
+
+```text
+ExecutionModeService
+        ↓
+domain execution family
+
+Capability Resolver
+        ↓
+what operation is required
+
+ExecutionResolver
+        ↓
+which provider should perform it
+
+Launch Resolver
+        ↓
+where Start should go
+```
+
+V55.6 only needs the first provider/capability resolution foundation.
+
+Launch unification is a later phase.
+
+---
+
+## 35. UI Placement Decision
+
+### Do not globally insert a blocking screen immediately after Plan creation
+
+Current specialized onboarding already has meaningful first steps:
+
+Study:
+
+```text
+Create Plan
+→ Capture Study Scope
+→ Record first Study Evidence
+```
+
+Development:
+
+```text
+Create Plan
+→ Connect GitHub Evidence
+```
+
+Career:
+
+```text
+Create Plan
+→ Capture real Career signal
+```
+
+A mandatory global Execution Setup redirect would disrupt these domain-specific flows and often occur before Canovia has enough Task context to know which capabilities are needed.
+
+### Recommended UX
+
+Execution Setup is a planning/preparation surface that appears only when there is a real decision to make.
+
+#### Study
+
+After enough Scope / Task context exists:
+
+```text
+Study Workspace
+→ determine required study capabilities
+→ if only one viable provider:
+     resolve silently
+  else:
+     show Execution Setup once
+→ normal Current Action
+```
+
+The setup can later live as a compact Workspace preparation card.
+
+It should not appear merely because the architecture supports providers.
+
+#### Development
+
+Do not add a duplicate setup UI in the first iteration.
+
+The existing GitHub workflow already behaves like an external execution/evidence integration.
+
+V55.6 should map this conceptually into capability/provider architecture without adding another user decision.
+
+#### Normal execution / `/navigate`
+
+Never show a provider chooser on every Start.
+
+Keep the current single CTA.
+
+Future behavior:
+
+```text
+[開始]
+→ resolve stored provider
+→ launch directly
+```
+
+A separate "実行方法を変更" entry can exist in Plan/Workspace configuration when external alternatives become real.
+
+---
+
+## 36. MVP Scope Recommended for V55.6
+
+V55.6 should be a **foundation release**, not the first marketplace release.
+
+### Implement
+
+1. Canonical Execution Capability representation
+2. Provider definition DTO/value object
+3. Provider catalog/registry interface and static implementation
+4. PlanExecutionPreference model + migration
+5. Deterministic ExecutionResolver
+6. ExecutionActivity model + migration for unbound provider results
+7. Activity → TaskEvidence projection boundary/interface
+8. Plan model relationships
+9. Unit/feature tests for the new contracts
+10. Documentation synchronization after tests pass
+
+### Do not wire into primary UX yet
+
+V55.6 should not change:
+
+- current Start CTA behavior
+- `/navigate` provider UI
+- Study Workspace visible flow
+- Development Workspace visible flow
+- Plan creation redirect
+- Intelligence scoring
+- Task progress mutation
+- GitHub workflow behavior
+
+This keeps the foundation low-risk and lets the next release validate UI with a mock/test provider without destabilizing current users.
+
+---
+
+## 37. Interfaces to Preserve for Future Expansion
+
+Recommended conceptual interfaces:
+
+### ExecutionProviderCatalog
+
+```text
+all()
+find(providerKey)
+forCapability(capability)
+```
+
+The implementation can be static now and composite/DB-backed later.
+
+### ExecutionCapabilityResolver
+
+```text
+forTask(Plan, Task)
+→ required capability(s)
+```
+
+The Study implementation delegates to the existing StudyActivityPolicy.
+
+### ExecutionResolver
+
+```text
+resolve(Plan, Task, Capability)
+→ selected provider resolution
+```
+
+Returns a decision object, not a redirect response.
+
+### ExecutionLaunchResolver — future
+
+```text
+provider + capability + task context
+→ internal route / web URL / universal link / deep link
+```
+
+Not required for V55.6.
+
+### ExecutionActivityProjector
+
+```text
+linked ExecutionActivity
+→ TaskEvidence
+```
+
+Projection owns:
+
+- evidence source/type mapping
+- confidence
+- normalized metadata
+- idempotent external key
+
+### Provider Connection / Availability — future
+
+A future interface should answer:
+
+```text
+Can this actor currently use this provider?
+```
+
+It can later hide:
+
+- OAuth connections
+- GitHub installations
+- app installation state
+- entitlement
+- provider outage state
+
+Do not embed those conditions directly into `ExecutionResolver`.
+
+---
+
+## 38. Existing Architecture to Reuse, Not Duplicate
+
+Reuse:
+
+- `StudyActivityPolicyService` for initial Study execution requirements
+- `ExecutionActionPolicyService` for one-primary-action UX
+- `ExecutionModeService` for execution family routing
+- `TaskEvidenceService` for canonical Task-bound Evidence
+- `TaskEvidenceAdapter` for allowlisted Intelligence facts
+- existing Study / Development Intelligence
+- existing GitHub Evidence flow
+- Workspace-specific onboarding and preparation surfaces
+
+Do not introduce parallel versions of:
+
+- Task progress model
+- Evidence model
+- Study readiness
+- Development readiness
+- generic recommendation engine
+- Plan category classifier
+- Workspace Mode
+- Execution Mode
+
+---
+
+## 39. Compatibility / Impact Assessment
+
+### Database
+
+Likely V55.6 migrations:
+
+- `plan_execution_preferences`
+- `execution_activities`
+
+No existing column needs to change.
+
+### Current models
+
+Add relationships only.
+
+No existing Plan / Task record requires backfill.
+
+### Runtime
+
+No provider/network request on ordinary GET pages.
+
+No external API call is introduced.
+
+No AI call is introduced.
+
+### Intelligence
+
+No scoring changes.
+
+New generic Activity records do not affect Readiness until they have been:
+
+1. linked to a Task
+2. projected to a known TaskEvidence type
+3. normalized by the existing Intelligence boundary
+
+### Existing users
+
+No setup modal or migration prompt.
+
+No existing Plan is blocked because it has no execution preference.
+
+Resolver must always preserve a valid Native/current fallback.
+
+---
+
+## 40. Recommended Implementation Sequence
+
+### V55.6 — Execution Ecosystem Foundation
+
+```text
+Capability
+→ Provider Catalog
+→ Preference
+→ Resolver
+→ Activity intake model
+→ Activity/Evidence projection contract
+```
+
+No visible UX change.
+
+### V55.7 — Execution Setup Validation
+
+Use Study as the first UX validation domain.
+
+Possible test setup:
+
+- existing Canovia Native provider
+- one mock/non-production external provider definition
+
+Validate:
+
+- setup appears only when choice exists
+- selection persists per Plan/capability
+- Start remains one-tap
+- user can change method later
+- Native fallback always works
+
+### Later — Activity Integration API
+
+Only after the internal Activity model and linking semantics are stable:
+
+```text
+authenticated provider event
+→ validate
+→ normalize
+→ idempotent ExecutionActivity
+→ link
+→ TaskEvidence
+```
+
+### Later — Launch Integration
+
+Add external URL / Universal Link / Deep Link launch.
+
+### Later — Developer Portal / Directory / Marketplace
+
+Only after real integrations demonstrate repeatable provider contracts.
+
+---
+
+## 41. Decision Summary
+
+The Execution Ecosystem should be implemented as an **orchestration layer inside the existing Canovia architecture**, not as a parallel subsystem.
+
+The key structural decision is:
+
+```text
+Workspace / Intelligence
+        ↓
+Current Action / Task
+        ↓
+Execution Mode
+        ↓
+Capability
+        ↓
+Provider Resolution
+        ↓
+Execution
+        ↓
+ExecutionActivity
+        ↓
+TaskEvidence
+        ↓
+Existing Intelligence / Replan
+```
+
+For V55.6:
+
+- keep current UX unchanged
+- add the minimum provider/capability/activity domain foundation
+- keep external integration optional
+- keep Native fallback authoritative
+- do not build Marketplace/OAuth/API/ads
+- do not let Activity directly mutate progress
+- do not bypass TaskEvidence / Intelligence normalization
+
+This gives Canovia a stable path from today's Native/GitHub execution architecture to the future external Execution Ecosystem without requiring a large rewrite.
