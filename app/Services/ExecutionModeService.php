@@ -102,7 +102,7 @@ final class ExecutionModeService
             return [
                 'mode' => $mode,
                 'action_id' => 'study_activity',
-                'label' => '学習Workspaceで進める',
+                'label' => '学習Activityで進める',
                 'description' => '問題演習・想起・教材学習から、このTaskに合う学習Activityを選びます。',
                 'route_name' => 'plans.tasks.study_activity.show',
                 'route_parameters' => [$plan->id, $task->id],
@@ -115,7 +115,7 @@ final class ExecutionModeService
             self::DEVELOPMENT => [
                 'mode' => $mode,
                 'action_id' => 'execution_orchestration',
-                'label' => '開発Workspaceで進める',
+                'label' => '開発フローで進める',
                 'description' => 'Task Context・GitHub・Execution Packetを使って実装作業へ入ります。',
                 'route_name' => 'plans.tasks.execution_orchestration.show',
                 'route_parameters' => [$plan->id, $task->id],
@@ -125,7 +125,7 @@ final class ExecutionModeService
             self::CAREER => [
                 'mode' => $mode,
                 'action_id' => 'career_workspace',
-                'label' => 'Career Workspaceで進める',
+                'label' => 'Career管理で進める',
                 'description' => '応募・選考・面接・Captureを、このPlanのCareer Pipelineで進めます。',
                 'route_name' => 'plans.career.index',
                 'route_parameters' => [$plan->id],
