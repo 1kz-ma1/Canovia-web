@@ -12,6 +12,7 @@ use App\Models\Task;
 use App\Services\BehaviorIdentityService;
 use App\Services\FeatureAccessService;
 use App\Services\PlanOwnershipService;
+use App\Services\PlanCategoryProfileService;
 use App\Services\StudyRecallCandidateExtractionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,9 @@ use Illuminate\Validation\ValidationException;
 
 class StudyRecallCandidateController extends Controller
 {
+    public function __construct(
+        private readonly PlanCategoryProfileService $categoryProfiles,
+    ) {}
     public function extract(
         Request $request,
         Plan $plan,
@@ -227,7 +231,7 @@ class StudyRecallCandidateController extends Controller
     private function authorizeTask(Request $request, Plan $plan, Task $task, PlanOwnershipService $ownership): void
     {
         abort_unless((int) $task->plan_id === (int) $plan->id, 404);
-        abort_unless(trim((string) $plan->category) === '資格学習', 404);
+        abort_unless($this->categoryProfiles->forPlan($plan)->key === 'study', 404);
         $ownership->authorizeTask($request, $task);
     }
 

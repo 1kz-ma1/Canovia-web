@@ -140,8 +140,8 @@
                     <p class="text-xs font-bold uppercase tracking-[0.16em] text-amber-300">CANOVIA TOOLS</p>
                     <h2 class="mt-1 text-lg font-black text-slate-50">AI演習を使えそうですが、Planカテゴリが一致していません</h2>
                     <p class="mt-2 text-sm leading-6 text-slate-300">
-                        AI演習は現在「資格学習」カテゴリのPlanで利用できます。
-                        このPlanが資格学習用なら、カテゴリを「資格学習」に変更すると未完了Taskからすぐ演習を始められます。
+                        AI演習は学習カテゴリのPlanで利用できます。
+                        このPlanが学習用なら、カテゴリを学習・試験系に変更すると未完了Taskからすぐ演習を始められます。
                     </p>
                 </div>
                 @if ($canManage ?? false)

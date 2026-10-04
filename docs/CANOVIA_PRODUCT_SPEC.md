@@ -1945,3 +1945,53 @@ Native AIが失敗・未設定でも元ファイルは保持し、手動で科�
 Planの学習カテゴリには「試験範囲」導線を追加し、元ファイル確認、抽出信頼度、曖昧点、範囲行追加/削除、再解析、確認・修正・確定を1画面で行える。
 
 詳細は `docs/V53.4_STUDY_SCOPE_CAPTURE.md` を正とする。
+
+
+## V53.5 Study Intelligence
+
+Human-confirmed Study Scopeと既存Practice / Recall Evidenceを接続し、試験範囲に対する現在状態をdeterministicに計算する。
+
+```text
+Confirmed Scope
++ Practice Evidence
++ Recall Evidence
++ deadline context
+→ scope-level observation
+→ Coverage / Mastery / Retention
+→ Remaining Effort / Deadline Pressure
+→ Exam Readiness
+```
+
+Task progressはStudy Stateのsource of truthとして使用しない。
+
+Coverageは、confirmed scopeのうちPractice / Recall Evidenceを安全に紐付けられた範囲の割合とする。unitまたは特徴的range tokenの一致を強いSignalとし、subject-only一致は同subjectに1範囲しかなくunitもない場合だけ許可する。例えば「数学を勉強する」というgeneric Taskを、二次関数・図形の両方へ自動展開しない。
+
+Masteryはscopeへ紐付いたPractice scoreから算出し、latest 65% + average 35%を基準とする。scopeに一致するweaknessだけをbounded penaltyとして扱う。
+
+RetentionはRecall rating / mastered stateから算出する。again=20 / hard=50 / good=80 / easy=95 / mastered=100をV1 mappingとし、複数観測はlatest 65% + average 35%でまとめる。
+
+SpeedはV53.5では未計測とする。現在のStudyPracticeSession started_at/completed_atは解答時間だけでなく採点・provider latency・結果確認等を含み得るため、解答速度として利用しない。
+
+残り学習量は偽の分数精度を出さず、confirmed scope 1件を1 Study Unitとする相対負荷で表す。Evidence / Mastery / Retentionが揃うほどremaining unitを減らし、remaining units / remaining percent / units per day / deadline pressureを出す。将来、authoritative duration dataが十分に溜まった時点でUnits→時間へ校正可能にする。
+
+試験日は、1つのconfirmed exam dateがあればそれを使い、なければPlan deadlineをfallbackとする。複数confirmed Captureのexam dateが食い違う場合は `exam_date_conflict=true` とし、Canoviaが勝手にどちらかを選ばない。
+
+Exam Readiness V1:
+
+```text
+Coverage × 0.35
++ Mastery × 0.45
++ Retention × 0.20
+```
+
+Readyの目安はCoverage>=85 / Mastery>=80 / Retention>=70 / total>=80 / remaining effort<=25% / deadline pressureがhigh・overdueでないこと。Speedはscoreへ含めず、未計測中はconfidenceを上限0.85へ抑える。
+
+Study Intelligence StateSnapshotは、Scope Human Confirmation / Practice assessment Evidence / Recall review Evidenceが増えた時に更新する。GET表示ではephemeralに再評価し、閲覧のたびにsnapshotを量産しない。
+
+V53.5以降、V53.4のHuman Confirmation後はconfirmed scopeだけをIntelligence StateへProjectionする。AI Draftは引き続きStateへ入れない。Task生成やTask progress mutationも行わない。
+
+Study Activity / AI Practice / Recall / Recall candidateはexact `category === 資格学習` 判定を廃止し、Plan Category Profileの `study` 全体へ拡張する。AP専用profileは維持し、generic profileは `generic_study / 学習・試験` とする。
+
+Study Scope画面にはV53.5検証用の最小diagnosticとしてReadiness / Coverage / Mastery / Retention / Speed未計測 / 残りStudy Units / deadline pressureを表示する。最終Intelligence UXはV53.9、Next ActionはV53.6で扱う。
+
+詳細は `docs/V53.5_STUDY_INTELLIGENCE.md` を正とする。

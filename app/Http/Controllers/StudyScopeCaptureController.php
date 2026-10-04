@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FeatureKey;
+use App\Intelligence\Study\StudyPlanIntelligenceService;
 use App\Exceptions\NativeAiExecutionException;
 use App\Models\InboxItem;
 use App\Models\Plan;
@@ -30,6 +31,7 @@ class StudyScopeCaptureController extends Controller
         PlanCategoryProfileService $profiles,
         FeatureAccessService $featureAccess,
         NativeAiGateway $nativeAi,
+        StudyPlanIntelligenceService $studyIntelligence,
     ) {
         $ownership->authorizeView($request, $plan);
         $this->authorizeStudyPlan($plan, $profiles);
@@ -40,10 +42,17 @@ class StudyScopeCaptureController extends Controller
             ->latest('id')
             ->get();
 
+        $intelligence = $captures->contains(
+            fn (StudyScopeCapture $capture) => $capture->status === 'confirmed'
+        )
+            ? $studyIntelligence->evaluate($plan)
+            : null;
+
         return view('study_scope.index', [
             'plan' => $plan,
             'captures' => $captures,
             'canEdit' => $ownership->canEdit($request, $plan),
+            'studyIntelligence' => $intelligence,
             'canAnalyze' => $nativeAi->isConfigured()
                 && $featureAccess->canUse(
                     $request->user(),
@@ -227,6 +236,7 @@ class StudyScopeCaptureController extends Controller
         StudyScopeCapture $capture,
         PlanOwnershipService $ownership,
         PlanCategoryProfileService $profiles,
+        StudyPlanIntelligenceService $studyIntelligence,
     ) {
         $ownership->authorizeEdit($request, $plan);
         $this->authorizeStudyPlan($plan, $profiles);
@@ -342,9 +352,11 @@ class StudyScopeCaptureController extends Controller
             }
         });
 
+        $studyIntelligence->tryPersistSnapshot($plan, now());
+
         return redirect()
             ->route('plans.study_scope.index', $plan)
-            ->with('success', '試験範囲を確定しました。まだTaskや進捗は変更していません。');
+            ->with('success', '試験範囲を確定し、Study Intelligenceを更新しました。Taskや進捗は変更していません。');
     }
 
     public function destroy(

@@ -7,11 +7,15 @@ use App\Models\Plan;
 use App\Models\Task;
 use App\Services\FeatureAccessService;
 use App\Services\PlanOwnershipService;
+use App\Services\PlanCategoryProfileService;
 use App\Services\StudyActivityPolicyService;
 use Illuminate\Http\Request;
 
 class StudyActivityController extends Controller
 {
+    public function __construct(
+        private readonly PlanCategoryProfileService $categoryProfiles,
+    ) {}
     public function show(
         Request $request,
         Plan $plan,
@@ -22,7 +26,7 @@ class StudyActivityController extends Controller
     ) {
         abort_unless((int) $task->plan_id === (int) $plan->id, 404);
         $ownership->authorizeTask($request, $task);
-        abort_unless(trim((string) $plan->category) === '資格学習', 404);
+        abort_unless($this->categoryProfiles->forPlan($plan)->key === 'study', 404);
 
         $plan->loadMissing('resources');
         $task->loadMissing('resources');

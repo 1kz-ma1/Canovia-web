@@ -50,7 +50,7 @@ class StudyPracticePromptService
             : '- なし';
 
         $examProfile = is_array($strategy['exam_profile'] ?? null) ? $strategy['exam_profile'] : [];
-        $examProfileLabel = trim((string) ($examProfile['label'] ?? '資格学習'));
+        $examProfileLabel = trim((string) ($examProfile['label'] ?? '学習・試験'));
         $preferredType = trim((string) ($examProfile['preferred_response_type'] ?? '')) ?: 'single_choice';
         $isApSubjectA = ($examProfile['key'] ?? null) === 'ap_subject_a_exam';
 
@@ -95,7 +95,7 @@ class StudyPracticePromptService
                 '- 単純な用語・定義・知識再生だけで十分な問題はwork_inputをnoneにする。',
             ])
             : implode("\n", [
-                '- 資格試験として不必要な算術負荷を避け、理解・判断を測る難易度にする。',
+                '- 学習・試験として不必要な算術負荷を避け、理解・判断を測る難易度にする。',
                 '- 数値問題は意味のある丸めや扱いやすい値を優先し、計算量だけで難しくしない。',
             ]);
 

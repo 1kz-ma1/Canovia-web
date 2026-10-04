@@ -13,6 +13,7 @@ class PlanToolService
         private readonly FeatureAccessService $featureAccess,
         private readonly StudyActivityPolicyService $studyActivities,
         private readonly GuidedExecutionPolicyService $guidedExecutions,
+        private readonly PlanCategoryProfileService $categoryProfiles,
     ) {}
 
     /**
@@ -169,7 +170,7 @@ class PlanToolService
 
     private function isStudyPlan(Plan $plan): bool
     {
-        return trim((string) $plan->category) === '資格学習';
+        return $this->categoryProfiles->forPlan($plan)->key === 'study';
     }
 
     private function isCareerPlan(Plan $plan): bool

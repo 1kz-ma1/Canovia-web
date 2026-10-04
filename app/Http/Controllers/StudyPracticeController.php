@@ -15,6 +15,8 @@ use App\Services\EvidenceProgressService;
 use App\Services\FeatureAccessService;
 use App\Services\NativeAiGateway;
 use App\Services\PlanOwnershipService;
+use App\Services\PlanCategoryProfileService;
+use App\Intelligence\Study\StudyPlanIntelligenceService;
 use App\Services\PracticeQuestionDemandRecorder;
 use App\Services\StudyPracticeOrchestrator;
 use App\Services\StudyPracticePromptService;
@@ -30,6 +32,10 @@ use InvalidArgumentException;
 
 class StudyPracticeController extends Controller
 {
+    public function __construct(
+        private readonly PlanCategoryProfileService $categoryProfiles,
+        private readonly StudyPlanIntelligenceService $studyIntelligence,
+    ) {}
     public function show(
         Request $request,
         Plan $plan,
@@ -45,7 +51,7 @@ class StudyPracticeController extends Controller
         AiCapacityService $aiCapacity,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
-        abort_unless(trim((string) $plan->category) === '資格学習', 404);
+        $this->authorizeStudyPlan($plan);
 
         $key = $this->sessionKey($plan, $task);
         $state = $request->session()->get($key, []);
@@ -263,7 +269,7 @@ class StudyPracticeController extends Controller
         FeatureAccessService $featureAccess,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
-        abort_unless(trim((string) $plan->category) === '資格学習', 404);
+        $this->authorizeStudyPlan($plan);
         $featureAccess->authorizeUse(
             $request->user(),
             FeatureKey::QuestionPack,
@@ -348,7 +354,7 @@ class StudyPracticeController extends Controller
         NativeAiGateway $nativeAi,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
-        abort_unless(trim((string) $plan->category) === '資格学習', 404);
+        $this->authorizeStudyPlan($plan);
 
         $featureAccess->authorizeUse(
             $request->user(),
@@ -451,7 +457,7 @@ class StudyPracticeController extends Controller
         PracticeQuestionDemandRecorder $demandRecorder,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
-        abort_unless(trim((string) $plan->category) === '資格学習', 404);
+        $this->authorizeStudyPlan($plan);
 
         $validated = $request->validate([
             'questions_json' => ['required', 'string', 'max:120000'],
@@ -537,7 +543,7 @@ class StudyPracticeController extends Controller
         BehaviorIdentityService $identity,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
-        abort_unless(trim((string) $plan->category) === '資格学習', 404);
+        $this->authorizeStudyPlan($plan);
 
         $validated = $request->validate([
             'practice_session_id' => ['required', 'integer', 'min:1'],
@@ -605,7 +611,7 @@ class StudyPracticeController extends Controller
         NativeAiGateway $nativeAi,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
-        abort_unless(trim((string) $plan->category) === '資格学習', 404);
+        $this->authorizeStudyPlan($plan);
 
         $key = $this->sessionKey($plan, $task);
         $state = $request->session()->get($key, []);
@@ -834,6 +840,10 @@ class StudyPracticeController extends Controller
                 );
                 $state['attempt_id'] = $attempt->id;
                 $evidenceService->recordStudyPracticeAssessment($attempt);
+                $this->studyIntelligence->tryPersistSnapshot(
+                    $plan,
+                    $attempt->created_at ?? now(),
+                );
                 $practiceSession->update(['status' => StudyPracticeSession::STATUS_ASSESSED]);
                 $request->session()->put($key, $state);
 
@@ -890,7 +900,7 @@ class StudyPracticeController extends Controller
         TaskEvidenceService $evidenceService,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
-        abort_unless(trim((string) $plan->category) === '資格学習', 404);
+        $this->authorizeStudyPlan($plan);
 
         $validated = $request->validate([
             'assessment_json' => ['required', 'string', 'max:80000'],
@@ -946,6 +956,10 @@ class StudyPracticeController extends Controller
         $state['assessment'] = $assessment;
         $state['attempt_id'] = $attempt->id;
         $evidenceService->recordStudyPracticeAssessment($attempt);
+                $this->studyIntelligence->tryPersistSnapshot(
+                    $plan,
+                    $attempt->created_at ?? now(),
+                );
         $request->session()->put($key, $state);
 
         if (! empty($state['practice_session_id'])) {
@@ -972,7 +986,7 @@ class StudyPracticeController extends Controller
         StudyTaskProgressionService $progressionService,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
-        abort_unless(trim((string) $plan->category) === '資格学習', 404);
+        $this->authorizeStudyPlan($plan);
 
         $validated = $request->validate([
             'attempt_id' => ['required', 'integer', 'min:1'],
@@ -1150,7 +1164,7 @@ class StudyPracticeController extends Controller
         BehaviorIdentityService $identity,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
-        abort_unless(trim((string) $plan->category) === '資格学習', 404);
+        $this->authorizeStudyPlan($plan);
 
         $key = $this->sessionKey($plan, $task);
         $state = $request->session()->get($key, []);
@@ -1170,6 +1184,11 @@ class StudyPracticeController extends Controller
             ->with('status', $continuing
                 ? '前回の結果を引き継いで、次の演習を準備します。'
                 : 'この演習をリセットしました。');
+    }
+
+    private function authorizeStudyPlan(Plan $plan): void
+    {
+        abort_unless($this->categoryProfiles->forPlan($plan)->key === 'study', 404);
     }
 
     private function authorizeTask(Request $request, Plan $plan, Task $task, PlanOwnershipService $ownership): void

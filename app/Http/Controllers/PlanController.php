@@ -249,9 +249,9 @@ class PlanController extends Controller
             ? ($taskTools[(int) $toolFocusTask->id] ?? [])
             : [];
         $primaryPlanAction = $executionActions->primary($planTools);
-        $studyToolCategoryMismatch = trim((string) $plan->category) !== '資格学習'
-            && $toolService->looksLikeStudyPlan($plan);
         $planCategoryProfile = $categoryProfiles->forPlan($plan);
+        $studyToolCategoryMismatch = $planCategoryProfile->key !== 'study'
+            && $toolService->looksLikeStudyPlan($plan);
 
         return view('plans.show', compact(
             'plan',

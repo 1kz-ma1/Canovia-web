@@ -53,9 +53,9 @@ class StudyPracticeExamProfileService
         }
 
         return [
-            'key' => 'generic_qualification',
+            'key' => 'generic_study',
             'version' => 'v1',
-            'label' => '資格学習',
+            'label' => '学習・試験',
             'exam_code' => null,
             'subject' => null,
             'preferred_response_type' => null,

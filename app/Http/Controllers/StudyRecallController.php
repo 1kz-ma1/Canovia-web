@@ -13,6 +13,8 @@ use App\Services\BehaviorIdentityService;
 use App\Services\FeatureAccessService;
 use App\Services\NativeAiGateway;
 use App\Services\PlanOwnershipService;
+use App\Services\PlanCategoryProfileService;
+use App\Intelligence\Study\StudyPlanIntelligenceService;
 use App\Services\StudyRecallSchedulerService;
 use App\Services\TaskEvidenceService;
 use Illuminate\Http\Request;
@@ -22,6 +24,10 @@ use Illuminate\Validation\ValidationException;
 
 class StudyRecallController extends Controller
 {
+    public function __construct(
+        private readonly PlanCategoryProfileService $categoryProfiles,
+        private readonly StudyPlanIntelligenceService $studyIntelligence,
+    ) {}
     public function show(
         Request $request,
         Plan $plan,
@@ -211,6 +217,11 @@ class StudyRecallController extends Controller
             occurredAt: $review->reviewed_at,
         );
 
+        $this->studyIntelligence->tryPersistSnapshot(
+            $plan,
+            $review->reviewed_at ?? now(),
+        );
+
         $labels = [
             'again' => 'もう一度',
             'hard' => '難しい',
@@ -248,7 +259,7 @@ class StudyRecallController extends Controller
         bool $edit = false,
     ): void {
         abort_unless((int) $task->plan_id === (int) $plan->id, 404);
-        abort_unless(trim((string) $plan->category) === '資格学習', 404);
+        abort_unless($this->categoryProfiles->forPlan($plan)->key === 'study', 404);
 
         if ($edit) {
             $ownership->authorizeTask($request, $task);
