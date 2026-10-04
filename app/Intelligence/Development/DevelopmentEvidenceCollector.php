@@ -2,7 +2,6 @@
 
 namespace App\Intelligence\Development;
 
-use App\Enums\EvidenceSource;
 use App\Intelligence\Adapters\TaskEvidenceAdapter;
 use App\Intelligence\Data\EvidenceObservation;
 use App\Models\Plan;
@@ -19,6 +18,7 @@ final class DevelopmentEvidenceCollector
         'github_branch_observed',
         'github_commit_observed',
         'github_deployment_observed',
+        'development_quality_gate_confirmed',
     ];
 
     public function __construct(
@@ -32,7 +32,6 @@ final class DevelopmentEvidenceCollector
     {
         return TaskEvidence::query()
             ->where('plan_id', $plan->id)
-            ->where('source', EvidenceSource::GitHub->value)
             ->whereIn('type', self::TYPES)
             ->orderBy('occurred_at')
             ->orderBy('id')
