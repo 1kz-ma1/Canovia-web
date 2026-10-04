@@ -58,6 +58,18 @@ class WorkspaceModeRegistryV540Test extends TestCase
             'connect_github',
             $development->emptyStateActionKey,
         );
+
+        $this->assertSame('資格学習', $study->suggestedPlanCategory);
+        $this->assertSame('個人開発', $development->suggestedPlanCategory);
+        $this->assertSame([], $overview->onboardingSteps);
+        $this->assertSame(
+            ['create_plan', 'capture_study_scope', 'record_study_evidence'],
+            array_column($study->onboardingSteps, 'key'),
+        );
+        $this->assertSame(
+            ['create_plan', 'connect_github_evidence'],
+            array_column($development->onboardingSteps, 'key'),
+        );
     }
 
     public function test_registry_maps_only_profiles_with_dedicated_workspace_modes(): void
