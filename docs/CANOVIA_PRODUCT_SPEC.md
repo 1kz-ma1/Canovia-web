@@ -3766,3 +3766,174 @@ Action intentはcollapsed Home cardでも短く表示する。
 - provider trafficなし
 
 詳細は `docs/V55.3_CURRENT_ACTION_HOME_UX.md` を正とする。
+
+
+## V55.4 Map Exploration Surface Reframe
+
+V55.4はiOS前UX Completionとして、Canovia Mapを「Homeの別表示」から明示的なExplore Surfaceへ再定義する。
+
+最新のSurface責務:
+
+```text
+Home
+→ 今、何をすればいい？
+
+Workspace
+→ domainの現在地と判断理由
+
+Explore
+→ Canovia全体の構造・関係性・Contextを空間的に辿る
+```
+
+### Canonical entry
+
+Home:
+
+```text
+/
+route = home
+role = Now / Current Action
+```
+
+Explore:
+
+```text
+/map
+route = map.index
+role = spatial exploration / whole-system navigation
+```
+
+ログイン後・authenticated guest redirectのcanonical entryは常にHome。
+
+旧Map preferenceが残っていても `/map` へ自動redirectしない。
+
+### Legacy Home Surface Preference
+
+旧:
+
+- localStorage `pacekeeper.ui.home_surface`
+- cookie `canovia_home_surface`
+
+は互換期間中のlegacy stateとして残せるが、入口決定には使わない。
+
+`HomeSurfacePreference` はcompatibility shimとなり:
+
+```text
+value() → classic
+url() → /
+```
+
+を返す。
+
+DB migrationやlegacy storageの即時削除は行わない。
+
+### Settings
+
+以下をSettingsから撤去する。
+
+```text
+ホームの既定表示
+Classic
+Map
+```
+
+ユーザーはMapをHome preferenceとして理解する必要がない。
+
+Theme / Accent / Densityは変更しない。
+
+### Surface navigation
+
+既存compact switcherのlayout/CSS資産は再利用し、意味だけをSurface navigatorへ変更する。
+
+```text
+SURFACES
+Home
+Explore
+```
+
+DOM:
+
+- `data-canovia-surface-nav`
+- `data-canovia-surface="home"`
+- `data-canovia-surface="explore"`
+
+通常app pageは `data-canovia-surface="app"`。
+
+旧 `data-home-surface-*` UI contractは退役する。
+
+### Explore presentation
+
+Map root title:
+
+```text
+Canovia Explore
+```
+
+L0:
+
+```text
+L0 · CANOVIA EXPLORE
+```
+
+HomeがCurrent Actionを開始するSurfaceなのに対し、Exploreは:
+
+- 全体像
+- Plan / Execution Context
+- 振り返り
+- 共同
+- Space Station
+
+を空間的に探索するSurfaceとして説明する。
+
+L0 CTAは:
+
+```text
+実行Contextを探索
+```
+
+とし、「今やることを開始する」primary authorityはHomeへ残す。
+
+Mobile / Instant shell section labelは `Explore`。
+
+### Runtime cleanup
+
+product runtimeの `app.js` はlegacy Home preference moduleをmountしない。
+
+削除対象:
+
+- `resolveHomeSurface()`
+- `persistHomeSurface()`
+- Home link destination rewrite
+- Home surface setting event handlers
+
+legacy helper file自体はcompatibility window中は残してよい。
+
+### Preserved Map architecture
+
+V55.4では以下を変更しない。
+
+- `/map` URL
+- Map Projection
+- L0/L1/L2/L3 hierarchy
+- Space Station
+- Semantic Zoom
+- direct node navigation
+- Map telemetry
+- fullscreen Map shell
+- safe area
+- Instant Navigation
+- Mobile pan / pinch
+- Map personalization
+- Roadmap spatial surfaces
+
+### Cost boundary
+
+V55.4は:
+
+- DB query追加なし
+- migrationなし
+- AI trafficなし
+- provider trafficなし
+- Current Action selection変更なし
+
+詳細は `docs/V55.4_MAP_EXPLORATION_SURFACE.md` を正とする。
