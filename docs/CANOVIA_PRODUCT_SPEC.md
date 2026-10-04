@@ -1834,3 +1834,62 @@ State before
 V53.2ではOpenAIを使用しない。V53.3 Reasoning Routerでdeterministic / domain rule / OpenAI / future Canovia modelを同じDecision境界の後ろで選択可能にする。
 
 詳細は `docs/V53.2_DECISION_READINESS_ENGINE.md` を正とする。
+
+
+## V53.3 Reasoning Router
+
+V53.2のdeterministic Decisionをbaseline / fallbackとして維持したまま、provider-neutralなReasoning Routerを追加する。
+
+```text
+State
+→ Readiness
+→ deterministic candidates
+→ baseline Decision
+→ Reasoning Router
+  ├ deterministic
+  ├ OpenAI
+  └ future Canovia model
+→ selected Decision
+```
+
+default modeは `deterministic` とし、mergeだけでOpenAI traffic/costを増やさない。
+
+`openai` modeでは既存 `FeatureAccessService -> AutomaticAiExecution` を権限境界として再利用し、独自Premium判定を作らない。
+
+`auto` modeはcandidateが複数存在し、baseline confidenceが設定閾値以下の場合だけmodel escalation候補とする。
+
+OpenAIは自由にTask/Actionを発明せず、Canoviaがdeterministicに生成したcandidate listから1件だけ選択する。Structured Outputの `selected_type` 自体をcandidate enumへ制約する。
+
+最終Decision confidenceは、
+
+```text
+min(candidate confidence, provider confidence)
+```
+
+とし、modelがEvidence由来confidenceを上回らない。
+
+provider障害、権限不足、未設定、contract mismatch時はdeterministic baselineへfallbackする。fallbackは観測するがsuccessful reasoning cacheとしては扱わず、provider復旧後の再試行を妨げない。
+
+successfulなexact reasoning requestはrequest fingerprintで再利用し、同じState/Readiness/candidateに対するOpenAI二重実行を防ぐ。
+
+`intelligence_reasoning_runs` へ以下を保存する。
+
+- mode / route
+- provider / model
+- baseline / selected Decision type
+- baseline / selected confidence
+- baseline agreement
+- fallback reason
+- latency
+- NativeAiRun link
+- token usage
+- optional estimated USD cost
+- linked Decision trace
+
+provider pricingはhard-codeせず、環境設定されたinput/output token単価がある場合だけestimated costを計算する。
+
+baseline agreementは品質そのものではなくevaluation signalであり、最終品質は将来 `Decision -> Action -> Outcome -> State delta` で評価する。
+
+自然会話AIとDecision reasoningは別責務のまま維持する。
+
+詳細は `docs/V53.3_REASONING_ROUTER.md` を正とする。
