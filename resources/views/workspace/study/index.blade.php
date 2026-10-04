@@ -138,6 +138,13 @@
             </div>
         </section>
 
+        @include('workspace.partials.execution-setup', [
+            'executionSetup' => $executionSetup ?? null,
+            'plan' => $plan,
+            'navigationTask' => $navigationTask,
+            'canEdit' => $canEdit,
+        ])
+
         @include('intelligence.partials.state-change', [
             'feedback' => $intelligenceStateChange ?? null,
         ])
