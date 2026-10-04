@@ -1462,14 +1462,14 @@ resolve(Plan, Task, Capability)
 
 Returns a decision object, not a redirect response.
 
-### ExecutionLaunchResolver — future
+### ExecutionLaunchResolver
 
 ```text
 provider + capability + task context
 → internal route / web URL / universal link / deep link
 ```
 
-Not required for V55.6.
+V55.7でStudy Start向けの最初の実装を追加した。Nativeは既存routeを維持し、Validation External Providerだけ専用handoff surfaceへ解決する。Universal Link / Deep Linkは引き続き将来範囲。
 
 ### ExecutionActivityProjector
 
@@ -1591,22 +1591,28 @@ Capability
 
 No visible UX change.
 
-### V55.7 — Execution Setup Validation
+### V55.7 — Execution Setup Validation — implemented
 
-Use Study as the first UX validation domain.
+Studyを最初のUX validation domainとして実装済み。
 
-Possible test setup:
+Validation setup:
 
 - existing Canovia Native provider
-- one mock/non-production external provider definition
+- feature-flagged mock/non-production external provider
 
-Validate:
+Validated:
 
 - setup appears only when choice exists
+- existing Study onboarding takes precedence
 - selection persists per Plan/capability
-- Start remains one-tap
+- Start remains one-tap through the canonical Study action route
+- Home / Overview share the same launch decision indirectly
 - user can change method later
+- projected Study Tasks inherit the Plan+Capability preference
 - Native fallback always works
+- no external API/OAuth/Activity callback is introduced
+
+Canonical implementation spec: `docs/V55.7_EXECUTION_SETUP_VALIDATION.md`
 
 ### Later — Activity Integration API
 
