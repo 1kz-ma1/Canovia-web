@@ -116,7 +116,11 @@ final class CareerStateBuilder implements StateBuilder
                     return false;
                 }
 
-                if (($event['status'] ?? null) === 'completed') {
+                if (in_array(
+                    ($event['status'] ?? null),
+                    ['completed', 'result_waiting'],
+                    true,
+                )) {
                     return true;
                 }
 
