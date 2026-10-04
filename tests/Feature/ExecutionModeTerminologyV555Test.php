@@ -60,7 +60,7 @@ class ExecutionModeTerminologyV555Test extends TestCase
         $this->task($devB, 'UIを実装する');
 
         $response = $this->actingAs($user)->get(route('navigation.index', [
-            'mode' => ExecutionModeService::DEVELOPMENT,
+            'plan_id' => $devA->id,
         ]));
 
         $response
