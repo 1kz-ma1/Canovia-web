@@ -3635,3 +3635,134 @@ V55.2では:
 - provider trafficを追加しない
 
 詳細は `docs/V55.2_QUALITATIVE_READINESS_UX.md` を正とする。
+
+
+## V55.3 Current Action Home UX Refinement
+
+V55.3はiOS前UX CompletionのHome責務整理である。
+
+Action Homeの最優先質問は引き続き:
+
+```text
+今、何をすればいい？
+```
+
+専門Workspaceの成立後、Home Intelligence card内にReadiness / Current State / Biggest Gapを大きく再表示すると、Study / Development / Career Workspaceの縮小版になってしまう。
+
+V55.3ではHomeをCurrent Action中心へ戻す。
+
+### Home Intelligence hierarchy
+
+```text
+Plan context
+→ Current Action
+→ short Action intent
+→ Primary CTA
+→ specialized Workspace CTA
+→ compact judgment context
+→ なぜ今これ？
+```
+
+Homeでは独立した大型Readiness / Current State / Biggest Gap panelを表示しない。
+
+代わりにcompact contextとして:
+
+- Readiness
+- distinctな場合だけCurrent State
+- Biggest Gap label
+
+を1行へ圧縮する。
+
+Readiness / Gapの詳細、metrics、State Change、historyは専門Workspaceが担当する。
+
+### Canonical Workspace handoff
+
+`PlanIntelligencePresentation` に:
+
+- `workspaceUrl`
+- `workspaceLabel`
+- `hasWorkspaceHandoff()`
+
+を追加する。
+
+Study:
+
+```text
+/workspace/study?plan_id=...
+Study Workspace
+```
+
+Development:
+
+```text
+/workspace/development?plan_id=...
+Development Workspace
+```
+
+Career:
+
+```text
+/workspace/career?plan_id=...
+Career Workspace
+```
+
+`detailUrl` は既存のdomain detail / operation surfaceとして維持する。
+
+これにより:
+
+```text
+Home
+→ specialized Workspace
+→ domain operation/detail
+```
+
+の責務を分離する。
+
+### CTA deduplication
+
+HomeのIntelligence card:
+
+1. Primary Action CTAを最優先
+2. `workspaceUrl !== actionUrl` の場合だけWorkspace CTA
+3. IntelligenceがPrimaryならtitlebarのgeneric linkを `ほかの候補を見る` と表示
+4. Intelligenceがない通常Task Homeでは `実行を開く` を維持
+
+同じdestinationへのPrimary / secondary CTA重複を表示しない。
+
+### Explainability
+
+Action intentはcollapsed Home cardでも短く表示する。
+
+`なぜ今これ？` を開くと:
+
+- Decision summary
+- confidence
+- Task projection note
+
+を確認できる。
+
+詳細履歴は専門Workspace / Intelligence history側をauthorityとする。
+
+### Compatibility / cost
+
+以下は変更しない。
+
+- IntelligenceHomeActionServiceのselection policy
+- Plan priority semantics
+- other Plan horizontal browsing
+- active WorkSession behavior
+- attention rail
+- offline snapshot
+- Study explicit POST execution
+- Development action routing
+- Career action routing
+- telemetry semantics
+
+追加:
+
+- DB queryなし
+- migrationなし
+- AI trafficなし
+- provider trafficなし
+
+詳細は `docs/V55.3_CURRENT_ACTION_HOME_UX.md` を正とする。
