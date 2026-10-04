@@ -2251,3 +2251,51 @@ V54.0ではmanual Mode choiceを永続化しない。V54.2でユーザー明示�
 V54.0はV53 Intelligence計算、Task progress、Plan category、課金、AI trafficを変更しない。
 
 詳細は `docs/V54.0_WORKSPACE_MODE_CONTRACT.md` を正とする。
+
+
+## V54.1 Fixed Workspace Mode Bar
+
+Canoviaの全体App Shellへ、現在のWorkspaceを常時確認・切替できる固定Mode Barを追加する。
+
+横並びタブではなくdropdownを採用する。今後Workspace Modeが増えてもヘッダー横幅が増えないことを優先する。
+
+Mode optionはBladeへ直書きせず、`WorkspaceModeRegistry` をsingle source of truthとする。
+
+現在の公開Mode:
+
+- Overview
+- Study
+- Development
+
+固定Barは既存sticky headerの2段目として配置する。Desktop / Mobileとも同じsemantic partialを利用し、Focus Modeでは通常App Shellごと非表示にする。
+
+Mode切替Entry:
+
+`GET /workspace/{workspaceMode}`
+
+V54.1では選択を永続化しない。
+
+- Overview → Home
+- Study → accessibleなStudy PlanがあればStudy Scope / Intelligence surface
+- Development → accessibleなDevelopment PlanがあればGitHub / Development surface
+- 対象Planなし → `workspace_mode` query付きHomeへ一時的に戻す
+
+対象Plan選択はPlan priority → deadline → Plan IDの順でdeterministicに決める。
+
+`?workspace_mode=study` / `development` はそのrequestだけのephemeral explicit contextであり、User/DB/session/localStorageへ保存しない。永続化はV54.2の責務とする。
+
+V54.1 resolver precedence:
+
+```text
+explicit caller Mode
+→ valid ephemeral workspace_mode query
+→ strong domain route hint
+→ current Plan profile
+→ Overview
+```
+
+Instant Navigationではglobal headerがDOMに残るため、fragment metadataにWorkspace Modeを含め、page replacement後にlabel / icon / active option / data attributeを同期する。
+
+Mode BarはPlan filterではなくWorkspace navigationである。Task progress、Plan category、V53 Intelligence calculation、課金、AI trafficは変更しない。
+
+詳細は `docs/V54.1_FIXED_WORKSPACE_MODE_BAR.md` を正とする。
