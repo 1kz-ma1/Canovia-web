@@ -2679,3 +2679,180 @@ Workspace GETは履歴を作らず、live evaluationを過去Stateとして扱�
 V54.6は新規AI traffic、GitHub API traffic、Readiness formula変更、Task進捗変更、billing変更を行わない。
 
 詳細は `docs/V54.6_STATE_CHANGE_FEEDBACK.md` を正とする。
+
+
+## V54.7 Mode-specific Onboarding
+
+V54.7は、Study / Developmentの専門Workspaceへ初めて入ったユーザーに「このWorkspaceを有効にするために次に何が必要か」を示すsetup layerである。
+
+Canovia全体のFirst-run Gateとは責務を分ける。
+
+```text
+Global First-run
+→ Canoviaとは何か / 最初の入口
+
+Mode-specific Onboarding
+→ このWorkspaceで判断を開始するために何が必要か
+```
+
+Mode onboardingに専用の完了フラグは持たない。
+
+以下は追加しない。
+
+- onboarding completed DB column
+- localStorage completion state
+- dismiss / skip state
+- modal / forced tour
+
+代わりに実際のPlan / Scope / Evidenceからstep完了を導出する。
+
+### Registry contract
+
+`WorkspaceModeDefinitionData` は以下を持つ。
+
+- `suggestedPlanCategory`
+- `onboardingSteps`
+
+オンボーディングの順序・copy・Action semanticは `WorkspaceModeRegistry` をauthorityとする。
+
+Workspace ModeとPlan categoryは同一化しない。
+
+`suggestedPlanCategory` は、専門Workspaceからユーザーが明示的にPlan作成を開始した場合の初期値に限る。
+
+### Study first route
+
+Study onboarding:
+
+```text
+Study Plan
+→ confirmed Study Scope
+→ first Practice / Recall Evidence
+→ normal Exam Readiness / Gap / Current Action
+```
+
+Step completion:
+
+- Study Plan存在 → `create_plan` complete
+- confirmed Scope存在 → `capture_study_scope` complete
+- `study_practice_assessed` または `study_recall_reviewed` が存在 → `record_study_evidence` complete
+
+confirmed Scopeだけではセットアップを完了扱いにしない。
+
+最初のlearning Evidenceが入るまでは、Readinessの数字を主画面として押し出すより「現在地を測る」を優先する。
+
+最初のPractice / Recall Evidenceが存在するとMode onboardingは自動で消え、通常のStudy Workspaceへ移る。
+
+### Development first route
+
+Development onboarding:
+
+```text
+Development Plan
+→ first GitHub / Development Evidence
+→ normal Release Readiness / Quality Gates / Current Action
+```
+
+Step completion:
+
+- Development Plan存在 → `create_plan` complete
+- Development Intelligenceの `focus_task_state` が観測される → `connect_github_evidence` complete
+
+Release Evidenceが成立すると案内は自動で消える。
+
+Development onboardingはWorkspace GETでGitHub APIを呼ばず、既存Development Intelligence Stateだけを見る。
+
+### Shared presentation
+
+Study / Developmentは共通のMode onboarding presentationを使う。
+
+表示:
+
+- Mode identity
+- current setup step
+- current step explanation
+- completed / total
+- ordered step rail
+- one primary setup CTA
+
+案内自体に「完了」操作は置かない。
+
+Reality / Evidence側が進むことで案内が消える。
+
+### Mode-aware Plan creation
+
+専門WorkspaceからPlan作成する場合は、既存のdirect Plan formを使う。
+
+```text
+Study
+→ /plans/create/manual?workspace_mode=study
+
+Development
+→ /plans/create/manual?workspace_mode=development
+```
+
+既存routeの意味:
+
+```text
+/plans/create
+→ conversational Goal Discovery
+
+/plans/create/manual
+→ direct Plan form
+```
+
+専門Workspaceではすでにユーザーがdomainを選択済みなので、Goal Discoveryをもう一度挟まずdirect formを使う。
+
+初期category:
+
+- Study → `資格学習`
+- Development → `個人開発`
+
+create formはorigin Modeをhidden contextとして保持する。
+
+作成結果のPlan profileがorigin Modeと一致する場合:
+
+```text
+create
+→ originating Workspace?plan_id=...
+→ next setup step
+```
+
+ユーザーがcategoryを変更してprofileが一致しなくなった場合、Canoviaは不正確なWorkspaceへ強制redirectしない。
+
+その場合は既存のgeneric post-create flowへ戻す。
+
+### Overview first-use choice
+
+代表Study PlanもDevelopment Planも存在しない場合だけ、Overviewに「最初は目的に近い入口を選ぶ」surfaceを表示する。
+
+選択肢はRegistryから生成し、Overview自身は除外する。
+
+現在は:
+
+- Study
+- Development
+
+このsurfaceはgateではなく、専門Workspaceへのnavigation choiceである。
+
+どちらかの専門Planが存在すれば消える。
+
+### Performance / mutation boundary
+
+V54.7:
+
+- Study → selected Planに対するlearning Evidence `exists()` × 1
+- Development → existing evaluated `focus_task_state` を再利用
+- Registry → static definitions
+
+全Plan Evidence scanは行わない。
+
+Workspace GETでは:
+
+- Taskを作らない
+- Study Scopeを自動importしない
+- GitHub接続を開始しない
+- AIを呼ばない
+- GitHub providerを呼ばない
+- onboarding completionを保存しない
+
+詳細は `docs/V54.7_MODE_SPECIFIC_ONBOARDING.md` を正とする。
