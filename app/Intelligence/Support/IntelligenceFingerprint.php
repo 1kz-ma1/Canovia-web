@@ -2,7 +2,9 @@
 
 namespace App\Intelligence\Support;
 
+use App\Intelligence\Data\Decision;
 use App\Intelligence\Data\EvidenceObservation;
+use App\Intelligence\Data\ReadinessAssessment;
 use App\Intelligence\Data\StateSnapshot;
 
 final class IntelligenceFingerprint
@@ -55,6 +57,45 @@ final class IntelligenceFingerprint
     public static function stateReference(StateSnapshot $state): string
     {
         return 'state:'.$state->domain->value.':'.self::snapshot($state);
+    }
+
+    public static function readiness(ReadinessAssessment $readiness): string
+    {
+        return self::hash([
+            'score' => $readiness->score,
+            'level' => $readiness->level->value,
+            'confidence' => $readiness->confidence->value,
+            'components' => $readiness->components,
+            'gaps' => $readiness->gaps,
+            'metadata' => $readiness->metadata,
+        ]);
+    }
+
+    public static function decisionInput(
+        StateSnapshot $state,
+        ReadinessAssessment $readiness,
+    ): string {
+        return self::hash([
+            'state_reference' => self::stateReference($state),
+            'readiness_fingerprint' => self::readiness($readiness),
+        ]);
+    }
+
+    public static function decision(Decision $decision): string
+    {
+        return self::hash([
+            'type' => $decision->type,
+            'reason_code' => $decision->reasonCode,
+            'confidence' => $decision->confidence->value,
+            'input_fingerprint' => $decision->inputFingerprint,
+            'reasons' => $decision->reasons,
+            'metadata' => $decision->metadata,
+        ]);
+    }
+
+    public static function decisionReference(Decision $decision): string
+    {
+        return 'decision:'.self::decision($decision);
     }
 
     private static function hash(array $payload): string
