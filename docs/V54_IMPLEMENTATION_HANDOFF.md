@@ -300,7 +300,7 @@ Implemented:
 
 ### V54.6 — State Change Feedback
 
-Status: **IMPLEMENTED — PR #224 OPEN**
+Status: **MERGED — PR #224**
 
 Branch:
 
@@ -338,11 +338,27 @@ Implemented:
 
 ### V54.7 — Mode-specific Onboarding
 
-Planned:
+Status: **IN PROGRESS**
 
-- Study / Development first-use choice
-- mode-aware empty states
-- registry-driven future expansion
+Branch:
+
+`feature/v54-7-mode-onboarding`
+
+Permanent spec:
+
+`docs/V54.7_MODE_SPECIFIC_ONBOARDING.md`
+
+Implementation contract:
+
+- global First-run Gate remains separate
+- no Mode onboarding completion flag / modal / localStorage
+- onboarding steps live in WorkspaceModeRegistry
+- Study setup: Plan → confirmed Scope → first Practice / Recall Evidence
+- Development setup: Plan → first GitHub / Development Evidence
+- setup card disappears automatically from durable state
+- Mode-specific Plan creation prefills category and returns to the originating Workspace when profile remains truthful
+- Overview first-use choice is registry-driven
+- no Task auto-creation, AI traffic or GitHub provider request on Workspace GET
 
 ### V54.8 — Polish / telemetry / iOS
 
