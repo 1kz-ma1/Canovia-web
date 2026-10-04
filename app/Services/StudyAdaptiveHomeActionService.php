@@ -26,41 +26,31 @@ final class StudyAdaptiveHomeActionService
         Collection $guidanceDeck,
     ): ?array {
         $primaryGuidance = $guidanceDeck->first();
-        $plan = data_get($primaryGuidance, 'plan');
+        $guidancePlan = data_get($primaryGuidance, 'plan');
 
-        if ($plan instanceof Plan) {
-            if ($this->profiles->forPlan($plan)->key !== 'study') {
+        $topStudyPlan = $editablePlans
+            ->filter(
+                fn (Plan $candidate) =>
+                    $this->profiles->forPlan($candidate)->key === 'study'
+            )
+            ->sort(fn (Plan $left, Plan $right) => $this->comparePlans($left, $right))
+            ->first();
+
+        if ($guidancePlan instanceof Plan) {
+            if ($this->profiles->forPlan($guidancePlan)->key === 'study') {
+                $plan = $guidancePlan;
+            } elseif (
+                $topStudyPlan instanceof Plan
+                && $this->comparePlans($topStudyPlan, $guidancePlan) < 0
+            ) {
+                // A Study Plan without an executable Task can still own the
+                // current Action when its Plan-level priority is genuinely higher.
+                $plan = $topStudyPlan;
+            } else {
                 return null;
             }
         } else {
-            $plan = $editablePlans
-                ->filter(
-                    fn (Plan $candidate) =>
-                        $this->profiles->forPlan($candidate)->key === 'study'
-                )
-                ->sort(function (Plan $left, Plan $right) {
-                    $priority = (int) data_get(
-                        $this->priorities->evaluate($left),
-                        'priority',
-                        3,
-                    ) <=> (int) data_get(
-                        $this->priorities->evaluate($right),
-                        'priority',
-                        3,
-                    );
-
-                    if ($priority !== 0) {
-                        return $priority;
-                    }
-
-                    $deadline = ($left->deadline?->timestamp ?? PHP_INT_MAX)
-                        <=> ($right->deadline?->timestamp ?? PHP_INT_MAX);
-
-                    return $deadline !== 0
-                        ? $deadline
-                        : (int) $left->id <=> (int) $right->id;
-                })
-                ->first();
+            $plan = $topStudyPlan;
 
             if (! $plan instanceof Plan) {
                 return null;
@@ -101,6 +91,32 @@ final class StudyAdaptiveHomeActionService
                 (string) data_get($action->metadata, 'route_kind')
             ) === 'project_task',
         ];
+    }
+
+    private function comparePlans(Plan $left, Plan $right): int
+    {
+        $leftPriority = (int) data_get(
+            $this->priorities->evaluate($left),
+            'priority',
+            3,
+        );
+        $rightPriority = (int) data_get(
+            $this->priorities->evaluate($right),
+            'priority',
+            3,
+        );
+
+        $priority = $leftPriority <=> $rightPriority;
+        if ($priority !== 0) {
+            return $priority;
+        }
+
+        $deadline = ($left->deadline?->timestamp ?? PHP_INT_MAX)
+            <=> ($right->deadline?->timestamp ?? PHP_INT_MAX);
+
+        return $deadline !== 0
+            ? $deadline
+            : (int) $left->id <=> (int) $right->id;
     }
 
     private function label(string $routeKind, string $kind): string
