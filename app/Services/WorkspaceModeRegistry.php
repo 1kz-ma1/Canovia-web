@@ -38,6 +38,8 @@ final class WorkspaceModeRegistry
                 emptyStateTitle: 'Canoviaで何を進めますか？',
                 emptyStateDescription: '専門Workspaceを選ぶと、その目的に合った入口から始められます。',
                 emptyStateActionKey: 'choose_workspace',
+                suggestedPlanCategory: null,
+                onboardingSteps: [],
             ),
             new WorkspaceModeDefinitionData(
                 mode: WorkspaceMode::Study,
@@ -58,6 +60,30 @@ final class WorkspaceModeRegistry
                 emptyStateTitle: '試験範囲から始める',
                 emptyStateDescription: '試験範囲を取り込み、学習状態と次のActionを育てます。',
                 emptyStateActionKey: 'capture_study_scope',
+                suggestedPlanCategory: '資格学習',
+                onboardingSteps: [
+                    [
+                        'key' => 'create_plan',
+                        'title' => '学習Planを作る',
+                        'description' => '試験や学習目標ごとに、Scope・Evidence・ReadinessをまとめるPlanを一つ作ります。',
+                        'action_key' => 'create_plan',
+                        'action_label' => '学習Planを作る',
+                    ],
+                    [
+                        'key' => 'capture_study_scope',
+                        'title' => '試験範囲を確定する',
+                        'description' => 'Readinessの基準になる試験範囲を追加し、人の確認後にStudy Stateへ反映します。',
+                        'action_key' => 'capture_study_scope',
+                        'action_label' => '試験範囲を追加',
+                    ],
+                    [
+                        'key' => 'record_study_evidence',
+                        'title' => '最初のPractice / Recallを記録する',
+                        'description' => '一度だけ現在地を測れば、Coverage・Mastery・Retentionと次のActionがEvidenceベースで動き始めます。',
+                        'action_key' => 'study_current_action',
+                        'action_label' => '現在地を測る',
+                    ],
+                ],
             ),
             new WorkspaceModeDefinitionData(
                 mode: WorkspaceMode::Development,
@@ -77,6 +103,23 @@ final class WorkspaceModeRegistry
                 emptyStateTitle: 'GitHubから開発状態をつなぐ',
                 emptyStateDescription: 'RepositoryやPRを接続し、現実の開発EvidenceからRelease状態を追います。',
                 emptyStateActionKey: 'connect_github',
+                suggestedPlanCategory: '個人開発',
+                onboardingSteps: [
+                    [
+                        'key' => 'create_plan',
+                        'title' => '開発Planを作る',
+                        'description' => 'Release単位の判断をまとめる開発Planを一つ作ります。',
+                        'action_key' => 'create_plan',
+                        'action_label' => '開発Planを作る',
+                    ],
+                    [
+                        'key' => 'connect_github_evidence',
+                        'title' => 'GitHub EvidenceをTaskへつなぐ',
+                        'description' => 'Repository・PR・IssueなどをCanoviaへ追加し、現実の開発状態からRelease Readinessを立ち上げます。',
+                        'action_key' => 'connect_github',
+                        'action_label' => 'GitHubを開く',
+                    ],
+                ],
             ),
         ]);
     }
