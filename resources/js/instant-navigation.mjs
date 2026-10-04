@@ -154,6 +154,11 @@ function syncWorkspaceModeContext(documentRef, context) {
 
     if (documentRef.body) {
         documentRef.body.dataset.workspaceMode = key;
+        if (context.source) {
+            documentRef.body.dataset.workspaceModeSource = String(
+                context.source,
+            );
+        }
     }
 
     const page = documentRef.querySelector('[data-canovia-page]');

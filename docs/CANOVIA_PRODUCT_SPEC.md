@@ -2856,3 +2856,177 @@ Workspace GETでは:
 - onboarding completionを保存しない
 
 詳細は `docs/V54.7_MODE_SPECIFIC_ONBOARDING.md` を正とする。
+
+
+## V54.8 Workspace Mode Polish / Telemetry / iOS
+
+V54.8はWorkspace Modeシリーズのcloseoutである。
+
+新しいModeやIntelligence authorityを追加せず、V54.0〜V54.7で成立したWorkspace architectureをWeb / PWA / Native iOS境界まで安定化し、最小限の観測可能性を追加する。
+
+### Real-device Mode Bar
+
+Workspace Mode Barは既存sticky app header内のsecond rowを維持する。
+
+別のsticky layerは作らない。
+
+mobile / iOSではMode Bar自身もphysical safe areaを尊重する。
+
+- left: `safe-area-inset-left`
+- right: `safe-area-inset-right`
+- menu widthはphysical viewport内へ制約
+- menu heightは`100dvh`基準で制約
+- long menuは内部scroll
+- `-webkit-overflow-scrolling: touch`
+- `overscroll-behavior: contain`
+
+desktop headerもtop / horizontal safe areaを受けるため、landscape notch / Native shellでも固定chromeがphysical safe areaへ侵入しない。
+
+既存V51.9.8の:
+
+```text
+--canovia-mobile-dock-clearance
+virtual keyboard handling
+mobile tabbar safe area
+```
+
+はauthorityのまま維持する。
+
+### Dropdown lifecycle
+
+Mode dropdownのopen/closeはephemeral client UI stateであり、Workspace selection authorityではない。
+
+`workspace-mode-runtime.mjs` は以下だけを担当する。
+
+- desktop/mobileの重複switcherのうち一つだけをopen
+- open時にcurrent optionをviewport内へ寄せる
+- outside pointerでclose
+- Escapeでclose
+- Instant Navigation page replacementでclose
+- Instant Navigation page-readyでclose / context再確認
+- pagehideでclose
+- orientation changeでclose
+- VisualViewport resizeでclose
+
+これによりiOS rotation、virtual keyboard、PWA navigation、WKWebView navigation後に古いdropdown overlayを残さない。
+
+Workspaceの選択・永続化・resolver precedenceは引き続きserver authorityである。
+
+### Mode telemetry
+
+既存BehaviorEvent基盤へ2種類だけ追加する。
+
+```text
+workspace_mode_selected
+workspace_mode_auto_context
+```
+
+#### workspace_mode_selected
+
+ユーザーがModeを明示選択、または自動判定へresetした操作を観測する。
+
+保存可能metadata:
+
+- `selected_mode`: overview / study / development / auto
+- `from_mode`: overview / study / development
+- `from_source`: explicit / manual_preference / route_hint / plan_profile / default
+- `surface`: web / pwa / native
+- `device`: mobile / desktop
+- `platform`: ios / android / other
+
+#### workspace_mode_auto_context
+
+manual preferenceではなく、Canovia側のsemantic contextがWorkspaceを決定した状態を観測する。
+
+対象source:
+
+- route_hint
+- plan_profile
+- default
+
+保存可能metadata:
+
+- `mode`
+- `source`
+- `surface`
+- `device`
+- `platform`
+
+Clientはbrowser session中の最後の `mode:source` fingerprintだけをsessionStorageに保持し、同一automatic contextをページごとに重複送信しない。
+
+これはproduct stateではなくtelemetry dedupe専用であり、Workspace preferenceやonboarding completionには使わない。
+
+ServerはBehaviorEventControllerでmetadataを再whitelistする。
+
+以下をMode telemetryへ保存しない。
+
+- Plan title
+- Task title
+- user text
+- URL / raw query
+- AI content
+- provider payload
+- arbitrary client metadata
+
+Telemetry失敗はnavigationをblockしない。
+
+### Instant Navigation synchronization
+
+Instant Navigationはretained shellのMode Barを引き続き同期する。
+
+同期対象:
+
+- body Mode
+- body Mode source
+- page Mode
+- bar Mode / source
+- label
+- icon
+- active option
+- current mark
+- open dropdown cleanup
+
+このためfull reloadとInstant NavigationでMode表示・telemetry semanticsを分岐させない。
+
+### Native / PWA boundary
+
+V52.0 contractを維持する。
+
+Native:
+
+- Laravel session cookie authority
+- persistent WKWebsiteDataStore
+- existing CSRF
+- PWA Service Workerを登録しない
+
+PWA:
+
+- existing Service Worker / Instant Start
+
+Mode runtimeは既存 `canoviaClientSurface()` / `canoviaClientPlatform()` を利用し、Web / PWA / Nativeを同じBehaviorEvent schemaで比較可能にする。
+
+Native bridgeへPlan / Task / user contentを追加送信しない。
+
+### Performance / mutation boundary
+
+V54.8はWorkspace GETへserver queryを追加しない。
+
+追加client trafficは:
+
+- explicit Mode selection / resetごとに1 event
+- automatic Mode contextがbrowser session内で変化したときに1 event
+
+のみ。
+
+V54.8では:
+
+- AI requestなし
+- GitHub provider requestなし
+- all-Plan queryなし
+- Readiness再計算変更なし
+- preference semantics変更なし
+- billing変更なし
+
+V54.0〜V54.8をもってWorkspace Mode foundation / specialized Workspace / feedback / onboarding / real-device closeoutを完了とする。
+
+詳細は `docs/V54.8_WORKSPACE_MODE_POLISH_TELEMETRY_IOS.md` を正とする。

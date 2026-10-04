@@ -2,6 +2,7 @@ import { normalizeAiJsonText, buildAiJsonRepairPrompt } from './ai-json.mjs';
 import { mountInstantStartServiceWorker } from './instant-start.mjs';
 import { mountCanoviaInstantNavigation } from './instant-navigation.mjs';
 import { mountCanoviaInteractionPerformance } from './interaction-performance.mjs';
+import { mountWorkspaceModeRuntime } from './workspace-mode-runtime.mjs';
 import {
     canoviaClientSurface,
     isCanoviaNativeRuntime,
@@ -3905,6 +3906,7 @@ function initializeInstantCorePage(event) {
 document.addEventListener('canovia:page-ready', initializeInstantCorePage);
 
 document.addEventListener('DOMContentLoaded', () => {
+    mountWorkspaceModeRuntime();
     mountCanoviaNativeBridge();
     mountCanoviaInteractionPerformance();
 
