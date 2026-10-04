@@ -1,0 +1,75 @@
+name: V55.7 Validate
+
+on:
+  push:
+    branches:
+      - feature/v55-7-execution-setup-validation
+
+jobs:
+  execution-setup-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Lint V55.7 PHP
+        run: |
+          php -l app/Data/ExecutionSetupData.php
+          php -l app/Data/ExecutionLaunchDecisionData.php
+          php -l app/Services/ExecutionSetupService.php
+          php -l app/Services/ExecutionLaunchResolver.php
+          php -l app/Services/ExecutionProviderRegistry.php
+          php -l app/Http/Controllers/ExecutionSetupController.php
+          php -l app/Http/Controllers/ExecutionValidationProviderController.php
+          php -l app/Http/Controllers/StudyWorkspaceController.php
+          php -l app/Http/Controllers/StudyAdaptiveActionController.php
+          php -l app/Providers/AppServiceProvider.php
+          php -l config/canovia.php
+          php -l routes/web.php
+          php -l tests/Feature/ExecutionSetupValidationV557Test.php
+          php -l tests/Unit/ExecutionProviderValidationRegistryV557Test.php
+
+      - name: Compile Blade
+        run: php artisan view:cache
+
+      - name: V55.7 provider registry
+        run: php artisan test tests/Unit/ExecutionProviderValidationRegistryV557Test.php
+
+      - name: V55.7 execution setup validation
+        run: php artisan test tests/Feature/ExecutionSetupValidationV557Test.php
+
+      - name: V55.6 execution ecosystem regression
+        run: php artisan test tests/Feature/ExecutionEcosystemFoundationV556Test.php tests/Unit/ExecutionProviderRegistryV556Test.php
+
+      - name: V54.3 Study Workspace regression
+        run: php artisan test tests/Feature/StudyWorkspaceV543Test.php
+
+      - name: V54.7 onboarding regression
+        run: php artisan test tests/Feature/WorkspaceModeOnboardingV547Test.php
+
+      - name: V55.3 Current Action regression
+        run: php artisan test tests/Feature/CurrentActionHomeUxV553Test.php
+
+      - name: V53.6 Study Adaptive Action regression
+        run: php artisan test tests/Feature/StudyAdaptiveActionV536Test.php
