@@ -6034,8 +6034,9 @@ body.canovia-guide-active { overflow: hidden; }
 
 
 /* --------------------------------------------------------------------------
- * V43.2 Home Surface Entry
- * Classic and Map are two surfaces of one Home area, not competing shell tabs.
+ * V55.4 Home / Explore surface navigation
+ * Legacy class names are retained for layout compatibility only.
+ * Home is canonical Now; Map is explicit Explore.
  * -------------------------------------------------------------------------- */
 @layer components {
     .canovia-home-surface-switcher {
