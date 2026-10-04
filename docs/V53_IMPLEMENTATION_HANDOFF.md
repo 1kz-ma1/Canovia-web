@@ -379,7 +379,7 @@ Important semantics:
 
 ### V53.6 — Adaptive Action
 
-Status: **IMPLEMENTED — PR PENDING**
+Status: **MERGED**
 
 Branch:
 
@@ -422,25 +422,90 @@ Important semantics:
 
 ### V53.7 — Developer Evidence Sync
 
-Planned:
+Status: **IMPLEMENTED — PR PENDING**
 
-- GitHub event → normalized Evidence
-- Issue / Branch / Commit / PR / Review / CI / Merge / Deploy
-- automatic observation rather than manual refresh as the long-term goal
-- do not map events directly to progress without confidence / quality semantics
+Branch:
+
+`feature/v53-7-developer-evidence-sync`
+
+Permanent spec:
+
+`docs/V53.7_DEVELOPER_EVIDENCE_SYNC.md`
+
+Implemented:
+
+- existing V46 GitHub Return/Webhook path reused instead of rebuilt
+- signed webhook remains routing-only, never Development truth
+- durable bounded `routing_targets` for Issue / Push / Branch / Deployment
+- authoritative GitHub App REST re-fetch for Issue / Branch / Commit / Deployment
+- `pull_request_observed` added beside existing Review / CI / Merge Evidence
+- `github_issue_observed`
+- `github_branch_observed`
+- `github_commit_observed`
+- `github_deployment_observed`
+- explicit Artifact → Task link required before non-PR sync
+- entitlement checked before new non-PR GitHub API read
+- deployment routed only to linked PR / Branch / Commit whose authoritative SHA/ref matches
+- controlled GitHub facts added to `TaskEvidenceAdapter`
+- `DevelopmentEvidenceCollector` added as V53.8 input boundary
+- no Task progress/status mutation
+- no source code / Issue body / commit message / diff / Deployment payload imported into Intelligence
+- latent `GitHubWebhookDelivery` Eloquent table-name mismatch fixed
+
+Important semantics:
+
+- GitHub webhook = change notification / routing signal
+- GitHub REST re-fetch = authoritative provider state
+- TaskEvidence = bounded local observation
+- Evidence does not equal progress
+- merge does not equal 100%
+- deploy success does not equal requirement complete
+- repository activity is never fanned out to unrelated Tasks
+- V53.8 owns Development State / Release Readiness / Action interpretation
 
 ### V53.8 — Developer Readiness
 
-Planned:
+Status: **IMPLEMENTED — PR PENDING**
 
-- implementation readiness
-- tests
-- review
-- deploy
-- verification
-- spec synchronization
-- release readiness
-- next action based on missing quality gates
+Branch:
+
+`feature/v53-8-developer-readiness`
+
+Permanent spec:
+
+`docs/V53.8_DEVELOPER_READINESS.md`
+
+Implemented:
+
+- `DevelopmentStateBuilder`
+- `DevelopmentReleaseReadinessEvaluator`
+- Task-correlated Release candidate selection
+- seven release Quality Gates
+- deterministic Development Decision candidates
+- one Development Current Action
+- durable State / Decision / Action reuse through generic V53 stores
+- explicit Verification / Spec Sync Human Confirmation Evidence
+- release SHA / Deployment-bound manual confirmation
+- stale Verification invalidation after new Production Deploy
+- stale Spec Sync invalidation after implementation SHA change
+- new implementation generation invalidates old downstream release gates
+- per-reviewer latest Review Decision using anonymized reviewer key
+- Production-only deploy pass semantics
+- GitHub webhook / manual Return / manual gate Action refresh hooks
+- minimal Release Readiness diagnostic surface in GitHub Workflow
+- no Task progress/status mutation
+- no new OpenAI traffic
+
+Important semantics:
+
+- gates from different Tasks are never combined into one Ready release
+- Readiness score is explanatory, not a substitute for required gates
+- all seven V1 gates must pass for Ready
+- Commit / Merge / Deploy remain Evidence, not legacy progress percentages
+- Verification belongs to one concrete Production Deployment
+- Spec Sync belongs to one concrete implementation/release SHA
+- a newer release identity can revoke stale prior readiness
+- Task remains inspectable correlation context, not Development truth
 
 ### V53.9 — Intelligence UX
 
@@ -611,6 +676,8 @@ Current V53.5 checkpoint:
 
 Current V53.6 checkpoint:
 
+- PR #214 merged
+- merge commit: 06a3761b71067a1d9b9cb2dc1484beaf049a1941
 - Study Readiness gaps are ranked into deterministic Decision candidates
 - one current ActionProposal is generated from the selected Decision
 - durable Action projections and supersession history implemented
@@ -627,14 +694,50 @@ Current V53.6 checkpoint:
 - validation complete
 - validation run: #37172974165
 - temporary validation workflow removed after success
-- PR: pending creation
 
-Next after V53.6 merge:
+Current V53.7 checkpoint:
 
-- V53.7 Developer Evidence Sync
-- normalize GitHub Issue / Branch / Commit / PR / Review / CI / Merge / Deploy as Development Evidence
-- reuse generic State / Readiness / Decision / Action boundaries
-- do not map GitHub events directly to progress
+- GitHub webhook routing expanded to Issue / Push / Branch / Deployment
+- raw webhook payload remains outside persistence
+- Issue / Branch / Commit / Deployment are re-fetched through GitHub App REST
+- PR current state now emits `pull_request_observed`
+- explicit linked Artifact / Task is required before non-PR Evidence sync
+- DeveloperGithubEvidence entitlement is checked before new remote read
+- Task progress/status/remaining time are never mutated by V53.7
+- Development GitHub facts are normalized through TaskEvidenceAdapter
+- DevelopmentEvidenceCollector is the stable V53.8 input
+- Product Spec and permanent V53.7 spec synchronized
+- validation complete
+- validation run: #37174537348
+- temporary validation workflow removed after success
+- PR #215: open at V53.8 branch creation time
+
+Current V53.8 checkpoint:
+
+- Task-correlated Development State implemented
+- Release Readiness V1 with implementation / CI / Review / Merge / Production Deploy / Verification / Spec Sync
+- deterministic largest-gap Decision and one Current Action implemented
+- Human Verification / Spec Sync Evidence implemented
+- manual gate Evidence is bound to current release SHA / Deployment ID
+- stale Verification / Spec Sync is automatically invalidated
+- new implementation SHA does not inherit old downstream release gates
+- Review decisions are resolved per anonymized reviewer key
+- GitHub Workflow exposes minimal Release Readiness diagnostics
+- GitHub webhook / manual Return / manual quality confirmation refresh Current Action
+- Task progress/status/remaining time remain untouched
+- permanent V53.8 spec and Product Spec synchronized
+- validation run before final docs sync: #37176102557
+- final latest-head validation: #37176271547
+- temporary validation workflow removed after success
+- PR #216 created as stacked PR on V53.7 branch
+- PR #215 remains the prerequisite V53.7 PR
+
+Next after V53.8:
+
+- V53.9 Intelligence UX
+- unify Study / Development presentation around State / Readiness / Gap / Current Action / Why
+- keep Task / Evidence / Decision history inspectable as detail
+- finish durable docs and remove this temporary handoff at the end of V53
 
 ## Completion / deletion rule
 

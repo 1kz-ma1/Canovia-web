@@ -121,6 +121,42 @@ final class GitHubReturnEvidenceService
         $number = (int) ($pull['number'] ?? 0);
         $records = collect();
 
+        if ($number > 0) {
+            $stateFacts = [
+                'state' => (string) ($pull['state'] ?? ''),
+                'draft' => (bool) ($pull['draft'] ?? false),
+                'merged' => (bool) ($pull['merged'] ?? false),
+                'head_sha' => (string) ($pull['head_sha'] ?? ''),
+                'head_ref' => (string) ($pull['head_ref'] ?? ''),
+                'base_ref' => (string) ($pull['base_ref'] ?? ''),
+                'updated_at' => (string) ($pull['updated_at'] ?? ''),
+                'closed_at' => (string) ($pull['closed_at'] ?? ''),
+            ];
+            $stateFingerprint = hash(
+                'sha256',
+                (string) json_encode(
+                    $stateFacts,
+                    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+                ),
+            );
+
+            $records->push($this->evidence->record(
+                $task,
+                EvidenceSource::GitHub,
+                'pull_request_observed',
+                [
+                    'plan_artifact_id' => (int) $artifact->id,
+                    'repo_full_name' => $repo,
+                    'pull_request_number' => $number,
+                    'pull_request_url' => $pull['url'] ?? $artifact->url,
+                    ...$stateFacts,
+                ],
+                confidence: 1.0,
+                externalKey: 'github:'.$repo.':pull:'.$number.':state:'.$stateFingerprint,
+                occurredAt: $this->date($pull['updated_at'] ?? null) ?? now(),
+            ));
+        }
+
         foreach ((array) ($snapshot['reviews'] ?? []) as $review) {
             if (! is_array($review)) {
                 continue;

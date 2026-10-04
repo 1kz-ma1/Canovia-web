@@ -3,11 +3,15 @@
 namespace App\Jobs;
 
 use App\Enums\FeatureKey;
+use App\Intelligence\Development\DevelopmentAdaptiveActionService;
 use App\Models\GitHubWebhookDelivery;
+use App\Models\Plan;
 use App\Models\PlanArtifact;
 use App\Services\FeatureAccessService;
+use App\Services\GitHubDevelopmentEvidenceService;
 use App\Services\GitHubReturnEvidenceService;
 use App\Services\GitHubWorkflowService;
+use App\Services\PlanCategoryProfileService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -34,6 +38,9 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
         GitHubReturnEvidenceService $returns,
         GitHubWorkflowService $workflow,
         FeatureAccessService $access,
+        ?GitHubDevelopmentEvidenceService $developmentEvidence = null,
+        ?DevelopmentAdaptiveActionService $developmentActions = null,
+        ?PlanCategoryProfileService $profiles = null,
     ): void {
         $delivery = GitHubWebhookDelivery::query()->find($this->deliveryId);
         if (! $delivery instanceof GitHubWebhookDelivery) {
@@ -57,8 +64,15 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
             ->filter(fn (int $number) => $number > 0)
             ->unique()
             ->values();
+        $routingTargets = collect((array) $delivery->routing_targets)
+            ->filter(fn ($target) => is_array($target))
+            ->values();
 
-        if ($repoFullName === '' || $installationId <= 0 || $pullRequestNumbers->isEmpty()) {
+        if (
+            $repoFullName === ''
+            || $installationId <= 0
+            || ($pullRequestNumbers->isEmpty() && $routingTargets->isEmpty())
+        ) {
             $delivery->update([
                 'status' => 'ignored',
                 'processed_at' => now(),
@@ -83,6 +97,7 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
         $matchedArtifacts = 0;
         $syncedTasks = 0;
         $skippedEntitlement = 0;
+        $syncedPlanIds = [];
 
         try {
             foreach ($artifacts as $artifact) {
@@ -124,6 +139,34 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
 
                     $returns->sync($plan, $task, $artifact);
                     $syncedTasks++;
+                    $syncedPlanIds[(int) $plan->id] = true;
+                }
+            }
+
+            if ($developmentEvidence) {
+                $developmentCounts = $developmentEvidence->syncDelivery($delivery);
+                $matchedArtifacts += (int) $developmentCounts['matched_artifacts'];
+                $syncedTasks += (int) $developmentCounts['synced_tasks'];
+                $skippedEntitlement += (int) $developmentCounts['skipped_entitlement'];
+
+                foreach ((array) ($developmentCounts['plan_ids'] ?? []) as $planId) {
+                    $planId = (int) $planId;
+                    if ($planId > 0) {
+                        $syncedPlanIds[$planId] = true;
+                    }
+                }
+            }
+
+            if ($developmentActions && $profiles) {
+                foreach (array_keys($syncedPlanIds) as $planId) {
+                    $plan = Plan::query()->find((int) $planId);
+
+                    if (
+                        $plan instanceof Plan
+                        && $profiles->forPlan($plan)->key === 'development'
+                    ) {
+                        $developmentActions->tryRefresh($plan, now());
+                    }
                 }
             }
         } catch (Throwable $exception) {

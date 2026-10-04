@@ -59,6 +59,10 @@
         <div class="assistant-notice assistant-notice-info">{{ session('status') }}</div>
     @endif
 
+    @if ($development_action ?? null)
+        @include('github_workflow.partials.development_readiness')
+    @endif
+
     <section class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.58fr)]">
         <div class="rounded-3xl border border-slate-800 bg-slate-950/45 p-4 md:p-5">
             <div class="flex flex-wrap items-center justify-between gap-3">

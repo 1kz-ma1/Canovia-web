@@ -2039,3 +2039,103 @@ Study ScopeではCurrent Action、why-now、Readiness、confidence、最近のAc
 V53.6のStudy Action policyはdeterministicで、mergeにより新しいOpenAI traffic/costを発生させない。
 
 詳細は `docs/V53.6_ADAPTIVE_ACTION.md` を正とする。
+
+
+## V53.7 Developer Evidence Sync
+
+DevelopmentではGitHub activityをTask進捗へ直接変換せず、まずauthoritative Evidenceとして正規化する。
+
+```text
+signed GitHub webhook
+→ minimal routing
+→ GitHub App REST authoritative re-fetch
+→ explicitly linked Artifact / Task
+→ TaskEvidence
+→ EvidenceObservation
+→ V53.8 Development State
+```
+
+Webhook payloadは「変化があった」というtriggerに限定し、Issue / Branch / Commit / PR / Review / CI / Merge / Deploymentの実状態はGitHub App経由で再取得する。raw webhook bodyをIntelligence truthへ入れない。
+
+V53.7で扱うDevelopment Evidence:
+
+- `pull_request_observed`
+- `pull_request_review_submitted`
+- `pull_request_ci_observed`
+- `pull_request_merged`
+- `github_issue_observed`
+- `github_branch_observed`
+- `github_commit_observed`
+- `github_deployment_observed`
+
+非PR eventは、同じRepository / installationへ接続済みで、対象GitHub ArtifactがTaskへ明示linkされている場合だけ同期する。Repository全体のactivityをPlan内の全Taskへ展開しない。
+
+Issueはnumber/state/state reason/locked/assignee count、Branchはname/head SHA/protection、CommitはSHA/親数/署名確認、DeploymentはID/SHA/ref/environment/status/production flag等のbounded factだけを扱う。Issue本文・title、commit message、diff/files、source code、Deployment payload/description等はIntelligenceへ取り込まない。
+
+GitHub Appの新しい自動観測には対応するpermission/event subscriptionが必要で、IssueはIssues read、Branch/CommitはContents read、DeploymentはDeployments readを利用する。既存PR/Review/CI権限境界は維持する。
+
+`FeatureAccessService -> DeveloperGithubEvidence` をそのまま利用し、V53.7独自のPremium判定を作らない。新しい非PR同期ではEntitlement確認前にremote APIを読まない。
+
+GitHub eventはEvidenceであり進捗ではない。
+
+```text
+Commit observed ≠ 50%
+PR merged       ≠ 100%
+Deploy success  ≠ requirement complete
+```
+
+Task status / progress / remaining_minutes / Canovia workflow laneはV53.7では変更しない。
+
+`DevelopmentEvidenceCollector` をV53.8の入力境界とし、Webhook / GitHub REST / provider payloadの内部事情をDevelopment State Builderへ漏らさない。
+
+詳細は `docs/V53.7_DEVELOPER_EVIDENCE_SYNC.md` を正とする。
+
+
+## V53.8 Developer Readiness
+
+V53.7で正規化したDevelopment Evidenceを、Task単位のRelease State / Readiness / Decision / Current Actionへ変換する。
+
+```text
+Development Evidence
+→ same-Task Quality Gates
+→ Release Readiness
+→ largest Gap
+→ Decision
+→ Current Action
+```
+
+V1 Quality Gateは以下の7つとする。
+
+- implementation
+- CI / automated test
+- review
+- merge
+- production deploy
+- verification
+- specification synchronization
+
+Readiness scoreのweightは20 / 20 / 15 / 15 / 15 / 10 / 5。ただしscoreだけではReadyにしない。7 Gateすべてがpassedの場合だけReadyとし、failed Gateが1つでもあればBlocked、それ以外はDevelopingとする。Development Evidenceがなければscore=null / Unknown。
+
+Release Gateは必ずTaskごとに相関させる。別TaskのCI / Deploy / Verificationを寄せ集めて1つのReady判定を作らない。
+
+Task progress / status / remaining_minutesはDevelopment Stateのsource of truthにしない。
+
+Reviewはreviewerごとの最新APPROVED / CHANGES_REQUESTEDを匿名化したkeyで追跡し、未解決のCHANGES_REQUESTEDが1件でもあればReview Gateをfailedとする。コメントだけで既存Approvalを消さない。
+
+Production Deployだけをrelease deploy passedとして扱い、staging成功はpendingとする。Deployment SHAが現在の実装/release SHAと一致しなくなった場合、古いDeployはstaleとしてpendingへ戻す。
+
+実機・本番確認と仕様同期はGitHubから推測せず、`development_quality_gate_confirmed` のHuman Confirmationだけを使う。
+
+Verificationは現在のProduction Deployment ID + deployed SHAへbindする。新しいDeployが出たら以前のVerificationはstaleとなり再確認が必要。
+
+Spec Syncは現在の実装/release SHAへbindする。新しいCommit/SHAへ変わったら以前のSpec Syncはstaleとなる。`not_required`も明示的なHuman Decisionとしてのみ扱う。
+
+新しいimplementation SHAを観測した場合、旧CI / Review / Merge / Deploy等のdownstream release stateを新しい変更へ自動継承しない。PR headからmerge commitへの正当なmerge transitionだけは、直前headで成立したCI / Reviewを保持する。
+
+Development Decision / Actionはdeterministic baselineとし、V53.8による新しいOpenAI trafficは発生させない。
+
+Current ActionはGitHub webhook、manual GitHub Return、Verification / Spec Sync confirmation後に再評価する。同じsemantic State + Actionは既存Action projectionを再利用し、State変化で判断が変わった場合だけsupersedeする。
+
+GitHub WorkflowにはV53.8診断SurfaceとしてRelease Readiness / confidence / Release candidate Task / Current Action / 7 Gateを表示する。最終的なStudy / Development共通Intelligence UXはV53.9で整理する。
+
+詳細は `docs/V53.8_DEVELOPER_READINESS.md` を正とする。

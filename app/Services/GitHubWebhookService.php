@@ -12,6 +12,11 @@ final class GitHubWebhookService
         'workflow_run',
         'check_run',
         'check_suite',
+        'issues',
+        'push',
+        'create',
+        'deployment',
+        'deployment_status',
     ];
 
     public function configured(): bool
@@ -36,6 +41,34 @@ final class GitHubWebhookService
     public function supported(string $eventName): bool
     {
         return in_array($eventName, self::SUPPORTED_EVENTS, true);
+    }
+
+    private function branchFromRef(string $ref): ?string
+    {
+        $ref = trim($ref);
+
+        if (! str_starts_with($ref, 'refs/heads/')) {
+            return null;
+        }
+
+        return $this->boundedRef(substr($ref, strlen('refs/heads/')));
+    }
+
+    private function boundedRef(string $value): ?string
+    {
+        $value = trim($value);
+
+        if (
+            $value === ''
+            || mb_strlen($value) > 255
+            || str_contains($value, "\0")
+            || str_contains($value, '..')
+            || preg_match('/[\x00-\x1F\x7F]/u', $value)
+        ) {
+            return null;
+        }
+
+        return $value;
     }
 
     /**
@@ -86,7 +119,86 @@ final class GitHubWebhookService
             ->take(20)
             ->values();
 
-        if ($numbers->isEmpty()) {
+        $targets = $numbers
+            ->map(fn (int $number) => [
+                'kind' => 'pull_request',
+                'number' => $number,
+            ]);
+
+        if ($eventName === 'issues') {
+            $issueNumber = (int) (
+                data_get($payload, 'issue.number')
+                ?: data_get($payload, 'number', 0)
+            );
+
+            if ($issueNumber > 0) {
+                $targets->push([
+                    'kind' => 'issue',
+                    'number' => $issueNumber,
+                ]);
+            }
+        }
+
+        if ($eventName === 'push') {
+            $branch = $this->branchFromRef(
+                (string) data_get($payload, 'ref', ''),
+            );
+            $after = mb_strtolower(mb_substr(
+                trim((string) data_get($payload, 'after', '')),
+                0,
+                64,
+            ));
+
+            if (
+                $branch !== null
+                && preg_match('/^[a-f0-9]{7,64}$/', $after)
+                && ! preg_match('/^0+$/', $after)
+            ) {
+                $targets->push([
+                    'kind' => 'push',
+                    'branch' => $branch,
+                    'commit_sha' => $after,
+                ]);
+            }
+        }
+
+        if (
+            $eventName === 'create'
+            && (string) data_get($payload, 'ref_type', '') === 'branch'
+        ) {
+            $branch = $this->boundedRef(
+                (string) data_get($payload, 'ref', ''),
+            );
+
+            if ($branch !== null) {
+                $targets->push([
+                    'kind' => 'branch',
+                    'branch' => $branch,
+                ]);
+            }
+        }
+
+        if (in_array($eventName, ['deployment', 'deployment_status'], true)) {
+            $deploymentId = (int) data_get($payload, 'deployment.id', 0);
+
+            if ($deploymentId > 0) {
+                $targets->push([
+                    'kind' => 'deployment',
+                    'deployment_id' => $deploymentId,
+                ]);
+            }
+        }
+
+        $targets = $targets
+            ->filter(fn ($target) => is_array($target))
+            ->unique(fn (array $target) => json_encode(
+                $target,
+                JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+            ))
+            ->take(30)
+            ->values();
+
+        if ($targets->isEmpty()) {
             return null;
         }
 
@@ -96,6 +208,7 @@ final class GitHubWebhookService
             'repo_full_name' => $repoFullName,
             'installation_id' => $installationId,
             'pull_request_numbers' => $numbers->all(),
+            'routing_targets' => $targets->all(),
         ];
     }
 }

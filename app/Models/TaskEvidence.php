@@ -70,9 +70,15 @@ class TaskEvidence extends Model
             'guided_execution_reflected' => '実行振り返り',
             'interview_review_completed' => '面接振り返り',
             'interview_result_recorded' => '選考結果',
+            'pull_request_observed' => 'GitHub PR',
             'pull_request_review_submitted' => 'GitHubレビュー',
             'pull_request_merged' => 'GitHubマージ',
             'pull_request_ci_observed' => 'GitHub CI',
+            'github_issue_observed' => 'GitHub Issue',
+            'github_branch_observed' => 'GitHub Branch',
+            'github_commit_observed' => 'GitHub Commit',
+            'github_deployment_observed' => 'GitHub Deploy',
+            'development_quality_gate_confirmed' => '開発品質確認',
             default => '活動',
         };
     }
@@ -134,6 +140,54 @@ class TaskEvidence extends Model
                     'offer' => '内定・オファー',
                     'withdrawn' => '辞退',
                     default => '結果確認',
+                },
+            ),
+            'pull_request_observed' => sprintf(
+                'PR #%dを「%s」として確認しました。%s',
+                (int) (data_get($this->metadata, 'pull_request_number') ?? data_get($this->metadata, 'pull_request', 0)),
+                match ((string) data_get($this->metadata, 'state')) {
+                    'open' => 'open',
+                    'closed' => 'closed',
+                    default => '確認済み',
+                },
+                (bool) data_get($this->metadata, 'draft', false)
+                    ? 'Draftです。'
+                    : '',
+            ),
+            'github_issue_observed' => sprintf(
+                'Issue #%dを「%s」として確認しました。',
+                (int) data_get($this->metadata, 'issue_number', 0),
+                (string) data_get($this->metadata, 'issue_state', 'unknown'),
+            ),
+            'github_branch_observed' => sprintf(
+                'Branch %s のhead %sを確認しました。',
+                (string) data_get($this->metadata, 'branch', 'unknown'),
+                mb_substr((string) data_get($this->metadata, 'head_sha', ''), 0, 8),
+            ),
+            'github_commit_observed' => sprintf(
+                'Commit %sをGitHubで確認しました。%s',
+                mb_substr((string) data_get($this->metadata, 'commit_sha', ''), 0, 8),
+                filled(data_get($this->metadata, 'branch'))
+                    ? 'Branch '.(string) data_get($this->metadata, 'branch')
+                    : '',
+            ),
+            'github_deployment_observed' => sprintf(
+                '%sへのDeployを「%s」として確認しました。',
+                trim((string) data_get($this->metadata, 'environment')) ?: '対象環境',
+                (string) data_get($this->metadata, 'deployment_status', 'created'),
+            ),
+            'development_quality_gate_confirmed' => sprintf(
+                '%sを「%s」として明示確認しました。',
+                match ((string) data_get($this->metadata, 'quality_gate')) {
+                    'verification' => '実機・本番確認',
+                    'spec_sync' => '仕様同期',
+                    default => '品質Gate',
+                },
+                match ((string) data_get($this->metadata, 'gate_status')) {
+                    'passed' => '確認済み',
+                    'failed' => '問題あり',
+                    'not_required' => '対象外',
+                    default => '未確認',
                 },
             ),
             'pull_request_review_submitted' => sprintf(

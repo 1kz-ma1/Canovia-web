@@ -400,6 +400,333 @@ final class GitHubRepositoryWriter
     }
 
     /**
+     * Read one Issue through the installed GitHub App without importing
+     * unbounded body/comment text into Canovia Intelligence.
+     *
+     * @return array<string,mixed>
+     */
+    public function inspectIssue(
+        string $repoFullName,
+        int $issueNumber,
+    ): array {
+        if ($issueNumber <= 0) {
+            throw new RuntimeException('Issue番号を確認できませんでした。');
+        }
+
+        $context = $this->developmentReadContext(
+            $repoFullName,
+            'issues',
+            'Issues',
+        );
+
+        /** @var PendingRequest $client */
+        $client = $context['client'];
+        $response = $client->get(
+            '/repos/'.$context['repo_path'].'/issues/'.$issueNumber,
+        );
+
+        if ($response->status() === 404) {
+            throw new RuntimeException('対象IssueをGitHubから確認できませんでした。');
+        }
+
+        if (! $response->successful()) {
+            throw new RuntimeException('Issueの現在状態をGitHubから取得できませんでした。');
+        }
+
+        $issue = $response->json();
+        if (
+            ! is_array($issue)
+            || array_key_exists('pull_request', $issue)
+            || (int) ($issue['number'] ?? 0) !== $issueNumber
+        ) {
+            throw new RuntimeException('GitHubから返されたIssue情報を確認できませんでした。');
+        }
+
+        return [
+            'version' => 1,
+            'source' => 'github_app_rest',
+            'repo_full_name' => $repoFullName,
+            'installation_id' => $context['installation_id'],
+            'fetched_at' => now()->toIso8601String(),
+            'issue' => [
+                'number' => $issueNumber,
+                'state' => mb_substr((string) ($issue['state'] ?? ''), 0, 50),
+                'state_reason' => filled($issue['state_reason'] ?? null)
+                    ? mb_substr((string) $issue['state_reason'], 0, 80)
+                    : null,
+                'locked' => (bool) ($issue['locked'] ?? false),
+                'assignee_count' => collect((array) ($issue['assignees'] ?? []))
+                    ->filter(fn ($item) => is_array($item))
+                    ->count(),
+                'updated_at' => $this->dateValue($issue['updated_at'] ?? null),
+                'closed_at' => $this->dateValue($issue['closed_at'] ?? null),
+                'url' => $this->githubUrl($issue['html_url'] ?? null),
+            ],
+        ];
+    }
+
+    /**
+     * Read one Branch head through the installed GitHub App.
+     *
+     * @return array<string,mixed>
+     */
+    public function inspectBranch(
+        string $repoFullName,
+        string $branch,
+    ): array {
+        $branch = trim($branch);
+        if (
+            $branch === ''
+            || mb_strlen($branch) > 255
+            || str_contains($branch, "\0")
+        ) {
+            throw new RuntimeException('Branch名を確認できませんでした。');
+        }
+
+        $context = $this->developmentReadContext(
+            $repoFullName,
+            'contents',
+            'Contents',
+        );
+
+        /** @var PendingRequest $client */
+        $client = $context['client'];
+        $response = $client->get(
+            '/repos/'.$context['repo_path'].'/branches/'.rawurlencode($branch),
+        );
+
+        if ($response->status() === 404) {
+            throw new RuntimeException('対象BranchをGitHubから確認できませんでした。');
+        }
+
+        if (! $response->successful()) {
+            throw new RuntimeException('Branchの現在状態をGitHubから取得できませんでした。');
+        }
+
+        $branchData = $response->json();
+        if (! is_array($branchData)) {
+            throw new RuntimeException('GitHub Branch情報を読み取れませんでした。');
+        }
+
+        $actualName = trim((string) ($branchData['name'] ?? ''));
+        $headSha = mb_strtolower(mb_substr(
+            trim((string) data_get($branchData, 'commit.sha', '')),
+            0,
+            64,
+        ));
+
+        if ($actualName === '' || $headSha === '') {
+            throw new RuntimeException('GitHub Branchのheadを確認できませんでした。');
+        }
+
+        return [
+            'version' => 1,
+            'source' => 'github_app_rest',
+            'repo_full_name' => $repoFullName,
+            'installation_id' => $context['installation_id'],
+            'fetched_at' => now()->toIso8601String(),
+            'branch' => [
+                'name' => mb_substr($actualName, 0, 255),
+                'head_sha' => $headSha,
+                'protected' => (bool) ($branchData['protected'] ?? false),
+            ],
+        ];
+    }
+
+    /**
+     * Read one Commit by SHA through the installed GitHub App.
+     *
+     * Commit message / file diff are deliberately excluded from the returned
+     * Intelligence-facing snapshot.
+     *
+     * @return array<string,mixed>
+     */
+    public function inspectCommit(
+        string $repoFullName,
+        string $commitSha,
+    ): array {
+        $commitSha = mb_strtolower(trim($commitSha));
+        if (! preg_match('/^[a-f0-9]{7,64}$/', $commitSha)) {
+            throw new RuntimeException('Commit SHAを確認できませんでした。');
+        }
+
+        $context = $this->developmentReadContext(
+            $repoFullName,
+            'contents',
+            'Contents',
+        );
+
+        /** @var PendingRequest $client */
+        $client = $context['client'];
+        $response = $client->get(
+            '/repos/'.$context['repo_path'].'/commits/'.$commitSha,
+        );
+
+        if ($response->status() === 404) {
+            throw new RuntimeException('対象CommitをGitHubから確認できませんでした。');
+        }
+
+        if (! $response->successful()) {
+            throw new RuntimeException('Commitの現在状態をGitHubから取得できませんでした。');
+        }
+
+        $commit = $response->json();
+        if (! is_array($commit)) {
+            throw new RuntimeException('GitHub Commit情報を読み取れませんでした。');
+        }
+
+        $actualSha = mb_strtolower(mb_substr(
+            trim((string) ($commit['sha'] ?? '')),
+            0,
+            64,
+        ));
+
+        if (
+            $actualSha === ''
+            || ! str_starts_with($actualSha, $commitSha)
+        ) {
+            throw new RuntimeException('GitHubから返されたCommit SHAが一致しません。');
+        }
+
+        return [
+            'version' => 1,
+            'source' => 'github_app_rest',
+            'repo_full_name' => $repoFullName,
+            'installation_id' => $context['installation_id'],
+            'fetched_at' => now()->toIso8601String(),
+            'commit' => [
+                'sha' => $actualSha,
+                'authored_at' => $this->dateValue(
+                    data_get($commit, 'commit.author.date'),
+                ),
+                'committed_at' => $this->dateValue(
+                    data_get($commit, 'commit.committer.date'),
+                ),
+                'parent_count' => collect((array) ($commit['parents'] ?? []))
+                    ->filter(fn ($item) => is_array($item))
+                    ->count(),
+                'verified' => (bool) data_get(
+                    $commit,
+                    'commit.verification.verified',
+                    false,
+                ),
+                'url' => $this->githubUrl($commit['html_url'] ?? null),
+            ],
+        ];
+    }
+
+    /**
+     * Read one GitHub Deployment and its latest status.
+     *
+     * @return array<string,mixed>
+     */
+    public function inspectDeployment(
+        string $repoFullName,
+        int $deploymentId,
+    ): array {
+        if ($deploymentId <= 0) {
+            throw new RuntimeException('Deployment IDを確認できませんでした。');
+        }
+
+        $context = $this->developmentReadContext(
+            $repoFullName,
+            'deployments',
+            'Deployments',
+        );
+
+        /** @var PendingRequest $client */
+        $client = $context['client'];
+        $response = $client->get(
+            '/repos/'.$context['repo_path'].'/deployments/'.$deploymentId,
+        );
+
+        if ($response->status() === 404) {
+            throw new RuntimeException('対象DeploymentをGitHubから確認できませんでした。');
+        }
+
+        if (! $response->successful()) {
+            throw new RuntimeException('Deploymentの現在状態をGitHubから取得できませんでした。');
+        }
+
+        $deployment = $response->json();
+        if (
+            ! is_array($deployment)
+            || (int) ($deployment['id'] ?? 0) !== $deploymentId
+        ) {
+            throw new RuntimeException('GitHub Deployment情報を読み取れませんでした。');
+        }
+
+        $statusesResponse = $client->get(
+            '/repos/'.$context['repo_path'].'/deployments/'.$deploymentId.'/statuses',
+            ['per_page' => 10],
+        );
+
+        $statuses = $statusesResponse->successful()
+            ? collect($statusesResponse->json())
+                ->filter(fn ($item) => is_array($item))
+                ->take(10)
+                ->map(fn (array $item) => [
+                    'id' => (int) ($item['id'] ?? 0),
+                    'state' => mb_substr((string) ($item['state'] ?? ''), 0, 80),
+                    'created_at' => $this->dateValue($item['created_at'] ?? null),
+                    'updated_at' => $this->dateValue($item['updated_at'] ?? null),
+                ])
+                ->filter(fn (array $item) => $item['id'] > 0 && $item['state'] !== '')
+                ->values()
+            : collect();
+
+        $latest = $statuses
+            ->sortByDesc(fn (array $item) => (
+                (string) ($item['updated_at'] ?? $item['created_at'] ?? '')
+            ).':'.str_pad((string) $item['id'], 20, '0', STR_PAD_LEFT))
+            ->first();
+
+        return [
+            'version' => 1,
+            'source' => 'github_app_rest',
+            'repo_full_name' => $repoFullName,
+            'installation_id' => $context['installation_id'],
+            'fetched_at' => now()->toIso8601String(),
+            'deployment' => [
+                'id' => $deploymentId,
+                'sha' => mb_strtolower(mb_substr(
+                    trim((string) ($deployment['sha'] ?? '')),
+                    0,
+                    64,
+                )),
+                'ref' => mb_substr(
+                    trim((string) ($deployment['ref'] ?? '')),
+                    0,
+                    255,
+                ),
+                'environment' => mb_substr(
+                    trim((string) ($deployment['environment'] ?? '')),
+                    0,
+                    255,
+                ),
+                'production_environment' => (bool) (
+                    $deployment['production_environment'] ?? false
+                ),
+                'transient_environment' => (bool) (
+                    $deployment['transient_environment'] ?? false
+                ),
+                'created_at' => $this->dateValue(
+                    $deployment['created_at'] ?? null,
+                ),
+                'updated_at' => $this->dateValue(
+                    $deployment['updated_at'] ?? null,
+                ),
+                'latest_status' => is_array($latest)
+                    ? $latest['state']
+                    : null,
+                'latest_status_at' => is_array($latest)
+                    ? ($latest['updated_at'] ?? $latest['created_at'] ?? null)
+                    : null,
+            ],
+        ];
+    }
+
+    /**
      * Read the current target file state through the same GitHub App boundary
      * used for write, without creating a branch or commit.
      *
@@ -751,6 +1078,83 @@ final class GitHubRepositoryWriter
             ],
             'created_at' => now()->toIso8601String(),
             'executed_by' => 'github_app',
+        ];
+    }
+
+    /**
+     * @return array{
+     *   repo_path:string,
+     *   installation_id:int,
+     *   permissions:array<string,mixed>,
+     *   client:PendingRequest
+     * }
+     */
+    private function developmentReadContext(
+        string $repoFullName,
+        string $permission,
+        string $permissionLabel,
+    ): array {
+        if (! $this->configured()) {
+            throw new RuntimeException('GitHub AppがCanoviaに設定されていません。');
+        }
+
+        [$owner, $repo] = $this->splitRepo($repoFullName);
+        $repoPath = rawurlencode($owner).'/'.rawurlencode($repo);
+
+        $appJwt = $this->appJwt();
+        $installationResponse = $this->appClient($appJwt)
+            ->get('/repos/'.$repoPath.'/installation');
+
+        if ($installationResponse->status() === 404) {
+            throw new RuntimeException('Canovia GitHub AppがこのRepositoryに接続されていません。');
+        }
+
+        if (! $installationResponse->successful()) {
+            throw new RuntimeException('GitHub AppのRepository接続を確認できませんでした。');
+        }
+
+        $installationId = (int) data_get(
+            $installationResponse->json(),
+            'id',
+            0,
+        );
+        if ($installationId <= 0) {
+            throw new RuntimeException('GitHub App installationを確認できませんでした。');
+        }
+
+        $tokenResponse = $this->appClient($appJwt)
+            ->post('/app/installations/'.$installationId.'/access_tokens');
+
+        if (! $tokenResponse->successful()) {
+            throw new RuntimeException('GitHub Appの一時Access Tokenを発行できませんでした。');
+        }
+
+        $token = trim((string) data_get($tokenResponse->json(), 'token', ''));
+        $permissions = (array) data_get(
+            $tokenResponse->json(),
+            'permissions',
+            [],
+        );
+
+        if ($token === '') {
+            throw new RuntimeException('GitHub Appの一時Access Tokenを取得できませんでした。');
+        }
+
+        if (! in_array(
+            ($permissions[$permission] ?? null),
+            ['read', 'write'],
+            true,
+        )) {
+            throw new RuntimeException(
+                'GitHub Appに'.$permissionLabel.'のread権限がありません。',
+            );
+        }
+
+        return [
+            'repo_path' => $repoPath,
+            'installation_id' => $installationId,
+            'permissions' => $permissions,
+            'client' => $this->installationClient($token),
         ];
     }
 

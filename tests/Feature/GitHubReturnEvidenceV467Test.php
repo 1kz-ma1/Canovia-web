@@ -63,7 +63,7 @@ class GitHubReturnEvidenceV467Test extends TestCase
                 'GitHubのReview / Merge / CI結果を確認し、Task Evidenceへ反映しました。Task進捗・完了状態は自動変更していません。',
             );
 
-        $this->assertDatabaseCount('task_evidences', 2);
+        $this->assertDatabaseCount('task_evidences', 3);
 
         $reviewEvidence = TaskEvidence::query()
             ->where('type', 'pull_request_review_submitted')
@@ -105,7 +105,7 @@ class GitHubReturnEvidenceV467Test extends TestCase
             ->post(route('plans.tasks.execution_orchestration.github.return_sync', [$plan, $task, $pr]))
             ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseCount('task_evidences', 2);
+        $this->assertDatabaseCount('task_evidences', 3);
 
         $this->actingAs($user)
             ->get(route('plans.tasks.execution_orchestration.show', [$plan, $task]))
@@ -136,7 +136,7 @@ class GitHubReturnEvidenceV467Test extends TestCase
             ->post(route('plans.tasks.execution_orchestration.github.return_sync', [$plan, $task, $pr]))
             ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseCount('task_evidences', 2);
+        $this->assertDatabaseCount('task_evidences', 3);
 
         $reviewEvidence = TaskEvidence::query()
             ->where('type', 'pull_request_review_submitted')
