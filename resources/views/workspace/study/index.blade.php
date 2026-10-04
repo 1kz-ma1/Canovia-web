@@ -82,43 +82,23 @@
     </section>
 
     @if (! $plan)
-        <section class="page-card border-dashed border-amber-300/25 p-7 sm:p-9" data-study-workspace-no-plan>
-            <div class="mx-auto max-w-2xl text-center">
-                <p class="text-xs font-black uppercase tracking-[0.16em] text-amber-300">START STUDY WORKSPACE</p>
-                <h2 class="mt-2 text-2xl font-black text-slate-50">まず、学習Planを一つ作る</h2>
-                <p class="mt-3 text-sm leading-6 text-slate-400">
-                    Study WorkspaceはPlanごとの試験範囲・Evidence・Readinessを扱います。
-                    学習Planを作れば、試験範囲の取り込みから始められます。
-                </p>
-                <a href="{{ route('plans.create') }}" class="btn-primary mt-5 inline-flex min-h-11 items-center px-4">学習Planを作る</a>
-            </div>
-        </section>
-    @elseif (! $hasConfirmedScope)
-        <section class="page-card border-amber-300/20 bg-amber-300/[0.025] p-6 sm:p-8" data-study-workspace-capture-first>
-            <div class="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)] lg:items-center">
-                <div>
-                    <p class="text-[10px] font-black uppercase tracking-[0.18em] text-amber-300">FIRST EVIDENCE</p>
-                    <h2 class="mt-2 text-2xl font-black text-slate-50">試験範囲から始める</h2>
-                    <p class="mt-3 text-sm leading-6 text-slate-400">
-                        Readinessを意味のある数字にするには、まず「何が試験範囲か」を確定する必要があります。
-                        範囲表・スクリーンショット・PDFを追加して、人の確認後にStudy Stateへ反映します。
-                    </p>
-                    <div class="mt-5 flex flex-wrap gap-2">
-                        <a href="{{ route('plans.study_scope.index', $plan) }}" class="btn-primary min-h-11 px-4">試験範囲を追加</a>
-                        <a href="{{ route('plans.show', $plan) }}" class="btn-secondary min-h-11 px-4">Planを見る</a>
-                    </div>
-                </div>
-                <div class="rounded-2xl border border-white/8 bg-slate-950/35 p-5">
-                    <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">SELECTED PLAN</p>
-                    <p class="mt-2 text-lg font-black text-slate-100">{{ $plan->displayIcon() }} {{ $plan->title }}</p>
-                    <div class="mt-4 space-y-3 text-xs text-slate-500">
-                        <p>1. Scopeを確定</p>
-                        <p>2. Practice / RecallでEvidenceを増やす</p>
-                        <p>3. ReadinessとCurrent Actionが更新</p>
-                    </div>
-                </div>
-            </div>
-        </section>
+        <div data-study-workspace-no-plan>
+            @include('workspace.partials.mode-onboarding', [
+                'modeOnboarding' => $modeOnboarding ?? null,
+            ])
+        </div>
+    @elseif ($modeOnboarding ?? null)
+        <div
+            @if (data_get($modeOnboarding, 'current_step.key') === 'capture_study_scope')
+                data-study-workspace-capture-first
+            @elseif (data_get($modeOnboarding, 'current_step.key') === 'record_study_evidence')
+                data-study-workspace-first-evidence
+            @endif
+        >
+            @include('workspace.partials.mode-onboarding', [
+                'modeOnboarding' => $modeOnboarding,
+            ])
+        </div>
     @else
         <section id="study-readiness" class="page-card border-amber-300/15 p-5 sm:p-6" data-study-workspace-readiness>
             <div class="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">

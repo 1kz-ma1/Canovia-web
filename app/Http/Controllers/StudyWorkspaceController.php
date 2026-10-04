@@ -7,11 +7,13 @@ use App\Intelligence\Presentation\IntelligencePresentationHistoryService;
 use App\Intelligence\Presentation\IntelligenceStateChangeFeedbackService;
 use App\Intelligence\Presentation\StudyIntelligencePresentationAdapter;
 use App\Intelligence\Study\StudyAdaptiveActionService;
+use App\Enums\WorkspaceMode;
 use App\Models\Plan;
 use App\Models\Task;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanPriorityService;
+use App\Services\WorkspaceModeOnboardingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -26,6 +28,7 @@ final class StudyWorkspaceController extends Controller
         StudyIntelligencePresentationAdapter $presentationAdapter,
         IntelligencePresentationHistoryService $history,
         IntelligenceStateChangeFeedbackService $stateChanges,
+        WorkspaceModeOnboardingService $onboarding,
     ) {
         $studyPlans = $ownership->ownedPlans($request, [
             'tasks',
@@ -52,6 +55,10 @@ final class StudyWorkspaceController extends Controller
                 'hasConfirmedScope' => false,
                 'navigationTask' => null,
                 'intelligenceStateChange' => null,
+                'modeOnboarding' => $onboarding->build(
+                    WorkspaceMode::Study,
+                    [],
+                ),
             ]);
         }
 
@@ -65,11 +72,26 @@ final class StudyWorkspaceController extends Controller
             'confirmed_scope_count',
             0,
         ) > 0;
+        $hasStudyEvidence = $plan->taskEvidences()
+            ->whereIn('type', [
+                'study_practice_assessed',
+                'study_recall_reviewed',
+            ])
+            ->exists();
+        $canEdit = $ownership->canEdit($request, $plan);
+
+        $completedSteps = ['create_plan'];
+        if ($hasConfirmedScope) {
+            $completedSteps[] = 'capture_study_scope';
+        }
+        if ($hasStudyEvidence) {
+            $completedSteps[] = 'record_study_evidence';
+        }
 
         return view('workspace.study.index', [
             'studyPlans' => $studyPlans,
             'plan' => $plan,
-            'canEdit' => $ownership->canEdit($request, $plan),
+            'canEdit' => $canEdit,
             'studyAdaptiveAction' => $adaptiveAction,
             'intelligencePresentation' => $presentation,
             'intelligenceHistory' => $history->forPlan(
@@ -84,6 +106,13 @@ final class StudyWorkspaceController extends Controller
             'intelligenceStateChange' => $stateChanges->latestForPlan(
                 $plan,
                 IntelligenceDomain::Study,
+            ),
+            'modeOnboarding' => $onboarding->build(
+                WorkspaceMode::Study,
+                $completedSteps,
+                $plan,
+                $presentation,
+                $canEdit,
             ),
         ]);
     }

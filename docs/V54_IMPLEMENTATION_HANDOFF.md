@@ -300,7 +300,7 @@ Implemented:
 
 ### V54.6 — State Change Feedback
 
-Status: **IMPLEMENTED — PR #224 OPEN**
+Status: **MERGED — PR #224**
 
 Branch:
 
@@ -338,11 +338,49 @@ Implemented:
 
 ### V54.7 — Mode-specific Onboarding
 
-Planned:
+Status: **IMPLEMENTED — PR #225 OPEN**
 
-- Study / Development first-use choice
-- mode-aware empty states
-- registry-driven future expansion
+Branch:
+
+`feature/v54-7-mode-onboarding`
+
+Permanent spec:
+
+`docs/V54.7_MODE_SPECIFIC_ONBOARDING.md`
+
+Implemented:
+
+- global First-run Gate remains separate and unchanged
+- no Mode onboarding completion flag / modal / localStorage / dismiss state
+- `WorkspaceModeDefinitionData` now carries suggested Plan category + onboarding steps
+- Study / Development onboarding definitions live in `WorkspaceModeRegistry`
+- shared `WorkspaceModeOnboardingService`
+- shared self-completing onboarding card
+- Study setup:
+  - create Study Plan
+  - confirm Study Scope
+  - record first Practice / Recall Evidence
+- Development setup:
+  - create Development Plan
+  - connect first GitHub / Development Evidence
+- step completion is derived from durable Plan / Scope / Evidence state
+- setup card disappears automatically once the Mode has enough real state
+- Study adds only one selected-Plan Evidence `exists()` query
+- Development reuses existing `focus_task_state`
+- specialized Plan creation uses existing direct form:
+  - `/plans/create/manual?workspace_mode=study`
+  - `/plans/create/manual?workspace_mode=development`
+- Study creation prefills `資格学習`
+- Development creation prefills `個人開発`
+- matching created Plan returns directly to the originating Workspace
+- user category override is respected; mismatched profile falls back to generic post-create flow
+- `/plans/create` remains conversational Goal Discovery
+- Overview shows registry-driven Study / Development first-use choices only when neither specialized Plan exists
+- no Task auto-creation, AI traffic or GitHub provider request on Workspace GET
+- final validation run: #37194412233
+- V54.6 / V54.5 / V54.4 / V54.3 / V54.2 / V54.0 regressions passed
+- First-run Gate / Plan idempotency / Goal Context / Plan visual creation regressions passed
+- PR #225 created against main
 
 ### V54.8 — Polish / telemetry / iOS
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Intelligence\Development\DevelopmentAdaptiveActionService;
+use App\Enums\WorkspaceMode;
 use App\Intelligence\Enums\IntelligenceDomain;
 use App\Intelligence\Presentation\DevelopmentIntelligencePresentationAdapter;
 use App\Intelligence\Presentation\IntelligencePresentationHistoryService;
@@ -12,6 +13,7 @@ use App\Models\Task;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanPriorityService;
+use App\Services\WorkspaceModeOnboardingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -26,6 +28,7 @@ final class DevelopmentWorkspaceController extends Controller
         DevelopmentIntelligencePresentationAdapter $presentationAdapter,
         IntelligencePresentationHistoryService $history,
         IntelligenceStateChangeFeedbackService $stateChanges,
+        WorkspaceModeOnboardingService $onboarding,
     ) {
         $developmentPlans = $ownership->ownedPlans($request, [
             'tasks',
@@ -52,6 +55,10 @@ final class DevelopmentWorkspaceController extends Controller
                 'hasReleaseEvidence' => false,
                 'developmentFocusTask' => null,
                 'intelligenceStateChange' => null,
+                'modeOnboarding' => $onboarding->build(
+                    WorkspaceMode::Development,
+                    [],
+                ),
             ]);
         }
 
@@ -66,11 +73,17 @@ final class DevelopmentWorkspaceController extends Controller
         );
         $focusState = is_array($focusState) ? $focusState : null;
         $focusTaskId = (int) data_get($focusState, 'task_id', 0);
+        $canEdit = $ownership->canEdit($request, $plan);
+        $completedSteps = ['create_plan'];
+
+        if ($focusState !== null) {
+            $completedSteps[] = 'connect_github_evidence';
+        }
 
         return view('workspace.development.index', [
             'developmentPlans' => $developmentPlans,
             'plan' => $plan,
-            'canEdit' => $ownership->canEdit($request, $plan),
+            'canEdit' => $canEdit,
             'developmentAdaptiveAction' => $adaptiveAction,
             'intelligencePresentation' => $presentation,
             'intelligenceHistory' => $history->forPlan(
@@ -84,6 +97,13 @@ final class DevelopmentWorkspaceController extends Controller
             'intelligenceStateChange' => $stateChanges->latestForPlan(
                 $plan,
                 IntelligenceDomain::Development,
+            ),
+            'modeOnboarding' => $onboarding->build(
+                WorkspaceMode::Development,
+                $completedSteps,
+                $plan,
+                $presentation,
+                $canEdit,
             ),
         ]);
     }

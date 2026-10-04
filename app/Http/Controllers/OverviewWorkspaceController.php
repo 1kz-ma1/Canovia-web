@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\WorkspaceMode;
 use App\Intelligence\Enums\IntelligenceDomain;
 use App\Intelligence\Presentation\IntelligenceStateChangeFeedbackService;
 use App\Intelligence\Presentation\PlanIntelligencePresentation;
@@ -13,6 +14,7 @@ use App\Services\HomePageDataService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanPriorityService;
+use App\Services\WorkspaceModeRegistry;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -28,6 +30,7 @@ final class OverviewWorkspaceController extends Controller
         PlanIntelligencePresentationService $presentations,
         BehaviorIdentityService $identity,
         IntelligenceStateChangeFeedbackService $stateChanges,
+        WorkspaceModeRegistry $workspaceModes,
     ) {
         $homeData = $home->build($request, prefetch: true);
         $plans = $ownership->ownedPlans($request, [
@@ -78,6 +81,27 @@ final class OverviewWorkspaceController extends Controller
             ->take(2)
             ->values();
 
+        $firstUseModeChoices = collect();
+        if (! $studyPlan instanceof Plan && ! $developmentPlan instanceof Plan) {
+            $firstUseModeChoices = $workspaceModes->all()
+                ->reject(fn ($definition) =>
+                    $definition->mode === WorkspaceMode::Overview
+                )
+                ->filter(fn ($definition) =>
+                    $definition->onboardingSteps !== []
+                )
+                ->map(fn ($definition) => [
+                    'key' => $definition->mode->value,
+                    'label' => $definition->label,
+                    'description' => $definition->description,
+                    'accent_tone' => $definition->accentTone,
+                    'url' => route('workspace_modes.enter', [
+                        'workspaceMode' => $definition->mode->value,
+                    ]),
+                ])
+                ->values();
+        }
+
         $primaryIntelligence = $homeData['intelligencePresentation'] ?? null;
         $primaryGuidance = collect(
             data_get($homeData, 'dashboard.guidance_deck', []),
@@ -105,6 +129,7 @@ final class OverviewWorkspaceController extends Controller
                 data_get($homeData, 'actionHome.signals', []),
             )->take(4)->values(),
             'intelligenceChanges' => $intelligenceChanges,
+            'firstUseModeChoices' => $firstUseModeChoices,
         ]);
     }
 

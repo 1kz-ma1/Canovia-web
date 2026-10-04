@@ -9,6 +9,7 @@ final readonly class WorkspaceModeDefinitionData
     /**
      * @param array<int,string> $supportedProfileKeys
      * @param array<int,string> $navigationKeys
+     * @param array<int,array{key:string,title:string,description:string,action_key:string,action_label:string}> $onboardingSteps
      */
     public function __construct(
         public WorkspaceMode $mode,
@@ -22,6 +23,8 @@ final readonly class WorkspaceModeDefinitionData
         public string $emptyStateTitle,
         public string $emptyStateDescription,
         public string $emptyStateActionKey,
+        public ?string $suggestedPlanCategory = null,
+        public array $onboardingSteps = [],
     ) {}
 
     public function supportsProfile(string $profileKey): bool
@@ -52,6 +55,8 @@ final readonly class WorkspaceModeDefinitionData
                 'description' => $this->emptyStateDescription,
                 'action_key' => $this->emptyStateActionKey,
             ],
+            'suggested_plan_category' => $this->suggestedPlanCategory,
+            'onboarding_steps' => $this->onboardingSteps,
         ];
     }
 }

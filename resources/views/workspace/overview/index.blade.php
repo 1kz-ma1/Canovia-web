@@ -36,6 +36,35 @@
         </nav>
     </section>
 
+    @if (($firstUseModeChoices ?? collect())->isNotEmpty())
+        <section class="page-card border-violet-300/15 bg-violet-300/[0.025] p-5 sm:p-6" data-overview-first-use-workspaces>
+            <div>
+                <p class="text-[10px] font-black uppercase tracking-[0.16em] text-violet-300">CHOOSE A WORKSPACE</p>
+                <h2 class="mt-1 text-xl font-black text-slate-50">最初は、目的に近い入口を選ぶ</h2>
+                <p class="mt-2 text-sm leading-6 text-slate-400">
+                    Workspaceは別アプリではありません。同じCanoviaの中で、目的に合ったState・Evidence・Actionの流れへ入ります。
+                </p>
+            </div>
+
+            <div class="mt-5 grid gap-3 md:grid-cols-2">
+                @foreach ($firstUseModeChoices as $choice)
+                    <a
+                        href="{{ $choice['url'] }}"
+                        class="rounded-2xl border border-white/8 bg-slate-950/25 p-4 transition hover:border-white/15 hover:bg-slate-950/40"
+                        data-overview-first-use-workspace="{{ $choice['key'] }}"
+                    >
+                        <p class="text-[10px] font-black uppercase tracking-[0.14em] {{ $choice['key'] === 'study' ? 'text-amber-300' : 'text-cyan-300' }}">
+                            {{ strtoupper($choice['key']) }}
+                        </p>
+                        <h3 class="mt-2 text-base font-black text-slate-100">{{ $choice['label'] }} Workspace</h3>
+                        <p class="mt-2 text-xs leading-5 text-slate-500">{{ $choice['description'] }}</p>
+                        <span class="mt-4 inline-flex text-xs font-black {{ $choice['key'] === 'study' ? 'text-amber-300' : 'text-cyan-300' }}">このWorkspaceから始める →</span>
+                    </a>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     <section id="overview-current-action" class="page-card border-violet-300/15 p-5 sm:p-6" data-overview-primary-action>
         <div class="flex flex-wrap items-start justify-between gap-3">
             <div>

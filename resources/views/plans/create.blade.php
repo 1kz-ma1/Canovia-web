@@ -24,9 +24,17 @@
                 <div class="rounded-2xl border border-slate-700/80 bg-slate-950/35 p-3">
                     <div class="flex items-center gap-2">
                         <span class="grid h-6 w-6 place-items-center rounded-full border border-slate-600 text-[11px] font-black text-slate-400">2</span>
-                        <strong class="text-xs text-slate-300">AIで具体化</strong>
+                        <strong class="text-xs text-slate-300">
+                            {{ ($workspaceModeContext ?? null) ? ($workspaceModeContext['label'].' Workspace') : 'AIで具体化' }}
+                        </strong>
                     </div>
-                    <p class="mt-2 text-[11px] leading-5 text-slate-500">タスク・順番・必要時間を一緒に整理</p>
+                    <p class="mt-2 text-[11px] leading-5 text-slate-500">
+                        @if ($workspaceModeContext ?? null)
+                            Plan作成後、その目的専用のセットアップへ戻ります
+                        @else
+                            タスク・順番・必要時間を一緒に整理
+                        @endif
+                    </p>
                 </div>
             </div>
 
@@ -34,6 +42,22 @@
                 <img src="/brand/mascot-guide.webp" alt="" class="w-full drop-shadow-[0_18px_30px_rgba(0,0,0,.45)]">
             </div>
         </header>
+
+        @if ($workspaceModeContext ?? null)
+            <section
+                class="rounded-2xl border {{ $workspaceModeContext['key'] === 'study' ? 'border-amber-300/20 bg-amber-300/[0.025]' : 'border-cyan-300/20 bg-cyan-300/[0.025]' }} p-4"
+                data-plan-create-workspace-mode="{{ $workspaceModeContext['key'] }}"
+            >
+                <p class="text-[10px] font-black uppercase tracking-[0.16em] {{ $workspaceModeContext['key'] === 'study' ? 'text-amber-300' : 'text-cyan-300' }}">
+                    {{ strtoupper($workspaceModeContext['key']) }} WORKSPACE
+                </p>
+                <p class="mt-2 text-sm font-black text-slate-100">{{ $workspaceModeContext['label'] }} WorkspaceからPlanを作成中</p>
+                <p class="mt-1 text-xs leading-5 text-slate-500">{{ $workspaceModeContext['description'] }}</p>
+                <p class="mt-2 text-[11px] text-slate-600">
+                    カテゴリは {{ $workspaceModeContext['suggested_plan_category'] }} を初期値にしています。変更すると、内容に合わないWorkspaceへは強制的に戻しません。
+                </p>
+            </section>
+        @endif
 
         @if ($errors->any())
             <div class="assistant-notice assistant-notice-error">
@@ -54,6 +78,9 @@
             data-mutation-once
         >
             @csrf
+            @if ($workspaceModeContext ?? null)
+                <input type="hidden" name="workspace_mode" value="{{ $workspaceModeContext['key'] }}">
+            @endif
             <input type="hidden" name="create_request_id" value="{{ old('create_request_id', (string) \Illuminate\Support\Str::uuid()) }}">
 
             <section class="page-card space-y-5 p-5 sm:p-6">
@@ -202,14 +229,35 @@
                             <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-cyan-300/30 bg-cyan-300/10 text-[10px] font-black text-cyan-300">1</span>
                             <p class="text-xs leading-5 text-slate-400">計画の基本情報を保存</p>
                         </div>
-                        <div class="flex gap-3">
-                            <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-700 text-[10px] font-black text-slate-400">2</span>
-                            <p class="text-xs leading-5 text-slate-400">AIへ相談文をコピーして、タスクと順番を作成</p>
-                        </div>
-                        <div class="flex gap-3">
-                            <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-700 text-[10px] font-black text-slate-400">3</span>
-                            <p class="text-xs leading-5 text-slate-400">JSONを戻してロードマップを完成</p>
-                        </div>
+
+                        @if (($workspaceModeContext['key'] ?? null) === 'study')
+                            <div class="flex gap-3">
+                                <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-700 text-[10px] font-black text-slate-400">2</span>
+                                <p class="text-xs leading-5 text-slate-400">Study Workspaceへ戻って試験範囲を確定</p>
+                            </div>
+                            <div class="flex gap-3">
+                                <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-700 text-[10px] font-black text-slate-400">3</span>
+                                <p class="text-xs leading-5 text-slate-400">Practice / Recallで最初のEvidenceを記録</p>
+                            </div>
+                        @elseif (($workspaceModeContext['key'] ?? null) === 'development')
+                            <div class="flex gap-3">
+                                <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-700 text-[10px] font-black text-slate-400">2</span>
+                                <p class="text-xs leading-5 text-slate-400">Development Workspaceへ戻ってGitHub Evidenceを接続</p>
+                            </div>
+                            <div class="flex gap-3">
+                                <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-700 text-[10px] font-black text-slate-400">3</span>
+                                <p class="text-xs leading-5 text-slate-400">Release ReadinessとCurrent Actionを確認</p>
+                            </div>
+                        @else
+                            <div class="flex gap-3">
+                                <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-700 text-[10px] font-black text-slate-400">2</span>
+                                <p class="text-xs leading-5 text-slate-400">AIへ相談文をコピーして、タスクと順番を作成</p>
+                            </div>
+                            <div class="flex gap-3">
+                                <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-700 text-[10px] font-black text-slate-400">3</span>
+                                <p class="text-xs leading-5 text-slate-400">JSONを戻してロードマップを完成</p>
+                            </div>
+                        @endif
                     </div>
                 </section>
 
@@ -220,9 +268,16 @@
                         data-onboarding-target="create-plan-submit"
                         data-processing-label="計画を作成しています…"
                     >
-                        計画を作ってAIへ進む
+                        @if ($workspaceModeContext ?? null)
+                            Planを作って{{ $workspaceModeContext['label'] }} Workspaceへ
+                        @else
+                            計画を作ってAIへ進む
+                        @endif
                     </button>
-                    <a href="{{ route('home') }}" class="mt-2 flex min-h-10 items-center justify-center text-xs font-bold text-slate-500 hover:text-slate-300">キャンセル</a>
+                    <a
+                        href="{{ ($workspaceModeContext ?? null) ? $workspaceModeContext['return_url'] : route('home') }}"
+                        class="mt-2 flex min-h-10 items-center justify-center text-xs font-bold text-slate-500 hover:text-slate-300"
+                    >キャンセル</a>
                 </div>
             </aside>
         </form>
