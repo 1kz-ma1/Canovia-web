@@ -270,8 +270,12 @@
 
     @unless ($focusMode)
         <footer class="mt-12 hidden border-t border-slate-800 bg-slate-950/70 md:block">
-            <div class="mx-auto flex max-w-7xl flex-col gap-2 px-6 py-8 text-sm text-slate-500 md:flex-row md:items-center md:justify-between">
+            <div class="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-8 text-sm text-slate-500 md:flex-row md:items-center md:justify-between">
                 <p>Canovia — 自分のペースで、前へ。</p>
+                <div class="flex flex-wrap gap-4">
+                    <a href="{{ route('legal.privacy') }}" class="hover:text-slate-300">プライバシー</a>
+                    <a href="{{ route('legal.support') }}" class="hover:text-slate-300">サポート</a>
+                </div>
             </div>
         </footer>
 
@@ -378,6 +382,11 @@
                 <div class="mt-5 grid gap-2 sm:grid-cols-2">
                     <button type="button" class="btn-secondary w-full justify-center" data-onboarding-restart>使い方を見る</button>
                     <button type="button" class="btn-secondary w-full justify-center" data-install-guide-open>ホーム画面に追加</button>
+                </div>
+
+                <div class="mt-4 flex flex-wrap justify-center gap-4 text-xs">
+                    <a href="{{ route('legal.privacy') }}" class="font-semibold text-sky-300 hover:text-sky-200">プライバシー</a>
+                    <a href="{{ route('legal.support') }}" class="font-semibold text-sky-300 hover:text-sky-200">サポート</a>
                 </div>
 
                 <button type="button" class="btn-primary mt-3 w-full" data-ui-settings-close>閉じる</button>
