@@ -264,7 +264,7 @@ Implemented:
 
 ### V54.5 — Overview
 
-Status: **IN PROGRESS**
+Status: **IMPLEMENTED — PR PENDING**
 
 Branch:
 
@@ -274,18 +274,28 @@ Permanent spec:
 
 `docs/V54.5_OVERVIEW_WORKSPACE.md`
 
-Implementation contract:
+Implemented:
 
 - canonical Overview at `GET /workspace/overview`
-- existing Home selection remains global Action authority
+- Overview Mode entry now lands on dedicated Overview Workspace
+- root Home remains unchanged and compatible
+- `workspace.overview.*` is a strong Overview route hint
+- stored Study / Development preference does not override explicit Overview context
+- existing Home projection remains global Action authority
+- Home projection is reused in prefetch/non-recording mode
 - one primary global Action only
+- Intelligence-backed and ordinary Dashboard Guidance actions both supported
 - at most one Study and one Development summary
+- representative Plan selection: priority → deadline → ID
 - setup-needed summaries suppress fake numeric Readiness
-- bounded Inbox pending summary
+- bounded pending Inbox count + latest four identity-scoped items
 - bounded important Action Home signals
 - no new ranking / Readiness / notification model
-- no AI or GitHub provider traffic
-- root Home remains compatible
+- no Intelligence history persistence on Overview GET
+- no DashboardViewed / RecommendationShown telemetry from Overview GET
+- no new AI or GitHub provider traffic
+- final validation run: #37189794441
+- V54.4 / V54.3 / V54.2 / V54.1 / V54.0 / V53.9 / Home regressions passed
 
 ### V54.6 — State Change Feedback
 
