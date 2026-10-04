@@ -12,9 +12,9 @@ final class WorkspaceModeRegistry
      * Public Workspace Modes.
      *
      * Plan category profiles are intentionally broader than this list.
-     * Career / Creative / General remain available in Canovia but currently
-     * resolve to Overview until a dedicated Workspace Mode is explicitly
-     * designed and registered.
+     * Creative / General remain available in Canovia but currently resolve
+     * to Overview until a dedicated Workspace Mode is explicitly designed
+     * and registered.
      *
      * @return Collection<int,WorkspaceModeDefinitionData>
      */
@@ -118,6 +118,43 @@ final class WorkspaceModeRegistry
                         'description' => 'Repository・PR・IssueなどをCanoviaへ追加し、現実の開発状態からRelease Readinessを立ち上げます。',
                         'action_key' => 'connect_github',
                         'action_label' => 'GitHubを開く',
+                    ],
+                ],
+            ),
+            new WorkspaceModeDefinitionData(
+                mode: WorkspaceMode::Career,
+                label: 'Career',
+                iconKey: 'career',
+                description: '求人・応募・面接の現実Stateから、次に処理すべきCareer Actionを判断する。',
+                accentTone: 'career',
+                homeStrategy: 'career',
+                supportedProfileKeys: ['career'],
+                navigationKeys: [
+                    'current_action',
+                    'process_readiness',
+                    'career_inbox',
+                    'pipeline',
+                    'interviews',
+                    'history',
+                ],
+                emptyStateTitle: '現実のCareer情報を1つ残す',
+                emptyStateDescription: '求人・応募・選考の事実を1件だけ追加し、Career Stateと次のActionを立ち上げます。',
+                emptyStateActionKey: 'capture_career_signal',
+                suggestedPlanCategory: '就活・キャリア',
+                onboardingSteps: [
+                    [
+                        'key' => 'create_plan',
+                        'title' => 'Career Planを作る',
+                        'description' => '応募・選考・面接のStateとEvidenceをまとめるCareer Planを一つ作ります。',
+                        'action_key' => 'create_plan',
+                        'action_label' => 'Career Planを作る',
+                    ],
+                    [
+                        'key' => 'capture_career_signal',
+                        'title' => '現実のCareer情報を1つ追加する',
+                        'description' => '求人URL・応募先・選考予定など、今ある事実を1件だけ追加するとCareer Intelligenceが動き始めます。',
+                        'action_key' => 'capture_career_signal',
+                        'action_label' => 'Career情報を追加',
                     ],
                 ],
             ),
