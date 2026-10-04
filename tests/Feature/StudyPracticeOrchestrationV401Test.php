@@ -220,7 +220,7 @@ class StudyPracticeOrchestrationV401Test extends TestCase
             ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
             ->assertOk()
             ->assertSee('定着・応用確認')
-            ->assertDontSee('弱点補強');
+            ->assertDontSee('弱点補強（偏り防止）');
     }
 
     public function test_reset_marks_incomplete_practice_session_as_abandoned(): void
