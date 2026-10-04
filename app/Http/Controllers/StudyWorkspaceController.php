@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Intelligence\Enums\IntelligenceDomain;
 use App\Intelligence\Presentation\IntelligencePresentationHistoryService;
+use App\Intelligence\Presentation\IntelligenceStateChangeFeedbackService;
 use App\Intelligence\Presentation\StudyIntelligencePresentationAdapter;
 use App\Intelligence\Study\StudyAdaptiveActionService;
 use App\Models\Plan;
@@ -24,6 +25,7 @@ final class StudyWorkspaceController extends Controller
         StudyAdaptiveActionService $studyActions,
         StudyIntelligencePresentationAdapter $presentationAdapter,
         IntelligencePresentationHistoryService $history,
+        IntelligenceStateChangeFeedbackService $stateChanges,
     ) {
         $studyPlans = $ownership->ownedPlans($request, [
             'tasks',
@@ -49,6 +51,7 @@ final class StudyWorkspaceController extends Controller
                 'intelligenceHistory' => [],
                 'hasConfirmedScope' => false,
                 'navigationTask' => null,
+                'intelligenceStateChange' => null,
             ]);
         }
 
@@ -77,6 +80,10 @@ final class StudyWorkspaceController extends Controller
             'navigationTask' => $this->navigationTask(
                 $plan,
                 $presentation?->targetTask,
+            ),
+            'intelligenceStateChange' => $stateChanges->latestForPlan(
+                $plan,
+                IntelligenceDomain::Study,
             ),
         ]);
     }
