@@ -2607,3 +2607,75 @@ Overviewは:
 V54.5は新規AI traffic、GitHub API traffic、scoring変更、Task進捗変更、billing変更を行わない。
 
 詳細は `docs/V54.5_OVERVIEW_WORKSPACE.md` を正とする。
+
+
+## V54.6 State Change Feedback
+
+V54.6は、Evidence追加によってCanoviaの判断がどう変化したかをユーザーへ返すread-only feedback layerである。
+
+新しいevent storeやAI説明生成は作らず、既存の永続Intelligence履歴を比較する。
+
+Canonical comparison:
+
+```text
+previous persisted Decision Trace
++ previous State / Action
+→ compare
+current persisted Decision Trace
++ current State / Action
+→ State Change Feedback
+```
+
+Feedbackを表示するのは次のいずれかが成立するときだけ。
+
+- Readiness levelが変わった
+- Decision reason / Biggest Gapが変わった
+- Current Action fingerprintが変わった
+- Readiness scoreが5pt以上変化した
+
+5pt未満のscore-only変化は表示しない。履歴をフィード化せず、ユーザーの理解や次の行動に意味がある差分だけを返す。
+
+表示可能な内容:
+
+- Readiness before → after
+- score delta
+- State level before → after
+- Decision / Gap before → after
+- Current Action before → after
+- 新規Evidence件数
+- Evidence種別ラベル
+
+Evidence種別ラベル例:
+
+- Practice結果
+- Recall確認
+- 作業実績
+- Commit
+- Branch
+- Issue
+- Pull Request
+- CI / Test
+- Review
+- Production Deploy
+- Quality Gate確認
+
+以下はState Change Feedbackへ出さない。
+
+- raw provider payload
+- commit message
+- issue / PR本文
+- code diff
+- 学習回答本文
+- raw Evidence metadata
+
+Study WorkspaceではExam Readiness直後、Development WorkspaceではRelease Readiness直後に最新1件を表示する。
+
+Overviewでは代表Study Plan / Development Planから最新の意味ある変化を最大2件だけ表示する。Overviewを履歴feedにはしない。
+
+Feedbackは既存mutation flowが `StudyAdaptiveActionService::refresh / tryRefresh` または `DevelopmentAdaptiveActionService::refresh / tryRefresh` を実行して永続化した履歴だけを対象とする。
+
+Workspace GETは履歴を作らず、live evaluationを過去Stateとして扱わない。
+
+V54.6は新規AI traffic、GitHub API traffic、Readiness formula変更、Task進捗変更、billing変更を行わない。
+
+詳細は `docs/V54.6_STATE_CHANGE_FEEDBACK.md` を正とする。
