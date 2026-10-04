@@ -91,7 +91,9 @@ class WorkspaceModeBarV541Test extends TestCase
             ->get(route('workspace_modes.enter', [
                 'workspaceMode' => 'overview',
             ]))
-            ->assertRedirect(route('home'));
+            ->assertOk()
+            ->assertSee('data-overview-workspace', false)
+            ->assertSee('data-current-workspace-mode="overview"', false);
     }
 
     public function test_mode_entry_without_domain_plan_uses_ephemeral_home_context(): void
