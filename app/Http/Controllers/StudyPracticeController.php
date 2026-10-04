@@ -1059,24 +1059,13 @@ class StudyPracticeController extends Controller
                 : null;
             $progressAfter ??= max($progressBefore, (int) $attempt->recommended_task_progress_percent);
 
-            $historyLimit = max(
-                4,
-                (int) config(
-                    'study.exam_convergence.history_attempt_limit',
-                    16,
-                ),
-            );
-            $recentAttempts = $this->attemptQuery(
-                $request,
-                $plan,
-                $lockedTask,
-                $actorToken,
-            )
+            $historyLimit = max(4, (int) config('study.exam_convergence.history_attempt_limit', 16));
+            $recentAttempts = $this->attemptQuery($request, $plan, $lockedTask, $actorToken)
                 ->latest('created_at')
                 ->latest('id')
                 ->take($historyLimit)
                 ->get();
-            $strategy = $strategyService->build(
+            $nextStrategy = $strategyService->build(
                 $plan,
                 $lockedTask,
                 $recentAttempts,
@@ -1085,7 +1074,7 @@ class StudyPracticeController extends Controller
                 $plan,
                 $lockedTask,
                 $recentAttempts->take(8)->values(),
-                (array) ($strategy['learning_phase'] ?? []),
+                (array) ($nextStrategy['learning_phase'] ?? []),
             );
 
             if (($progressionDecision['kind'] ?? null) === 'verify_mastery' && $progressAfter >= 100) {
@@ -1106,10 +1095,10 @@ class StudyPracticeController extends Controller
 
             $nextActionAfter = match ($progressionDecision['kind'] ?? null) {
                 'verify_mastery' => '完了前の仕上げ確認を行う',
-                'advance_task' => '次のTask「'.data_get($progressionDecision, 'next_task.title', '次のTask').'」へ進む',
-                'plan_complete' => 'このPlanの学習完了を確認する',
                 'general_practice_return' => '総合演習で全体成績を再確認する',
                 'exam_mode' => '本番形式の総合演習を進める',
+                'advance_task' => '次のTask「'.data_get($progressionDecision, 'next_task.title', '次のTask').'」へ進む',
+                'plan_complete' => 'このPlanの学習完了を確認する',
                 default => $attempt->next_action ?: $lockedTask->next_action_note,
             };
 
@@ -1141,24 +1130,13 @@ class StudyPracticeController extends Controller
 
         if (! is_array($progressionDecision)) {
             $task->refresh();
-            $historyLimit = max(
-                4,
-                (int) config(
-                    'study.exam_convergence.history_attempt_limit',
-                    16,
-                ),
-            );
-            $recentAttempts = $this->attemptQuery(
-                $request,
-                $plan,
-                $task,
-                $actorToken,
-            )
+            $historyLimit = max(4, (int) config('study.exam_convergence.history_attempt_limit', 16));
+            $recentAttempts = $this->attemptQuery($request, $plan, $task, $actorToken)
                 ->latest('created_at')
                 ->latest('id')
                 ->take($historyLimit)
                 ->get();
-            $strategy = $strategyService->build(
+            $nextStrategy = $strategyService->build(
                 $plan,
                 $task,
                 $recentAttempts,
@@ -1167,7 +1145,7 @@ class StudyPracticeController extends Controller
                 $plan,
                 $task,
                 $recentAttempts->take(8)->values(),
-                (array) ($strategy['learning_phase'] ?? []),
+                (array) ($nextStrategy['learning_phase'] ?? []),
             );
         }
 
@@ -1189,13 +1167,13 @@ class StudyPracticeController extends Controller
             if (($progressionDecision['kind'] ?? null) === 'general_practice_return') {
                 return redirect()
                     ->route('plans.tasks.study_practice.show', [$plan, $task])
-                    ->with('status', '弱点補完を区切り、次は総合演習で全体成績を再確認します。');
+                    ->with('status', '弱点の集中補完を区切り、総合演習で全体成績を再確認します。');
             }
 
             if (($progressionDecision['kind'] ?? null) === 'exam_mode') {
                 return redirect()
                     ->route('plans.tasks.study_practice.show', [$plan, $task])
-                    ->with('status', '試験日が近いため、次は本番形式の総合演習を優先します。');
+                    ->with('status', '試験日が近いため、本番形式の総合演習を優先します。');
             }
 
             if (($progressionDecision['kind'] ?? null) === 'advance_task' && data_get($progressionDecision, 'next_task.id')) {
