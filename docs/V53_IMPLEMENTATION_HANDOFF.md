@@ -221,7 +221,7 @@ Important semantics:
 
 ### V53.2 — Decision & Readiness Engine
 
-Status: **IN PROGRESS**
+Status: **IMPLEMENTED — PR PENDING**
 
 Branch:
 
@@ -410,7 +410,29 @@ Current V53.2 checkpoint:
 - explainable Gap / Readiness implemented
 - deterministic Decision candidates implemented
 - durable Decision trace implemented
-- next before V53.2 completion: validation, Product Spec sync, PR
+- Product Spec and permanent V53.2 spec synchronized
+- validation complete
+- temporary validation workflow removed after success
+- PR: pending creation
+
+V53.2 validation checkpoint:
+
+- GitHub Actions run: #37167463399
+- V53.2 PHP lint: success
+- V53.0 contract regression: success
+- V53.1 State / Evidence regression: success
+- V53.2 Decision / Readiness tests: success
+- Execution Evidence regression: success
+- Study Practice regression: success
+- GitHub Evidence regression: success
+
+Next after V53.2 merge:
+
+- V53.3 Reasoning Router
+- keep deterministic V53.2 policy as baseline/fallback
+- add provider-neutral reasoning interfaces
+- separate natural conversation from decision reasoning
+- add cost / latency / quality observability before OpenAI becomes part of the decision path
 
 ## Completion / deletion rule
 
