@@ -174,6 +174,34 @@ final class TaskEvidenceAdapter
                     $metadata['deployment_id'] ?? null,
                 ),
             ],
+            'interview_review_completed' => [
+                'career_application_id' => $this->nullableInt(
+                    $metadata['career_application_id'] ?? null,
+                ),
+                'career_selection_event_id' => $this->nullableInt(
+                    $metadata['career_selection_event_id'] ?? null,
+                ),
+                'interview_review_id' => $this->nullableInt(
+                    $metadata['interview_review_id'] ?? null,
+                ),
+                'stage' => $this->nullableString(
+                    $metadata['stage'] ?? null,
+                ),
+            ],
+            'interview_result_recorded' => [
+                'career_application_id' => $this->nullableInt(
+                    $metadata['career_application_id'] ?? null,
+                ),
+                'career_selection_event_id' => $this->nullableInt(
+                    $metadata['career_selection_event_id'] ?? null,
+                ),
+                'stage' => $this->nullableString(
+                    $metadata['stage'] ?? null,
+                ),
+                'result' => $this->nullableString(
+                    $metadata['result'] ?? null,
+                ),
+            ],
             'artifact_state_observed' => [
                 'provider' => $this->nullableString($metadata['provider'] ?? null),
                 'artifact_type' => $this->nullableString($metadata['artifact_type'] ?? null),
