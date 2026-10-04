@@ -4614,9 +4614,20 @@ V55.9では実装しない:
 
 ## V56.0 Study Exam Convergence Policy
 
-V56.0はStudy Practiceを「弱点を見つけ続ける」挙動から、試験日へ収束するdeterministicな学習制御へ拡張する。
+V56.0では、Study Practiceが弱点を見つけ続けるだけで試験日へ収束しない問題を、deterministicなCanovia Policyで制御する。
 
-Canonical phases:
+責務:
+
+```text
+AI
+→ question generation / difficulty / assessment / error classification / next-step suggestion
+
+Canovia Policy
+→ phase / weakness graduation / deep-dive cap /
+   General Practice return / re-entry / exam-date convergence
+```
+
+Study Practice phase:
 
 ```text
 DIAGNOSIS
@@ -4625,26 +4636,28 @@ DIAGNOSIS
 → EXAM_MODE
 ```
 
-Phase制御はAIではなくCanovia Policyが所有する。
+Phase stateは新しいDB状態を追加せず、既存:
 
-```text
-AI
-→ 問題生成 / 難易度 / Error Classification / next_step suggestion
+- StudyPracticeAttempt
+- StudyPracticeSession.selection_context.strategy
+- StudyScopeCapture.exam_date
+- Plan.deadline
 
-Canovia
-→ Phase / Graduation / Cap / General Return / Re-entry / Exam-date convergence
-```
+から導出する。
 
 ### Weakness Graduation
 
 初期Policy:
 
-- targeted reinforcement Session >= 2
-- 推定targeted question budget >= 8
-- 直近2 targeted Attemptが各80%以上
-- 同Topicのblocking errorなし
+```text
+targeted reinforcement Sessions >= 2
+AND estimated targeted question budget >= 8
+AND latest 2 targeted scores >= 80%
+AND no blocking Topic error in those latest 2
+→ graduated
+```
 
-blocking:
+blocking error:
 
 - knowledge_gap
 - concept_gap
@@ -4653,146 +4666,128 @@ blocking:
 - unit_error
 - unknown
 
-`careless / calculation_slip` 単独では卒業を妨げない。
+calculation_slip / carelessだけではGraduationを妨げない。
 
-### Suspected weakness
-
-V41.4の既存semanticsを維持する。
-
-単発Signal:
+Graduationは永久masteryではなく:
 
 ```text
-Primary 0%
-Secondary 40%
-Diagnostic 60%
+stop deliberate drilling now
 ```
 
-複数AttemptのEvidenceが揃うまではPrimaryへ固定しない。
+を意味する。
 
-AIの `next_step=practice` だけではconfirmed weaknessにならない。
+### Overtraining prevention
 
-### Overtraining cap
+1 Topicの1 intervention cycleは:
 
-1 intervention cycle:
+```text
+maximum 3 targeted Sessions
+OR
+maximum estimated targeted question budget 20
+```
 
-- max 3 reinforcement Sessions
-- max estimated 20 targeted questions
+で打ち切る。
 
-卒業条件を満たさなくても上限到達でfocused reinforcementを停止する。
+Graduationできなくてもcap到達後はfocused reinforcementを止め、General Practiceへ戻す。
 
-### Mandatory General Practice
+### General Practice return
 
-Weaknessが:
-
-- graduated
-- capped
-
-になった後は、他のactive weaknessが残っていても一度General Practiceへ戻る。
+graduated / cappedの直後は、別弱点へ直接移らず最低1回のbroad Practiceを要求する。
 
 General Practice:
 
 ```text
-focus_topics = []
-Primary = 0
-Secondary = 0
-Diagnostic = 10
+primary = 0
+secondary = 0
+diagnostic = 10
 ```
 
-既存Question Bankのdomain round-robin / recent question avoidanceを再利用する。
+として既存Question Bankのdomain round-robin / recent question avoidanceを再利用する。
 
 ### Weakness re-entry
 
-graduated / capped Topicは、Broad Practiceで:
+Graduated / capped TopicはGeneral Practice / Exam Modeでのみ再評価する。
 
 ```text
-latest 3 General/Exam Attempts
-のうち同Topic blocking failure >= 2
+latest 3 broad Attemptsのうち
+same Topic blocking failure >= 2
+→ reopened
 ```
 
-の場合だけ `reopened` になる。
-
-1回のBroad mistakeでは再補完へ戻さない。
+単発ミスでは即再弱点化しない。
 
 ### Exam date
 
-Exam date authorityはStudy Intelligenceと共通化した `StudyExamDateService` を使う。
+試験日authorityはStudy Intelligenceと共通化した `StudyExamDateService` を使う。
 
 優先:
 
-1. unique confirmed StudyScopeCapture.exam_date
-2. Plan deadline
+1. exactly one unique confirmed StudyScopeCapture.exam_date
+2. Plan.deadline
 3. unknown
 
 初期Policy:
 
-- 15〜30日前: General Practice優先
-- 0〜14日前: Exam Mode優先
+```text
+days > 30
+→ bounded Diagnosis / Reinforcement allowed
 
-試験後の負の日数はExam Mode windowとして扱わない。
+15..30 days
+→ General Practice preferred
 
-### Exam Mode
+0..14 days
+→ Exam Mode
+```
 
-V56.0では既存1〜20問Session契約を壊さず、10問balanced blockで実施する。
+Exam Modeでは新しい細部探索よりAP科目A相当のbalanced 4-choice practiceを優先する。
 
-AP科目Aでは:
+現在のStudy Practice contractは1〜20問のため、V56.0では50/100問の巨大Sessionを作らず10問blockを積み上げる。
 
-- 原則4択
-- Question Bank / 過去問由来構造を優先
-- 分野バランス重視
-- micro-topic drill禁止
-- awkward arithmetic禁止
-- 新しい低頻度の細部探索を抑える
+### AP Subject A case
 
-50/100問の単一大型SessionはV56.0のNon-goal。
+42/50 = 84%程度の診断で:
 
-### Task progression compatibility
+- Network
+- Database
+- Performance / Availability calculations
+- Quality characteristics
 
-V41.10の `mastery_verification` は維持する。
+が一度観測されても、全領域をfocused weaknessとしてゼロから学び直さない。
 
-これはweakness drillingではなくTask完了前の短い横断確認なので、General / Exam phaseでもcompletion signalが出た場合は実施可能。
+single signalはmonitoringに留め、repeated evidenceがある狭いTopicだけ短く補完する。
 
-### Persistence / migration
+### AI Prompt
 
-新しいphase tableは追加しない。
+Generation / evaluation promptもPhase-awareにするが、Promptだけに終了判断を委ねない。
 
-既存:
-
-- StudyPracticeAttempt
-- StudyPracticeSession.selection_context.strategy
-
-から履歴状態を導出する。
-
-新SessionはStrategy v3として `learning_phase / weakness_control` snapshotを保存する。
-
-既存V40/V41履歴は互換推定する。
-
-### Prompt boundary
-
-Generation Promptへ:
-
-- current Canovia phase
-- active topics
-- graduated/capped topics
-- phase-specific restrictions
-
-を渡す。
-
-Assessment Promptでは `next_step` がSuggestionであり、補完継続・卒業・General復帰はCanovia Policyが決めることを明示する。
+- reinforcementではCanovia-approved active Topicから逸脱しない
+- General Practiceでは直前弱点へ偏らない
+- Exam Modeでは本番バランスを優先する
+- graduated/capped Topicを勝手にfocused practiceへ戻さない
+- AI next_stepはsuggestionでありPhase遷移authorityではない
 
 ### UI
 
-既存Practice Strategy cardだけを拡張し:
+既存PRACTICE STRATEGY cardへ最小表示を追加する。
 
 - 現在Phase
 - 試験までの日数
 - active Topic
-- targeted Session / question budget
-- 卒業までの残り
-- graduated / capped後のGeneral return
-- Exam Mode理由
+- targeted Session / estimated question budget
+- graduationまでの残り
+- graduated / capped理由によるGeneral Practice return
+- Exam Mode表示
 
-を最小表示する。
+新しい管理dashboardは作らない。
 
-新しい学習管理画面は追加しない。
+### Compatibility
+
+DB migrationなし。
+
+既存Attempt / Session historyから状態を推定し、新SessionからStrategy v3 phase snapshotを保存する。
+
+Study Intelligenceのexam-date semanticsも同じ `StudyExamDateService` へ統合する。
+
+Telemetry eventは将来候補として仕様へ残すが、V56.0 MVPでは新しいTelemetry subsystemを追加しない。
 
 詳細は `docs/V56.0_STUDY_EXAM_CONVERGENCE_POLICY.md` を正とする。
