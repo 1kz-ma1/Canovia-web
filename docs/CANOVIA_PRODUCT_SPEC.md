@@ -571,9 +571,9 @@ Question MixはPrimary / Secondary / Diagnosticに分ける。Confirmed weakness
 
 External AI assessmentはquestion_feedbackへ `error_type` と `weakness_topics` を返す。calculation_slip / carelessはconcept_gap等より弱いSignalとして扱う。原因を回答から確認できない場合はunknownを使用し、AIに誤答理由を断定させない。
 
-Question Bank selectorはV41.4で `bank-v2-balanced` を導入し、V56.3で `bank-v3-exposure` へ更新する。Primary / Secondary / Diagnostic quotaとdomain round-robinを維持しつつ、Plan-wideの出題履歴からrecent / exposure count / last seenを使って短期再出題を抑える。External AI selectorは `prompt-v41.4-calibrated` とし、Canoviaが決めたExam ProfileとQuestion MixをPromptへ渡す。
+Question Bank selectorはV41.4で `bank-v2-balanced`、V56.3で `bank-v3-exposure`、V56.4で `bank-v4-routing` へ更新する。Primary / Secondary / Diagnostic quota、V56.3のPlan-wide exposure rotationを維持しつつ、V56.4ではsubtopic cooldownとparent-topic recent exposure capを上位ルーティングとして追加する。External AI selectorは `prompt-v41.4-calibrated` とし、Canoviaが決めたExam Profile / Question Mix / Routing PolicyをPromptへ渡す。
 
-AIのnext_step.focus_topicsは候補Signalとして残すが、次回演習方針を直接決定しない。最終的な出題配分はCanovia Policyが決める。
+AIのnext_step.focus_topicsは補助情報として残すが、V56.4以降は既に観測済みの学習上の弱点を微調整するだけで、新しい弱点を単独生成できない。correct + error_type=noneのreasoning品質改善はrouting weaknessへ昇格させない。最終的な出題配分・cooldown・mastery・parent capはCanovia Policyが決める。
 
 
 ## 17. V41.5 Economy Foundation
@@ -5017,3 +5017,139 @@ New selections persist exposure diagnostics in the existing `selected_questions`
 and no AI selector are introduced.
 
 Detailed contract: `docs/V56.3_QUESTION_EXPOSURE_ROTATION.md`.
+
+## V56.4 Study Routing Mastery / Cooldown
+
+V56.4 adds deterministic study-routing control above V56.0 phase convergence and V56.3 question-level exposure rotation.
+
+Canonical routing:
+
+```text
+V56.0 phase / weakness convergence
+→ V56.4 Task intent + mastery / cooldown
+→ Primary / Secondary / Diagnostic allocation
+→ subtopic cooldown suppression
+→ parent-topic exposure cap
+→ V56.3 question exposure rotation
+→ Question Bank / Hybrid provider
+```
+
+### Assessment authority
+
+For modern assessments that contain structured `question_feedback`, that structured feedback is authoritative for routing.
+
+```text
+correct + error_type=none
+→ feedback / reasoning_feedback may remain visible
+→ weakness_topics / misconceptions are cleared for routing
+→ summary weaknesses do not create a routing weakness
+```
+
+`next_step.focus_topics` cannot create a new weakness by itself. It can only slightly influence a Topic already supported by actual error evidence.
+
+### Task intent
+
+Internal Task modes:
+
+- `focused_remediation`
+- `broad_assessment`
+- `adaptive`
+
+Broad mode is intentionally conservative and requires an explicit signal such as:
+
+- 分野横断
+- 横断問題
+- 弱点探索
+- 全範囲
+- 模試 / 模擬 / 本番演習
+
+Generic `総合演習` remains `adaptive` for backward compatibility.
+
+The public Study Practice strategy key remains `general_practice`; the internal difference is stored in:
+
+```text
+selection_context.strategy.routing_policy.task_mode
+```
+
+### Broad allocation
+
+For an explicit broad-assessment 10-question block:
+
+```text
+confirmed weakness recheck <= 2
+retention check           <= 2
+cross-domain exploration  >= 6
+```
+
+A confirmed weakness does not convert the whole broad block into one-domain remediation.
+
+### Focused remediation
+
+Focused remediation keeps deliberate depth:
+
+```text
+primary ≈ 60%
+secondary / related ≈ 20%
+diagnostic exploration = remaining
+```
+
+V56.0 graduation / cap still bounds the intervention.
+
+### Mastery / cooldown
+
+Initial configurable policy:
+
+```text
+correct streak for cooldown = 2
+mastery correct count       = 3
+cooldown sets               = 2
+mastered cooldown sets      = 4
+perfect latest score        = 100%
+```
+
+These are routing defaults, not permanent mastery claims.
+
+### Parent-topic exposure
+
+V56.4 separates:
+
+- `mastery_confidence`
+- `recent_exposure`
+
+Initial parent control:
+
+```text
+recent question window      = 10
+normal broad parent cap     = 2
+high-exposure parent cap    = 1
+high exposure threshold     = 0.40
+high confidence threshold   = 0.75
+```
+
+Thus SQL / HAVING / JOIN / transaction questions are also evaluated through the shared parent `データベース`, preventing sibling-subtopic chaining from dominating broad practice.
+
+### Question Bank
+
+Current selector:
+
+```text
+bank-v4-routing
+```
+
+It preserves V56.3 question-level exposure ordering while adding:
+
+1. cooldown suppression
+2. parent-topic cap / exposure preference
+3. parent-aware diagnostic round-robin
+4. then V56.3 recent / exposure-count / last-seen ordering
+
+New selection diagnostics remain inside existing JSON:
+
+- `selection_parent_topic`
+- `selection_parent_recent_exposure`
+- `selection_parent_cap`
+- `selection_cooldown_match`
+
+No migration and no new required external-AI field are introduced.
+
+Detailed contract: `docs/V56.4_STUDY_ROUTING_MASTERY_COOLDOWN.md`.
