@@ -1,0 +1,51 @@
+name: V56.13 Study State First Validation
+
+on:
+  push:
+    branches:
+      - feature/v56-13-study-state-first-workspace
+
+jobs:
+  study-state-first:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Intelligence/Study/StudyLearningTypeRouter.php
+          php -l app/Intelligence/Study/StudyWorkspaceStateResolver.php
+          php -l app/Intelligence/Study/StudyWorkspaceSurfaceRegistry.php
+          php -l app/Intelligence/Study/StudyWorkspaceSurfacePolicy.php
+          php -l app/Http/Controllers/StudyWorkspaceController.php
+          php -l app/Http/Controllers/PlanController.php
+          php -l app/Services/WorkspaceModeRegistry.php
+          php -l tests/Feature/StudyStateFirstWorkspaceV5613Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V56.13 State First
+        run: php artisan test tests/Feature/StudyStateFirstWorkspaceV5613Test.php
+      - name: V54.3 Study Workspace
+        run: php artisan test tests/Feature/StudyWorkspaceV543Test.php
+      - name: V54.7 Mode onboarding
+        run: php artisan test tests/Feature/WorkspaceModeOnboardingV547Test.php
+      - name: V55.7 Execution setup
+        run: php artisan test tests/Feature/ExecutionSetupValidationV557Test.php
+      - name: Workspace registry
+        run: php artisan test tests/Unit/WorkspaceModeRegistryV540Test.php
+      - name: V56.12 Workspace resume
+        run: php artisan test tests/Feature/WorkspaceResumeAndSessionScopeV5612Test.php
+      - name: Study adaptive action
+        run: php artisan test tests/Feature/StudyAdaptiveActionV536Test.php
+      - name: V56.4 Study routing
+        run: php artisan test tests/Feature/StudyPracticeRoutingV564Test.php
