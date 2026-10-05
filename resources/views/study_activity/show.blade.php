@@ -4,8 +4,17 @@
 
 @section('content')
     @php
-        $primary = (array) ($activity['primary'] ?? []);
-        $allActivities = collect($activity['all'] ?? []);
+        $stateMethod = $methodRecommendation ?? null;
+        $primary = (array) (
+            data_get($stateMethod, 'primary')
+            ?: ($activity['primary'] ?? [])
+        );
+        $allActivities = $stateMethod
+            ? collect([
+                $primary,
+                ...((array) data_get($stateMethod, 'alternatives', [])),
+            ])
+            : collect($activity['all'] ?? []);
         $primaryKey = (string) ($primary['key'] ?? 'question_practice');
     @endphp
 
@@ -63,10 +72,17 @@
                                 <a href="{{ route('plans.resources.index', $plan) }}" class="btn-secondary">⌘ 単語帳・教材を登録</a>
                             @endif
                         </div>
+                    @elseif (in_array($primaryKey, ['scope_organization', 'practical_evidence'], true))
+                        <p class="text-sm leading-6 text-slate-300">{{ $primary['description'] ?? '' }}</p>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <a href="{{ $primary['url'] ?? route('plans.show', $plan) }}" class="btn-primary">
+                                {{ $primary['action_label'] ?? 'この方法で進める' }}
+                            </a>
+                        </div>
                     @else
                         <p class="text-sm leading-6 text-slate-300">まず教材・解説から知識を入れ、理解できた箇所をあとで問題演習へつなげます。</p>
                         <div class="mt-4 flex flex-wrap gap-2">
-                            <a href="{{ route('plans.resources.index', $plan) }}" class="btn-primary">⌘ 関連資料を開く</a>
+                            <a href="{{ $primary['url'] ?? route('plans.resources.index', $plan) }}" class="btn-primary">{{ $primary['action_label'] ?? '⌘ 関連資料を開く' }}</a>
                         </div>
                     @endif
                 </div>
@@ -77,7 +93,10 @@
             <div>
                 <p class="text-xs font-bold uppercase tracking-[0.16em] text-sky-300">METHOD FIT</p>
                 <h2 class="mt-1 text-lg font-black text-slate-50">学習方法の相性</h2>
-                <p class="mt-2 text-xs leading-5 text-slate-500">Taskの文脈から決める相対的な適合度です。試験の得点予測ではありません。</p>
+                <p class="mt-2 text-xs leading-5 text-slate-500">
+                    {{ $stateMethod ? 'Taskの意味に加えて、現在State・Practice履歴・Retention・Scope状況を反映した相対的な優先度です。' : 'Taskの文脈から決める相対的な適合度です。' }}
+                    試験の得点予測ではありません。
+                </p>
             </div>
             <div class="mt-4 space-y-4">
                 @foreach ($allActivities as $method)

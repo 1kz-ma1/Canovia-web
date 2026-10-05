@@ -36,7 +36,7 @@ Current Learning State
 
 ## Phase 1 — V56.14 Study Recommendation Surface
 
-Status: **implemented in V56.14 branch; pending merge**
+Status: **implemented and merged in V56.14**
 
 Goal:
 
@@ -89,7 +89,7 @@ Implemented in V56.14:
 
 ## Phase 2 — Study Method Recommendation
 
-Status: pending
+Status: **implemented in V56.15 branch; pending merge**
 
 Goal:
 
@@ -128,6 +128,24 @@ school test + missing range
 ~~~
 
 The recommendation must use existing Evidence and deterministic policy before adding AI reasoning.
+
+V56.15 reuses the existing V41.10 `StudyActivityPolicyService` as the Task-semantic base and adds State First overrides rather than creating a duplicate Activity classifier.
+
+Implemented in V56.15:
+
+- State-aware StudyMethodRecommendationService
+- Question Practice / Recall / Resource Study / Scope Organization / Practical Evidence
+- repeated knowledge/concept gap → Resource Study
+- retention due → Recall
+- Exam Mode → Question Practice
+- unfinished Practice Session → Resume continuity
+- school test missing Scope → Scope Organization
+- memorization → Recall
+- skill learning → Practical Evidence
+- Workspace and dedicated Study Activity page share the same method authority
+- ranked alternative methods
+- no mutation / AI / provider traffic on read paths
+- code validation run 37319194087
 
 ## Phase 3 — Score / Baseline Evidence Capture
 

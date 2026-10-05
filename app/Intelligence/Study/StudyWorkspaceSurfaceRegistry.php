@@ -30,6 +30,10 @@ final class StudyWorkspaceSurfaceRegistry
                 'partial' => 'workspace.study.surfaces.biggest-gap',
                 'label' => 'Biggest Gap',
             ],
+            'study_method_recommendation' => [
+                'partial' => 'workspace.study.surfaces.study-method-recommendation',
+                'label' => 'Study Method Recommendation',
+            ],
             'study_recommendation' => [
                 'partial' => 'workspace.study.surfaces.study-recommendation',
                 'label' => 'Study Recommendation',

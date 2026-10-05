@@ -8,6 +8,7 @@ use App\Intelligence\Presentation\IntelligenceStateChangeFeedbackService;
 use App\Intelligence\Presentation\StudyIntelligencePresentationAdapter;
 use App\Intelligence\Study\StudyAdaptiveActionService;
 use App\Intelligence\Study\StudyLearningTypeRouter;
+use App\Intelligence\Study\StudyMethodRecommendationService;
 use App\Intelligence\Study\StudyWorkspaceRecommendationService;
 use App\Intelligence\Study\StudyWorkspaceStateResolver;
 use App\Intelligence\Study\StudyWorkspaceSurfacePolicy;
@@ -18,6 +19,7 @@ use App\Services\BehaviorIdentityService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanPriorityService;
+use App\Services\StudyActivityPolicyService;
 use App\Services\WorkspaceModeOnboardingService;
 use App\Services\ExecutionSetupService;
 use Illuminate\Http\Request;
@@ -32,6 +34,7 @@ final class StudyWorkspaceController extends Controller
         PlanPriorityService $priorities,
         StudyAdaptiveActionService $studyActions,
         StudyLearningTypeRouter $learningTypes,
+        StudyMethodRecommendationService $methodRecommendations,
         StudyWorkspaceRecommendationService $recommendations,
         StudyWorkspaceStateResolver $studyState,
         StudyWorkspaceSurfacePolicy $surfacePolicy,
@@ -71,6 +74,7 @@ final class StudyWorkspaceController extends Controller
                 'studyLearningType' => null,
                 'studyWorkspaceState' => null,
                 'studyWorkspaceRecommendation' => null,
+                'studyMethodRecommendation' => null,
                 'studyWorkspaceComposition' => null,
                 'modeOnboarding' => $onboarding->build(
                     WorkspaceMode::Study,
@@ -107,6 +111,24 @@ final class StudyWorkspaceController extends Controller
                 $actorToken,
             )
             : null;
+        $methodRecommendation = $navigationTask instanceof Task
+            ? $methodRecommendations->recommend(
+                $plan,
+                $navigationTask,
+                $learningType,
+                $resolvedState,
+                $recommendation,
+                $request->user()?->id,
+                $actorToken,
+                filled($presentation)
+                    ? (string) data_get(
+                        $presentation->action->metadata,
+                        'route_kind',
+                        '',
+                    )
+                    : null,
+            )
+            : null;
         $composition = $surfacePolicy->compose(
             $plan,
             $learningType,
@@ -115,6 +137,7 @@ final class StudyWorkspaceController extends Controller
             $navigationTask,
             $canEdit,
             $recommendation,
+            $methodRecommendation,
         );
 
         // Existing Study Plans no longer pass through a fixed Scope/Evidence
@@ -130,6 +153,14 @@ final class StudyWorkspaceController extends Controller
         $executionSetupData = (
             ! (bool) ($composition['blocks_execution'] ?? false)
             && $navigationTask instanceof Task
+            && (
+                ! is_array($methodRecommendation)
+                || (string) data_get(
+                    $methodRecommendation,
+                    'primary.key',
+                    '',
+                ) === StudyActivityPolicyService::QUESTION_PRACTICE
+            )
         )
             ? $executionSetup->inspect($plan, $navigationTask)
             : null;
@@ -154,6 +185,7 @@ final class StudyWorkspaceController extends Controller
             'studyLearningType' => $learningType,
             'studyWorkspaceState' => $resolvedState,
             'studyWorkspaceRecommendation' => $recommendation,
+            'studyMethodRecommendation' => $methodRecommendation,
             'studyWorkspaceComposition' => $composition,
             'modeOnboarding' => $modeOnboarding,
         ]);
