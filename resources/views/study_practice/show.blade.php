@@ -24,7 +24,7 @@
                         <p class="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-300">CONTINUE PRACTICE</p>
                         <h1 class="mt-2 text-2xl font-black text-slate-50">{{ $exerciseTitle ?: '演習の続きを再開' }}</h1>
                         <p class="mt-2 text-sm text-slate-400">{{ $plan->displayIcon() }} {{ $plan->title }} / {{ $task->title }}</p>
-                        <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-300">前回の問題セットと保存済み回答をそのまま復元しました。問題生成や出題方針の再計算は行わず、このSessionの続きから再開します。</p>
+                        <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-300">前回の問題セットと保存済みの回答をそのまま復元しました。問題生成や出題方針の再計算は行わず、このSessionの続きから再開します。</p>
                         <div class="mt-3 flex flex-wrap gap-2">
                             <span class="badge badge-slate">{{ (int) data_get($resumeProgress, 'answered', 0) }}/{{ (int) data_get($resumeProgress, 'total', count($questions ?? [])) }}問 回答済み</span>
                             <span class="badge badge-slate">{{ $resumeProviderLabel }}</span>
