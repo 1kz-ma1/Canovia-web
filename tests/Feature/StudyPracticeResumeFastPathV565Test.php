@@ -87,6 +87,7 @@ class StudyPracticeResumeFastPathV565Test extends TestCase
 
         $this->actingAs($user)
             ->withSession([
+                'study_practice_freshly_prepared' => true,
                 "study_practice.{$plan->id}.{$task->id}" => [
                     'title' => 'DNS確認',
                     'questions' => $this->questions(),
@@ -99,11 +100,7 @@ class StudyPracticeResumeFastPathV565Test extends TestCase
                     'practice_session_id' => $practiceSession->id,
                 ],
             ])
-            ->get(route('plans.tasks.study_practice.show', [
-                $plan,
-                $task,
-                'prepared' => 1,
-            ]))
+            ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
             ->assertOk()
             ->assertSee('PRACTICE STRATEGY')
             ->assertSee('PRACTICE RELIABILITY')
