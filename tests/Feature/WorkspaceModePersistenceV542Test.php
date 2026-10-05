@@ -31,7 +31,7 @@ class WorkspaceModePersistenceV542Test extends TestCase
         ]);
     }
 
-    public function test_authenticated_manual_choice_persists_and_controls_contextless_surfaces(): void
+    public function test_authenticated_manual_choice_persists_and_root_resumes_selected_workspace(): void
     {
         $user = User::factory()->create();
         $study = $this->plan($user, 'AP対策', '資格学習');
@@ -49,11 +49,7 @@ class WorkspaceModePersistenceV542Test extends TestCase
 
         $this->actingAs($user)
             ->get(route('home'))
-            ->assertOk()
-            ->assertSee('data-current-workspace-mode="study"', false)
-            ->assertSee('data-workspace-mode-source="manual_preference"', false)
-            ->assertSee('data-workspace-mode-preference="study"', false)
-            ->assertSee('固定中');
+            ->assertRedirect(route('workspace.study.index'));
     }
 
     public function test_plan_deep_link_overrides_manual_choice_without_erasing_it(): void
@@ -77,9 +73,7 @@ class WorkspaceModePersistenceV542Test extends TestCase
 
         $this->actingAs($user)
             ->get(route('home'))
-            ->assertOk()
-            ->assertSee('data-current-workspace-mode="development"', false)
-            ->assertSee('data-workspace-mode-source="manual_preference"', false);
+            ->assertRedirect(route('workspace.development.index'));
     }
 
     public function test_strong_domain_route_overrides_manual_choice(): void
@@ -163,12 +157,7 @@ class WorkspaceModePersistenceV542Test extends TestCase
 
         $this->actingAs($user)
             ->get(route('home'))
-            ->assertOk()
-            ->assertSee('data-current-workspace-mode="career"', false)
-            ->assertSee(
-                'data-workspace-mode-source="manual_preference"',
-                false,
-            );
+            ->assertRedirect(route('workspace.career.index'));
     }
 
     public function test_unknown_mode_cannot_be_persisted(): void
