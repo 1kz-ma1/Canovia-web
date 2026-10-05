@@ -29,6 +29,7 @@ final class StudyWorkspaceSurfacePolicy
         ?Task $navigationTask,
         bool $canEdit,
         ?array $recommendation = null,
+        ?array $methodRecommendation = null,
     ): array {
         $surfaces = [];
         $type = (string) ($learningType['key'] ?? 'general_learning');
@@ -61,11 +62,22 @@ final class StudyWorkspaceSurfacePolicy
             );
         }
 
+        $hasMethodRecommendation = is_array($methodRecommendation)
+            && $methodRecommendation !== [];
+
+        if ($hasMethodRecommendation) {
+            $surfaces[] = $this->registry->surface(
+                'study_method_recommendation',
+                $methodRecommendation ?? [],
+            );
+        }
+
         $usesRecommendation = $this->usesPracticeRecommendation(
             $type,
             $state,
             $presentation,
             $recommendation,
+            $methodRecommendation,
         );
 
         if ($usesRecommendation) {
@@ -93,7 +105,7 @@ final class StudyWorkspaceSurfacePolicy
             $navigationTask,
             $canEdit,
         );
-        if (! $usesRecommendation) {
+        if (! $usesRecommendation && ! $hasMethodRecommendation) {
             $surfaces[] = $this->registry->surface(
                 'current_action',
                 $primaryAction,
@@ -129,12 +141,14 @@ final class StudyWorkspaceSurfacePolicy
             'navigation_task' => $navigationTask,
             'learning_type' => $learningType,
             'current_position_known' => $currentPositionKnown,
+            'method_recommendation' => $methodRecommendation,
         ]);
 
         return [
             'surfaces' => $surfaces,
             'blocks_execution' => (bool) ($context['blocks_execution'] ?? false),
             'uses_study_recommendation' => $usesRecommendation,
+            'uses_study_method_recommendation' => $hasMethodRecommendation,
             'primary_action' => $primaryAction,
         ];
     }
@@ -148,8 +162,20 @@ final class StudyWorkspaceSurfacePolicy
         array $state,
         ?PlanIntelligencePresentation $presentation,
         ?array $recommendation,
+        ?array $methodRecommendation,
     ): bool {
         if (! is_array($recommendation) || $recommendation === []) {
+            return false;
+        }
+
+        if (
+            is_array($methodRecommendation)
+            && (string) data_get(
+                $methodRecommendation,
+                'primary.key',
+                '',
+            ) !== \App\Services\StudyActivityPolicyService::QUESTION_PRACTICE
+        ) {
             return false;
         }
 
