@@ -5350,3 +5350,101 @@ V56.13:
 
 Detailed contract: `docs/V56.13_STUDY_STATE_FIRST_WORKSPACE.md`.
 
+## V56.14 Study Recommendation Surface
+
+V56.14 makes the Study Workspace's recommended next practice visible before execution.
+
+Canonical authority:
+
+~~~text
+Study Practice history
++ Task intent
++ V56.0 Exam Convergence
++ V56.4 Routing / Mastery / Cooldown
+→ StudyPracticeStrategyService
+→ StudyWorkspaceRecommendationService
+→ Study Recommendation Surface
+~~~
+
+The Workspace does not maintain a second allocation policy.
+
+When there is no unfinished Study Practice Session, the recommendation is built by the same StudyPracticeStrategyService used by the actual Practice flow.
+
+The surface can show:
+
+- Strategy / phase label
+- target question count
+- primary / secondary / diagnostic allocation
+- bounded weakness recheck topics
+- retention-due topics
+- cooldown context
+- suppressed / preferred parent topics
+- deterministic Strategy reason
+- CTA to the existing Study Practice route
+
+Display labels translate the existing Strategy buckets without changing counts:
+
+### General / broad practice
+
+- primary = 弱点の再確認
+- secondary = 定着確認
+- diagnostic = 横断・未探索
+
+### Weakness Reinforcement
+
+- primary = 重点弱点
+- secondary = 関連弱点
+- diagnostic = 確認問題
+
+### Diagnosis
+
+- diagnostic = 現在地診断
+
+### Exam Mode
+
+- diagnostic = 本番横断
+
+### Resume authority
+
+When an actor-owned READY / IN_PROGRESS StudyPracticeSession with an existing question snapshot exists:
+
+~~~text
+stored Session selection_context.strategy
+→ Study Recommendation
+→ 続きから再開
+→ V56.5 Resume Fast Path
+~~~
+
+The Workspace does not calculate a new next-set Strategy above an already-fixed Session.
+
+### Surface selection
+
+Study Recommendation replaces the generic Current Action card only when question Practice is actually the applicable next execution method.
+
+It is initially available for:
+
+- certification_exam
+- score_exam
+- general_learning
+- school_test after required Scope exists
+
+It does not override:
+
+- school-test Scope gate
+- memorization Recall
+- skill-learning practical Evidence flows
+- non-Practice Study Intelligence actions
+
+### Mutation / cost boundary
+
+Workspace GET may read Practice history and existing Practice Session state, but it does not:
+
+- generate questions
+- call a question provider
+- create a StudyPracticeSession
+- create a StudyPracticeAttempt
+- change Task progress
+- add AI traffic
+
+Detailed contract: docs/V56.14_STUDY_RECOMMENDATION_SURFACE.md.
+
