@@ -3,6 +3,7 @@
     $workspaceModeContext ??= app(\App\Services\WorkspaceModeResolver::class)->resolve(request());
     $workspaceModeDefinition ??= $workspaceModeRegistry->definition($workspaceModeContext->mode);
     $workspaceModeOptions ??= $workspaceModeRegistry->all();
+    $workspaceModeCompact ??= false;
     $workspaceModePreference ??= app(\App\Services\WorkspaceModePreference::class)->selected(request());
     $workspaceModeContextLabel = match ($workspaceModeContext->source) {
         \App\Enums\WorkspaceModeSource::ManualPreference => '固定中',
@@ -14,19 +15,42 @@
 
 <div
     class="workspace-mode-bar"
+    @if ($workspaceModeCompact)
+        style="display:inline-flex;min-width:0;border:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;"
+    @endif
     data-workspace-mode-bar
+    data-workspace-mode-compact="{{ $workspaceModeCompact ? '1' : '0' }}"
     data-current-workspace-mode="{{ $workspaceModeDefinition->mode->value }}"
     data-workspace-mode-source="{{ $workspaceModeContext->source->value }}"
     data-workspace-mode-preference="{{ $workspaceModePreference?->value ?? 'auto' }}"
     data-workspace-mode-event-url="{{ route('behavior_events.store') }}"
 >
-    <div class="workspace-mode-bar-inner">
-        <span class="workspace-mode-kicker">WORKSPACE</span>
+    <div
+        class="workspace-mode-bar-inner"
+        @if ($workspaceModeCompact)
+            style="width:auto;min-height:0;margin:0;padding:0;gap:0;"
+        @endif
+    >
+        @unless ($workspaceModeCompact)
+            <span class="workspace-mode-kicker">WORKSPACE</span>
+        @endunless
 
-        <details class="workspace-mode-switcher">
-            <summary class="workspace-mode-trigger" data-workspace-mode-trigger>
-                <span class="workspace-mode-current-icons" aria-hidden="true">
-                    @foreach ($workspaceModeOptions as $modeOption)
+        <details
+            class="workspace-mode-switcher"
+            @if ($workspaceModeCompact)
+                style="flex:0 1 auto;max-width:6rem;"
+            @endif
+        >
+            <summary
+                class="workspace-mode-trigger"
+                data-workspace-mode-trigger
+                @if ($workspaceModeCompact)
+                    style="width:auto;min-width:0;min-height:1.35rem;gap:.25rem;border-radius:9999px;padding:.14rem .42rem;box-shadow:none;"
+                @endif
+            >
+                @unless ($workspaceModeCompact)
+                    <span class="workspace-mode-current-icons" aria-hidden="true">
+                        @foreach ($workspaceModeOptions as $modeOption)
                         <span
                             class="workspace-mode-icon {{ $modeOption->mode === $workspaceModeDefinition->mode ? '' : 'hidden' }}"
                             data-workspace-mode-current-icon="{{ $modeOption->mode->value }}"
@@ -45,20 +69,42 @@
                                     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><path d="m5.6 5.6 2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1"/></svg>
                             @endswitch
                         </span>
-                    @endforeach
-                </span>
+                        @endforeach
+                    </span>
+                @endunless
 
                 <span class="workspace-mode-current-copy">
-                    <strong data-workspace-mode-label>{{ $workspaceModeDefinition->label }}</strong>
-                    <small data-workspace-mode-context-label>{{ $workspaceModeContextLabel }}</small>
+                    <strong
+                        data-workspace-mode-label
+                        @if ($workspaceModeCompact)
+                            style="max-width:4.5rem;font-size:.58rem;"
+                        @endif
+                    >{{ $workspaceModeDefinition->label }}</strong>
+                    @unless ($workspaceModeCompact)
+                        <small data-workspace-mode-context-label>{{ $workspaceModeContextLabel }}</small>
+                    @endunless
                 </span>
 
-                <svg class="workspace-mode-chevron" viewBox="0 0 20 20" aria-hidden="true">
+                <svg
+                    class="workspace-mode-chevron"
+                    viewBox="0 0 20 20"
+                    aria-hidden="true"
+                    @if ($workspaceModeCompact)
+                        style="width:.65rem;height:.65rem;"
+                    @endif
+                >
                     <path d="m6 8 4 4 4-4"/>
                 </svg>
             </summary>
 
-            <div class="workspace-mode-menu" role="menu" aria-label="Workspaceを切り替える">
+            <div
+                class="workspace-mode-menu"
+                role="menu"
+                aria-label="Workspaceを切り替える"
+                @if ($workspaceModeCompact)
+                    style="position:fixed;top:calc(env(safe-area-inset-top) + 4.1rem);right:max(1rem, env(safe-area-inset-right));left:max(1rem, env(safe-area-inset-left));width:auto;"
+                @endif
+            >
                 <div class="workspace-mode-menu-heading">
                     <strong>Workspace</strong>
                     <span>選んだWorkspaceを固定し、Planなど明確な文脈ではその画面に追従します。</span>
