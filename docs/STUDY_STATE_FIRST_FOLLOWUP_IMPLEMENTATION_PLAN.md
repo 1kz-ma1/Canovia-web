@@ -36,7 +36,7 @@ Current Learning State
 
 ## Phase 1 — V56.14 Study Recommendation Surface
 
-Status: **implemented in V56.14 branch; pending merge**
+Status: **implemented and merged in V56.14**
 
 Goal:
 
@@ -89,7 +89,7 @@ Implemented in V56.14:
 
 ## Phase 2 — Study Method Recommendation
 
-Status: pending
+Status: **implementation in progress as V56.15**
 
 Goal:
 
@@ -128,6 +128,8 @@ school test + missing range
 ~~~
 
 The recommendation must use existing Evidence and deterministic policy before adding AI reasoning.
+
+V56.15 reuses the existing V41.10 `StudyActivityPolicyService` as the Task-semantic base and adds State First overrides rather than creating a duplicate Activity classifier.
 
 ## Phase 3 — Score / Baseline Evidence Capture
 
