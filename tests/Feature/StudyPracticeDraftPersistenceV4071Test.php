@@ -172,6 +172,7 @@ class StudyPracticeDraftPersistenceV4071Test extends TestCase
         $this->importExercise($user, $plan, $task);
 
         $this->actingAs($user)
+            ->followingRedirects()
             ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
             ->assertOk()
             ->assertSee('data-study-practice-draft-form', false)
