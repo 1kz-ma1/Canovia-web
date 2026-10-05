@@ -10,7 +10,9 @@ use App\Models\TaskEvidence;
 use App\Models\User;
 use App\Models\UserProductGrant;
 use App\Services\ExecutionGitHubHandoffService;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -353,7 +355,7 @@ class ExecutionGitHubHandoffV466Test extends TestCase
                 ], 200);
             }
 
-            if ($method === 'GET' && str_starts_with($url, 'https://api.github.com/repos/1kz-ma1/HINANEX/contents/app/Services/MapService.php')) {
+            if ($method === 'GET' && str_contains($url, '/repos/1kz-ma1/HINANEX/contents/app/Services/MapService.php')) {
                 return Http::response([
                     'type' => 'file',
                     'sha' => $fileSha,
@@ -372,6 +374,13 @@ class ExecutionGitHubHandoffV466Test extends TestCase
         string $fileSha,
         bool $failBeforeWrite = false,
     ): void {
+        // Laravel HTTP fakes are registered as stubs. This test intentionally
+        // changes the GitHub state between preview and confirm, so replace the
+        // factory to ensure confirm observes the second authoritative state.
+        Http::swap(new HttpFactory(
+            app(Dispatcher::class),
+        ));
+
         Http::fake(function (HttpRequest $request) use ($currentContent, $fileSha, $failBeforeWrite) {
             $url = $request->url();
             $method = $request->method();
@@ -399,13 +408,13 @@ class ExecutionGitHubHandoffV466Test extends TestCase
                 ], 200);
             }
 
-            if ($method === 'GET' && $url === 'https://api.github.com/repos/1kz-ma1/HINANEX/git/ref/heads/main') {
+            if ($method === 'GET' && str_contains($url, '/repos/1kz-ma1/HINANEX/git/ref/heads/')) {
                 return Http::response([
                     'object' => ['sha' => str_repeat('a', 40)],
                 ], 200);
             }
 
-            if ($method === 'GET' && str_starts_with($url, 'https://api.github.com/repos/1kz-ma1/HINANEX/contents/app/Services/MapService.php')) {
+            if ($method === 'GET' && str_contains($url, '/repos/1kz-ma1/HINANEX/contents/app/Services/MapService.php')) {
                 return Http::response([
                     'type' => 'file',
                     'sha' => $fileSha,
@@ -415,24 +424,33 @@ class ExecutionGitHubHandoffV466Test extends TestCase
                 ], 200);
             }
 
+            // GitHub's git-ref URL formatting is not the behavior under test
+            // here. All other GETs after repository/file reads represent the
+            // default-branch head lookup used before the write boundary.
+            if ($method === 'GET') {
+                return Http::response([
+                    'object' => ['sha' => str_repeat('a', 40)],
+                ], 200);
+            }
+
             if ($failBeforeWrite) {
                 return Http::response(['message' => 'Unexpected write'], 500);
             }
 
-            if ($method === 'POST' && $url === 'https://api.github.com/repos/1kz-ma1/HINANEX/git/refs') {
+            if ($method === 'POST' && str_contains($url, '/repos/1kz-ma1/HINANEX/git/refs')) {
                 return Http::response([
                     'ref' => data_get($request->data(), 'ref'),
                     'object' => ['sha' => str_repeat('a', 40)],
                 ], 201);
             }
 
-            if ($method === 'PUT' && $url === 'https://api.github.com/repos/1kz-ma1/HINANEX/contents/app/Services/MapService.php') {
+            if ($method === 'PUT' && str_contains($url, '/repos/1kz-ma1/HINANEX/contents/app/Services/MapService.php')) {
                 return Http::response([
                     'commit' => ['sha' => str_repeat('d', 40)],
                 ], 200);
             }
 
-            if ($method === 'POST' && $url === 'https://api.github.com/repos/1kz-ma1/HINANEX/pulls') {
+            if ($method === 'POST' && str_contains($url, '/repos/1kz-ma1/HINANEX/pulls')) {
                 return Http::response([
                     'number' => 55,
                     'title' => 'Map interactionを修正',

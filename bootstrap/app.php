@@ -26,6 +26,19 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: [\App\Services\HomeSurfacePreference::COOKIE]);
         $middleware->redirectGuestsTo(fn (Request $request) => route('auth.login.form'));
         $middleware->redirectUsersTo(fn (Request $request) => app(\App\Services\HomeSurfacePreference::class)->url($request));
+
+        // GitHub file content is source text, not ordinary form prose.
+        // Preserve leading/trailing whitespace and final newlines exactly on
+        // the two routes that accept a file body for review-only GitHub write.
+        $middleware->trimStrings(except: [
+            fn (Request $request) => $request->is(
+                'github-workflow/artifacts/*/repository-change',
+            ),
+            fn (Request $request) => $request->is(
+                'plans/*/tasks/*/execution-orchestration/github/prepare',
+            ),
+        ]);
+
         $middleware->alias([
             'admin.access' => EnsureAdminAccess::class,
             'feature.access' => EnsureFeatureAccess::class,

@@ -14,6 +14,7 @@ use App\Services\ExecutionPacketService;
 use App\Services\ExecutionRequestHandoffService;
 use App\Services\FeatureAccessService;
 use App\Services\GitHubEvidenceDecisionService;
+use App\Services\GitHubIntegrationReadinessService;
 use App\Services\GitHubRepositoryWriter;
 use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
@@ -30,6 +31,7 @@ final class ExecutionOrchestrationController extends Controller
         ExecutionPacketService $packets,
         FeatureAccessService $access,
         ExecutionGitHubHandoffService $githubHandoff,
+        GitHubIntegrationReadinessService $githubReadiness,
         GitHubRepositoryWriter $githubWriter,
         GitHubEvidenceDecisionService $githubDecision,
         ExecutionCoordinationService $coordination,
@@ -52,15 +54,8 @@ final class ExecutionOrchestrationController extends Controller
             FeatureKey::AutomaticAiExecution,
             ['plan_id' => (int) $plan->id, 'task_id' => (int) $task->id],
         );
-        $githubWriteDecision = $access->resolveAccess(
+        $githubIntegrationStatus = $githubReadiness->forActor(
             $request->user(),
-            FeatureKey::DeveloperGithubWrite,
-            ['plan_id' => (int) $plan->id, 'task_id' => (int) $task->id],
-        );
-        $githubEvidenceDecision = $access->resolveAccess(
-            $request->user(),
-            FeatureKey::DeveloperGithubEvidence,
-            ['plan_id' => (int) $plan->id, 'task_id' => (int) $task->id],
         );
 
         $githubRepositories = PlanArtifact::query()
@@ -112,10 +107,27 @@ final class ExecutionOrchestrationController extends Controller
             'githubHandoffResult' => is_array($state['github_handoff_result'] ?? null)
                 ? $state['github_handoff_result']
                 : null,
-            'githubWriteEntitled' => $githubWriteDecision->allowed,
-            'githubEvidenceEntitled' => $githubEvidenceDecision->allowed,
-            'githubWriteConfigured' => $githubWriter->configured(),
-            'githubWebhookConfigured' => trim((string) config('services.github.app_webhook_secret', '')) !== '',
+            'githubWriteEntitled' => (bool) data_get(
+                $githubIntegrationStatus,
+                'write.allowed',
+                false,
+            ),
+            'githubEvidenceEntitled' => (bool) data_get(
+                $githubIntegrationStatus,
+                'evidence.allowed',
+                false,
+            ),
+            'githubWriteConfigured' => (bool) data_get(
+                $githubIntegrationStatus,
+                'runtime.app_configured',
+                false,
+            ),
+            'githubWebhookConfigured' => (bool) data_get(
+                $githubIntegrationStatus,
+                'runtime.webhook_configured',
+                false,
+            ),
+            'githubIntegrationStatus' => $githubIntegrationStatus,
             'latestExecutionPullRequest' => $latestExecutionPullRequest,
             'githubReturnSnapshot' => $githubReturnSnapshot,
             'githubDecisionCandidate' => $githubDecisionCandidate,

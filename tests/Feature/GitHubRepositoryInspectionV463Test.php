@@ -97,11 +97,19 @@ class GitHubRepositoryInspectionV463Test extends TestCase
             ->get(route('github_workflow.index', ['plan_id' => $plan->id]))
             ->assertOk()
             ->assertSee('Repository URLだけで終わらせない')
-            ->assertSee('自動取得はDeveloper GitHub Evidence');
+            ->assertSee('Developer GitHub Evidenceは現在利用不可')
+            ->assertSee('現在の利用権ではRepository read / Return Evidenceを利用できません');
 
         $this->actingAs($user)
             ->post(route('github_workflow.repository.refresh', $artifact))
-            ->assertForbidden();
+            ->assertRedirect(route('github_workflow.index', ['plan_id' => $plan->id]))
+            ->assertSessionHas(
+                'status',
+                fn (string $message) => str_contains(
+                    $message,
+                    'Developer GitHub Evidence',
+                ),
+            );
     }
 
     public function test_manual_refresh_updates_snapshot_without_turning_repository_into_workflow_evidence(): void
@@ -135,7 +143,7 @@ class GitHubRepositoryInspectionV463Test extends TestCase
         $this->assertNull($artifact->githubWorkflowState());
         $this->assertSame('keep', data_get($artifact->metadata, 'custom_key'));
         $this->assertSame('main', data_get($artifact->metadata, 'github_repository_snapshot.repository.default_branch'));
-        $this->assertDatabaseCount('task_evidence', 0);
+        $this->assertDatabaseCount('task_evidences', 0);
     }
 
     public function test_failed_remote_inspection_keeps_repository_capture_available(): void

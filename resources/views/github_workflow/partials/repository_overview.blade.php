@@ -12,12 +12,29 @@
     $remoteWarnings = collect(data_get($snapshot, 'warnings', []));
     $canInspectRepository = (bool) ($can_repository_inspect ?? false);
     $canWriteRepository = (bool) ($can_repository_write ?? false);
+    $integrationStatus = (array) ($github_integration_status ?? []);
+    $evidenceAccessMessage = (string) data_get(
+        $integrationStatus,
+        'evidence.message',
+        'Repository自動取得を利用できません。',
+    );
+    $writeAccessMessage = (string) data_get(
+        $integrationStatus,
+        'write.message',
+        'RepositoryへのReview Writeを利用できません。',
+    );
     $githubWriteConfigured = (bool) ($github_write_configured ?? false);
     $githubAppConnectAvailable = (bool) ($github_app_connect_available ?? false);
     $appConnection = is_array($overview['app_connection'] ?? null) ? $overview['app_connection'] : [];
     $connectionStatus = (string) ($appConnection['status'] ?? 'not_connected');
     $connectionManagementUrl = $appConnection['management_url'] ?? null;
     $connectionAccount = trim((string) ($appConnection['account_login'] ?? ''));
+    $connectionReadiness = is_array($overview['integration_readiness'] ?? null)
+        ? $overview['integration_readiness']
+        : [];
+    $connectionOwner = (string) ($connectionReadiness['owner'] ?? '');
+    $connectionReadinessLabel = (string) ($connectionReadiness['label'] ?? '');
+    $connectionReadinessDetail = (string) ($connectionReadiness['detail'] ?? '');
 @endphp
 
 <article
@@ -214,9 +231,10 @@
                         <button type="submit" class="btn-primary px-3 py-2 text-xs">GitHubから読み込む</button>
                     </form>
                 @elseif (! $canInspectRepository)
-                    <span class="rounded-full border border-violet-300/15 bg-violet-300/[0.035] px-3 py-2 text-[10px] text-violet-200">
-                        自動取得はDeveloper GitHub Evidence
-                    </span>
+                    <div class="max-w-md rounded-xl border border-violet-300/15 bg-violet-300/[0.035] px-3 py-2">
+                        <p class="text-[10px] font-black text-violet-200">Developer GitHub Evidenceは現在利用不可</p>
+                        <p class="mt-1 text-[10px] leading-5 text-slate-500">{{ $evidenceAccessMessage }}</p>
+                    </div>
                 @endif
             </div>
         </section>
@@ -238,11 +256,24 @@
                             <span class="rounded-full border border-rose-300/15 bg-rose-300/[0.04] px-2 py-1 text-[10px] font-bold text-rose-200">接続を確認できません</span>
                         @endif
                     </div>
-                    <h4 class="mt-1 text-sm font-black text-slate-100">GitHubを知らなくても、変更をレビューに出す</h4>
+                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                        @if ($connectionOwner !== '')
+                            <span class="badge badge-slate">NEXT · {{ $connectionOwner }}</span>
+                        @endif
+                        @if ($connectionReadinessLabel !== '')
+                            <span class="text-[10px] font-bold text-slate-400">{{ $connectionReadinessLabel }}</span>
+                        @endif
+                    </div>
+                    <h4 class="mt-2 text-sm font-black text-slate-100">GitHubを知らなくても、変更をレビューに出す</h4>
                     <p class="mt-2 text-xs leading-6 text-slate-500">
                         Repository管理者がCanovia GitHub Appを一度接続すれば、CanoviaのEditorはここから変更を提出できます。
                         Canoviaが作業用Branchを作り、1回のCommitとPull Requestを作成します。mainへ直接push・mergeはしません。
                     </p>
+                    @if ($connectionReadinessDetail !== '' && ($connectionReadiness['state'] ?? '') !== 'ready')
+                        <p class="mt-2 rounded-xl border border-white/8 bg-slate-950/25 px-3 py-2 text-[10px] leading-5 text-slate-500">
+                            {{ $connectionReadinessDetail }}
+                        </p>
+                    @endif
                 </div>
 
                 @if ($overview['can_edit'] && $canWriteRepository && $githubWriteConfigured)
@@ -314,10 +345,8 @@
                 <p class="mt-4 text-xs text-slate-500">変更の提出とGitHub接続はCanoviaのEditor以上が行えます。</p>
             @elseif (! $canWriteRepository)
                 <div class="mt-4 rounded-xl border border-violet-300/12 bg-violet-300/[0.025] p-3">
-                    <p class="text-xs font-bold text-violet-100">Repositoryへの反映はDeveloper GitHub Write</p>
-                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
-                        閲覧・手動整理とは分離し、GitHubへBranch / Commit / Pull Requestを作る権限だけを別Capabilityにしています。
-                    </p>
+                    <p class="text-xs font-bold text-violet-100">Developer GitHub Writeは現在利用できません</p>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">{{ $writeAccessMessage }}</p>
                 </div>
             @elseif (! $githubWriteConfigured)
                 <div class="mt-4 rounded-xl border border-amber-300/12 bg-amber-300/[0.025] p-3">

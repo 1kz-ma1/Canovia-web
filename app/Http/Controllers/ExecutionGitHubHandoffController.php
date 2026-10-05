@@ -12,11 +12,13 @@ use App\Services\ExecutionOrchestrationContextService;
 use App\Services\ExecutionRequestHandoffService;
 use App\Services\FeatureAccessService;
 use App\Services\GitHubEvidenceDecisionService;
+use App\Services\GitHubIntegrationReadinessService;
 use App\Services\GitHubRepositoryWriter;
 use App\Services\GitHubReturnEvidenceService;
 use App\Services\PlanActivityService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -24,6 +26,9 @@ use Illuminate\Validation\ValidationException;
 
 final class ExecutionGitHubHandoffController extends Controller
 {
+    public function __construct(
+        private readonly GitHubIntegrationReadinessService $githubReadiness,
+    ) {}
     public function prepare(
         Request $request,
         Plan $plan,
@@ -33,11 +38,20 @@ final class ExecutionGitHubHandoffController extends Controller
         ExecutionGitHubHandoffService $handoff,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
-        $access->authorizeUse(
-            $request->user(),
+        if ($blocked = $this->capabilityRedirect(
+            $request,
+            $access,
             FeatureKey::DeveloperGithubWrite,
-            ['plan_id' => (int) $plan->id, 'task_id' => (int) $task->id],
-        );
+            $plan,
+            $task,
+            [
+                'plan_id' => (int) $plan->id,
+                'task_id' => (int) $task->id,
+            ],
+            'Developer GitHub Write',
+        )) {
+            return $blocked;
+        }
 
         $validated = $request->validate([
             'repository_artifact_id' => ['required', 'integer', 'min:1'],
@@ -74,6 +88,11 @@ final class ExecutionGitHubHandoffController extends Controller
                 pullRequestBody: $validated['pull_request_body'] ?? null,
                 user: $request->user(),
             );
+        } catch (ValidationException $exception) {
+            return redirect()
+                ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
+                ->withInput()
+                ->withErrors($exception->errors());
         } catch (\RuntimeException $exception) {
             return redirect()
                 ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
@@ -98,11 +117,20 @@ final class ExecutionGitHubHandoffController extends Controller
         PlanActivityService $activity,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
-        $access->authorizeUse(
-            $request->user(),
+        if ($blocked = $this->capabilityRedirect(
+            $request,
+            $access,
             FeatureKey::DeveloperGithubWrite,
-            ['plan_id' => (int) $plan->id, 'task_id' => (int) $task->id],
-        );
+            $plan,
+            $task,
+            [
+                'plan_id' => (int) $plan->id,
+                'task_id' => (int) $task->id,
+            ],
+            'Developer GitHub Write',
+        )) {
+            return $blocked;
+        }
 
         $candidate = $handoff->candidate($request, $plan, $task);
         if (! $candidate) {
@@ -328,11 +356,21 @@ final class ExecutionGitHubHandoffController extends Controller
         DevelopmentAdaptiveActionService $developmentActions,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
-        $access->authorizeUse(
-            $request->user(),
+        if ($blocked = $this->capabilityRedirect(
+            $request,
+            $access,
             FeatureKey::DeveloperGithubEvidence,
-            ['plan_id' => (int) $plan->id, 'task_id' => (int) $task->id, 'artifact_id' => (int) $artifact->id],
-        );
+            $plan,
+            $task,
+            [
+                'plan_id' => (int) $plan->id,
+                'task_id' => (int) $task->id,
+                'artifact_id' => (int) $artifact->id,
+            ],
+            'Developer GitHub Evidence',
+        )) {
+            return $blocked;
+        }
 
         abort_unless(
             (int) $artifact->plan_id === (int) $plan->id
@@ -399,11 +437,21 @@ final class ExecutionGitHubHandoffController extends Controller
         PlanActivityService $activity,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
-        $access->authorizeUse(
-            $request->user(),
+        if ($blocked = $this->capabilityRedirect(
+            $request,
+            $access,
             FeatureKey::DeveloperGithubEvidence,
-            ['plan_id' => (int) $plan->id, 'task_id' => (int) $task->id, 'artifact_id' => (int) $artifact->id],
-        );
+            $plan,
+            $task,
+            [
+                'plan_id' => (int) $plan->id,
+                'task_id' => (int) $task->id,
+                'artifact_id' => (int) $artifact->id,
+            ],
+            'Developer GitHub Evidence',
+        )) {
+            return $blocked;
+        }
 
         abort_unless(
             (int) $artifact->plan_id === (int) $plan->id
@@ -533,6 +581,45 @@ final class ExecutionGitHubHandoffController extends Controller
         return redirect()
             ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
             ->with('status', 'GitHub変更候補を破棄しました。GitHub側には何も変更していません。');
+    }
+
+    /**
+     * Preserve capability enforcement while keeping web-form failures
+     * actionable for the current Development context.
+     *
+     * @param array<string,mixed> $context
+     */
+    private function capabilityRedirect(
+        Request $request,
+        FeatureAccessService $access,
+        FeatureKey $feature,
+        Plan $plan,
+        Task $task,
+        array $context,
+        string $label,
+    ): ?RedirectResponse {
+        $decision = $access->resolveAccess(
+            $request->user(),
+            $feature,
+            $context,
+        );
+
+        if ($decision->allowed) {
+            return null;
+        }
+
+        return redirect()
+            ->route(
+                'plans.tasks.execution_orchestration.show',
+                [$plan, $task],
+            )
+            ->with(
+                'status',
+                $this->githubReadiness->deniedMessage(
+                    $decision,
+                    $label,
+                ),
+            );
     }
 
     private function authorizeTask(

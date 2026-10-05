@@ -59,6 +59,8 @@
         <div class="assistant-notice assistant-notice-info">{{ session('status') }}</div>
     @endif
 
+    @include('github_workflow.partials.integration_readiness')
+
     @if ($development_action ?? null)
         @include('github_workflow.partials.development_readiness')
     @endif

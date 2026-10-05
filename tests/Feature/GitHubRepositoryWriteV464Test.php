@@ -170,7 +170,14 @@ class GitHubRepositoryWriteV464Test extends TestCase
                 'commit_message' => 'update readme',
                 'pull_request_title' => 'README更新',
             ])
-            ->assertForbidden();
+            ->assertRedirect(route('github_workflow.index', ['plan_id' => $plan->id]))
+            ->assertSessionHas(
+                'status',
+                fn (string $message) => str_contains(
+                    $message,
+                    'Developer GitHub Write',
+                ),
+            );
 
         Http::assertNothingSent();
         $this->assertDatabaseCount('plan_artifacts', 1);
@@ -214,50 +221,37 @@ class GitHubRepositoryWriteV464Test extends TestCase
 
         $same = "same content\n";
 
-        Http::fake(function (HttpRequest $request) use ($same) {
-            $url = $request->url();
-            $method = $request->method();
-
-            if ($method === 'GET' && $url === 'https://api.github.com/repos/1kz-ma1/HINANEX/installation') {
-                return Http::response(['id' => 777], 200);
-            }
-
-            if ($method === 'POST' && $url === 'https://api.github.com/app/installations/777/access_tokens') {
-                return Http::response([
+        Http::fake([
+            'https://api.github.com/repos/1kz-ma1/HINANEX/installation' =>
+                Http::response(['id' => 777], 200),
+            'https://api.github.com/app/installations/777/access_tokens' =>
+                Http::response([
                     'token' => 'installation-token',
                     'permissions' => [
                         'metadata' => 'read',
                         'contents' => 'write',
                         'pull_requests' => 'write',
                     ],
-                ], 201);
-            }
-
-            if ($method === 'GET' && $url === 'https://api.github.com/repos/1kz-ma1/HINANEX') {
-                return Http::response([
+                ], 201),
+            'https://api.github.com/repos/1kz-ma1/HINANEX' =>
+                Http::response([
                     'full_name' => '1kz-ma1/HINANEX',
                     'archived' => false,
                     'default_branch' => 'main',
-                ], 200);
-            }
-
-            if ($method === 'GET' && $url === 'https://api.github.com/repos/1kz-ma1/HINANEX/git/ref/heads/main') {
-                return Http::response([
+                ], 200),
+            'https://api.github.com/repos/1kz-ma1/HINANEX/git/ref/heads/main' =>
+                Http::response([
                     'object' => ['sha' => str_repeat('a', 40)],
-                ], 200);
-            }
-
-            if ($method === 'GET' && str_starts_with($url, 'https://api.github.com/repos/1kz-ma1/HINANEX/contents/README.md')) {
-                return Http::response([
+                ], 200),
+            'https://api.github.com/repos/1kz-ma1/HINANEX/contents/README.md*' =>
+                Http::response([
                     'type' => 'file',
                     'sha' => str_repeat('b', 40),
+                    'size' => strlen($same),
                     'encoding' => 'base64',
                     'content' => base64_encode($same),
-                ], 200);
-            }
-
-            return Http::response(['message' => 'Unexpected write'], 500);
-        });
+                ], 200),
+        ]);
 
         $this->actingAs($user)
             ->post(route('github_workflow.repository.change', $repo), [
@@ -319,7 +313,7 @@ class GitHubRepositoryWriteV464Test extends TestCase
             ->assertSee('Repository管理者がCanovia GitHub Appを一度接続すれば')
             ->assertSee('変更をレビューに出す')
             ->assertSee('mainへ直接push・mergeはしません')
-            ->assertSee('GitHub Appを接続');
+            ->assertSee('GitHubを接続');
     }
 
     private function fakeSuccessfulGitHubWrite(): void

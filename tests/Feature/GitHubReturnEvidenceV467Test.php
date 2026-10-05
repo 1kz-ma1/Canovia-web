@@ -182,7 +182,17 @@ class GitHubReturnEvidenceV467Test extends TestCase
 
         $this->actingAs($user)
             ->post(route('plans.tasks.execution_orchestration.github.return_sync', [$plan, $task, $pr]))
-            ->assertForbidden();
+            ->assertRedirect(route(
+                'plans.tasks.execution_orchestration.show',
+                [$plan, $task],
+            ))
+            ->assertSessionHas(
+                'status',
+                fn (string $message) => str_contains(
+                    $message,
+                    'Developer GitHub Evidence',
+                ),
+            );
 
         Http::assertNothingSent();
         $this->assertDatabaseCount('task_evidences', 0);
