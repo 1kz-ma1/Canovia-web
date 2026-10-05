@@ -5664,3 +5664,76 @@ School-test titles such as `数学II 中間テストで80点` may expose `target
 
 Detailed contract: `docs/V56.16_STUDY_SCORE_BASELINE_EVIDENCE.md`.
 
+## V56.17 Study Learning Type Confirmation / Override
+
+V56.17 completes the State First Study architecture by making Learning Type an editable Plan-level decision when deterministic classification is ambiguous.
+
+Canonical precedence:
+
+~~~text
+explicit Plan Learning Type override
+>
+deterministic StudyLearningTypeRouter inference
+~~~
+
+Supported Learning Types:
+
+- `score_exam` — スコアを上げる
+- `school_test` — 学校のテスト
+- `certification_exam` — 資格に合格
+- `skill_learning` — スキル習得
+- `memorization` — 暗記・定着
+- `general_learning` — その他の学習
+
+Persistence:
+
+- `plans.study_learning_type_override`
+- `plans.study_learning_type_confirmed_at`
+
+Confirmation is shown only when no explicit override exists and deterministic confidence is below 0.80.
+
+Strong signals such as TOEIC / IELTS, school-test keywords, qualification keywords, memorization keywords, and concrete programming-language / programming keywords do not prompt.
+
+Generic wording such as 「学ぶ」「身につける」「習得」 and fallback general-learning classification may prompt because choosing a different Learning Type materially changes Study surfaces and methods.
+
+An explicit choice:
+
+- sets downstream Learning Type confidence to 1.0
+- suppresses future confirmation prompts
+- outranks contradictory heuristic text
+- remains editable from Goal Summary
+- can be reset to automatic inference
+- does not change Workspace Mode
+
+The low-confidence confirmation surface is non-blocking.
+
+Downstream services do not implement their own override logic. They continue consuming `StudyLearningTypeRouter`, so one explicit choice consistently changes:
+
+- Missing Context
+- Study Method Recommendation
+- Score / Baseline behavior
+- Scope behavior
+- Recall / Practice / Practical Evidence selection
+- Study Activity presentation
+
+Routes:
+
+~~~text
+PUT /plans/{plan}/study-learning-type
+→ plans.study_learning_type.update
+
+DELETE /plans/{plan}/study-learning-type
+→ plans.study_learning_type.destroy
+~~~
+
+Detailed contract: `docs/V56.17_STUDY_LEARNING_TYPE_OVERRIDE.md`.
+
+V56.17 completes the temporary four-phase State First follow-up program:
+
+1. V56.14 Study Recommendation Surface
+2. V56.15 Study Method Recommendation
+3. V56.16 Score / Baseline Evidence
+4. V56.17 Learning Type Confirmation / Override
+
+The temporary `docs/STUDY_STATE_FIRST_FOLLOWUP_IMPLEMENTATION_PLAN.md` is therefore removed in V56.17. Permanent versioned specs and this Product Spec are the authorities after merge.
+
