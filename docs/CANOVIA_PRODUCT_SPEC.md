@@ -2331,6 +2331,18 @@ explicit caller Mode
 
 このprecedenceは「ユーザーの固定を無視する」ためではなく、具体的なdeep linkのsemantic truthを守るためのもの。たとえばDevelopmentを固定した状態でStudy Planを開いた場合、その画面ではStudyを表示するが、保存済みDevelopment preferenceは維持し、Homeへ戻ればDevelopmentへ復帰する。
 
+V56.12ではこの「Homeへ戻れば固定Modeへ復帰」をapp再開にも適用する。root `/` が `manual_preference` を解決した場合は、generic Action Homeを表示したままMode Barだけ固定表示にせず、対応するcanonical Workspace Homeへredirectする。
+
+```text
+manual overview     → /workspace/overview
+manual study        → /workspace/study
+manual development  → /workspace/development
+manual career       → /workspace/career
+automatic / null    → /  (Action Home)
+```
+
+`?workspace_mode=...` のexplicit context、strong domain route hint、Plan / Task / WorkSession profileは従来どおりmanual preferenceより強い。したがって明示contextを開いたことを理由に保存済みpreferenceは消さない。
+
 Mode Barの通常選択は `POST /workspace/{workspaceMode}/select` で保存し、`DELETE /workspace/preference` でautomaticへ戻す。V54.1の `GET /workspace/{workspaceMode}` はephemeral navigationとして残す。
 
 Mode Barはcurrent Modeとは別にstored preferenceを保持し、表示上は `固定中` / `画面に追従` / `Planに追従` / `自動` を区別する。Instant NavigationでもMode sourceとvisible context labelを同期し、retained headerの表示が古くならないようにする。
