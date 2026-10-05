@@ -50,6 +50,7 @@ use App\Http\Controllers\DevelopmentReadinessController;
 use App\Http\Controllers\StudyPracticeController;
 use App\Http\Controllers\StudyActivityController;
 use App\Http\Controllers\StudyScopeCaptureController;
+use App\Http\Controllers\StudyScoreController;
 use App\Http\Controllers\StudyAdaptiveActionController;
 use App\Http\Controllers\StudyRecallController;
 use App\Http\Controllers\StudyRecallCandidateController;
@@ -394,6 +395,15 @@ Route::post('/plans/{plan}/study-scope/{capture}/confirm', [StudyScopeCaptureCon
     ->name('plans.study_scope.confirm');
 Route::delete('/plans/{plan}/study-scope/{capture}', [StudyScopeCaptureController::class, 'destroy'])
     ->name('plans.study_scope.destroy');
+
+// V56.16 Score / Baseline Evidence: external score scale is kept separate from Practice accuracy.
+Route::get('/plans/{plan}/study-scores', [StudyScoreController::class, 'index'])
+    ->name('plans.study_scores.index');
+Route::post('/plans/{plan}/study-scores', [StudyScoreController::class, 'store'])
+    ->middleware('throttle:20,1')
+    ->name('plans.study_scores.store');
+Route::delete('/plans/{plan}/study-scores/{studyScoreObservation}', [StudyScoreController::class, 'destroy'])
+    ->name('plans.study_scores.destroy');
 
 Route::post('/plans/{plan}/study-action/execute', [StudyAdaptiveActionController::class, 'execute'])
     ->name('plans.study_action.execute');
