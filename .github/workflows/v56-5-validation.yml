@@ -44,4 +44,4 @@ jobs:
       - name: Native AI Practice
         run: php artisan test tests/Feature/NativeAiPracticeV418Test.php
       - name: Study Workspace
-        run: php artisan test tests/Feature/StudyWorkspaceV4186Test.php
+        run: php artisan test tests/Feature/StudyWorkspaceV543Test.php
