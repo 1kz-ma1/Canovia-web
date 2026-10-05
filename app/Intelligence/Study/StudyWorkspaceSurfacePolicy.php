@@ -260,9 +260,31 @@ final class StudyWorkspaceSurfacePolicy
         }
 
         if (
+            $type === 'skill_learning'
+            && ! $currentPositionKnown
+        ) {
+            return [
+                'kind' => 'practical_baseline',
+                'eyebrow' => 'CURRENT POSITION',
+                'title' => 'まず実践結果から現在地を作ります',
+                'detail' => 'スキル学習では問題を解くだけでなく、実際に作る・使う・試す結果をEvidenceとして現在地に反映します。',
+                'action_url' => $navigationTask
+                    ? route(
+                        'plans.tasks.guided_execution.show',
+                        [$plan, $navigationTask],
+                    )
+                    : route('plans.show', $plan),
+                'action_label' => $navigationTask
+                    ? '実行を始める'
+                    : 'Plan内容を確認',
+                'blocks_execution' => false,
+            ];
+        }
+
+        if (
             in_array(
                 $type,
-                ['certification_exam', 'general_learning', 'skill_learning'],
+                ['certification_exam', 'general_learning'],
                 true,
             )
             && ! $currentPositionKnown
