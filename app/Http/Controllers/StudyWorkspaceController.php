@@ -7,6 +7,9 @@ use App\Intelligence\Presentation\IntelligencePresentationHistoryService;
 use App\Intelligence\Presentation\IntelligenceStateChangeFeedbackService;
 use App\Intelligence\Presentation\StudyIntelligencePresentationAdapter;
 use App\Intelligence\Study\StudyAdaptiveActionService;
+use App\Intelligence\Study\StudyLearningTypeRouter;
+use App\Intelligence\Study\StudyWorkspaceStateResolver;
+use App\Intelligence\Study\StudyWorkspaceSurfacePolicy;
 use App\Enums\WorkspaceMode;
 use App\Models\Plan;
 use App\Models\Task;
@@ -26,6 +29,9 @@ final class StudyWorkspaceController extends Controller
         PlanCategoryProfileService $profiles,
         PlanPriorityService $priorities,
         StudyAdaptiveActionService $studyActions,
+        StudyLearningTypeRouter $learningTypes,
+        StudyWorkspaceStateResolver $studyState,
+        StudyWorkspaceSurfacePolicy $surfacePolicy,
         ExecutionSetupService $executionSetup,
         StudyIntelligencePresentationAdapter $presentationAdapter,
         IntelligencePresentationHistoryService $history,
@@ -58,6 +64,9 @@ final class StudyWorkspaceController extends Controller
                 'navigationTask' => null,
                 'intelligenceStateChange' => null,
                 'executionSetup' => null,
+                'studyLearningType' => null,
+                'studyWorkspaceState' => null,
+                'studyWorkspaceComposition' => null,
                 'modeOnboarding' => $onboarding->build(
                     WorkspaceMode::Study,
                     [],
@@ -75,36 +84,34 @@ final class StudyWorkspaceController extends Controller
             'confirmed_scope_count',
             0,
         ) > 0;
-        $hasStudyEvidence = $plan->taskEvidences()
-            ->whereIn('type', [
-                'study_practice_assessed',
-                'study_recall_reviewed',
-            ])
-            ->exists();
         $canEdit = $ownership->canEdit($request, $plan);
         $navigationTask = $this->navigationTask(
             $plan,
             $presentation?->targetTask,
         );
+        $learningType = $learningTypes->route($plan);
+        $resolvedState = $studyState->resolve($plan, $adaptiveAction);
+        $composition = $surfacePolicy->compose(
+            $plan,
+            $learningType,
+            $resolvedState,
+            $presentation,
+            $navigationTask,
+            $canEdit,
+        );
 
-        $completedSteps = ['create_plan'];
-        if ($hasConfirmedScope) {
-            $completedSteps[] = 'capture_study_scope';
-        }
-        if ($hasStudyEvidence) {
-            $completedSteps[] = 'record_study_evidence';
-        }
-
+        // Existing Study Plans no longer pass through a fixed Scope/Evidence
+        // onboarding sequence. State First composition owns the next surface.
         $modeOnboarding = $onboarding->build(
             WorkspaceMode::Study,
-            $completedSteps,
+            ['create_plan'],
             $plan,
             $presentation,
             $canEdit,
         );
 
         $executionSetupData = (
-            $modeOnboarding === null
+            ! (bool) ($composition['blocks_execution'] ?? false)
             && $navigationTask instanceof Task
         )
             ? $executionSetup->inspect($plan, $navigationTask)
@@ -127,6 +134,9 @@ final class StudyWorkspaceController extends Controller
                 IntelligenceDomain::Study,
             ),
             'executionSetup' => $executionSetupData,
+            'studyLearningType' => $learningType,
+            'studyWorkspaceState' => $resolvedState,
+            'studyWorkspaceComposition' => $composition,
             'modeOnboarding' => $modeOnboarding,
         ]);
     }
