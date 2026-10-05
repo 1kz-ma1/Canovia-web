@@ -98,6 +98,44 @@ class StudyPracticePromptService
         $cappedTopics = collect($learningPhase['capped_topics'] ?? [])
             ->filter()
             ->implode(' / ');
+
+        $routingPolicy = is_array($strategy['routing_policy'] ?? null)
+            ? $strategy['routing_policy']
+            : [];
+        $taskMode = (string) ($routingPolicy['task_mode'] ?? 'adaptive');
+        $cooldownTopics = collect($routingPolicy['cooldown_topics'] ?? [])
+            ->filter()
+            ->implode(' / ');
+        $masteredTopics = collect($routingPolicy['mastered_topics'] ?? [])
+            ->filter()
+            ->implode(' / ');
+        $retentionDueTopics = collect($routingPolicy['retention_due_topics'] ?? [])
+            ->filter()
+            ->implode(' / ');
+        $suppressedParents = collect($routingPolicy['suppressed_parent_topics'] ?? [])
+            ->filter()
+            ->implode(' / ');
+        $preferredParents = collect($routingPolicy['preferred_parent_topics'] ?? [])
+            ->filter()
+            ->implode(' / ');
+        $parentRoutingLines = collect($routingPolicy['parent_topics'] ?? [])
+            ->filter(fn ($item) => is_array($item))
+            ->take(12)
+            ->map(function (array $item) {
+                return sprintf(
+                    '- %s | confidence:%.2f | recent_exposure:%.2f | cap:%d%s',
+                    (string) ($item['parent_topic'] ?? '未分類'),
+                    (float) ($item['mastery_confidence'] ?? 0.5),
+                    (float) ($item['recent_exposure'] ?? 0.0),
+                    (int) ($item['broad_question_cap'] ?? 2),
+                    (bool) ($item['suppressed'] ?? false) ? ' | suppressed' : '',
+                );
+            })
+            ->implode("\n");
+        $parentRoutingLines = $parentRoutingLines !== ''
+            ? $parentRoutingLines
+            : '- まだparent exposure履歴はありません';
+
         $phaseRules = match ($phaseKey) {
             'weakness_reinforcement' => implode("\n", [
                 '- Canoviaがactive_topicsとして指定したTopicの範囲内だけを集中補完する。',
@@ -118,7 +156,8 @@ class StudyPracticePromptService
             ]),
             default => implode("\n", [
                 '- 直前まで補完していた弱点へ意図的に偏らず、試験範囲を横断する。',
-                '- graduated / capped Topicは自然に出題されてもよいが、集中ドリルへ戻さない。',
+                '- graduated / capped / cooldown / mastered Topicを集中ドリルへ戻さない。',
+                '- reasoning_feedbackに改善余地があるだけの正答Topicを再出題理由にしない。',
                 '- 全体成績を再測定できる分野バランスを優先する。',
             ]),
         };
@@ -180,6 +219,20 @@ Phase理由: {$phaseReason}
 {$phaseRules}
 ※Phase遷移・弱点卒業・再オープン判断はCanovia Policyの責務です。AI側で延長・解除・再開しないでください。
 
+【Canovia Routing Policy】
+Task mode: {$taskMode}
+cooldown Topic: {$cooldownTopics}
+mastered Topic: {$masteredTopics}
+定着確認待ちTopic: {$retentionDueTopics}
+recent exposureが高い親カテゴリ: {$suppressedParents}
+探索優先の親カテゴリ: {$preferredParents}
+{$parentRoutingLines}
+- broad_assessmentでは、同一親カテゴリへ問題を寄せず、上記capを目安に分野横断Coverageを優先する。
+- cooldown / mastered Topicは、Canoviaが定着確認枠として明示した場合を除いて意図的に生成しない。
+- parent recent_exposureが高い場合、未出題subtopicが残っていても同じ親カテゴリを掘り続けない。
+- 正答済みTopicについて「もっと詳しく説明できる」「他選択肢も説明できる」というだけでは再出題しない。
+※何を出すか・何問出すか・いつ重点から外すかはCanoviaが決定しています。AIはこの配分を上書きしないでください。
+
 【弱点優先度】
 {$priorityLines}
 
@@ -206,6 +259,8 @@ Phase理由: {$phaseReason}
 - 過去のAI演習でweaknessesがある場合でも、Canoviaの優先度・出題配分に従い、全問をその弱点だけへ寄せない
 - 重点弱点・他の弱点・横断診断を上記の配分に近づける
 - すでに安定して正解できている内容だけを同じ形で繰り返さない
+- 正答時のreasoning品質改善コメントだけを根拠に、そのTopic・兄弟subtopic・親カテゴリへ追加問題を割り当てない
+- broad_assessmentでは重点再確認枠を越えて直前弱点を増やさず、残りを未探索・低confidenceの親カテゴリへ配る
 - Canoviaの方針が「完了前の仕上げ確認」の場合は、直前と同型の反復ではなくTask全体から広く確認し、理解の穴が残っていないかを見る
 - 難易度は「理解・判断・条件整理」の深さで調整し、無意味に複雑な手計算では調整しない
 - 問題文だけで解答に必要な条件が分かるようにする
@@ -323,6 +378,10 @@ task_id: {$task->id}
 - feedbackはその問題への簡潔なフィードバック、reasoning_feedbackは思考過程がある場合だけ具体的に書く
 - error_typeは none / knowledge_gap / concept_gap / reasoning_gap / condition_reading / unit_error / calculation_slip / careless / unknown のいずれか
 - 正解ならerror_typeはnone。誤答でも原因を回答内容から判断できない場合はunknownにし、推測でconcept_gap等へ決めつけない
+- correctness=correctかつerror_type=noneの場合、reasoning_feedbackに改善コメントを書いてもweakness_topicsは原則[]にする
+- 正答した上で「説明が短い」「より具体的に説明できる」「専門用語を厳密に使える」「他選択肢が誤りの理由まで説明できる」はフィードバック品質の話であり、学習ルーティング上のweaknessにはしない
+- AP科目Aでは、任意のreasoningが簡潔というだけで正答をpartialへ下げない。実質的な概念誤解・条件判断誤りが回答過程に現れている場合だけpartial / reasoning_gapを使う
+- next_step.focus_topicsはincorrect / partialなど実際の学習上の誤りに基づくTopicだけを候補にし、正答時の説明品質改善だけを理由に入れない
 - calculation_slipは「式・考え方は正しいが算術だけを誤った」と確認できる場合に使う
 - carelessは知識不足ではなく明確な転記・選択・読み落とし等だと回答過程から判断できる場合だけ使う
 - weakness_topicsには、その誤答が本当に補強対象になり得る知識・概念だけを短く入れる
@@ -331,6 +390,7 @@ task_id: {$task->id}
 - 単発の計算ミスやcarelessだけを、恒常的な「弱点」と断定しない。Canoviaが履歴と合わせて優先度を決める
 - score_percentは0〜100の整数
 - strengths / weaknesses は具体的な知識・思考内容を書く。ただしweaknessesを一回の軽微なミスだけで過剰に増やさない
+- correctness=correctの問題に対するreasoning品質改善はweaknessesへ入れず、reasoning_feedbackへだけ残す
 - recommended_task_progress_percentは、今回の結果だけでなく現在進捗も踏まえた0〜100の整数
 - next_actionは次に取るべき具体的な学習Actionを1つに絞る
 - next_stepは「この評価を見た直後にCanovia上で何をすべきか」を構造化して必ず返す
