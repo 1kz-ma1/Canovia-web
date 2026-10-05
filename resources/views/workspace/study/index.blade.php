@@ -44,7 +44,11 @@
         <nav class="flex gap-2 overflow-x-auto px-5 py-3 sm:px-6" aria-label="学習Workspace navigation">
             @if ($plan)
                 <a href="#study-current-state" class="badge badge-slate whitespace-nowrap">Current State</a>
-                <a href="#study-current-action" class="badge badge-slate whitespace-nowrap">Current Action</a>
+                @if ($studyMethodRecommendation ?? null)
+                    <a href="#study-method-recommendation" class="badge badge-slate whitespace-nowrap">Recommended Method</a>
+                @else
+                    <a href="#study-current-action" class="badge badge-slate whitespace-nowrap">Current Action</a>
+                @endif
                 @if (data_get($studyWorkspaceState ?? [], 'has_confirmed_scope'))
                     <a href="#study-readiness" class="badge badge-slate whitespace-nowrap">Readiness</a>
                 @endif
