@@ -31,7 +31,6 @@
         $processMessage = $dashboard['process_message'] ?? '続けることで、きっとどこかでつながってる。';
     @endphp
 
-    @include('layouts.partials.home-surface-switcher', ['activeSurface' => 'classic'])
 
     <div
         id="behaviorDashboard"
