@@ -353,7 +353,7 @@ class ExecutionGitHubHandoffV466Test extends TestCase
                 ], 200);
             }
 
-            if ($method === 'GET' && str_starts_with($url, 'https://api.github.com/repos/1kz-ma1/HINANEX/contents/app/Services/MapService.php')) {
+            if ($method === 'GET' && str_contains($url, '/repos/1kz-ma1/HINANEX/contents/app/Services/MapService.php')) {
                 return Http::response([
                     'type' => 'file',
                     'sha' => $fileSha,
@@ -399,13 +399,13 @@ class ExecutionGitHubHandoffV466Test extends TestCase
                 ], 200);
             }
 
-            if ($method === 'GET' && str_contains($url, '/repos/1kz-ma1/HINANEX/git/ref/heads/main')) {
+            if ($method === 'GET' && str_contains($url, '/repos/1kz-ma1/HINANEX/git/ref/heads/')) {
                 return Http::response([
                     'object' => ['sha' => str_repeat('a', 40)],
                 ], 200);
             }
 
-            if ($method === 'GET' && str_starts_with($url, 'https://api.github.com/repos/1kz-ma1/HINANEX/contents/app/Services/MapService.php')) {
+            if ($method === 'GET' && str_contains($url, '/repos/1kz-ma1/HINANEX/contents/app/Services/MapService.php')) {
                 return Http::response([
                     'type' => 'file',
                     'sha' => $fileSha,
