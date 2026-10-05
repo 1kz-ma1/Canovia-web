@@ -1,0 +1,53 @@
+name: V56.17 Study Learning Type Override Validation
+
+on:
+  push:
+    branches:
+      - feature/v56-17-study-learning-type-override
+
+jobs:
+  study-learning-type:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Intelligence/Study/StudyLearningTypeRouter.php
+          php -l app/Http/Controllers/StudyLearningTypeController.php
+          php -l app/Http/Controllers/StudyWorkspaceController.php
+          php -l app/Intelligence/Study/StudyWorkspaceSurfacePolicy.php
+          php -l app/Models/Plan.php
+          php -l tests/Feature/StudyLearningTypeOverrideV5617Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V56.17 Learning Type Override
+        run: php artisan test tests/Feature/StudyLearningTypeOverrideV5617Test.php
+      - name: V56.16 Score Baseline
+        run: php artisan test tests/Feature/StudyScoreBaselineV5616Test.php
+      - name: V56.15 Study Method
+        run: php artisan test tests/Feature/StudyMethodRecommendationV5615Test.php
+      - name: V56.14 Recommendation
+        run: php artisan test tests/Feature/StudyRecommendationSurfaceV5614Test.php
+      - name: V56.13 State First
+        run: php artisan test tests/Feature/StudyStateFirstWorkspaceV5613Test.php
+      - name: Workspace Mode Persistence
+        run: php artisan test tests/Feature/WorkspaceModePersistenceV542Test.php
+      - name: V56.4 Routing
+        run: php artisan test tests/Feature/StudyPracticeRoutingV564Test.php
+      - name: V56.0 Convergence
+        run: php artisan test tests/Feature/StudyExamConvergencePolicyV560Test.php
+      - name: Recall
+        run: php artisan test tests/Feature/StudyRecallV4111Test.php
+      - name: Study Workspace
+        run: php artisan test tests/Feature/StudyWorkspaceV543Test.php
