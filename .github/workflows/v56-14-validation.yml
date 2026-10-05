@@ -1,0 +1,44 @@
+name: V56.14 Study Recommendation Validation
+
+on:
+  push:
+    branches:
+      - feature/v56-14-study-recommendation-surface
+
+jobs:
+  study-recommendation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Intelligence/Study/StudyWorkspaceRecommendationService.php
+          php -l app/Intelligence/Study/StudyWorkspaceSurfacePolicy.php
+          php -l app/Intelligence/Study/StudyWorkspaceSurfaceRegistry.php
+          php -l app/Http/Controllers/StudyWorkspaceController.php
+          php -l tests/Feature/StudyRecommendationSurfaceV5614Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V56.14 recommendation
+        run: php artisan test tests/Feature/StudyRecommendationSurfaceV5614Test.php
+      - name: V56.13 State First
+        run: php artisan test tests/Feature/StudyStateFirstWorkspaceV5613Test.php
+      - name: V56.4 Routing
+        run: php artisan test tests/Feature/StudyPracticeRoutingV564Test.php
+      - name: V56.0 Convergence
+        run: php artisan test tests/Feature/StudyExamConvergencePolicyV560Test.php
+      - name: V56.5 Resume
+        run: php artisan test tests/Feature/StudyPracticeResumeFastPathV565Test.php
+      - name: V54.3 Study Workspace
+        run: php artisan test tests/Feature/StudyWorkspaceV543Test.php
