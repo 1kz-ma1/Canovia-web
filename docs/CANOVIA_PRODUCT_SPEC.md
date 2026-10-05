@@ -571,7 +571,7 @@ Question MixはPrimary / Secondary / Diagnosticに分ける。Confirmed weakness
 
 External AI assessmentはquestion_feedbackへ `error_type` と `weakness_topics` を返す。calculation_slip / carelessはconcept_gap等より弱いSignalとして扱う。原因を回答から確認できない場合はunknownを使用し、AIに誤答理由を断定させない。
 
-Question Bank selectorは `bank-v2-balanced` へ更新し、Primary / Secondary / Diagnostic quotaとdomain round-robinを利用する。External AI selectorは `prompt-v41.4-calibrated` とし、Canoviaが決めたExam ProfileとQuestion MixをPromptへ渡す。
+Question Bank selectorはV41.4で `bank-v2-balanced` を導入し、V56.3で `bank-v3-exposure` へ更新する。Primary / Secondary / Diagnostic quotaとdomain round-robinを維持しつつ、Plan-wideの出題履歴からrecent / exposure count / last seenを使って短期再出題を抑える。External AI selectorは `prompt-v41.4-calibrated` とし、Canoviaが決めたExam ProfileとQuestion MixをPromptへ渡す。
 
 AIのnext_step.focus_topicsは候補Signalとして残すが、次回演習方針を直接決定しない。最終的な出題配分はCanovia Policyが決める。
 
@@ -4969,3 +4969,51 @@ V56.0 Phase / Weakness Policy remains the authority over whether practice is Dia
 No database migration is required.
 
 Detailed contract: `docs/V56.2_IPA_OFFICIAL_QUESTION_PACK.md`.
+
+## V56.3 Question Exposure Rotation
+
+V56.3 improves deterministic Question Bank repetition control before adding more official AP years.
+
+Question selection remains inside the existing authority chain:
+
+```text
+V56.0 phase / weakness policy
+→ Question Mix
+→ V56.2 Pack coverage + official priority
+→ V56.3 exposure rotation inside the selected Pack
+```
+
+Question Bank selector version:
+
+```text
+bank-v3-exposure
+```
+
+The selector derives bounded Plan-wide exposure state from
+`StudyPracticeSession.selected_questions`.
+
+Initial policy:
+
+```text
+history_session_limit = 24
+recent_session_window = 3
+```
+
+Within each existing topic/domain group, selection prefers:
+
+1. not recently seen
+2. lower bounded exposure count
+3. longer time since last exposure
+4. existing focus score
+5. existing difficulty / sort order
+
+History is Plan-wide rather than Task-local. This prevents two Study Tasks under the same exam Plan
+from independently replaying the same Question Bank sequence.
+
+The rule is preference-based: narrow Weakness Reinforcement may reuse recent questions when the
+focus pool is small. V56.0 graduation/cap behavior remains the mechanism that prevents endless drills.
+
+New selections persist exposure diagnostics in the existing `selected_questions` JSON. No migration
+and no AI selector are introduced.
+
+Detailed contract: `docs/V56.3_QUESTION_EXPOSURE_ROTATION.md`.

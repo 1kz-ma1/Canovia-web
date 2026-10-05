@@ -107,19 +107,7 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
         $secondaryTarget = max(0, min($targetCount, (int) ($mix['secondary'] ?? 0)));
         $diagnosticTarget = max(0, min($targetCount, (int) ($mix['diagnostic'] ?? $targetCount)));
 
-        $recentQuestionIds = StudyPracticeSession::query()
-            ->where('plan_id', $plan->id)
-            ->where('task_id', $task->id)
-            ->whereNotNull('selected_questions')
-            ->latest('created_at')
-            ->take(8)
-            ->get()
-            ->flatMap(fn (StudyPracticeSession $session) => collect($session->selected_questions ?? []))
-            ->pluck('question_id')
-            ->filter()
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->all();
+        $exposureContext = $this->questionExposureContext($plan);
 
         $preferHarder = ($strategy['key'] ?? '') === 'retention_and_transfer';
 
@@ -128,8 +116,10 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
             ->map(function (Question $question) use (
                 $primaryTopics,
                 $secondaryTopics,
-                $recentQuestionIds,
+                $exposureContext,
             ) {
+                $exposure = $exposureContext['questions'][(int) $question->id] ?? [];
+
                 return [
                     'question' => $question,
                     'primary_score' => $this->coverageService->questionFocusScore($question, $primaryTopics),
@@ -137,7 +127,11 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
                     'primary_topic' => $this->bestMatchingTopic($question, $primaryTopics),
                     'secondary_topic' => $this->bestMatchingTopic($question, $secondaryTopics),
                     'domain_key' => $this->domainKey($question),
-                    'recent' => in_array((int) $question->id, $recentQuestionIds, true),
+                    'exposure_count' => (int) ($exposure['exposure_count'] ?? 0),
+                    'last_seen_session_offset' => array_key_exists('last_seen_session_offset', $exposure)
+                        ? $exposure['last_seen_session_offset']
+                        : null,
+                    'recent' => (bool) ($exposure['recent'] ?? false),
                 ];
             })
             ->values();
@@ -215,7 +209,7 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
             'provider' => $this->key(),
             'mode' => $this->mode(),
             'selector_type' => 'question_bank',
-            'selector_version' => 'bank-v2-balanced',
+            'selector_version' => 'bank-v3-exposure',
             'payload' => [
                 'title' => $pack->title.' / '.($strategy['label'] ?? '演習'),
                 'questions' => $rendered,
@@ -240,6 +234,11 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
                     ],
                     'actual' => $actualMix,
                 ],
+                'selection_rotation' => [
+                    'history_sessions_considered' => $exposureContext['session_count'],
+                    'history_session_limit' => $exposureContext['history_limit'],
+                    'recent_session_window' => $exposureContext['recent_window'],
+                ],
             ],
             'questions' => $rendered,
             'selected_questions' => $selected->map(fn (array $item) => [
@@ -249,6 +248,9 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
                 'source_reference' => $item['question']->source_reference,
                 'selection_bucket' => $item['bucket'],
                 'selection_domain' => $item['domain_key'],
+                'selection_exposure_count' => (int) ($item['exposure_count'] ?? 0),
+                'selection_last_seen_session_offset' => $item['last_seen_session_offset'] ?? null,
+                'selection_recent' => (bool) ($item['recent'] ?? false),
             ])->all(),
         ];
     }
@@ -264,7 +266,7 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
             'provider' => $this->key(),
             'mode' => $this->mode(),
             'selector_type' => 'question_bank_partial',
-            'selector_version' => 'bank-v2-balanced',
+            'selector_version' => 'bank-v3-exposure',
             'payload' => [
                 'title' => 'Canovia Question Bank / '.($strategy['label'] ?? '演習'),
                 'questions' => [],
@@ -311,8 +313,13 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
                         $leftScore = $scoreKey ? (int) ($left[$scoreKey] ?? 0) : 0;
                         $rightScore = $scoreKey ? (int) ($right[$scoreKey] ?? 0) : 0;
 
+                        $leftLastSeen = $left['last_seen_session_offset'] ?? null;
+                        $rightLastSeen = $right['last_seen_session_offset'] ?? null;
+
                         $leftRank = [
                             $left['recent'] ? 1 : 0,
+                            (int) ($left['exposure_count'] ?? 0),
+                            $leftLastSeen === null ? PHP_INT_MIN : -1 * (int) $leftLastSeen,
                             -1 * $leftScore,
                             $preferHarder
                                 ? -1 * (int) $left['question']->difficulty
@@ -322,6 +329,8 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
                         ];
                         $rightRank = [
                             $right['recent'] ? 1 : 0,
+                            (int) ($right['exposure_count'] ?? 0),
+                            $rightLastSeen === null ? PHP_INT_MIN : -1 * (int) $rightLastSeen,
                             -1 * $rightScore,
                             $preferHarder
                                 ? -1 * (int) $right['question']->difficulty
@@ -363,6 +372,74 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
         }
 
         return $picked->values();
+    }
+
+    /**
+     * @return array{
+     *   questions:array<int,array{exposure_count:int,last_seen_session_offset:?int,recent:bool}>,
+     *   session_count:int,
+     *   history_limit:int,
+     *   recent_window:int
+     * }
+     */
+    private function questionExposureContext(Plan $plan): array
+    {
+        $historyLimit = max(
+            1,
+            min(100, (int) config('study.question_bank_selection.exposure_history_session_limit', 24)),
+        );
+        $recentWindow = max(
+            1,
+            min(
+                $historyLimit,
+                (int) config('study.question_bank_selection.recent_session_window', 3),
+            ),
+        );
+
+        $sessions = StudyPracticeSession::query()
+            ->where('plan_id', $plan->id)
+            ->whereNotNull('selected_questions')
+            ->latest('created_at')
+            ->latest('id')
+            ->take($historyLimit)
+            ->get(['id', 'selected_questions']);
+
+        $questions = [];
+
+        foreach ($sessions->values() as $sessionOffset => $session) {
+            $questionIds = collect($session->selected_questions ?? [])
+                ->pluck('question_id')
+                ->filter(fn ($id) => is_numeric($id) && (int) $id > 0)
+                ->map(fn ($id) => (int) $id)
+                ->unique();
+
+            foreach ($questionIds as $questionId) {
+                if (! isset($questions[$questionId])) {
+                    $questions[$questionId] = [
+                        'exposure_count' => 0,
+                        'last_seen_session_offset' => null,
+                        'recent' => false,
+                    ];
+                }
+
+                $questions[$questionId]['exposure_count']++;
+
+                if ($questions[$questionId]['last_seen_session_offset'] === null) {
+                    $questions[$questionId]['last_seen_session_offset'] = (int) $sessionOffset;
+                }
+
+                if ($sessionOffset < $recentWindow) {
+                    $questions[$questionId]['recent'] = true;
+                }
+            }
+        }
+
+        return [
+            'questions' => $questions,
+            'session_count' => $sessions->count(),
+            'history_limit' => $historyLimit,
+            'recent_window' => $recentWindow,
+        ];
     }
 
     /**

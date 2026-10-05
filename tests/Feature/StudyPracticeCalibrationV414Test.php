@@ -287,7 +287,7 @@ class StudyPracticeCalibrationV414Test extends TestCase
 
         $selected = collect($prepared['selected_questions']);
 
-        $this->assertSame('bank-v2-balanced', $prepared['selector_version']);
+        $this->assertSame('bank-v3-exposure', $prepared['selector_version']);
         $this->assertCount(10, $selected);
         $this->assertSame(10, $selected->pluck('question_id')->unique()->count());
         $this->assertGreaterThanOrEqual(2, $selected->where('selection_bucket', 'diagnostic')->count());
