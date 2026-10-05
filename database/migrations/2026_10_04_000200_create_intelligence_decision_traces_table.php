@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         if (Schema::hasTable('intelligence_decision_traces')) {
-            foreach ([
+            $expectedColumns = [
                 'id',
                 'user_id',
                 'plan_id',
@@ -37,12 +37,16 @@ return new class extends Migration
                 'metadata',
                 'created_at',
                 'updated_at',
-            ] as $column) {
-                if (! Schema::hasColumn('intelligence_decision_traces', $column)) {
-                    throw new RuntimeException(
-                        "Existing intelligence_decision_traces table is incomplete: missing {$column}.",
-                    );
-                }
+            ];
+
+            $existingColumns = Schema::getColumnListing('intelligence_decision_traces');
+            $missingColumns = array_values(array_diff($expectedColumns, $existingColumns));
+
+            if ($missingColumns !== []) {
+                throw new RuntimeException(
+                    'Existing intelligence_decision_traces table is incomplete: missing '
+                    .implode(', ', $missingColumns).'.',
+                );
             }
 
             return;
