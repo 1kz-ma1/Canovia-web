@@ -29,6 +29,12 @@
     $connectionStatus = (string) ($appConnection['status'] ?? 'not_connected');
     $connectionManagementUrl = $appConnection['management_url'] ?? null;
     $connectionAccount = trim((string) ($appConnection['account_login'] ?? ''));
+    $connectionReadiness = is_array($overview['integration_readiness'] ?? null)
+        ? $overview['integration_readiness']
+        : [];
+    $connectionOwner = (string) ($connectionReadiness['owner'] ?? '');
+    $connectionReadinessLabel = (string) ($connectionReadiness['label'] ?? '');
+    $connectionReadinessDetail = (string) ($connectionReadiness['detail'] ?? '');
 @endphp
 
 <article
@@ -250,11 +256,24 @@
                             <span class="rounded-full border border-rose-300/15 bg-rose-300/[0.04] px-2 py-1 text-[10px] font-bold text-rose-200">接続を確認できません</span>
                         @endif
                     </div>
-                    <h4 class="mt-1 text-sm font-black text-slate-100">GitHubを知らなくても、変更をレビューに出す</h4>
+                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                        @if ($connectionOwner !== '')
+                            <span class="badge badge-slate">NEXT · {{ $connectionOwner }}</span>
+                        @endif
+                        @if ($connectionReadinessLabel !== '')
+                            <span class="text-[10px] font-bold text-slate-400">{{ $connectionReadinessLabel }}</span>
+                        @endif
+                    </div>
+                    <h4 class="mt-2 text-sm font-black text-slate-100">GitHubを知らなくても、変更をレビューに出す</h4>
                     <p class="mt-2 text-xs leading-6 text-slate-500">
                         Repository管理者がCanovia GitHub Appを一度接続すれば、CanoviaのEditorはここから変更を提出できます。
                         Canoviaが作業用Branchを作り、1回のCommitとPull Requestを作成します。mainへ直接push・mergeはしません。
                     </p>
+                    @if ($connectionReadinessDetail !== '' && ($connectionReadiness['state'] ?? '') !== 'ready')
+                        <p class="mt-2 rounded-xl border border-white/8 bg-slate-950/25 px-3 py-2 text-[10px] leading-5 text-slate-500">
+                            {{ $connectionReadinessDetail }}
+                        </p>
+                    @endif
                 </div>
 
                 @if ($overview['can_edit'] && $canWriteRepository && $githubWriteConfigured)
