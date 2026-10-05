@@ -309,7 +309,7 @@ class PlanController extends Controller
             ? 'このPlanはすでに作成済みです。元のWorkspaceで続きから開きました。'
             : match ($mode) {
                 WorkspaceMode::Study =>
-                    '学習Planを作成しました。次は試験範囲を確定します。',
+                    '学習Planを作成しました。Study Workspaceで現在地から次のActionを決めます。',
                 WorkspaceMode::Development =>
                     '開発Planを作成しました。次はGitHub Evidenceをつなぎます。',
                 WorkspaceMode::Career =>
