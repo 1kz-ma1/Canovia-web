@@ -8,9 +8,16 @@
         $configuration = (array) data_get($snapshot, 'configuration', []);
         $queue = (array) data_get($snapshot, 'queue', []);
         $deliveries = (array) data_get($snapshot, 'deliveries', []);
+        $schema = (array) data_get($snapshot, 'schema', []);
         $worker = (array) data_get($queue, 'worker_observation', []);
         $repositories = collect(data_get($snapshot, 'repositories.items', []));
         $recentDeliveries = collect(data_get($snapshot, 'recent_deliveries', []));
+        $operatorSteps = collect(data_get($snapshot, 'operator_steps', []));
+        $diagnosticErrors = collect(data_get($snapshot, 'diagnostic_errors', []));
+        $schemaReady = (bool) data_get($schema, 'webhook_deliveries_table')
+            && (bool) data_get($schema, 'plan_artifacts_table')
+            && ((string) data_get($configuration, 'queue_driver', 'sync') !== 'database'
+                || (bool) data_get($schema, 'jobs_table'));
 
         $overallLabel = match ($overall) {
             'healthy' => '動作確認済み',
@@ -58,13 +65,19 @@
             </div>
         </header>
 
-        <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             @foreach ([
                 [
                     'label' => 'GITHUB APP',
                     'ok' => (bool) data_get($configuration, 'app_configured'),
-                    'value' => data_get($configuration, 'app_configured') ? '設定済み' : '未設定',
+                    'value' => data_get($configuration, 'app_configured') ? 'Credential設定済み' : '未設定',
                     'note' => 'App ID + Private Key',
+                ],
+                [
+                    'label' => 'INSTALL URL',
+                    'ok' => (bool) data_get($configuration, 'install_url_configured'),
+                    'value' => data_get($configuration, 'install_url_configured') ? '設定済み' : '未設定',
+                    'note' => 'Repository選択へ進むGitHub App URL',
                 ],
                 [
                     'label' => 'WEBHOOK',
@@ -77,6 +90,12 @@
                     'ok' => (bool) data_get($configuration, 'async_queue_configured'),
                     'value' => strtoupper((string) data_get($configuration, 'queue_driver', 'unknown')),
                     'note' => 'sync/nullは本番自動同期に不向き',
+                ],
+                [
+                    'label' => 'DB SCHEMA',
+                    'ok' => $schemaReady,
+                    'value' => $schemaReady ? 'Ready' : '要確認',
+                    'note' => (string) data_get($schema, 'webhook_deliveries_table_name', 'github_webhook_deliveries'),
                 ],
                 [
                     'label' => 'CONNECTED REPOS',
@@ -92,6 +111,23 @@
                 </article>
             @endforeach
         </section>
+
+        @if ($diagnosticErrors->isNotEmpty())
+            <section class="rounded-2xl border border-rose-300/15 bg-rose-300/[0.03] p-4" data-github-diagnostic-errors>
+                <p class="text-xs font-black text-rose-100">診断中に読み取れなかった項目があります</p>
+                <div class="mt-3 space-y-2">
+                    @foreach ($diagnosticErrors as $error)
+                        <div class="rounded-xl border border-rose-300/10 bg-slate-950/25 p-3">
+                            <p class="text-[10px] font-black uppercase tracking-[.1em] text-rose-200">{{ data_get($error, 'area', 'unknown') }}</p>
+                            <p class="mt-1 text-xs leading-5 text-slate-400">{{ data_get($error, 'message') }}</p>
+                        </div>
+                    @endforeach
+                </div>
+                <p class="mt-3 text-[10px] leading-5 text-slate-600">
+                    診断画面自体は500にせず、欠けているSchemaやruntime状態をここへ表示します。
+                </p>
+            </section>
+        @endif
 
         <section class="grid gap-5 xl:grid-cols-[1.05fr_.95fr]">
             <article class="page-card p-5 sm:p-6">
@@ -267,33 +303,20 @@
                 <h2 class="mt-1 text-xl font-black text-slate-50">本番有効化までの作業</h2>
 
                 <div class="mt-4 space-y-2">
-                    @foreach ([
-                        [
-                            'done' => (bool) data_get($configuration, 'app_configured'),
-                            'label' => 'GitHub App ID / Private KeyをRender等へ設定',
-                        ],
-                        [
-                            'done' => (bool) data_get($configuration, 'webhook_configured'),
-                            'label' => 'Webhook SecretをGitHub AppとRender等へ設定',
-                        ],
-                        [
-                            'done' => (bool) data_get($configuration, 'async_queue_configured'),
-                            'label' => '非同期Queue driverを設定',
-                        ],
-                        [
-                            'done' => (int) data_get($snapshot, 'repositories.connected_count', 0) > 0,
-                            'label' => '対象RepositoryへCanovia GitHub Appをinstall',
-                        ],
-                        [
-                            'done' => data_get($worker, 'state') === 'observed',
-                            'label' => '実WebhookでQueue Worker処理を確認',
-                        ],
-                    ] as $check)
-                        <div class="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/30 p-3">
-                            <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-black {{ $check['done'] ? 'border-emerald-300/25 bg-emerald-300/10 text-emerald-200' : 'border-slate-700 text-slate-500' }}">
-                                {{ $check['done'] ? '✓' : '·' }}
-                            </span>
-                            <p class="text-xs leading-5 {{ $check['done'] ? 'text-slate-300' : 'text-slate-500' }}">{{ $check['label'] }}</p>
+                    @foreach ($operatorSteps as $check)
+                        <div class="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
+                            <div class="flex items-start gap-3">
+                                <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-black {{ data_get($check, 'done') ? 'border-emerald-300/25 bg-emerald-300/10 text-emerald-200' : 'border-slate-700 text-slate-500' }}">
+                                    {{ data_get($check, 'done') ? '✓' : '·' }}
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <p class="text-xs font-black {{ data_get($check, 'done') ? 'text-slate-300' : 'text-slate-400' }}">{{ data_get($check, 'label') }}</p>
+                                        <span class="badge badge-slate">{{ data_get($check, 'owner') }}</span>
+                                    </div>
+                                    <p class="mt-1 text-[10px] leading-5 text-slate-600">{{ data_get($check, 'detail') }}</p>
+                                </div>
+                            </div>
                         </div>
                     @endforeach
                 </div>
