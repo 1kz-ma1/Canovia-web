@@ -78,6 +78,40 @@ class StudyPracticeResumeFastPathV565Test extends TestCase
         );
     }
 
+    public function test_freshly_prepared_session_uses_normal_answering_ui_not_resume_continuity(): void
+    {
+        [$user, $plan, $task] = $this->studyPlan();
+        $practiceSession = $this->practiceSession($user, $plan, $task, [
+            'status' => StudyPracticeSession::STATUS_READY,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession([
+                "study_practice.{$plan->id}.{$task->id}" => [
+                    'title' => 'DNS確認',
+                    'questions' => $this->questions(),
+                    'answers' => [],
+                    'draft_answers' => [],
+                    'evaluation_prompt' => null,
+                    'assessment' => null,
+                    'attempt_id' => null,
+                    'attempt_token' => (string) Str::uuid(),
+                    'practice_session_id' => $practiceSession->id,
+                ],
+            ])
+            ->get(route('plans.tasks.study_practice.show', [
+                $plan,
+                $task,
+                'prepared' => 1,
+            ]))
+            ->assertOk()
+            ->assertSee('PRACTICE STRATEGY')
+            ->assertSee('PRACTICE RELIABILITY')
+            ->assertSee('aria-label="AI演習の進行状況"', false)
+            ->assertDontSee('CONTINUE PRACTICE')
+            ->assertDontSee('data-study-practice-resume-fast-path', false);
+    }
+
     public function test_ready_session_without_answers_still_uses_resume_fast_path(): void
     {
         [$user, $plan, $task] = $this->studyPlan();
