@@ -262,9 +262,9 @@ class StudyPracticeStrategyService
             $focusTopics = [];
             $questionMix = $this->broadMix($targetQuestionCount);
         } else {
-            $key = $taskMode === 'broad_assessment'
-                ? 'broad_assessment'
-                : 'general_practice';
+            // Keep the established strategy key for compatibility.
+            // V56.4 differentiates broad Task intent inside routing_policy.
+            $key = 'general_practice';
             $label = $taskMode === 'broad_assessment'
                 ? '分野横断演習'
                 : '総合演習';
