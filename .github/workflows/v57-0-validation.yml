@@ -1,0 +1,53 @@
+name: V57.0 GitHub Integration Stabilization
+
+on:
+  push:
+    branches:
+      - feature/v57-0-github-integration-stabilization
+
+jobs:
+  github-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/GitHubIntegrationReadinessService.php
+          php -l app/Services/GitHubIntegrationDiagnosticsService.php
+          php -l app/Http/Controllers/GitHubWorkflowController.php
+          php -l app/Http/Controllers/ExecutionGitHubHandoffController.php
+          php -l app/Http/Controllers/ExecutionOrchestrationController.php
+          php -l tests/Feature/GitHubIntegrationStabilizationV570Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V57.0 Stabilization
+        run: php artisan test tests/Feature/GitHubIntegrationStabilizationV570Test.php
+      - name: V46.0 Workflow Hub
+        run: php artisan test tests/Feature/GitHubWorkflowHubV460Test.php
+      - name: V46.3 Repository Inspection
+        run: php artisan test tests/Feature/GitHubRepositoryInspectionV463Test.php
+      - name: V46.4 Repository Write
+        run: php artisan test tests/Feature/GitHubRepositoryWriteV464Test.php
+      - name: V46.5 App Connection
+        run: php artisan test tests/Feature/GitHubAppConnectionV465Test.php
+      - name: V46.6 Execution Handoff
+        run: php artisan test tests/Feature/ExecutionGitHubHandoffV466Test.php
+      - name: V46.7 Return Evidence
+        run: php artisan test tests/Feature/GitHubReturnEvidenceV467Test.php
+      - name: V46.10 Webhook Return Sync
+        run: php artisan test tests/Feature/GitHubWebhookReturnSyncV4610Test.php
+      - name: V53.8 Developer Readiness
+        run: php artisan test tests/Feature/DeveloperReadinessV538Test.php
+      - name: V54.4 Development Workspace
+        run: php artisan test tests/Feature/DevelopmentWorkspaceV544Test.php
