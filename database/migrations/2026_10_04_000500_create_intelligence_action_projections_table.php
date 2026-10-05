@@ -8,6 +8,46 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('intelligence_action_projections')) {
+            $expectedColumns = [
+                'id',
+                'user_id',
+                'plan_id',
+                'intelligence_decision_trace_id',
+                'projected_task_id',
+                'domain',
+                'scope_type',
+                'scope_id',
+                'state_fingerprint',
+                'action_fingerprint',
+                'action_reference',
+                'kind',
+                'title',
+                'intent',
+                'confidence',
+                'estimated_minutes',
+                'success_signals',
+                'metadata',
+                'status',
+                'superseded_at',
+                'dismissed_at',
+                'created_at',
+                'updated_at',
+            ];
+
+            $existingColumns = Schema::getColumnListing('intelligence_action_projections');
+            $missingColumns = array_values(array_diff($expectedColumns, $existingColumns));
+
+            if ($missingColumns !== []) {
+                throw new RuntimeException(
+                    'Existing intelligence_action_projections table is incomplete: missing '
+                    .implode(', ', $missingColumns).'.',
+                );
+            }
+
+            return;
+        }
+
         Schema::create('intelligence_action_projections', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
