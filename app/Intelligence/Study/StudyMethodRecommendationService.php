@@ -306,11 +306,17 @@ final class StudyMethodRecommendationService
             ];
         }
 
-        if ($adaptiveRouteKind === 'study_scope') {
+        if (
+            $adaptiveRouteKind === 'study_scope'
+            && (bool) (
+                $state['has_confirmed_scope']
+                ?? false
+            )
+        ) {
             return [
                 self::SCOPE_ORGANIZATION,
                 null,
-                '現在のStudy Intelligenceでは、次の学習配分を決める前に範囲・試験情報の確認が必要です。',
+                '確認済みScopeはありますが、現在のStudy Intelligenceでは次の学習配分を決める前に範囲・試験情報の再確認が必要です。',
                 'adaptive_scope',
             ];
         }
