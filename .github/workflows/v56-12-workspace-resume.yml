@@ -1,0 +1,42 @@
+name: V56.12 Workspace Resume Validation
+
+on:
+  push:
+    branches:
+      - fix/v56-12-workspace-resume-and-session-scope
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  workspace-resume:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Http/Controllers/HomeController.php
+          php -l app/Services/ContinuityService.php
+          php -l tests/Feature/WorkspaceResumeAndSessionScopeV5612Test.php
+          php -l tests/Feature/WorkspaceModePersistenceV542Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V56.12 workspace resume and session scope
+        run: php artisan test tests/Feature/WorkspaceResumeAndSessionScopeV5612Test.php
+      - name: V54.2 Workspace persistence regression
+        run: php artisan test tests/Feature/WorkspaceModePersistenceV542Test.php
+      - name: Home continuity regression
+        run: php artisan test tests/Feature/ModelReuseV5195Test.php tests/Feature/HomeCoreBundleCostReductionV5192Test.php
+      - name: Specialized Workspace regression
+        run: php artisan test tests/Feature/StudyWorkspaceV543Test.php tests/Feature/DevelopmentWorkspaceV544Test.php tests/Feature/OverviewWorkspaceV545Test.php tests/Feature/CareerWorkspaceModeV551Test.php
