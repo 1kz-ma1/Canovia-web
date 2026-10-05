@@ -36,7 +36,7 @@ class CanoviaHomeSurfaceV432Test extends TestCase
             ->assertDontSee('HOME SURFACE')
             ->assertSee('data-canovia-surface="home"', false)
             ->assertDontSee('data-canovia-surface="explore"', false)
-            ->assertSee('aria-label="Action Home"', false)
+            ->assertSee('data-action-home', false)
             ->assertSee('data-canovia-nav-key="desktop-home"', false)
             ->assertSee('href="'.route('home').'"', false)
             ->assertSee('data-canovia-nav-key="desktop-constellation"', false)
