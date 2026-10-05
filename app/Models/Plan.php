@@ -41,6 +41,8 @@ class Plan extends Model
         'visual_icon',
         'accent_key',
         'roadmap_world',
+        'study_learning_type_override',
+        'study_learning_type_confirmed_at',
     ];
 
     protected function casts(): array
@@ -52,6 +54,7 @@ class Plan extends Model
             'is_public' => 'boolean',
             'is_collaborative' => 'boolean',
             'last_ai_context_exported_at' => 'datetime',
+            'study_learning_type_confirmed_at' => 'datetime',
         ];
     }
 

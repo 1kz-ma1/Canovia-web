@@ -51,6 +51,7 @@ use App\Http\Controllers\StudyPracticeController;
 use App\Http\Controllers\StudyActivityController;
 use App\Http\Controllers\StudyScopeCaptureController;
 use App\Http\Controllers\StudyScoreController;
+use App\Http\Controllers\StudyLearningTypeController;
 use App\Http\Controllers\StudyAdaptiveActionController;
 use App\Http\Controllers\StudyRecallController;
 use App\Http\Controllers\StudyRecallCandidateController;
@@ -404,6 +405,12 @@ Route::post('/plans/{plan}/study-scores', [StudyScoreController::class, 'store']
     ->name('plans.study_scores.store');
 Route::delete('/plans/{plan}/study-scores/{studyScoreObservation}', [StudyScoreController::class, 'destroy'])
     ->name('plans.study_scores.destroy');
+
+// V56.17 explicit Learning Type confirmation / override.
+Route::put('/plans/{plan}/study-learning-type', [StudyLearningTypeController::class, 'update'])
+    ->name('plans.study_learning_type.update');
+Route::delete('/plans/{plan}/study-learning-type', [StudyLearningTypeController::class, 'destroy'])
+    ->name('plans.study_learning_type.destroy');
 
 Route::post('/plans/{plan}/study-action/execute', [StudyAdaptiveActionController::class, 'execute'])
     ->name('plans.study_action.execute');

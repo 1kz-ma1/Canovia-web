@@ -43,6 +43,23 @@ final class StudyWorkspaceSurfacePolicy
             'learning_type' => $learningType,
             'state' => $state,
         ]);
+
+        if (
+            $canEdit
+            && (bool) (
+                $learningType['needs_confirmation']
+                ?? false
+            )
+        ) {
+            $surfaces[] = $this->registry->surface(
+                'learning_type_confirmation',
+                [
+                    'plan' => $plan,
+                    'learning_type' => $learningType,
+                ],
+            );
+        }
+
         $surfaces[] = $this->registry->surface('current_state', [
             'plan' => $plan,
             'learning_type' => $learningType,
