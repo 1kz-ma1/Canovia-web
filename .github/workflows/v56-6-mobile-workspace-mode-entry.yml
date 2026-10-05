@@ -1,0 +1,41 @@
+name: V56.6 Mobile Workspace Mode Entry Validation
+
+on:
+  push:
+    branches:
+      - feature/v56-6-mobile-workspace-mode-entry
+
+jobs:
+  mobile-workspace-entry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l tests/Feature/MobileWorkspaceModeEntryV566Test.php
+          php -l tests/Feature/WorkspaceModeBarV541Test.php
+          php -l tests/Feature/WorkspaceModePersistenceV542Test.php
+          php -l tests/Feature/WorkspaceModePolishTelemetryV548Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V56.6 mobile workspace entry
+        run: php artisan test tests/Feature/MobileWorkspaceModeEntryV566Test.php
+      - name: V54.1 fixed mode bar regression
+        run: php artisan test tests/Feature/WorkspaceModeBarV541Test.php
+      - name: V54.2 persistence regression
+        run: php artisan test tests/Feature/WorkspaceModePersistenceV542Test.php
+      - name: V54.8 mobile polish regression
+        run: php artisan test tests/Feature/WorkspaceModePolishTelemetryV548Test.php
+      - name: V54.0 resolver regression
+        run: php artisan test tests/Feature/WorkspaceModeResolverV540Test.php
