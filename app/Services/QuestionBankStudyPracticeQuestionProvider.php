@@ -125,6 +125,10 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
         $cooldownTopics = collect($routingPolicy['cooldown_topics'] ?? [])
             ->filter(fn ($item) => is_string($item) && trim($item) !== '')
             ->values();
+        $cooldownTopicKeys = $cooldownTopics
+            ->map(fn (string $topic) => $this->taxonomy->key($topic))
+            ->filter()
+            ->flip();
 
         $preferHarder = ($strategy['key'] ?? '') === 'retention_and_transfer';
 
@@ -135,7 +139,7 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
                 $secondaryTopics,
                 $exposureContext,
                 $parentStates,
-                $cooldownTopics,
+                $cooldownTopicKeys,
             ) {
                 $exposure = $exposureContext['questions'][(int) $question->id] ?? [];
                 $parentTopic = $this->taxonomy->parentForQuestion($question)
@@ -153,6 +157,18 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
                             2,
                         ),
                     );
+                $metadata = collect($question->learning_metadata ?? []);
+                $questionSubtopic = $this->taxonomy->subtopicForQuestion($question);
+                $questionTopicKeys = collect($metadata->get('weakness_targets', []))
+                    ->merge($metadata->get('concepts', []))
+                    ->when(
+                        $questionSubtopic !== null,
+                        fn (Collection $items) => $items->push($questionSubtopic),
+                    )
+                    ->filter(fn ($item) => is_string($item) && trim($item) !== '')
+                    ->map(fn ($item) => $this->taxonomy->key((string) $item))
+                    ->filter()
+                    ->unique();
 
                 return [
                     'question' => $question,
@@ -168,11 +184,11 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
                     'parent_suppressed' => (bool) ($parentState['suppressed'] ?? false),
                     'parent_preferred' => (bool) ($parentState['preferred'] ?? false),
                     'parent_cap' => $parentCap,
-                    'cooldown_match' => $cooldownTopics->isNotEmpty()
-                        && $this->coverageService->questionFocusScore(
-                            $question,
-                            $cooldownTopics,
-                        ) > 0,
+                    // Cooldown is subtopic-specific. Sibling concepts such as
+                    // SQL and NoSQL are controlled by parent exposure instead
+                    // of fuzzy focus matching.
+                    'cooldown_match' => $questionTopicKeys
+                        ->contains(fn (string $key) => isset($cooldownTopicKeys[$key])),
                     'exposure_count' => (int) ($exposure['exposure_count'] ?? 0),
                     'last_seen_session_offset' => array_key_exists('last_seen_session_offset', $exposure)
                         ? $exposure['last_seen_session_offset']
