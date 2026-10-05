@@ -8,6 +8,43 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('execution_activities')) {
+            $expectedColumns = [
+                'id',
+                'user_id',
+                'actor_token',
+                'provider_key',
+                'capability',
+                'external_key',
+                'type',
+                'title',
+                'status',
+                'started_at',
+                'completed_at',
+                'duration_seconds',
+                'metrics',
+                'metadata',
+                'plan_id',
+                'task_id',
+                'task_evidence_id',
+                'linked_at',
+                'created_at',
+                'updated_at',
+            ];
+
+            $existingColumns = Schema::getColumnListing('execution_activities');
+            $missingColumns = array_values(array_diff($expectedColumns, $existingColumns));
+
+            if ($missingColumns !== []) {
+                throw new RuntimeException(
+                    'Existing execution_activities table is incomplete: missing '
+                    .implode(', ', $missingColumns).'.',
+                );
+            }
+
+            return;
+        }
+
         Schema::create('execution_activities', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();

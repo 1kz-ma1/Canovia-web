@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('github_webhook_deliveries', 'routing_targets')) {
+            return;
+        }
+
         Schema::table('github_webhook_deliveries', function (Blueprint $table) {
             $table->json('routing_targets')
                 ->nullable()

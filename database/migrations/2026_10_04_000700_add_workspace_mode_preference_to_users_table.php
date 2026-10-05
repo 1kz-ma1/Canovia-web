@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('users', 'workspace_mode_preference')) {
+            return;
+        }
+
         Schema::table('users', function (Blueprint $table) {
             $table->string('workspace_mode_preference', 32)
                 ->nullable()

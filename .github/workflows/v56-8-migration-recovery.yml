@@ -27,11 +27,22 @@ jobs:
       - name: PHP and shell lint
         run: |
           php -l database/migrations/2026_10_04_000200_create_intelligence_decision_traces_table.php
+          php -l database/migrations/2026_10_04_000300_create_intelligence_reasoning_runs_table.php
+          php -l database/migrations/2026_10_04_000400_create_study_scope_capture_tables.php
+          php -l database/migrations/2026_10_04_000500_create_intelligence_action_projections_table.php
+          php -l database/migrations/2026_10_04_000600_add_routing_targets_to_github_webhook_deliveries_table.php
+          php -l database/migrations/2026_10_04_000700_add_workspace_mode_preference_to_users_table.php
+          php -l database/migrations/2026_10_05_000100_create_plan_execution_preferences_table.php
+          php -l database/migrations/2026_10_05_000200_create_execution_activities_table.php
+          php -l database/migrations/2026_10_05_000300_create_provider_connections_table.php
+          php -l tests/Feature/ProductionMigrationReconciliationV5610Test.php
           php -l tests/Feature/IntelligenceDecisionTraceMigrationRecoveryV568Test.php
           php -l tests/Feature/RenderStartupMigrationRetryV569Test.php
           sh -n docker/render-start.sh
       - run: php artisan view:cache
       - run: php artisan migrate --force
+      - name: V56.10 production migration reconciliation
+        run: php artisan test tests/Feature/ProductionMigrationReconciliationV5610Test.php
       - name: V56.9 Render startup retry
         run: php artisan test tests/Feature/RenderStartupMigrationRetryV569Test.php
       - name: V56.8 migration recovery

@@ -8,6 +8,56 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('intelligence_reasoning_runs')) {
+            $expectedColumns = [
+                'id',
+                'user_id',
+                'plan_id',
+                'intelligence_decision_trace_id',
+                'native_ai_run_id',
+                'domain',
+                'scope_type',
+                'scope_id',
+                'state_reference',
+                'readiness_fingerprint',
+                'input_fingerprint',
+                'request_fingerprint',
+                'mode_requested',
+                'route_selected',
+                'provider',
+                'model',
+                'status',
+                'baseline_decision_type',
+                'selected_decision_type',
+                'baseline_confidence',
+                'selected_confidence',
+                'agrees_with_baseline',
+                'used_fallback',
+                'fallback_reason',
+                'candidate_count',
+                'latency_ms',
+                'input_tokens',
+                'output_tokens',
+                'total_tokens',
+                'estimated_cost_usd',
+                'metadata',
+                'created_at',
+                'updated_at',
+            ];
+
+            $existingColumns = Schema::getColumnListing('intelligence_reasoning_runs');
+            $missingColumns = array_values(array_diff($expectedColumns, $existingColumns));
+
+            if ($missingColumns !== []) {
+                throw new RuntimeException(
+                    'Existing intelligence_reasoning_runs table is incomplete: missing '
+                    .implode(', ', $missingColumns).'.',
+                );
+            }
+
+            return;
+        }
+
         Schema::create('intelligence_reasoning_runs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
