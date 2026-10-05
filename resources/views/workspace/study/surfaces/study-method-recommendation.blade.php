@@ -6,6 +6,7 @@
 @endphp
 
 <section
+    id="study-method-recommendation"
     class="page-card border-emerald-300/20 bg-emerald-300/[0.025] p-5 sm:p-6"
     data-study-surface="study_method_recommendation"
     data-study-method-recommendation
