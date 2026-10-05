@@ -148,7 +148,14 @@ class StudyPracticeRoutingV564Test extends TestCase
     {
         [$user, $plan, $task] = $this->scenario('broad');
         $pack = $this->diversePack();
-        $having = $pack->questions()->where('external_key', 'database-having')->firstOrFail();
+        $having = $pack->questions()
+            ->get()
+            ->first(fn (Question $question) => in_array(
+                'HAVING',
+                $question->learning_metadata['weakness_targets'] ?? [],
+                true,
+            ));
+        $this->assertInstanceOf(Question::class, $having);
 
         $this->attempt($user, $plan, $task, $having, 'correct', 'none', 'HAVING', now()->subHour());
         $this->attempt($user, $plan, $task, $having, 'correct', 'none', 'HAVING', now());
@@ -242,6 +249,59 @@ class StudyPracticeRoutingV564Test extends TestCase
         $this->assertCount(10, $selected);
         $this->assertGreaterThanOrEqual(5, $byParent->count());
         $this->assertTrue($byParent->every(fn ($count) => (int) $count <= 2));
+    }
+
+    public function test_broad_assessment_limits_confirmed_weakness_to_recheck_budget(): void
+    {
+        [$user, $plan, $task] = $this->scenario('broad');
+        $pack = $this->pack();
+        $binary = $this->question($pack, 1, '二分探索', 'アルゴリズム');
+
+        $this->attempt(
+            $user,
+            $plan,
+            $task,
+            $binary,
+            'incorrect',
+            'concept_gap',
+            '二分探索',
+            now()->subHour(),
+        );
+        $this->attempt(
+            $user,
+            $plan,
+            $task,
+            $binary,
+            'incorrect',
+            'concept_gap',
+            '二分探索',
+            now(),
+        );
+
+        $strategy = $this->strategy($plan, $task);
+
+        $this->assertSame('broad_assessment', $strategy['key']);
+        $this->assertSame(
+            'general_practice',
+            data_get($strategy, 'learning_phase.phase'),
+        );
+        $this->assertSame(
+            'broad_assessment',
+            data_get($strategy, 'learning_phase.routing_override'),
+        );
+        $this->assertContains(
+            '二分探索',
+            data_get($strategy, 'weakness_priority.primary_topics', []),
+        );
+        $this->assertLessThanOrEqual(
+            2,
+            (int) data_get($strategy, 'question_mix.primary'),
+        );
+        $this->assertGreaterThanOrEqual(
+            6,
+            (int) data_get($strategy, 'question_mix.diagnostic'),
+        );
+        $this->assertSame([], $strategy['focus_topics']);
     }
 
     public function test_focused_remediation_prioritizes_repeated_confirmed_weakness(): void
