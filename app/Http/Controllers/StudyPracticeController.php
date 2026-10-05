@@ -75,14 +75,18 @@ class StudyPracticeController extends Controller
                 ->whereKey((int) $state['practice_session_id'])
                 ->first()
             : null;
-        $resumeMode = (bool) $request->session()->get(
-            'study_practice_resume_fast_path',
-            false,
+        $resumeSessionId = (int) $request->session()->get(
+            'study_practice_resume_fast_path_session_id',
+            0,
         );
-        $preparedMode = (bool) $request->session()->get(
-            'study_practice_freshly_prepared',
-            false,
+        $freshSessionId = (int) $request->session()->get(
+            'study_practice_freshly_prepared_session_id',
+            0,
         );
+        $resumeMode = $currentPracticeSession
+            && $resumeSessionId === (int) $currentPracticeSession->id;
+        $preparedMode = $currentPracticeSession
+            && $freshSessionId === (int) $currentPracticeSession->id;
 
         // Answering resume is a distinct fast path. A Session that was just
         // prepared in the immediately preceding request is not a "resume".
@@ -381,7 +385,10 @@ class StudyPracticeController extends Controller
 
         return redirect()
             ->route('plans.tasks.study_practice.show', [$plan, $task])
-            ->with('study_practice_resume_fast_path', true);
+            ->with(
+                'study_practice_resume_fast_path_session_id',
+                (int) $practiceSession->id,
+            );
     }
 
     public function prepare(
@@ -465,7 +472,10 @@ class StudyPracticeController extends Controller
 
         return redirect()
             ->route('plans.tasks.study_practice.show', [$plan, $task])
-            ->with('study_practice_freshly_prepared', true)
+            ->with(
+                'study_practice_freshly_prepared_session_id',
+                (int) $practiceSession->id,
+            )
             ->with('success', count($questions).'問をCanovia Question Bankから準備しました。')
             ->with('study_practice_scroll_to', 'practice-questions');
     }
@@ -570,7 +580,10 @@ class StudyPracticeController extends Controller
 
         return redirect()
             ->route('plans.tasks.study_practice.show', [$plan, $task])
-            ->with('study_practice_freshly_prepared', true)
+            ->with(
+                'study_practice_freshly_prepared_session_id',
+                (int) $practiceSession->id,
+            )
             ->with('success', $successMessage)
             ->with('study_practice_scroll_to', 'practice-questions');
     }
@@ -661,7 +674,10 @@ class StudyPracticeController extends Controller
 
         return redirect()
             ->route('plans.tasks.study_practice.show', [$plan, $task])
-            ->with('study_practice_freshly_prepared', true)
+            ->with(
+                'study_practice_freshly_prepared_session_id',
+                (int) $practiceSession->id,
+            )
             ->with('success', count($questions).'問の演習を読み込みました。Canovia上で回答できます。')
             ->with('study_practice_scroll_to', 'practice-questions');
     }
