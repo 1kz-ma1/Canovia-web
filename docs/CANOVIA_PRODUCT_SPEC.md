@@ -5858,3 +5858,112 @@ When disabled, both the navigation entry and dashboard card are hidden.
 
 Detailed contract: `docs/V56.18_STUDY_SCENARIO_LAB.md`.
 
+## V57.0 GitHub Integration Stabilization
+
+V57.0 stabilizes the existing GitHub integration before Development State First.
+
+The central rule is:
+
+~~~text
+GitHub unavailable
+≠
+Development unavailable
+~~~
+
+Repository read, review-only write, and automatic Return Sync are separate capabilities and readiness levels.
+
+### Readiness
+
+`GitHubIntegrationReadinessService` projects:
+
+- Developer GitHub Evidence capability
+- Developer GitHub Write capability
+- GitHub App credential readiness
+- Install URL readiness
+- Webhook readiness
+- async Queue readiness
+- Repository installation state
+- actionable next owner
+
+Possible next owners include:
+
+- PLAN / ENTITLEMENT
+- CANOVIA OPERATOR
+- GITHUB APP
+- GITHUB / REPOSITORY ADMIN
+- RENDER
+
+Super Admin Free/Premium Preview restrictions are surfaced explicitly so operators do not mistake Preview policy for a broken GitHub App.
+
+### Web capability denial
+
+User-originated GitHub web actions remain fail-closed, but capability denial no longer drops the user onto an opaque 403 page.
+
+Instead, the current GitHub / Development surface receives an actionable status message.
+
+True Plan ownership/editor authorization remains 403/404.
+
+### Diagnostics
+
+`/admin/github` is a diagnostic surface and therefore must remain available even when one integration dependency is broken.
+
+It separately reports:
+
+- App ID / Private Key
+- Install URL
+- Webhook Secret
+- Queue driver
+- Queue storage schema
+- `github_webhook_deliveries`
+- connected Repositories
+- worker observation
+- diagnostic query failures
+
+The diagnostics service uses the model-declared canonical webhook table name and converts schema/query failures into diagnostic facts instead of a 500.
+
+### Interactive GitHub App vs automatic Return Sync
+
+Interactive review write requires:
+
+~~~text
+DeveloperGithubWrite
++
+App ID / Private Key
++
+Install URL
++
+Repository installation
++
+Contents / Pull Requests write
+~~~
+
+Automatic Return Sync additionally requires:
+
+~~~text
+Webhook Secret
++
+async Queue
++
+queue storage
++
+running Queue Worker
+~~~
+
+Worker health is not inferred from configuration alone. It becomes observed when real webhook deliveries are processed.
+
+### Source-text integrity
+
+File content sent to GitHub is source text, not ordinary prose input.
+
+Canovia preserves leading/trailing whitespace and final newlines on GitHub file-body routes so a file that is already identical to the default branch is not misclassified because request middleware trimmed its content.
+
+### Development architecture implication
+
+V57.0 intentionally does not make GitHub the Development workflow controller.
+
+GitHub becomes an optional State Sensor / Execution Provider for later Development stages.
+
+A future Development State First layer can therefore support conception, specification, bootstrap, implementation, feedback, validation and release while only showing GitHub / PR surfaces when the current state actually needs them.
+
+Detailed contract: `docs/V57.0_GITHUB_INTEGRATION_STABILIZATION.md`.
+
