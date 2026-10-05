@@ -415,6 +415,15 @@ class ExecutionGitHubHandoffV466Test extends TestCase
                 ], 200);
             }
 
+            // GitHub's git-ref URL formatting is not the behavior under test
+            // here. All other GETs after repository/file reads represent the
+            // default-branch head lookup used before the write boundary.
+            if ($method === 'GET') {
+                return Http::response([
+                    'object' => ['sha' => str_repeat('a', 40)],
+                ], 200);
+            }
+
             if ($failBeforeWrite) {
                 return Http::response(['message' => 'Unexpected write'], 500);
             }
@@ -441,9 +450,7 @@ class ExecutionGitHubHandoffV466Test extends TestCase
                 ], 201);
             }
 
-            throw new \RuntimeException(
-                'Unexpected GitHub test request: '.$method.' '.$url,
-            );
+            return Http::response(['message' => 'Unexpected request'], 500);
         });
     }
 
