@@ -8,6 +8,34 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('provider_connections')) {
+            $expectedColumns = [
+                'id',
+                'user_id',
+                'provider_key',
+                'public_id',
+                'secret_ciphertext',
+                'label',
+                'status',
+                'last_used_at',
+                'revoked_at',
+                'created_at',
+                'updated_at',
+            ];
+
+            $existingColumns = Schema::getColumnListing('provider_connections');
+            $missingColumns = array_values(array_diff($expectedColumns, $existingColumns));
+
+            if ($missingColumns !== []) {
+                throw new RuntimeException(
+                    'Existing provider_connections table is incomplete: missing '
+                    .implode(', ', $missingColumns).'.',
+                );
+            }
+
+            return;
+        }
+
         Schema::create('provider_connections', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')
