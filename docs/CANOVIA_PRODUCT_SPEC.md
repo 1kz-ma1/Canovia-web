@@ -5588,3 +5588,79 @@ No AI/provider request and no migration are added.
 
 Detailed contract: `docs/V56.15_STUDY_METHOD_RECOMMENDATION.md`.
 
+## V56.16 Study Score / Baseline Evidence
+
+V56.16 separates external learning scores from Canovia Practice accuracy.
+
+Canonical rule:
+
+~~~text
+StudyPracticeAttempt.score_percent
+= accuracy inside a Canovia Practice set
+
+StudyScoreObservation.score_value
+= observed value on an external / declared score scale
+~~~
+
+The product must never infer TOEIC / IELTS / school-test absolute score from Practice percentage.
+
+Persistence:
+
+- Plan-level `study_score_observations`
+- actor identity
+- request UUID
+- metric key / label
+- observed score value
+- preserved scale min / max where known
+- source kind / optional source detail
+- observed date
+- optional bounded component scores
+
+Initial profiles:
+
+- TOEIC total 0–990; optional Listening / Reading 0–495
+- IELTS 0–9 in 0.5 increments; optional Listening / Reading / Writing / Speaking
+- school test 0–100
+- unknown score exams remain generic and are not normalized to 0–100
+
+State First:
+
+- `score_observation_count`
+- `has_external_score_baseline`
+- `latest_external_score`
+- `external_score_history`
+
+For `score_exam`, Practice history alone does not satisfy the external-score baseline requirement.
+
+Score Exam Current State shows distinct values:
+
+- Current Score
+- Target
+- Gap
+- Practice Accuracy (explicitly marked as a separate scale)
+
+Missing external baseline routes to:
+
+~~~text
+GET /plans/{plan}/study-scores
+plans.study_scores.index
+~~~
+
+Capture writes through:
+
+~~~text
+POST /plans/{plan}/study-scores
+plans.study_scores.store
+~~~
+
+Observations can be deleted by the owning actor through:
+
+~~~text
+DELETE /plans/{plan}/study-scores/{studyScoreObservation}
+plans.study_scores.destroy
+~~~
+
+School-test titles such as `数学II 中間テストで80点` may expose `target_score=80`; the target remains Plan intent, not Evidence.
+
+Detailed contract: `docs/V56.16_STUDY_SCORE_BASELINE_EVIDENCE.md`.
+

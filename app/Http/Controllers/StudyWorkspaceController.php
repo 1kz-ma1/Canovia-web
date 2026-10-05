@@ -99,10 +99,15 @@ final class StudyWorkspaceController extends Controller
             $presentation?->targetTask,
         );
         $learningType = $learningTypes->route($plan);
-        $resolvedState = $studyState->resolve($plan, $adaptiveAction);
         $actorToken = $request->user()
             ? null
             : $identity->resolve($request);
+        $resolvedState = $studyState->resolve(
+            $plan,
+            $adaptiveAction,
+            $request->user()?->id,
+            $actorToken,
+        );
         $recommendation = $navigationTask instanceof Task
             ? $recommendations->recommend(
                 $plan,

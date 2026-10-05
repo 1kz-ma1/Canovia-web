@@ -128,9 +128,9 @@ class StudyStateFirstWorkspaceV5613Test extends TestCase
                 false,
             )
             ->assertSee('現在スコアがまだ分かりません')
-            ->assertSee('診断を始める')
+            ->assertSee('現在スコアを記録')
             ->assertSee(
-                route('plans.tasks.study_practice.show', [$plan, $task]),
+                route('plans.study_scores.index', $plan),
                 false,
             )
             ->assertDontSee('今回の試験範囲がまだ分かりません');
