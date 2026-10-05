@@ -5,7 +5,9 @@ namespace App\Intelligence\Study;
 use App\Intelligence\Data\StudyAdaptiveActionResult;
 use App\Models\Plan;
 use App\Models\StudyPracticeAttempt;
+use App\Models\StudyScoreObservation;
 use App\Models\TaskEvidence;
+use Illuminate\Database\Eloquent\Builder;
 
 final class StudyWorkspaceStateResolver
 {
@@ -15,6 +17,8 @@ final class StudyWorkspaceStateResolver
     public function resolve(
         Plan $plan,
         StudyAdaptiveActionResult $adaptive,
+        ?int $userId = null,
+        ?string $actorToken = null,
     ): array {
         $state = $adaptive->intelligence->state;
         $metrics = (array) $state->metrics;
@@ -26,6 +30,18 @@ final class StudyWorkspaceStateResolver
             ->latest('id')
             ->take(8)
             ->get();
+
+        $scoreObservations = $this->scoreQuery(
+            $plan,
+            $userId,
+            $actorToken,
+        )
+            ->latest('observed_at')
+            ->latest('id')
+            ->take(6)
+            ->get();
+
+        $latestScoreObservation = $scoreObservations->first();
 
         $practiceEvidenceCount = TaskEvidence::query()
             ->where('plan_id', $plan->id)
@@ -57,7 +73,8 @@ final class StudyWorkspaceStateResolver
 
         $weaknesses = $this->weaknesses($attempts->all());
 
-        $currentPositionKnown = $attemptCount > 0
+        $currentPositionKnown = $scoreObservations->isNotEmpty()
+            || $attemptCount > 0
             || $practiceEvidenceCount > 0
             || $recallEvidenceCount > 0
             || $observedScopeCount > 0;
@@ -77,6 +94,7 @@ final class StudyWorkspaceStateResolver
         $phase = match (true) {
             $attemptCount > 0 => 'active_practice',
             $practiceEvidenceCount > 0 || $recallEvidenceCount > 0 => 'evidence_informed',
+            $scoreObservations->isNotEmpty() => 'score_baseline_known',
             $scopeCount > 0 => 'scope_informed',
             $activeTaskCount > 0 => 'baseline_needed',
             default => 'context_needed',
@@ -87,6 +105,7 @@ final class StudyWorkspaceStateResolver
             'phase_label' => match ($phase) {
                 'active_practice' => '演習履歴から現在地を把握済み',
                 'evidence_informed' => '学習Evidenceから現在地を把握済み',
+                'score_baseline_known' => '外部スコアから現在地を把握済み',
                 'scope_informed' => '学習範囲を基準に現在地を測定中',
                 'baseline_needed' => '最初の現在地確認が必要',
                 default => '学習の入口を設定中',
@@ -96,6 +115,18 @@ final class StudyWorkspaceStateResolver
             'confirmed_scope_count' => $scopeCount,
             'observed_scope_count' => $observedScopeCount,
             'practice_attempt_count' => $attemptCount,
+            'score_observation_count' => $scoreObservations->count(),
+            'has_external_score_baseline' => $scoreObservations->isNotEmpty(),
+            'latest_external_score' => $latestScoreObservation
+                instanceof StudyScoreObservation
+                    ? $this->scoreObservation($latestScoreObservation)
+                    : null,
+            'external_score_history' => $scoreObservations
+                ->map(fn (StudyScoreObservation $observation) =>
+                    $this->scoreObservation($observation)
+                )
+                ->values()
+                ->all(),
             'practice_evidence_count' => $practiceEvidenceCount,
             'recall_evidence_count' => $recallEvidenceCount,
             'active_task_count' => $activeTaskCount,
@@ -137,6 +168,48 @@ final class StudyWorkspaceStateResolver
                 ->take(6)
                 ->values()
                 ->all(),
+        ];
+    }
+
+    private function scoreQuery(
+        Plan $plan,
+        ?int $userId,
+        ?string $actorToken,
+    ): Builder {
+        $query = StudyScoreObservation::query()
+            ->where('plan_id', $plan->id);
+
+        if ($userId !== null) {
+            return $query->where('user_id', $userId);
+        }
+
+        return $query
+            ->whereNull('user_id')
+            ->where('actor_token', (string) $actorToken);
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function scoreObservation(
+        StudyScoreObservation $observation,
+    ): array {
+        return [
+            'id' => (int) $observation->id,
+            'metric_key' => (string) $observation->metric_key,
+            'metric_label' => (string) $observation->metric_label,
+            'score_value' => (float) $observation->score_value,
+            'display_value' => $observation->displayValue(),
+            'scale_min' => $observation->scale_min,
+            'scale_max' => $observation->scale_max,
+            'unit' => (string) $observation->unit,
+            'source_kind' => (string) $observation->source_kind,
+            'source_label' => $observation->sourceLabel(),
+            'source_detail' => $observation->source_label,
+            'observed_at' => $observation->observed_at,
+            'components' => is_array($observation->components)
+                ? $observation->components
+                : [],
         ];
     }
 
