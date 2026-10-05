@@ -1,6 +1,11 @@
 <?php
 
 return [
+    'question_bank_selection' => [
+        'exposure_history_session_limit' => 24,
+        'recent_session_window' => 3,
+    ],
+
     'exam_convergence' => [
         'history_attempt_limit' => 16,
 
