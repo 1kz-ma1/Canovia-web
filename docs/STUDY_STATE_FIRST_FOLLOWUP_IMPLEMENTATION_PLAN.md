@@ -89,7 +89,7 @@ Implemented in V56.14:
 
 ## Phase 2 — Study Method Recommendation
 
-Status: **implemented in V56.15 branch; pending merge**
+Status: **implemented and merged in V56.15**
 
 Goal:
 
@@ -149,7 +149,7 @@ Implemented in V56.15:
 
 ## Phase 3 — Score / Baseline Evidence Capture
 
-Status: pending
+Status: **implementation in progress as V56.16**
 
 Goal:
 
@@ -169,6 +169,8 @@ Requirements:
 - allow bounded component scores where the exam supports them
 - feed Score Exam State First surfaces
 - keep Practice accuracy and external score scale separate
+
+V56.16 introduces Plan-level `StudyScoreObservation`, bounded score profiles, actor-scoped State First reads, and a dedicated capture/history UI. Practice `score_percent` remains a separate metric.
 
 ## Phase 4 — Learning Type Confirmation / Override
 
