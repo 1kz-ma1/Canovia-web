@@ -35,4 +35,11 @@ return [
         env('CANOVIA_EXECUTION_SETUP_VALIDATION_ENABLED', false),
         FILTER_VALIDATE_BOOL
     ),
+
+    // V56.18: Super Admin-only Study Scenario Lab. Keep disabled unless
+    // actively validating Study surfaces in a controlled environment.
+    'study_scenario_lab_enabled' => filter_var(
+        env('CANOVIA_STUDY_SCENARIO_LAB_ENABLED', false),
+        FILTER_VALIDATE_BOOL
+    ),
 ];

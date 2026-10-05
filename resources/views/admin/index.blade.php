@@ -145,6 +145,22 @@
                 </div>
             </a>
 
+            @if ($studyScenarioLabEnabled)
+                <a href="{{ route('admin.study_scenarios.index') }}" class="group page-card block p-5 transition hover:-translate-y-0.5 hover:border-cyan-300/35 sm:p-6">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <span class="inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2.5 py-1 text-[10px] font-black tracking-[.12em] text-cyan-200">STUDY QA</span>
+                            <h2 class="mt-3 text-xl font-black text-slate-50">Study Scenario Lab</h2>
+                            <p class="mt-2 text-sm leading-6 text-slate-400">AP・TOEIC・学校テスト・暗記・スキル・曖昧Planを実データで再現し、通常のStudy Workspaceを検証します。</p>
+                        </div>
+                        <span class="text-2xl text-slate-600 transition group-hover:translate-x-1 group-hover:text-cyan-200" aria-hidden="true">→</span>
+                    </div>
+                    <div class="mt-5 rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.035] p-4 text-xs leading-5 text-slate-400">
+                        Admin専用・明示フラグON時のみ表示。生成データはLab fixtureとして追跡されます。
+                    </div>
+                </a>
+            @endif
+
             <a href="{{ route('admin.economy.index') }}" class="group page-card block p-5 transition hover:-translate-y-0.5 hover:border-emerald-400/35 sm:p-6">
                 <div class="flex items-start justify-between gap-4">
                     <div>

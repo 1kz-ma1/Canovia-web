@@ -77,6 +77,10 @@ class AdminDashboardController extends Controller
 
         $mapTelemetry7d = $mapTelemetry->summary(7);
         $mapTelemetry30d = $mapTelemetry->summary(30);
+        $studyScenarioLabEnabled = (bool) config(
+            'canovia.study_scenario_lab_enabled',
+            false,
+        );
 
         return view('admin.index', compact(
             'feedbackNew',
@@ -93,6 +97,7 @@ class AdminDashboardController extends Controller
             'guidedReflection30d',
             'mapTelemetry7d',
             'mapTelemetry30d',
+            'studyScenarioLabEnabled',
         ));
     }
 }
