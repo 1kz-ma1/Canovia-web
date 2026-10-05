@@ -6,7 +6,7 @@
 @php
     $target = data_get($learningType, 'target_score');
     $unitLabel = ($profile['unit'] ?? 'score') === 'band'
-        ? 'Band'
+        ? ''
         : '点';
 @endphp
 
