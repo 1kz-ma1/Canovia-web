@@ -4899,3 +4899,73 @@ V56.1では追加しない:
 - iOS native settings rewrite
 
 詳細は `docs/V56.1_IOS_SOFT_LAUNCH_WEB_READINESS.md` を正とする。
+
+
+## V56.2 IPA Official Question Pack
+
+V56.2 adds the first authentic IPA AP past-question corpus to the existing Question Bank.
+
+Initial bundled Pack:
+
+```text
+ap-a-ipa-2025-autumn-official-v1
+source = 令和7年度 秋期 応用情報技術者試験 午前
+subject equivalent = 科目A
+questions = 35
+```
+
+Content composition:
+
+- Technology 20
+- Management 5
+- Strategy 10
+
+Diagram-heavy items are excluded until Question has first-class image/diagram support.
+
+Every included item uses:
+
+```text
+source_type = official
+source_reference = 年度 / 期 / 試験区分 / 時間区分 / 問番号
+learning_metadata.provenance = publisher / source URLs / question number / transcription note
+```
+
+The existing Study Practice UI renders `source_reference` directly under the question, so official attribution is visible during practice.
+
+### Official-first deterministic selection
+
+Question Pack metadata may now include:
+
+```json
+{
+  "selection_priority": 100
+}
+```
+
+Coverage resolution still prioritizes:
+
+1. qualification match
+2. Pack availability for the requested question count / focus
+
+Only among Packs that can satisfy the same practice demand does higher `selection_priority` win.
+
+Therefore:
+
+```text
+General Practice / Exam Mode
+→ IPA official Pack first when sufficient
+
+narrow weakness without enough official matches
+→ Canovia Core Pack
+
+remaining uncovered seats
+→ Hybrid Native AI fallback
+```
+
+This keeps question selection deterministic. AI does not decide which official past question to use.
+
+V56.0 Phase / Weakness Policy remains the authority over whether practice is Diagnosis, Reinforcement, General Practice, or Exam Mode.
+
+No database migration is required.
+
+Detailed contract: `docs/V56.2_IPA_OFFICIAL_QUESTION_PACK.md`.

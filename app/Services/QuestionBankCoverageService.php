@@ -68,6 +68,7 @@ class QuestionBankCoverageService
                 return [
                     'pack' => $pack,
                     'pack_score' => $packScore,
+                    'selection_priority' => $this->selectionPriority($pack),
                     'active_count' => $questions->count(),
                     'focus_match_count' => $focusMatchCount,
                     'required_count' => $requiredCount,
@@ -79,12 +80,14 @@ class QuestionBankCoverageService
                 return [
                     $right['available'] ? 1 : 0,
                     $right['pack_score'],
+                    $right['selection_priority'],
                     $right['focus_match_count'],
                     $right['active_count'],
                     $right['pack']->id,
                 ] <=> [
                     $left['available'] ? 1 : 0,
                     $left['pack_score'],
+                    $left['selection_priority'],
                     $left['focus_match_count'],
                     $left['active_count'],
                     $left['pack']->id,
@@ -173,6 +176,18 @@ class QuestionBankCoverageService
         }
 
         return $score;
+    }
+
+    private function selectionPriority(QuestionPack $pack): int
+    {
+        $raw = data_get($pack->metadata, 'selection_priority', 0);
+        $priority = filter_var($raw, FILTER_VALIDATE_INT);
+
+        if ($priority === false) {
+            return 0;
+        }
+
+        return max(-100, min(100, (int) $priority));
     }
 
     private function packMatchScore(QuestionPack $pack, string $normalizedContext): int
