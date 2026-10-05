@@ -5737,3 +5737,124 @@ V56.17 completes the temporary four-phase State First follow-up program:
 
 The temporary `docs/STUDY_STATE_FIRST_FOLLOWUP_IMPLEMENTATION_PLAN.md` is therefore removed in V56.17. Permanent versioned specs and this Product Spec are the authorities after merge.
 
+## V56.18 Study Scenario Lab
+
+V56.18 adds a Super Admin-only QA environment for reproducing Study states that are difficult for the product owner to personally generate through real-world learning.
+
+The Lab is not a user-facing simulator.
+
+It creates ordinary Canovia Plan / Task / Study records and then opens the normal Study Workspace.
+
+Access requires both:
+
+~~~text
+admin.access
++
+CANOVIA_STUDY_SCENARIO_LAB_ENABLED=true
+~~~
+
+If the explicit flag is disabled, the Lab returns 404 even for Super Admin.
+
+Canonical route:
+
+~~~text
+GET /admin/study-scenarios
+~~~
+
+Fixture mutations:
+
+~~~text
+POST   /admin/study-scenarios/{scenarioKey}
+DELETE /admin/study-scenarios/fixtures/{fixture}
+DELETE /admin/study-scenarios
+~~~
+
+### Fixture identity
+
+Lab-created Plans are tracked through `study_scenario_fixtures`.
+
+A fixture stores:
+
+- user_id
+- plan_id
+- scenario_key
+- scenario_version
+
+`user_id + scenario_key` is unique.
+
+Recreate / delete operations use this fixture relationship. They never find Plans by title/category, so a real Plan with a similar name is not eligible for Lab cleanup.
+
+### Initial presets
+
+1. AP / current state known
+   - 3 Practice Attempts
+   - latest 90%
+   - DB / network history
+   - no confirmed Scope
+2. AP / repeated knowledge gap
+   - repeated DNS knowledge / concept gap
+   - expected Resource Study
+3. TOEIC 600 / external baseline known
+   - current 480
+   - Listening 250 / Reading 230
+   - Practice 76%
+4. TOEIC 600 / external baseline missing
+   - Practice 84%
+   - no external score Evidence
+5. School test / Scope missing
+   - previous score 62
+   - target 80
+   - no Study Scope
+6. Memorization / Recall due
+   - 6 Recall items
+   - 4 due
+7. Skill learning / Practical Evidence
+   - Python CLI Task
+   - no practical Evidence
+8. Ambiguous Learning Type
+   - 「英語を学ぶ」
+   - no Learning Type override
+
+These presets intentionally cover both Learning Type differences and State changes inside the same type.
+
+### Data authority
+
+Scenario state is built from the normal models:
+
+- Plan
+- Task
+- StudyPracticeAttempt
+- StudyScoreObservation
+- StudyRecallItem
+
+The Lab does not inject fake State into Study Workspace views.
+
+Therefore V56.13–V56.17 must derive exactly the same UI/policy result as they would for a real learner with equivalent durable data.
+
+### Mutation boundary
+
+Lab index GET is read-only.
+
+Creating/recreating a preset:
+
+1. removes only the current Admin user's existing fixture for that scenario
+2. deletes its fixture Plan and cascaded Study rows
+3. creates a fresh normal Study Plan / Task / Evidence state
+4. records the new fixture
+5. redirects to normal Study Workspace
+
+Delete-all removes only Plans referenced by the current Admin user's fixture records.
+
+No AI/provider calls are made.
+
+### Admin integration
+
+When the feature flag is enabled:
+
+- Admin navigation shows `Study Lab`
+- Admin Dashboard shows a Study QA card
+
+When disabled, both the navigation entry and dashboard card are hidden.
+
+Detailed contract: `docs/V56.18_STUDY_SCENARIO_LAB.md`.
+
