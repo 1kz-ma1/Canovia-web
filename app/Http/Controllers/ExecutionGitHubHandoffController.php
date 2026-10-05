@@ -88,6 +88,11 @@ final class ExecutionGitHubHandoffController extends Controller
                 pullRequestBody: $validated['pull_request_body'] ?? null,
                 user: $request->user(),
             );
+        } catch (ValidationException $exception) {
+            return redirect()
+                ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
+                ->withInput()
+                ->withErrors($exception->errors());
         } catch (\RuntimeException $exception) {
             return redirect()
                 ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
