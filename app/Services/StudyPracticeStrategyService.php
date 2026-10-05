@@ -162,6 +162,11 @@ class StudyPracticeStrategyService
             ?? StudyExamConvergencePolicyService::PHASE_GENERAL_PRACTICE
         );
 
+        $allocationQuestionCount = $phase
+                === StudyExamConvergencePolicyService::PHASE_WEAKNESS_REINFORCEMENT
+            ? $suggestedQuestionCount
+            : $normalQuestionCount;
+
         $controlledWeakness = match (true) {
             $taskMode === 'broad_assessment' =>
                 $this->broadRoutingWeakness(
@@ -175,7 +180,7 @@ class StudyPracticeStrategyService
                 $this->controlledWeakness(
                     $weakness,
                     (array) ($learningPhase['active_topics'] ?? []),
-                    $normalQuestionCount,
+                    $allocationQuestionCount,
                 ),
             default => $this->broadRoutingWeakness(
                 $weakness,
