@@ -30,6 +30,10 @@ final class StudyWorkspaceSurfaceRegistry
                 'partial' => 'workspace.study.surfaces.biggest-gap',
                 'label' => 'Biggest Gap',
             ],
+            'study_recommendation' => [
+                'partial' => 'workspace.study.surfaces.study-recommendation',
+                'label' => 'Study Recommendation',
+            ],
             'current_action' => [
                 'partial' => 'workspace.study.surfaces.current-action',
                 'label' => 'Current Action',
