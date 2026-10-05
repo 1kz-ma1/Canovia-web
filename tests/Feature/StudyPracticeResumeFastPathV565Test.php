@@ -56,7 +56,7 @@ class StudyPracticeResumeFastPathV565Test extends TestCase
             ->assertOk()
             ->assertSee('CONTINUE PRACTICE')
             ->assertSee('DNS確認')
-            ->assertSee('保存済みの回答を復元しました')
+            ->assertSee('保存済みの回答をそのまま復元しました')
             ->assertSee('1/2問 回答済み')
             ->assertSee('続きから回答')
             ->assertSee('DNSは名前解決を行うため。')
