@@ -1,0 +1,43 @@
+name: V56.2 IPA Official Pack Validation
+
+on:
+  push:
+    branches:
+      - feature/v56-2-ipa-official-question-pack
+
+jobs:
+  ipa-official-pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/QuestionBankCoverageService.php
+          php -l tests/Feature/IpaOfficialQuestionPackV562Test.php
+      - name: Validate bundled JSON
+        run: php -r 'json_decode(file_get_contents("resources/question_packs/ap/ap-a-ipa-2025-autumn-official-v1.json"), true, 512, JSON_THROW_ON_ERROR); echo "JSON OK\n";'
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V56.2 official pack
+        run: php artisan test tests/Feature/IpaOfficialQuestionPackV562Test.php
+      - name: AP core pack regression
+        run: php artisan test tests/Feature/ApQuestionPackV403Test.php
+      - name: Question Bank regression
+        run: php artisan test tests/Feature/QuestionBankV402Test.php
+      - name: V41.4 selector regression
+        run: php artisan test tests/Feature/StudyPracticeCalibrationV414Test.php
+      - name: Hybrid regression
+        run: php artisan test tests/Feature/HybridQuestionAssemblyV4182Test.php
+      - name: V56.0 convergence regression
+        run: php artisan test tests/Feature/StudyExamConvergencePolicyV560Test.php
