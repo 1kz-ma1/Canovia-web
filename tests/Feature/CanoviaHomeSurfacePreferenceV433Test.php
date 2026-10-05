@@ -39,9 +39,9 @@ class CanoviaHomeSurfacePreferenceV433Test extends TestCase
         $response
             ->assertOk()
             ->assertSee('data-canovia-surface="home"', false)
-            ->assertSee('data-canovia-surface-nav', false)
-            ->assertSee('data-canovia-surface="explore"', false)
-            ->assertSee('Explore')
+            ->assertDontSee('data-canovia-surface-nav', false)
+            ->assertDontSee('data-canovia-surface="explore"', false)
+            ->assertDontSee('>Explore<', false)
             ->assertDontSee('data-home-surface-preference-options', false)
             ->assertDontSee('data-home-surface-preference="classic"', false)
             ->assertDontSee('data-home-surface-preference="map"', false)
