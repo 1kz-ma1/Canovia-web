@@ -697,12 +697,13 @@ class StudyPracticeRoutingV564Test extends TestCase
         $index = 1;
         foreach ($definitions as [$parent, $topic]) {
             for ($i = 1; $i <= $perParent; $i++) {
+                $current = $index++;
                 $this->question(
                     $pack,
-                    $index++,
+                    $current,
                     $topic,
                     $parent,
-                    Str::slug($parent).'-'.Str::slug($topic).'-'.$i,
+                    'diverse-'.$current,
                 );
             }
         }
