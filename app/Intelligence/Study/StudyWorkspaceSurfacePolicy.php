@@ -44,6 +44,7 @@ final class StudyWorkspaceSurfacePolicy
             'state' => $state,
         ]);
         $surfaces[] = $this->registry->surface('current_state', [
+            'plan' => $plan,
             'learning_type' => $learningType,
             'state' => $state,
         ]);
@@ -240,21 +241,23 @@ final class StudyWorkspaceSurfacePolicy
             ];
         }
 
-        if ($type === 'score_exam' && ! $currentPositionKnown) {
+        if (
+            $type === 'score_exam'
+            && ! (bool) (
+                $state['has_external_score_baseline']
+                ?? false
+            )
+        ) {
             return [
                 'kind' => 'current_score',
                 'eyebrow' => 'CURRENT POSITION',
                 'title' => '現在スコアがまだ分かりません',
-                'detail' => '目標スコアだけでは配分を決められないため、直近スコアを残すか、短い診断で現在地を作るのが先です。',
-                'action_url' => $navigationTask
-                    ? route(
-                        'plans.tasks.study_practice.show',
-                        [$plan, $navigationTask],
-                    )
-                    : route('plans.show', $plan),
-                'action_label' => $navigationTask
-                    ? '診断を始める'
-                    : 'Plan内容を確認',
+                'detail' => 'Canovia演習の正答率は外部試験スコアとは別尺度です。直近の公式結果・模試・自己申告スコアをEvidenceとして記録すると、目標との差を正しく扱えます。',
+                'action_url' => route(
+                    'plans.study_scores.index',
+                    $plan,
+                ),
+                'action_label' => '現在スコアを記録',
                 'blocks_execution' => false,
             ];
         }
