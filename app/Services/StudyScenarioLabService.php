@@ -174,10 +174,10 @@ final class StudyScenarioLabService
                 ->lockForUpdate()
                 ->first();
 
-            if ($existing?->plan) {
-                $existing->plan->delete();
-            } elseif ($existing) {
+            if ($existing) {
+                $oldPlan = $existing->plan;
                 $existing->delete();
+                $oldPlan?->delete();
             }
 
             $plan = $this->createPlan(
@@ -216,14 +216,10 @@ final class StudyScenarioLabService
 
         DB::transaction(function () use ($fixture) {
             $fixture->loadMissing('plan');
-
-            if ($fixture->plan) {
-                $fixture->plan->delete();
-
-                return;
-            }
+            $plan = $fixture->plan;
 
             $fixture->delete();
+            $plan?->delete();
         });
     }
 
@@ -237,11 +233,10 @@ final class StudyScenarioLabService
                 ->get();
 
             foreach ($fixtures as $fixture) {
-                if ($fixture->plan) {
-                    $fixture->plan->delete();
-                } else {
-                    $fixture->delete();
-                }
+                $plan = $fixture->plan;
+
+                $fixture->delete();
+                $plan?->delete();
             }
 
             return $fixtures->count();
@@ -306,22 +301,31 @@ final class StudyScenarioLabService
         Plan $plan,
         Task $task,
     ): void {
-        match ($scenarioKey) {
-            'ap-current' =>
-                $this->seedApCurrent($user, $plan, $task),
-            'ap-knowledge-gap' =>
-                $this->seedApKnowledgeGap($user, $plan, $task),
-            'toeic-known' =>
-                $this->seedToeicKnown($user, $plan, $task),
-            'toeic-missing' =>
-                $this->seedToeicMissing($user, $plan, $task),
-            'school-scope-missing' =>
-                $this->seedSchoolTest($user, $plan),
-            'memorization-due' =>
-                $this->seedMemorization($plan, $task),
-            'skill-practical', 'ambiguous-type' => null,
-            default => null,
-        };
+        switch ($scenarioKey) {
+            case 'ap-current':
+                $this->seedApCurrent($user, $plan, $task);
+                break;
+
+            case 'ap-knowledge-gap':
+                $this->seedApKnowledgeGap($user, $plan, $task);
+                break;
+
+            case 'toeic-known':
+                $this->seedToeicKnown($user, $plan, $task);
+                break;
+
+            case 'toeic-missing':
+                $this->seedToeicMissing($user, $plan, $task);
+                break;
+
+            case 'school-scope-missing':
+                $this->seedSchoolTest($user, $plan);
+                break;
+
+            case 'memorization-due':
+                $this->seedMemorization($plan, $task);
+                break;
+        }
     }
 
     private function seedApCurrent(
