@@ -13,6 +13,7 @@ class StudyPracticeStrategyService
         private readonly StudyWeaknessPrioritizationService $weaknessPriorities,
         private readonly StudyExamConvergencePolicyService $convergence,
         private readonly StudyTaskProgressionService $progression,
+        private readonly StudyPracticeRoutingPolicyService $routingPolicy,
     ) {}
 
     /**
@@ -99,22 +100,96 @@ class StudyPracticeStrategyService
             $weakness,
         );
 
-        $controlledWeakness = $this->controlledWeakness(
+        $routingPolicy = $this->routingPolicy->analyze(
+            $plan,
+            $task,
+            $recentAttempts,
             $weakness,
-            (array) ($learningPhase['active_topics'] ?? []),
-            $normalQuestionCount,
+            $learningPhase,
         );
+
+        $policyPhase = (string) (
+            $learningPhase['phase']
+            ?? StudyExamConvergencePolicyService::PHASE_GENERAL_PRACTICE
+        );
+        $taskMode = (string) ($routingPolicy['task_mode'] ?? 'adaptive');
+        $eligibleActiveTopics = collect(
+            $routingPolicy['eligible_active_topics']
+                ?? $learningPhase['active_topics']
+                ?? [],
+        )
+            ->filter(fn ($topic) => is_string($topic) && trim($topic) !== '')
+            ->map(fn ($topic) => trim((string) $topic))
+            ->unique()
+            ->values();
+
+        $learningPhase['policy_phase'] = $policyPhase;
+        $learningPhase['task_mode'] = $taskMode;
+
+        if (
+            $policyPhase
+                === StudyExamConvergencePolicyService::PHASE_WEAKNESS_REINFORCEMENT
+            && $taskMode === 'broad_assessment'
+        ) {
+            $learningPhase['phase'] =
+                StudyExamConvergencePolicyService::PHASE_GENERAL_PRACTICE;
+            $learningPhase['label'] = '横断探索';
+            $learningPhase['reason'] =
+                'このTaskは分野横断型のため、確認済み弱点は1〜2問だけ再確認し、残りは未探索・低confidence分野を優先します。';
+            $learningPhase['active_topics'] = [];
+            $learningPhase['routing_override'] = 'broad_assessment';
+        } elseif (
+            $policyPhase
+                === StudyExamConvergencePolicyService::PHASE_WEAKNESS_REINFORCEMENT
+            && $eligibleActiveTopics->isEmpty()
+        ) {
+            $learningPhase['phase'] =
+                StudyExamConvergencePolicyService::PHASE_GENERAL_PRACTICE;
+            $learningPhase['label'] = '総合演習';
+            $learningPhase['reason'] =
+                '重点弱点がmastery/cooldown条件を満たしたため、集中補強を止めて横断探索へ戻します。';
+            $learningPhase['active_topics'] = [];
+            $learningPhase['routing_override'] = 'mastery_cooldown';
+        } elseif (
+            $policyPhase
+                === StudyExamConvergencePolicyService::PHASE_WEAKNESS_REINFORCEMENT
+        ) {
+            $learningPhase['active_topics'] = $eligibleActiveTopics->all();
+        }
+
+        $phase = (string) (
+            $learningPhase['phase']
+            ?? StudyExamConvergencePolicyService::PHASE_GENERAL_PRACTICE
+        );
+
+        $controlledWeakness = match (true) {
+            $taskMode === 'broad_assessment' =>
+                $this->broadRoutingWeakness(
+                    $weakness,
+                    $routingPolicy,
+                    $normalQuestionCount,
+                    true,
+                ),
+            $phase
+                === StudyExamConvergencePolicyService::PHASE_WEAKNESS_REINFORCEMENT =>
+                $this->controlledWeakness(
+                    $weakness,
+                    (array) ($learningPhase['active_topics'] ?? []),
+                    $normalQuestionCount,
+                ),
+            default => $this->broadRoutingWeakness(
+                $weakness,
+                $routingPolicy,
+                $normalQuestionCount,
+                false,
+            ),
+        };
 
         $progression = $this->progression->resolve(
             $plan,
             $task,
             $recentAttempts->take(8)->values(),
             $learningPhase,
-        );
-
-        $phase = (string) (
-            $learningPhase['phase']
-            ?? StudyExamConvergencePolicyService::PHASE_GENERAL_PRACTICE
         );
 
         // Mastery verification is already a broad diagnostic check, not a
@@ -182,11 +257,15 @@ class StudyPracticeStrategyService
             $focusTopics = [];
             $questionMix = $this->broadMix($targetQuestionCount);
         } else {
-            $key = 'general_practice';
-            $label = '総合演習';
+            $key = $taskMode === 'broad_assessment'
+                ? 'broad_assessment'
+                : 'general_practice';
+            $label = $taskMode === 'broad_assessment'
+                ? '分野横断演習'
+                : '総合演習';
             $reason = (string) $learningPhase['reason'];
             $focusTopics = [];
-            $questionMix = $this->broadMix($targetQuestionCount);
+            $questionMix = $controlledWeakness['question_mix'];
         }
 
         $examProfile = $this->examProfiles->forPlanTask(
@@ -196,7 +275,7 @@ class StudyPracticeStrategyService
 
         return [
             'key' => $key,
-            'version' => 'v3',
+            'version' => 'v4',
             'label' => $label,
             'reason' => $reason,
             'learning_phase' => $learningPhase,
@@ -210,7 +289,14 @@ class StudyPracticeStrategyService
                     $learningPhase['reopened_topics'] ?? [],
                 'topic_states' =>
                     $learningPhase['topic_states'] ?? [],
+                'cooldown_topics' =>
+                    $routingPolicy['cooldown_topics'] ?? [],
+                'mastered_topics' =>
+                    $routingPolicy['mastered_topics'] ?? [],
+                'retention_due_topics' =>
+                    $routingPolicy['retention_due_topics'] ?? [],
             ],
+            'routing_policy' => $routingPolicy,
             'focus_topics' => $focusTopics,
             'target_question_count' => $targetQuestionCount,
             'history_sample_count' => $recentAttempts->count(),
