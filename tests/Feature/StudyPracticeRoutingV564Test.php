@@ -280,7 +280,7 @@ class StudyPracticeRoutingV564Test extends TestCase
 
         $strategy = $this->strategy($plan, $task);
 
-        $this->assertSame('broad_assessment', $strategy['key']);
+        $this->assertSame('general_practice', $strategy['key']);
         $this->assertSame(
             'general_practice',
             data_get($strategy, 'learning_phase.phase'),
@@ -465,7 +465,7 @@ class StudyPracticeRoutingV564Test extends TestCase
 
         $strategy = $this->strategy($plan, $task);
 
-        $this->assertSame('broad_assessment', $strategy['key']);
+        $this->assertSame('general_practice', $strategy['key']);
         $this->assertSame([], $strategy['focus_topics']);
         $this->assertContains('SQL', data_get($strategy, 'routing_policy.cooldown_topics', []));
         $this->assertSame(0, (int) data_get($strategy, 'question_mix.primary'));
