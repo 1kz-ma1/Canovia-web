@@ -75,8 +75,14 @@ class StudyPracticeController extends Controller
                 ->whereKey((int) $state['practice_session_id'])
                 ->first()
             : null;
-        $resumeMode = $request->boolean('resume');
-        $preparedMode = $request->boolean('prepared');
+        $resumeMode = (bool) $request->session()->get(
+            'study_practice_resume_fast_path',
+            false,
+        );
+        $preparedMode = (bool) $request->session()->get(
+            'study_practice_freshly_prepared',
+            false,
+        );
 
         // Answering resume is a distinct fast path. A Session that was just
         // prepared in the immediately preceding request is not a "resume".
@@ -374,11 +380,8 @@ class StudyPracticeController extends Controller
         ]);
 
         return redirect()
-            ->route('plans.tasks.study_practice.show', [
-                $plan,
-                $task,
-                'resume' => 1,
-            ]);
+            ->route('plans.tasks.study_practice.show', [$plan, $task])
+            ->with('study_practice_resume_fast_path', true);
     }
 
     public function prepare(
@@ -461,11 +464,8 @@ class StudyPracticeController extends Controller
         ]);
 
         return redirect()
-            ->route('plans.tasks.study_practice.show', [
-                $plan,
-                $task,
-                'prepared' => 1,
-            ])
+            ->route('plans.tasks.study_practice.show', [$plan, $task])
+            ->with('study_practice_freshly_prepared', true)
             ->with('success', count($questions).'問をCanovia Question Bankから準備しました。')
             ->with('study_practice_scroll_to', 'practice-questions');
     }
@@ -569,11 +569,8 @@ class StudyPracticeController extends Controller
         };
 
         return redirect()
-            ->route('plans.tasks.study_practice.show', [
-                $plan,
-                $task,
-                'prepared' => 1,
-            ])
+            ->route('plans.tasks.study_practice.show', [$plan, $task])
+            ->with('study_practice_freshly_prepared', true)
             ->with('success', $successMessage)
             ->with('study_practice_scroll_to', 'practice-questions');
     }
@@ -663,11 +660,8 @@ class StudyPracticeController extends Controller
         ]);
 
         return redirect()
-            ->route('plans.tasks.study_practice.show', [
-                $plan,
-                $task,
-                'prepared' => 1,
-            ])
+            ->route('plans.tasks.study_practice.show', [$plan, $task])
+            ->with('study_practice_freshly_prepared', true)
             ->with('success', count($questions).'問の演習を読み込みました。Canovia上で回答できます。')
             ->with('study_practice_scroll_to', 'practice-questions');
     }
