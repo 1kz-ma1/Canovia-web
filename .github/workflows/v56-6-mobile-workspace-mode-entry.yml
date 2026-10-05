@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - feature/v56-6-mobile-workspace-mode-entry
+  pull_request:
+    branches:
+      - main
 
 jobs:
   mobile-workspace-entry:
