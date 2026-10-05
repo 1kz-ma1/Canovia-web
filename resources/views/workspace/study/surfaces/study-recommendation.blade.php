@@ -71,7 +71,9 @@
             ],
             [
                 'label' => '定着確認',
-                'items' => $retention_due_topics ?? $secondary_topics ?? [],
+                'items' => ! empty($retention_due_topics ?? [])
+                    ? $retention_due_topics
+                    : ($secondary_topics ?? []),
             ],
             [
                 'label' => '集中補強を休止',
