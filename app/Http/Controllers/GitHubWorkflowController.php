@@ -43,6 +43,20 @@ final class GitHubWorkflowController extends Controller
         $integrationStatus = $this->githubReadiness->forActor(
             $request->user(),
         );
+        $dashboard['repository_overviews'] = collect(
+            $dashboard['repository_overviews'] ?? [],
+        )
+            ->map(function (array $overview) use ($integrationStatus) {
+                $overview['integration_readiness'] =
+                    $this->githubReadiness->connectionStatus(
+                        $integrationStatus,
+                        is_array($overview['app_connection'] ?? null)
+                            ? $overview['app_connection']
+                            : [],
+                    );
+
+                return $overview;
+            });
         $selectedPlan = $dashboard['selected_plan'] ?? null;
         $developmentAction = null;
         $developmentFocusTask = null;
