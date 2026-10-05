@@ -179,7 +179,7 @@ class StudyPracticeRoutingV564Test extends TestCase
         ));
     }
 
-    public function test_sql_cooldown_does_not_treat_nosql_as_same_subtopic(): void
+    public function test_sql_cooldown_does_not_treat_database_siblings_as_same_subtopic(): void
     {
         [$user, $plan, $task] = $this->scenario('broad');
         $pack = $this->diversePack(2);
@@ -221,12 +221,8 @@ class StudyPracticeRoutingV564Test extends TestCase
             ->get();
 
         $this->assertTrue($selectedModels->contains(
-            fn (Question $question) => in_array(
-                'NoSQL',
-                $question->learning_metadata['weakness_targets'] ?? [],
-                true,
-            ) || in_array(
-                'JOIN',
+            fn (Question $question) => ! in_array(
+                'SQL',
                 $question->learning_metadata['weakness_targets'] ?? [],
                 true,
             ),
