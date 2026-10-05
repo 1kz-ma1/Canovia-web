@@ -12,6 +12,7 @@ use App\Services\PlanOwnershipService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 final class StudyScoreController extends Controller
@@ -51,6 +52,8 @@ final class StudyScoreController extends Controller
             'observations' => $observations,
             'latestObservation' => $observations->first(),
             'canEdit' => $ownership->canEdit($request, $plan),
+            'scoreSources' => StudyScoreObservation::SOURCES,
+            'captureRequestId' => (string) Str::uuid(),
         ]);
     }
 
