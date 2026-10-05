@@ -1,4 +1,4 @@
-name: V56.8 Migration Recovery Validation
+name: Production Migration Recovery Validation
 
 on:
   push:
@@ -24,12 +24,16 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run build
-      - name: PHP lint
+      - name: PHP and shell lint
         run: |
           php -l database/migrations/2026_10_04_000200_create_intelligence_decision_traces_table.php
           php -l tests/Feature/IntelligenceDecisionTraceMigrationRecoveryV568Test.php
+          php -l tests/Feature/RenderStartupMigrationRetryV569Test.php
+          sh -n docker/render-start.sh
       - run: php artisan view:cache
       - run: php artisan migrate --force
+      - name: V56.9 Render startup retry
+        run: php artisan test tests/Feature/RenderStartupMigrationRetryV569Test.php
       - name: V56.8 migration recovery
         run: php artisan test tests/Feature/IntelligenceDecisionTraceMigrationRecoveryV568Test.php
       - name: V53.2 decision readiness regression
