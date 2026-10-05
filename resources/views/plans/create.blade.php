@@ -233,11 +233,11 @@
                         @if (($workspaceModeContext['key'] ?? null) === 'study')
                             <div class="flex gap-3">
                                 <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-700 text-[10px] font-black text-slate-400">2</span>
-                                <p class="text-xs leading-5 text-slate-400">Study Workspaceへ戻って試験範囲を確定</p>
+                                <p class="text-xs leading-5 text-slate-400">Study Workspaceが学習タイプと現在Stateを判定</p>
                             </div>
                             <div class="flex gap-3">
                                 <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-700 text-[10px] font-black text-slate-400">3</span>
-                                <p class="text-xs leading-5 text-slate-400">Practice / Recallで最初のEvidenceを記録</p>
+                                <p class="text-xs leading-5 text-slate-400">今必要な診断・演習・範囲整理・Recallから開始</p>
                             </div>
                         @elseif (($workspaceModeContext['key'] ?? null) === 'development')
                             <div class="flex gap-3">
