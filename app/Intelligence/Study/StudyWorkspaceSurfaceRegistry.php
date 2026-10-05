@@ -14,6 +14,10 @@ final class StudyWorkspaceSurfaceRegistry
                 'partial' => 'workspace.study.surfaces.goal-summary',
                 'label' => 'Goal Summary',
             ],
+            'learning_type_confirmation' => [
+                'partial' => 'workspace.study.surfaces.learning-type-confirmation',
+                'label' => 'Learning Type Confirmation',
+            ],
             'current_state' => [
                 'partial' => 'workspace.study.surfaces.current-state',
                 'label' => 'Current State',
