@@ -12,7 +12,10 @@ use RuntimeException;
 
 class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestionProvider
 {
-    public function __construct(private readonly QuestionBankCoverageService $coverageService) {}
+    public function __construct(
+        private readonly QuestionBankCoverageService $coverageService,
+        private readonly StudyTopicTaxonomyService $taxonomy,
+    ) {}
 
     public function key(): string
     {
@@ -108,6 +111,24 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
         $diagnosticTarget = max(0, min($targetCount, (int) ($mix['diagnostic'] ?? $targetCount)));
 
         $exposureContext = $this->questionExposureContext($plan);
+        $routingPolicy = is_array($strategy['routing_policy'] ?? null)
+            ? $strategy['routing_policy']
+            : [];
+        $broadRouting = (bool) ($routingPolicy['broad_parent_control'] ?? false)
+            && ($strategy['key'] ?? '') !== 'weakness_reinforcement';
+        $parentStates = collect($routingPolicy['parent_topics'] ?? [])
+            ->filter(fn ($item) => is_array($item))
+            ->mapWithKeys(fn (array $item) => [
+                $this->taxonomy->key((string) ($item['parent_topic'] ?? ''))
+                    => $item,
+            ]);
+        $cooldownTopics = collect($routingPolicy['cooldown_topics'] ?? [])
+            ->filter(fn ($item) => is_string($item) && trim($item) !== '')
+            ->values();
+        $cooldownTopicKeys = $cooldownTopics
+            ->map(fn (string $topic) => $this->taxonomy->key($topic))
+            ->filter()
+            ->flip();
 
         $preferHarder = ($strategy['key'] ?? '') === 'retention_and_transfer';
 
@@ -117,8 +138,37 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
                 $primaryTopics,
                 $secondaryTopics,
                 $exposureContext,
+                $parentStates,
+                $cooldownTopicKeys,
             ) {
                 $exposure = $exposureContext['questions'][(int) $question->id] ?? [];
+                $parentTopic = $this->taxonomy->parentForQuestion($question)
+                    ?? $this->domainKey($question);
+                $parentKey = $this->taxonomy->key($parentTopic);
+                $parentState = is_array($parentStates->get($parentKey))
+                    ? $parentStates->get($parentKey)
+                    : [];
+                $parentCap = array_key_exists('broad_question_cap', $parentState)
+                    ? max(0, (int) $parentState['broad_question_cap'])
+                    : max(
+                        1,
+                        (int) config(
+                            'study.practice_routing.parent_exposure.broad_max_questions',
+                            2,
+                        ),
+                    );
+                $metadata = collect($question->learning_metadata ?? []);
+                $questionSubtopic = $this->taxonomy->subtopicForQuestion($question);
+                $questionTopicKeys = collect($metadata->get('weakness_targets', []))
+                    ->merge($metadata->get('concepts', []))
+                    ->when(
+                        $questionSubtopic !== null,
+                        fn (Collection $items) => $items->push($questionSubtopic),
+                    )
+                    ->filter(fn ($item) => is_string($item) && trim($item) !== '')
+                    ->map(fn ($item) => $this->taxonomy->key((string) $item))
+                    ->filter()
+                    ->unique();
 
                 return [
                     'question' => $question,
@@ -127,6 +177,18 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
                     'primary_topic' => $this->bestMatchingTopic($question, $primaryTopics),
                     'secondary_topic' => $this->bestMatchingTopic($question, $secondaryTopics),
                     'domain_key' => $this->domainKey($question),
+                    'parent_topic' => $parentTopic,
+                    'parent_key' => $parentKey !== '' ? $parentKey : 'other',
+                    'parent_recent_exposure' => (float) ($parentState['recent_exposure'] ?? 0.0),
+                    'parent_confidence' => (float) ($parentState['mastery_confidence'] ?? 0.5),
+                    'parent_suppressed' => (bool) ($parentState['suppressed'] ?? false),
+                    'parent_preferred' => (bool) ($parentState['preferred'] ?? false),
+                    'parent_cap' => $parentCap,
+                    // Cooldown is subtopic-specific. Sibling concepts such as
+                    // SQL and NoSQL are controlled by parent exposure instead
+                    // of fuzzy focus matching.
+                    'cooldown_match' => $questionTopicKeys
+                        ->contains(fn (string $key) => isset($cooldownTopicKeys[$key])),
                     'exposure_count' => (int) ($exposure['exposure_count'] ?? 0),
                     'last_seen_session_offset' => array_key_exists('last_seen_session_offset', $exposure)
                         ? $exposure['last_seen_session_offset']
@@ -146,6 +208,8 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
             'primary_score',
             $preferHarder,
             $selectedIds,
+            $broadRouting,
+            $selected,
         );
         $this->appendSelection($selected, $selectedIds, $primary, 'primary');
 
@@ -156,6 +220,8 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
             'secondary_score',
             $preferHarder,
             $selectedIds,
+            $broadRouting,
+            $selected,
         );
         $this->appendSelection($selected, $selectedIds, $secondary, 'secondary');
 
@@ -167,10 +233,12 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
         $diagnostic = $this->selectBucket(
             $diagnosticPool,
             $diagnosticTarget,
-            'domain_key',
+            $broadRouting ? 'parent_key' : 'domain_key',
             null,
             $preferHarder,
             $selectedIds,
+            $broadRouting,
+            $selected,
         );
         $this->appendSelection($selected, $selectedIds, $diagnostic, 'diagnostic');
 
@@ -183,12 +251,36 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
                 $fallback = $this->selectBucket(
                     $candidates,
                     $remaining,
-                    'domain_key',
+                    $broadRouting ? 'parent_key' : 'domain_key',
                     null,
                     $preferHarder,
                     $selectedIds,
+                    $broadRouting,
+                    $selected,
                 );
                 $this->appendSelection($selected, $selectedIds, $fallback, 'balanced_fill');
+            }
+
+            // Bank-only mode may relax parent/cooldown caps only as a final
+            // fill. Hybrid mode deliberately leaves capped seats open.
+            $remaining = max(0, $targetCount - $selected->count());
+            if ($remaining > 0 && $broadRouting) {
+                $relaxed = $this->selectBucket(
+                    $candidates,
+                    $remaining,
+                    'parent_key',
+                    null,
+                    $preferHarder,
+                    $selectedIds,
+                    false,
+                    $selected,
+                );
+                $this->appendSelection(
+                    $selected,
+                    $selectedIds,
+                    $relaxed,
+                    'balanced_fill_relaxed',
+                );
             }
 
             if ($selected->count() < $targetCount) {
@@ -209,7 +301,7 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
             'provider' => $this->key(),
             'mode' => $this->mode(),
             'selector_type' => 'question_bank',
-            'selector_version' => 'bank-v3-exposure',
+            'selector_version' => 'bank-v4-routing',
             'payload' => [
                 'title' => $pack->title.' / '.($strategy['label'] ?? '演習'),
                 'questions' => $rendered,
@@ -239,6 +331,14 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
                     'history_session_limit' => $exposureContext['history_limit'],
                     'recent_session_window' => $exposureContext['recent_window'],
                 ],
+                'routing_control' => [
+                    'broad_parent_control' => $broadRouting,
+                    'cooldown_topics' => $cooldownTopics->values()->all(),
+                    'suppressed_parent_topics' =>
+                        $routingPolicy['suppressed_parent_topics'] ?? [],
+                    'preferred_parent_topics' =>
+                        $routingPolicy['preferred_parent_topics'] ?? [],
+                ],
             ],
             'questions' => $rendered,
             'selected_questions' => $selected->map(fn (array $item) => [
@@ -248,6 +348,13 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
                 'source_reference' => $item['question']->source_reference,
                 'selection_bucket' => $item['bucket'],
                 'selection_domain' => $item['domain_key'],
+                'selection_parent_topic' => $item['parent_topic'] ?? null,
+                'selection_parent_recent_exposure' => round(
+                    (float) ($item['parent_recent_exposure'] ?? 0.0),
+                    3,
+                ),
+                'selection_parent_cap' => (int) ($item['parent_cap'] ?? 0),
+                'selection_cooldown_match' => (bool) ($item['cooldown_match'] ?? false),
                 'selection_exposure_count' => (int) ($item['exposure_count'] ?? 0),
                 'selection_last_seen_session_offset' => $item['last_seen_session_offset'] ?? null,
                 'selection_recent' => (bool) ($item['recent'] ?? false),
@@ -266,7 +373,7 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
             'provider' => $this->key(),
             'mode' => $this->mode(),
             'selector_type' => 'question_bank_partial',
-            'selector_version' => 'bank-v3-exposure',
+            'selector_version' => 'bank-v4-routing',
             'payload' => [
                 'title' => 'Canovia Question Bank / '.($strategy['label'] ?? '演習'),
                 'questions' => [],
@@ -299,24 +406,43 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
         ?string $scoreKey,
         bool $preferHarder,
         Collection $selectedIds,
+        bool $enforceParentCaps = false,
+        ?Collection $alreadySelected = null,
     ): Collection {
         if ($count <= 0) {
             return collect();
         }
 
+        $parentCounts = collect($alreadySelected ?? [])
+            ->filter(fn ($item) => is_array($item))
+            ->countBy(fn (array $item) => (string) ($item['parent_key'] ?? 'other'));
+
         $available = $candidates
             ->reject(fn (array $item) => $selectedIds->contains((int) $item['question']->id))
             ->groupBy(fn (array $item) => (string) ($item[$groupKey] ?: 'other'))
-            ->map(function (Collection $group) use ($scoreKey, $preferHarder) {
+            ->map(function (Collection $group) use (
+                $scoreKey,
+                $preferHarder,
+                $enforceParentCaps,
+            ) {
                 return $group
-                    ->sort(function (array $left, array $right) use ($scoreKey, $preferHarder) {
+                    ->sort(function (array $left, array $right) use (
+                        $scoreKey,
+                        $preferHarder,
+                        $enforceParentCaps,
+                    ) {
                         $leftScore = $scoreKey ? (int) ($left[$scoreKey] ?? 0) : 0;
                         $rightScore = $scoreKey ? (int) ($right[$scoreKey] ?? 0) : 0;
-
                         $leftLastSeen = $left['last_seen_session_offset'] ?? null;
                         $rightLastSeen = $right['last_seen_session_offset'] ?? null;
 
                         $leftRank = [
+                            $enforceParentCaps && ($left['cooldown_match'] ?? false) ? 1 : 0,
+                            $enforceParentCaps && ($left['parent_suppressed'] ?? false) ? 1 : 0,
+                            $enforceParentCaps && ($left['parent_preferred'] ?? false) ? 0 : 1,
+                            $enforceParentCaps
+                                ? (float) ($left['parent_recent_exposure'] ?? 0.0)
+                                : 0.0,
                             $left['recent'] ? 1 : 0,
                             (int) ($left['exposure_count'] ?? 0),
                             $leftLastSeen === null ? PHP_INT_MIN : -1 * (int) $leftLastSeen,
@@ -328,6 +454,12 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
                             (int) $left['question']->id,
                         ];
                         $rightRank = [
+                            $enforceParentCaps && ($right['cooldown_match'] ?? false) ? 1 : 0,
+                            $enforceParentCaps && ($right['parent_suppressed'] ?? false) ? 1 : 0,
+                            $enforceParentCaps && ($right['parent_preferred'] ?? false) ? 0 : 1,
+                            $enforceParentCaps
+                                ? (float) ($right['parent_recent_exposure'] ?? 0.0)
+                                : 0.0,
                             $right['recent'] ? 1 : 0,
                             (int) ($right['exposure_count'] ?? 0),
                             $rightLastSeen === null ? PHP_INT_MIN : -1 * (int) $rightLastSeen,
@@ -342,8 +474,26 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
                         return $leftRank <=> $rightRank;
                     })
                     ->values();
+            });
+
+        $available = $enforceParentCaps
+            ? $available->sort(function (Collection $left, Collection $right) {
+                $leftItem = $left->first() ?? [];
+                $rightItem = $right->first() ?? [];
+
+                return [
+                    (bool) ($leftItem['parent_suppressed'] ?? false) ? 1 : 0,
+                    (bool) ($leftItem['parent_preferred'] ?? false) ? 0 : 1,
+                    (float) ($leftItem['parent_recent_exposure'] ?? 0.0),
+                    -1 * $left->count(),
+                ] <=> [
+                    (bool) ($rightItem['parent_suppressed'] ?? false) ? 1 : 0,
+                    (bool) ($rightItem['parent_preferred'] ?? false) ? 0 : 1,
+                    (float) ($rightItem['parent_recent_exposure'] ?? 0.0),
+                    -1 * $right->count(),
+                ];
             })
-            ->sortByDesc(fn (Collection $group) => $group->count());
+            : $available->sortByDesc(fn (Collection $group) => $group->count());
 
         $picked = collect();
 
@@ -355,13 +505,46 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
                     break;
                 }
 
-                $next = $group->shift();
+                $next = null;
+                while ($group->isNotEmpty()) {
+                    $candidate = $group->shift();
+                    if (! is_array($candidate)) {
+                        continue;
+                    }
+
+                    if ($enforceParentCaps) {
+                        if ((bool) ($candidate['cooldown_match'] ?? false)) {
+                            continue;
+                        }
+
+                        $parentKey = (string) ($candidate['parent_key'] ?? 'other');
+                        $parentCap = max(0, (int) ($candidate['parent_cap'] ?? 0));
+                        $currentCount = (int) ($parentCounts->get($parentKey, 0));
+
+                        if ($parentCap <= 0 || $currentCount >= $parentCap) {
+                            continue;
+                        }
+                    }
+
+                    $next = $candidate;
+                    break;
+                }
+
                 if (! $next) {
                     $available->forget($key);
                     continue;
                 }
 
                 $picked->push($next);
+
+                if ($enforceParentCaps) {
+                    $parentKey = (string) ($next['parent_key'] ?? 'other');
+                    $parentCounts->put(
+                        $parentKey,
+                        (int) ($parentCounts->get($parentKey, 0)) + 1,
+                    );
+                }
+
                 $available->put($key, $group);
                 $madeProgress = true;
             }
@@ -521,6 +704,8 @@ class QuestionBankStudyPracticeQuestionProvider implements StudyPracticeQuestion
             'source_question_id' => $question->id,
             'source_type' => $question->source_type,
             'source_reference' => $question->source_reference,
+            'topic' => $this->taxonomy->subtopicForQuestion($question),
+            'parent_topic' => $this->taxonomy->parentForQuestion($question),
             'prompt' => $question->prompt,
             'response_fields' => $fields,
             'type' => $legacyType,

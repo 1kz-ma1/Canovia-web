@@ -190,11 +190,25 @@ class StudyTaskProgressionService
             return false;
         }
 
-        if (collect($attempt->weaknesses ?? [])->filter()->isNotEmpty()) {
+        $feedback = collect(data_get(
+            $attempt->assessment,
+            'question_feedback',
+            [],
+        ))->filter(fn ($item) => is_array($item))->values();
+        $hasStructuredFeedback = $feedback->contains(
+            fn (array $item) =>
+                array_key_exists('correctness', $item)
+                || array_key_exists('error_type', $item),
+        );
+
+        if (
+            ! $hasStructuredFeedback
+            && collect($attempt->weaknesses ?? [])->filter()->isNotEmpty()
+        ) {
             return false;
         }
 
-        $blockingErrors = collect(data_get($attempt->assessment, 'question_feedback', []))
+        $blockingErrors = $feedback
             ->filter(fn ($feedback) => is_array($feedback))
             ->contains(function (array $feedback) {
                 if (! in_array((string) ($feedback['correctness'] ?? ''), ['incorrect', 'partial'], true)) {

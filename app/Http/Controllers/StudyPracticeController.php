@@ -1271,14 +1271,38 @@ class StudyPracticeController extends Controller
             throw ValidationException::withMessages([$field => 'recommended_task_progress_percentは0〜100の整数で返してください。']);
         }
 
+        $questionFeedback = $this->normalizeQuestionFeedback(
+            $decoded['question_feedback'] ?? [],
+            $questions,
+        );
+        $hasStructuredFeedback = collect($questionFeedback)->contains(
+            fn (array $item) =>
+                array_key_exists('correctness', $item)
+                || array_key_exists('error_type', $item),
+        );
+        $routingWeaknesses = collect($questionFeedback)
+            ->filter(fn (array $item) => in_array(
+                (string) ($item['correctness'] ?? ''),
+                ['incorrect', 'partial'],
+                true,
+            ))
+            ->flatMap(fn (array $item) => $item['weakness_topics'] ?? [])
+            ->filter(fn ($item) => is_string($item) && trim($item) !== '')
+            ->map(fn ($item) => trim((string) $item))
+            ->unique()
+            ->take(12)
+            ->values()
+            ->all();
+
         $assessment = [
             'score_percent' => $score,
-            'question_feedback' => $this->normalizeQuestionFeedback(
-                $decoded['question_feedback'] ?? [],
-                $questions,
-            ),
+            'question_feedback' => $questionFeedback,
             'strengths' => $this->stringList($decoded['strengths'] ?? []),
-            'weaknesses' => $this->stringList($decoded['weaknesses'] ?? []),
+            // Modern structured feedback is the routing authority. This keeps
+            // prose-only reasoning improvements out of durable weaknesses.
+            'weaknesses' => $hasStructuredFeedback
+                ? $routingWeaknesses
+                : $this->stringList($decoded['weaknesses'] ?? []),
             'recommended_task_progress_percent' => $recommendedProgress,
             'evidence_summary' => mb_substr(trim((string) ($decoded['evidence_summary'] ?? '')), 0, 2000),
             'next_action' => mb_substr(trim((string) ($decoded['next_action'] ?? '')), 0, 1000),
@@ -1827,8 +1851,24 @@ class StudyPracticeController extends Controller
             if (! in_array($errorType, $allowedErrorTypes, true)) {
                 $errorType = $correctness === 'correct' ? 'none' : 'unknown';
             }
+            $weaknessTopics = array_slice(
+                $this->stringList($item['weakness_topics'] ?? []),
+                0,
+                8,
+            );
+            $misconceptions = array_slice(
+                $this->stringList($item['misconceptions'] ?? []),
+                0,
+                8,
+            );
+
             if ($correctness === 'correct') {
                 $errorType = 'none';
+                // Reasoning-quality comments may remain visible, but a correct
+                // answer cannot register a routing weakness. If the reasoning
+                // reveals a substantive misconception, the AI must use partial.
+                $weaknessTopics = [];
+                $misconceptions = [];
             }
 
             $seen[$questionId] = true;
@@ -1838,8 +1878,8 @@ class StudyPracticeController extends Controller
                 'feedback' => mb_substr(trim((string) ($item['feedback'] ?? '')), 0, 2000),
                 'reasoning_feedback' => mb_substr(trim((string) ($item['reasoning_feedback'] ?? '')), 0, 2000),
                 'error_type' => $errorType,
-                'weakness_topics' => array_slice($this->stringList($item['weakness_topics'] ?? []), 0, 8),
-                'misconceptions' => array_slice($this->stringList($item['misconceptions'] ?? []), 0, 8),
+                'weakness_topics' => $weaknessTopics,
+                'misconceptions' => $misconceptions,
             ];
         }
 

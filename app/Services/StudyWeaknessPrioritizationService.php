@@ -52,15 +52,28 @@ class StudyWeaknessPrioritizationService
             $ageWeight = max(0.50, 1.0 - ($attemptIndex * 0.08));
             $attemptSignals = [];
             $attemptErrors = [];
+            $feedbackItems = collect(data_get(
+                $attempt->assessment,
+                'question_feedback',
+                [],
+            ))->filter(fn ($item) => is_array($item))->values();
+            $hasStructuredFeedback = $feedbackItems->contains(
+                fn (array $item) =>
+                    array_key_exists('correctness', $item)
+                    || array_key_exists('error_type', $item),
+            );
 
-            foreach ($this->strings($attempt->weaknesses ?? []) as $topic) {
-                // Summary-level weaknesses are useful hints, but lower quality
-                // than per-question error classification.
-                $this->putSignal($attemptSignals, $topic, 0.30 * $ageWeight);
-                $attemptErrors[$this->key($topic)][] = 'unknown';
+            // Modern per-question classification is authoritative. Summary
+            // weaknesses remain only as a compatibility fallback for older
+            // attempts that do not have correctness/error_type.
+            if (! $hasStructuredFeedback) {
+                foreach ($this->strings($attempt->weaknesses ?? []) as $topic) {
+                    $this->putSignal($attemptSignals, $topic, 0.30 * $ageWeight);
+                    $attemptErrors[$this->key($topic)][] = 'unknown';
+                }
             }
 
-            foreach (collect(data_get($attempt->assessment, 'question_feedback', [])) as $feedback) {
+            foreach ($feedbackItems as $feedback) {
                 if (! is_array($feedback)) {
                     continue;
                 }
@@ -147,23 +160,15 @@ class StudyWeaknessPrioritizationService
             }
         }
 
-        // AI next_step is a useful hint, but it is only one signal. It must not
-        // override the history-based priority policy by itself.
+        // AI next_step focus is advisory only. It may break a near tie among
+        // already observed weaknesses, but it cannot create a new weakness.
         foreach ($this->strings($guidedTopics) as $guidedTopic) {
             $key = $this->key($guidedTopic);
-            if ($key === '') {
+            if ($key === '' || ! isset($topics[$key])) {
                 continue;
             }
 
-            $topics[$key] ??= [
-                'topic' => $guidedTopic,
-                'weighted_error' => 0.35,
-                'weak_attempts' => [0 => true],
-                'recent_attempts' => [0 => true],
-                'error_types' => ['unknown'],
-                'latest_weak_index' => 0,
-                'latest_strength_index' => null,
-            ];
+            $topics[$key]['weighted_error'] += 0.02;
         }
 
         $scope = mb_strtolower(implode(' ', [

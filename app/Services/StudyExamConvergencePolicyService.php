@@ -256,8 +256,10 @@ final class StudyExamConvergencePolicyService
         }
 
         foreach ($attempts as $attempt) {
-            foreach ((array) ($attempt->weaknesses ?? []) as $topic) {
-                $put($topic);
+            if (! $this->hasStructuredFeedback($attempt)) {
+                foreach ((array) ($attempt->weaknesses ?? []) as $topic) {
+                    $put($topic);
+                }
             }
 
             foreach ((array) data_get(
@@ -484,10 +486,13 @@ final class StudyExamConvergencePolicyService
 
     private function hasWeakSignal($attempt, string $topicKey): bool
     {
-        if ($this->listContainsTopic(
-            $attempt->weaknesses ?? [],
-            $topicKey,
-        )) {
+        if (
+            ! $this->hasStructuredFeedback($attempt)
+            && $this->listContainsTopic(
+                $attempt->weaknesses ?? [],
+                $topicKey,
+            )
+        ) {
             return true;
         }
 
@@ -556,10 +561,26 @@ final class StudyExamConvergencePolicyService
             }
         }
 
-        return ! $feedbackSeen
+        return ! $this->hasStructuredFeedback($attempt)
+            && ! $feedbackSeen
             && $this->listContainsTopic(
                 $attempt->weaknesses ?? [],
                 $topicKey,
+            );
+    }
+
+    private function hasStructuredFeedback($attempt): bool
+    {
+        return collect(data_get(
+            $attempt->assessment,
+            'question_feedback',
+            [],
+        ))
+            ->filter(fn ($item) => is_array($item))
+            ->contains(
+                fn (array $item) =>
+                    array_key_exists('correctness', $item)
+                    || array_key_exists('error_type', $item),
             );
     }
 
