@@ -47,6 +47,7 @@ final class StudyMethodRecommendationService
             $activity,
             $type,
             $adaptiveRouteKind,
+            (bool) ($state['has_confirmed_scope'] ?? false),
         );
 
         $knowledgeGap = $this->repeatedKnowledgeGap(
@@ -204,6 +205,7 @@ final class StudyMethodRecommendationService
         array $activity,
         string $type,
         ?string $adaptiveRouteKind,
+        bool $hasConfirmedScope,
     ): array {
         $existing = collect(
             $activity['all'] ?? [],
@@ -247,7 +249,10 @@ final class StudyMethodRecommendationService
 
         if (
             $type === 'school_test'
-            || $adaptiveRouteKind === 'study_scope'
+            || (
+                $adaptiveRouteKind === 'study_scope'
+                && $hasConfirmedScope
+            )
         ) {
             $existing->push([
                 'key' => self::SCOPE_ORGANIZATION,
@@ -354,21 +359,21 @@ final class StudyMethodRecommendationService
             ];
         }
 
-        if ($adaptiveRouteKind === 'study_recall') {
-            return [
-                StudyActivityPolicyService::RECALL,
-                null,
-                '現在のStudy Intelligenceが定着確認を優先しているため、Practiceより先にRecallを行います。',
-                'adaptive_recall',
-            ];
-        }
-
         if ($phase === 'exam_mode') {
             return [
                 StudyActivityPolicyService::QUESTION_PRACTICE,
                 'exam_mode',
                 '本番が近いため、教材へ戻り続けるより本番形式の横断Practiceを優先します。',
                 'exam_mode',
+            ];
+        }
+
+        if ($adaptiveRouteKind === 'study_recall') {
+            return [
+                StudyActivityPolicyService::RECALL,
+                null,
+                '現在のStudy Intelligenceが定着確認を優先しているため、Practiceより先にRecallを行います。',
+                'adaptive_recall',
             ];
         }
 
