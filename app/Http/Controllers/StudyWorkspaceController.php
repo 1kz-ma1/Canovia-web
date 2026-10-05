@@ -19,6 +19,7 @@ use App\Services\BehaviorIdentityService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanPriorityService;
+use App\Services\StudyActivityPolicyService;
 use App\Services\WorkspaceModeOnboardingService;
 use App\Services\ExecutionSetupService;
 use Illuminate\Http\Request;
@@ -152,6 +153,14 @@ final class StudyWorkspaceController extends Controller
         $executionSetupData = (
             ! (bool) ($composition['blocks_execution'] ?? false)
             && $navigationTask instanceof Task
+            && (
+                ! is_array($methodRecommendation)
+                || (string) data_get(
+                    $methodRecommendation,
+                    'primary.key',
+                    '',
+                ) === StudyActivityPolicyService::QUESTION_PRACTICE
+            )
         )
             ? $executionSetup->inspect($plan, $navigationTask)
             : null;
