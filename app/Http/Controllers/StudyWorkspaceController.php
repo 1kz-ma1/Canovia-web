@@ -98,7 +98,13 @@ final class StudyWorkspaceController extends Controller
             $plan,
             $presentation?->targetTask,
         );
-        $learningType = $learningTypes->route($plan);
+        $learningType = [
+            ...$learningTypes->route($plan),
+            'options' => $learningTypes->options(),
+            'can_edit' => $canEdit,
+            'confirmed_at' =>
+                $plan->study_learning_type_confirmed_at,
+        ];
         $actorToken = $request->user()
             ? null
             : $identity->resolve($request);
