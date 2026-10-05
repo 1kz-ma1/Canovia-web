@@ -37,10 +37,16 @@ final class StudyMethodRecommendationService
         ?string $adaptiveRouteKind = null,
     ): array {
         $activity = $this->activities->forPlanTask($plan, $task);
+        $type = (string) (
+            $learningType['key']
+            ?? 'general_learning'
+        );
         $methods = $this->baseMethods(
             $plan,
             $task,
             $activity,
+            $type,
+            $adaptiveRouteKind,
         );
 
         $knowledgeGap = $this->repeatedKnowledgeGap(
@@ -54,10 +60,6 @@ final class StudyMethodRecommendationService
             ->where('plan_id', $plan->id)
             ->count();
 
-        $type = (string) (
-            $learningType['key']
-            ?? 'general_learning'
-        );
         $phase = (string) (
             $practiceRecommendation['phase']
             ?? ''
@@ -200,6 +202,8 @@ final class StudyMethodRecommendationService
         Plan $plan,
         Task $task,
         array $activity,
+        string $type,
+        ?string $adaptiveRouteKind,
     ): array {
         $existing = collect(
             $activity['all'] ?? [],
@@ -241,27 +245,34 @@ final class StudyMethodRecommendationService
             )
             ->values();
 
-        $existing->push([
-            'key' => self::SCOPE_ORGANIZATION,
-            'label' => 'Scope Organization',
-            'short_label' => '範囲整理',
-            'icon' => '▦',
-            'description' =>
-                '試験範囲・教材範囲を整理し、次の学習配分を決めます。',
-            'fit_score' => 20,
-            'source' => 'state_method',
-        ]);
+        if (
+            $type === 'school_test'
+            || $adaptiveRouteKind === 'study_scope'
+        ) {
+            $existing->push([
+                'key' => self::SCOPE_ORGANIZATION,
+                'label' => 'Scope Organization',
+                'short_label' => '範囲整理',
+                'icon' => '▦',
+                'description' =>
+                    '試験範囲・教材範囲を整理し、次の学習配分を決めます。',
+                'fit_score' => 20,
+                'source' => 'state_method',
+            ]);
+        }
 
-        $existing->push([
-            'key' => self::PRACTICAL_EVIDENCE,
-            'label' => 'Practical Evidence',
-            'short_label' => '実践・成果物',
-            'icon' => '◎',
-            'description' =>
-                '実際に作る・使う・解くなどの実践結果をEvidenceとして現在地に反映します。',
-            'fit_score' => 20,
-            'source' => 'state_method',
-        ]);
+        if ($type === 'skill_learning') {
+            $existing->push([
+                'key' => self::PRACTICAL_EVIDENCE,
+                'label' => 'Practical Evidence',
+                'short_label' => '実践・成果物',
+                'icon' => '◎',
+                'description' =>
+                    '実際に作る・使う・解くなどの実践結果をEvidenceとして現在地に反映します。',
+                'fit_score' => 20,
+                'source' => 'state_method',
+            ]);
+        }
 
         return $existing->all();
     }
