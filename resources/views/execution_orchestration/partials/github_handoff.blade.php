@@ -16,6 +16,17 @@
     $decisionCandidate = is_array($githubDecisionCandidate ?? null) ? $githubDecisionCandidate : null;
     $decisionRecommendation = (string) data_get($decisionCandidate, 'recommendation', '');
     $decisionActions = array_values((array) data_get($decisionCandidate, 'allowed_actions', []));
+    $githubIntegration = (array) ($githubIntegrationStatus ?? []);
+    $githubWriteMessage = (string) data_get(
+        $githubIntegration,
+        'write.message',
+        'Developer GitHub Writeを利用できません。',
+    );
+    $githubEvidenceMessage = (string) data_get(
+        $githubIntegration,
+        'evidence.message',
+        'Developer GitHub Evidenceを利用できません。',
+    );
 @endphp
 
 @if ($packet || $candidate || $handoffResult || $pullRequestArtifact)
@@ -278,7 +289,7 @@
                                 </div>
                             @else
                                 <div class="mt-3 rounded-xl border border-amber-300/10 bg-amber-300/[0.02] px-3 py-2 text-[11px] text-slate-500">
-                                    Taskへ反映する前にGitHubを再確認するため、Developer GitHub Evidence capabilityとCanovia GitHub App設定が必要です。
+                                    {{ ! $githubEvidenceEntitled ? $githubEvidenceMessage : 'Taskへ反映する前にGitHubを再確認するため、Canovia運営側のGitHub App設定が必要です。' }}
                                 </div>
                             @endif
                         @else
@@ -297,7 +308,7 @@
                         </form>
                     @elseif (! $githubEvidenceEntitled)
                         <div class="rounded-xl border border-violet-300/10 bg-violet-300/[0.02] px-3 py-2 text-[11px] text-slate-500">
-                            GitHub Evidenceの取得にはDeveloper GitHub Evidence capabilityが必要です。
+                            {{ $githubEvidenceMessage }}
                         </div>
                     @else
                         <div class="rounded-xl border border-amber-300/10 bg-amber-300/[0.02] px-3 py-2 text-[11px] text-slate-500">
@@ -401,10 +412,8 @@
             </div>
         @elseif (! $githubWriteEntitled)
             <div class="mt-5 rounded-xl border border-violet-300/12 bg-violet-300/[0.025] p-4">
-                <p class="text-xs font-bold text-violet-100">GitHubへの反映はDeveloper GitHub Write</p>
-                <p class="mt-1 text-[11px] leading-5 text-slate-500">
-                    Execution Packetの生成・外部AI利用とは分離し、Repositoryへ書き込む権限だけを別Capabilityにしています。
-                </p>
+                <p class="text-xs font-bold text-violet-100">Developer GitHub Writeは現在利用できません</p>
+                <p class="mt-1 text-[11px] leading-5 text-slate-500">{{ $githubWriteMessage }}</p>
             </div>
         @elseif (! $githubWriteConfigured)
             <div class="mt-5 rounded-xl border border-amber-300/12 bg-amber-300/[0.025] p-4">
