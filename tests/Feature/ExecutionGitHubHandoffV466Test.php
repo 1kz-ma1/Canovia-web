@@ -441,7 +441,9 @@ class ExecutionGitHubHandoffV466Test extends TestCase
                 ], 201);
             }
 
-            return Http::response(['message' => 'Unexpected request'], 500);
+            throw new \RuntimeException(
+                'Unexpected GitHub test request: '.$method.' '.$url,
+            );
         });
     }
 
