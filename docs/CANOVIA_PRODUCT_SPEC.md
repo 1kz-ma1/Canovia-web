@@ -5448,3 +5448,143 @@ Workspace GET may read Practice history and existing Practice Session state, but
 
 Detailed contract: docs/V56.14_STUDY_RECOMMENDATION_SURFACE.md.
 
+## V56.15 Study Method Recommendation
+
+V56.15 adds the method-selection layer above V56.14 Practice Strategy.
+
+Canonical flow:
+
+~~~text
+Learning Type
++ Current Learning State
++ Task semantic fit
++ Practice Strategy / Routing State
++ Recall / Resource availability
+→ StudyMethodRecommendationService
+→ primary learning method
+→ method-specific execution
+~~~
+
+### Existing V41.10 authority
+
+V41.10 `StudyActivityPolicyService` remains the Task-semantic classifier for:
+
+- `question_practice`
+- `recall`
+- `resource_study`
+
+V56.15 does not replace or duplicate it.
+
+Responsibility split:
+
+~~~text
+StudyActivityPolicyService
+= which method fits the Task text / intent?
+
+StudyMethodRecommendationService
+= which method is primary now, given current State?
+~~~
+
+V56.15 can additionally select:
+
+- `scope_organization`
+- `practical_evidence`
+
+### Deterministic method priority
+
+Initial precedence:
+
+1. unfinished Practice Session → Question Practice / Resume
+2. school test with missing Scope → Scope Organization
+3. memorization learning → Recall
+4. skill learning → Practical Evidence
+5. Exam Mode → Question Practice / Exam Mode
+6. explicit current Study Intelligence Recall action → Recall
+7. repeated knowledge/concept gap in at least 2 distinct Attempts among latest 3 → Resource Study
+8. retention-due topics → Recall
+9. otherwise V41.10 Task-semantic primary activity
+
+Exam Mode remains authoritative over ordinary retention detours.
+
+The older Scope-based Study Intelligence route may only force Scope Organization when confirmed Scope already exists. It must not reintroduce a universal Scope gate for no-Scope certification Plans.
+
+### Repeated knowledge gap
+
+Resource Study is selected only from structured Question Feedback when:
+
+- correctness is `incorrect` or `partial`
+- error type is `knowledge_gap` or `concept_gap`
+- the signal occurs in at least 2 distinct Attempts among the latest 3
+
+A single knowledge gap does not force a method switch.
+
+### Workspace composition
+
+The Workspace renders `study_method_recommendation` before method-specific detail.
+
+When Question Practice is primary:
+
+~~~text
+Study Method Recommendation
+→ V56.14 exact Practice Recommendation
+~~~
+
+V56.14 remains authoritative for question count, weakness/retention/exploration allocation and Resume Strategy.
+
+When another method is primary:
+
+~~~text
+Study Method Recommendation
+→ primary method CTA
+~~~
+
+The V56.14 Practice card and generic Current Action are not shown as competing primary actions.
+
+The existing Other Study Methods surface is populated from ranked method alternatives instead of a fixed unordered list.
+
+### Method routes
+
+- Question Practice → `plans.tasks.study_practice.show`
+- Recall → `plans.tasks.study_recall.show`
+- Resource Study → `plans.resources.index`
+- Scope Organization → `plans.study_scope.index`
+- Practical Evidence → `plans.tasks.guided_execution.show`
+
+### Study Activity page
+
+The dedicated Study Activity page uses the same State-aware method recommendation as Study Workspace.
+
+This prevents:
+
+~~~text
+Workspace: Resource Study recommended
+→ Study Activity page: Question Practice recommended
+~~~
+
+from occurring after repeated knowledge/concept gaps or other State-based overrides.
+
+The generic V41.10 `forPlanTask()` contract remains available to other surfaces and execution capability resolution.
+
+### Execution Setup
+
+Study Workspace provider setup is only shown when Question Practice is the current primary method.
+
+Recall, Resource Study, Scope Organization and Practical Evidence do not display a Practice-provider selector above their primary method.
+
+### Mutation / cost boundary
+
+V56.15 Workspace / Study Activity reads may inspect:
+
+- Practice Attempts
+- existing Practice Session strategy
+- Recall items
+- Plan Resources
+- Study State
+- V41.10 method fit
+
+They do not create or mutate Attempts, Sessions, Recall items, Resources, Tasks or Evidence.
+
+No AI/provider request and no migration are added.
+
+Detailed contract: `docs/V56.15_STUDY_METHOD_RECOMMENDATION.md`.
+
