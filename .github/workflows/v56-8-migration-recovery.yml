@@ -1,0 +1,40 @@
+name: V56.8 Migration Recovery Validation
+
+on:
+  push:
+    branches:
+      - fix/v56-8-migration-recovery
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  migration-recovery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l database/migrations/2026_10_04_000200_create_intelligence_decision_traces_table.php
+          php -l tests/Feature/IntelligenceDecisionTraceMigrationRecoveryV568Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V56.8 migration recovery
+        run: php artisan test tests/Feature/IntelligenceDecisionTraceMigrationRecoveryV568Test.php
+      - name: V53.2 decision readiness regression
+        run: php artisan test tests/Feature/IntelligenceDecisionReadinessV532Test.php
+      - name: V56.7 Action Home regression
+        run: php artisan test tests/Feature/CanoviaHomeSurfaceV432Test.php
+      - name: V56.6 Workspace entry regression
+        run: php artisan test tests/Feature/MobileWorkspaceModeEntryV566Test.php
