@@ -31,7 +31,7 @@ class QuestionExposureRotationV563Test extends TestCase
         $prepared = $this->prepareGeneral($plan, $task);
         $selected = collect($prepared['selected_questions']);
 
-        $this->assertSame('bank-v3-exposure', $prepared['selector_version']);
+        $this->assertSame('bank-v4-routing', $prepared['selector_version']);
         $this->assertSame(1, data_get($prepared, 'payload.selection_rotation.history_sessions_considered'));
         $this->assertSame(24, data_get($prepared, 'payload.selection_rotation.history_session_limit'));
         $this->assertSame(3, data_get($prepared, 'payload.selection_rotation.recent_session_window'));
