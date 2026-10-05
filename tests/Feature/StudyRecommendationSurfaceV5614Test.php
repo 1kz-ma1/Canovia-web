@@ -298,6 +298,10 @@ class StudyRecommendationSurfaceV5614Test extends TestCase
                 false,
             )
             ->assertSee(
+                'data-study-method-key="scope_organization"',
+                false,
+            )
+            ->assertDontSee(
                 'data-study-surface="current_action"',
                 false,
             );
@@ -320,7 +324,10 @@ class StudyRecommendationSurfaceV5614Test extends TestCase
                 'data-study-workspace-recommendation',
                 false,
             )
-            ->assertSee('Recallを開く')
+            ->assertSee(
+                'data-study-method-key="recall"',
+                false,
+            )
             ->assertSee(
                 route(
                     'plans.tasks.study_recall.show',
