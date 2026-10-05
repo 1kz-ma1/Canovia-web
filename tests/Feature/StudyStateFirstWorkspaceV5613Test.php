@@ -175,11 +175,15 @@ class StudyStateFirstWorkspaceV5613Test extends TestCase
             ->assertOk()
             ->assertSee('data-study-learning-type="skill_learning"', false)
             ->assertSee(
-                'data-study-workspace-missing-context="baseline"',
+                'data-study-workspace-missing-context="practical_baseline"',
                 false,
             )
             ->assertSee(
-                route('plans.tasks.study_practice.show', [$plan, $task]),
+                'data-study-method-key="practical_evidence"',
+                false,
+            )
+            ->assertSee(
+                route('plans.tasks.guided_execution.show', [$plan, $task]),
                 false,
             )
             ->assertDontSee('今回の試験範囲がまだ分かりません');
@@ -208,7 +212,10 @@ class StudyStateFirstWorkspaceV5613Test extends TestCase
                 route('plans.tasks.study_recall.show', [$plan, $task]),
                 false,
             )
-            ->assertSee('Recallを開く');
+            ->assertSee(
+                'data-study-method-key="recall"',
+                false,
+            );
     }
 
     public function test_confirmed_scope_keeps_existing_readiness_and_gap_surfaces(): void
