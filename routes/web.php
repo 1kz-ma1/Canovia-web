@@ -36,6 +36,7 @@ use App\Http\Controllers\AdminPracticeDemandController;
 use App\Http\Controllers\AdminGoalPatternDemandController;
 use App\Http\Controllers\AdminEconomyController;
 use App\Http\Controllers\AdminPreviewController;
+use App\Http\Controllers\AdminStudyScenarioLabController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\RoadmapController;
 use App\Http\Controllers\TimelineController;
@@ -181,6 +182,16 @@ Route::middleware('admin.access')->group(function () {
     Route::post('/admin/practice-demand/candidates/{candidate}/promote', [AdminPracticeDemandController::class, 'promoteCandidate'])->name('admin.practice_demand.candidates.promote');
     Route::post('/admin/practice-demand/candidates/{candidate}/reject', [AdminPracticeDemandController::class, 'rejectCandidate'])->name('admin.practice_demand.candidates.reject');
     Route::post('/admin/practice-demand/candidates/{candidate}/reopen', [AdminPracticeDemandController::class, 'reopenCandidate'])->name('admin.practice_demand.candidates.reopen');
+    Route::get('/admin/study-scenarios', [AdminStudyScenarioLabController::class, 'index'])
+        ->name('admin.study_scenarios.index');
+    Route::post('/admin/study-scenarios/{scenarioKey}', [AdminStudyScenarioLabController::class, 'store'])
+        ->middleware('throttle:30,1')
+        ->name('admin.study_scenarios.store');
+    Route::delete('/admin/study-scenarios/fixtures/{fixture}', [AdminStudyScenarioLabController::class, 'destroy'])
+        ->name('admin.study_scenarios.destroy');
+    Route::delete('/admin/study-scenarios', [AdminStudyScenarioLabController::class, 'destroyAll'])
+        ->name('admin.study_scenarios.destroy_all');
+
     Route::get('/admin/economy', [AdminEconomyController::class, 'index'])->name('admin.economy.index');
     Route::post('/admin/economy/grants', [AdminEconomyController::class, 'storeGrant'])->name('admin.economy.grants.store');
     Route::delete('/admin/economy/grants/{grant}', [AdminEconomyController::class, 'destroyGrant'])->name('admin.economy.grants.destroy');
