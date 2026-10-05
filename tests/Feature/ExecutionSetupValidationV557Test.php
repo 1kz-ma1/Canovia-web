@@ -32,16 +32,20 @@ class ExecutionSetupValidationV557Test extends TestCase
         ]);
     }
 
-    public function test_setup_is_not_shown_before_study_onboarding_is_complete(): void
+    public function test_missing_scope_does_not_block_state_first_practice_setup(): void
     {
         [$user, $plan] = $this->studyPlan();
-        $this->task($plan, 'ネットワークの過去問を解く');
+        $task = $this->task($plan, 'ネットワークの過去問を解く');
 
         $this->actingAs($user)
             ->get(route('workspace.study.index', ['plan_id' => $plan->id]))
             ->assertOk()
-            ->assertSee('data-study-workspace-capture-first', false)
-            ->assertDontSee('data-execution-setup', false);
+            ->assertSee('data-study-workspace-missing-context="baseline"', false)
+            ->assertSee(
+                route('plans.tasks.study_practice.show', [$plan, $task]),
+                false,
+            )
+            ->assertDontSee('data-study-workspace-capture-first', false);
 
         $this->assertDatabaseCount('plan_execution_preferences', 0);
     }

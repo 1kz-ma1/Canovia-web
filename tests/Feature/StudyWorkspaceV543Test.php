@@ -83,7 +83,7 @@ class StudyWorkspaceV543Test extends TestCase
             ->assertSee('value="'.$lower->id.'" selected', false);
     }
 
-    public function test_workspace_is_capture_first_before_confirmed_scope_and_does_not_create_task(): void
+    public function test_workspace_is_state_first_before_confirmed_scope_and_does_not_create_task(): void
     {
         $user = User::factory()->create();
         $plan = $this->plan($user, 'AP対策', '資格学習');
@@ -91,9 +91,11 @@ class StudyWorkspaceV543Test extends TestCase
         $this->actingAs($user)
             ->get(route('workspace.study.index', ['plan_id' => $plan->id]))
             ->assertOk()
-            ->assertSee('data-study-workspace-capture-first', false)
-            ->assertSee('試験範囲から始める')
-            ->assertSee(route('plans.study_scope.index', $plan), false)
+            ->assertSee('data-study-workspace-composed', false)
+            ->assertSee('data-study-learning-type="certification_exam"', false)
+            ->assertSee('data-study-workspace-missing-context="baseline"', false)
+            ->assertSee('まず現在地を1回だけ測ります')
+            ->assertDontSee('data-study-workspace-capture-first', false)
             ->assertDontSee('data-study-workspace-readiness', false);
 
         $this->assertDatabaseCount('tasks', 0);

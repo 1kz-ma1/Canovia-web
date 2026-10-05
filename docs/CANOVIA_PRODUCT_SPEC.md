@@ -5220,3 +5220,133 @@ The user can explicitly choose `新しい演習を作る`, which reuses the exis
 No database migration.
 
 Detailed contract: `docs/V56.5_STUDY_PRACTICE_RESUME_FAST_PATH.md`.
+
+## V56.13 Study State-First Workspace Composition
+
+V56.13 changes the Study Workspace entry model from a fixed setup sequence to State First composition.
+
+Canonical decision flow:
+
+```text
+Plan / Tasks / Study Evidence / Practice Attempts / Deadline
+→ StudyLearningTypeRouter
+→ StudyWorkspaceStateResolver
+→ StudyWorkspaceSurfacePolicy
+→ StudyWorkspaceSurfaceRegistry
+→ registered Study UI surfaces
+```
+
+### Learning Type Router
+
+Initial internal types:
+
+- `certification_exam`
+- `score_exam`
+- `school_test`
+- `memorization`
+- `skill_learning`
+- `general_learning`
+
+This classification is deterministic presentation/policy state, not a new persisted Plan schema.
+
+### State First rule
+
+Study Scope is no longer a universal prerequisite.
+
+Canovia first determines whether a usable current position already exists from:
+
+- Study Practice Attempts
+- `study_practice_assessed` Evidence
+- `study_recall_reviewed` Evidence
+- observed confirmed Scope
+- active Tasks
+- deadline context
+
+A learner with existing Practice history is considered to have a usable current position even when confirmed Study Scope is absent.
+
+### Missing Context rule
+
+Canovia asks only for context that materially changes the next action.
+
+Examples:
+
+```text
+AP + Practice history
+→ current position known
+→ continue Practice / weakness / recent-result surfaces
+→ Scope remains optional
+
+TOEIC 600 + no baseline
+→ score exam
+→ current score / diagnostic surface
+→ do not ask for exam scope
+
+School test + no range
+→ school_test
+→ Study Scope is decision-changing
+→ surface Scope Capture prominently
+
+Memorization
+→ retention / Recall baseline
+
+Skill learning
+→ practical Evidence / current Task baseline
+```
+
+Practice percentages are never interpreted as absolute TOEIC / IELTS scores.
+
+### Surface Registry
+
+Initial registered Study surfaces:
+
+- Goal Summary
+- Current State
+- Missing Context
+- Readiness
+- Biggest Gap
+- Current Action
+- Weaknesses
+- Recent Results
+- Scope Coverage
+- Study Methods
+
+Views render selected registry surfaces instead of branching on specific named exams.
+
+Future image / diagram / material-viewer integrations can be added as new registered surfaces without changing the State First architecture.
+
+### Existing Study Intelligence
+
+The existing V53 Scope-based Exam Readiness model remains authoritative when confirmed Scope exists.
+
+V56.13 does not introduce a second readiness score.
+
+It changes whether missing Scope is allowed to gate the entire Study Workspace.
+
+### Study Mode onboarding
+
+Study Mode registry onboarding is now Plan creation only.
+
+After a Study Plan exists:
+
+```text
+Mode onboarding ends
+→ State First composition begins
+```
+
+Development and Career onboarding semantics are unchanged.
+
+### Mutation / cost boundary
+
+V56.13:
+
+- adds no migration
+- adds no AI traffic
+- adds no external provider traffic
+- creates no Task on Workspace GET
+- does not change Study Practice routing
+- does not change Study Recall scheduling
+- does not change Study Scope Capture
+- does not infer unsupported score scales
+
+Detailed contract: `docs/V56.13_STUDY_STATE_FIRST_WORKSPACE.md`.
+

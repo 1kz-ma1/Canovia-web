@@ -55,7 +55,7 @@ class WorkspaceModeRegistryV540Test extends TestCase
         $this->assertContains('interviews', $career->navigationKeys);
 
         $this->assertSame(
-            'capture_study_scope',
+            'create_plan',
             $study->emptyStateActionKey,
         );
         $this->assertSame(
@@ -72,7 +72,7 @@ class WorkspaceModeRegistryV540Test extends TestCase
         $this->assertSame('就活・キャリア', $career->suggestedPlanCategory);
         $this->assertSame([], $overview->onboardingSteps);
         $this->assertSame(
-            ['create_plan', 'capture_study_scope', 'record_study_evidence'],
+            ['create_plan'],
             array_column($study->onboardingSteps, 'key'),
         );
         $this->assertSame(

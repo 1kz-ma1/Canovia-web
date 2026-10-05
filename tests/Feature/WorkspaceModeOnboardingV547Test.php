@@ -31,7 +31,7 @@ class WorkspaceModeOnboardingV547Test extends TestCase
         ]);
     }
 
-    public function test_study_onboarding_advances_from_plan_to_scope_to_first_evidence_and_then_disappears(): void
+    public function test_study_onboarding_ends_after_plan_creation_and_state_first_takes_over(): void
     {
         $user = User::factory()->create();
 
@@ -51,30 +51,10 @@ class WorkspaceModeOnboardingV547Test extends TestCase
         $this->actingAs($user)
             ->get(route('workspace.study.index', ['plan_id' => $plan->id]))
             ->assertOk()
-            ->assertSee('data-study-workspace-capture-first', false)
-            ->assertSee('data-workspace-mode-onboarding-step="capture_study_scope"', false)
-            ->assertSee('試験範囲から始める')
-            ->assertDontSee('data-study-workspace-readiness', false);
-
-        $this->scope($plan, 'ネットワーク', 'CIDR');
-
-        $this->actingAs($user)
-            ->get(route('workspace.study.index', ['plan_id' => $plan->id]))
-            ->assertOk()
-            ->assertSee('data-study-workspace-first-evidence', false)
-            ->assertSee('data-workspace-mode-onboarding-step="record_study_evidence"', false)
-            ->assertSee('最初のPractice / Recallを記録する')
-            ->assertDontSee('data-study-workspace-readiness', false);
-
-        $task = $this->task($plan, 'CIDRを演習する');
-        $this->studyEvidence($task);
-
-        $this->actingAs($user)
-            ->get(route('workspace.study.index', ['plan_id' => $plan->id]))
-            ->assertOk()
             ->assertDontSee('data-workspace-mode-onboarding="study"', false)
-            ->assertSee('data-study-workspace-readiness', false)
-            ->assertSee('EXAM READINESS');
+            ->assertSee('data-study-workspace-composed', false)
+            ->assertSee('data-study-workspace-missing-context="baseline"', false)
+            ->assertDontSee('試験範囲から始める');
     }
 
     public function test_development_onboarding_advances_to_github_evidence_and_disappears_after_observed_release_state(): void
@@ -133,7 +113,7 @@ class WorkspaceModeOnboardingV547Test extends TestCase
             ->assertSee('data-plan-create-workspace-mode="study"', false)
             ->assertSee('name="workspace_mode" value="study"', false)
             ->assertSee('value="資格学習" selected', false)
-            ->assertSee('Study Workspaceへ戻って試験範囲を確定');
+            ->assertSee('Study Workspaceが学習タイプと現在Stateを判定');
 
         $response = $this->actingAs($user)
             ->post(route('plans.store'), [
@@ -152,7 +132,7 @@ class WorkspaceModeOnboardingV547Test extends TestCase
             ]))
             ->assertSessionHas(
                 'status',
-                '学習Planを作成しました。次は試験範囲を確定します。',
+                '学習Planを作成しました。Study Workspaceで現在地から次のActionを決めます。',
             );
 
         $this->assertSame('資格学習', $plan->category);
