@@ -24,19 +24,18 @@ class CanoviaHomeSurfaceV432Test extends TestCase
         ]);
     }
 
-    public function test_home_and_explore_are_distinct_surfaces_without_map_becoming_primary_navigation(): void
+    public function test_home_does_not_expose_map_entry_while_direct_explore_remains_available(): void
     {
         [$user] = $this->scenario();
 
         $home = $this->actingAs($user)->get(route('home'));
         $home->assertOk()
-            ->assertSee('data-canovia-surface-nav', false)
-            ->assertSee('SURFACES')
-            ->assertSee('>Home<', false)
-            ->assertSee('>Explore<', false)
+            ->assertDontSee('data-canovia-surface-nav', false)
+            ->assertDontSee('SURFACES')
+            ->assertDontSee('>Explore<', false)
             ->assertDontSee('HOME SURFACE')
             ->assertSee('data-canovia-surface="home"', false)
-            ->assertSee('data-canovia-surface="explore"', false)
+            ->assertDontSee('data-canovia-surface="explore"', false)
             ->assertSee('aria-label="Action Home"', false)
             ->assertSee('data-canovia-nav-key="desktop-home"', false)
             ->assertSee('href="'.route('home').'"', false)
