@@ -64,7 +64,11 @@ class StudyStateFirstWorkspaceV5613Test extends TestCase
                 route('plans.tasks.study_practice.show', [$plan, $task]),
                 false,
             )
-            ->assertSee('演習を続ける')
+            ->assertSee('data-study-workspace-recommendation', false)
+            ->assertDontSee(
+                'data-study-surface="current_action"',
+                false,
+            )
             ->assertDontSee(
                 'data-study-workspace-missing-context="study_scope"',
                 false,

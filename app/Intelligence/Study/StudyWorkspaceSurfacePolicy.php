@@ -28,6 +28,7 @@ final class StudyWorkspaceSurfacePolicy
         ?PlanIntelligencePresentation $presentation,
         ?Task $navigationTask,
         bool $canEdit,
+        ?array $recommendation = null,
     ): array {
         $surfaces = [];
         $type = (string) ($learningType['key'] ?? 'general_learning');
@@ -60,6 +61,20 @@ final class StudyWorkspaceSurfacePolicy
             );
         }
 
+        $usesRecommendation = $this->usesPracticeRecommendation(
+            $type,
+            $state,
+            $presentation,
+            $recommendation,
+        );
+
+        if ($usesRecommendation) {
+            $surfaces[] = $this->registry->surface(
+                'study_recommendation',
+                $recommendation ?? [],
+            );
+        }
+
         if ($hasScope && $presentation) {
             $surfaces[] = $this->registry->surface('readiness', [
                 'presentation' => $presentation,
@@ -78,10 +93,12 @@ final class StudyWorkspaceSurfacePolicy
             $navigationTask,
             $canEdit,
         );
-        $surfaces[] = $this->registry->surface(
-            'current_action',
-            $primaryAction,
-        );
+        if (! $usesRecommendation) {
+            $surfaces[] = $this->registry->surface(
+                'current_action',
+                $primaryAction,
+            );
+        }
 
         if (! empty($state['weaknesses'])) {
             $surfaces[] = $this->registry->surface('weaknesses', [
@@ -117,8 +134,57 @@ final class StudyWorkspaceSurfacePolicy
         return [
             'surfaces' => $surfaces,
             'blocks_execution' => (bool) ($context['blocks_execution'] ?? false),
+            'uses_study_recommendation' => $usesRecommendation,
             'primary_action' => $primaryAction,
         ];
+    }
+
+    /**
+     * @param array<string,mixed> $state
+     * @param array<string,mixed>|null $recommendation
+     */
+    private function usesPracticeRecommendation(
+        string $type,
+        array $state,
+        ?PlanIntelligencePresentation $presentation,
+        ?array $recommendation,
+    ): bool {
+        if (! is_array($recommendation) || $recommendation === []) {
+            return false;
+        }
+
+        if (! in_array(
+            $type,
+            [
+                'certification_exam',
+                'score_exam',
+                'general_learning',
+                'school_test',
+            ],
+            true,
+        )) {
+            return false;
+        }
+
+        $hasScope = (bool) ($state['has_confirmed_scope'] ?? false);
+
+        if ($type === 'school_test' && ! $hasScope) {
+            return false;
+        }
+
+        if ((bool) ($recommendation['resume'] ?? false)) {
+            return true;
+        }
+
+        if ($hasScope && $presentation) {
+            return (string) data_get(
+                $presentation->action->metadata,
+                'route_kind',
+                '',
+            ) === 'study_practice';
+        }
+
+        return true;
     }
 
     /**
