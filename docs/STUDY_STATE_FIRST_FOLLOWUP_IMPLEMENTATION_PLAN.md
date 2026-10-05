@@ -149,7 +149,7 @@ Implemented in V56.15:
 
 ## Phase 3 — Score / Baseline Evidence Capture
 
-Status: **implementation in progress as V56.16**
+Status: **implemented in V56.16 branch; pending merge**
 
 Goal:
 
@@ -171,6 +171,20 @@ Requirements:
 - keep Practice accuracy and external score scale separate
 
 V56.16 introduces Plan-level `StudyScoreObservation`, bounded score profiles, actor-scoped State First reads, and a dedicated capture/history UI. Practice `score_percent` remains a separate metric.
+
+Implemented in V56.16:
+
+- Plan-level StudyScoreObservation persistence
+- TOEIC / IELTS / school-test bounded profiles
+- generic unbounded score profile without invented normalization
+- source + observed-date preservation
+- optional bounded component scores
+- actor-scoped current score State
+- Score Exam Current / Target / Gap / Practice Accuracy separation
+- score-exam Missing Context routes to real score capture instead of treating Practice accuracy as exam score
+- school-test target score parsing
+- idempotent request UUID capture
+- validation run 37321581982
 
 ## Phase 4 — Learning Type Confirmation / Override
 
