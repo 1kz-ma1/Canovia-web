@@ -8,6 +8,46 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('intelligence_decision_traces')) {
+            foreach ([
+                'id',
+                'user_id',
+                'plan_id',
+                'intelligence_state_snapshot_id',
+                'domain',
+                'scope_type',
+                'scope_id',
+                'state_reference',
+                'state_fingerprint',
+                'readiness_fingerprint',
+                'readiness_score',
+                'readiness_level',
+                'readiness_confidence',
+                'readiness_components',
+                'readiness_gaps',
+                'readiness_metadata',
+                'decision_reference',
+                'decision_type',
+                'reason_code',
+                'decision_summary',
+                'decision_confidence',
+                'input_fingerprint',
+                'decision_reasons',
+                'decision_metadata',
+                'metadata',
+                'created_at',
+                'updated_at',
+            ] as $column) {
+                if (! Schema::hasColumn('intelligence_decision_traces', $column)) {
+                    throw new RuntimeException(
+                        "Existing intelligence_decision_traces table is incomplete: missing {$column}.",
+                    );
+                }
+            }
+
+            return;
+        }
+
         Schema::create('intelligence_decision_traces', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
