@@ -8,6 +8,30 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('plan_execution_preferences')) {
+            $expectedColumns = [
+                'id',
+                'plan_id',
+                'capability',
+                'provider_key',
+                'user_selected',
+                'created_at',
+                'updated_at',
+            ];
+
+            $existingColumns = Schema::getColumnListing('plan_execution_preferences');
+            $missingColumns = array_values(array_diff($expectedColumns, $existingColumns));
+
+            if ($missingColumns !== []) {
+                throw new RuntimeException(
+                    'Existing plan_execution_preferences table is incomplete: missing '
+                    .implode(', ', $missingColumns).'.',
+                );
+            }
+
+            return;
+        }
+
         Schema::create('plan_execution_preferences', function (Blueprint $table) {
             $table->id();
             $table->foreignId('plan_id')->constrained()->cascadeOnDelete();
