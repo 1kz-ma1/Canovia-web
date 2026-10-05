@@ -11,6 +11,7 @@ use App\Models\PlanArtifact;
 use App\Models\Task;
 use App\Services\BehaviorIdentityService;
 use App\Services\FeatureAccessService;
+use App\Services\GitHubIntegrationReadinessService;
 use App\Services\GitHubRepositoryInspector;
 use App\Services\GitHubRepositoryWriter;
 use App\Services\GitHubWorkflowService;
@@ -18,12 +19,16 @@ use App\Services\PlanActivityService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\TaskEvidenceService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 final class GitHubWorkflowController extends Controller
 {
+    public function __construct(
+        private readonly GitHubIntegrationReadinessService $githubReadiness,
+    ) {}
     public function index(
         Request $request,
         GitHubWorkflowService $workflow,
@@ -35,6 +40,9 @@ final class GitHubWorkflowController extends Controller
         IntelligencePresentationHistoryService $history,
     ) {
         $dashboard = $workflow->dashboard($request);
+        $integrationStatus = $this->githubReadiness->forActor(
+            $request->user(),
+        );
         $selectedPlan = $dashboard['selected_plan'] ?? null;
         $developmentAction = null;
         $developmentFocusTask = null;
@@ -75,17 +83,27 @@ final class GitHubWorkflowController extends Controller
 
         return view('github_workflow.index', [
             ...$dashboard,
-            'can_repository_inspect' => $featureAccess->canUse(
-                $request->user(),
-                FeatureKey::DeveloperGithubEvidence,
+            'can_repository_inspect' => (bool) data_get(
+                $integrationStatus,
+                'evidence.allowed',
+                false,
             ),
-            'can_repository_write' => $featureAccess->canUse(
-                $request->user(),
-                FeatureKey::DeveloperGithubWrite,
+            'can_repository_write' => (bool) data_get(
+                $integrationStatus,
+                'write.allowed',
+                false,
             ),
-            'github_write_configured' => $repositoryWriter->configured(),
-            'github_app_connect_available' => $repositoryWriter->configured()
-                && $repositoryWriter->installUrl() !== null,
+            'github_write_configured' => (bool) data_get(
+                $integrationStatus,
+                'runtime.app_configured',
+                false,
+            ),
+            'github_app_connect_available' => (bool) data_get(
+                $integrationStatus,
+                'runtime.interactive_write_configured',
+                false,
+            ),
+            'github_integration_status' => $integrationStatus,
             'development_action' => $developmentAction,
             'development_focus_task' => $developmentFocusTask,
             'intelligencePresentation' => $intelligencePresentation,
@@ -237,11 +255,19 @@ final class GitHubWorkflowController extends Controller
 
         abort_unless($plan && $artifact->provider === 'github', 404);
         $ownership->authorizeEdit($request, $plan);
-        $featureAccess->authorizeUse(
-            $request->user(),
+        if ($blocked = $this->capabilityRedirect(
+            $request,
+            $featureAccess,
             FeatureKey::DeveloperGithubEvidence,
-            ['plan_id' => (int) $plan->id, 'artifact_id' => (int) $artifact->id],
-        );
+            (int) $plan->id,
+            [
+                'plan_id' => (int) $plan->id,
+                'artifact_id' => (int) $artifact->id,
+            ],
+            'Developer GitHub Evidence',
+        )) {
+            return $blocked;
+        }
 
         $parsed = $workflow->parseUrl((string) $artifact->url);
         abort_unless(($parsed['kind'] ?? null) === 'repository', 404);
@@ -295,11 +321,19 @@ final class GitHubWorkflowController extends Controller
 
         abort_unless($plan && $artifact->provider === 'github', 404);
         $ownership->authorizeEdit($request, $plan);
-        $featureAccess->authorizeUse(
-            $request->user(),
+        if ($blocked = $this->capabilityRedirect(
+            $request,
+            $featureAccess,
             FeatureKey::DeveloperGithubWrite,
-            ['plan_id' => (int) $plan->id, 'artifact_id' => (int) $artifact->id],
-        );
+            (int) $plan->id,
+            [
+                'plan_id' => (int) $plan->id,
+                'artifact_id' => (int) $artifact->id,
+            ],
+            'Developer GitHub Write',
+        )) {
+            return $blocked;
+        }
 
         $parsed = $workflow->parseUrl((string) $artifact->url);
         abort_unless(($parsed['kind'] ?? null) === 'repository', 404);
@@ -395,11 +429,19 @@ final class GitHubWorkflowController extends Controller
         abort_unless($plan && $artifact->provider === 'github', 404);
 
         $ownership->authorizeEdit($request, $plan);
-        $featureAccess->authorizeUse(
-            $request->user(),
+        if ($blocked = $this->capabilityRedirect(
+            $request,
+            $featureAccess,
             FeatureKey::DeveloperGithubWrite,
-            ['plan_id' => (int) $plan->id, 'artifact_id' => (int) $artifact->id],
-        );
+            (int) $plan->id,
+            [
+                'plan_id' => (int) $plan->id,
+                'artifact_id' => (int) $artifact->id,
+            ],
+            'Developer GitHub Write',
+        )) {
+            return $blocked;
+        }
 
         $parsed = $workflow->parseUrl((string) $artifact->url);
         abort_unless(($parsed['kind'] ?? null) === 'repository', 404);
@@ -497,11 +539,19 @@ final class GitHubWorkflowController extends Controller
 
         abort_unless($plan && $artifact->provider === 'github', 404);
         $ownership->authorizeEdit($request, $plan);
-        $featureAccess->authorizeUse(
-            $request->user(),
+        if ($blocked = $this->capabilityRedirect(
+            $request,
+            $featureAccess,
             FeatureKey::DeveloperGithubWrite,
-            ['plan_id' => (int) $plan->id, 'artifact_id' => (int) $artifact->id],
-        );
+            (int) $plan->id,
+            [
+                'plan_id' => (int) $plan->id,
+                'artifact_id' => (int) $artifact->id,
+            ],
+            'Developer GitHub Write',
+        )) {
+            return $blocked;
+        }
 
         $parsed = $workflow->parseUrl((string) $artifact->url);
         abort_unless(($parsed['kind'] ?? null) === 'repository', 404);
@@ -566,11 +616,19 @@ final class GitHubWorkflowController extends Controller
 
         abort_unless($plan && $artifact->provider === 'github', 404);
         $ownership->authorizeEdit($request, $plan);
-        $featureAccess->authorizeUse(
-            $request->user(),
+        if ($blocked = $this->capabilityRedirect(
+            $request,
+            $featureAccess,
             FeatureKey::DeveloperGithubWrite,
-            ['plan_id' => (int) $plan->id, 'artifact_id' => (int) $artifact->id],
-        );
+            (int) $plan->id,
+            [
+                'plan_id' => (int) $plan->id,
+                'artifact_id' => (int) $artifact->id,
+            ],
+            'Developer GitHub Write',
+        )) {
+            return $blocked;
+        }
 
         $parsed = $workflow->parseUrl((string) $artifact->url);
         abort_unless(($parsed['kind'] ?? null) === 'repository', 404);
@@ -721,6 +779,44 @@ final class GitHubWorkflowController extends Controller
         return redirect()
             ->to($this->safeReturnUrl($request, $plan->id))
             ->with('success', 'GitHub項目のCanovia状態を更新しました。');
+    }
+
+    /**
+     * Keep web-form capability denial fail-closed without dropping users onto
+     * an opaque 403 page.
+     *
+     * @param array<string,mixed> $context
+     */
+    private function capabilityRedirect(
+        Request $request,
+        FeatureAccessService $featureAccess,
+        FeatureKey $feature,
+        int $planId,
+        array $context,
+        string $label,
+    ): ?RedirectResponse {
+        $decision = $featureAccess->resolveAccess(
+            $request->user(),
+            $feature,
+            $context,
+        );
+
+        if ($decision->allowed) {
+            return null;
+        }
+
+        return redirect()
+            ->route(
+                'github_workflow.index',
+                ['plan_id' => $planId],
+            )
+            ->with(
+                'status',
+                $this->githubReadiness->deniedMessage(
+                    $decision,
+                    $label,
+                ),
+            );
     }
 
     private function githubInstallStateKey(string $state): string
