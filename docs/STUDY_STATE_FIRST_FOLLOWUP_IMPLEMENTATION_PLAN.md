@@ -36,7 +36,7 @@ Current Learning State
 
 ## Phase 1 — V56.14 Study Recommendation Surface
 
-Status: **implementation in progress**
+Status: **implemented in V56.14 branch; pending merge**
 
 Goal:
 
@@ -76,6 +76,16 @@ stored Session strategy
 The recommendation shown in Workspace and the Strategy used by Study Practice must share the same policy authority.
 
 Do not call provider question generation from Workspace GET.
+
+Implemented in V56.14:
+
+- StudyWorkspaceRecommendationService
+- actor-scoped Attempt history
+- resumable Session strategy authority
+- Study Recommendation Surface
+- exact Strategy bucket/count display
+- practice-oriented Surface Policy replacement of generic Current Action
+- validation run 37316603268
 
 ## Phase 2 — Study Method Recommendation
 
