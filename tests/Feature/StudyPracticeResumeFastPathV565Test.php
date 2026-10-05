@@ -87,7 +87,7 @@ class StudyPracticeResumeFastPathV565Test extends TestCase
 
         $this->actingAs($user)
             ->withSession([
-                'study_practice_freshly_prepared' => true,
+                'study_practice_freshly_prepared_session_id' => $practiceSession->id,
                 "study_practice.{$plan->id}.{$task->id}" => [
                     'title' => 'DNS確認',
                     'questions' => $this->questions(),
