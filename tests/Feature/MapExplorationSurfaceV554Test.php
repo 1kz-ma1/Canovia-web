@@ -35,10 +35,9 @@ class MapExplorationSurfaceV554Test extends TestCase
             ->get(route('home'))
             ->assertOk()
             ->assertSee('data-canovia-surface="home"', false)
-            ->assertSee('data-canovia-surface-nav', false)
+            ->assertDontSee('data-canovia-surface-nav', false)
             ->assertSee('aria-label="Action Home"', false)
-            ->assertSee('>Home<', false)
-            ->assertSee('>Explore<', false)
+            ->assertDontSee('>Explore<', false)
             ->assertDontSee('HOME SURFACE')
             ->assertDontSee('>Classic<', false);
 
