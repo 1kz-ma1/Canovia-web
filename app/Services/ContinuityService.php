@@ -30,17 +30,28 @@ class ContinuityService
      */
     public function homeContext(Collection $plans, string $actorToken): array
     {
-        $dashboardSessions = WorkSession::query()
-            ->where('actor_token', $actorToken)
-            ->where(function ($query) {
-                $query->whereIn('status', ['active', 'paused'])
-                    ->orWhere(function ($pendingQuery) {
-                        $pendingQuery
-                            ->where('needs_plan_update', true)
-                            ->whereIn('status', ['completed', 'interrupted']);
-                    });
-            })
-            ->get();
+        $eligiblePlanIds = $plans
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $dashboardSessions = $eligiblePlanIds === []
+            ? collect()
+            : WorkSession::query()
+                ->whereIn('plan_id', $eligiblePlanIds)
+                ->where('actor_token', $actorToken)
+                ->where(function ($query) {
+                    $query->whereIn('status', ['active', 'paused'])
+                        ->orWhere(function ($pendingQuery) {
+                            $pendingQuery
+                                ->where('needs_plan_update', true)
+                                ->whereIn('status', ['completed', 'interrupted']);
+                        });
+                })
+                ->get();
 
         $latestSession = $this->latestSessionForPlans($plans, $actorToken);
 
