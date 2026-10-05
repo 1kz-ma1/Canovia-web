@@ -2,7 +2,7 @@
     $primary = (array) ($primary ?? data_get($surfaceData ?? [], 'primary', []));
     $signals = (array) ($signals ?? data_get($surfaceData ?? [], 'signals', []));
     $key = (string) ($primary['key'] ?? '');
-    $isPractice = $key === AppServicesStudyActivityPolicyService::QUESTION_PRACTICE;
+    $isPractice = $key === 'question_practice';
 @endphp
 
 <section
