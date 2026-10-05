@@ -179,6 +179,60 @@ class StudyPracticeRoutingV564Test extends TestCase
         ));
     }
 
+    public function test_sql_cooldown_does_not_treat_nosql_as_same_subtopic(): void
+    {
+        [$user, $plan, $task] = $this->scenario('broad');
+        $pack = $this->diversePack(2);
+        $sql = $this->question(
+            $pack,
+            999,
+            'SQL',
+            'データベース',
+            'database-sql-cooldown',
+        );
+
+        $this->attempt($user, $plan, $task, $sql, 'correct', 'none', 'SQL', now()->subHour());
+        $this->attempt($user, $plan, $task, $sql, 'correct', 'none', 'SQL', now());
+
+        $strategy = $this->strategy($plan, $task);
+        $prepared = app(QuestionBankStudyPracticeQuestionProvider::class)->preparePartial(
+            $plan,
+            $task,
+            $this->attempts($plan, $task),
+            $strategy,
+        );
+        $selected = collect($prepared['selected_questions']);
+
+        $this->assertContains('SQL', data_get($strategy, 'routing_policy.cooldown_topics', []));
+        $this->assertFalse($selected->contains(
+            fn (array $item) => (int) $item['question_id'] === (int) $sql->id,
+        ));
+
+        $selectedDatabaseQuestions = $selected
+            ->where('selection_parent_topic', 'データベース');
+        $this->assertNotEmpty($selectedDatabaseQuestions);
+        $this->assertTrue($selectedDatabaseQuestions->every(
+            fn (array $item) => ($item['selection_cooldown_match'] ?? false) === false,
+        ));
+
+        $selectedQuestionIds = $selectedDatabaseQuestions->pluck('question_id');
+        $selectedModels = Question::query()
+            ->whereIn('id', $selectedQuestionIds->all())
+            ->get();
+
+        $this->assertTrue($selectedModels->contains(
+            fn (Question $question) => in_array(
+                'NoSQL',
+                $question->learning_metadata['weakness_targets'] ?? [],
+                true,
+            ) || in_array(
+                'JOIN',
+                $question->learning_metadata['weakness_targets'] ?? [],
+                true,
+            ),
+        ));
+    }
+
     public function test_high_parent_recent_exposure_suppresses_other_subtopics_in_same_parent(): void
     {
         [$user, $plan, $task] = $this->scenario('broad');
