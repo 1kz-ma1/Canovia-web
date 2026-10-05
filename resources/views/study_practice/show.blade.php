@@ -6,8 +6,43 @@
     <div
         class="mx-auto max-w-5xl space-y-5"
         data-study-practice-root
-        data-study-practice-scroll-to="{{ session('study_practice_scroll_to') }}"
+        data-study-practice-scroll-to="{{ $studyPracticeScrollTo ?? session('study_practice_scroll_to') }}"
     >
+        @if ($resumeFastPath ?? false)
+            @php
+                $resumeProviderLabel = match ($currentPracticeSession?->question_provider) {
+                    'question_bank' => 'Canovia Question Bank',
+                    'native_ai' => 'Canovia Native AI',
+                    'hybrid_ai' => 'Canovia Hybrid',
+                    'external_ai' => '外部AI',
+                    default => '既存の演習',
+                };
+            @endphp
+            <section class="page-card border-cyan-300/25 p-5 sm:p-6" data-study-practice-resume-fast-path>
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div class="min-w-0">
+                        <p class="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-300">CONTINUE PRACTICE</p>
+                        <h1 class="mt-2 text-2xl font-black text-slate-50">{{ $exerciseTitle ?: '演習の続きを再開' }}</h1>
+                        <p class="mt-2 text-sm text-slate-400">{{ $plan->displayIcon() }} {{ $plan->title }} / {{ $task->title }}</p>
+                        <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-300">前回の問題セットと保存済みの回答をそのまま復元しました。問題生成や出題方針の再計算は行わず、このSessionの続きから再開します。</p>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <span class="badge badge-slate">{{ (int) data_get($resumeProgress, 'answered', 0) }}/{{ (int) data_get($resumeProgress, 'total', count($questions ?? [])) }}問 回答済み</span>
+                            <span class="badge badge-slate">{{ $resumeProviderLabel }}</span>
+                            @if ($currentPracticeSession)
+                                <span class="badge badge-slate">Session #{{ $currentPracticeSession->id }}</span>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <a href="{{ route('plans.show', $plan) }}" class="btn-secondary">Planへ戻る</a>
+                        <form method="POST" action="{{ route('plans.tasks.study_practice.reset', [$plan, $task]) }}">
+                            @csrf
+                            <button type="submit" class="btn-secondary">新しい演習を作る</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        @else
         <section class="page-card border-cyan-300/20 p-5 sm:p-6">
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div>
@@ -183,6 +218,7 @@
                 @endif
             </div>
         </section>
+        @endif
 
         @if (session('success'))
             <div class="rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.06] px-4 py-3 text-sm text-emerald-100">{{ session('success') }}</div>
@@ -206,6 +242,7 @@
             ];
         @endphp
 
+        @unless ($resumeFastPath ?? false)
         <section class="page-card px-4 py-3 sm:px-5" aria-label="AI演習の進行状況">
             <div class="grid grid-cols-4 gap-2">
                 @foreach ($practiceSteps as $index => $step)
@@ -225,6 +262,7 @@
                 @endforeach
             </div>
         </section>
+        @endunless
 
         @php
             $questionJsonError = $errors->first('questions_json');
@@ -625,12 +663,16 @@
                     </summary>
                     <div class="{{ ($practiceStage ?? 'answering') === 'answering' ? '' : 'mt-4' }}">
                 <div class="flex items-center gap-3">
-                    <span class="grid h-8 w-8 place-items-center rounded-full bg-cyan-300/10 text-sm font-black text-cyan-200">2</span>
+                    <span class="grid h-8 w-8 place-items-center rounded-full bg-cyan-300/10 text-sm font-black text-cyan-200">{{ ($resumeFastPath ?? false) ? '↻' : '2' }}</span>
                     <div>
-                        <h2 class="font-black text-slate-100">{{ $exerciseTitle ?: '演習に回答' }}</h2>
+                        <h2 class="font-black text-slate-100">{{ ($resumeFastPath ?? false) ? '続きから回答' : ($exerciseTitle ?: '演習に回答') }}</h2>
                         <p class="text-xs text-slate-500">
-                            {{ count($questions) }}問。
-                            {{ ($currentPracticeSession?->question_provider ?? '') === 'question_bank' ? '機械採点できる問題はCanoviaがその場で採点します。' : '回答は評価用プロンプトへまとめられます。' }}
+                            @if ($resumeFastPath ?? false)
+                                保存済みの回答を復元しています。未回答の問題からそのまま続けられます。
+                            @else
+                                {{ count($questions) }}問。
+                                {{ ($currentPracticeSession?->question_provider ?? '') === 'question_bank' ? '機械採点できる問題はCanoviaがその場で採点します。' : '回答は評価用プロンプトへまとめられます。' }}
+                            @endif
                         </p>
                     </div>
                 </div>

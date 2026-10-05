@@ -421,6 +421,7 @@ Route::get('/plans/{plan}/tasks/{task}/study-recall/sources/{source}/file', [Stu
 // Freeは外部AIとのJSON handoffを維持し、Premium CoreはNative AIを同じ演習UIへ接続する。
 Route::middleware('feature.access:'.FeatureKey::AiPractice->value)->group(function () {
     Route::get('/plans/{plan}/tasks/{task}/study-practice', [StudyPracticeController::class, 'show'])->name('plans.tasks.study_practice.show');
+    Route::get('/plans/{plan}/tasks/{task}/study-practice/resume', [StudyPracticeController::class, 'resume'])->name('plans.tasks.study_practice.resume');
     Route::post('/plans/{plan}/tasks/{task}/study-practice/prepare', [StudyPracticeController::class, 'prepare'])->name('plans.tasks.study_practice.prepare');
     Route::post('/plans/{plan}/tasks/{task}/study-practice/native/prepare', [StudyPracticeController::class, 'prepareNative'])->name('plans.tasks.study_practice.native.prepare');
     Route::post('/plans/{plan}/tasks/{task}/study-practice/import', [StudyPracticeController::class, 'import'])->name('plans.tasks.study_practice.import');

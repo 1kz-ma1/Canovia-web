@@ -93,7 +93,7 @@ class StudyPracticeResultRecoveryV4073Test extends TestCase
         $this->actingAs($user)
             ->get($show)
             ->assertOk()
-            ->assertSee('ASSESSMENT PREVIEW')
+            ->assertSee('ASSESSMENT / NEXT STEP')
             ->assertSee('88%')
             ->assertSee('CNAMEレコードを確認する')
             ->assertSee('Taskへ反映');
