@@ -30,6 +30,31 @@ class StudyScoreBaselineV5616Test extends TestCase
         ]);
     }
 
+    public function test_score_capture_page_renders_profile_sources_and_form(): void
+    {
+        [$user, $plan] = $this->scenario(
+            'TOEIC 600点を取る',
+            '英語学習',
+            'TOEIC対策',
+        );
+
+        $this->actingAs($user)
+            ->get(route('plans.study_scores.index', $plan))
+            ->assertOk()
+            ->assertSee('SCORE / BASELINE EVIDENCE')
+            ->assertSee('TOEIC')
+            ->assertSee('0〜990')
+            ->assertSee('公式結果')
+            ->assertSee('模試・模擬試験')
+            ->assertSee('name="request_id"', false)
+            ->assertSee('name="components[listening]"', false)
+            ->assertSee('name="components[reading]"', false)
+            ->assertSee(
+                route('plans.study_scores.store', $plan),
+                false,
+            );
+    }
+
     public function test_toeic_score_is_stored_as_external_evidence_and_rendered_separately_from_practice_accuracy(): void
     {
         [$user, $plan, $task] = $this->scenario(
