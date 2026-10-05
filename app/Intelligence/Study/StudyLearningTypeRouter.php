@@ -45,6 +45,7 @@ final class StudyLearningTypeRouter
                 '学校テスト',
                 0.97,
                 ['school_test_keyword'],
+                $this->pointTarget($title.' '.$description),
             );
         }
 
@@ -149,6 +150,29 @@ final class StudyLearningTypeRouter
         }
 
         return false;
+    }
+
+    private function pointTarget(string $text): int|float|null
+    {
+        $text = $this->normalize($text);
+
+        if (
+            preg_match(
+                '/([0-9]{1,3}(?:\.[0-9]+)?)\s*(?:点|%|パーセント)/u',
+                $text,
+                $matches,
+            ) === 1
+        ) {
+            $value = (float) $matches[1];
+
+            if ($value >= 0 && $value <= 100) {
+                return floor($value) === $value
+                    ? (int) $value
+                    : $value;
+            }
+        }
+
+        return null;
     }
 
     private function scoreTarget(string $text): int|float|null
