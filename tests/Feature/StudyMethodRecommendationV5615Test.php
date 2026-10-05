@@ -424,6 +424,48 @@ class StudyMethodRecommendationV5615Test extends TestCase
             ->assertSee(route('plans.resources.index', $plan), false);
     }
 
+    public function test_study_activity_page_uses_same_state_aware_resource_method(): void
+    {
+        [$user, $plan, $task] = $this->scenario(
+            'AP対策',
+            '資格学習',
+            'DNS問題演習',
+        );
+
+        $this->attempt(
+            $user,
+            $plan,
+            $task,
+            55,
+            correctness: 'incorrect',
+            errorType: 'knowledge_gap',
+            topics: ['DNS'],
+            createdAt: now()->subHours(2),
+        );
+        $this->attempt(
+            $user,
+            $plan,
+            $task,
+            60,
+            correctness: 'partial',
+            errorType: 'concept_gap',
+            topics: ['DNS'],
+            createdAt: now()->subHour(),
+        );
+
+        $this->actingAs($user)
+            ->get(route(
+                'plans.tasks.study_activity.show',
+                [$plan, $task],
+            ))
+            ->assertOk()
+            ->assertSee('Resource Study')
+            ->assertSee('教材学習')
+            ->assertSee('knowledge/concept gap')
+            ->assertSee(route('plans.resources.index', $plan), false)
+            ->assertDontSee('✦ AI演習で進める');
+    }
+
     public function test_method_alternatives_are_ranked_and_linked(): void
     {
         [$user, $plan, $task] = $this->scenario(
