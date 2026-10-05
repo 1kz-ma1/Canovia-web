@@ -5153,3 +5153,58 @@ New selection diagnostics remain inside existing JSON:
 No migration and no new required external-AI field are introduced.
 
 Detailed contract: `docs/V56.4_STUDY_ROUTING_MASTERY_COOLDOWN.md`.
+
+## V56.5 Study Practice Resume Fast Path
+
+V56.5 separates new-practice setup from unfinished-practice continuation.
+
+Canonical entry:
+
+```text
+Study Practice link
+→ resumable READY / IN_PROGRESS Session exists?
+  → yes: resume route → restore snapshot → answering
+  → no:  show setup → Strategy / Provider preview → prepare
+```
+
+Resume authority is the existing `StudyPracticeSession`:
+
+- `selection_context.strategy`
+- `question_provider / question_provider_mode`
+- `provider_payload`
+- `questions_snapshot`
+- `draft_answers`
+
+During resume, Canovia does **not** run `StudyPracticeOrchestrator::previewHandoff()`. Therefore reopening a Session cannot recalculate V56.4 phase/routing, choose another provider, or replace the selected questions.
+
+New route:
+
+```text
+GET /plans/{plan}/tasks/{task}/study-practice/resume
+plans.tasks.study_practice.resume
+```
+
+Existing Home / Plan / Workspace links continue targeting the canonical Study Practice entry. The controller automatically branches into resume when durable unfinished answer state exists.
+
+Resume UI intentionally skips:
+
+- Practice Strategy setup card
+- Practice Reliability setup card
+- four-stage "問題準備 → 回答 → AI評価 → 結果" strip
+
+and renders:
+
+```text
+CONTINUE PRACTICE
+→ restored answer count / total
+→ existing Session/provider
+→ questions
+```
+
+The user can explicitly choose `新しい演習を作る`, which reuses the existing reset semantics and marks the unfinished Session `abandoned`.
+
+`answered` / `assessed` Sessions remain on V40.7.3 evaluation/result recovery and do not use the answer-resume fast path.
+
+No database migration.
+
+Detailed contract: `docs/V56.5_STUDY_PRACTICE_RESUME_FAST_PATH.md`.
