@@ -348,11 +348,32 @@ class StudyPracticeStrategyService
         $primary = $active->take(2)->values();
         $secondary = $active->skip(2)->take(3)->values();
 
+        $primaryRatio = max(
+            0.0,
+            min(
+                1.0,
+                (float) config(
+                    'study.practice_routing.focused_remediation.primary_ratio',
+                    0.60,
+                ),
+            ),
+        );
+        $secondaryRatio = max(
+            0.0,
+            min(
+                1.0,
+                (float) config(
+                    'study.practice_routing.focused_remediation.secondary_ratio',
+                    0.20,
+                ),
+            ),
+        );
+
         $primaryCount = $primary->isNotEmpty()
-            ? max(1, (int) round($targetQuestionCount * 0.50))
+            ? max(1, (int) round($targetQuestionCount * $primaryRatio))
             : 0;
         $secondaryCount = $secondary->isNotEmpty()
-            ? max(1, (int) round($targetQuestionCount * 0.30))
+            ? max(1, (int) round($targetQuestionCount * $secondaryRatio))
             : 0;
 
         if (
@@ -418,6 +439,147 @@ class StudyPracticeStrategyService
             'question_mix' => $questionMix,
             'has_confirmed_weakness' => $active->isNotEmpty(),
             'has_any_weakness_signal' => $active->isNotEmpty(),
+        ];
+    }
+
+    /**
+     * Broad routing keeps a small recheck/retention budget and reserves the
+     * majority of the block for cross-domain exploration.
+     *
+     * @param array<string,mixed> $weakness
+     * @param array<string,mixed> $routingPolicy
+     * @return array<string,mixed>
+     */
+    private function broadRoutingWeakness(
+        array $weakness,
+        array $routingPolicy,
+        int $targetQuestionCount,
+        bool $includeWeaknessRecheck,
+    ): array {
+        $minimumExploration = max(
+            0,
+            min(
+                $targetQuestionCount,
+                (int) config(
+                    'study.practice_routing.broad_assessment.minimum_exploration_questions',
+                    6,
+                ),
+            ),
+        );
+        $recheckLimit = max(
+            0,
+            (int) config(
+                'study.practice_routing.broad_assessment.weakness_recheck_questions',
+                2,
+            ),
+        );
+        $retentionLimit = max(
+            0,
+            (int) config(
+                'study.practice_routing.broad_assessment.retention_questions',
+                2,
+            ),
+        );
+
+        $primary = $includeWeaknessRecheck
+            ? collect($routingPolicy['broad_recheck_topics'] ?? [])
+                ->filter(fn ($topic) => is_string($topic) && trim($topic) !== '')
+                ->map(fn ($topic) => trim((string) $topic))
+                ->unique()
+                ->take($recheckLimit)
+                ->values()
+            : collect();
+
+        $secondary = collect($routingPolicy['retention_due_topics'] ?? [])
+            ->filter(fn ($topic) => is_string($topic) && trim($topic) !== '')
+            ->map(fn ($topic) => trim((string) $topic))
+            ->reject(fn (string $topic) => $primary->contains($topic))
+            ->unique()
+            ->take($retentionLimit)
+            ->values();
+
+        $availableNonExploration = max(
+            0,
+            $targetQuestionCount - $minimumExploration,
+        );
+        $primaryCount = $primary->isNotEmpty()
+            ? min($recheckLimit, $availableNonExploration)
+            : 0;
+        $remainingNonExploration = max(
+            0,
+            $availableNonExploration - $primaryCount,
+        );
+        $secondaryCount = $secondary->isNotEmpty()
+            ? min($retentionLimit, $remainingNonExploration)
+            : 0;
+
+        $questionMix = [
+            'primary' => $primaryCount,
+            'secondary' => $secondaryCount,
+            'diagnostic' => max(
+                $minimumExploration,
+                $targetQuestionCount - $primaryCount - $secondaryCount,
+            ),
+        ];
+
+        // Keep exact target size if the configured exploration minimum is
+        // larger than the remaining seats after clamping.
+        $questionMix['diagnostic'] = max(
+            0,
+            $targetQuestionCount
+                - $questionMix['primary']
+                - $questionMix['secondary'],
+        );
+
+        $primaryKeys = $primary
+            ->map(fn ($topic) => $this->topicKey((string) $topic))
+            ->flip();
+        $secondaryKeys = $secondary
+            ->map(fn ($topic) => $this->topicKey((string) $topic))
+            ->flip();
+        $cooldownKeys = collect($routingPolicy['cooldown_topics'] ?? [])
+            ->filter()
+            ->map(fn ($topic) => $this->topicKey((string) $topic))
+            ->flip();
+
+        $ranked = collect($weakness['ranked'] ?? [])
+            ->filter(fn ($item) => is_array($item))
+            ->map(function (array $item) use (
+                $primaryKeys,
+                $secondaryKeys,
+                $cooldownKeys,
+            ) {
+                $key = $this->topicKey((string) ($item['topic'] ?? ''));
+
+                $item['tier'] = match (true) {
+                    isset($primaryKeys[$key]) => 'primary',
+                    isset($secondaryKeys[$key]) => 'secondary',
+                    isset($cooldownKeys[$key]) => 'resolved',
+                    default => 'monitor',
+                };
+
+                return $item;
+            })
+            ->values()
+            ->all();
+
+        return [
+            ...$weakness,
+            'ranked' => $ranked,
+            'primary_topics' => $primary->all(),
+            'secondary_topics' => $secondary->all(),
+            'monitor_topics' => collect($weakness['monitor_topics'] ?? [])
+                ->filter()
+                ->reject(fn ($topic) =>
+                    $primary->contains($topic)
+                    || $secondary->contains($topic)
+                )
+                ->values()
+                ->all(),
+            'question_mix' => $questionMix,
+            'has_confirmed_weakness' => $primary->isNotEmpty(),
+            'has_any_weakness_signal' =>
+                $primary->isNotEmpty() || $secondary->isNotEmpty(),
         ];
     }
 
