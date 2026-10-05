@@ -172,6 +172,10 @@ final class StudyWorkspaceSurfacePolicy
             return false;
         }
 
+        if ((bool) ($recommendation['resume'] ?? false)) {
+            return true;
+        }
+
         if ($hasScope && $presentation) {
             return (string) data_get(
                 $presentation->action->metadata,
