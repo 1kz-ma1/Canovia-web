@@ -45,10 +45,15 @@ class StudyActivityController extends Controller
 
         $adaptive = $studyActions->evaluate($plan);
         $learningType = $learningTypes->route($plan);
-        $resolvedState = $stateResolver->resolve($plan, $adaptive);
         $actorToken = $request->user()
             ? null
             : $identity->resolve($request);
+        $resolvedState = $stateResolver->resolve(
+            $plan,
+            $adaptive,
+            $request->user()?->id,
+            $actorToken,
+        );
         $practiceRecommendation = $practiceRecommendations->recommend(
             $plan,
             $task,
