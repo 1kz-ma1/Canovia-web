@@ -35,7 +35,7 @@ final class StudyTopicTaxonomyService
                     continue;
                 }
 
-                if ($normalized === $alias || str_contains($normalized, $alias)) {
+                if ($this->matchesAlias($normalized, $alias)) {
                     return (string) $parent;
                 }
             }
@@ -112,6 +112,24 @@ final class StudyTopicTaxonomyService
         $aliases = config('study.practice_routing.parent_topic_aliases', []);
 
         return is_array($aliases) ? $aliases : [];
+    }
+
+    private function matchesAlias(string $value, string $alias): bool
+    {
+        if ($value === $alias) {
+            return true;
+        }
+
+        // Short ASCII abbreviations such as IP / OS / AI must not match
+        // arbitrary substrings (e.g. "script"). Longer terms and Japanese
+        // labels can safely use phrase containment.
+        if (preg_match('/^[a-z0-9.+#-]{1,4}$/', $alias) === 1) {
+            $pattern = '/(^|[^a-z0-9])'.preg_quote($alias, '/').'([^a-z0-9]|$)/u';
+
+            return preg_match($pattern, $value) === 1;
+        }
+
+        return str_contains($value, $alias);
     }
 
     private function normalize(string $value): string
