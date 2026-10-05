@@ -75,16 +75,34 @@ class StudyPracticeController extends Controller
                 ->whereKey((int) $state['practice_session_id'])
                 ->first()
             : null;
+        $resumeMode = $request->boolean('resume');
 
-        // Recover unfinished practice from durable StudyPracticeSession state.
+        // Answering resume is a distinct fast path. Do not make the learner
+        // traverse the new-practice setup flow or recalculate selection.
+        if (! $resumeMode) {
+            $resumableSession = $this->resumablePracticeSession(
+                $request,
+                $plan,
+                $task,
+                $actorToken,
+                $currentPracticeSession,
+            );
+
+            if ($resumableSession) {
+                return redirect()->route(
+                    'plans.tasks.study_practice.resume',
+                    [$plan, $task],
+                );
+            }
+        }
+
+        // Recover handoff/result stages from durable StudyPracticeSession state.
         // V40.7.1 covered answer drafts; V40.7.3 also restores the handoff/result
         // stages so a duplicate/reloaded GET cannot make a successful assessment
         // look as if "nothing happened".
         if (! $currentPracticeSession && empty($state['questions'])) {
             $currentPracticeSession = $this->practiceSessionQuery($request, $plan, $task, $actorToken)
                 ->whereIn('status', [
-                    StudyPracticeSession::STATUS_READY,
-                    StudyPracticeSession::STATUS_IN_PROGRESS,
                     StudyPracticeSession::STATUS_ANSWERED,
                     StudyPracticeSession::STATUS_ASSESSED,
                 ])
@@ -186,15 +204,44 @@ class StudyPracticeController extends Controller
         $nativeAiAvailable = $nativeAiEntitled && $nativeAi->isConfigured();
         $nativeAiCapacity = $aiCapacity->policyFor($request->user());
 
-        $orchestration = $orchestrator->previewHandoff(
-            $plan,
-            $task,
-            $recentAttempts,
-            $questionPackAllowed ? null : 'external_ai',
-        );
-        $practiceStrategy = $currentPracticeSession
-            ? (array) data_get($currentPracticeSession->selection_context, 'strategy', $orchestration['strategy'])
-            : $orchestration['strategy'];
+        $resumeFastPath = $resumeMode
+            && $currentPracticeSession
+            && in_array($currentPracticeSession->status, [
+                StudyPracticeSession::STATUS_READY,
+                StudyPracticeSession::STATUS_IN_PROGRESS,
+            ], true)
+            && $this->hasQuestionSnapshot($currentPracticeSession);
+
+        // New-practice setup owns orchestration preview. Existing Sessions own
+        // their already-selected strategy/provider and must not be re-routed.
+        $orchestration = $currentPracticeSession
+            ? null
+            : $orchestrator->previewHandoff(
+                $plan,
+                $task,
+                $recentAttempts,
+                $questionPackAllowed ? null : 'external_ai',
+            );
+
+        $storedStrategy = $currentPracticeSession
+            ? data_get($currentPracticeSession->selection_context, 'strategy')
+            : null;
+        $practiceStrategy = is_array($storedStrategy) && $storedStrategy !== []
+            ? $storedStrategy
+            : (
+                $currentPracticeSession
+                    ? [
+                        'key' => $currentPracticeSession->strategy ?: 'existing_practice',
+                        'label' => '既存の演習',
+                        'reason' => 'このSessionで確定済みの問題セットを続けます。',
+                        'target_question_count' => count($currentPracticeSession->questions_snapshot ?? []),
+                        'learning_phase' => [],
+                        'focus_topics' => [],
+                        'question_mix' => [],
+                        'weakness_priority' => [],
+                    ]
+                    : (array) ($orchestration['strategy'] ?? [])
+            );
         $studyProgression = $progressionService->resolve(
             $plan,
             $task,
@@ -206,9 +253,9 @@ class StudyPracticeController extends Controller
                 'provider' => $currentPracticeSession->question_provider,
                 'mode' => $currentPracticeSession->question_provider_mode,
             ]
-            : $orchestration['provider'];
+            : (array) ($orchestration['provider'] ?? []);
         $generationPrompt = $currentPracticeSession
-            ? (string) data_get($currentPracticeSession->provider_payload, 'generation_prompt', data_get($orchestration, 'provider.payload.generation_prompt', ''))
+            ? (string) data_get($currentPracticeSession->provider_payload, 'generation_prompt', '')
             : (string) data_get($orchestration, 'provider.payload.generation_prompt', '');
         $studyActivity = $studyActivityPolicy->forPlanTask($plan, $task);
         $practiceReliability = $reliabilityService->evaluate(
@@ -220,6 +267,9 @@ class StudyPracticeController extends Controller
         $prepareRequestId = old('prepare_request_id')
             ?: ($currentPracticeSession?->prepare_request_id ?? (string) Str::uuid());
         $draftAnswers = $this->draftAnswersForView($state, $currentPracticeSession);
+        $resumeProgress = $resumeFastPath
+            ? $this->resumeProgress($state['questions'] ?? [], $draftAnswers)
+            : null;
         $assessmentForView = is_array($state['assessment'] ?? null) ? $state['assessment'] : null;
 
         if ($assessmentForView && ! is_array($assessmentForView['next_step'] ?? null)) {
@@ -263,7 +313,71 @@ class StudyPracticeController extends Controller
             'nativeAiAvailable' => $nativeAiAvailable,
             'nativeAiConfigured' => $nativeAi->isConfigured(),
             'nativeAiCapacity' => $nativeAiCapacity,
+            'resumeFastPath' => $resumeFastPath,
+            'resumeProgress' => $resumeProgress,
+            'studyPracticeScrollTo' => $resumeFastPath
+                ? 'practice-questions'
+                : session('study_practice_scroll_to'),
         ]);
+    }
+
+    public function resume(
+        Request $request,
+        Plan $plan,
+        Task $task,
+        PlanOwnershipService $ownership,
+        BehaviorIdentityService $identity,
+    ) {
+        $this->authorizeTask($request, $plan, $task, $ownership);
+        $this->authorizeStudyPlan($plan);
+
+        $actorToken = $identity->resolve($request);
+        $practiceSession = $this->resumablePracticeSession(
+            $request,
+            $plan,
+            $task,
+            $actorToken,
+        );
+
+        if (! $practiceSession || ! $this->hasQuestionSnapshot($practiceSession)) {
+            return redirect()
+                ->route('plans.tasks.study_practice.show', [$plan, $task])
+                ->with('status', '再開できる途中の演習はありません。新しい演習を準備できます。');
+        }
+
+        $questions = $practiceSession->questions_snapshot;
+        $draftAnswers = is_array($practiceSession->draft_answers)
+            ? $practiceSession->draft_answers
+            : [];
+        $existingState = $request->session()->get(
+            $this->sessionKey($plan, $task),
+            [],
+        );
+
+        $request->session()->put($this->sessionKey($plan, $task), [
+            'title' => $practiceSession->exercise_title ?: 'AI演習',
+            'questions' => $questions,
+            'answers' => $this->answersFromDraft($questions, $draftAnswers),
+            'draft_answers' => $draftAnswers,
+            'evaluation_prompt' => null,
+            'assessment' => null,
+            'attempt_id' => null,
+            'attempt_token' => (
+                (int) ($existingState['practice_session_id'] ?? 0)
+                    === (int) $practiceSession->id
+                && filled($existingState['attempt_token'] ?? null)
+            )
+                ? (string) $existingState['attempt_token']
+                : (string) Str::uuid(),
+            'practice_session_id' => $practiceSession->id,
+        ]);
+
+        return redirect()
+            ->route('plans.tasks.study_practice.show', [
+                $plan,
+                $task,
+                'resume' => 1,
+            ]);
     }
 
     public function prepare(
@@ -1231,6 +1345,90 @@ class StudyPracticeController extends Controller
             ->with('status', $continuing
                 ? '前回の結果を引き継いで、次の演習を準備します。'
                 : 'この演習をリセットしました。');
+    }
+
+    private function resumablePracticeSession(
+        Request $request,
+        Plan $plan,
+        Task $task,
+        string $actorToken,
+        ?StudyPracticeSession $current = null,
+    ): ?StudyPracticeSession {
+        if (
+            $current
+            && in_array($current->status, [
+                StudyPracticeSession::STATUS_READY,
+                StudyPracticeSession::STATUS_IN_PROGRESS,
+            ], true)
+            && $this->hasQuestionSnapshot($current)
+        ) {
+            return $current;
+        }
+
+        return $this->practiceSessionQuery(
+            $request,
+            $plan,
+            $task,
+            $actorToken,
+        )
+            ->whereIn('status', [
+                StudyPracticeSession::STATUS_READY,
+                StudyPracticeSession::STATUS_IN_PROGRESS,
+            ])
+            ->whereNotNull('questions_snapshot')
+            ->latest('updated_at')
+            ->latest('id')
+            ->get()
+            ->first(fn (StudyPracticeSession $session) =>
+                $this->hasQuestionSnapshot($session)
+            );
+    }
+
+    private function hasQuestionSnapshot(
+        StudyPracticeSession $practiceSession,
+    ): bool {
+        return is_array($practiceSession->questions_snapshot)
+            && $practiceSession->questions_snapshot !== [];
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $questions
+     * @param array<string,array<string,mixed>> $draftAnswers
+     * @return array{answered:int,total:int}
+     */
+    private function resumeProgress(
+        array $questions,
+        array $draftAnswers,
+    ): array {
+        $answered = collect($questions)
+            ->filter(fn ($question) => is_array($question))
+            ->filter(function (array $question) use ($draftAnswers) {
+                $questionId = trim((string) ($question['id'] ?? ''));
+                if ($questionId === '') {
+                    return false;
+                }
+
+                $fields = is_array($draftAnswers[$questionId] ?? null)
+                    ? $draftAnswers[$questionId]
+                    : [];
+
+                foreach ($fields as $value) {
+                    if (is_array($value) && $value !== []) {
+                        return true;
+                    }
+                    if (is_scalar($value) && trim((string) $value) !== '') {
+                        return true;
+                    }
+                }
+
+                return false;
+            })
+            ->count();
+
+        return [
+            'answered' => $answered,
+            'total' => count($questions),
+        ];
     }
 
     private function authorizeStudyPlan(Plan $plan): void
