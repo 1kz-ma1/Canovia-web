@@ -1,0 +1,48 @@
+name: V56.18 Study Scenario Lab Validation
+
+on:
+  push:
+    branches:
+      - feature/v56-18-study-scenario-lab
+
+jobs:
+  study-scenario-lab:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Models/StudyScenarioFixture.php
+          php -l app/Services/StudyScenarioLabService.php
+          php -l app/Http/Controllers/AdminStudyScenarioLabController.php
+          php -l app/Http/Controllers/AdminDashboardController.php
+          php -l tests/Feature/StudyScenarioLabV5618Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V56.18 Scenario Lab
+        run: php artisan test tests/Feature/StudyScenarioLabV5618Test.php
+      - name: V56.17 Learning Type
+        run: php artisan test tests/Feature/StudyLearningTypeOverrideV5617Test.php
+      - name: V56.16 Score Baseline
+        run: php artisan test tests/Feature/StudyScoreBaselineV5616Test.php
+      - name: V56.15 Study Method
+        run: php artisan test tests/Feature/StudyMethodRecommendationV5615Test.php
+      - name: V56.14 Recommendation
+        run: php artisan test tests/Feature/StudyRecommendationSurfaceV5614Test.php
+      - name: V56.13 State First
+        run: php artisan test tests/Feature/StudyStateFirstWorkspaceV5613Test.php
+      - name: Study Workspace
+        run: php artisan test tests/Feature/StudyWorkspaceV543Test.php
+      - name: Workspace Mode Persistence
+        run: php artisan test tests/Feature/WorkspaceModePersistenceV542Test.php
