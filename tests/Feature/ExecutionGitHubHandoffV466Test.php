@@ -10,7 +10,9 @@ use App\Models\TaskEvidence;
 use App\Models\User;
 use App\Models\UserProductGrant;
 use App\Services\ExecutionGitHubHandoffService;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -372,6 +374,13 @@ class ExecutionGitHubHandoffV466Test extends TestCase
         string $fileSha,
         bool $failBeforeWrite = false,
     ): void {
+        // Laravel HTTP fakes are registered as stubs. This test intentionally
+        // changes the GitHub state between preview and confirm, so replace the
+        // factory to ensure confirm observes the second authoritative state.
+        Http::swap(new HttpFactory(
+            app(Dispatcher::class),
+        ));
+
         Http::fake(function (HttpRequest $request) use ($currentContent, $fileSha, $failBeforeWrite) {
             $url = $request->url();
             $method = $request->method();
