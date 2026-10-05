@@ -76,10 +76,11 @@ class StudyPracticeController extends Controller
                 ->first()
             : null;
         $resumeMode = $request->boolean('resume');
+        $preparedMode = $request->boolean('prepared');
 
-        // Answering resume is a distinct fast path. Do not make the learner
-        // traverse the new-practice setup flow or recalculate selection.
-        if (! $resumeMode) {
+        // Answering resume is a distinct fast path. A Session that was just
+        // prepared in the immediately preceding request is not a "resume".
+        if (! $resumeMode && ! $preparedMode) {
             $resumableSession = $this->resumablePracticeSession(
                 $request,
                 $plan,
@@ -460,7 +461,11 @@ class StudyPracticeController extends Controller
         ]);
 
         return redirect()
-            ->route('plans.tasks.study_practice.show', [$plan, $task])
+            ->route('plans.tasks.study_practice.show', [
+                $plan,
+                $task,
+                'prepared' => 1,
+            ])
             ->with('success', count($questions).'問をCanovia Question Bankから準備しました。')
             ->with('study_practice_scroll_to', 'practice-questions');
     }
@@ -564,7 +569,11 @@ class StudyPracticeController extends Controller
         };
 
         return redirect()
-            ->route('plans.tasks.study_practice.show', [$plan, $task])
+            ->route('plans.tasks.study_practice.show', [
+                $plan,
+                $task,
+                'prepared' => 1,
+            ])
             ->with('success', $successMessage)
             ->with('study_practice_scroll_to', 'practice-questions');
     }
@@ -654,7 +663,11 @@ class StudyPracticeController extends Controller
         ]);
 
         return redirect()
-            ->route('plans.tasks.study_practice.show', [$plan, $task])
+            ->route('plans.tasks.study_practice.show', [
+                $plan,
+                $task,
+                'prepared' => 1,
+            ])
             ->with('success', count($questions).'問の演習を読み込みました。Canovia上で回答できます。')
             ->with('study_practice_scroll_to', 'practice-questions');
     }
