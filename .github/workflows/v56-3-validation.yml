@@ -1,0 +1,43 @@
+name: V56.3 Question Exposure Rotation Validation
+
+on:
+  push:
+    branches:
+      - feature/v56-3-question-exposure-rotation
+
+jobs:
+  exposure-rotation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/QuestionBankStudyPracticeQuestionProvider.php
+          php -l config/study.php
+          php -l tests/Feature/QuestionExposureRotationV563Test.php
+          php -l tests/Feature/StudyPracticeCalibrationV414Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V56.3 exposure rotation
+        run: php artisan test tests/Feature/QuestionExposureRotationV563Test.php
+      - name: Question Bank regression
+        run: php artisan test tests/Feature/QuestionBankV402Test.php
+      - name: V41.4 selector regression
+        run: php artisan test tests/Feature/StudyPracticeCalibrationV414Test.php
+      - name: V56.2 official pack regression
+        run: php artisan test tests/Feature/IpaOfficialQuestionPackV562Test.php
+      - name: Hybrid regression
+        run: php artisan test tests/Feature/HybridQuestionAssemblyV4182Test.php
+      - name: V56.0 convergence regression
+        run: php artisan test tests/Feature/StudyExamConvergencePolicyV560Test.php
