@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'アカウント | Canovia')
 @section('content')
-<div class="mx-auto max-w-lg">
+<div class="mx-auto max-w-lg space-y-5">
     <section class="page-card p-6 sm:p-8">
         <p class="text-sm font-semibold text-emerald-400">Protected</p>
         <h1 class="mt-2 text-2xl font-bold text-slate-50">{{ $user->name }}</h1>
@@ -9,9 +9,45 @@
         <div class="mt-6 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm leading-6 text-emerald-100">
             計画はアカウントに紐づいています。Cookie削除・別端末・PWA再インストール後も、ログインすれば復元できます。
         </div>
+
+        <div class="mt-5 flex flex-wrap gap-4 text-sm">
+            <a href="{{ route('legal.privacy') }}" class="font-semibold text-sky-300 hover:text-sky-200">プライバシーポリシー</a>
+            <a href="{{ route('legal.support') }}" class="font-semibold text-sky-300 hover:text-sky-200">サポート</a>
+        </div>
+
         <form method="POST" action="{{ route('auth.logout') }}" class="mt-6" data-clear-offline-state>
             @csrf
             <button type="submit" class="btn-secondary w-full">ログアウト</button>
+        </form>
+    </section>
+
+    <section class="page-card border border-rose-400/20 p-6 sm:p-8">
+        <p class="text-xs font-black uppercase tracking-[0.16em] text-rose-300">DELETE ACCOUNT</p>
+        <h2 class="mt-2 text-xl font-bold text-slate-50">アカウントを削除</h2>
+        <p class="mt-3 text-sm leading-7 text-slate-400">
+            本人所有のPlan、Task、学習履歴、AI履歴、Inbox、アップロードファイルなどを削除します。この操作は取り消せません。
+            他のユーザーが所有する共同Planそのものは削除しません。
+        </p>
+
+        <form method="POST" action="{{ route('auth.account.destroy') }}" class="mt-5 space-y-4" data-clear-offline-state>
+            @csrf
+            @method('DELETE')
+
+            <label class="block">
+                <span class="text-sm font-semibold text-slate-300">現在のパスワード</span>
+                <input type="password" name="password" autocomplete="current-password" required class="form-control mt-2">
+                @error('password')<span class="mt-1 block text-xs text-rose-300">{{ $message }}</span>@enderror
+            </label>
+
+            <label class="block">
+                <span class="text-sm font-semibold text-slate-300">確認のためメールアドレスを再入力</span>
+                <input type="email" name="confirmation_email" value="{{ old('confirmation_email') }}" autocomplete="email" required class="form-control mt-2">
+                @error('confirmation_email')<span class="mt-1 block text-xs text-rose-300">{{ $message }}</span>@enderror
+            </label>
+
+            <button type="submit" class="w-full rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm font-bold text-rose-100 hover:bg-rose-500/20">
+                アカウントと本人所有データを削除
+            </button>
         </form>
     </section>
 </div>

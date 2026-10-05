@@ -14,6 +14,11 @@ return [
     // Canonical public origin. Route generation and shared URLs use this URL in production.
     'canonical_url' => rtrim((string) env('CANOVIA_CANONICAL_URL', env('APP_URL', '')), '/'),
 
+    // V56.1 App Store / support metadata. Configure these explicitly in
+    // production before the iOS Soft Launch.
+    'support_email' => trim((string) env('CANOVIA_SUPPORT_EMAIL', '')),
+    'operator_name' => trim((string) env('CANOVIA_OPERATOR_NAME', 'Canovia')),
+
     // Old public hosts that should hand users over to the canonical Canovia origin.
     'legacy_hosts' => array_values(array_filter(array_map(
         static fn (string $host) => trim(strtolower($host)),

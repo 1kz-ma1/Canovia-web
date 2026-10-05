@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\AccountDeletionService;
 use App\Services\GuestPlanClaimService;
 use App\Services\FutureMemoService;
 use App\Services\FirstRunService;
@@ -175,6 +176,46 @@ class AuthController extends Controller
         }
 
         return view('auth.account', ['user' => $request->user()]);
+    }
+
+    public function destroyAccount(
+        Request $request,
+        AccountDeletionService $deletion,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 403);
+
+        $validated = $request->validate([
+            'password' => ['required', 'string'],
+            'confirmation_email' => ['required', 'email'],
+        ]);
+
+        if (! Hash::check((string) $validated['password'], (string) $user->password)) {
+            throw ValidationException::withMessages([
+                'password' => '現在のパスワードが正しくありません。',
+            ]);
+        }
+
+        if (
+            mb_strtolower(trim((string) $validated['confirmation_email']))
+            !== mb_strtolower(trim((string) $user->email))
+        ) {
+            throw ValidationException::withMessages([
+                'confirmation_email' => '確認用メールアドレスが現在のアカウントと一致しません。',
+            ]);
+        }
+
+        $deletion->delete($user);
+
+        // Do not call SessionGuard::logout() after deleting the User because
+        // it can try to rotate the deleted model's remember token.
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        Auth::forgetGuards();
+
+        return redirect()
+            ->route('home')
+            ->with('status', 'Canoviaアカウントと本人所有データを削除しました。');
     }
 
     public function logout(Request $request)
