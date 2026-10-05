@@ -189,7 +189,16 @@
                     <a href="{{ route('home') }}" class="mobile-brand-mark pk-mobile-brand-mark" aria-label="Canovia ホーム"><img src="/brand/logo-mark.svg" alt="" width="32" height="32"></a>
                 @endunless
                 <div class="min-w-0 flex-1">
-                    <p class="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-300">CANOVIA</p>
+                    <div class="flex min-w-0 items-center gap-1.5">
+                        <p class="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-300">CANOVIA</p>
+                        @include('layouts.partials.workspace-mode-bar', [
+                            'workspaceModeRegistry' => $workspaceModeRegistry,
+                            'workspaceModeContext' => $workspaceModeContext,
+                            'workspaceModeDefinition' => $workspaceModeDefinition,
+                            'workspaceModeOptions' => $workspaceModeOptions,
+                            'workspaceModeCompact' => true,
+                        ])
+                    </div>
                     <p class="truncate text-sm font-bold text-slate-50" data-mobile-section-label>{{ $mobileSection }}</p>
                 </div>
                 <button type="button" class="mobile-guide-action" data-guide-open aria-label="Canovia Guideを開く" title="ガイド">
@@ -232,12 +241,6 @@
                     <a href="{{ route('auth.register.form') }}" class="account-state-dot" title="この端末だけに保存中" aria-label="アカウントを作る"></a>
                 @endauth
             </div>
-            @include('layouts.partials.workspace-mode-bar', [
-                'workspaceModeRegistry' => $workspaceModeRegistry,
-                'workspaceModeContext' => $workspaceModeContext,
-                'workspaceModeDefinition' => $workspaceModeDefinition,
-                'workspaceModeOptions' => $workspaceModeOptions,
-            ])
         </header>
     @endunless
 
