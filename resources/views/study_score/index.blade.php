@@ -64,7 +64,7 @@
 
             <form method="POST" action="{{ route('plans.study_scores.store', $plan) }}" class="mt-5 space-y-5" data-mutation-once>
                 @csrf
-                <input type="hidden" name="request_id" value="{{ (string) IlluminateSupportStr::uuid() }}">
+                <input type="hidden" name="request_id" value="{{ $captureRequestId }}">
 
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div>
@@ -98,7 +98,7 @@
                     <div>
                         <label for="source-kind" class="text-xs font-bold text-slate-300">出所</label>
                         <select id="source-kind" name="source_kind" class="input-field mt-2 w-full" required>
-                            @foreach (AppModelsStudyScoreObservation::SOURCES as $key => $label)
+                            @foreach ($scoreSources as $key => $label)
                                 <option value="{{ $key }}" @selected(old('source_kind', 'self_reported') === $key)>{{ $label }}</option>
                             @endforeach
                         </select>
