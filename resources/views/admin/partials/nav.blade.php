@@ -27,6 +27,12 @@
         href="{{ route('admin.goal_pattern_demand.index') }}"
         class="{{ request()->routeIs('admin.goal_pattern_demand.*') ? 'btn-primary' : 'btn-secondary' }} px-3 py-2 text-xs"
     >Goal需要</a>
+    @if (config('canovia.study_scenario_lab_enabled'))
+        <a
+            href="{{ route('admin.study_scenarios.index') }}"
+            class="{{ request()->routeIs('admin.study_scenarios.*') ? 'btn-primary' : 'btn-secondary' }} px-3 py-2 text-xs"
+        >Study Lab</a>
+    @endif
     <a
         href="{{ route('admin.economy.index') }}"
         class="{{ request()->routeIs('admin.economy.*') ? 'btn-primary' : 'btn-secondary' }} px-3 py-2 text-xs"
