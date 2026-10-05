@@ -52,9 +52,13 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('plan_id')->nullable()->constrained()->cascadeOnDelete();
-            $table->foreignId('intelligence_decision_trace_id')
-                ->nullable()
-                ->constrained('intelligence_decision_traces')
+            $table->foreignId('intelligence_decision_trace_id')->nullable();
+            $table->foreign(
+                'intelligence_decision_trace_id',
+                'iap_decision_trace_fk',
+            )
+                ->references('id')
+                ->on('intelligence_decision_traces')
                 ->nullOnDelete();
             $table->foreignId('projected_task_id')
                 ->nullable()

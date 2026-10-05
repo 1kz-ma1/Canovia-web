@@ -35,12 +35,16 @@ jobs:
           php -l database/migrations/2026_10_05_000100_create_plan_execution_preferences_table.php
           php -l database/migrations/2026_10_05_000200_create_execution_activities_table.php
           php -l database/migrations/2026_10_05_000300_create_provider_connections_table.php
+          php -l database/migrations/2026_10_05_000400_reconcile_intelligence_schema_constraints.php
+          php -l tests/Feature/MysqlConstraintRecoveryV5611Test.php
           php -l tests/Feature/ProductionMigrationReconciliationV5610Test.php
           php -l tests/Feature/IntelligenceDecisionTraceMigrationRecoveryV568Test.php
           php -l tests/Feature/RenderStartupMigrationRetryV569Test.php
           sh -n docker/render-start.sh
       - run: php artisan view:cache
       - run: php artisan migrate --force
+      - name: V56.11 MySQL constraint recovery
+        run: php artisan test tests/Feature/MysqlConstraintRecoveryV5611Test.php
       - name: V56.10 production migration reconciliation
         run: php artisan test tests/Feature/ProductionMigrationReconciliationV5610Test.php
       - name: V56.9 Render startup retry
