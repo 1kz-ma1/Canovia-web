@@ -140,11 +140,21 @@
 
     @unless ($focusMode)
         <header class="desktop-app-header sticky top-0 z-50 hidden border-b border-slate-800/90 bg-slate-950/90 backdrop-blur-xl md:block">
-            <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-                <a href="{{ route('home') }}" class="pk-brand-lockup pk-canovia-header-lockup group inline-flex items-center gap-3" aria-label="Canovia ホーム">
-                    <img src="/brand/canovia-wordmark.png" alt="Canovia カノーヴィア" class="pk-canovia-header-wordmark">
-                    <span class="sr-only">Canovia - 未来までの航路を、一緒に。</span>
-                </a>
+            <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-6 py-2.5">
+                <div class="flex min-w-0 items-center gap-2.5">
+                    <a href="{{ route('home') }}" class="pk-brand-lockup pk-canovia-header-lockup group inline-flex min-w-0 items-center gap-3" aria-label="Canovia ホーム">
+                        <img src="/brand/canovia-wordmark.png" alt="Canovia カノーヴィア" class="pk-canovia-header-wordmark">
+                        <span class="sr-only">Canovia - 未来までの航路を、一緒に。</span>
+                    </a>
+
+                    @include('layouts.partials.workspace-mode-bar', [
+                        'workspaceModeRegistry' => $workspaceModeRegistry,
+                        'workspaceModeContext' => $workspaceModeContext,
+                        'workspaceModeDefinition' => $workspaceModeDefinition,
+                        'workspaceModeOptions' => $workspaceModeOptions,
+                        'workspaceModeInline' => true,
+                    ])
+                </div>
 
                 <nav class="pk-desktop-nav flex flex-wrap items-center gap-1 rounded-2xl border border-slate-800 bg-slate-900/75 p-1 text-sm shadow-lg shadow-slate-950/20" aria-label="メインナビゲーション">
                     <a href="{{ route('home') }}" data-canovia-nav-key="desktop-home" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('home') || request()->routeIs('calendar.*') || request()->routeIs('my_plans.*') || request()->routeIs('plans.show') || request()->routeIs('plans.dashboard') || request()->routeIs('plans.edit') || request()->routeIs('tasks.*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6.8 15.7c-1.8 1.7-2.7 3.4-2.5 4.9 1.5.2 3.2-.7 4.9-2.5M14.5 4.2c2.8-.9 5.2-.9 5.3-.8.1.1.1 2.5-.8 5.3-1 3.2-3.5 6.1-7.2 7.8L7.9 12.6c1.7-3.7 4.6-6.2 6.6-8.4Z"/><path d="m9.1 15 4 4M7.4 12.1l-2.7.6-1.5 2.6 4.2.8M14.8 16.3l.8 4.2 2.6-1.5.6-2.7"/><circle cx="15.2" cy="8.8" r="1.6"/></svg><i></i></span><span>ホーム</span></a>
@@ -171,12 +181,6 @@
                     @endauth
                 </div>
             </div>
-            @include('layouts.partials.workspace-mode-bar', [
-                'workspaceModeRegistry' => $workspaceModeRegistry,
-                'workspaceModeContext' => $workspaceModeContext,
-                'workspaceModeDefinition' => $workspaceModeDefinition,
-                'workspaceModeOptions' => $workspaceModeOptions,
-            ])
         </header>
 
         <header class="mobile-app-header md:hidden">
