@@ -6180,3 +6180,37 @@ a coding agent or perform GitHub writes automatically.
 
 Canonical contract:
 `docs/V57.7_PROVIDER_LINKED_TRIAGE.md`.
+
+
+## V57.8 Opt-in Coding Agent Handoff
+
+A Development Implementation Brief can now enter the existing Execution
+Orchestration flow after explicit user confirmation.
+
+```text
+Development Brief
+→ user confirms scope
+→ canonical Execution Request
+→ external Execution Orchestration prompt
+→ user-selected Coding Agent
+```
+
+V57.8 does not start a provider automatically and does not add a second
+Execution / Provider architecture.
+
+The confirmed request uses source type
+`development_implementation_brief`, actor type `external`, and the existing
+Execution Context fingerprint / Dependency / protected-scope rules.
+
+V57.7 provider text remains transient and is not automatically copied into
+session state. Moving from Provider Triage into Coding Agent Handoff rebuilds
+the bounded V57.6 Implementation Brief server-side.
+
+No Task progress, GitHub write, merge or deploy is performed by preparing the
+handoff.
+
+Existing GitHub Return Evidence and future ProviderConnection Activity intake
+remain the return paths.
+
+Canonical contract:
+`docs/V57.8_OPT_IN_CODING_AGENT_HANDOFF.md`.
