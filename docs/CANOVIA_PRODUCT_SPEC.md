@@ -6214,3 +6214,27 @@ remain the return paths.
 
 Canonical contract:
 `docs/V57.8_OPT_IN_CODING_AGENT_HANDOFF.md`.
+
+
+## V57.9 Compact Desktop Header
+
+Desktop no longer dedicates a second sticky row to Workspace switching.
+
+```text
+Canovia + compact Workspace selector
++ primary navigation
++ utilities
+→ one desktop header row
+```
+
+The Workspace selector remains registry-driven and globally available, but its
+desktop trigger/menu are visually compact. Workspace routing, persistence,
+telemetry and Instant Navigation synchronization are unchanged.
+
+Primary navigation and utility spacing are also tightened on desktop only.
+
+Mobile keeps the existing compact touch-first Workspace selector and is not
+redesigned by this phase.
+
+Canonical contract:
+`docs/V57.9_COMPACT_DESKTOP_HEADER.md`.
