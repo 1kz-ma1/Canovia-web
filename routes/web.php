@@ -462,6 +462,8 @@ Route::post('/plans/{plan}/tasks/{task}/study-recall/items', [StudyRecallControl
     ->name('plans.tasks.study_recall.items.store');
 Route::post('/plans/{plan}/tasks/{task}/study-recall/items/{item}/review', [StudyRecallController::class, 'review'])
     ->name('plans.tasks.study_recall.items.review');
+Route::post('/plans/{plan}/tasks/{task}/study-recall/complete', [StudyRecallController::class, 'complete'])
+    ->name('plans.tasks.study_recall.complete');
 Route::delete('/plans/{plan}/tasks/{task}/study-recall/items/{item}', [StudyRecallController::class, 'destroy'])
     ->name('plans.tasks.study_recall.items.destroy');
 Route::post('/plans/{plan}/tasks/{task}/study-recall/candidates/extract', [StudyRecallCandidateController::class, 'extract'])
