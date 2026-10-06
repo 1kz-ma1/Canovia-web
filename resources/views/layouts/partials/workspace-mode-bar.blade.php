@@ -4,6 +4,7 @@
     $workspaceModeDefinition ??= $workspaceModeRegistry->definition($workspaceModeContext->mode);
     $workspaceModeOptions ??= $workspaceModeRegistry->all();
     $workspaceModeCompact ??= false;
+    $workspaceModeInline ??= false;
     $workspaceModePreference ??= app(\App\Services\WorkspaceModePreference::class)->selected(request());
     $workspaceModeContextLabel = match ($workspaceModeContext->source) {
         \App\Enums\WorkspaceModeSource::ManualPreference => '固定中',
@@ -14,12 +15,13 @@
 @endphp
 
 <div
-    class="workspace-mode-bar"
+    class="workspace-mode-bar {{ $workspaceModeCompact ? 'is-compact' : '' }} {{ $workspaceModeInline ? 'is-inline' : '' }}"
     @if ($workspaceModeCompact)
         style="display:inline-flex;min-width:0;border:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;"
     @endif
     data-workspace-mode-bar
     data-workspace-mode-compact="{{ $workspaceModeCompact ? '1' : '0' }}"
+    data-workspace-mode-inline="{{ $workspaceModeInline ? '1' : '0' }}"
     data-current-workspace-mode="{{ $workspaceModeDefinition->mode->value }}"
     data-workspace-mode-source="{{ $workspaceModeContext->source->value }}"
     data-workspace-mode-preference="{{ $workspaceModePreference?->value ?? 'auto' }}"
