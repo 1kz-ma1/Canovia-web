@@ -10,6 +10,9 @@ class StudyActivityPolicyService
     public const QUESTION_PRACTICE = 'question_practice';
     public const RECALL = 'recall';
     public const RESOURCE_STUDY = 'resource_study';
+    public const LISTENING = 'listening';
+    public const DICTATION = 'dictation';
+    public const SHADOWING = 'shadowing';
 
     /**
      * A qualification Plan can contain administrative Tasks (booking, applying,
@@ -64,6 +67,22 @@ class StudyActivityPolicyService
             '学習',
             '勉強',
             '練習',
+            'リスニング',
+            'listening',
+            '聴解',
+            '聞き取り',
+            '聞き取る',
+            '音声を聞く',
+            'ディクテーション',
+            'dictation',
+            '書き取り',
+            '聞き取って書く',
+            '音声を書き取る',
+            'シャドーイング',
+            'shadowing',
+            '音声に続いて',
+            '復唱',
+            '発音練習',
         ]);
     }
 
@@ -87,6 +106,9 @@ class StudyActivityPolicyService
             self::QUESTION_PRACTICE => 58,
             self::RECALL => 35,
             self::RESOURCE_STUDY => 35,
+            self::LISTENING => 20,
+            self::DICTATION => 20,
+            self::SHADOWING => 20,
         ];
 
         $scores[self::QUESTION_PRACTICE] += $this->termScore($context, [
@@ -134,11 +156,58 @@ class StudyActivityPolicyService
             '資料を読む' => 34,
         ]);
 
+        $scores[self::LISTENING] += $this->termScore($context, [
+            'リスニング' => 55,
+            'listening' => 55,
+            '聴解' => 50,
+            '聞き取り' => 45,
+            '聞き取る' => 45,
+            '音声を聞く' => 40,
+            '耳で理解' => 35,
+            '聞く練習' => 32,
+        ]);
+
+        $scores[self::DICTATION] += $this->termScore($context, [
+            'ディクテーション' => 65,
+            'dictation' => 65,
+            '書き取り' => 58,
+            '聞き取って書く' => 65,
+            '音声を書き取る' => 65,
+            '聞こえた英文を書く' => 58,
+        ]);
+
+        $scores[self::SHADOWING] += $this->termScore($context, [
+            'シャドーイング' => 68,
+            'shadowing' => 68,
+            '音声に続いて' => 58,
+            '復唱' => 45,
+            '発音練習' => 40,
+            '音声をまねる' => 48,
+        ]);
+
         // A direct practice intent wins over incidental memorization words such
         // as "暗記問題". Conversely, a pure TOEIC vocabulary Task should not
         // be pulled into AI question generation just because the Plan is a test.
         if ($this->containsAny($context, ['過去問', '模試', '模擬試験', '演習問題', '問題演習'])) {
             $scores[self::QUESTION_PRACTICE] += 25;
+        }
+
+        if ($this->containsAny($context, ['ディクテーション', 'dictation', '聞き取って書く', '音声を書き取る'])) {
+            $scores[self::DICTATION] += 20;
+            $scores[self::QUESTION_PRACTICE] -= 10;
+        }
+
+        if ($this->containsAny($context, ['シャドーイング', 'shadowing', '音声に続いて'])) {
+            $scores[self::SHADOWING] += 20;
+            $scores[self::QUESTION_PRACTICE] -= 10;
+        }
+
+        if (
+            $this->containsAny($context, ['リスニング', 'listening', '聴解', '聞き取り', '音声を聞く'])
+            && ! $this->containsAny($context, ['過去問', '模試', '模擬試験', '演習問題', '問題演習'])
+        ) {
+            $scores[self::LISTENING] += 15;
+            $scores[self::QUESTION_PRACTICE] -= 10;
         }
 
         if (
@@ -176,6 +245,27 @@ class StudyActivityPolicyService
                 'description' => '参考書・教材・解説から知識を入れ、必要な箇所だけ後で演習します。',
                 'action_label' => '教材学習で進める',
             ],
+            self::LISTENING => [
+                'label' => 'Listening',
+                'short_label' => 'リスニング',
+                'icon' => '◌',
+                'description' => '答えや字幕を見る前に音声を聞き、意味と聞き取れない箇所を切り分けます。',
+                'action_label' => 'リスニングで進める',
+            ],
+            self::DICTATION => [
+                'label' => 'Dictation',
+                'short_label' => 'ディクテーション',
+                'icon' => '✎',
+                'description' => '短い音声を書き取り、聞き落とした音・語・境界を教材と比較します。',
+                'action_label' => 'ディクテーションで進める',
+            ],
+            self::SHADOWING => [
+                'label' => 'Shadowing',
+                'short_label' => 'シャドーイング',
+                'icon' => '≈',
+                'description' => '音声の直後を追って発話し、リズム・強勢・音のつながりを反復します。',
+                'action_label' => 'シャドーイングで進める',
+            ],
         ];
 
         $ranked = collect($scores)
@@ -204,6 +294,9 @@ class StudyActivityPolicyService
         return match ($key) {
             self::RECALL => 'このTaskは語彙・用語を「思い出せる状態」にする比重が高いため、問題生成より想起反復を優先します。',
             self::RESOURCE_STUDY => 'このTaskは新しい知識を入れる工程が中心なので、先に教材から理解を作り、その後に必要なら演習する方が合っています。',
+            self::LISTENING => 'このTaskは音声を聞いて意味を取ること自体が中心なので、問題生成よりListening反復を優先します。',
+            self::DICTATION => 'このTaskは聞こえた音を文字へ変換し、聞き落としを特定することが中心なので、Dictationを優先します。',
+            self::SHADOWING => 'このTaskは音声のリズム・強勢・音のつながりを追って再現することが中心なので、Shadowingを優先します。',
             default => 'このTaskは問題を解いて理解・判断を確認する工程が中心なので、Question Practiceが最も合っています。',
         };
     }
