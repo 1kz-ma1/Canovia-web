@@ -25,8 +25,8 @@ class HomeController extends Controller
             return redirect()->route(
                 match ($workspace->mode) {
                     WorkspaceMode::Overview => 'workspace.overview.index',
-                    WorkspaceMode::Study => 'workspace.study.index',
-                    WorkspaceMode::Development => 'workspace.development.index',
+                    WorkspaceMode::Study => 'workspace.study.top',
+                    WorkspaceMode::Development => 'workspace.development.top',
                     WorkspaceMode::Career => 'workspace.career.index',
                 },
             );
