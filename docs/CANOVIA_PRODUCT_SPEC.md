@@ -6924,3 +6924,62 @@ User overrideはLevel 3まで。Level 4 Internal PreviewはSuper Admin専用。
 Level不足時はCareer専用Workspace / Career mutationをserver-sideでも制限し、保存済みCareer preferenceは削除せずOverviewへfallbackする。
 
 V58.20ではPublic LevelのDB管理、percentage rollout、Pricing / Premium / Pro runtime移行、Career UI完成は行わない。
+
+
+## V58.21 Release Gate / Feature Inventory
+
+Early Accessへ向けて、V58.20 Release Level Foundationをread-only Release Gateへ拡張する。
+
+Canonical detail:
+
+- `docs/V58.21_RELEASE_GATE_FEATURE_INVENTORY.md`
+- `docs/CANOVIA_RELEASE_LEVEL_SPEC.md`
+- `docs/CANOVIA_MONETIZATION_SPEC.md`
+
+### Product decision
+
+```text
+L1 Early Access Core
+= Study / Developmentの現在の安定Core
+
+L2 Product Preview
+= Premium / Pro / Dev ProのComing Soon presentation
+= paid capability unlockではない
+
+L3 Beta Expansion
+= selected beta capability / Career Beta
+
+L4 Internal Preview
+= unfinished / mutation / internal-only capability
+```
+
+L2へFeature capabilityを割り当てない。
+特にPremium / Pro / Dev ProはEarly Access時点で購入・利用を解放せず、体験差をPreviewとして見せる。
+
+Developer GitHub WriteはRepository mutationを伴うため、V58.21ではL4 Internal Previewに固定する。
+
+### Release Gate
+
+Adminにread-only Release Gateを追加する。
+
+```text
+admin.release_gate.index
+```
+
+Release Gateは:
+
+- Feature inventory整合
+- Entitlement inventory整合
+- Workspace minimum整合
+- required route存在
+- Levelごとのrequired Feature / Workspace maturity
+
+を自動検証する。
+
+一方、mobile実機、500/403、rollback、copy、telemetry、feedback等はmanual checkとして残し、自動昇格しない。
+
+Initial Early Access targetはL1。
+
+L2はcanonical Product Preview route `product.preview.index` が未実装のため、V58.21時点では意図的にBlockedとする。
+
+この実装だけではPublic Release Levelを変更しない。

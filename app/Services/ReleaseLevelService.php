@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\FeatureKey;
 use App\Enums\ReleaseLevel;
 use App\Enums\WorkspaceMode;
 use App\Models\User;
@@ -130,6 +131,27 @@ final class ReleaseLevelService
         $user->forceFill([
             'release_level_override' => $level?->value,
         ])->save();
+    }
+
+    public function minimumForFeature(
+        FeatureKey $feature,
+    ): ReleaseLevel {
+        return $this->normalizeLevel(
+            config(
+                "release_levels.feature_minimum.{$feature->value}",
+                ReleaseLevel::InternalPreview->value,
+            ),
+            ReleaseLevel::InternalPreview,
+        );
+    }
+
+    public function allowsFeature(
+        FeatureKey $feature,
+        ?User $user = null,
+        ?Request $request = null,
+    ): bool {
+        return $this->levelFor($user, $request)
+            ->isAtLeast($this->minimumForFeature($feature));
     }
 
     public function minimumForWorkspace(
