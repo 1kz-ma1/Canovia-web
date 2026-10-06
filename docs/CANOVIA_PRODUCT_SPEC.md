@@ -6080,3 +6080,41 @@ or AI, persist a context snapshot, create Evidence/associations, or mutate Task
 progress/status/remaining time.
 
 Detailed contract: `docs/V57.4_DEVELOPER_EXECUTION_CONTEXT.md`.
+
+
+## V57.5 GitHub Connection & Private Repository Unification
+
+GitHub App installation becomes the canonical Repository connection path for
+Canovia Developer.
+
+Connection/read and write are separate:
+
+```text
+DeveloperGithubEvidence
+→ connect / verify GitHub App
+→ Repository read
+→ Development Evidence
+
+DeveloperGithubWrite
+→ optional Branch / Commit / Pull Request creation
+```
+
+A Repository is connected when the exact GitHub App installation grants
+Contents and Pull Requests read access. Write readiness is projected
+separately and requires write access to both.
+
+Connected Repository inspection uses an installation access token and supports
+both Public and Private Repositories. The old service-owned
+`GitHubRepositoryInspector` remains public-only and is now only a limited
+fallback preview for unconnected Public Repositories.
+
+Developer Home may start GitHub App connection directly when a Repository root
+already exists. Users never need to make a Private Repository public merely to
+connect it to Canovia.
+
+Write surfaces require both write entitlement and write-ready installation.
+A read-only connected Repository remains valid for Evidence but cannot become
+an Execution GitHub write target.
+
+Detailed contract:
+`docs/V57.5_GITHUB_CONNECTION_PRIVATE_REPOSITORY_UNIFICATION.md`.

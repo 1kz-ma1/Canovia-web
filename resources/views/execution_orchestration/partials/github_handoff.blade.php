@@ -1,8 +1,17 @@
 @php
     $connectedRepositories = collect($githubRepositories ?? [])
-        ->filter(fn ($repository) =>
-            (string) data_get($repository->metadata, 'github_app_connection.status', '') === 'connected'
-        )
+        ->filter(function ($repository) {
+            $connection = is_array(data_get($repository->metadata, 'github_app_connection'))
+                ? data_get($repository->metadata, 'github_app_connection')
+                : [];
+
+            return (string) ($connection['status'] ?? '') === 'connected'
+                && (
+                    array_key_exists('write_ready', $connection)
+                        ? (bool) $connection['write_ready']
+                        : true
+                );
+        })
         ->values();
     $candidate = is_array($githubChangeCandidate ?? null) ? $githubChangeCandidate : null;
     $handoffResult = is_array($githubHandoffResult ?? null) ? $githubHandoffResult : null;
@@ -426,7 +435,7 @@
             <div class="mt-5 rounded-xl border border-dashed border-cyan-300/15 bg-cyan-300/[0.02] p-4">
                 <p class="text-xs font-bold text-cyan-100">このPlanには接続済みRepositoryがありません</p>
                 <p class="mt-1 text-[11px] leading-5 text-slate-500">
-                    GitHub全体像からRepositoryを登録し、「GitHubを接続」を完了してください。OrganizationではOwner承認が必要な場合があります。
+                    GitHub全体像からRepositoryを接続し、Canoviaから変更を送る場合だけwrite権限も有効にしてください。read接続だけでもDeveloper Evidenceは利用できます。
                 </p>
                 <a href="{{ route('github_workflow.index', ['plan_id' => $plan->id]) }}" class="btn-secondary mt-3">Repository接続を確認</a>
             </div>

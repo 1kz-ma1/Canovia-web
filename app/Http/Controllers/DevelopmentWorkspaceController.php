@@ -12,6 +12,7 @@ use App\Models\Plan;
 use App\Models\Task;
 use App\Services\DevelopmentExecutionContextService;
 use App\Services\DevelopmentHomeService;
+use App\Services\GitHubIntegrationReadinessService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanPriorityService;
@@ -30,6 +31,7 @@ final class DevelopmentWorkspaceController extends Controller
         DevelopmentIntelligencePresentationAdapter $presentationAdapter,
         DevelopmentHomeService $developerHome,
         DevelopmentExecutionContextService $executionContext,
+        GitHubIntegrationReadinessService $githubReadiness,
         IntelligencePresentationHistoryService $history,
         IntelligenceStateChangeFeedbackService $stateChanges,
         WorkspaceModeOnboardingService $onboarding,
@@ -63,6 +65,9 @@ final class DevelopmentWorkspaceController extends Controller
                 'developmentAssociationTasks' => collect(),
                 'developmentActiveTasks' => collect(),
                 'developmentExecutionContext' => null,
+                'developmentGithubRepository' => null,
+                'developmentGithubConnection' => null,
+                'developmentGithubIntegrationStatus' => null,
                 'intelligenceStateChange' => null,
                 'modeOnboarding' => $onboarding->build(
                     WorkspaceMode::Development,
@@ -100,6 +105,29 @@ final class DevelopmentWorkspaceController extends Controller
             $contextTaskId,
             $primaryAction,
         );
+        $developmentGithubRepository = $plan->artifacts()
+            ->where('provider', 'github')
+            ->where('artifact_type', 'repository')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+        $developmentGithubIntegrationStatus = $githubReadiness->forActor(
+            $request->user(),
+        );
+        $developmentGithubConnection = $developmentGithubRepository
+            ? $githubReadiness->connectionStatus(
+                $developmentGithubIntegrationStatus,
+                is_array(data_get(
+                    $developmentGithubRepository->metadata,
+                    'github_app_connection',
+                ))
+                    ? data_get(
+                        $developmentGithubRepository->metadata,
+                        'github_app_connection',
+                    )
+                    : [],
+            )
+            : null;
         $canEdit = $ownership->canEdit($request, $plan);
         $completedSteps = ['create_plan'];
 
@@ -122,6 +150,9 @@ final class DevelopmentWorkspaceController extends Controller
             'developmentAssociationTasks' => $home['association_tasks'],
             'developmentActiveTasks' => $home['active_tasks'],
             'developmentExecutionContext' => $developerExecutionContext,
+            'developmentGithubRepository' => $developmentGithubRepository,
+            'developmentGithubConnection' => $developmentGithubConnection,
+            'developmentGithubIntegrationStatus' => $developmentGithubIntegrationStatus,
             'intelligenceStateChange' => $stateChanges->latestForPlan(
                 $plan,
                 IntelligenceDomain::Development,

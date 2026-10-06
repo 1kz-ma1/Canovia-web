@@ -45,7 +45,7 @@ class GitHubRepositoryInspectionV463Test extends TestCase
             ])
             ->assertRedirect(route('github_workflow.index', ['plan_id' => $plan->id]))
             ->assertSessionHasNoErrors()
-            ->assertSessionHas('status', 'GitHubから現在のRepository構造も読み込みました。');
+            ->assertSessionHas('status', 'Public Repository Previewを読み込みました。GitHub App接続後は同じ画面でauthoritative同期へ切り替わります。');
 
         $artifact = PlanArtifact::query()->firstOrFail();
         $snapshot = data_get($artifact->metadata, 'github_repository_snapshot');
@@ -70,7 +70,7 @@ class GitHubRepositoryInspectionV463Test extends TestCase
             ->assertSee('#12 Validationを更新')
             ->assertSee('#31 E2E確認')
             ->assertSee('CI')
-            ->assertSee('GitHubから更新');
+            ->assertSee('Public Preview更新');
 
         Http::assertSentCount(5);
     }
@@ -166,7 +166,7 @@ class GitHubRepositoryInspectionV463Test extends TestCase
             ->assertSessionHasNoErrors()
             ->assertSessionHas(
                 'status',
-                'RepositoryをGitHubから取得できませんでした。公開Repositoryでない場合はGitHub接続が必要です。',
+                'Public PreviewでRepositoryを取得できませんでした。Private Repositoryの場合はGitHub Appを接続してください。',
             );
 
         $artifact = PlanArtifact::query()->firstOrFail();
@@ -204,7 +204,7 @@ class GitHubRepositoryInspectionV463Test extends TestCase
             ->assertSessionHasNoErrors()
             ->assertSessionHas(
                 'status',
-                '現在のGitHub読み込みは公開Repositoryだけに対応しています。Private Repositoryはユーザー別GitHub接続が必要です。',
+                'Private RepositoryはPublic Previewでは読み込めません。GitHub Appを接続するとPrivateのまま同期できます。',
             );
 
         $artifact = PlanArtifact::query()->firstOrFail();

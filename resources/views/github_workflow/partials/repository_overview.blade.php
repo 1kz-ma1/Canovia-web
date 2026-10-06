@@ -27,7 +27,13 @@
     $githubAppConnectAvailable = (bool) ($github_app_connect_available ?? false);
     $appConnection = is_array($overview['app_connection'] ?? null) ? $overview['app_connection'] : [];
     $connectionStatus = (string) ($appConnection['status'] ?? 'not_connected');
+    $connectionReadReady = (bool) ($appConnection['read_ready'] ?? ($connectionStatus === 'connected'));
+    $connectionWriteReady = array_key_exists('write_ready', $appConnection)
+        ? (bool) $appConnection['write_ready']
+        : ($connectionStatus === 'connected');
     $connectionManagementUrl = $appConnection['management_url'] ?? null;
+    $snapshotSource = (string) data_get($snapshot, 'source', '');
+    $isAppSnapshot = $snapshotSource === 'github_app_rest';
     $connectionAccount = trim((string) ($appConnection['account_login'] ?? ''));
     $connectionReadiness = is_array($overview['integration_readiness'] ?? null)
         ? $overview['integration_readiness']
@@ -51,7 +57,7 @@
                     </span>
                     @if ($snapshot)
                         <span class="rounded-full border border-emerald-300/15 bg-emerald-300/[0.035] px-2 py-1 text-[10px] font-bold text-emerald-200">
-                            GitHub snapshot
+                            {{ $isAppSnapshot ? 'GitHub App sync' : 'Public preview' }}
                         </span>
                     @elseif (! $overview['repository_registered'])
                         <span class="rounded-full border border-slate-700 px-2 py-1 text-[10px] text-slate-500">関連URLから認識</span>
@@ -83,7 +89,13 @@
                     <form method="POST" action="{{ route('github_workflow.repository.refresh', $overview['repository_artifact_id']) }}">
                         @csrf
                         <button type="submit" class="btn-primary px-3 py-2 text-xs">
-                            {{ $snapshot ? 'GitHubから更新' : 'GitHubから読み込む' }}
+                            @if ($connectionStatus === 'connected')
+                                Repository同期
+                            @elseif ($snapshot)
+                                Public Preview更新
+                            @else
+                                Public Previewを試す
+                            @endif
                         </button>
                     </form>
                 @endif
@@ -222,13 +234,15 @@
                     <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">GITHUB NOW</p>
                     <h4 class="mt-1 text-sm font-black text-slate-100">Repository URLだけで終わらせない</h4>
                     <p class="mt-2 text-xs leading-6 text-slate-500">
-                        GitHubから読み込むと、Branch・Open PR・Issue・最近のActionsをこの画面へ重ねて表示できます。
+                        GitHub App接続済みならPublic / Privateを問わず同期します。未接続RepositoryはPublicの場合だけ限定Previewできます。
                     </p>
                 </div>
                 @if ($overview['can_edit'] && $canInspectRepository)
                     <form method="POST" action="{{ route('github_workflow.repository.refresh', $overview['repository_artifact_id']) }}">
                         @csrf
-                        <button type="submit" class="btn-primary px-3 py-2 text-xs">GitHubから読み込む</button>
+                        <button type="submit" class="btn-primary px-3 py-2 text-xs">
+                            {{ $connectionStatus === 'connected' ? 'Repository同期' : 'Public Previewを試す' }}
+                        </button>
                     </form>
                 @elseif (! $canInspectRepository)
                     <div class="max-w-md rounded-xl border border-violet-300/15 bg-violet-300/[0.035] px-3 py-2">
@@ -241,42 +255,34 @@
     @endif
 
     @if ($overview['repository_registered'])
-        <section class="border-b border-violet-300/12 bg-violet-300/[0.018] p-5" data-github-review-change>
+        <section class="border-b border-violet-300/12 bg-violet-300/[0.018] p-5" data-github-connection>
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div class="max-w-3xl">
                     <div class="flex flex-wrap items-center gap-2">
-                        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-violet-300">REVIEW-ONLY WRITE</p>
+                        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-violet-300">GITHUB CONNECTION</p>
                         @if ($connectionStatus === 'connected')
-                            <span class="rounded-full border border-emerald-300/15 bg-emerald-300/[0.04] px-2 py-1 text-[10px] font-bold text-emerald-200">GitHub App 接続済み</span>
-                        @elseif (in_array($connectionStatus, ['connecting', 'pending'], true))
-                            <span class="rounded-full border border-amber-300/15 bg-amber-300/[0.04] px-2 py-1 text-[10px] font-bold text-amber-200">接続待ち</span>
-                        @elseif ($connectionStatus === 'permission_update_required')
-                            <span class="rounded-full border border-amber-300/15 bg-amber-300/[0.04] px-2 py-1 text-[10px] font-bold text-amber-200">権限承認待ち</span>
-                        @elseif (in_array($connectionStatus, ['revoked', 'verification_failed'], true))
-                            <span class="rounded-full border border-rose-300/15 bg-rose-300/[0.04] px-2 py-1 text-[10px] font-bold text-rose-200">接続を確認できません</span>
+                            <span class="rounded-full border border-emerald-300/15 bg-emerald-300/[0.04] px-2 py-1 text-[10px] font-bold text-emerald-200">GitHub接続済み</span>
+                        @elseif (in_array($connectionStatus, ['connecting', 'pending', 'permission_update_required', 'revoked', 'verification_failed'], true))
+                            <span class="rounded-full border border-amber-300/15 bg-amber-300/[0.04] px-2 py-1 text-[10px] font-bold text-amber-200">確認が必要</span>
+                        @else
+                            <span class="rounded-full border border-slate-700 px-2 py-1 text-[10px] font-bold text-slate-500">未接続</span>
                         @endif
                     </div>
-                    <div class="mt-2 flex flex-wrap items-center gap-2">
-                        @if ($connectionOwner !== '')
-                            <span class="badge badge-slate">NEXT · {{ $connectionOwner }}</span>
-                        @endif
-                        @if ($connectionReadinessLabel !== '')
-                            <span class="text-[10px] font-bold text-slate-400">{{ $connectionReadinessLabel }}</span>
-                        @endif
-                    </div>
-                    <h4 class="mt-2 text-sm font-black text-slate-100">GitHubを知らなくても、変更をレビューに出す</h4>
+
+                    <h4 class="mt-2 text-sm font-black text-slate-100">RepositoryをGitHub Appで接続</h4>
                     <p class="mt-2 text-xs leading-6 text-slate-500">
-                        Repository管理者がCanovia GitHub Appを一度接続すれば、CanoviaのEditorはここから変更を提出できます。
-                        Canoviaが作業用Branchを作り、1回のCommitとPull Requestを作成します。mainへ直接push・mergeはしません。
+                        GitHubでCanovia Appに許可したRepositoryだけを同期します。Public / Privateで導線は変わりません。
+                        接続だけならread権限で利用でき、PATやGitHubパスワードをCanoviaへ渡す必要はありません。
                     </p>
+
                     @if ($connectionReadinessDetail !== '' && ($connectionReadiness['state'] ?? '') !== 'ready')
-                        <p class="mt-2 rounded-xl border border-white/8 bg-slate-950/25 px-3 py-2 text-[10px] leading-5 text-slate-500">
+                        <p class="mt-3 rounded-xl border border-white/8 bg-slate-950/25 px-3 py-2 text-[10px] leading-5 text-slate-500">
                             {{ $connectionReadinessDetail }}
                         </p>
                     @endif
                 </div>
 
-                @if ($overview['can_edit'] && $canWriteRepository && $githubWriteConfigured)
+                @if ($overview['can_edit'] && $canInspectRepository)
                     <div class="flex flex-wrap gap-2">
                         @if ($connectionStatus !== 'connected' && $githubAppConnectAvailable)
                             <form method="POST" action="{{ route('github_workflow.app.connect', $overview['repository_artifact_id']) }}">
@@ -285,10 +291,12 @@
                             </form>
                         @endif
 
-                        <form method="POST" action="{{ route('github_workflow.app.check', $overview['repository_artifact_id']) }}">
-                            @csrf
-                            <button type="submit" class="btn-secondary px-3 py-2 text-xs">接続状態を確認</button>
-                        </form>
+                        @if ($connectionStatus !== 'not_connected')
+                            <form method="POST" action="{{ route('github_workflow.app.check', $overview['repository_artifact_id']) }}">
+                                @csrf
+                                <button type="submit" class="btn-secondary px-3 py-2 text-xs">接続状態を確認</button>
+                            </form>
+                        @endif
 
                         @if ($connectionManagementUrl)
                             <a href="{{ $connectionManagementUrl }}" target="_blank" rel="noopener noreferrer" class="btn-secondary px-3 py-2 text-xs">
@@ -299,155 +307,140 @@
                 @endif
             </div>
 
-            @if ($connectionStatus === 'connected')
-                <div class="mt-4 rounded-xl border border-emerald-300/12 bg-emerald-300/[0.025] p-3">
-                    <p class="text-xs font-bold text-emerald-100">
-                        このRepositoryはCanovia GitHub Appに接続されています
-                        @if ($connectionAccount !== '')
-                            · {{ $connectionAccount }}
-                        @endif
-                    </p>
-                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
-                        Canovia Editorの依頼はGitHub上ではAppが実行し、誰が依頼したかはCanovia側に別記録します。個人PATやGitHubパスワードの共有は不要です。
-                    </p>
-                </div>
-            @elseif (in_array($connectionStatus, ['connecting', 'pending'], true))
-                <div class="mt-4 rounded-xl border border-amber-300/12 bg-amber-300/[0.025] p-3">
-                    <p class="text-xs font-bold text-amber-100">GitHub側の接続完了を待っています</p>
-                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
-                        Organizationでは、Repository Adminが接続を要求してもOwner承認が必要な場合があります。承認後に「接続状態を確認」を押せば、Canovia側の状態を更新できます。
-                    </p>
-                </div>
-            @elseif ($connectionStatus === 'permission_update_required')
-                <div class="mt-4 rounded-xl border border-amber-300/12 bg-amber-300/[0.025] p-3">
-                    <p class="text-xs font-bold text-amber-100">GitHub Appのwrite権限承認が必要です</p>
-                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
-                        App自体は対象Repositoryで確認できていますが、Contents / Pull Requestsのwrite権限が揃っていません。GitHub側で権限更新を承認してから再確認してください。
-                    </p>
-                </div>
-            @elseif ($connectionStatus === 'revoked')
-                <div class="mt-4 rounded-xl border border-rose-300/12 bg-rose-300/[0.025] p-3">
-                    <p class="text-xs font-bold text-rose-100">以前のGitHub App接続を現在確認できません</p>
-                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
-                        Repository側でAppが削除された、または対象Repositoryへのアクセスが外れた可能性があります。必要なら「GitHubを接続」から再設定してください。
-                    </p>
-                </div>
-            @elseif ($connectionStatus === 'verification_failed')
-                <div class="mt-4 rounded-xl border border-rose-300/12 bg-rose-300/[0.025] p-3">
-                    <p class="text-xs font-bold text-rose-100">GitHubから返された接続情報を検証できませんでした</p>
-                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
-                        Canoviaはcallbackのinstallation IDをそのまま信用せず、対象Repositoryの現在のInstallationと照合します。もう一度Canoviaから接続を開始してください。
-                    </p>
-                </div>
-            @endif
-
             @if (! $overview['can_edit'])
-                <p class="mt-4 text-xs text-slate-500">変更の提出とGitHub接続はCanoviaのEditor以上が行えます。</p>
-            @elseif (! $canWriteRepository)
+                <p class="mt-4 text-xs text-slate-500">GitHub接続の変更はCanoviaのEditor以上が行えます。</p>
+            @elseif (! $canInspectRepository)
                 <div class="mt-4 rounded-xl border border-violet-300/12 bg-violet-300/[0.025] p-3">
-                    <p class="text-xs font-bold text-violet-100">Developer GitHub Writeは現在利用できません</p>
-                    <p class="mt-1 text-[11px] leading-5 text-slate-500">{{ $writeAccessMessage }}</p>
+                    <p class="text-xs font-bold text-violet-100">GitHub接続は現在利用できません</p>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">{{ $evidenceAccessMessage }}</p>
                 </div>
             @elseif (! $githubWriteConfigured)
                 <div class="mt-4 rounded-xl border border-amber-300/12 bg-amber-300/[0.025] p-3">
-                    <p class="text-xs font-bold text-amber-100">Canovia運営側のGitHub App設定がまだありません</p>
+                    <p class="text-xs font-bold text-amber-100">Canovia運営側のGitHub App設定が必要です</p>
                     <p class="mt-1 text-[11px] leading-5 text-slate-500">
-                        App ID / Private KeyはCanovia運営側だけがserver-sideに設定します。一般ユーザーへ秘密鍵やPATを入力させません。
+                        App ID / Private KeyはCanovia運営側だけがserver-sideに保持します。一般ユーザーへ秘密鍵やPATを入力させません。
                     </p>
                 </div>
             @elseif (! $githubAppConnectAvailable && $connectionStatus !== 'connected')
                 <div class="mt-4 rounded-xl border border-amber-300/12 bg-amber-300/[0.025] p-3">
                     <p class="text-xs font-bold text-amber-100">GitHub Appの接続URL設定が必要です</p>
                     <p class="mt-1 text-[11px] leading-5 text-slate-500">
-                        Canovia運営側でGitHub Appのinstall URLを設定すると、ユーザーはこの画面の「GitHubを接続」だけでRepository選択へ進めます。
+                        Canovia運営側でInstall URLを設定すると、ここからRepository選択へ進めます。
                     </p>
                 </div>
-            @elseif ($connectionStatus !== 'connected')
-                <div class="mt-4 rounded-xl border border-dashed border-violet-300/15 bg-violet-300/[0.02] p-4">
-                    <p class="text-xs font-bold text-violet-100">最初にGitHubを接続してください</p>
+            @elseif ($connectionStatus === 'connected')
+                <div class="mt-4 rounded-xl border border-emerald-300/12 bg-emerald-300/[0.025] p-3">
+                    <p class="text-xs font-bold text-emerald-100">
+                        このRepositoryはGitHub Appで同期できます
+                        @if ($connectionAccount !== '')
+                            · {{ $connectionAccount }}
+                        @endif
+                    </p>
                     <p class="mt-1 text-[11px] leading-5 text-slate-500">
-                        GitHubで対象Repositoryを選ぶだけです。OrganizationのポリシーでOwner承認が必要な場合は、その承認が完了するまでCanoviaはwriteを有効にしません。
+                        {{ filled(data_get($remoteRepository, 'visibility'))
+                            ? ucfirst((string) data_get($remoteRepository, 'visibility')).' Repository'
+                            : 'Public / Private Repository' }}
+                        をInstallation scope内でreadします。Webhook / PR / Issue / CommitのEvidenceも同じ接続を使います。
+                    </p>
+                </div>
+            @elseif (in_array($connectionStatus, ['connecting', 'pending'], true))
+                <div class="mt-4 rounded-xl border border-amber-300/12 bg-amber-300/[0.025] p-3">
+                    <p class="text-xs font-bold text-amber-100">GitHub側の接続完了を待っています</p>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                        OrganizationではOwner承認が必要な場合があります。承認後に「接続状態を確認」を押してください。
+                    </p>
+                </div>
+            @elseif ($connectionStatus === 'permission_update_required')
+                <div class="mt-4 rounded-xl border border-amber-300/12 bg-amber-300/[0.025] p-3">
+                    <p class="text-xs font-bold text-amber-100">GitHub Appのread権限を確認してください</p>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                        Contents / Pull Requestsのread権限が必要です。IssuesやActionsは付与された権限の範囲だけ同期します。
+                    </p>
+                </div>
+            @elseif (in_array($connectionStatus, ['revoked', 'verification_failed'], true))
+                <div class="mt-4 rounded-xl border border-rose-300/12 bg-rose-300/[0.025] p-3">
+                    <p class="text-xs font-bold text-rose-100">GitHub接続を再確認してください</p>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                        Installationが削除されたか、対象RepositoryがCanovia Appのscopeから外れた可能性があります。
                     </p>
                 </div>
             @else
-                <details class="mt-4 rounded-2xl border border-white/8 bg-slate-950/35 p-4">
-                    <summary class="cursor-pointer list-none text-sm font-black text-slate-100">＋ 変更をレビューに出す</summary>
+                <div class="mt-4 rounded-xl border border-dashed border-violet-300/15 bg-violet-300/[0.02] p-4">
+                    <p class="text-xs font-bold text-violet-100">GitHub App未接続</p>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                        Private RepositoryをPublicへ変更する必要はありません。「GitHubを接続」から対象Repositoryを許可してください。
+                    </p>
+                </div>
+            @endif
 
-                    <form method="POST" action="{{ route('github_workflow.repository.change', $overview['repository_artifact_id']) }}" class="mt-4 grid gap-3 lg:grid-cols-2">
-                        @csrf
-
-                        <label class="block">
-                            <span class="text-xs font-semibold text-slate-400">変更するファイル</span>
-                            <input
-                                type="text"
-                                name="file_path"
-                                value="{{ old('file_path') }}"
-                                class="form-control mt-2 w-full"
-                                maxlength="240"
-                                placeholder="例: app/Services/ExampleService.php"
-                                required
-                            >
-                            <span class="mt-1 block text-[10px] text-slate-600">既存ファイルは更新、新しいpathなら新規作成します。.github/workflows は対象外です。</span>
-                        </label>
-
-                        <label class="block">
-                            <span class="text-xs font-semibold text-slate-400">レビュー用タイトル</span>
-                            <input
-                                type="text"
-                                name="pull_request_title"
-                                value="{{ old('pull_request_title') }}"
-                                class="form-control mt-2 w-full"
-                                maxlength="240"
-                                placeholder="例: Mapのズーム操作を修正"
-                                required
-                            >
-                        </label>
-
-                        <label class="block lg:col-span-2">
-                            <span class="text-xs font-semibold text-slate-400">ファイルの新しい内容</span>
-                            <textarea
-                                name="file_content"
-                                class="form-control mt-2 min-h-64 w-full font-mono text-xs"
-                                maxlength="200000"
-                                placeholder="このファイルに反映する完全な内容を貼り付けます"
-                                required
-                            >{{ old('file_content') }}</textarea>
-                        </label>
-
-                        <label class="block">
-                            <span class="text-xs font-semibold text-slate-400">変更メモ</span>
-                            <input
-                                type="text"
-                                name="commit_message"
-                                value="{{ old('commit_message') }}"
-                                class="form-control mt-2 w-full"
-                                maxlength="240"
-                                placeholder="例: fix map zoom interaction"
-                                required
-                            >
-                        </label>
-
-                        <label class="block">
-                            <span class="text-xs font-semibold text-slate-400">レビュー説明（任意）</span>
-                            <textarea
-                                name="pull_request_body"
-                                class="form-control mt-2 min-h-24 w-full text-xs"
-                                maxlength="20000"
-                                placeholder="何を変えたか、確認してほしいこと"
-                            >{{ old('pull_request_body') }}</textarea>
-                        </label>
-
-                        <div class="lg:col-span-2 rounded-xl border border-cyan-300/10 bg-cyan-300/[0.02] p-3 text-[11px] leading-5 text-slate-500">
-                            <strong class="text-cyan-100">送信後の流れ:</strong>
-                            Canoviaがdefault branchから <code>canovia/*</code> Branchを作成 → ファイルをCommit → Pull Requestを作成 → Canoviaの「レビュー待ち」へ追加します。
-                            merge・force push・branch削除は行いません。
+            @if ($connectionStatus === 'connected')
+                <div class="mt-5 border-t border-white/8 pt-5" data-github-optional-write>
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">OPTIONAL WRITE</p>
+                            <h4 class="mt-1 text-sm font-black text-slate-100">Canoviaから変更をレビューに出す</h4>
+                            <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                                Read接続とは別機能です。必要な場合だけContents / Pull Requestsのwrite権限を使います。
+                            </p>
                         </div>
+                        @if ($connectionWriteReady)
+                            <span class="badge badge-slate">Write ready</span>
+                        @else
+                            <span class="badge badge-slate">Read only</span>
+                        @endif
+                    </div>
 
-                        <div class="lg:col-span-2">
-                            <button type="submit" class="btn-primary w-full justify-center">変更をレビューに出す</button>
+                    @if (! $canWriteRepository)
+                        <p class="mt-3 text-[11px] leading-5 text-slate-500">
+                            {{ $writeAccessMessage }} GitHubのread同期はそのまま利用できます。
+                        </p>
+                    @elseif (! $connectionWriteReady)
+                        <div class="mt-3 rounded-xl border border-slate-700 bg-slate-950/25 p-3">
+                            <p class="text-xs font-bold text-slate-300">Read接続は完了しています</p>
+                            <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                                CanoviaからPRを作成したい場合だけ、GitHub側でContents / Pull Requestsのwrite権限を追加してください。
+                            </p>
                         </div>
-                    </form>
-                </details>
+                    @else
+                        <details class="mt-3 rounded-2xl border border-white/8 bg-slate-950/35 p-4">
+                            <summary class="cursor-pointer list-none text-sm font-black text-slate-100">＋ 変更をレビューに出す</summary>
+
+                            <form method="POST" action="{{ route('github_workflow.repository.change', $overview['repository_artifact_id']) }}" class="mt-4 grid gap-3 lg:grid-cols-2">
+                                @csrf
+
+                                <label class="block">
+                                    <span class="text-xs font-semibold text-slate-400">変更するファイル</span>
+                                    <input type="text" name="file_path" value="{{ old('file_path') }}" class="form-control mt-2 w-full" maxlength="240" required>
+                                    <span class="mt-1 block text-[10px] text-slate-600">.github/workflows 配下は対象外です。</span>
+                                </label>
+
+                                <label class="block">
+                                    <span class="text-xs font-semibold text-slate-400">レビュー用タイトル</span>
+                                    <input type="text" name="pull_request_title" value="{{ old('pull_request_title') }}" class="form-control mt-2 w-full" maxlength="240" required>
+                                </label>
+
+                                <label class="block lg:col-span-2">
+                                    <span class="text-xs font-semibold text-slate-400">ファイルの新しい内容</span>
+                                    <textarea name="file_content" class="form-control mt-2 min-h-64 w-full font-mono text-xs" maxlength="200000" required>{{ old('file_content') }}</textarea>
+                                </label>
+
+                                <label class="block">
+                                    <span class="text-xs font-semibold text-slate-400">変更メモ</span>
+                                    <input type="text" name="commit_message" value="{{ old('commit_message') }}" class="form-control mt-2 w-full" maxlength="240" required>
+                                </label>
+
+                                <label class="block">
+                                    <span class="text-xs font-semibold text-slate-400">レビュー説明（任意）</span>
+                                    <textarea name="pull_request_body" class="form-control mt-2 min-h-24 w-full text-xs" maxlength="20000">{{ old('pull_request_body') }}</textarea>
+                                </label>
+
+                                <div class="lg:col-span-2">
+                                    <button type="submit" class="btn-primary w-full justify-center">変更をレビューに出す</button>
+                                </div>
+                            </form>
+                        </details>
+                    @endif
+                </div>
             @endif
         </section>
     @endif

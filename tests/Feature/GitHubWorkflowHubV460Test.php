@@ -84,7 +84,7 @@ class GitHubWorkflowHubV460Test extends TestCase
             ->assertSee('data-github-workflow-lane="changes"', false)
             ->assertSee('data-github-workflow-lane="merge"', false)
             ->assertSee('data-github-workflow-lane="done"', false)
-            ->assertSee('RepositoryはGitHubから現在構造を読み取れます')
+            ->assertSee('Developer機能の本流はGitHub App接続です')
             ->assertSee('PR without Canovia state')
             ->assertSee('PR for review');
 

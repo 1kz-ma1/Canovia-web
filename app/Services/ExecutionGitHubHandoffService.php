@@ -63,6 +63,22 @@ final class ExecutionGitHubHandoffService
             ]);
         }
 
+        $connection = is_array(data_get(
+            $repository->metadata,
+            'github_app_connection',
+        ))
+            ? data_get($repository->metadata, 'github_app_connection')
+            : [];
+        $writeReady = array_key_exists('write_ready', $connection)
+            ? (bool) $connection['write_ready']
+            : true;
+
+        if (! $writeReady) {
+            throw ValidationException::withMessages([
+                'repository_artifact_id' => 'このRepositoryはread接続済みですが、Canoviaから変更を送るwrite権限は有効ではありません。',
+            ]);
+        }
+
         $parsed = $this->githubWorkflow->parseUrl((string) $repository->url);
         if (($parsed['kind'] ?? null) !== 'repository' || blank($parsed['repo_full_name'] ?? null)) {
             throw ValidationException::withMessages([

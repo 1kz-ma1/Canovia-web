@@ -66,6 +66,10 @@ final class GitHubIntegrationReadinessService
                 'queue_driver' => $queueDriver,
                 'async_queue_configured' =>
                     $asyncQueueConfigured,
+                'interactive_connect_configured' =>
+                    $appIdConfigured
+                    && $privateKeyConfigured
+                    && $installUrlConfigured,
                 'interactive_write_configured' =>
                     $appIdConfigured
                     && $privateKeyConfigured
@@ -104,9 +108,9 @@ final class GitHubIntegrationReadinessService
         array $readiness,
         array $appConnection,
     ): array {
-        $writeAllowed = (bool) data_get(
+        $evidenceAllowed = (bool) data_get(
             $readiness,
-            'write.allowed',
+            'evidence.allowed',
             false,
         );
         $runtime = (array) data_get(
@@ -118,16 +122,25 @@ final class GitHubIntegrationReadinessService
             $appConnection['status']
             ?? 'not_connected'
         );
+        $permissions = is_array($appConnection['permissions'] ?? null)
+            ? $appConnection['permissions']
+            : [];
+        $writeReady = array_key_exists('write_ready', $appConnection)
+            ? (bool) $appConnection['write_ready']
+            : (
+                ($permissions['contents'] ?? null) === 'write'
+                && ($permissions['pull_requests'] ?? null) === 'write'
+            );
 
-        if (! $writeAllowed) {
+        if (! $evidenceAllowed) {
             return [
                 'state' => 'capability_blocked',
                 'owner' => 'PLAN / ENTITLEMENT',
-                'label' => 'Write利用不可',
+                'label' => 'GitHub接続利用不可',
                 'detail' => (string) data_get(
                     $readiness,
-                    'write.message',
-                    'GitHub Writeを利用できません。',
+                    'evidence.message',
+                    'GitHub接続を利用できません。',
                 ),
             ];
         }
@@ -157,8 +170,10 @@ final class GitHubIntegrationReadinessService
             'connected' => [
                 'state' => 'ready',
                 'owner' => 'READY',
-                'label' => 'Review write準備完了',
-                'detail' => '対象RepositoryへのGitHub App接続とwrite権限が確認されています。',
+                'label' => 'GitHub接続済み',
+                'detail' => $writeReady
+                    ? '対象RepositoryをGitHub App経由でreadでき、必要なwrite権限も確認されています。'
+                    : '対象RepositoryをGitHub App経由でreadできます。Private Repositoryもこの接続経路で利用できます。',
             ],
             'connecting', 'pending' => [
                 'state' => 'github_pending',
@@ -169,8 +184,8 @@ final class GitHubIntegrationReadinessService
             'permission_update_required' => [
                 'state' => 'github_permission',
                 'owner' => 'GITHUB APP',
-                'label' => 'write権限承認待ち',
-                'detail' => 'Contents / Pull Requestsのwrite権限をGitHub側で承認する必要があります。',
+                'label' => 'Read権限確認が必要',
+                'detail' => 'Contents / Pull Requestsのread権限をGitHub側で確認してください。',
             ],
             'revoked', 'verification_failed' => [
                 'state' => 'github_reconnect',
