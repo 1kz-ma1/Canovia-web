@@ -70,6 +70,7 @@ use App\Http\Controllers\ClientPerformanceController;
 use App\Http\Controllers\WorkspaceModeController;
 use App\Http\Controllers\StudyWorkspaceController;
 use App\Http\Controllers\DevelopmentWorkspaceController;
+use App\Http\Controllers\DevelopmentActivityObservationController;
 use App\Http\Controllers\OverviewWorkspaceController;
 use App\Http\Controllers\ExecutionSetupController;
 use App\Http\Controllers\ExecutionValidationProviderController;
@@ -347,6 +348,12 @@ Route::middleware('feature.access:'.FeatureKey::ProjectArtifact->value)->group(f
     Route::post('/github-workflow/artifacts/{artifact}/github-app/check', [GitHubWorkflowController::class, 'checkRepositoryConnection'])
         ->middleware('throttle:6,1')
         ->name('github_workflow.app.check');
+    Route::post('/plans/{plan}/development-observations/{observation}/link', [DevelopmentActivityObservationController::class, 'link'])
+        ->middleware('throttle:30,1')
+        ->name('plans.development_observations.link');
+    Route::post('/plans/{plan}/development-observations/{observation}/ignore', [DevelopmentActivityObservationController::class, 'ignore'])
+        ->middleware('throttle:30,1')
+        ->name('plans.development_observations.ignore');
     Route::post('/plans/{plan}/development-readiness/tasks/{task}/quality-gate', [DevelopmentReadinessController::class, 'confirmQualityGate'])
         ->middleware('throttle:12,1')
         ->name('plans.development_readiness.quality_gate.confirm');
