@@ -2275,7 +2275,7 @@ Mode optionはBladeへ直書きせず、`WorkspaceModeRegistry` をsingle source
 
 Mode切替Entry:
 
-`GET /workspace/{workspaceMode}`
+`GET /workspace/mode/{workspaceMode}`
 
 V54.1では選択を永続化しない。
 
@@ -2343,7 +2343,7 @@ automatic / null    → /  (Action Home)
 
 `?workspace_mode=...` のexplicit context、strong domain route hint、Plan / Task / WorkSession profileは従来どおりmanual preferenceより強い。したがって明示contextを開いたことを理由に保存済みpreferenceは消さない。
 
-Mode Barの通常選択は `POST /workspace/{workspaceMode}/select` で保存し、`DELETE /workspace/preference` でautomaticへ戻す。V54.1の `GET /workspace/{workspaceMode}` はephemeral navigationとして残す。
+Mode Barの通常選択は `POST /workspace/{workspaceMode}/select` で保存し、`DELETE /workspace/preference` でautomaticへ戻す。V54.1の `GET /workspace/mode/{workspaceMode}` はephemeral navigationとして残す。
 
 Mode Barはcurrent Modeとは別にstored preferenceを保持し、表示上は `固定中` / `画面に追従` / `Planに追従` / `自動` を区別する。Instant NavigationでもMode sourceとvisible context labelを同期し、retained headerの表示が古くならないようにする。
 
@@ -6427,3 +6427,34 @@ Study Top remains responsible for multi-Plan selection.
 
 Canonical contract:
 `docs/V58.3_STUDY_WORKSPACE_SURFACES.md`.
+
+## V58.4 Specialized Mode Top Canonical Entry
+
+Study / DeveloperのMode-level entryは、V58.2で導入したMode Topを正規入口とする。
+
+```text
+Workspace Mode select / ephemeral entry / manual preference resume
+→ Study Top / Developer Top
+→ Planを選択・準備
+→ selected Plan Workspace
+```
+
+Study / DeveloperのPlan Workspace deep linkは引き続き直接開ける。Plan作成後、
+Current Action、Study Practice / Recall、DeveloperのPlan-local surfaceなど、
+対象Planが明示された導線をMode Topへ戻す変更は行わない。
+
+generic ephemeral entryはconcrete Workspace routeとの衝突を避けるため:
+
+```text
+GET /workspace/mode/{workspaceMode}
+→ workspace_modes.enter
+```
+
+へ移動した。Overview / Careerの入口契約は従来どおり。
+
+V58.4はrouting-onlyであり、Workspace preference persistence、Study /
+Development Intelligence、AI / GitHub provider traffic、Task / Plan state、
+entitlement / billing behaviorを変更しない。
+
+Canonical contract:
+`docs/V58.4_SPECIALIZED_MODE_TOP_ENTRY.md`.
