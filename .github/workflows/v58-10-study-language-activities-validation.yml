@@ -1,0 +1,48 @@
+name: V58.10 Study Language Activities Validation
+
+on:
+  push:
+    branches:
+      - feature/v58-10-study-language-activities
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Http/Controllers/StudyLanguageActivityController.php
+          php -l app/Services/StudyActivityPolicyService.php
+          php -l app/Intelligence/Study/StudyMethodRecommendationService.php
+          php -l app/Execution/ExecutionCapability.php
+          php -l app/Services/ExecutionCapabilityResolver.php
+          php -l app/Services/ExecutionProviderRegistry.php
+          php -l app/Intelligence/Adapters/TaskEvidenceAdapter.php
+          php -l app/Models/TaskEvidence.php
+          php -l tests/Feature/StudyLanguageActivitiesV5810Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V58.10 dedicated language Activity contract
+        run: php artisan test tests/Feature/StudyLanguageActivitiesV5810Test.php
+      - name: V41.10 Activity Policy regression
+        run: php artisan test tests/Feature/StudyActivityPolicyV4110Test.php
+      - name: V56.15 Study Method Recommendation regression
+        run: php artisan test tests/Feature/StudyMethodRecommendationV5615Test.php
+      - name: V55.6 Execution Ecosystem feature regression
+        run: php artisan test tests/Feature/ExecutionEcosystemFoundationV556Test.php
+      - name: V55.6 Execution Provider registry regression
+        run: php artisan test tests/Unit/ExecutionProviderRegistryV556Test.php
+      - name: V58.6 Recall Task progression regression
+        run: php artisan test tests/Feature/StudyRecallTaskProgressionV586Test.php
