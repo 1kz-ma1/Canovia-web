@@ -6118,3 +6118,30 @@ an Execution GitHub write target.
 
 Detailed contract:
 `docs/V57.5_GITHUB_CONNECTION_PRIVATE_REPOSITORY_UNIFICATION.md`.
+
+
+## V57.6 Context-aware Implementation Brief
+
+Developer Home now converts the canonical Development Adaptive Action and the
+V57.4 Task-scoped Execution Context into a deterministic, copy-ready
+implementation brief.
+
+```text
+Next Action
++ Task-scoped GitHub reality
+→ Implementation / CI / Review / Deploy / Verification brief
+→ HOW TO PROCEED
+→ DONE WHEN
+→ optional copy handoff
+```
+
+The brief is a presentation and handoff layer, not a second decision engine.
+Developer Home GET does not call GitHub or AI to generate it and does not
+persist source code, diff, PR / Issue / Review body, or a new brief record.
+
+Unknown provider facts remain unknown. Task progress, status and remaining time
+are not mutated. GitHub writes still require the existing entitlement,
+installation permission and human-confirmation boundaries.
+
+Canonical contract:
+`docs/V57.6_CONTEXT_AWARE_IMPLEMENTATION_BRIEF.md`.
