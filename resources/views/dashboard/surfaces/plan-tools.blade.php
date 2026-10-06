@@ -7,7 +7,14 @@
         </div>
     </div>
     <div class="mt-4 flex flex-wrap gap-2">
-        @if ($categoryProfile->key === 'career')
+        @if (
+            $categoryProfile->key === 'career'
+            && app(\App\Services\ReleaseLevelService::class)->allowsWorkspace(
+                \App\Enums\WorkspaceMode::Career,
+                auth()->user(),
+                request(),
+            )
+        )
             <a href="{{ route('plans.career.index', $item['plan']) }}" class="btn-primary px-3 py-2 text-xs">◆ Career</a>
         @endif
         @if ($planCanEdit)
