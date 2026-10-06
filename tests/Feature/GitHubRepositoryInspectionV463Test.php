@@ -70,7 +70,7 @@ class GitHubRepositoryInspectionV463Test extends TestCase
             ->assertSee('#12 Validationを更新')
             ->assertSee('#31 E2E確認')
             ->assertSee('CI')
-            ->assertSee('GitHubから更新');
+            ->assertSee('Public Preview更新');
 
         Http::assertSentCount(5);
     }
