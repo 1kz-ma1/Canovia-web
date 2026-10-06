@@ -36,7 +36,15 @@
                         <h2 class="mt-1 text-xl font-black text-slate-50">{{ $primary['icon'] ?? '◉' }} {{ $primary['label'] ?? 'Study Activity' }}</h2>
                         <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-300">{{ $primary['reason'] ?? '' }}</p>
                     </div>
-                    <span class="badge badge-green">適合度 {{ (int) ($primary['fit_score'] ?? 0) }}</span>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="badge badge-green">適合度 {{ (int) ($primary['fit_score'] ?? 0) }}</span>
+                        @if ((int) ($primary['outcome_adjustment'] ?? 0) !== 0)
+                            <span class="badge badge-slate">
+                                実利用補正
+                                {{ ((int) $primary['outcome_adjustment']) > 0 ? '+' : '' }}{{ (int) $primary['outcome_adjustment'] }}
+                            </span>
+                        @endif
+                    </div>
                 </div>
 
                 <div class="mt-4">
@@ -149,12 +157,26 @@
                     <div>
                         <div class="flex items-center justify-between gap-3">
                             <span class="text-sm font-bold text-slate-200">{{ $method['icon'] }} {{ $method['label'] }}</span>
-                            <span class="text-xs text-slate-400">{{ (int) $method['fit_score'] }} / 100</span>
+                            <span class="text-xs text-slate-400">
+                                @if ((int) ($method['outcome_adjustment'] ?? 0) !== 0)
+                                    {{ (int) ($method['base_fit_score'] ?? $method['fit_score']) }}
+                                    → {{ (int) $method['fit_score'] }} / 100
+                                @else
+                                    {{ (int) $method['fit_score'] }} / 100
+                                @endif
+                            </span>
                         </div>
                         <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-800">
                             <div class="h-full rounded-full bg-current text-emerald-300" style="width: {{ max(0, min(100, (int) $method['fit_score'])) }}%"></div>
                         </div>
                         <p class="mt-1 text-[11px] leading-5 text-slate-500">{{ $method['description'] }}</p>
+                        @if ((int) ($method['outcome_adjustment'] ?? 0) !== 0)
+                            <p class="mt-1 text-[10px] leading-4 text-amber-200/75">
+                                実利用補正
+                                {{ ((int) $method['outcome_adjustment']) > 0 ? '+' : '' }}{{ (int) $method['outcome_adjustment'] }}:
+                                {{ $method['outcome_note'] ?? '' }}
+                            </p>
+                        @endif
                     </div>
                 @endforeach
             </div>
@@ -303,7 +325,8 @@
                 @endif
 
                 <p class="mt-3 text-[10px] leading-4 text-slate-600">
-                    この観測値はStudy Method Recommendation、Task進捗、Practice Reliabilityを自動変更しません。
+                    V58.15では、同じ明示Activityの比較が3件以上あり方向が安定した場合だけ、直近最大5件の中央値からStudy Methodのfitへ最大±5点を補助反映します。
+                    因果効果とは扱わず、このSignalだけでPrimary Methodは自動変更しません。Task進捗・Practice Reliabilityも変更しません。
                 </p>
             </div>
         </details>

@@ -26,7 +26,18 @@
                             <p class="text-sm font-black text-slate-100">{{ $method['icon'] ?? '◉' }} {{ $method['short_label'] ?? $method['label'] ?? '学習方法' }}</p>
                             <p class="mt-1 text-xs leading-5 text-slate-500">{{ $method['description'] ?? '' }}</p>
                         </div>
-                        <span class="badge badge-slate">{{ (int) ($method['fit_score'] ?? 0) }}</span>
+                        <div class="flex flex-col items-end gap-1">
+                            <span class="badge badge-slate">{{ (int) ($method['fit_score'] ?? 0) }}</span>
+                            @if ((int) ($method['outcome_adjustment'] ?? 0) !== 0)
+                                <span
+                                    class="text-[10px] font-bold text-amber-200"
+                                    data-study-method-alternative-outcome-adjustment="{{ (int) $method['outcome_adjustment'] }}"
+                                >
+                                    実利用
+                                    {{ ((int) $method['outcome_adjustment']) > 0 ? '+' : '' }}{{ (int) $method['outcome_adjustment'] }}
+                                </span>
+                            @endif
+                        </div>
                     </div>
                     <p class="mt-3 text-xs font-bold text-emerald-200">{{ $method['action_label'] ?? 'この方法を開く' }} →</p>
                 </a>

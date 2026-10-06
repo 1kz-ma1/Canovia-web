@@ -274,7 +274,7 @@ class StudyActivityOutcomeObservationV5812Test extends TestCase
             ->assertSee('73%');
     }
 
-    public function test_activity_observation_does_not_change_method_recommendation_output(): void
+    public function test_single_activity_observation_is_visible_but_does_not_adjust_or_switch_method(): void
     {
         [$user, $plan, $task] = $this->scenario(
             'TOEIC語彙暗記',
@@ -310,10 +310,41 @@ class StudyActivityOutcomeObservationV5812Test extends TestCase
             null,
         );
 
-        $this->assertSame($before, $after);
+        $this->assertSame(
+            data_get($before, 'primary.key'),
+            data_get($after, 'primary.key'),
+        );
+        $this->assertSame(
+            data_get($before, 'primary.fit_score'),
+            data_get($after, 'primary.fit_score'),
+        );
         $this->assertSame(
             'recall',
             data_get($after, 'primary.key'),
+        );
+
+        $listening = collect([
+            $after['primary'],
+            ...$after['alternatives'],
+        ])->firstWhere('key', 'listening');
+
+        $this->assertSame(
+            1,
+            $listening['outcome_observation_count'],
+        );
+        $this->assertSame(
+            'observing',
+            $listening['outcome_signal_status'],
+        );
+        $this->assertSame(
+            0,
+            $listening['outcome_adjustment'],
+        );
+        $this->assertFalse(
+            data_get(
+                $after,
+                'outcome_calibration.primary_switch_allowed',
+            ),
         );
     }
 
