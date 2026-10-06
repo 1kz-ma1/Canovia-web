@@ -44,7 +44,7 @@ final class BootstrapGitHubDevelopmentActivity implements ShouldQueue
     {
         Log::warning('GitHub development activity bootstrap failed.', [
             'repository_artifact_id' => $this->repositoryArtifactId,
-            'exception' => $exception?::class,
+            'exception' => $exception ? $exception::class : null,
             'message' => $exception?->getMessage(),
         ]);
     }
