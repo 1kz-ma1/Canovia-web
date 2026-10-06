@@ -1082,6 +1082,200 @@ final class GitHubRepositoryWriter
     }
 
     /**
+     * Read a bounded Repository snapshot through the installed GitHub App.
+     * This is the authoritative path for both public and private repositories.
+     *
+     * @return array<string,mixed>
+     */
+    public function inspectRepositorySnapshot(string $repoFullName): array
+    {
+        $context = $this->developmentReadContext(
+            $repoFullName,
+            'contents',
+            'Contents',
+        );
+
+        /** @var PendingRequest $client */
+        $client = $context['client'];
+        $permissions = (array) $context['permissions'];
+        $repoPath = (string) $context['repo_path'];
+
+        $repositoryResponse = $client->get('/repos/'.$repoPath);
+        if (! $repositoryResponse->successful()) {
+            throw new RuntimeException('GitHub App経由でRepository情報を取得できませんでした。');
+        }
+
+        $repository = $repositoryResponse->json();
+        if (! is_array($repository)) {
+            throw new RuntimeException('GitHub Repository情報を読み取れませんでした。');
+        }
+
+        $warnings = [];
+
+        $branchesResponse = $client->get('/repos/'.$repoPath.'/branches', [
+            'per_page' => 12,
+        ]);
+
+        $pullsResponse = null;
+        if (in_array(($permissions['pull_requests'] ?? null), ['read', 'write'], true)) {
+            $pullsResponse = $client->get('/repos/'.$repoPath.'/pulls', [
+                'state' => 'open',
+                'sort' => 'updated',
+                'direction' => 'desc',
+                'per_page' => 12,
+            ]);
+        } else {
+            $warnings[] = 'Pull RequestsはGitHub Appのread権限がないため取得していません。';
+        }
+
+        $issuesResponse = null;
+        if (in_array(($permissions['issues'] ?? null), ['read', 'write'], true)) {
+            $issuesResponse = $client->get('/repos/'.$repoPath.'/issues', [
+                'state' => 'open',
+                'sort' => 'updated',
+                'direction' => 'desc',
+                'per_page' => 20,
+            ]);
+        } else {
+            $warnings[] = 'IssuesはGitHub Appのread権限がないため取得していません。';
+        }
+
+        $actionsResponse = null;
+        if (in_array(($permissions['actions'] ?? null), ['read', 'write'], true)) {
+            $actionsResponse = $client->get('/repos/'.$repoPath.'/actions/runs', [
+                'per_page' => 10,
+            ]);
+        } else {
+            $warnings[] = 'ActionsはGitHub Appのread権限がないため取得していません。';
+        }
+
+        if (! $branchesResponse->successful()) {
+            $warnings[] = 'branchesは取得できませんでした。';
+        }
+        if ($pullsResponse && ! $pullsResponse->successful()) {
+            $warnings[] = 'pull requestsは取得できませんでした。';
+        }
+        if ($issuesResponse && ! $issuesResponse->successful()) {
+            $warnings[] = 'issuesは取得できませんでした。';
+        }
+        if ($actionsResponse && ! $actionsResponse->successful()) {
+            $warnings[] = 'actionsは取得できませんでした。';
+        }
+
+        $branches = $branchesResponse->successful()
+            ? collect((array) $branchesResponse->json())
+                ->filter(fn ($item) => is_array($item))
+                ->take(12)
+                ->map(fn (array $item) => [
+                    'name' => mb_substr((string) ($item['name'] ?? ''), 0, 255),
+                    'protected' => (bool) ($item['protected'] ?? false),
+                    'sha' => mb_substr((string) data_get($item, 'commit.sha', ''), 0, 64),
+                ])
+                ->filter(fn (array $item) => $item['name'] !== '')
+                ->values()
+                ->all()
+            : [];
+
+        $pullRequests = $pullsResponse && $pullsResponse->successful()
+            ? collect((array) $pullsResponse->json())
+                ->filter(fn ($item) => is_array($item))
+                ->take(12)
+                ->map(fn (array $item) => [
+                    'number' => (int) ($item['number'] ?? 0),
+                    'title' => mb_substr((string) ($item['title'] ?? ''), 0, 500),
+                    'draft' => (bool) ($item['draft'] ?? false),
+                    'head' => mb_substr((string) data_get($item, 'head.ref', ''), 0, 255),
+                    'base' => mb_substr((string) data_get($item, 'base.ref', ''), 0, 255),
+                    'updated_at' => $this->dateValue($item['updated_at'] ?? null),
+                    'url' => $this->githubUrl($item['html_url'] ?? null),
+                ])
+                ->filter(fn (array $item) => $item['number'] > 0)
+                ->values()
+                ->all()
+            : [];
+
+        $issues = $issuesResponse && $issuesResponse->successful()
+            ? collect((array) $issuesResponse->json())
+                ->filter(fn ($item) =>
+                    is_array($item) && ! array_key_exists('pull_request', $item)
+                )
+                ->take(12)
+                ->map(fn (array $item) => [
+                    'number' => (int) ($item['number'] ?? 0),
+                    'title' => mb_substr((string) ($item['title'] ?? ''), 0, 500),
+                    'updated_at' => $this->dateValue($item['updated_at'] ?? null),
+                    'url' => $this->githubUrl($item['html_url'] ?? null),
+                ])
+                ->filter(fn (array $item) => $item['number'] > 0)
+                ->values()
+                ->all()
+            : [];
+
+        $runData = $actionsResponse && $actionsResponse->successful()
+            ? $actionsResponse->json()
+            : [];
+        $runs = is_array($runData)
+            ? collect($runData['workflow_runs'] ?? [])
+                ->filter(fn ($item) => is_array($item))
+                ->take(10)
+                ->map(fn (array $item) => [
+                    'id' => (int) ($item['id'] ?? 0),
+                    'name' => mb_substr((string) ($item['name'] ?? ''), 0, 255),
+                    'event' => mb_substr((string) ($item['event'] ?? ''), 0, 100),
+                    'status' => mb_substr((string) ($item['status'] ?? ''), 0, 100),
+                    'conclusion' => filled($item['conclusion'] ?? null)
+                        ? mb_substr((string) $item['conclusion'], 0, 100)
+                        : null,
+                    'branch' => mb_substr((string) ($item['head_branch'] ?? ''), 0, 255),
+                    'updated_at' => $this->dateValue($item['updated_at'] ?? null),
+                    'url' => $this->githubUrl($item['html_url'] ?? null),
+                ])
+                ->filter(fn (array $item) => $item['id'] > 0)
+                ->values()
+                ->all()
+            : [];
+
+        return [
+            'version' => 2,
+            'source' => 'github_app_rest',
+            'repo_full_name' => (string) ($repository['full_name'] ?? $repoFullName),
+            'fetched_at' => now()->toIso8601String(),
+            'rate_limit_remaining' => $this->integerHeader(
+                $repositoryResponse->header('X-RateLimit-Remaining'),
+            ),
+            'repository' => [
+                'description' => filled($repository['description'] ?? null)
+                    ? mb_substr((string) $repository['description'], 0, 1200)
+                    : null,
+                'default_branch' => mb_substr((string) ($repository['default_branch'] ?? ''), 0, 255),
+                'language' => filled($repository['language'] ?? null)
+                    ? mb_substr((string) $repository['language'], 0, 100)
+                    : null,
+                'visibility' => mb_substr((string) ($repository['visibility'] ?? ((bool) ($repository['private'] ?? false) ? 'private' : 'public')), 0, 50),
+                'archived' => (bool) ($repository['archived'] ?? false),
+                'fork' => (bool) ($repository['fork'] ?? false),
+                'stars' => max(0, (int) ($repository['stargazers_count'] ?? 0)),
+                'forks' => max(0, (int) ($repository['forks_count'] ?? 0)),
+                'open_issues_count' => max(0, (int) ($repository['open_issues_count'] ?? 0)),
+                'updated_at' => $this->dateValue($repository['updated_at'] ?? null),
+                'pushed_at' => $this->dateValue($repository['pushed_at'] ?? null),
+                'url' => $this->githubUrl($repository['html_url'] ?? null),
+            ],
+            'branches' => $branches,
+            'pull_requests' => $pullRequests,
+            'issues' => $issues,
+            'actions_runs' => $runs,
+            'limits' => [
+                'branches' => 12,
+                'pull_requests' => 12,
+                'issues' => 12,
+                'actions_runs' => 10,
+            ],
+            'warnings' => array_values(array_unique($warnings)),
+        ];
+    }
+
+    /**
      * Return a bounded initial Development activity set for a newly connected
      * Repository. Provider text is deliberately limited to titles; bodies,
      * commit messages, diffs and source code are never returned.
@@ -1548,6 +1742,11 @@ final class GitHubRepositoryWriter
         }
 
         return $explicitSuccess ? 'success' : 'unknown';
+    }
+
+    private function integerHeader(mixed $value): ?int
+    {
+        return is_numeric($value) ? max(0, (int) $value) : null;
     }
 
     private function dateValue(mixed $value): ?string
