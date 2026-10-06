@@ -6824,3 +6824,29 @@ V58.17はTask進捗、完了、Weakness Priority、Exam Convergence、Routing、
 
 Canonical contract:
 `docs/V58.17_STUDY_PRACTICE_CUMULATIVE_CHECKPOINTS.md`.
+
+## V58.18 Plan-wide Weakness Handoff after 100 Questions
+
+V58.17のcurrent Task 100問Checkpointと、V58.16のsame-Plan AP科目A parent-topic観測を接続し、次回の分野横断Practiceへboundedな再確認Signalを渡す。
+
+適用には以下をすべて要求する。
+
+- AP科目A Plan
+- current Taskで100 graded questions到達
+- parent topicで3 exposure以上
+- 2 unique Question Bank questions以上
+- observed correctness <60%
+- task_mode = broad_assessment
+- deterministic policy phase = general_practice
+- mastery verificationではない
+
+既存Task-local `broad_recheck_topics`を最優先し、Plan-wide候補は未使用枠だけを埋める。デフォルト最大2問。General Practiceの`focus_topics`は空のまま、残り問題は横断探索を維持する。
+
+current Taskでcooldown / masteredのTopicはPlan-wide履歴から復活させない。
+
+Strategy snapshotへ `routing_policy.plan_wide_weakness_handoff` を保存し、実際に適用された時だけPractice UIへ表示する。
+
+Task progress / completion / mastery / Study Method / V56.0 phaseは変更しない。No migration / no extra AI call。
+
+Canonical contract:
+`docs/V58.18_PLAN_WIDE_WEAKNESS_HANDOFF.md`.
