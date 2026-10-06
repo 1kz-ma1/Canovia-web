@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FeatureKey;
+use App\Jobs\BootstrapGitHubDevelopmentActivity;
 use App\Intelligence\Development\DevelopmentAdaptiveActionService;
 use App\Intelligence\Enums\IntelligenceDomain;
 use App\Intelligence\Presentation\DevelopmentIntelligencePresentationAdapter;
@@ -407,6 +408,7 @@ final class GitHubWorkflowController extends Controller
         GitHubWorkflowService $workflow,
         GitHubRepositoryWriter $repositoryWriter,
         PlanActivityService $activity,
+        PlanCategoryProfileService $profiles,
     ) {
         $state = trim((string) $request->query('state', ''));
         if (! preg_match('/^[a-f0-9]{64}$/', $state)) {
@@ -530,6 +532,19 @@ final class GitHubWorkflowController extends Controller
             ],
         );
 
+        if ($connection['status'] === 'connected') {
+            BootstrapGitHubDevelopmentActivity::dispatch((int) $artifact->id);
+
+            if ($profiles->forPlan($plan)->key === 'development') {
+                return redirect()
+                    ->route('workspace.development.index', ['plan_id' => $plan->id])
+                    ->with(
+                        'success',
+                        'GitHub Repositoryとの接続を確認しました。既存の開発活動をCanoviaへ同期しています。',
+                    );
+            }
+        }
+
         return redirect()
             ->route('github_workflow.index', ['plan_id' => $plan->id])
             ->with(
@@ -547,6 +562,7 @@ final class GitHubWorkflowController extends Controller
         FeatureAccessService $featureAccess,
         GitHubWorkflowService $workflow,
         GitHubRepositoryWriter $repositoryWriter,
+        PlanCategoryProfileService $profiles,
     ) {
         $artifact->loadMissing('plan');
         $plan = $artifact->plan;
@@ -605,6 +621,19 @@ final class GitHubWorkflowController extends Controller
             null,
         );
         $this->storeRepositoryConnection($artifact, $connection);
+
+        if ($connection['status'] === 'connected') {
+            BootstrapGitHubDevelopmentActivity::dispatch((int) $artifact->id);
+
+            if ($profiles->forPlan($plan)->key === 'development') {
+                return redirect()
+                    ->route('workspace.development.index', ['plan_id' => $plan->id])
+                    ->with(
+                        'success',
+                        'GitHub Appの接続状態を確認しました。既存の開発活動をCanoviaへ同期しています。',
+                    );
+            }
+        }
 
         return redirect()
             ->route('github_workflow.index', ['plan_id' => $plan->id])
