@@ -9,6 +9,7 @@ use App\Models\Plan;
 use App\Models\PlanArtifact;
 use App\Services\FeatureAccessService;
 use App\Services\GitHubDevelopmentEvidenceService;
+use App\Services\GitHubDevelopmentObservationService;
 use App\Services\GitHubReturnEvidenceService;
 use App\Services\GitHubWorkflowService;
 use App\Services\PlanCategoryProfileService;
@@ -39,6 +40,7 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
         GitHubWorkflowService $workflow,
         FeatureAccessService $access,
         ?GitHubDevelopmentEvidenceService $developmentEvidence = null,
+        ?GitHubDevelopmentObservationService $developmentObservations = null,
         ?DevelopmentAdaptiveActionService $developmentActions = null,
         ?PlanCategoryProfileService $profiles = null,
     ): void {
@@ -96,6 +98,7 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
 
         $matchedArtifacts = 0;
         $syncedTasks = 0;
+        $observedActivities = 0;
         $skippedEntitlement = 0;
         $syncedPlanIds = [];
 
@@ -143,6 +146,13 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
                 }
             }
 
+            if ($developmentObservations) {
+                $observationCounts = $developmentObservations->observeDelivery(
+                    $delivery,
+                );
+                $observedActivities += (int) ($observationCounts['observed'] ?? 0);
+            }
+
             if ($developmentEvidence) {
                 $developmentCounts = $developmentEvidence->syncDelivery($delivery);
                 $matchedArtifacts += (int) $developmentCounts['matched_artifacts'];
@@ -187,7 +197,9 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
             throw $exception;
         }
 
-        $status = $syncedTasks > 0 ? 'processed' : 'ignored';
+        $status = ($syncedTasks > 0 || $observedActivities > 0)
+            ? 'processed'
+            : 'ignored';
 
         $delivery->update([
             'status' => $status,

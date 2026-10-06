@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FeatureKey;
+use App\Jobs\BootstrapGitHubDevelopmentActivity;
 use App\Intelligence\Development\DevelopmentAdaptiveActionService;
 use App\Intelligence\Enums\IntelligenceDomain;
 use App\Intelligence\Presentation\DevelopmentIntelligencePresentationAdapter;
@@ -530,6 +531,13 @@ final class GitHubWorkflowController extends Controller
             ],
         );
 
+        if (
+            $connection['status'] === 'connected'
+            && (string) config('queue.default') !== 'sync'
+        ) {
+            BootstrapGitHubDevelopmentActivity::dispatch((int) $artifact->id);
+        }
+
         return redirect()
             ->route('github_workflow.index', ['plan_id' => $plan->id])
             ->with(
@@ -605,6 +613,13 @@ final class GitHubWorkflowController extends Controller
             null,
         );
         $this->storeRepositoryConnection($artifact, $connection);
+
+        if (
+            $connection['status'] === 'connected'
+            && (string) config('queue.default') !== 'sync'
+        ) {
+            BootstrapGitHubDevelopmentActivity::dispatch((int) $artifact->id);
+        }
 
         return redirect()
             ->route('github_workflow.index', ['plan_id' => $plan->id])
