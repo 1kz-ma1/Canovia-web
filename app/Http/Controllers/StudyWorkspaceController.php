@@ -10,6 +10,7 @@ use App\Intelligence\Study\ApSubjectACoverageDashboardService;
 use App\Intelligence\Study\StudyAdaptiveActionService;
 use App\Intelligence\Study\StudyLearningTypeRouter;
 use App\Intelligence\Study\StudyMethodRecommendationService;
+use App\Intelligence\Study\StudyWeaknessInterventionOutcomeService;
 use App\Intelligence\Study\StudyWorkspaceRecommendationService;
 use App\Intelligence\Study\StudyWorkspaceStateResolver;
 use App\Intelligence\Study\StudyWorkspaceSurfacePolicy;
@@ -36,6 +37,7 @@ final class StudyWorkspaceController extends Controller
         PlanPriorityService $priorities,
         StudyAdaptiveActionService $studyActions,
         ApSubjectACoverageDashboardService $apCoverage,
+        StudyWeaknessInterventionOutcomeService $interventionOutcomes,
         StudyLearningTypeRouter $learningTypes,
         StudyMethodRecommendationService $methodRecommendations,
         StudyWorkspaceRecommendationService $recommendations,
@@ -126,6 +128,17 @@ final class StudyWorkspaceController extends Controller
                 $actorToken,
             )
             : null;
+        $weaknessInterventionOutcomes = (
+            $studySurface === 'analysis'
+            && $navigationTask instanceof Task
+        )
+            ? $interventionOutcomes->project(
+                $plan,
+                $navigationTask,
+                $request->user()?->id,
+                $actorToken,
+            )
+            : null;
         $resolvedState = $studyState->resolve(
             $plan,
             $adaptiveAction,
@@ -168,6 +181,7 @@ final class StudyWorkspaceController extends Controller
             $recommendation,
             $methodRecommendation,
             $apSubjectACoverage,
+            $weaknessInterventionOutcomes,
         );
 
         $projectedComposition = $views->project(

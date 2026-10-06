@@ -38,6 +38,10 @@ final class StudyWorkspaceSurfaceRegistry
                 'partial' => 'workspace.study.surfaces.ap-subject-a-coverage',
                 'label' => 'AP Subject A Coverage',
             ],
+            'weakness_intervention_outcomes' => [
+                'partial' => 'workspace.study.surfaces.weakness-intervention-outcomes',
+                'label' => 'Weakness Intervention Outcomes',
+            ],
             'study_method_recommendation' => [
                 'partial' => 'workspace.study.surfaces.study-method-recommendation',
                 'label' => 'Study Method Recommendation',

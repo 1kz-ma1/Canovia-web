@@ -65,6 +65,7 @@ final class StudyWorkspaceViewService
                     'readiness',
                     'biggest_gap',
                     'ap_subject_a_coverage',
+                    'weakness_intervention_outcomes',
                     'weaknesses',
                     'recent_results',
                     'scope_coverage',
