@@ -25,13 +25,15 @@ final class ApSubjectAPlanWideWeaknessHandoffService
         Task $task,
         ?int $userId,
         ?string $actorToken,
+        ?array $checkpointProjection = null,
     ): array {
-        $checkpoint = $this->checkpoints->project(
-            $plan,
-            $task,
-            $userId,
-            $actorToken,
-        );
+        $checkpoint = $checkpointProjection
+            ?? $this->checkpoints->project(
+                $plan,
+                $task,
+                $userId,
+                $actorToken,
+            );
 
         if (! (bool) ($checkpoint['complete'] ?? false)) {
             return $this->unavailable(
