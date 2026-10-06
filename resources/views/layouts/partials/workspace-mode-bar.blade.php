@@ -2,7 +2,7 @@
     $workspaceModeRegistry ??= app(\App\Services\WorkspaceModeRegistry::class);
     $workspaceModeContext ??= app(\App\Services\WorkspaceModeResolver::class)->resolve(request());
     $workspaceModeDefinition ??= $workspaceModeRegistry->definition($workspaceModeContext->mode);
-    $workspaceModeOptions ??= $workspaceModeRegistry->all();
+    $workspaceModeOptions ??= $workspaceModeRegistry->available();
     $workspaceModeCompact ??= false;
     $workspaceModeInline ??= false;
     $workspaceModePreference ??= app(\App\Services\WorkspaceModePreference::class)->selected(request());
