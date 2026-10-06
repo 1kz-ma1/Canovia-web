@@ -6680,8 +6680,8 @@ Practice assessment
 → descriptive score delta
 ```
 
-対象はQuestion Practice / Recall / Listening / Dictation / Shadowing。
-Resource Studyは明示完了Evidenceがまだないためunmeasuredとする。
+対象はQuestion Practice / Recall / Resource Study / Listening / Dictation / Shadowing。
+Resource StudyはV58.14の明示完了Evidenceだけを観測し、Resource URLを開いただけでは学習実施とみなさない。
 
 Recall Reviewや同一Language Activityが複数回あっても、同じPractice間では
 1つのscore observationとして扱う。複数Activityが混ざった区間、14日超の区間、
@@ -6725,3 +6725,34 @@ No migration / no provider call。
 
 Canonical contract:
 `docs/V58.13_QUESTION_CANDIDATE_RELIABILITY.md`.
+
+## V58.14 Resource Study Completion Evidence
+
+Resource Studyをgeneric Resource libraryへのリンクだけで終わらせず、
+専用Execution Surfaceと明示完了Evidenceへ接続する。
+
+```text
+Resource Study recommendation
+→ dedicated surface
+→ Resourceを開く
+→ explicit outcome POST
+→ study_resource_study_completed
+→ V58.12 observation
+```
+
+Resource URLを開いただけではEvidenceを作らない。
+Task-linked Resourceを優先し、Taskに紐づくResourceがない場合だけTask未割当の
+Plan-level Resourceを候補にする。submitted resource_idはserver-sideで同じeligible
+contextへ再照合し、cross-Plan / other-Task-only Resourceを拒否する。
+
+Evidenceはconfidence 0.65の自己申告Activity factであり、Task進捗・完了・masteryは
+自動変更しない。normalized Intelligence factsへはresource_id / outcome_ratingだけを通し、
+Resource title / URL / reflectionは渡さない。
+
+V58.12はこのEvidenceをResource Studyとして追跡し、waiting / observedの通常Activityへ
+昇格する。Recommendation scoring / Practice Reliabilityは変更しない。
+
+No migration / no provider call / Free path。
+
+Canonical contract:
+`docs/V58.14_RESOURCE_STUDY_EVIDENCE.md`.

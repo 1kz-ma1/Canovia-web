@@ -198,7 +198,7 @@ class StudyActivityOutcomeObservationV5812Test extends TestCase
         );
     }
 
-    public function test_average_and_latest_deltas_are_deterministic_and_resource_study_remains_unmeasured(): void
+    public function test_average_and_latest_deltas_are_deterministic_and_resource_study_waits_without_explicit_evidence(): void
     {
         [$user, $plan, $task] = $this->scenario();
 
@@ -221,7 +221,7 @@ class StudyActivityOutcomeObservationV5812Test extends TestCase
         $this->assertSame(80, $recall['latest_after_score']);
         $this->assertSame(20, $recall['latest_score_delta']);
 
-        $this->assertSame('unmeasured', $resource['measurement_status']);
+        $this->assertSame('waiting', $resource['measurement_status']);
         $this->assertSame(0, $resource['observation_count']);
     }
 
