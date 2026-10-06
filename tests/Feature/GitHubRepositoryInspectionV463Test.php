@@ -166,7 +166,7 @@ class GitHubRepositoryInspectionV463Test extends TestCase
             ->assertSessionHasNoErrors()
             ->assertSessionHas(
                 'status',
-                'RepositoryをGitHubから取得できませんでした。公開Repositoryでない場合はGitHub接続が必要です。',
+                'Public PreviewでRepositoryを取得できませんでした。Private Repositoryの場合はGitHub Appを接続してください。',
             );
 
         $artifact = PlanArtifact::query()->firstOrFail();
@@ -204,7 +204,7 @@ class GitHubRepositoryInspectionV463Test extends TestCase
             ->assertSessionHasNoErrors()
             ->assertSessionHas(
                 'status',
-                '現在のGitHub読み込みは公開Repositoryだけに対応しています。Private Repositoryはユーザー別GitHub接続が必要です。',
+                'Private RepositoryはPublic Previewでは読み込めません。GitHub Appを接続するとPrivateのまま同期できます。',
             );
 
         $artifact = PlanArtifact::query()->firstOrFail();
