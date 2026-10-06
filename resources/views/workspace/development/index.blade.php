@@ -134,57 +134,55 @@
     @endphp
 
     <section class="page-card overflow-hidden p-0" data-development-surface-shell>
-        <div class="flex flex-col gap-3 px-4 py-3 sm:px-5 xl:flex-row xl:items-center xl:justify-between">
-            <div class="flex min-w-0 items-center gap-3">
-                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cyan-300/18 bg-cyan-300/[0.06] text-cyan-300">
-                    <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" aria-hidden="true">
-                        <path d="m8.5 7-5 5 5 5M15.5 7l5 5-5 5M14 4l-4 16" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
-                <div class="min-w-0">
-                    <div class="flex items-center gap-2">
-                        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">DEVELOPER</p>
+        <div class="flex flex-col gap-3 px-4 py-3 sm:px-5 xl:flex-row xl:items-end xl:justify-between">
+            <div class="min-w-0">
+                <a
+                    href="{{ route('workspace.development.top') }}"
+                    class="specialized-workspace-top-link"
+                    data-development-top-link
+                >
+                    <span aria-hidden="true">←</span>
+                    <span>開発トップへ</span>
+                </a>
+
+                <div class="mt-3 flex min-w-0 items-center gap-3">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cyan-300/18 bg-cyan-300/[0.06] text-cyan-300">
+                        <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" aria-hidden="true">
+                            <path d="m8.5 7-5 5 5 5M15.5 7l5 5-5 5M14 4l-4 16" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">DEVELOPER</p>
+                            @if ($selectedSurfaceItem)
+                                <span
+                                    class="rounded-full border border-white/8 bg-slate-950/35 px-2 py-0.5 text-[9px] font-black text-slate-500"
+                                    data-development-current-category="{{ data_get($selectedSurfaceItem, 'category_key') }}"
+                                >
+                                    {{ data_get($selectedSurfaceItem, 'category_label') }}
+                                </span>
+                            @endif
+                        </div>
+                        <p class="truncate text-sm font-black text-slate-100">
+                            {{ $plan?->title ?? '開発Workspace' }}
+                        </p>
                         @if ($selectedSurfaceItem)
-                            <span
-                                class="rounded-full border border-white/8 bg-slate-950/35 px-2 py-0.5 text-[9px] font-black text-slate-500"
-                                data-development-current-category="{{ data_get($selectedSurfaceItem, 'category_key') }}"
-                            >
-                                {{ data_get($selectedSurfaceItem, 'category_label') }}
-                            </span>
+                            <p class="mt-0.5 truncate text-[10px] text-slate-600">
+                                {{ data_get($selectedSurfaceItem, 'label') }} · {{ data_get($selectedSurfaceItem, 'description') }}
+                            </p>
                         @endif
                     </div>
-                    <p class="truncate text-sm font-black text-slate-100">
-                        {{ $plan?->title ?? '開発Workspace' }}
-                    </p>
-                    @if ($selectedSurfaceItem)
-                        <p class="mt-0.5 truncate text-[10px] text-slate-600">
-                            {{ data_get($selectedSurfaceItem, 'label') }} · {{ data_get($selectedSurfaceItem, 'description') }}
-                        </p>
-                    @endif
                 </div>
             </div>
 
-            @if ($developmentPlans->isNotEmpty())
+            @if ($plan)
                 <form
                     method="GET"
                     action="{{ route('workspace.development.index') }}"
-                    class="development-workspace-navigation"
+                    class="development-workspace-navigation is-view-only"
                     data-development-navigation-form
                 >
-                    <label class="development-workspace-control">
-                        <span>PLAN</span>
-                        <select
-                            id="development-workspace-plan"
-                            name="plan_id"
-                            data-development-plan-select
-                        >
-                            @foreach ($developmentPlans as $developmentPlan)
-                                <option value="{{ $developmentPlan->id }}" @selected($plan && (int) $plan->id === (int) $developmentPlan->id)>
-                                    {{ $developmentPlan->title }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
+                    <input type="hidden" name="plan_id" value="{{ $plan->id }}">
 
                     <label class="development-workspace-control">
                         <span>VIEW</span>
@@ -261,7 +259,7 @@
         if (!form) return;
 
         const selects = form.querySelectorAll(
-            '[data-development-plan-select], [data-development-surface-select]',
+            '[data-development-surface-select]',
         );
 
         selects.forEach((select) => {

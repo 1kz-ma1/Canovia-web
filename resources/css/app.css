@@ -10150,3 +10150,58 @@ html[data-canovia-keyboard="open"] .workspace-mode-menu {
         width: min(34rem, 48vw);
     }
 }
+
+
+/* ==========================================================================
+   V58.2 Study / Developer Mode Top hubs
+   Plan switching lives on the Mode Top. Plan workspaces keep only a compact
+   escape link and plan-local navigation.
+   ========================================================================== */
+.specialized-workspace-top-link {
+    display: inline-flex;
+    min-height: 1.75rem;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 0.55rem;
+    padding: 0.18rem 0.38rem;
+    color: rgb(100 116 139);
+    font-size: 0.66rem;
+    font-weight: 800;
+    text-decoration: none;
+    transition:
+        background 140ms ease,
+        color 140ms ease;
+}
+
+.specialized-workspace-top-link:hover,
+.specialized-workspace-top-link:focus-visible {
+    background: rgb(30 41 59 / 0.55);
+    color: rgb(203 213 225);
+    outline: none;
+}
+
+.development-workspace-navigation.is-view-only {
+    display: block;
+    width: min(100%, 16rem);
+}
+
+.development-workspace-navigation.is-view-only .development-workspace-control {
+    width: 100%;
+}
+
+@media (max-width: 767px) {
+    .specialized-workspace-top-link {
+        min-height: 2rem;
+        padding: 0.28rem 0.45rem;
+    }
+
+    .development-workspace-navigation.is-view-only {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .specialized-workspace-top-link {
+        transition: none;
+    }
+}

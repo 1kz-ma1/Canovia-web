@@ -44,7 +44,7 @@ class DevelopmentWorkspaceV544Test extends TestCase
             ->assertSee('data-workspace-mode-source="route_hint"', false);
     }
 
-    public function test_workspace_selects_highest_priority_development_plan_and_allows_explicit_switch(): void
+    public function test_workspace_selects_highest_priority_development_plan_and_preserves_explicit_deep_link(): void
     {
         $user = User::factory()->create();
 
@@ -74,14 +74,19 @@ class DevelopmentWorkspaceV544Test extends TestCase
             ->get(route('workspace.development.index'))
             ->assertOk()
             ->assertSee($primary->title)
-            ->assertSee('value="'.$primary->id.'" selected', false);
+            ->assertDontSee($lower->title)
+            ->assertSee('data-development-top-link', false)
+            ->assertSee(route('workspace.development.top'), false)
+            ->assertDontSee('data-development-plan-select', false);
 
         $this->actingAs($user)
             ->get(route('workspace.development.index', [
                 'plan_id' => $lower->id,
             ]))
             ->assertOk()
-            ->assertSee('value="'.$lower->id.'" selected', false);
+            ->assertSee($lower->title)
+            ->assertSee('data-development-top-link', false)
+            ->assertDontSee('data-development-plan-select', false);
     }
 
     public function test_workspace_is_state_first_without_release_evidence_and_does_not_mutate_core_state(): void

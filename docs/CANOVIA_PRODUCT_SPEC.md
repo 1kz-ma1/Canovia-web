@@ -6306,3 +6306,68 @@ speculative destinations.
 
 Canonical contract:
 `docs/V58.1_DEVELOPER_NAVIGATION_IA.md`.
+
+
+## V58.2 Study / Developer Mode Top Hubs
+
+Study / Developer now separate mode-level navigation from Plan-scoped daily
+work.
+
+Canonical hierarchy:
+
+```text
+Study Top / Developer Top
+→ choose Plan
+→ inspect progress / preparation / integration state
+→ open one Plan Workspace
+
+Plan Workspace
+→ work inside the selected Plan
+→ one screen = one information / operation lineage
+```
+
+New routes:
+
+```text
+GET /workspace/study/top
+GET /workspace/development/top
+```
+
+Each specialized Plan Workspace exposes a compact top-left escape link:
+
+```text
+← 学習トップへ
+← 開発トップへ
+```
+
+Study Top owns:
+
+- Study Plan list
+- weighted Plan progress
+- deadline / status
+- active / total Task counts
+- Study Scope entry
+- Resources entry
+- Study Scores entry
+- Study Plan creation
+
+Developer Top owns:
+
+- Development Plan list
+- weighted Plan progress
+- deadline / status
+- active / total Task counts
+- registered Repository
+- persisted GitHub App connection state
+- GitHub / Evidence setup entry
+- Development Plan creation
+
+Mode Top GET does not run Study / Development Adaptive Action for every Plan,
+does not call AI, and Developer Top does not perform remote GitHub API reads.
+
+Plan selection moves out of the specialized Plan Workspace. Study Workspace is
+therefore Plan-local, while Developer Workspace keeps the V58.1 grouped View
+selector but no longer exposes a second Plan selector.
+
+Canonical contract:
+`docs/V58.2_STUDY_DEVELOPER_MODE_TOPS.md`.

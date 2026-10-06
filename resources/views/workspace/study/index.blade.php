@@ -12,37 +12,38 @@
 @endphp
 
 <div class="mx-auto max-w-7xl space-y-5" data-study-workspace>
-    <section class="page-card overflow-hidden p-0">
-        <div class="border-b border-white/8 bg-gradient-to-r from-amber-300/[0.08] via-slate-950/20 to-transparent px-5 py-5 sm:px-6">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div class="max-w-3xl">
-                    <p class="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300">STUDY WORKSPACE</p>
-                    <h1 class="mt-2 text-2xl font-black text-slate-50 sm:text-3xl">学習の現在地から、次の一手まで。</h1>
-                    <p class="mt-2 text-sm leading-6 text-slate-400">
-                        Planの種類と、Canoviaがすでに持っている学習Stateから、今必要な情報・学習方法・次のActionだけを組み立てます。
-                    </p>
+    <section class="page-card overflow-hidden p-0" data-study-workspace-shell>
+        <div class="px-4 py-3 sm:px-5">
+            <a
+                href="{{ route('workspace.study.top') }}"
+                class="specialized-workspace-top-link"
+                data-study-top-link
+            >
+                <span aria-hidden="true">←</span>
+                <span>学習トップへ</span>
+            </a>
+
+            <div class="mt-3 flex min-w-0 items-center gap-3">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-300/18 bg-amber-300/[0.06] text-amber-300">
+                    <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" aria-hidden="true">
+                        <path d="M5 5.5h9.5a2 2 0 0 1 2 2V19H7a2 2 0 0 1-2-2V5.5Zm11.5 2H19v9.5a2 2 0 0 1-2 2h-.5" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
                 </div>
 
-                @if ($studyPlans->isNotEmpty())
-                    <form method="GET" action="{{ route('workspace.study.index') }}" class="min-w-0 rounded-2xl border border-white/8 bg-slate-950/35 p-3 lg:w-[22rem]">
-                        <label for="study-workspace-plan" class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">STUDY PLAN</label>
-                        <div class="mt-2 flex gap-2">
-                            <select id="study-workspace-plan" name="plan_id" class="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm font-bold text-slate-100">
-                                @foreach ($studyPlans as $studyPlan)
-                                    <option value="{{ $studyPlan->id }}" @selected($plan && (int) $plan->id === (int) $studyPlan->id)>
-                                        {{ $studyPlan->title }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <button type="submit" class="btn-secondary min-h-10 px-3 text-xs">表示</button>
-                        </div>
-                    </form>
-                @endif
+                <div class="min-w-0">
+                    <p class="text-[10px] font-black uppercase tracking-[0.16em] text-amber-300">STUDY</p>
+                    <p class="truncate text-sm font-black text-slate-100">
+                        {{ $plan?->title ?? '学習Workspace' }}
+                    </p>
+                    <p class="mt-0.5 text-[10px] text-slate-600">
+                        {{ $plan ? '現在のPlanで学習を進めます。Plan切り替え・準備は学習トップから。' : '学習Planを作ると、ここに現在の学習Contextが表示されます。' }}
+                    </p>
+                </div>
             </div>
         </div>
 
-        <nav class="flex gap-2 overflow-x-auto px-5 py-3 sm:px-6" aria-label="学習Workspace navigation">
-            @if ($plan)
+        @if ($plan)
+            <nav class="flex gap-2 overflow-x-auto border-t border-white/8 px-4 py-2.5 sm:px-5" aria-label="学習Workspace navigation">
                 <a href="#study-current-state" class="badge badge-slate whitespace-nowrap">Current State</a>
                 @if ($studyMethodRecommendation ?? null)
                     <a href="#study-method-recommendation" class="badge badge-slate whitespace-nowrap">Recommended Method</a>
@@ -53,9 +54,9 @@
                     <a href="#study-readiness" class="badge badge-slate whitespace-nowrap">Readiness</a>
                 @endif
                 <a href="#study-methods" class="badge badge-slate whitespace-nowrap">Study Methods</a>
-            @endif
-            <a href="#study-history" class="badge badge-slate whitespace-nowrap">History</a>
-        </nav>
+                <a href="#study-history" class="badge badge-slate whitespace-nowrap">History</a>
+            </nav>
+        @endif
     </section>
 
     @if (! $plan)
