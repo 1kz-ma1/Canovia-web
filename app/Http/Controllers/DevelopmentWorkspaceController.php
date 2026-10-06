@@ -10,6 +10,7 @@ use App\Intelligence\Presentation\IntelligencePresentationHistoryService;
 use App\Intelligence\Presentation\IntelligenceStateChangeFeedbackService;
 use App\Models\Plan;
 use App\Models\Task;
+use App\Services\DevelopmentTaskMatchService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanPriorityService;
@@ -26,6 +27,7 @@ final class DevelopmentWorkspaceController extends Controller
         PlanPriorityService $priorities,
         DevelopmentAdaptiveActionService $developmentActions,
         DevelopmentIntelligencePresentationAdapter $presentationAdapter,
+        DevelopmentTaskMatchService $taskMatches,
         IntelligencePresentationHistoryService $history,
         IntelligenceStateChangeFeedbackService $stateChanges,
         WorkspaceModeOnboardingService $onboarding,
@@ -54,6 +56,8 @@ final class DevelopmentWorkspaceController extends Controller
                 'intelligenceHistory' => [],
                 'hasReleaseEvidence' => false,
                 'developmentFocusTask' => null,
+                'developmentActivityObservations' => collect(),
+                'developmentAssociationTasks' => collect(),
                 'intelligenceStateChange' => null,
                 'modeOnboarding' => $onboarding->build(
                     WorkspaceMode::Development,
@@ -61,6 +65,17 @@ final class DevelopmentWorkspaceController extends Controller
                 ),
             ]);
         }
+
+        $activityObservations = $taskMatches->refreshPlan($plan);
+        $associationTasks = $plan->tasks
+            ->filter(fn (Task $task) =>
+                ! in_array($task->status, ['done', 'cancelled'], true)
+            )
+            ->sortBy([
+                ['sort_order', 'asc'],
+                ['id', 'asc'],
+            ])
+            ->values();
 
         $adaptiveAction = $developmentActions->evaluate($plan);
         $presentation = $presentationAdapter->adapt(
@@ -94,6 +109,8 @@ final class DevelopmentWorkspaceController extends Controller
             'developmentFocusTask' => $focusTaskId > 0
                 ? $this->task($plan, $focusTaskId)
                 : null,
+            'developmentActivityObservations' => $activityObservations,
+            'developmentAssociationTasks' => $associationTasks,
             'intelligenceStateChange' => $stateChanges->latestForPlan(
                 $plan,
                 IntelligenceDomain::Development,
