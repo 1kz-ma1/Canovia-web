@@ -33,8 +33,8 @@ class WorkspaceResumeAndSessionScopeV5612Test extends TestCase
     {
         foreach ([
             'overview' => 'workspace.overview.index',
-            'study' => 'workspace.study.index',
-            'development' => 'workspace.development.index',
+            'study' => 'workspace.study.top',
+            'development' => 'workspace.development.top',
             'career' => 'workspace.career.index',
         ] as $mode => $routeName) {
             $user = User::factory()->create([
