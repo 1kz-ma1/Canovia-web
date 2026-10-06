@@ -1,0 +1,53 @@
+name: V57.7 Provider-linked Triage Validation
+
+on:
+  push:
+    branches:
+      - feature/v57-7-provider-linked-triage
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  provider-linked-triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Http/Controllers/DevelopmentProviderTriageController.php
+          php -l app/Services/DevelopmentProviderTriageService.php
+          php -l app/Services/GitHubRepositoryWriter.php
+          php -l tests/Feature/DeveloperProviderTriageV577Test.php
+          php -l routes/web.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V57.7 provider-linked triage
+        run: php artisan test tests/Feature/DeveloperProviderTriageV577Test.php
+      - name: V57.6 implementation brief regression
+        run: php artisan test tests/Feature/DeveloperImplementationBriefV576Test.php
+      - name: V57.4 execution context regression
+        run: php artisan test tests/Feature/DeveloperExecutionContextV574Test.php
+      - name: Developer Home regression
+        run: php artisan test tests/Feature/DeveloperHomeV573Test.php
+      - name: Observation and association regression
+        run: php artisan test tests/Feature/DeveloperActivityObservationV571Test.php tests/Feature/DeveloperTaskAssociationV572Test.php
+      - name: Evidence and readiness regression
+        run: php artisan test tests/Feature/DeveloperEvidenceSyncV537Test.php tests/Feature/DeveloperReadinessV538Test.php
+      - name: V57.5 connection regression
+        run: php artisan test tests/Feature/GitHubConnectionPrivateRepositoryV575Test.php tests/Feature/GitHubAppConnectionV465Test.php
+      - name: GitHub return evidence regression
+        run: php artisan test tests/Feature/GitHubReturnEvidenceV467Test.php tests/Feature/GitHubEvidenceDecisionV468Test.php
+      - name: Development Workspace regression
+        run: php artisan test tests/Feature/DevelopmentWorkspaceV544Test.php tests/Feature/WorkspaceModeOnboardingV547Test.php
