@@ -169,7 +169,7 @@ V41.16まで実装済み。次の大きな検討:
 - failed Recall Sourceの再抽出UI（V58.7実装済み）・複数ページbatch ingest（V58.8実装済み）
 - Plan Resourceからの安全なRecall material ingest（V58.11実装済み：URL非fetch + 明示material + Resource provenance）
 - Recall成績をTask progressionへ使うPolicy（V58.6実装済み：Recall-primary Taskのみ、Deck全体定着 + 明示確認で完了）
-- Listening / Dictation / Shadowing等のStudy Activity拡張
+- Listening / Dictation / Shadowing等のStudy Activity拡張（V58.10実装済み）
 - Native AI usage historyを使ったquota / cost policy
 
 ### Future
@@ -6667,3 +6667,31 @@ Resource URLはNative AI inputにもHTTP fetchにも使用しない。
 
 Canonical contract:
 `docs/V58.11_SAFE_RESOURCE_RECALL_HANDOFF.md`.
+
+## V58.12 Study Activity Outcome Observation
+
+Study Activityの実利用結果を、同じTask内の連続Practice採点を使って
+before / after観測できるようにする。
+
+```text
+Practice assessment
+→ one tracked Activity type
+→ next Practice assessment
+→ descriptive score delta
+```
+
+対象はQuestion Practice / Recall / Listening / Dictation / Shadowing。
+Resource Studyは明示完了Evidenceがまだないためunmeasuredとする。
+
+Recall Reviewや同一Language Activityが複数回あっても、同じPractice間では
+1つのscore observationとして扱う。複数Activityが混ざった区間、14日超の区間、
+invalid score、別actor Evidenceは比較から除外する。
+
+UIでは「実利用でのActivity観測」として平均・最新のbefore / afterを見せるが、
+問題難度・外部学習等の交絡を含むため因果効果とは扱わない。
+
+V58.12の観測値はStudy Method Recommendation、Practice Reliability、
+Task進捗、masteryを自動変更しない。
+
+Canonical contract:
+`docs/V58.12_STUDY_ACTIVITY_OUTCOME_OBSERVATION.md`.
