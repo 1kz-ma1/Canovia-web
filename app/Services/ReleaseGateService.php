@@ -178,10 +178,13 @@ final class ReleaseGateService
                     ),
                 ];
             })
-            ->sortBy([
-                fn (array $item) => $item['minimum_level']->value,
-                fn (array $item) => $item['feature']->value,
-            ])
+            ->sortBy(
+                fn (array $item) => sprintf(
+                    '%02d:%s',
+                    $item['minimum_level']->value,
+                    $item['feature']->value,
+                ),
+            )
             ->values();
     }
 
