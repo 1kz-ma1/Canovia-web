@@ -101,7 +101,7 @@ Route::delete('/plans/{plan}/development-preview', [DevelopmentPreviewController
     ->middleware('throttle:20,1')
     ->name('plans.development_preview.destroy');
 Route::get('/workspace/career', CareerModeWorkspaceController::class)->name('workspace.career.index');
-Route::get('/workspace/{workspaceMode}', [WorkspaceModeController::class, 'enter'])->name('workspace_modes.enter');
+Route::get('/workspace/mode/{workspaceMode}', [WorkspaceModeController::class, 'enter'])->name('workspace_modes.enter');
 Route::post('/workspace/{workspaceMode}/select', [WorkspaceModeController::class, 'select'])->name('workspace_modes.select');
 Route::delete('/workspace/preference', [WorkspaceModeController::class, 'reset'])->name('workspace_modes.preference.reset');
 Route::post('/plans/{plan}/tasks/{task}/execution-setup', [ExecutionSetupController::class, 'store'])
