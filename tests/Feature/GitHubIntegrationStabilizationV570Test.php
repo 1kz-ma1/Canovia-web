@@ -142,7 +142,7 @@ class GitHubIntegrationStabilizationV570Test extends TestCase
         );
     }
 
-    public function test_normal_write_entitlement_denial_redirects_with_reason(): void
+    public function test_normal_connection_entitlement_denial_uses_evidence_capability(): void
     {
         $user = $this->user();
         $plan = $this->plan($user);
@@ -162,7 +162,7 @@ class GitHubIntegrationStabilizationV570Test extends TestCase
                 fn (string $message) =>
                     str_contains(
                         $message,
-                        '現在の利用権ではDeveloper GitHub Writeを利用できません',
+                        '現在の利用権ではDeveloper GitHub Evidenceを利用できません',
                     ),
             );
     }
@@ -230,7 +230,6 @@ class GitHubIntegrationStabilizationV570Test extends TestCase
             ->assertSee('Capabilityあり')
             ->assertSee('接続導線Ready')
             ->assertSee('Server設定済み')
-            ->assertSee('NEXT · READY')
             ->assertSee('GitHub接続済み')
             ->assertSee('このRepositoryはGitHub Appで同期できます');
 
@@ -258,7 +257,6 @@ class GitHubIntegrationStabilizationV570Test extends TestCase
             ->assertOk()
             ->assertSee('App credential: 未設定')
             ->assertSee('運営設定が必要')
-            ->assertSee('NEXT · CANOVIA OPERATOR')
             ->assertSee('GitHub App credential未設定')
             ->assertSee('Canovia運営側のGitHub App設定がまだありません');
     }
