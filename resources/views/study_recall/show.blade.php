@@ -244,6 +244,123 @@
                         </form>
                     </div>
                 </details>
+
+                @if (($recallResources ?? collect())->isNotEmpty())
+                    <details
+                        class="mt-4 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.025] p-4"
+                        data-recall-resource-handoff
+                    >
+                        <summary class="cursor-pointer text-xs font-black text-cyan-100">
+                            登録済みResourceからRecall教材を作る
+                        </summary>
+
+                        <div class="mt-3 border-t border-white/8 pt-3">
+                            <p class="max-w-3xl text-xs leading-5 text-slate-500">
+                                CanoviaはResource URLを自動取得しません。
+                                Recallに使う内容をファイルまたは本文として確認して渡してください。
+                                Resourceは出典として紐づきます。
+                            </p>
+
+                            <div class="mt-4 grid gap-3">
+                                @foreach ($recallResources as $resource)
+                                    @php
+                                        $linkedToTask = $resource->tasks
+                                            ->contains(
+                                                fn ($linkedTask) =>
+                                                    (int) $linkedTask->id
+                                                    === (int) $task->id
+                                            );
+                                    @endphp
+
+                                    <details
+                                        class="rounded-xl border border-white/8 bg-slate-950/20 p-3"
+                                        data-recall-resource-row="{{ $resource->id }}"
+                                    >
+                                        <summary class="cursor-pointer list-none">
+                                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                                <div>
+                                                    <p class="text-xs font-black text-slate-200">
+                                                        {{ $resource->title }}
+                                                    </p>
+                                                    <p class="mt-1 text-[10px] text-slate-600">
+                                                        {{ $resource->providerLabel() }}
+                                                        · {{ $linkedToTask ? 'このTaskに紐づくResource' : 'Plan全体のResource' }}
+                                                    </p>
+                                                </div>
+                                                <span class="badge badge-slate">
+                                                    Recallで使う
+                                                </span>
+                                            </div>
+                                        </summary>
+
+                                        <div class="mt-3 border-t border-white/8 pt-3">
+                                            <a
+                                                href="{{ $resource->url }}"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="text-xs font-bold text-cyan-200 hover:text-cyan-100"
+                                            >
+                                                参照元を開く
+                                            </a>
+
+                                            <form
+                                                method="POST"
+                                                action="{{ route('plans.tasks.study_recall.resources.extract', [$plan, $task, $resource]) }}"
+                                                enctype="multipart/form-data"
+                                                class="mt-3 grid gap-3 lg:grid-cols-2"
+                                                data-recall-resource-form="{{ $resource->id }}"
+                                                data-mutation-once
+                                            >
+                                                @csrf
+
+                                                <div class="rounded-lg border border-white/6 bg-black/10 p-3">
+                                                    <label
+                                                        for="recall-resource-file-{{ $resource->id }}"
+                                                        class="text-[11px] font-bold text-slate-300"
+                                                    >
+                                                        PDF / 画像
+                                                    </label>
+                                                    <input
+                                                        id="recall-resource-file-{{ $resource->id }}"
+                                                        type="file"
+                                                        name="source_file"
+                                                        accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
+                                                        class="input-field mt-2 w-full"
+                                                    >
+                                                    <p class="mt-1 text-[10px] text-slate-600">
+                                                        最大10MB
+                                                    </p>
+                                                </div>
+
+                                                <div class="rounded-lg border border-white/6 bg-black/10 p-3">
+                                                    <label
+                                                        for="recall-resource-text-{{ $resource->id }}"
+                                                        class="text-[11px] font-bold text-slate-300"
+                                                    >
+                                                        または本文を貼り付け
+                                                    </label>
+                                                    <textarea
+                                                        id="recall-resource-text-{{ $resource->id }}"
+                                                        name="source_text"
+                                                        rows="4"
+                                                        class="input-field mt-2 w-full"
+                                                        placeholder="このResourceからRecall化する本文"
+                                                    ></textarea>
+                                                </div>
+
+                                                <div class="lg:col-span-2">
+                                                    <button type="submit" class="btn-secondary">
+                                                        このResourceをRecall候補へ
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </details>
+                                @endforeach
+                            </div>
+                        </div>
+                    </details>
+                @endif
             @else
                 <p class="mt-4 text-sm leading-6 text-slate-400">Recall自体は手動カードで利用できます。教材からの自動抽出はAutomatic AI Executionが利用できる場合に表示されます。</p>
             @endif
@@ -270,6 +387,14 @@
                                         @endif
                                     </div>
                                     <p class="mt-1 text-[10px] text-slate-600">{{ $source->sourceLabel() }} · 新規候補 {{ (int) $source->candidate_count }}件</p>
+                                    @if ($source->resource)
+                                        <p
+                                            class="mt-1 text-[10px] text-cyan-300/70"
+                                            data-recall-source-resource="{{ $source->resource->id }}"
+                                        >
+                                            Resource: {{ $source->resource->title }}
+                                        </p>
+                                    @endif
                                     @if ($source->status === 'failed')
                                         <p class="mt-1 text-[10px] leading-4 text-amber-200/70">
                                             教材は保存済みです。利用条件を満たせば同じ教材から再抽出できます。

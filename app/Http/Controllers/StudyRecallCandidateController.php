@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\FeatureKey;
 use App\Exceptions\NativeAiExecutionException;
 use App\Models\Plan;
+use App\Models\PlanResource;
 use App\Models\StudyRecallCandidate;
 use App\Models\StudyRecallItem;
 use App\Models\StudyRecallSource;
@@ -91,6 +92,169 @@ class StudyRecallCandidateController extends Controller
         return redirect()
             ->route('plans.tasks.study_recall.show', [$plan, $task])
             ->with('success', $result['created'].'件のRecall候補を作成しました。内容を確認してDeckへ追加してください。');
+    }
+
+    public function extractFromResource(
+        Request $request,
+        Plan $plan,
+        Task $task,
+        PlanResource $resource,
+        PlanOwnershipService $ownership,
+        BehaviorIdentityService $identity,
+        FeatureAccessService $featureAccess,
+        StudyRecallCandidateExtractionService $extractor,
+    ) {
+        $this->authorizeTask(
+            $request,
+            $plan,
+            $task,
+            $ownership,
+        );
+        $this->ensureResourceEligibleForTask(
+            $resource,
+            $plan,
+            $task,
+        );
+
+        $featureAccess->authorizeUse(
+            $request->user(),
+            FeatureKey::AutomaticAiExecution,
+            [
+                'plan_id' => (int) $plan->id,
+                'task_id' => (int) $task->id,
+            ],
+        );
+
+        $validated = $request->validate([
+            'source_file' => [
+                'nullable',
+                'file',
+                'mimes:pdf,jpg,jpeg,png,webp',
+                'max:10240',
+                'required_without:source_text',
+            ],
+            'source_text' => [
+                'nullable',
+                'string',
+                'max:50000',
+                'required_without:source_file',
+            ],
+        ]);
+
+        $actorToken = $identity->resolve($request);
+        $file = $request->file('source_file');
+        $sourceType = 'text';
+        $path = null;
+        $mime = null;
+        $name = null;
+
+        try {
+            if ($file) {
+                $mime = (string) $file->getMimeType();
+                $name = mb_substr(
+                    (string) $file->getClientOriginalName(),
+                    0,
+                    255,
+                );
+                $sourceType =
+                    $mime === 'application/pdf'
+                        ? 'pdf'
+                        : 'image';
+
+                $extension = strtolower(
+                    (string) $file->getClientOriginalExtension(),
+                );
+
+                if ($extension === '') {
+                    $extension =
+                        $sourceType === 'pdf'
+                            ? 'pdf'
+                            : 'jpg';
+                }
+
+                $path = $file->storeAs(
+                    'study-recall-sources/'
+                    .$plan->id
+                    .'/'
+                    .$task->id,
+                    (string) Str::uuid().'.'.$extension,
+                );
+
+                if (! is_string($path) || $path === '') {
+                    throw new RuntimeException(
+                        'Recall教材ファイルを保存できませんでした。',
+                    );
+                }
+            }
+
+            $source = StudyRecallSource::query()->create([
+                'plan_id' => (int) $plan->id,
+                'task_id' => (int) $task->id,
+                'plan_resource_id' => (int) $resource->id,
+                'user_id' => $request->user()?->id,
+                'actor_token' =>
+                    $request->user() ? null : $actorToken,
+                'source_type' => $sourceType,
+                'original_name' =>
+                    $name
+                    ?: mb_substr(
+                        (string) $resource->title,
+                        0,
+                        255,
+                    ),
+                'mime_type' => $mime,
+                'storage_path' => $path,
+                'source_text' =>
+                    $sourceType === 'text'
+                        ? trim(
+                            (string) (
+                                $validated['source_text']
+                                ?? ''
+                            ),
+                        )
+                        : null,
+                'status' => 'pending',
+            ]);
+        } catch (Throwable $exception) {
+            if ($path) {
+                Storage::delete($path);
+            }
+
+            throw $exception;
+        }
+
+        try {
+            $result = $extractor->extract(
+                $source,
+                $plan,
+                $task,
+                $request->user()?->id,
+            );
+        } catch (NativeAiExecutionException $exception) {
+            return redirect()
+                ->route(
+                    'plans.tasks.study_recall.show',
+                    [$plan, $task],
+                )
+                ->with(
+                    'status',
+                    $exception->getMessage()
+                    .' Resourceとの紐づきと教材は保存済みなので、失敗したSourceから再抽出できます。',
+                );
+        }
+
+        return redirect()
+            ->route(
+                'plans.tasks.study_recall.show',
+                [$plan, $task],
+            )
+            ->with(
+                'success',
+                $resource->title
+                .'から'
+                .$result['created']
+                .'件のRecall候補を作成しました。内容を確認してDeckへ追加してください。',
+            );
     }
 
     public function extractBatch(
@@ -448,6 +612,29 @@ class StudyRecallCandidateController extends Controller
         abort_unless((int) $task->plan_id === (int) $plan->id, 404);
         abort_unless($this->categoryProfiles->forPlan($plan)->key === 'study', 404);
         $ownership->authorizeTask($request, $task);
+    }
+
+    private function ensureResourceEligibleForTask(
+        PlanResource $resource,
+        Plan $plan,
+        Task $task,
+    ): void {
+        abort_unless(
+            (int) $resource->plan_id === (int) $plan->id
+            && $resource->resource_type === 'file',
+            404,
+        );
+
+        $linkedTaskIds = $resource
+            ->tasks()
+            ->pluck('tasks.id')
+            ->map(fn ($id) => (int) $id);
+
+        abort_unless(
+            $linkedTaskIds->isEmpty()
+            || $linkedTaskIds->contains((int) $task->id),
+            404,
+        );
     }
 
     private function ensureSourceBelongsToTask(

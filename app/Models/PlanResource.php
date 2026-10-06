@@ -51,6 +51,14 @@ class PlanResource extends Model
         return $this->belongsToMany(Task::class, 'plan_resource_task')->withTimestamps();
     }
 
+    public function recallSources()
+    {
+        return $this->hasMany(
+            StudyRecallSource::class,
+            'plan_resource_id',
+        );
+    }
+
     public function providerLabel(): string
     {
         return self::PROVIDERS[$this->provider] ?? $this->provider;

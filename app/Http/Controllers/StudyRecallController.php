@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\EvidenceSource;
 use App\Enums\FeatureKey;
 use App\Models\Plan;
+use App\Models\PlanResource;
 use App\Models\StudyRecallCandidate;
 use App\Models\StudyRecallItem;
 use App\Models\StudyRecallSource;
@@ -97,10 +98,29 @@ class StudyRecallController extends Controller
                 ->take(100)
                 ->get(),
             'recallSources' => StudyRecallSource::query()
+                ->with('resource:id,title,provider,url')
                 ->where('plan_id', $plan->id)
                 ->where('task_id', $task->id)
                 ->latest('id')
                 ->take(8)
+                ->get(),
+            'recallResources' => PlanResource::query()
+                ->with('tasks:id,title')
+                ->where('plan_id', $plan->id)
+                ->where('resource_type', 'file')
+                ->where(function ($query) use ($task) {
+                    $query
+                        ->whereDoesntHave('tasks')
+                        ->orWhereHas(
+                            'tasks',
+                            fn ($taskQuery) =>
+                                $taskQuery->where(
+                                    'tasks.id',
+                                    $task->id,
+                                ),
+                        );
+                })
+                ->orderBy('id')
                 ->get(),
             'canGenerateRecallCandidates' => $nativeAi->isConfigured()
                 && $featureAccess->canUse(

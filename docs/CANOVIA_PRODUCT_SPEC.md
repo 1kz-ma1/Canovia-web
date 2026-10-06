@@ -167,7 +167,7 @@ V41.16まで実装済み。次の大きな検討:
 - StoreKit / App Store Server API / Stripe等からProduct Grantへ同期するBilling Adapter
 - Study / Career / Developer Packの具体Capability実装とFeatureKey接続
 - failed Recall Sourceの再抽出UI（V58.7実装済み）・複数ページbatch ingest（V58.8実装済み）
-- Plan Resourceからの安全なRecall material ingest
+- Plan Resourceからの安全なRecall material ingest（V58.11実装済み：URL非fetch + 明示material + Resource provenance）
 - Recall成績をTask progressionへ使うPolicy（V58.6実装済み：Recall-primary Taskのみ、Deck全体定着 + 明示確認で完了）
 - Listening / Dictation / Shadowing等のStudy Activity拡張
 - Native AI usage historyを使ったquota / cost policy
@@ -6538,9 +6538,9 @@ textは `source_text`、image / PDFは既存private `storage_path` を再利用�
 Candidate重複防止は既存の `task_id + fingerprint(prompt|answer)` を維持し、
 retry専用のCandidate状態は追加しない。
 
-Plan Resourceは現状共有URL参照であり、V58.7では任意URLをserver fetchしない。
-Resourceからの安全なRecall material ingestは、trusted material acquisition contract
-を別途定義してから行う。
+Plan Resourceは共有URL参照のまま維持する。V58.11では任意URLをserver fetchせず、
+Resourceを出典として選んだ上で、ユーザーが明示的に渡したfile/textだけを
+StudyRecallSourceへ保存・抽出するtrusted material handoffを実装した。
 
 Migration、Recall scheduler、Task progression、billingは変更しない。
 
@@ -6637,3 +6637,33 @@ V58.10はマイク録音、音声認識、発音採点、Dictation自動採点�
 
 Canonical contract:
 `docs/V58.10_STUDY_LANGUAGE_ACTIVITIES.md`.
+
+## V58.11 Safe Plan Resource → Recall Handoff
+
+Plan ResourceをRecallへ接続する際、外部URLをCanovia serverが自動取得しない。
+
+```text
+PlanResource
+→ user selects Recall handoff
+→ explicit local file / pasted text
+→ StudyRecallSource.plan_resource_id
+→ existing Candidate extraction
+→ Human Review
+```
+
+`study_recall_sources.plan_resource_id` をnullable FKとして追加し、
+Resource由来Sourceのprovenanceを保持する。Resource削除時はnullOnDeleteとし、
+既存Recall historyは残す。
+
+利用可能Resourceはsame Planのfileで、current Taskに紐づくもの、または
+Task未割当のPlan-level Resourceだけ。別Task専用Resourceとcross-Plan Resourceは
+server-sideで拒否する。
+
+Resource URLはNative AI inputにもHTTP fetchにも使用しない。
+抽出対象はユーザーが確認して渡したPDF/image/textだけ。
+
+一般PlanResource device uploadは解禁せず、Resourceのlightweight reference contractは
+維持する。
+
+Canonical contract:
+`docs/V58.11_SAFE_RESOURCE_RECALL_HANDOFF.md`.
