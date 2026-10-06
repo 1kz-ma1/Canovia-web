@@ -18,8 +18,8 @@
                     「今やる / レビュー待ち / 修正必要 / マージ待ち / 完了」に整理します。
                 </p>
                 <p class="mt-2 text-xs leading-6 text-slate-500">
-                    RepositoryはGitHubから現在構造を読み取れます。GitHub AppをRepository管理者が接続した場合は、EditorがCanoviaからレビュー用PRまで作成できます。
-                    mainへの直接push / mergeは行わず、Canoviaの「今やる / レビュー待ち」等もGitHub remote stateから自動変更しません。
+                    Developer機能の本流はGitHub App接続です。Public / Privateを問わず、許可したRepositoryだけをread同期します。
+                    未接続のPublic Repositoryは限定Previewだけ利用でき、Canoviaからのwriteは別権限として必要な場合だけ有効にします。
                 </p>
             </div>
 
@@ -92,7 +92,7 @@
         </div>
 
         <details class="rounded-3xl border border-cyan-300/15 bg-cyan-300/[0.035] p-4 md:p-5" @if ($items->isEmpty()) open @endif>
-            <summary class="cursor-pointer list-none text-sm font-black text-cyan-100">＋ GitHub URLを追加</summary>
+            <summary class="cursor-pointer list-none text-sm font-black text-cyan-100">＋ Repository / GitHub URLを登録</summary>
 
             @if ($editable_plans->isEmpty())
                 <p class="mt-3 text-xs leading-6 text-slate-500">編集できるPlanがないため、GitHub項目は追加できません。</p>
@@ -151,7 +151,7 @@
                     <div class="sm:col-span-2">
                         <button type="submit" class="btn-primary w-full justify-center">Canoviaへ追加</button>
                         <p class="mt-2 text-[11px] leading-5 text-slate-500">
-                            Repository URLは作業レーンに置かず「全体像」として表示します。利用権限があれば登録直後にGitHubのBranch / Open PR / Issue / Actionsもread-onlyで読み込みます。PR / Issue / Branch等だけがCanovia状態を持ちます。
+                            Repository URLは接続対象として登録します。未接続Public Repositoryは限定Preview、GitHub App接続後はPublic / Private共通のauthoritative同期へ切り替わります。PR / Issue等の個別URLは手動参照として残せます。
                         </p>
                     </div>
                 </form>
