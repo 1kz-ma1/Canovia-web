@@ -1,0 +1,47 @@
+name: V57.4 Developer Execution Context Validation
+
+on:
+  push:
+    branches:
+      - feature/v57-4-developer-execution-context
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  developer-execution-context:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Http/Controllers/DevelopmentWorkspaceController.php
+          php -l app/Services/DevelopmentExecutionContextService.php
+          php -l tests/Feature/DeveloperExecutionContextV574Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V57.4 Developer Execution Context
+        run: php artisan test tests/Feature/DeveloperExecutionContextV574Test.php
+      - name: V57.3 Developer Home regression
+        run: php artisan test tests/Feature/DeveloperHomeV573Test.php
+      - name: V57.2 Task Association regression
+        run: php artisan test tests/Feature/DeveloperTaskAssociationV572Test.php
+      - name: V57.1 Observation regression
+        run: php artisan test tests/Feature/DeveloperActivityObservationV571Test.php
+      - name: Development Evidence / Readiness regression
+        run: php artisan test tests/Feature/DeveloperEvidenceSyncV537Test.php tests/Feature/DeveloperReadinessV538Test.php
+      - name: Development Workspace / Onboarding regression
+        run: php artisan test tests/Feature/DevelopmentWorkspaceV544Test.php tests/Feature/WorkspaceModeOnboardingV547Test.php
+      - name: GitHub stabilization regression
+        run: php artisan test tests/Feature/GitHubIntegrationStabilizationV570Test.php tests/Feature/GitHubAppConnectionV465Test.php
