@@ -9,6 +9,7 @@ use App\Models\Plan;
 use App\Models\PlanArtifact;
 use App\Services\FeatureAccessService;
 use App\Services\GitHubDevelopmentEvidenceService;
+use App\Services\GitHubDevelopmentObservationService;
 use App\Services\GitHubReturnEvidenceService;
 use App\Services\GitHubWorkflowService;
 use App\Services\PlanCategoryProfileService;
@@ -39,6 +40,7 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
         GitHubWorkflowService $workflow,
         FeatureAccessService $access,
         ?GitHubDevelopmentEvidenceService $developmentEvidence = null,
+        ?GitHubDevelopmentObservationService $developmentObservations = null,
         ?DevelopmentAdaptiveActionService $developmentActions = null,
         ?PlanCategoryProfileService $profiles = null,
     ): void {
@@ -141,6 +143,10 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
                     $syncedTasks++;
                     $syncedPlanIds[(int) $plan->id] = true;
                 }
+            }
+
+            if ($developmentObservations) {
+                $developmentObservations->observeDelivery($delivery);
             }
 
             if ($developmentEvidence) {
