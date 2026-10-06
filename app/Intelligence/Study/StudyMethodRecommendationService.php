@@ -18,6 +18,7 @@ final class StudyMethodRecommendationService
 
     public function __construct(
         private readonly StudyActivityPolicyService $activities,
+        private readonly StudyMethodOutcomeCalibrationService $outcomeCalibration,
     ) {}
 
     /**
@@ -110,6 +111,19 @@ final class StudyMethodRecommendationService
             $state,
         );
 
+        $outcomeCalibration =
+            $this->outcomeCalibration->project(
+                $plan,
+                $task,
+                $userId,
+                $actorToken,
+            );
+
+        $methods = $this->applyOutcomeCalibration(
+            $methods,
+            $outcomeCalibration,
+        );
+
         $ranked = collect($methods)
             ->sortByDesc(fn (array $method) =>
                 (int) ($method['fit_score'] ?? 0)
@@ -192,6 +206,8 @@ final class StudyMethodRecommendationService
                     === StudyActivityPolicyService::QUESTION_PRACTICE
                     ? $practiceRecommendation
                     : null,
+            'outcome_calibration' =>
+                $outcomeCalibration,
         ];
     }
 
@@ -568,6 +584,116 @@ final class StudyMethodRecommendationService
                 $method['fit_score'] = max(
                     20,
                     min(100, $score),
+                );
+
+                return $method;
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $methods
+     * @param array<string,mixed> $calibration
+     * @return array<int,array<string,mixed>>
+     */
+    private function applyOutcomeCalibration(
+        array $methods,
+        array $calibration,
+    ): array {
+        return collect($methods)
+            ->map(function (array $method) use (
+                $calibration,
+            ) {
+                $key = (string) (
+                    $method['key']
+                    ?? ''
+                );
+                $baseScore = max(
+                    0,
+                    min(
+                        100,
+                        (int) (
+                            $method['fit_score']
+                            ?? 0
+                        ),
+                    ),
+                );
+
+                $signal = data_get(
+                    $calibration,
+                    'methods.'.$key,
+                );
+
+                $adjustment = is_array($signal)
+                    ? (int) (
+                        $signal[
+                            'applied_adjustment'
+                        ]
+                        ?? 0
+                    )
+                    : 0;
+
+                $method['base_fit_score'] =
+                    $baseScore;
+                $method['outcome_adjustment'] =
+                    $adjustment;
+                $method['outcome_signal_status'] =
+                    is_array($signal)
+                        ? (string) (
+                            $signal['status']
+                            ?? 'observing'
+                        )
+                        : 'excluded';
+                $method['outcome_observation_count'] =
+                    is_array($signal)
+                        ? (int) (
+                            $signal[
+                                'observation_count'
+                            ]
+                            ?? 0
+                        )
+                        : 0;
+                $method['outcome_sample_count'] =
+                    is_array($signal)
+                        ? (int) (
+                            $signal[
+                                'sample_count'
+                            ]
+                            ?? 0
+                        )
+                        : 0;
+                $method['outcome_median_delta'] =
+                    is_array($signal)
+                        ? (
+                            $signal['median_delta']
+                            ?? null
+                        )
+                        : null;
+                $method[
+                    'outcome_direction_ratio_percent'
+                ] = is_array($signal)
+                    ? (int) (
+                        $signal[
+                            'direction_ratio_percent'
+                        ]
+                        ?? 0
+                    )
+                    : 0;
+                $method['outcome_note'] =
+                    is_array($signal)
+                        ? (string) (
+                            $signal['note']
+                            ?? ''
+                        )
+                        : '';
+                $method['fit_score'] = max(
+                    20,
+                    min(
+                        100,
+                        $baseScore
+                        + $adjustment,
+                    ),
                 );
 
                 return $method;
