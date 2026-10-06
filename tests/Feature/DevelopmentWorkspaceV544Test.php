@@ -220,7 +220,7 @@ class DevelopmentWorkspaceV544Test extends TestCase
         );
     }
 
-    public function test_persistent_development_selection_lands_on_development_workspace(): void
+    public function test_persistent_development_selection_lands_on_development_top(): void
     {
         $user = User::factory()->create();
         $this->plan($user, 'Canovia', '個人開発');
@@ -229,7 +229,7 @@ class DevelopmentWorkspaceV544Test extends TestCase
             ->post(route('workspace_modes.select', [
                 'workspaceMode' => WorkspaceMode::Development->value,
             ]))
-            ->assertRedirect(route('workspace.development.index'));
+            ->assertRedirect(route('workspace.development.top'));
 
         $this->assertSame(
             'development',

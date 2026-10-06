@@ -40,7 +40,7 @@ class WorkspaceModePersistenceV542Test extends TestCase
             ->post(route('workspace_modes.select', [
                 'workspaceMode' => WorkspaceMode::Study->value,
             ]))
-            ->assertRedirect(route('workspace.study.index'));
+            ->assertRedirect(route('workspace.study.top'));
 
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
@@ -49,7 +49,7 @@ class WorkspaceModePersistenceV542Test extends TestCase
 
         $this->actingAs($user)
             ->get(route('home'))
-            ->assertRedirect(route('workspace.study.index'));
+            ->assertRedirect(route('workspace.study.top'));
     }
 
     public function test_plan_deep_link_overrides_manual_choice_without_erasing_it(): void
@@ -73,7 +73,7 @@ class WorkspaceModePersistenceV542Test extends TestCase
 
         $this->actingAs($user)
             ->get(route('home'))
-            ->assertRedirect(route('workspace.development.index'));
+            ->assertRedirect(route('workspace.development.top'));
     }
 
     public function test_strong_domain_route_overrides_manual_choice(): void

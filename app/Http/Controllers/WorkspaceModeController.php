@@ -3,10 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\WorkspaceMode;
-use App\Models\Plan;
-use App\Services\PlanCategoryProfileService;
-use App\Services\PlanOwnershipService;
-use App\Services\PlanPriorityService;
 use App\Services\WorkspaceModePreference;
 use App\Services\WorkspaceModeRegistry;
 use Illuminate\Http\RedirectResponse;
@@ -15,22 +11,12 @@ use Illuminate\Http\Request;
 final class WorkspaceModeController extends Controller
 {
     public function enter(
-        Request $request,
         string $workspaceMode,
         WorkspaceModeRegistry $registry,
-        PlanOwnershipService $ownership,
-        PlanCategoryProfileService $profiles,
-        PlanPriorityService $priorities,
     ): RedirectResponse {
         $mode = $this->publicMode($workspaceMode, $registry);
 
-        return $this->redirectForMode(
-            $request,
-            $mode,
-            $ownership,
-            $profiles,
-            $priorities,
-        );
+        return $this->redirectForMode($mode);
     }
 
     public function select(
@@ -38,21 +24,12 @@ final class WorkspaceModeController extends Controller
         string $workspaceMode,
         WorkspaceModeRegistry $registry,
         WorkspaceModePreference $preference,
-        PlanOwnershipService $ownership,
-        PlanCategoryProfileService $profiles,
-        PlanPriorityService $priorities,
     ): RedirectResponse {
         $mode = $this->publicMode($workspaceMode, $registry);
 
         $preference->remember($request, $mode);
 
-        return $this->redirectForMode(
-            $request,
-            $mode,
-            $ownership,
-            $profiles,
-            $priorities,
-        );
+        return $this->redirectForMode($mode);
     }
 
     public function reset(
@@ -88,94 +65,15 @@ final class WorkspaceModeController extends Controller
     }
 
     private function redirectForMode(
-        Request $request,
         WorkspaceMode $mode,
-        PlanOwnershipService $ownership,
-        PlanCategoryProfileService $profiles,
-        PlanPriorityService $priorities,
     ): RedirectResponse {
-        if ($mode === WorkspaceMode::Overview) {
-            return redirect()->route('workspace.overview.index');
-        }
-
-        if ($mode === WorkspaceMode::Study) {
-            return redirect()->route('workspace.study.index');
-        }
-
-        if ($mode === WorkspaceMode::Development) {
-            return redirect()->route('workspace.development.index');
-        }
-
-        if ($mode === WorkspaceMode::Career) {
-            return redirect()->route('workspace.career.index');
-        }
-
-        $profileKey = $mode->value;
-        $plans = $ownership->ownedPlans($request, [
-            'tasks',
-            'workLogs',
-            'availabilityRules',
-            'availabilityOverrides',
-        ])->filter(
-            fn (Plan $plan) =>
-                $profiles->forPlan($plan)->key === $profileKey,
+        return redirect()->route(
+            match ($mode) {
+                WorkspaceMode::Overview => 'workspace.overview.index',
+                WorkspaceMode::Study => 'workspace.study.top',
+                WorkspaceMode::Development => 'workspace.development.top',
+                WorkspaceMode::Career => 'workspace.career.index',
+            },
         );
-
-        $plan = $plans
-            ->sort(function (Plan $left, Plan $right) use ($priorities) {
-                $priority = (int) data_get(
-                    $priorities->evaluate($left),
-                    'priority',
-                    5,
-                ) <=> (int) data_get(
-                    $priorities->evaluate($right),
-                    'priority',
-                    5,
-                );
-
-                if ($priority !== 0) {
-                    return $priority;
-                }
-
-                $deadline = ($left->deadline?->timestamp ?? PHP_INT_MAX)
-                    <=> ($right->deadline?->timestamp ?? PHP_INT_MAX);
-
-                if ($deadline !== 0) {
-                    return $deadline;
-                }
-
-                return ((int) $left->id) <=> ((int) $right->id);
-            })
-            ->first();
-
-        if ($plan instanceof Plan) {
-            return match ($mode) {
-                WorkspaceMode::Study => redirect()->route(
-                    'workspace.study.index',
-                    ['plan_id' => $plan->id],
-                ),
-                WorkspaceMode::Development => redirect()->route(
-                    'workspace.development.index',
-                    ['plan_id' => $plan->id],
-                ),
-                WorkspaceMode::Career => redirect()->route(
-                    'workspace.career.index',
-                    ['plan_id' => $plan->id],
-                ),
-                WorkspaceMode::Overview => redirect()->route('workspace.overview.index'),
-            };
-        }
-
-        return redirect()
-            ->route('home', ['workspace_mode' => $mode->value])
-            ->with(
-                'status',
-                match ($mode) {
-                    WorkspaceMode::Study => '学習Workspaceを始めるには、学習Planを作成してください。',
-                    WorkspaceMode::Development => '開発Workspaceを始めるには、開発Planを作成してください。',
-                    WorkspaceMode::Career => 'Career Workspaceを始めるには、Career Planを作成してください。',
-                    WorkspaceMode::Overview => 'Overviewを開きました。',
-                },
-            );
     }
 }
