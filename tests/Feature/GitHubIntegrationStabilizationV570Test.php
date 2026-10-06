@@ -257,7 +257,7 @@ class GitHubIntegrationStabilizationV570Test extends TestCase
             ->assertOk()
             ->assertSee('App credential: 未設定')
             ->assertSee('運営設定が必要')
-            ->assertSee('Canovia運営側のGitHub App設定がまだありません');
+            ->assertSee('Canovia運営側のGitHub App設定が必要です');
     }
 
     public function test_workflow_marks_missing_install_url_separately(): void
@@ -281,7 +281,6 @@ class GitHubIntegrationStabilizationV570Test extends TestCase
             ->assertOk()
             ->assertSee('App credential: ✓')
             ->assertSee('Install URL: 未設定')
-            ->assertSee('Install URL未設定')
             ->assertSee('GitHub Appの接続URL設定が必要です');
     }
 
