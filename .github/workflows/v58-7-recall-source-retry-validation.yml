@@ -1,0 +1,38 @@
+name: V58.7 Recall Source Retry Validation
+
+on:
+  push:
+    branches:
+      - feature/v58-7-recall-source-retry
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Models/StudyRecallSource.php
+          php -l app/Http/Controllers/StudyRecallCandidateController.php
+          php -l tests/Feature/StudyRecallSourceRetryV587Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V58.7 dedicated failed source retry contract
+        run: php artisan test tests/Feature/StudyRecallSourceRetryV587Test.php
+      - name: V41.12 Recall Candidate regression
+        run: php artisan test tests/Feature/StudyRecallCandidateV4112Test.php
+      - name: V41.11 Recall loop regression
+        run: php artisan test tests/Feature/StudyRecallV4111Test.php
+      - name: V58.6 Recall Task progression regression
+        run: php artisan test tests/Feature/StudyRecallTaskProgressionV586Test.php
