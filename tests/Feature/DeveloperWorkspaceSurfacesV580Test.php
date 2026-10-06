@@ -33,7 +33,7 @@ class DeveloperWorkspaceSurfacesV580Test extends TestCase
         ]);
     }
 
-    public function test_default_surface_shows_current_work_and_dedicated_surface_tabs_only(): void
+    public function test_default_surface_shows_current_work_and_grouped_view_selector_only(): void
     {
         [$user, $plan] = $this->scenario();
 
@@ -46,16 +46,25 @@ class DeveloperWorkspaceSurfacesV580Test extends TestCase
             ->assertOk()
             ->assertSee('data-development-surface="work"', false)
             ->assertSee('data-development-surface-panel="work"', false)
-            ->assertSee('data-development-surface-tab="work"', false)
-            ->assertSee('data-development-surface-tab="repository"', false)
-            ->assertSee('data-development-surface-tab="team"', false)
-            ->assertSee('data-development-surface-tab="improvements"', false)
-            ->assertSee('data-development-surface-tab="preview"', false)
+            ->assertSee('data-development-navigation-form', false)
+            ->assertSee('data-development-surface-select', false)
+            ->assertSee('data-development-current-category="execution"', false)
+            ->assertSee('<optgroup label="実行">', false)
+            ->assertSee('<optgroup label="設計">', false)
+            ->assertSee('<optgroup label="プロジェクト">', false)
+            ->assertSee('<optgroup label="観測">', false)
+            ->assertSee('value="work"', false)
+            ->assertSee('value="repository"', false)
+            ->assertSee('value="team"', false)
+            ->assertSee('value="improvements"', false)
+            ->assertSee('value="preview"', false)
             ->assertSee('今やること')
             ->assertSee('リポジトリ')
             ->assertSee('チーム')
             ->assertSee('改善')
             ->assertSee('プレビュー')
+            ->assertDontSee('data-development-surface-tab=', false)
+            ->assertDontSee('<optgroup label="自動化">', false)
             ->assertSee('data-development-context-details', false)
             ->assertDontSee('data-development-surface-panel="repository"', false)
             ->assertDontSee('data-development-surface-panel="team"', false)
