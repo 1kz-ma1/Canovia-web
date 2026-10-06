@@ -205,14 +205,50 @@
                     <summary class="cursor-pointer text-xs font-bold text-slate-300">最近取り込んだ教材</summary>
                     <div class="mt-3 grid gap-2">
                         @foreach ($recallSources as $source)
-                            <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/6 bg-slate-950/20 px-3 py-2">
+                            <div
+                                class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/6 bg-slate-950/20 px-3 py-2"
+                                data-recall-source-row="{{ $source->id }}"
+                                data-recall-source-status="{{ $source->status }}"
+                            >
                                 <div>
-                                    <p class="text-xs font-bold text-slate-200">{{ $source->original_name ?: $source->sourceLabel() }}</p>
-                                    <p class="mt-1 text-[10px] text-slate-600">{{ $source->sourceLabel() }} · {{ $source->status }} · 新規候補 {{ (int) $source->candidate_count }}件</p>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <p class="text-xs font-bold text-slate-200">{{ $source->original_name ?: $source->sourceLabel() }}</p>
+                                        @if ($source->status === 'failed')
+                                            <span class="badge badge-slate">抽出失敗</span>
+                                        @elseif ($source->status === 'ready')
+                                            <span class="badge badge-slate">抽出済み</span>
+                                        @else
+                                            <span class="badge badge-slate">処理中</span>
+                                        @endif
+                                    </div>
+                                    <p class="mt-1 text-[10px] text-slate-600">{{ $source->sourceLabel() }} · 新規候補 {{ (int) $source->candidate_count }}件</p>
+                                    @if ($source->status === 'failed')
+                                        <p class="mt-1 text-[10px] leading-4 text-amber-200/70">
+                                            教材は保存済みです。利用条件を満たせば同じ教材から再抽出できます。
+                                        </p>
+                                    @endif
                                 </div>
-                                @if ($source->storage_path)
-                                    <a href="{{ route('plans.tasks.study_recall.sources.file', [$plan, $task, $source]) }}" target="_blank" class="text-xs font-bold text-violet-200 hover:text-violet-100">元教材を確認</a>
-                                @endif
+                                <div class="flex flex-wrap items-center gap-2">
+                                    @if ($source->storage_path)
+                                        <a href="{{ route('plans.tasks.study_recall.sources.file', [$plan, $task, $source]) }}" target="_blank" class="text-xs font-bold text-violet-200 hover:text-violet-100">元教材を確認</a>
+                                    @endif
+
+                                    @if (
+                                        $source->status === 'failed'
+                                        && $source->hasStoredMaterial()
+                                        && $canGenerateRecallCandidates
+                                    )
+                                        <form
+                                            method="POST"
+                                            action="{{ route('plans.tasks.study_recall.sources.retry', [$plan, $task, $source]) }}"
+                                            data-recall-source-retry-form="{{ $source->id }}"
+                                            data-mutation-once
+                                        >
+                                            @csrf
+                                            <button type="submit" class="btn-secondary px-3 py-2 text-xs">再抽出</button>
+                                        </form>
+                                    @endif
+                                </div>
                             </div>
                         @endforeach
                     </div>
