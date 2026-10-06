@@ -182,6 +182,15 @@
         </section>
     @endif
 
+    <details class="rounded-3xl border border-slate-800 bg-slate-950/30 p-4 md:p-5" data-github-legacy-artifact-lanes>
+        <summary class="cursor-pointer list-none text-sm font-black text-slate-300">
+            手動GitHub Artifactレーン
+            <span class="ml-2 text-[10px] font-normal text-slate-600">必要なときだけ開く</span>
+        </summary>
+        <p class="mt-2 text-xs leading-5 text-slate-600">
+            Developer HomeではNext Action / GitHub Realityが主導します。このレーンは手動登録したPR・Issue・Branchの補助整理用です。
+        </p>
+        <div class="mt-4 space-y-5">
     @if ($unclassified->isNotEmpty())
         <section class="rounded-3xl border border-amber-300/15 bg-amber-300/[0.035] p-4 md:p-5" data-github-workflow-unclassified>
             <div class="flex items-center justify-between gap-3">
@@ -242,6 +251,9 @@
             @endforeach
         </div>
     </section>
+
+        </div>
+    </details>
 
     @if ($items->isEmpty())
         <section class="rounded-3xl border border-dashed border-slate-700 bg-slate-950/30 p-8 text-center">
