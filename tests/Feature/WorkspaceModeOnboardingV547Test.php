@@ -57,7 +57,7 @@ class WorkspaceModeOnboardingV547Test extends TestCase
             ->assertDontSee('試験範囲から始める');
     }
 
-    public function test_development_onboarding_advances_to_github_evidence_and_disappears_after_observed_release_state(): void
+    public function test_development_onboarding_ends_after_plan_creation_and_developer_home_takes_over(): void
     {
         $user = User::factory()->create();
 
@@ -79,28 +79,16 @@ class WorkspaceModeOnboardingV547Test extends TestCase
                 'plan_id' => $plan->id,
             ]))
             ->assertOk()
-            ->assertSee('data-development-workspace-github-first', false)
-            ->assertSee(
-                'data-workspace-mode-onboarding-step="connect_github_evidence"',
-                false,
-            )
-            ->assertSee('GitHub EvidenceをTaskへつなぐ')
-            ->assertDontSee('data-development-workspace-readiness', false);
-
-        $task = $this->task($plan, 'V54.7');
-        $this->commitEvidence($task);
-
-        $this->actingAs($user)
-            ->get(route('workspace.development.index', [
-                'plan_id' => $plan->id,
-            ]))
-            ->assertOk()
             ->assertDontSee(
                 'data-workspace-mode-onboarding="development"',
                 false,
             )
-            ->assertSee('data-development-workspace-readiness', false)
-            ->assertSee('RELEASE READINESS');
+            ->assertSee('data-development-home-v1', false)
+            ->assertSee('data-development-home-next-action', false)
+            ->assertSee('data-development-home-recent-activity', false)
+            ->assertSee('data-development-home-active', false)
+            ->assertSee('data-development-home-readiness', false)
+            ->assertSee('GitHub未接続でもDeveloper Homeは使えます。');
     }
 
     public function test_study_mode_plan_creation_prefills_category_and_returns_to_study_workspace(): void
@@ -157,7 +145,7 @@ class WorkspaceModeOnboardingV547Test extends TestCase
             )
             ->assertSee('value="個人開発" selected', false)
             ->assertSee(
-                'Development Workspaceへ戻ってGitHub Evidenceを接続',
+                'Developer Homeが現在Stateから次のActionを提示',
             );
 
         $response = $this->actingAs($user)
@@ -177,7 +165,7 @@ class WorkspaceModeOnboardingV547Test extends TestCase
             ]))
             ->assertSessionHas(
                 'status',
-                '開発Planを作成しました。次はGitHub Evidenceをつなぎます。',
+                '開発Planを作成しました。Developer Homeで次のActionから始めます。',
             );
     }
 
