@@ -122,6 +122,15 @@ final class GitHubIntegrationReadinessService
             $appConnection['status']
             ?? 'not_connected'
         );
+        $permissions = is_array($appConnection['permissions'] ?? null)
+            ? $appConnection['permissions']
+            : [];
+        $writeReady = array_key_exists('write_ready', $appConnection)
+            ? (bool) $appConnection['write_ready']
+            : (
+                ($permissions['contents'] ?? null) === 'write'
+                && ($permissions['pull_requests'] ?? null) === 'write'
+            );
 
         if (! $evidenceAllowed) {
             return [
@@ -162,7 +171,7 @@ final class GitHubIntegrationReadinessService
                 'state' => 'ready',
                 'owner' => 'READY',
                 'label' => 'GitHub接続済み',
-                'detail' => (bool) ($appConnection['write_ready'] ?? false)
+                'detail' => $writeReady
                     ? '対象RepositoryをGitHub App経由でreadでき、必要なwrite権限も確認されています。'
                     : '対象RepositoryをGitHub App経由でreadできます。Private Repositoryもこの接続経路で利用できます。',
             ],
