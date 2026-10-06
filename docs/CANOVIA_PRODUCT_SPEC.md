@@ -6238,3 +6238,42 @@ redesigned by this phase.
 
 Canonical contract:
 `docs/V57.9_COMPACT_DESKTOP_HEADER.md`.
+
+
+## V58.0 Developer Workspace Focused Surfaces
+
+Developer Workspace follows the daily-use rule:
+
+```text
+one screen = one information / operation lineage
+```
+
+The old vertically stacked Developer Home is replaced by five server-rendered
+surfaces:
+
+```text
+今やること / リポジトリ / チーム / 改善 / プレビュー
+```
+
+Only the selected `?surface=` is rendered.
+
+The default Work surface keeps Next Action first and moves detailed Execution
+Context / Implementation Brief and additional active Tasks behind explicit
+details controls.
+
+Repository opens a bounded GitHub App tree projection only when explicitly
+selected. It reads path/type/size metadata, never source file contents, and does
+not persist the tree.
+
+Team uses existing Plan collaboration facts, assigned artifacts, linked Tasks
+and recent activity. It does not infer Task ownership.
+
+Improvements are deterministic from existing connection / activity / readiness /
+paused-Task facts; opening the surface does not call AI.
+
+Preview stores one explicit external-link PlanArtifact and loads its sandboxed
+iframe only after a user click. The server never fetches the Preview URL and an
+external-open fallback remains for sites that reject framing.
+
+Canonical contract:
+`docs/V58.0_DEVELOPER_WORKSPACE_SURFACES.md`.
