@@ -84,7 +84,7 @@ class DevelopmentWorkspaceV544Test extends TestCase
             ->assertSee('value="'.$lower->id.'" selected', false);
     }
 
-    public function test_workspace_is_github_first_without_release_evidence_and_does_not_mutate_state(): void
+    public function test_workspace_is_state_first_without_release_evidence_and_does_not_mutate_core_state(): void
     {
         $user = User::factory()->create();
         $plan = $this->plan($user, 'Canovia', '個人開発');
@@ -94,13 +94,15 @@ class DevelopmentWorkspaceV544Test extends TestCase
                 'plan_id' => $plan->id,
             ]))
             ->assertOk()
-            ->assertSee('data-development-workspace-github-first', false)
-            ->assertSee('GitHub EvidenceをTaskへつなぐ')
+            ->assertSee('data-development-home-v1', false)
+            ->assertSee('data-development-home-next-action', false)
+            ->assertSee('data-development-home-recent-activity', false)
+            ->assertSee('data-development-home-active', false)
+            ->assertSee('data-development-workspace-readiness', false)
             ->assertSee(
                 route('github_workflow.index', ['plan_id' => $plan->id]),
                 false,
-            )
-            ->assertDontSee('data-development-workspace-readiness', false);
+            );
 
         $this->assertDatabaseCount('tasks', 0);
         $this->assertDatabaseCount('task_evidences', 0);
@@ -130,7 +132,7 @@ class DevelopmentWorkspaceV544Test extends TestCase
             ->assertSee('data-development-workspace-quality-gates', false)
             ->assertSee('RELEASE READINESS')
             ->assertSee('BIGGEST RELEASE GAP')
-            ->assertSee('CURRENT ACTION')
+            ->assertSee('NEXT ACTION')
             ->assertSee('CI / Test')
             ->assertSee('Review')
             ->assertSee('Production Deploy')

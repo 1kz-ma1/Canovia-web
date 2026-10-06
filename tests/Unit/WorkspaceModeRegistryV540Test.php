@@ -50,7 +50,11 @@ class WorkspaceModeRegistryV540Test extends TestCase
             'release_readiness',
             $development->navigationKeys,
         );
-        $this->assertContains('github', $development->navigationKeys);
+        $this->assertContains('github_activity', $development->navigationKeys);
+        $this->assertContains(
+            'active_development',
+            $development->navigationKeys,
+        );
         $this->assertContains('pipeline', $career->navigationKeys);
         $this->assertContains('interviews', $career->navigationKeys);
 
@@ -59,7 +63,7 @@ class WorkspaceModeRegistryV540Test extends TestCase
             $study->emptyStateActionKey,
         );
         $this->assertSame(
-            'connect_github',
+            'create_plan',
             $development->emptyStateActionKey,
         );
         $this->assertSame(
@@ -76,7 +80,7 @@ class WorkspaceModeRegistryV540Test extends TestCase
             array_column($study->onboardingSteps, 'key'),
         );
         $this->assertSame(
-            ['create_plan', 'connect_github_evidence'],
+            ['create_plan'],
             array_column($development->onboardingSteps, 'key'),
         );
         $this->assertSame(

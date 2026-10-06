@@ -2760,22 +2760,25 @@ confirmed Scopeだけではセットアップを完了扱いにしない。
 
 ### Development first route
 
-Development onboarding:
+V57.3 supersedes the original Development onboarding sequence.
+
+Current Development onboarding:
 
 ```text
 Development Plan
-→ first GitHub / Development Evidence
-→ normal Release Readiness / Quality Gates / Current Action
+→ Developer Home
 ```
 
 Step completion:
 
 - Development Plan存在 → `create_plan` complete
-- Development Intelligenceの `focus_task_state` が観測される → `connect_github_evidence` complete
 
-Release Evidenceが成立すると案内は自動で消える。
+Plan作成後はGitHub Evidenceを必須setupにしない。Developer Homeが現在Stateから
+Current Actionを決め、必要な場合だけGitHub / Execution / Review / Deploy /
+Verification / Spec Syncへ導く。
 
-Development onboardingはWorkspace GETでGitHub APIを呼ばず、既存Development Intelligence Stateだけを見る。
+GitHubはState Sensor / Execution Providerであり、Development Workspaceへ入るための
+universal prerequisiteではない。
 
 ### Shared presentation
 
@@ -5967,3 +5970,71 @@ A future Development State First layer can therefore support conception, specifi
 
 Detailed contract: `docs/V57.0_GITHUB_INTEGRATION_STABILIZATION.md`.
 
+
+
+## V57.1 Developer Activity Observation
+
+Connected Development repositories project authoritative GitHub facts into
+`development_activity_observations` before Task Evidence exists.
+
+Canonical boundary:
+
+```text
+GitHub webhook / bounded connection bootstrap
+→ GitHub App REST re-fetch
+→ DevelopmentActivityObservation
+```
+
+Observation is not Task Evidence and never advances Task progress. Raw webhook
+payloads, source, diff, PR/Issue bodies and commit messages are not persisted.
+
+Detailed contract: `docs/V57.1_DEVELOPER_ACTIVITY_OBSERVATION.md`.
+
+## V57.2 Developer Task Association
+
+V57.2 turns unresolved GitHub observations into deterministic Task candidates.
+
+```text
+Observation
+→ deterministic candidate
+→ Human Confirmation
+→ PlanArtifact ↔ Task
+→ authoritative GitHub re-fetch
+→ existing TaskEvidence
+```
+
+No LLM chooses the Task and no relation is created without human confirmation.
+Association still does not change Task progress/status/remaining time.
+
+Detailed contract: `docs/V57.2_DEVELOPER_TASK_ASSOCIATION.md`.
+
+## V57.3 Developer Home V1
+
+Development Workspace becomes a State First Developer Home.
+
+Primary hierarchy:
+
+```text
+Next Action
+→ Recent GitHub Reality
+→ Active Development
+→ Release Readiness / Quality Gates
+→ History
+```
+
+The existing Development Adaptive Action remains the authority for Next Action.
+V57.1 observations supply recent GitHub reality and V57.2 supplies human-confirmed
+Task association. Unfinished Tasks form Active Development.
+
+Release Readiness remains authoritative but is secondary to daily execution.
+Quality Gates remain available as detail instead of dominating the first screen.
+
+Development onboarding ends after Plan creation. Missing GitHub Evidence may
+still produce a GitHub-oriented Next Action, but it no longer blocks the rest of
+Developer Home.
+
+Workspace GET does not call GitHub or AI and does not create associations,
+Evidence or Task progress. It may refresh local deterministic Task suggestion
+metadata.
+
+Detailed contract: `docs/V57.3_DEVELOPER_HOME_V1.md`.

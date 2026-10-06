@@ -242,11 +242,11 @@
                         @elseif (($workspaceModeContext['key'] ?? null) === 'development')
                             <div class="flex gap-3">
                                 <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-700 text-[10px] font-black text-slate-400">2</span>
-                                <p class="text-xs leading-5 text-slate-400">Development Workspaceへ戻ってGitHub Evidenceを接続</p>
+                                <p class="text-xs leading-5 text-slate-400">Developer Homeが現在Stateから次のActionを提示</p>
                             </div>
                             <div class="flex gap-3">
                                 <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-700 text-[10px] font-black text-slate-400">3</span>
-                                <p class="text-xs leading-5 text-slate-400">Release ReadinessとCurrent Actionを確認</p>
+                                <p class="text-xs leading-5 text-slate-400">GitHub・実装・Review・Releaseの必要な入口から開始</p>
                             </div>
                         @elseif (($workspaceModeContext['key'] ?? null) === 'career')
                             <div class="flex gap-3">
