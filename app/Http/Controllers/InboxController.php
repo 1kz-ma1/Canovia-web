@@ -134,6 +134,7 @@ class InboxController extends Controller
         FeatureAccessService $featureAccess,
         NativeAiGateway $nativeAi,
         InboxIntelligenceService $intelligence,
+        ReleaseLevelService $releaseLevels,
     ) {
         $validated = $request->validate([
             'title' => ['nullable', 'string', 'max:255'],
@@ -249,6 +250,18 @@ class InboxController extends Controller
             ) {
                 try {
                     $suggestion = $intelligence->suggest($item, $request->user()?->id);
+                    if (
+                        ($suggestion['destination'] ?? null) === 'career_capture'
+                        && ! $releaseLevels->allowsWorkspace(
+                            WorkspaceMode::Career,
+                            $request->user(),
+                            $request,
+                        )
+                    ) {
+                        $suggestion['destination'] = 'keep_inbox';
+                        $suggestion['reason'] = 'Careerは現在Beta準備中のため、Inboxに保持します。';
+                    }
+
                     $metadata = is_array($item->metadata) ? $item->metadata : [];
                     $metadata['routing_suggestion'] = $suggestion;
 
