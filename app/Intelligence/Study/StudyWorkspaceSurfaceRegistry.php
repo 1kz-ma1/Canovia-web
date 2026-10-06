@@ -34,6 +34,10 @@ final class StudyWorkspaceSurfaceRegistry
                 'partial' => 'workspace.study.surfaces.biggest-gap',
                 'label' => 'Biggest Gap',
             ],
+            'ap_subject_a_coverage' => [
+                'partial' => 'workspace.study.surfaces.ap-subject-a-coverage',
+                'label' => 'AP Subject A Coverage',
+            ],
             'study_method_recommendation' => [
                 'partial' => 'workspace.study.surfaces.study-method-recommendation',
                 'label' => 'Study Method Recommendation',

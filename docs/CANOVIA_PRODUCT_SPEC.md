@@ -6787,3 +6787,23 @@ DB-only / read-only / provider-free / no migration。
 
 Canonical contract:
 `docs/V58.15_STUDY_METHOD_OUTCOME_CALIBRATION.md`.
+
+## V58.16 AP Subject A Coverage Dashboard
+
+AP科目A Planの複数Taskを横断し、採点済みQuestion Bank実績からPlan-wide Coverage / 正答観測をStudy Analysisへ表示する。
+
+公式CoverageとPerformanceは分離する。
+
+- 公式Coverage: reference公式Pack内で採点済みのユニーク問題数 / Pack収録数
+- 正答観測: Core Packを含むQuestion Bank全採点exposureのdomain別correct / partial / incorrect
+
+同じ公式問題を繰り返してもCoverageは増えない。Core Pack問題は正答観測には入るが公式Coverageには入らない。
+
+current AP公式Pack metadataではテクノロジ20 / マネジメント5 / ストラテジ10 / total35をreference denominatorとして利用する。これはinstalled Packの母数であり、普遍的な試験配点とは扱わない。
+
+Study Analysisへregistered surface `ap_subject_a_coverage` を追加する。Plan-wide domain / parent-topic観測はread-onlyで、Task-local Weakness Priority / Routing / Task進捗 / Masteryを変更しない。
+
+最新最大200 Session / same Plan / same actor限定。DB-only / provider-free / no migration。
+
+Canonical contract:
+`docs/V58.16_AP_SUBJECT_A_COVERAGE_DASHBOARD.md`.

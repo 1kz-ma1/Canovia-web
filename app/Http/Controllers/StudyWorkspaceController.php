@@ -6,6 +6,7 @@ use App\Intelligence\Enums\IntelligenceDomain;
 use App\Intelligence\Presentation\IntelligencePresentationHistoryService;
 use App\Intelligence\Presentation\IntelligenceStateChangeFeedbackService;
 use App\Intelligence\Presentation\StudyIntelligencePresentationAdapter;
+use App\Intelligence\Study\ApSubjectACoverageDashboardService;
 use App\Intelligence\Study\StudyAdaptiveActionService;
 use App\Intelligence\Study\StudyLearningTypeRouter;
 use App\Intelligence\Study\StudyMethodRecommendationService;
@@ -34,6 +35,7 @@ final class StudyWorkspaceController extends Controller
         PlanCategoryProfileService $profiles,
         PlanPriorityService $priorities,
         StudyAdaptiveActionService $studyActions,
+        ApSubjectACoverageDashboardService $apCoverage,
         StudyLearningTypeRouter $learningTypes,
         StudyMethodRecommendationService $methodRecommendations,
         StudyWorkspaceRecommendationService $recommendations,
@@ -117,6 +119,13 @@ final class StudyWorkspaceController extends Controller
         $actorToken = $request->user()
             ? null
             : $identity->resolve($request);
+        $apSubjectACoverage = $studySurface === 'analysis'
+            ? $apCoverage->project(
+                $plan,
+                $request->user()?->id,
+                $actorToken,
+            )
+            : null;
         $resolvedState = $studyState->resolve(
             $plan,
             $adaptiveAction,
@@ -158,6 +167,7 @@ final class StudyWorkspaceController extends Controller
             $canEdit,
             $recommendation,
             $methodRecommendation,
+            $apSubjectACoverage,
         );
 
         $projectedComposition = $views->project(
