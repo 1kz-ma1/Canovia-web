@@ -341,6 +341,30 @@ final class StudyMethodRecommendationService
             ];
         }
 
+        if (in_array(
+            $basePrimary,
+            [
+                StudyActivityPolicyService::LISTENING,
+                StudyActivityPolicyService::DICTATION,
+                StudyActivityPolicyService::SHADOWING,
+            ],
+            true,
+        )) {
+            return [
+                $basePrimary,
+                null,
+                match ($basePrimary) {
+                    StudyActivityPolicyService::DICTATION =>
+                        'このTaskは聞こえた音を文字へ変換して聞き落としを確認する工程が中心なので、Task適合度どおりDictationを優先します。',
+                    StudyActivityPolicyService::SHADOWING =>
+                        'このTaskは音声を追ってリズム・強勢・音のつながりを再現する工程が中心なので、Task適合度どおりShadowingを優先します。',
+                    default =>
+                        'このTaskは音声を聞いて意味と聞き取れない箇所を確認する工程が中心なので、Task適合度どおりListeningを優先します。',
+                },
+                'task_semantic_fit',
+            ];
+        }
+
         if ($type === 'memorization') {
             return [
                 StudyActivityPolicyService::RECALL,
@@ -420,30 +444,6 @@ final class StudyMethodRecommendationService
                 StudyActivityPolicyService::RECALL,
                 null,
                 'このTaskは記憶・想起の比重が高いため、V41.10のTask適合度どおりRecallを優先します。',
-                'task_semantic_fit',
-            ];
-        }
-
-        if (in_array(
-            $basePrimary,
-            [
-                StudyActivityPolicyService::LISTENING,
-                StudyActivityPolicyService::DICTATION,
-                StudyActivityPolicyService::SHADOWING,
-            ],
-            true,
-        )) {
-            return [
-                $basePrimary,
-                null,
-                match ($basePrimary) {
-                    StudyActivityPolicyService::DICTATION =>
-                        'このTaskは聞こえた音を文字へ変換して聞き落としを確認する工程が中心なので、Task適合度どおりDictationを優先します。',
-                    StudyActivityPolicyService::SHADOWING =>
-                        'このTaskは音声を追ってリズム・強勢・音のつながりを再現する工程が中心なので、Task適合度どおりShadowingを優先します。',
-                    default =>
-                        'このTaskは音声を聞いて意味と聞き取れない箇所を確認する工程が中心なので、Task適合度どおりListeningを優先します。',
-                },
                 'task_semantic_fit',
             ];
         }
