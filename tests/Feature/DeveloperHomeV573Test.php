@@ -133,7 +133,8 @@ class DeveloperHomeV573Test extends TestCase
 
     public function test_plan_without_github_is_not_blocked_by_setup_onboarding(): void
     {
-        [$user, $plan] = $this->scenario();
+        [$user, $plan, , , $root] = $this->scenario();
+        $root->delete();
 
         $this->actingAs($user)
             ->get(route('workspace.development.index', [
