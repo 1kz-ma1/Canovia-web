@@ -58,6 +58,14 @@ final class OverviewWorkspaceController extends Controller
             $profiles,
             $priorities,
         );
+        $careerAvailable = in_array(
+            WorkspaceMode::Career->value,
+            $workspaceModes->publicKeys(),
+            true,
+        );
+        $careerSpecializedPlan = $careerAvailable
+            ? $careerPlan
+            : null;
 
         $actorToken = $identity->resolve($request);
         $userId = $request->user()?->id;
@@ -79,9 +87,9 @@ final class OverviewWorkspaceController extends Controller
                     IntelligenceDomain::Development,
                 )
                 : null,
-            $careerPlan instanceof Plan
+            $careerSpecializedPlan instanceof Plan
                 ? $stateChanges->latestForPlan(
-                    $careerPlan,
+                    $careerSpecializedPlan,
                     IntelligenceDomain::Career,
                 )
                 : null,
@@ -139,11 +147,13 @@ final class OverviewWorkspaceController extends Controller
                 $developmentPlan,
                 $presentations,
             ),
-            'careerSummary' => $this->modeSummary(
-                'career',
-                $careerPlan,
-                $presentations,
-            ),
+            'careerSummary' => $careerAvailable
+                ? $this->modeSummary(
+                    'career',
+                    $careerSpecializedPlan,
+                    $presentations,
+                )
+                : [],
             'pendingInboxCount' => (clone $pendingInbox)->count(),
             'pendingInboxItems' => $pendingInbox->take(4)->get(),
             'importantSignals' => collect(
