@@ -92,7 +92,7 @@ class QuestionCandidateReliabilityV5813Test extends TestCase
         $this->assertSame(1, $beforeReuse['applied_adjustment']);
 
         for ($i = 0; $i < 4; $i++) {
-            $session = $this->session(
+            $session = $this->practiceSession(
                 $plan,
                 $task,
                 $user,
@@ -126,7 +126,7 @@ class QuestionCandidateReliabilityV5813Test extends TestCase
             $user,
         )->promotedQuestion;
 
-        $this->session(
+        $this->practiceSession(
             $plan,
             $task,
             $user,
@@ -158,7 +158,7 @@ class QuestionCandidateReliabilityV5813Test extends TestCase
             );
         }
 
-        $session = $this->session(
+        $session = $this->practiceSession(
             $plan,
             $task,
             $user,
@@ -208,7 +208,7 @@ class QuestionCandidateReliabilityV5813Test extends TestCase
             'canovia_original',
         );
 
-        $session = $this->session(
+        $session = $this->practiceSession(
             $plan,
             $task,
             $user,
@@ -244,7 +244,7 @@ class QuestionCandidateReliabilityV5813Test extends TestCase
             ->values();
 
         for ($i = 0; $i < 4; $i++) {
-            $session = $this->session(
+            $session = $this->practiceSession(
                 $plan,
                 $task,
                 $user,
@@ -488,7 +488,7 @@ class QuestionCandidateReliabilityV5813Test extends TestCase
     /**
      * @param array<int,int> $questionIds
      */
-    private function session(
+    private function practiceSession(
         Plan $plan,
         Task $task,
         User $user,
