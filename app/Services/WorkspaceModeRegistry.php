@@ -8,8 +8,12 @@ use Illuminate\Support\Collection;
 
 final class WorkspaceModeRegistry
 {
+    public function __construct(
+        private readonly ?ReleaseLevelService $releaseLevels = null,
+    ) {}
+
     /**
-     * Public Workspace Modes.
+     * Canonical Workspace Mode catalog.
      *
      * Plan category profiles are intentionally broader than this list.
      * Creative / General remain available in Canovia but currently resolve
@@ -140,6 +144,23 @@ final class WorkspaceModeRegistry
         ]);
     }
 
+    /**
+     * Workspace Modes available to the current actor Release Level.
+     *
+     * @return Collection<int,WorkspaceModeDefinitionData>
+     */
+    public function available(): Collection
+    {
+        $levels = $this->releaseLevels
+            ?? app(ReleaseLevelService::class);
+
+        return $this->all()
+            ->filter(fn (WorkspaceModeDefinitionData $item) =>
+                $levels->allowsWorkspace($item->mode)
+            )
+            ->values();
+    }
+
     public function default(): WorkspaceModeDefinitionData
     {
         return $this->definition(WorkspaceMode::Overview);
@@ -169,7 +190,7 @@ final class WorkspaceModeRegistry
             return null;
         }
 
-        return $this->all()
+        return $this->available()
             ->reject(fn (WorkspaceModeDefinitionData $item) =>
                 $item->mode === WorkspaceMode::Overview
             )
@@ -189,7 +210,7 @@ final class WorkspaceModeRegistry
      */
     public function publicKeys(): array
     {
-        return $this->all()
+        return $this->available()
             ->map(fn (WorkspaceModeDefinitionData $item) =>
                 $item->mode->value
             )

@@ -1,8 +1,21 @@
 # Canovia Release Level / Feature Flag Specification
 
-> Status: Product / release architecture decision, implementation pending  
+> Status: Product contract + V58.20 Foundation implemented  
 > Updated: 2026-10-07  
 > Scope: Early Access staged release, admin preview, beta rollout
+
+V58.20でFoundationを実装済み:
+
+- `ReleaseLevel` / `ReleaseLevelService`
+- config-based Public Release Level
+- Super Admin Release Preview
+- user-specific Level override
+- Career Level 3 gating
+- server-side middleware
+- Workspace / onboarding visibility integration
+- Admin Economy Inspector access control
+
+未実装のLevel 1 / 2全Feature inventoryやPublic LevelのDB/Admin操作は、Early Access Release Gateを固めてから追加する。
 
 ## 1. Purpose
 
@@ -360,9 +373,10 @@ Admin Preview Levelは「公開成熟度プレビュー」であり、別軸と�
 
 ## 17. Non-goals of this specification
 
-この文書だけでは実装しない:
+V58.20 Foundation後も、この文書だけでは実装しない:
 
-- database migration
+- Public Release LevelのDB永続化 / Admin切替
+- Level 1 / 2の全Feature inventory
 - percentage rollout engine
 - billing
 - Premium / Pro entitlement resolver migration

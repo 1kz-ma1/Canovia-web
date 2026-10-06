@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\BehaviorEventType;
+use App\Enums\WorkspaceMode;
 use Illuminate\Http\Request;
 
 final class HomePageDataService
@@ -23,6 +24,7 @@ final class HomePageDataService
         private readonly ActionHomeProjectionService $actionHome,
         private readonly PlanCategoryProfileService $categoryProfiles,
         private readonly IntelligenceHomeActionService $intelligenceHome,
+        private readonly ReleaseLevelService $releaseLevels,
     ) {}
 
     public function build(Request $request, bool $prefetch = false): array
@@ -44,7 +46,14 @@ final class HomePageDataService
         $hasCareerPlan = $plans->contains(
             fn ($plan) => $this->categoryProfiles->forPlan($plan)->key === 'career'
         );
-        if ($hasCareerPlan) {
+        if (
+            $hasCareerPlan
+            && $this->releaseLevels->allowsWorkspace(
+                WorkspaceMode::Career,
+                $request->user(),
+                $request,
+            )
+        ) {
             $this->core->plans($request, ['career']);
         }
 

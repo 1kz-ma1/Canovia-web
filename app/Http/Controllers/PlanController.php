@@ -70,7 +70,7 @@ class PlanController extends Controller
         PlanCategoryProfileService $categoryProfiles,
         WorkspaceModeRegistry $workspaceModes,
     ) {
-        $workspaceModeKeys = $workspaceModes->all()
+        $workspaceModeKeys = $workspaceModes->available()
             ->filter(fn ($definition) =>
                 $definition->mode !== WorkspaceMode::Overview
                 && $definition->onboardingSteps !== []

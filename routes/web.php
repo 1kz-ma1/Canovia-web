@@ -36,6 +36,7 @@ use App\Http\Controllers\AdminPracticeDemandController;
 use App\Http\Controllers\AdminGoalPatternDemandController;
 use App\Http\Controllers\AdminEconomyController;
 use App\Http\Controllers\AdminPreviewController;
+use App\Http\Controllers\AdminReleaseLevelController;
 use App\Http\Controllers\AdminStudyScenarioLabController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\RoadmapController;
@@ -102,7 +103,7 @@ Route::post('/plans/{plan}/development-preview', [DevelopmentPreviewController::
 Route::delete('/plans/{plan}/development-preview', [DevelopmentPreviewController::class, 'destroy'])
     ->middleware('throttle:20,1')
     ->name('plans.development_preview.destroy');
-Route::get('/workspace/career', CareerModeWorkspaceController::class)->name('workspace.career.index');
+Route::get('/workspace/career', CareerModeWorkspaceController::class)->middleware('release.level:3')->name('workspace.career.index');
 Route::get('/workspace/mode/{workspaceMode}', [WorkspaceModeController::class, 'enter'])->name('workspace_modes.enter');
 Route::post('/workspace/{workspaceMode}/select', [WorkspaceModeController::class, 'select'])->name('workspace_modes.select');
 Route::delete('/workspace/preference', [WorkspaceModeController::class, 'reset'])->name('workspace_modes.preference.reset');
@@ -217,6 +218,8 @@ Route::middleware('admin.access')->group(function () {
     Route::post('/admin/economy/complimentary-premium', [AdminEconomyController::class, 'storeComplimentaryPremium'])->name('admin.economy.complimentary.store');
     Route::delete('/admin/economy/complimentary-premium/{user}', [AdminEconomyController::class, 'destroyComplimentaryPremium'])->name('admin.economy.complimentary.destroy');
     Route::post('/admin/preview', [AdminPreviewController::class, 'update'])->name('admin.preview.update');
+    Route::post('/admin/release-level/preview', [AdminReleaseLevelController::class, 'updatePreview'])->name('admin.release_level.preview.update');
+    Route::post('/admin/release-level/users/{user}', [AdminReleaseLevelController::class, 'updateUser'])->name('admin.release_level.user.update');
     Route::post('/admin/question-packs/import', [AdminQuestionPackController::class, 'import'])->name('admin.question_packs.import');
     Route::post('/admin/question-packs/import-bundled', [AdminQuestionPackController::class, 'importBundled'])->name('admin.question_packs.import_bundled');
     Route::patch('/admin/question-packs/{questionPack}/status', [AdminQuestionPackController::class, 'updateStatus'])->name('admin.question_packs.status');
@@ -329,18 +332,18 @@ Route::put('/plans/{plan}/resources/{resource}', [PlanResourceController::class,
 Route::delete('/plans/{plan}/resources/{resource}', [PlanResourceController::class, 'destroy'])->name('plans.resources.destroy');
 
 // Career workspace / low-input capture / interview learning loop.
-Route::get('/plans/{plan}/career', [CareerWorkspaceController::class, 'index'])->name('plans.career.index');
-Route::post('/plans/{plan}/career/captures', [CareerWorkspaceController::class, 'storeCapture'])->name('plans.career.captures.store');
-Route::get('/plans/{plan}/career/captures/{capture}/screenshot', [CareerWorkspaceController::class, 'screenshot'])->name('plans.career.captures.screenshot');
-Route::delete('/plans/{plan}/career/captures/{capture}', [CareerWorkspaceController::class, 'destroyCapture'])->name('plans.career.captures.destroy');
-Route::post('/plans/{plan}/career/captures/{capture}/link', [CareerWorkspaceController::class, 'linkCapture'])->name('plans.career.captures.link');
-Route::post('/plans/{plan}/career/applications', [CareerWorkspaceController::class, 'storeApplication'])->name('plans.career.applications.store');
-Route::patch('/plans/{plan}/career/applications/{application}', [CareerWorkspaceController::class, 'updateApplication'])->name('plans.career.applications.update');
-Route::post('/plans/{plan}/career/applications/{application}/events', [CareerWorkspaceController::class, 'storeSelectionEvent'])->name('plans.career.events.store');
-Route::patch('/plans/{plan}/career/events/{event}/result', [CareerWorkspaceController::class, 'updateSelectionEventResult'])->name('plans.career.events.result');
-Route::patch('/plans/{plan}/career/events/{event}/cancel', [CareerWorkspaceController::class, 'cancelSelectionEvent'])->name('plans.career.events.cancel');
-Route::get('/plans/{plan}/career/interviews/{event}/review', [InterviewReviewController::class, 'show'])->name('plans.career.interview_reviews.show');
-Route::post('/plans/{plan}/career/interviews/{event}/review', [InterviewReviewController::class, 'store'])->name('plans.career.interview_reviews.store');
+Route::get('/plans/{plan}/career', [CareerWorkspaceController::class, 'index'])->middleware('release.level:3')->name('plans.career.index');
+Route::post('/plans/{plan}/career/captures', [CareerWorkspaceController::class, 'storeCapture'])->middleware('release.level:3')->name('plans.career.captures.store');
+Route::get('/plans/{plan}/career/captures/{capture}/screenshot', [CareerWorkspaceController::class, 'screenshot'])->middleware('release.level:3')->name('plans.career.captures.screenshot');
+Route::delete('/plans/{plan}/career/captures/{capture}', [CareerWorkspaceController::class, 'destroyCapture'])->middleware('release.level:3')->name('plans.career.captures.destroy');
+Route::post('/plans/{plan}/career/captures/{capture}/link', [CareerWorkspaceController::class, 'linkCapture'])->middleware('release.level:3')->name('plans.career.captures.link');
+Route::post('/plans/{plan}/career/applications', [CareerWorkspaceController::class, 'storeApplication'])->middleware('release.level:3')->name('plans.career.applications.store');
+Route::patch('/plans/{plan}/career/applications/{application}', [CareerWorkspaceController::class, 'updateApplication'])->middleware('release.level:3')->name('plans.career.applications.update');
+Route::post('/plans/{plan}/career/applications/{application}/events', [CareerWorkspaceController::class, 'storeSelectionEvent'])->middleware('release.level:3')->name('plans.career.events.store');
+Route::patch('/plans/{plan}/career/events/{event}/result', [CareerWorkspaceController::class, 'updateSelectionEventResult'])->middleware('release.level:3')->name('plans.career.events.result');
+Route::patch('/plans/{plan}/career/events/{event}/cancel', [CareerWorkspaceController::class, 'cancelSelectionEvent'])->middleware('release.level:3')->name('plans.career.events.cancel');
+Route::get('/plans/{plan}/career/interviews/{event}/review', [InterviewReviewController::class, 'show'])->middleware('release.level:3')->name('plans.career.interview_reviews.show');
+Route::post('/plans/{plan}/career/interviews/{event}/review', [InterviewReviewController::class, 'store'])->middleware('release.level:3')->name('plans.career.interview_reviews.store');
 Route::middleware('feature.access:'.FeatureKey::ProjectArtifact->value)->group(function () {
     Route::get('/plans/{plan}/artifacts', [PlanArtifactController::class, 'index'])->name('plans.artifacts.index');
     Route::post('/plans/{plan}/artifacts', [PlanArtifactController::class, 'store'])->name('plans.artifacts.store');

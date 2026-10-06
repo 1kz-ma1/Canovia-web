@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\FeatureKey;
+use App\Enums\WorkspaceMode;
 use App\Models\InboxItem;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ final class SpaceStationContextService
         private readonly FeatureAccessService $access,
         private readonly FeatureFlagService $flags,
         private readonly NativeAiGateway $nativeAi,
+        private readonly ReleaseLevelService $releaseLevels,
     ) {}
 
     /**
@@ -27,6 +29,11 @@ final class SpaceStationContextService
     {
         $actorToken = $this->identity->resolve($request);
         $userId = $request->user()?->id;
+        $careerAvailable = $this->releaseLevels->allowsWorkspace(
+            WorkspaceMode::Career,
+            $request->user(),
+            $request,
+        );
 
         $items = $this->ownInboxItems($userId, $actorToken)
             ->with('plan')
@@ -59,7 +66,7 @@ final class SpaceStationContextService
             && $this->access->canUse($request->user(), FeatureKey::AutomaticAiExecution);
 
         $routingCandidate = $suggestion
-            ? $this->routingCandidate($suggestion)
+            ? $this->routingCandidate($suggestion, $careerAvailable)
             : null;
 
         $contextCandidate = $this->contextCandidate($request, $editablePlans);
@@ -69,7 +76,12 @@ final class SpaceStationContextService
             'pending_count' => $pendingCount,
             'latest_item' => $latestItem,
             'routing_candidate' => $routingCandidate,
-            'routing_destinations' => InboxIntelligenceService::PUBLIC_DESTINATIONS,
+            'routing_destinations' => collect(InboxIntelligenceService::PUBLIC_DESTINATIONS)
+                ->when(
+                    ! $careerAvailable,
+                    fn ($destinations) => $destinations->except('career_capture'),
+                )
+                ->all(),
             'execution_actor_types' => ExecutionPacketService::ACTOR_TYPES,
             'editable_plans' => $editablePlans,
             'context_candidate' => $contextCandidate,
@@ -104,10 +116,15 @@ final class SpaceStationContextService
      * @param array<string,mixed> $suggestion
      * @return array<string,mixed>
      */
-    private function routingCandidate(array $suggestion): array
-    {
+    private function routingCandidate(
+        array $suggestion,
+        bool $careerAvailable,
+    ): array {
         $destination = (string) ($suggestion['destination'] ?? 'keep_inbox');
-        if (! array_key_exists($destination, InboxIntelligenceService::PUBLIC_DESTINATIONS)) {
+        if (
+            ! array_key_exists($destination, InboxIntelligenceService::PUBLIC_DESTINATIONS)
+            || ($destination === 'career_capture' && ! $careerAvailable)
+        ) {
             $destination = 'keep_inbox';
         }
 
@@ -211,6 +228,11 @@ final class SpaceStationContextService
                 ? ['Resourceを確認', route('plans.resources.index', $plan)]
                 : [null, null],
             'career_capture' => $plan
+                && $this->releaseLevels->allowsWorkspace(
+                    WorkspaceMode::Career,
+                    $request->user(),
+                    $request,
+                )
                 ? ['Careerを確認', route('plans.career.index', $plan)]
                 : [null, null],
             'keep_inbox' => ['Inboxを確認', route('inbox.index')],

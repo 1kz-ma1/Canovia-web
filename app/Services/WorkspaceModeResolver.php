@@ -29,7 +29,10 @@ final class WorkspaceModeResolver
     ): WorkspaceModeContextData {
         $routeName = $request->route()?->getName();
 
-        if ($explicit instanceof WorkspaceMode) {
+        if (
+            $explicit instanceof WorkspaceMode
+            && $this->isPublic($explicit)
+        ) {
             return new WorkspaceModeContextData(
                 mode: $explicit,
                 source: WorkspaceModeSource::Explicit,
@@ -47,7 +50,10 @@ final class WorkspaceModeResolver
         }
 
         $routeMode = $this->routeHint($routeName);
-        if ($routeMode instanceof WorkspaceMode) {
+        if (
+            $routeMode instanceof WorkspaceMode
+            && $this->isPublic($routeMode)
+        ) {
             $plan = $this->routePlan($request);
 
             return new WorkspaceModeContextData(
@@ -114,13 +120,18 @@ final class WorkspaceModeResolver
 
         $mode = WorkspaceMode::tryFrom($value);
 
-        return $mode && in_array(
+        return $mode && $this->isPublic($mode)
+            ? $mode
+            : null;
+    }
+
+    private function isPublic(WorkspaceMode $mode): bool
+    {
+        return in_array(
             $mode->value,
             $this->registry->publicKeys(),
             true,
-        )
-            ? $mode
-            : null;
+        );
     }
 
     private function routeHint(?string $routeName): ?WorkspaceMode

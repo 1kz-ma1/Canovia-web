@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\FeatureKey;
 use App\Enums\ProductKey;
+use App\Enums\ReleaseLevel;
 use App\Models\User;
 use App\Models\UserProductGrant;
 use App\Services\AdminAccessService;
@@ -12,6 +13,7 @@ use App\Services\EconomyCatalogService;
 use App\Services\EconomyRecommendationService;
 use App\Services\FeatureAccessService;
 use App\Services\ProductGrantService;
+use App\Services\ReleaseLevelService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -25,6 +27,7 @@ class AdminEconomyController extends Controller
         private readonly EconomyRecommendationService $recommendations,
         private readonly AiCapacityService $capacity,
         private readonly FeatureAccessService $featureAccess,
+        private readonly ReleaseLevelService $releaseLevels,
     ) {}
 
     public function index(Request $request)
@@ -77,6 +80,18 @@ class AdminEconomyController extends Controller
             'complimentaryHistory' => $complimentaryHistory,
             'productCases' => ProductKey::cases(),
             'catalog' => $this->catalog,
+            'publicReleaseLevel' => $this->releaseLevels->publicLevel(),
+            'selectedUserReleaseLevel' => $selectedUser
+                ? $this->releaseLevels->assignedLevelFor($selectedUser)
+                : null,
+            'releaseLevelCases' => collect(ReleaseLevel::cases())
+                ->filter(fn (ReleaseLevel $level) =>
+                    $level->value <= (int) config(
+                        'release_levels.maximum_user_override',
+                        ReleaseLevel::BetaExpansion->value,
+                    )
+                )
+                ->values(),
         ]);
     }
 

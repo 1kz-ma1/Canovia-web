@@ -68,6 +68,12 @@
     $adminPreviewMode = $isSuperAdmin
         ? app(\App\Services\AdminPreviewContext::class)->mode($currentUser)
         : null;
+    $releaseLevelService = app(\App\Services\ReleaseLevelService::class);
+    $currentReleaseLevel = $releaseLevelService->levelFor($currentUser, request());
+    $publicReleaseLevel = $releaseLevelService->publicLevel();
+    $adminReleasePreviewLevel = $isSuperAdmin
+        ? $releaseLevelService->adminPreview($currentUser, request())
+        : null;
     $hasPremiumCore = $currentUser && ! $isSuperAdmin
         ? app(\App\Services\ProductGrantService::class)->hasEffectiveProduct($currentUser, \App\Enums\ProductKey::PremiumCore)
         : false;
@@ -84,7 +90,7 @@
     $workspaceModeDefinition = $workspaceModeRegistry->definition(
         $workspaceModeContext->mode,
     );
-    $workspaceModeOptions = $workspaceModeRegistry->all();
+    $workspaceModeOptions = $workspaceModeRegistry->available();
 @endphp
 <!DOCTYPE html>
 <html lang="ja">
@@ -129,7 +135,7 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body data-focus-mode="{{ $focusMode ? '1' : '0' }}" data-workspace-mode="{{ $workspaceModeDefinition->mode->value }}" data-workspace-mode-source="{{ $workspaceModeContext->source->value }}" data-onboarding-version="{{ $onboardingVersion }}" data-onboarding-auto="{{ $onboardingAuto ? '1' : '0' }}" data-onboarding-authenticated="{{ auth()->check() ? '1' : '0' }}" data-pwa-install-url="{{ route('pwa.install.prepare') }}" data-route-name="{{ request()->route()?->getName() }}" data-canovia-surface="{{ request()->routeIs('map.*') ? 'explore' : (request()->routeIs('home') ? 'home' : 'app') }}" class="pk-cosmic-shell min-h-screen bg-slate-950 text-slate-100 antialiased {{ $focusMode ? 'pace-focus-mode' : '' }}">
+<body data-release-level="{{ $currentReleaseLevel->value }}" data-release-level-label="{{ $currentReleaseLevel->label() }}" data-focus-mode="{{ $focusMode ? '1' : '0' }}" data-workspace-mode="{{ $workspaceModeDefinition->mode->value }}" data-workspace-mode-source="{{ $workspaceModeContext->source->value }}" data-onboarding-version="{{ $onboardingVersion }}" data-onboarding-auto="{{ $onboardingAuto ? '1' : '0' }}" data-onboarding-authenticated="{{ auth()->check() ? '1' : '0' }}" data-pwa-install-url="{{ route('pwa.install.prepare') }}" data-route-name="{{ request()->route()?->getName() }}" data-canovia-surface="{{ request()->routeIs('map.*') ? 'explore' : (request()->routeIs('home') ? 'home' : 'app') }}" class="pk-cosmic-shell min-h-screen bg-slate-950 text-slate-100 antialiased {{ $focusMode ? 'pace-focus-mode' : '' }}">
     <div class="pk-cosmic-backdrop pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
         <span class="pk-space-glow pk-space-glow-a"></span>
         <span class="pk-space-glow pk-space-glow-b"></span>
@@ -354,6 +360,28 @@
                             @endforeach
                         </div>
                         <p class="mt-2 text-[11px] leading-5 text-slate-500">プレビュー中も管理者権限自体は維持され、設定からAdmin表示へ戻せます。</p>
+
+                        <p class="mt-4 text-xs font-bold text-slate-300">Release Preview</p>
+                        <div class="mt-2 grid grid-cols-3 gap-2">
+                            <form method="POST" action="{{ route('admin.release_level.preview.update') }}">
+                                @csrf
+                                <input type="hidden" name="level" value="public">
+                                <button type="submit" class="{{ $adminReleasePreviewLevel === null ? 'btn-primary' : 'btn-secondary' }} w-full justify-center px-2 py-2 text-xs">Public</button>
+                            </form>
+                            @foreach (\App\Enums\ReleaseLevel::cases() as $releaseLevel)
+                                <form method="POST" action="{{ route('admin.release_level.preview.update') }}">
+                                    @csrf
+                                    <input type="hidden" name="level" value="{{ $releaseLevel->value }}">
+                                    <button type="submit" class="{{ $adminReleasePreviewLevel === $releaseLevel ? 'btn-primary' : 'btn-secondary' }} w-full justify-center px-2 py-2 text-xs">
+                                        L{{ $releaseLevel->value }}
+                                    </button>
+                                </form>
+                            @endforeach
+                        </div>
+                        <p class="mt-2 text-[11px] leading-5 text-slate-500">
+                            現在: L{{ $currentReleaseLevel->value }} {{ $currentReleaseLevel->label() }}
+                            · Public: L{{ $publicReleaseLevel->value }}
+                        </p>
                     </section>
                 @endif
 

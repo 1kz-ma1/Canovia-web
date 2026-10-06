@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\FeatureKey;
+use App\Enums\WorkspaceMode;
 use App\Models\Plan;
 use App\Models\Task;
 use App\Models\User;
@@ -14,6 +15,7 @@ class PlanToolService
         private readonly StudyActivityPolicyService $studyActivities,
         private readonly GuidedExecutionPolicyService $guidedExecutions,
         private readonly PlanCategoryProfileService $categoryProfiles,
+        private readonly ?ReleaseLevelService $releaseLevels = null,
     ) {}
 
     /**
@@ -36,7 +38,11 @@ class PlanToolService
             ],
         ];
 
-        if ($this->isCareerPlan($plan)) {
+        if (
+            $this->isCareerPlan($plan)
+            && ($this->releaseLevels ?? app(ReleaseLevelService::class))
+                ->allowsWorkspace(WorkspaceMode::Career, $actor)
+        ) {
             $tools[] = [
                 'id' => 'career_workspace',
                 'name' => 'Career',
