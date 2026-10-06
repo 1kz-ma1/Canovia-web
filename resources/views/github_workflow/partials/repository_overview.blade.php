@@ -240,7 +240,9 @@
                 @if ($overview['can_edit'] && $canInspectRepository)
                     <form method="POST" action="{{ route('github_workflow.repository.refresh', $overview['repository_artifact_id']) }}">
                         @csrf
-                        <button type="submit" class="btn-primary px-3 py-2 text-xs">GitHubから読み込む</button>
+                        <button type="submit" class="btn-primary px-3 py-2 text-xs">
+                            {{ $connectionStatus === 'connected' ? 'Repository同期' : 'Public Previewを試す' }}
+                        </button>
                     </form>
                 @elseif (! $canInspectRepository)
                     <div class="max-w-md rounded-xl border border-violet-300/15 bg-violet-300/[0.035] px-3 py-2">
