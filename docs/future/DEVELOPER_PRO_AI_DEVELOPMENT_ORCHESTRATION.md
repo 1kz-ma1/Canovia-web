@@ -1532,3 +1532,26 @@ Measure
 Developer Proは「Codexを呼べるボタン」ではありません。
 
 **CanoviaがProduct Context・Living Specification・Development Decisionを継続保持し、Coding Agentを安全かつ効率的に使うためのDevelopment Orchestration Layerになること**が、この構想の中心です。
+
+
+---
+
+## V57.8 implementation note
+
+V57.8 promotes one narrow part of this future direction into the current
+product:
+
+```text
+current Development Implementation Brief
+→ explicit human confirmation
+→ existing Execution Request
+→ existing external Execution Orchestration handoff
+```
+
+It intentionally does **not** implement Developer Pro runtime, autonomous
+coding, provider-specific Codex/Claude integration, or automatic PR creation.
+
+The current provider-neutral Execution Ecosystem remains authoritative. A real
+future coding provider should reuse `ProviderConnection`,
+`execution_context`, signed Activity return and GitHub Evidence rather than
+creating a Developer-Pro-only runtime.
