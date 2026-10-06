@@ -208,6 +208,67 @@ class StudyRecallCandidateController extends Controller
             ->with('success', $message);
     }
 
+    public function retry(
+        Request $request,
+        Plan $plan,
+        Task $task,
+        StudyRecallSource $source,
+        PlanOwnershipService $ownership,
+        FeatureAccessService $featureAccess,
+        StudyRecallCandidateExtractionService $extractor,
+    ) {
+        $this->authorizeTask($request, $plan, $task, $ownership);
+        $this->ensureSourceBelongsToTask($source, $plan, $task);
+
+        $featureAccess->authorizeUse(
+            $request->user(),
+            FeatureKey::AutomaticAiExecution,
+            [
+                'plan_id' => (int) $plan->id,
+                'task_id' => (int) $task->id,
+            ],
+        );
+
+        if ($source->status !== 'failed') {
+            throw ValidationException::withMessages([
+                'recall_source' =>
+                    '再抽出できるのは失敗した教材だけです。',
+            ]);
+        }
+
+        if (! $source->hasStoredMaterial()) {
+            throw ValidationException::withMessages([
+                'recall_source' =>
+                    '保存済み教材を読み込めません。教材をもう一度追加してください。',
+            ]);
+        }
+
+        try {
+            $result = $extractor->extract(
+                $source,
+                $plan,
+                $task,
+                $request->user()?->id,
+            );
+        } catch (NativeAiExecutionException $exception) {
+            return redirect()
+                ->route('plans.tasks.study_recall.show', [$plan, $task])
+                ->with(
+                    'status',
+                    $exception->getMessage()
+                    .' 保存済み教材は残っているため、設定確認後に再抽出できます。',
+                );
+        }
+
+        return redirect()
+            ->route('plans.tasks.study_recall.show', [$plan, $task])
+            ->with(
+                'success',
+                $result['created']
+                .'件のRecall候補を再抽出しました。内容を確認してDeckへ追加してください。',
+            );
+    }
+
     public function sourceFile(
         Request $request,
         Plan $plan,
@@ -216,7 +277,7 @@ class StudyRecallCandidateController extends Controller
         PlanOwnershipService $ownership,
     ) {
         abort_unless((int) $task->plan_id === (int) $plan->id, 404);
-        abort_unless((int) $source->plan_id === (int) $plan->id && (int) $source->task_id === (int) $task->id, 404);
+        $this->ensureSourceBelongsToTask($source, $plan, $task);
         $ownership->authorizeTaskView($request, $task);
 
         abort_unless($source->storage_path && Storage::exists($source->storage_path), 404);
@@ -233,6 +294,18 @@ class StudyRecallCandidateController extends Controller
         abort_unless((int) $task->plan_id === (int) $plan->id, 404);
         abort_unless($this->categoryProfiles->forPlan($plan)->key === 'study', 404);
         $ownership->authorizeTask($request, $task);
+    }
+
+    private function ensureSourceBelongsToTask(
+        StudyRecallSource $source,
+        Plan $plan,
+        Task $task,
+    ): void {
+        abort_unless(
+            (int) $source->plan_id === (int) $plan->id
+            && (int) $source->task_id === (int) $task->id,
+            404,
+        );
     }
 
     private function normalize(string $value): string

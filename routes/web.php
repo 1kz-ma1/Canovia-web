@@ -470,6 +470,8 @@ Route::post('/plans/{plan}/tasks/{task}/study-recall/candidates/extract', [Study
     ->name('plans.tasks.study_recall.candidates.extract');
 Route::post('/plans/{plan}/tasks/{task}/study-recall/candidates/review', [StudyRecallCandidateController::class, 'reviewBatch'])
     ->name('plans.tasks.study_recall.candidates.review');
+Route::post('/plans/{plan}/tasks/{task}/study-recall/sources/{source}/retry', [StudyRecallCandidateController::class, 'retry'])
+    ->name('plans.tasks.study_recall.sources.retry');
 Route::get('/plans/{plan}/tasks/{task}/study-recall/sources/{source}/file', [StudyRecallCandidateController::class, 'sourceFile'])
     ->name('plans.tasks.study_recall.sources.file');
 
