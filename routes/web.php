@@ -54,6 +54,7 @@ use App\Http\Controllers\DevelopmentPreviewController;
 use App\Http\Controllers\StudyPracticeController;
 use App\Http\Controllers\StudyActivityController;
 use App\Http\Controllers\StudyLanguageActivityController;
+use App\Http\Controllers\StudyResourceActivityController;
 use App\Http\Controllers\StudyScopeCaptureController;
 use App\Http\Controllers\StudyScoreController;
 use App\Http\Controllers\StudyLearningTypeController;
@@ -461,6 +462,11 @@ Route::get('/plans/{plan}/tasks/{task}/study-language/{activity}', [StudyLanguag
     ->name('plans.tasks.study_language.show');
 Route::post('/plans/{plan}/tasks/{task}/study-language/{activity}', [StudyLanguageActivityController::class, 'store'])
     ->name('plans.tasks.study_language.store');
+
+Route::get('/plans/{plan}/tasks/{task}/study-resource', [StudyResourceActivityController::class, 'show'])
+    ->name('plans.tasks.study_resource.show');
+Route::post('/plans/{plan}/tasks/{task}/study-resource', [StudyResourceActivityController::class, 'store'])
+    ->name('plans.tasks.study_resource.store');
 
 Route::get('/plans/{plan}/tasks/{task}/study-recall', [StudyRecallController::class, 'show'])
     ->name('plans.tasks.study_recall.show');
