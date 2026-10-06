@@ -13,6 +13,7 @@ class StudyRecallSource extends Model
     protected $fillable = [
         'plan_id',
         'task_id',
+        'plan_resource_id',
         'user_id',
         'actor_token',
         'source_type',
@@ -40,6 +41,14 @@ class StudyRecallSource extends Model
     public function task()
     {
         return $this->belongsTo(Task::class);
+    }
+
+    public function resource()
+    {
+        return $this->belongsTo(
+            PlanResource::class,
+            'plan_resource_id',
+        );
     }
 
     public function candidates()
