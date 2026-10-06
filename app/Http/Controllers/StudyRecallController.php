@@ -15,9 +15,12 @@ use App\Services\NativeAiGateway;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanCategoryProfileService;
 use App\Intelligence\Study\StudyAdaptiveActionService;
+use App\Services\StudyRecallProgressionService;
 use App\Services\StudyRecallSchedulerService;
+use App\Services\StudyTaskProgressionService;
 use App\Services\TaskEvidenceService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -35,6 +38,7 @@ class StudyRecallController extends Controller
         PlanOwnershipService $ownership,
         FeatureAccessService $featureAccess,
         NativeAiGateway $nativeAi,
+        StudyRecallProgressionService $recallProgression,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
 
@@ -52,11 +56,18 @@ class StudyRecallController extends Controller
         $todayReviewCount = $task->studyRecallReviews()
             ->where('reviewed_at', '>=', today())
             ->count();
+        $recallProgressionState = $recallProgression->evaluate(
+            $plan,
+            $task,
+            $items,
+        );
 
         return view('study_recall.show', [
             'plan' => $plan,
             'task' => $task,
             'items' => $items,
+            'canEdit' => $ownership->canEdit($request, $plan),
+            'recallProgression' => $recallProgressionState,
             'currentItem' => $currentItem,
             'stats' => [
                 'total' => $items->count(),
@@ -232,6 +243,167 @@ class StudyRecallController extends Controller
         return redirect()
             ->route('plans.tasks.study_recall.show', [$plan, $task])
             ->with('status', ($labels[$validated['rating']] ?? '評価').'として記録しました。');
+    }
+
+    public function complete(
+        Request $request,
+        Plan $plan,
+        Task $task,
+        PlanOwnershipService $ownership,
+        BehaviorIdentityService $identity,
+        StudyRecallProgressionService $recallProgression,
+        StudyTaskProgressionService $taskProgression,
+        TaskEvidenceService $evidence,
+    ) {
+        $this->authorizeTask($request, $plan, $task, $ownership, true);
+
+        $actorToken = $identity->resolve($request);
+        $decision = null;
+        $alreadyCompleted = false;
+
+        DB::transaction(function () use (
+            $request,
+            $plan,
+            $task,
+            $actorToken,
+            $recallProgression,
+            $taskProgression,
+            $evidence,
+            &$decision,
+            &$alreadyCompleted,
+        ) {
+            $lockedTask = Task::query()
+                ->where('plan_id', $plan->id)
+                ->whereKey($task->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($lockedTask->status === 'cancelled') {
+                throw ValidationException::withMessages([
+                    'recall_progression' =>
+                        'このTaskは中止されています。Task状態を見直してからRecall結果を反映してください。',
+                ]);
+            }
+
+            if (
+                (int) $lockedTask->progress_percent >= 100
+                || $lockedTask->status === 'done'
+            ) {
+                $alreadyCompleted = true;
+                $decision = $taskProgression->afterVerifiedCompletion(
+                    $plan,
+                    $lockedTask,
+                    'Taskはすでに完了しています。',
+                );
+
+                return;
+            }
+
+            $state = $recallProgression->evaluate(
+                $plan,
+                $lockedTask,
+                null,
+                true,
+            );
+
+            if (! (bool) ($state['eligible'] ?? false)) {
+                throw ValidationException::withMessages([
+                    'recall_progression' => (string) (
+                        $state['reason']
+                        ?? 'Recallの定着条件を確認できませんでした。'
+                    ),
+                ]);
+            }
+
+            $metrics = (array) ($state['metrics'] ?? []);
+            $reason = 'Recall定着確認: '
+                .(int) ($metrics['mastered'] ?? 0)
+                .'/'
+                .(int) ($metrics['total'] ?? 0)
+                .'件が定着条件を満たし、due 0件。';
+
+            $decision = $taskProgression->afterVerifiedCompletion(
+                $plan,
+                $lockedTask,
+                $reason,
+            );
+
+            $nextAction = ($decision['kind'] ?? null) === 'advance_task'
+                ? '次のTask「'.data_get(
+                    $decision,
+                    'next_task.title',
+                    '次のTask',
+                ).'」へ進む'
+                : 'このPlanの学習完了を確認する';
+
+            $lockedTask->update([
+                'progress_percent' => 100,
+                'remaining_minutes' => 0,
+                'progress_reason' => mb_substr($reason, 0, 4000),
+                'next_action_note' => $nextAction,
+                'status' => 'done',
+            ]);
+
+            $evidence->record(
+                $lockedTask,
+                EvidenceSource::Native,
+                'study_recall_mastery_confirmed',
+                [
+                    'reviewed_count' => (int) (
+                        $metrics['reviewed'] ?? 0
+                    ),
+                    'mastered_count' => (int) (
+                        $metrics['mastered'] ?? 0
+                    ),
+                    'total_count' => (int) (
+                        $metrics['total'] ?? 0
+                    ),
+                    'due_count' => (int) ($metrics['due'] ?? 0),
+                    'mastery_percent' => (int) (
+                        $metrics['mastery_percent'] ?? 0
+                    ),
+                    'completion_confirmed_by_user' => true,
+                ],
+                confidence: 0.8,
+                externalKey:
+                    'study-recall-mastery-confirmed:task:'
+                    .$lockedTask->id,
+                userId: $request->user()?->id,
+                actorToken: $request->user() ? null : $actorToken,
+                occurredAt: now(),
+            );
+        }, 3);
+
+        $this->studyActions->tryRefresh($plan, now());
+
+        if (
+            ($decision['kind'] ?? null) === 'advance_task'
+            && data_get($decision, 'next_task.id')
+        ) {
+            return redirect()
+                ->route('plans.tasks.study_activity.show', [
+                    $plan,
+                    data_get($decision, 'next_task.id'),
+                ])
+                ->with(
+                    'status',
+                    $alreadyCompleted
+                        ? 'Taskはすでに完了しています。次の学習Taskへ進みます。'
+                        : 'Recallの定着を確認してTaskを完了しました。次の学習Taskへ進みます。',
+                );
+        }
+
+        return redirect()
+            ->route('workspace.study.index', [
+                'plan_id' => $plan->id,
+                'surface' => 'work',
+            ])
+            ->with(
+                'status',
+                $alreadyCompleted
+                    ? 'Taskはすでに完了しています。'
+                    : 'Recallの定着を確認してTaskを完了しました。学習Plan全体を確認します。',
+            );
     }
 
     public function destroy(
