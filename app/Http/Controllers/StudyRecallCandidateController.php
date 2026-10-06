@@ -13,12 +13,15 @@ use App\Services\BehaviorIdentityService;
 use App\Services\FeatureAccessService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanCategoryProfileService;
+use App\Services\StudyRecallBatchCandidateExtractionService;
 use App\Services\StudyRecallCandidateExtractionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
+use Throwable;
 
 class StudyRecallCandidateController extends Controller
 {
@@ -88,6 +91,157 @@ class StudyRecallCandidateController extends Controller
         return redirect()
             ->route('plans.tasks.study_recall.show', [$plan, $task])
             ->with('success', $result['created'].'件のRecall候補を作成しました。内容を確認してDeckへ追加してください。');
+    }
+
+    public function extractBatch(
+        Request $request,
+        Plan $plan,
+        Task $task,
+        PlanOwnershipService $ownership,
+        BehaviorIdentityService $identity,
+        FeatureAccessService $featureAccess,
+        StudyRecallBatchCandidateExtractionService $extractor,
+    ) {
+        $this->authorizeTask($request, $plan, $task, $ownership);
+        $featureAccess->authorizeUse(
+            $request->user(),
+            FeatureKey::AutomaticAiExecution,
+            [
+                'plan_id' => (int) $plan->id,
+                'task_id' => (int) $task->id,
+            ],
+        );
+
+        $validated = $request->validate([
+            'source_files' => [
+                'required',
+                'array',
+                'min:'.StudyRecallBatchCandidateExtractionService::MIN_SOURCES,
+                'max:'.StudyRecallBatchCandidateExtractionService::MAX_SOURCES,
+            ],
+            'source_files.*' => [
+                'required',
+                'file',
+                'mimes:pdf,jpg,jpeg,png,webp',
+                'max:10240',
+            ],
+        ]);
+
+        $files = collect($request->file('source_files', []))
+            ->filter()
+            ->values();
+
+        $totalBytes = $files->sum(
+            fn ($file) => max(0, (int) $file->getSize()),
+        );
+
+        if ($totalBytes > 20 * 1024 * 1024) {
+            throw ValidationException::withMessages([
+                'source_files' =>
+                    '複数ページの合計サイズは20MB以下にしてください。',
+            ]);
+        }
+
+        $actorToken = $identity->resolve($request);
+        $paths = [];
+        $sources = collect();
+
+        try {
+            foreach ($files as $file) {
+                $mime = (string) $file->getMimeType();
+                $sourceType =
+                    $mime === 'application/pdf' ? 'pdf' : 'image';
+                $extension = strtolower(
+                    (string) $file->getClientOriginalExtension(),
+                );
+
+                if ($extension === '') {
+                    $extension = $sourceType === 'pdf' ? 'pdf' : 'jpg';
+                }
+
+                $path = $file->storeAs(
+                    'study-recall-sources/'
+                    .$plan->id
+                    .'/'
+                    .$task->id,
+                    (string) Str::uuid().'.'.$extension,
+                );
+
+                if (! is_string($path) || $path === '') {
+                    throw new RuntimeException(
+                        'Recall教材ファイルを保存できませんでした。',
+                    );
+                }
+
+                $paths[] = $path;
+
+                $sources->push(
+                    StudyRecallSource::query()->create([
+                        'plan_id' => (int) $plan->id,
+                        'task_id' => (int) $task->id,
+                        'user_id' => $request->user()?->id,
+                        'actor_token' =>
+                            $request->user() ? null : $actorToken,
+                        'source_type' => $sourceType,
+                        'original_name' =>
+                            mb_substr(
+                                (string) $file->getClientOriginalName(),
+                                0,
+                                255,
+                            ),
+                        'mime_type' => $mime,
+                        'storage_path' => $path,
+                        'source_text' => null,
+                        'status' => 'pending',
+                    ]),
+                );
+            }
+        } catch (Throwable $exception) {
+            if ($paths !== []) {
+                Storage::delete($paths);
+            }
+
+            if ($sources->isNotEmpty()) {
+                StudyRecallSource::query()
+                    ->whereIn('id', $sources->pluck('id'))
+                    ->delete();
+            }
+
+            throw $exception;
+        }
+
+        try {
+            $result = $extractor->extract(
+                $sources,
+                $plan,
+                $task,
+                $request->user()?->id,
+            );
+        } catch (NativeAiExecutionException $exception) {
+            return redirect()
+                ->route(
+                    'plans.tasks.study_recall.show',
+                    [$plan, $task],
+                )
+                ->with(
+                    'status',
+                    $exception->getMessage()
+                    .' 教材はすべて保存済みなので、失敗したSourceから個別に再抽出できます。',
+                );
+        }
+
+        return redirect()
+            ->route(
+                'plans.tasks.study_recall.show',
+                [$plan, $task],
+            )
+            ->with(
+                'success',
+                $result['source_count']
+                .'件の教材から'
+                .$result['created']
+                .'件のRecall候補をまとめて作成しました。内容を確認してDeckへ追加してください。',
+            );
     }
 
     public function reviewBatch(

@@ -196,6 +196,54 @@
                         <button type="submit" class="btn-primary">候補を抽出</button>
                     </div>
                 </form>
+
+                <details
+                    class="mt-4 rounded-xl border border-violet-300/15 bg-violet-300/[0.025] p-4"
+                    data-recall-batch-ingest
+                >
+                    <summary class="cursor-pointer text-xs font-black text-violet-100">
+                        複数ページをまとめて取り込む
+                    </summary>
+                    <div class="mt-3 border-t border-white/8 pt-3">
+                        <p class="text-xs leading-5 text-slate-500">
+                            2〜5個の画像 / PDFを1回の解析へまとめます。ページをまたぐ同じ論点も重複を抑えてCandidate化します。
+                        </p>
+                        <form
+                            method="POST"
+                            action="{{ route('plans.tasks.study_recall.candidates.extract_batch', [$plan, $task]) }}"
+                            enctype="multipart/form-data"
+                            class="mt-3"
+                            data-recall-batch-form
+                            data-mutation-once
+                        >
+                            @csrf
+                            <label class="text-xs font-bold text-slate-300" for="recall-source-files">
+                                画像 / PDFを2〜5個選択
+                            </label>
+                            <input
+                                id="recall-source-files"
+                                type="file"
+                                name="source_files[]"
+                                multiple
+                                required
+                                accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
+                                class="input-field mt-2 w-full"
+                            >
+                            <p class="mt-2 text-[10px] leading-4 text-slate-600">
+                                1ファイル最大10MB・合計20MBまで。1回のNative AI実行でまとめて読み取ります。
+                            </p>
+                            @error('source_files')
+                                <p class="mt-2 text-xs text-rose-300">{{ $message }}</p>
+                            @enderror
+                            @error('source_files.*')
+                                <p class="mt-2 text-xs text-rose-300">{{ $message }}</p>
+                            @enderror
+                            <button type="submit" class="btn-secondary mt-3">
+                                まとめて候補を抽出
+                            </button>
+                        </form>
+                    </div>
+                </details>
             @else
                 <p class="mt-4 text-sm leading-6 text-slate-400">Recall自体は手動カードで利用できます。教材からの自動抽出はAutomatic AI Executionが利用できる場合に表示されます。</p>
             @endif

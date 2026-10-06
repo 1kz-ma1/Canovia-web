@@ -143,8 +143,21 @@ class NativeAiGateway
                 'model' => $model,
             ];
         } catch (NativeAiExecutionException $exception) {
-            $this->markFailed($run, $exception->errorCode, $exception->getMessage());
-            throw $exception;
+            $this->markFailed(
+                $run,
+                $exception->errorCode,
+                $exception->getMessage(),
+            );
+
+            if ($exception->runId !== null) {
+                throw $exception;
+            }
+
+            throw new NativeAiExecutionException(
+                $exception->getMessage(),
+                $exception->errorCode,
+                (int) $run->id,
+            );
         } catch (ConnectionException $exception) {
             $this->markFailed($run, 'native_ai_connection_failed', $exception->getMessage());
 
@@ -335,7 +348,12 @@ class NativeAiGateway
         return collect($inputParts)
             ->map(function (array $part) {
                 $type = (string) ($part['type'] ?? '');
-                $payload = (string) ($part['image_url'] ?? $part['file_data'] ?? '');
+                $payload = (string) (
+                    $part['image_url']
+                    ?? $part['file_data']
+                    ?? $part['text']
+                    ?? ''
+                );
 
                 return [
                     'type' => $type,
