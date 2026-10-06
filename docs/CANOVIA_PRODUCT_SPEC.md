@@ -6277,3 +6277,32 @@ external-open fallback remains for sites that reject framing.
 
 Canonical contract:
 `docs/V58.0_DEVELOPER_WORKSPACE_SURFACES.md`.
+
+
+## V58.1 Developer Workspace Navigation IA
+
+Developer Workspace no longer assumes every surface is a permanent peer-level
+horizontal tab.
+
+Current implemented surfaces are grouped by lifecycle:
+
+```text
+実行         → 今やること
+設計         → 改善
+プロジェクト → リポジトリ / チーム
+観測         → プレビュー
+```
+
+The compact Developer shell exposes one Plan selector and one grouped View
+selector. The selected category is derived from the selected surface and shown
+as a small location badge.
+
+The existing `?surface=` URL contract remains unchanged. There is no separate
+category query state.
+
+Future categories such as `自動化` are not rendered until a real surface
+exists. This prevents the global navigation from becoming a row of disabled or
+speculative destinations.
+
+Canonical contract:
+`docs/V58.1_DEVELOPER_NAVIGATION_IA.md`.
