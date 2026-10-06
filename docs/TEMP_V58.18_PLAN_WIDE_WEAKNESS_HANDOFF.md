@@ -26,9 +26,10 @@ All conditions are required:
 2. current Task cumulative checkpoint has reached >=100 graded questions
 3. V58.16 Plan-wide coverage is available
 4. candidate is a parent topic with >=3 assessed Question Bank exposures
-5. candidate observed correctness <60%
-6. current Practice routing task_mode = broad_assessment
-7. current deterministic policy phase = general_practice
+5. candidate spans >=2 unique Question Bank questions
+6. candidate observed correctness <60%
+7. current Practice routing task_mode = broad_assessment
+8. current deterministic policy phase = general_practice
 
 If any condition fails, no Plan-wide routing effect is applied.
 
@@ -159,13 +160,14 @@ Required:
 1. <100 questions → no handoff
 2. non-AP → no handoff
 3. parent topic <3 exposures → no candidate
-4. parent topic >=3 and >=60% → no candidate
-5. parent topic >=3 and <60% → candidate
-6. actor isolation
-7. cross-Task Plan observations can create candidate
-8. adaptive/focused Task mode → no application
-9. broad_assessment + general_practice → application
-10. exam_mode → no application
+4. repeated exposure of only one unique question → no candidate
+5. parent topic >=3, >=2 unique and >=60% → no candidate
+6. parent topic >=3, >=2 unique and <60% → candidate
+7. actor isolation
+8. cross-Task Plan observations can create candidate
+9. adaptive/focused Task mode → no application
+10. broad_assessment + general_practice → application
+11. exam_mode → no application
 11. local broad_recheck topics keep precedence
 12. max 2 total primary recheck topics
 13. cooldown/mastered candidate suppressed
