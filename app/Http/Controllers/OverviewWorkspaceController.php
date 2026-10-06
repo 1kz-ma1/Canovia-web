@@ -99,7 +99,7 @@ final class OverviewWorkspaceController extends Controller
             && ! $developmentPlan instanceof Plan
             && ! $careerPlan instanceof Plan
         ) {
-            $firstUseModeChoices = $workspaceModes->all()
+            $firstUseModeChoices = $workspaceModes->available()
                 ->reject(fn ($definition) =>
                     $definition->mode === WorkspaceMode::Overview
                 )
