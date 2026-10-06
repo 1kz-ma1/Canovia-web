@@ -65,6 +65,15 @@ final class TaskEvidenceAdapter
             'study_recall_reviewed' => [
                 'study_recall_review_id' => $this->nullableInt($metadata['study_recall_review_id'] ?? null),
                 'study_recall_item_id' => $this->nullableInt($metadata['study_recall_item_id'] ?? null),
+                'study_recall_candidate_ids' => $this->intList(
+                    $metadata['study_recall_candidate_ids'] ?? [],
+                ),
+                'study_recall_source_ids' => $this->intList(
+                    $metadata['study_recall_source_ids'] ?? [],
+                ),
+                'candidate_confidences' => $this->percentList(
+                    $metadata['candidate_confidences'] ?? [],
+                ),
                 'rating' => $this->nullableString($metadata['rating'] ?? null),
                 'repetitions' => $this->nullableInt($metadata['repetitions'] ?? null),
                 'lapse_count' => $this->nullableInt($metadata['lapse_count'] ?? null),
@@ -236,6 +245,52 @@ final class TaskEvidenceAdapter
         $value = filter_var($value, FILTER_VALIDATE_INT);
 
         return $value === false ? null : max(0, min(100, (int) $value));
+    }
+
+    /**
+     * @return array<int,int>
+     */
+    private function intList(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return collect($value)
+            ->map(fn ($item) => filter_var(
+                $item,
+                FILTER_VALIDATE_INT,
+            ))
+            ->filter(fn ($item) => $item !== false)
+            ->map(fn ($item) => (int) $item)
+            ->filter(fn (int $item) => $item > 0)
+            ->take(12)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int,int>
+     */
+    private function percentList(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return collect($value)
+            ->map(fn ($item) => filter_var(
+                $item,
+                FILTER_VALIDATE_INT,
+            ))
+            ->filter(fn ($item) => $item !== false)
+            ->map(fn ($item) => max(
+                0,
+                min(100, (int) $item),
+            ))
+            ->take(12)
+            ->values()
+            ->all();
     }
 
     private function nullableInt(mixed $value): ?int
