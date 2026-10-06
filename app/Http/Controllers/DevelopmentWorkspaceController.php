@@ -10,7 +10,7 @@ use App\Intelligence\Presentation\IntelligencePresentationHistoryService;
 use App\Intelligence\Presentation\IntelligenceStateChangeFeedbackService;
 use App\Models\Plan;
 use App\Models\Task;
-use App\Services\DevelopmentTaskMatchService;
+use App\Services\DevelopmentHomeService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanPriorityService;
@@ -27,7 +27,7 @@ final class DevelopmentWorkspaceController extends Controller
         PlanPriorityService $priorities,
         DevelopmentAdaptiveActionService $developmentActions,
         DevelopmentIntelligencePresentationAdapter $presentationAdapter,
-        DevelopmentTaskMatchService $taskMatches,
+        DevelopmentHomeService $developerHome,
         IntelligencePresentationHistoryService $history,
         IntelligenceStateChangeFeedbackService $stateChanges,
         WorkspaceModeOnboardingService $onboarding,
@@ -56,8 +56,10 @@ final class DevelopmentWorkspaceController extends Controller
                 'intelligenceHistory' => [],
                 'hasReleaseEvidence' => false,
                 'developmentFocusTask' => null,
-                'developmentActivityObservations' => collect(),
+                'developmentRecentActivity' => collect(),
+                'developmentUnresolvedActivity' => collect(),
                 'developmentAssociationTasks' => collect(),
+                'developmentActiveTasks' => collect(),
                 'intelligenceStateChange' => null,
                 'modeOnboarding' => $onboarding->build(
                     WorkspaceMode::Development,
@@ -65,17 +67,6 @@ final class DevelopmentWorkspaceController extends Controller
                 ),
             ]);
         }
-
-        $activityObservations = $taskMatches->refreshPlan($plan);
-        $associationTasks = $plan->tasks
-            ->filter(fn (Task $task) =>
-                ! in_array($task->status, ['done', 'cancelled'], true)
-            )
-            ->sortBy([
-                ['sort_order', 'asc'],
-                ['id', 'asc'],
-            ])
-            ->values();
 
         $adaptiveAction = $developmentActions->evaluate($plan);
         $presentation = $presentationAdapter->adapt(
@@ -88,12 +79,12 @@ final class DevelopmentWorkspaceController extends Controller
         );
         $focusState = is_array($focusState) ? $focusState : null;
         $focusTaskId = (int) data_get($focusState, 'task_id', 0);
+        $home = $developerHome->build(
+            $plan,
+            $focusTaskId > 0 ? $focusTaskId : null,
+        );
         $canEdit = $ownership->canEdit($request, $plan);
         $completedSteps = ['create_plan'];
-
-        if ($focusState !== null) {
-            $completedSteps[] = 'connect_github_evidence';
-        }
 
         return view('workspace.development.index', [
             'developmentPlans' => $developmentPlans,
@@ -109,8 +100,10 @@ final class DevelopmentWorkspaceController extends Controller
             'developmentFocusTask' => $focusTaskId > 0
                 ? $this->task($plan, $focusTaskId)
                 : null,
-            'developmentActivityObservations' => $activityObservations,
-            'developmentAssociationTasks' => $associationTasks,
+            'developmentRecentActivity' => $home['recent_activity'],
+            'developmentUnresolvedActivity' => $home['unresolved_activity'],
+            'developmentAssociationTasks' => $home['association_tasks'],
+            'developmentActiveTasks' => $home['active_tasks'],
             'intelligenceStateChange' => $stateChanges->latestForPlan(
                 $plan,
                 IntelligenceDomain::Development,
