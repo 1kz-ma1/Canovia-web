@@ -1849,18 +1849,21 @@ final class GitHubRepositoryWriter
                 ];
             })
             ->filter()
-            ->sortBy([
-                fn (array $left, array $right) =>
-                    strcmp(
-                        dirname($left['path']),
-                        dirname($right['path']),
-                    ),
-                fn (array $left, array $right) =>
-                    ($left['type'] === 'directory' ? 0 : 1)
-                    <=> ($right['type'] === 'directory' ? 0 : 1),
-                fn (array $left, array $right) =>
-                    strcasecmp($left['name'], $right['name']),
-            ])
+            ->sort(function (array $left, array $right): int {
+                $leftDir = dirname($left['path']);
+                $rightDir = dirname($right['path']);
+
+                if ($leftDir !== $rightDir) {
+                    return strcasecmp($leftDir, $rightDir);
+                }
+
+                $typeOrder = ($left['type'] === 'directory' ? 0 : 1)
+                    <=> ($right['type'] === 'directory' ? 0 : 1);
+
+                return $typeOrder !== 0
+                    ? $typeOrder
+                    : strcasecmp($left['name'], $right['name']);
+            })
             ->values();
 
         $providerTruncated = (bool) ($treePayload['truncated'] ?? false);
