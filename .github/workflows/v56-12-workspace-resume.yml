@@ -34,6 +34,8 @@ jobs:
           php -l app/Services/ReleaseGateService.php
           php -l app/Http/Controllers/AdminReleaseGateController.php
           php -l tests/Feature/ReleaseGateInventoryV5821Test.php
+          php -l app/Http/Controllers/ProductPreviewController.php
+          php -l tests/Feature/ProductPreviewV5822Test.php
       - run: php artisan view:cache
       - run: php artisan migrate --force
       - name: V56.12 workspace resume and session scope
@@ -44,6 +46,8 @@ jobs:
         run: php artisan test tests/Feature/ReleaseLevelFoundationV5820Test.php
       - name: V58.21 Release Gate inventory
         run: php artisan test tests/Feature/ReleaseGateInventoryV5821Test.php
+      - name: V58.22 Product Preview
+        run: php artisan test tests/Feature/ProductPreviewV5822Test.php
       - name: Home continuity regression
         run: php artisan test tests/Feature/ModelReuseV5195Test.php tests/Feature/HomeCoreBundleCostReductionV5192Test.php
       - name: Specialized Workspace regression
