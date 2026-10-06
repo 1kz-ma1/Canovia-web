@@ -259,7 +259,7 @@
         if (!form) return;
 
         const selects = form.querySelectorAll(
-            '[data-development-plan-select], [data-development-surface-select]',
+            '[data-development-surface-select]',
         );
 
         selects.forEach((select) => {
