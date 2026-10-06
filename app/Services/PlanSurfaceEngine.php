@@ -4,12 +4,17 @@ namespace App\Services;
 
 use App\Data\PlanCategoryProfileData;
 use App\Data\PlanSurfaceModuleData;
+use App\Enums\WorkspaceMode;
 use App\Models\Plan;
 use App\Models\Task;
 use Illuminate\Support\Collection;
 
 class PlanSurfaceEngine
 {
+    public function __construct(
+        private readonly ?ReleaseLevelService $releaseLevels = null,
+    ) {}
+
     /**
      * Build a deterministic list of registered UI modules.
      *
@@ -37,7 +42,11 @@ class PlanSurfaceEngine
             ));
         }
 
-        if ($profile->key === 'career') {
+        if (
+            $profile->key === 'career'
+            && ($this->releaseLevels ?? app(ReleaseLevelService::class))
+                ->allowsWorkspace(WorkspaceMode::Career)
+        ) {
             $reviewDue = $situation['career_review_due_event'] ?? null;
             $nextInterview = $situation['career_next_interview_event'] ?? null;
             $resultWaiting = collect($situation['career_result_waiting_events'] ?? []);
