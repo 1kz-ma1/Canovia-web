@@ -50,6 +50,69 @@
             <div class="rounded-2xl border border-slate-700 bg-slate-900/70 px-4 py-3 text-sm text-slate-300">{{ session('status') }}</div>
         @endif
 
+        @php
+            $recallProgressMetrics = (array) data_get($recallProgression ?? [], 'metrics', []);
+            $recallProgressKind = (string) data_get($recallProgression ?? [], 'kind', 'empty');
+            $recallProgressEligible = (bool) data_get($recallProgression ?? [], 'eligible', false);
+        @endphp
+
+        <section
+            class="page-card border-emerald-300/15 p-4 sm:p-5"
+            data-study-recall-progression
+            data-study-recall-progression-kind="{{ $recallProgressKind }}"
+        >
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300">TASK PROGRESSION</p>
+                        @if ($recallProgressEligible)
+                            <span class="badge badge-slate">Task完了候補</span>
+                        @elseif ($recallProgressKind === 'supplementary')
+                            <span class="badge badge-slate">補助学習</span>
+                        @elseif ($recallProgressKind === 'completed')
+                            <span class="badge badge-slate">完了済み</span>
+                        @endif
+                    </div>
+
+                    <p class="mt-2 text-sm font-black text-slate-100">
+                        Recallの定着をTask進行へつなげる
+                    </p>
+                    <p class="mt-1 max-w-3xl text-xs leading-5 text-slate-500">
+                        {{ data_get($recallProgression ?? [], 'reason', 'Recallの進行状態を確認しています。') }}
+                    </p>
+
+                    <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500">
+                        <span>確認済み {{ (int) ($recallProgressMetrics['reviewed'] ?? 0) }}/{{ (int) ($recallProgressMetrics['total'] ?? 0) }}</span>
+                        <span>定着候補 {{ (int) ($recallProgressMetrics['mastered'] ?? 0) }}/{{ (int) ($recallProgressMetrics['total'] ?? 0) }}</span>
+                        <span>今やる {{ (int) ($recallProgressMetrics['due'] ?? 0) }}</span>
+                    </div>
+                </div>
+
+                @if ($recallProgressEligible && ($canEdit ?? false))
+                    <form
+                        method="POST"
+                        action="{{ route('plans.tasks.study_recall.complete', [$plan, $task]) }}"
+                        class="shrink-0"
+                        data-study-recall-complete-form
+                        data-mutation-once
+                    >
+                        @csrf
+                        <button type="submit" class="btn-primary min-h-10 px-4 text-xs">
+                            Recall定着を確認してTask完了
+                        </button>
+                    </form>
+                @elseif ($recallProgressEligible)
+                    <p class="shrink-0 text-[10px] leading-4 text-slate-600">
+                        Task完了の反映には編集権限が必要です。
+                    </p>
+                @endif
+            </div>
+
+            @error('recall_progression')
+                <p class="mt-3 text-xs text-rose-300">{{ $message }}</p>
+            @enderror
+        </section>
+
         @if ($currentItem)
             <section class="page-card border-cyan-300/20 p-5 sm:p-7">
                 <div class="flex flex-wrap items-start justify-between gap-3">

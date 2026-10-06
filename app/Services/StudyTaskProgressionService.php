@@ -229,6 +229,25 @@ class StudyTaskProgressionService
     }
 
     /**
+     * Reuse the canonical Study next-Task selector after another Study
+     * activity has independently verified completion.
+     *
+     * @return array<string,mixed>
+     */
+    public function afterVerifiedCompletion(
+        Plan $plan,
+        Task $task,
+        string $reason,
+    ): array {
+        return $this->afterCompletion($plan, $task, [
+            'passed' => true,
+            'strong_attempt_count' => 0,
+            'required_strong_attempts' => 0,
+            'reason' => $reason,
+        ]);
+    }
+
+    /**
      * @param array<string,mixed> $verification
      * @return array<string,mixed>
      */
