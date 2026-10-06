@@ -206,7 +206,7 @@ final class DevelopmentTaskAssociationService
     ): string {
         $title = trim((string) $observation->title);
 
-        return match ($observation->kind) {
+        $value = match ($observation->kind) {
             'pull_request' => 'PR #'.(int) $observation->provider_number
                 .($title !== '' ? ' · '.$title : ''),
             'issue' => 'Issue #'.(int) $observation->provider_number
@@ -215,6 +215,8 @@ final class DevelopmentTaskAssociationService
             'commit' => 'Commit '.mb_substr((string) $observation->sha, 0, 10),
             default => $title !== '' ? $title : 'GitHub activity',
         };
+
+        return mb_substr($value, 0, 255);
     }
 
     private function externalId(
