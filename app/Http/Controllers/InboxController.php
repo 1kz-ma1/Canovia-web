@@ -43,19 +43,6 @@ class InboxController extends Controller
             $request,
         );
 
-        if (
-            ($validated['destination'] ?? null) === 'career_capture'
-            && ! $releaseLevels->allowsWorkspace(
-                WorkspaceMode::Career,
-                $request->user(),
-                $request,
-            )
-        ) {
-            throw ValidationException::withMessages([
-                'destination' => 'Careerは現在Beta準備中です。',
-            ]);
-        }
-
         $editablePlans = $ownership->ownedPlans($request, ['tasks'])
             ->filter(fn ($plan) => $ownership->canEdit($request, $plan))
             ->values();
@@ -354,6 +341,19 @@ class InboxController extends Controller
             'future_memo_category' => ['nullable', 'in:'.implode(',', array_keys(FutureMemo::CATEGORIES))],
             ...$this->mapReturnRules(),
         ]);
+
+        if (
+            ($validated['destination'] ?? null) === 'career_capture'
+            && ! $releaseLevels->allowsWorkspace(
+                WorkspaceMode::Career,
+                $request->user(),
+                $request,
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'destination' => 'Careerは現在Beta準備中です。',
+            ]);
+        }
 
         $editablePlans = $ownership->ownedPlans($request, ['tasks'])
             ->filter(fn ($plan) => $ownership->canEdit($request, $plan))
