@@ -49,17 +49,14 @@ class StudyStateFirstWorkspaceV5613Test extends TestCase
         );
 
         $this->actingAs($user)
-            ->get(route('workspace.study.index', ['plan_id' => $plan->id]))
+            ->get(route('workspace.study.index', [
+                'plan_id' => $plan->id,
+            ]))
             ->assertOk()
             ->assertSee(
                 'data-study-learning-type="certification_exam"',
                 false,
             )
-            ->assertSee('data-study-workspace-current-state', false)
-            ->assertSee('演習履歴から現在地を把握済み')
-            ->assertSee('84%')
-            ->assertSee('データベース')
-            ->assertSee('ネットワーク')
             ->assertSee(
                 route('plans.tasks.study_practice.show', [$plan, $task]),
                 false,
@@ -74,6 +71,20 @@ class StudyStateFirstWorkspaceV5613Test extends TestCase
                 false,
             )
             ->assertDontSee('data-study-workspace-capture-first', false)
+            ->assertDontSee('data-study-workspace-current-state', false)
+            ->assertDontSee('data-study-workspace-readiness', false);
+
+        $this->actingAs($user)
+            ->get(route('workspace.study.index', [
+                'plan_id' => $plan->id,
+                'surface' => 'analysis',
+            ]))
+            ->assertOk()
+            ->assertSee('data-study-workspace-current-state', false)
+            ->assertSee('演習履歴から現在地を把握済み')
+            ->assertSee('84%')
+            ->assertSee('データベース')
+            ->assertSee('ネットワーク')
             ->assertDontSee('data-study-workspace-readiness', false);
     }
 
@@ -119,10 +130,11 @@ class StudyStateFirstWorkspaceV5613Test extends TestCase
         $task = $this->task($plan, 'TOEIC診断問題');
 
         $this->actingAs($user)
-            ->get(route('workspace.study.index', ['plan_id' => $plan->id]))
+            ->get(route('workspace.study.index', [
+                'plan_id' => $plan->id,
+            ]))
             ->assertOk()
             ->assertSee('data-study-learning-type="score_exam"', false)
-            ->assertSee('目標 600')
             ->assertSee(
                 'data-study-workspace-missing-context="current_score"',
                 false,
@@ -134,6 +146,14 @@ class StudyStateFirstWorkspaceV5613Test extends TestCase
                 false,
             )
             ->assertDontSee('今回の試験範囲がまだ分かりません');
+
+        $this->actingAs($user)
+            ->get(route('workspace.study.index', [
+                'plan_id' => $plan->id,
+                'surface' => 'preparation',
+            ]))
+            ->assertOk()
+            ->assertSee('目標 600');
     }
 
     public function test_school_test_without_scope_surfaces_scope_as_decision_changing_context(): void
@@ -231,7 +251,10 @@ class StudyStateFirstWorkspaceV5613Test extends TestCase
         $this->attempt($user, $plan, $task, 75, ['CIDR']);
 
         $this->actingAs($user)
-            ->get(route('workspace.study.index', ['plan_id' => $plan->id]))
+            ->get(route('workspace.study.index', [
+                'plan_id' => $plan->id,
+                'surface' => 'analysis',
+            ]))
             ->assertOk()
             ->assertSee('data-study-workspace-readiness', false)
             ->assertSee('data-study-workspace-gap', false)
