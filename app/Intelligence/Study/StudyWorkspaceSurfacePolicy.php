@@ -31,6 +31,7 @@ final class StudyWorkspaceSurfacePolicy
         ?array $recommendation = null,
         ?array $methodRecommendation = null,
         ?array $apSubjectACoverage = null,
+        ?array $weaknessInterventionOutcomes = null,
     ): array {
         $surfaces = [];
         $type = (string) ($learningType['key'] ?? 'general_learning');
@@ -128,6 +129,22 @@ final class StudyWorkspaceSurfacePolicy
                 [
                     'coverage' =>
                         $apSubjectACoverage,
+                ],
+            );
+        }
+
+        if (
+            is_array($weaknessInterventionOutcomes)
+            && (bool) (
+                $weaknessInterventionOutcomes['available']
+                ?? false
+            )
+        ) {
+            $surfaces[] = $this->registry->surface(
+                'weakness_intervention_outcomes',
+                [
+                    'outcomes' =>
+                        $weaknessInterventionOutcomes,
                 ],
             );
         }
