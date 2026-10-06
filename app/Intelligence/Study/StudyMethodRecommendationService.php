@@ -692,7 +692,10 @@ final class StudyMethodRecommendationService
                     [$plan, $task],
                 ),
             StudyActivityPolicyService::RESOURCE_STUDY =>
-                route('plans.resources.index', $plan),
+                route(
+                    'plans.tasks.study_resource.show',
+                    [$plan, $task],
+                ),
             StudyActivityPolicyService::LISTENING,
             StudyActivityPolicyService::DICTATION,
             StudyActivityPolicyService::SHADOWING =>
@@ -741,8 +744,8 @@ final class StudyMethodRecommendationService
                     : 'Recallを準備',
             StudyActivityPolicyService::RESOURCE_STUDY =>
                 $resourceCount > 0
-                    ? '教材を確認'
-                    : '教材を登録・確認',
+                    ? '教材学習を始める'
+                    : '教材学習を準備',
             StudyActivityPolicyService::LISTENING =>
                 'Listeningを始める',
             StudyActivityPolicyService::DICTATION =>
