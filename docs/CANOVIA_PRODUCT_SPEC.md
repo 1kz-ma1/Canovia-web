@@ -6038,3 +6038,45 @@ Evidence or Task progress. It may refresh local deterministic Task suggestion
 metadata.
 
 Detailed contract: `docs/V57.3_DEVELOPER_HOME_V1.md`.
+
+
+## V57.4 Developer Execution Context
+
+V57.4 deepens Developer Home by attaching a bounded, Task-scoped execution
+context to the existing Development Adaptive Action.
+
+Canonical flow:
+
+```text
+Development Adaptive Action
++ target / focus Task
++ confirmed Task ↔ GitHub Artifact links
++ persisted authoritative GitHub TaskEvidence
+→ DevelopmentExecutionContextService
+→ Action Context / Handoff surface
+```
+
+V57.4 does not create a second decision engine. V53.8 remains authoritative for
+the next Action, target Task/Gate and success signals.
+
+The context projection may show:
+
+- repository full name
+- branch / latest commit SHA
+- Pull Request number / state / draft / URL
+- CI state
+- latest Review state / reviewer
+- Issue state
+- Deployment environment / status
+- linked GitHub Artifacts
+- recent GitHub Evidence summaries
+- deterministic Evidence guidance for the current Action
+
+Context is bounded to one unfinished Task. Evidence from another Task must not
+leak into the current execution context even when both Tasks share a repository.
+
+Developer Home GET reads only persisted Canovia state. It does not call GitHub
+or AI, persist a context snapshot, create Evidence/associations, or mutate Task
+progress/status/remaining time.
+
+Detailed contract: `docs/V57.4_DEVELOPER_EXECUTION_CONTEXT.md`.
