@@ -10062,3 +10062,106 @@ html[data-canovia-keyboard="open"] .workspace-mode-menu {
         padding-top: 0.35rem;
     }
 }
+
+
+/* ==========================================================================
+   V58.0 Developer Workspace focused surfaces
+   One specialized information/operation stream is rendered at a time.
+   ========================================================================== */
+.development-surface-tabs {
+    display: flex;
+    gap: 0.35rem;
+    overflow-x: auto;
+    padding: 0.45rem;
+    scrollbar-width: thin;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+.development-surface-tab {
+    display: flex;
+    min-width: 8.7rem;
+    flex: 1 0 8.7rem;
+    flex-direction: column;
+    gap: 0.12rem;
+    border: 1px solid transparent;
+    border-radius: 0.9rem;
+    padding: 0.58rem 0.72rem;
+    color: rgb(100 116 139);
+    text-decoration: none;
+    transition:
+        border-color 140ms ease,
+        background 140ms ease,
+        color 140ms ease;
+}
+
+.development-surface-tab strong {
+    color: rgb(203 213 225);
+    font-size: 0.72rem;
+    font-weight: 900;
+}
+
+.development-surface-tab span {
+    font-size: 0.57rem;
+    line-height: 1.35;
+}
+
+.development-surface-tab:hover,
+.development-surface-tab:focus-visible {
+    border-color: rgb(71 85 105 / 0.68);
+    background: rgb(30 41 59 / 0.46);
+    outline: none;
+}
+
+.development-surface-tab.is-active {
+    border-color: rgb(34 211 238 / 0.24);
+    background:
+        linear-gradient(
+            135deg,
+            rgb(34 211 238 / 0.08),
+            rgb(139 92 246 / 0.055)
+        );
+    color: rgb(148 163 184);
+}
+
+.development-surface-tab.is-active strong {
+    color: rgb(224 242 254);
+}
+
+[data-development-context-details] > summary::-webkit-details-marker,
+[data-development-active-work-details] > summary::-webkit-details-marker {
+    display: none;
+}
+
+[data-development-repository-tree] {
+    scrollbar-gutter: stable;
+}
+
+@media (min-width: 1024px) {
+    .development-surface-tabs {
+        overflow: visible;
+    }
+
+    .development-surface-tab {
+        min-width: 0;
+        flex-basis: 0;
+    }
+}
+
+@media (max-width: 767px) {
+    .development-surface-tabs {
+        padding-right: max(0.45rem, env(safe-area-inset-right));
+        padding-left: max(0.45rem, env(safe-area-inset-left));
+    }
+
+    .development-surface-tab {
+        min-width: 8.2rem;
+        flex-basis: 8.2rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .development-surface-tab {
+        transition: none;
+    }
+}

@@ -28,7 +28,7 @@ class DeveloperHomeV573Test extends TestCase
         ]);
     }
 
-    public function test_developer_home_orders_daily_work_before_release_detail(): void
+    public function test_developer_home_renders_one_information_stream_at_a_time(): void
     {
         [$user, $plan, $doing, $todo, $root] = $this->scenario();
 
@@ -42,38 +42,37 @@ class DeveloperHomeV573Test extends TestCase
             'url' => 'https://github.com/1kz-ma1/Canovia-web/pull/260',
         ]);
 
-        $response = $this->actingAs($user)
+        $work = $this->actingAs($user)
             ->get(route('workspace.development.index', [
                 'plan_id' => $plan->id,
             ]))
             ->assertOk()
-            ->assertSee('DEVELOPER HOME')
+            ->assertSee('data-development-surface="work"', false)
+            ->assertSee('data-development-surface-panel="work"', false)
             ->assertSee('NEXT ACTION')
-            ->assertSee('RECENT GITHUB REALITY')
             ->assertSee('ACTIVE DEVELOPMENT')
-            ->assertSee('RELEASE READINESS');
+            ->assertDontSee('data-development-home-recent-activity', false)
+            ->assertDontSee('data-development-home-readiness', false);
 
-        $html = $response->getContent();
-
-        $next = strpos($html, 'data-development-home-next-action');
-        $github = strpos($html, 'data-development-home-recent-activity');
-        $active = strpos($html, 'data-development-home-active');
-        $readiness = strpos($html, 'data-development-home-readiness');
-
-        $this->assertNotFalse($next);
-        $this->assertNotFalse($github);
-        $this->assertNotFalse($active);
-        $this->assertNotFalse($readiness);
-        $this->assertLessThan($github, $next);
-        $this->assertLessThan($active, $github);
-        $this->assertLessThan($readiness, $active);
-
+        $html = $work->getContent();
         $doingPosition = strpos($html, $doing->title);
         $todoPosition = strpos($html, $todo->title);
 
         $this->assertNotFalse($doingPosition);
         $this->assertNotFalse($todoPosition);
         $this->assertLessThan($todoPosition, $doingPosition);
+
+        $this->actingAs($user)
+            ->get(route('workspace.development.index', [
+                'plan_id' => $plan->id,
+                'surface' => 'repository',
+            ]))
+            ->assertOk()
+            ->assertSee('data-development-surface="repository"', false)
+            ->assertSee('data-development-surface-panel="repository"', false)
+            ->assertSee('data-development-home-recent-activity', false)
+            ->assertSee('data-development-home-readiness', false)
+            ->assertDontSee('data-development-home-next-action', false);
     }
 
     public function test_recent_github_reality_shows_linked_and_unresolved_activity_differently(): void
@@ -113,6 +112,7 @@ class DeveloperHomeV573Test extends TestCase
         $response = $this->actingAs($user)
             ->get(route('workspace.development.index', [
                 'plan_id' => $plan->id,
+                'surface' => 'repository',
             ]));
 
         $response
@@ -146,7 +146,16 @@ class DeveloperHomeV573Test extends TestCase
                 false,
             )
             ->assertSee('data-development-home-next-action', false)
-            ->assertSee('GitHub未接続でもDeveloper Homeは使えます。')
+            ->assertSee('data-development-surface-tab="repository"', false)
+            ->assertSee('リポジトリ')
+            ->assertDontSee('data-development-home-readiness', false);
+
+        $this->actingAs($user)
+            ->get(route('workspace.development.index', [
+                'plan_id' => $plan->id,
+                'surface' => 'repository',
+            ]))
+            ->assertOk()
             ->assertSee('data-development-home-readiness', false);
     }
 
