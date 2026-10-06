@@ -121,23 +121,15 @@ class StudyWorkspaceV543Test extends TestCase
         $this->practiceEvidence($task, 86);
         $this->recallEvidence($task, 'good');
 
-        $response = $this->actingAs($user)
-            ->get(route('workspace.study.index', ['plan_id' => $plan->id]));
-
-        $response
+        $this->actingAs($user)
+            ->get(route('workspace.study.index', [
+                'plan_id' => $plan->id,
+            ]))
             ->assertOk()
-            ->assertSee('data-study-workspace-readiness', false)
-            ->assertSee('data-study-workspace-gap', false)
+            ->assertSee('data-study-view-panel="work"', false)
             ->assertSee('data-study-workspace-recommendation', false)
             ->assertDontSee('data-study-workspace-action', false)
-            ->assertSee('data-study-workspace-priority-scope', false)
-            ->assertSee('EXAM READINESS')
-            ->assertSee('BIGGEST GAP')
-            ->assertSee('Coverage')
-            ->assertSee('Mastery')
-            ->assertSee('Retention')
-            ->assertSee('Remaining')
-            ->assertSee('CIDR')
+            ->assertDontSee('data-study-workspace-readiness', false)
             ->assertSee(
                 route('plans.tasks.study_practice.show', [$plan, $task]),
                 false,
@@ -146,6 +138,24 @@ class StudyWorkspaceV543Test extends TestCase
                 route('plans.tasks.study_recall.show', [$plan, $task]),
                 false,
             );
+
+        $this->actingAs($user)
+            ->get(route('workspace.study.index', [
+                'plan_id' => $plan->id,
+                'surface' => 'analysis',
+            ]))
+            ->assertOk()
+            ->assertSee('data-study-workspace-readiness', false)
+            ->assertSee('data-study-workspace-gap', false)
+            ->assertSee('data-study-workspace-priority-scope', false)
+            ->assertSee('EXAM READINESS')
+            ->assertSee('BIGGEST GAP')
+            ->assertSee('Coverage')
+            ->assertSee('Mastery')
+            ->assertSee('Retention')
+            ->assertSee('Remaining')
+            ->assertSee('CIDR')
+            ->assertDontSee('data-study-workspace-recommendation', false);
     }
 
     public function test_explicit_plan_selection_rejects_inaccessible_or_non_study_plan(): void
