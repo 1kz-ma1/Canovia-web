@@ -72,7 +72,9 @@ use App\Http\Controllers\CoreFragmentBundleController;
 use App\Http\Controllers\ClientPerformanceController;
 use App\Http\Controllers\WorkspaceModeController;
 use App\Http\Controllers\StudyWorkspaceController;
+use App\Http\Controllers\StudyWorkspaceTopController;
 use App\Http\Controllers\DevelopmentWorkspaceController;
+use App\Http\Controllers\DevelopmentWorkspaceTopController;
 use App\Http\Controllers\DevelopmentActivityObservationController;
 use App\Http\Controllers\OverviewWorkspaceController;
 use App\Http\Controllers\ExecutionSetupController;
@@ -88,7 +90,9 @@ Route::get('/welcome', [FirstRunController::class, 'show'])->name('first_run.sho
 Route::post('/welcome/start', [FirstRunController::class, 'start'])->name('first_run.start');
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/workspace/overview', OverviewWorkspaceController::class)->name('workspace.overview.index');
+Route::get('/workspace/study/top', StudyWorkspaceTopController::class)->name('workspace.study.top');
 Route::get('/workspace/study', StudyWorkspaceController::class)->name('workspace.study.index');
+Route::get('/workspace/development/top', DevelopmentWorkspaceTopController::class)->name('workspace.development.top');
 Route::get('/workspace/development', DevelopmentWorkspaceController::class)->name('workspace.development.index');
 Route::post('/plans/{plan}/development-preview', [DevelopmentPreviewController::class, 'store'])
     ->middleware('throttle:20,1')
