@@ -37,6 +37,7 @@ use App\Http\Controllers\AdminGoalPatternDemandController;
 use App\Http\Controllers\AdminEconomyController;
 use App\Http\Controllers\AdminPreviewController;
 use App\Http\Controllers\AdminReleaseLevelController;
+use App\Http\Controllers\AdminReleaseGateController;
 use App\Http\Controllers\AdminStudyScenarioLabController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\RoadmapController;
@@ -212,6 +213,7 @@ Route::middleware('admin.access')->group(function () {
     Route::delete('/admin/study-scenarios', [AdminStudyScenarioLabController::class, 'destroyAll'])
         ->name('admin.study_scenarios.destroy_all');
 
+    Route::get('/admin/release-gate', [AdminReleaseGateController::class, 'index'])->name('admin.release_gate.index');
     Route::get('/admin/economy', [AdminEconomyController::class, 'index'])->name('admin.economy.index');
     Route::post('/admin/economy/grants', [AdminEconomyController::class, 'storeGrant'])->name('admin.economy.grants.store');
     Route::delete('/admin/economy/grants/{grant}', [AdminEconomyController::class, 'destroyGrant'])->name('admin.economy.grants.destroy');
