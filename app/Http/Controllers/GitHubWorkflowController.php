@@ -115,7 +115,7 @@ final class GitHubWorkflowController extends Controller
             ),
             'github_app_connect_available' => (bool) data_get(
                 $integrationStatus,
-                'runtime.interactive_write_configured',
+                'runtime.interactive_connect_configured',
                 false,
             ),
             'github_integration_status' => $integrationStatus,
@@ -263,6 +263,7 @@ final class GitHubWorkflowController extends Controller
         FeatureAccessService $featureAccess,
         GitHubWorkflowService $workflow,
         GitHubRepositoryInspector $repositoryInspector,
+        GitHubRepositoryWriter $repositoryWriter,
         PlanActivityService $activity,
     ) {
         $artifact->loadMissing('plan');
@@ -288,7 +289,19 @@ final class GitHubWorkflowController extends Controller
         abort_unless(($parsed['kind'] ?? null) === 'repository', 404);
 
         try {
-            $snapshot = $repositoryInspector->inspect((string) $parsed['repo_full_name']);
+            $connected = (string) data_get(
+                $artifact->metadata,
+                'github_app_connection.status',
+                '',
+            ) === 'connected';
+
+            $snapshot = $connected
+                ? $repositoryWriter->inspectRepositorySnapshot(
+                    (string) $parsed['repo_full_name'],
+                )
+                : $repositoryInspector->inspect(
+                    (string) $parsed['repo_full_name'],
+                );
         } catch (\RuntimeException $exception) {
             return redirect()
                 ->route('github_workflow.index', ['plan_id' => $plan->id])
@@ -339,13 +352,13 @@ final class GitHubWorkflowController extends Controller
         if ($blocked = $this->capabilityRedirect(
             $request,
             $featureAccess,
-            FeatureKey::DeveloperGithubWrite,
+            FeatureKey::DeveloperGithubEvidence,
             (int) $plan->id,
             [
                 'plan_id' => (int) $plan->id,
                 'artifact_id' => (int) $artifact->id,
             ],
-            'Developer GitHub Write',
+            'Developer GitHub Evidence',
         )) {
             return $blocked;
         }
@@ -447,13 +460,13 @@ final class GitHubWorkflowController extends Controller
         if ($blocked = $this->capabilityRedirect(
             $request,
             $featureAccess,
-            FeatureKey::DeveloperGithubWrite,
+            FeatureKey::DeveloperGithubEvidence,
             (int) $plan->id,
             [
                 'plan_id' => (int) $plan->id,
                 'artifact_id' => (int) $artifact->id,
             ],
-            'Developer GitHub Write',
+            'Developer GitHub Evidence',
         )) {
             return $blocked;
         }
@@ -543,8 +556,8 @@ final class GitHubWorkflowController extends Controller
             ->with(
                 $connection['status'] === 'connected' ? 'success' : 'status',
                 $connection['status'] === 'connected'
-                    ? 'GitHub Repositoryとの接続を確認しました。Canoviaからレビュー用PRを作成できます。'
-                    : 'GitHub Appは接続されていますが、Contents / Pull Requestsのwrite権限承認が必要です。',
+                    ? 'GitHub Repositoryとの接続を確認しました。Public / Privateを問わずGitHub App経由で同期できます。'
+                    : 'GitHub Appは確認できましたが、Contents / Pull Requestsのread権限が必要です。',
             );
     }
 
@@ -564,13 +577,13 @@ final class GitHubWorkflowController extends Controller
         if ($blocked = $this->capabilityRedirect(
             $request,
             $featureAccess,
-            FeatureKey::DeveloperGithubWrite,
+            FeatureKey::DeveloperGithubEvidence,
             (int) $plan->id,
             [
                 'plan_id' => (int) $plan->id,
                 'artifact_id' => (int) $artifact->id,
             ],
-            'Developer GitHub Write',
+            'Developer GitHub Evidence',
         )) {
             return $blocked;
         }
@@ -627,7 +640,7 @@ final class GitHubWorkflowController extends Controller
                 $connection['status'] === 'connected' ? 'success' : 'status',
                 $connection['status'] === 'connected'
                     ? 'GitHub Appの接続状態を確認しました。'
-                    : 'GitHub Appは存在しますが、必要なwrite権限がまだ承認されていません。',
+                    : 'GitHub Appは存在しますが、必要なread権限を確認できません。',
             );
     }
 
@@ -865,21 +878,32 @@ final class GitHubWorkflowController extends Controller
         $permissions = is_array($installation['permissions'] ?? null)
             ? $installation['permissions']
             : [];
-        $ready = ($permissions['contents'] ?? null) === 'write'
+        $readReady = in_array(
+            $permissions['contents'] ?? null,
+            ['read', 'write'],
+            true,
+        ) && in_array(
+            $permissions['pull_requests'] ?? null,
+            ['read', 'write'],
+            true,
+        );
+        $writeReady = ($permissions['contents'] ?? null) === 'write'
             && ($permissions['pull_requests'] ?? null) === 'write';
 
         return [
-            'status' => $ready ? 'connected' : 'permission_update_required',
+            'status' => $readReady ? 'connected' : 'permission_update_required',
             'installation_id' => (int) ($installation['installation_id'] ?? 0),
             'account_login' => (string) ($installation['account_login'] ?? ''),
             'account_type' => (string) ($installation['account_type'] ?? ''),
             'target_type' => (string) ($installation['target_type'] ?? ''),
             'repository_selection' => (string) ($installation['repository_selection'] ?? ''),
             'permissions' => $permissions,
+            'read_ready' => $readReady,
+            'write_ready' => $writeReady,
             'management_url' => $installation['management_url'] ?? null,
             'requested_by_user_id' => $requestedByUserId,
             'requested_at' => now()->toIso8601String(),
-            'connected_at' => $ready ? now()->toIso8601String() : null,
+            'connected_at' => $readReady ? now()->toIso8601String() : null,
             'last_checked_at' => now()->toIso8601String(),
             'setup_action' => $setupAction,
         ];
