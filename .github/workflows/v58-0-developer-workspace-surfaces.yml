@@ -1,0 +1,54 @@
+name: V58.0 Developer Workspace Surfaces Validation
+
+on:
+  push:
+    branches:
+      - feature/v58-0-developer-workspace-surfaces
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  developer-surfaces:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Http/Controllers/DevelopmentWorkspaceController.php
+          php -l app/Http/Controllers/DevelopmentPreviewController.php
+          php -l app/Services/DevelopmentWorkspaceSurfaceService.php
+          php -l app/Services/GitHubRepositoryWriter.php
+          php -l tests/Feature/DeveloperWorkspaceSurfacesV580Test.php
+          php -l tests/Feature/DeveloperHomeV573Test.php
+          php -l tests/Feature/DevelopmentWorkspaceV544Test.php
+          php -l routes/web.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V58.0 focused surfaces
+        run: php artisan test tests/Feature/DeveloperWorkspaceSurfacesV580Test.php
+      - name: Developer Home regression
+        run: php artisan test tests/Feature/DeveloperHomeV573Test.php
+      - name: Development Workspace regression
+        run: php artisan test tests/Feature/DevelopmentWorkspaceV544Test.php
+      - name: V57.6 Brief regression
+        run: php artisan test tests/Feature/DeveloperImplementationBriefV576Test.php
+      - name: V57.7 Provider triage regression
+        run: php artisan test tests/Feature/DeveloperProviderTriageV577Test.php
+      - name: V57.8 Coding Agent handoff regression
+        run: php artisan test tests/Feature/DeveloperCodingAgentHandoffV578Test.php
+      - name: V57.9 desktop shell regression
+        run: php artisan test tests/Feature/DesktopHeaderDensityV579Test.php
+      - name: Workspace mode regression
+        run: php artisan test tests/Feature/WorkspaceModeBarV541Test.php tests/Feature/WorkspaceModePersistenceV542Test.php tests/Feature/MobileWorkspaceModeEntryV566Test.php
