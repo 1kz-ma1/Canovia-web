@@ -24,6 +24,7 @@ class StudyPracticeStrategyService
         Plan $plan,
         Task $task,
         Collection $recentAttempts,
+        array $planWideWeaknessHandoff = [],
     ): array {
         $historyLimit = max(
             4,
@@ -162,6 +163,31 @@ class StudyPracticeStrategyService
             ?? StudyExamConvergencePolicyService::PHASE_GENERAL_PRACTICE
         );
 
+        $progression = $this->progression->resolve(
+            $plan,
+            $task,
+            $recentAttempts->take(8)->values(),
+            $learningPhase,
+        );
+
+        // Mastery verification is already a broad diagnostic check, not a
+        // weakness drill. Keep it during General Practice for compatibility
+        // and count it as broad evidence through learning_phase. Exam Mode
+        // remains authoritative in the final exam window.
+        $masteryVerification = (
+            ($progression['kind'] ?? null) === 'verify_mastery'
+            && $phase
+                !== StudyExamConvergencePolicyService::PHASE_EXAM_MODE
+        );
+
+        $routingPolicy = $this->applyPlanWideWeaknessHandoff(
+            $routingPolicy,
+            $planWideWeaknessHandoff,
+            $policyPhase,
+            $taskMode,
+            $masteryVerification,
+        );
+
         $allocationQuestionCount = $phase
                 === StudyExamConvergencePolicyService::PHASE_WEAKNESS_REINFORCEMENT
             ? $suggestedQuestionCount
@@ -189,23 +215,6 @@ class StudyPracticeStrategyService
                 false,
             ),
         };
-
-        $progression = $this->progression->resolve(
-            $plan,
-            $task,
-            $recentAttempts->take(8)->values(),
-            $learningPhase,
-        );
-
-        // Mastery verification is already a broad diagnostic check, not a
-        // weakness drill. Keep it during General Practice for compatibility
-        // and count it as broad evidence through learning_phase. Exam Mode
-        // remains authoritative in the final exam window.
-        $masteryVerification = (
-            ($progression['kind'] ?? null) === 'verify_mastery'
-            && $phase
-                !== StudyExamConvergencePolicyService::PHASE_EXAM_MODE
-        );
 
         $targetQuestionCount = $masteryVerification
             ? 5
@@ -586,6 +595,164 @@ class StudyPracticeStrategyService
             'has_any_weakness_signal' =>
                 $primary->isNotEmpty() || $secondary->isNotEmpty(),
         ];
+    }
+
+    /**
+     * Plan-wide AP weakness observations may fill only unused seats in the
+     * existing broad-assessment recheck budget. Task-local routing remains
+     * authoritative and always keeps precedence.
+     *
+     * @param array<string,mixed> $routingPolicy
+     * @param array<string,mixed> $handoff
+     * @return array<string,mixed>
+     */
+    private function applyPlanWideWeaknessHandoff(
+        array $routingPolicy,
+        array $handoff,
+        string $policyPhase,
+        string $taskMode,
+        bool $masteryVerification,
+    ): array {
+        $reason = 'not_eligible';
+
+        $allowed = (bool) ($handoff['eligible'] ?? false)
+            && $taskMode === 'broad_assessment'
+            && $policyPhase
+                === StudyExamConvergencePolicyService::PHASE_GENERAL_PRACTICE
+            && ! $masteryVerification;
+
+        if (! (bool) ($handoff['eligible'] ?? false)) {
+            $reason = (string) (
+                $handoff['reason']
+                ?? 'handoff_not_eligible'
+            );
+        } elseif ($taskMode !== 'broad_assessment') {
+            $reason = 'task_mode_not_broad_assessment';
+        } elseif (
+            $policyPhase
+            !== StudyExamConvergencePolicyService::PHASE_GENERAL_PRACTICE
+        ) {
+            $reason = 'policy_phase_not_general_practice';
+        } elseif ($masteryVerification) {
+            $reason = 'mastery_verification';
+        }
+
+        $limit = max(
+            0,
+            (int) config(
+                'study.practice_routing.broad_assessment.weakness_recheck_questions',
+                2,
+            ),
+        );
+
+        $localTopics = collect(
+            $routingPolicy['broad_recheck_topics'] ?? [],
+        )
+            ->filter(fn ($topic) => is_string($topic) && trim($topic) !== '')
+            ->map(fn ($topic) => trim((string) $topic))
+            ->unique()
+            ->take($limit)
+            ->values();
+
+        $blockedKeys = collect([
+            ...($routingPolicy['cooldown_topics'] ?? []),
+            ...($routingPolicy['mastered_topics'] ?? []),
+        ])
+            ->filter(fn ($topic) => is_string($topic) && trim($topic) !== '')
+            ->map(fn ($topic) => $this->topicKey((string) $topic))
+            ->filter()
+            ->flip();
+
+        $candidateRows = collect(
+            $handoff['candidate_topics'] ?? [],
+        )
+            ->filter(fn ($item) => is_array($item))
+            ->filter(
+                fn (array $item) =>
+                    is_string($item['topic'] ?? null)
+                    && trim((string) $item['topic']) !== '',
+            )
+            ->values();
+
+        $candidateTopics = $candidateRows
+            ->pluck('topic')
+            ->map(fn ($topic) => trim((string) $topic))
+            ->filter(
+                fn (string $topic) =>
+                    ! isset(
+                        $blockedKeys[
+                            $this->topicKey($topic)
+                        ],
+                    ),
+            )
+            ->unique()
+            ->values();
+
+        $merged = $allowed
+            ? $localTopics
+                ->concat($candidateTopics)
+                ->unique()
+                ->take($limit)
+                ->values()
+            : $localTopics;
+
+        $localKeys = $localTopics
+            ->map(fn ($topic) => $this->topicKey((string) $topic))
+            ->flip();
+
+        $appliedTopics = $allowed
+            ? $merged
+                ->reject(
+                    fn ($topic) =>
+                        isset(
+                            $localKeys[
+                                $this->topicKey(
+                                    (string) $topic,
+                                )
+                            ],
+                        ),
+                )
+                ->values()
+            : collect();
+
+        if ($allowed) {
+            $reason = $appliedTopics->isNotEmpty()
+                ? 'applied'
+                : (
+                    $candidateTopics->isEmpty()
+                        ? 'candidates_blocked_by_local_mastery'
+                        : 'local_recheck_budget_full'
+                );
+        }
+
+        $routingPolicy['broad_recheck_topics'] =
+            $merged->all();
+        $routingPolicy['plan_wide_weakness_handoff'] = [
+            'version' => 'v1',
+            'eligible' =>
+                (bool) ($handoff['eligible'] ?? false),
+            'applied' =>
+                $appliedTopics->isNotEmpty(),
+            'reason' => $reason,
+            'checkpoint_assessed_question_count' =>
+                (int) data_get(
+                    $handoff,
+                    'checkpoint.assessed_question_count',
+                    0,
+                ),
+            'candidate_topics' =>
+                $candidateRows->all(),
+            'applied_topics' =>
+                $appliedTopics->all(),
+            'local_topics' =>
+                $localTopics->all(),
+            'maximum_recheck_questions' =>
+                $limit,
+            'preserves_local_precedence' => true,
+            'keeps_focus_topics_empty' => true,
+        ];
+
+        return $routingPolicy;
     }
 
     /**

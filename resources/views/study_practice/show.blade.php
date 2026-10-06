@@ -79,6 +79,14 @@
                     $phaseKey = (string) ($learningPhase['phase'] ?? 'general_practice');
                     $phaseLabel = (string) ($learningPhase['label'] ?? '総合演習');
                     $daysUntilExam = $learningPhase['days_until_exam'] ?? null;
+                    $planWideWeaknessHandoff = (array) data_get(
+                        $practiceStrategy,
+                        'routing_policy.plan_wide_weakness_handoff',
+                        [],
+                    );
+                    $planWideAppliedTopics = collect(
+                        $planWideWeaknessHandoff['applied_topics'] ?? [],
+                    )->filter();
                 @endphp
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
@@ -154,6 +162,21 @@
                 @elseif ($phaseKey === 'exam_mode')
                     <div class="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/[0.04] px-3 py-2">
                         <p class="text-xs font-bold text-amber-100">本番バランスを優先します。新しい細かい弱点探索より、AP科目A相当の総合確認を進めます。</p>
+                    </div>
+                @endif
+
+                @if ($planWideAppliedTopics->isNotEmpty())
+                    <div
+                        class="mt-3 rounded-xl border border-sky-300/15 bg-sky-300/[0.035] px-3 py-2"
+                        data-plan-wide-weakness-handoff
+                    >
+                        <p class="text-xs font-bold text-sky-100">
+                            100問後のPlan全体再確認:
+                            {{ $planWideAppliedTopics->implode(' / ') }}
+                        </p>
+                        <p class="mt-1 text-[10px] leading-4 text-slate-500">
+                            Plan全体で繰り返し弱かったTopicを最大{{ (int) ($planWideWeaknessHandoff['maximum_recheck_questions'] ?? 2) }}問だけ再確認します。残りは分野横断の探索を維持します。
+                        </p>
                     </div>
                 @endif
 

@@ -10,6 +10,7 @@ use App\Models\StudyPracticeSession;
 use App\Models\Task;
 use App\Services\AiCapacityService;
 use App\Services\AiJsonInputNormalizer;
+use App\Services\ApSubjectAPlanWideWeaknessHandoffService;
 use App\Services\BehaviorIdentityService;
 use App\Services\EvidenceProgressService;
 use App\Services\FeatureAccessService;
@@ -48,6 +49,7 @@ class StudyPracticeController extends Controller
         StudyActivityPolicyService $studyActivityPolicy,
         StudyPracticeReliabilityService $reliabilityService,
         StudyPracticeCumulativeCheckpointService $checkpointService,
+        ApSubjectAPlanWideWeaknessHandoffService $planWideHandoffService,
         BehaviorIdentityService $identity,
         FeatureAccessService $featureAccess,
         NativeAiGateway $nativeAi,
@@ -72,6 +74,16 @@ class StudyPracticeController extends Controller
             $request->user()?->id,
             $request->user() ? null : $actorToken,
         );
+        $planWideWeaknessHandoff =
+            $planWideHandoffService->project(
+                $plan,
+                $task,
+                $request->user()?->id,
+                $request->user()
+                    ? null
+                    : $actorToken,
+                $practiceCheckpoint,
+            );
         $attemptQuery = $this->attemptQuery($request, $plan, $task, $actorToken);
         $historyLimit = max(4, (int) config('study.exam_convergence.history_attempt_limit', 16));
         $recentAttempts = (clone $attemptQuery)->latest('created_at')->latest('id')->take($historyLimit)->get();
@@ -240,6 +252,7 @@ class StudyPracticeController extends Controller
                 $task,
                 $recentAttempts,
                 $questionPackAllowed ? null : 'external_ai',
+                $planWideWeaknessHandoff,
             );
 
         $storedStrategy = $currentPracticeSession
@@ -408,6 +421,7 @@ class StudyPracticeController extends Controller
         StudyPracticeOrchestrator $orchestrator,
         BehaviorIdentityService $identity,
         FeatureAccessService $featureAccess,
+        ApSubjectAPlanWideWeaknessHandoffService $planWideHandoffService,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
         $this->authorizeStudyPlan($plan);
@@ -422,6 +436,15 @@ class StudyPracticeController extends Controller
         ]);
 
         $actorToken = $identity->resolve($request);
+        $planWideWeaknessHandoff =
+            $planWideHandoffService->project(
+                $plan,
+                $task,
+                $request->user()?->id,
+                $request->user()
+                    ? null
+                    : $actorToken,
+            );
         $attemptQuery = $this->attemptQuery($request, $plan, $task, $actorToken);
         $historyLimit = max(4, (int) config('study.exam_convergence.history_attempt_limit', 16));
         $recentAttempts = (clone $attemptQuery)->latest('created_at')->latest('id')->take($historyLimit)->get();
@@ -435,6 +458,7 @@ class StudyPracticeController extends Controller
                 $request->user() ? null : $actorToken,
                 (string) $validated['prepare_request_id'],
                 'question_bank',
+                $planWideWeaknessHandoff,
             );
         } catch (\RuntimeException $exception) {
             throw ValidationException::withMessages([
@@ -498,6 +522,7 @@ class StudyPracticeController extends Controller
         BehaviorIdentityService $identity,
         FeatureAccessService $featureAccess,
         NativeAiGateway $nativeAi,
+        ApSubjectAPlanWideWeaknessHandoffService $planWideHandoffService,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
         $this->authorizeStudyPlan($plan);
@@ -513,6 +538,15 @@ class StudyPracticeController extends Controller
         ]);
 
         $actorToken = $identity->resolve($request);
+        $planWideWeaknessHandoff =
+            $planWideHandoffService->project(
+                $plan,
+                $task,
+                $request->user()?->id,
+                $request->user()
+                    ? null
+                    : $actorToken,
+            );
         $attemptQuery = $this->attemptQuery($request, $plan, $task, $actorToken);
         $historyLimit = max(4, (int) config('study.exam_convergence.history_attempt_limit', 16));
         $recentAttempts = (clone $attemptQuery)->latest('created_at')->latest('id')->take($historyLimit)->get();
@@ -526,6 +560,7 @@ class StudyPracticeController extends Controller
                 $request->user() ? null : $actorToken,
                 (string) $validated['prepare_request_id'],
                 'hybrid_ai',
+                $planWideWeaknessHandoff,
             );
         } catch (NativeAiExecutionException $exception) {
             return redirect()
@@ -606,6 +641,7 @@ class StudyPracticeController extends Controller
         StudyPracticeOrchestrator $orchestrator,
         BehaviorIdentityService $identity,
         PracticeQuestionDemandRecorder $demandRecorder,
+        ApSubjectAPlanWideWeaknessHandoffService $planWideHandoffService,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
         $this->authorizeStudyPlan($plan);
@@ -629,6 +665,15 @@ class StudyPracticeController extends Controller
         $exerciseTitle = $title !== '' ? mb_substr($title, 0, 120) : 'AI演習';
 
         $actorToken = $identity->resolve($request);
+        $planWideWeaknessHandoff =
+            $planWideHandoffService->project(
+                $plan,
+                $task,
+                $request->user()?->id,
+                $request->user()
+                    ? null
+                    : $actorToken,
+            );
         $attemptQuery = $this->attemptQuery($request, $plan, $task, $actorToken);
         $historyLimit = max(4, (int) config('study.exam_convergence.history_attempt_limit', 16));
         $recentAttempts = (clone $attemptQuery)->latest('created_at')->latest('id')->take($historyLimit)->get();
@@ -640,6 +685,7 @@ class StudyPracticeController extends Controller
             $request->user() ? null : $actorToken,
             (string) ($validated['prepare_request_id'] ?? Str::uuid()),
             'external_ai',
+            $planWideWeaknessHandoff,
         );
 
         $practiceSession->update([
