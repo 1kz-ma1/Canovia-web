@@ -1,0 +1,45 @@
+name: V58.9 Recall Candidate Outcome Trace Validation
+
+on:
+  push:
+    branches:
+      - feature/v58-9-recall-candidate-outcome-trace
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/StudyRecallCandidateOutcomeService.php
+          php -l app/Http/Controllers/StudyRecallController.php
+          php -l app/Intelligence/Adapters/TaskEvidenceAdapter.php
+          php -l tests/Feature/StudyRecallCandidateOutcomeTraceV589Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V58.9 dedicated Candidate outcome trace contract
+        run: php artisan test tests/Feature/StudyRecallCandidateOutcomeTraceV589Test.php
+      - name: V41.11 Recall loop regression
+        run: php artisan test tests/Feature/StudyRecallV4111Test.php
+      - name: V41.12 Recall Candidate regression
+        run: php artisan test tests/Feature/StudyRecallCandidateV4112Test.php
+      - name: V58.6 Recall Task progression regression
+        run: php artisan test tests/Feature/StudyRecallTaskProgressionV586Test.php
+      - name: V58.7 Recall Source retry regression
+        run: php artisan test tests/Feature/StudyRecallSourceRetryV587Test.php
+      - name: V58.8 Recall batch ingest regression
+        run: php artisan test tests/Feature/StudyRecallBatchIngestV588Test.php
+      - name: V53.5 Study Intelligence regression
+        run: php artisan test tests/Feature/StudyIntelligenceV535Test.php
