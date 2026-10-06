@@ -6,7 +6,7 @@
         : 'workspace.development.index';
 @endphp
 
-<div class="divide-y divide-white/8 overflow-hidden rounded-2xl border border-white/8 bg-slate-950/20" data-specialized-top-plan-list="{{ $mode }}">
+<div class="divide-y divide-white/8 rounded-2xl border border-white/8 bg-slate-950/20" data-specialized-top-plan-list="{{ $mode }}">
     @forelse ($summaries as $summary)
         @php
             $plan = data_get($summary, 'plan');
