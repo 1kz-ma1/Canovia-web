@@ -28,7 +28,9 @@
     $appConnection = is_array($overview['app_connection'] ?? null) ? $overview['app_connection'] : [];
     $connectionStatus = (string) ($appConnection['status'] ?? 'not_connected');
     $connectionReadReady = (bool) ($appConnection['read_ready'] ?? ($connectionStatus === 'connected'));
-    $connectionWriteReady = (bool) ($appConnection['write_ready'] ?? false);
+    $connectionWriteReady = array_key_exists('write_ready', $appConnection)
+        ? (bool) $appConnection['write_ready']
+        : ($connectionStatus === 'connected');
     $connectionManagementUrl = $appConnection['management_url'] ?? null;
     $snapshotSource = (string) data_get($snapshot, 'source', '');
     $isAppSnapshot = $snapshotSource === 'github_app_rest';
