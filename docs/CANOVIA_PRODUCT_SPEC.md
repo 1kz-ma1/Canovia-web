@@ -6371,3 +6371,59 @@ selector but no longer exposes a second Plan selector.
 
 Canonical contract:
 `docs/V58.2_STUDY_DEVELOPER_MODE_TOPS.md`.
+
+
+## V58.3 Study Workspace Focused Surfaces
+
+Study Plan Workspace now follows the same daily-use information architecture as
+Developer Workspace:
+
+```text
+one screen = one information / operation lineage
+```
+
+The selected Study Plan is split into four real focused Views:
+
+```text
+実行 → 今やること
+準備 → 学習準備
+分析 → 学習分析
+記録 → 履歴
+```
+
+Canonical URL contract:
+
+```text
+/workspace/study?plan_id=...&surface=work
+/workspace/study?plan_id=...&surface=preparation
+/workspace/study?plan_id=...&surface=analysis
+/workspace/study?plan_id=...&surface=history
+```
+
+Missing / unknown `surface` falls back to `work`.
+
+The existing Study State First engine remains authoritative. V58.3 does not add
+a second readiness/recommendation model; it only projects the already composed
+Study surfaces into the selected View.
+
+The default Work View keeps only execution-relevant information:
+
+- missing context that changes execution
+- recommended Study method / Study recommendation
+- current action
+- alternative Study methods
+- existing Execution Setup / state-change feedback
+
+Preparation owns the selected Plan's Study Scope, Resources, external Scores and
+Plan-detail inputs.
+
+Analysis owns Current State, Readiness, Biggest Gap, weaknesses, recent results
+and Scope Coverage.
+
+History owns the existing Decision / Action / State history and is no longer a
+permanent tail on every Study Workspace screen.
+
+Study Top remains responsible for multi-Plan selection.
+
+Canonical contract:
+`docs/V58.3_STUDY_WORKSPACE_SURFACES.md`.
