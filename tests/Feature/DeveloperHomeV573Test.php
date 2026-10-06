@@ -146,7 +146,8 @@ class DeveloperHomeV573Test extends TestCase
                 false,
             )
             ->assertSee('data-development-home-next-action', false)
-            ->assertSee('GitHub未接続でもDeveloper Homeは使えます。')
+            ->assertSee('data-development-surface-tab="repository"', false)
+            ->assertSee('リポジトリ')
             ->assertDontSee('data-development-home-readiness', false);
 
         $this->actingAs($user)
