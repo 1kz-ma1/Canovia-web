@@ -234,7 +234,7 @@ final class GitHubWorkflowController extends Controller
                 $metadata = is_array($artifact->metadata) ? $artifact->metadata : [];
                 $metadata['github_repository_snapshot'] = $snapshot;
                 $artifact->update(['metadata' => $metadata]);
-                $inspectionMessage = 'GitHubから現在のRepository構造も読み込みました。';
+                $inspectionMessage = 'Public Repository Previewを読み込みました。GitHub App接続後は同じ画面でauthoritative同期へ切り替わります。';
             } catch (\RuntimeException $exception) {
                 // Repository capture must remain fail-open. The URL is still a
                 // valid Canovia root even when remote inspection is unavailable.
