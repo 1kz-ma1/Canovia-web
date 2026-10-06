@@ -45,6 +45,21 @@
     $unresolvedActivityIds = $unresolvedActivity->pluck('id')->map(fn ($id) => (int) $id);
     $associationTasks = collect($developmentAssociationTasks ?? []);
     $activeTasks = collect($developmentActiveTasks ?? []);
+    $githubRepository = $developmentGithubRepository ?? null;
+    $githubConnection = is_array($developmentGithubConnection ?? null)
+        ? $developmentGithubConnection
+        : [];
+    $githubIntegration = is_array($developmentGithubIntegrationStatus ?? null)
+        ? $developmentGithubIntegrationStatus
+        : [];
+    $githubConnectionState = (string) data_get($githubConnection, 'state', 'repository_install');
+    $githubEvidenceAllowed = (bool) data_get($githubIntegration, 'evidence.allowed', false);
+    $githubConnectAvailable = (bool) data_get($githubIntegration, 'runtime.interactive_connect_configured', false);
+    $githubAppConnectionStatus = (string) data_get(
+        $githubRepository?->metadata,
+        'github_app_connection.status',
+        'not_connected',
+    );
     $executionContext = is_array($developmentExecutionContext ?? null)
         ? $developmentExecutionContext
         : null;
@@ -356,14 +371,51 @@
             </div>
 
             @if ($recentActivity->isEmpty())
-                <div class="mt-4 rounded-2xl border border-dashed border-slate-700 bg-slate-950/20 p-5">
-                    <p class="text-sm font-black text-slate-200">GitHub Activityはまだありません。</p>
-                    <p class="mt-2 text-xs leading-5 text-slate-500">
-                        GitHub未接続でもDeveloper Homeは使えます。接続するとPR・Issue・Commitなどの現実Stateをここへ取り込めます。
-                    </p>
-                    <a href="{{ route('github_workflow.index', ['plan_id' => $plan->id]) }}" class="mt-4 inline-flex text-xs font-bold text-cyan-300 hover:text-cyan-200">
-                        GitHubを接続・確認する →
-                    </a>
+                <div class="mt-4 rounded-2xl border border-dashed border-slate-700 bg-slate-950/20 p-5" data-development-github-connection>
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="max-w-3xl">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <p class="text-sm font-black text-slate-200">GitHub Activityはまだありません。</p>
+                                @if ($githubAppConnectionStatus === 'connected')
+                                    <span class="badge badge-slate">Connected</span>
+                                @elseif ($githubRepository)
+                                    <span class="badge badge-slate">Not connected</span>
+                                @endif
+                            </div>
+                            <p class="mt-2 text-xs leading-5 text-slate-500">
+                                @if ($githubAppConnectionStatus === 'connected')
+                                    RepositoryはGitHub Appに接続済みです。次のWebhook / Bootstrap同期でPR・Issue・Commitなどの現実Stateがここに入ります。
+                                @elseif ($githubRepository)
+                                    Private RepositoryをPublicへ変更する必要はありません。GitHub AppにこのRepositoryを許可すると同じDeveloper Homeへ同期できます。
+                                @else
+                                    GitHub未接続でもDeveloper Homeは使えます。Repositoryを登録してGitHub Appを接続すると、PR・Issue・Commitなどを自動で取り込めます。
+                                @endif
+                            </p>
+                        </div>
+
+                        <div class="flex shrink-0 flex-wrap gap-2">
+                            @if (
+                                $canEdit
+                                && $githubRepository
+                                && $githubAppConnectionStatus !== 'connected'
+                                && $githubEvidenceAllowed
+                                && $githubConnectAvailable
+                            )
+                                <form method="POST" action="{{ route('github_workflow.app.connect', $githubRepository) }}">
+                                    @csrf
+                                    <button type="submit" class="btn-primary min-h-10 px-3 text-xs">GitHubを接続</button>
+                                </form>
+                            @endif
+
+                            <a href="{{ route('github_workflow.index', ['plan_id' => $plan->id]) }}" class="btn-secondary min-h-10 px-3 text-xs">
+                                {{ $githubRepository ? '接続設定' : 'Repositoryを追加' }}
+                            </a>
+                        </div>
+                    </div>
+
+                    @if ($githubRepository && $githubAppConnectionStatus !== 'connected' && filled(data_get($githubConnection, 'detail')))
+                        <p class="mt-3 text-[11px] leading-5 text-slate-600">{{ data_get($githubConnection, 'detail') }}</p>
+                    @endif
                 </div>
             @else
                 <div class="mt-4 grid gap-3 xl:grid-cols-2">
