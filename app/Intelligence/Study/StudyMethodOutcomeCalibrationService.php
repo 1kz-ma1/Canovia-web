@@ -195,7 +195,17 @@ final class StudyMethodOutcomeCalibrationService
             $observationCount
             >= self::MIN_OBSERVATIONS
         ) {
+            $hasOpposingMeaningfulDirections =
+                $positiveCount > 0
+                && $negativeCount > 0;
+
             if (
+                $hasOpposingMeaningfulDirections
+                && $directionRatio
+                    < self::MIN_DIRECTION_RATIO
+            ) {
+                $status = 'mixed';
+            } elseif (
                 $median === null
                 || abs($median)
                     < self::MEANINGFUL_DELTA
