@@ -28,9 +28,25 @@
                 @if (($primary['fit_score'] ?? null) !== null)
                     <span class="badge badge-green">適合度 {{ (int) $primary['fit_score'] }}</span>
                 @endif
+                @if ((int) ($primary['outcome_adjustment'] ?? 0) !== 0)
+                    <span
+                        class="badge badge-slate"
+                        data-study-method-outcome-adjustment="{{ (int) $primary['outcome_adjustment'] }}"
+                    >
+                        実利用補正
+                        {{ ((int) $primary['outcome_adjustment']) > 0 ? '+' : '' }}{{ (int) $primary['outcome_adjustment'] }}
+                    </span>
+                @endif
             </div>
 
             <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-300">{{ $primary['reason'] ?? '' }}</p>
+
+            @if ((int) ($primary['outcome_adjustment'] ?? 0) !== 0)
+                <p class="mt-3 text-[10px] leading-4 text-amber-200/80">
+                    {{ $primary['outcome_note'] ?? '' }}
+                    このSignalだけでPrimary Methodは自動変更しません。
+                </p>
+            @endif
 
             @if (! empty($primary['variant']))
                 <div class="mt-3">
