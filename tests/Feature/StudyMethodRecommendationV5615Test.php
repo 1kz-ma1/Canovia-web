@@ -116,7 +116,7 @@ class StudyMethodRecommendationV5615Test extends TestCase
             ->assertSee('knowledge / concept gap')
             ->assertSee('直近3回中 2回')
             ->assertSee('DNS')
-            ->assertSee(route('plans.resources.index', $plan), false)
+            ->assertSee(route('plans.tasks.study_resource.show', [$plan, $task]), false)
             ->assertDontSee(
                 'data-study-workspace-recommendation',
                 false,
@@ -421,7 +421,7 @@ class StudyMethodRecommendationV5615Test extends TestCase
                 false,
             )
             ->assertSee('教材学習')
-            ->assertSee(route('plans.resources.index', $plan), false);
+            ->assertSee(route('plans.tasks.study_resource.show', [$plan, $task]), false);
     }
 
     public function test_study_activity_page_uses_same_state_aware_resource_method(): void
@@ -462,7 +462,7 @@ class StudyMethodRecommendationV5615Test extends TestCase
             ->assertSee('Resource Study')
             ->assertSee('教材学習')
             ->assertSee('knowledge/concept gap')
-            ->assertSee(route('plans.resources.index', $plan), false)
+            ->assertSee(route('plans.tasks.study_resource.show', [$plan, $task]), false)
             ->assertDontSee('✦ AI演習で進める');
     }
 
@@ -495,7 +495,7 @@ class StudyMethodRecommendationV5615Test extends TestCase
                 ),
                 false,
             )
-            ->assertSee(route('plans.resources.index', $plan), false);
+            ->assertSee(route('plans.tasks.study_resource.show', [$plan, $task]), false);
 
         $html = $response->getContent();
         $recallPosition = strpos(
