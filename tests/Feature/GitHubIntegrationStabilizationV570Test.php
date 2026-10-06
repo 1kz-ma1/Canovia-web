@@ -231,8 +231,8 @@ class GitHubIntegrationStabilizationV570Test extends TestCase
             ->assertSee('接続導線Ready')
             ->assertSee('Server設定済み')
             ->assertSee('NEXT · READY')
-            ->assertSee('Review write準備完了')
-            ->assertSee('このRepositoryはCanovia GitHub Appに接続されています');
+            ->assertSee('GitHub接続済み')
+            ->assertSee('このRepositoryはGitHub Appで同期できます');
 
         $this->assertSame(
             'connected',
