@@ -6572,3 +6572,35 @@ entitlement / billingは変更しない。
 
 Canonical contract:
 `docs/V58.8_RECALL_BATCH_INGEST.md`.
+
+## V58.9 Recall Candidate Outcome Trace
+
+AI生成Recall Candidateの出自と、その後の実Recall Reviewを直接追跡できる。
+
+```text
+Candidate
+→ Human Review
+→ Recall Item
+→ Recall outcome
+→ Evidence lineage / outcome projection
+```
+
+新しい `study_recall_reviewed` Evidenceは、Itemに紐づくpromoted Candidate群の
+Candidate ID / Source ID / original confidenceをbounded ordered arrayとして保持する。
+手動カードでは空配列になる。
+
+複数Candidateが同じRecall Itemへ統合された場合も、Candidate lineageは全て残す一方、
+Review件数などTask-level outcomeはunique Item単位で集計して二重計上しない。
+
+`StudyRecallCandidateOutcomeService` はprovider-freeに
+unobserved / developing / needs_reinforcement / retainedを投影し、
+original AI confidenceと実Recall結果を別軸で可視化する。
+
+Recallの難しさは内容・学習状態にも依存するため、V58.9はCandidate confidenceを
+自動変更せず、「Recall成績が悪い = Candidate品質が悪い」とは判定しない。
+
+Migration、Candidate extraction、Human Review、Recall scheduler、
+V58.6 Task progression、billingは変更しない。
+
+Canonical contract:
+`docs/V58.9_RECALL_CANDIDATE_OUTCOME_TRACE.md`.
