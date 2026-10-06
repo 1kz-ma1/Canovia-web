@@ -95,14 +95,25 @@ class DevelopmentWorkspaceV544Test extends TestCase
             ]))
             ->assertOk()
             ->assertSee('data-development-home-v1', false)
+            ->assertSee('data-development-surface="work"', false)
             ->assertSee('data-development-home-next-action', false)
-            ->assertSee('data-development-home-recent-activity', false)
             ->assertSee('data-development-home-active', false)
-            ->assertSee('data-development-workspace-readiness', false)
+            ->assertDontSee('data-development-home-recent-activity', false)
+            ->assertDontSee('data-development-workspace-readiness', false)
             ->assertSee(
                 route('github_workflow.index', ['plan_id' => $plan->id]),
                 false,
             );
+
+        $this->actingAs($user)
+            ->get(route('workspace.development.index', [
+                'plan_id' => $plan->id,
+                'surface' => 'repository',
+            ]))
+            ->assertOk()
+            ->assertSee('data-development-home-recent-activity', false)
+            ->assertSee('data-development-workspace-readiness', false)
+            ->assertDontSee('data-development-home-next-action', false);
 
         $this->assertDatabaseCount('tasks', 0);
         $this->assertDatabaseCount('task_evidences', 0);
@@ -119,20 +130,28 @@ class DevelopmentWorkspaceV544Test extends TestCase
         $task = $this->task($plan, 'V54.4 Development Workspace');
         $this->commitEvidence($task);
 
-        $response = $this->actingAs($user)
+        $this->actingAs($user)
             ->get(route('workspace.development.index', [
                 'plan_id' => $plan->id,
-            ]));
+            ]))
+            ->assertOk()
+            ->assertSee('data-development-workspace-action', false)
+            ->assertSee('NEXT ACTION')
+            ->assertSee($task->title)
+            ->assertSee('CIを通す')
+            ->assertDontSee('data-development-workspace-readiness', false);
 
-        $response
+        $this->actingAs($user)
+            ->get(route('workspace.development.index', [
+                'plan_id' => $plan->id,
+                'surface' => 'repository',
+            ]))
             ->assertOk()
             ->assertSee('data-development-workspace-readiness', false)
             ->assertSee('data-development-workspace-gap', false)
-            ->assertSee('data-development-workspace-action', false)
             ->assertSee('data-development-workspace-quality-gates', false)
             ->assertSee('RELEASE READINESS')
             ->assertSee('BIGGEST RELEASE GAP')
-            ->assertSee('NEXT ACTION')
             ->assertSee('CI / Test')
             ->assertSee('Review')
             ->assertSee('Production Deploy')
@@ -145,9 +164,7 @@ class DevelopmentWorkspaceV544Test extends TestCase
             ->assertSee(
                 'data-development-workspace-gate-status="passed"',
                 false,
-            )
-            ->assertSee($task->title)
-            ->assertSee('CIを通す');
+            );
 
         $this->assertDatabaseCount('intelligence_state_snapshots', 0);
         $this->assertDatabaseCount('intelligence_decision_traces', 0);
