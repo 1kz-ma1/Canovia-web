@@ -34,6 +34,10 @@
         >Study Lab</a>
     @endif
     <a
+        href="{{ route('admin.release_gate.index') }}"
+        class="{{ request()->routeIs('admin.release_gate.*') ? 'btn-primary' : 'btn-secondary' }} px-3 py-2 text-xs"
+    >Release Gate</a>
+    <a
         href="{{ route('admin.economy.index') }}"
         class="{{ request()->routeIs('admin.economy.*') ? 'btn-primary' : 'btn-secondary' }} px-3 py-2 text-xs"
     >Economy</a>
