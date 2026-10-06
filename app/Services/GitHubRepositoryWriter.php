@@ -1082,6 +1082,220 @@ final class GitHubRepositoryWriter
     }
 
     /**
+     * Return a bounded initial Development activity set for a newly connected
+     * Repository. Provider text is deliberately limited to titles; bodies,
+     * commit messages, diffs and source code are never returned.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public function bootstrapDevelopmentActivity(
+        string $repoFullName,
+        int $limit = 20,
+    ): array {
+        $limit = max(1, min(20, $limit));
+        $context = $this->developmentReadContext(
+            $repoFullName,
+            'contents',
+            'Contents',
+        );
+
+        /** @var PendingRequest $client */
+        $client = $context['client'];
+        $permissions = (array) $context['permissions'];
+        $repoPath = (string) $context['repo_path'];
+        $facts = collect();
+
+        $repositoryResponse = $client->get('/repos/'.$repoPath);
+        $repository = $repositoryResponse->successful()
+            && is_array($repositoryResponse->json())
+                ? $repositoryResponse->json()
+                : [];
+        $defaultBranch = mb_substr(
+            trim((string) ($repository['default_branch'] ?? '')),
+            0,
+            255,
+        );
+
+        if (in_array(
+            $permissions['pull_requests'] ?? null,
+            ['read', 'write'],
+            true,
+        )) {
+            $pullsResponse = $client->get('/repos/'.$repoPath.'/pulls', [
+                'state' => 'open',
+                'sort' => 'updated',
+                'direction' => 'desc',
+                'per_page' => $limit,
+            ]);
+
+            if ($pullsResponse->successful()) {
+                collect((array) $pullsResponse->json())
+                    ->filter(fn ($pull) => is_array($pull))
+                    ->take($limit)
+                    ->each(function (array $pull) use ($facts) {
+                        $number = (int) ($pull['number'] ?? 0);
+                        if ($number <= 0) {
+                            return;
+                        }
+
+                        $state = (string) ($pull['state'] ?? 'open');
+                        $facts->push([
+                            'kind' => 'pull_request',
+                            'identity' => (string) $number,
+                            'provider_number' => $number,
+                            'title' => mb_substr(
+                                (string) ($pull['title'] ?? ''),
+                                0,
+                                255,
+                            ),
+                            'state' => (bool) ($pull['draft'] ?? false)
+                                && $state === 'open'
+                                    ? 'draft'
+                                    : mb_substr($state, 0, 64),
+                            'ref' => mb_substr(
+                                (string) data_get($pull, 'head.ref', ''),
+                                0,
+                                255,
+                            ),
+                            'sha' => mb_strtolower(mb_substr(
+                                (string) data_get($pull, 'head.sha', ''),
+                                0,
+                                64,
+                            )),
+                            'url' => $this->githubUrl(
+                                $pull['html_url'] ?? null,
+                            ),
+                            'occurred_at' => $this->dateValue(
+                                $pull['updated_at'] ?? null,
+                            ),
+                        ]);
+                    });
+            }
+        }
+
+        if (in_array(
+            $permissions['issues'] ?? null,
+            ['read', 'write'],
+            true,
+        )) {
+            $issuesResponse = $client->get('/repos/'.$repoPath.'/issues', [
+                'state' => 'open',
+                'sort' => 'updated',
+                'direction' => 'desc',
+                'per_page' => $limit,
+            ]);
+
+            if ($issuesResponse->successful()) {
+                collect((array) $issuesResponse->json())
+                    ->filter(fn ($issue) =>
+                        is_array($issue)
+                        && ! array_key_exists('pull_request', $issue)
+                    )
+                    ->take($limit)
+                    ->each(function (array $issue) use ($facts) {
+                        $number = (int) ($issue['number'] ?? 0);
+                        if ($number <= 0) {
+                            return;
+                        }
+
+                        $facts->push([
+                            'kind' => 'issue',
+                            'identity' => (string) $number,
+                            'provider_number' => $number,
+                            'title' => mb_substr(
+                                (string) ($issue['title'] ?? ''),
+                                0,
+                                255,
+                            ),
+                            'state' => mb_substr(
+                                (string) ($issue['state'] ?? 'open'),
+                                0,
+                                64,
+                            ),
+                            'url' => $this->githubUrl(
+                                $issue['html_url'] ?? null,
+                            ),
+                            'occurred_at' => $this->dateValue(
+                                $issue['updated_at'] ?? null,
+                            ),
+                        ]);
+                    });
+            }
+        }
+
+        if ($defaultBranch !== '') {
+            $commitsResponse = $client->get('/repos/'.$repoPath.'/commits', [
+                'sha' => $defaultBranch,
+                'per_page' => $limit,
+            ]);
+
+            if ($commitsResponse->successful()) {
+                $commits = collect((array) $commitsResponse->json())
+                    ->filter(fn ($commit) => is_array($commit))
+                    ->take($limit)
+                    ->values();
+
+                $headSha = mb_strtolower(mb_substr(
+                    (string) data_get($commits->first(), 'sha', ''),
+                    0,
+                    64,
+                ));
+
+                if ($headSha !== '') {
+                    $facts->push([
+                        'kind' => 'branch',
+                        'identity' => $defaultBranch,
+                        'state' => 'active',
+                        'ref' => $defaultBranch,
+                        'sha' => $headSha,
+                        'occurred_at' => now()->toIso8601String(),
+                    ]);
+                }
+
+                $commits->each(function (array $commit) use (
+                    $facts,
+                    $defaultBranch,
+                ) {
+                    $sha = mb_strtolower(mb_substr(
+                        (string) ($commit['sha'] ?? ''),
+                        0,
+                        64,
+                    ));
+
+                    if (! preg_match('/^[a-f0-9]{7,64}$/', $sha)) {
+                        return;
+                    }
+
+                    $facts->push([
+                        'kind' => 'commit',
+                        'identity' => $sha,
+                        'state' => 'observed',
+                        'ref' => $defaultBranch,
+                        'sha' => $sha,
+                        'url' => $this->githubUrl(
+                            $commit['html_url'] ?? null,
+                        ),
+                        'occurred_at' => $this->dateValue(
+                            data_get($commit, 'commit.committer.date')
+                            ?? data_get($commit, 'commit.author.date'),
+                        ),
+                    ]);
+                });
+            }
+        }
+
+        return $facts
+            ->filter(fn ($fact) => is_array($fact))
+            ->unique(fn (array $fact) =>
+                (string) ($fact['kind'] ?? '')
+                .'|'.(string) ($fact['identity'] ?? '')
+            )
+            ->take(61)
+            ->values()
+            ->all();
+    }
+
+    /**
      * @return array{
      *   repo_path:string,
      *   installation_id:int,
