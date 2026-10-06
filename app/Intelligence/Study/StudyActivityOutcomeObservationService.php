@@ -129,13 +129,16 @@ final class StudyActivityOutcomeObservationService
                 )
                 ->map(
                     fn (TaskEvidence $item) =>
-                        $this->activityKey($item),
+                        $this->intervalActivityKey($item),
                 )
                 ->filter()
                 ->unique()
                 ->values();
 
-            if ($between->count() > 1) {
+            if (
+                $between->count() > 1
+                || $between->first() === '__unknown__'
+            ) {
                 $ambiguousIntervals++;
                 continue;
             }
@@ -266,6 +269,20 @@ final class StudyActivityOutcomeObservationService
                 'actor_token',
                 (string) $actorToken,
             );
+    }
+
+    private function intervalActivityKey(
+        TaskEvidence $evidence,
+    ): ?string {
+        if (
+            $evidence->type
+            === 'study_language_activity_completed'
+        ) {
+            return $this->activityKey($evidence)
+                ?? '__unknown__';
+        }
+
+        return $this->activityKey($evidence);
     }
 
     private function activityKey(
