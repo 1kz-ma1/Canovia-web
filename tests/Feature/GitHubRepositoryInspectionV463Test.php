@@ -45,7 +45,7 @@ class GitHubRepositoryInspectionV463Test extends TestCase
             ])
             ->assertRedirect(route('github_workflow.index', ['plan_id' => $plan->id]))
             ->assertSessionHasNoErrors()
-            ->assertSessionHas('status', 'GitHubから現在のRepository構造も読み込みました。');
+            ->assertSessionHas('status', 'Public Repository Previewを読み込みました。GitHub App接続後は同じ画面でauthoritative同期へ切り替わります。');
 
         $artifact = PlanArtifact::query()->firstOrFail();
         $snapshot = data_get($artifact->metadata, 'github_repository_snapshot');
