@@ -16,3 +16,8 @@ Final dedicated validation run:
 All V58.2 validation and listed Study / Developer / Workspace regressions passed.
 
 Do not use this TEMP file as the source of truth for future changes.
+
+
+Implementation PR:
+
+`https://github.com/1kz-ma1/Canovia-web/pull/270`
