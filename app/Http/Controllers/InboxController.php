@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FeatureKey;
+use App\Enums\WorkspaceMode;
 use App\Exceptions\NativeAiExecutionException;
 use App\Models\CareerCapture;
 use App\Models\FutureMemo;
@@ -17,6 +18,7 @@ use App\Services\InboxIntelligenceService;
 use App\Services\InboxRoutingService;
 use App\Services\NativeAiGateway;
 use App\Services\PlanOwnershipService;
+use App\Services\ReleaseLevelService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -31,9 +33,28 @@ class InboxController extends Controller
         PlanOwnershipService $ownership,
         FeatureAccessService $featureAccess,
         NativeAiGateway $nativeAi,
+        ReleaseLevelService $releaseLevels,
     ) {
         $actorToken = $identity->resolve($request);
         $userId = $request->user()?->id;
+        $careerAvailable = $releaseLevels->allowsWorkspace(
+            WorkspaceMode::Career,
+            $request->user(),
+            $request,
+        );
+
+        if (
+            ($validated['destination'] ?? null) === 'career_capture'
+            && ! $releaseLevels->allowsWorkspace(
+                WorkspaceMode::Career,
+                $request->user(),
+                $request,
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'destination' => 'Careerは現在Beta準備中です。',
+            ]);
+        }
 
         $editablePlans = $ownership->ownedPlans($request, ['tasks'])
             ->filter(fn ($plan) => $ownership->canEdit($request, $plan))
@@ -71,17 +92,19 @@ class InboxController extends Controller
                 ->take(20)
                 ->get();
 
-            $careerCaptures = CareerCapture::query()
-                ->with(['plan', 'application'])
-                ->whereIn('plan_id', $editablePlanIds)
-                ->where('status', 'pending')
-                ->where(function (Builder $query) use ($userId, $actorToken) {
-                    $this->applyIdentityScope($query, $userId, $actorToken);
-                })
-                ->latest('captured_at')
-                ->latest('id')
-                ->take(20)
-                ->get();
+            if ($careerAvailable) {
+                $careerCaptures = CareerCapture::query()
+                    ->with(['plan', 'application'])
+                    ->whereIn('plan_id', $editablePlanIds)
+                    ->where('status', 'pending')
+                    ->where(function (Builder $query) use ($userId, $actorToken) {
+                        $this->applyIdentityScope($query, $userId, $actorToken);
+                    })
+                    ->latest('captured_at')
+                    ->latest('id')
+                    ->take(20)
+                    ->get();
+            }
 
             $pendingPlanUpdates = WorkSession::query()
                 ->with(['plan', 'task'])
@@ -107,7 +130,12 @@ class InboxController extends Controller
                 + $pendingPlanUpdates->count(),
             'canUseInboxAi' => $nativeAi->isConfigured()
                 && $featureAccess->canUse($request->user(), FeatureKey::AutomaticAiExecution),
-            'routingDestinations' => InboxIntelligenceService::PUBLIC_DESTINATIONS,
+            'routingDestinations' => collect(InboxIntelligenceService::PUBLIC_DESTINATIONS)
+                ->when(
+                    ! $careerAvailable,
+                    fn ($destinations) => $destinations->except('career_capture'),
+                )
+                ->all(),
             'executionActorTypes' => ExecutionPacketService::ACTOR_TYPES,
         ]);
     }
@@ -267,6 +295,7 @@ class InboxController extends Controller
         BehaviorIdentityService $identity,
         FeatureAccessService $featureAccess,
         InboxIntelligenceService $intelligence,
+        ReleaseLevelService $releaseLevels,
     ) {
         $request->validate($this->mapReturnRules());
 
@@ -275,6 +304,17 @@ class InboxController extends Controller
 
         try {
             $suggestion = $intelligence->suggest($inboxItem, $request->user()?->id);
+            if (
+                ($suggestion['destination'] ?? null) === 'career_capture'
+                && ! $releaseLevels->allowsWorkspace(
+                    WorkspaceMode::Career,
+                    $request->user(),
+                    $request,
+                )
+            ) {
+                $suggestion['destination'] = 'keep_inbox';
+                $suggestion['reason'] = 'Careerは現在Beta準備中のため、Inboxに保持します。';
+            }
         } catch (NativeAiExecutionException $exception) {
             return $this->redirectAfterAction($request)
                 ->with('status', $exception->getMessage());
@@ -299,6 +339,7 @@ class InboxController extends Controller
         PlanOwnershipService $ownership,
         FeatureAccessService $featureAccess,
         InboxRoutingService $routing,
+        ReleaseLevelService $releaseLevels,
     ) {
         $this->authorizeItem($request, $inboxItem, $identity);
 
