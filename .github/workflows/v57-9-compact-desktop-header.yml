@@ -38,6 +38,6 @@ jobs:
       - name: Workspace persistence regression
         run: php artisan test tests/Feature/WorkspaceModePersistenceV542Test.php
       - name: Home shell regression
-        run: php artisan test tests/Feature/HomeDensityV541Test.php tests/Feature/WebRealDeviceFinishV5198Test.php
+        run: php artisan test tests/Feature/ActionHomeDensityV5197Test.php tests/Feature/WebRealDeviceFinishV5198Test.php
       - name: Development Workspace regression
         run: php artisan test tests/Feature/DevelopmentWorkspaceV544Test.php tests/Feature/DeveloperHomeV573Test.php
