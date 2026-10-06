@@ -21,9 +21,18 @@ class StudyPracticeOrchestrator
     /**
      * @param Collection<int, mixed> $recentAttempts
      */
-    public function preview(Plan $plan, Task $task, Collection $recentAttempts): array
-    {
-        return $this->strategyService->build($plan, $task, $recentAttempts);
+    public function preview(
+        Plan $plan,
+        Task $task,
+        Collection $recentAttempts,
+        array $planWideWeaknessHandoff = [],
+    ): array {
+        return $this->strategyService->build(
+            $plan,
+            $task,
+            $recentAttempts,
+            $planWideWeaknessHandoff,
+        );
     }
 
     /**
@@ -39,8 +48,14 @@ class StudyPracticeOrchestrator
         Task $task,
         Collection $recentAttempts,
         ?string $providerKey = null,
+        array $planWideWeaknessHandoff = [],
     ): array {
-        $strategy = $this->strategyService->build($plan, $task, $recentAttempts);
+        $strategy = $this->strategyService->build(
+            $plan,
+            $task,
+            $recentAttempts,
+            $planWideWeaknessHandoff,
+        );
         $provider = $providerKey !== null
             ? $this->providerRouter->questionProviderByKey($providerKey)
             : $this->providerRouter->questionProvider($plan, $task, $strategy);
@@ -62,6 +77,7 @@ class StudyPracticeOrchestrator
         ?string $actorToken,
         string $prepareRequestId,
         ?string $providerKey = null,
+        array $planWideWeaknessHandoff = [],
     ): StudyPracticeSession {
         $existing = StudyPracticeSession::query()
             ->where('prepare_request_id', $prepareRequestId)
@@ -80,7 +96,12 @@ class StudyPracticeOrchestrator
 
             $storedStrategy = is_array(data_get($existing->selection_context, 'strategy'))
                 ? data_get($existing->selection_context, 'strategy')
-                : $this->strategyService->build($plan, $task, $recentAttempts);
+                : $this->strategyService->build(
+                    $plan,
+                    $task,
+                    $recentAttempts,
+                    $planWideWeaknessHandoff,
+                );
             $demand = $this->demandRecorder->record(
                 $existing,
                 $plan,
@@ -113,7 +134,12 @@ class StudyPracticeOrchestrator
             return $existing;
         }
 
-        $strategy = $this->strategyService->build($plan, $task, $recentAttempts);
+        $strategy = $this->strategyService->build(
+            $plan,
+            $task,
+            $recentAttempts,
+            $planWideWeaknessHandoff,
+        );
 
         $provider = $providerKey !== null
             ? $this->providerRouter->questionProviderByKey($providerKey)
