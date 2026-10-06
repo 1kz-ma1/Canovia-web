@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\WorkspaceMode;
 use App\Models\Plan;
 use App\Models\Task;
 use Illuminate\Support\Collection;
@@ -16,6 +17,7 @@ final class ExecutionModeService
     public function __construct(
         private readonly PlanCategoryProfileService $profiles,
         private readonly StudyActivityPolicyService $studyActivities,
+        private readonly ?ReleaseLevelService $releaseLevels = null,
     ) {}
 
     /**
@@ -34,6 +36,9 @@ final class ExecutionModeService
             self::CAREER,
             self::GENERAL,
         ])
+            ->filter(fn (string $mode) =>
+                $mode !== self::CAREER || $this->careerAvailable()
+            )
             ->filter(fn (string $mode) => $grouped->has($mode))
             ->mapWithKeys(function (string $mode) use ($grouped, $definitions) {
                 $modePlans = $grouped->get($mode, collect())->values();
@@ -111,6 +116,10 @@ final class ExecutionModeService
             ];
         }
 
+        if ($mode === self::CAREER && ! $this->careerAvailable()) {
+            return $this->timerAction(self::GENERAL);
+        }
+
         return match ($mode) {
             self::DEVELOPMENT => [
                 'mode' => $mode,
@@ -134,6 +143,12 @@ final class ExecutionModeService
             ],
             default => $this->timerAction(self::GENERAL),
         };
+    }
+
+    private function careerAvailable(): bool
+    {
+        return ($this->releaseLevels ?? app(ReleaseLevelService::class))
+            ->allowsWorkspace(WorkspaceMode::Career);
     }
 
     private function timerAction(string $mode): array
