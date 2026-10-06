@@ -72,6 +72,27 @@ class StudyRecallTaskProgressionV586Test extends TestCase
         $this->assertSame(0, data_get($ready, 'metrics.due'));
     }
 
+    public function test_again_review_counts_as_reviewed_but_never_as_mastered(): void
+    {
+        [, $plan, $task] = $this->scenario();
+
+        $this->item($plan, $task, [
+            'repetitions' => 0,
+            'lapse_count' => 1,
+            'interval_days' => 0,
+            'due_at' => now()->addMinutes(10),
+            'last_reviewed_at' => now(),
+        ]);
+
+        $state = app(StudyRecallProgressionService::class)
+            ->evaluate($plan, $task);
+
+        $this->assertSame('retaining', $state['kind']);
+        $this->assertFalse($state['eligible']);
+        $this->assertSame(1, data_get($state, 'metrics.reviewed'));
+        $this->assertSame(0, data_get($state, 'metrics.mastered'));
+    }
+
     public function test_due_mastered_card_prevents_completion_candidate(): void
     {
         [, $plan, $task] = $this->scenario();
@@ -177,8 +198,6 @@ class StudyRecallTaskProgressionV586Test extends TestCase
 
     public function test_explicit_recall_completion_finishes_task_records_evidence_and_advances_to_next_task(): void
     {
-        $this->withoutExceptionHandling();
-
         [$user, $plan, $task, $nextTask] = $this->scenario();
         $this->masteredDeck($plan, $task);
 
