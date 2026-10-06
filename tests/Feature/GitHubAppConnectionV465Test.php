@@ -95,7 +95,7 @@ class GitHubAppConnectionV465Test extends TestCase
             ->assertRedirect(route('github_workflow.index', ['plan_id' => $plan->id]))
             ->assertSessionHas(
                 'success',
-                'GitHub Repositoryとの接続を確認しました。Canoviaからレビュー用PRを作成できます。',
+                'GitHub Repositoryとの接続を確認しました。Public / Privateを問わずGitHub App経由で同期できます。',
             );
 
         $repo->refresh();
@@ -228,7 +228,7 @@ class GitHubAppConnectionV465Test extends TestCase
         $this->assertSame('Organization', data_get($repo->metadata, 'github_app_connection.target_type'));
     }
 
-    public function test_installation_without_required_write_permissions_is_not_write_ready(): void
+    public function test_read_permissions_connect_repository_without_enabling_write(): void
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);
         $plan = $this->plan($user);
@@ -244,7 +244,8 @@ class GitHubAppConnectionV465Test extends TestCase
                 'permissions' => [
                     'metadata' => 'read',
                     'contents' => 'read',
-                    'pull_requests' => 'write',
+                    'pull_requests' => 'read',
+                    'issues' => 'read',
                 ],
             ], 200),
         ]);
@@ -252,21 +253,29 @@ class GitHubAppConnectionV465Test extends TestCase
         $this->actingAs($user)
             ->post(route('github_workflow.app.check', $repo))
             ->assertRedirect(route('github_workflow.index', ['plan_id' => $plan->id]))
-            ->assertSessionHas(
-                'status',
-                'GitHub Appは存在しますが、必要なwrite権限がまだ承認されていません。',
-            );
+            ->assertSessionHas('success', 'GitHub Appの接続状態を確認しました。');
 
         $repo->refresh();
+
         $this->assertSame(
-            'permission_update_required',
+            'connected',
             data_get($repo->metadata, 'github_app_connection.status'),
         );
+        $this->assertTrue((bool) data_get(
+            $repo->metadata,
+            'github_app_connection.read_ready',
+        ));
+        $this->assertFalse((bool) data_get(
+            $repo->metadata,
+            'github_app_connection.write_ready',
+        ));
 
         $this->actingAs($user)
             ->get(route('github_workflow.index', ['plan_id' => $plan->id]))
             ->assertOk()
-            ->assertSee('GitHub Appのwrite権限承認が必要です')
+            ->assertSee('GitHub接続済み')
+            ->assertSee('Read only')
+            ->assertSee('Read接続は完了しています')
             ->assertDontSee('＋ 変更をレビューに出す');
     }
 
