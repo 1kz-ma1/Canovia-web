@@ -150,7 +150,7 @@ class StudyLanguageActivitiesV5810Test extends TestCase
             ))
             ->assertOk()
             ->assertSee('Listening')
-            ->assertSee('Language Activity')
+            ->assertSee('Activityを実施')
             ->assertSee(
                 route('plans.tasks.study_language.show', [
                     $plan,
