@@ -331,7 +331,7 @@ class ApSubjectACoverageDashboardV5816Test extends TestCase
         [$user, $plan, $task] = $this->apPlan();
         [, $questions] = $this->officialPack();
 
-        $this->session(
+        $this->practiceSession(
             $plan,
             $task,
             $user,
@@ -344,7 +344,7 @@ class ApSubjectACoverageDashboardV5816Test extends TestCase
             ],
         );
 
-        $native = $this->session(
+        $native = $this->practiceSession(
             $plan,
             $task,
             $user,
@@ -621,7 +621,7 @@ class ApSubjectACoverageDashboardV5816Test extends TestCase
         array $selected,
         array $feedback,
     ): StudyPracticeSession {
-        $session = $this->session(
+        $session = $this->practiceSession(
             $plan,
             $task,
             $user,
@@ -639,7 +639,7 @@ class ApSubjectACoverageDashboardV5816Test extends TestCase
     /**
      * @param array<int,array<string,mixed>> $selected
      */
-    private function session(
+    private function practiceSession(
         Plan $plan,
         Task $task,
         User $user,
