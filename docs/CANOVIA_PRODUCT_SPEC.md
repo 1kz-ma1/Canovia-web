@@ -6887,3 +6887,40 @@ DB-only / provider-free / no migration。
 
 Canonical contract:
 `docs/V58.19_WEAKNESS_INTERVENTION_OUTCOMES.md`.
+
+
+## V58.20 Release Level Foundation
+
+Early Access staged releaseのruntime foundationを追加する。
+
+Canonical contract:
+
+- `docs/CANOVIA_RELEASE_LEVEL_SPEC.md`
+- `docs/V58.20_RELEASE_LEVEL_FOUNDATION.md`
+
+実装:
+
+```text
+Public Release Level
++ User Access Override
++ Super Admin Release Preview
+→ ReleaseLevelService
+→ Workspace availability / route enforcement
+```
+
+初期Workspace minimum:
+
+- Overview: Level 0
+- Study: Level 1
+- Development: Level 1
+- Career: Level 3
+
+Foundation導入だけで現在の公開面を変えないため、default Public LevelはLevel 4とする。Early Access開始時に `CANOVIA_PUBLIC_RELEASE_LEVEL` を明示的に1または2へ下げる。
+
+既存Free/Premium Admin PreviewはEntitlement体験のPreviewとして維持し、Release Previewとは別Session / 別軸で動作する。
+
+User overrideはLevel 3まで。Level 4 Internal PreviewはSuper Admin専用。
+
+Level不足時はCareer専用Workspace / Career mutationをserver-sideでも制限し、保存済みCareer preferenceは削除せずOverviewへfallbackする。
+
+V58.20ではPublic LevelのDB管理、percentage rollout、Pricing / Premium / Pro runtime移行、Career UI完成は行わない。
