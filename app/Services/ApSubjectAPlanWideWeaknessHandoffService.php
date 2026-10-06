@@ -9,6 +9,7 @@ use App\Models\Task;
 final class ApSubjectAPlanWideWeaknessHandoffService
 {
     private const MIN_PARENT_EXPOSURES = 3;
+    private const MIN_UNIQUE_QUESTIONS = 2;
     private const MAX_CORRECT_RATE = 59;
     private const MAX_CANDIDATES = 5;
 
@@ -90,6 +91,12 @@ final class ApSubjectAPlanWideWeaknessHandoffService
                             ]
                             ?? 0
                         );
+                        $uniqueQuestions = (int) (
+                            $item[
+                                'unique_question_count'
+                            ]
+                            ?? 0
+                        );
                         $rate = $item[
                             'observed_correct_rate_percent'
                         ] ?? null;
@@ -98,6 +105,8 @@ final class ApSubjectAPlanWideWeaknessHandoffService
                             $topic === ''
                             || $exposures
                                 < self::MIN_PARENT_EXPOSURES
+                            || $uniqueQuestions
+                                < self::MIN_UNIQUE_QUESTIONS
                             || ! is_numeric($rate)
                             || (int) $rate
                                 > self::MAX_CORRECT_RATE
@@ -110,6 +119,8 @@ final class ApSubjectAPlanWideWeaknessHandoffService
                             'domain' => $domainLabel,
                             'assessed_exposure_count' =>
                                 $exposures,
+                            'unique_question_count' =>
+                                $uniqueQuestions,
                             'observed_correct_rate_percent' =>
                                 (int) $rate,
                             'source' =>
@@ -179,6 +190,8 @@ final class ApSubjectAPlanWideWeaknessHandoffService
             'policy' => [
                 'minimum_parent_exposures' =>
                     self::MIN_PARENT_EXPOSURES,
+                'minimum_unique_questions' =>
+                    self::MIN_UNIQUE_QUESTIONS,
                 'maximum_correct_rate_percent' =>
                     self::MAX_CORRECT_RATE,
                 'maximum_candidates' =>
@@ -229,6 +242,8 @@ final class ApSubjectAPlanWideWeaknessHandoffService
             'policy' => [
                 'minimum_parent_exposures' =>
                     self::MIN_PARENT_EXPOSURES,
+                'minimum_unique_questions' =>
+                    self::MIN_UNIQUE_QUESTIONS,
                 'maximum_correct_rate_percent' =>
                     self::MAX_CORRECT_RATE,
                 'maximum_candidates' =>
