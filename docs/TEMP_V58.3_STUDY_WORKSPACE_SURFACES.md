@@ -11,6 +11,13 @@ The implementation is complete and the canonical specification is:
 
 Final dedicated validation run:
 
-`37436839869`
+`37437022054`
 
 Do not use this TEMP file as the source of truth for future changes.
+
+
+## Pull Request
+
+Implementation PR:
+
+`https://github.com/1kz-ma1/Canovia-web/pull/271`
