@@ -1,0 +1,44 @@
+name: V58.15 Study Method Outcome Calibration Validation
+
+on:
+  push:
+    branches:
+      - feature/v58-15-study-method-outcome-calibration
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Intelligence/Study/StudyMethodOutcomeCalibrationService.php
+          php -l app/Intelligence/Study/StudyMethodRecommendationService.php
+          php -l tests/Feature/StudyMethodOutcomeCalibrationV5815Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V58.15 dedicated Study Method calibration contract
+        run: php artisan test tests/Feature/StudyMethodOutcomeCalibrationV5815Test.php
+      - name: V56.15 Study Method Recommendation regression
+        run: php artisan test tests/Feature/StudyMethodRecommendationV5615Test.php
+      - name: V58.12 Activity outcome observation regression
+        run: php artisan test tests/Feature/StudyActivityOutcomeObservationV5812Test.php
+      - name: V58.14 Resource Study Evidence regression
+        run: php artisan test tests/Feature/ResourceStudyEvidenceV5814Test.php
+      - name: V58.10 Language Activity regression
+        run: php artisan test tests/Feature/StudyLanguageActivitiesV5810Test.php
+      - name: V41.10 Study Activity Policy regression
+        run: php artisan test tests/Feature/StudyActivityPolicyV4110Test.php
+      - name: V56.5 Practice resume regression
+        run: php artisan test tests/Feature/StudyPracticeResumeFastPathV565Test.php
