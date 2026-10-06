@@ -1,0 +1,41 @@
+name: V58.6 Recall Task Progression Validation
+
+on:
+  push:
+    branches:
+      - feature/v58-6-recall-task-progression
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/StudyRecallProgressionService.php
+          php -l app/Services/StudyTaskProgressionService.php
+          php -l app/Http/Controllers/StudyRecallController.php
+          php -l tests/Feature/StudyRecallTaskProgressionV586Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V58.6 dedicated Recall progression contract
+        run: php artisan test tests/Feature/StudyRecallTaskProgressionV586Test.php
+      - name: V41.11 Recall learning loop regression
+        run: php artisan test tests/Feature/StudyRecallV4111Test.php
+      - name: V41.10 Study Task progression regression
+        run: php artisan test tests/Feature/StudyTaskProgressionV4110Test.php
+      - name: Study Activity Policy regression
+        run: php artisan test tests/Feature/StudyActivityPolicyV4110Test.php
+      - name: Study Workspace focused surface regression
+        run: php artisan test tests/Feature/StudyWorkspaceFocusedSurfacesV583Test.php
