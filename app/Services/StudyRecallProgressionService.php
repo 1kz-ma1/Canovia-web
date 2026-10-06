@@ -96,7 +96,7 @@ final class StudyRecallProgressionService
         }
 
         $reviewed = $items->filter(
-            fn (StudyRecallItem $item) => (int) $item->repetitions > 0,
+            fn (StudyRecallItem $item) => $item->last_reviewed_at !== null,
         )->count();
         $mastered = $items->filter(
             fn (StudyRecallItem $item) => $item->isMastered(),
@@ -159,7 +159,7 @@ final class StudyRecallProgressionService
         $reviewed = $items->filter(
             fn ($item) =>
                 $item instanceof StudyRecallItem
-                && (int) $item->repetitions > 0,
+                && $item->last_reviewed_at !== null,
         )->count();
         $mastered = $items->filter(
             fn ($item) =>
