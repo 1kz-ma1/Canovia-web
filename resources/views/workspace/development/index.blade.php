@@ -35,6 +35,14 @@
     $recentStates = collect(data_get($intelligenceHistory ?? [], 'states', []));
     $shortSha = trim((string) data_get($focusState, 'head_sha', ''));
     $shortSha = $shortSha !== '' ? mb_substr($shortSha, 0, 10) : null;
+    $activityObservations = collect($developmentActivityObservations ?? []);
+    $associationTasks = collect($developmentAssociationTasks ?? []);
+    $observationKindLabels = [
+        'pull_request' => 'Pull Request',
+        'issue' => 'Issue',
+        'branch' => 'Branch',
+        'commit' => 'Commit',
+    ];
 @endphp
 
 <div class="mx-auto max-w-7xl space-y-5" data-development-workspace>
@@ -71,6 +79,9 @@
             <a href="#development-current-action" class="badge badge-slate whitespace-nowrap">Current Action</a>
             <a href="#development-readiness" class="badge badge-slate whitespace-nowrap">Release Readiness</a>
             <a href="#development-quality-gates" class="badge badge-slate whitespace-nowrap">Quality Gates</a>
+            @if ($activityObservations->isNotEmpty())
+                <a href="#development-github-activity" class="badge badge-slate whitespace-nowrap">GitHub Activity {{ $activityObservations->count() }}</a>
+            @endif
             @if ($plan)
                 <a href="{{ route('github_workflow.index', ['plan_id' => $plan->id]) }}#github-workflow-board" class="badge badge-slate whitespace-nowrap">GitHub</a>
                 <a href="{{ route('github_workflow.index', ['plan_id' => $plan->id]) }}#development-intelligence" class="badge badge-slate whitespace-nowrap">Evidence</a>
@@ -81,6 +92,94 @@
             <a href="#development-history" class="badge badge-slate whitespace-nowrap">History</a>
         </nav>
     </section>
+
+    @if ($plan && $activityObservations->isNotEmpty())
+        <section id="development-github-activity" class="page-card border-cyan-300/15 p-5 sm:p-6" data-development-activity-association>
+            <div class="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                    <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">GITHUB ACTIVITY</p>
+                    <h2 class="mt-1 text-lg font-black text-slate-50">GitHubの動きとTaskを対応づける</h2>
+                    <p class="mt-2 text-xs leading-5 text-slate-500">
+                        Canoviaが候補を出しますが、自動では関連付けません。確認後にだけEvidenceへ接続します。
+                    </p>
+                </div>
+                <span class="badge badge-slate">{{ $activityObservations->count() }}件 未整理</span>
+            </div>
+
+            <div class="mt-4 space-y-3">
+                @foreach ($activityObservations as $observation)
+                    @php
+                        $suggestedTask = $observation->suggestedTask;
+                        $confidence = $observation->suggestion_confidence !== null
+                            ? (int) round(((float) $observation->suggestion_confidence) * 100)
+                            : null;
+                        $label = $observationKindLabels[$observation->kind] ?? $observation->kind;
+                        $displayTitle = trim((string) $observation->title);
+                        if ($displayTitle === '') {
+                            $displayTitle = match ($observation->kind) {
+                                'pull_request' => 'PR #'.(int) $observation->provider_number,
+                                'issue' => 'Issue #'.(int) $observation->provider_number,
+                                'branch' => (string) $observation->ref,
+                                'commit' => mb_substr((string) $observation->sha, 0, 10),
+                                default => 'GitHub activity',
+                            };
+                        }
+                    @endphp
+
+                    <article class="rounded-2xl border border-white/8 bg-slate-950/25 p-4" data-development-observation="{{ $observation->id }}">
+                        <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="badge badge-slate">{{ $label }}</span>
+                                    @if ($observation->state)
+                                        <span class="text-[10px] font-bold text-slate-500">{{ $observation->state }}</span>
+                                    @endif
+                                    @if ($observation->last_observed_at)
+                                        <span class="text-[10px] text-slate-600">{{ $observation->last_observed_at->format('m/d H:i') }}</span>
+                                    @endif
+                                </div>
+                                <p class="mt-2 break-words text-sm font-black text-slate-100">{{ $displayTitle }}</p>
+                                @if ($observation->ref)
+                                    <p class="mt-1 break-all text-[11px] text-slate-600">{{ $observation->ref }}</p>
+                                @endif
+                                @if ($suggestedTask)
+                                    <p class="mt-2 text-xs text-cyan-200" data-development-observation-suggestion>
+                                        候補: {{ $suggestedTask->title }}
+                                        @if ($confidence !== null)
+                                            <span class="text-slate-500">· {{ $confidence }}%</span>
+                                        @endif
+                                    </p>
+                                @else
+                                    <p class="mt-2 text-xs text-slate-600">候補を一意に決められませんでした。Taskを選んでください。</p>
+                                @endif
+                            </div>
+
+                            @if ($canEdit)
+                                <div class="w-full lg:w-[28rem]">
+                                    <form method="POST" action="{{ route('plans.development_observations.link', [$plan, $observation]) }}" class="flex flex-col gap-2 sm:flex-row">
+                                        @csrf
+                                        <select name="task_id" required class="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-xs font-bold text-slate-100">
+                                            <option value="">Taskを選択</option>
+                                            @foreach ($associationTasks as $associationTask)
+                                                <option value="{{ $associationTask->id }}" @selected($suggestedTask && (int) $suggestedTask->id === (int) $associationTask->id)>
+                                                    {{ $associationTask->title }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <button type="submit" class="btn-primary min-h-10 px-3 text-xs">関連付ける</button>
+                                    </form>
+                                    <form method="POST" action="{{ route('plans.development_observations.ignore', [$plan, $observation]) }}" class="mt-2 text-right">
+                                        @csrf
+                                        <button type="submit" class="text-[11px] font-bold text-slate-600 hover:text-slate-400">今回は無視</button>
+                                    </form>
+                                </div>
+                            @endif
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+        </section>
+    @endif
 
     @if (! $plan)
         <div data-development-workspace-no-plan>
