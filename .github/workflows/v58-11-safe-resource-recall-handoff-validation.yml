@@ -41,5 +41,5 @@ jobs:
         run: php artisan test tests/Feature/StudyRecallBatchIngestV588Test.php
       - name: V58.9 Recall Candidate outcome regression
         run: php artisan test tests/Feature/StudyRecallCandidateOutcomeTraceV589Test.php
-      - name: Account deletion storage cleanup regression
-        run: php artisan test --filter=AccountDeletion
+      - name: V56.1 account deletion regression
+        run: php artisan test tests/Feature/IosSoftLaunchWebReadinessV561Test.php
