@@ -208,6 +208,89 @@
                     @endforeach
                 </div>
 
+                @php
+                    $candidateSignal = (array) data_get(
+                        $practiceReliability ?? [],
+                        'candidate_signal',
+                        [],
+                    );
+                    $candidateSignalStatus = (string) (
+                        $candidateSignal['status']
+                        ?? 'unavailable'
+                    );
+                @endphp
+
+                @if (
+                    filled($candidateSignal['exam_profile_key'] ?? null)
+                    && $candidateSignalStatus !== 'unavailable'
+                )
+                    <details
+                        class="mt-3 rounded-xl border border-white/8 bg-slate-950/20 p-3"
+                        data-practice-candidate-reliability
+                    >
+                        <summary class="cursor-pointer text-xs font-black text-slate-200">
+                            Question Candidate運営実績
+                        </summary>
+
+                        <div class="mt-3 border-t border-white/8 pt-3">
+                            <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                @foreach ([
+                                    [
+                                        'label' => 'Human Review',
+                                        'value' => (int) ($candidateSignal['reviewed_count'] ?? 0),
+                                    ],
+                                    [
+                                        'label' => 'Bankへ昇格',
+                                        'value' => (int) ($candidateSignal['promoted_count'] ?? 0),
+                                    ],
+                                    [
+                                        'label' => '採点済み再利用',
+                                        'value' => (int) ($candidateSignal['assessed_reuse_count'] ?? 0),
+                                    ],
+                                    [
+                                        'label' => 'Signal強度',
+                                        'value' => ((int) ($candidateSignal['evidence_strength_percent'] ?? 0)).'%',
+                                    ],
+                                ] as $stat)
+                                    <div class="rounded-lg border border-white/6 bg-black/10 p-2 text-center">
+                                        <p class="text-[10px] text-slate-600">{{ $stat['label'] }}</p>
+                                        <strong class="mt-1 block text-sm text-slate-100">{{ $stat['value'] }}</strong>
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            <p class="mt-3 text-[10px] leading-4 text-slate-500">
+                                {{ $candidateSignal['note'] ?? '' }}
+                            </p>
+
+                            <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-600">
+                                <span>
+                                    promoted / reviewed:
+                                    {{ ($candidateSignal['promotion_rate_percent'] ?? null) !== null
+                                        ? ((int) $candidateSignal['promotion_rate_percent']).'%'
+                                        : '—' }}
+                                </span>
+                                <span>
+                                    selected reuse:
+                                    {{ (int) ($candidateSignal['selected_reuse_count'] ?? 0) }}
+                                </span>
+                                <span>
+                                    current Session:
+                                    {{ (int) ($candidateSignal['current_session_promoted_candidate_count'] ?? 0) }}
+                                </span>
+                                <span>
+                                    Reliability補正:
+                                    {{ ((int) ($candidateSignal['applied_adjustment'] ?? 0)) >= 0 ? '+' : '' }}{{ (int) ($candidateSignal['applied_adjustment'] ?? 0) }}pt
+                                </span>
+                            </div>
+
+                            <p class="mt-2 text-[10px] leading-4 text-amber-200/70">
+                                学習者の正答率はQuestion品質の判定に使っていません。
+                            </p>
+                        </div>
+                    </details>
+                @endif
+
                 <p class="mt-3 text-[10px] leading-4 text-slate-600">{{ data_get($practiceReliability, 'disclaimer') }}</p>
 
                 @if (! $questionPracticeIsPrimary)
