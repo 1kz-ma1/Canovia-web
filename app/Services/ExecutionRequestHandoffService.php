@@ -82,6 +82,61 @@ final class ExecutionRequestHandoffService
     }
 
     /**
+     * Convert a human-confirmed Development Implementation Brief into the
+     * canonical session-scoped Execution Request.
+     *
+     * The brief is already bounded by V57.6 and intentionally excludes source
+     * code / diff / provider bodies. This method does not invoke any agent.
+     *
+     * @param array<string,mixed> $brief
+     * @return array<string,mixed>
+     */
+    public function confirmFromDevelopmentBrief(
+        Request $request,
+        Plan $plan,
+        Task $task,
+        array $brief,
+        ?int $availableMinutes = null,
+    ): array {
+        $copyText = trim((string) ($brief['copy_text'] ?? ''));
+
+        if ($copyText === '') {
+            throw ValidationException::withMessages([
+                'development_handoff' => 'Implementation Briefを確認できませんでした。',
+            ]);
+        }
+
+        return $this->confirm(
+            request: $request,
+            plan: $plan,
+            task: $task,
+            source: [
+                'type' => 'development_implementation_brief',
+                'version' => max(1, (int) ($brief['version'] ?? 1)),
+                'mode' => mb_substr(
+                    trim((string) ($brief['mode'] ?? 'continuation')),
+                    0,
+                    80,
+                ),
+                'action_kind' => mb_substr(
+                    trim((string) ($brief['kind'] ?? '')),
+                    0,
+                    120,
+                ),
+                'title' => mb_substr(
+                    trim((string) ($brief['title'] ?? $task->title)),
+                    0,
+                    500,
+                ),
+                'brief_hash' => hash('sha256', $copyText),
+            ],
+            instruction: $copyText,
+            actorType: 'external',
+            availableMinutes: $availableMinutes,
+        );
+    }
+
+    /**
      * @param array<string,mixed> $source
      * @return array<string,mixed>
      */
