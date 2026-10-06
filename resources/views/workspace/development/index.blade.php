@@ -67,6 +67,13 @@
         ? data_get($executionContext, 'handoff')
         : [];
     $executionRecentEvidence = collect(data_get($executionContext, 'recent_evidence', []));
+    $implementationBrief = is_array($developmentImplementationBrief ?? null)
+        ? $developmentImplementationBrief
+        : null;
+    $implementationBriefSteps = collect(data_get($implementationBrief, 'steps', []));
+    $implementationBriefFacts = collect(data_get($implementationBrief, 'known_facts', []));
+    $implementationBriefValidation = collect(data_get($implementationBrief, 'validation', []));
+    $implementationBriefGuardrails = collect(data_get($implementationBrief, 'guardrails', []));
     $ciLabels = [
         'success' => '成功',
         'failure' => '失敗',
@@ -346,6 +353,127 @@
                             @endif
                         </div>
                     </div>
+
+                    @if ($implementationBrief)
+                        <div
+                            class="mt-4 rounded-3xl border border-cyan-300/18 bg-[linear-gradient(135deg,rgba(34,211,238,.055),rgba(139,92,246,.04),rgba(15,23,42,.15))] p-4 sm:p-5"
+                            data-development-implementation-brief
+                            data-development-implementation-brief-mode="{{ data_get($implementationBrief, 'mode', 'continuation') }}"
+                        >
+                            <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                <div class="max-w-3xl">
+                                    <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">
+                                        {{ data_get($implementationBrief, 'eyebrow', 'DEVELOPMENT BRIEF') }}
+                                    </p>
+                                    <h3 class="mt-1 text-lg font-black text-slate-50">
+                                        {{ data_get($implementationBrief, 'title', '次の開発Action') }}
+                                    </h3>
+                                    <p class="mt-2 text-xs leading-5 text-slate-400">
+                                        {{ data_get($implementationBrief, 'objective') }}
+                                    </p>
+                                </div>
+
+                                <div class="flex flex-wrap gap-2 text-[10px]">
+                                    @if (data_get($implementationBrief, 'target.repository'))
+                                        <span class="rounded-full border border-white/8 bg-slate-950/30 px-2.5 py-1 text-slate-500">
+                                            {{ data_get($implementationBrief, 'target.repository') }}
+                                        </span>
+                                    @endif
+                                    @if (data_get($implementationBrief, 'target.branch'))
+                                        <span class="rounded-full border border-white/8 bg-slate-950/30 px-2.5 py-1 text-slate-500">
+                                            {{ data_get($implementationBrief, 'target.branch') }}
+                                        </span>
+                                    @endif
+                                    @if (data_get($implementationBrief, 'target.pull_request_number'))
+                                        <span class="rounded-full border border-white/8 bg-slate-950/30 px-2.5 py-1 text-slate-500">
+                                            PR #{{ (int) data_get($implementationBrief, 'target.pull_request_number') }}
+                                        </span>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,.8fr)]">
+                                <div class="rounded-2xl border border-cyan-300/12 bg-slate-950/25 p-4">
+                                    <p class="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200">HOW TO PROCEED</p>
+                                    <ol class="mt-3 space-y-2.5 text-xs leading-5 text-slate-300">
+                                        @foreach ($implementationBriefSteps as $briefStep)
+                                            <li class="flex gap-3">
+                                                <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-cyan-300/20 bg-cyan-300/[0.04] text-[9px] font-black text-cyan-300">
+                                                    {{ $loop->iteration }}
+                                                </span>
+                                                <span>{{ $briefStep }}</span>
+                                            </li>
+                                        @endforeach
+                                    </ol>
+                                </div>
+
+                                <div class="space-y-3">
+                                    <div class="rounded-2xl border border-white/8 bg-slate-950/25 p-4">
+                                        <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">KNOWN STATE</p>
+                                        <ul class="mt-2 space-y-1.5 text-[11px] leading-4 text-slate-500">
+                                            @foreach ($implementationBriefFacts as $briefFact)
+                                                <li>• {{ $briefFact }}</li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+
+                                    <div class="rounded-2xl border border-emerald-300/12 bg-emerald-300/[0.025] p-4">
+                                        <p class="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-300">DONE WHEN</p>
+                                        <ul class="mt-2 space-y-1.5 text-[11px] leading-4 text-slate-400">
+                                            @foreach ($implementationBriefValidation as $signal)
+                                                <li class="flex gap-2">
+                                                    <span class="text-emerald-300">✓</span>
+                                                    <span>{{ $signal }}</span>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <details class="mt-4 rounded-2xl border border-white/8 bg-slate-950/25 p-4" data-development-brief-handoff>
+                                <summary class="cursor-pointer list-none text-xs font-black text-slate-300">
+                                    このBriefを実装ツールへ渡す
+                                    <span class="ml-2 text-[10px] font-normal text-slate-600">source codeやdiffは含みません</span>
+                                </summary>
+
+                                <div class="mt-3">
+                                    <textarea
+                                        id="development-implementation-brief-copy"
+                                        readonly
+                                        rows="15"
+                                        class="form-control w-full resize-y font-mono text-[11px] leading-5"
+                                        data-development-brief-copy
+                                    >{{ data_get($implementationBrief, 'copy_text') }}</textarea>
+
+                                    <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+                                        <p class="text-[10px] leading-4 text-slate-600">
+                                            Task / Repository / GitHub State / 完了条件だけを渡します。未知の事実は補完しません。
+                                        </p>
+                                        <button
+                                            type="button"
+                                            class="btn-secondary min-h-9 px-3 text-xs"
+                                            data-development-brief-copy-button
+                                            data-copy-target="development-implementation-brief-copy"
+                                        >
+                                            Briefをコピー
+                                        </button>
+                                    </div>
+
+                                    @if ($implementationBriefGuardrails->isNotEmpty())
+                                        <div class="mt-3 border-t border-white/8 pt-3">
+                                            <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-600">GUARDRAILS</p>
+                                            <ul class="mt-2 space-y-1 text-[10px] leading-4 text-slate-600">
+                                                @foreach ($implementationBriefGuardrails as $guardrail)
+                                                    <li>• {{ $guardrail }}</li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+                                    @endif
+                                </div>
+                            </details>
+                        </div>
+                    @endif
                 </div>
             @endif
         </section>
@@ -713,4 +841,45 @@
         </details>
     @endif
 </div>
+
+@if ($implementationBrief)
+    <script>
+        (() => {
+            const button = document.querySelector('[data-development-brief-copy-button]');
+            if (!button) return;
+
+            button.addEventListener('click', async () => {
+                const targetId = button.dataset.copyTarget;
+                const target = targetId ? document.getElementById(targetId) : null;
+                if (!target) return;
+
+                const value = target.value || '';
+                let copied = false;
+
+                if (navigator.clipboard && window.isSecureContext) {
+                    try {
+                        await navigator.clipboard.writeText(value);
+                        copied = true;
+                    } catch (_) {
+                        copied = false;
+                    }
+                }
+
+                if (!copied) {
+                    target.focus();
+                    target.select();
+                    copied = document.execCommand('copy');
+                }
+
+                if (copied) {
+                    const original = button.textContent;
+                    button.textContent = 'コピー済み';
+                    window.setTimeout(() => {
+                        button.textContent = original;
+                    }, 1400);
+                }
+            });
+        })();
+    </script>
+@endif
 @endsection
