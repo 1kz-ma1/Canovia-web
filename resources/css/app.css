@@ -10205,3 +10205,68 @@ html[data-canovia-keyboard="open"] .workspace-mode-menu {
         transition: none;
     }
 }
+
+
+/* ==========================================================================
+   V58.3 Study Workspace focused views
+   Study Plan Workspace owns one Plan and one selected Study View.
+   ========================================================================== */
+.specialized-workspace-view-navigation {
+    display: block;
+    width: min(100%, 16rem);
+    min-width: 0;
+}
+
+.specialized-workspace-view-control {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid rgb(51 65 85 / 0.72);
+    border-radius: 0.85rem;
+    background: rgb(2 6 23 / 0.52);
+    padding: 0.28rem 0.38rem 0.28rem 0.58rem;
+}
+
+.specialized-workspace-view-control > span {
+    flex: 0 0 auto;
+    color: rgb(71 85 105);
+    font-size: 0.54rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+}
+
+.specialized-workspace-view-control select {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    padding: 0.34rem 1.7rem 0.34rem 0.15rem;
+    color: rgb(226 232 240);
+    font-size: 0.7rem;
+    font-weight: 800;
+    outline: none;
+}
+
+.specialized-workspace-view-control:focus-within {
+    border-color: rgb(251 191 36 / 0.34);
+    box-shadow: 0 0 0 1px rgb(251 191 36 / 0.08);
+}
+
+.specialized-workspace-view-control optgroup {
+    color: rgb(148 163 184);
+    font-weight: 900;
+}
+
+.specialized-workspace-view-control option {
+    color: rgb(226 232 240);
+    background: rgb(15 23 42);
+    font-weight: 700;
+}
+
+@media (max-width: 767px) {
+    .specialized-workspace-view-navigation {
+        width: 100%;
+    }
+}
