@@ -45,6 +45,26 @@
     $unresolvedActivityIds = $unresolvedActivity->pluck('id')->map(fn ($id) => (int) $id);
     $associationTasks = collect($developmentAssociationTasks ?? []);
     $activeTasks = collect($developmentActiveTasks ?? []);
+    $executionContext = is_array($developmentExecutionContext ?? null)
+        ? $developmentExecutionContext
+        : null;
+    $executionHandoff = is_array(data_get($executionContext, 'handoff'))
+        ? data_get($executionContext, 'handoff')
+        : [];
+    $executionRecentEvidence = collect(data_get($executionContext, 'recent_evidence', []));
+    $ciLabels = [
+        'success' => '成功',
+        'failure' => '失敗',
+        'pending' => '実行中',
+        'unknown' => '未確認',
+    ];
+    $reviewLabels = [
+        'APPROVED' => '承認',
+        'CHANGES_REQUESTED' => '修正依頼',
+        'COMMENTED' => 'コメント',
+        'DISMISSED' => '取消',
+        'UNKNOWN' => '未確認',
+    ];
     $observationKindLabels = [
         'pull_request' => 'Pull Request',
         'issue' => 'Issue',
@@ -173,6 +193,146 @@
                     @endif
                 </div>
             </div>
+
+            @if ($executionContext)
+                <div class="mt-5 border-t border-white/8 pt-5" data-development-execution-context>
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">ACTION CONTEXT</p>
+                            <h3 class="mt-1 text-base font-black text-slate-100">
+                                {{ data_get($executionContext, 'task.title', '対象Task') }}
+                            </h3>
+                            <p class="mt-1 text-xs leading-5 text-slate-500">
+                                このTaskに明示リンクされたGitHub Evidenceだけから、現在の実行対象をまとめています。
+                            </p>
+                        </div>
+                        @if (data_get($executionContext, 'latest_evidence_at'))
+                            <span class="text-[10px] text-slate-600">
+                                Evidence {{ data_get($executionContext, 'latest_evidence_at')?->format('m/d H:i') }}
+                            </span>
+                        @endif
+                    </div>
+
+                    <div class="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                        <div class="rounded-xl border border-white/8 bg-slate-950/30 p-3">
+                            <p class="text-[10px] font-black uppercase tracking-[0.1em] text-slate-600">Repository</p>
+                            <p class="mt-1 break-all text-xs font-bold text-slate-200">
+                                {{ data_get($executionContext, 'repository') ?: '未確認' }}
+                            </p>
+                        </div>
+                        <div class="rounded-xl border border-white/8 bg-slate-950/30 p-3">
+                            <p class="text-[10px] font-black uppercase tracking-[0.1em] text-slate-600">Branch / Commit</p>
+                            <p class="mt-1 break-all text-xs font-bold text-slate-200">
+                                {{ data_get($executionContext, 'branch.name') ?: '未確認' }}
+                            </p>
+                            @if (data_get($executionContext, 'commit.sha'))
+                                <p class="mt-1 text-[10px] text-slate-600">
+                                    {{ mb_substr((string) data_get($executionContext, 'commit.sha'), 0, 10) }}
+                                    @if (data_get($executionContext, 'commit.verified'))
+                                        · verified
+                                    @endif
+                                </p>
+                            @endif
+                        </div>
+                        <div class="rounded-xl border border-white/8 bg-slate-950/30 p-3">
+                            <p class="text-[10px] font-black uppercase tracking-[0.1em] text-slate-600">Pull Request</p>
+                            @if (data_get($executionContext, 'pull_request.number'))
+                                @if (data_get($executionContext, 'pull_request.url'))
+                                    <a href="{{ data_get($executionContext, 'pull_request.url') }}" target="_blank" rel="noopener noreferrer" class="mt-1 block text-xs font-black text-cyan-200 hover:text-cyan-100">
+                                        #{{ (int) data_get($executionContext, 'pull_request.number') }} · {{ data_get($executionContext, 'pull_request.state', 'unknown') }}
+                                    </a>
+                                @else
+                                    <p class="mt-1 text-xs font-black text-slate-200">
+                                        #{{ (int) data_get($executionContext, 'pull_request.number') }} · {{ data_get($executionContext, 'pull_request.state', 'unknown') }}
+                                    </p>
+                                @endif
+                                @if (data_get($executionContext, 'pull_request.draft'))
+                                    <p class="mt-1 text-[10px] text-amber-200">Draft</p>
+                                @endif
+                            @else
+                                <p class="mt-1 text-xs font-bold text-slate-500">未確認</p>
+                            @endif
+                        </div>
+                        <div class="rounded-xl border border-white/8 bg-slate-950/30 p-3">
+                            <p class="text-[10px] font-black uppercase tracking-[0.1em] text-slate-600">CI / Review</p>
+                            <p class="mt-1 text-xs font-black {{ data_get($executionContext, 'ci.state') === 'failure' ? 'text-rose-300' : (data_get($executionContext, 'ci.state') === 'success' ? 'text-emerald-300' : 'text-slate-300') }}">
+                                CI {{ $ciLabels[data_get($executionContext, 'ci.state', 'unknown')] ?? data_get($executionContext, 'ci.state', '未確認') }}
+                            </p>
+                            <p class="mt-1 text-[10px] text-slate-500">
+                                Review {{ $reviewLabels[data_get($executionContext, 'review.state', 'UNKNOWN')] ?? data_get($executionContext, 'review.state', '未確認') }}
+                                @if (data_get($executionContext, 'review.reviewer'))
+                                    · {{ data_get($executionContext, 'review.reviewer') }}
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+
+                    @if (data_get($executionContext, 'issue.number') || data_get($executionContext, 'deployment.status'))
+                        <div class="mt-2 flex flex-wrap gap-2 text-[10px]">
+                            @if (data_get($executionContext, 'issue.number'))
+                                <span class="rounded-full border border-white/8 bg-slate-950/30 px-2.5 py-1 text-slate-500">
+                                    Issue #{{ (int) data_get($executionContext, 'issue.number') }} · {{ data_get($executionContext, 'issue.state', 'unknown') }}
+                                </span>
+                            @endif
+                            @if (data_get($executionContext, 'deployment.status'))
+                                <span class="rounded-full border border-white/8 bg-slate-950/30 px-2.5 py-1 text-slate-500">
+                                    Deploy {{ data_get($executionContext, 'deployment.environment') ?: 'environment' }}
+                                    · {{ data_get($executionContext, 'deployment.status') }}
+                                    @if (data_get($executionContext, 'deployment.production'))
+                                        · production
+                                    @endif
+                                </span>
+                            @endif
+                        </div>
+                    @endif
+
+                    <div class="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,.85fr)]">
+                        <div class="rounded-2xl border border-violet-300/15 bg-violet-300/[0.025] p-4">
+                            <p class="text-[10px] font-black uppercase tracking-[0.14em] text-violet-300">HANDOFF</p>
+                            <p class="mt-2 text-sm font-black text-slate-100">{{ data_get($executionHandoff, 'title', '次の開発Action') }}</p>
+                            <p class="mt-2 text-xs leading-5 text-slate-400">{{ data_get($executionHandoff, 'evidence_hint') }}</p>
+
+                            @if (count((array) data_get($executionHandoff, 'done_when', [])) > 0)
+                                <div class="mt-3 border-t border-white/8 pt-3">
+                                    <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-600">DONE WHEN</p>
+                                    <ul class="mt-2 space-y-1.5 text-xs text-slate-400">
+                                        @foreach ((array) data_get($executionHandoff, 'done_when', []) as $signal)
+                                            <li class="flex gap-2">
+                                                <span class="text-cyan-300">✓</span>
+                                                <span>{{ $signal }}</span>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+                        </div>
+
+                        <div class="rounded-2xl border border-white/8 bg-slate-950/25 p-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">RECENT EVIDENCE</p>
+                                <span class="text-[10px] text-slate-700">{{ $executionRecentEvidence->count() }}件</span>
+                            </div>
+                            @if ($executionRecentEvidence->isEmpty())
+                                <p class="mt-2 text-xs leading-5 text-slate-600">このTaskのGitHub Evidenceはまだありません。</p>
+                            @else
+                                <div class="mt-2 space-y-2">
+                                    @foreach ($executionRecentEvidence->take(3) as $contextEvidence)
+                                        <div class="rounded-xl border border-white/6 bg-slate-950/30 p-2.5">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <span class="text-[10px] font-black text-slate-500">{{ $contextEvidence['label'] }}</span>
+                                                @if ($contextEvidence['occurred_at'])
+                                                    <span class="text-[9px] text-slate-700">{{ $contextEvidence['occurred_at']->format('m/d H:i') }}</span>
+                                                @endif
+                                            </div>
+                                            <p class="mt-1 text-[11px] leading-4 text-slate-400">{{ $contextEvidence['summary'] }}</p>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @endif
         </section>
 
         <section

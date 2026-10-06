@@ -10,6 +10,7 @@ use App\Intelligence\Presentation\IntelligencePresentationHistoryService;
 use App\Intelligence\Presentation\IntelligenceStateChangeFeedbackService;
 use App\Models\Plan;
 use App\Models\Task;
+use App\Services\DevelopmentExecutionContextService;
 use App\Services\DevelopmentHomeService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
@@ -28,6 +29,7 @@ final class DevelopmentWorkspaceController extends Controller
         DevelopmentAdaptiveActionService $developmentActions,
         DevelopmentIntelligencePresentationAdapter $presentationAdapter,
         DevelopmentHomeService $developerHome,
+        DevelopmentExecutionContextService $executionContext,
         IntelligencePresentationHistoryService $history,
         IntelligenceStateChangeFeedbackService $stateChanges,
         WorkspaceModeOnboardingService $onboarding,
@@ -60,6 +62,7 @@ final class DevelopmentWorkspaceController extends Controller
                 'developmentUnresolvedActivity' => collect(),
                 'developmentAssociationTasks' => collect(),
                 'developmentActiveTasks' => collect(),
+                'developmentExecutionContext' => null,
                 'intelligenceStateChange' => null,
                 'modeOnboarding' => $onboarding->build(
                     WorkspaceMode::Development,
@@ -83,6 +86,20 @@ final class DevelopmentWorkspaceController extends Controller
             $plan,
             $focusTaskId > 0 ? $focusTaskId : null,
         );
+        $primaryAction = $adaptiveAction->primaryAction();
+        $actionTaskId = (int) data_get(
+            $primaryAction?->metadata,
+            'target_task_id',
+            0,
+        );
+        $contextTaskId = $actionTaskId > 0
+            ? $actionTaskId
+            : ($focusTaskId > 0 ? $focusTaskId : null);
+        $developerExecutionContext = $executionContext->build(
+            $plan,
+            $contextTaskId,
+            $primaryAction,
+        );
         $canEdit = $ownership->canEdit($request, $plan);
         $completedSteps = ['create_plan'];
 
@@ -104,6 +121,7 @@ final class DevelopmentWorkspaceController extends Controller
             'developmentUnresolvedActivity' => $home['unresolved_activity'],
             'developmentAssociationTasks' => $home['association_tasks'],
             'developmentActiveTasks' => $home['active_tasks'],
+            'developmentExecutionContext' => $developerExecutionContext,
             'intelligenceStateChange' => $stateChanges->latestForPlan(
                 $plan,
                 IntelligenceDomain::Development,
