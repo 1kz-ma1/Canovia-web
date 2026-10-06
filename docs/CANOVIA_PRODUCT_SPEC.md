@@ -168,7 +168,7 @@ V41.16まで実装済み。次の大きな検討:
 - Study / Career / Developer Packの具体Capability実装とFeatureKey接続
 - failed Recall Sourceの再抽出UI・複数ページbatch ingest
 - Plan Resourceからの安全なRecall material ingest
-- Recall成績をTask progressionへ使うPolicy
+- Recall成績をTask progressionへ使うPolicy（V58.6実装済み：Recall-primary Taskのみ、Deck全体定着 + 明示確認で完了）
 - Listening / Dictation / Shadowing等のStudy Activity拡張
 - Native AI usage historyを使ったquota / cost policy
 
@@ -6484,3 +6484,32 @@ entitlement / billingを変更しない。
 
 Canonical contract:
 `docs/V58.5_SPECIALIZED_MODE_TOP_DENSITY.md`.
+
+## V58.6 Recall Task Progression
+
+Recall-primaryなStudy Taskでは、既存Recall Deckの実成績をTask progressionへ
+接続する。
+
+```text
+Recall review
+→ Deck全体が既存mastery条件を満たす
+→ due 0
+→ Task完了候補
+→ user明示確認
+→ Task done
+→ 既存Study next-Task選択
+```
+
+Recall review単体ではTaskを自動完了しない。RecallがPrimary ActivityでないTaskでは
+Deckは補助学習のままで、Task完了Signalには使わない。
+
+Review済み判定は `last_reviewed_at` を使う。`Again` はrepetitionsを0へ戻すが、
+実際にreviewした事実まで未学習扱いにはしない。
+
+Task完了前にserver-sideでTask / active Recall cardをlockし、eligibilityを再評価する。
+明示完了時は `study_recall_mastery_confirmed` Evidenceをidempotentに記録する。
+
+Question Practice progression、Recall scheduler、AI/provider、entitlement / billingは変更しない。
+
+Canonical contract:
+`docs/V58.6_RECALL_TASK_PROGRESSION.md`.
