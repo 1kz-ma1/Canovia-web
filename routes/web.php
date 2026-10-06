@@ -468,6 +468,8 @@ Route::delete('/plans/{plan}/tasks/{task}/study-recall/items/{item}', [StudyReca
     ->name('plans.tasks.study_recall.items.destroy');
 Route::post('/plans/{plan}/tasks/{task}/study-recall/candidates/extract', [StudyRecallCandidateController::class, 'extract'])
     ->name('plans.tasks.study_recall.candidates.extract');
+Route::post('/plans/{plan}/tasks/{task}/study-recall/candidates/extract-batch', [StudyRecallCandidateController::class, 'extractBatch'])
+    ->name('plans.tasks.study_recall.candidates.extract_batch');
 Route::post('/plans/{plan}/tasks/{task}/study-recall/candidates/review', [StudyRecallCandidateController::class, 'reviewBatch'])
     ->name('plans.tasks.study_recall.candidates.review');
 Route::post('/plans/{plan}/tasks/{task}/study-recall/sources/{source}/retry', [StudyRecallCandidateController::class, 'retry'])
