@@ -311,7 +311,7 @@ class PlanController extends Controller
                 WorkspaceMode::Study =>
                     '学習Planを作成しました。Study Workspaceで現在地から次のActionを決めます。',
                 WorkspaceMode::Development =>
-                    '開発Planを作成しました。次はGitHub Evidenceをつなぎます。',
+                    '開発Planを作成しました。Developer Homeで次のActionから始めます。',
                 WorkspaceMode::Career =>
                     'Career Planを作成しました。次は現実のCareer情報を1件追加します。',
                 WorkspaceMode::Overview =>
