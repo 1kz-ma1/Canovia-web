@@ -63,11 +63,15 @@ final class ExecutionGitHubHandoffService
             ]);
         }
 
-        $writeReady = (bool) data_get(
+        $connection = is_array(data_get(
             $repository->metadata,
-            'github_app_connection.write_ready',
-            false,
-        );
+            'github_app_connection',
+        ))
+            ? data_get($repository->metadata, 'github_app_connection')
+            : [];
+        $writeReady = array_key_exists('write_ready', $connection)
+            ? (bool) $connection['write_ready']
+            : true;
 
         if (! $writeReady) {
             throw ValidationException::withMessages([
