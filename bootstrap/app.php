@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use App\Http\Middleware\EnsureAdminAccess;
 use App\Http\Middleware\EnsureFeatureAccess;
+use App\Http\Middleware\EnsureReleaseLevel;
 use App\Http\Middleware\EnsureFirstRunStarted;
 use App\Http\Middleware\MeasurePagePerformance;
 use App\Http\Middleware\NormalizeAiJsonInput;
@@ -42,6 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin.access' => EnsureAdminAccess::class,
             'feature.access' => EnsureFeatureAccess::class,
+            'release.level' => EnsureReleaseLevel::class,
         ]);
         $middleware->appendToGroup('web', RedirectLegacyCanoviaHost::class);
         // Track the AI plan funnel before JSON normalization so even parser
