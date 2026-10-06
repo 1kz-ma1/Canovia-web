@@ -146,7 +146,8 @@ class DeveloperHomeV573Test extends TestCase
                 false,
             )
             ->assertSee('data-development-home-next-action', false)
-            ->assertSee('data-development-surface-tab="repository"', false)
+            ->assertSee('data-development-surface-select', false)
+            ->assertSee('value="repository"', false)
             ->assertSee('リポジトリ')
             ->assertDontSee('data-development-home-readiness', false);
 
