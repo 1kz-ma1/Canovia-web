@@ -30,7 +30,20 @@ final class DevelopmentWorkspaceSurfaceService
     }
 
     /**
-     * @return array<int,array{key:string,label:string,description:string}>
+     * Existing surfaces are grouped by lifecycle category so the global
+     * navigation can grow without turning into an ever-wider tab row.
+     *
+     * Future categories/surfaces are not rendered until a real surface exists.
+     *
+     * @return array<int,array{
+     *   key:string,
+     *   label:string,
+     *   description:string,
+     *   category_key:string,
+     *   category_label:string,
+     *   category_order:int,
+     *   surface_order:int
+     * }>
      */
     public function tabs(): array
     {
@@ -39,26 +52,46 @@ final class DevelopmentWorkspaceSurfaceService
                 'key' => 'work',
                 'label' => '今やること',
                 'description' => 'Next Actionと現在Task',
-            ],
-            [
-                'key' => 'repository',
-                'label' => 'リポジトリ',
-                'description' => '構成・Activity・Release',
-            ],
-            [
-                'key' => 'team',
-                'label' => 'チーム',
-                'description' => 'メンバー・役割・状態',
+                'category_key' => 'execution',
+                'category_label' => '実行',
+                'category_order' => 10,
+                'surface_order' => 10,
             ],
             [
                 'key' => 'improvements',
                 'label' => '改善',
                 'description' => '改善候補と技術的な詰まり',
+                'category_key' => 'design',
+                'category_label' => '設計',
+                'category_order' => 20,
+                'surface_order' => 10,
+            ],
+            [
+                'key' => 'repository',
+                'label' => 'リポジトリ',
+                'description' => '構成・Activity・Release',
+                'category_key' => 'project',
+                'category_label' => 'プロジェクト',
+                'category_order' => 30,
+                'surface_order' => 10,
+            ],
+            [
+                'key' => 'team',
+                'label' => 'チーム',
+                'description' => 'メンバー・役割・状態',
+                'category_key' => 'project',
+                'category_label' => 'プロジェクト',
+                'category_order' => 30,
+                'surface_order' => 20,
             ],
             [
                 'key' => 'preview',
                 'label' => 'プレビュー',
                 'description' => 'サイト確認',
+                'category_key' => 'observation',
+                'category_label' => '観測',
+                'category_order' => 40,
+                'surface_order' => 10,
             ],
         ];
     }
