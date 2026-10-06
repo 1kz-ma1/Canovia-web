@@ -4101,6 +4101,7 @@ Workspace / Intelligence
 - `study.practice`
 - `study.recall`
 - `study.resource`
+- `study.language`
 - `coding.repository`
 - `general.task`
 
@@ -4119,6 +4120,7 @@ AIによるCapability判定は行わない。
 - `canovia.study.practice` / native
 - `canovia.study.recall` / native
 - `canovia.study.resource` / native
+- `canovia.study.language` / native
 - `canovia.development` / native
 - `github` / external
 - `canovia.general` / native
@@ -6604,3 +6606,34 @@ V58.6 Task progression、billingは変更しない。
 
 Canonical contract:
 `docs/V58.9_RECALL_CANDIDATE_OUTCOME_TRACE.md`.
+
+## V58.10 Study Language Activities
+
+Study Activity PolicyへListening / Dictation / Shadowingをfirst-class Activity
+として追加する。
+
+```text
+Task semantics
+→ Listening / Dictation / Shadowing
+→ dedicated language Activity surface
+→ existing Resourceを開く
+→ explicit self-report
+→ study_language_activity_completed Evidence
+```
+
+明示的な「リスニング問題演習」はQuestion Practiceを維持し、純粋な音声理解・
+書き取り・shadowing Taskだけをlanguage Activityへ送る。
+
+V56.15 State-aware recommendationはTaskが明示するlanguage Activityを保持する。
+Execution Ecosystemには `study.language` capabilityと
+`canovia.study.language` native providerを追加する。
+
+Activity実施結果はrounds / outcome_ratingをconfidence 0.6の自己評価Evidenceとして
+記録するが、Task進捗・完了は自動変更しない。free-text reflectionはEvidenceへ保持しても
+normalized Intelligence factsへは渡さない。
+
+V58.10はマイク録音、音声認識、発音採点、Dictation自動採点、remote Resource fetchを
+実装しない。Language Activity自体は非AIなのでFree pathで利用できる。
+
+Canonical contract:
+`docs/V58.10_STUDY_LANGUAGE_ACTIVITIES.md`.
