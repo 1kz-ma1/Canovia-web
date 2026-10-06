@@ -49,6 +49,7 @@ use App\Http\Controllers\PlanArtifactController;
 use App\Http\Controllers\GitHubWorkflowController;
 use App\Http\Controllers\DevelopmentReadinessController;
 use App\Http\Controllers\DevelopmentProviderTriageController;
+use App\Http\Controllers\DevelopmentCodingAgentHandoffController;
 use App\Http\Controllers\StudyPracticeController;
 use App\Http\Controllers\StudyActivityController;
 use App\Http\Controllers\StudyScopeCaptureController;
@@ -94,6 +95,9 @@ Route::post('/workspace/{workspaceMode}/select', [WorkspaceModeController::class
 Route::delete('/workspace/preference', [WorkspaceModeController::class, 'reset'])->name('workspace_modes.preference.reset');
 Route::post('/plans/{plan}/tasks/{task}/execution-setup', [ExecutionSetupController::class, 'store'])
     ->name('plans.tasks.execution_setup.store');
+Route::post('/plans/{plan}/tasks/{task}/development-coding-agent-handoff', DevelopmentCodingAgentHandoffController::class)
+    ->middleware('throttle:12,1')
+    ->name('plans.tasks.development_coding_agent_handoff.prepare');
 Route::post('/execution/providers/{providerKey}/connections', [ProviderConnectionController::class, 'store'])
     ->middleware(['auth', 'throttle:12,1'])
     ->name('execution.provider_connections.store');

@@ -486,6 +486,59 @@
                                 </div>
                             @endif
 
+                            @if ($canEdit && $implementationBriefTaskId > 0)
+                                <details class="mt-4 rounded-2xl border border-violet-300/14 bg-violet-300/[0.025] p-4" data-development-coding-agent-handoff>
+                                    <summary class="cursor-pointer list-none text-xs font-black text-violet-200">
+                                        Coding Agentへ引き継ぐ
+                                        <span class="ml-2 text-[10px] font-normal text-slate-600">明示確認後にExecution Contextを準備</span>
+                                    </summary>
+
+                                    <form
+                                        method="POST"
+                                        action="{{ route('plans.tasks.development_coding_agent_handoff.prepare', [$plan, $implementationBriefTaskId]) }}"
+                                        class="mt-4 space-y-4"
+                                    >
+                                        @csrf
+
+                                        <div class="rounded-xl border border-white/8 bg-slate-950/30 p-3">
+                                            <p class="text-xs font-bold text-slate-300">引き継ぐ内容</p>
+                                            <ul class="mt-2 space-y-1 text-[10px] leading-4 text-slate-600">
+                                                <li>• 現在TaskとImplementation Brief</li>
+                                                <li>• Plan / Dependency / protected scopeを含む既存Execution Context</li>
+                                                <li>• Repository / Branch / PRなど確認済みの開発State</li>
+                                            </ul>
+                                            <p class="mt-2 text-[10px] leading-4 text-slate-600">
+                                                V57.7のReview本文・CI annotationなど一時Provider本文は自動で保存・引き継ぎません。
+                                            </p>
+                                        </div>
+
+                                        <label class="block">
+                                            <span class="text-xs font-semibold text-slate-400">今回使える時間 <span class="text-slate-600">任意</span></span>
+                                            <input
+                                                type="number"
+                                                min="5"
+                                                max="1440"
+                                                name="available_minutes"
+                                                class="form-control mt-2 w-full sm:max-w-48"
+                                                placeholder="例: 30"
+                                            >
+                                        </label>
+
+                                        <label class="flex items-start gap-3 rounded-xl border border-violet-300/10 bg-violet-300/[0.02] p-3">
+                                            <input type="checkbox" name="confirmed" value="1" required class="mt-0.5">
+                                            <span class="text-xs leading-5 text-slate-400">
+                                                現在Taskの範囲と完了条件を確認しました。Coding Agent向けPromptの準備だけを行い、
+                                                Agent実行・GitHub write・merge・deployはまだ行わないことを理解しています。
+                                            </span>
+                                        </label>
+
+                                        <button type="submit" class="btn-primary min-h-10 w-full justify-center sm:w-auto">
+                                            Coding Agent向けContextを準備
+                                        </button>
+                                    </form>
+                                </details>
+                            @endif
+
                             <details class="mt-4 rounded-2xl border border-white/8 bg-slate-950/25 p-4" data-development-brief-handoff>
                                 <summary class="cursor-pointer list-none text-xs font-black text-slate-300">
                                     このBriefを実装ツールへ渡す

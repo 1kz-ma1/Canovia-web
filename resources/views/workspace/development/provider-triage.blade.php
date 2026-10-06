@@ -276,6 +276,30 @@
             @endforeach
         </ol>
 
+        <div class="mt-5 rounded-2xl border border-violet-300/14 bg-violet-300/[0.025] p-4" data-provider-triage-agent-handoff>
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div class="max-w-3xl">
+                    <p class="text-[10px] font-black uppercase tracking-[0.14em] text-violet-300">CODING AGENT HANDOFF</p>
+                    <p class="mt-1 text-xs leading-5 text-slate-500">
+                        Execution Orchestrationへ進む場合は、現在のImplementation Briefだけを再構成して引き継ぎます。
+                        この画面で一時取得したReview本文・CI annotationはsessionにも保存しません。
+                    </p>
+                </div>
+
+                <form
+                    method="POST"
+                    action="{{ route('plans.tasks.development_coding_agent_handoff.prepare', [$plan, $task]) }}"
+                    class="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center"
+                >
+                    @csrf
+                    <input type="hidden" name="confirmed" value="1">
+                    <button type="submit" class="btn-secondary min-h-10 px-3 text-xs">
+                        Implementation BriefからAgent Contextを準備
+                    </button>
+                </form>
+            </div>
+        </div>
+
         <details class="mt-5 rounded-2xl border border-white/8 bg-slate-950/25 p-4" data-provider-triage-copy>
             <summary class="cursor-pointer list-none text-xs font-black text-slate-300">
                 このTriageを実装ツールへ渡す
