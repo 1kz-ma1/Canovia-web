@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\WorkspaceMode;
 use App\Intelligence\Presentation\PlanIntelligencePresentation;
 use App\Intelligence\Presentation\PlanIntelligencePresentationService;
 use App\Models\Plan;
@@ -12,6 +13,8 @@ final class IntelligenceHomeActionService
     public function __construct(
         private readonly PlanIntelligencePresentationService $presentations,
         private readonly PlanPriorityService $priorities,
+        private readonly PlanCategoryProfileService $profiles,
+        private readonly ReleaseLevelService $releaseLevels,
     ) {}
 
     /**
@@ -32,7 +35,9 @@ final class IntelligenceHomeActionService
 
         $topSupported = $editablePlans
             ->filter(
-                fn (Plan $candidate) => $this->presentations->supports($candidate),
+                fn (Plan $candidate) =>
+                    $this->presentationAvailable($candidate)
+                    && $this->presentations->supports($candidate),
             )
             ->sort(
                 fn (Plan $left, Plan $right) =>
@@ -41,7 +46,10 @@ final class IntelligenceHomeActionService
             ->first();
 
         if ($guidancePlan instanceof Plan) {
-            if ($this->presentations->supports($guidancePlan)) {
+            if (
+                $this->presentationAvailable($guidancePlan)
+                && $this->presentations->supports($guidancePlan)
+            ) {
                 $plan = $guidancePlan;
             } elseif (
                 $topSupported instanceof Plan
@@ -60,6 +68,17 @@ final class IntelligenceHomeActionService
         }
 
         return $this->presentations->forPlan($plan);
+    }
+
+    private function presentationAvailable(Plan $plan): bool
+    {
+        if ($this->profiles->forPlan($plan)->key !== 'career') {
+            return true;
+        }
+
+        return $this->releaseLevels->allowsWorkspace(
+            WorkspaceMode::Career,
+        );
     }
 
     private function comparePlans(Plan $left, Plan $right): int
