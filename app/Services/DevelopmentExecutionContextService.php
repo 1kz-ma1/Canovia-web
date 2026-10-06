@@ -56,8 +56,8 @@ final class DevelopmentExecutionContextService
         $task->loadMissing([
             'artifacts' => fn ($query) =>
                 $query->where('provider', 'github')
-                    ->latest('updated_at')
-                    ->latest('id'),
+                    ->orderByDesc('plan_artifacts.updated_at')
+                    ->orderByDesc('plan_artifacts.id'),
         ]);
 
         $repository = $this->repository($evidence, $task);
