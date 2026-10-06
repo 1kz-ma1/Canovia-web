@@ -282,6 +282,7 @@ final class ApSubjectACoverageDashboardService
                             $domains[$domain],
                             $parentTopic,
                             $correctness,
+                            $questionId,
                             $assessedAt,
                         );
                     }
@@ -734,6 +735,7 @@ final class ApSubjectACoverageDashboardService
         array &$domain,
         string $parentTopic,
         string $correctness,
+        int $questionId,
         mixed $assessedAt,
     ): void {
         $parentTopic = mb_substr(
@@ -754,6 +756,7 @@ final class ApSubjectACoverageDashboardService
                 'partial_count' => 0,
                 'incorrect_count' => 0,
                 'latest_assessed_at' => null,
+                '_unique_questions' => [],
             ];
 
         $domain['_parents'][$parentTopic][
@@ -762,6 +765,9 @@ final class ApSubjectACoverageDashboardService
         $domain['_parents'][$parentTopic][
             $correctness.'_count'
         ]++;
+        $domain['_parents'][$parentTopic][
+            '_unique_questions'
+        ][$questionId] = true;
 
         if (
             $assessedAt !== null
@@ -804,8 +810,16 @@ final class ApSubjectACoverageDashboardService
                     )
                     : null;
 
+                $uniqueQuestionCount = count(
+                    $row['_unique_questions']
+                        ?? [],
+                );
+                unset($row['_unique_questions']);
+
                 return [
                     ...$row,
+                    'unique_question_count' =>
+                        $uniqueQuestionCount,
                     'observed_correct_rate_percent' =>
                         $rate,
                     'status' =>
