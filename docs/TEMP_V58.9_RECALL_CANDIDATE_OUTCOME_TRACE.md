@@ -43,14 +43,19 @@ It only preserves the provenance/outcome relationship for later analysis.
 
 ## Review Evidence provenance
 
-When a reviewed Recall Item came from a promoted Candidate, the existing
-`study_recall_reviewed` Evidence additionally records:
+When a reviewed Recall Item came from one or more promoted Candidates, the
+existing `study_recall_reviewed` Evidence additionally records ordered,
+bounded lineage arrays:
 
-- `study_recall_candidate_id`
-- `study_recall_source_id`
-- `candidate_confidence`
+- `study_recall_candidate_ids`
+- `study_recall_source_ids`
+- `candidate_confidences`
 
-Manual Recall cards keep these fields null / absent.
+The arrays use the same Candidate ordering. This covers the valid case where
+multiple reviewed Candidates were edited/promoted into the same existing Recall
+Item.
+
+Manual Recall cards keep these arrays empty.
 
 The existing Evidence remains one row per idempotent Recall review.
 
@@ -58,9 +63,9 @@ The existing Evidence remains one row per idempotent Recall review.
 
 `TaskEvidenceAdapter` exposes only bounded known fields:
 
-- candidate ID
-- source ID
-- candidate confidence
+- Candidate ID list
+- Source ID list
+- Candidate confidence list
 
 It does not expose:
 
@@ -106,13 +111,16 @@ These are learner/card outcomes, not Candidate quality labels.
 
 ## Aggregate projection
 
-Task-level aggregate:
+Task-level aggregate separates Candidate lineage count from unique Recall Item
+outcomes so shared Items never double-count reviews:
 
 - promoted Candidate count
+- promoted unique Item count
 - observed Candidate count
-- retained count
-- reinforcement-needed count
-- total review count
+- observed unique Item count
+- retained unique Item count
+- reinforcement-needed unique Item count
+- total unique review count
 - self-rated successful recall count
 - self-rated recall success percent
 - average original Candidate confidence
@@ -142,8 +150,9 @@ compact native `<details>` section:
 
 It shows:
 
-- promoted / observed
-- retained
+- promoted Candidate / unique Item
+- observed unique Item
+- retained unique Item
 - review count
 - self-rated recall success
 - original AI confidence average
@@ -186,9 +195,10 @@ V58.9 does not:
 
 Required:
 
-- promoted Candidate review Evidence contains Candidate/Source/confidence trace
-- manual card review Evidence does not invent Candidate provenance
-- TaskEvidenceAdapter normalizes the three new known facts
+- promoted Candidate review Evidence contains ordered Candidate/Source/confidence lineage arrays
+- multiple Candidates sharing one Item do not lose provenance or double-count aggregate reviews
+- manual card review Evidence uses empty provenance arrays
+- TaskEvidenceAdapter normalizes the three new known lineage facts
 - outcome projection handles unobserved / developing / reinforcement / retained
 - aggregate metrics are deterministic
 - confidence bands are descriptive and deterministic
