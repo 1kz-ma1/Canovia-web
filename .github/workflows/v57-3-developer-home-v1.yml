@@ -1,0 +1,55 @@
+name: V57.3 Developer Home V1 Validation
+
+on:
+  push:
+    branches:
+      - feature/v57-3-developer-home-v1
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  developer-home:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Http/Controllers/DevelopmentWorkspaceController.php
+          php -l app/Http/Controllers/PlanController.php
+          php -l app/Services/DevelopmentHomeService.php
+          php -l app/Services/WorkspaceModeRegistry.php
+          php -l tests/Feature/DeveloperHomeV573Test.php
+          php -l tests/Feature/DeveloperTaskAssociationV572Test.php
+          php -l tests/Feature/DevelopmentWorkspaceV544Test.php
+          php -l tests/Feature/WorkspaceModeOnboardingV547Test.php
+          php -l tests/Unit/WorkspaceModeRegistryV540Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V57.3 Developer Home
+        run: php artisan test tests/Feature/DeveloperHomeV573Test.php
+      - name: V57.2 Task Association regression
+        run: php artisan test tests/Feature/DeveloperTaskAssociationV572Test.php
+      - name: V57.1 Observation regression
+        run: php artisan test tests/Feature/DeveloperActivityObservationV571Test.php
+      - name: V54.7 onboarding regression
+        run: php artisan test tests/Feature/WorkspaceModeOnboardingV547Test.php
+      - name: V54.4 Development Workspace regression
+        run: php artisan test tests/Feature/DevelopmentWorkspaceV544Test.php
+      - name: V54.0 registry regression
+        run: php artisan test tests/Unit/WorkspaceModeRegistryV540Test.php
+      - name: Developer Evidence and Readiness regression
+        run: php artisan test tests/Feature/DeveloperEvidenceSyncV537Test.php tests/Feature/DeveloperReadinessV538Test.php
+      - name: GitHub stabilization regression
+        run: php artisan test tests/Feature/GitHubIntegrationStabilizationV570Test.php tests/Feature/GitHubAppConnectionV465Test.php
