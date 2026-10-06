@@ -1,9 +1,17 @@
 @php
     $connectedRepositories = collect($githubRepositories ?? [])
-        ->filter(fn ($repository) =>
-            (string) data_get($repository->metadata, 'github_app_connection.status', '') === 'connected'
-            && (bool) data_get($repository->metadata, 'github_app_connection.write_ready', false)
-        )
+        ->filter(function ($repository) {
+            $connection = is_array(data_get($repository->metadata, 'github_app_connection'))
+                ? data_get($repository->metadata, 'github_app_connection')
+                : [];
+
+            return (string) ($connection['status'] ?? '') === 'connected'
+                && (
+                    array_key_exists('write_ready', $connection)
+                        ? (bool) $connection['write_ready']
+                        : true
+                );
+        })
         ->values();
     $candidate = is_array($githubChangeCandidate ?? null) ? $githubChangeCandidate : null;
     $handoffResult = is_array($githubHandoffResult ?? null) ? $githubHandoffResult : null;
