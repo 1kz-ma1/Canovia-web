@@ -6458,3 +6458,29 @@ entitlement / billing behaviorを変更しない。
 
 Canonical contract:
 `docs/V58.4_SPECIALIZED_MODE_TOP_ENTRY.md`.
+
+## V58.5 Specialized Mode Top Daily-use Density
+
+V58.4でStudy / Developer Topが正規入口になったため、Mode Topを日常利用向けの
+compact hubへ整理する。
+
+```text
+Mode Top
+→ Plan名 / 進捗 / 状態をcompact rowで一覧
+→ primary Open
+→ setup / detailは必要時だけ展開
+```
+
+Studyは範囲・教材・成績・Plan詳細をnative `<details>` 配下へ移し、
+DeveloperはRepository / persisted GitHub connection stateをrow内へinline表示する。
+GitHub setupは利用可能な場合に直接到達可能なまま維持する。
+
+Planごとのnested `page-card` は廃止し、Top headerとDeveloper Integration表示も
+compact化する。
+
+V58.5はpresentation-onlyで、Plan ordering / progress、Study / Development
+Intelligence、AI / provider traffic、Task / Plan state、Workspace preference、
+entitlement / billingを変更しない。
+
+Canonical contract:
+`docs/V58.5_SPECIALIZED_MODE_TOP_DENSITY.md`.
