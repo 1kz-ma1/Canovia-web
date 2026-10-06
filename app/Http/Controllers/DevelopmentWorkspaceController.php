@@ -11,6 +11,7 @@ use App\Intelligence\Presentation\IntelligenceStateChangeFeedbackService;
 use App\Models\Plan;
 use App\Models\Task;
 use App\Services\DevelopmentExecutionContextService;
+use App\Services\DevelopmentImplementationBriefService;
 use App\Services\DevelopmentHomeService;
 use App\Services\GitHubIntegrationReadinessService;
 use App\Services\PlanCategoryProfileService;
@@ -31,6 +32,7 @@ final class DevelopmentWorkspaceController extends Controller
         DevelopmentIntelligencePresentationAdapter $presentationAdapter,
         DevelopmentHomeService $developerHome,
         DevelopmentExecutionContextService $executionContext,
+        DevelopmentImplementationBriefService $implementationBriefs,
         GitHubIntegrationReadinessService $githubReadiness,
         IntelligencePresentationHistoryService $history,
         IntelligenceStateChangeFeedbackService $stateChanges,
@@ -65,6 +67,7 @@ final class DevelopmentWorkspaceController extends Controller
                 'developmentAssociationTasks' => collect(),
                 'developmentActiveTasks' => collect(),
                 'developmentExecutionContext' => null,
+                'developmentImplementationBrief' => null,
                 'developmentGithubRepository' => null,
                 'developmentGithubConnection' => null,
                 'developmentGithubIntegrationStatus' => null,
@@ -103,6 +106,10 @@ final class DevelopmentWorkspaceController extends Controller
         $developerExecutionContext = $executionContext->build(
             $plan,
             $contextTaskId,
+            $primaryAction,
+        );
+        $developerImplementationBrief = $implementationBriefs->build(
+            $developerExecutionContext,
             $primaryAction,
         );
         $developmentGithubRepository = $plan->artifacts()
@@ -150,6 +157,7 @@ final class DevelopmentWorkspaceController extends Controller
             'developmentAssociationTasks' => $home['association_tasks'],
             'developmentActiveTasks' => $home['active_tasks'],
             'developmentExecutionContext' => $developerExecutionContext,
+            'developmentImplementationBrief' => $developerImplementationBrief,
             'developmentGithubRepository' => $developmentGithubRepository,
             'developmentGithubConnection' => $developmentGithubConnection,
             'developmentGithubIntegrationStatus' => $developmentGithubIntegrationStatus,
