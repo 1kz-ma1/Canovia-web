@@ -3,64 +3,54 @@
 @section('title', '開発トップ | Canovia')
 
 @section('content')
-<div class="mx-auto max-w-6xl space-y-4" data-development-top>
-    <section class="page-card overflow-hidden p-0">
-        <div class="flex flex-col gap-4 px-5 py-5 sm:px-6 sm:py-6 lg:flex-row lg:items-start lg:justify-between">
-            <div class="max-w-3xl">
-                <p class="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">DEVELOPER TOP</p>
-                <h1 class="mt-2 text-2xl font-black text-slate-50">開発Planを選ぶ・接続する。</h1>
-                <p class="mt-2 text-sm leading-6 text-slate-400">
-                    日々の開発はPlan Workspaceへ。ここではPlan一覧、進捗、Repository / GitHub接続状態をまとめます。
+<div class="mx-auto max-w-6xl space-y-3" data-development-top>
+    <section class="page-card px-4 py-4 sm:px-5" data-specialized-top-compact-header>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <p class="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">DEVELOPER TOP</p>
+                    <h1 class="text-lg font-black text-slate-50">開発Plan</h1>
+                    <span class="text-[10px] text-slate-500">{{ $developmentPlanSummaries->count() }}件</span>
+                </div>
+                <p class="mt-1 text-xs leading-5 text-slate-500">
+                    PlanとRepository状態を一覧し、必要な接続設定だけ開きます。
                 </p>
             </div>
 
             <a
                 href="{{ route('plans.create.manual', ['workspace_mode' => 'development']) }}"
-                class="btn-primary min-h-10 shrink-0 px-4"
+                class="btn-primary min-h-9 shrink-0 px-3.5 text-xs"
             >
                 開発Planを作る
             </a>
         </div>
     </section>
 
-    <section class="page-card p-5 sm:p-6" data-development-top-integration>
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-                <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">GITHUB INTEGRATION</p>
-                <h2 class="mt-1 text-sm font-black text-slate-100">
-                    {{ data_get($developmentGithubIntegrationStatus, 'evidence.allowed') ? 'GitHub Evidenceを利用できます' : 'GitHub連携の利用状態' }}
-                </h2>
-                <p class="mt-2 max-w-3xl text-xs leading-5 text-slate-500">
-                    {{ data_get($developmentGithubIntegrationStatus, 'evidence.message', '各PlanのRepository接続状態を確認できます。') }}
-                </p>
-            </div>
-
-            <div class="flex flex-wrap gap-2 text-[10px]">
-                @if (data_get($developmentGithubIntegrationStatus, 'runtime.interactive_connect_configured'))
-                    <span class="rounded-full border border-emerald-300/15 bg-emerald-300/[0.03] px-2.5 py-1 text-emerald-300">App Ready</span>
-                @else
-                    <span class="rounded-full border border-amber-300/15 bg-amber-300/[0.03] px-2.5 py-1 text-amber-200">App Setup確認</span>
-                @endif
-            </div>
+    <section
+        class="flex flex-col gap-2 rounded-2xl border border-white/8 bg-slate-950/20 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between"
+        data-development-top-integration
+        data-development-top-integration-compact
+    >
+        <div class="min-w-0 text-[10px] leading-4 text-slate-500">
+            <span class="font-black uppercase tracking-[0.12em] text-slate-600">GitHub Integration</span>
+            <span class="ml-2">
+                {{ data_get($developmentGithubIntegrationStatus, 'evidence.message', '各PlanのRepository接続状態を確認できます。') }}
+            </span>
         </div>
+
+        @if (data_get($developmentGithubIntegrationStatus, 'runtime.interactive_connect_configured'))
+            <span class="shrink-0 text-[10px] font-bold text-emerald-300">App Ready</span>
+        @else
+            <span class="shrink-0 text-[10px] font-bold text-amber-200">App Setup確認</span>
+        @endif
     </section>
 
-    <section class="page-card p-5 sm:p-6">
-        <div class="flex flex-wrap items-end justify-between gap-3">
-            <div>
-                <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">DEVELOPMENT PLANS</p>
-                <h2 class="mt-1 text-lg font-black text-slate-50">Planと進捗</h2>
-            </div>
-            <span class="badge badge-slate">{{ $developmentPlanSummaries->count() }}件</span>
-        </div>
-
-        <div class="mt-4">
-            @include('workspace.partials.specialized-top-plan-list', [
-                'mode' => 'development',
-                'summaries' => $developmentPlanSummaries,
-                'developmentGithubIntegrationStatus' => $developmentGithubIntegrationStatus,
-            ])
-        </div>
+    <section class="page-card p-3 sm:p-4">
+        @include('workspace.partials.specialized-top-plan-list', [
+            'mode' => 'development',
+            'summaries' => $developmentPlanSummaries,
+            'developmentGithubIntegrationStatus' => $developmentGithubIntegrationStatus,
+        ])
     </section>
 </div>
 @endsection
