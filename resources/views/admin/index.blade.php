@@ -161,6 +161,29 @@
                 </a>
             @endif
 
+            <a href="{{ route('admin.release_gate.index') }}" class="group page-card block p-5 transition hover:-translate-y-0.5 hover:border-cyan-300/35 sm:p-6">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <span class="inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2.5 py-1 text-[10px] font-black tracking-[.12em] text-cyan-200">EARLY ACCESS</span>
+                        <h2 class="mt-3 text-xl font-black text-slate-50">Release Gate</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-400">L1/L2の構造Blockerと手動確認項目を分離し、公開候補の状態を確認します。</p>
+                    </div>
+                    <span class="text-2xl text-slate-600 transition group-hover:translate-x-1 group-hover:text-cyan-200" aria-hidden="true">→</span>
+                </div>
+                <div class="mt-5 grid grid-cols-2 gap-2">
+                    <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+                        <p class="text-[10px] text-slate-500">Target</p>
+                        <p class="mt-1 text-sm font-black text-slate-100">L{{ $releaseTarget->value }} {{ $releaseTarget->label() }}</p>
+                    </div>
+                    <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+                        <p class="text-[10px] text-slate-500">Auto checks</p>
+                        <p class="mt-1 text-sm font-black {{ $releaseTargetAssessment['automatic_ready'] ? 'text-emerald-200' : 'text-rose-200' }}">
+                            {{ $releaseTargetAssessment['automatic_check_count'] - $releaseTargetAssessment['failed_check_count'] }}/{{ $releaseTargetAssessment['automatic_check_count'] }}
+                        </p>
+                    </div>
+                </div>
+            </a>
+
             <a href="{{ route('admin.economy.index') }}" class="group page-card block p-5 transition hover:-translate-y-0.5 hover:border-emerald-400/35 sm:p-6">
                 <div class="flex items-start justify-between gap-4">
                     <div>
