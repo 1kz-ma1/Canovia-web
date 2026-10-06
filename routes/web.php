@@ -50,6 +50,7 @@ use App\Http\Controllers\GitHubWorkflowController;
 use App\Http\Controllers\DevelopmentReadinessController;
 use App\Http\Controllers\DevelopmentProviderTriageController;
 use App\Http\Controllers\DevelopmentCodingAgentHandoffController;
+use App\Http\Controllers\DevelopmentPreviewController;
 use App\Http\Controllers\StudyPracticeController;
 use App\Http\Controllers\StudyActivityController;
 use App\Http\Controllers\StudyScopeCaptureController;
@@ -89,6 +90,12 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/workspace/overview', OverviewWorkspaceController::class)->name('workspace.overview.index');
 Route::get('/workspace/study', StudyWorkspaceController::class)->name('workspace.study.index');
 Route::get('/workspace/development', DevelopmentWorkspaceController::class)->name('workspace.development.index');
+Route::post('/plans/{plan}/development-preview', [DevelopmentPreviewController::class, 'store'])
+    ->middleware('throttle:20,1')
+    ->name('plans.development_preview.store');
+Route::delete('/plans/{plan}/development-preview', [DevelopmentPreviewController::class, 'destroy'])
+    ->middleware('throttle:20,1')
+    ->name('plans.development_preview.destroy');
 Route::get('/workspace/career', CareerModeWorkspaceController::class)->name('workspace.career.index');
 Route::get('/workspace/{workspaceMode}', [WorkspaceModeController::class, 'enter'])->name('workspace_modes.enter');
 Route::post('/workspace/{workspaceMode}/select', [WorkspaceModeController::class, 'select'])->name('workspace_modes.select');
