@@ -12,6 +12,7 @@ use App\Models\PracticeQuestionDemand;
 use App\Models\QuestionPack;
 use App\Services\AdminAccessService;
 use App\Services\MapTelemetryService;
+use App\Services\ReleaseGateService;
 use Illuminate\Http\Request;
 
 class AdminDashboardController extends Controller
@@ -20,7 +21,11 @@ class AdminDashboardController extends Controller
     {
     }
 
-    public function index(Request $request, MapTelemetryService $mapTelemetry)
+    public function index(
+        Request $request,
+        MapTelemetryService $mapTelemetry,
+        ReleaseGateService $releaseGate,
+    )
     {
         if (! $this->access->authorized($request)) {
             return redirect()->route('admin.login');
@@ -81,6 +86,8 @@ class AdminDashboardController extends Controller
             'canovia.study_scenario_lab_enabled',
             false,
         );
+        $releaseTarget = $releaseGate->recommendedTarget();
+        $releaseTargetAssessment = $releaseGate->assess($releaseTarget);
 
         return view('admin.index', compact(
             'feedbackNew',
@@ -98,6 +105,8 @@ class AdminDashboardController extends Controller
             'mapTelemetry7d',
             'mapTelemetry30d',
             'studyScenarioLabEnabled',
+            'releaseTarget',
+            'releaseTargetAssessment',
         ));
     }
 }
