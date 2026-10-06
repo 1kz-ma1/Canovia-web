@@ -45,7 +45,7 @@ class StudyWorkspaceV543Test extends TestCase
             ->assertSee('data-workspace-mode-source="route_hint"', false);
     }
 
-    public function test_workspace_selects_highest_priority_study_plan_and_allows_explicit_switch(): void
+    public function test_workspace_selects_highest_priority_study_plan_and_preserves_explicit_deep_link(): void
     {
         $user = User::factory()->create();
 
@@ -75,12 +75,18 @@ class StudyWorkspaceV543Test extends TestCase
             ->get(route('workspace.study.index'))
             ->assertOk()
             ->assertSee($primary->title)
-            ->assertSee('value="'.$primary->id.'" selected', false);
+            ->assertDontSee($lower->title)
+            ->assertSee('data-study-top-link', false)
+            ->assertSee(route('workspace.study.top'), false)
+            ->assertDontSee('id="study-workspace-plan"', false);
 
         $this->actingAs($user)
             ->get(route('workspace.study.index', ['plan_id' => $lower->id]))
             ->assertOk()
-            ->assertSee('value="'.$lower->id.'" selected', false);
+            ->assertSee($lower->title)
+            ->assertDontSee($primary->title)
+            ->assertSee('data-study-top-link', false)
+            ->assertDontSee('id="study-workspace-plan"', false);
     }
 
     public function test_workspace_is_state_first_before_confirmed_scope_and_does_not_create_task(): void
