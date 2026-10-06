@@ -27,7 +27,11 @@
     $githubAppConnectAvailable = (bool) ($github_app_connect_available ?? false);
     $appConnection = is_array($overview['app_connection'] ?? null) ? $overview['app_connection'] : [];
     $connectionStatus = (string) ($appConnection['status'] ?? 'not_connected');
+    $connectionReadReady = (bool) ($appConnection['read_ready'] ?? ($connectionStatus === 'connected'));
+    $connectionWriteReady = (bool) ($appConnection['write_ready'] ?? false);
     $connectionManagementUrl = $appConnection['management_url'] ?? null;
+    $snapshotSource = (string) data_get($snapshot, 'source', '');
+    $isAppSnapshot = $snapshotSource === 'github_app_rest';
     $connectionAccount = trim((string) ($appConnection['account_login'] ?? ''));
     $connectionReadiness = is_array($overview['integration_readiness'] ?? null)
         ? $overview['integration_readiness']
@@ -51,7 +55,7 @@
                     </span>
                     @if ($snapshot)
                         <span class="rounded-full border border-emerald-300/15 bg-emerald-300/[0.035] px-2 py-1 text-[10px] font-bold text-emerald-200">
-                            GitHub snapshot
+                            {{ $isAppSnapshot ? 'GitHub App sync' : 'Public preview' }}
                         </span>
                     @elseif (! $overview['repository_registered'])
                         <span class="rounded-full border border-slate-700 px-2 py-1 text-[10px] text-slate-500">関連URLから認識</span>
@@ -83,7 +87,13 @@
                     <form method="POST" action="{{ route('github_workflow.repository.refresh', $overview['repository_artifact_id']) }}">
                         @csrf
                         <button type="submit" class="btn-primary px-3 py-2 text-xs">
-                            {{ $snapshot ? 'GitHubから更新' : 'GitHubから読み込む' }}
+                            @if ($connectionStatus === 'connected')
+                                Repository同期
+                            @elseif ($snapshot)
+                                Public Preview更新
+                            @else
+                                Public Previewを試す
+                            @endif
                         </button>
                     </form>
                 @endif
@@ -222,7 +232,7 @@
                     <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">GITHUB NOW</p>
                     <h4 class="mt-1 text-sm font-black text-slate-100">Repository URLだけで終わらせない</h4>
                     <p class="mt-2 text-xs leading-6 text-slate-500">
-                        GitHubから読み込むと、Branch・Open PR・Issue・最近のActionsをこの画面へ重ねて表示できます。
+                        GitHub App接続済みならPublic / Privateを問わず同期します。未接続RepositoryはPublicの場合だけ限定Previewできます。
                     </p>
                 </div>
                 @if ($overview['can_edit'] && $canInspectRepository)
