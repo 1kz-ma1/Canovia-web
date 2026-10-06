@@ -9,6 +9,7 @@ use App\Models\StudyRecallSource;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\UserProductGrant;
+use App\Services\AccountDeletionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
@@ -283,6 +284,51 @@ class SafePlanResourceRecallHandoffV5811Test extends TestCase
             'id' => $source->id,
             'task_id' => $task->id,
         ]);
+    }
+
+    public function test_account_deletion_removes_resource_derived_recall_private_file(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+
+        $resource = $this->resource(
+            $user,
+            $plan,
+            'https://drive.google.com/file/d/delete/view',
+        );
+
+        $path = 'study-recall-sources/'
+            .$plan->id
+            .'/'
+            .$task->id
+            .'/delete-me.pdf';
+
+        Storage::disk('local')->put(
+            $path,
+            '%PDF-1.4 private',
+        );
+
+        $source = StudyRecallSource::query()->create([
+            'plan_id' => $plan->id,
+            'task_id' => $task->id,
+            'plan_resource_id' => $resource->id,
+            'user_id' => $user->id,
+            'source_type' => 'pdf',
+            'original_name' => 'delete-me.pdf',
+            'mime_type' => 'application/pdf',
+            'storage_path' => $path,
+            'status' => 'ready',
+            'candidate_count' => 0,
+        ]);
+
+        app(AccountDeletionService::class)->delete($user);
+
+        $this->assertDatabaseMissing('study_recall_sources', [
+            'id' => $source->id,
+        ]);
+        $this->assertDatabaseMissing('plan_resources', [
+            'id' => $resource->id,
+        ]);
+        Storage::disk('local')->assertMissing($path);
     }
 
     public function test_source_ui_shows_plan_resource_provenance(): void
