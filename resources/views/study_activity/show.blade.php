@@ -72,6 +72,29 @@
                                 <a href="{{ route('plans.resources.index', $plan) }}" class="btn-secondary">⌘ 単語帳・教材を登録</a>
                             @endif
                         </div>
+                    @elseif (in_array($primaryKey, ['listening', 'dictation', 'shadowing'], true))
+                        <p class="text-sm leading-6 text-slate-300">{{ $primary['description'] ?? '' }}</p>
+                        <div class="mt-4 grid gap-3 sm:grid-cols-3">
+                            @foreach ([
+                                ['label' => '教材を開く', 'text' => '登録済みの音声・動画・transcriptを使います。'],
+                                ['label' => 'Activityを実施', 'text' => 'Taskに合う手順でListening / Dictation / Shadowingを行います。'],
+                                ['label' => '結果を記録', 'text' => '感触を自己評価Evidenceとして残します。進捗は自動変更しません。'],
+                            ] as $index => $step)
+                                <div class="rounded-xl border border-white/8 bg-slate-950/25 p-3">
+                                    <p class="text-[10px] font-black text-slate-500">{{ $index + 1 }}</p>
+                                    <p class="mt-1 text-sm font-bold text-slate-100">{{ $step['label'] }}</p>
+                                    <p class="mt-1 text-xs leading-5 text-slate-400">{{ $step['text'] }}</p>
+                                </div>
+                            @endforeach
+                        </div>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <a href="{{ $primary['url'] }}" class="btn-primary">
+                                {{ $primary['action_label'] ?? 'Language Activityを始める' }}
+                            </a>
+                            <a href="{{ route('plans.resources.index', $plan) }}" class="btn-secondary">
+                                教材を確認
+                            </a>
+                        </div>
                     @elseif (in_array($primaryKey, ['scope_organization', 'practical_evidence'], true))
                         <p class="text-sm leading-6 text-slate-300">{{ $primary['description'] ?? '' }}</p>
                         <div class="mt-4 flex flex-wrap gap-2">

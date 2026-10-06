@@ -53,6 +53,7 @@ use App\Http\Controllers\DevelopmentCodingAgentHandoffController;
 use App\Http\Controllers\DevelopmentPreviewController;
 use App\Http\Controllers\StudyPracticeController;
 use App\Http\Controllers\StudyActivityController;
+use App\Http\Controllers\StudyLanguageActivityController;
 use App\Http\Controllers\StudyScopeCaptureController;
 use App\Http\Controllers\StudyScoreController;
 use App\Http\Controllers\StudyLearningTypeController;
@@ -455,6 +456,11 @@ Route::post('/plans/{plan}/study-action/execute', [StudyAdaptiveActionController
 // 資格学習のActivity選択はAI演習より上位の共通入口として扱う。
 Route::get('/plans/{plan}/tasks/{task}/study-activity', [StudyActivityController::class, 'show'])
     ->name('plans.tasks.study_activity.show');
+
+Route::get('/plans/{plan}/tasks/{task}/study-language/{activity}', [StudyLanguageActivityController::class, 'show'])
+    ->name('plans.tasks.study_language.show');
+Route::post('/plans/{plan}/tasks/{task}/study-language/{activity}', [StudyLanguageActivityController::class, 'store'])
+    ->name('plans.tasks.study_language.store');
 
 Route::get('/plans/{plan}/tasks/{task}/study-recall', [StudyRecallController::class, 'show'])
     ->name('plans.tasks.study_recall.show');

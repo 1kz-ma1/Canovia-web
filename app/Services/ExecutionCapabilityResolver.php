@@ -40,6 +40,10 @@ final class ExecutionCapabilityResolver
                     ExecutionCapability::STUDY_RECALL,
                 StudyActivityPolicyService::RESOURCE_STUDY =>
                     ExecutionCapability::STUDY_RESOURCE,
+                StudyActivityPolicyService::LISTENING,
+                StudyActivityPolicyService::DICTATION,
+                StudyActivityPolicyService::SHADOWING =>
+                    ExecutionCapability::STUDY_LANGUAGE,
                 default =>
                     ExecutionCapability::STUDY_PRACTICE,
             };

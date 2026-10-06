@@ -9,6 +9,7 @@ final class ExecutionCapability
     public const STUDY_PRACTICE = 'study.practice';
     public const STUDY_RECALL = 'study.recall';
     public const STUDY_RESOURCE = 'study.resource';
+    public const STUDY_LANGUAGE = 'study.language';
     public const CODING_REPOSITORY = 'coding.repository';
     public const GENERAL_TASK = 'general.task';
 

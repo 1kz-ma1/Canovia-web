@@ -103,7 +103,7 @@ final class ExecutionModeService
                 'mode' => $mode,
                 'action_id' => 'study_activity',
                 'label' => '学習Activityで進める',
-                'description' => '問題演習・想起・教材学習から、このTaskに合う学習Activityを選びます。',
+                'description' => '問題演習・想起・教材学習・語学練習から、このTaskに合う学習Activityを選びます。',
                 'route_name' => 'plans.tasks.study_activity.show',
                 'route_parameters' => [$plan->id, $task->id],
                 'supports_timer' => false,
@@ -160,7 +160,7 @@ final class ExecutionModeService
                 'label' => '学習',
                 'eyebrow' => 'STUDY',
                 'icon' => '◈',
-                'description' => '問題演習・想起・教材学習など、学習内容に合わせた実行へ。',
+                'description' => '問題演習・想起・教材学習・語学練習など、学習内容に合わせた実行へ。',
                 'specialized' => true,
             ],
             self::DEVELOPMENT => [

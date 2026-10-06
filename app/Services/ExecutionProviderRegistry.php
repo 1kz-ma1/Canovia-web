@@ -39,6 +39,12 @@ final class ExecutionProviderRegistry implements ExecutionProviderCatalog
                 capabilities: [ExecutionCapability::STUDY_RESOURCE],
             ),
             new ExecutionProviderDefinitionData(
+                key: 'canovia.study.language',
+                name: 'Canovia Language Practice',
+                kind: ExecutionProviderKind::Native,
+                capabilities: [ExecutionCapability::STUDY_LANGUAGE],
+            ),
+            new ExecutionProviderDefinitionData(
                 key: 'canovia.development',
                 name: 'Canovia Development Flow',
                 kind: ExecutionProviderKind::Native,
