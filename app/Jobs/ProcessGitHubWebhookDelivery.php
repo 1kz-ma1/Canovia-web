@@ -98,6 +98,7 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
 
         $matchedArtifacts = 0;
         $syncedTasks = 0;
+        $observedActivities = 0;
         $skippedEntitlement = 0;
         $syncedPlanIds = [];
 
@@ -146,7 +147,10 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
             }
 
             if ($developmentObservations) {
-                $developmentObservations->observeDelivery($delivery);
+                $observationCounts = $developmentObservations->observeDelivery(
+                    $delivery,
+                );
+                $observedActivities += (int) ($observationCounts['observed'] ?? 0);
             }
 
             if ($developmentEvidence) {
@@ -193,7 +197,9 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
             throw $exception;
         }
 
-        $status = $syncedTasks > 0 ? 'processed' : 'ignored';
+        $status = ($syncedTasks > 0 || $observedActivities > 0)
+            ? 'processed'
+            : 'ignored';
 
         $delivery->update([
             'status' => $status,
