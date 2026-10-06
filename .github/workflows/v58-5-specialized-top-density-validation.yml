@@ -1,0 +1,39 @@
+name: V58.5 Specialized Mode Top Density Validation
+
+on:
+  push:
+    branches:
+      - feature/v58-5-specialized-top-density
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l tests/Feature/SpecializedModeTopDensityV585Test.php
+          php -l tests/Feature/SpecializedWorkspaceTopsV582Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V58.5 dedicated contract
+        run: php artisan test tests/Feature/SpecializedModeTopDensityV585Test.php
+      - name: V58.2 specialized mode top regression
+        run: php artisan test tests/Feature/SpecializedWorkspaceTopsV582Test.php
+      - name: V58.3 Study focused surfaces regression
+        run: php artisan test tests/Feature/StudyWorkspaceFocusedSurfacesV583Test.php
+      - name: V58.4 specialized entry regression
+        run: php artisan test tests/Feature/SpecializedModeTopEntryV584Test.php
+      - name: Workspace and mobile entry regression
+        run: php artisan test tests/Feature/WorkspaceModeBarV541Test.php tests/Feature/WorkspaceModePersistenceV542Test.php tests/Feature/MobileWorkspaceModeEntryV566Test.php tests/Feature/WorkspaceResumeAndSessionScopeV5612Test.php
