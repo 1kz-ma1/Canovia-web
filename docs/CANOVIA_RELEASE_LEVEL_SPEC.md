@@ -1,6 +1,6 @@
 # Canovia Release Level / Feature Flag Specification
 
-> Status: Product contract + V58.20 Foundation implemented  
+> Status: Product contract + V58.20 Foundation + V58.21 Release Gate implemented  
 > Updated: 2026-10-07  
 > Scope: Early Access staged release, admin preview, beta rollout
 
@@ -15,7 +15,15 @@ V58.20でFoundationを実装済み:
 - Workspace / onboarding visibility integration
 - Admin Economy Inspector access control
 
-未実装のLevel 1 / 2全Feature inventoryやPublic LevelのDB/Admin操作は、Early Access Release Gateを固めてから追加する。
+V58.21でFeature maturity inventoryとread-only Release Gateを追加済み。
+
+- L1 = stable Study / Development Core
+- L2 = presentation-only Product Preview
+- L3 = selected Beta capabilities
+- L4 = Internal mutation / unfinished capability
+
+L2は `product.preview.index` が実装されるまでRelease Gate上Blockedとする。
+Public LevelのDB/Admin操作は引き続き未実装。
 
 ## 1. Purpose
 
@@ -373,10 +381,10 @@ Admin Preview Levelは「公開成熟度プレビュー」であり、別軸と�
 
 ## 17. Non-goals of this specification
 
-V58.20 Foundation後も、この文書だけでは実装しない:
+V58.21 Release Gate後も、この文書だけでは実装しない:
 
 - Public Release LevelのDB永続化 / Admin切替
-- Level 1 / 2の全Feature inventory
+- Product Preview UI / checkout
 - percentage rollout engine
 - billing
 - Premium / Pro entitlement resolver migration
