@@ -166,7 +166,7 @@ V41.16まで実装済み。次の大きな検討:
 - Roadmap FeatureとRelease Notesの明示的な紐付け
 - StoreKit / App Store Server API / Stripe等からProduct Grantへ同期するBilling Adapter
 - Study / Career / Developer Packの具体Capability実装とFeatureKey接続
-- failed Recall Sourceの再抽出UI・複数ページbatch ingest
+- failed Recall Sourceの再抽出UI（V58.7実装済み）・複数ページbatch ingest
 - Plan Resourceからの安全なRecall material ingest
 - Recall成績をTask progressionへ使うPolicy（V58.6実装済み：Recall-primary Taskのみ、Deck全体定着 + 明示確認で完了）
 - Listening / Dictation / Shadowing等のStudy Activity拡張
@@ -6513,3 +6513,34 @@ Question Practice progression、Recall scheduler、AI/provider、entitlement / b
 
 Canonical contract:
 `docs/V58.6_RECALL_TASK_PROGRESSION.md`.
+
+## V58.7 Recall Source Retry
+
+失敗したRecall Candidate抽出は、保存済みのprivate
+`StudyRecallSource` から明示的に再実行できる。
+
+```text
+failed saved Source
+→ user Retry
+→ same Source
+→ existing Candidate extraction
+→ Human Review
+```
+
+Retryはfailed Sourceだけに限定し、Plan / Task ownership、
+`AutomaticAiExecution`、Source所属、保存済み教材の存在をserver-sideで再確認する。
+
+textは `source_text`、image / PDFは既存private `storage_path` を再利用する。
+同じ教材の再アップロードは不要。
+
+Candidate重複防止は既存の `task_id + fingerprint(prompt|answer)` を維持し、
+retry専用のCandidate状態は追加しない。
+
+Plan Resourceは現状共有URL参照であり、V58.7では任意URLをserver fetchしない。
+Resourceからの安全なRecall material ingestは、trusted material acquisition contract
+を別途定義してから行う。
+
+Migration、Recall scheduler、Task progression、billingは変更しない。
+
+Canonical contract:
+`docs/V58.7_RECALL_SOURCE_RETRY.md`.
