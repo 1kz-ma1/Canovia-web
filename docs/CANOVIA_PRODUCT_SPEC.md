@@ -166,7 +166,7 @@ V41.16まで実装済み。次の大きな検討:
 - Roadmap FeatureとRelease Notesの明示的な紐付け
 - StoreKit / App Store Server API / Stripe等からProduct Grantへ同期するBilling Adapter
 - Study / Career / Developer Packの具体Capability実装とFeatureKey接続
-- failed Recall Sourceの再抽出UI（V58.7実装済み）・複数ページbatch ingest
+- failed Recall Sourceの再抽出UI（V58.7実装済み）・複数ページbatch ingest（V58.8実装済み）
 - Plan Resourceからの安全なRecall material ingest
 - Recall成績をTask progressionへ使うPolicy（V58.6実装済み：Recall-primary Taskのみ、Deck全体定着 + 明示確認で完了）
 - Listening / Dictation / Shadowing等のStudy Activity拡張
@@ -6544,3 +6544,31 @@ Migration、Recall scheduler、Task progression、billingは変更しない。
 
 Canonical contract:
 `docs/V58.7_RECALL_SOURCE_RETRY.md`.
+
+## V58.8 Recall Batch Ingest
+
+Recall教材は2〜5個の画像 / PDFを一度に選択し、1回のNative AI実行で
+Candidate抽出できる。
+
+```text
+multiple files
+→ one Source per file
+→ one Native AI run
+→ Candidate.source_index
+→ Human Review
+```
+
+既存の `1 StudyRecallSource = 1 file` は維持し、batch専用tableやmigrationは
+追加しない。各Candidateは最も直接の根拠となるSourceへ紐づく。
+
+制限は1ファイル10MB、合計20MB。Candidate重複防止は既存の
+`task_id + fingerprint(prompt|answer)` を維持する。
+
+provider失敗時は全Sourceをfailedとして保存し、同じfailed NativeAiRun IDを保持する。
+その後はV58.7でSourceごとに個別再抽出できる。
+
+単一file / pasted text、Human Review、Recall scheduler、V58.6 progression、
+entitlement / billingは変更しない。
+
+Canonical contract:
+`docs/V58.8_RECALL_BATCH_INGEST.md`.
