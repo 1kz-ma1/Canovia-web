@@ -424,6 +424,30 @@ final class StudyMethodRecommendationService
             ];
         }
 
+        if (in_array(
+            $basePrimary,
+            [
+                StudyActivityPolicyService::LISTENING,
+                StudyActivityPolicyService::DICTATION,
+                StudyActivityPolicyService::SHADOWING,
+            ],
+            true,
+        )) {
+            return [
+                $basePrimary,
+                null,
+                match ($basePrimary) {
+                    StudyActivityPolicyService::DICTATION =>
+                        'このTaskは聞こえた音を文字へ変換して聞き落としを確認する工程が中心なので、Task適合度どおりDictationを優先します。',
+                    StudyActivityPolicyService::SHADOWING =>
+                        'このTaskは音声を追ってリズム・強勢・音のつながりを再現する工程が中心なので、Task適合度どおりShadowingを優先します。',
+                    default =>
+                        'このTaskは音声を聞いて意味と聞き取れない箇所を確認する工程が中心なので、Task適合度どおりListeningを優先します。',
+                },
+                'task_semantic_fit',
+            ];
+        }
+
         $variant = match ($phase) {
             'diagnosis' => 'diagnosis',
             'weakness_reinforcement' =>
@@ -669,6 +693,17 @@ final class StudyMethodRecommendationService
                 ),
             StudyActivityPolicyService::RESOURCE_STUDY =>
                 route('plans.resources.index', $plan),
+            StudyActivityPolicyService::LISTENING,
+            StudyActivityPolicyService::DICTATION,
+            StudyActivityPolicyService::SHADOWING =>
+                route(
+                    'plans.tasks.study_language.show',
+                    [
+                        $plan,
+                        $task,
+                        'activity' => $key,
+                    ],
+                ),
             self::SCOPE_ORGANIZATION =>
                 route('plans.study_scope.index', $plan),
             self::PRACTICAL_EVIDENCE =>
@@ -708,6 +743,12 @@ final class StudyMethodRecommendationService
                 $resourceCount > 0
                     ? '教材を確認'
                     : '教材を登録・確認',
+            StudyActivityPolicyService::LISTENING =>
+                'Listeningを始める',
+            StudyActivityPolicyService::DICTATION =>
+                'Dictationを始める',
+            StudyActivityPolicyService::SHADOWING =>
+                'Shadowingを始める',
             self::SCOPE_ORGANIZATION =>
                 '範囲を整理',
             self::PRACTICAL_EVIDENCE =>
