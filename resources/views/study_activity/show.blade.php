@@ -137,6 +137,158 @@
             </div>
         </section>
 
+        @php
+            $activityOutcomeMethods = collect(
+                data_get($activityOutcomes ?? [], 'methods', []),
+            );
+            $activityOutcomePairCount = (int) data_get(
+                $activityOutcomes ?? [],
+                'valid_observation_pair_count',
+                0,
+            );
+            $activityOutcomePracticeCount = (int) data_get(
+                $activityOutcomes ?? [],
+                'practice_assessment_count',
+                0,
+            );
+        @endphp
+
+        <details
+            class="page-card p-4 sm:p-5"
+            data-study-activity-outcome-observation
+        >
+            <summary class="cursor-pointer list-none">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-amber-300">
+                            REAL USAGE OBSERVATION
+                        </p>
+                        <h2 class="mt-1 text-sm font-black text-slate-100">
+                            実利用でのActivity観測
+                        </h2>
+                    </div>
+                    <span class="badge badge-slate">
+                        比較 {{ $activityOutcomePairCount }}件
+                    </span>
+                </div>
+            </summary>
+
+            <div class="mt-4 border-t border-white/8 pt-4">
+                <p class="max-w-3xl text-xs leading-5 text-slate-500">
+                    同じTaskのPractice採点どうしを比較し、その間に記録されたActivityが1種類だけだった区間を観測します。
+                    スコア前後差は因果効果の証明ではなく、問題難度・範囲・外部学習などの影響を含む参考値です。
+                </p>
+
+                <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    @foreach ([
+                        [
+                            'label' => 'Practice採点',
+                            'value' => $activityOutcomePracticeCount,
+                        ],
+                        [
+                            'label' => '比較可能',
+                            'value' => $activityOutcomePairCount,
+                        ],
+                        [
+                            'label' => 'Activity混在で除外',
+                            'value' => (int) data_get(
+                                $activityOutcomes ?? [],
+                                'ambiguous_interval_count',
+                                0,
+                            ),
+                        ],
+                        [
+                            'label' => '14日超で除外',
+                            'value' => (int) data_get(
+                                $activityOutcomes ?? [],
+                                'stale_interval_count',
+                                0,
+                            ),
+                        ],
+                    ] as $stat)
+                        <div class="rounded-xl border border-white/8 bg-slate-950/25 p-3 text-center">
+                            <p class="text-[10px] text-slate-500">{{ $stat['label'] }}</p>
+                            <strong class="mt-1 block text-lg text-slate-100">{{ $stat['value'] }}</strong>
+                        </div>
+                    @endforeach
+                </div>
+
+                @if ($activityOutcomePracticeCount < 2)
+                    <div class="mt-4 rounded-xl border border-white/8 bg-slate-950/20 p-4">
+                        <p class="text-sm font-bold text-slate-200">観測待ち</p>
+                        <p class="mt-1 text-xs leading-5 text-slate-500">
+                            同じTaskでPractice採点が2回以上たまると、その間に実施したActivityと後続スコアの前後差を確認できます。
+                        </p>
+                    </div>
+                @else
+                    <div class="mt-4 grid gap-2">
+                        @foreach ($activityOutcomeMethods as $method)
+                            @php
+                                $delta = $method['average_score_delta'] ?? null;
+                                $status = (string) ($method['measurement_status'] ?? 'waiting');
+                            @endphp
+                            <div
+                                class="rounded-xl border border-white/8 bg-slate-950/20 px-3 py-3"
+                                data-study-activity-outcome-method="{{ $method['key'] ?? '' }}"
+                            >
+                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <p class="text-sm font-bold text-slate-200">
+                                            {{ $method['icon'] ?? '•' }} {{ $method['label'] ?? 'Activity' }}
+                                        </p>
+                                        <p class="mt-1 text-[10px] text-slate-600">
+                                            実行記録 {{ (int) ($method['usage_count'] ?? 0) }}
+                                            · 比較 {{ (int) ($method['observation_count'] ?? 0) }}
+                                        </p>
+                                    </div>
+
+                                    @if ($status === 'unmeasured')
+                                        <span class="badge badge-slate">未計測</span>
+                                    @elseif ($delta !== null)
+                                        <span class="badge badge-slate">
+                                            平均前後差 {{ $delta > 0 ? '+' : '' }}{{ (int) $delta }}pt
+                                        </span>
+                                    @else
+                                        <span class="badge badge-slate">観測待ち</span>
+                                    @endif
+                                </div>
+
+                                @if (($method['observation_count'] ?? 0) > 0)
+                                    <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500">
+                                        <span>
+                                            平均
+                                            {{ (int) ($method['average_before_score'] ?? 0) }}%
+                                            →
+                                            {{ (int) ($method['average_after_score'] ?? 0) }}%
+                                        </span>
+                                        <span>
+                                            最新
+                                            {{ (int) ($method['latest_before_score'] ?? 0) }}%
+                                            →
+                                            {{ (int) ($method['latest_after_score'] ?? 0) }}%
+                                            （{{ ($method['latest_score_delta'] ?? 0) > 0 ? '+' : '' }}{{ (int) ($method['latest_score_delta'] ?? 0) }}pt）
+                                        </span>
+                                    </div>
+                                @elseif ($status === 'unmeasured')
+                                    <p class="mt-2 text-[10px] leading-4 text-slate-600">
+                                        Resource Studyは明示的な完了Evidenceがまだないため、現段階ではActivity効果比較へ含めません。
+                                    </p>
+                                @elseif (($method['usage_count'] ?? 0) > 0)
+                                    <p class="mt-2 text-[10px] leading-4 text-slate-600">
+                                        実行記録はありますが、比較可能な前後Practiceがまだ揃っていません。
+                                    </p>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
+                <p class="mt-3 text-[10px] leading-4 text-slate-600">
+                    この観測値はStudy Method Recommendation、Task進捗、Practice Reliabilityを自動変更しません。
+                </p>
+            </div>
+        </details>
+
         @if ($resources->isNotEmpty())
             <section class="page-card p-5 sm:p-6">
                 <p class="text-xs font-bold uppercase tracking-[0.16em] text-violet-300">AVAILABLE RESOURCES</p>
