@@ -62,6 +62,22 @@ final class DevelopmentCodingAgentHandoffController extends Controller
 
         $adaptive = $developmentActions->evaluate($plan);
         $action = $adaptive->primaryAction();
+        $actionTaskId = (int) data_get(
+            $action?->metadata,
+            'target_task_id',
+            0,
+        );
+
+        if (
+            $actionTaskId > 0
+            && $actionTaskId !== (int) $task->id
+        ) {
+            throw ValidationException::withMessages([
+                'coding_agent_handoff' =>
+                    '現在のDevelopment Actionが対象にしているTaskからhandoffしてください。',
+            ]);
+        }
+
         $context = $executionContext->build(
             $plan,
             (int) $task->id,
