@@ -84,11 +84,22 @@ class WorkspaceModeOnboardingV547Test extends TestCase
                 false,
             )
             ->assertSee('data-development-home-v1', false)
+            ->assertSee('data-development-surface="work"', false)
             ->assertSee('data-development-home-next-action', false)
-            ->assertSee('data-development-home-recent-activity', false)
             ->assertSee('data-development-home-active', false)
-            ->assertSee('data-development-home-readiness', false)
-            ->assertSee('GitHub未接続でもDeveloper Homeは使えます。');
+            ->assertSee('data-development-top-link', false)
+            ->assertSee('data-development-surface-select', false)
+            ->assertDontSee('data-development-home-recent-activity', false)
+            ->assertDontSee('data-development-home-readiness', false);
+
+        $this->actingAs($user)
+            ->get(route('workspace.development.index', [
+                'plan_id' => $plan->id,
+                'surface' => 'repository',
+            ]))
+            ->assertOk()
+            ->assertSee('data-development-home-recent-activity', false)
+            ->assertSee('data-development-home-readiness', false);
     }
 
     public function test_study_mode_plan_creation_prefills_category_and_returns_to_study_workspace(): void
