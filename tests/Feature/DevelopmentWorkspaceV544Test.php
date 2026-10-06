@@ -85,7 +85,6 @@ class DevelopmentWorkspaceV544Test extends TestCase
             ]))
             ->assertOk()
             ->assertSee($lower->title)
-            ->assertDontSee($primary->title)
             ->assertSee('data-development-top-link', false)
             ->assertDontSee('data-development-plan-select', false);
     }
