@@ -6807,3 +6807,20 @@ Study Analysisへregistered surface `ap_subject_a_coverage` を追加する。Pl
 
 Canonical contract:
 `docs/V58.16_AP_SUBJECT_A_COVERAGE_DASHBOARD.md`.
+
+## V58.17 Study Practice 50 / 100 Cumulative Checkpoints
+
+Study Practiceの10問単位Sessionを維持したまま、current Taskの採点済みquestion_feedbackを累積して50問 / 100問Checkpointを表示する。
+
+Providerを問わず `correct / partial / incorrect` の構造化Feedbackだけを問題数として数える。同一Attempt内の同じquestion_idは1回だけ。
+
+50問・100問到達時は最初のN問を時系列で固定して正答観測Snapshotを作るため、51問目以降や101問目以降の結果で過去Checkpoint値は変わらない。
+
+Question Bank問題はdurable question idがある場合だけunique / repeated exposureを分離する。AI生成問題は累積問数には入るがfake uniquenessは作らない。
+
+current Plan / current Task / current actor限定、oldest最大500 Attempt。read-only / DB-only / provider-free / no migration。
+
+V58.17はTask進捗、完了、Weakness Priority、Exam Convergence、Routing、Masteryを変更しない。50/100問到達を自動的な弱点補強開始条件にはしない。
+
+Canonical contract:
+`docs/V58.17_STUDY_PRACTICE_CUMULATIVE_CHECKPOINTS.md`.

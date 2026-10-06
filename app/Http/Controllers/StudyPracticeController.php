@@ -22,6 +22,7 @@ use App\Services\StudyPracticeOrchestrator;
 use App\Services\StudyPracticePromptService;
 use App\Services\StudyPracticeReliabilityService;
 use App\Services\StudyPracticeStrategyService;
+use App\Services\StudyPracticeCumulativeCheckpointService;
 use App\Services\StudyActivityPolicyService;
 use App\Services\StudyTaskProgressionService;
 use App\Services\TaskEvidenceService;
@@ -46,6 +47,7 @@ class StudyPracticeController extends Controller
         StudyTaskProgressionService $progressionService,
         StudyActivityPolicyService $studyActivityPolicy,
         StudyPracticeReliabilityService $reliabilityService,
+        StudyPracticeCumulativeCheckpointService $checkpointService,
         BehaviorIdentityService $identity,
         FeatureAccessService $featureAccess,
         NativeAiGateway $nativeAi,
@@ -64,6 +66,12 @@ class StudyPracticeController extends Controller
         }
 
         $actorToken = $identity->resolve($request);
+        $practiceCheckpoint = $checkpointService->project(
+            $plan,
+            $task,
+            $request->user()?->id,
+            $request->user() ? null : $actorToken,
+        );
         $attemptQuery = $this->attemptQuery($request, $plan, $task, $actorToken);
         $historyLimit = max(4, (int) config('study.exam_convergence.history_attempt_limit', 16));
         $recentAttempts = (clone $attemptQuery)->latest('created_at')->latest('id')->take($historyLimit)->get();
@@ -317,6 +325,7 @@ class StudyPracticeController extends Controller
             'studyProgression' => $studyProgression,
             'studyActivity' => $studyActivity,
             'practiceReliability' => $practiceReliability,
+            'practiceCheckpoint' => $practiceCheckpoint,
             'practiceStage' => $practiceStage,
             'currentAttempt' => $currentAttempt,
             'recentAttempts' => $recentAttempts,

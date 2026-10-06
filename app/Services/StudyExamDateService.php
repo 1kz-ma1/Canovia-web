@@ -68,9 +68,9 @@ final class StudyExamDateService
             return null;
         }
 
-        $captured = $capturedAt
-            ? DateTimeImmutable::createFromInterface($capturedAt)
-            : new DateTimeImmutable();
+        $captured = DateTimeImmutable::createFromInterface(
+            $capturedAt ?? now(),
+        );
 
         $captured = $captured->setTime(0, 0);
         $exam = (new DateTimeImmutable($examDate))->setTime(0, 0);

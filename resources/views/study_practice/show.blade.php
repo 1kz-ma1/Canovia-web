@@ -180,6 +180,10 @@
                 </p>
             </div>
 
+            @include('study_practice.partials.cumulative-checkpoint', [
+                'checkpoint' => $practiceCheckpoint ?? [],
+            ])
+
             @php
                 $recommendedActivity = (array) data_get($practiceReliability ?? [], 'recommended_activity', []);
                 $questionPracticeIsPrimary = data_get($recommendedActivity, 'key') === 'question_practice';
