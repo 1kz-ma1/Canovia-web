@@ -1,0 +1,42 @@
+name: V58.17 Study Practice Cumulative Checkpoints Validation
+
+on:
+  push:
+    branches:
+      - feature/v58-17-practice-cumulative-checkpoints
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/StudyPracticeCumulativeCheckpointService.php
+          php -l app/Http/Controllers/StudyPracticeController.php
+          php -l tests/Feature/StudyPracticeCumulativeCheckpointV5817Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V58.17 dedicated cumulative checkpoint contract
+        run: php artisan test tests/Feature/StudyPracticeCumulativeCheckpointV5817Test.php
+      - name: V56.0 Study Exam Convergence regression
+        run: php artisan test tests/Feature/StudyExamConvergencePolicyV560Test.php
+      - name: V56.3 Question exposure rotation regression
+        run: php artisan test tests/Feature/QuestionExposureRotationV563Test.php
+      - name: V56.4 Study Practice routing regression
+        run: php artisan test tests/Feature/StudyPracticeRoutingV564Test.php
+      - name: V58.16 AP coverage regression
+        run: php artisan test tests/Feature/ApSubjectACoverageDashboardV5816Test.php
+      - name: V40.1 Study Practice orchestration regression
+        run: php artisan test tests/Feature/StudyPracticeOrchestrationV401Test.php
