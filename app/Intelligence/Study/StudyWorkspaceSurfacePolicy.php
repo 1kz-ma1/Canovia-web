@@ -30,6 +30,7 @@ final class StudyWorkspaceSurfacePolicy
         bool $canEdit,
         ?array $recommendation = null,
         ?array $methodRecommendation = null,
+        ?array $apSubjectACoverage = null,
     ): array {
         $surfaces = [];
         $type = (string) ($learningType['key'] ?? 'general_learning');
@@ -113,6 +114,22 @@ final class StudyWorkspaceSurfacePolicy
             $surfaces[] = $this->registry->surface('biggest_gap', [
                 'presentation' => $presentation,
             ]);
+        }
+
+        if (
+            is_array($apSubjectACoverage)
+            && (bool) (
+                $apSubjectACoverage['available']
+                ?? false
+            )
+        ) {
+            $surfaces[] = $this->registry->surface(
+                'ap_subject_a_coverage',
+                [
+                    'coverage' =>
+                        $apSubjectACoverage,
+                ],
+            );
         }
 
         $primaryAction = $this->primaryAction(
