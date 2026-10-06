@@ -1722,6 +1722,183 @@ final class GitHubRepositoryWriter
      *
      * @return array<string,mixed>
      */
+    /**
+     * Read a bounded repository tree for the explicit Developer Repository
+     * surface. Source contents are never fetched.
+     *
+     * @return array<string,mixed>
+     */
+    public function inspectRepositoryTree(
+        string $repoFullName,
+        int $limit = 320,
+    ): array {
+        $limit = max(50, min(500, $limit));
+
+        $context = $this->developmentReadContext(
+            $repoFullName,
+            'contents',
+            'Contents',
+        );
+
+        /** @var PendingRequest $client */
+        $client = $context['client'];
+        $repoPath = (string) $context['repo_path'];
+
+        $repositoryResponse = $client->get('/repos/'.$repoPath);
+        if (! $repositoryResponse->successful()) {
+            throw new RuntimeException('GitHub App経由でRepository情報を取得できませんでした。');
+        }
+
+        $repository = $repositoryResponse->json();
+        if (! is_array($repository)) {
+            throw new RuntimeException('GitHub Repository情報を読み取れませんでした。');
+        }
+
+        $defaultBranch = trim((string) (
+            $repository['default_branch']
+            ?? ''
+        ));
+        if ($defaultBranch === '') {
+            throw new RuntimeException('Repositoryのdefault branchを確認できませんでした。');
+        }
+
+        $commitResponse = $client->get(
+            '/repos/'.$repoPath.'/commits/'.rawurlencode($defaultBranch),
+        );
+
+        if (! $commitResponse->successful()) {
+            throw new RuntimeException('default branchのtreeを確認できませんでした。');
+        }
+
+        $commit = $commitResponse->json();
+        $treeSha = trim((string) data_get(
+            is_array($commit) ? $commit : [],
+            'commit.tree.sha',
+            '',
+        ));
+        $headSha = trim((string) data_get(
+            is_array($commit) ? $commit : [],
+            'sha',
+            '',
+        ));
+
+        if ($treeSha === '') {
+            throw new RuntimeException('Repository tree SHAを確認できませんでした。');
+        }
+
+        $treeResponse = $client->get(
+            '/repos/'.$repoPath.'/git/trees/'.rawurlencode($treeSha),
+            ['recursive' => 1],
+        );
+
+        if (! $treeResponse->successful()) {
+            throw new RuntimeException('Repository directory構成を取得できませんでした。');
+        }
+
+        $treePayload = $treeResponse->json();
+        if (! is_array($treePayload)) {
+            throw new RuntimeException('Repository directory構成を読み取れませんでした。');
+        }
+
+        $rawTree = collect((array) ($treePayload['tree'] ?? []))
+            ->filter(fn ($item) => is_array($item))
+            ->filter(fn (array $item) => in_array(
+                $item['type'] ?? null,
+                ['tree', 'blob'],
+                true,
+            ))
+            ->map(function (array $item) use (
+                $repoFullName,
+                $defaultBranch,
+            ) {
+                $path = trim((string) ($item['path'] ?? ''), '/');
+                if ($path === '' || mb_strlen($path) > 1200) {
+                    return null;
+                }
+
+                $type = (string) ($item['type'] ?? 'blob');
+                $depth = min(12, substr_count($path, '/'));
+                $url = 'https://github.com/'.$repoFullName
+                    .'/'.($type === 'tree' ? 'tree' : 'blob')
+                    .'/'.rawurlencode($defaultBranch)
+                    .'/'.implode(
+                        '/',
+                        array_map(
+                            'rawurlencode',
+                            explode('/', $path),
+                        ),
+                    );
+
+                return [
+                    'path' => $path,
+                    'name' => mb_substr(
+                        (string) basename($path),
+                        0,
+                        255,
+                    ),
+                    'type' => $type === 'tree'
+                        ? 'directory'
+                        : 'file',
+                    'depth' => $depth,
+                    'size' => $type === 'blob' && is_numeric(
+                        $item['size'] ?? null,
+                    )
+                        ? max(0, (int) $item['size'])
+                        : null,
+                    'url' => $url,
+                ];
+            })
+            ->filter()
+            ->sortBy([
+                fn (array $left, array $right) =>
+                    strcmp(
+                        dirname($left['path']),
+                        dirname($right['path']),
+                    ),
+                fn (array $left, array $right) =>
+                    ($left['type'] === 'directory' ? 0 : 1)
+                    <=> ($right['type'] === 'directory' ? 0 : 1),
+                fn (array $left, array $right) =>
+                    strcasecmp($left['name'], $right['name']),
+            ])
+            ->values();
+
+        $providerTruncated = (bool) ($treePayload['truncated'] ?? false);
+        $visible = $rawTree->take($limit)->values();
+
+        return [
+            'version' => 1,
+            'source' => 'github_app_git_tree',
+            'repo_full_name' => $repoFullName,
+            'repository_url' => $this->githubUrl(
+                $repository['html_url'] ?? null,
+            ),
+            'visibility' => mb_substr(
+                (string) (
+                    $repository['visibility']
+                    ?? ((bool) ($repository['private'] ?? false)
+                        ? 'private'
+                        : 'public')
+                ),
+                0,
+                50,
+            ),
+            'default_branch' => mb_substr(
+                $defaultBranch,
+                0,
+                255,
+            ),
+            'head_sha' => mb_substr($headSha, 0, 64),
+            'fetched_at' => now()->toIso8601String(),
+            'entries' => $visible->all(),
+            'entry_count' => $visible->count(),
+            'total_observed_count' => $rawTree->count(),
+            'truncated' => $providerTruncated
+                || $rawTree->count() > $limit,
+            'limit' => $limit,
+        ];
+    }
+
     public function inspectRepositorySnapshot(string $repoFullName): array
     {
         $context = $this->developmentReadContext(
