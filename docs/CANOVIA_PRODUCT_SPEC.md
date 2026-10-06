@@ -6983,3 +6983,38 @@ Initial Early Access targetはL1。
 L2はcanonical Product Preview route `product.preview.index` が未実装のため、V58.21時点では意図的にBlockedとする。
 
 この実装だけではPublic Release Levelを変更しない。
+
+
+## V58.22 Product Preview
+
+L2 Product Preview Surfaceを実装する。
+
+Canonical detail:
+
+- `docs/V58.22_PRODUCT_PREVIEW.md`
+- `docs/CANOVIA_MONETIZATION_SPEC.md`
+- `docs/CANOVIA_RELEASE_LEVEL_SPEC.md`
+
+Product Preview:
+
+```text
+GET /product-preview
+route = product.preview.index
+release minimum = L2
+```
+
+役割はpaid capabilityの解放ではなく、Free / Premium / Pro / Dev Proの体験差をEarly Accessユーザーへ説明すること。
+
+FreeのみAvailable。
+Premium / Pro / Dev ProはComing Soonとし、価格・正式提供時期・checkoutを持たない。
+
+Study / Developmentはfeature tableではなく処理フローで差を見せる。
+将来Preview動画を追加する場合も同じExperience contractをpresentation sourceとして利用できる。
+
+Account EntryはL2以上だけ表示。
+L1以下はdirect routeもRelease Level boundaryで制限する。
+
+閲覧は `product_preview_viewed` をserver-sideで安全に記録する。
+
+V58.22後、Release GateのL2 structural blockerは解消し、Initial Early Access planning targetをL2へ更新する。
+この変更だけではProduction Public Levelを変更しない。
