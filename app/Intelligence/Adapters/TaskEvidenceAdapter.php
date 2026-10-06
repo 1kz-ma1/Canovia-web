@@ -62,6 +62,14 @@ final class TaskEvidenceAdapter
                 'weaknesses' => $this->stringList($metadata['weaknesses'] ?? []),
                 'weakness_topics' => $this->stringList($metadata['weakness_topics'] ?? []),
             ],
+            'study_resource_study_completed' => [
+                'resource_id' => $this->nullableInt(
+                    $metadata['resource_id'] ?? null,
+                ),
+                'outcome_rating' => $this->nullableString(
+                    $metadata['outcome_rating'] ?? null,
+                ),
+            ],
             'study_language_activity_completed' => [
                 'activity_type' => $this->nullableString(
                     $metadata['activity_type'] ?? null,
