@@ -6690,8 +6690,10 @@ invalid score、別actor Evidenceは比較から除外する。
 UIでは「実利用でのActivity観測」として平均・最新のbefore / afterを見せるが、
 問題難度・外部学習等の交絡を含むため因果効果とは扱わない。
 
-V58.12の観測値はStudy Method Recommendation、Practice Reliability、
-Task進捗、masteryを自動変更しない。
+V58.12の観測値はV58.15で、同一Task・同一actorの明示Activityに十分な比較が
+たまった場合だけStudy Method fitへ最大±5ptの補助Signalとして利用する。
+因果効果とは扱わず、Primary Methodは自動切替しない。
+Practice Reliability、Task進捗、masteryは変更しない。
 
 Canonical contract:
 `docs/V58.12_STUDY_ACTIVITY_OUTCOME_OBSERVATION.md`.
@@ -6756,3 +6758,32 @@ No migration / no provider call / Free path。
 
 Canonical contract:
 `docs/V58.14_RESOURCE_STUDY_EVIDENCE.md`.
+
+## V58.15 Study Method Outcome Calibration
+
+V58.12で観測した実利用Activityのbefore / afterを、Study Method fitへ
+bounded secondary signalとして接続する。
+
+対象は明示Activityのみ:
+
+- Recall
+- Resource Study
+- Listening
+- Dictation
+- Shadowing
+
+Question Practiceは「他Activity Evidenceが無かった区間」であり、clean interventionとは
+みなせないためcalibration対象外。
+
+同一Task / 同一actorで3比較未満は観測だけ。
+3比較以上で直近最大5件を使い、score delta中央値と方向一致率を確認する。
+±5pt未満の中央値はneutral、方向が2/3未満ならmixedとして補正しない。
+
+fit補正は最大±5pt。
+V56.15のPrimary Method選択後に適用するため、Primary keyは変更しない。
+代替Methodの並びと表示fitだけが個人の実利用Signalで小幅に変化する。
+
+DB-only / read-only / provider-free / no migration。
+
+Canonical contract:
+`docs/V58.15_STUDY_METHOD_OUTCOME_CALIBRATION.md`.
