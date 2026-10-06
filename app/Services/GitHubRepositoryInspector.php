@@ -39,7 +39,7 @@ final class GitHubRepositoryInspector
         // only, even when a token is configured for rate-limit relief.
         $visibility = strtolower((string) ($repository['visibility'] ?? ''));
         if ((bool) ($repository['private'] ?? false) || ($visibility !== '' && $visibility !== 'public')) {
-            throw new RuntimeException('現在のGitHub読み込みは公開Repositoryだけに対応しています。Private Repositoryはユーザー別GitHub接続が必要です。');
+            throw new RuntimeException('Private RepositoryはPublic Previewでは読み込めません。GitHub Appを接続するとPrivateのまま同期できます。');
         }
 
         $warnings = [];
@@ -219,7 +219,7 @@ final class GitHubRepositoryInspector
     private function repositoryError(Response $response): string
     {
         if ($response->status() === 404) {
-            return 'RepositoryをGitHubから取得できませんでした。公開Repositoryでない場合はGitHub接続が必要です。';
+            return 'Public PreviewでRepositoryを取得できませんでした。Private Repositoryの場合はGitHub Appを接続してください。';
         }
 
         if ($response->status() === 403) {
