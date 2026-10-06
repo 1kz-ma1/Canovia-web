@@ -50,7 +50,14 @@ final class ReleaseLevelService
             }
         }
 
-        if ($user && $user->release_level_override !== null) {
+        return $user
+            ? $this->assignedLevelFor($user)
+            : $this->publicLevel();
+    }
+
+    public function assignedLevelFor(User $user): ReleaseLevel
+    {
+        if ($user->release_level_override !== null) {
             return $this->normalizeLevel(
                 $user->release_level_override,
                 $this->publicLevel(),
