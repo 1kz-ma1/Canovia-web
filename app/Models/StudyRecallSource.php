@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class StudyRecallSource extends Model
 {
@@ -44,6 +45,20 @@ class StudyRecallSource extends Model
     public function candidates()
     {
         return $this->hasMany(StudyRecallCandidate::class);
+    }
+
+    public function hasStoredMaterial(): bool
+    {
+        if ($this->source_type === 'text') {
+            return trim((string) $this->source_text) !== '';
+        }
+
+        if (in_array($this->source_type, ['image', 'pdf'], true)) {
+            return filled($this->storage_path)
+                && Storage::exists((string) $this->storage_path);
+        }
+
+        return false;
     }
 
     public function sourceLabel(): string
