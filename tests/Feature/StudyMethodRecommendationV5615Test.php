@@ -400,7 +400,7 @@ class StudyMethodRecommendationV5615Test extends TestCase
 
     public function test_reference_book_task_preserves_v4110_resource_semantic_fit(): void
     {
-        [$user, $plan] = $this->scenario(
+        [$user, $plan, $task] = $this->scenario(
             '簿記2級',
             '資格学習',
             '参考書の第3章を読む',
