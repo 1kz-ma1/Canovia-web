@@ -1,6 +1,6 @@
 # Canovia Product Specification
 
-更新基準: 2026-09-27 / V41.16 Conversational Onboarding / Invisible Memory
+更新基準: 2026-10-07 / V58.19 + Early Access Monetization / Release Level product decisions
 
 V41.8〜V41.12のNative AI Practice / Adaptive Learning Flow / Recall基盤を維持しつつ、V41.13ではTaskごとのPrimary Actionを1つに整理し、旧「今日」をメインナビから退役させてCanovia Inboxを追加する。Home=Now、Inbox=Input、Roadmap=Future、Timeline=Pastとして主要導線の責務を分離する。詳細は [V41.12仕様](V41.12_RECALL_CANDIDATE_IMPORT.md)、[V41.13仕様](V41.13_ACTION_INBOX_REFRAME.md) を参照。
 
@@ -165,7 +165,7 @@ V41.16まで実装済み。次の大きな検討:
 - SupportしたRoadmap Featureのstatus変化・Release通知
 - Roadmap FeatureとRelease Notesの明示的な紐付け
 - StoreKit / App Store Server API / Stripe等からProduct Grantへ同期するBilling Adapter
-- Study / Career / Developer Packの具体Capability実装とFeatureKey接続
+- Premium / Pro capabilityの具体実装とFeatureKey接続（Workspace共通tier。CareerはBeta Preview、Dev ProはFuture）
 - failed Recall Sourceの再抽出UI（V58.7実装済み）・複数ページbatch ingest（V58.8実装済み）
 - Plan Resourceからの安全なRecall material ingest（V58.11実装済み：URL非fetch + 明示material + Resource provenance）
 - Recall成績をTask progressionへ使うPolicy（V58.6実装済み：Recall-primary Taskのみ、Deck全体定着 + 明示確認で完了）
@@ -196,109 +196,112 @@ Developer Pro / AI Development Orchestrationの長期構想は `docs/future/DEVE
 
 ## 4. Monetization and Entitlements
 
-Canovia Economyの基本構造:
+Canoviaの現行Product-level課金方針は [Canovia Monetization Specification](CANOVIA_MONETIZATION_SPEC.md) を正とする。
+
+Canonical plan model:
 
 ```text
-FREE
-│
-└─ PREMIUM CORE
-      ├─ Study Pack
-      ├─ Career Pack
-      ├─ Developer Pack
-      ├─ Creator Pack
-      ├─ AI Capacity Boost
-      └─ All Access
+Free      = Execute
+Premium   = Guide
+Pro       = Understand
+Dev Pro   = Observe & Improve the Product
 ```
 
 原則:
 
 > Freeでも、自分で動けば目標へ到達できる。  
-> 課金すると、整理・転記・解析・判断・自動化をCanoviaがより多く引き受ける。
+> 課金すると、判断・理解・自動化をCanoviaがより多く引き受ける。
 
-`Billing`、`Entitlement`、`AI Capacity`は別責務とする。
+Workspaceごとの別契約を基本にしない。
+
+- Study / Development / Career等はCanovia Free / Premium / Proを共有する
+- Study専用Pro / Development専用Proを別商品として増殖させない
+- Dev Proのみ、公開後のProduct Intelligenceを扱うDevelopment専門追加プラン候補とする
+
+Study:
+
+- Free: 学習を実行・記録できる
+- Premium: 弱点・次の学習・ペース等の判断を支援する
+- Pro: 教材・長期履歴・Knowledge Stateまで理解してContextを構築する
+
+Development:
+
+- Free: Repository連携、基本管理、非AI中心の外部AI向けPrompt生成
+- Premium: PR等からの軽量推論、Development Rules / specification / AI制約生成
+- Pro: Repository内容を読み、Code / Spec / Test / Decisionを横断したContextを構築する
+- Dev Pro: 公開後のTelemetry / Product Intelligenceから改善ループを支援する
+
+`Billing`、`Entitlement`、`AI Capacity`、`Release Level`は別責務とする。
 
 ```text
 Billing != Entitlement
 Entitlement != AI Capacity
-Pack ownership != unlimited AI
+Entitlement != Release Level
 ```
 
-Feature側が問い合わせる内容は一つに限定する。
+`FeatureAccessService` をEntitlementの最終境界として維持し、Feature codeへProduct名・価格・Provider条件を散らさない。
 
-> このactorは、この公開済みFeatureを利用できるか。
+V41.5で実装されたProduct Grant / resolver / Economy Catalogはruntime foundationとして維持するが、当時の `Premium Core + Purpose Pack` 商品構成は将来Product shapeの正ではない。runtime migrationは別実装仕様で行い、このProduct Spec更新だけでは既存ProductKeyやgrant semanticsを変更しない。
 
-`FeatureAccessService` がEntitlementの最終境界であり、Feature codeへ以下のような条件を散らさない。
+Early AccessではFreeを実利用可能とし、Premium / Pro / Dev Proは原則Coming Soon + previewで価値を見せる。料金・checkout・AI quotaは実利用・原価・支払意思を観測してから確定する。
 
-```php
-$user->is_premium
-$user->has_study_pack
-$user->coin_balance
-$user->has_gift
-```
+AI原価については無制限利用を前提にせず、deterministic処理、Context retrieval、cache、小さい推論、高コストAgentを段階分離する。Dev Proでは将来、base subscription + Agent Credits / BYOK等を検討できる。
 
-V41.5では `ProductKey` / `config/economy.php` / `user_product_grants` を追加し、Provider非依存のProduct GrantをPremium / Gift / Sponsorそれぞれのresolverから既存の `FeatureAccessService` へ流す。
+## 5. Feature Flag / Release Level
 
-```text
-Billing / Manual / Gift / Sponsor
-              ↓
-        Product Grant
-              ↓
-        Economy Catalog
-              ↓
-Premium / Gift / Sponsor
-Product Grant resolvers
-              ↓
-     FeatureAccessService
-```
+個別Feature Flagと、ユーザーへ提供する整合済みProduct構成を分離する。
 
-AI Practice本体、Question Bank、外部AI Handoff等の核となるFree経路は維持する。V41.8では `automatic_ai_execution` をPremium Coreの実CapabilityとしてFree=falseへ切り替え、Canovia自身がAI Providerを呼ぶ自動実行だけをPremium価値とする。Pack向けCapability-level FeatureKeyはFree=falseで予約し、実際のCapabilityを実装したときに既存アクセス境界へ接続する。
-
-V41.16では例外ではなく独立Capabilityとして `conversational_onboarding` をFree=trueで追加する。これは最初の伴走価値を体験させる限定されたNative AI経路であり、`automatic_ai_execution` や継続 `canovia_companion` のPremium境界をFree化しない。
-
-AI Capacityは `AiCapacityService` で独立判定する。All AccessはPurpose Packを包含するがAI Capacity Boostを包含しない。
-
-料金構成の推薦はV41.5時点では生成AIではなく決定論的な `EconomyRecommendationService` が担当し、Freeを正式な推薦結果として扱う。売上最大化ではなく「現在の使い方に対する最小十分構成」を目的とする。
-
-Coinは直接Feature解放するEntitlement sourceから外す。将来は応援・Gift・自己表現・Cosmetic等の別経済として扱い、Coinで注目やランキングを買えない方針とする。
-
-未実装:
-
-- StoreKit / Stripe等の購入処理
-- 実料金
-- 公開Paywall / Checkout
-- Coin残高・取引
-- Gift購入
-- Sponsor課金
-- Native AI使用量課金（V41.8では利用履歴のみ記録し、請求はしない）
-
-## 5. Feature Flag
+詳細は [Canovia Release Level / Feature Flag Specification](CANOVIA_RELEASE_LEVEL_SPEC.md) を正とする。
 
 Feature Flagの問い:
 
-> この機能を現在公開するか。
+> この個別機能を現在有効にするか。
+
+Release Levelの問い:
+
+> このactorへ、どの整合済みCanovia構成を提供するか。
 
 Entitlementの問い:
 
-> 公開済みのこの機能を、このactorが利用できるか。
+> 公開済みのこのFeatureを、このactorが契約・権利上利用できるか。
 
-V40.7では`FeatureFlagService`を最小境界として追加する。現在の永続化元は設定であり、server-side Admin操作・percentage rolloutの氵続化はNextへ送る。
+Release LevelはFeature Flagを束ねる上位のrelease contractであり、単なる「完成機能数」ではない。
 
-最小定義で考慮できる項目:
+初期分離:
 
-- feature key
-- enabled
-- environment
-- platform
-- minimum app version
+```text
+Public Release Level
+Admin Preview Level
+User Access Level
+```
 
-将来追加候補:
+AdminのPreview変更はPublic Releaseを変更しない。Beta tester等はUser Access LevelでPublicより先の整合済みLevelへ進められる。
 
-- rollout percentage
-- optional audience
-- released_at
-- emergency off
+Initial product levels:
 
-Feature FlagをEntitlement resolverの内部へ入れない。
+- Level 0 — Core Stable
+- Level 1 — Early Access Core
+- Level 2 — Product Preview
+- Level 3 — Beta Expansion
+- Level 4 — Internal Preview
+
+Careerは専用UI / basic flowを統一した後、Level 3 Beta Previewへ載せる候補とする。
+
+Release LevelはUI表示だけでなくNavigation / Empty State / Workspace Switcher / Deep Link / server route / permissionまで整合させる。上位Levelから下位Levelへ戻しても作成済みデータを削除しない。
+
+Overrideの概念優先順位:
+
+```text
+Emergency Kill Switch
+→ explicit safety / feature override
+→ actor-specific beta/access override
+→ Public Release Level
+→ default feature state
+```
+
+Release LevelとEntitlementは別軸とする。Featureが未公開なら、Paid entitlementがあってもPublic利用可能にはしない。
+
+V40.7の`FeatureFlagService`、既存Admin Free/Premium Preview、`FeatureAccessService`を置き換えず、その上にrelease maturityの軸を追加する。server-backed persistence / Admin操作は実装時にlatest mainへ合わせて設計する。
 
 ## 6. Deploy / Release / App Store
 
@@ -577,6 +580,15 @@ AIのnext_step.focus_topicsは補助情報として残すが、V56.4以降は既
 
 
 ## 17. V41.5 Economy Foundation
+
+### 2026-10-07 product-shape compatibility
+
+V41.5は現在もProduct Grant / Entitlement / AI Capacityのruntime foundationとして有効だが、当時定義した `Premium Core + Purpose Pack` は将来の商品構成の正ではない。
+
+現行Product-level targetは `docs/CANOVIA_MONETIZATION_SPEC.md` の Free / Premium / Pro + Development専用Dev Pro追加構造を優先する。
+
+この互換注記だけではruntime ProductKey / grant / resolverを変更しない。移行時は専用実装仕様・migration・regression testを作る。
+
 
 V41.5は課金処理を導入せず、将来のPremium Core + Purpose Packを既存Entitlement境界へ接続できる基盤を実装する。
 
