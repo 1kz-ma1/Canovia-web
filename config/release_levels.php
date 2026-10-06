@@ -124,6 +124,9 @@ return [
                 'required_routes' => [
                     'workspace.study.top',
                     'workspace.development.top',
+                    'plans.tasks.study_practice.show',
+                    'plans.study_scope.index',
+                    'plans.artifacts.index',
                     'feedback.index',
                     'behavior_events.store',
                 ],
