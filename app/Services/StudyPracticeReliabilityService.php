@@ -6,6 +6,9 @@ use App\Models\StudyPracticeSession;
 
 class StudyPracticeReliabilityService
 {
+    public function __construct(
+        private readonly PracticeQuestionCandidateReliabilitySignalService $candidateSignals,
+    ) {}
     /**
      * These values are product guidance, not measured model accuracy.
      * They communicate how much Canovia can verify from provenance, grading
@@ -25,12 +28,35 @@ class StudyPracticeReliabilityService
         $providerKey = (string) ($session?->question_provider ?: ($provider['provider'] ?? 'external_ai'));
         $assessmentProvider = (string) ($session?->assessment_provider ?? '');
 
-        $questionQuality = match ($providerKey) {
+        $questionQualityBase = match ($providerKey) {
             'question_bank' => 95,
             'hybrid_ai' => 84,
             'native_ai' => 74,
             default => 66,
         };
+
+        $candidateSignal = $this->candidateSignals->summarize(
+            $session,
+            $strategy,
+        );
+        $candidateAdjustment = in_array(
+            $providerKey,
+            ['native_ai', 'hybrid_ai'],
+            true,
+        )
+            ? (int) (
+                $candidateSignal['applied_adjustment']
+                ?? 0
+            )
+            : 0;
+        $questionQuality = max(
+            0,
+            min(
+                100,
+                $questionQualityBase
+                    + $candidateAdjustment,
+            ),
+        );
 
         $gradingReliability = match ($assessmentProvider) {
             'question_bank_grader' => 98,
@@ -54,7 +80,13 @@ class StudyPracticeReliabilityService
                 'key' => 'question_quality',
                 'label' => '出題内容',
                 'score' => $questionQuality,
-                'note' => $this->questionNote($providerKey),
+                'base_score' => $questionQualityBase,
+                'candidate_adjustment' => $candidateAdjustment,
+                'note' => $this->questionNote(
+                    $providerKey,
+                    $candidateSignal,
+                    $candidateAdjustment,
+                ),
             ],
             [
                 'key' => 'grading_reliability',
@@ -94,7 +126,8 @@ class StudyPracticeReliabilityService
                     'label_level' => $this->label((int) $metric['score']),
                 ]))
                 ->all(),
-            'disclaimer' => 'これは実測したAI正答率ではありません。出題元・採点方式・Question Bank Coverage・Taskとの学習方法適合度からCanoviaが算出した目安です。',
+            'candidate_signal' => $candidateSignal,
+            'disclaimer' => 'これは実測したAI正答率ではありません。出題元・採点方式・Question Bank Coverage・Taskとの学習方法適合度に加え、利用可能な場合だけQuestion CandidateのHuman Review / 再利用実績を小幅に反映した目安です。学習者の正答率はQuestion品質の判定に使っていません。',
             'recommended_activity' => data_get($activity, 'primary'),
         ];
     }
@@ -127,14 +160,54 @@ class StudyPracticeReliabilityService
         };
     }
 
-    private function questionNote(string $providerKey): string
-    {
-        return match ($providerKey) {
+    /**
+     * @param array<string,mixed> $candidateSignal
+     */
+    private function questionNote(
+        string $providerKey,
+        array $candidateSignal,
+        int $candidateAdjustment,
+    ): string {
+        $base = match ($providerKey) {
             'question_bank' => '人が管理するQuestion Bank中心なので、問題文と正答ルールを検証しやすい構成です。',
             'hybrid_ai' => 'Question Bankを先に使い、不足分だけAI生成で補います。',
-            'native_ai' => 'AI生成問題が中心です。Candidate運営で改善できますが、Question Bankより不確実性があります。',
+            'native_ai' => 'AI生成問題が中心です。Question Bankより不確実性があります。',
             default => '外部AI生成に依存するため、問題品質をCanoviaだけでは完全に検証できません。',
         };
+
+        if (
+            ! in_array(
+                $providerKey,
+                ['native_ai', 'hybrid_ai'],
+                true,
+            )
+        ) {
+            return $base;
+        }
+
+        $status = (string) (
+            $candidateSignal['status']
+            ?? 'unavailable'
+        );
+
+        if (
+            $status === 'unavailable'
+            || $status === 'none'
+        ) {
+            return $base
+                .' Candidate運営実績による補正はまだありません。';
+        }
+
+        if ($status === 'observing') {
+            return $base
+                .' Candidate Human Reviewは観測中で、サンプル不足のため点数補正はしていません。';
+        }
+
+        return $base
+            .' Candidate Human Review / 再利用実績を'
+            .($candidateAdjustment >= 0 ? '+' : '')
+            .$candidateAdjustment
+            .'点だけ小幅に反映しています。';
     }
 
     private function gradingNote(string $assessmentProvider, string $providerKey): string
