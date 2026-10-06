@@ -335,7 +335,12 @@ class NativeAiGateway
         return collect($inputParts)
             ->map(function (array $part) {
                 $type = (string) ($part['type'] ?? '');
-                $payload = (string) ($part['image_url'] ?? $part['file_data'] ?? '');
+                $payload = (string) (
+                    $part['image_url']
+                    ?? $part['file_data']
+                    ?? $part['text']
+                    ?? ''
+                );
 
                 return [
                     'type' => $type,
