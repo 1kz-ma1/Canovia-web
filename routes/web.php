@@ -86,9 +86,13 @@ use App\Http\Controllers\ExecutionValidationProviderController;
 use App\Http\Controllers\ProviderConnectionController;
 use App\Http\Controllers\ProviderExecutionContextController;
 use App\Http\Controllers\LegalController;
+use App\Http\Controllers\ProductPreviewController;
 
 Route::get('/privacy', [LegalController::class, 'privacy'])->name('legal.privacy');
 Route::get('/support', [LegalController::class, 'support'])->name('legal.support');
+Route::get('/product-preview', ProductPreviewController::class)
+    ->middleware('release.level:2')
+    ->name('product.preview.index');
 
 Route::get('/welcome', [FirstRunController::class, 'show'])->name('first_run.show');
 Route::post('/welcome/start', [FirstRunController::class, 'start'])->name('first_run.start');
