@@ -3,6 +3,19 @@
 @section('title', 'Execution Packet | Canovia')
 
 @section('content')
+@php
+    $executionRequestSourceType = (string) data_get($executionRequest ?? null, 'source.type', '');
+    $executionRequestSourceLabel = match ($executionRequestSourceType) {
+        'companion_candidate' => 'Companionで確認した依頼を引き継いでいます',
+        'development_implementation_brief' => 'Developer Homeで確認したImplementation Briefを引き継いでいます',
+        default => 'Inboxで確認した依頼を引き継いでいます',
+    };
+    $executionRequestSourceTitle = match ($executionRequestSourceType) {
+        'development_implementation_brief' => 'Development Implementation Brief',
+        default => data_get($executionRequest ?? null, 'source.title', 'Inbox Item'),
+    };
+@endphp
+
     @php
         $dependencyState = (string) ($context['dependency_state'] ?? 'ready');
         $taskCancelled = $task->status === 'cancelled';
@@ -69,10 +82,10 @@
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
                         <p class="text-[10px] font-black uppercase tracking-[.16em] text-emerald-300">CONFIRMED EXECUTION REQUEST</p>
-                        <h2 class="mt-1 text-base font-black text-slate-100">{{ data_get($executionRequest, 'source.type') === 'companion_candidate' ? 'Companionで確認した依頼を引き継いでいます' : 'Inboxで確認した依頼を引き継いでいます' }}</h2>
+                        <h2 class="mt-1 text-base font-black text-slate-100">{{ $executionRequestSourceLabel }}</h2>
                         <p class="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-300">{{ data_get($executionRequest, 'instruction') }}</p>
                         <p class="mt-2 text-[10px] leading-4 text-slate-600">
-                            元: {{ data_get($executionRequest, 'source.title', 'Inbox Item') }}
+                            元: {{ $executionRequestSourceTitle }}
                             · 対象: {{ data_get($executionRequest, 'target_task.title', $task->title) }}
                         </p>
                     </div>
