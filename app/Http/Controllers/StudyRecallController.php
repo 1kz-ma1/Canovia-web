@@ -15,6 +15,7 @@ use App\Services\NativeAiGateway;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanCategoryProfileService;
 use App\Intelligence\Study\StudyAdaptiveActionService;
+use App\Services\StudyRecallCandidateOutcomeService;
 use App\Services\StudyRecallProgressionService;
 use App\Services\StudyRecallSchedulerService;
 use App\Services\StudyTaskProgressionService;
@@ -39,6 +40,7 @@ class StudyRecallController extends Controller
         FeatureAccessService $featureAccess,
         NativeAiGateway $nativeAi,
         StudyRecallProgressionService $recallProgression,
+        StudyRecallCandidateOutcomeService $candidateOutcomes,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
 
@@ -68,6 +70,10 @@ class StudyRecallController extends Controller
             'items' => $items,
             'canEdit' => $ownership->canEdit($request, $plan),
             'recallProgression' => $recallProgressionState,
+            'candidateOutcomes' => $candidateOutcomes->project(
+                $plan,
+                $task,
+            ),
             'currentItem' => $currentItem,
             'stats' => [
                 'total' => $items->count(),
@@ -206,6 +212,19 @@ class StudyRecallController extends Controller
         $review = $result['review'];
         $updatedItem = $result['item'];
 
+        $candidateLineages = StudyRecallCandidate::query()
+            ->where('plan_id', $plan->id)
+            ->where('task_id', $task->id)
+            ->where('status', 'promoted')
+            ->where('promoted_item_id', $updatedItem->id)
+            ->orderBy('id')
+            ->take(12)
+            ->get([
+                'id',
+                'study_recall_source_id',
+                'confidence',
+            ]);
+
         $evidence->record(
             $task,
             EvidenceSource::Native,
@@ -213,6 +232,24 @@ class StudyRecallController extends Controller
             [
                 'study_recall_review_id' => (int) $review->id,
                 'study_recall_item_id' => (int) $updatedItem->id,
+                'study_recall_candidate_ids' => $candidateLineages
+                    ->pluck('id')
+                    ->map(fn ($id) => (int) $id)
+                    ->values()
+                    ->all(),
+                'study_recall_source_ids' => $candidateLineages
+                    ->pluck('study_recall_source_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->values()
+                    ->all(),
+                'candidate_confidences' => $candidateLineages
+                    ->pluck('confidence')
+                    ->map(fn ($value) => max(
+                        0,
+                        min(100, (int) $value),
+                    ))
+                    ->values()
+                    ->all(),
                 'prompt' => Str::limit((string) $updatedItem->prompt, 160),
                 'rating' => (string) $review->rating,
                 'repetitions' => (int) $updatedItem->repetitions,

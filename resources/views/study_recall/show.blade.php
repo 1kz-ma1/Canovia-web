@@ -304,6 +304,142 @@
             @endif
         </section>
 
+        @php
+            $candidateOutcomeAggregate = (array) data_get(
+                $candidateOutcomes ?? [],
+                'aggregate',
+                [],
+            );
+            $candidateOutcomeRows = (array) data_get(
+                $candidateOutcomes ?? [],
+                'recent_candidates',
+                [],
+            );
+            $candidateOutcomeLabels = [
+                'unobserved' => '未観測',
+                'developing' => '学習中',
+                'needs_reinforcement' => '要補強',
+                'retained' => '定着',
+            ];
+        @endphp
+
+        @if ((bool) data_get($candidateOutcomes ?? [], 'has_lineage', false))
+            <details
+                class="page-card border-cyan-300/15 p-4 sm:p-5"
+                data-recall-candidate-outcome
+            >
+                <summary class="cursor-pointer list-none">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">
+                                CANDIDATE OUTCOME
+                            </p>
+                            <h2 class="mt-1 text-sm font-black text-slate-100">
+                                AI候補の実Recall結果
+                            </h2>
+                        </div>
+                        <span class="badge badge-slate">
+                            観測 {{ (int) ($candidateOutcomeAggregate['observed_item_count'] ?? 0) }}
+                            / {{ (int) ($candidateOutcomeAggregate['promoted_item_count'] ?? 0) }} cards
+                        </span>
+                    </div>
+                </summary>
+
+                <div class="mt-4 border-t border-white/8 pt-4">
+                    <p class="max-w-3xl text-xs leading-5 text-slate-500">
+                        AIが生成時に付けたconfidenceと、その後のAgain / Hard / Good / Easyを別軸で観測します。
+                        覚えにくさは内容自体の難しさも含むため、この結果だけでCandidate品質を自動判定・再採点はしません。
+                    </p>
+
+                    <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                        @foreach ([
+                            [
+                                'label' => 'AI候補',
+                                'value' => (int) ($candidateOutcomeAggregate['promoted_candidate_count'] ?? 0),
+                            ],
+                            [
+                                'label' => '実カード',
+                                'value' => (int) ($candidateOutcomeAggregate['promoted_item_count'] ?? 0),
+                            ],
+                            [
+                                'label' => '定着',
+                                'value' => (int) ($candidateOutcomeAggregate['retained_item_count'] ?? 0),
+                            ],
+                            [
+                                'label' => 'Recall確認',
+                                'value' => (int) ($candidateOutcomeAggregate['review_count'] ?? 0),
+                            ],
+                            [
+                                'label' => '想起成功',
+                                'value' => ($candidateOutcomeAggregate['self_rated_recall_success_percent'] ?? null) !== null
+                                    ? ((int) $candidateOutcomeAggregate['self_rated_recall_success_percent']).'%'
+                                    : '—',
+                            ],
+                        ] as $stat)
+                            <div class="rounded-xl border border-white/8 bg-slate-950/25 p-3 text-center">
+                                <p class="text-[10px] text-slate-500">{{ $stat['label'] }}</p>
+                                <strong class="mt-1 block text-lg text-slate-100">{{ $stat['value'] }}</strong>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-600">
+                        <span>
+                            元AI confidence平均
+                            {{ ($candidateOutcomeAggregate['average_candidate_confidence'] ?? null) !== null
+                                ? ((int) $candidateOutcomeAggregate['average_candidate_confidence']).'/100'
+                                : '—' }}
+                        </span>
+                        <span>
+                            要補強
+                            {{ (int) ($candidateOutcomeAggregate['reinforcement_item_count'] ?? 0) }} cards
+                        </span>
+                        <span>
+                            Hard / Good / Easyを想起成功として集計
+                        </span>
+                    </div>
+
+                    @if ($candidateOutcomeRows !== [])
+                        <div class="mt-4 grid gap-2">
+                            @foreach ($candidateOutcomeRows as $row)
+                                <div
+                                    class="rounded-xl border border-white/8 bg-slate-950/20 px-3 py-3"
+                                    data-recall-candidate-outcome-row="{{ (int) ($row['candidate_id'] ?? 0) }}"
+                                    data-recall-candidate-outcome-state="{{ $row['outcome_state'] ?? 'unobserved' }}"
+                                >
+                                    <div class="flex flex-wrap items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <p class="truncate text-xs font-bold text-slate-200">
+                                                {{ $row['prompt'] ?? 'Recall Candidate' }}
+                                            </p>
+                                            <p class="mt-1 text-[10px] text-slate-600">
+                                                {{ $row['source_name'] ?? '教材' }}
+                                                · confidence {{ (int) ($row['confidence'] ?? 0) }}/100
+                                            </p>
+                                        </div>
+                                        <span class="badge badge-slate">
+                                            {{ $candidateOutcomeLabels[$row['outcome_state'] ?? 'unobserved'] ?? '観測中' }}
+                                        </span>
+                                    </div>
+
+                                    <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500">
+                                        <span>Review {{ (int) ($row['review_count'] ?? 0) }}</span>
+                                        <span>Again {{ (int) data_get($row, 'rating_counts.again', 0) }}</span>
+                                        <span>
+                                            想起成功
+                                            {{ ($row['self_rated_recall_success_percent'] ?? null) !== null
+                                                ? ((int) $row['self_rated_recall_success_percent']).'%'
+                                                : '—' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </details>
+        @endif
+
         @if ($recallCandidates->isNotEmpty())
             <section class="page-card border-amber-300/20 p-5 sm:p-6">
                 <div>
