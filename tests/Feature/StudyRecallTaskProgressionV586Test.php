@@ -177,6 +177,8 @@ class StudyRecallTaskProgressionV586Test extends TestCase
 
     public function test_explicit_recall_completion_finishes_task_records_evidence_and_advances_to_next_task(): void
     {
+        $this->withoutExceptionHandling();
+
         [$user, $plan, $task, $nextTask] = $this->scenario();
         $this->masteredDeck($plan, $task);
 
@@ -295,7 +297,7 @@ class StudyRecallTaskProgressionV586Test extends TestCase
             'owner_token' => Str::random(64),
             'public_slug' => (string) Str::uuid(),
             'title' => 'TOEIC 800点',
-            'description' => 'TOEIC語彙と問題演習',
+            'description' => 'TOEIC頻出語彙を覚えて定着させる',
             'category' => '資格学習',
             'start_date' => today(),
             'deadline' => today()->addMonths(2),
