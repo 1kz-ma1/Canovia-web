@@ -65,6 +65,7 @@ class TaskEvidence extends Model
             'study_practice_assessed' => 'AI演習',
             'study_recall_reviewed' => 'Recall学習',
             'study_language_activity_completed' => '語学Activity',
+            'study_resource_study_completed' => '教材学習',
             'artifact_state_observed' => '制作ファイル',
             'focus_session_completed' => '集中作業',
             'focus_session_interrupted' => '集中作業を中断',
@@ -91,6 +92,16 @@ class TaskEvidence extends Model
                 'AI演習 %d%% · %s',
                 (int) data_get($this->metadata, 'score_percent', 0),
                 trim((string) data_get($this->metadata, 'evidence_summary')) ?: '評価結果を保存しました。',
+            ),
+            'study_resource_study_completed' => sprintf(
+                '%s · %s',
+                trim((string) data_get($this->metadata, 'resource_title'))
+                    ?: 'Resource Study',
+                match ((string) data_get($this->metadata, 'outcome_rating')) {
+                    'needs_review' => 'まだ理解が浅い',
+                    'covered' => '必要範囲を確認できた',
+                    default => '一部理解できた',
+                },
             ),
             'study_language_activity_completed' => sprintf(
                 '%sを%d周 / セット実施 · %s',
