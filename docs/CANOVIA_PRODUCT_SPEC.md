@@ -6145,3 +6145,38 @@ installation permission and human-confirmation boundaries.
 
 Canonical contract:
 `docs/V57.6_CONTEXT_AWARE_IMPLEMENTATION_BRIEF.md`.
+
+
+## V57.7 Provider-linked CI / Review Triage
+
+Developer Home may now cross from bounded Development State into provider text
+only after an explicit user action.
+
+```text
+CI failure / Review changes requested
+→ explicit provider-detail request
+→ GitHub App read
+→ transient CI annotations / Review comments
+→ deterministic Task-scoped triage
+```
+
+Normal Developer Home GET remains provider-call-free.
+
+CI triage may read bounded failed Actions jobs, failing steps, Check Runs,
+Check annotations and Commit Status detail where GitHub App permissions allow.
+
+Review triage may read bounded Review bodies and inline review comments for the
+current Pull Request.
+
+These provider details are response-only and are not persisted to TaskEvidence,
+PlanArtifact metadata, Intelligence snapshots, Decision traces or a dedicated
+triage table. The response is marked `no-store`.
+
+Only Plan editors/owners with Developer GitHub Evidence access may request
+provider triage.
+
+The triage page may create a user-copyable handoff, but Canovia does not invoke
+a coding agent or perform GitHub writes automatically.
+
+Canonical contract:
+`docs/V57.7_PROVIDER_LINKED_TRIAGE.md`.
