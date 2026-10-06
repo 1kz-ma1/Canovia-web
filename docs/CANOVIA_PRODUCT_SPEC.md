@@ -6695,3 +6695,33 @@ Task進捗、masteryを自動変更しない。
 
 Canonical contract:
 `docs/V58.12_STUDY_ACTIVITY_OUTCOME_OBSERVATION.md`.
+
+## V58.13 Question Candidate Reliability Signal
+
+AI Practice Reliabilityの「出題内容」へ、Question Candidateの運営実績を
+bounded signalとして反映する。
+
+```text
+Candidate Human Review
+(promoted / rejected)
++ promoted Questionの実Practice再利用
+→ evidence maturity
+→ Native / Hybrid question_qualityへ最大±6pt
+```
+
+reviewed Candidate 5件未満では点数を変更しない。20件review / 20回assessed reuseを
+それぞれmaturity上限とし、Human Reviewを75%、再利用量を25%でSignal強度へ反映する。
+
+promotion rate 70%をneutral centerとするが、これは統計的な真のQuestion品質ではなく
+運営上のcalibrationである。
+
+学習者の正答率・弱点・Task masteryはQuestion品質へ使わない。
+難しい良問の正答率が低い可能性を品質低下と誤解しないためである。
+
+Question Bank / external AIのbaselineはCandidate補正しない。
+Native AI / Hybrid AIのみ既存question_quality baselineへ小幅補正する。
+
+No migration / no provider call。
+
+Canonical contract:
+`docs/V58.13_QUESTION_CANDIDATE_RELIABILITY.md`.
