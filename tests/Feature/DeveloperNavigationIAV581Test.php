@@ -128,12 +128,12 @@ class DeveloperNavigationIAV581Test extends TestCase
 
         $response
             ->assertOk()
+            ->assertSee('class="development-workspace-navigation"', false)
             ->assertSee(
-                '<form method="GET" action="'
-                .route('workspace.development.index')
-                .'" class="development-workspace-navigation"',
+                'action="'.route('workspace.development.index').'"',
                 false,
             )
+            ->assertSee('data-development-navigation-form', false)
             ->assertSee('name="plan_id"', false)
             ->assertSee('name="surface"', false)
             ->assertSee('value="'.$second->id.'"', false)
