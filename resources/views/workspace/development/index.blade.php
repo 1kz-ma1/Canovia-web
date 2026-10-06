@@ -119,8 +119,22 @@
     data-development-home-v1
     data-development-surface="{{ $developmentSurface ?? 'work' }}"
 >
+    @php
+        $surfaceItems = collect($developmentSurfaceTabs ?? []);
+        $selectedSurfaceItem = $surfaceItems->firstWhere(
+            'key',
+            $developmentSurface ?? 'work',
+        );
+        $surfaceGroups = $surfaceItems
+            ->sortBy([
+                ['category_order', 'asc'],
+                ['surface_order', 'asc'],
+            ])
+            ->groupBy('category_key');
+    @endphp
+
     <section class="page-card overflow-hidden p-0" data-development-surface-shell>
-        <div class="flex flex-col gap-3 border-b border-white/8 px-4 py-3 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex flex-col gap-3 px-4 py-3 sm:px-5 xl:flex-row xl:items-center xl:justify-between">
             <div class="flex min-w-0 items-center gap-3">
                 <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cyan-300/18 bg-cyan-300/[0.06] text-cyan-300">
                     <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" aria-hidden="true">
@@ -128,48 +142,81 @@
                     </svg>
                 </div>
                 <div class="min-w-0">
-                    <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">DEVELOPER</p>
+                    <div class="flex items-center gap-2">
+                        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">DEVELOPER</p>
+                        @if ($selectedSurfaceItem)
+                            <span
+                                class="rounded-full border border-white/8 bg-slate-950/35 px-2 py-0.5 text-[9px] font-black text-slate-500"
+                                data-development-current-category="{{ data_get($selectedSurfaceItem, 'category_key') }}"
+                            >
+                                {{ data_get($selectedSurfaceItem, 'category_label') }}
+                            </span>
+                        @endif
+                    </div>
                     <p class="truncate text-sm font-black text-slate-100">
                         {{ $plan?->title ?? '開発Workspace' }}
                     </p>
+                    @if ($selectedSurfaceItem)
+                        <p class="mt-0.5 truncate text-[10px] text-slate-600">
+                            {{ data_get($selectedSurfaceItem, 'label') }} · {{ data_get($selectedSurfaceItem, 'description') }}
+                        </p>
+                    @endif
                 </div>
             </div>
 
             @if ($developmentPlans->isNotEmpty())
-                <form method="GET" action="{{ route('workspace.development.index') }}" class="flex min-w-0 items-center gap-2 lg:w-[23rem]">
-                    <input type="hidden" name="surface" value="{{ $developmentSurface ?? 'work' }}">
-                    <select id="development-workspace-plan" name="plan_id" class="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-xs font-bold text-slate-100">
-                        @foreach ($developmentPlans as $developmentPlan)
-                            <option value="{{ $developmentPlan->id }}" @selected($plan && (int) $plan->id === (int) $developmentPlan->id)>
-                                {{ $developmentPlan->title }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <button type="submit" class="btn-secondary min-h-9 px-3 text-xs">表示</button>
+                <form
+                    method="GET"
+                    action="{{ route('workspace.development.index') }}"
+                    class="development-workspace-navigation"
+                    data-development-navigation-form
+                >
+                    <label class="development-workspace-control">
+                        <span>PLAN</span>
+                        <select
+                            id="development-workspace-plan"
+                            name="plan_id"
+                            data-development-plan-select
+                        >
+                            @foreach ($developmentPlans as $developmentPlan)
+                                <option value="{{ $developmentPlan->id }}" @selected($plan && (int) $plan->id === (int) $developmentPlan->id)>
+                                    {{ $developmentPlan->title }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </label>
+
+                    <label class="development-workspace-control">
+                        <span>VIEW</span>
+                        <select
+                            id="development-workspace-surface"
+                            name="surface"
+                            data-development-surface-select
+                        >
+                            @foreach ($surfaceGroups as $surfaceGroup)
+                                @php
+                                    $firstSurface = $surfaceGroup->first();
+                                @endphp
+                                <optgroup label="{{ data_get($firstSurface, 'category_label') }}">
+                                    @foreach ($surfaceGroup as $surfaceItem)
+                                        <option
+                                            value="{{ data_get($surfaceItem, 'key') }}"
+                                            @selected(data_get($surfaceItem, 'key') === ($developmentSurface ?? 'work'))
+                                        >
+                                            {{ data_get($surfaceItem, 'label') }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            @endforeach
+                        </select>
+                    </label>
+
+                    <noscript>
+                        <button type="submit" class="btn-secondary min-h-9 px-3 text-xs">表示</button>
+                    </noscript>
                 </form>
             @endif
         </div>
-
-        <nav class="development-surface-tabs" aria-label="Developer Workspace">
-            @foreach (($developmentSurfaceTabs ?? []) as $surfaceTab)
-                @php
-                    $surfaceKey = (string) data_get($surfaceTab, 'key');
-                    $isSurfaceActive = $surfaceKey === ($developmentSurface ?? 'work');
-                @endphp
-                <a
-                    href="{{ route('workspace.development.index', array_filter([
-                        'plan_id' => $plan?->id,
-                        'surface' => $surfaceKey,
-                    ])) }}"
-                    class="development-surface-tab {{ $isSurfaceActive ? 'is-active' : '' }}"
-                    data-development-surface-tab="{{ $surfaceKey }}"
-                    @if ($isSurfaceActive) aria-current="page" @endif
-                >
-                    <strong>{{ data_get($surfaceTab, 'label') }}</strong>
-                    <span>{{ data_get($surfaceTab, 'description') }}</span>
-                </a>
-            @endforeach
-        </nav>
     </section>
 
     @if (! $plan)
@@ -207,6 +254,28 @@
         @endswitch
     @endif
 </div>
+
+<script>
+    (() => {
+        const form = document.querySelector('[data-development-navigation-form]');
+        if (!form) return;
+
+        const selects = form.querySelectorAll(
+            '[data-development-plan-select], [data-development-surface-select]',
+        );
+
+        selects.forEach((select) => {
+            select.addEventListener('change', () => {
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                    return;
+                }
+
+                form.submit();
+            });
+        });
+    })();
+</script>
 
 @if (($developmentSurface ?? 'work') === 'work' && $implementationBrief)
     <script>
