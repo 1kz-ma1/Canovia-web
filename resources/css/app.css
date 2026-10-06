@@ -10165,3 +10165,78 @@ html[data-canovia-keyboard="open"] .workspace-mode-menu {
         transition: none;
     }
 }
+
+
+/* ==========================================================================
+   V58.1 Developer Workspace navigation IA
+   Replace the ever-wider surface tab row with two compact controls:
+   Plan + grouped View selector. Only real surfaces are exposed.
+   ========================================================================== */
+.development-workspace-navigation {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+}
+
+.development-workspace-control {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid rgb(51 65 85 / 0.72);
+    border-radius: 0.85rem;
+    background: rgb(2 6 23 / 0.52);
+    padding: 0.28rem 0.38rem 0.28rem 0.58rem;
+}
+
+.development-workspace-control > span {
+    flex: 0 0 auto;
+    color: rgb(71 85 105);
+    font-size: 0.54rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+}
+
+.development-workspace-control select {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    padding: 0.34rem 1.7rem 0.34rem 0.15rem;
+    color: rgb(226 232 240);
+    font-size: 0.7rem;
+    font-weight: 800;
+    outline: none;
+}
+
+.development-workspace-control:focus-within {
+    border-color: rgb(34 211 238 / 0.32);
+    box-shadow: 0 0 0 1px rgb(34 211 238 / 0.08);
+}
+
+.development-workspace-control optgroup {
+    color: rgb(148 163 184);
+    font-weight: 900;
+}
+
+.development-workspace-control option {
+    color: rgb(226 232 240);
+    background: rgb(15 23 42);
+    font-weight: 700;
+}
+
+@media (min-width: 640px) {
+    .development-workspace-navigation {
+        grid-template-columns:
+            minmax(11rem, 1.25fr)
+            minmax(8.5rem, 0.75fr);
+    }
+}
+
+@media (min-width: 1280px) {
+    .development-workspace-navigation {
+        width: min(34rem, 48vw);
+    }
+}
