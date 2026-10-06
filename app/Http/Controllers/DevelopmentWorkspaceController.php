@@ -13,7 +13,10 @@ use App\Models\Task;
 use App\Services\DevelopmentExecutionContextService;
 use App\Services\DevelopmentImplementationBriefService;
 use App\Services\DevelopmentHomeService;
+use App\Services\DevelopmentWorkspaceSurfaceService;
 use App\Services\GitHubIntegrationReadinessService;
+use App\Services\GitHubRepositoryWriter;
+use App\Services\GitHubWorkflowService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanPriorityService;
@@ -31,9 +34,12 @@ final class DevelopmentWorkspaceController extends Controller
         DevelopmentAdaptiveActionService $developmentActions,
         DevelopmentIntelligencePresentationAdapter $presentationAdapter,
         DevelopmentHomeService $developerHome,
+        DevelopmentWorkspaceSurfaceService $surfaces,
         DevelopmentExecutionContextService $executionContext,
         DevelopmentImplementationBriefService $implementationBriefs,
         GitHubIntegrationReadinessService $githubReadiness,
+        GitHubRepositoryWriter $githubRepositoryReader,
+        GitHubWorkflowService $githubWorkflow,
         IntelligencePresentationHistoryService $history,
         IntelligenceStateChangeFeedbackService $stateChanges,
         WorkspaceModeOnboardingService $onboarding,
@@ -51,6 +57,9 @@ final class DevelopmentWorkspaceController extends Controller
         )->values();
 
         $plan = $this->selectedPlan($request, $developmentPlans);
+
+        $developmentSurface = $surfaces->selected($request);
+        $developmentSurfaceTabs = $surfaces->tabs();
 
         if (! $plan instanceof Plan) {
             return view('workspace.development.index', [
@@ -72,6 +81,14 @@ final class DevelopmentWorkspaceController extends Controller
                 'developmentGithubConnection' => null,
                 'developmentGithubIntegrationStatus' => null,
                 'intelligenceStateChange' => null,
+                'developmentSurface' => $developmentSurface,
+                'developmentSurfaceTabs' => $developmentSurfaceTabs,
+                'developmentRepositoryTree' => null,
+                'developmentRepositoryTreeError' => null,
+                'developmentTeam' => null,
+                'developmentImprovements' => [],
+                'developmentPreview' => null,
+                'canManage' => false,
                 'modeOnboarding' => $onboarding->build(
                     WorkspaceMode::Development,
                     [],
@@ -136,7 +153,66 @@ final class DevelopmentWorkspaceController extends Controller
             )
             : null;
         $canEdit = $ownership->canEdit($request, $plan);
+        $canManage = $ownership->owns($request, $plan);
         $completedSteps = ['create_plan'];
+
+        $developmentRepositoryTree = null;
+        $developmentRepositoryTreeError = null;
+
+        if (
+            $developmentSurface === 'repository'
+            && $developmentGithubRepository
+            && (bool) data_get(
+                $developmentGithubIntegrationStatus,
+                'evidence.allowed',
+                false,
+            )
+            && (string) data_get(
+                $developmentGithubConnection,
+                'state',
+                '',
+            ) === 'ready'
+        ) {
+            $parsedRepository = $githubWorkflow->parseUrl(
+                (string) $developmentGithubRepository->url,
+            );
+            $repoFullName = trim((string) (
+                $parsedRepository['repo_full_name']
+                ?? ''
+            ));
+
+            if ($repoFullName !== '') {
+                try {
+                    $developmentRepositoryTree =
+                        $githubRepositoryReader->inspectRepositoryTree(
+                            $repoFullName,
+                        );
+                } catch (\RuntimeException $exception) {
+                    $developmentRepositoryTreeError =
+                        $exception->getMessage();
+                }
+            }
+        }
+
+        $developmentTeam = $developmentSurface === 'team'
+            ? $surfaces->team($plan)
+            : null;
+
+        $developmentImprovements =
+            $developmentSurface === 'improvements'
+                ? $surfaces->improvements(
+                    $adaptiveAction,
+                    $home['unresolved_activity'],
+                    $home['active_tasks'],
+                    is_array($developmentGithubConnection)
+                        ? $developmentGithubConnection
+                        : [],
+                )
+                : [];
+
+        $developmentPreview = $developmentSurface === 'preview'
+            ? $surfaces->preview($plan)
+            : null;
 
         return view('workspace.development.index', [
             'developmentPlans' => $developmentPlans,
@@ -161,6 +237,14 @@ final class DevelopmentWorkspaceController extends Controller
             'developmentGithubRepository' => $developmentGithubRepository,
             'developmentGithubConnection' => $developmentGithubConnection,
             'developmentGithubIntegrationStatus' => $developmentGithubIntegrationStatus,
+            'developmentSurface' => $developmentSurface,
+            'developmentSurfaceTabs' => $developmentSurfaceTabs,
+            'developmentRepositoryTree' => $developmentRepositoryTree,
+            'developmentRepositoryTreeError' => $developmentRepositoryTreeError,
+            'developmentTeam' => $developmentTeam,
+            'developmentImprovements' => $developmentImprovements,
+            'developmentPreview' => $developmentPreview,
+            'canManage' => $canManage,
             'intelligenceStateChange' => $stateChanges->latestForPlan(
                 $plan,
                 IntelligenceDomain::Development,
