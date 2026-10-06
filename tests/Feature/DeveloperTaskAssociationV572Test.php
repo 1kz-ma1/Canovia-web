@@ -200,7 +200,7 @@ class DeveloperTaskAssociationV572Test extends TestCase
                 'plan_id' => $plan->id,
             ]))
             ->assertOk()
-            ->assertSee('GitHubの動きとTaskを対応づける')
+            ->assertSee('最近GitHubで何が起きたか')
             ->assertSee('Fix GitHub webhook routing')
             ->assertSee('関連付ける')
             ->assertSee('今回は無視');
