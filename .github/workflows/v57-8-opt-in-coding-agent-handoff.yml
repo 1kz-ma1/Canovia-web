@@ -44,7 +44,7 @@ jobs:
       - name: V57.3 Developer Home regression
         run: php artisan test tests/Feature/DeveloperHomeV573Test.php
       - name: Execution Orchestration regression
-        run: php artisan test tests/Feature/ExecutionOrchestrationV471Test.php tests/Feature/ExecutionRequestHandoffV473Test.php
+        run: php artisan test tests/Feature/ExecutionOrchestrationV470Test.php tests/Feature/ExecutionOrchestrationDependencyV470Test.php tests/Feature/ExecutionRequestHandoffV471Test.php
       - name: Execution Ecosystem regression
         run: php artisan test tests/Feature/ExecutionEcosystemFoundationV556Test.php tests/Feature/ProviderConnectionActivityIntakeV559Test.php
       - name: GitHub return regression
