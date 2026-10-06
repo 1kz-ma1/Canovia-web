@@ -55,6 +55,111 @@ Canoviaは「コードを書くAI」を置き換えるのではなく、**何を
 
 ---
 
+## 1.1 2026-10-07 Product Direction Update
+
+Developer Proの中心を「開発中の自動実装」だけに置かない。
+
+Canovia Developmentの役割を、開発段階と公開後で分離する。
+
+### Development stage
+
+完成前はCanovia自身が高コストCoding Agentとして常時実装する必要はない。
+
+Canoviaが担う:
+
+```text
+Product / Goal context
++ specification / decision history
++ repository signals
++ development state
++ Development Rules
++ context packaging
++ external AI prompt / handoff
+```
+
+外部Coding Agentが担う:
+
+```text
+bounded repository inspection
++ implementation
++ tests
++ PR-level execution
+```
+
+Canovia共通planとの関係:
+
+- Free: Repository連携 / 基本管理 / non-AI中心のPrompt生成
+- Premium: PR進捗推定、改善候補、Development Rules / lightweight specification等の軽量推論
+- Pro: Repository内容を読み、Code / Spec / Test / Decisionを横断したContextを構築
+- Dev Pro: 原則として公開後Product Intelligenceを主価値にする
+
+### Observability-ready development
+
+公開後に初めて計測を考えるのではなく、開発段階から:
+
+- Feature purpose
+- success condition
+- Metric
+- Event Definition
+- Release
+- Repository / Task relation
+
+を残せる構造を想定する。
+
+これは「今すぐ利用データをCanoviaへ送る」こととは分離する。
+
+```text
+Prepare for Product Intelligence opt-in
+!=
+Runtime end-user telemetry consent / connection
+```
+
+設計準備と実データ接続の同意を分ける。
+
+### Post-release stage — Dev Pro core
+
+公開後は:
+
+```text
+Observe
+→ Interpret
+→ Hypothesis
+→ Improve
+→ Verify
+```
+
+を継続するProduct Intelligence layerを主価値とする。
+
+Candidate observations:
+
+- Feature Adoption
+- Funnel
+- User Journey
+- retention / return
+- Release Impact
+- error / latency
+- intended feature usage vs actual usage
+- feedback
+
+Feedbackを待って手作業で改善するだけでなく、実環境Evidenceから改善候補を発見する。
+
+### Data granularity
+
+Raw eventをそのまま大量にAIへ渡さない。
+
+```text
+Raw Observation
+→ deterministic / statistical aggregation
+→ Product Intelligence
+→ semantic summary
+→ AI Context
+```
+
+UIで人間へ見せる粒度と、AI判断へ渡す粒度を分ける。
+
+高コストAI / Coding Agentは、十分に絞り込まれた改善候補だけで起動する。
+
+
 ## 2. Relationship to Current Canovia
 
 Developer Proは現在のDevelopment Workspaceを置き換えません。
@@ -929,23 +1034,49 @@ Pricingより先に原価と採用率を観測します。
 
 ## 29. Monetization Direction
 
-現時点で価格を固定しません。
-
-Future candidate:
+Current product-level direction:
 
 ```text
-Developer Pro Subscription
+Canovia Free / Premium / Pro
 +
-Implementation Credits
+Dev Pro add-on for Development
++
+optional Implementation / Agent Credits
 ```
 
-無制限AI実装を前提にしません。
+Dev Proは「Development Proという通常Pro tier」ではなく、Canovia Proより先にあるDevelopment専門のProduct Intelligence / automation追加契約候補として扱う。
 
-既存のCanovia `Developer Pack` 等のEconomy/Entitlement概念と、ここでいうDeveloper Proは現時点では同一仕様ではありません。
+Value boundary:
 
-将来課金を設計する際は、current Product Catalog / Entitlement architectureを再調査し、並行課金ロジックを作らないことを原則とします。
+```text
+Free      = manage / execute
+Premium   = guide AI and development decisions
+Pro       = understand repository / project context
+Dev Pro   = observe released product and improve it
+```
 
----
+無制限AI実装を前提にしない。
+
+Candidate cost models:
+
+- included Agent credits
+- usage-based extra credits
+- BYOK
+- provider-specific execution passed through separately
+
+Canovia側が提供する価値は、単なるProvider API resaleではなく:
+
+- context
+- orchestration
+- safety / approval boundary
+- Product Intelligence
+- verification continuity
+
+に置く。
+
+Pricingより先に、AI cost / accepted improvement / repeat usage / user valueを観測する。
+
+既存V41.5 Product Grant / Entitlement architectureはruntime foundationとして再利用するが、当時のPurpose Pack product shapeをそのまま将来商品名として固定しない。
 
 ## 30. Partner Ecosystem Relationship
 
