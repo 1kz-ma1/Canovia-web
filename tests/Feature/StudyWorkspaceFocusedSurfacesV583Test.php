@@ -55,7 +55,7 @@ class StudyWorkspaceFocusedSurfacesV583Test extends TestCase
             ->assertSee('value="history"', false)
             ->assertSee('data-study-top-link', false)
             ->assertSee(route('workspace.study.top'), false)
-            ->assertSee($task->title)
+            ->assertSee('data-study-workspace-methods', false)
             ->assertDontSee('data-study-workspace-current-state', false)
             ->assertDontSee('data-study-workspace-readiness', false)
             ->assertDontSee('data-study-workspace-history', false);
