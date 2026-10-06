@@ -6850,3 +6850,28 @@ Task progress / completion / mastery / Study Method / V56.0 phaseは変更しな
 
 Canonical contract:
 `docs/V58.18_PLAN_WIDE_WEAKNESS_HANDOFF.md`.
+
+## V58.19 Weakness Intervention Outcome Observation
+
+Focused weakness reinforcementの実利用効果を、補強中の点数ではなく「補強前Broad Practice → 補強終了後Broad Practice」の同Topic結果で観測する。
+
+same Plan / same Task / same actor、最新最大120 Attemptを対象とする。
+
+baseline / afterはそれぞれ最大5問、最低2問かつ2 unique question refsを要求する。correct / partial / incorrectだけを使い、partialはcorrectに含めない。
+
+補強中のTopic得点はintervention contextとして表示するだけで、after判定には使わない。
+
+before / afterが揃った場合:
+
+- +15pt以上: improved observation
+- -15pt以下: regressed observation
+- それ以外: stable observation
+
+これは因果効果の証明ではなくread-only観測。Weakness Priority / Exam Convergence / Routing / V58.18 / Mastery / Task進捗を変更しない。
+
+Study Analysisへregistered surface `weakness_intervention_outcomes` を追加する。
+
+DB-only / provider-free / no migration。
+
+Canonical contract:
+`docs/V58.19_WEAKNESS_INTERVENTION_OUTCOMES.md`.
