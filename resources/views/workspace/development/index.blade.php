@@ -74,6 +74,23 @@
     $implementationBriefFacts = collect(data_get($implementationBrief, 'known_facts', []));
     $implementationBriefValidation = collect(data_get($implementationBrief, 'validation', []));
     $implementationBriefGuardrails = collect(data_get($implementationBrief, 'guardrails', []));
+    $implementationBriefMode = (string) data_get($implementationBrief, 'mode', 'continuation');
+    $implementationBriefTaskId = (int) data_get($implementationBrief, 'target.task_id', 0);
+    $implementationBriefPullRequest = (int) data_get($implementationBrief, 'target.pull_request_number', 0);
+    $providerTriageCiAvailable = $implementationBriefPullRequest > 0
+        && (
+            $implementationBriefMode === 'ci_triage'
+            || data_get($executionContext, 'ci.state') === 'failure'
+        );
+    $providerTriageReviewAvailable = $implementationBriefPullRequest > 0
+        && (
+            $implementationBriefMode === 'review'
+            || in_array(
+                data_get($executionContext, 'review.state'),
+                ['CHANGES_REQUESTED', 'COMMENTED'],
+                true,
+            )
+        );
     $ciLabels = [
         'success' => '成功',
         'failure' => '失敗',
@@ -430,6 +447,44 @@
                                     </div>
                                 </div>
                             </div>
+
+                            @if (
+                                $canEdit
+                                && $implementationBriefTaskId > 0
+                                && ($providerTriageCiAvailable || $providerTriageReviewAvailable)
+                            )
+                                <div class="mt-4 rounded-2xl border border-rose-300/12 bg-rose-300/[0.02] p-4" data-development-provider-triage-entry>
+                                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <p class="text-[10px] font-black uppercase tracking-[0.14em] text-rose-300">PROVIDER DETAIL</p>
+                                            <p class="mt-1 text-xs leading-5 text-slate-500">
+                                                必要なときだけGitHubからReview本文・CI失敗詳細を一時取得します。取得した本文やannotationはCanoviaへ保存しません。
+                                            </p>
+                                        </div>
+                                        <div class="flex shrink-0 flex-wrap gap-2">
+                                            @if ($providerTriageCiAvailable)
+                                                <form method="POST" action="{{ route('plans.development_provider_triage.inspect', [$plan, $implementationBriefTaskId]) }}">
+                                                    @csrf
+                                                    <input type="hidden" name="mode" value="ci">
+                                                    <button type="submit" class="btn-secondary min-h-10 px-3 text-xs">
+                                                        CI失敗の詳細を取得
+                                                    </button>
+                                                </form>
+                                            @endif
+
+                                            @if ($providerTriageReviewAvailable)
+                                                <form method="POST" action="{{ route('plans.development_provider_triage.inspect', [$plan, $implementationBriefTaskId]) }}">
+                                                    @csrf
+                                                    <input type="hidden" name="mode" value="review">
+                                                    <button type="submit" class="btn-secondary min-h-10 px-3 text-xs">
+                                                        Review指摘の詳細を取得
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
 
                             <details class="mt-4 rounded-2xl border border-white/8 bg-slate-950/25 p-4" data-development-brief-handoff>
                                 <summary class="cursor-pointer list-none text-xs font-black text-slate-300">

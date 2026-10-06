@@ -400,6 +400,641 @@ final class GitHubRepositoryWriter
     }
 
     /**
+     * Explicitly fetch bounded provider detail for one Pull Request triage.
+     *
+     * Unlike normal Developer Home GET, this method may fetch review text and
+     * CI annotations because the user explicitly requested provider-linked
+     * triage. Returned provider text is transient and must not be persisted by
+     * callers.
+     *
+     * @return array<string,mixed>
+     */
+    public function inspectPullRequestTriage(
+        string $repoFullName,
+        int $pullRequestNumber,
+        string $mode = 'auto',
+    ): array {
+        if ($pullRequestNumber <= 0) {
+            throw new RuntimeException('Pull Request番号を確認できませんでした。');
+        }
+
+        if (! in_array($mode, ['auto', 'ci', 'review'], true)) {
+            throw new RuntimeException('Provider triage modeを確認できませんでした。');
+        }
+
+        $context = $this->developmentReadContext(
+            $repoFullName,
+            'pull_requests',
+            'Pull Requests',
+        );
+
+        /** @var PendingRequest $client */
+        $client = $context['client'];
+        $permissions = (array) $context['permissions'];
+        $repoPath = (string) $context['repo_path'];
+
+        $pullResponse = $client->get(
+            '/repos/'.$repoPath.'/pulls/'.$pullRequestNumber,
+        );
+
+        if ($pullResponse->status() === 404) {
+            throw new RuntimeException('対象Pull RequestをGitHubから確認できませんでした。');
+        }
+
+        if (! $pullResponse->successful()) {
+            throw new RuntimeException('Pull Requestの現在状態をGitHubから取得できませんでした。');
+        }
+
+        $pull = $pullResponse->json();
+        if (
+            ! is_array($pull)
+            || (int) ($pull['number'] ?? 0) !== $pullRequestNumber
+        ) {
+            throw new RuntimeException('GitHubから返されたPull Request情報を確認できませんでした。');
+        }
+
+        $headSha = mb_strtolower(mb_substr(
+            trim((string) data_get($pull, 'head.sha', '')),
+            0,
+            64,
+        ));
+        $warnings = [];
+        $reviewDetails = [
+            'reviews' => [],
+            'inline_comments' => [],
+        ];
+        $ciDetails = [
+            'workflow_runs' => [],
+            'jobs' => [],
+            'check_runs' => [],
+            'annotations' => [],
+            'statuses' => [],
+        ];
+
+        if (in_array($mode, ['auto', 'review'], true)) {
+            $reviewsResponse = $client->get(
+                '/repos/'.$repoPath.'/pulls/'.$pullRequestNumber.'/reviews',
+                ['per_page' => 50],
+            );
+
+            if ($reviewsResponse->successful()) {
+                $reviewDetails['reviews'] = collect(
+                    (array) $reviewsResponse->json(),
+                )
+                    ->filter(fn ($item) => is_array($item))
+                    ->sortByDesc(fn (array $item) =>
+                        (string) ($item['submitted_at'] ?? '')
+                        .':'.str_pad(
+                            (string) ((int) ($item['id'] ?? 0)),
+                            20,
+                            '0',
+                            STR_PAD_LEFT,
+                        )
+                    )
+                    ->take(20)
+                    ->map(fn (array $item) => [
+                        'id' => (int) ($item['id'] ?? 0),
+                        'state' => mb_strtoupper(mb_substr(
+                            (string) ($item['state'] ?? ''),
+                            0,
+                            50,
+                        )),
+                        'reviewer' => mb_substr(
+                            (string) data_get($item, 'user.login', ''),
+                            0,
+                            255,
+                        ),
+                        'body' => $this->boundedProviderText(
+                            $item['body'] ?? null,
+                            1800,
+                        ),
+                        'submitted_at' => $this->dateValue(
+                            $item['submitted_at'] ?? null,
+                        ),
+                        'commit_id' => mb_substr(
+                            (string) ($item['commit_id'] ?? ''),
+                            0,
+                            64,
+                        ),
+                        'url' => $this->githubUrl(
+                            $item['html_url'] ?? null,
+                        ),
+                    ])
+                    ->filter(fn (array $item) =>
+                        $item['id'] > 0 && $item['state'] !== ''
+                    )
+                    ->values()
+                    ->all();
+            } else {
+                $warnings[] = 'Pull Request review本文を取得できませんでした。';
+            }
+
+            $commentsResponse = $client->get(
+                '/repos/'.$repoPath.'/pulls/'.$pullRequestNumber.'/comments',
+                ['per_page' => 50],
+            );
+
+            if ($commentsResponse->successful()) {
+                $reviewDetails['inline_comments'] = collect(
+                    (array) $commentsResponse->json(),
+                )
+                    ->filter(fn ($item) => is_array($item))
+                    ->sortByDesc(fn (array $item) =>
+                        (string) ($item['updated_at'] ?? $item['created_at'] ?? '')
+                        .':'.str_pad(
+                            (string) ((int) ($item['id'] ?? 0)),
+                            20,
+                            '0',
+                            STR_PAD_LEFT,
+                        )
+                    )
+                    ->take(30)
+                    ->map(fn (array $item) => [
+                        'id' => (int) ($item['id'] ?? 0),
+                        'reviewer' => mb_substr(
+                            (string) data_get($item, 'user.login', ''),
+                            0,
+                            255,
+                        ),
+                        'body' => $this->boundedProviderText(
+                            $item['body'] ?? null,
+                            1800,
+                        ),
+                        'path' => mb_substr(
+                            (string) ($item['path'] ?? ''),
+                            0,
+                            500,
+                        ),
+                        'line' => $this->positiveInteger(
+                            $item['line']
+                            ?? $item['original_line']
+                            ?? null,
+                        ),
+                        'side' => mb_substr(
+                            (string) ($item['side'] ?? ''),
+                            0,
+                            20,
+                        ),
+                        'created_at' => $this->dateValue(
+                            $item['created_at'] ?? null,
+                        ),
+                        'updated_at' => $this->dateValue(
+                            $item['updated_at'] ?? null,
+                        ),
+                        'url' => $this->githubUrl(
+                            $item['html_url'] ?? null,
+                        ),
+                    ])
+                    ->filter(fn (array $item) =>
+                        $item['id'] > 0 && $item['body'] !== null
+                    )
+                    ->values()
+                    ->all();
+            } else {
+                $warnings[] = 'Pull Request inline commentを取得できませんでした。';
+            }
+        }
+
+        if (in_array($mode, ['auto', 'ci'], true)) {
+            if (
+                $headSha !== ''
+                && in_array(
+                    $permissions['actions'] ?? null,
+                    ['read', 'write'],
+                    true,
+                )
+            ) {
+                $actionsResponse = $client->get(
+                    '/repos/'.$repoPath.'/actions/runs',
+                    [
+                        'head_sha' => $headSha,
+                        'per_page' => 12,
+                    ],
+                );
+
+                if ($actionsResponse->successful()) {
+                    $actionsData = $actionsResponse->json();
+                    $runs = is_array($actionsData)
+                        ? collect($actionsData['workflow_runs'] ?? [])
+                            ->filter(fn ($item) => is_array($item))
+                            ->take(12)
+                            ->map(fn (array $item) => [
+                                'id' => (int) ($item['id'] ?? 0),
+                                'run_attempt' => max(
+                                    1,
+                                    (int) ($item['run_attempt'] ?? 1),
+                                ),
+                                'name' => mb_substr(
+                                    (string) ($item['name'] ?? ''),
+                                    0,
+                                    255,
+                                ),
+                                'status' => mb_substr(
+                                    (string) ($item['status'] ?? ''),
+                                    0,
+                                    100,
+                                ),
+                                'conclusion' => filled(
+                                    $item['conclusion'] ?? null,
+                                )
+                                    ? mb_substr(
+                                        (string) $item['conclusion'],
+                                        0,
+                                        100,
+                                    )
+                                    : null,
+                                'head_sha' => mb_substr(
+                                    (string) ($item['head_sha'] ?? ''),
+                                    0,
+                                    64,
+                                ),
+                                'updated_at' => $this->dateValue(
+                                    $item['updated_at'] ?? null,
+                                ),
+                                'url' => $this->githubUrl(
+                                    $item['html_url'] ?? null,
+                                ),
+                            ])
+                            ->filter(fn (array $item) => $item['id'] > 0)
+                            ->values()
+                        : collect();
+
+                    $ciDetails['workflow_runs'] = $runs->all();
+
+                    $failedRuns = $runs
+                        ->filter(fn (array $run) => in_array(
+                            $run['conclusion'] ?? null,
+                            [
+                                'failure',
+                                'cancelled',
+                                'timed_out',
+                                'startup_failure',
+                                'action_required',
+                            ],
+                            true,
+                        ))
+                        ->take(5);
+
+                    foreach ($failedRuns as $run) {
+                        $jobsResponse = $client->get(
+                            '/repos/'.$repoPath
+                            .'/actions/runs/'.(int) $run['id'].'/jobs',
+                            [
+                                'filter' => 'latest',
+                                'per_page' => 30,
+                            ],
+                        );
+
+                        if (! $jobsResponse->successful()) {
+                            $warnings[] = 'GitHub Actions job詳細を取得できませんでした。';
+                            continue;
+                        }
+
+                        $jobsData = $jobsResponse->json();
+                        if (! is_array($jobsData)) {
+                            continue;
+                        }
+
+                        collect($jobsData['jobs'] ?? [])
+                            ->filter(fn ($item) => is_array($item))
+                            ->filter(fn (array $job) => in_array(
+                                $job['conclusion'] ?? null,
+                                [
+                                    'failure',
+                                    'cancelled',
+                                    'timed_out',
+                                    'startup_failure',
+                                    'action_required',
+                                ],
+                                true,
+                            ))
+                            ->take(20)
+                            ->each(function (array $job) use (
+                                &$ciDetails,
+                                $run,
+                            ) {
+                                $ciDetails['jobs'][] = [
+                                    'id' => (int) ($job['id'] ?? 0),
+                                    'run_id' => (int) $run['id'],
+                                    'run_name' => (string) $run['name'],
+                                    'name' => mb_substr(
+                                        (string) ($job['name'] ?? ''),
+                                        0,
+                                        255,
+                                    ),
+                                    'status' => mb_substr(
+                                        (string) ($job['status'] ?? ''),
+                                        0,
+                                        100,
+                                    ),
+                                    'conclusion' => filled(
+                                        $job['conclusion'] ?? null,
+                                    )
+                                        ? mb_substr(
+                                            (string) $job['conclusion'],
+                                            0,
+                                            100,
+                                        )
+                                        : null,
+                                    'url' => $this->githubUrl(
+                                        $job['html_url'] ?? null,
+                                    ),
+                                    'steps' => collect(
+                                        $job['steps'] ?? [],
+                                    )
+                                        ->filter(fn ($step) =>
+                                            is_array($step)
+                                        )
+                                        ->filter(fn (array $step) =>
+                                            in_array(
+                                                $step['conclusion'] ?? null,
+                                                [
+                                                    'failure',
+                                                    'cancelled',
+                                                    'timed_out',
+                                                    'action_required',
+                                                ],
+                                                true,
+                                            )
+                                        )
+                                        ->take(10)
+                                        ->map(fn (array $step) => [
+                                            'number' => max(
+                                                0,
+                                                (int) (
+                                                    $step['number']
+                                                    ?? 0
+                                                ),
+                                            ),
+                                            'name' => mb_substr(
+                                                (string) (
+                                                    $step['name']
+                                                    ?? ''
+                                                ),
+                                                0,
+                                                255,
+                                            ),
+                                            'conclusion' => mb_substr(
+                                                (string) (
+                                                    $step['conclusion']
+                                                    ?? ''
+                                                ),
+                                                0,
+                                                100,
+                                            ),
+                                        ])
+                                        ->values()
+                                        ->all(),
+                                ];
+                            });
+                    }
+                } else {
+                    $warnings[] = 'GitHub Actions runを取得できませんでした。';
+                }
+            } else {
+                $warnings[] = 'GitHub Actions read権限がないためworkflow job詳細は取得していません。';
+            }
+
+            if (
+                $headSha !== ''
+                && in_array(
+                    $permissions['checks'] ?? null,
+                    ['read', 'write'],
+                    true,
+                )
+            ) {
+                $checksResponse = $client->get(
+                    '/repos/'.$repoPath.'/commits/'.$headSha.'/check-runs',
+                    ['per_page' => 30],
+                );
+
+                if ($checksResponse->successful()) {
+                    $checksData = $checksResponse->json();
+                    $checks = is_array($checksData)
+                        ? collect($checksData['check_runs'] ?? [])
+                            ->filter(fn ($item) => is_array($item))
+                            ->take(30)
+                            ->map(fn (array $item) => [
+                                'id' => (int) ($item['id'] ?? 0),
+                                'name' => mb_substr(
+                                    (string) ($item['name'] ?? ''),
+                                    0,
+                                    255,
+                                ),
+                                'status' => mb_substr(
+                                    (string) ($item['status'] ?? ''),
+                                    0,
+                                    100,
+                                ),
+                                'conclusion' => filled(
+                                    $item['conclusion'] ?? null,
+                                )
+                                    ? mb_substr(
+                                        (string) $item['conclusion'],
+                                        0,
+                                        100,
+                                    )
+                                    : null,
+                                'completed_at' => $this->dateValue(
+                                    $item['completed_at'] ?? null,
+                                ),
+                                'url' => $this->githubUrl(
+                                    $item['html_url'] ?? null,
+                                ),
+                            ])
+                            ->filter(fn (array $item) => $item['id'] > 0)
+                            ->values()
+                        : collect();
+
+                    $ciDetails['check_runs'] = $checks->all();
+
+                    $failedChecks = $checks
+                        ->filter(fn (array $check) => in_array(
+                            $check['conclusion'] ?? null,
+                            [
+                                'failure',
+                                'cancelled',
+                                'timed_out',
+                                'startup_failure',
+                                'action_required',
+                                'stale',
+                            ],
+                            true,
+                        ))
+                        ->take(8);
+
+                    foreach ($failedChecks as $check) {
+                        $annotationsResponse = $client->get(
+                            '/repos/'.$repoPath
+                            .'/check-runs/'.(int) $check['id']
+                            .'/annotations',
+                            ['per_page' => 30],
+                        );
+
+                        if (! $annotationsResponse->successful()) {
+                            $warnings[] = 'GitHub Check annotationを取得できませんでした。';
+                            continue;
+                        }
+
+                        collect((array) $annotationsResponse->json())
+                            ->filter(fn ($item) => is_array($item))
+                            ->take(30)
+                            ->each(function (array $annotation) use (
+                                &$ciDetails,
+                                $check,
+                            ) {
+                                $message = $this->boundedProviderText(
+                                    $annotation['message'] ?? null,
+                                    1800,
+                                );
+
+                                if ($message === null) {
+                                    return;
+                                }
+
+                                $ciDetails['annotations'][] = [
+                                    'check_run_id' => (int) $check['id'],
+                                    'check_name' => (string) $check['name'],
+                                    'path' => mb_substr(
+                                        (string) (
+                                            $annotation['path']
+                                            ?? ''
+                                        ),
+                                        0,
+                                        500,
+                                    ),
+                                    'start_line' => $this->positiveInteger(
+                                        $annotation['start_line']
+                                        ?? null,
+                                    ),
+                                    'end_line' => $this->positiveInteger(
+                                        $annotation['end_line']
+                                        ?? null,
+                                    ),
+                                    'level' => mb_substr(
+                                        (string) (
+                                            $annotation['annotation_level']
+                                            ?? ''
+                                        ),
+                                        0,
+                                        50,
+                                    ),
+                                    'title' => $this->boundedProviderText(
+                                        $annotation['title'] ?? null,
+                                        500,
+                                    ),
+                                    'message' => $message,
+                                ];
+                            });
+                    }
+                } else {
+                    $warnings[] = 'GitHub Check Runsを取得できませんでした。';
+                }
+            } else {
+                $warnings[] = 'GitHub Checks read権限がないためannotation詳細は取得していません。';
+            }
+
+            if (
+                $headSha !== ''
+                && in_array(
+                    $permissions['statuses'] ?? null,
+                    ['read', 'write'],
+                    true,
+                )
+            ) {
+                $statusResponse = $client->get(
+                    '/repos/'.$repoPath.'/commits/'.$headSha.'/status',
+                );
+
+                if ($statusResponse->successful()) {
+                    $statusData = $statusResponse->json();
+
+                    if (is_array($statusData)) {
+                        $ciDetails['statuses'] = collect(
+                            $statusData['statuses'] ?? [],
+                        )
+                            ->filter(fn ($item) => is_array($item))
+                            ->filter(fn (array $item) => in_array(
+                                $item['state'] ?? null,
+                                ['error', 'failure', 'pending'],
+                                true,
+                            ))
+                            ->take(30)
+                            ->map(fn (array $item) => [
+                                'id' => (int) ($item['id'] ?? 0),
+                                'state' => mb_substr(
+                                    (string) ($item['state'] ?? ''),
+                                    0,
+                                    50,
+                                ),
+                                'context' => mb_substr(
+                                    (string) ($item['context'] ?? ''),
+                                    0,
+                                    255,
+                                ),
+                                'description' =>
+                                    $this->boundedProviderText(
+                                        $item['description'] ?? null,
+                                        800,
+                                    ),
+                                'updated_at' => $this->dateValue(
+                                    $item['updated_at'] ?? null,
+                                ),
+                                'url' => $this->githubUrl(
+                                    $item['target_url'] ?? null,
+                                ),
+                            ])
+                            ->values()
+                            ->all();
+                    }
+                } else {
+                    $warnings[] = 'GitHub Commit Status詳細を取得できませんでした。';
+                }
+            }
+        }
+
+        return [
+            'version' => 1,
+            'source' => 'github_app_rest_explicit_triage',
+            'transient' => true,
+            'mode' => $mode,
+            'repo_full_name' => $repoFullName,
+            'fetched_at' => now()->toIso8601String(),
+            'pull_request' => [
+                'number' => $pullRequestNumber,
+                'title' => mb_substr(
+                    (string) ($pull['title'] ?? ''),
+                    0,
+                    500,
+                ),
+                'state' => mb_substr(
+                    (string) ($pull['state'] ?? ''),
+                    0,
+                    50,
+                ),
+                'draft' => (bool) ($pull['draft'] ?? false),
+                'head_sha' => $headSha,
+                'head_ref' => mb_substr(
+                    (string) data_get($pull, 'head.ref', ''),
+                    0,
+                    255,
+                ),
+                'base_ref' => mb_substr(
+                    (string) data_get($pull, 'base.ref', ''),
+                    0,
+                    255,
+                ),
+                'url' => $this->githubUrl(
+                    $pull['html_url'] ?? null,
+                ),
+            ],
+            'review' => $reviewDetails,
+            'ci' => $ciDetails,
+            'warnings' => array_values(array_unique($warnings)),
+        ];
+    }
+
+    /**
      * Read one Issue through the installed GitHub App without importing
      * unbounded body/comment text into Canovia Intelligence.
      *
@@ -1747,6 +2382,28 @@ final class GitHubRepositoryWriter
     private function integerHeader(mixed $value): ?int
     {
         return is_numeric($value) ? max(0, (int) $value) : null;
+    }
+
+    private function boundedProviderText(
+        mixed $value,
+        int $limit,
+    ): ?string {
+        $text = trim((string) $value);
+
+        if ($text === '') {
+            return null;
+        }
+
+        $text = preg_replace('/\r\n?|\n/u', "\n", $text) ?? $text;
+
+        return mb_substr($text, 0, max(1, $limit));
+    }
+
+    private function positiveInteger(mixed $value): ?int
+    {
+        $number = is_numeric($value) ? (int) $value : 0;
+
+        return $number > 0 ? $number : null;
     }
 
     private function dateValue(mixed $value): ?string
