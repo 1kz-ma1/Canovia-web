@@ -1,6 +1,6 @@
 # TEMP V58.2 Study / Developer Mode Top Hubs
 
-Status: implementation working spec  
+Status: implemented / validated  
 Branch: `feature/v58-2-study-development-mode-tops`
 
 This temporary spec is intentionally committed **before implementation** so the
@@ -304,42 +304,63 @@ This avoids duplicate Plan selectors.
 - [x] commit this working spec before implementation
 
 ### Phase B — shared backend
-- [ ] add shared Mode Top Plan summary service
-- [ ] add Study Top controller
-- [ ] add Developer Top controller
-- [ ] add routes
+- [x] add shared Mode Top Plan summary service
+- [x] add Study Top controller
+- [x] add Developer Top controller
+- [x] add routes
 
 ### Phase C — top UI
-- [ ] add shared Plan list partial
-- [ ] add Study Top page
-- [ ] add Developer Top page
-- [ ] add empty states
-- [ ] add create Plan CTAs
+- [x] add shared Plan list partial
+- [x] add Study Top page
+- [x] add Developer Top page
+- [x] add empty states
+- [x] add create Plan CTAs
 
 ### Phase D — Plan workspace links / responsibility cleanup
-- [ ] add `学習トップへ →`
-- [ ] add `開発トップへ →`
-- [ ] move Study multi-Plan selection out of Plan Workspace
-- [ ] move Developer multi-Plan selection out of Plan Workspace
-- [ ] keep Developer View selector
+- [x] add `学習トップへ` navigation
+- [x] add `開発トップへ` navigation
+- [x] move Study multi-Plan selection out of Plan Workspace
+- [x] move Developer multi-Plan selection out of Plan Workspace
+- [x] keep Developer View selector
 
 ### Phase E — validation
-- [ ] top route authorization / profile filtering
-- [ ] progress summary test
-- [ ] Study Top links / setup test
-- [ ] Developer GitHub status / no remote API test
-- [ ] Study Workspace regression
-- [ ] Developer V58.0 / V58.1 regression
-- [ ] Workspace Mode route hint regression
-- [ ] mobile / desktop shell regression
+- [x] top route authorization / profile filtering
+- [x] progress summary test
+- [x] Study Top links / setup test
+- [x] Developer GitHub status / no remote API test
+- [x] Study Workspace regression
+- [x] Developer V58.0 / V58.1 regression
+- [x] Workspace Mode route hint regression
+- [x] mobile / desktop shell regression
 
 ### Phase F — final documentation / PR
-- [ ] update canonical Product Spec
-- [ ] mark this TEMP spec implemented
-- [ ] remove temporary CI workflow after green
+- [x] update canonical Product Spec
+- [x] mark this TEMP spec implemented
+- [x] remove temporary CI workflow after green
 - [ ] create PR and record URL
 
 ---
+
+## 11.5 Validation result
+
+Dedicated V58.2 validation run:
+
+`37421544835`
+
+Passed:
+
+- frontend build
+- PHP lint
+- Blade compile
+- migration smoke
+- V58.2 Study / Developer Mode Top tests
+- Study Workspace / State First regressions
+- Developer Workspace V54.4 / V58.0 / V58.1 regressions
+- V57.6 / V57.7 / V57.8 Developer implementation-chain regressions
+- Workspace Mode bar / persistence / onboarding / mobile regressions
+- V57.9 compact desktop shell regression
+
+No remote GitHub request is performed by Developer Top GET.
 
 ## 12. Non-goals
 
