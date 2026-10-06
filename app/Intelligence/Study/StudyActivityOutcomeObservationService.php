@@ -18,6 +18,7 @@ final class StudyActivityOutcomeObservationService
         'study_practice_assessed',
         'study_recall_reviewed',
         'study_language_activity_completed',
+        'study_resource_study_completed',
     ];
 
     /**
@@ -213,14 +214,9 @@ final class StudyActivityOutcomeObservationService
                     'latest_observed_at' =>
                         $latest['after_at'] ?? null,
                     'measurement_status' =>
-                        $key
-                            === StudyActivityPolicyService::RESOURCE_STUDY
-                                ? 'unmeasured'
-                                : (
-                                    $activityObservations->isNotEmpty()
-                                        ? 'observed'
-                                        : 'waiting'
-                                ),
+                        $activityObservations->isNotEmpty()
+                            ? 'observed'
+                            : 'waiting',
                 ];
             })
             ->values()
@@ -290,6 +286,13 @@ final class StudyActivityOutcomeObservationService
     ): ?string {
         if ($evidence->type === 'study_recall_reviewed') {
             return StudyActivityPolicyService::RECALL;
+        }
+
+        if (
+            $evidence->type
+            === 'study_resource_study_completed'
+        ) {
+            return StudyActivityPolicyService::RESOURCE_STUDY;
         }
 
         if (
