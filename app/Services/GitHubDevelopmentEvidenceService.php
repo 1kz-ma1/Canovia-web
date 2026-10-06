@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\EvidenceSource;
 use App\Enums\FeatureKey;
+use App\Models\DevelopmentActivityObservation;
 use App\Models\GitHubWebhookDelivery;
 use App\Models\PlanArtifact;
 use App\Models\Task;
@@ -26,6 +27,65 @@ final class GitHubDevelopmentEvidenceService
      *
      * @return array{matched_artifacts:int,synced_tasks:int,skipped_entitlement:int,plan_ids:array<int,int>}
      */
+    /**
+     * Synchronize one human-confirmed V57.2 Observation into the existing
+     * non-PR Evidence pipeline.
+     */
+    public function syncObservation(
+        DevelopmentActivityObservation $observation,
+        Task $task,
+        PlanArtifact $artifact,
+    ): ?\App\Models\TaskEvidence {
+        if (
+            (int) $observation->plan_id !== (int) $task->plan_id
+            || (int) $artifact->plan_id !== (int) $task->plan_id
+            || $artifact->provider !== 'github'
+            || ! $artifact->tasks()->whereKey($task->id)->exists()
+        ) {
+            return null;
+        }
+
+        $repository = $observation->repositoryArtifact;
+        $parsedRepository = $repository instanceof PlanArtifact
+            ? $this->workflow->parseUrl((string) $repository->url)
+            : [];
+
+        $repoFullName = trim((string) ($parsedRepository['repo_full_name'] ?? ''));
+        if ($repoFullName === '') {
+            return null;
+        }
+
+        $target = match ((string) $observation->kind) {
+            'issue' => [
+                'kind' => 'issue',
+                'number' => (int) $observation->provider_number,
+            ],
+            'branch' => [
+                'kind' => 'branch',
+                'branch' => (string) $observation->ref,
+            ],
+            'commit' => [
+                'kind' => 'commit',
+                'commit_sha' => (string) $observation->sha,
+                'branch' => (string) $observation->ref,
+            ],
+            default => null,
+        };
+
+        if (! is_array($target)) {
+            return null;
+        }
+
+        $snapshot = $this->authoritativeSnapshot($repoFullName, $target);
+
+        return $this->recordTargetEvidence(
+            $task,
+            [(int) $artifact->id],
+            $target,
+            $snapshot,
+        );
+    }
+
     public function syncDelivery(
         GitHubWebhookDelivery $delivery,
     ): array {
@@ -396,6 +456,10 @@ final class GitHubDevelopmentEvidenceService
                     (string) ($target['commit_sha'] ?? ''),
                 ),
             ],
+            'commit' => $this->github->inspectCommit(
+                $repoFullName,
+                (string) ($target['commit_sha'] ?? ''),
+            ),
             'deployment' => $this->github->inspectDeployment(
                 $repoFullName,
                 (int) ($target['deployment_id'] ?? 0),
@@ -429,6 +493,12 @@ final class GitHubDevelopmentEvidenceService
                 $snapshot,
             ),
             'push' => $this->recordPush(
+                $task,
+                $artifactIds,
+                $target,
+                $snapshot,
+            ),
+            'commit' => $this->recordCommit(
                 $task,
                 $artifactIds,
                 $target,
@@ -554,6 +624,41 @@ final class GitHubDevelopmentEvidenceService
         // The branch observation is also useful but Commit is the canonical
         // push Evidence. The branch head remains available from a separate
         // branch Artifact / create event.
+        return $this->evidence->record(
+            $task,
+            EvidenceSource::GitHub,
+            'github_commit_observed',
+            [
+                'plan_artifact_id' => $artifactIds[0] ?? null,
+                'plan_artifact_ids' => $artifactIds,
+                'repo_full_name' => $repo,
+                'commit_sha' => $sha,
+                'branch' => trim((string) ($target['branch'] ?? '')) ?: null,
+                'parent_count' => (int) ($commit['parent_count'] ?? 0),
+                'verified' => (bool) ($commit['verified'] ?? false),
+            ],
+            confidence: 1.0,
+            externalKey: 'github:'.$repo.':commit:'.$sha,
+            occurredAt: $this->date(
+                $commit['committed_at'] ?? $commit['authored_at'] ?? null,
+            ) ?? now(),
+        );
+    }
+
+    private function recordCommit(
+        Task $task,
+        array $artifactIds,
+        array $target,
+        array $snapshot,
+    ): ?\App\Models\TaskEvidence {
+        $commit = (array) ($snapshot['commit'] ?? []);
+        $repo = (string) ($snapshot['repo_full_name'] ?? '');
+        $sha = mb_strtolower(trim((string) ($commit['sha'] ?? '')));
+
+        if ($repo === '' || $sha === '') {
+            return null;
+        }
+
         return $this->evidence->record(
             $task,
             EvidenceSource::GitHub,
