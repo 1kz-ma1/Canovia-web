@@ -70,6 +70,40 @@
                 </article>
             </section>
 
+            <section class="page-card border-violet-300/20 p-5 sm:p-6">
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-[.18em] text-violet-300">RELEASE ACCESS</p>
+                        <h2 class="mt-1 text-lg font-black text-slate-100">User Release Level</h2>
+                        <p class="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
+                            Public Releaseとは独立して、このユーザーだけBeta構成へ進めます。Internal Previewは管理者専用です。
+                        </p>
+                    </div>
+                    <div class="text-right">
+                        <span class="badge badge-slate">L{{ $selectedUserReleaseLevel?->value ?? $publicReleaseLevel->value }} {{ $selectedUserReleaseLevel?->label() ?? $publicReleaseLevel->label() }}</span>
+                        <p class="mt-1 text-[10px] text-slate-600">Public L{{ $publicReleaseLevel->value }}</p>
+                    </div>
+                </div>
+
+                <form method="POST" action="{{ route('admin.release_level.user.update', $selectedUser) }}" class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+                    @csrf
+                    <label class="flex-1">
+                        <span class="form-label">Access Level</span>
+                        <select name="level" class="form-control mt-2">
+                            <option value="public" @selected($selectedUser->release_level_override === null)>
+                                Publicを継承 — L{{ $publicReleaseLevel->value }} {{ $publicReleaseLevel->label() }}
+                            </option>
+                            @foreach ($releaseLevelCases as $releaseLevel)
+                                <option value="{{ $releaseLevel->value }}" @selected((int) $selectedUser->release_level_override === $releaseLevel->value && $selectedUser->release_level_override !== null)>
+                                    L{{ $releaseLevel->value }} {{ $releaseLevel->label() }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </label>
+                    <button class="btn-secondary justify-center" type="submit">Release Levelを変更</button>
+                </form>
+            </section>
+
             <section class="page-card border-cyan-300/20 p-5 sm:p-6">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>
