@@ -29,7 +29,7 @@ return [
     | This is a planning target only. It never changes Public Release Level.
     |
     */
-    'early_access_target' => ReleaseLevel::EarlyAccessCore->value,
+    'early_access_target' => ReleaseLevel::ProductPreview->value,
 
     /*
     |--------------------------------------------------------------------------

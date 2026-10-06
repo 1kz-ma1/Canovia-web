@@ -24,6 +24,9 @@ enum BehaviorEventType: string
     case WorkspaceModeSelected = 'workspace_mode_selected';
     case WorkspaceModeAutoContext = 'workspace_mode_auto_context';
 
+    // V58.22 Product Preview demand telemetry. Server-recorded only.
+    case ProductPreviewViewed = 'product_preview_viewed';
+
     // V42.4 Living Map validation telemetry.
     case MapViewed = 'map_viewed';
     case MapSurfaceViewed = 'map_surface_viewed';

@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ReleaseLevel;
 use App\Models\User;
 use App\Services\AccountDeletionService;
 use App\Services\GuestPlanClaimService;
 use App\Services\FutureMemoService;
 use App\Services\FirstRunService;
+use App\Services\ReleaseLevelService;
 use Illuminate\Http\Request;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Auth;
@@ -169,13 +171,22 @@ class AuthController extends Controller
             : back()->withErrors(['email' => __($status)]);
     }
 
-    public function account(Request $request)
-    {
+    public function account(
+        Request $request,
+        ReleaseLevelService $releaseLevels,
+    ) {
         if (! $request->user()) {
             return redirect()->route('auth.login.form');
         }
 
-        return view('auth.account', ['user' => $request->user()]);
+        return view('auth.account', [
+            'user' => $request->user(),
+            'showProductPreview' => $releaseLevels->allowsMinimum(
+                ReleaseLevel::ProductPreview,
+                $request->user(),
+                $request,
+            ),
+        ]);
     }
 
     public function destroyAccount(

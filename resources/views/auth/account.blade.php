@@ -10,6 +10,23 @@
             計画はアカウントに紐づいています。Cookie削除・別端末・PWA再インストール後も、ログインすれば復元できます。
         </div>
 
+        @if ($showProductPreview)
+            <a
+                href="{{ route('product.preview.index') }}"
+                class="mt-5 block rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.04] p-4 transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.07]"
+                data-product-preview-entry
+            >
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">EARLY ACCESS</p>
+                        <p class="mt-1 text-sm font-black text-slate-100">プラン・機能プレビュー</p>
+                        <p class="mt-1 text-xs leading-5 text-slate-500">Free / Premium / Pro / Dev ProでCanoviaの動きがどう変わるか確認できます。</p>
+                    </div>
+                    <span class="text-lg text-cyan-300" aria-hidden="true">→</span>
+                </div>
+            </a>
+        @endif
+
         <div class="mt-5 flex flex-wrap gap-4 text-sm">
             <a href="{{ route('legal.privacy') }}" class="font-semibold text-sky-300 hover:text-sky-200">プライバシーポリシー</a>
             <a href="{{ route('legal.support') }}" class="font-semibold text-sky-300 hover:text-sky-200">サポート</a>

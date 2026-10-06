@@ -108,21 +108,17 @@ class ReleaseGateInventoryV5821Test extends TestCase
         $this->assertNotEmpty($assessment['manual_checks']);
     }
 
-    public function test_level_two_is_blocked_until_canonical_product_preview_surface_exists(): void
+    public function test_level_two_contract_requires_canonical_product_preview_surface(): void
     {
-        $assessment = app(ReleaseGateService::class)
-            ->assess(ReleaseLevel::ProductPreview);
-
-        $this->assertFalse($assessment['automatic_ready']);
-        $this->assertSame('blocked', $assessment['status']);
-
-        $this->assertTrue(
-            $assessment['failed_checks']->contains(
-                fn (array $check) =>
-                    $check['key']
-                    === 'route:2:product.preview.index',
-            ),
+        $requiredRoutes = (array) config(
+            'release_levels.gate.levels.'.
+            ReleaseLevel::ProductPreview->value.
+            '.required_routes',
+            [],
         );
+
+        $this->assertContains('product.preview.index', $requiredRoutes);
+        $this->assertTrue(route('product.preview.index') !== '');
     }
 
     public function test_release_maturity_never_grants_entitlement(): void
@@ -159,7 +155,7 @@ class ReleaseGateInventoryV5821Test extends TestCase
         );
     }
 
-    public function test_admin_release_gate_shows_l1_candidate_l2_blocker_and_feature_inventory(): void
+    public function test_admin_release_gate_shows_l1_candidate_and_feature_inventory(): void
     {
         $admin = User::factory()->create([
             'first_run_completed_at' => now(),
@@ -171,7 +167,6 @@ class ReleaseGateInventoryV5821Test extends TestCase
             ->assertOk()
             ->assertSee('Release Gate')
             ->assertSee('L1 Early Access Core')
-            ->assertSee('product.preview.index')
             ->assertSee('Feature maturity map')
             ->assertSee(FeatureKey::DeveloperGithubWrite->value);
     }

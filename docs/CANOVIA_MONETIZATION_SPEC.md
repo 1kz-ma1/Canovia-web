@@ -1,6 +1,6 @@
 # Canovia Monetization Specification
 
-> Status: Product decision / implementation pending  
+> Status: Product decision + Early Access Product Preview implemented; paid runtime pending  
 > Updated: 2026-10-07  
 > Scope: Canovia-wide plan architecture, Study / Development boundaries, Early Access presentation
 
@@ -268,6 +268,30 @@ Early Accessでは原則:
 購入経路は、実際の価値・原価・運用が成立するまで公開しない。
 
 Coming Soonは単なるロックではなく、将来的に「興味あり」「通知希望」等の需要シグナルを取れる余地を持たせる。
+
+## 8.1 V58.22 Product Preview implementation
+
+Early AccessのProduct Preview Surfaceを実装済み。
+
+```text
+route = product.preview.index
+minimum release level = 2
+```
+
+表示:
+
+- Free = 利用可能
+- Premium = Coming Soon
+- Pro = Coming Soon
+- Dev Pro = Coming Soon
+- Study experience preview
+- Development experience preview
+
+価格・正式提供時期・AI quotaは表示しない。
+checkout / billing / purchase CTAは持たない。
+
+閲覧は `product_preview_viewed` として安全なmetadataだけを観測する。
+将来のinterest / notify CTAは別実装とする。
 
 ## 9. AI cost principles
 

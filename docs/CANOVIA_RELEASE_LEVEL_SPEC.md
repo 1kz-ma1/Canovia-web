@@ -1,6 +1,6 @@
 # Canovia Release Level / Feature Flag Specification
 
-> Status: Product contract + V58.20 Foundation + V58.21 Release Gate implemented  
+> Status: Product contract + V58.20 Foundation + V58.21 Release Gate + V58.22 Product Preview implemented  
 > Updated: 2026-10-07  
 > Scope: Early Access staged release, admin preview, beta rollout
 
@@ -22,8 +22,8 @@ V58.21でFeature maturity inventoryとread-only Release Gateを追加済み。
 - L3 = selected Beta capabilities
 - L4 = Internal mutation / unfinished capability
 
-L2は `product.preview.index` が実装されるまでRelease Gate上Blockedとする。
-Public LevelのDB/Admin操作は引き続き未実装。
+V58.22で `product.preview.index` を実装し、L2 automated gateはManual Review候補へ進んだ。
+Initial Early Access planning targetはL2 Product Preview。Public LevelのDB/Admin操作は引き続き未実装。
 
 ## 1. Purpose
 
@@ -334,13 +334,15 @@ Public Levelへ昇格する最低条件:
 
 ## 14. Early Access recommended state
 
-Initial recommendation:
+Initial recommendation after V58.22:
 
 ```text
-Public          = Level 1 or Level 2
-Admin Preview   = Level 4
-Selected Beta   = Level 3
+Early Access candidate = Level 2
+Admin Preview          = Level 4
+Selected Beta          = Level 3
 ```
+
+これはPublic Release Levelを自動変更しない。L2のManual Release Checks完了後にProduct Ownerが公開判断する。
 
 Study / Developmentを安定した主要カテゴリとして公開し、Careerは専用UI / basic flowを揃えてからLevel 3 Betaへ昇格させる。
 
@@ -384,7 +386,7 @@ Admin Preview Levelは「公開成熟度プレビュー」であり、別軸と�
 V58.21 Release Gate後も、この文書だけでは実装しない:
 
 - Public Release LevelのDB永続化 / Admin切替
-- Product Preview UI / checkout
+- checkout / billing
 - percentage rollout engine
 - billing
 - Premium / Pro entitlement resolver migration
