@@ -132,6 +132,15 @@ class ProductPreviewV5822Test extends TestCase
         );
     }
 
+
+    public function test_early_access_planning_target_advances_to_level_two(): void
+    {
+        $this->assertSame(
+            ReleaseLevel::ProductPreview,
+            app(ReleaseGateService::class)->recommendedTarget(),
+        );
+    }
+
     public function test_product_preview_contract_keeps_only_free_available(): void
     {
         $tiers = (array) config('product_preview.tiers', []);
