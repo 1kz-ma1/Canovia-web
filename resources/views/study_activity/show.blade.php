@@ -72,6 +72,29 @@
                                 <a href="{{ route('plans.resources.index', $plan) }}" class="btn-secondary">⌘ 単語帳・教材を登録</a>
                             @endif
                         </div>
+                    @elseif ($primaryKey === 'resource_study')
+                        <p class="text-sm leading-6 text-slate-300">{{ $primary['description'] ?? '' }}</p>
+                        <div class="mt-4 grid gap-3 sm:grid-cols-3">
+                            @foreach ([
+                                ['label' => '確認したい論点を決める', 'text' => 'Task全体を漫然と読むのではなく、今回理解したい箇所を絞ります。'],
+                                ['label' => '必要な教材だけ開く', 'text' => 'Taskに紐づくResourceを優先して、必要な章・節・解説を確認します。'],
+                                ['label' => '実施結果を記録', 'text' => '教材学習を明示Evidenceとして残します。リンクを開いただけでは記録しません。'],
+                            ] as $index => $step)
+                                <div class="rounded-xl border border-white/8 bg-slate-950/25 p-3">
+                                    <p class="text-[10px] font-black text-slate-500">{{ $index + 1 }}</p>
+                                    <p class="mt-1 text-sm font-bold text-slate-100">{{ $step['label'] }}</p>
+                                    <p class="mt-1 text-xs leading-5 text-slate-400">{{ $step['text'] }}</p>
+                                </div>
+                            @endforeach
+                        </div>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <a href="{{ $primary['url'] }}" class="btn-primary">
+                                {{ $primary['action_label'] ?? '教材学習を始める' }}
+                            </a>
+                            <a href="{{ route('plans.resources.index', $plan) }}" class="btn-secondary">
+                                教材を管理
+                            </a>
+                        </div>
                     @elseif (in_array($primaryKey, ['listening', 'dictation', 'shadowing'], true))
                         <p class="text-sm leading-6 text-slate-300">{{ $primary['description'] ?? '' }}</p>
                         <div class="mt-4 grid gap-3 sm:grid-cols-3">
@@ -269,10 +292,6 @@
                                             （{{ ($method['latest_score_delta'] ?? 0) > 0 ? '+' : '' }}{{ (int) ($method['latest_score_delta'] ?? 0) }}pt）
                                         </span>
                                     </div>
-                                @elseif ($status === 'unmeasured')
-                                    <p class="mt-2 text-[10px] leading-4 text-slate-600">
-                                        Resource Studyは明示的な完了Evidenceがまだないため、現段階ではActivity効果比較へ含めません。
-                                    </p>
                                 @elseif (($method['usage_count'] ?? 0) > 0)
                                     <p class="mt-2 text-[10px] leading-4 text-slate-600">
                                         実行記録はありますが、比較可能な前後Practiceがまだ揃っていません。
