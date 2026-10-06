@@ -63,61 +63,38 @@ class WorkspaceModeBarV541Test extends TestCase
             );
     }
 
-    public function test_mode_entry_routes_to_best_existing_domain_surface(): void
+    public function test_mode_entry_routes_to_mode_level_surfaces(): void
     {
         $user = User::factory()->create([
             'first_run_completed_at' => now(),
         ]);
 
-        $study = $this->plan($user, 'AP対策', '資格学習', priority: 1);
-        $this->plan($user, '別の学習', '勉強', priority: 4);
-        $development = $this->plan(
-            $user,
-            'Canovia',
-            '個人開発',
-            priority: 1,
-        );
-        $career = $this->plan(
-            $user,
-            'エンジニア就活',
-            '就活・キャリア',
-            priority: 1,
-        );
-
         $this->actingAs($user)
             ->get(route('workspace_modes.enter', [
                 'workspaceMode' => 'study',
             ]))
-            ->assertOk()
-            ->assertSee('data-study-workspace', false)
-            ->assertSee($study->title);
+            ->assertRedirect(route('workspace.study.top'));
 
         $this->actingAs($user)
             ->get(route('workspace_modes.enter', [
                 'workspaceMode' => 'development',
             ]))
-            ->assertOk()
-            ->assertSee('data-development-workspace', false)
-            ->assertSee($development->title);
+            ->assertRedirect(route('workspace.development.top'));
 
         $this->actingAs($user)
             ->get(route('workspace_modes.enter', [
                 'workspaceMode' => 'career',
             ]))
-            ->assertOk()
-            ->assertSee('data-career-workspace', false)
-            ->assertSee($career->title);
+            ->assertRedirect(route('workspace.career.index'));
 
         $this->actingAs($user)
             ->get(route('workspace_modes.enter', [
                 'workspaceMode' => 'overview',
             ]))
-            ->assertOk()
-            ->assertSee('data-overview-workspace', false)
-            ->assertSee('data-current-workspace-mode="overview"', false);
+            ->assertRedirect(route('workspace.overview.index'));
     }
 
-    public function test_mode_entry_without_domain_plan_uses_ephemeral_home_context(): void
+    public function test_mode_entry_is_navigation_only_and_does_not_persist_preference(): void
     {
         $user = User::factory()->create([
             'first_run_completed_at' => now(),
@@ -127,12 +104,12 @@ class WorkspaceModeBarV541Test extends TestCase
             ->get(route('workspace_modes.enter', [
                 'workspaceMode' => 'study',
             ]))
-            ->assertOk()
-            ->assertSee('data-study-workspace-no-plan', false)
-            ->assertSee('data-workspace-mode="study"', false)
-            ->assertSee('data-current-workspace-mode="study"', false);
+            ->assertRedirect(route('workspace.study.top'));
 
-        // GET Study Workspace entry remains navigation-only.
+        $this->assertNull(
+            $user->fresh()->workspace_mode_preference,
+        );
+
         $this->actingAs($user)
             ->get(route('home'))
             ->assertOk()
