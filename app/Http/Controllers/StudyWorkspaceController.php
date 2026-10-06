@@ -20,6 +20,7 @@ use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanPriorityService;
 use App\Services\StudyActivityPolicyService;
+use App\Services\StudyWorkspaceViewService;
 use App\Services\WorkspaceModeOnboardingService;
 use App\Services\ExecutionSetupService;
 use Illuminate\Http\Request;
@@ -38,6 +39,7 @@ final class StudyWorkspaceController extends Controller
         StudyWorkspaceRecommendationService $recommendations,
         StudyWorkspaceStateResolver $studyState,
         StudyWorkspaceSurfacePolicy $surfacePolicy,
+        StudyWorkspaceViewService $views,
         BehaviorIdentityService $identity,
         ExecutionSetupService $executionSetup,
         StudyIntelligencePresentationAdapter $presentationAdapter,
@@ -56,6 +58,10 @@ final class StudyWorkspaceController extends Controller
             fn (Plan $left, Plan $right) =>
                 $this->comparePlans($left, $right, $priorities),
         )->values();
+
+        $studySurface = $views->selected($request);
+        $studySurfaceDefinition = $views->definition($studySurface);
+        $studySurfaceOptions = $views->options();
 
         $plan = $this->selectedPlan($request, $studyPlans);
 
@@ -76,6 +82,9 @@ final class StudyWorkspaceController extends Controller
                 'studyWorkspaceRecommendation' => null,
                 'studyMethodRecommendation' => null,
                 'studyWorkspaceComposition' => null,
+                'studySurface' => $studySurface,
+                'studySurfaceDefinition' => $studySurfaceDefinition,
+                'studySurfaceOptions' => $studySurfaceOptions,
                 'modeOnboarding' => $onboarding->build(
                     WorkspaceMode::Study,
                     [],
@@ -151,6 +160,11 @@ final class StudyWorkspaceController extends Controller
             $methodRecommendation,
         );
 
+        $projectedComposition = $views->project(
+            $composition,
+            $studySurface,
+        );
+
         // Existing Study Plans no longer pass through a fixed Scope/Evidence
         // onboarding sequence. State First composition owns the next surface.
         $modeOnboarding = $onboarding->build(
@@ -162,7 +176,8 @@ final class StudyWorkspaceController extends Controller
         );
 
         $executionSetupData = (
-            ! (bool) ($composition['blocks_execution'] ?? false)
+            $studySurface === 'work'
+            && ! (bool) ($composition['blocks_execution'] ?? false)
             && $navigationTask instanceof Task
             && (
                 ! is_array($methodRecommendation)
@@ -182,22 +197,29 @@ final class StudyWorkspaceController extends Controller
             'canEdit' => $canEdit,
             'studyAdaptiveAction' => $adaptiveAction,
             'intelligencePresentation' => $presentation,
-            'intelligenceHistory' => $history->forPlan(
-                $plan,
-                IntelligenceDomain::Study,
-            ),
+            'intelligenceHistory' => $studySurface === 'history'
+                ? $history->forPlan(
+                    $plan,
+                    IntelligenceDomain::Study,
+                )
+                : [],
             'hasConfirmedScope' => $hasConfirmedScope,
             'navigationTask' => $navigationTask,
-            'intelligenceStateChange' => $stateChanges->latestForPlan(
-                $plan,
-                IntelligenceDomain::Study,
-            ),
+            'intelligenceStateChange' => $studySurface === 'work'
+                ? $stateChanges->latestForPlan(
+                    $plan,
+                    IntelligenceDomain::Study,
+                )
+                : null,
             'executionSetup' => $executionSetupData,
             'studyLearningType' => $learningType,
             'studyWorkspaceState' => $resolvedState,
             'studyWorkspaceRecommendation' => $recommendation,
             'studyMethodRecommendation' => $methodRecommendation,
-            'studyWorkspaceComposition' => $composition,
+            'studyWorkspaceComposition' => $projectedComposition,
+            'studySurface' => $studySurface,
+            'studySurfaceDefinition' => $studySurfaceDefinition,
+            'studySurfaceOptions' => $studySurfaceOptions,
             'modeOnboarding' => $modeOnboarding,
         ]);
     }
