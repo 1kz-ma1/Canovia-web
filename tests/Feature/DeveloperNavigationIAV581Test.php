@@ -38,8 +38,9 @@ class DeveloperNavigationIAV581Test extends TestCase
         $response
             ->assertOk()
             ->assertSee('data-development-navigation-form', false)
-            ->assertSee('data-development-plan-select', false)
+            ->assertDontSee('data-development-plan-select', false)
             ->assertSee('data-development-surface-select', false)
+            ->assertSee('data-development-top-link', false)
             ->assertSee(
                 'data-development-current-category="project"',
                 false,
@@ -102,7 +103,7 @@ class DeveloperNavigationIAV581Test extends TestCase
         }
     }
 
-    public function test_plan_and_view_controls_share_one_compact_navigation_form(): void
+    public function test_plan_workspace_keeps_only_view_control_and_current_plan_hidden_context(): void
     {
         [$user, $plan] = $this->scenario();
 
@@ -128,20 +129,27 @@ class DeveloperNavigationIAV581Test extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('class="development-workspace-navigation"', false)
+            ->assertSee(
+                'class="development-workspace-navigation is-view-only"',
+                false,
+            )
             ->assertSee(
                 'action="'.route('workspace.development.index').'"',
                 false,
             )
             ->assertSee('data-development-navigation-form', false)
-            ->assertSee('name="plan_id"', false)
+            ->assertDontSee('data-development-plan-select', false)
+            ->assertSee(
+                '<input type="hidden" name="plan_id" value="'.$second->id.'">',
+                false,
+            )
             ->assertSee('name="surface"', false)
-            ->assertSee('value="'.$second->id.'"', false)
             ->assertSee('value="preview"', false)
             ->assertSee(
                 'data-development-current-category="observation"',
                 false,
-            );
+            )
+            ->assertSee(route('workspace.development.top'), false);
     }
 
     private function scenario(): array
