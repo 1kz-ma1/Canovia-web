@@ -173,6 +173,8 @@ class ReleaseLevelFoundationV5820Test extends TestCase
             'release_level_override' => ReleaseLevel::BetaExpansion->value,
         ]);
 
+        $beta->refresh();
+
         $this->actingAs($beta)
             ->get(route('home'))
             ->assertOk()
