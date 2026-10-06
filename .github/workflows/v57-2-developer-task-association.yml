@@ -1,0 +1,49 @@
+name: V57.2 Developer Task Association Validation
+
+on:
+  push:
+    branches:
+      - feature/v57-2-developer-task-association
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  developer-task-association:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Http/Controllers/DevelopmentActivityObservationController.php
+          php -l app/Http/Controllers/DevelopmentWorkspaceController.php
+          php -l app/Services/DevelopmentTaskAssociationService.php
+          php -l app/Services/DevelopmentTaskMatchService.php
+          php -l app/Services/GitHubDevelopmentEvidenceService.php
+          php -l routes/web.php
+          php -l tests/Feature/DeveloperTaskAssociationV572Test.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V57.2 Task association
+        run: php artisan test tests/Feature/DeveloperTaskAssociationV572Test.php
+      - name: V57.1 Observation regression
+        run: php artisan test tests/Feature/DeveloperActivityObservationV571Test.php
+      - name: Developer Evidence regression
+        run: php artisan test tests/Feature/DeveloperEvidenceSyncV537Test.php
+      - name: Developer Readiness regression
+        run: php artisan test tests/Feature/DeveloperReadinessV538Test.php
+      - name: Development Workspace regression
+        run: php artisan test tests/Feature/DevelopmentWorkspaceV544Test.php
+      - name: GitHub connection regression
+        run: php artisan test tests/Feature/GitHubAppConnectionV465Test.php tests/Feature/GitHubIntegrationStabilizationV570Test.php
