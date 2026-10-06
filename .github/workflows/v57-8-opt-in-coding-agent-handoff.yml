@@ -1,0 +1,55 @@
+name: V57.8 Opt-in Coding Agent Handoff Validation
+
+on:
+  push:
+    branches:
+      - feature/v57-8-opt-in-coding-agent-handoff
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  coding-agent-handoff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Http/Controllers/DevelopmentCodingAgentHandoffController.php
+          php -l app/Services/DevelopmentCodingAgentHandoffService.php
+          php -l app/Services/ExecutionRequestHandoffService.php
+          php -l tests/Feature/DeveloperCodingAgentHandoffV578Test.php
+          php -l routes/web.php
+      - run: php artisan view:cache
+      - run: php artisan migrate --force
+      - name: V57.8 Coding Agent handoff
+        run: php artisan test tests/Feature/DeveloperCodingAgentHandoffV578Test.php
+      - name: V57.7 Provider triage regression
+        run: php artisan test tests/Feature/DeveloperProviderTriageV577Test.php
+      - name: V57.6 Implementation Brief regression
+        run: php artisan test tests/Feature/DeveloperImplementationBriefV576Test.php
+      - name: V57.4 Execution Context regression
+        run: php artisan test tests/Feature/DeveloperExecutionContextV574Test.php
+      - name: V57.3 Developer Home regression
+        run: php artisan test tests/Feature/DeveloperHomeV573Test.php
+      - name: Execution Orchestration regression
+        run: php artisan test tests/Feature/ExecutionOrchestrationV471Test.php tests/Feature/ExecutionRequestHandoffV473Test.php
+      - name: Execution Ecosystem regression
+        run: php artisan test tests/Feature/ExecutionEcosystemFoundationV556Test.php tests/Feature/ProviderConnectionActivityIntakeV559Test.php
+      - name: GitHub return regression
+        run: php artisan test tests/Feature/GitHubReturnEvidenceV467Test.php tests/Feature/GitHubEvidenceDecisionV468Test.php
+      - name: GitHub Connection regression
+        run: php artisan test tests/Feature/GitHubConnectionPrivateRepositoryV575Test.php tests/Feature/GitHubAppConnectionV465Test.php
+      - name: Development Workspace regression
+        run: php artisan test tests/Feature/DevelopmentWorkspaceV544Test.php tests/Feature/WorkspaceModeOnboardingV547Test.php
