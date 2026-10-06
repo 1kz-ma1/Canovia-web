@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FeatureKey;
+use App\Intelligence\Study\StudyActivityOutcomeObservationService;
 use App\Intelligence\Study\StudyAdaptiveActionService;
 use App\Intelligence\Study\StudyLearningTypeRouter;
 use App\Intelligence\Study\StudyMethodRecommendationService;
@@ -33,6 +34,7 @@ class StudyActivityController extends Controller
         StudyWorkspaceStateResolver $stateResolver,
         StudyWorkspaceRecommendationService $practiceRecommendations,
         StudyMethodRecommendationService $methodRecommendations,
+        StudyActivityOutcomeObservationService $activityOutcomes,
         BehaviorIdentityService $identity,
         FeatureAccessService $featureAccess,
     ) {
@@ -80,6 +82,12 @@ class StudyActivityController extends Controller
             'task' => $task,
             'activity' => $activities->forPlanTask($plan, $task),
             'methodRecommendation' => $methodRecommendation,
+            'activityOutcomes' => $activityOutcomes->project(
+                $plan,
+                $task,
+                $request->user()?->id,
+                $actorToken,
+            ),
             'canUseAiPractice' => $featureAccess->canUse(
                 $request->user(),
                 FeatureKey::AiPractice,
