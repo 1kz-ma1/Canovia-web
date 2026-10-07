@@ -515,6 +515,7 @@ final class PersonalizationLivingProfileService
         return [
             'pending' => $pending,
             'resolved' => $resolved,
+            'feature_recommendation_priority' => array_values((array) data_get($context, 'context_sources.inferred.feature_recommendation_priority', [])),
             'pending_count' => count($pending),
             'context_revision' => (int) (
                 $context['context_revision']
