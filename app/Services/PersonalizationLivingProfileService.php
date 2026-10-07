@@ -223,6 +223,14 @@ final class PersonalizationLivingProfileService
                     $signal['recent_pr_or_commit_count']
                     ?? 0
                 ),
+                'active_day_count_90d' => (int) (
+                    $signal['active_day_count_90d']
+                    ?? 0
+                ),
+                'activity_span_days_90d' => (int) (
+                    $signal['activity_span_days_90d']
+                    ?? 0
+                ),
             ];
             $observedDevelopmentBehavior = (array) data_get(
                 $context,

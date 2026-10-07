@@ -1,6 +1,6 @@
 # Canovia Personalization Specification
 
-> Status: V58.35 Confidence Calibration implemented; manual release review pending  
+> Status: V58.36 Sustained Development Behavior Signal implemented; manual release review pending  
 > Updated: 2026-10-07
 
 ## 1. Purpose
@@ -840,3 +840,24 @@ Calibration metadataはversion、signal strength、evidence count、basisを保�
 Canonical:
 
 - `docs/V58.35_PERSONALIZATION_CONFIDENCE_CALIBRATION.md`
+
+
+## V58.36 Sustained Development Behavior Signal
+
+Development behavior evidenceへ90日windowの継続性を追加する。
+
+```text
+distinct active days >= 6
+AND
+activity span >= 28 calendar days
+-> sustained_development_activity_28d_6_days
+```
+
+Sustained signal単独はsignal strength 2までとし、high confidenceには追加のrecent PR / Commit evidence等を要求する。
+
+これはexperience / seniority / authorshipの推定ではない。
+self-reported experienceとGuidance Levelは変更しない。
+
+Canonical:
+
+- `docs/V58.36_SUSTAINED_DEVELOPMENT_BEHAVIOR_SIGNAL.md`
