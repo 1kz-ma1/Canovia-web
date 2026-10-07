@@ -9,6 +9,7 @@
     $studyPracticeFocused = $resolved->get('study_practice_focused');
     $studyReviewCycle = $resolved->get('study_review_cycle');
     $featureRecommendationPriority = (array) data_get($profile, 'feature_recommendation_priority', []);
+    $growthExperience = (array) data_get($profile, 'growth_experience', []);
 @endphp
 
 <div class="mx-auto max-w-3xl space-y-5" data-personalization-context-updates>
@@ -79,6 +80,16 @@
             </p>
         </section>
     @endif
+
+    <section class="page-card p-5 sm:p-7" data-growth-experience-summary>
+        <h2 class="text-lg font-black text-slate-100">利用の変化と、あなたが選んだこと</h2>
+        <p class="mt-2 text-sm leading-7 text-slate-400">Canoviaが確認した行動と、あなた自身が承認した設定を分けて表示します。行動の多さを能力や経験年数の評価には使用しません。</p>
+        <div class="mt-4 grid gap-3 sm:grid-cols-3">
+            <div class="rounded-xl border border-white/10 p-3"><p class="text-xs text-slate-400">確認された行動</p><p class="mt-1 text-xl font-black text-slate-100">{{ count((array) ($growthExperience['observed_milestones'] ?? [])) }}</p></div>
+            <div class="rounded-xl border border-white/10 p-3"><p class="text-xs text-slate-400">承認した選択</p><p class="mt-1 text-xl font-black text-slate-100">{{ count((array) ($growthExperience['confirmed_choices'] ?? [])) }}</p></div>
+            <div class="rounded-xl border border-white/10 p-3"><p class="text-xs text-slate-400">確認待ち</p><p class="mt-1 text-xl font-black text-slate-100">{{ (int) ($growthExperience['pending_choices'] ?? 0) }}</p></div>
+        </div>
+    </section>
 
     @if ($featureRecommendationPriority !== [])
         <section class="page-card p-5 sm:p-7" data-feature-recommendation-priority>
