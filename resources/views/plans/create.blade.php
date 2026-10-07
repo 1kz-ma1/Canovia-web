@@ -82,9 +82,9 @@
                 <input type="hidden" name="workspace_mode" value="{{ $workspaceModeContext['key'] }}">
             @endif
             <input type="hidden" name="create_request_id" value="{{ old('create_request_id', (string) \Illuminate\Support\Str::uuid()) }}">
-            @if (data_get($prefill ?? [], 'personalization_seed_key'))
-                <input type="hidden" name="personalization_seed_key" value="{{ data_get($prefill, 'personalization_seed_key') }}">
-                <input type="hidden" name="personalization_seed_domain" value="{{ data_get($prefill, 'personalization_seed_domain') }}">
+            @if (old('personalization_seed_key', data_get($prefill ?? [], 'personalization_seed_key')))
+                <input type="hidden" name="personalization_seed_key" value="{{ old('personalization_seed_key', data_get($prefill ?? [], 'personalization_seed_key')) }}">
+                <input type="hidden" name="personalization_seed_domain" value="{{ old('personalization_seed_domain', data_get($prefill ?? [], 'personalization_seed_domain')) }}">
             @endif
 
             <section class="page-card space-y-5 p-5 sm:p-6">
