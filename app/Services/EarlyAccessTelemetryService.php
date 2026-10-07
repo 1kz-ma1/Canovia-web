@@ -6,6 +6,7 @@ use App\Enums\BehaviorEventType;
 use App\Models\BehaviorEvent;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Throwable;
 
 final class EarlyAccessTelemetryService
 {
@@ -62,14 +63,20 @@ final class EarlyAccessTelemetryService
 
         $actorToken = $this->identity->resolve($request);
 
-        $alreadyRecorded = BehaviorEvent::query()
-            ->where('actor_token', $actorToken)
-            ->where(
-                'event_type',
-                BehaviorEventType::EarlyAccessSessionStarted->value,
-            )
-            ->where('occurred_at', '>=', now()->startOfDay())
-            ->exists();
+        $alreadyRecorded = false;
+
+        try {
+            $alreadyRecorded = BehaviorEvent::query()
+                ->where('actor_token', $actorToken)
+                ->where(
+                    'event_type',
+                    BehaviorEventType::EarlyAccessSessionStarted->value,
+                )
+                ->where('occurred_at', '>=', now()->startOfDay())
+                ->exists();
+        } catch (Throwable) {
+            // Observability must never become a product outage.
+        }
 
         if (! $alreadyRecorded) {
             $this->events->recordSafely(
