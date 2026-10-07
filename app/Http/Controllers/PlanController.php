@@ -161,6 +161,15 @@ class PlanController extends Controller
         // The request ID is persisted on the Plan itself. If Safari/PWA resends
         // the same form because the redirect was not rendered, createOrFirst()
         // converges every retry onto the original Plan instead of duplicating it.
+        $acceptedPersonalizationSeed = $request->session()->get(
+            'canovia.personalization.accepted_seed',
+        );
+        $acceptedPersonalizationSeed = is_array(
+            $acceptedPersonalizationSeed,
+        )
+            ? $acceptedPersonalizationSeed
+            : null;
+
         $plan = Plan::query()->createOrFirst(
             ['creation_request_id' => $createRequestId],
             [
@@ -180,6 +189,10 @@ class PlanController extends Controller
                 'is_public' => $request->boolean('is_public'),
                 'is_collaborative' => false,
             ]
+        );
+
+        $request->session()->forget(
+            'canovia.personalization.accepted_seed',
         );
 
         if (! $plan->wasRecentlyCreated) {
@@ -219,7 +232,8 @@ class PlanController extends Controller
 
         if (
             $plan->wasRecentlyCreated
-            && filled($validated['personalization_seed_key'] ?? null)
+            && is_array($acceptedPersonalizationSeed)
+            && filled($acceptedPersonalizationSeed['key'] ?? null)
         ) {
             $events->recordSafely(
                 $identity->resolve($request),
@@ -227,9 +241,9 @@ class PlanController extends Controller
                 $request,
                 $plan,
                 metadata: [
-                    'seed_key' => (string) $validated['personalization_seed_key'],
+                    'seed_key' => (string) $acceptedPersonalizationSeed['key'],
                     'domain' => (string) (
-                        $validated['personalization_seed_domain']
+                        $acceptedPersonalizationSeed['domain']
                         ?? 'unknown'
                     ),
                 ],
