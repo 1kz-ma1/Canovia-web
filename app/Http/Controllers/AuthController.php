@@ -10,6 +10,7 @@ use App\Services\FutureMemoService;
 use App\Services\FirstRunService;
 use App\Services\ReleaseLevelService;
 use App\Services\EarlyAccessTelemetryService;
+use App\Services\PersonalizationLivingProfileService;
 use Illuminate\Http\Request;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Auth;
@@ -177,6 +178,7 @@ class AuthController extends Controller
     public function account(
         Request $request,
         ReleaseLevelService $releaseLevels,
+        PersonalizationLivingProfileService $livingProfile,
     ) {
         if (! $request->user()) {
             return redirect()->route('auth.login.form');
@@ -188,6 +190,7 @@ class AuthController extends Controller
         return view('auth.account', [
             'user' => $user,
             'personalizationContext' => $user->personalizationContext,
+            'livingProfileSummary' => $livingProfile->summary($request),
             'showPersonalizationBootstrap' =>
                 $releaseLevels->allowsMinimum(
                     ReleaseLevel::EarlyAccessCore,

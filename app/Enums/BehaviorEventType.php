@@ -47,6 +47,13 @@ enum BehaviorEventType: string
     case CapabilitySetupCompleted = 'capability_setup_completed';
     case CapabilitySetupAbandoned = 'capability_setup_abandoned';
 
+    // V58.27 Living Profile Context Update Loop. Server-recorded only.
+    case ContextRefreshTriggered = 'context_refresh_triggered';
+    case ContextUpdateCandidateCreated = 'context_update_candidate_created';
+    case ContextUpdateAutoApplied = 'context_update_auto_applied';
+    case ContextUpdateConfirmed = 'context_update_confirmed';
+    case ContextUpdateDismissed = 'context_update_dismissed';
+
     // V42.4 Living Map validation telemetry.
     case MapViewed = 'map_viewed';
     case MapSurfaceViewed = 'map_surface_viewed';

@@ -21,6 +21,7 @@ use App\Services\GitHubWorkflowService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanPriorityService;
+use App\Services\PersonalizationLivingProfileService;
 use App\Services\WorkspaceModeOnboardingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -45,6 +46,7 @@ final class DevelopmentWorkspaceController extends Controller
         IntelligenceStateChangeFeedbackService $stateChanges,
         WorkspaceModeOnboardingService $onboarding,
         CapabilityActivationService $capabilityActivation,
+        PersonalizationLivingProfileService $livingProfile,
     ) {
         $developmentPlans = $ownership->ownedPlans($request, [
             'tasks',
@@ -160,12 +162,20 @@ final class DevelopmentWorkspaceController extends Controller
             $developmentGithubRepository
             && is_array($developmentGithubConnection)
         ) {
-            $capabilityActivation->syncGithubCompletion(
+            $newlyCompleted = $capabilityActivation->syncGithubCompletion(
                 $request,
                 $plan,
                 $developmentGithubRepository,
                 $developmentGithubConnection,
             );
+
+            if ($newlyCompleted) {
+                $livingProfile->refresh(
+                    $request,
+                    'capability_readiness',
+                    $plan,
+                );
+            }
         }
 
         $githubCapabilityActivation = $capabilityActivation->github(

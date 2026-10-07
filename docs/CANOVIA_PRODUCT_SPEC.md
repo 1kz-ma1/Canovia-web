@@ -7200,3 +7200,43 @@ Canonical:
 - `docs/V58.26_CAPABILITY_ACTIVATION_FOUNDATION.md`
 - `docs/CANOVIA_PERSONALIZATION_SPEC.md`
 - `docs/wip/PERSONALIZATION_BOOTSTRAP_IMPLEMENTATION.md`
+
+
+## V58.27 Living Profile Foundation
+
+Personalizationを初回Onboardingで終わらせず、
+実利用からContext Update Candidateを作るFoundationを追加する。
+
+```text
+Initial Diagnosis
+→ Actual Behavior
+→ Context Update Candidate
+→ Replanning
+```
+
+低リスク:
+
+- recent Workspace
+- recommended Surface ordering
+
+は自動適用可能。
+
+高影響:
+
+- advanced capability exposure
+- experience interpretation
+- Plan direction
+
+はUser Confirmation境界を持つ。
+
+V58.27ではGitHub接続を根拠に
+「高度なDevelopment支援を表示する」候補まで実装する。
+
+これはExperience再分類ではない。
+Self-reported experience / Guidanceは維持する。
+
+Canonical:
+
+- `docs/V58.27_LIVING_PROFILE_FOUNDATION.md`
+- `docs/CANOVIA_PERSONALIZATION_SPEC.md`
+- `docs/wip/PERSONALIZATION_BOOTSTRAP_IMPLEMENTATION.md`

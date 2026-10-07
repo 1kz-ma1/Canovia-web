@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\WorkspaceMode;
 use App\Services\WorkspaceModePreference;
 use App\Services\WorkspaceModeRegistry;
+use App\Services\PersonalizationLivingProfileService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -24,10 +25,25 @@ final class WorkspaceModeController extends Controller
         string $workspaceMode,
         WorkspaceModeRegistry $registry,
         WorkspaceModePreference $preference,
+        PersonalizationLivingProfileService $livingProfile,
     ): RedirectResponse {
         $mode = $this->publicMode($workspaceMode, $registry);
 
         $preference->remember($request, $mode);
+
+        if (
+            $request->user()
+            && in_array(
+                $mode,
+                [WorkspaceMode::Study, WorkspaceMode::Development],
+                true,
+            )
+        ) {
+            $livingProfile->refresh(
+                $request,
+                'workspace_change',
+            );
+        }
 
         return $this->redirectForMode($mode);
     }

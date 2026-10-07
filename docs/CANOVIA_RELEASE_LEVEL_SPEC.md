@@ -497,3 +497,34 @@ Capability Activation must not bypass:
 - Feature Access
 - Plan ownership / edit access
 - existing GitHub App verification
+
+
+## V58.27 Living Profile release contract
+
+Minimum:
+
+```text
+L1 Early Access Core
+```
+
+L1 structural required route:
+
+- `personalization.updates.index`
+
+L1 manual review:
+
+- `living_profile_context_update`
+  - low-risk auto update
+  - high-impact pending candidate
+  - confirm
+  - dismiss
+  - no repeated prompt from same candidate
+  - self-reported preservation
+  - mobile / desktop
+
+Living Profile must not bypass:
+
+- Release Level
+- Entitlement / Feature Access
+- self-reported source provenance
+- explicit confirmation boundary for high-impact changes
