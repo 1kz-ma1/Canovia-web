@@ -516,6 +516,17 @@ final class PersonalizationLivingProfileService
             'pending' => $pending,
             'resolved' => $resolved,
             'feature_recommendation_priority' => array_values((array) data_get($context, 'context_sources.inferred.feature_recommendation_priority', [])),
+            'growth_experience' => [
+                'observed_milestones' => array_values(array_filter([
+                    isset($resolved['study_practice_focused']) ? 'study_practice_focused' : null,
+                    isset($resolved['study_review_cycle']) ? 'study_review_cycle' : null,
+                ])),
+                'confirmed_choices' => array_values(array_keys(array_filter(
+                    $resolved,
+                    fn ($candidate) => ($candidate['status'] ?? null) === 'confirmed',
+                ))),
+                'pending_choices' => count($pending),
+            ],
             'pending_count' => count($pending),
             'context_revision' => (int) (
                 $context['context_revision']
