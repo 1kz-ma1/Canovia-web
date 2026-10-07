@@ -12,6 +12,7 @@ use App\Http\Middleware\MeasurePagePerformance;
 use App\Http\Middleware\NormalizeAiJsonInput;
 use App\Http\Middleware\RedirectLegacyCanoviaHost;
 use App\Http\Middleware\TrackAiPlanFunnel;
+use App\Http\Middleware\TrackEarlyAccessVisit;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -44,6 +45,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.access' => EnsureAdminAccess::class,
             'feature.access' => EnsureFeatureAccess::class,
             'release.level' => EnsureReleaseLevel::class,
+            'early_access.visit' => TrackEarlyAccessVisit::class,
         ]);
         $middleware->appendToGroup('web', RedirectLegacyCanoviaHost::class);
         // Track the AI plan funnel before JSON normalization so even parser
