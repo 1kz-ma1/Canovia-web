@@ -267,16 +267,16 @@ class CandidateEvidenceReopenV5832Test extends TestCase
         $candidate = $this->candidate($user);
         $context = $this->context($user)->fresh();
 
-        $this->assertSame('dismissed', data_get($candidate, 'status'));
+        $this->assertSame('pending', data_get($candidate, 'status'));
         $this->assertSame(1, data_get(
             $candidate,
             'dismissed_signal_strength',
         ));
         $this->assertSame(
-            1,
+            2,
             $this->candidateCreatedEvents()->count(),
         );
-        $this->assertNotContains(
+        $this->assertContains(
             'sustained_development_activity_28d_6_days',
             data_get($candidate, 'evidence', []),
         );
