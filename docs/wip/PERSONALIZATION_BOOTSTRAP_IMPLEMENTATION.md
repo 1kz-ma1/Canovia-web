@@ -504,7 +504,10 @@ V58.33 Study Review Cycle Personalization = GREEN
 V58.34 Long Usage Window = GREEN
 V58.35 Confidence Calibration = GREEN
 V58.36 Sustained Development Behavior Signal = GREEN
-V58.37 Repository Structure Breadth Signal = implemented / CI pending
+V58.37 Repository Structure Breadth Signal = merged (earlier CI failure subsequently addressed)
+V58.38 Guidance Level Change Candidate = merged; CI regression corrected in PR #316
+V58.39 Development Plan Direction Review = merged; CI green in PR #316
+V58.40 Feature Recommendation Priority = PR #317, CI pending
 
 Future Architecture remains Concept / Architecture preservation context.
 V58.35 only updates the Overview's Current reference.
@@ -513,7 +516,7 @@ V58.35 only updates the Overview's Current reference.
 Current next action:
 
 ```text
-1. Review V58.37 CI and merge its PR when green.
+1. Verify V58.40 PR #317 CI, fix failures, and merge only when green.
 2. Keep WIP.
 3. Manual Release Review remains:
    - personalization_first_use
@@ -529,11 +532,9 @@ Current next action:
    - personalization_confidence_calibration
    - sustained_development_behavior_signal
    - repository_structure_breadth_signal
-4. Recommended next small slice after V58.37:
-   - Guidance Level update candidate
-   OR
-   - Plan-direction update candidate
+4. Next package: Growth Experience copy and safe contextual recommendation UX.
 5. Do not use Future Architecture docs as implementation requirements.
+6. V58.38–39 are merged; V58.40 remains pending validation. Manual Release Review still required.
 ```
 
 When resuming after interruption:
