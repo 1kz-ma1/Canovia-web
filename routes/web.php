@@ -98,12 +98,14 @@ Route::get('/product-preview', ProductPreviewController::class)
 
 Route::get('/welcome', [FirstRunController::class, 'show'])->name('first_run.show');
 Route::post('/welcome/start', [FirstRunController::class, 'start'])->name('first_run.start');
-Route::get('/personalization', [PersonalizationController::class, 'show'])->name('personalization.show');
-Route::post('/personalization', [PersonalizationController::class, 'store'])->middleware('throttle:20,1')->name('personalization.store');
-Route::post('/personalization/skip', [PersonalizationController::class, 'skip'])->middleware('throttle:20,1')->name('personalization.skip');
-Route::get('/personalization/result', [PersonalizationController::class, 'result'])->name('personalization.result');
-Route::post('/personalization/seeds/{seedKey}', [PersonalizationController::class, 'acceptSeed'])->middleware('throttle:20,1')->name('personalization.seed.accept');
-Route::post('/personalization/capabilities/{capability}/interest', [PersonalizationController::class, 'capabilityInterest'])->middleware('throttle:20,1')->name('personalization.capability.interest');
+Route::middleware('release.level:1')->group(function () {
+    Route::get('/personalization', [PersonalizationController::class, 'show'])->name('personalization.show');
+    Route::post('/personalization', [PersonalizationController::class, 'store'])->middleware('throttle:20,1')->name('personalization.store');
+    Route::post('/personalization/skip', [PersonalizationController::class, 'skip'])->middleware('throttle:20,1')->name('personalization.skip');
+    Route::get('/personalization/result', [PersonalizationController::class, 'result'])->name('personalization.result');
+    Route::post('/personalization/seeds/{seedKey}', [PersonalizationController::class, 'acceptSeed'])->middleware('throttle:20,1')->name('personalization.seed.accept');
+    Route::post('/personalization/capabilities/{capability}/interest', [PersonalizationController::class, 'capabilityInterest'])->middleware('throttle:20,1')->name('personalization.capability.interest');
+});
 Route::get('/', [HomeController::class, 'index'])->middleware('early_access.visit')->name('home');
 Route::get('/workspace/overview', OverviewWorkspaceController::class)->middleware('early_access.visit')->name('workspace.overview.index');
 Route::get('/workspace/study/top', StudyWorkspaceTopController::class)->middleware('early_access.visit')->name('workspace.study.top');
