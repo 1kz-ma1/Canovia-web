@@ -7159,3 +7159,44 @@ Interestを保存する。接続は強制しない。
 
 PersonalizationはL1 Early Access Core以上で公開する。
 L0では従来のPlan作成フローへfallbackする。
+
+
+## V58.26 Capability Activation Foundation
+
+PersonalizationのFeature Eligibilityを、実際のCapability利用まで段階的につなぐ。
+
+```text
+Need
+→ Preview
+→ Interest
+→ Readiness
+→ Setup
+→ Completed
+```
+
+GitHub Integrationを最初の実例とする。
+
+Canoviaは:
+
+- capabilityを提案する
+- readinessを説明する
+- next ownerを示す
+- setup lifecycleを記録する
+
+既存GitHub Workflowは:
+
+- Repository登録
+- GitHub App install
+- connection verification
+- sync
+
+を担当する。
+
+接続完了はobserved Contextとして記録するが、
+Initial Diagnosis / self-reported experience / Guidanceを自動変更しない。
+
+Canonical:
+
+- `docs/V58.26_CAPABILITY_ACTIVATION_FOUNDATION.md`
+- `docs/CANOVIA_PERSONALIZATION_SPEC.md`
+- `docs/wip/PERSONALIZATION_BOOTSTRAP_IMPLEMENTATION.md`
