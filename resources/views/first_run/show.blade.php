@@ -32,16 +32,16 @@
                     Canoviaは、話しながら<br class="hidden sm:block">次の一歩を作るアプリです
                 </h1>
                 <p class="mt-3 max-w-xl text-sm leading-7 text-slate-300 sm:text-base">
-                    目標がまだ曖昧でも大丈夫。最初にCanoviaへ話すと、会話から現在地を理解し、最初のPlanと次の一歩へつなげます。
-                    その後は実行・Evidence・Inboxを同じContextとして引き継ぎます。
+                    目標がまだ曖昧でも大丈夫。最初に今進めたいことと現在地を少し教えると、Canoviaが最初のPlanの型と次の一歩を用意します。
+                    その後の会話・実行・Evidence・Inboxも同じContextとして引き継ぎます。
                 </p>
 
                 <div class="onboarding-intro-points mt-6">
                     <article>
                         <span aria-hidden="true">🤝</span>
                         <div>
-                            <strong>まずCanoviaに話す</strong>
-                            <small>入力方法を選ばず、そのまま伝えられます。</small>
+                            <strong>まず現在地を少し伝える</strong>
+                            <small>全部設定せず、今分かる範囲だけで始められます。</small>
                         </div>
                     </article>
                     <article>
