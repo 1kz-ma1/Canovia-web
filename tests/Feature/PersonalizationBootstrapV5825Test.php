@@ -46,6 +46,31 @@ class PersonalizationBootstrapV5825Test extends TestCase
             );
     }
 
+
+    public function test_level_zero_keeps_personalization_hidden_and_first_run_uses_stable_core_path(): void
+    {
+        config([
+            'release_levels.public_level' =>
+                \App\Enums\ReleaseLevel::CoreStable->value,
+        ]);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('auth.account'))
+            ->assertOk()
+            ->assertDontSee('data-personalization-account-entry', false);
+
+        $this->actingAs($user)
+            ->get(route('personalization.show'))
+            ->assertRedirect(route('workspace.overview.index'));
+
+        auth()->logout();
+
+        $this->post(route('first_run.start'))
+            ->assertRedirect(route('plans.create'));
+    }
+
     public function test_multi_domain_diagnosis_persists_self_reported_context_and_keeps_observed_inferred_separate(): void
     {
         $user = User::factory()->create();
