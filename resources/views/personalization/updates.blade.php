@@ -77,6 +77,15 @@
 
                 @if ($candidateKey === 'development_advanced_support')
                     <h2 class="mt-3 text-lg font-black text-slate-100">より高度なDevelopment支援を表示しますか？</h2>
+                    @if (data_get($candidate, 'reopen_reason') === 'stronger_evidence')
+                        <div
+                            class="mt-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.035] p-3 text-xs leading-6 text-cyan-100/80"
+                            data-candidate-reopened="stronger_evidence"
+                        >
+                            前回見送った後、Repository利用やDevelopment activityなど、
+                            より強い観測事実が増えたため再確認しています。
+                        </div>
+                    @endif
                     <p class="mt-2 text-sm leading-7 text-slate-400">
                         GitHub連携まで使える状態になっています。最近の利用状況を見ると、
                         Repositoryを前提にした高度な開発支援も役立ちそうです。
