@@ -505,6 +505,27 @@ class CandidateEvidenceReopenV5832Test extends TestCase
         $this->assertSame(2, data_get($reopened, 'evidence_revision'));
     }
 
+    public function test_guidance_suggestion_requires_confirmation_and_rejects_stale_level(): void
+    {
+        [$user, $plan, $repository] = $this->scenario();
+        $this->context($user)->forceFill(['guidance_level' => 'guided'])->save();
+        $this->repository($plan, $user, 'https://github.com/example/second-repo');
+        $this->observation($plan, $repository, 'pull_request', 'pr-1');
+        $this->observation($plan, $repository, 'commit', 'commit-1');
+
+        $this->actingAs($user)->post(route('personalization.updates.refresh'));
+        $candidate = data_get($this->context($user)->inferred_context, 'update_candidates.development_guidance_level');
+        $this->assertSame('pending', data_get($candidate, 'status'));
+        $this->assertSame('guided', $this->context($user)->guidance_level);
+
+        $this->context($user)->forceFill(['guidance_level' => 'standard'])->save();
+        $this->actingAs($user)->post(route('personalization.updates.confirm', [
+            'candidateKey' => 'development_guidance_level',
+        ]));
+        $this->assertSame('pending', data_get($this->context($user)->inferred_context, 'update_candidates.development_guidance_level.status'));
+        $this->assertSame('standard', $this->context($user)->guidance_level);
+    }
+
     /**
      * @return array{0:User,1:Plan,2:PlanArtifact}
      */

@@ -101,7 +101,10 @@
                     </span>
                 </div>
 
-                @if ($candidateKey === 'development_advanced_support')
+                @if ($candidateKey === 'development_guidance_level')
+                    <h2 class="mt-3 text-lg font-black text-slate-100">案内の詳しさを標準に変更しますか？</h2>
+                    <p class="mt-2 text-sm leading-7 text-slate-400">継続的な開発活動が確認できたため、画面の案内量を減らす選択肢を提案しています。経験や能力の判定ではありません。変更にはあなたの確認が必要です。</p>
+                @elseif ($candidateKey === 'development_advanced_support')
                     <h2 class="mt-3 text-lg font-black text-slate-100">より高度なDevelopment支援を表示しますか？</h2>
                     @if (data_get($candidate, 'reopen_reason') === 'stronger_evidence')
                         <div

@@ -407,6 +407,34 @@ final class PersonalizationLivingProfileService
             }
         }
 
+        // A suggestion about assistance intensity is not an experience assessment.
+        // Only sustained, corroborated activity may suggest less guided UI.
+        if ($githubConnected && $selfReportedExperience !== '' && isset($signal)) {
+            $currentGuidance = (string) ($context['guidance_level'] ?? 'standard');
+            $guidanceKey = 'development_guidance_level';
+            if ($currentGuidance === 'guided' && $signalStrength >= 3) {
+                $guidanceExisting = (array) ($candidates[$guidanceKey] ?? []);
+                if ($guidanceExisting === []) {
+                    $candidates[$guidanceKey] = $this->candidate(
+                        key: $guidanceKey,
+                        domain: 'development',
+                        kind: 'guidance_level_change',
+                        risk: 'high',
+                        confidence: $calibration['confidence'],
+                        status: 'pending',
+                        trigger: $safeTrigger,
+                        evidence: $evidence,
+                        proposal: [
+                            'current_level' => 'guided',
+                            'proposed_level' => 'standard',
+                        ],
+                        signalStrength: $signalStrength,
+                        evidenceFingerprint: $fingerprint,
+                    );
+                }
+            }
+        }
+
         $inferred[self::CANDIDATES_KEY] = $candidates;
 
         $this->contexts->saveLivingProfileState(
@@ -508,6 +536,15 @@ final class PersonalizationLivingProfileService
             return false;
         }
 
+        if ($candidateKey === 'development_guidance_level') {
+            $baseline = (string) data_get($candidate, 'proposal.current_level', '');
+            $target = (string) data_get($candidate, 'proposal.proposed_level', '');
+            if ($baseline !== 'guided' || $target !== 'standard'
+                || (string) ($context['guidance_level'] ?? '') !== $baseline) {
+                return false;
+            }
+        }
+
         $candidate['status'] = $confirmed
             ? 'confirmed'
             : 'dismissed';
@@ -551,6 +588,10 @@ final class PersonalizationLivingProfileService
                     'confirmed_at' => now()->toIso8601String(),
                 ],
             );
+        }
+
+        if ($confirmed && $candidateKey === 'development_guidance_level') {
+            $this->contexts->applyConfirmedGuidanceLevel($request, 'guided', 'standard');
         }
 
         $this->contexts->saveLivingProfileState(
