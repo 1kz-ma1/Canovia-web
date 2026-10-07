@@ -15,6 +15,7 @@ final class PersonalizationLivingProfileService
         private readonly BehaviorIdentityService $identity,
         private readonly BehaviorEventLogger $events,
         private readonly DevelopmentPersonalizationSignalService $developmentSignals,
+        private readonly PersonalizationConfidenceCalibrationService $confidenceCalibration,
     ) {}
 
     /**
@@ -256,6 +257,11 @@ final class PersonalizationLivingProfileService
                     'github_integration_connected',
                 ]),
             );
+            $calibration = $this->confidenceCalibration->calibrate(
+                risk: 'high',
+                signalStrength: $signalStrength,
+                evidence: $evidence,
+            );
 
             if ($status === '') {
                 $candidates[$candidateKey] = $this->candidate(
@@ -263,9 +269,7 @@ final class PersonalizationLivingProfileService
                     domain: 'development',
                     kind: 'advanced_support_offer',
                     risk: 'high',
-                    confidence: $signalStrength >= 2
-                        ? 'high'
-                        : 'medium',
+                    confidence: $calibration['confidence'],
                     status: 'pending',
                     trigger: $trigger,
                     evidence: $evidence,
@@ -277,6 +281,8 @@ final class PersonalizationLivingProfileService
                     evidenceFingerprint: $fingerprint,
                     evidenceRevision: 1,
                 );
+                $candidates[$candidateKey]['confidence_calibration'] =
+                    $calibration;
 
                 $this->recordCandidateEvent(
                     $request,
@@ -300,7 +306,8 @@ final class PersonalizationLivingProfileService
                 ) + 1;
 
                 $existing['status'] = 'pending';
-                $existing['confidence'] = 'high';
+                $existing['confidence'] = $calibration['confidence'];
+                $existing['confidence_calibration'] = $calibration;
                 $existing['trigger'] = $safeTrigger;
                 $existing['evidence'] = $evidence;
                 $existing['signal_strength'] = $signalStrength;
@@ -342,9 +349,8 @@ final class PersonalizationLivingProfileService
                     $existing['signal_strength'] = $signalStrength;
                     $existing['evidence_fingerprint'] = $fingerprint;
                     $existing['evidence'] = $evidence;
-                    $existing['confidence'] = $signalStrength >= 2
-                        ? 'high'
-                        : 'medium';
+                    $existing['confidence'] = $calibration['confidence'];
+                    $existing['confidence_calibration'] = $calibration;
                     $existing['evidence_revision'] =
                         $previousFingerprint === ''
                             ? max(
@@ -377,6 +383,8 @@ final class PersonalizationLivingProfileService
                     1,
                     (int) ($existing['evidence_revision'] ?? 1),
                 );
+                $existing['confidence'] = $calibration['confidence'];
+                $existing['confidence_calibration'] = $calibration;
                 $candidates[$candidateKey] = $existing;
             }
         }
