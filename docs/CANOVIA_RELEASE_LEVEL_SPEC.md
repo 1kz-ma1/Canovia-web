@@ -428,3 +428,39 @@ READYはProduction昇格を自動実行する状態ではなく、Product Owner�
 L2 reviewはL0 + L1 + L2の累積Manual Checkを対象とする。
 
 V58.24ではL2→L0 downgrade regressionも追加し、Surface非表示とdata preservationを自動検証する。
+
+
+## V58.25 Personalization Bootstrap release contract
+
+Personalization Bootstrap minimum:
+
+```text
+L1 Early Access Core
+```
+
+L1 structural required routes:
+
+- `personalization.show`
+- `personalization.store`
+
+L1 manual review:
+
+- `personalization_first_use`
+  - diagnosis
+  - Plan Seed
+  - existing Plan create
+  - mobile / desktop
+
+L0 downgrade:
+
+- Personalization Account entry hidden
+- direct route blocked by Release Level middleware
+- new First Run falls back to stable Goal Discovery / Plan create path
+- saved Personalization Context is not deleted
+
+Personalization Eligibility does not replace:
+
+- Release Level
+- Feature Flag
+- Entitlement
+- Ownership

@@ -6,7 +6,9 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\Plan;
 use App\Models\GoalContext;
 use App\Enums\WorkspaceMode;
+use App\Enums\BehaviorEventType;
 use App\Services\BehaviorIdentityService;
+use App\Services\BehaviorEventLogger;
 use App\Services\ContinuityService;
 use App\Services\ExecutionActionPolicyService;
 use App\Services\PlanOwnershipService;
@@ -65,6 +67,7 @@ class PlanController extends Controller
         Request $request,
         PlanCollaborationService $collaboration,
         BehaviorIdentityService $identity,
+        BehaviorEventLogger $events,
         GoalContextService $goalContexts,
         GoalContextAccessService $goalContextAccess,
         PlanCategoryProfileService $categoryProfiles,
@@ -98,6 +101,15 @@ class PlanController extends Controller
                 'nullable',
                 'string',
                 Rule::in($workspaceModeKeys),
+            ],
+            'personalization_seed_key' => [
+                'nullable',
+                'string',
+                'max:80',
+            ],
+            'personalization_seed_domain' => [
+                'nullable',
+                Rule::in(['study', 'development']),
             ],
         ]);
 
@@ -149,6 +161,15 @@ class PlanController extends Controller
         // The request ID is persisted on the Plan itself. If Safari/PWA resends
         // the same form because the redirect was not rendered, createOrFirst()
         // converges every retry onto the original Plan instead of duplicating it.
+        $acceptedPersonalizationSeed = $request->session()->get(
+            'canovia.personalization.accepted_seed',
+        );
+        $acceptedPersonalizationSeed = is_array(
+            $acceptedPersonalizationSeed,
+        )
+            ? $acceptedPersonalizationSeed
+            : null;
+
         $plan = Plan::query()->createOrFirst(
             ['creation_request_id' => $createRequestId],
             [
@@ -168,6 +189,10 @@ class PlanController extends Controller
                 'is_public' => $request->boolean('is_public'),
                 'is_collaborative' => false,
             ]
+        );
+
+        $request->session()->forget(
+            'canovia.personalization.accepted_seed',
         );
 
         if (! $plan->wasRecentlyCreated) {
@@ -203,6 +228,26 @@ class PlanController extends Controller
 
             return redirect()->route('plans.ai_task_assistant.show', $plan)
                 ->with('status', 'この計画はすでに作成済みです。重複を作らず、続きから開きました。');
+        }
+
+        if (
+            $plan->wasRecentlyCreated
+            && is_array($acceptedPersonalizationSeed)
+            && filled($acceptedPersonalizationSeed['key'] ?? null)
+        ) {
+            $events->recordSafely(
+                $identity->resolve($request),
+                BehaviorEventType::PlanCreatedFromSeed,
+                $request,
+                $plan,
+                metadata: [
+                    'seed_key' => (string) $acceptedPersonalizationSeed['key'],
+                    'domain' => (string) (
+                        $acceptedPersonalizationSeed['domain']
+                        ?? 'unknown'
+                    ),
+                ],
+            );
         }
 
         if ($request->boolean('is_collaborative') && $request->user()) {

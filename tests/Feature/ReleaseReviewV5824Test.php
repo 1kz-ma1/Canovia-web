@@ -99,7 +99,7 @@ class ReleaseReviewV5824Test extends TestCase
         $reviews = app(ReleaseReviewService::class);
         $items = $reviews->items(ReleaseLevel::ProductPreview);
 
-        $this->assertCount(10, $items);
+        $this->assertGreaterThanOrEqual(10, $items->count());
 
         foreach ($items as $item) {
             $reviews->save(
@@ -113,7 +113,7 @@ class ReleaseReviewV5824Test extends TestCase
 
         $summary = $reviews->summary(ReleaseLevel::ProductPreview);
         $this->assertTrue($summary['complete']);
-        $this->assertSame(10, $summary['passed']);
+        $this->assertSame($items->count(), $summary['passed']);
         $this->assertSame(0, $summary['failed']);
         $this->assertSame(0, $summary['pending']);
 
@@ -122,7 +122,9 @@ class ReleaseReviewV5824Test extends TestCase
             ->assertOk()
             ->assertSee('data-release-review-decision="ready"', false)
             ->assertSee('READY FOR RELEASE')
-            ->assertSee('10/10');
+            ->assertSee(
+                $items->count().'/'.$items->count(),
+            );
     }
 
     public function test_one_failed_review_prevents_ready_decision(): void

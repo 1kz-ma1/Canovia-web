@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ReleaseLevel;
 use App\Services\FirstRunService;
+use App\Services\ReleaseLevelService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -20,12 +22,27 @@ final class FirstRunController extends Controller
         ]);
     }
 
-    public function start(Request $request, FirstRunService $firstRun): RedirectResponse
-    {
+    public function start(
+        Request $request,
+        FirstRunService $firstRun,
+        ReleaseLevelService $releaseLevels,
+    ): RedirectResponse {
         $firstRun->markPassed($request);
 
+        if (
+            ! $releaseLevels->allowsMinimum(
+                ReleaseLevel::EarlyAccessCore,
+                $request->user(),
+                $request,
+            )
+        ) {
+            return redirect()
+                ->route('plans.create')
+                ->with('status', 'まず、今どうしたいかをそのままCanoviaに話してみてください。');
+        }
+
         return redirect()
-            ->route('plans.create')
-            ->with('status', 'まず、今どうしたいかをそのままCanoviaに話してみてください。');
+            ->route('personalization.show', ['source' => 'first_run'])
+            ->with('status', 'まず、今進めたいことと現在地を少しだけ教えてください。');
     }
 }

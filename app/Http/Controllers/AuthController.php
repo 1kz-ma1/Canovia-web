@@ -115,7 +115,7 @@ class AuthController extends Controller
             'status',
             $claimMessages !== []
                 ? 'アカウントを作成し、' . implode('と', $claimMessages) . 'を保護しました。'
-                : 'アカウントを作成しました。まずCanoviaに、今進めたいことをそのまま話してみてください。'
+                : 'アカウントを作成しました。まず、今進めたいことと現在地を少しだけ教えてください。'
         );
     }
 
@@ -182,11 +182,21 @@ class AuthController extends Controller
             return redirect()->route('auth.login.form');
         }
 
+        $user = $request->user();
+        $user->loadMissing('personalizationContext');
+
         return view('auth.account', [
-            'user' => $request->user(),
+            'user' => $user,
+            'personalizationContext' => $user->personalizationContext,
+            'showPersonalizationBootstrap' =>
+                $releaseLevels->allowsMinimum(
+                    ReleaseLevel::EarlyAccessCore,
+                    $user,
+                    $request,
+                ),
             'showProductPreview' => $releaseLevels->allowsMinimum(
                 ReleaseLevel::ProductPreview,
-                $request->user(),
+                $user,
                 $request,
             ),
         ]);

@@ -31,6 +31,17 @@ enum BehaviorEventType: string
     case EarlyAccessRegistered = 'early_access_registered';
     case EarlyAccessSessionStarted = 'early_access_session_started';
 
+    // V58.25 Personalization Bootstrap. Server-recorded only.
+    case PersonalizationStarted = 'personalization_started';
+    case PersonalizationCompleted = 'personalization_completed';
+    case PersonalizationSkipped = 'personalization_skipped';
+    case PlanSeedShown = 'plan_seed_shown';
+    case PlanSeedAccepted = 'plan_seed_accepted';
+    case PlanCreatedFromSeed = 'plan_created_from_seed';
+    case CapabilityPreviewShown = 'capability_preview_shown';
+    case CapabilityInterestYes = 'capability_interest_yes';
+    case CapabilityInterestNo = 'capability_interest_no';
+
     // V42.4 Living Map validation telemetry.
     case MapViewed = 'map_viewed';
     case MapSurfaceViewed = 'map_surface_viewed';

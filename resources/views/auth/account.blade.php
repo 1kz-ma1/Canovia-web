@@ -10,6 +10,25 @@
             計画はアカウントに紐づいています。Cookie削除・別端末・PWA再インストール後も、ログインすれば復元できます。
         </div>
 
+        @if ($showPersonalizationBootstrap)
+        <a
+            href="{{ route('personalization.show', ['source' => 'account']) }}"
+            class="mt-5 block rounded-2xl border border-violet-300/15 bg-violet-300/[0.035] p-4 transition hover:border-violet-300/30 hover:bg-violet-300/[0.065]"
+            data-personalization-account-entry
+        >
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-[10px] font-black uppercase tracking-[0.16em] text-violet-300">PERSONALIZATION</p>
+                    <p class="mt-1 text-sm font-black text-slate-100">Canoviaをあなた向けに調整する</p>
+                    <p class="mt-1 text-xs leading-5 text-slate-500">
+                        {{ $personalizationContext?->completed_at ? '今の状況に合わせて回答を見直せます。' : '1分ほどの診断から、最初に必要なPlanと機能を絞ります。' }}
+                    </p>
+                </div>
+                <span class="text-lg text-violet-300" aria-hidden="true">→</span>
+            </div>
+        </a>
+        @endif
+
         @if ($showProductPreview)
             <a
                 href="{{ route('product.preview.index') }}"

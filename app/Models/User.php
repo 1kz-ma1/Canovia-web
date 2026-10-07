@@ -55,6 +55,11 @@ class User extends Authenticatable
         return $this->hasMany(UserProductGrant::class);
     }
 
+    public function personalizationContext()
+    {
+        return $this->hasOne(UserPersonalizationContext::class);
+    }
+
     protected function casts(): array
     {
         return [
