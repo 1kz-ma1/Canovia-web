@@ -119,6 +119,11 @@
     data-development-home-v1
     data-development-surface="{{ $developmentSurface ?? 'work' }}"
 >
+    @include('workspace.development.partials.capability-activation', [
+        'activation' => $githubCapabilityActivation ?? null,
+        'plan' => $plan ?? null,
+    ])
+
     @php
         $surfaceItems = collect($developmentSurfaceTabs ?? []);
         $selectedSurfaceItem = $surfaceItems->firstWhere(

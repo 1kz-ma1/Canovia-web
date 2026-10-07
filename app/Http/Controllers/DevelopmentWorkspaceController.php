@@ -14,6 +14,7 @@ use App\Services\DevelopmentExecutionContextService;
 use App\Services\DevelopmentImplementationBriefService;
 use App\Services\DevelopmentHomeService;
 use App\Services\DevelopmentWorkspaceSurfaceService;
+use App\Services\CapabilityActivationService;
 use App\Services\GitHubIntegrationReadinessService;
 use App\Services\GitHubRepositoryWriter;
 use App\Services\GitHubWorkflowService;
@@ -43,6 +44,7 @@ final class DevelopmentWorkspaceController extends Controller
         IntelligencePresentationHistoryService $history,
         IntelligenceStateChangeFeedbackService $stateChanges,
         WorkspaceModeOnboardingService $onboarding,
+        CapabilityActivationService $capabilityActivation,
     ) {
         $developmentPlans = $ownership->ownedPlans($request, [
             'tasks',
@@ -80,6 +82,7 @@ final class DevelopmentWorkspaceController extends Controller
                 'developmentGithubRepository' => null,
                 'developmentGithubConnection' => null,
                 'developmentGithubIntegrationStatus' => null,
+                'githubCapabilityActivation' => null,
                 'intelligenceStateChange' => null,
                 'developmentSurface' => $developmentSurface,
                 'developmentSurfaceTabs' => $developmentSurfaceTabs,
@@ -152,6 +155,26 @@ final class DevelopmentWorkspaceController extends Controller
                     : [],
             )
             : null;
+
+        if (
+            $developmentGithubRepository
+            && is_array($developmentGithubConnection)
+        ) {
+            $capabilityActivation->syncGithubCompletion(
+                $request,
+                $plan,
+                $developmentGithubRepository,
+                $developmentGithubConnection,
+            );
+        }
+
+        $githubCapabilityActivation = $capabilityActivation->github(
+            $request,
+            $plan,
+            null,
+            $developmentGithubIntegrationStatus,
+            null,
+        );
         $canEdit = $ownership->canEdit($request, $plan);
         $canManage = $ownership->owns($request, $plan);
         $completedSteps = ['create_plan'];
@@ -237,6 +260,7 @@ final class DevelopmentWorkspaceController extends Controller
             'developmentGithubRepository' => $developmentGithubRepository,
             'developmentGithubConnection' => $developmentGithubConnection,
             'developmentGithubIntegrationStatus' => $developmentGithubIntegrationStatus,
+            'githubCapabilityActivation' => $githubCapabilityActivation,
             'developmentSurface' => $developmentSurface,
             'developmentSurfaceTabs' => $developmentSurfaceTabs,
             'developmentRepositoryTree' => $developmentRepositoryTree,

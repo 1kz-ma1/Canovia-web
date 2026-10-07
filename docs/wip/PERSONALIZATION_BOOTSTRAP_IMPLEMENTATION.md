@@ -207,18 +207,37 @@ Acceptance:
 - [x] CI green
 - [ ] Manual Release Review: mobile / desktop first-use
 
-## Phase 2 — Capability Activation Foundation [PLANNED]
+## Phase 2 — Capability Activation Foundation [IMPLEMENTED / MANUAL REVIEW PENDING]
 
 Goal:
 共通 `Need → Preview → Interest → Readiness → Setup` contractをComponent / serviceとして強化。
 
-Candidates:
+Acceptance:
 
-- GitHub guided readiness steps
-- capability recommendation state persistence
-- setup started / completed / abandoned telemetry
-- Plan作成後のGitHub interest handoff
-- one-repository auto-candidate behavior
+- [x] common Capability Activation service boundary
+- [x] GitHub guided readiness steps
+- [x] capability lifecycle state persistence
+- [x] setup started telemetry
+- [x] setup completed telemetry
+- [x] setup abandoned telemetry
+- [x] Plan作成後のGitHub interest handoff
+- [x] one-repository auto-candidate behavior
+- [x] multi-repository no-auto-selection
+- [x] existing GitHub Workflow reuse
+- [x] operator / entitlement / user owner distinction
+- [x] connected fact -> observed_context
+- [x] self-reported experience / Guidance remains unchanged
+- [x] dismissed / abandoned no persistent nag
+- [x] Release Gate contract
+- [x] regression tests written
+- [x] CI green
+- [ ] Manual Release Review: github_capability_activation
+
+Deferred within Phase 2:
+
+- capability registry for multiple providers
+- setup resume notification
+- additional capability adapters
 
 ## Phase 3 — Living Profile [PLANNED]
 
@@ -317,17 +336,17 @@ Candidates:
 Current state:
 
 ```text
-PR #294
-V58.25 automated validation = GREEN
+PR #294 = merged
+PR #295 = open
+Phase 1 automated validation = GREEN
+Phase 2 automated validation = GREEN
 
 Passed:
 - PHP lint
 - Blade view cache
 - migration
-- PersonalizationBootstrapV5825Test
-- FirstRunUxV4123Test
-- ConversationalOnboardingV4116Test
-- V58.20–V58.24 regressions
+- V58.20–V58.25 regressions
+- CapabilityActivationV5826Test
 - Home continuity
 - Specialized Workspace regression
 - Production Migration Recovery
@@ -336,22 +355,17 @@ Passed:
 Current next action:
 
 ```text
-1. Review / merge PR #294 when appropriate.
-2. Manual Release Review:
-   personalization_first_use
-   - mobile
-   - desktop
-   - diagnosis
-   - multi-domain
-   - Skip
-   - Plan Seed
-   - existing Plan create
-   - GitHub Value Preview eligibility
+1. Review / merge PR #295 when appropriate.
+2. Manual Release Review remains:
+   - personalization_first_use
+   - github_capability_activation
 3. Keep this WIP file.
 4. Next implementation Phase:
-   Phase 2 Capability Activation Foundation.
-5. Phase 3 Living Profile remains deferred.
-   Do not turn Initial Diagnosis into a permanent profile.
+   Phase 3 Living Profile.
+5. Phase 3 must begin from observed facts as Context Update Candidates.
+   Do not overwrite self-reported answers.
+6. High-impact inferred changes require optional user confirmation.
+7. Avoid periodic questionnaire spam.
 ```
 
 When resuming after interruption:

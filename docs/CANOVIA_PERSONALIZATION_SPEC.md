@@ -1,6 +1,6 @@
 # Canovia Personalization Specification
 
-> Status: V58.25 Phase 1 implemented; manual first-use review pending  
+> Status: V58.26 Phase 2 implemented; manual release review pending  
 > Updated: 2026-10-07
 
 ## 1. Purpose
@@ -356,6 +356,51 @@ Need / readiness detected
 Interest YesでもGitHubへ強制遷移しない。
 
 Guided SetupはPhase 2。
+
+## 7.1 Capability Activation Foundation
+
+V58.26でPhase 2の最初の実装を追加する。
+
+Common lifecycle:
+
+```text
+Need
+→ Preview
+→ Interest
+→ Readiness
+→ Setup
+→ Completed
+```
+
+GitHub Integrationを最初のadapterとして扱う。
+
+State provenance:
+
+```text
+Interest
+= self_reported
+
+Activation lifecycle
+= feature_readiness
+
+Actual connection
+= observed
+```
+
+Setup started / completed / abandonedは、本人の経験値やGuidanceを直接変更しない。
+
+Repository candidate:
+
+- 0件: Repository登録へ誘導
+- 1件: candidateとして自動選択
+- 複数: 自動選択しない
+
+自動候補化はexternal action実行ではない。
+GitHub App install / connectはユーザーの明示操作を維持する。
+
+Canonical detail:
+
+- `docs/V58.26_CAPABILITY_ACTIVATION_FOUNDATION.md`
 
 ## 8. Existing User
 

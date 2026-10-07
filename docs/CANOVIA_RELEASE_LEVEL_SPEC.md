@@ -464,3 +464,36 @@ Personalization Eligibility does not replace:
 - Feature Flag
 - Entitlement
 - Ownership
+
+
+## V58.26 Capability Activation release contract
+
+Minimum:
+
+```text
+L1 Early Access Core
+```
+
+L1 structural required route:
+
+- `capabilities.setup.start`
+
+L1 manual review:
+
+- `github_capability_activation`
+  - Preview
+  - Interest
+  - Readiness
+  - single Repository candidate
+  - multi Repository no-auto-selection
+  - Setup start
+  - abandon
+  - completed state
+  - mobile / desktop
+
+Capability Activation must not bypass:
+
+- Release Level
+- Feature Access
+- Plan ownership / edit access
+- existing GitHub App verification
