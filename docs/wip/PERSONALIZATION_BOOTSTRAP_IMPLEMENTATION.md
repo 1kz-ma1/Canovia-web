@@ -20,7 +20,7 @@ Product intentは以下を優先する。
 
 - `FirstRunService` が新規account / guestの初回gateを管理
 - `FirstRunController::show` はwelcome UI
-- `FirstRunController::start` は現在 `plans.create` へ遷移
+- V58.25以前の `FirstRunController::start` は `plans.create` へ遷移
 - authenticated existing userは `first_run_completed_at` がある限り強制gateされない
 - Workspace固有のonboardingは `WorkspaceModeOnboardingService` が別責務で存在
 
@@ -189,19 +189,23 @@ Goal:
 
 Acceptance:
 
-- [ ] Study / Development / unsure複数選択
-- [ ] Skip
-- [ ] conditional minimum questions
-- [ ] auth context persistence
-- [ ] guest session draft
-- [ ] Study / Development deterministic seed
-- [ ] seed accept → existing Plan form
-- [ ] GitHub suggestion only for suitable Development context
-- [ ] preview拒否でGitHubへ遷移しない
-- [ ] existing user optional
-- [ ] mobile stable
-- [ ] telemetry
-- [ ] tests
+- [x] Study / Development / unsure複数選択
+- [x] Skip
+- [x] conditional minimum questions
+- [x] auth context persistence
+- [x] guest session draft
+- [x] Study / Development deterministic seed
+- [x] seed accept → existing Plan form
+- [x] GitHub suggestion only for suitable Development context
+- [x] preview拒否でGitHubへ遷移しない
+- [x] existing user optional
+- [x] source provenance: self_reported / observed / inferred
+- [x] Initial Diagnosisを初期仮説として扱うcontract
+- [x] responsive mobile-first implementation
+- [x] telemetry implementation
+- [x] regression tests written
+- [ ] CI green
+- [ ] Manual Release Review: mobile / desktop first-use
 
 ## Phase 2 — Capability Activation Foundation [PLANNED]
 
@@ -313,8 +317,18 @@ Candidates:
 Current next action:
 
 ```text
-Living Context source separation adjusted.
-Continue Phase 1 account entry + tests + CI.
+Create V58.25 PR.
+Run CI:
+- PersonalizationBootstrapV5825Test
+- FirstRunUxV4123Test
+- ConversationalOnboardingV4116Test
+- Release Review regression
+- Workspace regression
+- Migration Recovery
+
+Fix only Phase 1 blockers.
+After CI green, mark Phase 1 implementation complete.
+Keep WIP for Phase 2 / Phase 3 continuation.
 Do not implement Phase 3 inference engine in V58.25.
 ```
 
