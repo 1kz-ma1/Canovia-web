@@ -551,3 +551,18 @@ When resuming after interruption:
 3. Check latest PR / main
 4. Continue from NEXT
 5. Update this file before stopping
+
+## V58.45 — Specialized entry / legacy onboarding audit (2026-10-08)
+
+Verified against main after PR #324:
+
+- Canonical mode switching enters `workspace.study.top` and `workspace.development.top`; top Plan selection opens the corresponding Plan-scoped workspace. These routes are **not** legacy.
+- Study's registry onboarding now contains **create_plan only**; State First policy owns learning context and does not require Scope capture for an existing Plan. The old `capture_study_scope` action handler still exists in `WorkspaceModeOnboardingService`, but is not currently referenced by the Study registry. Treat as dormant compatibility code, not evidence of an active mandatory step.
+- Development's registry onboarding also contains **create_plan only**; Developer Home is accessible without GitHub. The `connect_github` action handler remains in the generic onboarding service but is not in the Development registry. GitHub is optional and capability-gated.
+- Both workspace controllers still construct `modeOnboarding`; the existing-Plan Study view does not render it, while the existing-Plan Development view conditionally renders it. Under the current one-step registry, both return null after Plan creation. This is **redundant wiring**, not an observed duplicate prompt.
+- A separate **older global seven-step onboarding** is still active in `resources/js/app.js` and `resources/views/layouts/partials/onboarding.blade.php`. It starts with conversational Plan creation and uses `pacekeeper.onboarding.*` localStorage keys. Automatic intro depends on `data-onboarding-auto`, no prior local state, and an empty-Plan dashboard. Its copy and progression are not synchronized with the new Personalization diagnosis → editable Plan Seed → specialized top path. This is the **highest-priority potential duplicate / stale entry**; reproduce with a fresh EarlyAccessCore account before disabling or migrating it.
+- `FirstRunController::start` enters `personalization.show` at EarlyAccessCore; `PersonalizationController::acceptSeed` enters `plans.create.manual` with prefill. The older global guide expects `plans.create` and a conversation path. A fresh account may therefore see conflicting guidance after its first Plan or on a later dashboard visit. This is a code-path risk, **not a confirmed production reproduction**.
+
+Acceptance scenarios still requiring manual verification (mobile + desktop): fresh Study diagnosis/seed/Plan; fresh Development diagnosis/seed/Plan without GitHub; existing user with old `pacekeeper.onboarding.stage.*` storage; skipped diagnosis; returning user with Plan and no Scope; connected GitHub actor; restricted GitHub actor. Capture screenshots, actual route sequence, and whether intro/guide appears twice. Do not auto-pass Release Review from CI.
+
+Implementation follow-up: add a **targeted regression test** for the canonical first-run/seed path, then suppress or migrate only the conflicting automatic legacy global guide for EarlyAccessCore first-use. Preserve explicit replay and lower-release-level compatibility; do not remove old routes or legacy storage keys without migration coverage.
