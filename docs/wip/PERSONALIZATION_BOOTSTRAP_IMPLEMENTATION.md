@@ -320,7 +320,7 @@ Implemented next slice — V58.30 Plan Completion Fingerprint:
 - [x] cancellation-based completion reevaluation
 - [x] trigger Task / completed Task semantic separation
 - [x] regression tests written
-- [ ] CI green
+- [x] CI green
 - [ ] Manual Release Review: plan_completion_fingerprint
 
 Deferred next slices:
@@ -386,7 +386,7 @@ Phase 2 automated validation = GREEN
 Phase 3 Foundation automated validation = GREEN
 V58.28 Study Behavior Adapter = GREEN
 V58.29 Plan Lifecycle Refresh Triggers = GREEN
-V58.30 Plan Completion Fingerprint = implemented / CI pending
+V58.30 Plan Completion Fingerprint = implemented / automated validation GREEN
 
 Future Architecture remains Concept / Architecture preservation context.
 V58.30 only updates the Overview's Current reference.
@@ -395,33 +395,20 @@ V58.30 only updates the Overview's Current reference.
 Current next action:
 
 ```text
-1. Create V58.30 PR.
-2. Run CI:
-   - PlanCompletionFingerprintV5830Test
-   - PlanLifecyclePersonalizationV5829Test
-   - StudyBehaviorPersonalizationV5828Test
-   - LivingProfileV5827Test
-   - CapabilityActivationV5826Test
-   - Personalization V58.25
-   - Release Review
-   - Home / Specialized Workspace
-   - Migration Recovery
-3. Fix V58.30 blockers only.
-4. After CI green:
-   - mark V58.30 CI green
-   - keep WIP
-5. Manual Release Review remains:
+1. Review / merge PR #299 when appropriate.
+2. Keep WIP.
+3. Manual Release Review remains:
    - personalization_first_use
    - github_capability_activation
    - living_profile_context_update
    - study_behavior_personalization
    - plan_lifecycle_personalization
    - plan_completion_fingerprint
-6. Recommended next small slice:
+4. Recommended next small slice:
    - return-after-absence trigger
    OR
    - stronger-signal candidate reopen rule
-7. Do not use Future Architecture docs as implementation requirements.
+5. Do not use Future Architecture docs as implementation requirements.
 ```
 
 When resuming after interruption:
