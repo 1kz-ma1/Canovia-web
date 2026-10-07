@@ -146,7 +146,11 @@ class LivingProfileV5827Test extends TestCase
         $this->assertIsArray($candidate);
         $this->assertSame('pending', data_get($candidate, 'status'));
         $this->assertSame('high', data_get($candidate, 'risk'));
-        $this->assertSame('medium', data_get($candidate, 'confidence'));
+        $this->assertSame('low', data_get($candidate, 'confidence'));
+        $this->assertSame(1, data_get(
+            $candidate,
+            'confidence_calibration.signal_strength',
+        ));
         $this->assertTrue((bool) data_get(
             $candidate,
             'confirmation_required',
