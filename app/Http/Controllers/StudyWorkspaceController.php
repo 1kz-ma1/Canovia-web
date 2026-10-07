@@ -25,6 +25,7 @@ use App\Services\StudyActivityPolicyService;
 use App\Services\StudyWorkspaceViewService;
 use App\Services\WorkspaceModeOnboardingService;
 use App\Services\ExecutionSetupService;
+use App\Services\PersonalizationContextService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -50,6 +51,7 @@ final class StudyWorkspaceController extends Controller
         IntelligencePresentationHistoryService $history,
         IntelligenceStateChangeFeedbackService $stateChanges,
         WorkspaceModeOnboardingService $onboarding,
+        PersonalizationContextService $personalizationContexts,
     ) {
         $studyPlans = $ownership->ownedPlans($request, [
             'tasks',
@@ -73,6 +75,11 @@ final class StudyWorkspaceController extends Controller
             return view('workspace.study.index', [
                 'studyPlans' => $studyPlans,
                 'plan' => null,
+                'firstUseContext' => data_get(
+                    $personalizationContexts->current($request),
+                    'domain_context.study',
+                    [],
+                ),
                 'canEdit' => false,
                 'studyAdaptiveAction' => null,
                 'intelligencePresentation' => null,
