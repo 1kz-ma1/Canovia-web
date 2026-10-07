@@ -516,6 +516,54 @@ class PersonalizationBootstrapV5825Test extends TestCase
         }
     }
 
+    public function test_diagnosis_seed_creation_opens_matching_specialized_workspace(): void
+    {
+        foreach ([
+            ['study', 'study_goal', '資格試験を合格する', 'study_kind', 'qualification', 'study_qualification', '資格学習', 'workspace.study.index'],
+            ['development', 'development_goal', 'アプリを公開する', 'development_stage', 'new', 'development_new', '個人開発', 'workspace.development.index'],
+        ] as [$domain, $goalField, $goal, $kindField, $kind, $seedKey, $category, $workspaceRoute]) {
+            $user = User::factory()->create();
+
+            $this->actingAs($user)
+                ->post(route('personalization.store'), [
+                    'domains' => [$domain],
+                    $goalField => $goal,
+                    $kindField => $kind,
+                ])
+                ->assertRedirect(route('personalization.result'));
+
+            $this->actingAs($user)
+                ->post(route('personalization.seed.accept', ['seedKey' => $seedKey]))
+                ->assertRedirect(route('plans.create.manual', ['workspace_mode' => $domain]));
+
+            $this->actingAs($user)
+                ->get(route('plans.create.manual', ['workspace_mode' => $domain]))
+                ->assertOk()
+                ->assertSee('value="' . $goal . '"', false);
+
+            $requestId = (string) Str::uuid();
+            $this->actingAs($user)
+                ->post(route('plans.store'), [
+                    'title' => $goal,
+                    'category' => $category,
+                    'workspace_mode' => $domain,
+                    'create_request_id' => $requestId,
+                    'personalization_seed_key' => $seedKey,
+                    'personalization_seed_domain' => $domain,
+                ])
+                ->assertRedirect(route($workspaceRoute, ['plan_id' => Plan::query()->where('creation_request_id', $requestId)->value('id')]));
+
+            $plan = Plan::query()
+                ->where('creation_request_id', $requestId)
+                ->firstOrFail();
+
+            $this->actingAs($user)
+                ->get(route($workspaceRoute, ['plan_id' => $plan->id]))
+                ->assertOk()
+                ->assertSee($goal);
+        }
+    }
+
     private function requestFor(User $user): \Illuminate\Http\Request
     {
         $request = \Illuminate\Http\Request::create(
