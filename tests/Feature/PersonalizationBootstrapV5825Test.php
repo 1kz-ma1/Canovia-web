@@ -180,6 +180,43 @@ class PersonalizationBootstrapV5825Test extends TestCase
             ),
         );
         $this->assertSame([], $stored->inferred_context);
+        $this->assertSame(
+            'guided',
+            $stored->guidance_level,
+            'Observed candidate must not auto-promote Guidance in Phase 1.',
+        );
+    }
+
+    public function test_client_hidden_seed_fields_cannot_fake_plan_created_from_seed_telemetry(): void
+    {
+        $user = User::factory()->create();
+        $createRequestId = (string) Str::uuid();
+
+        $this->actingAs($user)
+            ->post(route('plans.store'), [
+                'title' => 'Fake seed attempt',
+                'description' => 'normal manual creation',
+                'category' => '個人開発',
+                'workspace_mode' => 'development',
+                'create_request_id' => $createRequestId,
+                'personalization_seed_key' => 'development_existing',
+                'personalization_seed_domain' => 'development',
+            ])
+            ->assertRedirect();
+
+        $plan = Plan::query()
+            ->where('creation_request_id', $createRequestId)
+            ->firstOrFail();
+
+        $this->assertFalse(
+            BehaviorEvent::query()
+                ->where(
+                    'event_type',
+                    BehaviorEventType::PlanCreatedFromSeed->value,
+                )
+                ->where('plan_id', $plan->id)
+                ->exists(),
+        );
     }
 
     public function test_github_preview_is_not_shown_without_readiness_signal(): void
