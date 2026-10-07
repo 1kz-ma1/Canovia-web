@@ -267,6 +267,10 @@ final class PersonalizationContextService
                     : []),
                 ...$observed,
             ],
+            'context_revision' => max(
+                1,
+                (int) $context->context_revision + 1,
+            ),
         ])->save();
     }
 
