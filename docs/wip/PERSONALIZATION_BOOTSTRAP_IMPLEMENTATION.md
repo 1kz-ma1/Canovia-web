@@ -207,18 +207,37 @@ Acceptance:
 - [x] CI green
 - [ ] Manual Release Review: mobile / desktop first-use
 
-## Phase 2 — Capability Activation Foundation [PLANNED]
+## Phase 2 — Capability Activation Foundation [IMPLEMENTED / CI PENDING]
 
 Goal:
 共通 `Need → Preview → Interest → Readiness → Setup` contractをComponent / serviceとして強化。
 
-Candidates:
+Acceptance:
 
-- GitHub guided readiness steps
-- capability recommendation state persistence
-- setup started / completed / abandoned telemetry
-- Plan作成後のGitHub interest handoff
-- one-repository auto-candidate behavior
+- [x] common Capability Activation service boundary
+- [x] GitHub guided readiness steps
+- [x] capability lifecycle state persistence
+- [x] setup started telemetry
+- [x] setup completed telemetry
+- [x] setup abandoned telemetry
+- [x] Plan作成後のGitHub interest handoff
+- [x] one-repository auto-candidate behavior
+- [x] multi-repository no-auto-selection
+- [x] existing GitHub Workflow reuse
+- [x] operator / entitlement / user owner distinction
+- [x] connected fact -> observed_context
+- [x] self-reported experience / Guidance remains unchanged
+- [x] dismissed / abandoned no persistent nag
+- [x] Release Gate contract
+- [x] regression tests written
+- [ ] CI green
+- [ ] Manual Release Review: github_capability_activation
+
+Deferred within Phase 2:
+
+- capability registry for multiple providers
+- setup resume notification
+- additional capability adapters
 
 ## Phase 3 — Living Profile [PLANNED]
 
@@ -333,25 +352,33 @@ Passed:
 - Production Migration Recovery
 ```
 
+Current state:
+
+```text
+PR #294 = merged
+Phase 1 automated validation = GREEN
+Phase 2 implementation = complete on feature/v58-26-capability-activation-foundation
+```
+
 Current next action:
 
 ```text
-1. Review / merge PR #294 when appropriate.
-2. Manual Release Review:
-   personalization_first_use
-   - mobile
-   - desktop
-   - diagnosis
-   - multi-domain
-   - Skip
-   - Plan Seed
-   - existing Plan create
-   - GitHub Value Preview eligibility
-3. Keep this WIP file.
-4. Next implementation Phase:
-   Phase 2 Capability Activation Foundation.
-5. Phase 3 Living Profile remains deferred.
-   Do not turn Initial Diagnosis into a permanent profile.
+1. Create V58.26 PR.
+2. Run CI:
+   - CapabilityActivationV5826Test
+   - Personalization V58.25 regression
+   - Release Review regression
+   - Development Workspace regression
+   - Migration Recovery
+3. Fix Phase 2 blockers only.
+4. After CI green:
+   - mark Phase 2 CI green
+   - keep WIP
+5. Manual Release Review remains:
+   - personalization_first_use
+   - github_capability_activation
+6. Phase 3 Living Profile remains deferred.
+   Initial Diagnosis must remain a starting hypothesis, not a permanent profile.
 ```
 
 When resuming after interruption:
