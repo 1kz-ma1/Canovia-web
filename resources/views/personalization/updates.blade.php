@@ -91,8 +91,11 @@
                         Repositoryを前提にした高度な開発支援も役立ちそうです。
                     </p>
                     @if (data_get($candidate, 'reopen_reason') === 'stronger_evidence')
-                        <div class="mt-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.035] px-3 py-2 text-xs leading-6 text-cyan-100">
-                            前回見送った後に、より強いDevelopment利用シグナルが確認されたため、もう一度だけ候補として表示しています。
+                        <div
+                            class="mt-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.035] px-3 py-2 text-xs leading-6 text-cyan-100"
+                            data-candidate-reopened="stronger_evidence"
+                        >
+                            より強い観測事実が増えたため再確認しています。前回と同じ事実だけで繰り返し表示しているわけではありません。
                         </div>
                     @endif
                     <p class="mt-3 text-xs leading-6 text-slate-500">
