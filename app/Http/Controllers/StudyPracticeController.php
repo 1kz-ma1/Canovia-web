@@ -1044,16 +1044,10 @@ class StudyPracticeController extends Controller
                 );
                 $state['attempt_id'] = $attempt->id;
                 $evidenceService->recordStudyPracticeAssessment($attempt);
-        $this->studyActions->tryRefresh(
-            $plan,
-            $attempt->created_at ?? now(),
-        );
-        if ($attempt->wasRecentlyCreated) {
-            $this->studyBehavior->observeAssessedPractice(
-                $request,
-                $plan,
-            );
-        }
+                $this->studyActions->tryRefresh(
+                    $plan,
+                    $attempt->created_at ?? now(),
+                );
                 if ($attempt->wasRecentlyCreated) {
                     $this->studyBehavior->observeAssessedPractice(
                         $request,
@@ -1172,10 +1166,16 @@ class StudyPracticeController extends Controller
         $state['assessment'] = $assessment;
         $state['attempt_id'] = $attempt->id;
         $evidenceService->recordStudyPracticeAssessment($attempt);
-                $this->studyActions->tryRefresh(
-                    $plan,
-                    $attempt->created_at ?? now(),
-                );
+        $this->studyActions->tryRefresh(
+            $plan,
+            $attempt->created_at ?? now(),
+        );
+        if ($attempt->wasRecentlyCreated) {
+            $this->studyBehavior->observeAssessedPractice(
+                $request,
+                $plan,
+            );
+        }
         $request->session()->put($key, $state);
 
         if (! empty($state['practice_session_id'])) {
