@@ -7391,3 +7391,38 @@ Canonical:
 
 - `docs/V58.31_RETURN_AFTER_ABSENCE_PERSONALIZATION.md`
 - `docs/CANOVIA_PERSONALIZATION_SPEC.md`
+
+
+## V58.32 Candidate Evidence Revision / Reopen
+
+Living Profileのhigh-impact Candidateに、Dismiss後の再提示条件を追加する。
+
+```text
+same evidence
+→ dismissを尊重
+
+same-strength evidence fluctuation
+→ dismissを尊重
+
+materially stronger evidence
+→ candidate reopen
+→ user confirmation
+```
+
+最初の対象は `development_advanced_support`。
+
+Current Development factsを安全な集計値として観測し、
+Candidate側でsignal strength / evidence fingerprint / revisionを保持する。
+
+V58.32は:
+
+- user experienceを自動再分類しない
+- GitHub activityをuser authorshipと断定しない
+- Guidanceを変更しない
+- Plan / Taskを変更しない
+- confirmed Candidateを再openしない
+
+Canonical:
+
+- `docs/V58.32_CONTEXT_CANDIDATE_EVIDENCE_REOPEN.md`
+- `docs/CANOVIA_PERSONALIZATION_SPEC.md`
