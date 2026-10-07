@@ -13,7 +13,7 @@
                     <span class="text-[10px] text-slate-500">{{ $studyPlanSummaries->count() }}件</span>
                 </div>
                 <p class="mt-1 text-xs leading-5 text-slate-500">
-                    Planを選んで学習へ。範囲・教材・成績は各Planの「準備・詳細」から開けます。
+                    Planを選ぶと、演習結果や現在の学習状況から次の行動を案内します。範囲の登録は必要な場合だけで構いません。
                 </p>
             </div>
 

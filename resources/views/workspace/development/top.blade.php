@@ -13,7 +13,7 @@
                     <span class="text-[10px] text-slate-500">{{ $developmentPlanSummaries->count() }}件</span>
                 </div>
                 <p class="mt-1 text-xs leading-5 text-slate-500">
-                    PlanとRepository状態を一覧し、必要な接続設定だけ開きます。
+                    Planを選ぶと、現在の開発状況と次の行動を確認できます。GitHub接続は必須ではありません。
                 </p>
             </div>
 
