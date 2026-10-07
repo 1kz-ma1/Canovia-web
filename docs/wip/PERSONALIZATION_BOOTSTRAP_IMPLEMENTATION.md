@@ -239,7 +239,7 @@ Deferred within Phase 2:
 - setup resume notification
 - additional capability adapters
 
-## Phase 3 — Living Profile [PLANNED]
+## Phase 3 — Living Profile Foundation [IMPLEMENTED / CI PENDING]
 
 Goal:
 Initial Diagnosisを初期仮説として、Observed BehaviorからContext再評価候補を作る。
@@ -251,56 +251,55 @@ Initial Diagnosis
 → User Context v1
 → Actual Behavior
 → Context Update Candidate
-→ optional User Confirmation
+→ Auto Apply OR optional User Confirmation
 → User Context v2
 → Plan / UI / Guidance / Feature Recommendation refresh
 ```
 
-Source separation:
+Implemented:
 
-- self_reported / user_answered
-- observed
-- inferred / estimated
-- confidence
+- [x] self_reported / observed / inferred source separationを維持
+- [x] inferred_context.update_candidates contract
+- [x] candidate risk / confidence / status
+- [x] low-risk auto apply boundary
+- [x] recent Study / Development Workspace priority
+- [x] workspace_change refresh trigger
+- [x] capability_readiness refresh trigger
+- [x] manual refresh trigger
+- [x] GitHub connected -> advanced Development support candidate
+- [x] high-impact confirmation required
+- [x] confirm / dismiss
+- [x] dismissed candidate is not recreated from same candidate key
+- [x] Growth Experience entry: 「Canoviaが気づいた変化」
+- [x] self-reported experience preserved
+- [x] Guidance Level preserved
+- [x] telemetry
+- [x] Release Gate contract
+- [x] regression tests written
+- [ ] CI green
+- [ ] Manual Release Review: living_profile_context_update
 
-Low-risk auto update candidates:
+Deferred next slices:
 
-- recent domain
-- recommendation ordering
-- Feature Recommendation priority
-
-Confirmation candidates:
-
-- major experience-level change
-- Plan-direction impact
-- exposing advanced capability groups
-- inferred user intent
-
-Refresh trigger candidates:
-
-- Plan completion
-- new Goal / Plan
+- Study behavior adapter:
+  - 基礎学習 → 演習中心
+  - review / retention stage
+- new_plan refresh trigger
+- plan_completed refresh trigger
+- return after long absence trigger
 - long usage window
-- return after long absence
-- new domain adoption
-- clear behavior shift
-- advanced capability readiness reached
-
-Growth Experience candidates:
-
-- 「最近、開発の進め方が変わってきました」
-- 「演習中心の学習段階に入っています」
-- 「GitHub連携が役立つ段階になっています」
+- stronger Development behavior signal:
+  - multiple repositories
+  - continuous PR activity
+- evidence fingerprint / stronger-signal reopen rule
+- confidence calibration
+- Guidance Level update candidate
+- Plan-direction update candidate
+- Feature Recommendation priority adapter
+- Growth Experience copy variants
 
 Do not implement periodic questionnaire spam.
-
-Other candidates:
-
-- Development behavior signals
-- Study behavior signals
-- guidance adjustment
-- recommendation cooldown / dismiss memory
-- feature readiness refresh
+Do not auto-reclassify experience level.
 
 ## Phase 4 — Domain Expansion [PLANNED]
 
@@ -337,35 +336,35 @@ Current state:
 
 ```text
 PR #294 = merged
-PR #295 = open
+PR #295 = merged
 Phase 1 automated validation = GREEN
 Phase 2 automated validation = GREEN
-
-Passed:
-- PHP lint
-- Blade view cache
-- migration
-- V58.20–V58.25 regressions
-- CapabilityActivationV5826Test
-- Home continuity
-- Specialized Workspace regression
-- Production Migration Recovery
+Phase 3 Foundation implementation = complete on feature/v58-27-living-profile-foundation
 ```
 
 Current next action:
 
 ```text
-1. Review / merge PR #295 when appropriate.
-2. Manual Release Review remains:
+1. Create V58.27 PR.
+2. Run CI:
+   - LivingProfileV5827Test
+   - CapabilityActivationV5826Test
+   - Personalization V58.25 regression
+   - Release Review regression
+   - Workspace Mode persistence
+   - Development Workspace regression
+   - Migration Recovery
+3. Fix Phase 3 Foundation blockers only.
+4. After CI green:
+   - mark Phase 3 Foundation CI green
+   - keep WIP
+5. Manual Release Review remains:
    - personalization_first_use
    - github_capability_activation
-3. Keep this WIP file.
-4. Next implementation Phase:
-   Phase 3 Living Profile.
-5. Phase 3 must begin from observed facts as Context Update Candidates.
-   Do not overwrite self-reported answers.
-6. High-impact inferred changes require optional user confirmation.
-7. Avoid periodic questionnaire spam.
+   - living_profile_context_update
+6. Next small implementation slice after V58.27:
+   Study behavior adapter OR additional refresh triggers.
+7. Do not jump directly to AI inference engine.
 ```
 
 When resuming after interruption:
