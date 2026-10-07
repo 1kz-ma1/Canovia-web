@@ -25,7 +25,7 @@ final class FirstRunController extends Controller
         $firstRun->markPassed($request);
 
         return redirect()
-            ->route('plans.create')
-            ->with('status', 'まず、今どうしたいかをそのままCanoviaに話してみてください。');
+            ->route('personalization.show', ['source' => 'first_run'])
+            ->with('status', 'まず、今進めたいことと現在地を少しだけ教えてください。');
     }
 }
