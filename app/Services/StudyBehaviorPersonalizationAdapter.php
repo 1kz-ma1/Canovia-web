@@ -74,25 +74,23 @@ final class StudyBehaviorPersonalizationAdapter
             ],
         ];
 
-        $existingObservedStage = data_get(
-            $context,
-            'context_sources.observed.study_behavior.stage',
-        );
-        $existingObservedPlan = (int) data_get(
-            $context,
-            'context_sources.observed.study_behavior.plan_id',
-            0,
+        $this->events->recordOnceSafely(
+            $this->identity->resolve($request),
+            BehaviorEventType::ContextRefreshTriggered,
+            $request,
+            $plan,
+            metadata: [
+                'trigger' => 'study_practice_assessed',
+            ],
+            withinMinutes: 5,
         );
 
-        if (
-            $existingObservedStage !== 'practice_focused'
-            || $existingObservedPlan !== (int) $plan->id
-        ) {
-            $this->contexts->storeObservedCandidate(
-                $request,
-                $observed,
-            );
-        }
+        // Every assessed attempt is a new observed fact. Preserve the latest
+        // count/average while keeping inference separate.
+        $this->contexts->storeObservedCandidate(
+            $request,
+            $observed,
+        );
 
         $fresh = $this->contexts->current($request);
         $inferred = is_array(data_get(
@@ -151,30 +149,26 @@ final class StudyBehaviorPersonalizationAdapter
             false,
         );
 
-        data_set(
-            $featureReadiness,
-            'study.practice_focused',
-            [
-                'enabled' => true,
-                'source' => 'observed_study_behavior',
-                'candidate_key' => self::CANDIDATE_KEY,
-                'plan_id' => (int) $plan->id,
-                'activated_at' => data_get(
-                    $featureReadiness,
-                    'study.practice_focused.activated_at',
-                    now()->toIso8601String(),
-                ),
-            ],
-        );
-
-        $this->contexts->saveLivingProfileState(
-            $request,
-            $inferred,
-            null,
-            $featureReadiness,
-        );
-
         if (! $alreadyApplied) {
+            data_set(
+                $featureReadiness,
+                'study.practice_focused',
+                [
+                    'enabled' => true,
+                    'source' => 'observed_study_behavior',
+                    'candidate_key' => self::CANDIDATE_KEY,
+                    'plan_id' => (int) $plan->id,
+                    'activated_at' => now()->toIso8601String(),
+                ],
+            );
+
+            $this->contexts->saveLivingProfileState(
+                $request,
+                $inferred,
+                null,
+                $featureReadiness,
+            );
+
             $this->events->recordSafely(
                 $this->identity->resolve($request),
                 BehaviorEventType::ContextUpdateAutoApplied,
