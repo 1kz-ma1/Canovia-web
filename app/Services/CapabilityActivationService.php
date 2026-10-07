@@ -101,10 +101,15 @@ final class CapabilityActivationService
         );
 
         $storedStage = (string) ($activation['stage'] ?? '');
-        $visible = $eligible
-            || $interest !== null
-            || $repositoryCount > 0
-            || $storedStage !== '';
+        $visible =
+            $interest === 'yes'
+            || ($eligible && $interest === null)
+            || in_array(
+                $storedStage,
+                ['setup_started', 'completed'],
+                true,
+            )
+            || $connectionState === 'ready';
 
         if (! $visible) {
             return [
