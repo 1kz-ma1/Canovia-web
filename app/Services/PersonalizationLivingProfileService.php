@@ -231,6 +231,10 @@ final class PersonalizationLivingProfileService
                     $signal['activity_span_days_90d']
                     ?? 0
                 ),
+                'repository_structure_breadth' => (int) (
+                    $signal['repository_structure_breadth']
+                    ?? 0
+                ),
             ];
             $observedDevelopmentBehavior = (array) data_get(
                 $context,
