@@ -9,6 +9,7 @@ use App\Services\GuestPlanClaimService;
 use App\Services\FutureMemoService;
 use App\Services\FirstRunService;
 use App\Services\ReleaseLevelService;
+use App\Services\EarlyAccessTelemetryService;
 use Illuminate\Http\Request;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Auth;
@@ -80,6 +81,7 @@ class AuthController extends Controller
         GuestPlanClaimService $claimService,
         FutureMemoService $futureMemos,
         FirstRunService $firstRun,
+        EarlyAccessTelemetryService $earlyAccessTelemetry,
     ) {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:80'],
@@ -95,6 +97,7 @@ class AuthController extends Controller
         $request->session()->regenerate();
         $claimed = $claimService->claim($request, $user);
         $claimedMemos = $futureMemos->claimGuestMemos($request, $user);
+        $earlyAccessTelemetry->recordRegistration($request, $user);
 
         $claimMessages = [];
         if ($claimed > 0) $claimMessages[] = "{$claimed}件のGuest計画";

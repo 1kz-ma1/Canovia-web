@@ -30,6 +30,7 @@ use App\Http\Controllers\CanoviaFutureController;
 use App\Http\Controllers\AdminFeedbackController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminTelemetryController;
+use App\Http\Controllers\AdminEarlyAccessController;
 use App\Http\Controllers\AdminGitHubDiagnosticsController;
 use App\Http\Controllers\AdminQuestionPackController;
 use App\Http\Controllers\AdminPracticeDemandController;
@@ -96,19 +97,19 @@ Route::get('/product-preview', ProductPreviewController::class)
 
 Route::get('/welcome', [FirstRunController::class, 'show'])->name('first_run.show');
 Route::post('/welcome/start', [FirstRunController::class, 'start'])->name('first_run.start');
-Route::get('/', [HomeController::class, 'index'])->name('home');
-Route::get('/workspace/overview', OverviewWorkspaceController::class)->name('workspace.overview.index');
-Route::get('/workspace/study/top', StudyWorkspaceTopController::class)->name('workspace.study.top');
-Route::get('/workspace/study', StudyWorkspaceController::class)->name('workspace.study.index');
-Route::get('/workspace/development/top', DevelopmentWorkspaceTopController::class)->name('workspace.development.top');
-Route::get('/workspace/development', DevelopmentWorkspaceController::class)->name('workspace.development.index');
+Route::get('/', [HomeController::class, 'index'])->middleware('early_access.visit')->name('home');
+Route::get('/workspace/overview', OverviewWorkspaceController::class)->middleware('early_access.visit')->name('workspace.overview.index');
+Route::get('/workspace/study/top', StudyWorkspaceTopController::class)->middleware('early_access.visit')->name('workspace.study.top');
+Route::get('/workspace/study', StudyWorkspaceController::class)->middleware('early_access.visit')->name('workspace.study.index');
+Route::get('/workspace/development/top', DevelopmentWorkspaceTopController::class)->middleware('early_access.visit')->name('workspace.development.top');
+Route::get('/workspace/development', DevelopmentWorkspaceController::class)->middleware('early_access.visit')->name('workspace.development.index');
 Route::post('/plans/{plan}/development-preview', [DevelopmentPreviewController::class, 'store'])
     ->middleware('throttle:20,1')
     ->name('plans.development_preview.store');
 Route::delete('/plans/{plan}/development-preview', [DevelopmentPreviewController::class, 'destroy'])
     ->middleware('throttle:20,1')
     ->name('plans.development_preview.destroy');
-Route::get('/workspace/career', CareerModeWorkspaceController::class)->middleware('release.level:3')->name('workspace.career.index');
+Route::get('/workspace/career', CareerModeWorkspaceController::class)->middleware(['release.level:3', 'early_access.visit'])->name('workspace.career.index');
 Route::get('/workspace/mode/{workspaceMode}', [WorkspaceModeController::class, 'enter'])->name('workspace_modes.enter');
 Route::post('/workspace/{workspaceMode}/select', [WorkspaceModeController::class, 'select'])->name('workspace_modes.select');
 Route::delete('/workspace/preference', [WorkspaceModeController::class, 'reset'])->name('workspace_modes.preference.reset');
@@ -199,6 +200,7 @@ Route::middleware('admin.access')->group(function () {
     Route::post('/admin/feedback/login', [AdminFeedbackController::class, 'authenticate'])->middleware('throttle:10,1')->name('admin.feedback.authenticate');
     Route::get('/admin/feedback', [AdminFeedbackController::class, 'index'])->name('admin.feedback.index');
     Route::get('/admin/telemetry', [AdminTelemetryController::class, 'index'])->name('admin.telemetry.index');
+    Route::get('/admin/early-access', [AdminEarlyAccessController::class, 'index'])->name('admin.early_access.index');
     Route::get('/admin/github', [AdminGitHubDiagnosticsController::class, 'index'])->name('admin.github.index');
     Route::get('/admin/question-packs', [AdminQuestionPackController::class, 'index'])->name('admin.question_packs.index');
     Route::get('/admin/practice-demand', [AdminPracticeDemandController::class, 'index'])->name('admin.practice_demand.index');

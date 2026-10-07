@@ -34,6 +34,10 @@
         >Study Lab</a>
     @endif
     <a
+        href="{{ route('admin.early_access.index') }}"
+        class="{{ request()->routeIs('admin.early_access.*') ? 'btn-primary' : 'btn-secondary' }} px-3 py-2 text-xs"
+    >Early Access</a>
+    <a
         href="{{ route('admin.release_gate.index') }}"
         class="{{ request()->routeIs('admin.release_gate.*') ? 'btn-primary' : 'btn-secondary' }} px-3 py-2 text-xs"
     >Release Gate</a>

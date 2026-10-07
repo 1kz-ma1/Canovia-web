@@ -27,6 +27,10 @@ enum BehaviorEventType: string
     // V58.22 Product Preview demand telemetry. Server-recorded only.
     case ProductPreviewViewed = 'product_preview_viewed';
 
+    // V58.23 Early Access observability. Server-recorded only.
+    case EarlyAccessRegistered = 'early_access_registered';
+    case EarlyAccessSessionStarted = 'early_access_session_started';
+
     // V42.4 Living Map validation telemetry.
     case MapViewed = 'map_viewed';
     case MapSurfaceViewed = 'map_surface_viewed';

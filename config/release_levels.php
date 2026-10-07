@@ -128,7 +128,9 @@ return [
                     'plans.study_scope.index',
                     'plans.artifacts.index',
                     'feedback.index',
+                    'feedback.store',
                     'behavior_events.store',
+                    'admin.early_access.index',
                 ],
                 'manual_checks' => [
                     'Study / Development first-use flow on mobile and desktop',

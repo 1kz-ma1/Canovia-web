@@ -1,6 +1,6 @@
 # Canovia Release Level / Feature Flag Specification
 
-> Status: Product contract + V58.20 Foundation + V58.21 Release Gate + V58.22 Product Preview implemented  
+> Status: Product contract + V58.20 Foundation + V58.21 Release Gate + V58.22 Product Preview + V58.23 Early Access Observability implemented  
 > Updated: 2026-10-07  
 > Scope: Early Access staged release, admin preview, beta rollout
 
@@ -24,6 +24,16 @@ V58.21でFeature maturity inventoryとread-only Release Gateを追加済み。
 
 V58.22で `product.preview.index` を実装し、L2 automated gateはManual Review候補へ進んだ。
 Initial Early Access planning targetはL2 Product Preview。Public LevelのDB/Admin操作は引き続き未実装。
+
+V58.23でEarly Access disclosure / Feedback context / activation・retention observabilityを追加済み。
+
+- `admin.early_access.index`
+- `early_access_registered`
+- `early_access_session_started`
+- DB factベースActivation
+- D1 / D7 operational retention
+
+L1 structural gateではFeedback送信routeとAdmin Early Access observability routeの存在も検証する。
 
 ## 1. Purpose
 

@@ -7018,3 +7018,50 @@ L1以下はdirect routeもRelease Level boundaryで制限する。
 
 V58.22後、Release GateのL2 structural blockerは解消し、Initial Early Access planning targetをL2へ更新する。
 この変更だけではProduction Public Levelを変更しない。
+
+
+## V58.23 Early Access Observability
+
+L2 Early Access candidateへ最低限の運営・観測Layerを追加する。
+
+Canonical detail:
+
+- `docs/V58.23_EARLY_ACCESS_OBSERVABILITY.md`
+- `docs/CANOVIA_RELEASE_LEVEL_SPEC.md`
+
+User-facing:
+
+- Early Access disclosure
+- Feedback immediate CTA
+- L2 Product Preview link
+- Feedback contextへrelease levelを付与
+
+Telemetry:
+
+```text
+early_access_registered
+early_access_session_started
+```
+
+Activationはevent instrumentationだけに依存せず:
+
+```text
+User
+→ first_run_completed_at
+→ Plan
+→ Task
+→ WorkStarted
+→ WorkCompleted
+```
+
+のDB fact / existing execution eventsから集計する。
+
+Admin:
+
+```text
+GET /admin/early-access
+```
+
+でActivation、D1 / D7、Daily Active、Product Preview、Feedback mixを確認できる。
+
+この実装だけではPublic Release Levelを変更しない。
