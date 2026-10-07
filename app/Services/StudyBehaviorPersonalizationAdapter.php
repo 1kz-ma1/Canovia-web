@@ -103,7 +103,10 @@ final class StudyBehaviorPersonalizationAdapter
             ? $inferred['update_candidates']
             : [];
 
+        $candidateCreated = false;
+
         if (! isset($candidates[self::CANDIDATE_KEY])) {
+            $candidateCreated = true;
             $candidates[self::CANDIDATE_KEY] = [
                 'key' => self::CANDIDATE_KEY,
                 'domain' => 'study',
@@ -149,8 +152,9 @@ final class StudyBehaviorPersonalizationAdapter
             false,
         );
 
-        if (! $alreadyApplied) {
-            data_set(
+        if ($candidateCreated || ! $alreadyApplied) {
+            if (! $alreadyApplied) {
+                data_set(
                 $featureReadiness,
                 'study.practice_focused',
                 [
@@ -159,8 +163,9 @@ final class StudyBehaviorPersonalizationAdapter
                     'candidate_key' => self::CANDIDATE_KEY,
                     'plan_id' => (int) $plan->id,
                     'activated_at' => now()->toIso8601String(),
-                ],
-            );
+                    ],
+                );
+            }
 
             $this->contexts->saveLivingProfileState(
                 $request,
@@ -169,17 +174,19 @@ final class StudyBehaviorPersonalizationAdapter
                 $featureReadiness,
             );
 
-            $this->events->recordSafely(
-                $this->identity->resolve($request),
-                BehaviorEventType::ContextUpdateAutoApplied,
-                $request,
-                $plan,
-                metadata: [
-                    'candidate_key' => self::CANDIDATE_KEY,
-                    'domain' => 'study',
-                    'change_type' => 'practice_focused_readiness',
-                ],
-            );
+            if (! $alreadyApplied) {
+                $this->events->recordSafely(
+                    $this->identity->resolve($request),
+                    BehaviorEventType::ContextUpdateAutoApplied,
+                    $request,
+                    $plan,
+                    metadata: [
+                        'candidate_key' => self::CANDIDATE_KEY,
+                        'domain' => 'study',
+                        'change_type' => 'practice_focused_readiness',
+                    ],
+                );
+            }
         }
     }
 }
