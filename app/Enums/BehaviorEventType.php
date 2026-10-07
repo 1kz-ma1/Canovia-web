@@ -42,6 +42,11 @@ enum BehaviorEventType: string
     case CapabilityInterestYes = 'capability_interest_yes';
     case CapabilityInterestNo = 'capability_interest_no';
 
+    // V58.26 Capability Activation lifecycle. Server-recorded only.
+    case CapabilitySetupStarted = 'capability_setup_started';
+    case CapabilitySetupCompleted = 'capability_setup_completed';
+    case CapabilitySetupAbandoned = 'capability_setup_abandoned';
+
     // V42.4 Living Map validation telemetry.
     case MapViewed = 'map_viewed';
     case MapSurfaceViewed = 'map_surface_viewed';
