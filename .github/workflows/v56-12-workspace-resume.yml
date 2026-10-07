@@ -52,6 +52,9 @@ jobs:
           php -l app/Models/UserPersonalizationContext.php
           php -l tests/Feature/PersonalizationBootstrapV5825Test.php
           php -l database/migrations/2026_10_07_020000_create_user_personalization_contexts_table.php
+          php -l app/Services/CapabilityActivationService.php
+          php -l app/Http/Controllers/CapabilityActivationController.php
+          php -l tests/Feature/CapabilityActivationV5826Test.php
       - run: php artisan view:cache
       - run: php artisan migrate --force
       - name: V56.12 workspace resume and session scope
@@ -70,6 +73,8 @@ jobs:
         run: php artisan test tests/Feature/ReleaseReviewV5824Test.php
       - name: V58.25 Personalization Bootstrap
         run: php artisan test tests/Feature/PersonalizationBootstrapV5825Test.php tests/Feature/FirstRunUxV4123Test.php tests/Feature/ConversationalOnboardingV4116Test.php
+      - name: V58.26 Capability Activation
+        run: php artisan test tests/Feature/CapabilityActivationV5826Test.php
       - name: Home continuity regression
         run: php artisan test tests/Feature/ModelReuseV5195Test.php tests/Feature/HomeCoreBundleCostReductionV5192Test.php
       - name: Specialized Workspace regression
