@@ -665,3 +665,29 @@ L1 manual review:
   - mobile / desktop
 
 V58.32 does not change Release Level or Entitlement automatically.
+
+
+## V58.33 Study Review Cycle Personalization release contract
+
+Minimum:
+
+`L1 Early Access Core`
+
+No new route / migration.
+
+L1 manual review:
+
+- `study_review_cycle_personalization`
+  - same-day 5 attempts → no review-cycle observation
+  - assessed attempts >= 5
+  - distinct practice days >= 2
+  - practice span >= 3 calendar days
+  - Growth Experience visible
+  - copy explicitly avoids retention / mastery claim
+  - self-reported Study stage preserved
+  - Guidance preserved
+  - later spaced attempt refreshes observed metrics
+  - no duplicate Candidate / Auto Apply event
+  - mobile / desktop
+
+V58.33 does not change Release Level, Entitlement, Plan content, Task content, Guidance, or Study strategy automatically.
