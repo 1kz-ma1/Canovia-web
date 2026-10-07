@@ -126,6 +126,7 @@ return [
                     'workspace.development.top',
                     'personalization.show',
                     'personalization.store',
+                    'capabilities.setup.start',
                     'plans.tasks.study_practice.show',
                     'plans.study_scope.index',
                     'plans.artifacts.index',
@@ -137,6 +138,7 @@ return [
                 'manual_checks' => [
                     'specialized_first_use' => 'Study / Development first-use flow on mobile and desktop',
                     'personalization_first_use' => 'Personalization diagnosis → Plan Seed → existing Plan create flow on mobile and desktop',
+                    'github_capability_activation' => 'GitHub Capability Preview → Interest → Readiness → Setup lifecycle on mobile and desktop',
                     'early_access_copy' => 'Early Access disclosure copy review',
                     'downgrade_core' => 'Downgrade to Level 0 preserves data and usable core flow',
                     'feedback_telemetry' => 'Feedback path and telemetry payload review',
