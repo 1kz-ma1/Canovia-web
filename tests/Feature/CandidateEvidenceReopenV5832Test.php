@@ -400,7 +400,7 @@ class CandidateEvidenceReopenV5832Test extends TestCase
             'metadata' => [
                 'github_app_connection' => [
                     'status' => 'connected',
-                    'installation_id' => random_int(100, 999),
+                    'installation_id' => 777,
                     'read_ready' => true,
                     'write_ready' => false,
                 ],
