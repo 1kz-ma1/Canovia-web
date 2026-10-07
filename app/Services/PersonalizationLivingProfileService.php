@@ -435,6 +435,30 @@ final class PersonalizationLivingProfileService
             }
         }
 
+        // A Plan-direction proposal is a reversible recommendation, never a Plan mutation.
+        // Only corroborated Development activity may suggest reviewing the Plan direction.
+        if ($githubConnected && isset($signal) && $signalStrength >= 3) {
+            $directionKey = 'development_plan_direction_review';
+            if (! isset($candidates[$directionKey])) {
+                $candidates[$directionKey] = $this->candidate(
+                    key: $directionKey,
+                    domain: 'development',
+                    kind: 'plan_direction_review',
+                    risk: 'high',
+                    confidence: $calibration['confidence'],
+                    status: 'pending',
+                    trigger: $safeTrigger,
+                    evidence: $evidence,
+                    proposal: [
+                        'action' => 'review_existing_development_plans',
+                        'automatic_plan_mutation' => false,
+                    ],
+                    signalStrength: $signalStrength,
+                    evidenceFingerprint: $fingerprint,
+                );
+            }
+        }
+
         $inferred[self::CANDIDATES_KEY] = $candidates;
 
         $this->contexts->saveLivingProfileState(
