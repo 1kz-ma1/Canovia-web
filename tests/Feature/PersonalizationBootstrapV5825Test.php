@@ -453,6 +453,45 @@ class PersonalizationBootstrapV5825Test extends TestCase
             ->assertSee('data-onboarding-auto="0"', false);
     }
 
+    public function test_seed_metadata_survives_plan_validation_retry(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('personalization.store'), [
+                'domains' => ['study'],
+                'study_goal' => '資格試験',
+                'study_kind' => 'qualification',
+            ])
+            ->assertRedirect(route('personalization.result'));
+
+        $this->actingAs($user)
+            ->post(route('personalization.seed.accept', ['seedKey' => 'study_qualification']))
+            ->assertRedirect(route('plans.create.manual', ['workspace_mode' => 'study']));
+
+        $this->actingAs($user)
+            ->get(route('plans.create.manual', ['workspace_mode' => 'study']))
+            ->assertOk()
+            ->assertSee('name="personalization_seed_key" value="study_qualification"', false);
+
+        $this->actingAs($user)
+            ->from(route('plans.create.manual', ['workspace_mode' => 'study']))
+            ->post(route('plans.store'), [
+                'title' => '',
+                'category' => '資格学習',
+                'workspace_mode' => 'study',
+                'personalization_seed_key' => 'study_qualification',
+                'personalization_seed_domain' => 'study',
+            ])
+            ->assertSessionHasErrors('title');
+
+        $this->actingAs($user)
+            ->get(route('plans.create.manual', ['workspace_mode' => 'study']))
+            ->assertOk()
+            ->assertSee('name="personalization_seed_key" value="study_qualification"', false)
+            ->assertSee('name="personalization_seed_domain" value="study"', false);
+    }
+
     private function requestFor(User $user): \Illuminate\Http\Request
     {
         $request = \Illuminate\Http\Request::create(
