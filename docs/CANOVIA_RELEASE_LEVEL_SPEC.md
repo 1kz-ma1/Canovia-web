@@ -1,6 +1,6 @@
 # Canovia Release Level / Feature Flag Specification
 
-> Status: Product contract + V58.20 Foundation + V58.21 Release Gate + V58.22 Product Preview + V58.23 Early Access Observability implemented  
+> Status: Product contract + V58.20 Foundation + V58.21 Release Gate + V58.22 Product Preview + V58.23 Early Access Observability + V58.24 Release Review implemented  
 > Updated: 2026-10-07  
 > Scope: Early Access staged release, admin preview, beta rollout
 
@@ -403,3 +403,28 @@ V58.21 Release Gate後も、この文書だけでは実装しない:
 - Career public release
 - automatic release promotion
 - autonomous feature activation
+
+
+## V58.24 Manual Release Review
+
+Release GateのManual Checkへstable keyを付与し、Passed / Failed / Pendingを永続化する。
+
+Canonical detail:
+
+- `docs/V58.24_RELEASE_REVIEW.md`
+
+Final decision:
+
+```text
+Automatic blocked -> BLOCKED
+Automatic ready + Failed -> REVIEW FAILED
+Automatic ready + Pending -> MANUAL REVIEW
+Automatic ready + all Passed -> READY FOR RELEASE
+```
+
+Review結果はPublic Release Levelを変更しない。
+READYはProduction昇格を自動実行する状態ではなく、Product Ownerが公開操作を検討できる状態を意味する。
+
+L2 reviewはL0 + L1 + L2の累積Manual Checkを対象とする。
+
+V58.24ではL2→L0 downgrade regressionも追加し、Surface非表示とdata preservationを自動検証する。

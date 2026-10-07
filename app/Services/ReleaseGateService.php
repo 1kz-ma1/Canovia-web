@@ -103,10 +103,13 @@ final class ReleaseGateService
                 ]);
             }
 
-            foreach ((array) ($definition['manual_checks'] ?? []) as $manualCheck) {
+            foreach ((array) ($definition['manual_checks'] ?? []) as $manualKey => $manualCheck) {
                 $manualChecks->push([
                     'source_level' => $sourceLevel->value,
                     'level_label' => $sourceLevel->label(),
+                    'check_key' => is_string($manualKey)
+                        ? $manualKey
+                        : 'manual_'.($manualKey + 1),
                     'label' => (string) $manualCheck,
                 ]);
             }

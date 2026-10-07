@@ -7,11 +7,13 @@
         $statusLabels = [
             'ready' => ['label' => 'READY', 'class' => 'badge-green'],
             'manual_review' => ['label' => 'MANUAL REVIEW', 'class' => 'badge-slate'],
+            'failed' => ['label' => 'REVIEW FAILED', 'class' => 'badge-slate'],
             'blocked' => ['label' => 'BLOCKED', 'class' => 'badge-slate'],
         ];
+        $decision = $statusLabels[$recommendedDecision] ?? $statusLabels['blocked'];
     @endphp
 
-    <div class="mx-auto max-w-7xl space-y-6">
+    <div class="mx-auto max-w-7xl space-y-6" data-release-review-decision="{{ $recommendedDecision }}">
         @include('admin.partials.nav')
 
         <header class="rounded-[1.6rem] border border-cyan-300/15 bg-slate-950/55 p-5 sm:p-7">
@@ -24,7 +26,7 @@
                         手動確認へ進めるCandidateであることだけを意味します。
                     </p>
                 </div>
-                <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="grid grid-cols-2 gap-2 text-xs lg:grid-cols-3">
                     <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
                         <p class="text-slate-500">Public</p>
                         <p class="mt-1 font-black text-slate-100">L{{ $publicLevel->value }} {{ $publicLevel->label() }}</p>
@@ -32,6 +34,10 @@
                     <div class="rounded-xl border border-cyan-300/15 bg-cyan-300/[0.04] p-3">
                         <p class="text-cyan-300">Early Access target</p>
                         <p class="mt-1 font-black text-slate-100">L{{ $recommendedTarget->value }} {{ $recommendedTarget->label() }}</p>
+                    </div>
+                    <div class="col-span-2 rounded-xl border border-slate-800 bg-slate-950/35 p-3 lg:col-span-1">
+                        <p class="text-slate-500">Release decision</p>
+                        <p class="mt-1"><span class="badge {{ $decision['class'] }}">{{ $decision['label'] }}</span></p>
                     </div>
                 </div>
             </div>
@@ -41,8 +47,9 @@
             @foreach ($assessments as $assessment)
                 @php
                     $level = $assessment['level'];
-                    $status = $statusLabels[$assessment['status']] ?? $statusLabels['blocked'];
+                    $status = $statusLabels[$assessment['decision'] ?? $assessment['status']] ?? $statusLabels['blocked'];
                     $isTarget = $level === $recommendedTarget;
+                    $review = $assessment['review'] ?? null;
                 @endphp
                 <article class="page-card p-5 {{ $isTarget ? 'border-cyan-300/30' : '' }}">
                     <div class="flex items-start justify-between gap-3">
@@ -64,7 +71,13 @@
                         </div>
                         <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
                             <p class="text-slate-500">Manual</p>
-                            <p class="mt-1 font-black text-slate-100">{{ $assessment['manual_checks']->count() }}</p>
+                            <p class="mt-1 font-black text-slate-100">
+                                @if ($review)
+                                    {{ $review['passed'] }}/{{ $review['total'] }}
+                                @else
+                                    {{ $assessment['manual_checks']->count() }}
+                                @endif
+                            </p>
                         </div>
                     </div>
 
@@ -78,6 +91,14 @@
                                 </div>
                             @endforeach
                         </div>
+                    @elseif (($assessment['decision'] ?? null) === 'ready')
+                        <p class="mt-4 text-xs leading-5 text-emerald-200">
+                            自動チェックと手動レビューが完了しています。
+                        </p>
+                    @elseif (($assessment['decision'] ?? null) === 'failed')
+                        <p class="mt-4 text-xs leading-5 text-rose-200">
+                            Failedの手動レビューがあります。
+                        </p>
                     @elseif ($assessment['manual_checks']->isNotEmpty())
                         <p class="mt-4 text-xs leading-5 text-amber-100">
                             構造チェックは通過。公開前に手動確認が必要です。
@@ -117,20 +138,118 @@
                 </div>
 
                 <div class="border-t border-slate-800 p-5 sm:p-6 lg:border-l lg:border-t-0">
-                    <h3 class="text-sm font-black text-slate-200">Manual release checks</h3>
-                    <p class="mt-1 text-[10px] leading-4 text-slate-500">
-                        ここは自動承認しません。実機・運用・UXを確認したうえでProduct Ownerが判断します。
-                    </p>
-                    <div class="mt-3 space-y-2">
-                        @foreach ($recommendedAssessment['manual_checks'] as $check)
-                            <div class="rounded-xl border border-amber-300/10 bg-amber-300/[0.03] p-3">
-                                <p class="text-[10px] font-black text-amber-200">
-                                    L{{ $check['source_level'] }} {{ $check['level_label'] }}
-                                </p>
-                                <p class="mt-1 text-xs leading-5 text-slate-300">{{ $check['label'] }}</p>
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h3 class="text-sm font-black text-slate-200">Manual Release Review</h3>
+                            <p class="mt-1 text-[10px] leading-4 text-slate-500">
+                                実機・運用・UXを確認して保存します。全項目PassedでもPublic Levelは自動変更しません。
+                            </p>
+                        </div>
+                        <div class="grid grid-cols-3 gap-1 text-center text-[10px]">
+                            <div class="rounded-lg border border-emerald-300/10 bg-emerald-300/[0.04] px-2 py-1.5">
+                                <span class="block text-slate-500">Passed</span>
+                                <strong class="text-emerald-200">{{ $recommendedReview['passed'] }}</strong>
                             </div>
+                            <div class="rounded-lg border border-rose-300/10 bg-rose-300/[0.04] px-2 py-1.5">
+                                <span class="block text-slate-500">Failed</span>
+                                <strong class="text-rose-200">{{ $recommendedReview['failed'] }}</strong>
+                            </div>
+                            <div class="rounded-lg border border-slate-800 bg-slate-950/35 px-2 py-1.5">
+                                <span class="block text-slate-500">Pending</span>
+                                <strong class="text-slate-200">{{ $recommendedReview['pending'] }}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 space-y-3">
+                        @foreach ($recommendedReview['items'] as $check)
+                            @php
+                                $checkStatus = $check['status'];
+                                $statusClass = match ($checkStatus) {
+                                    'passed' => 'border-emerald-300/15 bg-emerald-300/[0.035]',
+                                    'failed' => 'border-rose-300/15 bg-rose-300/[0.035]',
+                                    default => 'border-amber-300/10 bg-amber-300/[0.025]',
+                                };
+                                $statusLabel = match ($checkStatus) {
+                                    'passed' => 'PASSED',
+                                    'failed' => 'FAILED',
+                                    default => 'PENDING',
+                                };
+                                $statusText = match ($checkStatus) {
+                                    'passed' => 'text-emerald-200',
+                                    'failed' => 'text-rose-200',
+                                    default => 'text-amber-200',
+                                };
+                            @endphp
+
+                            <article class="rounded-xl border p-3 {{ $statusClass }}" data-release-review-item="{{ $check['source_level']->value }}:{{ $check['check_key'] }}">
+                                <div class="flex flex-wrap items-start justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <p class="text-[10px] font-black {{ $statusText }}">
+                                            L{{ $check['source_level']->value }} {{ $check['source_level']->label() }} · {{ $statusLabel }}
+                                        </p>
+                                        <p class="mt-1 text-xs font-bold leading-5 text-slate-200">{{ $check['label'] }}</p>
+                                        <p class="mt-1 font-mono text-[9px] text-slate-600">{{ $check['check_key'] }}</p>
+                                    </div>
+
+                                    @if ($check['reviewed_at'])
+                                        <p class="text-right text-[9px] leading-4 text-slate-600">
+                                            {{ $check['reviewed_by_name'] ?: 'Admin' }}<br>
+                                            {{ $check['reviewed_at']->format('Y/m/d H:i') }}
+                                        </p>
+                                    @endif
+                                </div>
+
+                                <form method="POST" action="{{ route('admin.release_gate.review.update') }}" class="mt-3">
+                                    @csrf
+                                    <input type="hidden" name="release_level" value="{{ $check['source_level']->value }}">
+                                    <input type="hidden" name="check_key" value="{{ $check['check_key'] }}">
+
+                                    <label class="block">
+                                        <span class="sr-only">Review note</span>
+                                        <textarea
+                                            name="note"
+                                            rows="2"
+                                            maxlength="2000"
+                                            class="form-control text-xs"
+                                            placeholder="確認環境・気づいた点・再確認条件など"
+                                        >{{ $check['note'] }}</textarea>
+                                    </label>
+
+                                    <div class="mt-2 flex flex-wrap gap-2">
+                                        <button type="submit" name="status" value="passed" class="btn-secondary px-3 py-2 text-xs">Passed</button>
+                                        <button type="submit" name="status" value="failed" class="btn-secondary px-3 py-2 text-xs">Failed</button>
+                                    </div>
+                                </form>
+
+                                @if ($checkStatus !== 'pending')
+                                    <form method="POST" action="{{ route('admin.release_gate.review.reset') }}" class="mt-2">
+                                        @csrf
+                                        @method('DELETE')
+                                        <input type="hidden" name="release_level" value="{{ $check['source_level']->value }}">
+                                        <input type="hidden" name="check_key" value="{{ $check['check_key'] }}">
+                                        <button type="submit" class="text-[10px] font-bold text-slate-500 hover:text-slate-300">Pendingへ戻す</button>
+                                    </form>
+                                @endif
+                            </article>
                         @endforeach
                     </div>
+
+                    @if ($recommendedDecision === 'ready')
+                        <div class="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/[0.05] p-4">
+                            <p class="text-xs font-black text-emerald-200">READY FOR RELEASE</p>
+                            <p class="mt-1 text-[10px] leading-5 text-slate-400">
+                                自動チェックと手動レビューが完了しています。Public Release Levelの変更は別操作として明示的に行います。
+                            </p>
+                        </div>
+                    @elseif ($recommendedDecision === 'failed')
+                        <div class="mt-4 rounded-xl border border-rose-300/20 bg-rose-300/[0.05] p-4">
+                            <p class="text-xs font-black text-rose-200">REVIEW FAILED</p>
+                            <p class="mt-1 text-[10px] leading-5 text-slate-400">
+                                Failed項目があります。修正・再確認後にPassedへ更新してください。
+                            </p>
+                        </div>
+                    @endif
                 </div>
             </div>
         </section>
@@ -188,8 +307,8 @@
         </section>
 
         <section class="rounded-2xl border border-slate-800 bg-slate-950/35 p-4 text-xs leading-6 text-slate-500">
-            この画面はread-onlyです。Release GateからPublic Levelを変更したり、自動昇格させたりはしません。
-            現時点でL2は <code class="text-slate-300">product.preview.index</code> が未実装のため、構造上Blockedになります。
+            Release Reviewの結果は保存されますが、この画面からPublic Levelを変更したり自動昇格させたりはしません。
+            <code class="text-slate-300">READY FOR RELEASE</code> は「公開操作を検討できる状態」を意味します。
         </section>
     </div>
 @endsection

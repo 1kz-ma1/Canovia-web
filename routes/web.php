@@ -220,6 +220,8 @@ Route::middleware('admin.access')->group(function () {
         ->name('admin.study_scenarios.destroy_all');
 
     Route::get('/admin/release-gate', [AdminReleaseGateController::class, 'index'])->name('admin.release_gate.index');
+    Route::post('/admin/release-gate/review', [AdminReleaseGateController::class, 'updateReview'])->name('admin.release_gate.review.update');
+    Route::delete('/admin/release-gate/review', [AdminReleaseGateController::class, 'resetReview'])->name('admin.release_gate.review.reset');
     Route::get('/admin/economy', [AdminEconomyController::class, 'index'])->name('admin.economy.index');
     Route::post('/admin/economy/grants', [AdminEconomyController::class, 'storeGrant'])->name('admin.economy.grants.store');
     Route::delete('/admin/economy/grants/{grant}', [AdminEconomyController::class, 'destroyGrant'])->name('admin.economy.grants.destroy');
