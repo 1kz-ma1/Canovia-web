@@ -23,11 +23,28 @@ final class AdminReleaseGateController extends Controller
 
         $recommendedTarget = $this->gate->recommendedTarget();
 
-        $recommendedAssessment = $this->gate->assess($recommendedTarget);
-        $recommendedReview = $this->reviews->summary($recommendedTarget);
+        $assessments = $this->gate->assessments()
+            ->map(function (array $assessment) {
+                $review = $this->reviews->summary($assessment['level']);
+                $assessment['review'] = $review;
+                $assessment['decision'] = $this->decision(
+                    $assessment,
+                    $review,
+                );
+
+                return $assessment;
+            });
+
+        $recommendedAssessment = $assessments
+            ->first(
+                fn (array $assessment) =>
+                    $assessment['level'] === $recommendedTarget,
+            ) ?? $this->gate->assess($recommendedTarget);
+        $recommendedReview = $recommendedAssessment['review']
+            ?? $this->reviews->summary($recommendedTarget);
 
         return view('admin.release_gate.index', [
-            'assessments' => $this->gate->assessments(),
+            'assessments' => $assessments,
             'featureInventory' => $this->gate->featureInventory(),
             'publicLevel' => $this->levels->publicLevel(),
             'recommendedTarget' => $recommendedTarget,
