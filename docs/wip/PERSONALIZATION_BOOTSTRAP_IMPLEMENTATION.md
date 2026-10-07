@@ -339,14 +339,33 @@ Implemented next slice — V58.31 Return-after-Absence Trigger:
 - [x] CI green
 - [ ] Manual Release Review: return_after_absence_personalization
 
+Implemented next slice — V58.32 Candidate Evidence Reopen:
+
+- [x] Candidate signal_strength
+- [x] Candidate evidence_fingerprint
+- [x] Candidate evidence_revision
+- [x] Dismiss snapshots current evidence strength
+- [x] same evidence stays dismissed
+- [x] same-strength fingerprint change stays dismissed
+- [x] stronger signal reopens Candidate
+- [x] pending Candidate silently updates current evidence snapshot
+- [x] legacy dismissed Candidate compatibility
+- [x] safe Development observed aggregates
+- [x] reopened UI explanation
+- [x] self-reported experience preserved
+- [x] Guidance preserved
+- [x] regression tests written
+- [ ] CI green
+- [ ] Manual Release Review: context_candidate_evidence_reopen
+
 Deferred next slices:
 
 - review / retention stage adapter
 - long usage window
-- stronger Development behavior signal:
-  - multiple repositories
-  - continuous PR activity
-- stronger-signal candidate reopen rule
+- stronger Development behavior signal expansion:
+  - sustained activity across longer windows
+  - additional repository complexity signals
+- confidence calibration
 - confidence calibration
 - Guidance Level update candidate
 - Plan-direction update candidate
@@ -396,6 +415,7 @@ PR #296 = merged
 PR #297 = merged
 PR #298 = merged
 PR #299 = merged
+PR #300 = merged
 
 Phase 1 automated validation = GREEN
 Phase 2 automated validation = GREEN
@@ -403,18 +423,34 @@ Phase 3 Foundation automated validation = GREEN
 V58.28 Study Behavior Adapter = GREEN
 V58.29 Plan Lifecycle Refresh Triggers = GREEN
 V58.30 Plan Completion Fingerprint = GREEN
-V58.31 Return-after-Absence Trigger = implemented / automated validation GREEN
+V58.31 Return-after-Absence Trigger = GREEN
+V58.32 Candidate Evidence Reopen = implemented / CI pending
 
 Future Architecture remains Concept / Architecture preservation context.
-V58.31 only updates the Overview's Current reference.
+V58.32 only updates the Overview's Current reference.
 ```
 
 Current next action:
 
 ```text
-1. Review / merge PR #300 when appropriate.
-2. Keep WIP.
-3. Manual Release Review remains:
+1. Create V58.32 PR.
+2. Run CI:
+   - CandidateEvidenceReopenV5832Test
+   - ReturnAfterAbsencePersonalizationV5831Test
+   - PlanCompletionFingerprintV5830Test
+   - PlanLifecyclePersonalizationV5829Test
+   - StudyBehaviorPersonalizationV5828Test
+   - LivingProfileV5827Test
+   - CapabilityActivationV5826Test
+   - Personalization V58.25
+   - Release Review
+   - Home / Specialized Workspace
+   - Migration Recovery
+3. Fix V58.32 blockers only.
+4. After CI green:
+   - mark V58.32 CI green
+   - keep WIP
+5. Manual Release Review remains:
    - personalization_first_use
    - github_capability_activation
    - living_profile_context_update
@@ -422,11 +458,12 @@ Current next action:
    - plan_lifecycle_personalization
    - plan_completion_fingerprint
    - return_after_absence_personalization
-4. Recommended next small slice:
-   - stronger-signal candidate reopen rule
+   - context_candidate_evidence_reopen
+6. Recommended next small slice:
+   - review / retention Study adapter
    OR
-   - review / retention stage adapter
-5. Do not use Future Architecture docs as implementation requirements.
+   - long usage window
+7. Do not use Future Architecture docs as implementation requirements.
 ```
 
 When resuming after interruption:
