@@ -558,6 +558,7 @@ class CandidateEvidenceReopenV5832Test extends TestCase
         ]))->assertRedirect(route('personalization.updates.index'));
         $this->assertSame('confirmed', data_get($this->context($user)->inferred_context, 'update_candidates.development_plan_direction_review.status'));
         $this->assertSame($before, $plan->fresh()->toArray());
+        $this->actingAs($user)->post(route('personalization.updates.refresh'));
         $this->assertContains('development.plan_review', (array) data_get($this->context($user)->inferred_context, 'feature_recommendation_priority', []));
     }
 
