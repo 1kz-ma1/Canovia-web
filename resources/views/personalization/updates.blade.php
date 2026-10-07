@@ -166,7 +166,7 @@
                 <div class="mt-5 flex flex-wrap gap-2">
                     <form method="POST" action="{{ route('personalization.updates.confirm', ['candidateKey' => $candidateKey]) }}">
                         @csrf
-                        <button type="submit" class="btn-primary px-4 py-2 text-xs">表示する</button>
+                        <button type="submit" class="btn-primary px-4 py-2 text-xs">{{ $candidateKey === 'development_plan_direction_review' ? '確認済みにする' : ($candidateKey === 'development_guidance_level' ? '案内を標準に変更' : '表示する') }}</button>
                     </form>
                     <form method="POST" action="{{ route('personalization.updates.dismiss', ['candidateKey' => $candidateKey]) }}">
                         @csrf
