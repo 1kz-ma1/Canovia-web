@@ -407,6 +407,52 @@ class PersonalizationBootstrapV5825Test extends TestCase
         $this->assertSame('guided', $stored->guidance_level);
     }
 
+    public function test_study_and_development_seed_forms_disable_legacy_auto_tour(): void
+    {
+        foreach ([
+            ['study', 'study_goal', '資格試験', 'study_qualification', 'study_kind', 'qualification'],
+            ['development', 'development_goal', 'アプリ開発', 'development_new', 'development_stage', 'new'],
+        ] as [$domain, $goalField, $goal, $seedKey, $kindField, $kind]) {
+            $user = User::factory()->create();
+
+            $this->actingAs($user)
+                ->post(route('personalization.store'), [
+                    'domains' => [$domain],
+                    $goalField => $goal,
+                    $kindField => $kind,
+                ])
+                ->assertRedirect(route('personalization.result'));
+
+            $this->actingAs($user)
+                ->get(route('personalization.result'))
+                ->assertOk()
+                ->assertSee('data-onboarding-auto="0"', false);
+
+            $this->actingAs($user)
+                ->post(route('personalization.seed.accept', ['seedKey' => $seedKey]))
+                ->assertRedirect(route('plans.create.manual', ['workspace_mode' => $domain]));
+
+            $this->actingAs($user)
+                ->get(route('plans.create.manual', ['workspace_mode' => $domain]))
+                ->assertOk()
+                ->assertSee('data-onboarding-auto="0"', false);
+        }
+    }
+
+    public function test_skipping_diagnosis_does_not_restart_legacy_auto_tour(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('personalization.skip'))
+            ->assertRedirect(route('plans.create'));
+
+        $this->actingAs($user)
+            ->get(route('plans.create'))
+            ->assertOk()
+            ->assertSee('data-onboarding-auto="0"', false);
+    }
+
     private function requestFor(User $user): \Illuminate\Http\Request
     {
         $request = \Illuminate\Http\Request::create(
