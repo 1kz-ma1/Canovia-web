@@ -32,6 +32,27 @@ final class PersonalizationLivingProfileService
         }
 
         $context = $this->contexts->current($request);
+        $hasContext =
+            (array) data_get(
+                $context,
+                'context_sources.self_reported',
+                [],
+            ) !== []
+            || (array) data_get(
+                $context,
+                'context_sources.observed',
+                [],
+            ) !== []
+            || (array) data_get(
+                $context,
+                'context_sources.inferred',
+                [],
+            ) !== [];
+
+        if (! $hasContext) {
+            return $this->summary($request);
+        }
+
         $inferred = is_array(data_get(
             $context,
             'context_sources.inferred',
