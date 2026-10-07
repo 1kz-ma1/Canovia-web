@@ -240,6 +240,39 @@ final class PersonalizationContextService
         }
     }
 
+    /** Apply a user-confirmed guidance change only when its baseline is current. */
+    public function applyConfirmedGuidanceLevel(
+        Request $request,
+        string $expected,
+        string $target,
+    ): bool {
+        $user = $request->user();
+        if (! $user || ! in_array($target, ['guided', 'standard'], true)) {
+            return false;
+        }
+
+        $updated = UserPersonalizationContext::query()
+            ->where('user_id', $user->id)
+            ->where('guidance_level', $expected)
+            ->update([
+                'guidance_level' => $target,
+                'context_revision' => \Illuminate\Support\Facades\DB::raw('context_revision + 1'),
+                'last_evaluated_at' => now(),
+            ]);
+
+        if ($updated !== 1) {
+            return false;
+        }
+
+        $session = $request->session()->get(self::SESSION_KEY, []);
+        if (is_array($session) && $session !== []) {
+            $session['guidance_level'] = $target;
+            $request->session()->put(self::SESSION_KEY, $session);
+        }
+
+        return true;
+    }
+
     /**
      * Persist Living Profile derived state without mutating self-reported or
      * observed source facts.
