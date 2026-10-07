@@ -6,7 +6,9 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\Plan;
 use App\Models\GoalContext;
 use App\Enums\WorkspaceMode;
+use App\Enums\BehaviorEventType;
 use App\Services\BehaviorIdentityService;
+use App\Services\BehaviorEventLogger;
 use App\Services\ContinuityService;
 use App\Services\ExecutionActionPolicyService;
 use App\Services\PlanOwnershipService;
@@ -65,6 +67,7 @@ class PlanController extends Controller
         Request $request,
         PlanCollaborationService $collaboration,
         BehaviorIdentityService $identity,
+        BehaviorEventLogger $events,
         GoalContextService $goalContexts,
         GoalContextAccessService $goalContextAccess,
         PlanCategoryProfileService $categoryProfiles,
@@ -98,6 +101,15 @@ class PlanController extends Controller
                 'nullable',
                 'string',
                 Rule::in($workspaceModeKeys),
+            ],
+            'personalization_seed_key' => [
+                'nullable',
+                'string',
+                'max:80',
+            ],
+            'personalization_seed_domain' => [
+                'nullable',
+                Rule::in(['study', 'development']),
             ],
         ]);
 
@@ -203,6 +215,25 @@ class PlanController extends Controller
 
             return redirect()->route('plans.ai_task_assistant.show', $plan)
                 ->with('status', 'この計画はすでに作成済みです。重複を作らず、続きから開きました。');
+        }
+
+        if (
+            $plan->wasRecentlyCreated
+            && filled($validated['personalization_seed_key'] ?? null)
+        ) {
+            $events->recordSafely(
+                $identity->resolve($request),
+                BehaviorEventType::PlanCreatedFromSeed,
+                $request,
+                $plan,
+                metadata: [
+                    'seed_key' => (string) $validated['personalization_seed_key'],
+                    'domain' => (string) (
+                        $validated['personalization_seed_domain']
+                        ?? 'unknown'
+                    ),
+                ],
+            );
         }
 
         if ($request->boolean('is_collaborative') && $request->user()) {
