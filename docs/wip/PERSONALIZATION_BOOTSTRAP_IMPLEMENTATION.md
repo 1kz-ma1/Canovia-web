@@ -207,7 +207,7 @@ Acceptance:
 - [x] CI green
 - [ ] Manual Release Review: mobile / desktop first-use
 
-## Phase 2 — Capability Activation Foundation [IMPLEMENTED / CI PENDING]
+## Phase 2 — Capability Activation Foundation [IMPLEMENTED / MANUAL REVIEW PENDING]
 
 Goal:
 共通 `Need → Preview → Interest → Readiness → Setup` contractをComponent / serviceとして強化。
@@ -230,7 +230,7 @@ Acceptance:
 - [x] dismissed / abandoned no persistent nag
 - [x] Release Gate contract
 - [x] regression tests written
-- [ ] CI green
+- [x] CI green
 - [ ] Manual Release Review: github_capability_activation
 
 Deferred within Phase 2:
@@ -336,49 +336,36 @@ Candidates:
 Current state:
 
 ```text
-PR #294
-V58.25 automated validation = GREEN
+PR #294 = merged
+PR #295 = open
+Phase 1 automated validation = GREEN
+Phase 2 automated validation = GREEN
 
 Passed:
 - PHP lint
 - Blade view cache
 - migration
-- PersonalizationBootstrapV5825Test
-- FirstRunUxV4123Test
-- ConversationalOnboardingV4116Test
-- V58.20–V58.24 regressions
+- V58.20–V58.25 regressions
+- CapabilityActivationV5826Test
 - Home continuity
 - Specialized Workspace regression
 - Production Migration Recovery
 ```
 
-Current state:
-
-```text
-PR #294 = merged
-Phase 1 automated validation = GREEN
-Phase 2 implementation = complete on feature/v58-26-capability-activation-foundation
-```
-
 Current next action:
 
 ```text
-1. Create V58.26 PR.
-2. Run CI:
-   - CapabilityActivationV5826Test
-   - Personalization V58.25 regression
-   - Release Review regression
-   - Development Workspace regression
-   - Migration Recovery
-3. Fix Phase 2 blockers only.
-4. After CI green:
-   - mark Phase 2 CI green
-   - keep WIP
-5. Manual Release Review remains:
+1. Review / merge PR #295 when appropriate.
+2. Manual Release Review remains:
    - personalization_first_use
    - github_capability_activation
-6. Phase 3 Living Profile remains deferred.
-   Initial Diagnosis must remain a starting hypothesis, not a permanent profile.
+3. Keep this WIP file.
+4. Next implementation Phase:
+   Phase 3 Living Profile.
+5. Phase 3 must begin from observed facts as Context Update Candidates.
+   Do not overwrite self-reported answers.
+6. High-impact inferred changes require optional user confirmation.
+7. Avoid periodic questionnaire spam.
 ```
 
 When resuming after interruption:
