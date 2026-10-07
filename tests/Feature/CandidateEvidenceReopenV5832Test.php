@@ -273,6 +273,57 @@ class CandidateEvidenceReopenV5832Test extends TestCase
         );
     }
 
+    public function test_confirmed_candidate_never_reopens_when_signal_becomes_stronger(): void
+    {
+        [$user, $plan, $repository] = $this->scenario();
+
+        $this->actingAs($user)
+            ->post(route('personalization.updates.refresh'))
+            ->assertRedirect(route('personalization.updates.index'));
+
+        $this->actingAs($user)
+            ->post(route('personalization.updates.confirm', [
+                'candidateKey' => 'development_advanced_support',
+            ]))
+            ->assertRedirect(route('personalization.updates.index'));
+
+        $this->repository(
+            $plan,
+            $user,
+            'https://github.com/example/second-repo',
+        );
+
+        foreach ([1, 2, 3] as $number) {
+            $this->observation(
+                $plan,
+                $repository,
+                'pull_request',
+                'github:confirmed-pr:'.$number,
+            );
+        }
+
+        $this->actingAs($user)
+            ->post(route('personalization.updates.refresh'))
+            ->assertRedirect(route('personalization.updates.index'));
+
+        $candidate = $this->candidate($user);
+
+        $this->assertSame(
+            'confirmed',
+            data_get($candidate, 'status'),
+        );
+        $this->assertTrue((bool) data_get(
+            $this->context($user)->feature_readiness,
+            'development.advanced_support.enabled',
+        ));
+        $this->assertSame(
+            0,
+            $this->candidateCreatedEvents()
+                ->where('metadata.reopened', true)
+                ->count(),
+        );
+    }
+
     public function test_legacy_dismissed_candidate_without_fingerprint_reopens_only_when_signal_is_stronger(): void
     {
         [$user, $plan] = $this->scenario();
