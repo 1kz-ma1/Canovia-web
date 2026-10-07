@@ -336,7 +336,7 @@ Implemented next slice — V58.31 Return-after-Absence Trigger:
 - [x] Guidance preserved
 - [x] no silent profile creation
 - [x] regression tests written
-- [ ] CI green
+- [x] CI green
 - [ ] Manual Release Review: return_after_absence_personalization
 
 Deferred next slices:
@@ -403,7 +403,7 @@ Phase 3 Foundation automated validation = GREEN
 V58.28 Study Behavior Adapter = GREEN
 V58.29 Plan Lifecycle Refresh Triggers = GREEN
 V58.30 Plan Completion Fingerprint = GREEN
-V58.31 Return-after-Absence Trigger = implemented / CI pending
+V58.31 Return-after-Absence Trigger = implemented / automated validation GREEN
 
 Future Architecture remains Concept / Architecture preservation context.
 V58.31 only updates the Overview's Current reference.
@@ -412,23 +412,9 @@ V58.31 only updates the Overview's Current reference.
 Current next action:
 
 ```text
-1. Create V58.31 PR.
-2. Run CI:
-   - ReturnAfterAbsencePersonalizationV5831Test
-   - PlanCompletionFingerprintV5830Test
-   - PlanLifecyclePersonalizationV5829Test
-   - StudyBehaviorPersonalizationV5828Test
-   - LivingProfileV5827Test
-   - CapabilityActivationV5826Test
-   - Personalization V58.25
-   - Release Review
-   - Home / Specialized Workspace
-   - Migration Recovery
-3. Fix V58.31 blockers only.
-4. After CI green:
-   - mark V58.31 CI green
-   - keep WIP
-5. Manual Release Review remains:
+1. Review / merge PR #300 when appropriate.
+2. Keep WIP.
+3. Manual Release Review remains:
    - personalization_first_use
    - github_capability_activation
    - living_profile_context_update
@@ -436,11 +422,11 @@ Current next action:
    - plan_lifecycle_personalization
    - plan_completion_fingerprint
    - return_after_absence_personalization
-6. Recommended next small slice:
+4. Recommended next small slice:
    - stronger-signal candidate reopen rule
    OR
    - review / retention stage adapter
-7. Do not use Future Architecture docs as implementation requirements.
+5. Do not use Future Architecture docs as implementation requirements.
 ```
 
 When resuming after interruption:
