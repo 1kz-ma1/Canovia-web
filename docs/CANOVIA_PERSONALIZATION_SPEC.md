@@ -1,6 +1,6 @@
 # Canovia Personalization Specification
 
-> Status: V58.32 Candidate Evidence Reopen implemented; automated validation pending  
+> Status: V58.32 Candidate Evidence Reopen implemented; manual release review pending  
 > Updated: 2026-10-07
 
 ## 1. Purpose
