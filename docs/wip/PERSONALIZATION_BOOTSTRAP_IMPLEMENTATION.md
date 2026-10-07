@@ -391,7 +391,7 @@ Implemented next slice — V58.34 Long Usage Window:
 - [x] no silent profile creation
 - [x] V58.32 duplicate reopen copy cleanup
 - [x] regression tests written
-- [ ] CI green
+- [x] CI green
 - [ ] Manual Release Review: long_usage_window_personalization
 
 Deferred next slices:
@@ -461,7 +461,7 @@ V58.30 Plan Completion Fingerprint = GREEN
 V58.31 Return-after-Absence Trigger = GREEN
 V58.32 Candidate Evidence Reopen = GREEN
 V58.33 Study Review Cycle Personalization = GREEN
-V58.34 Long Usage Window = implemented / CI pending
+V58.34 Long Usage Window = implemented / automated validation GREEN
 
 Future Architecture remains Concept / Architecture preservation context.
 V58.34 only updates the Overview's Current reference.
@@ -470,26 +470,9 @@ V58.34 only updates the Overview's Current reference.
 Current next action:
 
 ```text
-1. Create V58.34 PR.
-2. Run CI:
-   - LongUsageWindowPersonalizationV5834Test
-   - StudyReviewCyclePersonalizationV5833Test
-   - CandidateEvidenceReopenV5832Test
-   - ReturnAfterAbsencePersonalizationV5831Test
-   - PlanCompletionFingerprintV5830Test
-   - PlanLifecyclePersonalizationV5829Test
-   - StudyBehaviorPersonalizationV5828Test
-   - LivingProfileV5827Test
-   - CapabilityActivationV5826Test
-   - Personalization V58.25
-   - Release Review
-   - Home / Specialized Workspace
-   - Migration Recovery
-3. Fix V58.34 blockers only.
-4. After CI green:
-   - mark V58.34 CI green
-   - keep WIP
-5. Manual Release Review remains:
+1. Review / merge PR #303 when appropriate.
+2. Keep WIP.
+3. Manual Release Review remains:
    - personalization_first_use
    - github_capability_activation
    - living_profile_context_update
@@ -500,11 +483,11 @@ Current next action:
    - context_candidate_evidence_reopen
    - study_review_cycle_personalization
    - long_usage_window_personalization
-6. Recommended next small slice:
+4. Recommended next small slice:
    - confidence calibration
    OR
    - stronger Development behavior signal expansion
-7. Do not use Future Architecture docs as implementation requirements.
+5. Do not use Future Architecture docs as implementation requirements.
 ```
 
 When resuming after interruption:
