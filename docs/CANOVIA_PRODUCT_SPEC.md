@@ -7101,3 +7101,61 @@ READY FOR RELEASE
 READYでもPublic Release Levelは自動変更しない。
 
 またL2→L0 downgrade時にStudy / Development専用Surfaceを隠しても、既存Plan / Taskを保持しCore flowから利用できることをregression testで固定する。
+
+
+## V58.25 Personalization Bootstrap
+
+新規ユーザーの0→1 frictionを減らすPersonalization Bootstrapを追加する。
+
+Canonical:
+
+- `docs/CANOVIA_PERSONALIZATION_SPEC.md`
+- `docs/V58.25_PERSONALIZATION_BOOTSTRAP.md`
+- `docs/wip/PERSONALIZATION_BOOTSTRAP_IMPLEMENTATION.md`
+
+Core principle:
+
+```text
+Initial Diagnosis is a starting hypothesis, not a permanent profile.
+```
+
+初回診断は固定プロフィールではなく、伴走開始の初期仮説。
+
+Phase 1:
+
+```text
+Welcome
+→ Study / Development / unsure diagnosis
+→ source-aware Personalization Context
+→ deterministic Plan Seed
+→ existing Plan create
+```
+
+Personalization Contextは:
+
+```text
+self_reported
+observed
+inferred
+```
+
+を混同しない。
+
+Phase 1ではself_reportedのみをBootstrapから更新し、
+observed / inferred behavior engineは後続Phaseへ残す。
+
+Plan思想との対応:
+
+```text
+Initial Diagnosis = Initial Plan
+Observed Behavior = Actual Result
+Context Update = Replanning
+```
+
+GitHubはDevelopment actorでreadiness signalがある場合だけValue Previewを出し、
+Interestを保存する。接続は強制しない。
+
+既存ユーザーへは強制せず、Accountから任意起動する。
+
+PersonalizationはL1 Early Access Core以上で公開する。
+L0では従来のPlan作成フローへfallbackする。
