@@ -276,7 +276,7 @@ class CandidateEvidenceReopenV5832Test extends TestCase
             1,
             $this->candidateCreatedEvents()->count(),
         );
-        $this->assertContains(
+        $this->assertNotContains(
             'sustained_development_activity_28d_6_days',
             data_get($candidate, 'evidence', []),
         );
