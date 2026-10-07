@@ -42,6 +42,10 @@ jobs:
           php -l app/Http/Controllers/AdminEarlyAccessController.php
           php -l app/Http/Middleware/TrackEarlyAccessVisit.php
           php -l tests/Feature/EarlyAccessObservabilityV5823Test.php
+          php -l app/Models/ReleaseReviewCheck.php
+          php -l app/Services/ReleaseReviewService.php
+          php -l tests/Feature/ReleaseReviewV5824Test.php
+          php -l database/migrations/2026_10_07_010000_create_release_review_checks_table.php
       - run: php artisan view:cache
       - run: php artisan migrate --force
       - name: V56.12 workspace resume and session scope
@@ -56,6 +60,8 @@ jobs:
         run: php artisan test tests/Feature/ProductPreviewV5822Test.php
       - name: V58.23 Early Access observability
         run: php artisan test tests/Feature/EarlyAccessObservabilityV5823Test.php
+      - name: V58.24 Release Review
+        run: php artisan test tests/Feature/ReleaseReviewV5824Test.php
       - name: Home continuity regression
         run: php artisan test tests/Feature/ModelReuseV5195Test.php tests/Feature/HomeCoreBundleCostReductionV5192Test.php
       - name: Specialized Workspace regression
