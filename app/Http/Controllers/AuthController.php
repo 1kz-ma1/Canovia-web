@@ -115,7 +115,7 @@ class AuthController extends Controller
             'status',
             $claimMessages !== []
                 ? 'アカウントを作成し、' . implode('と', $claimMessages) . 'を保護しました。'
-                : 'アカウントを作成しました。まずCanoviaに、今進めたいことをそのまま話してみてください。'
+                : 'アカウントを作成しました。まず、今進めたいことと現在地を少しだけ教えてください。'
         );
     }
 
