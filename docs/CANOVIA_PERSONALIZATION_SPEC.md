@@ -1,6 +1,6 @@
 # Canovia Personalization Specification
 
-> Status: V58.31 Return-after-Absence Trigger implemented; manual release review pending  
+> Status: V58.32 Candidate Evidence Reopen implemented; automated validation pending  
 > Updated: 2026-10-07
 
 ## 1. Purpose
@@ -610,6 +610,59 @@ V58.31は:
 Canonical:
 
 - `docs/V58.31_RETURN_AFTER_ABSENCE_PERSONALIZATION.md`
+
+## 7.7 Candidate Evidence Revision / Reopen
+
+V58.32でhigh-impact Context Update CandidateへEvidence revisionを追加する。
+
+Core rule:
+
+```text
+dismissed candidate
++ same / similar evidence
+→ stay dismissed
+
+dismissed candidate
++ materially stronger evidence
+→ reopen
+```
+
+Candidate metadata:
+
+- signal_strength
+- evidence_fingerprint
+- evidence_revision
+- dismissed evidence snapshot
+- reopened_at / reopen_reason
+
+Reopenには:
+
+```text
+current signal_strength > dismissed signal_strength
+AND
+evidence fingerprint changed
+```
+
+の両方を要求する。
+
+最初の適用対象:
+
+- `development_advanced_support`
+
+Development observed facts:
+
+- connected repository count
+- recent Development activity count
+- recent PR / Commit observation count
+
+重要:
+
+Repository activityはuser authorshipやexperience levelを意味しない。
+高度なDevelopment支援が役立つ可能性のsignalとしてのみ使う。
+
+Canonical:
+
+- `docs/V58.32_CONTEXT_CANDIDATE_EVIDENCE_REOPEN.md`
 
 ## 8. Existing User
 
