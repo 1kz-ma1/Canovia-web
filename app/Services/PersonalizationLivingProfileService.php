@@ -208,6 +208,45 @@ final class PersonalizationLivingProfileService
                 1,
                 (int) ($signal['signal_strength'] ?? 1),
             );
+
+            $developmentBehavior = [
+                'connected_repository_count' => (int) (
+                    $signal['connected_repository_count']
+                    ?? 0
+                ),
+                'recent_activity_count' => (int) (
+                    $signal['recent_activity_count']
+                    ?? 0
+                ),
+                'recent_pr_or_commit_count' => (int) (
+                    $signal['recent_pr_or_commit_count']
+                    ?? 0
+                ),
+            ];
+            $observedDevelopmentBehavior = (array) data_get(
+                $context,
+                'context_sources.observed.development_behavior',
+                [],
+            );
+
+            if (
+                array_intersect_key(
+                    $observedDevelopmentBehavior,
+                    $developmentBehavior,
+                ) !== $developmentBehavior
+            ) {
+                $this->contexts->storeObservedCandidate(
+                    $request,
+                    [
+                        'development_behavior' => [
+                            ...$developmentBehavior,
+                            'observed_at' =>
+                                now()->toIso8601String(),
+                        ],
+                    ],
+                );
+            }
+
             $fingerprint = (string) (
                 $signal['evidence_fingerprint']
                 ?? ''
