@@ -67,11 +67,23 @@ final class CapabilityActivationService
         $autoCandidate = $repositoryCount === 1
             ? $repositories->first()
             : null;
+        $storedRepositoryId = (int) (
+            $activation['repository_artifact_id']
+            ?? 0
+        );
 
         if (! $repository instanceof PlanArtifact) {
-            $repository = $autoCandidate instanceof PlanArtifact
-                ? $autoCandidate
+            $storedRepository = $storedRepositoryId > 0
+                ? $repositories->firstWhere('id', $storedRepositoryId)
                 : null;
+
+            $repository = $storedRepository instanceof PlanArtifact
+                ? $storedRepository
+                : (
+                    $autoCandidate instanceof PlanArtifact
+                        ? $autoCandidate
+                        : null
+                );
         }
 
         $readiness ??= $this->githubReadiness->forActor(
@@ -433,6 +445,10 @@ final class CapabilityActivationService
 
         if ($storedStage === 'setup_started') {
             return 'setup_started';
+        }
+
+        if ($storedStage === 'completed') {
+            return 'completed';
         }
 
         if ($interest === 'yes') {
