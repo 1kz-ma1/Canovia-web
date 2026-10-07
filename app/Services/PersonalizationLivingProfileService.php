@@ -238,12 +238,18 @@ final class PersonalizationLivingProfileService
                 [],
             );
 
-            if (
-                array_intersect_key(
-                    $observedDevelopmentBehavior,
-                    $developmentBehavior,
-                ) !== $developmentBehavior
-            ) {
+            $developmentBehaviorChanged = collect(
+                $developmentBehavior,
+            )->contains(
+                fn ($value, $key) =>
+                    ! array_key_exists(
+                        $key,
+                        $observedDevelopmentBehavior,
+                    )
+                    || $observedDevelopmentBehavior[$key] !== $value,
+            );
+
+            if ($developmentBehaviorChanged) {
                 $this->contexts->storeObservedCandidate(
                     $request,
                     [
