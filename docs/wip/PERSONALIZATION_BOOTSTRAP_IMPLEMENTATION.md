@@ -356,7 +356,7 @@ Implemented next slice — V58.32 Candidate Evidence Reopen:
 - [x] Guidance preserved
 - [x] regression tests written
 - [x] CI green
-- [ ] Manual Release Review: context_context_candidate_evidence_reopen
+- [ ] Manual Release Review: context_candidate_evidence_reopen
 
 Deferred next slices:
 
@@ -365,7 +365,6 @@ Deferred next slices:
 - stronger Development behavior signal expansion:
   - sustained activity across longer windows
   - additional repository complexity signals
-- confidence calibration
 - confidence calibration
 - Guidance Level update candidate
 - Plan-direction update candidate
