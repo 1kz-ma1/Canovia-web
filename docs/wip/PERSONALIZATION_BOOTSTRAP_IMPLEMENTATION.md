@@ -394,12 +394,25 @@ Implemented next slice — V58.34 Long Usage Window:
 - [x] CI green
 - [ ] Manual Release Review: long_usage_window_personalization
 
+Implemented next slice — V58.35 Confidence Calibration:
+
+- [x] deterministic confidence calibration service
+- [x] signal strength 1 / 2 / 3 -> low / medium / high
+- [x] calibration version + basis metadata
+- [x] pending Candidate recalibration
+- [x] stronger-evidence reopen recalibration
+- [x] confirmed Candidate compatibility
+- [x] high-risk confirmation boundary preserved
+- [x] self-reported Context / Guidance preserved
+- [x] regression assertions added
+- [ ] CI green
+- [ ] Manual Release Review: personalization_confidence_calibration
+
 Deferred next slices:
 
 - stronger Development behavior signal expansion:
   - sustained activity across longer windows
   - additional repository complexity signals
-- confidence calibration
 - Guidance Level update candidate
 - Plan-direction update candidate
 - Feature Recommendation priority adapter
@@ -451,6 +464,7 @@ PR #299 = merged
 PR #300 = merged
 PR #301 = merged
 PR #302 = merged
+PR #303 = merged
 
 Phase 1 automated validation = GREEN
 Phase 2 automated validation = GREEN
@@ -461,16 +475,17 @@ V58.30 Plan Completion Fingerprint = GREEN
 V58.31 Return-after-Absence Trigger = GREEN
 V58.32 Candidate Evidence Reopen = GREEN
 V58.33 Study Review Cycle Personalization = GREEN
-V58.34 Long Usage Window = implemented / automated validation GREEN
+V58.34 Long Usage Window = GREEN
+V58.35 Confidence Calibration = implemented / CI pending
 
 Future Architecture remains Concept / Architecture preservation context.
-V58.34 only updates the Overview's Current reference.
+V58.35 only updates the Overview's Current reference.
 ```
 
 Current next action:
 
 ```text
-1. Review / merge PR #303 when appropriate.
+1. Review V58.35 CI and merge its PR when green.
 2. Keep WIP.
 3. Manual Release Review remains:
    - personalization_first_use
@@ -483,9 +498,8 @@ Current next action:
    - context_candidate_evidence_reopen
    - study_review_cycle_personalization
    - long_usage_window_personalization
-4. Recommended next small slice:
-   - confidence calibration
-   OR
+   - personalization_confidence_calibration
+4. Recommended next small slice after V58.35:
    - stronger Development behavior signal expansion
 5. Do not use Future Architecture docs as implementation requirements.
 ```
