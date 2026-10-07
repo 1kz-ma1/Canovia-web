@@ -1,6 +1,6 @@
 # Canovia Personalization Specification
 
-> Status: V58.27 Living Profile Foundation implemented; manual release review pending  
+> Status: V58.28 Study Behavior Adapter implemented; manual release review pending  
 > Updated: 2026-10-07
 
 ## 1. Purpose
@@ -461,6 +461,45 @@ V58.27 Refresh Trigger:
 Canonical:
 
 - `docs/V58.27_LIVING_PROFILE_FOUNDATION.md`
+
+## 7.3 Study Behavior Personalization Adapter
+
+V58.28でStudyのdurable behaviorをLiving Profileへ接続する。
+
+Deterministic first rule:
+
+```text
+authenticated Study user
++ same Study Plan
++ assessed StudyPracticeAttempt >= 3
+→ observed_context.study_behavior.stage = practice_focused
+```
+
+これは能力評価ではなく、実際の学習行動の観測。
+
+Derived low-risk state:
+
+```text
+feature_readiness.study.practice_focused.enabled = true
+```
+
+Living Profileでは:
+
+> 演習中心の学習段階に入っています
+
+というGrowth Experienceを表示できる。
+
+V58.28は以下を変更しない:
+
+- self-reported Study stage
+- Guidance Level
+- Plan / Task progress
+- Study Practice strategy
+- weakness / mastery model
+
+Canonical:
+
+- `docs/V58.28_STUDY_BEHAVIOR_PERSONALIZATION.md`
 
 ## 8. Existing User
 

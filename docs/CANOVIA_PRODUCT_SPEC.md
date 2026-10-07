@@ -7240,3 +7240,49 @@ Canonical:
 - `docs/V58.27_LIVING_PROFILE_FOUNDATION.md`
 - `docs/CANOVIA_PERSONALIZATION_SPEC.md`
 - `docs/wip/PERSONALIZATION_BOOTSTRAP_IMPLEMENTATION.md`
+
+
+## V58.28 Study Behavior Personalization
+
+Living ProfileへStudyの実演習行動を最初のDomain Adapterとして接続する。
+
+```text
+assessed Study Practice x3+
+→ observed practice_focused
+→ low-risk derived readiness
+→ Growth Experience
+```
+
+重要:
+
+- 能力レベル再分類ではない
+- 初回Study stageを上書きしない
+- Guidance Levelを変更しない
+- Plan / Task progressを変更しない
+- Study Strategy / weakness modelを変更しない
+
+同一Study Planの評価済み演習が3回未満ではLiving Profileを変更しない。
+3回目以降は観測値を更新するが、同じContext Update Candidate / Auto Apply telemetryを増殖させない。
+
+Canonical:
+
+- `docs/V58.28_STUDY_BEHAVIOR_PERSONALIZATION.md`
+- `docs/CANOVIA_PERSONALIZATION_SPEC.md`
+
+## Future Architecture boundary
+
+Long-term Architecture direction is documented under `docs/future/`.
+
+Start at:
+
+- `docs/future/CANOVIA_FUTURE_ARCHITECTURE_OVERVIEW.md`
+
+Future documents are architecture-preservation context only.
+
+They do not:
+
+- replace this Product Spec
+- make Future components current requirements
+- authorize OAuth / Shared Context / Opportunity Engine / Automatic Improvement / Product Factory implementation
+
+Current behavior continues to be defined by latest main + Active Specs.

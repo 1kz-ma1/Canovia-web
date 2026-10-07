@@ -25,6 +25,7 @@ use App\Services\StudyPracticeReliabilityService;
 use App\Services\StudyPracticeStrategyService;
 use App\Services\StudyPracticeCumulativeCheckpointService;
 use App\Services\StudyActivityPolicyService;
+use App\Services\StudyBehaviorPersonalizationAdapter;
 use App\Services\StudyTaskProgressionService;
 use App\Services\TaskEvidenceService;
 use Illuminate\Http\Request;
@@ -38,6 +39,7 @@ class StudyPracticeController extends Controller
     public function __construct(
         private readonly PlanCategoryProfileService $categoryProfiles,
         private readonly StudyAdaptiveActionService $studyActions,
+        private readonly StudyBehaviorPersonalizationAdapter $studyBehavior,
     ) {}
     public function show(
         Request $request,
@@ -1046,6 +1048,12 @@ class StudyPracticeController extends Controller
                     $plan,
                     $attempt->created_at ?? now(),
                 );
+                if ($attempt->wasRecentlyCreated) {
+                    $this->studyBehavior->observeAssessedPractice(
+                        $request,
+                        $plan,
+                    );
+                }
                 $practiceSession->update(['status' => StudyPracticeSession::STATUS_ASSESSED]);
                 $request->session()->put($key, $state);
 
@@ -1158,10 +1166,16 @@ class StudyPracticeController extends Controller
         $state['assessment'] = $assessment;
         $state['attempt_id'] = $attempt->id;
         $evidenceService->recordStudyPracticeAssessment($attempt);
-                $this->studyActions->tryRefresh(
-                    $plan,
-                    $attempt->created_at ?? now(),
-                );
+        $this->studyActions->tryRefresh(
+            $plan,
+            $attempt->created_at ?? now(),
+        );
+        if ($attempt->wasRecentlyCreated) {
+            $this->studyBehavior->observeAssessedPractice(
+                $request,
+                $plan,
+            );
+        }
         $request->session()->put($key, $state);
 
         if (! empty($state['practice_session_id'])) {

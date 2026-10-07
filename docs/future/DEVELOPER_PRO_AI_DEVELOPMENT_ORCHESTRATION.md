@@ -8,6 +8,37 @@
 
 ---
 
+## Related Future Architecture
+
+Developer Pro belongs inside the broader Future Architecture.
+
+Read together with:
+
+- `docs/future/CANOVIA_FUTURE_ARCHITECTURE_OVERVIEW.md`
+- `docs/future/CANOVIA_PLATFORM_ECOSYSTEM.md`
+- `docs/future/PRODUCT_INTELLIGENCE_AUTOMATIC_IMPROVEMENT.md`
+- `docs/future/PRODUCT_CREATION_SYSTEM.md`
+
+Responsibility split:
+
+```text
+Canovia Platform
+= Identity / Context / Consent / Activity / Capability contracts
+
+Product Intelligence
+= Evidence / Hypothesis / Decision / Pattern / Opportunity
+
+Product Creation System
+= Incubation / product creation / first-party-partner decisions
+
+Developer Pro
+= external productization of proven development + intelligence orchestration
+```
+
+This document does not make Product Intelligence, Opportunity Engine, Product Factory, or cross-app Platform contracts current requirements.
+
+---
+
 ## 1. Purpose
 
 Developer Proは、CanoviaのDevelopmentカテゴリを将来的に発展させる構想です。

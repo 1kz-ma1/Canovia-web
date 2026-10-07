@@ -279,11 +279,23 @@ Implemented:
 - [x] CI green
 - [ ] Manual Release Review: living_profile_context_update
 
+Implemented next slice — V58.28 Study Behavior Adapter:
+
+- [x] assessed Study Practice >= 3
+- [x] observed study_behavior.stage = practice_focused
+- [x] recent attempt count / average observation
+- [x] low-risk auto-applied candidate
+- [x] Growth Experience: 「演習中心の学習段階に入っています」
+- [x] self-reported Study stage preserved
+- [x] Guidance preserved
+- [x] duplicate candidate / auto-apply suppression
+- [x] regression tests written
+- [x] CI green
+- [ ] Manual Release Review: study_behavior_personalization
+
 Deferred next slices:
 
-- Study behavior adapter:
-  - 基礎学習 → 演習中心
-  - review / retention stage
+- review / retention stage adapter
 - new_plan refresh trigger
 - plan_completed refresh trigger
 - return after long absence trigger
@@ -337,44 +349,37 @@ Current state:
 ```text
 PR #294 = merged
 PR #295 = merged
-PR #296 = open
+PR #296 = merged
 Phase 1 automated validation = GREEN
 Phase 2 automated validation = GREEN
 Phase 3 Foundation automated validation = GREEN
+V58.28 Study Behavior Adapter = implemented / automated validation GREEN
 
-Passed:
-- PHP lint
-- Blade view cache
-- migration
-- V58.20–V58.26 regressions
-- LivingProfileV5827Test
-- Home continuity
-- Specialized Workspace regression
-- Production Migration Recovery
+Future Architecture documentation added on the same branch:
+- docs/future/CANOVIA_FUTURE_ARCHITECTURE_OVERVIEW.md
+- docs/future/CANOVIA_PLATFORM_ECOSYSTEM.md
+- docs/future/PRODUCT_INTELLIGENCE_AUTOMATIC_IMPROVEMENT.md
+- docs/future/PRODUCT_CREATION_SYSTEM.md
+
+Future documents are Concept / Architecture preservation context only.
+They do not promote Future features into current implementation requirements.
 ```
 
 Current next action:
 
 ```text
-1. Review / merge PR #296 when appropriate.
-2. Manual Release Review remains:
+1. Review / merge PR #297 when appropriate.
+2. Keep WIP.
+3. Manual Release Review remains:
    - personalization_first_use
    - github_capability_activation
    - living_profile_context_update
-3. Keep this WIP file.
-4. Next small implementation slice:
-   Study behavior adapter OR additional refresh triggers.
-5. Recommended next:
-   Study behavior adapter:
-   - 基礎学習 → 演習中心
-   - observed learning activity
-   - low/high impact boundary
-6. After that:
-   - new_plan trigger
-   - plan_completed trigger
-   - return-after-absence trigger
-   - evidence fingerprint / stronger-signal reopen
-7. Do not jump directly to unrestricted AI inference.
+   - study_behavior_personalization
+4. Recommended next implementation slice:
+   - new_plan refresh trigger
+   - plan_completed refresh trigger
+   then return-after-absence / evidence fingerprint.
+5. Do not implement Future Architecture components merely because docs/future now describes them.
 ```
 
 When resuming after interruption:
