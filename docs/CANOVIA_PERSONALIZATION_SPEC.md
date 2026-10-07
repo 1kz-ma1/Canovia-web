@@ -1,6 +1,6 @@
 # Canovia Personalization Specification
 
-> Status: V58.36 Sustained Development Behavior Signal implemented; manual release review pending  
+> Status: V58.37 Repository Structure Breadth Signal implemented; manual release review pending  
 > Updated: 2026-10-07
 
 ## 1. Purpose
@@ -861,3 +861,14 @@ self-reported experienceとGuidance Levelは変更しない。
 Canonical:
 
 - `docs/V58.36_SUSTAINED_DEVELOPMENT_BEHAVIOR_SIGNAL.md`
+
+
+## V58.37 Repository Structure Breadth Signal
+
+既存GitHub Repository snapshotから5つの構造dimensionを観測し、3つ以上が確認できた場合に `repository_structure_breadth_3_plus` Evidenceを追加する。
+
+これはcomplexity / quality / seniority / experienceの推定ではない。Breadth単独はsignal strength 2までとし、strength 3への寄与にはrecent PR / Commit Evidenceを追加で要求する。
+
+Canonical:
+
+- `docs/V58.37_REPOSITORY_STRUCTURE_BREADTH_SIGNAL.md`
