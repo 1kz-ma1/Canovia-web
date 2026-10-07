@@ -19,7 +19,9 @@ final class DevelopmentPersonalizationSignalService
      *   evidence:array<int,string>,
      *   connected_repository_count:int,
      *   recent_activity_count:int,
-     *   recent_pr_or_commit_count:int
+     *   recent_pr_or_commit_count:int,
+     *   active_day_count_90d:int,
+     *   activity_span_days_90d:int
      * }
      */
     public function advancedSupport(User $user): array
@@ -62,16 +64,28 @@ final class DevelopmentPersonalizationSignalService
             ->unique()
             ->count();
 
-        $observations = $developmentPlanIds->isEmpty()
+        $longWindowObservations = $developmentPlanIds->isEmpty()
             ? collect()
             : DevelopmentActivityObservation::query()
                 ->whereIn('plan_id', $developmentPlanIds)
-                ->where('last_observed_at', '>=', now()->subDays(30))
+                ->where('last_observed_at', '>=', now()->subDays(90))
                 ->get([
                     'kind',
                     'repository_artifact_id',
                     'external_key',
+                    'occurred_at',
+                    'last_observed_at',
                 ]);
+
+        $observations = $longWindowObservations
+            ->filter(
+                fn (DevelopmentActivityObservation $observation) =>
+                    $observation->last_observed_at
+                    && $observation->last_observed_at->gte(
+                        now()->subDays(30),
+                    ),
+            )
+            ->values();
 
         $recentActivityCount = $observations
             ->pluck('external_key')
@@ -86,10 +100,39 @@ final class DevelopmentPersonalizationSignalService
             ->unique()
             ->count();
 
+        $activityDates90d = $longWindowObservations
+            ->map(
+                fn (DevelopmentActivityObservation $observation) =>
+                    optional(
+                        $observation->occurred_at
+                        ?? $observation->last_observed_at,
+                    )->toDateString(),
+            )
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        $activeDayCount90d = $activityDates90d->count();
+        $activitySpanDays90d = $activeDayCount90d >= 2
+            ? CarbonCarbonImmutable::parse(
+                (string) $activityDates90d->first(),
+            )->diffInDays(
+                CarbonCarbonImmutable::parse(
+                    (string) $activityDates90d->last(),
+                ),
+            ) + 1
+            : $activeDayCount90d;
+
+        $sustainedActivityObserved =
+            $activeDayCount90d >= 6
+            && $activitySpanDays90d >= 28;
+
         $signalStrength = 1;
 
         if (
             $connectedRepositoryCount >= 2
+            || $sustainedActivityObserved
             || (
                 $recentActivityCount >= 3
                 && $recentPrOrCommitCount >= 1
@@ -102,6 +145,10 @@ final class DevelopmentPersonalizationSignalService
             (
                 $connectedRepositoryCount >= 2
                 && $recentActivityCount >= 5
+                && $recentPrOrCommitCount >= 2
+            )
+            || (
+                $sustainedActivityObserved
                 && $recentPrOrCommitCount >= 2
             )
             || $recentPrOrCommitCount >= 3
@@ -123,6 +170,10 @@ final class DevelopmentPersonalizationSignalService
             $evidence[] = 'recent_pr_or_commit_activity_2_plus';
         }
 
+        if ($sustainedActivityObserved) {
+            $evidence[] = 'sustained_development_activity_28d_6_days';
+        }
+
         $fingerprintPayload = [
             'schema' => 1,
             'connected_repository_bucket' => min(
@@ -137,6 +188,13 @@ final class DevelopmentPersonalizationSignalService
                 5,
                 $recentPrOrCommitCount,
             ),
+            'active_day_bucket_90d' => min(12, $activeDayCount90d),
+            'activity_span_bucket_90d' => match (true) {
+                $activitySpanDays90d >= 56 => '56_plus',
+                $activitySpanDays90d >= 28 => '28_55',
+                $activitySpanDays90d >= 14 => '14_27',
+                default => 'under_14',
+            },
         ];
 
         return [
@@ -155,6 +213,8 @@ final class DevelopmentPersonalizationSignalService
             'recent_activity_count' => $recentActivityCount,
             'recent_pr_or_commit_count' =>
                 $recentPrOrCommitCount,
+            'active_day_count_90d' => $activeDayCount90d,
+            'activity_span_days_90d' => $activitySpanDays90d,
         ];
     }
 }
