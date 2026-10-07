@@ -145,7 +145,7 @@ return [
                     'plan_lifecycle_personalization' => 'New Plan / Plan completion lifecycle triggers refresh Living Profile without rewriting Plan or self-reported context',
                     'plan_completion_fingerprint' => 'Plan completion fingerprint distinguishes duplicate re-completion from a material completion revision',
                     'return_after_absence_personalization' => 'Long-absence return refreshes Living Profile once without forcing re-onboarding or rewriting user context',
-                    'context_candidate_evidence_reopen' => 'Dismissed high-impact candidate reopens only after materially stronger evidence, not same-strength activity changes',
+                    'context_context_candidate_evidence_reopen' => 'Dismissed high-impact candidate reopens only after materially stronger evidence, not same-strength activity changes',
                     'early_access_copy' => 'Early Access disclosure copy review',
                     'downgrade_core' => 'Downgrade to Level 0 preserves data and usable core flow',
                     'feedback_telemetry' => 'Feedback path and telemetry payload review',
