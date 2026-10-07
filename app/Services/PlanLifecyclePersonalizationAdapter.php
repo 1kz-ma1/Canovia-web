@@ -198,7 +198,12 @@ final class PlanLifecyclePersonalizationAdapter
             $completedIds->all();
         $lifecycle['completion_snapshots'] = $snapshots;
         $lifecycle['last_completed_plan_id'] = (int) $plan->id;
-        $lifecycle['last_completed_task_id'] = (int) $task->id;
+        $lifecycle['last_completion_trigger_task_id'] =
+            (int) $task->id;
+        $lifecycle['last_completed_task_id'] =
+            $this->taskIsComplete($task)
+                ? (int) $task->id
+                : null;
         $lifecycle['last_completed_at'] = now()->toIso8601String();
         $lifecycle['last_completion_revision'] = $revision;
         $lifecycle['last_completion_change'] = $change;
