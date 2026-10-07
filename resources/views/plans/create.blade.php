@@ -82,6 +82,10 @@
                 <input type="hidden" name="workspace_mode" value="{{ $workspaceModeContext['key'] }}">
             @endif
             <input type="hidden" name="create_request_id" value="{{ old('create_request_id', (string) \Illuminate\Support\Str::uuid()) }}">
+            @if (data_get($prefill ?? [], 'personalization_seed_key'))
+                <input type="hidden" name="personalization_seed_key" value="{{ data_get($prefill, 'personalization_seed_key') }}">
+                <input type="hidden" name="personalization_seed_domain" value="{{ data_get($prefill, 'personalization_seed_domain') }}">
+            @endif
 
             <section class="page-card space-y-5 p-5 sm:p-6">
                 <div class="rounded-2xl border border-cyan-300/20 bg-cyan-400/[.045] p-4 sm:p-5">
@@ -122,7 +126,7 @@
                         id="deadline"
                         type="date"
                         name="deadline"
-                        value="{{ old('deadline') }}"
+                        value="{{ old('deadline', data_get($prefill ?? [], 'deadline')) }}"
                         class="form-control mt-3 min-h-11"
                     >
                 </div>
