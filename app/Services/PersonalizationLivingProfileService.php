@@ -231,6 +231,10 @@ final class PersonalizationLivingProfileService
                     $signal['activity_span_days_90d']
                     ?? 0
                 ),
+                'repository_structure_breadth' => (int) (
+                    $signal['repository_structure_breadth']
+                    ?? 0
+                ),
             ];
             $observedDevelopmentBehavior = (array) data_get(
                 $context,
@@ -238,12 +242,18 @@ final class PersonalizationLivingProfileService
                 [],
             );
 
-            if (
-                array_intersect_key(
-                    $observedDevelopmentBehavior,
-                    $developmentBehavior,
-                ) !== $developmentBehavior
-            ) {
+            $developmentBehaviorChanged = collect(
+                $developmentBehavior,
+            )->contains(
+                fn ($value, $key) =>
+                    ! array_key_exists(
+                        $key,
+                        $observedDevelopmentBehavior,
+                    )
+                    || $observedDevelopmentBehavior[$key] !== $value,
+            );
+
+            if ($developmentBehaviorChanged) {
                 $this->contexts->storeObservedCandidate(
                     $request,
                     [

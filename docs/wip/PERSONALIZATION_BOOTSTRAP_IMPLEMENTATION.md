@@ -420,13 +420,23 @@ Implemented next slice — V58.36 Sustained Development Behavior Signal:
 - [x] self-reported experience preserved
 - [x] Guidance preserved
 - [x] regression test added
-- [ ] CI green
+- [x] CI green
 - [ ] Manual Release Review: sustained_development_behavior_signal
 
 Deferred next slices:
 
-- stronger Development behavior signal expansion:
-  - additional repository complexity signals
+Implemented next slice — V58.37 Repository Structure Breadth Signal:
+
+- [x] existing Repository snapshot reuse
+- [x] five deterministic structure dimensions
+- [x] breadth >= 3 Evidence
+- [x] breadth-only strength capped at 2
+- [x] strength 3 requires recent PR / Commit Evidence
+- [x] no extra GitHub API request
+- [x] experience / Guidance preserved
+- [x] regression test added
+- [ ] CI green
+- [ ] Manual Release Review: repository_structure_breadth_signal
 - Guidance Level update candidate
 - Plan-direction update candidate
 - Feature Recommendation priority adapter
@@ -493,7 +503,8 @@ V58.32 Candidate Evidence Reopen = GREEN
 V58.33 Study Review Cycle Personalization = GREEN
 V58.34 Long Usage Window = GREEN
 V58.35 Confidence Calibration = GREEN
-V58.36 Sustained Development Behavior Signal = implemented / CI pending
+V58.36 Sustained Development Behavior Signal = GREEN
+V58.37 Repository Structure Breadth Signal = implemented / CI pending
 
 Future Architecture remains Concept / Architecture preservation context.
 V58.35 only updates the Overview's Current reference.
@@ -502,7 +513,7 @@ V58.35 only updates the Overview's Current reference.
 Current next action:
 
 ```text
-1. Review V58.36 CI and merge its PR when green.
+1. Review V58.37 CI and merge its PR when green.
 2. Keep WIP.
 3. Manual Release Review remains:
    - personalization_first_use
@@ -517,10 +528,11 @@ Current next action:
    - long_usage_window_personalization
    - personalization_confidence_calibration
    - sustained_development_behavior_signal
-4. Recommended next small slice after V58.36:
-   - additional Development repository complexity signal
-   OR
+   - repository_structure_breadth_signal
+4. Recommended next small slice after V58.37:
    - Guidance Level update candidate
+   OR
+   - Plan-direction update candidate
 5. Do not use Future Architecture docs as implementation requirements.
 ```
 

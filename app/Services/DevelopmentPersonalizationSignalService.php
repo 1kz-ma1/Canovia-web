@@ -21,7 +21,8 @@ final class DevelopmentPersonalizationSignalService
      *   recent_activity_count:int,
      *   recent_pr_or_commit_count:int,
      *   active_day_count_90d:int,
-     *   activity_span_days_90d:int
+     *   activity_span_days_90d:int,
+     *   repository_structure_breadth:int
      * }
      */
     public function advancedSupport(User $user): array
@@ -115,10 +116,10 @@ final class DevelopmentPersonalizationSignalService
 
         $activeDayCount90d = $activityDates90d->count();
         $activitySpanDays90d = $activeDayCount90d >= 2
-            ? CarbonCarbonImmutable::parse(
+            ? \Carbon\CarbonImmutable::parse(
                 (string) $activityDates90d->first(),
             )->diffInDays(
-                CarbonCarbonImmutable::parse(
+                \Carbon\CarbonImmutable::parse(
                     (string) $activityDates90d->last(),
                 ),
             ) + 1
@@ -128,11 +129,39 @@ final class DevelopmentPersonalizationSignalService
             $activeDayCount90d >= 6
             && $activitySpanDays90d >= 28;
 
+        $repositoryStructureBreadth = $repositories
+            ->map(function (PlanArtifact $artifact): int {
+                $snapshot = data_get(
+                    $artifact->metadata,
+                    'github_repository_snapshot',
+                    [],
+                );
+
+                if (! is_array($snapshot)) {
+                    return 0;
+                }
+
+                $dimensions = [
+                    filled(data_get($snapshot, 'repository.language')),
+                    count((array) data_get($snapshot, 'branches', [])) >= 2,
+                    count((array) data_get($snapshot, 'pull_requests', [])) >= 1,
+                    count((array) data_get($snapshot, 'issues', [])) >= 1,
+                    count((array) data_get($snapshot, 'actions_runs', [])) >= 1,
+                ];
+
+                return count(array_filter($dimensions));
+            })
+            ->max() ?? 0;
+
+        $broadRepositoryStructureObserved =
+            $repositoryStructureBreadth >= 3;
+
         $signalStrength = 1;
 
         if (
             $connectedRepositoryCount >= 2
             || $sustainedActivityObserved
+            || $broadRepositoryStructureObserved
             || (
                 $recentActivityCount >= 3
                 && $recentPrOrCommitCount >= 1
@@ -149,6 +178,10 @@ final class DevelopmentPersonalizationSignalService
             )
             || (
                 $sustainedActivityObserved
+                && $recentPrOrCommitCount >= 2
+            )
+            || (
+                $broadRepositoryStructureObserved
                 && $recentPrOrCommitCount >= 2
             )
             || $recentPrOrCommitCount >= 3
@@ -174,6 +207,10 @@ final class DevelopmentPersonalizationSignalService
             $evidence[] = 'sustained_development_activity_28d_6_days';
         }
 
+        if ($broadRepositoryStructureObserved) {
+            $evidence[] = 'repository_structure_breadth_3_plus';
+        }
+
         $fingerprintPayload = [
             'schema' => 1,
             'connected_repository_bucket' => min(
@@ -189,6 +226,7 @@ final class DevelopmentPersonalizationSignalService
                 $recentPrOrCommitCount,
             ),
             'active_day_bucket_90d' => min(12, $activeDayCount90d),
+            'repository_structure_breadth' => $repositoryStructureBreadth,
             'activity_span_bucket_90d' => match (true) {
                 $activitySpanDays90d >= 56 => '56_plus',
                 $activitySpanDays90d >= 28 => '28_55',
@@ -215,6 +253,7 @@ final class DevelopmentPersonalizationSignalService
                 $recentPrOrCommitCount,
             'active_day_count_90d' => $activeDayCount90d,
             'activity_span_days_90d' => $activitySpanDays90d,
+            'repository_structure_breadth' => $repositoryStructureBreadth,
         ];
     }
 }

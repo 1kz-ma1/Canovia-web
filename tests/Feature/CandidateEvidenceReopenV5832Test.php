@@ -304,6 +304,55 @@ class CandidateEvidenceReopenV5832Test extends TestCase
         $this->assertSame('guided', $context->guidance_level);
     }
 
+    public function test_repository_structure_breadth_is_observed_without_experience_inference(): void
+    {
+        [$user, $plan, $repository] = $this->scenario();
+
+        $metadata = (array) $repository->metadata;
+        $metadata['github_repository_snapshot'] = [
+            'version' => 1,
+            'repository' => ['language' => 'PHP'],
+            'branches' => [
+                ['name' => 'main'],
+                ['name' => 'feature/example'],
+            ],
+            'pull_requests' => [
+                ['number' => 1],
+            ],
+            'issues' => [],
+            'actions_runs' => [],
+        ];
+        $repository->update(['metadata' => $metadata]);
+
+        $this->actingAs($user)
+            ->post(route('personalization.updates.refresh'));
+
+        $candidate = $this->candidate($user);
+        $context = $this->context($user)->fresh();
+
+        $this->assertSame(2, data_get($candidate, 'signal_strength'));
+        $this->assertSame('medium', data_get($candidate, 'confidence'));
+        $this->assertContains(
+            'repository_structure_breadth_3_plus',
+            data_get($candidate, 'evidence', []),
+        );
+        $this->assertSame(
+            3,
+            data_get(
+                $context->observed_context,
+                'development_behavior.repository_structure_breadth',
+            ),
+        );
+        $this->assertSame(
+            'beginner',
+            data_get(
+                $context->self_reported_context,
+                'domain_context.development.experience',
+            ),
+        );
+        $this->assertSame('guided', $context->guidance_level);
+    }
+
     public function test_pending_candidate_updates_evidence_before_dismissal_without_duplicate_prompt_event(): void
     {
         [$user, $plan] = $this->scenario();
