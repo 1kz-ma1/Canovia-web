@@ -509,6 +509,8 @@ V58.38 Guidance Level Change Candidate = merged; CI regression corrected in PR #
 V58.39 Development Plan Direction Review = merged; CI green in PR #316
 V58.40 Feature Recommendation Priority = merged; CI green in PR #317
 V58.41 Growth Experience Summary = merged; CI green in PR #319
+V58.42 Context Confirmation UX / integration regression = merged; CI green in PR #321
+V58.43 Release Review coverage = merged; CI green in PR #322
 
 Future Architecture remains Concept / Architecture preservation context.
 V58.35 only updates the Overview's Current reference.
@@ -517,7 +519,7 @@ V58.35 only updates the Overview's Current reference.
 Current next action:
 
 ```text
-1. V58.40 PR #317 and V58.41 PR #319 merged after CI green.
+1. V58.40–43 merged after CI green; manual Release Review has not been completed.
 2. Keep WIP.
 3. Manual Release Review remains:
    - personalization_first_use
@@ -533,9 +535,13 @@ Current next action:
    - personalization_confidence_calibration
    - sustained_development_behavior_signal
    - repository_structure_breadth_signal
+   - guidance_level_confirmation
+   - plan_direction_review_confirmation
+   - feature_recommendation_priority
+   - growth_experience_separation
 4. Next package: end-to-end manual Release Review and product validation of Growth Experience, recommendations, and confirmation UX.
 5. Do not use Future Architecture docs as implementation requirements.
-6. V58.38–41 are merged; manual Release Review and user-facing acceptance remain required.
+6. V58.38–43 are merged; manual Release Review and user-facing acceptance remain required. Never mark manual checks passed from CI alone.
 ```
 
 When resuming after interruption:
