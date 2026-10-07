@@ -7317,3 +7317,38 @@ Canonical:
 
 - `docs/V58.29_PLAN_LIFECYCLE_PERSONALIZATION.md`
 - `docs/CANOVIA_PERSONALIZATION_SPEC.md`
+
+
+## V58.30 Plan Completion Fingerprint
+
+V58.29のPlan completion memoryをmaterial structural fingerprintへ拡張する。
+
+```text
+first completion
+→ revision 1
+
+reopen / re-complete with same structure
+→ no new revision
+
+material structure change
+→ re-complete
+→ revision + 1
+```
+
+Fingerprintはruntime progress/statusではなく、Plan条件・Task内容・見積・優先度・依存関係などのmaterial structureを対象にする。
+
+V58.29の既存completion ID memoryはsilent baseline化してから新revision判定へ移行する。
+
+また、最後の未完了Taskをcancelledにした結果、残るnon-cancelled Tasksが全て完了している場合もPlan completionを成立させる。
+
+V58.30は:
+
+- Plan / Taskを自動変更しない
+- AI semantic diffをしない
+- user-facing completion historyを追加しない
+- automatic replanningをしない
+
+Canonical:
+
+- `docs/V58.30_PLAN_COMPLETION_FINGERPRINT.md`
+- `docs/CANOVIA_PERSONALIZATION_SPEC.md`

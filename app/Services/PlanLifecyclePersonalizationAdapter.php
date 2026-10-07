@@ -13,6 +13,7 @@ final class PlanLifecyclePersonalizationAdapter
     public function __construct(
         private readonly PersonalizationContextService $contexts,
         private readonly PersonalizationLivingProfileService $livingProfile,
+        private readonly PlanCompletionFingerprintService $fingerprints,
     ) {}
 
     public function observeCreated(
@@ -45,12 +46,13 @@ final class PlanLifecyclePersonalizationAdapter
         Request $request,
         Task $task,
     ): void {
+        if (! $task->wasChanged(['status', 'progress_percent'])) {
+            return;
+        }
+
         if (
-            ! $task->wasChanged([
-                'status',
-                'progress_percent',
-            ])
-            || ! $this->taskIsComplete($task)
+            ! $this->taskIsComplete($task)
+            && $task->status !== 'cancelled'
         ) {
             return;
         }
@@ -97,19 +99,114 @@ final class PlanLifecyclePersonalizationAdapter
             ->unique()
             ->values();
 
-        if ($completedIds->contains((int) $plan->id)) {
+        $snapshots = is_array(
+            $lifecycle['completion_snapshots']
+            ?? null,
+        )
+            ? $lifecycle['completion_snapshots']
+            : [];
+
+        $planKey = (string) $plan->id;
+        $existing = is_array($snapshots[$planKey] ?? null)
+            ? $snapshots[$planKey]
+            : [];
+        $existingFingerprint = (string) (
+            $existing['fingerprint']
+            ?? ''
+        );
+        $current = $this->fingerprints->snapshot($plan);
+
+        $hasExistingFingerprint = preg_match(
+            '/^[a-f0-9]{64}$/',
+            $existingFingerprint,
+        ) === 1;
+
+        if (
+            $hasExistingFingerprint
+            && hash_equals(
+                $existingFingerprint,
+                $current['fingerprint'],
+            )
+        ) {
             return;
         }
 
-        $completedIds->push((int) $plan->id);
+        $legacyRemembered =
+            ! $hasExistingFingerprint
+            && $completedIds->contains((int) $plan->id);
 
-        $lifecycle['recent_completed_plan_ids'] = $completedIds
+        if ($legacyRemembered) {
+            $snapshots = $this->rememberSnapshot(
+                $snapshots,
+                $planKey,
+                [
+                    'schema_version' =>
+                        $current['schema_version'],
+                    'fingerprint' =>
+                        $current['fingerprint'],
+                    'revision' => 1,
+                    'task_count' =>
+                        $current['task_count'],
+                    'completed_at' =>
+                        now()->toIso8601String(),
+                    'change' =>
+                        'legacy_baseline',
+                ],
+            );
+
+            $lifecycle['completion_snapshots'] = $snapshots;
+            $lifecycle['last_completion_baselined_plan_id'] =
+                (int) $plan->id;
+            $lifecycle['last_completion_baselined_at'] =
+                now()->toIso8601String();
+
+            $this->contexts->storeObservedCandidate(
+                $request,
+                ['plan_lifecycle' => $lifecycle],
+            );
+
+            return;
+        }
+
+        $revision = $hasExistingFingerprint
+            ? max(1, (int) ($existing['revision'] ?? 1)) + 1
+            : 1;
+        $change = $hasExistingFingerprint
+            ? 'material_revision'
+            : 'first_completion';
+
+        $snapshots = $this->rememberSnapshot(
+            $snapshots,
+            $planKey,
+            [
+                'schema_version' => $current['schema_version'],
+                'fingerprint' => $current['fingerprint'],
+                'revision' => $revision,
+                'task_count' => $current['task_count'],
+                'completed_at' => now()->toIso8601String(),
+                'change' => $change,
+            ],
+        );
+
+        $completedIds = $completedIds
+            ->reject(fn ($id) => (int) $id === (int) $plan->id)
+            ->push((int) $plan->id)
             ->slice(-self::COMPLETED_PLAN_MEMORY)
-            ->values()
-            ->all();
+            ->values();
+
+        $lifecycle['recent_completed_plan_ids'] =
+            $completedIds->all();
+        $lifecycle['completion_snapshots'] = $snapshots;
         $lifecycle['last_completed_plan_id'] = (int) $plan->id;
-        $lifecycle['last_completed_task_id'] = (int) $task->id;
+        $lifecycle['last_completion_trigger_task_id'] =
+            (int) $task->id;
+        $lifecycle['last_completed_task_id'] =
+            $this->taskIsComplete($task)
+                ? (int) $task->id
+                : null;
         $lifecycle['last_completed_at'] = now()->toIso8601String();
+        $lifecycle['last_completion_revision'] = $revision;
+        $lifecycle['last_completion_change'] = $change;
 
         $this->contexts->storeObservedCandidate(
             $request,
@@ -120,6 +217,35 @@ final class PlanLifecyclePersonalizationAdapter
             $request,
             'plan_completed',
             $plan,
+            [
+                'completion_revision' => $revision,
+                'completion_change' => $change,
+            ],
+        );
+    }
+
+    /**
+     * @param array<string,array<string,mixed>> $snapshots
+     * @param array<string,mixed> $snapshot
+     * @return array<string,array<string,mixed>>
+     */
+    private function rememberSnapshot(
+        array $snapshots,
+        string $planKey,
+        array $snapshot,
+    ): array {
+        unset($snapshots[$planKey]);
+        $snapshots[$planKey] = $snapshot;
+
+        if (count($snapshots) <= self::COMPLETED_PLAN_MEMORY) {
+            return $snapshots;
+        }
+
+        return array_slice(
+            $snapshots,
+            -self::COMPLETED_PLAN_MEMORY,
+            null,
+            true,
         );
     }
 

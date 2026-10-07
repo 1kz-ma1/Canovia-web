@@ -308,6 +308,21 @@ Implemented next slice — V58.29 Plan Lifecycle Refresh Triggers:
 - [x] CI green
 - [ ] Manual Release Review: plan_lifecycle_personalization
 
+Implemented next slice — V58.30 Plan Completion Fingerprint:
+
+- [x] material structural completion fingerprint
+- [x] runtime status/progress excluded from fingerprint
+- [x] first completion revision 1
+- [x] same-structure reopen / re-complete suppression
+- [x] material edit → next completion revision
+- [x] new Task → next completion revision
+- [x] V58.29 legacy memory silent baseline
+- [x] cancellation-based completion reevaluation
+- [x] trigger Task / completed Task semantic separation
+- [x] regression tests written
+- [x] CI green
+- [ ] Manual Release Review: plan_completion_fingerprint
+
 Deferred next slices:
 
 - review / retention stage adapter
@@ -316,7 +331,7 @@ Deferred next slices:
 - stronger Development behavior signal:
   - multiple repositories
   - continuous PR activity
-- evidence fingerprint / stronger-signal reopen rule
+- stronger-signal candidate reopen rule
 - confidence calibration
 - Guidance Level update candidate
 - Plan-direction update candidate
@@ -364,21 +379,23 @@ PR #294 = merged
 PR #295 = merged
 PR #296 = merged
 PR #297 = merged
+PR #298 = merged
 
 Phase 1 automated validation = GREEN
 Phase 2 automated validation = GREEN
 Phase 3 Foundation automated validation = GREEN
 V58.28 Study Behavior Adapter = GREEN
-V58.29 Plan Lifecycle Refresh Triggers = implemented / automated validation GREEN
+V58.29 Plan Lifecycle Refresh Triggers = GREEN
+V58.30 Plan Completion Fingerprint = implemented / automated validation GREEN
 
 Future Architecture remains Concept / Architecture preservation context.
-V58.29 only updates the Overview's Current reference.
+V58.30 only updates the Overview's Current reference.
 ```
 
 Current next action:
 
 ```text
-1. Review / merge PR #298 when appropriate.
+1. Review / merge PR #299 when appropriate.
 2. Keep WIP.
 3. Manual Release Review remains:
    - personalization_first_use
@@ -386,10 +403,11 @@ Current next action:
    - living_profile_context_update
    - study_behavior_personalization
    - plan_lifecycle_personalization
+   - plan_completion_fingerprint
 4. Recommended next small slice:
-   - evidence fingerprint / completion revision
-   OR
    - return-after-absence trigger
+   OR
+   - stronger-signal candidate reopen rule
 5. Do not use Future Architecture docs as implementation requirements.
 ```
 

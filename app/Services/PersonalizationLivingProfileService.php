@@ -26,6 +26,7 @@ final class PersonalizationLivingProfileService
         Request $request,
         string $trigger = 'manual',
         ?Plan $plan = null,
+        array $triggerMetadata = [],
     ): array {
         if (! $request->user()) {
             return $this->summary($request);
@@ -71,6 +72,7 @@ final class PersonalizationLivingProfileService
 
         $safeTrigger = $this->safeTrigger($trigger);
         $eventMetadata = [
+            ...$triggerMetadata,
             'trigger' => $safeTrigger,
         ];
 

@@ -583,3 +583,30 @@ L1 manual review:
   - non-owner / collaborator must not mutate owner Personalization
 
 V58.29 does not introduce automatic Plan mutation or a new Plan status.
+
+
+## V58.30 Plan Completion Fingerprint release contract
+
+Minimum:
+
+```text
+L1 Early Access Core
+```
+
+No new route / migration.
+
+L1 manual review:
+
+- `plan_completion_fingerprint`
+  - runtime status/progress only → same fingerprint
+  - material Task edit → fingerprint changes
+  - first completion → revision 1
+  - same-structure re-complete → no new revision
+  - material change + re-complete → revision 2
+  - new Task + re-complete → revision 2
+  - V58.29 memory → silent legacy baseline
+  - post-baseline material change → revision 2
+  - cancellation can establish Plan completion
+  - cancelled trigger Task is not labelled completed
+
+V58.30 does not change Release Level, Entitlement, Plan content, or Guidance automatically.
