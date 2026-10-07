@@ -223,6 +223,14 @@
     </section>
 
     @if (! $plan)
+        @if (filled(data_get($firstUseContext ?? [], 'goal')))
+            <section class="page-card p-4 sm:p-5" data-development-first-use-context>
+                <p class="text-xs font-semibold text-slate-400">診断で登録した開発目標</p>
+                <p class="mt-1 break-words text-sm font-semibold text-slate-100">{{ data_get($firstUseContext, 'goal') }}</p>
+                <p class="mt-2 text-xs text-slate-400">この目標からPlanを作成できます。診断の回答をもう一度入力する必要はありません。</p>
+                <a href="{{ route('personalization.result') }}" class="mt-3 inline-flex text-xs font-semibold text-cyan-300 underline underline-offset-4">診断からPlan候補を見る</a>
+            </section>
+        @endif
         <div data-development-workspace-no-plan>
             @include('workspace.partials.mode-onboarding', [
                 'modeOnboarding' => $modeOnboarding ?? null,
