@@ -54,7 +54,9 @@ final class PersonalizationContextUpdateController extends Controller
             ->route('personalization.updates.index')
             ->with(
                 'success',
-                '今後の表示に反映します。初回診断の回答自体は変更していません。',
+                $candidateKey === 'development_plan_direction_review'
+                    ? 'レビュー候補を確認済みにしました。Planやタスクは自動変更されません。'
+                    : '今後の表示に反映します。初回診断の回答自体は変更していません。',
             );
     }
 
