@@ -188,6 +188,12 @@ class AuthController extends Controller
         return view('auth.account', [
             'user' => $user,
             'personalizationContext' => $user->personalizationContext,
+            'showPersonalizationBootstrap' =>
+                $releaseLevels->allowsMinimum(
+                    ReleaseLevel::EarlyAccessCore,
+                    $user,
+                    $request,
+                ),
             'showProductPreview' => $releaseLevels->allowsMinimum(
                 ReleaseLevel::ProductPreview,
                 $user,
