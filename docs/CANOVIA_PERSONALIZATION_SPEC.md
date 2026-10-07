@@ -1,6 +1,6 @@
 # Canovia Personalization Specification
 
-> Status: V58.26 Phase 2 implemented; manual release review pending  
+> Status: V58.27 Living Profile Foundation implemented; automated validation pending  
 > Updated: 2026-10-07
 
 ## 1. Purpose
@@ -402,6 +402,66 @@ Canonical detail:
 
 - `docs/V58.26_CAPABILITY_ACTIVATION_FOUNDATION.md`
 
+## 7.2 Living Profile Foundation
+
+V58.27でContext Update Loopの最小Foundationを追加する。
+
+```text
+Observed Fact
+→ Context Update Candidate
+→ Auto Apply OR User Confirmation
+→ Derived Context update
+```
+
+Candidateは:
+
+```text
+inferred_context.update_candidates
+```
+
+へ保存する。
+
+### Low risk
+
+例:
+
+```text
+explicit workspace selection
+→ recent domain
+→ recommended_surfaces order
+```
+
+自動適用可能。
+
+### High impact
+
+例:
+
+```text
+GitHub connected
+→ advanced Development support candidate
+```
+
+User confirmation必須。
+
+確認しても:
+
+- self-reported experience
+- Initial Diagnosis
+- Guidance Level
+
+は変更しない。
+
+V58.27 Refresh Trigger:
+
+- workspace_change
+- capability_readiness
+- manual
+
+Canonical:
+
+- `docs/V58.27_LIVING_PROFILE_FOUNDATION.md`
+
 ## 8. Existing User
 
 Existing userへBootstrapを強制しない。
@@ -416,7 +476,7 @@ Account / Settingsから:
 
 ## 9. Telemetry
 
-Phase 1 server-side events:
+Personalization / Living Profile server-side events:
 
 - personalization_started
 - personalization_completed
@@ -427,6 +487,14 @@ Phase 1 server-side events:
 - capability_preview_shown
 - capability_interest_yes
 - capability_interest_no
+- capability_setup_started
+- capability_setup_completed
+- capability_setup_abandoned
+- context_refresh_triggered
+- context_update_candidate_created
+- context_update_auto_applied
+- context_update_confirmed
+- context_update_dismissed
 
 Metadataはdomain / seed key / capability key / guidance level等の安全なenumerationに限定する。
 free text answerはTelemetryへ保存しない。
