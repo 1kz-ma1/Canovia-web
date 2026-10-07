@@ -120,6 +120,7 @@ class ReleaseReviewV5824Test extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.release_gate.index'))
             ->assertOk()
+            ->assertSee('data-release-review-decision="ready"', false)
             ->assertSee('READY FOR RELEASE')
             ->assertSee('10/10');
     }
@@ -149,8 +150,8 @@ class ReleaseReviewV5824Test extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.release_gate.index'))
             ->assertOk()
-            ->assertSee('REVIEW FAILED')
-            ->assertDontSee('READY FOR RELEASE');
+            ->assertSee('data-release-review-decision="failed"', false)
+            ->assertSee('REVIEW FAILED');
     }
 
     public function test_release_review_never_changes_public_level(): void
