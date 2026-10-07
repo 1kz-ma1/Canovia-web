@@ -687,6 +687,7 @@ final class PersonalizationLivingProfileService
                 'workspace_change',
                 'return',
                 'return_after_absence',
+                'long_usage_window',
             ],
             true,
         )

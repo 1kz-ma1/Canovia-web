@@ -147,6 +147,7 @@ return [
                     'return_after_absence_personalization' => 'Long-absence return refreshes Living Profile once without forcing re-onboarding or rewriting user context',
                     'context_candidate_evidence_reopen' => 'Dismissed high-impact candidate reopens only after materially stronger evidence, not same-strength activity changes',
                     'study_review_cycle_personalization' => 'Spaced assessed Study practice produces a review-cycle Growth Experience without claiming retention or rewriting Study context',
+                    'long_usage_window_personalization' => 'Sustained usage span + active-day milestone refreshes Living Profile once without forcing re-onboarding',
                     'early_access_copy' => 'Early Access disclosure copy review',
                     'downgrade_core' => 'Downgrade to Level 0 preserves data and usable core flow',
                     'feedback_telemetry' => 'Feedback path and telemetry payload review',

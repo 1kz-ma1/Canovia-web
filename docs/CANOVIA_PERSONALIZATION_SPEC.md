@@ -1,6 +1,6 @@
 # Canovia Personalization Specification
 
-> Status: V58.33 Study Review Cycle Personalization implemented; manual release review pending  
+> Status: V58.34 Long Usage Window implemented; manual release review pending  
 > Updated: 2026-10-07
 
 ## 1. Purpose
@@ -663,6 +663,60 @@ Repository activityはuser authorshipやexperience levelを意味しない。
 Canonical:
 
 - `docs/V58.32_CONTEXT_CANDIDATE_EVIDENCE_REOPEN.md`
+
+## 7.9 Long Usage Window Personalization
+
+V58.34で「長期間利用」をLiving Profile再評価の節目へ接続する。
+
+単なるcalendar tenureではなく:
+
+```text
+usage span >= 30 calendar days
+AND
+tracked active day count >= 6
+```
+
+の両方を満たした最初の節目だけ:
+
+```text
+trigger = long_usage_window
+→ deterministic Living Profile refresh
+```
+
+とする。
+
+Presenceは以下をaccount-scoped observed Contextとして保持する:
+
+- first_seen_at
+- active_day_count
+- last_usage_span_days
+- long_usage_window_reached_at
+
+V58.31 legacy Presenceは保守的にbackfillし、
+過去のactive-day数を推測しない。
+
+同じrequestで:
+
+```text
+return_after_absence
++
+long_usage_window
+```
+
+が成立する場合はreturn-after-absenceを優先する。
+Long Usage milestoneは後続active dayまで未消費のまま残す。
+
+V58.34は:
+
+- questionnaireを表示しない
+- self-reported Contextを書き換えない
+- Guidanceを変更しない
+- experience levelを変更しない
+- Plan / Taskを変更しない
+
+Canonical:
+
+- `docs/V58.34_LONG_USAGE_WINDOW_PERSONALIZATION.md`
 
 ## 8. Existing User
 

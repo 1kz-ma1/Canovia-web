@@ -691,3 +691,30 @@ L1 manual review:
   - mobile / desktop
 
 V58.33 does not change Release Level, Entitlement, Plan content, Task content, Guidance, or Study strategy automatically.
+
+
+## V58.34 Long Usage Window release contract
+
+Minimum:
+
+```text
+L1 Early Access Core
+```
+
+No new route / migration.
+
+L1 manual review:
+
+- `long_usage_window_personalization`
+  - first tracked visit establishes first_seen + active day 1
+  - same-day navigation does not increment active days
+  - 30-day span alone does not trigger
+  - 30-day span + 6 active days triggers once
+  - exact counts are not copied to telemetry metadata
+  - long absence wins when both milestones become eligible together
+  - long-usage milestone remains eligible on a later active day
+  - V58.31 Presence backfills conservatively
+  - no Personalization Context → no silent enrollment
+  - mobile / desktop tracked surfaces remain stable
+
+V58.34 does not change Release Level, Entitlement, Guidance, Plan, or experience level automatically.
