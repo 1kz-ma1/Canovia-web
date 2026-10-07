@@ -319,8 +319,52 @@ final class PersonalizationLivingProfileService
                     evidenceRevision: $evidenceRevision,
                     reopened: true,
                 );
+            } elseif ($status === 'pending') {
+                $previousFingerprint = (string) (
+                    $existing['evidence_fingerprint']
+                    ?? ''
+                );
+                $fingerprintChanged =
+                    $fingerprint !== ''
+                    && (
+                        $previousFingerprint === ''
+                        || ! hash_equals(
+                            $previousFingerprint,
+                            $fingerprint,
+                        )
+                    );
+
+                if (
+                    $fingerprintChanged
+                    || ! isset($existing['signal_strength'])
+                    || ! isset($existing['evidence_revision'])
+                ) {
+                    $existing['signal_strength'] = $signalStrength;
+                    $existing['evidence_fingerprint'] = $fingerprint;
+                    $existing['evidence'] = $evidence;
+                    $existing['confidence'] = $signalStrength >= 2
+                        ? 'high'
+                        : 'medium';
+                    $existing['evidence_revision'] =
+                        $previousFingerprint === ''
+                            ? max(
+                                1,
+                                (int) (
+                                    $existing['evidence_revision']
+                                    ?? 1
+                                ),
+                            )
+                            : max(
+                                1,
+                                (int) (
+                                    $existing['evidence_revision']
+                                    ?? 1
+                                ),
+                            ) + 1;
+                    $candidates[$candidateKey] = $existing;
+                }
             } elseif (
-                in_array($status, ['pending', 'confirmed'], true)
+                $status === 'confirmed'
                 && (
                     ! isset($existing['signal_strength'])
                     || ! isset($existing['evidence_fingerprint'])
