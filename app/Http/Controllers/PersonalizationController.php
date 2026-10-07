@@ -294,6 +294,11 @@ final class PersonalizationController extends Controller
             'feature_readiness.github.interest',
             $validated['interest'],
         );
+        data_set(
+            $context,
+            'context_sources.self_reported.capability_interest.github_integration',
+            $validated['interest'],
+        );
 
         $contexts->saveSelfReportedPreference($request, $context);
 
