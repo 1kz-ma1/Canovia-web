@@ -69,6 +69,25 @@ class ReleaseReviewV5824Test extends TestCase
         ]);
     }
 
+    public function test_new_personalization_checks_remain_pending_until_manual_review(): void
+    {
+        $items = app(ReleaseReviewService::class)->items(ReleaseLevel::EarlyAccessCore);
+        $keys = $items->pluck('check_key')->all();
+
+        foreach ([
+            'personalization_confidence_calibration',
+            'sustained_development_behavior_signal',
+            'repository_structure_breadth_signal',
+            'guidance_level_confirmation',
+            'plan_direction_review_confirmation',
+            'feature_recommendation_priority',
+            'growth_experience_separation',
+        ] as $key) {
+            $this->assertContains($key, $keys);
+            $this->assertSame('pending', $items->firstWhere('check_key', $key)['status']);
+        }
+    }
+
     public function test_invalid_manual_check_key_cannot_be_saved(): void
     {
         $admin = User::factory()->create([
