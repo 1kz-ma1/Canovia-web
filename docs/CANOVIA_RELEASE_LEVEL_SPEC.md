@@ -650,7 +650,7 @@ No new route / migration.
 
 L1 manual review:
 
-- `context_context_candidate_evidence_reopen`
+- `context_candidate_evidence_reopen`
   - initial high-impact Candidate has evidence revision 1
   - dismiss snapshots current signal strength
   - same evidence → stays dismissed
