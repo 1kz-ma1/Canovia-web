@@ -355,7 +355,7 @@ Implemented next slice — V58.32 Candidate Evidence Reopen:
 - [x] self-reported experience preserved
 - [x] Guidance preserved
 - [x] regression tests written
-- [x] CI green
+- [ ] CI green
 - [ ] Manual Release Review: context_candidate_evidence_reopen
 
 Deferred next slices:
