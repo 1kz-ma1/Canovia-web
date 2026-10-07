@@ -29,7 +29,7 @@ final class CapabilityActivationController extends Controller
             404,
         );
 
-        $state = $activation->startGithub($request, $plan);
+        $state = $activation->github($request, $plan);
 
         if (! (bool) ($state['can_start'] ?? false)) {
             return redirect()
@@ -44,6 +44,8 @@ final class CapabilityActivationController extends Controller
                     ),
                 );
         }
+
+        $state = $activation->startGithub($request, $plan);
 
         return redirect()
             ->route('github_workflow.index', [
