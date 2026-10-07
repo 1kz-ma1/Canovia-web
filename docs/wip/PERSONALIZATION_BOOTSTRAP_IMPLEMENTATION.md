@@ -239,7 +239,7 @@ Deferred within Phase 2:
 - setup resume notification
 - additional capability adapters
 
-## Phase 3 — Living Profile Foundation [IMPLEMENTED / CI PENDING]
+## Phase 3 — Living Profile Foundation [IMPLEMENTED / MANUAL REVIEW PENDING]
 
 Goal:
 Initial Diagnosisを初期仮説として、Observed BehaviorからContext再評価候補を作る。
@@ -276,7 +276,7 @@ Implemented:
 - [x] telemetry
 - [x] Release Gate contract
 - [x] regression tests written
-- [ ] CI green
+- [x] CI green
 - [ ] Manual Release Review: living_profile_context_update
 
 Deferred next slices:
@@ -337,34 +337,44 @@ Current state:
 ```text
 PR #294 = merged
 PR #295 = merged
+PR #296 = open
 Phase 1 automated validation = GREEN
 Phase 2 automated validation = GREEN
-Phase 3 Foundation implementation = complete on feature/v58-27-living-profile-foundation
+Phase 3 Foundation automated validation = GREEN
+
+Passed:
+- PHP lint
+- Blade view cache
+- migration
+- V58.20–V58.26 regressions
+- LivingProfileV5827Test
+- Home continuity
+- Specialized Workspace regression
+- Production Migration Recovery
 ```
 
 Current next action:
 
 ```text
-1. Create V58.27 PR.
-2. Run CI:
-   - LivingProfileV5827Test
-   - CapabilityActivationV5826Test
-   - Personalization V58.25 regression
-   - Release Review regression
-   - Workspace Mode persistence
-   - Development Workspace regression
-   - Migration Recovery
-3. Fix Phase 3 Foundation blockers only.
-4. After CI green:
-   - mark Phase 3 Foundation CI green
-   - keep WIP
-5. Manual Release Review remains:
+1. Review / merge PR #296 when appropriate.
+2. Manual Release Review remains:
    - personalization_first_use
    - github_capability_activation
    - living_profile_context_update
-6. Next small implementation slice after V58.27:
+3. Keep this WIP file.
+4. Next small implementation slice:
    Study behavior adapter OR additional refresh triggers.
-7. Do not jump directly to AI inference engine.
+5. Recommended next:
+   Study behavior adapter:
+   - 基礎学習 → 演習中心
+   - observed learning activity
+   - low/high impact boundary
+6. After that:
+   - new_plan trigger
+   - plan_completed trigger
+   - return-after-absence trigger
+   - evidence fingerprint / stronger-signal reopen
+7. Do not jump directly to unrestricted AI inference.
 ```
 
 When resuming after interruption:
