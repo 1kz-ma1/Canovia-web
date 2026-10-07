@@ -47,8 +47,9 @@
             @foreach ($assessments as $assessment)
                 @php
                     $level = $assessment['level'];
-                    $status = $statusLabels[$assessment['status']] ?? $statusLabels['blocked'];
+                    $status = $statusLabels[$assessment['decision'] ?? $assessment['status']] ?? $statusLabels['blocked'];
                     $isTarget = $level === $recommendedTarget;
+                    $review = $assessment['review'] ?? null;
                 @endphp
                 <article class="page-card p-5 {{ $isTarget ? 'border-cyan-300/30' : '' }}">
                     <div class="flex items-start justify-between gap-3">
@@ -70,7 +71,13 @@
                         </div>
                         <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
                             <p class="text-slate-500">Manual</p>
-                            <p class="mt-1 font-black text-slate-100">{{ $assessment['manual_checks']->count() }}</p>
+                            <p class="mt-1 font-black text-slate-100">
+                                @if ($review)
+                                    {{ $review['passed'] }}/{{ $review['total'] }}
+                                @else
+                                    {{ $assessment['manual_checks']->count() }}
+                                @endif
+                            </p>
                         </div>
                     </div>
 
@@ -84,6 +91,14 @@
                                 </div>
                             @endforeach
                         </div>
+                    @elseif (($assessment['decision'] ?? null) === 'ready')
+                        <p class="mt-4 text-xs leading-5 text-emerald-200">
+                            自動チェックと手動レビューが完了しています。
+                        </p>
+                    @elseif (($assessment['decision'] ?? null) === 'failed')
+                        <p class="mt-4 text-xs leading-5 text-rose-200">
+                            Failedの手動レビューがあります。
+                        </p>
                     @elseif ($assessment['manual_checks']->isNotEmpty())
                         <p class="mt-4 text-xs leading-5 text-amber-100">
                             構造チェックは通過。公開前に手動確認が必要です。
