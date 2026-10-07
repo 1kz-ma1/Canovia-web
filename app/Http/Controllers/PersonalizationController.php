@@ -123,7 +123,7 @@ final class PersonalizationController extends Controller
         }
 
         $context = $bootstrap->buildContext($validated);
-        $context = $contexts->save($request, $context, completed: true);
+        $context = $contexts->saveSelfReported($request, $context, completed: true);
 
         $events->recordSafely(
             $identity->resolve($request),
@@ -295,7 +295,7 @@ final class PersonalizationController extends Controller
             $validated['interest'],
         );
 
-        $contexts->save($request, $context);
+        $contexts->saveSelfReportedPreference($request, $context);
 
         $events->recordSafely(
             $identity->resolve($request),
