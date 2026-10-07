@@ -7493,3 +7493,43 @@ Canonical:
 
 - `docs/V58.33_STUDY_REVIEW_CYCLE_PERSONALIZATION.md`
 - `docs/CANOVIA_PERSONALIZATION_SPEC.md`
+
+
+## V58.34 Long Usage Window Personalization
+
+Living Profileへ「長く使っている」という時間変化を接続する。
+
+ただし単なる登録後30日では発火しない。
+
+```text
+usage span >= 30 days
++
+tracked active days >= 6
+→ long_usage_window refresh
+```
+
+V58.31 Presenceを拡張し:
+
+- first_seen_at
+- active_day_count
+- usage span
+- long-usage milestone
+
+をaccount-scoped observed Contextとして保持する。
+
+Long absenceと同一requestで重なる場合は
+`return_after_absence` を優先し、二重refreshを避ける。
+
+V58.34は:
+
+- recurring surveyを出さない
+- experience / Guidanceを自動変更しない
+- Plan / Taskを自動変更しない
+- AI inferenceを行わない
+
+またV58.32で重複していたreopen説明UIを1箇所へ整理する。
+
+Canonical:
+
+- `docs/V58.34_LONG_USAGE_WINDOW_PERSONALIZATION.md`
+- `docs/CANOVIA_PERSONALIZATION_SPEC.md`
