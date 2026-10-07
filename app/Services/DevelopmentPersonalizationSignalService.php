@@ -47,8 +47,8 @@ final class DevelopmentPersonalizationSignalService
             })
             ->values();
 
-        $developmentPlanIds = $repositories
-            ->pluck('plan_id')
+        $connectedRepositoryIds = $repositories
+            ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
@@ -62,10 +62,13 @@ final class DevelopmentPersonalizationSignalService
             ->unique()
             ->count();
 
-        $observations = $developmentPlanIds->isEmpty()
+        $observations = $connectedRepositoryIds->isEmpty()
             ? collect()
             : DevelopmentActivityObservation::query()
-                ->whereIn('plan_id', $developmentPlanIds)
+                ->whereIn(
+                    'repository_artifact_id',
+                    $connectedRepositoryIds,
+                )
                 ->where('last_observed_at', '>=', now()->subDays(30))
                 ->get([
                     'kind',
