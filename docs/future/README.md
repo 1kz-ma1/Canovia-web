@@ -114,6 +114,90 @@ Canovia Core Loop completion
 
 Developer Pro、完全自動開発、Marketplace、Developer Portal等は、明示的に昇格されるまで原則として公開後拡張です。
 
+## Start Here
+
+Read this first:
+
+- [Canovia Future Architecture Overview](CANOVIA_FUTURE_ARCHITECTURE_OVERVIEW.md)
+
+The Overview explicitly separates:
+
+- CURRENT / ACTIVE
+- PARTIAL / FOUNDATION
+- FUTURE / CONCEPT
+
+and links current behavior back to Active Specs instead of duplicating it.
+
 ## Documents
 
+### Architecture overview
+
+- [Canovia Future Architecture Overview](CANOVIA_FUTURE_ARCHITECTURE_OVERVIEW.md)
+
+### Platform / Ecosystem
+
+- [Canovia Platform / Ecosystem](CANOVIA_PLATFORM_ECOSYSTEM.md)
+
+Covers Future direction for:
+
+- Canovia Family
+- Identity
+- Shared Context
+- Consent / Scope
+- Family Entitlement
+- Activity / Capability Contracts
+- Curated Execution Network
+- Differential Onboarding
+
+### Product Intelligence
+
+- [Product Intelligence / Automatic Improvement](PRODUCT_INTELLIGENCE_AUTOMATIC_IMPROVEMENT.md)
+
+Covers Future direction for:
+
+- Evidence Pipeline
+- Hypothesis Intelligence
+- Decision Memory
+- Data Lineage
+- Evidence Health
+- Pattern hierarchy
+- Opportunity Engine
+- Automatic Improvement
+
+### Product Creation
+
+- [Product Creation System / Incubation](PRODUCT_CREATION_SYSTEM.md)
+
+Covers Future direction for:
+
+- Incubation
+- First-party / Partner decisions
+- Product Factory
+- Multi-product vision
+- small-team leverage
+
+### Developer Pro
+
 - [Developer Pro / AI Development Orchestration](DEVELOPER_PRO_AI_DEVELOPMENT_ORCHESTRATION.md)
+
+Developer Pro remains a dedicated Future Design because its development-orchestration details are substantial.
+
+## Current-vs-Future Rule
+
+Do not use a Future document to redefine current behavior.
+
+If a Future document references a current capability such as:
+
+- Personalization Bootstrap
+- Living Profile
+- Study
+- Development
+- GitHub
+- Telemetry
+- Entitlement
+- Release Level
+- Execution Ecosystem Foundation
+
+follow the linked Active Spec / latest main implementation for current semantics.
+
+The Future document only describes how that current foundation may evolve.
