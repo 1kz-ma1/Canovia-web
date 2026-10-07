@@ -7426,3 +7426,47 @@ Canonical:
 
 - `docs/V58.32_CONTEXT_CANDIDATE_EVIDENCE_REOPEN.md`
 - `docs/CANOVIA_PERSONALIZATION_SPEC.md`
+
+
+## V58.32 Candidate Evidence Reopen
+
+Living ProfileのDismissed high-impact candidateを、
+同じ事実で永遠に出さない / 毎回しつこく出す、の二択にしない。
+
+```text
+Dismiss
+↓
+same-strength evidence
+→ respect dismissal
+
+real behavior/environment change
+↓
+stronger signal
+→ candidate may reopen
+```
+
+V58.32 first scope:
+
+`development_advanced_support`
+
+Signalは:
+
+- connected GitHub foundation
+- multiple Development repositories
+- recent Development activity
+- PR / Commit activity
+
+からdeterministicに算出する。
+
+重要:
+
+- experience levelを自動変更しない
+- productivity scoreにしない
+- code quality評価にしない
+- confirmed candidateは再openしない
+- raw GitHub contentをTelemetryへ送らない
+
+Canonical:
+
+- `docs/V58.32_CANDIDATE_EVIDENCE_REOPEN.md`
+- `docs/CANOVIA_PERSONALIZATION_SPEC.md`
