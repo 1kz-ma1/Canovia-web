@@ -293,11 +293,24 @@ Implemented next slice — V58.28 Study Behavior Adapter:
 - [x] CI green
 - [ ] Manual Release Review: study_behavior_personalization
 
+Implemented next slice — V58.29 Plan Lifecycle Refresh Triggers:
+
+- [x] new_plan trigger
+- [x] plan_completed trigger
+- [x] observed plan_lifecycle context
+- [x] createOrFirst retry dedupe
+- [x] final active Task completion detection
+- [x] cancelled Task excluded
+- [x] owner-only Context update
+- [x] no silent profile creation
+- [x] bounded completed Plan ID memory
+- [x] regression tests written
+- [ ] CI green
+- [ ] Manual Release Review: plan_lifecycle_personalization
+
 Deferred next slices:
 
 - review / retention stage adapter
-- new_plan refresh trigger
-- plan_completed refresh trigger
 - return after long absence trigger
 - long usage window
 - stronger Development behavior signal:
@@ -350,36 +363,46 @@ Current state:
 PR #294 = merged
 PR #295 = merged
 PR #296 = merged
+PR #297 = merged
+
 Phase 1 automated validation = GREEN
 Phase 2 automated validation = GREEN
 Phase 3 Foundation automated validation = GREEN
-V58.28 Study Behavior Adapter = implemented / automated validation GREEN
+V58.28 Study Behavior Adapter = GREEN
+V58.29 Plan Lifecycle Refresh Triggers = implemented / CI pending
 
-Future Architecture documentation added on the same branch:
-- docs/future/CANOVIA_FUTURE_ARCHITECTURE_OVERVIEW.md
-- docs/future/CANOVIA_PLATFORM_ECOSYSTEM.md
-- docs/future/PRODUCT_INTELLIGENCE_AUTOMATIC_IMPROVEMENT.md
-- docs/future/PRODUCT_CREATION_SYSTEM.md
-
-Future documents are Concept / Architecture preservation context only.
-They do not promote Future features into current implementation requirements.
+Future Architecture remains Concept / Architecture preservation context.
+V58.29 only updates the Overview's Current reference.
 ```
 
 Current next action:
 
 ```text
-1. Review / merge PR #297 when appropriate.
-2. Keep WIP.
-3. Manual Release Review remains:
+1. Create V58.29 PR.
+2. Run CI:
+   - PlanLifecyclePersonalizationV5829Test
+   - StudyBehaviorPersonalizationV5828Test
+   - LivingProfileV5827Test
+   - CapabilityActivationV5826Test
+   - Personalization V58.25
+   - Release Review
+   - Home / Specialized Workspace
+   - Migration Recovery
+3. Fix V58.29 blockers only.
+4. After CI green:
+   - mark V58.29 CI green
+   - keep WIP
+5. Manual Release Review remains:
    - personalization_first_use
    - github_capability_activation
    - living_profile_context_update
    - study_behavior_personalization
-4. Recommended next implementation slice:
-   - new_plan refresh trigger
-   - plan_completed refresh trigger
-   then return-after-absence / evidence fingerprint.
-5. Do not implement Future Architecture components merely because docs/future now describes them.
+   - plan_lifecycle_personalization
+6. Recommended next small slice:
+   - evidence fingerprint / completion revision
+   OR
+   - return-after-absence trigger
+7. Do not use Future Architecture docs as implementation requirements.
 ```
 
 When resuming after interruption:
