@@ -278,19 +278,19 @@ class LivingProfileV5827Test extends TestCase
                 false,
             );
 
-        $this->assertSame(
-            1,
-            BehaviorEvent::query()
-                ->where(
-                    'event_type',
-                    BehaviorEventType::ContextUpdateCandidateCreated->value,
-                )
-                ->whereJsonContains(
-                    'metadata->candidate_key',
-                    'development_advanced_support',
-                )
-                ->count(),
-        );
+        $candidateEvents = BehaviorEvent::query()
+            ->where(
+                'event_type',
+                BehaviorEventType::ContextUpdateCandidateCreated->value,
+            )
+            ->get()
+            ->filter(
+                fn (BehaviorEvent $event) =>
+                    data_get($event->metadata, 'candidate_key')
+                        === 'development_advanced_support',
+            );
+
+        $this->assertCount(1, $candidateEvents);
     }
 
     public function test_user_without_personalization_context_is_not_silently_profiled_on_workspace_change(): void
@@ -322,15 +322,15 @@ class LivingProfileV5827Test extends TestCase
 
     public function test_level_zero_hides_living_profile_surface(): void
     {
-        config([
-            'release_levels.public_level' =>
-                ReleaseLevel::CoreStable->value,
-        ]);
-
         $user = $this->personalizedUser(
             domains: ['development'],
             experience: 'standard',
         );
+
+        config([
+            'release_levels.public_level' =>
+                ReleaseLevel::CoreStable->value,
+        ]);
 
         $this->actingAs($user)
             ->get(route('auth.account'))
