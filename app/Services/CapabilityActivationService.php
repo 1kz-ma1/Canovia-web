@@ -365,12 +365,12 @@ final class CapabilityActivationService
         Plan $plan,
         ?PlanArtifact $repository,
         array $connection,
-    ): void {
+    ): bool {
         if (
             ! $repository
             || (string) data_get($connection, 'state') !== 'ready'
         ) {
-            return;
+            return false;
         }
 
         $context = $this->contexts->current($request);
@@ -385,7 +385,7 @@ final class CapabilityActivationService
             : [];
 
         if (($activation['stage'] ?? null) === 'completed') {
-            return;
+            return false;
         }
 
         data_set($featureReadiness, 'github.activation', [
@@ -424,6 +424,8 @@ final class CapabilityActivationService
                 'repository_artifact_id' => (int) $repository->id,
             ],
         );
+
+        return true;
     }
 
     private function stage(
