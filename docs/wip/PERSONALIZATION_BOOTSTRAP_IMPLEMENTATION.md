@@ -566,3 +566,15 @@ Verified against main after PR #324:
 Acceptance scenarios still requiring manual verification (mobile + desktop): fresh Study diagnosis/seed/Plan; fresh Development diagnosis/seed/Plan without GitHub; existing user with old `pacekeeper.onboarding.stage.*` storage; skipped diagnosis; returning user with Plan and no Scope; connected GitHub actor; restricted GitHub actor. Capture screenshots, actual route sequence, and whether intro/guide appears twice. Do not auto-pass Release Review from CI.
 
 Implementation follow-up: add a **targeted regression test** for the canonical first-run/seed path, then suppress or migrate only the conflicting automatic legacy global guide for EarlyAccessCore first-use. Preserve explicit replay and lower-release-level compatibility; do not remove old routes or legacy storage keys without migration coverage.
+
+## V58.49 — Diagnosis → specialized workspace consumption audit (2026-10-08)
+
+Verified from code (not a live-user walkthrough):
+
+1. `PersonalizationBootstrapService::buildContext` stores Study goal/kind/stage, Development goal/experience/stage/GitHub readiness, guidance level, and recommended surfaces as self-reported context. `seeds()` uses Study kind and Development stage to choose the initial Plan phases. The seed acceptance path transfers title, description, category, deadline and mode to the Plan form.
+2. `PlanController::store` calls `PlanLifecyclePersonalizationAdapter::observeCreated`; the adapter writes observed plan lifecycle and refreshes the Living Profile for eligible owned Plans. This is **not equivalent to using every diagnosis answer** to select a workspace action.
+3. `StudyWorkspaceController` builds actions from Plan intelligence, learning type, practice state, and execution evidence. Its controller signature does **not** read `PersonalizationContextService` or the stored `domain_context.study.stage` directly. Verify any indirect consumer before asserting that Study stage affects first recommendations.
+4. `DevelopmentWorkspaceController` builds Developer Home from Plan/tasks/activity and GitHub readiness. It injects Living Profile for capability completion refresh, but its controller signature does **not** read `domain_context.development.experience` directly. Guidance level may be available to other components, but an immediate effect on Developer Home is **not established** by this audit.
+5. GitHub readiness is optional. A diagnosis answer of `github_usage=no` must never prevent opening Development Home or creating a Development Plan.
+
+Follow-up implementation acceptance criteria: prove first-session Study/Development recommendations reflect **relevant** diagnosis signals only when no stronger observed evidence exists; do not replace State-first decisions with self-reported guesses. Add feature tests for novice vs experienced Development and not-started vs started Study, including no GitHub, and compare rendered actions. If no difference is appropriate, explain the deliberate non-use rather than claiming personalization. Keep self-reported, observed, inferred and confirmed sources separate.
