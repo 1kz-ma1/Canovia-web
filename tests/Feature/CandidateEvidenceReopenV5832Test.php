@@ -530,6 +530,18 @@ class CandidateEvidenceReopenV5832Test extends TestCase
         $this->assertSame('standard', $this->context($user)->guidance_level);
     }
 
+    public function test_feature_recommendations_do_not_promote_unconfirmed_development_capabilities(): void
+    {
+        [$user] = $this->scenario();
+        $user->forceFill(['workspace_mode_preference' => 'development'])->save();
+        $this->actingAs($user)->post(route('personalization.updates.refresh'));
+        $context = $this->context($user);
+        $priority = (array) data_get($context->inferred_context, 'feature_recommendation_priority', []);
+        $this->assertContains('workspace.development', $priority);
+        $this->assertNotContains('development.advanced_support', $priority);
+        $this->assertNotContains('development.plan_review', $priority);
+    }
+
     /**
      * @return array{0:User,1:Plan,2:PlanArtifact}
      */

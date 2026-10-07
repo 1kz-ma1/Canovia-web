@@ -8,6 +8,7 @@
     $resolved = collect($profile['resolved'] ?? []);
     $studyPracticeFocused = $resolved->get('study_practice_focused');
     $studyReviewCycle = $resolved->get('study_review_cycle');
+    $featureRecommendationPriority = (array) data_get($profile, 'feature_recommendation_priority', []);
 @endphp
 
 <div class="mx-auto max-w-3xl space-y-5" data-personalization-context-updates>
@@ -76,6 +77,24 @@
             <p class="mt-3 text-xs leading-6 text-slate-500">
                 初回に回答した学習段階、Guidance Level、Plan内容、Study strategyは変更していません。
             </p>
+        </section>
+    @endif
+
+    @if ($featureRecommendationPriority !== [])
+        <section class="page-card p-5 sm:p-7" data-feature-recommendation-priority>
+            <h2 class="text-sm font-black text-slate-100">現在のおすすめ機能</h2>
+            <p class="mt-2 text-xs leading-6 text-slate-400">利用モードと承認済みの選択に基づく表示です。未承認の提案は反映されません。</p>
+            <ul class="mt-3 space-y-2 text-sm text-slate-200">
+                @foreach ($featureRecommendationPriority as $recommendation)
+                    <li>{{ match ($recommendation) {
+                        'workspace.study' => '学習ワークスペース',
+                        'workspace.development' => '開発ワークスペース',
+                        'development.advanced_support' => '高度な開発支援',
+                        'development.plan_review' => '開発Planの方向性レビュー',
+                        default => $recommendation,
+                    } }}</li>
+                @endforeach
+            </ul>
         </section>
     @endif
 

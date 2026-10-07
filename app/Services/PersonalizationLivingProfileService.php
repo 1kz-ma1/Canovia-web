@@ -459,6 +459,20 @@ final class PersonalizationLivingProfileService
             }
         }
 
+        // Recommendation adapter: explicit preferences and confirmed choices
+        // determine order; pending high-risk candidates never activate features.
+        $recommendationPriority = [];
+        if (in_array($recentDomain, ['study', 'development'], true)) {
+            $recommendationPriority[] = 'workspace.'.$recentDomain;
+        }
+        if (($candidates['development_advanced_support']['status'] ?? null) === 'confirmed') {
+            $recommendationPriority[] = 'development.advanced_support';
+        }
+        if (($candidates['development_plan_direction_review']['status'] ?? null) === 'confirmed') {
+            $recommendationPriority[] = 'development.plan_review';
+        }
+        $inferred['feature_recommendation_priority'] = array_values(array_unique($recommendationPriority));
+
         $inferred[self::CANDIDATES_KEY] = $candidates;
 
         $this->contexts->saveLivingProfileState(
@@ -501,6 +515,7 @@ final class PersonalizationLivingProfileService
         return [
             'pending' => $pending,
             'resolved' => $resolved,
+            'feature_recommendation_priority' => array_values((array) data_get($context, 'context_sources.inferred.feature_recommendation_priority', [])),
             'pending_count' => count($pending),
             'context_revision' => (int) (
                 $context['context_revision']
