@@ -2528,6 +2528,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!currentStage && body?.dataset.onboardingAuto === '1' && !localState && newUserDashboard) {
         setStage('intro');
     }
+    // A stored legacy stage must not resume over the Personalization first-run
+    // experience. Explicit guide replay remains available from settings.
+    if (body?.dataset.onboardingAuto !== '1' && !replayMode) {
+        currentStage = null;
+    }
     if (currentStage) {
         window.setTimeout(() => {
             if (currentStage === 'intro') showIntro();
