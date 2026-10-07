@@ -182,11 +182,15 @@ class AuthController extends Controller
             return redirect()->route('auth.login.form');
         }
 
+        $user = $request->user();
+        $user->loadMissing('personalizationContext');
+
         return view('auth.account', [
-            'user' => $request->user(),
+            'user' => $user,
+            'personalizationContext' => $user->personalizationContext,
             'showProductPreview' => $releaseLevels->allowsMinimum(
                 ReleaseLevel::ProductPreview,
-                $request->user(),
+                $user,
                 $request,
             ),
         ]);
