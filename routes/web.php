@@ -96,19 +96,19 @@ Route::get('/product-preview', ProductPreviewController::class)
 
 Route::get('/welcome', [FirstRunController::class, 'show'])->name('first_run.show');
 Route::post('/welcome/start', [FirstRunController::class, 'start'])->name('first_run.start');
-Route::get('/', [HomeController::class, 'index'])->name('home');
-Route::get('/workspace/overview', OverviewWorkspaceController::class)->name('workspace.overview.index');
-Route::get('/workspace/study/top', StudyWorkspaceTopController::class)->name('workspace.study.top');
-Route::get('/workspace/study', StudyWorkspaceController::class)->name('workspace.study.index');
-Route::get('/workspace/development/top', DevelopmentWorkspaceTopController::class)->name('workspace.development.top');
-Route::get('/workspace/development', DevelopmentWorkspaceController::class)->name('workspace.development.index');
+Route::get('/', [HomeController::class, 'index'])->middleware('early_access.visit')->name('home');
+Route::get('/workspace/overview', OverviewWorkspaceController::class)->middleware('early_access.visit')->name('workspace.overview.index');
+Route::get('/workspace/study/top', StudyWorkspaceTopController::class)->middleware('early_access.visit')->name('workspace.study.top');
+Route::get('/workspace/study', StudyWorkspaceController::class)->middleware('early_access.visit')->name('workspace.study.index');
+Route::get('/workspace/development/top', DevelopmentWorkspaceTopController::class)->middleware('early_access.visit')->name('workspace.development.top');
+Route::get('/workspace/development', DevelopmentWorkspaceController::class)->middleware('early_access.visit')->name('workspace.development.index');
 Route::post('/plans/{plan}/development-preview', [DevelopmentPreviewController::class, 'store'])
     ->middleware('throttle:20,1')
     ->name('plans.development_preview.store');
 Route::delete('/plans/{plan}/development-preview', [DevelopmentPreviewController::class, 'destroy'])
     ->middleware('throttle:20,1')
     ->name('plans.development_preview.destroy');
-Route::get('/workspace/career', CareerModeWorkspaceController::class)->middleware('release.level:3')->name('workspace.career.index');
+Route::get('/workspace/career', CareerModeWorkspaceController::class)->middleware(['release.level:3', 'early_access.visit'])->name('workspace.career.index');
 Route::get('/workspace/mode/{workspaceMode}', [WorkspaceModeController::class, 'enter'])->name('workspace_modes.enter');
 Route::post('/workspace/{workspaceMode}/select', [WorkspaceModeController::class, 'select'])->name('workspace_modes.select');
 Route::delete('/workspace/preference', [WorkspaceModeController::class, 'reset'])->name('workspace_modes.preference.reset');
