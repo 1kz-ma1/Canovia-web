@@ -23,6 +23,7 @@ use App\Services\PlanOwnershipService;
 use App\Services\PlanPriorityService;
 use App\Services\PersonalizationLivingProfileService;
 use App\Services\WorkspaceModeOnboardingService;
+use App\Services\PersonalizationContextService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -45,6 +46,7 @@ final class DevelopmentWorkspaceController extends Controller
         IntelligencePresentationHistoryService $history,
         IntelligenceStateChangeFeedbackService $stateChanges,
         WorkspaceModeOnboardingService $onboarding,
+        PersonalizationContextService $personalizationContexts,
         CapabilityActivationService $capabilityActivation,
         PersonalizationLivingProfileService $livingProfile,
     ) {
@@ -69,6 +71,11 @@ final class DevelopmentWorkspaceController extends Controller
             return view('workspace.development.index', [
                 'developmentPlans' => $developmentPlans,
                 'plan' => null,
+                'firstUseContext' => data_get(
+                    $personalizationContexts->current($request),
+                    'domain_context.development',
+                    [],
+                ),
                 'canEdit' => false,
                 'developmentAdaptiveAction' => null,
                 'intelligencePresentation' => null,
