@@ -241,10 +241,60 @@ final class PersonalizationContextService
     }
 
     /**
-     * Future Phase 3 boundary.
+     * Persist Living Profile derived state without mutating self-reported or
+     * observed source facts.
      *
-     * Observed behavior may be stored separately, but this method intentionally
-     * does not resolve or auto-apply it to guidance / Plan decisions yet.
+     * @param array<string,mixed> $inferredContext
+     * @param array<int,string>|null $recommendedSurfaces
+     * @param array<string,mixed>|null $featureReadiness
+     */
+    public function saveLivingProfileState(
+        Request $request,
+        array $inferredContext,
+        ?array $recommendedSurfaces = null,
+        ?array $featureReadiness = null,
+    ): void {
+        $user = $request->user();
+        if (! $user) {
+            return;
+        }
+
+        $context = UserPersonalizationContext::query()
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (! $context) {
+            return;
+        }
+
+        $updates = [
+            'inferred_context' => $inferredContext,
+            'context_revision' => max(
+                1,
+                (int) $context->context_revision + 1,
+            ),
+            'last_evaluated_at' => now(),
+        ];
+
+        if ($recommendedSurfaces !== null) {
+            $updates['recommended_surfaces'] = array_values(
+                array_unique(array_filter(
+                    $recommendedSurfaces,
+                    fn ($value) => is_string($value) && $value !== '',
+                )),
+            );
+        }
+
+        if ($featureReadiness !== null) {
+            $updates['feature_readiness'] = $featureReadiness;
+        }
+
+        $context->forceFill($updates)->save();
+    }
+
+    /**
+     * Persist actual observed facts. Interpretation / inference belongs to the
+     * Living Profile service and must not overwrite self-reported answers.
      *
      * @param array<string,mixed> $observed
      */
