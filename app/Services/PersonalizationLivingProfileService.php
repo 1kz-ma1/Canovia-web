@@ -69,16 +69,29 @@ final class PersonalizationLivingProfileService
             ? $context['feature_readiness']
             : [];
 
-        $this->events->recordOnceSafely(
-            $this->identity->resolve($request),
-            BehaviorEventType::ContextRefreshTriggered,
-            $request,
-            $plan,
-            metadata: [
-                'trigger' => $this->safeTrigger($trigger),
-            ],
-            withinMinutes: 5,
-        );
+        $safeTrigger = $this->safeTrigger($trigger);
+        $eventMetadata = [
+            'trigger' => $safeTrigger,
+        ];
+
+        if (in_array($safeTrigger, ['new_plan', 'plan_completed'], true)) {
+            $this->events->recordSafely(
+                $this->identity->resolve($request),
+                BehaviorEventType::ContextRefreshTriggered,
+                $request,
+                $plan,
+                metadata: $eventMetadata,
+            );
+        } else {
+            $this->events->recordOnceSafely(
+                $this->identity->resolve($request),
+                BehaviorEventType::ContextRefreshTriggered,
+                $request,
+                $plan,
+                metadata: $eventMetadata,
+                withinMinutes: 5,
+            );
+        }
 
         $recentDomain = (string) (
             $request->user()?->workspace_mode_preference
