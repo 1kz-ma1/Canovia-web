@@ -265,7 +265,7 @@ class CandidateEvidenceReopenV5832Test extends TestCase
             ->post(route('personalization.updates.refresh'));
 
         $candidate = $this->candidate($user);
-        $context = $this->context($user);
+        $context = $this->context($user)->fresh();
 
         $this->assertSame('dismissed', data_get($candidate, 'status'));
         $this->assertSame(1, data_get(
