@@ -1,6 +1,6 @@
 # Canovia Personalization Specification
 
-> Status: V58.31 Return-after-Absence Trigger implemented; automated validation pending  
+> Status: V58.31 Return-after-Absence Trigger implemented; manual release review pending  
 > Updated: 2026-10-07
 
 ## 1. Purpose
