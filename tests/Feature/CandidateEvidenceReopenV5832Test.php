@@ -542,6 +542,26 @@ class CandidateEvidenceReopenV5832Test extends TestCase
         $this->assertNotContains('development.plan_review', $priority);
     }
 
+    public function test_plan_direction_confirmation_is_explicit_and_does_not_change_plan(): void
+    {
+        [$user, $plan, $repository] = $this->scenario();
+        $this->repository($plan, $user, 'https://github.com/example/second-repo');
+        $this->observation($plan, $repository, 'pull_request', 'pr-1');
+        $this->observation($plan, $repository, 'commit', 'commit-1');
+        $this->observation($plan, $repository, 'commit', 'commit-2');
+        $this->actingAs($user)->post(route('personalization.updates.refresh'));
+        $this->actingAs($user)->get(route('personalization.updates.index'))
+            ->assertOk()->assertSee('確認済みにする');
+        $before = $plan->fresh()->toArray();
+        $this->actingAs($user)->post(route('personalization.updates.confirm', [
+            'candidateKey' => 'development_plan_direction_review',
+        ]))->assertRedirect(route('personalization.updates.index'));
+        $this->assertSame('confirmed', data_get($this->context($user)->inferred_context, 'update_candidates.development_plan_direction_review.status'));
+        $this->assertSame($before, $plan->fresh()->toArray());
+        $this->actingAs($user)->post(route('personalization.updates.refresh'));
+        $this->assertContains('development.plan_review', (array) data_get($this->context($user)->inferred_context, 'feature_recommendation_priority', []));
+    }
+
     public function test_growth_experience_separates_observed_milestones_and_confirmed_choices(): void
     {
         [$user] = $this->scenario();
