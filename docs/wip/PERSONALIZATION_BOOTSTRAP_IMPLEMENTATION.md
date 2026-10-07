@@ -405,13 +405,27 @@ Implemented next slice — V58.35 Confidence Calibration:
 - [x] high-risk confirmation boundary preserved
 - [x] self-reported Context / Guidance preserved
 - [x] regression assertions added
-- [ ] CI green
+- [x] CI green
 - [ ] Manual Release Review: personalization_confidence_calibration
+
+Implemented next slice — V58.36 Sustained Development Behavior Signal:
+
+- [x] 90-day observation window
+- [x] distinct active-day count
+- [x] activity span
+- [x] >= 6 active days across >= 28 days sustained evidence
+- [x] sustained-only signal capped at strength 2
+- [x] recent PR / Commit evidence can combine to strength 3
+- [x] observed aggregate persistence
+- [x] self-reported experience preserved
+- [x] Guidance preserved
+- [x] regression test added
+- [ ] CI green
+- [ ] Manual Release Review: sustained_development_behavior_signal
 
 Deferred next slices:
 
 - stronger Development behavior signal expansion:
-  - sustained activity across longer windows
   - additional repository complexity signals
 - Guidance Level update candidate
 - Plan-direction update candidate
@@ -465,6 +479,8 @@ PR #300 = merged
 PR #301 = merged
 PR #302 = merged
 PR #303 = merged
+PR #304 = merged
+PR #305 = merged
 
 Phase 1 automated validation = GREEN
 Phase 2 automated validation = GREEN
@@ -476,7 +492,8 @@ V58.31 Return-after-Absence Trigger = GREEN
 V58.32 Candidate Evidence Reopen = GREEN
 V58.33 Study Review Cycle Personalization = GREEN
 V58.34 Long Usage Window = GREEN
-V58.35 Confidence Calibration = implemented / CI pending
+V58.35 Confidence Calibration = GREEN
+V58.36 Sustained Development Behavior Signal = implemented / CI pending
 
 Future Architecture remains Concept / Architecture preservation context.
 V58.35 only updates the Overview's Current reference.
@@ -485,7 +502,7 @@ V58.35 only updates the Overview's Current reference.
 Current next action:
 
 ```text
-1. Review V58.35 CI and merge its PR when green.
+1. Review V58.36 CI and merge its PR when green.
 2. Keep WIP.
 3. Manual Release Review remains:
    - personalization_first_use
@@ -499,8 +516,11 @@ Current next action:
    - study_review_cycle_personalization
    - long_usage_window_personalization
    - personalization_confidence_calibration
-4. Recommended next small slice after V58.35:
-   - stronger Development behavior signal expansion
+   - sustained_development_behavior_signal
+4. Recommended next small slice after V58.36:
+   - additional Development repository complexity signal
+   OR
+   - Guidance Level update candidate
 5. Do not use Future Architecture docs as implementation requirements.
 ```
 
