@@ -55,6 +55,7 @@
                 </div>
             </a>
         @endif
+        @endif
 
         @if ($showProductPreview)
             <a
