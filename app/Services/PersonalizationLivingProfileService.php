@@ -14,6 +14,7 @@ final class PersonalizationLivingProfileService
         private readonly PersonalizationContextService $contexts,
         private readonly BehaviorIdentityService $identity,
         private readonly BehaviorEventLogger $events,
+        private readonly DevelopmentPersonalizationSignalService $developmentSignals,
     ) {}
 
     /**
@@ -201,6 +202,60 @@ final class PersonalizationLivingProfileService
                 ? $candidates[$candidateKey]
                 : [];
             $status = (string) ($existing['status'] ?? '');
+            $signal = $this->developmentSignals
+                ->advancedSupport($request->user());
+            $signalStrength = max(
+                1,
+                (int) ($signal['signal_strength'] ?? 1),
+            );
+
+            $developmentBehavior = [
+                'connected_repository_count' => (int) (
+                    $signal['connected_repository_count']
+                    ?? 0
+                ),
+                'recent_activity_count' => (int) (
+                    $signal['recent_activity_count']
+                    ?? 0
+                ),
+                'recent_pr_or_commit_count' => (int) (
+                    $signal['recent_pr_or_commit_count']
+                    ?? 0
+                ),
+            ];
+            $observedDevelopmentBehavior = (array) data_get(
+                $context,
+                'context_sources.observed.development_behavior',
+                [],
+            );
+
+            if (
+                array_intersect_key(
+                    $observedDevelopmentBehavior,
+                    $developmentBehavior,
+                ) !== $developmentBehavior
+            ) {
+                $this->contexts->storeObservedCandidate(
+                    $request,
+                    [
+                        'development_behavior' => [
+                            ...$developmentBehavior,
+                            'observed_at' =>
+                                now()->toIso8601String(),
+                        ],
+                    ],
+                );
+            }
+
+            $fingerprint = (string) (
+                $signal['evidence_fingerprint']
+                ?? ''
+            );
+            $evidence = array_values(
+                (array) ($signal['evidence'] ?? [
+                    'github_integration_connected',
+                ]),
+            );
 
             if ($status === '') {
                 $candidates[$candidateKey] = $this->candidate(
@@ -208,28 +263,121 @@ final class PersonalizationLivingProfileService
                     domain: 'development',
                     kind: 'advanced_support_offer',
                     risk: 'high',
-                    confidence: 'medium',
+                    confidence: $signalStrength >= 2
+                        ? 'high'
+                        : 'medium',
                     status: 'pending',
                     trigger: $trigger,
-                    evidence: ['github_integration_connected'],
+                    evidence: $evidence,
                     proposal: [
                         'feature_readiness_key' =>
                             'development.advanced_support',
                     ],
+                    signalStrength: $signalStrength,
+                    evidenceFingerprint: $fingerprint,
+                    evidenceRevision: 1,
                 );
 
-                $this->events->recordSafely(
-                    $this->identity->resolve($request),
-                    BehaviorEventType::ContextUpdateCandidateCreated,
+                $this->recordCandidateEvent(
                     $request,
                     $plan,
-                    metadata: [
-                        'candidate_key' => $candidateKey,
-                        'domain' => 'development',
-                        'risk' => 'high',
-                        'confirmation_required' => true,
-                    ],
+                    $candidateKey,
+                    signalStrength: $signalStrength,
+                    evidenceRevision: 1,
+                    reopened: false,
                 );
+            } elseif (
+                $status === 'dismissed'
+                && $this->shouldReopenDismissedCandidate(
+                    $existing,
+                    $signalStrength,
+                    $fingerprint,
+                )
+            ) {
+                $evidenceRevision = max(
+                    1,
+                    (int) ($existing['evidence_revision'] ?? 1),
+                ) + 1;
+
+                $existing['status'] = 'pending';
+                $existing['confidence'] = 'high';
+                $existing['trigger'] = $safeTrigger;
+                $existing['evidence'] = $evidence;
+                $existing['signal_strength'] = $signalStrength;
+                $existing['evidence_fingerprint'] = $fingerprint;
+                $existing['evidence_revision'] = $evidenceRevision;
+                $existing['resolved_at'] = null;
+                $existing['reopened_at'] = now()->toIso8601String();
+                $existing['reopen_reason'] = 'stronger_evidence';
+                $candidates[$candidateKey] = $existing;
+
+                $this->recordCandidateEvent(
+                    $request,
+                    $plan,
+                    $candidateKey,
+                    signalStrength: $signalStrength,
+                    evidenceRevision: $evidenceRevision,
+                    reopened: true,
+                );
+            } elseif ($status === 'pending') {
+                $previousFingerprint = (string) (
+                    $existing['evidence_fingerprint']
+                    ?? ''
+                );
+                $fingerprintChanged =
+                    $fingerprint !== ''
+                    && (
+                        $previousFingerprint === ''
+                        || ! hash_equals(
+                            $previousFingerprint,
+                            $fingerprint,
+                        )
+                    );
+
+                if (
+                    $fingerprintChanged
+                    || ! isset($existing['signal_strength'])
+                    || ! isset($existing['evidence_revision'])
+                ) {
+                    $existing['signal_strength'] = $signalStrength;
+                    $existing['evidence_fingerprint'] = $fingerprint;
+                    $existing['evidence'] = $evidence;
+                    $existing['confidence'] = $signalStrength >= 2
+                        ? 'high'
+                        : 'medium';
+                    $existing['evidence_revision'] =
+                        $previousFingerprint === ''
+                            ? max(
+                                1,
+                                (int) (
+                                    $existing['evidence_revision']
+                                    ?? 1
+                                ),
+                            )
+                            : max(
+                                1,
+                                (int) (
+                                    $existing['evidence_revision']
+                                    ?? 1
+                                ),
+                            ) + 1;
+                    $candidates[$candidateKey] = $existing;
+                }
+            } elseif (
+                $status === 'confirmed'
+                && (
+                    ! isset($existing['signal_strength'])
+                    || ! isset($existing['evidence_fingerprint'])
+                    || ! isset($existing['evidence_revision'])
+                )
+            ) {
+                $existing['signal_strength'] = $signalStrength;
+                $existing['evidence_fingerprint'] = $fingerprint;
+                $existing['evidence_revision'] = max(
+                    1,
+                    (int) ($existing['evidence_revision'] ?? 1),
+                );
+                $candidates[$candidateKey] = $existing;
             }
         }
 
@@ -338,6 +486,24 @@ final class PersonalizationLivingProfileService
             ? 'confirmed'
             : 'dismissed';
         $candidate['resolved_at'] = now()->toIso8601String();
+
+        if (! $confirmed) {
+            $candidate['last_dismissed_at'] =
+                $candidate['resolved_at'];
+            $candidate['dismissed_signal_strength'] = max(
+                1,
+                (int) ($candidate['signal_strength'] ?? 1),
+            );
+            $candidate['dismissed_evidence_fingerprint'] =
+                (string) (
+                    $candidate['evidence_fingerprint']
+                    ?? ''
+                );
+            $candidate['dismissed_evidence_revision'] = max(
+                1,
+                (int) ($candidate['evidence_revision'] ?? 1),
+            );
+        }
         $candidates[$candidateKey] = $candidate;
         $inferred[self::CANDIDATES_KEY] = $candidates;
 
@@ -384,6 +550,20 @@ final class PersonalizationLivingProfileService
                     $candidate['risk']
                     ?? 'unknown'
                 ),
+                'signal_strength' => max(
+                    1,
+                    (int) (
+                        $candidate['signal_strength']
+                        ?? 1
+                    ),
+                ),
+                'evidence_revision' => max(
+                    1,
+                    (int) (
+                        $candidate['evidence_revision']
+                        ?? 1
+                    ),
+                ),
             ],
         );
 
@@ -406,6 +586,9 @@ final class PersonalizationLivingProfileService
         array $evidence,
         array $proposal,
         ?string $resolvedAt = null,
+        int $signalStrength = 1,
+        string $evidenceFingerprint = '',
+        int $evidenceRevision = 1,
     ): array {
         return [
             'key' => $key,
@@ -417,10 +600,79 @@ final class PersonalizationLivingProfileService
             'confirmation_required' => $risk === 'high',
             'trigger' => $this->safeTrigger($trigger),
             'evidence' => array_values($evidence),
+            'signal_strength' => max(1, $signalStrength),
+            'evidence_fingerprint' => $evidenceFingerprint,
+            'evidence_revision' => max(1, $evidenceRevision),
             'proposal' => $proposal,
             'created_at' => now()->toIso8601String(),
             'resolved_at' => $resolvedAt,
         ];
+    }
+
+    /**
+     * A dismissal is respected until evidence becomes materially stronger.
+     *
+     * Merely changing the fingerprint at the same signal strength is not
+     * enough to reopen a high-impact candidate.
+     *
+     * @param array<string,mixed> $candidate
+     */
+    private function shouldReopenDismissedCandidate(
+        array $candidate,
+        int $signalStrength,
+        string $fingerprint,
+    ): bool {
+        $dismissedStrength = max(
+            1,
+            (int) (
+                $candidate['dismissed_signal_strength']
+                ?? $candidate['signal_strength']
+                ?? 1
+            ),
+        );
+        $dismissedFingerprint = (string) (
+            $candidate['dismissed_evidence_fingerprint']
+            ?? $candidate['evidence_fingerprint']
+            ?? ''
+        );
+
+        return $signalStrength > $dismissedStrength
+            && $fingerprint !== ''
+            && (
+                $dismissedFingerprint === ''
+                || ! hash_equals(
+                    $dismissedFingerprint,
+                    $fingerprint,
+                )
+            );
+    }
+
+    private function recordCandidateEvent(
+        Request $request,
+        ?Plan $plan,
+        string $candidateKey,
+        int $signalStrength,
+        int $evidenceRevision,
+        bool $reopened,
+    ): void {
+        $this->events->recordSafely(
+            $this->identity->resolve($request),
+            BehaviorEventType::ContextUpdateCandidateCreated,
+            $request,
+            $plan,
+            metadata: [
+                'candidate_key' => $candidateKey,
+                'domain' => 'development',
+                'risk' => 'high',
+                'confirmation_required' => true,
+                'signal_strength' => $signalStrength,
+                'evidence_revision' => $evidenceRevision,
+                'reopened' => $reopened,
+                'reason' => $reopened
+                    ? 'stronger_evidence'
+                    : 'initial_evidence',
+            ],
+        );
     }
 
     private function safeTrigger(string $trigger): string

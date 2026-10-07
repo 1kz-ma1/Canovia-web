@@ -636,3 +636,32 @@ L1 manual review:
   - mobile / desktop
 
 V58.31 does not introduce automatic replanning or re-onboarding.
+
+
+## V58.32 Candidate Evidence Reopen release contract
+
+Minimum:
+
+```text
+L1 Early Access Core
+```
+
+No new route / migration.
+
+L1 manual review:
+
+- `context_candidate_evidence_reopen`
+  - initial high-impact Candidate has evidence revision 1
+  - dismiss snapshots current signal strength
+  - same evidence → stays dismissed
+  - changed fingerprint at same strength → stays dismissed
+  - stronger signal → reopens once
+  - reopened explanation visible
+  - pending Candidate silently refreshes evidence snapshot
+  - legacy dismissed Candidate does not reopen at strength 1
+  - legacy dismissed Candidate may reopen at stronger signal
+  - self-reported experience preserved
+  - Guidance preserved
+  - mobile / desktop
+
+V58.32 does not change Release Level or Entitlement automatically.
