@@ -528,3 +528,33 @@ Living Profile must not bypass:
 - Entitlement / Feature Access
 - self-reported source provenance
 - explicit confirmation boundary for high-impact changes
+
+
+## V58.28 Study Behavior Personalization release contract
+
+Minimum:
+
+```text
+L1 Early Access Core
+```
+
+No new structural route.
+
+L1 manual review:
+
+- `study_behavior_personalization`
+  - 1–2 assessed attempts: no Living Profile transition
+  - 3rd assessed attempt: practice-focused observed Context
+  - Growth Experience visible
+  - self-reported Study stage preserved
+  - Guidance preserved
+  - later attempts update metrics without duplicate candidate
+  - mobile / desktop
+
+Study Behavior Personalization must not bypass or rewrite:
+
+- current Study Intelligence
+- Plan / Task progress
+- Release Level
+- Entitlement / Feature Access
+- self-reported Personalization Context
