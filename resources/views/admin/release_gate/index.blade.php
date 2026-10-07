@@ -13,7 +13,7 @@
         $decision = $statusLabels[$recommendedDecision] ?? $statusLabels['blocked'];
     @endphp
 
-    <div class="mx-auto max-w-7xl space-y-6">
+    <div class="mx-auto max-w-7xl space-y-6" data-release-review-decision="{{ $recommendedDecision }}">
         @include('admin.partials.nav')
 
         <header class="rounded-[1.6rem] border border-cyan-300/15 bg-slate-950/55 p-5 sm:p-7">
