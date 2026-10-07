@@ -1,6 +1,6 @@
 # Canovia Personalization Specification
 
-> Status: V58.25 Phase 1 implementation in progress  
+> Status: V58.25 Phase 1 implemented; manual first-use review pending  
 > Updated: 2026-10-07
 
 ## 1. Purpose
