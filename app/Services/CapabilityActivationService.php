@@ -138,9 +138,13 @@ final class CapabilityActivationService
             false,
         );
 
-        $nextUrl = $plan
-            ? route('github_workflow.index', ['plan_id' => $plan->id])
-            : route('workspace.development.top');
+        $nextUrl = $stage === 'preview'
+            ? route('personalization.result')
+            : (
+                $plan
+                    ? route('github_workflow.index', ['plan_id' => $plan->id])
+                    : route('workspace.development.top')
+            );
 
         $owner = (string) data_get(
             $connection,
@@ -155,7 +159,17 @@ final class CapabilityActivationService
             '',
         ));
 
-        if (! $runtimeReady) {
+        if ($stage === 'preview') {
+            $owner = 'YOU';
+            $detail = 'まず、GitHub連携で何が変わるかを確認して、使うかどうか選べます。';
+        } elseif (! $accessAllowed) {
+            $owner = 'PLAN / ENTITLEMENT';
+            $detail = (string) data_get(
+                $readiness,
+                'evidence.message',
+                '現在の利用権ではGitHub連携を開始できません。',
+            );
+        } elseif (! $runtimeReady) {
             $owner = 'CANOVIA OPERATOR';
             $detail = 'GitHub Appの接続環境が整うまで、ユーザー側の設定は不要です。';
         } elseif (! $repository) {
