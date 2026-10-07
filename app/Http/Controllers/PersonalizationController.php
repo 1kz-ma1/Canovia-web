@@ -249,6 +249,13 @@ final class PersonalizationController extends Controller
             'personalization_seed_key' => $seed['key'],
             'personalization_seed_domain' => $seed['domain'],
         ]);
+        $request->session()->put(
+            'canovia.personalization.accepted_seed',
+            [
+                'key' => $seed['key'],
+                'domain' => $seed['domain'],
+            ],
+        );
 
         $events->recordSafely(
             $identity->resolve($request),
