@@ -142,6 +142,7 @@ return [
                     'github_capability_activation' => 'GitHub Capability Preview → Interest → Readiness → Setup lifecycle on mobile and desktop',
                     'living_profile_context_update' => 'Living Profile low-risk auto update + high-impact confirmation flow on mobile and desktop',
                     'study_behavior_personalization' => 'Study assessed practice → observed practice-focused Growth Experience without rewriting initial diagnosis',
+                    'plan_lifecycle_personalization' => 'New Plan / Plan completion lifecycle triggers refresh Living Profile without rewriting Plan or self-reported context',
                     'early_access_copy' => 'Early Access disclosure copy review',
                     'downgrade_core' => 'Downgrade to Level 0 preserves data and usable core flow',
                     'feedback_telemetry' => 'Feedback path and telemetry payload review',
