@@ -65,7 +65,6 @@ final class PersonalizationContextService
             ],
             'completed_at' => $stored->completed_at?->toIso8601String(),
             'skipped_at' => $stored->skipped_at?->toIso8601String(),
-            ...$session,
         ]);
     }
 
