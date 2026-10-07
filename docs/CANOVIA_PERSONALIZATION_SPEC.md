@@ -1,6 +1,6 @@
 # Canovia Personalization Specification
 
-> Status: V58.32 Candidate Evidence Reopen implemented; manual release review pending  
+> Status: V58.33 Study Review Cycle Personalization implemented; manual release review pending  
 > Updated: 2026-10-07
 
 ## 1. Purpose
@@ -723,3 +723,39 @@ Implementation progress / phase split:
 `docs/wip/PERSONALIZATION_BOOTSTRAP_IMPLEMENTATION.md`
 
 全Phaseが恒久仕様へ吸収されるまでWIPを残す。
+
+
+## V58.33 Study Review Cycle Personalization
+
+V58.28のpractice-focused observationを、時間軸を持つ復習行動へ拡張する。
+
+Deterministic contract:
+
+- same Study Plan
+- assessed attempts >= 5
+- recent distinct practice days >= 2
+- observed span >= 3 calendar days
+
+を満たす場合、`observed_context.study_behavior.review_cycle.stage`を
+`spaced_review_observed`として保持する。
+
+これはretention / masteryの推定ではない。
+Scoreは観測値として保持できるが、V58.33の発火条件には使用しない。
+
+Low-risk Candidate:
+
+- `study_review_cycle`
+- status = auto_applied
+- `feature_readiness.study.review_cycle.enabled = true`
+
+変更しない:
+
+- self-reported Study stage
+- Guidance Level
+- Plan / Task
+- Study strategy
+- exam readiness
+
+Canonical:
+
+- `docs/V58.33_STUDY_REVIEW_CYCLE_PERSONALIZATION.md`
