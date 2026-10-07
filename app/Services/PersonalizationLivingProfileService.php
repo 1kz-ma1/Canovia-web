@@ -550,6 +550,20 @@ final class PersonalizationLivingProfileService
                     $candidate['risk']
                     ?? 'unknown'
                 ),
+                'signal_strength' => max(
+                    1,
+                    (int) (
+                        $candidate['signal_strength']
+                        ?? 1
+                    ),
+                ),
+                'evidence_revision' => max(
+                    1,
+                    (int) (
+                        $candidate['evidence_revision']
+                        ?? 1
+                    ),
+                ),
             ],
         );
 
