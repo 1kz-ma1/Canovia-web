@@ -542,6 +542,19 @@ class CandidateEvidenceReopenV5832Test extends TestCase
         $this->assertNotContains('development.plan_review', $priority);
     }
 
+    public function test_growth_experience_separates_observed_milestones_and_confirmed_choices(): void
+    {
+        [$user] = $this->scenario();
+        $this->actingAs($user)->post(route('personalization.updates.refresh'));
+        $response = $this->actingAs($user)->get(route('personalization.updates.index'));
+        $response->assertOk()->assertSee('data-growth-experience-summary', false);
+        $summary = app(\App\Services\PersonalizationLivingProfileService::class)
+            ->summary(request()->setUserResolver(fn () => $user));
+        $this->assertIsArray(data_get($summary, 'growth_experience.observed_milestones'));
+        $this->assertIsArray(data_get($summary, 'growth_experience.confirmed_choices'));
+        $this->assertIsInt(data_get($summary, 'growth_experience.pending_choices'));
+    }
+
     /**
      * @return array{0:User,1:Plan,2:PlanArtifact}
      */
