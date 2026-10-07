@@ -492,6 +492,30 @@ class PersonalizationBootstrapV5825Test extends TestCase
             ->assertSee('name="personalization_seed_domain" value="study"', false);
     }
 
+    public function test_diagnosed_goal_appears_in_empty_specialized_workspace(): void
+    {
+        foreach ([
+            ['study', 'study_goal', '資格試験を合格する', 'workspace.study.index', 'data-study-first-use-context'],
+            ['development', 'development_goal', '新しいアプリを公開する', 'workspace.development.index', 'data-development-first-use-context'],
+        ] as [$domain, $goalField, $goal, $route, $marker]) {
+            $user = User::factory()->create();
+
+            $this->actingAs($user)
+                ->post(route('personalization.store'), [
+                    'domains' => [$domain],
+                    $goalField => $goal,
+                ])
+                ->assertRedirect(route('personalization.result'));
+
+            $this->actingAs($user)
+                ->get(route($route))
+                ->assertOk()
+                ->assertSee($marker, false)
+                ->assertSee($goal)
+                ->assertSee(route('personalization.result'), false);
+        }
+    }
+
     private function requestFor(User $user): \Illuminate\Http\Request
     {
         $request = \Illuminate\Http\Request::create(
