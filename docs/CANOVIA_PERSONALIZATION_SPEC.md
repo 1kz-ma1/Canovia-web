@@ -1,6 +1,6 @@
 # Canovia Personalization Specification
 
-> Status: V58.30 Plan Completion Fingerprint implemented; manual release review pending  
+> Status: V58.31 Return-after-Absence Trigger implemented; manual release review pending  
 > Updated: 2026-10-07
 
 ## 1. Purpose
@@ -569,6 +569,47 @@ Cancellationによって最後の未完了Taskが除外され、残るactive Tas
 Canonical:
 
 - `docs/V58.30_PLAN_COMPLETION_FINGERPRINT.md`
+
+## 7.6 Return-after-Absence Trigger
+
+V58.31で長期間利用後の復帰をLiving Profile再評価の節目へ接続する。
+
+Account-scoped observed presence:
+
+```text
+observed_context.presence.last_seen_at
+```
+
+初回tracked visitはbaselineのみ。
+
+```text
+absence < 14 days
+→ presence update only
+
+absence >= 14 calendar days
+→ trigger = return_after_absence
+→ deterministic Living Profile refresh
+```
+
+Telemetryはexact daysではなく:
+
+- 14_29
+- 30_59
+- 60_plus
+
+のbucketだけを使う。
+
+V58.31は:
+
+- forced re-onboardingしない
+- self-reported Contextを変更しない
+- Guidanceを変更しない
+- Planを変更しない
+- Personalization未設定userをsilently profileしない
+
+Canonical:
+
+- `docs/V58.31_RETURN_AFTER_ABSENCE_PERSONALIZATION.md`
 
 ## 8. Existing User
 

@@ -610,3 +610,29 @@ L1 manual review:
   - cancelled trigger Task is not labelled completed
 
 V58.30 does not change Release Level, Entitlement, Plan content, or Guidance automatically.
+
+
+## V58.31 Return-after-Absence release contract
+
+Minimum:
+
+```text
+L1 Early Access Core
+```
+
+No new route / migration.
+
+L1 manual review:
+
+- `return_after_absence_personalization`
+  - first tracked visit → baseline only
+  - <14 days → no refresh
+  - >=14 days → one return refresh
+  - same-day navigation → no duplicate
+  - prefetch ignored
+  - self-reported Context preserved
+  - Guidance preserved
+  - no Personalization Context → no silent profile creation
+  - mobile / desktop
+
+V58.31 does not introduce automatic replanning or re-onboarding.

@@ -323,10 +323,25 @@ Implemented next slice — V58.30 Plan Completion Fingerprint:
 - [x] CI green
 - [ ] Manual Release Review: plan_completion_fingerprint
 
+Implemented next slice — V58.31 Return-after-Absence Trigger:
+
+- [x] account-scoped presence baseline
+- [x] daily last_seen update
+- [x] 14-day deterministic long-absence threshold
+- [x] coarse telemetry buckets
+- [x] one refresh per return day
+- [x] Instant Navigation prefetch ignored
+- [x] no forced re-onboarding
+- [x] self-reported Context preserved
+- [x] Guidance preserved
+- [x] no silent profile creation
+- [x] regression tests written
+- [x] CI green
+- [ ] Manual Release Review: return_after_absence_personalization
+
 Deferred next slices:
 
 - review / retention stage adapter
-- return after long absence trigger
 - long usage window
 - stronger Development behavior signal:
   - multiple repositories
@@ -380,22 +395,24 @@ PR #295 = merged
 PR #296 = merged
 PR #297 = merged
 PR #298 = merged
+PR #299 = merged
 
 Phase 1 automated validation = GREEN
 Phase 2 automated validation = GREEN
 Phase 3 Foundation automated validation = GREEN
 V58.28 Study Behavior Adapter = GREEN
 V58.29 Plan Lifecycle Refresh Triggers = GREEN
-V58.30 Plan Completion Fingerprint = implemented / automated validation GREEN
+V58.30 Plan Completion Fingerprint = GREEN
+V58.31 Return-after-Absence Trigger = implemented / automated validation GREEN
 
 Future Architecture remains Concept / Architecture preservation context.
-V58.30 only updates the Overview's Current reference.
+V58.31 only updates the Overview's Current reference.
 ```
 
 Current next action:
 
 ```text
-1. Review / merge PR #299 when appropriate.
+1. Review / merge PR #300 when appropriate.
 2. Keep WIP.
 3. Manual Release Review remains:
    - personalization_first_use
@@ -404,10 +421,11 @@ Current next action:
    - study_behavior_personalization
    - plan_lifecycle_personalization
    - plan_completion_fingerprint
+   - return_after_absence_personalization
 4. Recommended next small slice:
-   - return-after-absence trigger
-   OR
    - stronger-signal candidate reopen rule
+   OR
+   - review / retention stage adapter
 5. Do not use Future Architecture docs as implementation requirements.
 ```
 

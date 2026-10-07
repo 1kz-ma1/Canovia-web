@@ -64,6 +64,8 @@ jobs:
           php -l tests/Feature/PlanLifecyclePersonalizationV5829Test.php
           php -l app/Services/PlanCompletionFingerprintService.php
           php -l tests/Feature/PlanCompletionFingerprintV5830Test.php
+          php -l app/Services/ReturnAfterAbsencePersonalizationAdapter.php
+          php -l tests/Feature/ReturnAfterAbsencePersonalizationV5831Test.php
       - run: php artisan view:cache
       - run: php artisan migrate --force
       - name: V56.12 workspace resume and session scope
@@ -92,6 +94,8 @@ jobs:
         run: php artisan test tests/Feature/PlanLifecyclePersonalizationV5829Test.php
       - name: V58.30 Plan Completion Fingerprint
         run: php artisan test tests/Feature/PlanCompletionFingerprintV5830Test.php
+      - name: V58.31 Return After Absence
+        run: php artisan test tests/Feature/ReturnAfterAbsencePersonalizationV5831Test.php
       - name: Home continuity regression
         run: php artisan test tests/Feature/ModelReuseV5195Test.php tests/Feature/HomeCoreBundleCostReductionV5192Test.php
       - name: Specialized Workspace regression
