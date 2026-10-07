@@ -62,29 +62,172 @@ Phase 1 domains:
 Study / Developmentはmulti-select可能。
 `unsure` は単独または他domainと共存してもよいが、追加質問を増やす理由には使わない。
 
-## 4. Context
+## 4. Personalization Context principle
+
+> **Initial Diagnosis is a starting hypothesis, not a permanent profile.**
+
+日本語:
+
+> **初回診断はユーザーを固定的に分類するものではなく、Canoviaが伴走を始めるための初期仮説として扱う。**
+
+Canoviaは初回回答を永久的な事実として扱わない。
+
+例:
+
+```text
+初回
+self_reported development experience = beginner
+
+実利用
+GitHub利用増加
+Repository複数
+継続的なPR
+高度Capability利用
+
+将来
+observed development maturity = higher
+inferred recommendation = advanced support candidate
+```
+
+初回回答は「当時本人がそう回答した」という事実として保持し、
+観測や推定で上書きしない。
+
+### 4.1 Source provenance
 
 Auth userはone-to-one Personalization Contextを持つ。
 
-Concept:
+Persisted source layers:
 
 ```text
-domains[]
-common_context{}
-domain_context{}
-guidance_level
-recommended_surfaces[]
-feature_readiness{}
-completed_at
-skipped_at
+self_reported_context
+observed_context
+inferred_context
 ```
 
-Phase 1ではanswer history tableを作らず、current contextをJSONとして保持する。
+意味:
 
-初回回答を永久固定しない。
-将来Observed Behaviorから更新可能なモデルとして扱う。
+```text
+self_reported
+= user_answered / 本人が明示した情報
+
+observed
+= Canovia内の実利用から直接確認できた事実
+
+inferred
+= self-reported + observed等から推定したContext
+```
+
+Derived state:
+
+```text
+guidance_level
+recommended_surfaces
+feature_readiness
+```
+
+Phase 1では:
+
+- Initial Diagnosisは `self_reported_context` のみ更新
+- `observed_context` / `inferred_context` は空でよい
+- Guidance / Plan Seedはself-reportedから決定論的に導出
+- Behavior inference engineは実装しない
 
 Guestはsession draftを利用する。
+
+### 4.2 Context revision
+
+`context_revision` を持ち、Personalization Contextが将来更新される前提を明示する。
+
+`version` はschema / contract version。
+`context_revision` は同一ユーザーContextの更新世代。
+
+この2つを混同しない。
+
+### 4.3 Context Update Loop
+
+Long-term contract:
+
+```text
+Initial Diagnosis
+↓
+User Context v1
+↓
+Actual Behavior
+↓
+Context Update Candidate
+↓
+必要ならUser Confirmation
+↓
+User Context v2
+↓
+Plan / UI / Guidance / Feature Recommendation更新
+```
+
+Personalizationを一度きりのOnboardingとして扱わない。
+
+### 4.4 Auto update vs confirmation
+
+低リスクで自動調整可能な候補:
+
+- 最近利用するカテゴリ
+- おすすめ表示順位
+- Feature Recommendation priority
+- low-impact surface ordering
+
+User Confirmationを挟めるべき候補:
+
+- 経験レベルを大きく変更
+- Plan方針へ影響
+- 新しい高度機能群を表示
+- ユーザー意図の推測が必要
+- high-impact Guidance変更
+
+将来例:
+
+> 最近の利用状況を見ると、より高度な開発支援が役立ちそうです。表示しますか？
+
+### 4.5 Refresh triggers
+
+大量の定期アンケートは行わない。
+
+Context再評価候補:
+
+- Plan完了
+- 新しいGoal / Plan作成
+- 長期間利用
+- 長期離脱から復帰
+- 新カテゴリ利用開始
+- 行動パターンの明確な変化
+- 高度Capabilityの利用条件成立
+
+Triggerは再評価の契機であり、毎回質問UIを出す意味ではない。
+
+### 4.6 Growth Experience
+
+Personalization更新を裏側のRecommendation処理だけに閉じない。
+
+必要に応じ将来:
+
+- 「最近、開発の進め方が変わってきました」
+- 「演習中心の学習段階に入っています」
+- 「GitHub連携が役立つ段階になっています」
+
+のように、Canoviaが成長・変化に気づいたことを伝えられる。
+
+Phase 1ではこのUIを実装しない。
+
+### 4.7 Plan philosophy alignment
+
+CanoviaのPlan思想と同じ。
+
+```text
+Initial Diagnosis = Initial Plan
+Observed Behavior = Actual Result
+Context Update = Replanning
+```
+
+最初のPlanを絶対視しないのと同様、Initial Diagnosisも絶対視しない。
+
 
 ## 5. Guidance Level
 
