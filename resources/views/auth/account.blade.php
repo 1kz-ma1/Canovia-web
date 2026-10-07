@@ -27,6 +27,33 @@
                 <span class="text-lg text-violet-300" aria-hidden="true">→</span>
             </div>
         </a>
+        @if ($showPersonalizationBootstrap && $personalizationContext)
+            <a
+                href="{{ route('personalization.updates.index') }}"
+                class="mt-3 block rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.03] p-4 transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.06]"
+                data-living-profile-account-entry
+            >
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">LIVING PROFILE</p>
+                        <p class="mt-1 text-sm font-black text-slate-100">Canoviaが気づいた変化</p>
+                        <p class="mt-1 text-xs leading-5 text-slate-500">
+                            @if ((int) data_get($livingProfileSummary ?? [], 'pending_count', 0) > 0)
+                                {{ (int) data_get($livingProfileSummary, 'pending_count') }}件、確認してほしいContext更新候補があります。
+                            @else
+                                実際の利用状況から現在地を再評価できます。初回診断を固定プロフィールにはしません。
+                            @endif
+                        </p>
+                    </div>
+                    @if ((int) data_get($livingProfileSummary ?? [], 'pending_count', 0) > 0)
+                        <span class="rounded-full border border-amber-300/20 bg-amber-300/[0.06] px-2.5 py-1 text-[10px] font-black text-amber-200">
+                            {{ (int) data_get($livingProfileSummary, 'pending_count') }}
+                        </span>
+                    @else
+                        <span class="text-lg text-cyan-300" aria-hidden="true">→</span>
+                    @endif
+                </div>
+            </a>
         @endif
 
         @if ($showProductPreview)
