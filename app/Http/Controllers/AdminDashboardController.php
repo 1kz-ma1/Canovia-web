@@ -13,6 +13,7 @@ use App\Models\QuestionPack;
 use App\Services\AdminAccessService;
 use App\Services\MapTelemetryService;
 use App\Services\ReleaseGateService;
+use App\Services\EarlyAccessInsightsService;
 use Illuminate\Http\Request;
 
 class AdminDashboardController extends Controller
@@ -25,6 +26,7 @@ class AdminDashboardController extends Controller
         Request $request,
         MapTelemetryService $mapTelemetry,
         ReleaseGateService $releaseGate,
+        EarlyAccessInsightsService $earlyAccessInsights,
     )
     {
         if (! $this->access->authorized($request)) {
@@ -88,6 +90,7 @@ class AdminDashboardController extends Controller
         );
         $releaseTarget = $releaseGate->recommendedTarget();
         $releaseTargetAssessment = $releaseGate->assess($releaseTarget);
+        $earlyAccessSummary = $earlyAccessInsights->summary(7);
 
         return view('admin.index', compact(
             'feedbackNew',
@@ -107,6 +110,7 @@ class AdminDashboardController extends Controller
             'studyScenarioLabEnabled',
             'releaseTarget',
             'releaseTargetAssessment',
+            'earlyAccessSummary',
         ));
     }
 }
