@@ -104,9 +104,9 @@ return [
                     'inbox.index',
                 ],
                 'manual_checks' => [
-                    'Core Goal / Plan / Task / Evidence flow smoke test',
-                    'Settings / account recovery flow confirmation',
-                    'No blocker 500 or unintended 403 on core paths',
+                    'core_flow_smoke' => 'Core Goal / Plan / Task / Evidence flow smoke test',
+                    'account_recovery' => 'Settings / account recovery flow confirmation',
+                    'core_http_errors' => 'No blocker 500 or unintended 403 on core paths',
                 ],
             ],
 
@@ -133,10 +133,10 @@ return [
                     'admin.early_access.index',
                 ],
                 'manual_checks' => [
-                    'Study / Development first-use flow on mobile and desktop',
-                    'Early Access disclosure copy review',
-                    'Downgrade to Level 0 preserves data and usable core flow',
-                    'Feedback path and telemetry payload review',
+                    'specialized_first_use' => 'Study / Development first-use flow on mobile and desktop',
+                    'early_access_copy' => 'Early Access disclosure copy review',
+                    'downgrade_core' => 'Downgrade to Level 0 preserves data and usable core flow',
+                    'feedback_telemetry' => 'Feedback path and telemetry payload review',
                 ],
             ],
 
@@ -149,9 +149,9 @@ return [
                     'product.preview.index',
                 ],
                 'manual_checks' => [
-                    'Premium / Pro / Dev Pro preview copy reviewed against Monetization Spec',
-                    'Preview clearly states Coming Soon and exposes no checkout path',
-                    'Study / Development experience differences are understandable without pricing',
+                    'product_preview_copy' => 'Premium / Pro / Dev Pro preview copy reviewed against Monetization Spec',
+                    'product_preview_no_checkout' => 'Preview clearly states Coming Soon and exposes no checkout path',
+                    'product_preview_clarity' => 'Study / Development experience differences are understandable without pricing',
                 ],
             ],
 
@@ -165,9 +165,9 @@ return [
                     'plans.career.index',
                 ],
                 'manual_checks' => [
-                    'Career dedicated UI / basic flow alignment',
-                    'Selected Beta user downgrade restores hidden data safely',
-                    'Beta-only capability telemetry and support path verified',
+                    'career_ui_alignment' => 'Career dedicated UI / basic flow alignment',
+                    'career_downgrade' => 'Selected Beta user downgrade restores hidden data safely',
+                    'beta_support_telemetry' => 'Beta-only capability telemetry and support path verified',
                 ],
             ],
 
@@ -176,7 +176,7 @@ return [
                 'required_features' => [],
                 'required_routes' => [],
                 'manual_checks' => [
-                    'Internal-only surfaces are not reachable from lower levels',
+                    'internal_boundary' => 'Internal-only surfaces are not reachable from lower levels',
                 ],
             ],
         ],
