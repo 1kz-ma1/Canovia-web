@@ -236,6 +236,68 @@ class CandidateEvidenceReopenV5832Test extends TestCase
         $this->assertCount(3, $this->candidateCreatedEvents());
     }
 
+    public function test_sustained_activity_across_28_days_strengthens_signal_without_reclassifying_experience(): void
+    {
+        [$user, $plan, $repository] = $this->scenario();
+
+        $this->actingAs($user)
+            ->post(route('personalization.updates.refresh'));
+
+        $this->actingAs($user)
+            ->post(route('personalization.updates.dismiss', [
+                'candidateKey' => 'development_advanced_support',
+            ]));
+
+        foreach ([35, 28, 21, 14, 7, 0] as $daysAgo) {
+            DevelopmentActivityObservation::query()->create([
+                'plan_id' => $plan->id,
+                'repository_artifact_id' => $repository->id,
+                'provider' => 'github',
+                'kind' => 'issue',
+                'external_key' => 'github:sustained:'.$daysAgo,
+                'last_observed_at' => now()->subDays($daysAgo),
+                'occurred_at' => now()->subDays($daysAgo),
+                'resolution_status' => 'unlinked',
+            ]);
+        }
+
+        $this->actingAs($user)
+            ->post(route('personalization.updates.refresh'));
+
+        $candidate = $this->candidate($user);
+        $context = $this->context($user);
+
+        $this->assertSame('pending', data_get($candidate, 'status'));
+        $this->assertSame(2, data_get($candidate, 'signal_strength'));
+        $this->assertSame('medium', data_get($candidate, 'confidence'));
+        $this->assertContains(
+            'sustained_development_activity_28d_6_days',
+            data_get($candidate, 'evidence', []),
+        );
+        $this->assertSame(
+            6,
+            data_get(
+                $context->observed_context,
+                'development_behavior.active_day_count_90d',
+            ),
+        );
+        $this->assertGreaterThanOrEqual(
+            28,
+            data_get(
+                $context->observed_context,
+                'development_behavior.activity_span_days_90d',
+            ),
+        );
+        $this->assertSame(
+            'beginner',
+            data_get(
+                $context->self_reported_context,
+                'domain_context.development.experience',
+            ),
+        );
+        $this->assertSame('guided', $context->guidance_level);
+    }
+
     public function test_pending_candidate_updates_evidence_before_dismissal_without_duplicate_prompt_event(): void
     {
         [$user, $plan] = $this->scenario();
