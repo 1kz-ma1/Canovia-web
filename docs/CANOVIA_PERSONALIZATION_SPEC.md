@@ -1,6 +1,6 @@
 # Canovia Personalization Specification
 
-> Status: V58.29 Plan Lifecycle Refresh Triggers implemented; manual release review pending  
+> Status: V58.30 Plan Completion Fingerprint implemented; automated validation pending  
 > Updated: 2026-10-07
 
 ## 1. Purpose
@@ -538,6 +538,37 @@ all non-cancelled Tasks are done / 100%
 Canonical:
 
 - `docs/V58.29_PLAN_LIFECYCLE_PERSONALIZATION.md`
+
+## 7.5 Plan Completion Fingerprint
+
+V58.30でPlan completionをPlan IDだけでなくmaterial structural fingerprintでversion化する。
+
+```text
+same structure
+complete → reopen → re-complete
+= same revision
+
+material Plan / Task change
+→ re-complete
+= next completion revision
+```
+
+FingerprintはPlan主要条件 + non-cancelled Task構造から作る。
+
+除外:
+
+- status
+- progress
+- remaining time
+- updated_at
+
+V58.29 legacy memoryは最初のpost-upgrade completionでsilent baseline化し、偽の新completionを発火しない。
+
+Cancellationによって最後の未完了Taskが除外され、残るactive Taskが全て完了した場合もPlan completionとして再評価する。
+
+Canonical:
+
+- `docs/V58.30_PLAN_COMPLETION_FINGERPRINT.md`
 
 ## 8. Existing User
 
