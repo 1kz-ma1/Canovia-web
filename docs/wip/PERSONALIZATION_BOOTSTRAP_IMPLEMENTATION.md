@@ -182,7 +182,7 @@ Guest draftはsession only。
 
 # 2. Phase roadmap
 
-## Phase 1 — Bootstrap Foundation [IN PROGRESS]
+## Phase 1 — Bootstrap Foundation [IMPLEMENTED / MANUAL REVIEW PENDING]
 
 Goal:
 「何をしたいか」を短く理解し、0からPlanを書かずに既存Plan作成へ進める。
@@ -204,7 +204,7 @@ Acceptance:
 - [x] responsive mobile-first implementation
 - [x] telemetry implementation
 - [x] regression tests written
-- [ ] CI green
+- [x] CI green
 - [ ] Manual Release Review: mobile / desktop first-use
 
 ## Phase 2 — Capability Activation Foundation [PLANNED]
@@ -314,22 +314,44 @@ Candidates:
 
 # 4. NEXT
 
-Current next action:
+Current state:
 
 ```text
-Create V58.25 PR.
-Run CI:
+PR #294
+V58.25 automated validation = GREEN
+
+Passed:
+- PHP lint
+- Blade view cache
+- migration
 - PersonalizationBootstrapV5825Test
 - FirstRunUxV4123Test
 - ConversationalOnboardingV4116Test
-- Release Review regression
-- Workspace regression
-- Migration Recovery
+- V58.20–V58.24 regressions
+- Home continuity
+- Specialized Workspace regression
+- Production Migration Recovery
+```
 
-Fix only Phase 1 blockers.
-After CI green, mark Phase 1 implementation complete.
-Keep WIP for Phase 2 / Phase 3 continuation.
-Do not implement Phase 3 inference engine in V58.25.
+Current next action:
+
+```text
+1. Review / merge PR #294 when appropriate.
+2. Manual Release Review:
+   personalization_first_use
+   - mobile
+   - desktop
+   - diagnosis
+   - multi-domain
+   - Skip
+   - Plan Seed
+   - existing Plan create
+   - GitHub Value Preview eligibility
+3. Keep this WIP file.
+4. Next implementation Phase:
+   Phase 2 Capability Activation Foundation.
+5. Phase 3 Living Profile remains deferred.
+   Do not turn Initial Diagnosis into a permanent profile.
 ```
 
 When resuming after interruption:
