@@ -239,7 +239,7 @@ final class PersonalizationLivingProfileService
             );
 
             if (
-                array_intersect_key(
+                array_intersect_assoc(
                     $observedDevelopmentBehavior,
                     $developmentBehavior,
                 ) !== $developmentBehavior
