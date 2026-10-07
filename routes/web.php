@@ -90,6 +90,7 @@ use App\Http\Controllers\ProviderExecutionContextController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\ProductPreviewController;
 use App\Http\Controllers\PersonalizationController;
+use App\Http\Controllers\PersonalizationContextUpdateController;
 
 Route::get('/privacy', [LegalController::class, 'privacy'])->name('legal.privacy');
 Route::get('/support', [LegalController::class, 'support'])->name('legal.support');
@@ -101,6 +102,12 @@ Route::get('/welcome', [FirstRunController::class, 'show'])->name('first_run.sho
 Route::post('/welcome/start', [FirstRunController::class, 'start'])->name('first_run.start');
 Route::middleware('release.level:1')->group(function () {
     Route::get('/personalization', [PersonalizationController::class, 'show'])->name('personalization.show');
+    Route::middleware('auth')->group(function () {
+        Route::get('/personalization/updates', [PersonalizationContextUpdateController::class, 'index'])->name('personalization.updates.index');
+        Route::post('/personalization/updates/refresh', [PersonalizationContextUpdateController::class, 'refresh'])->middleware('throttle:12,1')->name('personalization.updates.refresh');
+        Route::post('/personalization/updates/{candidateKey}/confirm', [PersonalizationContextUpdateController::class, 'confirm'])->middleware('throttle:12,1')->name('personalization.updates.confirm');
+        Route::post('/personalization/updates/{candidateKey}/dismiss', [PersonalizationContextUpdateController::class, 'dismiss'])->middleware('throttle:12,1')->name('personalization.updates.dismiss');
+    });
     Route::post('/personalization', [PersonalizationController::class, 'store'])->middleware('throttle:20,1')->name('personalization.store');
     Route::post('/personalization/skip', [PersonalizationController::class, 'skip'])->middleware('throttle:20,1')->name('personalization.skip');
     Route::get('/personalization/result', [PersonalizationController::class, 'result'])->name('personalization.result');
