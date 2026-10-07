@@ -22,7 +22,12 @@ final class PersonalizationContextService
         $session = $request->session()->get(self::SESSION_KEY, []);
         $session = is_array($session) ? $session : [];
 
-        $stored = $request->user()?->personalizationContext;
+        $user = $request->user();
+        $stored = $user
+            ? UserPersonalizationContext::query()
+                ->where('user_id', $user->id)
+                ->first()
+            : null;
 
         if (! $stored instanceof UserPersonalizationContext) {
             return $this->normalize($session);
