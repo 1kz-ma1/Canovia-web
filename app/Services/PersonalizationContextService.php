@@ -195,6 +195,47 @@ final class PersonalizationContextService
     }
 
     /**
+     * Persist derived recommendation / activation state without rewriting
+     * self-reported answers. Phase 2 capability lifecycle uses this path.
+     *
+     * @param array<string,mixed> $featureReadiness
+     */
+    public function saveFeatureReadinessState(
+        Request $request,
+        array $featureReadiness,
+    ): void {
+        $user = $request->user();
+        if (! $user) {
+            return;
+        }
+
+        $context = UserPersonalizationContext::query()
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (! $context) {
+            return;
+        }
+
+        $context->forceFill([
+            'feature_readiness' => $featureReadiness,
+            'context_revision' => max(
+                1,
+                (int) $context->context_revision + 1,
+            ),
+            'last_evaluated_at' => now(),
+        ])->save();
+
+        $session = $request->session()->get(self::SESSION_KEY, []);
+        if (is_array($session) && $session !== []) {
+            $session['feature_readiness'] = $featureReadiness;
+            $session['context_revision'] = $context->context_revision;
+            $session['last_evaluated_at'] = now()->toIso8601String();
+            $request->session()->put(self::SESSION_KEY, $session);
+        }
+    }
+
+    /**
      * Future Phase 3 boundary.
      *
      * Observed behavior may be stored separately, but this method intentionally
