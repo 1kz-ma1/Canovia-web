@@ -119,7 +119,7 @@ final class DevelopmentPersonalizationSignalService
             ? \Carbon\CarbonImmutable::parse(
                 (string) $activityDates90d->first(),
             )->diffInDays(
-                CarbonCarbonImmutable::parse(
+                \Carbon\CarbonImmutable::parse(
                     (string) $activityDates90d->last(),
                 ),
             ) + 1
