@@ -56,8 +56,13 @@
 
     $onboardingVersion = (int) config('canovia.onboarding_version', 1);
     $isPublicLegalSurface = request()->routeIs('legal.*');
+    // Early Access first use is owned by FirstRun + Personalization, not the
+    // legacy seven-step conversation tour. Explicit replay stays available.
+    $usesPersonalizationFirstRun = app(\App\Services\ReleaseLevelService::class)
+        ->allowsMinimum(\App\Enums\ReleaseLevel::EarlyAccessCore, auth()->user(), request());
     $onboardingAuto = ! $focusMode
         && ! $isPublicLegalSurface
+        && ! $usesPersonalizationFirstRun
         && (! auth()->check() || (int) auth()->user()->onboarding_version < $onboardingVersion);
     $releaseNotes = \App\Support\ReleaseNotes::all();
     $latestReleaseKey = (string) data_get($releaseNotes->first(), 'key', '');
