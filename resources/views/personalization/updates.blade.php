@@ -90,6 +90,11 @@
                         GitHub連携まで使える状態になっています。最近の利用状況を見ると、
                         Repositoryを前提にした高度な開発支援も役立ちそうです。
                     </p>
+                    @if (data_get($candidate, 'reopen_reason') === 'stronger_evidence')
+                        <div class="mt-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.035] px-3 py-2 text-xs leading-6 text-cyan-100">
+                            前回見送った後に、より強いDevelopment利用シグナルが確認されたため、もう一度だけ候補として表示しています。
+                        </div>
+                    @endif
                     <p class="mt-3 text-xs leading-6 text-slate-500">
                         これは「経験レベルが変わった」と断定するものではありません。
                         初回に回答した経験レベルも変更しません。
