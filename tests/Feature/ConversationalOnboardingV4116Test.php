@@ -57,7 +57,7 @@ class ConversationalOnboardingV4116Test extends TestCase
             'password_confirmation' => 'password123',
         ])
             ->assertRedirect(route('first_run.show'))
-            ->assertSessionHas('status', 'アカウントを作成しました。まずCanoviaに、今進めたいことをそのまま話してみてください。');
+            ->assertSessionHas('status', 'アカウントを作成しました。まず、今進めたいことと現在地を少しだけ教えてください。');
 
         $this->get(route('first_run.show'))
             ->assertOk()
@@ -65,6 +65,9 @@ class ConversationalOnboardingV4116Test extends TestCase
             ->assertDontSee('今はスキップ');
 
         $this->post(route('first_run.start'))
+            ->assertRedirect(route('personalization.show', ['source' => 'first_run']));
+
+        $this->post(route('personalization.skip'))
             ->assertRedirect(route('plans.create'));
 
         $this->get(route('plans.create'))
