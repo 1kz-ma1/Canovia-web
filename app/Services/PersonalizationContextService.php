@@ -294,6 +294,17 @@ final class PersonalizationContextService
             'domains' => $context['domains'],
             'common_context' => $context['common_context'],
             'domain_context' => $context['domain_context'],
+            'capability_interest' => is_array(
+                data_get(
+                    $context,
+                    'context_sources.self_reported.capability_interest',
+                ),
+            )
+                ? data_get(
+                    $context,
+                    'context_sources.self_reported.capability_interest',
+                )
+                : [],
         ];
     }
 }
