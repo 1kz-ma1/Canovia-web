@@ -1,6 +1,6 @@
 # Canovia Personalization Specification
 
-> Status: V58.34 Long Usage Window implemented; manual release review pending  
+> Status: V58.35 Confidence Calibration implemented; manual release review pending  
 > Updated: 2026-10-07
 
 ## 1. Purpose
@@ -813,3 +813,30 @@ Low-risk Candidate:
 Canonical:
 
 - `docs/V58.33_STUDY_REVIEW_CYCLE_PERSONALIZATION.md`
+
+
+## V58.35 Personalization Confidence Calibration
+
+High-impact Context Update Candidateのconfidenceをdeterministic observed evidenceから校正する。
+
+Initial policy:
+
+```text
+signal_strength 1 -> low
+signal_strength 2 -> medium
+signal_strength 3 -> high
+```
+
+Calibration metadataはversion、signal strength、evidence count、basisを保持する。
+
+重要:
+
+- confidenceはriskを上書きしない
+- high confidenceでもhigh-risk Candidateはconfirmation required
+- self-reported Context / Guidance / experience levelを変更しない
+- dismissed Candidateのreopen条件はV58.32のstronger evidence contractを維持する
+- confirmed Candidateを自動reopenしない
+
+Canonical:
+
+- `docs/V58.35_PERSONALIZATION_CONFIDENCE_CALIBRATION.md`

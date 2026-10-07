@@ -43,6 +43,9 @@ class CandidateEvidenceReopenV5832Test extends TestCase
         $this->assertSame('pending', data_get($candidate, 'status'));
         $this->assertSame(1, data_get($candidate, 'signal_strength'));
         $this->assertSame(1, data_get($candidate, 'evidence_revision'));
+        $this->assertSame('low', data_get($candidate, 'confidence'));
+        $this->assertSame(1, data_get($candidate, 'confidence_calibration.version'));
+        $this->assertSame(1, data_get($candidate, 'confidence_calibration.signal_strength'));
         $this->assertMatchesRegularExpression(
             '/^[a-f0-9]{64}$/',
             (string) data_get($candidate, 'evidence_fingerprint'),
@@ -92,6 +95,8 @@ class CandidateEvidenceReopenV5832Test extends TestCase
         $this->assertSame('pending', data_get($reopened, 'status'));
         $this->assertSame(2, data_get($reopened, 'signal_strength'));
         $this->assertSame(2, data_get($reopened, 'evidence_revision'));
+        $this->assertSame('medium', data_get($reopened, 'confidence'));
+        $this->assertSame(2, data_get($reopened, 'confidence_calibration.signal_strength'));
         $this->assertSame(
             'stronger_evidence',
             data_get($reopened, 'reopen_reason'),
@@ -222,6 +227,8 @@ class CandidateEvidenceReopenV5832Test extends TestCase
         $this->assertSame('pending', data_get($stronger, 'status'));
         $this->assertSame(3, data_get($stronger, 'signal_strength'));
         $this->assertSame(3, data_get($stronger, 'evidence_revision'));
+        $this->assertSame('high', data_get($stronger, 'confidence'));
+        $this->assertSame(3, data_get($stronger, 'confidence_calibration.signal_strength'));
         $this->assertContains(
             'recent_pr_or_commit_activity_2_plus',
             data_get($stronger, 'evidence', []),

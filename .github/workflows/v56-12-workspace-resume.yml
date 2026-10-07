@@ -68,6 +68,7 @@ jobs:
           php -l tests/Feature/ReturnAfterAbsencePersonalizationV5831Test.php
           php -l app/Services/DevelopmentPersonalizationSignalService.php
           php -l tests/Feature/CandidateEvidenceReopenV5832Test.php
+          php -l app/Services/PersonalizationConfidenceCalibrationService.php
           php -l app/Services/StudyReviewCyclePersonalizationAdapter.php
           php -l tests/Feature/StudyReviewCyclePersonalizationV5833Test.php
           php -l tests/Feature/LongUsageWindowPersonalizationV5834Test.php
