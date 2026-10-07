@@ -101,7 +101,10 @@
                     </span>
                 </div>
 
-                @if ($candidateKey === 'development_guidance_level')
+                @if ($candidateKey === 'development_plan_direction_review')
+                    <h2 class="mt-3 text-lg font-black text-slate-100">開発Planの方向性を見直しますか？</h2>
+                    <p class="mt-2 text-sm leading-7 text-slate-400">GitHub上の活動から、現在のPlanの方向性を振り返るタイミングかもしれません。確認してもPlanの内容やタスクは自動変更されません。</p>
+                @elseif ($candidateKey === 'development_guidance_level')
                     <h2 class="mt-3 text-lg font-black text-slate-100">案内の詳しさを標準に変更しますか？</h2>
                     <p class="mt-2 text-sm leading-7 text-slate-400">継続的な開発活動が確認できたため、画面の案内量を減らす選択肢を提案しています。経験や能力の判定ではありません。変更にはあなたの確認が必要です。</p>
                 @elseif ($candidateKey === 'development_advanced_support')
