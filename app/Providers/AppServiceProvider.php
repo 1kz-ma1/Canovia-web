@@ -15,6 +15,8 @@ use App\Services\ExecutionProviderRegistry;
 use App\Services\TaskEvidenceExecutionActivityProjector;
 use App\Services\CoreContextService;
 use App\Services\PlanOwnershipService;
+use App\Services\PlanLifecyclePersonalizationAdapter;
+use App\Models\Task;
 use App\Services\RequestBehaviorHistory;
 use App\Support\RequestPerformance;
 use Illuminate\Support\Facades\DB;
@@ -71,6 +73,20 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Task::updated(function (Task $task): void {
+            if (! app()->bound('request')) {
+                return;
+            }
+
+            $request = request();
+            if (! $request->user()) {
+                return;
+            }
+
+            app(PlanLifecyclePersonalizationAdapter::class)
+                ->observeTaskUpdated($request, $task);
+        });
+
         if ((bool) config('performance.enabled', false)) {
             DB::listen(function (\Illuminate\Database\Events\QueryExecuted $event): void {
                 if (! app()->bound('request')) {

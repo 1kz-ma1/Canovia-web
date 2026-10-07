@@ -558,3 +558,28 @@ Study Behavior Personalization must not bypass or rewrite:
 - Release Level
 - Entitlement / Feature Access
 - self-reported Personalization Context
+
+
+## V58.29 Plan Lifecycle Personalization release contract
+
+Minimum:
+
+```text
+L1 Early Access Core
+```
+
+No new structural route.
+
+L1 manual review:
+
+- `plan_lifecycle_personalization`
+  - genuinely new Plan → new_plan refresh
+  - createOrFirst retry → no duplicate
+  - incomplete Plan → no completion refresh
+  - final active Task → one plan_completed refresh
+  - cancelled Task does not block completion
+  - reopen / re-complete → no duplicate in V58.29
+  - no Personalization Context → no silent profile creation
+  - non-owner / collaborator must not mutate owner Personalization
+
+V58.29 does not introduce automatic Plan mutation or a new Plan status.

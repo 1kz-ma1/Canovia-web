@@ -17,6 +17,7 @@ use App\Services\PlanActivityService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanProgressService;
 use App\Services\PlanPriorityService;
+use App\Services\PlanLifecyclePersonalizationAdapter;
 use App\Services\PlanTimelineService;
 use App\Services\PlanToolService;
 use App\Services\RecommendationService;
@@ -72,6 +73,7 @@ class PlanController extends Controller
         GoalContextAccessService $goalContextAccess,
         PlanCategoryProfileService $categoryProfiles,
         WorkspaceModeRegistry $workspaceModes,
+        PlanLifecyclePersonalizationAdapter $planLifecycle,
     ) {
         $workspaceModeKeys = $workspaceModes->available()
             ->filter(fn ($definition) =>
@@ -271,6 +273,11 @@ class PlanController extends Controller
                 $request->user() ? null : $identity->resolve($request),
             );
         }
+
+        $planLifecycle->observeCreated(
+            $request,
+            $plan,
+        );
 
         $workspaceRedirect = $this->workspaceModeRedirect(
             $plan,

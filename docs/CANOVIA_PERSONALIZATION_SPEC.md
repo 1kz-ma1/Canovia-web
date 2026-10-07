@@ -1,6 +1,6 @@
 # Canovia Personalization Specification
 
-> Status: V58.28 Study Behavior Adapter implemented; manual release review pending  
+> Status: V58.29 Plan Lifecycle Refresh Triggers implemented; manual release review pending  
 > Updated: 2026-10-07
 
 ## 1. Purpose
@@ -500,6 +500,44 @@ V58.28は以下を変更しない:
 Canonical:
 
 - `docs/V58.28_STUDY_BEHAVIOR_PERSONALIZATION.md`
+
+## 7.4 Plan Lifecycle Refresh Triggers
+
+V58.29でCanovia CoreのPlan lifecycleをLiving Profileの再評価契機へ接続する。
+
+Implemented:
+
+```text
+new Plan created
+→ observed plan lifecycle
+→ refresh trigger = new_plan
+
+last active Task completed
+→ observed Plan completion
+→ refresh trigger = plan_completed
+```
+
+重要:
+
+- Plan内容を自動変更しない
+- self-reported Contextを変更しない
+- Guidanceを変更しない
+- Plan completion用の新しいDB statusを追加しない
+
+Plan completionはcurrent Task stateから判定する。
+
+```text
+non-cancelled Taskが1件以上
++
+all non-cancelled Tasks are done / 100%
+```
+
+同一Planのreopen → re-completeはV58.29では再発火しない。
+将来evidence fingerprint / completion revisionで拡張する。
+
+Canonical:
+
+- `docs/V58.29_PLAN_LIFECYCLE_PERSONALIZATION.md`
 
 ## 8. Existing User
 
