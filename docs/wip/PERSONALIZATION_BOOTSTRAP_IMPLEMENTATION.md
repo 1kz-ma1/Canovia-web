@@ -356,7 +356,7 @@ Implemented next slice — V58.32 Candidate Evidence Reopen:
 - [x] Guidance preserved
 - [x] regression tests written
 - [x] CI green
-- [ ] Manual Release Review: context_candidate_evidence_reopen
+- [ ] Manual Release Review: context_context_candidate_evidence_reopen
 
 Deferred next slices:
 
@@ -458,7 +458,7 @@ Current next action:
    - plan_lifecycle_personalization
    - plan_completion_fingerprint
    - return_after_absence_personalization
-   - candidate_evidence_reopen
+   - context_candidate_evidence_reopen
 6. Recommended next small slice:
    - review / retention Study adapter
    OR
