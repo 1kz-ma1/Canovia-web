@@ -20,6 +20,33 @@
         </header>
 
         <section class="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            <a href="{{ route('admin.early_access.index') }}" class="group page-card block p-5 transition hover:-translate-y-0.5 hover:border-cyan-300/35 sm:p-6">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <span class="inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2.5 py-1 text-[10px] font-black tracking-[.12em] text-cyan-200">EARLY ACCESS</span>
+                        <h2 class="mt-3 text-xl font-black text-slate-50">先行公開の観測</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-400">登録→実行のActivation、D1/D7再訪、Feedback、Product Preview需要を確認します。</p>
+                    </div>
+                    <span class="text-2xl text-slate-600 transition group-hover:translate-x-1 group-hover:text-cyan-200" aria-hidden="true">→</span>
+                </div>
+                <div class="mt-5 grid grid-cols-3 gap-2">
+                    <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+                        <p class="text-[10px] leading-4 text-slate-500">7日<br>登録</p>
+                        <p class="mt-1 text-xl font-black text-slate-100">{{ $earlyAccessSummary['registered_users'] }}</p>
+                    </div>
+                    <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+                        <p class="text-[10px] leading-4 text-slate-500">D1<br>Retention</p>
+                        <p class="mt-1 text-xl font-black text-violet-100">
+                            {{ $earlyAccessSummary['retention']['d1']['rate'] === null ? '—' : number_format($earlyAccessSummary['retention']['d1']['rate'], 0).'%' }}
+                        </p>
+                    </div>
+                    <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+                        <p class="text-[10px] leading-4 text-slate-500">Feedback</p>
+                        <p class="mt-1 text-xl font-black text-cyan-100">{{ $earlyAccessSummary['feedback']['total'] }}</p>
+                    </div>
+                </div>
+            </a>
+
             <a href="{{ route('admin.feedback.index') }}" class="group page-card block p-5 transition hover:-translate-y-0.5 hover:border-sky-400/35 sm:p-6">
                 <div class="flex items-start justify-between gap-4">
                     <div>
