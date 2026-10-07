@@ -548,7 +548,7 @@ class CandidateEvidenceReopenV5832Test extends TestCase
         $this->actingAs($user)->post(route('personalization.updates.refresh'));
         $response = $this->actingAs($user)->get(route('personalization.updates.index'));
         $response->assertOk()->assertSee('data-growth-experience-summary', false);
-        $summary = app(\\App\\Services\\PersonalizationLivingProfileService::class)
+        $summary = app(\App\Services\PersonalizationLivingProfileService::class)
             ->summary(request()->setUserResolver(fn () => $user));
         $this->assertIsArray(data_get($summary, 'growth_experience.observed_milestones'));
         $this->assertIsArray(data_get($summary, 'growth_experience.confirmed_choices'));
