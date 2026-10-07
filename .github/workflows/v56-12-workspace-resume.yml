@@ -68,6 +68,8 @@ jobs:
           php -l tests/Feature/ReturnAfterAbsencePersonalizationV5831Test.php
           php -l app/Services/DevelopmentPersonalizationSignalService.php
           php -l tests/Feature/CandidateEvidenceReopenV5832Test.php
+          php -l app/Services/StudyReviewCyclePersonalizationAdapter.php
+          php -l tests/Feature/StudyReviewCyclePersonalizationV5833Test.php
       - run: php artisan view:cache
       - run: php artisan migrate --force
       - name: V56.12 workspace resume and session scope
@@ -100,6 +102,8 @@ jobs:
         run: php artisan test tests/Feature/ReturnAfterAbsencePersonalizationV5831Test.php
       - name: V58.32 Candidate Evidence Reopen
         run: php artisan test tests/Feature/CandidateEvidenceReopenV5832Test.php
+      - name: V58.33 Study Review Cycle Personalization
+        run: php artisan test tests/Feature/StudyReviewCyclePersonalizationV5833Test.php
       - name: Home continuity regression
         run: php artisan test tests/Feature/ModelReuseV5195Test.php tests/Feature/HomeCoreBundleCostReductionV5192Test.php
       - name: Specialized Workspace regression

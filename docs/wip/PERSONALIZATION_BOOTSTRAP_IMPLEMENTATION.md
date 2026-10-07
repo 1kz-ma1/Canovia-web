@@ -358,9 +358,26 @@ Implemented next slice — V58.32 Candidate Evidence Reopen:
 - [x] CI green
 - [ ] Manual Release Review: context_candidate_evidence_reopen
 
+Implemented next slice — V58.33 Study Review Cycle Personalization:
+
+- [x] assessed Study Practice >= 5
+- [x] distinct practice days >= 2
+- [x] observed span >= 3 calendar days
+- [x] same-day volume does not imply review cycle
+- [x] observed spaced-review facts
+- [x] low-risk auto-applied Candidate
+- [x] Growth Experience: 「復習サイクルに入っています」
+- [x] retention / mastery is not auto-claimed
+- [x] self-reported Study stage preserved
+- [x] Guidance preserved
+- [x] later attempts refresh observed metrics
+- [x] duplicate Candidate / Auto Apply suppression
+- [x] regression tests written
+- [x] CI green
+- [ ] Manual Release Review: study_review_cycle_personalization
+
 Deferred next slices:
 
-- review / retention stage adapter
 - long usage window
 - stronger Development behavior signal expansion:
   - sustained activity across longer windows
@@ -415,6 +432,7 @@ PR #297 = merged
 PR #298 = merged
 PR #299 = merged
 PR #300 = merged
+PR #301 = merged
 
 Phase 1 automated validation = GREEN
 Phase 2 automated validation = GREEN
@@ -423,7 +441,8 @@ V58.28 Study Behavior Adapter = GREEN
 V58.29 Plan Lifecycle Refresh Triggers = GREEN
 V58.30 Plan Completion Fingerprint = GREEN
 V58.31 Return-after-Absence Trigger = GREEN
-V58.32 Candidate Evidence Reopen = implemented / CI pending
+V58.32 Candidate Evidence Reopen = GREEN
+V58.33 Study Review Cycle Personalization = GREEN
 
 Future Architecture remains Concept / Architecture preservation context.
 V58.32 only updates the Overview's Current reference.
@@ -432,8 +451,24 @@ V58.32 only updates the Overview's Current reference.
 Current next action:
 
 ```text
-1. Create V58.32 PR.
-2. Run CI:
+1. PR #302 created.
+2. CI GREEN on V58.33 implementation HEAD:
+   - V58.33 Study Review Cycle Personalization
+   - Candidate Evidence Reopen
+   - Return After Absence
+   - Plan Completion Fingerprint
+   - Plan Lifecycle Personalization
+   - Study Behavior Personalization
+   - Living Profile
+   - Capability Activation
+   - Personalization Bootstrap
+   - Release Review
+   - Home / Specialized Workspace
+   - Migration Recovery
+3. Final documentation-only WIP sync requires normal CI recheck.
+
+Previous CI matrix reference:
+   - StudyReviewCyclePersonalizationV5833Test
    - CandidateEvidenceReopenV5832Test
    - ReturnAfterAbsencePersonalizationV5831Test
    - PlanCompletionFingerprintV5830Test
@@ -445,10 +480,7 @@ Current next action:
    - Release Review
    - Home / Specialized Workspace
    - Migration Recovery
-3. Fix V58.32 blockers only.
-4. After CI green:
-   - mark V58.32 CI green
-   - keep WIP
+4. Fix final-HEAD blockers only.
 5. Manual Release Review remains:
    - personalization_first_use
    - github_capability_activation
@@ -458,8 +490,9 @@ Current next action:
    - plan_completion_fingerprint
    - return_after_absence_personalization
    - context_candidate_evidence_reopen
+   - study_review_cycle_personalization
 6. Recommended next small slice:
-   - review / retention Study adapter
+   - long usage window
    OR
    - confidence calibration
 7. Do not use Future Architecture docs as implementation requirements.

@@ -7,6 +7,7 @@
     $pending = collect($profile['pending'] ?? []);
     $resolved = collect($profile['resolved'] ?? []);
     $studyPracticeFocused = $resolved->get('study_practice_focused');
+    $studyReviewCycle = $resolved->get('study_review_cycle');
 @endphp
 
 <div class="mx-auto max-w-3xl space-y-5" data-personalization-context-updates>
@@ -49,6 +50,31 @@
             </p>
             <p class="mt-3 text-xs leading-6 text-slate-500">
                 初回に回答した学習段階、Guidance Level、Plan内容は変更していません。
+            </p>
+        </section>
+    @endif
+
+
+    @if (is_array($studyReviewCycle))
+        <section
+            class="page-card border border-sky-300/15 p-5 sm:p-7"
+            data-growth-experience="study_review_cycle"
+        >
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="rounded-full border border-sky-300/20 bg-sky-300/[0.05] px-2.5 py-1 text-[10px] font-black text-sky-200">
+                    OBSERVED CHANGE
+                </span>
+                <span class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-600">
+                    confidence: {{ data_get($studyReviewCycle, 'confidence', 'high') }}
+                </span>
+            </div>
+            <h2 class="mt-3 text-lg font-black text-slate-100">復習サイクルに入っています</h2>
+            <p class="mt-2 text-sm leading-7 text-slate-400">
+                同じStudy Planで、数日以上の間隔を含む複数日の評価済み演習をCanoviaが確認しました。
+                これは「復習行動が継続している」という観測であり、定着や習熟を自動判定したものではありません。
+            </p>
+            <p class="mt-3 text-xs leading-6 text-slate-500">
+                初回に回答した学習段階、Guidance Level、Plan内容、Study strategyは変更していません。
             </p>
         </section>
     @endif

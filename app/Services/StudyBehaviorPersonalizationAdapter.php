@@ -16,6 +16,7 @@ final class StudyBehaviorPersonalizationAdapter
         private readonly PersonalizationContextService $contexts,
         private readonly BehaviorIdentityService $identity,
         private readonly BehaviorEventLogger $events,
+        private readonly StudyReviewCyclePersonalizationAdapter $reviewCycle,
     ) {}
 
     /**
@@ -188,5 +189,10 @@ final class StudyBehaviorPersonalizationAdapter
                 );
             }
         }
+
+        $this->reviewCycle->observeAssessedPractice(
+            $request,
+            $plan,
+        );
     }
 }

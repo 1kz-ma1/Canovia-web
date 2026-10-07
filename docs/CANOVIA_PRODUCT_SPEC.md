@@ -7470,3 +7470,26 @@ Canonical:
 
 - `docs/V58.32_CONTEXT_CANDIDATE_EVIDENCE_REOPEN.md`
 - `docs/CANOVIA_PERSONALIZATION_SPEC.md`
+
+
+## V58.33 Study Review Cycle Personalization
+
+Studyの実利用から「時間を空けた再演習」をLiving Profileへ接続する。
+
+発火条件は、同じStudy Planにおける評価済み演習5回以上、
+2日以上の異なるpractice day、3 calendar days以上のspan。
+
+Canoviaが判断するのは「復習サイクルに入った」というbehavioral contextのみ。
+
+V58.33は:
+
+- retention / masteryを自動認定しない
+- scoreだけで能力分類しない
+- self-reported Study stageを書き換えない
+- Guidanceを変更しない
+- Plan / Task / Study strategyを変更しない
+
+Canonical:
+
+- `docs/V58.33_STUDY_REVIEW_CYCLE_PERSONALIZATION.md`
+- `docs/CANOVIA_PERSONALIZATION_SPEC.md`
