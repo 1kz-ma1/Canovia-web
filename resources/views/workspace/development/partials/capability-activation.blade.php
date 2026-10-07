@@ -83,7 +83,9 @@
                 </div>
 
                 <div class="flex flex-wrap gap-2">
-                    @if ($stage === 'setup_started')
+                    @if ($stage === 'preview')
+                        <a href="{{ $activation['next_url'] }}" class="btn-secondary px-3 py-2 text-xs">価値を確認する</a>
+                    @elseif ($stage === 'setup_started')
                         <a href="{{ $activation['next_url'] }}" class="btn-primary px-3 py-2 text-xs">設定を続ける</a>
                     @elseif (data_get($activation, 'can_start'))
                         <form method="POST" action="{{ route('capabilities.setup.start', ['capability' => 'github_integration', 'plan' => $plan]) }}">
