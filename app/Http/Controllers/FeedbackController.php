@@ -7,6 +7,8 @@ use App\Models\Plan;
 use App\Models\Task;
 use App\Services\BehaviorIdentityService;
 use App\Services\PlanOwnershipService;
+use App\Services\EarlyAccessService;
+use App\Services\ReleaseLevelService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -16,6 +18,8 @@ class FeedbackController extends Controller
         Request $request,
         BehaviorIdentityService $identity,
         PlanOwnershipService $ownership,
+        EarlyAccessService $earlyAccess,
+        ReleaseLevelService $releaseLevels,
     ) {
         $validated = $request->validate([
             'type' => ['required', Rule::in(['usability', 'bug', 'request', 'positive'])],
@@ -56,6 +60,13 @@ class FeedbackController extends Controller
                 'route' => optional($request->route())->getName(),
                 'user_agent' => mb_substr((string) $request->userAgent(), 0, 500),
                 'authenticated' => $request->user() !== null,
+                'early_access' => $earlyAccess->activeFor(
+                    $request->user(),
+                    $request,
+                ),
+                'release_level' => $releaseLevels
+                    ->levelFor($request->user(), $request)
+                    ->value,
             ],
             'status' => 'new',
         ]);
