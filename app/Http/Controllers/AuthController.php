@@ -31,7 +31,6 @@ class AuthController extends Controller
         GuestPlanClaimService $claimService,
         FutureMemoService $futureMemos,
         FirstRunService $firstRun,
-        EarlyAccessTelemetryService $earlyAccessTelemetry,
     ) {
         $credentials = $request->validate([
             'email' => ['required', 'email'],
@@ -82,6 +81,7 @@ class AuthController extends Controller
         GuestPlanClaimService $claimService,
         FutureMemoService $futureMemos,
         FirstRunService $firstRun,
+        EarlyAccessTelemetryService $earlyAccessTelemetry,
     ) {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:80'],
