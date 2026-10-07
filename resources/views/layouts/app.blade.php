@@ -74,6 +74,13 @@
     $adminReleasePreviewLevel = $isSuperAdmin
         ? $releaseLevelService->adminPreview($currentUser, request())
         : null;
+    $earlyAccessActive = ! $focusMode
+        && ! request()->routeIs('admin.*')
+        && ! request()->routeIs('legal.*')
+        && app(\App\Services\EarlyAccessService::class)
+            ->activeFor($currentUser, request());
+    $earlyAccessProductPreviewAvailable = $currentReleaseLevel
+        ->isAtLeast(\App\Enums\ReleaseLevel::ProductPreview);
     $hasPremiumCore = $currentUser && ! $isSuperAdmin
         ? app(\App\Services\ProductGrantService::class)->hasEffectiveProduct($currentUser, \App\Enums\ProductKey::PremiumCore)
         : false;
@@ -258,6 +265,29 @@
         <div data-canovia-page data-canovia-route="{{ request()->route()?->getName() }}" data-workspace-mode="{{ $workspaceModeDefinition->mode->value }}" data-workspace-mode-label="{{ $workspaceModeDefinition->label }}">
         @if (session('status'))
             <div class="assistant-notice assistant-notice-info mb-6" data-auto-toast>{{ session('status') }}</div>
+        @endif
+
+        @if ($earlyAccessActive)
+            <section
+                class="mb-4 flex flex-col gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.035] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                data-early-access-disclosure
+            >
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[.16em] text-cyan-200">Early Access</span>
+                        <span class="text-xs font-bold text-slate-200">Canoviaは先行公開中です</span>
+                    </div>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                        機能や仕様は改善に伴って変わる場合があります。使いにくさ・不具合・欲しい機能があれば、その場で教えてください。
+                    </p>
+                </div>
+                <div class="flex shrink-0 flex-wrap gap-2">
+                    @if ($earlyAccessProductPreviewAvailable && ! request()->routeIs('product.preview.index'))
+                        <a href="{{ route('product.preview.index') }}" class="btn-secondary px-3 py-2 text-xs">今後の機能を見る</a>
+                    @endif
+                    <button type="button" class="btn-secondary px-3 py-2 text-xs" data-feedback-open>フィードバック</button>
+                </div>
+            </section>
         @endif
 
         @guest
