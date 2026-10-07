@@ -128,14 +128,26 @@ one-to-one with user.
 Main fields:
 
 - version
-- domains JSON
-- common_context JSON
-- domain_context JSON
+- context_revision
+- self_reported_context JSON
+- observed_context JSON
+- inferred_context JSON
 - guidance_level
 - recommended_surfaces JSON
 - feature_readiness JSON
+- last_evaluated_at
 - completed_at
 - skipped_at
+
+Source rule:
+
+```text
+Initial Diagnosis -> self_reported_context
+Observed Behavior -> observed_context
+Inference -> inferred_context
+```
+
+Phase 1ではobserved / inferredを自動適用しない。
 
 Guest draftはsession only。
 
@@ -207,9 +219,59 @@ Candidates:
 ## Phase 3 — Living Profile [PLANNED]
 
 Goal:
-Initial Diagnosis + Observed BehaviorでContext更新。
+Initial Diagnosisを初期仮説として、Observed BehaviorからContext再評価候補を作る。
 
-Candidates:
+Core contract:
+
+```text
+Initial Diagnosis
+→ User Context v1
+→ Actual Behavior
+→ Context Update Candidate
+→ optional User Confirmation
+→ User Context v2
+→ Plan / UI / Guidance / Feature Recommendation refresh
+```
+
+Source separation:
+
+- self_reported / user_answered
+- observed
+- inferred / estimated
+- confidence
+
+Low-risk auto update candidates:
+
+- recent domain
+- recommendation ordering
+- Feature Recommendation priority
+
+Confirmation candidates:
+
+- major experience-level change
+- Plan-direction impact
+- exposing advanced capability groups
+- inferred user intent
+
+Refresh trigger candidates:
+
+- Plan completion
+- new Goal / Plan
+- long usage window
+- return after long absence
+- new domain adoption
+- clear behavior shift
+- advanced capability readiness reached
+
+Growth Experience candidates:
+
+- 「最近、開発の進め方が変わってきました」
+- 「演習中心の学習段階に入っています」
+- 「GitHub連携が役立つ段階になっています」
+
+Do not implement periodic questionnaire spam.
+
+Other candidates:
 
 - Development behavior signals
 - Study behavior signals
@@ -231,6 +293,8 @@ Candidates:
 
 # 3. Phase 1 product rules
 
+- **Initial Diagnosis is a starting hypothesis, not a permanent profile.**
+- 初回診断はユーザーを固定的に分類せず、伴走開始の初期仮説として扱う
 - diagnosisはPersonality typeを出さない
 - unanswered fieldはunknownとして扱う
 - Skipは常に可能
@@ -249,8 +313,9 @@ Candidates:
 Current next action:
 
 ```text
-Implement Phase 1 DB/model + services.
-Then connect First Run and Bootstrap UI.
+Living Context source separation adjusted.
+Continue Phase 1 account entry + tests + CI.
+Do not implement Phase 3 inference engine in V58.25.
 ```
 
 When resuming after interruption:
