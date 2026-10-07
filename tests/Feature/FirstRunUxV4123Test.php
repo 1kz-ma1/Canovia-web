@@ -44,19 +44,23 @@ class FirstRunUxV4123Test extends TestCase
             ->assertDontSee('data-onboarding-intro-skip', false);
     }
 
-    public function test_starting_first_run_unlocks_goal_discovery_and_persists_browser_gate(): void
+    public function test_starting_first_run_unlocks_personalization_and_persists_browser_gate(): void
     {
         $response = $this->post(route('first_run.start'));
 
         $response
-            ->assertRedirect(route('plans.create'))
+            ->assertRedirect(route('personalization.show', ['source' => 'first_run']))
             ->assertCookie(FirstRunService::COOKIE, '1')
             ->assertSessionHas('canovia.first_run.passed', true)
             ->assertSessionMissing('canovia.first_run.required');
 
-        $this->get(route('plans.create'))
+        $this->get(route('personalization.show', ['source' => 'first_run']))
             ->assertOk()
-            ->assertSee('FIRST COMPANION', false);
+            ->assertSee('data-personalization-bootstrap', false)
+            ->assertSee('最初から全部設定しなくて大丈夫。');
+
+        $this->get(route('plans.create'))
+            ->assertOk();
 
     }
 
@@ -136,7 +140,10 @@ class FirstRunUxV4123Test extends TestCase
             ->assertRedirect(route('first_run.show'));
 
         $this->post(route('first_run.start'))
-            ->assertRedirect(route('plans.create'));
+            ->assertRedirect(route('personalization.show', ['source' => 'first_run']));
+
+        $this->get(route('personalization.show', ['source' => 'first_run']))
+            ->assertOk();
 
         $this->get(route('plans.create'))->assertOk();
 
