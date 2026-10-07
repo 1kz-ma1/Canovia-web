@@ -7286,3 +7286,34 @@ They do not:
 - authorize OAuth / Shared Context / Opportunity Engine / Automatic Improvement / Product Factory implementation
 
 Current behavior continues to be defined by latest main + Active Specs.
+
+
+## V58.29 Plan Lifecycle Personalization
+
+Living ProfileへCanovia CoreのPlan lifecycle節目を接続する。
+
+```text
+Plan created
+→ trigger: new_plan
+
+all active Tasks completed
+→ trigger: plan_completed
+```
+
+Plan completionは新しいPlan statusではなく、既存Task stateから観測する。
+
+V58.29は:
+
+- Plan / Taskを自動変更しない
+- self-reported Personalizationを変更しない
+- Guidanceを変更しない
+- user without Personalization Contextをsilently profileしない
+- collaborator actionでowner Contextを変更しない
+
+同じPlanのcompletionはbounded Plan ID memoryで重複抑止する。
+reopen / re-complete revisionは後続evidence fingerprint contractへ分離する。
+
+Canonical:
+
+- `docs/V58.29_PLAN_LIFECYCLE_PERSONALIZATION.md`
+- `docs/CANOVIA_PERSONALIZATION_SPEC.md`
