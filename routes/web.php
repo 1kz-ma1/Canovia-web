@@ -6,6 +6,7 @@ use App\Http\Controllers\WorkLogController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\CanoviaMapController;
+use App\Http\Controllers\CapabilityActivationController;
 use App\Http\Controllers\MapPersonalizationController;
 use App\Http\Controllers\FirstRunController;
 use App\Http\Controllers\PlanController;
@@ -286,6 +287,15 @@ Route::post('/inbox/{inboxItem}/suggest', [InboxController::class, 'suggest'])->
 Route::post('/inbox/{inboxItem}/route', [InboxController::class, 'routeItem'])->name('inbox.route');
 Route::patch('/inbox/{inboxItem}/status', [InboxController::class, 'updateStatus'])->name('inbox.status');
 Route::get('/inbox/{inboxItem}/file', [InboxController::class, 'file'])->name('inbox.file');
+
+Route::middleware(['auth', 'release.level:1'])->group(function () {
+    Route::post('/capabilities/{capability}/plans/{plan}/setup/start', [CapabilityActivationController::class, 'start'])
+        ->middleware('throttle:12,1')
+        ->name('capabilities.setup.start');
+    Route::post('/capabilities/{capability}/plans/{plan}/setup/abandon', [CapabilityActivationController::class, 'abandon'])
+        ->middleware('throttle:12,1')
+        ->name('capabilities.setup.abandon');
+});
 
 Route::post('/behavior/events', [BehaviorEventController::class, 'store'])->name('behavior_events.store');
 Route::post('/recommendations/alternative', [RecommendationController::class, 'alternative'])->name('recommendations.alternative');
