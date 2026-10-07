@@ -434,6 +434,7 @@ final class PersonalizationLivingProfileService
                 'plan_completed',
                 'workspace_change',
                 'return',
+                'return_after_absence',
             ],
             true,
         )
