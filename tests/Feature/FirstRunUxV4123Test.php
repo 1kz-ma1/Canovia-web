@@ -193,6 +193,20 @@ class FirstRunUxV4123Test extends TestCase
         $this->assertStringContainsString('event.preventDefault()', $source);
     }
 
+    public function test_personalization_first_run_disables_legacy_auto_tour_but_preserves_replay(): void
+    {
+        $this->post(route('first_run.start'))
+            ->assertRedirect(route('personalization.show', ['source' => 'first_run']));
+
+        $this->get(route('personalization.show', ['source' => 'first_run']))
+            ->assertOk()
+            ->assertSee('data-onboarding-auto="0"', false);
+
+        $source = file_get_contents(resource_path('js/app.js'));
+        $this->assertStringContainsString("body?.dataset.onboardingAuto !== '1' && !replayMode", $source);
+        $this->assertStringContainsString("'[data-onboarding-restart]'", $source);
+    }
+
     private function scenario(): array
     {
         $user = User::factory()->create();
