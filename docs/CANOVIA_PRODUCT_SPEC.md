@@ -7352,3 +7352,42 @@ Canonical:
 
 - `docs/V58.30_PLAN_COMPLETION_FINGERPRINT.md`
 - `docs/CANOVIA_PERSONALIZATION_SPEC.md`
+
+
+## V58.31 Return-after-Absence Personalization
+
+Living Profileへ長期離脱後の復帰Triggerを追加する。
+
+```text
+first tracked visit
+→ presence baseline only
+
+<14 days
+→ normal presence update
+
+>=14 days
+→ return_after_absence refresh
+```
+
+Presence Source of Truth:
+
+```text
+observed_context.presence
+```
+
+これはEarly Access actor tokenではなくuser Personalization Contextへ保存する。
+
+同日navigation / Instant Navigation prefetchは復帰として重複評価しない。
+
+V58.31は:
+
+- re-onboardingを強制しない
+- self-reported Contextを書き換えない
+- Guidanceを自動変更しない
+- Plan / Taskを変更しない
+- AI inferenceを行わない
+
+Canonical:
+
+- `docs/V58.31_RETURN_AFTER_ABSENCE_PERSONALIZATION.md`
+- `docs/CANOVIA_PERSONALIZATION_SPEC.md`
