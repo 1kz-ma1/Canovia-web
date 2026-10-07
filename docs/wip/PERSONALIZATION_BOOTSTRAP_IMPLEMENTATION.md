@@ -290,7 +290,7 @@ Implemented next slice — V58.28 Study Behavior Adapter:
 - [x] Guidance preserved
 - [x] duplicate candidate / auto-apply suppression
 - [x] regression tests written
-- [ ] CI green
+- [x] CI green
 - [ ] Manual Release Review: study_behavior_personalization
 
 Deferred next slices:
@@ -353,7 +353,7 @@ PR #296 = merged
 Phase 1 automated validation = GREEN
 Phase 2 automated validation = GREEN
 Phase 3 Foundation automated validation = GREEN
-V58.28 Study Behavior Adapter = implemented / CI pending
+V58.28 Study Behavior Adapter = implemented / automated validation GREEN
 
 Future Architecture documentation added on the same branch:
 - docs/future/CANOVIA_FUTURE_ARCHITECTURE_OVERVIEW.md
@@ -368,30 +368,18 @@ They do not promote Future features into current implementation requirements.
 Current next action:
 
 ```text
-1. Create V58.28 PR.
-2. Run CI:
-   - StudyBehaviorPersonalizationV5828Test
-   - LivingProfileV5827Test
-   - CapabilityActivationV5826Test
-   - Personalization V58.25 regression
-   - Study regressions
-   - Release Review regression
-   - Home / Specialized Workspace regression
-   - Migration Recovery
-3. Fix V58.28 blockers only.
-4. After CI green:
-   - mark V58.28 CI green
-   - keep WIP
-5. Manual Release Review remains:
+1. Review / merge PR #297 when appropriate.
+2. Keep WIP.
+3. Manual Release Review remains:
    - personalization_first_use
    - github_capability_activation
    - living_profile_context_update
    - study_behavior_personalization
-6. Recommended next implementation slice:
+4. Recommended next implementation slice:
    - new_plan refresh trigger
    - plan_completed refresh trigger
    then return-after-absence / evidence fingerprint.
-7. Do not implement Future Architecture components merely because docs/future now describes them.
+5. Do not implement Future Architecture components merely because docs/future now describes them.
 ```
 
 When resuming after interruption:
