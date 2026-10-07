@@ -9,12 +9,14 @@ final class UserPersonalizationContext extends Model
     protected $fillable = [
         'user_id',
         'version',
-        'domains',
-        'common_context',
-        'domain_context',
+        'context_revision',
+        'self_reported_context',
+        'observed_context',
+        'inferred_context',
         'guidance_level',
         'recommended_surfaces',
         'feature_readiness',
+        'last_evaluated_at',
         'completed_at',
         'skipped_at',
     ];
@@ -23,11 +25,13 @@ final class UserPersonalizationContext extends Model
     {
         return [
             'version' => 'integer',
-            'domains' => 'array',
-            'common_context' => 'array',
-            'domain_context' => 'array',
+            'context_revision' => 'integer',
+            'self_reported_context' => 'array',
+            'observed_context' => 'array',
+            'inferred_context' => 'array',
             'recommended_surfaces' => 'array',
             'feature_readiness' => 'array',
+            'last_evaluated_at' => 'datetime',
             'completed_at' => 'datetime',
             'skipped_at' => 'datetime',
         ];
