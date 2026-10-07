@@ -117,6 +117,19 @@ inferred
 = self-reported + observed等から推定したContext
 ```
 
+将来のinferred entryは必要に応じてconfidenceを持てる。
+
+例:
+
+```text
+self_reported_experience = beginner
+observed_experience = intermediate
+inferred_experience = intermediate
+confidence = high
+```
+
+confidenceは推定の確からしさであり、本人回答を上書きする権限ではない。
+
 Derived state:
 
 ```text
@@ -365,6 +378,7 @@ Phase 1 server-side events:
 - personalization_skipped
 - plan_seed_shown
 - plan_seed_accepted
+- plan_created_from_seed
 - capability_preview_shown
 - capability_interest_yes
 - capability_interest_no
