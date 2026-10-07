@@ -424,7 +424,7 @@ V58.28 Study Behavior Adapter = GREEN
 V58.29 Plan Lifecycle Refresh Triggers = GREEN
 V58.30 Plan Completion Fingerprint = GREEN
 V58.31 Return-after-Absence Trigger = GREEN
-V58.32 Candidate Evidence Reopen = implemented / automated validation GREEN
+V58.32 Candidate Evidence Reopen = implemented / CI pending
 
 Future Architecture remains Concept / Architecture preservation context.
 V58.32 only updates the Overview's Current reference.
@@ -433,9 +433,24 @@ V58.32 only updates the Overview's Current reference.
 Current next action:
 
 ```text
-1. Review / merge PR #301 when appropriate.
-2. Keep WIP.
-3. Manual Release Review remains:
+1. Create V58.32 PR.
+2. Run CI:
+   - CandidateEvidenceReopenV5832Test
+   - ReturnAfterAbsencePersonalizationV5831Test
+   - PlanCompletionFingerprintV5830Test
+   - PlanLifecyclePersonalizationV5829Test
+   - StudyBehaviorPersonalizationV5828Test
+   - LivingProfileV5827Test
+   - CapabilityActivationV5826Test
+   - Personalization V58.25
+   - Release Review
+   - Home / Specialized Workspace
+   - Migration Recovery
+3. Fix V58.32 blockers only.
+4. After CI green:
+   - mark V58.32 CI green
+   - keep WIP
+5. Manual Release Review remains:
    - personalization_first_use
    - github_capability_activation
    - living_profile_context_update
@@ -443,12 +458,12 @@ Current next action:
    - plan_lifecycle_personalization
    - plan_completion_fingerprint
    - return_after_absence_personalization
-   - context_candidate_evidence_reopen
-4. Recommended next small slice:
+   - candidate_evidence_reopen
+6. Recommended next small slice:
    - review / retention Study adapter
    OR
-   - long usage window
-5. Do not use Future Architecture docs as implementation requirements.
+   - confidence calibration
+7. Do not use Future Architecture docs as implementation requirements.
 ```
 
 When resuming after interruption:
