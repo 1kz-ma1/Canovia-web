@@ -373,7 +373,7 @@ Implemented next slice — V58.33 Study Review Cycle Personalization:
 - [x] later attempts refresh observed metrics
 - [x] duplicate Candidate / Auto Apply suppression
 - [x] regression tests written
-- [ ] CI green
+- [x] CI green
 - [ ] Manual Release Review: study_review_cycle_personalization
 
 Deferred next slices:
@@ -442,7 +442,7 @@ V58.29 Plan Lifecycle Refresh Triggers = GREEN
 V58.30 Plan Completion Fingerprint = GREEN
 V58.31 Return-after-Absence Trigger = GREEN
 V58.32 Candidate Evidence Reopen = GREEN
-V58.33 Study Review Cycle Personalization = implemented / CI pending
+V58.33 Study Review Cycle Personalization = GREEN
 
 Future Architecture remains Concept / Architecture preservation context.
 V58.32 only updates the Overview's Current reference.
@@ -451,8 +451,23 @@ V58.32 only updates the Overview's Current reference.
 Current next action:
 
 ```text
-1. Create V58.33 PR.
-2. Run CI:
+1. PR #302 created.
+2. CI GREEN on V58.33 implementation HEAD:
+   - V58.33 Study Review Cycle Personalization
+   - Candidate Evidence Reopen
+   - Return After Absence
+   - Plan Completion Fingerprint
+   - Plan Lifecycle Personalization
+   - Study Behavior Personalization
+   - Living Profile
+   - Capability Activation
+   - Personalization Bootstrap
+   - Release Review
+   - Home / Specialized Workspace
+   - Migration Recovery
+3. Final documentation-only WIP sync requires normal CI recheck.
+
+Previous CI matrix reference:
    - StudyReviewCyclePersonalizationV5833Test
    - CandidateEvidenceReopenV5832Test
    - ReturnAfterAbsencePersonalizationV5831Test
@@ -465,10 +480,7 @@ Current next action:
    - Release Review
    - Home / Specialized Workspace
    - Migration Recovery
-3. Fix V58.33 blockers only.
-4. After CI green:
-   - mark V58.33 CI green
-   - keep WIP
+4. Fix final-HEAD blockers only.
 5. Manual Release Review remains:
    - personalization_first_use
    - github_capability_activation
