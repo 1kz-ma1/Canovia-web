@@ -10,6 +10,7 @@
             計画はアカウントに紐づいています。Cookie削除・別端末・PWA再インストール後も、ログインすれば復元できます。
         </div>
 
+        @if ($showPersonalizationBootstrap)
         <a
             href="{{ route('personalization.show', ['source' => 'account']) }}"
             class="mt-5 block rounded-2xl border border-violet-300/15 bg-violet-300/[0.035] p-4 transition hover:border-violet-300/30 hover:bg-violet-300/[0.065]"
@@ -26,6 +27,7 @@
                 <span class="text-lg text-violet-300" aria-hidden="true">→</span>
             </div>
         </a>
+        @endif
 
         @if ($showProductPreview)
             <a
