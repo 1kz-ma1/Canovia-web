@@ -5,6 +5,8 @@
 @php
     $profile = is_array($livingProfile ?? null) ? $livingProfile : [];
     $pending = collect($profile['pending'] ?? []);
+    $resolved = collect($profile['resolved'] ?? []);
+    $studyPracticeFocused = $resolved->get('study_practice_focused');
 @endphp
 
 <div class="mx-auto max-w-3xl space-y-5" data-personalization-context-updates>
@@ -26,6 +28,30 @@
             <button type="submit" class="btn-secondary px-4 py-2 text-xs">現在地を再評価</button>
         </form>
     </section>
+
+    @if (is_array($studyPracticeFocused))
+        <section
+            class="page-card border border-emerald-300/15 p-5 sm:p-7"
+            data-growth-experience="study_practice_focused"
+        >
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="rounded-full border border-emerald-300/20 bg-emerald-300/[0.05] px-2.5 py-1 text-[10px] font-black text-emerald-200">
+                    OBSERVED CHANGE
+                </span>
+                <span class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-600">
+                    confidence: {{ data_get($studyPracticeFocused, 'confidence', 'high') }}
+                </span>
+            </div>
+            <h2 class="mt-3 text-lg font-black text-slate-100">演習中心の学習段階に入っています</h2>
+            <p class="mt-2 text-sm leading-7 text-slate-400">
+                同じStudy Planで評価済み演習を継続していることをCanoviaが確認しました。
+                これは能力レベルの再分類ではなく、実際の学習行動が演習中心になっているという観測です。
+            </p>
+            <p class="mt-3 text-xs leading-6 text-slate-500">
+                初回に回答した学習段階、Guidance Level、Plan内容は変更していません。
+            </p>
+        </section>
+    @endif
 
     @if ($pending->isEmpty())
         <section class="page-card p-5 sm:p-7" data-context-update-empty>
