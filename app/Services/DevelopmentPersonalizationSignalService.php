@@ -28,6 +28,11 @@ final class DevelopmentPersonalizationSignalService
             ->with('plan')
             ->where('provider', 'github')
             ->where('artifact_type', 'repository')
+            ->whereHas(
+                'plan',
+                fn ($query) =>
+                    $query->where('user_id', $user->id),
+            )
             ->get()
             ->filter(function (PlanArtifact $artifact) use ($user) {
                 $plan = $artifact->plan;
