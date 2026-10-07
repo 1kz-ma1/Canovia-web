@@ -7065,3 +7065,39 @@ GET /admin/early-access
 でActivation、D1 / D7、Daily Active、Product Preview、Feedback mixを確認できる。
 
 この実装だけではPublic Release Levelを変更しない。
+
+
+## V58.24 Release Review
+
+Early Access L2 candidateのManual Release Gateを永続化する。
+
+Manual Checkはstable keyを持ち:
+
+```text
+Pending
+Passed
+Failed
+```
+
+としてAdmin Release Gate上で管理する。
+
+保存:
+
+- release level
+- check key
+- status
+- note
+- reviewer
+- reviewed at
+
+L2はL0 + L1 + L2の全Manual CheckがPassedかつAutomatic Gateが通過した場合のみ:
+
+```text
+READY FOR RELEASE
+```
+
+となる。
+
+READYでもPublic Release Levelは自動変更しない。
+
+またL2→L0 downgrade時にStudy / Development専用Surfaceを隠しても、既存Plan / Taskを保持しCore flowから利用できることをregression testで固定する。
