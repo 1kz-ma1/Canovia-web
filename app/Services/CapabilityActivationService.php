@@ -102,14 +102,17 @@ final class CapabilityActivationService
 
         $storedStage = (string) ($activation['stage'] ?? '');
         $visible =
-            $interest === 'yes'
-            || ($eligible && $interest === null)
-            || in_array(
-                $storedStage,
-                ['setup_started', 'completed'],
-                true,
-            )
-            || $connectionState === 'ready';
+            $connectionState === 'ready'
+            || $storedStage === 'completed'
+            || (
+                $interest !== 'no'
+                && $storedStage !== 'abandoned'
+                && (
+                    $interest === 'yes'
+                    || ($eligible && $interest === null)
+                    || $storedStage === 'setup_started'
+                )
+            );
 
         if (! $visible) {
             return [
