@@ -550,7 +550,8 @@ class PersonalizationBootstrapV5825Test extends TestCase
                     'create_request_id' => $requestId,
                     'personalization_seed_key' => $seedKey,
                     'personalization_seed_domain' => $domain,
-                ]);
+                ])
+                ->assertRedirect(route($workspaceRoute, ['plan_id' => Plan::query()->where('creation_request_id', $requestId)->value('id')]));
 
             $plan = Plan::query()
                 ->where('creation_request_id', $requestId)
