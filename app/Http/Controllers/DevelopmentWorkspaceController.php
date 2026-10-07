@@ -171,11 +171,9 @@ final class DevelopmentWorkspaceController extends Controller
         $githubCapabilityActivation = $capabilityActivation->github(
             $request,
             $plan,
-            $developmentGithubRepository,
+            null,
             $developmentGithubIntegrationStatus,
-            is_array($developmentGithubConnection)
-                ? $developmentGithubConnection
-                : null,
+            null,
         );
         $canEdit = $ownership->canEdit($request, $plan);
         $canManage = $ownership->owns($request, $plan);
