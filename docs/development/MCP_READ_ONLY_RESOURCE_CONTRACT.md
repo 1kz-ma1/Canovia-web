@@ -125,3 +125,16 @@ Sources:
 - https://modelcontextprotocol.io/specification/2025-11-25/basic/transports
 - https://modelcontextprotocol.io/specification/2025-11-25/server/tools
 - https://developers.openai.com/plugins/build/auth
+
+
+## Provider preflight without public activation (2026-10-09)
+
+A new **CLI-only** `canovia:mcp-staging-preflight` command verifies
+server-configured OAuth/Plan security switch readiness and, only with
+`--probe-metadata`, inspects a pinned HTTPS issuer discovery document.
+No token, account, Context or DB read/write occurs; no staging service,
+IdP tenant, ChatGPT client or production flag has been provisioned.
+The command never authorizes production activation—even when the metadata
+passes. Actual token `aud` / `client_id` and revocation semantics still
+require isolated IdP staging and end-to-end tests. See
+[staging runbook](MCP_STAGING_IDP_PREFLIGHT_CONTRACT.md).
