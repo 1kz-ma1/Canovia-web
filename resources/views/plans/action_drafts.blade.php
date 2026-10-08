@@ -126,7 +126,55 @@
                             @endforeach
                         </details>
                     @endif
+                    @php
+                        $hasSteps = $draft->steps->isNotEmpty();
+                        $stepsCurrent = $hasSteps && $draft->steps->every(fn ($step) => (int) $step->evidence_revision === (int) $draft->revision_no);
+                    @endphp
+                    @if ($hasSteps)
+                        <section class="mt-4 rounded-xl border border-sky-200 p-4" data-action-draft-steps="{{ $draft->id }}">
+                            <h3 class="text-sm font-bold text-sky-900">3段階のステップ案（{{ $draft->status === 'accepted' ? '承認済み' : '未承認' }}）</h3>
+                            <p class="mt-2 text-xs leading-5 text-slate-600">番号順の作業案です。承認時にTask ① → ② → ③ の前提関係を設定します。元のTask・進捗は書き換えません。作業時間は未見積もりです。</p>
+                            @if (! $stepsCurrent)
+                                <p class="mt-2 text-xs font-semibold text-amber-700" role="alert">記録の追加後に古くなった案です。再作成するまで承認できません。</p>
+                            @endif
+                            <ol class="mt-3 space-y-3">
+                                @foreach ($draft->steps as $step)
+                                    <li class="rounded-lg border border-slate-200 p-3 text-sm">
+                                        <p class="text-xs font-bold text-sky-700">STEP {{ $step->sort_order }}{{ $step->sort_order > 1 ? ' · 直前のステップ完了を前提' : '' }}</p>
+                                        <p class="mt-1 font-semibold text-slate-800">{{ $step->title }}</p>
+                                        @if ($step->accepted_task_id)
+                                            <p class="mt-1 text-xs text-slate-500">承認済みTask #{{ $step->accepted_task_id }}</p>
+                                        @endif
+                                    </li>
+                                @endforeach
+                            </ol>
+                            @if ($draft->status === 'proposed')
+                                @if ($stepsCurrent)
+                                    <form method="POST" action="{{ route('plans.action_drafts.steps.update', [$plan, $draft]) }}" class="mt-4 space-y-3">
+                                        @csrf @method('PATCH')
+                                        <input type="hidden" name="evidence_revision" value="{{ $draft->revision_no }}">
+                                        @foreach ($draft->steps as $step)
+                                            <label class="block text-xs font-semibold text-slate-700" for="step-title-{{ $step->id }}">STEP {{ $step->sort_order }} の作業名</label>
+                                            <input id="step-title-{{ $step->id }}" name="step_titles[{{ $step->id }}]" maxlength="255" required class="form-control w-full" value="{{ $step->title }}">
+                                        @endforeach
+                                        <button type="submit" class="btn-secondary">3つの作業案を修正する</button>
+                                    </form>
+                                @endif
+                                <form method="POST" action="{{ route('plans.action_drafts.steps.prepare', [$plan, $draft]) }}" class="mt-3">
+                                    @csrf
+                                    <input type="hidden" name="rebuild" value="1">
+                                    <p class="mb-2 text-xs text-slate-500">再作成すると手動で修正したステップ名は元に戻ります。提案の根拠と既存Taskは消えません。</p>
+                                    <button type="submit" class="btn-secondary">この記録からステップ案を再作成</button>
+                                </form>
+                            @endif
+                        </section>
+                    @endif
                     @if ($draft->status === 'proposed')
+                        @if (! $hasSteps)
+                            <form method="POST" action="{{ route('plans.action_drafts.steps.prepare', [$plan, $draft]) }}" class="mt-4">
+                                @csrf <button type="submit" class="btn-secondary">3段階のTask案を作る（未承認）</button>
+                            </form>
+                        @endif
                         <form method="POST" action="{{ route('plans.action_drafts.update', [$plan, $draft]) }}" class="mt-3 space-y-2">
                             @csrf @method('PATCH')
                             <label class="block text-xs font-bold text-slate-700" for="next-{{ $draft->id }}">次の行動案（編集可）</label>
@@ -156,7 +204,18 @@
                             </details>
                         @endif
                         <div class="mt-3 flex flex-wrap gap-3">
-                            <form method="POST" action="{{ route('plans.action_drafts.accept', [$plan, $draft]) }}">@csrf <button type="submit" class="btn-primary">承認してTaskに追加</button></form>
+                            @if (! $hasSteps)
+                                <form method="POST" action="{{ route('plans.action_drafts.accept', [$plan, $draft]) }}">
+                                    @csrf <input type="hidden" name="accept_mode" value="single">
+                                    <button type="submit" class="btn-primary">承認してTaskを1件追加</button>
+                                </form>
+                            @elseif ($stepsCurrent)
+                                <form method="POST" action="{{ route('plans.action_drafts.accept', [$plan, $draft]) }}">
+                                    @csrf <input type="hidden" name="accept_mode" value="bundle">
+                                    <input type="hidden" name="steps_fingerprint" value="{{ $stepService->fingerprint($draft->steps) }}">
+                                    <button type="submit" class="btn-primary">3つのTaskと前提関係を確認して承認</button>
+                                </form>
+                            @endif
                             <form method="POST" action="{{ route('plans.action_drafts.dismiss', [$plan, $draft]) }}">@csrf <button type="submit" class="btn-secondary">却下する</button></form>
                         </div>
                     @else

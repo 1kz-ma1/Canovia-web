@@ -14,6 +14,11 @@ final class PlanActionDraft extends Model
         'accepted_task_id', 'accepted_at', 'evidence_snapshots', 'revision_no'];
 
     protected function casts(): array { return ['accepted_at' => 'datetime', 'evidence_snapshots' => 'array', 'revision_no' => 'integer']; }
+    public function steps()
+    {
+        return $this->hasMany(PlanActionDraftStep::class)->orderBy('sort_order');
+    }
+
     public function revisions()
     {
         return $this->hasMany(PlanActionDraftRevision::class)->orderByDesc('to_revision');
