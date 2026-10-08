@@ -131,6 +131,17 @@
             ])
         </div>
     @else
+        @if (
+            filled(data_get($firstPlanContext ?? [], 'goal'))
+            && trim((string) data_get($firstPlanContext, 'goal')) === trim((string) $plan->title)
+            && (string) data_get($firstPlanContext, 'stage') === 'not_started'
+        )
+            <aside class="page-card p-4 sm:p-5" data-study-first-plan-guidance>
+                <p class="text-xs font-bold text-cyan-300">診断をもとにした初回ガイド</p>
+                <p class="mt-2 text-sm text-slate-200">まずは現在の理解度を確認し、学習範囲と最初の演習を決めましょう。</p>
+                <p class="mt-1 text-xs text-slate-400">タスクや実績が登録されると、実際の進捗に基づく案内を優先します。</p>
+            </aside>
+        @endif
         @switch($selectedSurface)
             @case('preparation')
                 @include('workspace.study.views.preparation')
