@@ -81,19 +81,20 @@
             <p class="text-[10px] font-black uppercase tracking-[.16em] text-sky-300">COMMON</p>
             <h2 class="mt-1 text-lg font-black text-slate-100">分かる範囲だけ</h2>
 
-            <div class="mt-4 grid gap-4 sm:grid-cols-2">
-                <label class="block">
+            <div class="mt-4 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                <label class="block min-w-0">
                     <span class="form-label">期限・試験日</span>
                     <input
                         type="date"
                         name="deadline"
                         value="{{ old('deadline', data_get($common, 'deadline')) }}"
-                        class="form-control mt-2"
+                        class="form-control mt-2 block w-full min-w-0 max-w-full"
+                        style="box-sizing: border-box;"
                     >
                     <span class="mt-1 block text-[11px] text-slate-500">未定なら空欄でOK。</span>
                 </label>
 
-                <label class="block">
+                <label class="block min-w-0">
                     <span class="form-label">1週間に使えそうな時間</span>
                     <select name="weekly_capacity" class="form-control mt-2">
                         @foreach ([
@@ -119,7 +120,7 @@
             <h2 class="mt-1 text-lg font-black text-slate-100">学習について少しだけ</h2>
 
             <div class="mt-4 space-y-4">
-                <label class="block">
+                <label class="block min-w-0">
                     <span class="form-label">何を学びたい？ <span class="font-normal text-slate-600">任意</span></span>
                     <input
                         type="text"
@@ -132,7 +133,7 @@
                 </label>
 
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <label class="block">
+                    <label class="block min-w-0">
                         <span class="form-label">学習の目的</span>
                         <select name="study_kind" class="form-control mt-2">
                             @foreach ([
@@ -146,7 +147,7 @@
                         </select>
                     </label>
 
-                    <label class="block">
+                    <label class="block min-w-0">
                         <span class="form-label">今の状態</span>
                         <select name="study_stage" class="form-control mt-2">
                             @foreach ([
@@ -172,7 +173,7 @@
             <h2 class="mt-1 text-lg font-black text-slate-100">開発について少しだけ</h2>
 
             <div class="mt-4 space-y-4">
-                <label class="block">
+                <label class="block min-w-0">
                     <span class="form-label">何を作る・改善する？ <span class="font-normal text-slate-600">任意</span></span>
                     <input
                         type="text"
@@ -185,7 +186,7 @@
                 </label>
 
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <label class="block">
+                    <label class="block min-w-0">
                         <span class="form-label">開発経験</span>
                         <select name="development_experience" class="form-control mt-2">
                             @foreach ([
@@ -198,7 +199,7 @@
                         </select>
                     </label>
 
-                    <label class="block">
+                    <label class="block min-w-0">
                         <span class="form-label">今の開発段階</span>
                         <select name="development_stage" class="form-control mt-2">
                             @foreach ([
@@ -211,7 +212,7 @@
                         </select>
                     </label>
 
-                    <label class="block">
+                    <label class="block min-w-0">
                         <span class="form-label">GitHubを使っている？</span>
                         <select name="github_usage" class="form-control mt-2">
                             @foreach ([
@@ -224,7 +225,7 @@
                         </select>
                     </label>
 
-                    <label class="block">
+                    <label class="block min-w-0">
                         <span class="form-label">対象Repositoryはある？</span>
                         <select name="repository_ready" class="form-control mt-2">
                             @foreach ([
