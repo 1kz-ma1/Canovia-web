@@ -2393,6 +2393,94 @@ final class GitHubRepositoryWriter
     }
 
     /**
+     * Read the document version immediately before its latest edit at the
+     * observed head SHA. Neither SHA is accepted from a browser request.
+     * The same public-repository boundary applies to historical content.
+     *
+     * @return array{sha:string,content:string}|null
+     */
+    public function readPreviousDevelopmentRoadmapMarkdown(
+        string $repoFullName,
+        string $currentSha,
+    ): ?array {
+        if (! preg_match('/^[a-f0-9]{40}$/D', $currentSha)) {
+            throw new \InvalidArgumentException('Invalid observed roadmap SHA.');
+        }
+
+        $context = $this->developmentReadContext(
+            $repoFullName,
+            'contents',
+            'Contents',
+        );
+        /** @var PendingRequest $client */
+        $client = $context['client'];
+        $repoPath = (string) $context['repo_path'];
+
+        $repoResponse = $client->get('/repos/'.$repoPath);
+        $repository = $repoResponse->successful() ? $repoResponse->json() : null;
+        if (! is_array($repository)
+            || ($repository['private'] ?? null) !== false
+            || ($repository['visibility'] ?? null) !== 'public') {
+            throw new RuntimeException('Private / Internal Repositoryの履歴は現在表示できません。');
+        }
+
+        $historyResponse = $client->get('/repos/'.$repoPath.'/commits', [
+            'sha' => $currentSha,
+            'path' => 'docs/development/ROADMAP.md',
+            'per_page' => 2,
+        ]);
+        if (! $historyResponse->successful()) {
+            throw new RuntimeException('Roadmapの更新履歴を取得できませんでした。');
+        }
+
+        $history = $historyResponse->json();
+        if (! is_array($history) || ! array_is_list($history)) {
+            throw new RuntimeException('Roadmap更新履歴の形式が不正です。');
+        }
+        if (count($history) < 2) {
+            return null;
+        }
+
+        // GitHub returns document-touching commits in descending order.
+        // Both commits must be valid before requesting any historical content.
+        $latestDocumentSha = (string) data_get($history, '0.sha', '');
+        $previousSha = (string) data_get($history, '1.sha', '');
+        if (! preg_match('/^[a-f0-9]{40}$/D', $latestDocumentSha)
+            || ! preg_match('/^[a-f0-9]{40}$/D', $previousSha)
+            || $latestDocumentSha === $previousSha) {
+            throw new RuntimeException('Roadmapの前回revisionを特定できませんでした。');
+        }
+
+        $response = $client->get(
+            '/repos/'.$repoPath.'/contents/docs/development/ROADMAP.md',
+            ['ref' => $previousSha],
+        );
+        if (! $response->successful()) {
+            throw new RuntimeException('Roadmapの前回revisionを取得できませんでした。');
+        }
+
+        $file = $response->json();
+        if (! is_array($file) || ($file['type'] ?? null) !== 'file'
+            || ($file['encoding'] ?? null) !== 'base64'
+            || ! is_string($file['content'] ?? null)
+            || (int) ($file['size'] ?? -1) < 0
+            || (int) ($file['size'] ?? -1) > self::MAX_CONTENT_BYTES) {
+            throw new RuntimeException('Roadmap前回revisionの形式またはサイズが不正です。');
+        }
+        $content = base64_decode(
+            preg_replace('/\\s+/', '', $file['content']) ?: '',
+            true,
+        );
+        if (! is_string($content)
+            || strlen($content) > self::MAX_CONTENT_BYTES
+            || strlen($content) !== (int) $file['size']) {
+            throw new RuntimeException('Roadmap前回revisionの内容を安全に読み取れませんでした。');
+        }
+
+        return ['sha' => $previousSha, 'content' => $content];
+    }
+
+    /**
      * Read a small, explicit set of PR references. No Plan/Task updates.
      * An installed GitHub App is NOT user authorization for private repos:
      * the Phase 2 reader fails closed on private/internal repositories.
