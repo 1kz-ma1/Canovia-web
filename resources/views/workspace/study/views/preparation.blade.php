@@ -22,6 +22,15 @@
             </p>
         </div>
 
+        @if (str_contains($plan->title.' '.($plan->description ?? ''), '簿記'))
+            <div class="mt-5 rounded-2xl border border-amber-300/20 bg-amber-300/[0.03] p-4" data-study-bookkeeping-starting-point>
+                <p class="text-[10px] font-black uppercase tracking-[.12em] text-amber-300">ADAPTIVE STARTING POINT</p>
+                <h3 class="mt-2 text-sm font-black text-slate-100">3級の復習から2級の先取りまで、理解度に合わせて決める</h3>
+                <p class="mt-2 text-xs leading-5 text-slate-400">授業で習った範囲を一律にやり直さず、基礎の12問で復習候補を確認します。結果から2級の導入を試すか判断するための参考にします。</p>
+                <a href="{{ route('plans.bookkeeping_placement.show', $plan) }}" class="btn-secondary mt-3 inline-flex min-h-11 items-center px-4 text-xs" data-study-bookkeeping-diagnostic-link>現在地を診断する →</a>
+            </div>
+        @endif
+
         <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <a href="{{ route('plans.study_scope.index', $plan) }}" class="rounded-2xl border border-white/8 bg-slate-950/25 p-4 transition hover:border-sky-300/30">
                 <div class="flex items-start justify-between gap-3">

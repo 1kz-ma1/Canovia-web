@@ -61,6 +61,7 @@ use App\Http\Controllers\StudyLanguageActivityController;
 use App\Http\Controllers\StudyResourceActivityController;
 use App\Http\Controllers\StudyScopeCaptureController;
 use App\Http\Controllers\StudyScoreController;
+use App\Http\Controllers\BookkeepingPlacementController;
 use App\Http\Controllers\StudyLearningTypeController;
 use App\Http\Controllers\StudyAdaptiveActionController;
 use App\Http\Controllers\StudyRecallController;
@@ -480,6 +481,15 @@ Route::post('/plans/{plan}/study-scope/{capture}/confirm', [StudyScopeCaptureCon
     ->name('plans.study_scope.confirm');
 Route::delete('/plans/{plan}/study-scope/{capture}', [StudyScopeCaptureController::class, 'destroy'])
     ->name('plans.study_scope.destroy');
+
+// V58.61 A user-confirmed bookkeeping foundation diagnostic records its own
+// source-labelled evidence, without changing Task progress or forcing grade order.
+Route::get('/plans/{plan}/bookkeeping-placement', [BookkeepingPlacementController::class, 'show'])
+    ->middleware('release.level:1')
+    ->name('plans.bookkeeping_placement.show');
+Route::post('/plans/{plan}/bookkeeping-placement', [BookkeepingPlacementController::class, 'store'])
+    ->middleware(['release.level:1', 'throttle:12,1'])
+    ->name('plans.bookkeeping_placement.store');
 
 // V56.16 Score / Baseline Evidence: external score scale is kept separate from Practice accuracy.
 Route::get('/plans/{plan}/study-scores', [StudyScoreController::class, 'index'])
