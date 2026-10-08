@@ -33,8 +33,8 @@
 | P0.0 | P0 | 本仕様書を統合しPR順序を固定 | 文書のみ、CI成功、レビュー | [x] (PR #343) |
 | P0.1 | P0 | **HINANEX / 旧「制作活動」救済**。Developmentから既存制作Planを明示的に探して開けるようにする。対象を全Creativeへ勝手にDevelopment分類しない | 所有者・編集者・閲覧者の権限、他人のPlan隔離、既存Creativeの振分けを保持。変更がカテゴリデータを書き換えるなら手動マージ | [x] (PR #344; session-only救済、Domain永続分離はP1.1) |
 | P0.2 | P0 | **Studyの既知試験範囲/未観測理解度の分離**。公的試験の登録Scope=0は「公式範囲が未確定」の根拠にしない。既知の試験は取得元/版を示し診断へ、学校別テストは必要なら範囲表を求める | APの初回Actionで「試験範囲を確定する」が最優先にならない。未取得時は取得状況を正直に表示、公式範囲を捏造しない。公式内容のソース・適用年を検証 | [x] (PR #346 / AP 2026シラバスVer.7.2参照、理解度Actionへ) |
-| P0.3 | P0 | **Overview関連性フィルタ**。未使用Mode・空Inbox・無Evidence Readiness・重複Actionを抑制。モード発見は別の導線に残す | Studyだけ/Developmentだけ/三分野/未利用/共有Plan/通知0の画面を回帰検証。優先推薦の投影元とアクセス制御は保持 | [ ] (V58.65実装中: CIとマージ待ち) |
-| P0.4 | P0 | **旧Roadmap/Plan作成案内の更新**。手動・AI/JSONは上級者/互換導線へ後退、通常は「目標→今できる行動」へ | 既存Plan編集・旧Roadmap自体は削除しない。新規/既存ユーザー双方の復帰・手動編集が可能 | [ ] |
+| P0.3 | P0 | **Overview関連性フィルタ**。未使用Mode・空Inbox・無Evidence Readiness・重複Actionを抑制。モード発見は別の導線に残す | Studyだけ/Developmentだけ/三分野/未利用/共有Plan/通知0の画面を回帰検証。優先推薦の投影元とアクセス制御は保持 | [x] (PR #347 / V58.65) |
+| P0.4 | P0 | **旧Roadmap/Plan作成案内の更新**。手動・AI/JSONは上級者/互換導線へ後退、通常は「目標→今できる行動」へ | 既存Plan編集・旧Roadmap自体は削除しない。新規/既存ユーザー双方の復帰・手動編集が可能 | [ ] (V58.66実装中: CI/マージ待ち) |
 | P1.1 | P1 | **Domain / Collaboration / Specializationの分離**。既存`category`との後方互換、本人の訂正、曖昧なときだけ確認。チーム専用のTask/担当/依存関係投影を段階拡張 | 制作活動を一律開発にしない。所属・表示・通知の誤分類を防ぐ。新DB・一括マイグレーションは手動判断 | [ ] |
 | P1.2 | P1 | **行動起点のPlan Draft**。小さな最初の行動→実績から候補構造を作る。draft/proposed/accepted を区別、既存Taskを勝手に変更しない | 生成根拠の提示、本人承認/修正/却下、冪等、再生成時の差分、AI費用上限・失敗時の実行継続 | [ ] |
 | P1.3 | P1 | **計画案の完成通知/スポットライト**。準備ができたとき一度だけ光る案内で計画を閲覧・修正可能にする | 重要な作業を遮らない、スクリーンリーダー・reduced-motion・PWA/Swift WKWebView・何度も表示しない | [ ] |
@@ -86,7 +86,7 @@ Scopeには `source`, `reference`, `version/applicable_period`, `verified_at`, `
 - 2026-10-08: **PR #343** 一時仕様書をmainへ統合。CI 2件成功。
 - 2026-10-08: **PR #344 (V58.63)** 旧Creative PlanをDevelopment Top/Workspaceから、本人の明示選択で利用できるSession-only救済をmainへ統合。CI 2件成功。Planの`category`/`is_collaborative`/権限は変更せず、元のCreativeを全件Developmentへ再分類しない。Development IntelligenceのDomain guardは維持し、救済表示中に誤ったRelease評価を行わない。
 - 実機・Render本番への反映は未確認。HINANEXの実DBレコードのカテゴリ・共同設定自体も未確認であり、今回のPRでは推測による既存データ更新をしていない。
-- 次のP0は **P0.2 AP既知試験範囲の誤推薦**、その後 P0.3 Overview表示整理と P0.4 旧ロードマップ導線。
+- P0.2 / P0.3 は実装・統合済み。次は **P0.4 旧ロードマップ/初回作成導線**。
 
 ### 2026-10-08 追加のMerge運用
 
@@ -97,7 +97,13 @@ Scopeには `source`, `reference`, `version/applicable_period`, `verified_at`, `
 
 - **PR #346 (V58.64) merged**, required CI 2 jobs green: AP 2026 IPA official syllabus Ver.7.2 vs measured learner state separation, Study/Overview first-action correction, owner merge permission documentation.
 - **PR #342 (V58.62) merged** after rebuilding on latest main and rerunning required CI 2 jobs green. The original PR number is retained.
-- **V58.65 (P0.3)** implements Overview relevance filtering, empty Inbox/Changes hiding, unmeasured Readiness suppression and de-duplicated Global/Mode Action. Complete only after CI and merge.
+- **PR #347 / V58.65 (P0.3) merged** with both CI jobs successful. Overviewの空カード/未利用Mode/重複Actionを整理。
+
+### 2026-10-08 P0.4進行
+
+- **V58.66** は作成フォームの旧「AIにコピー→JSONでロードマップ」説明を削除し、Plan作成後の強制AI初期タスク生成を解除する。Categoryが既存Workspaceに対応する場合は直接Workspaceへ、未分類やCreativeのPlanはPlan詳細で今できる行動を選ぶ。AI初期タスク生成は任意の補助機能として維持。
+- タスクのないPlanは完成済みロードマップとして誤表示せず、作業・方針の記録を最初の入口とする。タスクのある既存Planのロードマップは維持する。
+- **未実装:** 行動履歴からのPlan Draft自動作成、本人承認、スポットライト通知。P1.2/P1.3を完了扱いにしない。
 
 ## 7. 更新運用と破棄条件
 

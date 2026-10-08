@@ -136,8 +136,8 @@ class PlanController extends Controller
                     }
 
                     return redirect()
-                        ->route('plans.ai_task_assistant.show', $existingPlan)
-                        ->with('status', 'この目標はすでにPlanへ接続済みです。続きから開きました。');
+                        ->route('plans.show', $existingPlan)
+                        ->with('status', 'この目標はすでにPlanへ接続済みです。現在の状況から続けられます。');
                 }
             }
 
@@ -228,8 +228,8 @@ class PlanController extends Controller
                 return $workspaceRedirect;
             }
 
-            return redirect()->route('plans.ai_task_assistant.show', $plan)
-                ->with('status', 'この計画はすでに作成済みです。重複を作らず、続きから開きました。');
+            return redirect()->route('plans.show', $plan)
+                ->with('status', 'この計画はすでに作成済みです。重複を作らず、今の状態から続けられます。');
         }
 
         if (
@@ -290,8 +290,8 @@ class PlanController extends Controller
             return $workspaceRedirect;
         }
 
-        return redirect()->route('plans.ai_task_assistant.show', $plan)
-            ->with('status', '計画の基本情報を作成しました。続けてAIで初期タスクを生成できます。');
+        return redirect()->route('plans.show', $plan)
+            ->with('status', '目標を保存しました。まず今できることから始めましょう。タスクやロードマップは必要になった時点で整理できます。');
     }
 
     /**
@@ -345,16 +345,29 @@ class PlanController extends Controller
         WorkspaceModeRegistry $workspaceModes,
         bool $alreadyExists = false,
     ): ?RedirectResponse {
-        $mode = WorkspaceMode::tryFrom(trim((string) $rawMode));
-        if (! $mode instanceof WorkspaceMode || $mode === WorkspaceMode::Overview) {
-            return null;
-        }
-
-        $definition = $workspaceModes->definition($mode);
         $profile = $categoryProfiles->forPlan($plan);
+        $explicitMode = trim((string) $rawMode);
+        // A generic Plan form must not funnel every new Plan through AI Task
+        // generation. When the chosen category maps to an available Workspace,
+        // continue there without making the user pick that mode again.
+        // A mismatching explicit Workspace hint is never silently replaced.
+        if ($explicitMode === '') {
+            $definition = $workspaceModes->forProfile($profile->key);
+            if ($definition === null) {
+                return null;
+            }
 
-        if (! $definition->supportsProfile($profile->key)) {
-            return null;
+            $mode = $definition->mode;
+        } else {
+            $mode = WorkspaceMode::tryFrom($explicitMode);
+            if (! $mode instanceof WorkspaceMode || $mode === WorkspaceMode::Overview) {
+                return null;
+            }
+
+            $definition = $workspaceModes->definition($mode);
+            if (! $definition->supportsProfile($profile->key)) {
+                return null;
+            }
         }
 
         $message = $alreadyExists

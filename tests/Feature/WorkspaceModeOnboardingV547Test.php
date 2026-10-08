@@ -198,7 +198,7 @@ class WorkspaceModeOnboardingV547Test extends TestCase
             ->firstOrFail();
 
         $response->assertRedirect(
-            route('plans.ai_task_assistant.show', $plan),
+            route('plans.show', $plan),
         );
         $this->assertSame('個人開発', $plan->category);
     }

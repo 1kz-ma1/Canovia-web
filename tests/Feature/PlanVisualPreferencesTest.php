@@ -27,7 +27,7 @@ class PlanVisualPreferencesTest extends TestCase
         ]);
 
         $plan = Plan::where('title', 'Visual Plan')->firstOrFail();
-        $response->assertRedirect(route('plans.ai_task_assistant.show', $plan));
+        $response->assertRedirect(route('workspace.development.index', ['plan_id' => $plan->id]));
         $this->assertSame('🚀', $plan->visual_icon);
         $this->assertSame('violet', $plan->accentKey());
         $this->assertSame('space', $plan->roadmapWorld());

@@ -186,7 +186,7 @@ class CareerWorkspaceModeV551Test extends TestCase
         $plan = Plan::query()->where('title', '開発転向')->firstOrFail();
 
         $response->assertRedirect(
-            route('plans.ai_task_assistant.show', $plan),
+            route('plans.show', $plan),
         );
     }
 

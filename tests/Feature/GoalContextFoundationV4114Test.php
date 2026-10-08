@@ -21,7 +21,7 @@ class GoalContextFoundationV4114Test extends TestCase
         $this->withoutVite();
     }
 
-    public function test_plan_creation_creates_low_readiness_goal_context_without_changing_existing_redirect(): void
+    public function test_plan_creation_creates_low_readiness_goal_context_and_opens_plan_state(): void
     {
         $user = User::factory()->create();
 
@@ -33,7 +33,7 @@ class GoalContextFoundationV4114Test extends TestCase
 
         $plan = Plan::query()->where('title', 'サッカーが上手くなりたい')->firstOrFail();
 
-        $response->assertRedirect(route('plans.ai_task_assistant.show', $plan));
+        $response->assertRedirect(route('plans.show', $plan));
 
         $context = GoalContext::query()->where('plan_id', $plan->id)->firstOrFail();
         $this->assertSame('サッカーが上手くなりたい', $context->desired_state);
