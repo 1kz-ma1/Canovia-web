@@ -34,6 +34,10 @@ The owner of a personal Development Plan can prepare the proposed `chatgpt` shar
 
 Canovia includes a **deny-all** `/api/mcp` probe and optional protected resource discovery metadata for testing a future OAuth integration. Even when a legitimate-looking Authorization header is supplied, all MCP requests return unauthorized; prior sharing-preparation records do not grant access. The discovery feature is disabled unless server-owned HTTPS resource/issuer settings are explicitly configured. A real OAuth authorization server, token verifier, formal consent and MCP tool handler are **not** provided in this slice. See [MCP protected-resource contract](MCP_OAUTH_RESOURCE_GATE_CONTRACT.md).
 
+## Current: external token validation component (not activated)
+
+A disabled RFC 7662 token introspection adapter is implemented and tested independently. It can verify an IdP's issued resource-bound access token with `active`, `iss`, `sub`, `aud`, `client_id`, `exp` and `scope` claims but **cannot map that external identity to a Canovia user** or grant Plan permission. The public `/api/mcp` remains deny-all. See [MCP token verification contract](MCP_TOKEN_INTROSPECTION_CONTRACT.md).
+
 ## Future: direct delegated AI → Canovia read
 
 A coding AI that needs **Canovia-private Plan context** (as opposed to GitHub-public specifications) requires a different authorization boundary. A connected GitHub account alone is not evidence that the agent may read the user's Canovia Plans.
