@@ -32,8 +32,8 @@
 |---|---|---|---|---|
 | P0.0 | P0 | 本仕様書を統合しPR順序を固定 | 文書のみ、CI成功、レビュー | [x] (PR #343) |
 | P0.1 | P0 | **HINANEX / 旧「制作活動」救済**。Developmentから既存制作Planを明示的に探して開けるようにする。対象を全Creativeへ勝手にDevelopment分類しない | 所有者・編集者・閲覧者の権限、他人のPlan隔離、既存Creativeの振分けを保持。変更がカテゴリデータを書き換えるなら手動マージ | [x] (PR #344; session-only救済、Domain永続分離はP1.1) |
-| P0.2 | P0 | **Studyの既知試験範囲/未観測理解度の分離**。公的試験の登録Scope=0は「公式範囲が未確定」の根拠にしない。既知の試験は取得元/版を示し診断へ、学校別テストは必要なら範囲表を求める | APの初回Actionで「試験範囲を確定する」が最優先にならない。未取得時は取得状況を正直に表示、公式範囲を捏造しない。公式内容のソース・適用年を検証 | [ ] (V58.64実装中: IPA Ver.7.2参照, 理解度優先) |
-| P0.3 | P0 | **Overview関連性フィルタ**。未使用Mode・空Inbox・無Evidence Readiness・重複Actionを抑制。モード発見は別の導線に残す | Studyだけ/Developmentだけ/三分野/未利用/共有Plan/通知0の画面を回帰検証。優先推薦の投影元とアクセス制御は保持 | [ ] |
+| P0.2 | P0 | **Studyの既知試験範囲/未観測理解度の分離**。公的試験の登録Scope=0は「公式範囲が未確定」の根拠にしない。既知の試験は取得元/版を示し診断へ、学校別テストは必要なら範囲表を求める | APの初回Actionで「試験範囲を確定する」が最優先にならない。未取得時は取得状況を正直に表示、公式範囲を捏造しない。公式内容のソース・適用年を検証 | [x] (PR #346 / AP 2026シラバスVer.7.2参照、理解度Actionへ) |
+| P0.3 | P0 | **Overview関連性フィルタ**。未使用Mode・空Inbox・無Evidence Readiness・重複Actionを抑制。モード発見は別の導線に残す | Studyだけ/Developmentだけ/三分野/未利用/共有Plan/通知0の画面を回帰検証。優先推薦の投影元とアクセス制御は保持 | [ ] (V58.65実装中: CIとマージ待ち) |
 | P0.4 | P0 | **旧Roadmap/Plan作成案内の更新**。手動・AI/JSONは上級者/互換導線へ後退、通常は「目標→今できる行動」へ | 既存Plan編集・旧Roadmap自体は削除しない。新規/既存ユーザー双方の復帰・手動編集が可能 | [ ] |
 | P1.1 | P1 | **Domain / Collaboration / Specializationの分離**。既存`category`との後方互換、本人の訂正、曖昧なときだけ確認。チーム専用のTask/担当/依存関係投影を段階拡張 | 制作活動を一律開発にしない。所属・表示・通知の誤分類を防ぐ。新DB・一括マイグレーションは手動判断 | [ ] |
 | P1.2 | P1 | **行動起点のPlan Draft**。小さな最初の行動→実績から候補構造を作る。draft/proposed/accepted を区別、既存Taskを勝手に変更しない | 生成根拠の提示、本人承認/修正/却下、冪等、再生成時の差分、AI費用上限・失敗時の実行継続 | [ ] |
@@ -77,7 +77,7 @@ Scopeには `source`, `reference`, `version/applicable_period`, `verified_at`, `
 - 各Sliceで別PR、変更したロジックをFeature/Unit回帰テストで実証、既存の必須CIを完了。
 - データスキーマ・保存意味論・所有/閲覧権限・診断PDF・AIによる実データ更新・Release Level変更はユーザーの手動マージ判断。
 - 画面表示・文言・ドキュメント等の可逆な低影響変更は条件を満たせばagent squash merge可。mainのCI通過はRenderの本番反映確認ではない。
-- V58.62 **PR #342はmainとの差分競合が発生**。競合解消後に関連・必須CIを再実行し、成功・マージ可能なら2026-10-08オーナー承認に基づいてマージする。
+- V58.62 **PR #342は競合修正後にCI再成功、main統合済み（commit 9a014f3）**。次の簿記課題は内容と問題数、定着測定の拡張。
 - 先行利用前には AP/簿記/Career/チーム開発それぞれで新規登録から実機E2E、403/500・非ログイン・権限・リロード・データ削除導線を確認。
 - 個人情報の解析や音声機能は安全ゲート未通過では非公開。CareerのBeta/Release Levelを自動昇格しない。
 
@@ -92,6 +92,12 @@ Scopeには `source`, `reference`, `version/applicable_period`, `verified_at`, `
 
 - オーナーは「今はテスト成功なら全てマージを許可」と明示。以前の「影響大なら必ず手動マージ」規則を**承認ゲートについて**上書きする。
 - ただし関連テスト・必須CI、実際の差分レビュー、GitHubのマージ可能状態、必要なレビュー/保護、未解決のデータ/セキュリティ問題の確認は必須。コンフリクトや検証不足があればマージしない。Render本番の反映・実機確認は別。
+
+### 2026-10-08 P0.2/P0.3進行
+
+- **PR #346 (V58.64) merged**, required CI 2 jobs green: AP 2026 IPA official syllabus Ver.7.2 vs measured learner state separation, Study/Overview first-action correction, owner merge permission documentation.
+- **PR #342 (V58.62) merged** after rebuilding on latest main and rerunning required CI 2 jobs green. The original PR number is retained.
+- **V58.65 (P0.3)** implements Overview relevance filtering, empty Inbox/Changes hiding, unmeasured Readiness suppression and de-duplicated Global/Mode Action. Complete only after CI and merge.
 
 ## 7. 更新運用と破棄条件
 
