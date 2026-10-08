@@ -10,8 +10,9 @@ use App\Models\Plan;
  * Read-only eligibility evaluation for a FUTURE OAuth-linked MCP request.
  *
  * This is not an authentication middleware. The caller must first introspect
- * the bearer token; no HTTP endpoint currently creates links/consents or
- * invokes this policy. Default configuration always denies.
+ * the bearer token. The separately disabled MCP resource invokes this
+ * policy in a locked transaction; no user email or session grants access.
+ * Default configuration always denies.
  */
 final class McpDelegatedPlanAccessPolicy
 {
@@ -106,7 +107,7 @@ final class McpDelegatedPlanAccessPolicy
         }
 
         // An overview-only grant must NEVER authorize Task title/progress data.
-        return $requestedScope === 'overview' || $grant->scope === 'tasks'
+        return ($requestedScope === 'overview' || $grant->scope === 'tasks')
             ? $grant
             : null;
     }
