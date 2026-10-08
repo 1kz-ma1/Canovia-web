@@ -673,6 +673,8 @@ class PersonalizationBootstrapV5825Test extends TestCase
             ->assertSee('data-study-scope-next-action', false)
             ->assertSee($workspaceUrl, false);
 
+        $this->flushSession();
+
         $this->actingAs($user)
             ->withSession(['success' => '試験範囲を読み取りました。'])
             ->get(route('plans.study_scope.index', $plan))
