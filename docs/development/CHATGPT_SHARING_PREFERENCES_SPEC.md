@@ -25,6 +25,10 @@ In Development **作業** for eligible owned personal Plans, show a compact `Cha
 
 The account page lists all still-prepared entries (including expired entries) for the current user, with a cancellation form. If ownership has changed, hide the Plan's current title. This is an essential cancellation fallback when a Plan is no longer accessible through Development Work.\n\nThe existing owner-only manual Context preview remains independent. UI renders escaped labels; submissions use Laravel CSRF-protected forms and redirect back to Development Work. No JS dependency for save/revoke.
 
+## Current MCP OAuth discovery/probe implementation (no delegated access)
+
+A disabled-by-default `/api/mcp` authorization probe and RFC 9728 protected resource metadata routes are in place as a separate slice. They never accept bearer tokens or return private Context, even if the user previously saved a `prepared` sharing preference. See [MCP OAuth resource gate contract](MCP_OAUTH_RESOURCE_GATE_CONTRACT.md). Actual ChatGPT authorization, formal consent, an OAuth provider, token validation and JSON-RPC tools are still **not implemented**.
+
 ## Future OAuth/MCP — separate gated phase
 
 Never expose the new tables as an access-check substitute. A secure MCP read requires ChatGPT-specific client identification (CIMD/DCR/pre-registered), resource metadata and authorization-server metadata, OAuth 2.1 Authorization Code + PKCE S256, `resource`/audience binding, short-lived tokens, scopes, revocation and token verification on **every** tool call. Do not use existing HMAC activity credentials as OAuth.
