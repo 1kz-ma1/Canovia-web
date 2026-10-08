@@ -136,8 +136,8 @@ class PlanController extends Controller
                     }
 
                     return redirect()
-                        ->route('plans.ai_task_assistant.show', $existingPlan)
-                        ->with('status', 'この目標はすでにPlanへ接続済みです。続きから開きました。');
+                        ->route('plans.show', $existingPlan)
+                        ->with('status', 'この目標はすでにPlanへ接続済みです。実績と次の行動から続きを進められます。');
                 }
             }
 
@@ -228,8 +228,8 @@ class PlanController extends Controller
                 return $workspaceRedirect;
             }
 
-            return redirect()->route('plans.ai_task_assistant.show', $plan)
-                ->with('status', 'この計画はすでに作成済みです。重複を作らず、続きから開きました。');
+            return redirect()->route('plans.show', $plan)
+                ->with('status', 'この計画はすでに作成済みです。重複を作らず、実績と次の行動から再開できます。');
         }
 
         if (
@@ -290,8 +290,8 @@ class PlanController extends Controller
             return $workspaceRedirect;
         }
 
-        return redirect()->route('plans.ai_task_assistant.show', $plan)
-            ->with('status', '計画の基本情報を作成しました。続けてAIで初期タスクを生成できます。');
+        return redirect()->route('plans.show', $plan)
+            ->with('status', '目標を登録しました。今できることや実績から進められます。詳細な計画やAIの初期タスク生成は必要なときに利用できます。');
     }
 
     /**
@@ -345,15 +345,21 @@ class PlanController extends Controller
         WorkspaceModeRegistry $workspaceModes,
         bool $alreadyExists = false,
     ): ?RedirectResponse {
-        $mode = WorkspaceMode::tryFrom(trim((string) $rawMode));
-        if (! $mode instanceof WorkspaceMode || $mode === WorkspaceMode::Overview) {
-            return null;
-        }
-
-        $definition = $workspaceModes->definition($mode);
         $profile = $categoryProfiles->forPlan($plan);
+        $explicitMode = trim((string) $rawMode);
+        // The user should not need to name an internal Workspace category
+        // just to find the first actionable screen for a recognized Plan.
+        // Preserve an explicit mode only when it matches the saved profile.
+        $definition = $explicitMode !== ''
+            ? $workspaceModes->definition(
+                WorkspaceMode::tryFrom($explicitMode) ?? WorkspaceMode::Overview,
+            )
+            : $workspaceModes->forProfile($profile->key);
+        $mode = $definition?->mode;
 
-        if (! $definition->supportsProfile($profile->key)) {
+        if (! $mode instanceof WorkspaceMode
+            || $mode === WorkspaceMode::Overview
+            || ! $definition->supportsProfile($profile->key)) {
             return null;
         }
 
