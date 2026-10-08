@@ -67,6 +67,15 @@ claim checks. ChatGPT supports CIMD client identity and PKCE S256; verify
 the provider's exact issuer, client metadata, redirect URI, resource indicators
 and required token fields before enabling any integration.
 
+## Separately staged Plan authorization policy (still disabled)
+
+`McpDelegatedPlanAccessPolicy` and initially empty `mcp_linked_subjects` /
+`mcp_delegated_grants` tables can check an external subject's durable
+fingerprint, current Canovia owner/Development/noncollaborative state and
+exact Plan/client/resource/scope/time-limited grant. It is intentionally OFF
+and not called by `/api/mcp`. No link-creation or formal-consent path exists.
+See [delegated Plan policy contract](MCP_DELEGATED_PLAN_POLICY_CONTRACT.md).
+
 ## What remains absolutely denied
 
 - `GET|POST|DELETE /api/mcp` continues to **always return 401** if discovery

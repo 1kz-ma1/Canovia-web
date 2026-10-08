@@ -33,6 +33,14 @@ A disabled-by-default `/api/mcp` authorization probe and RFC 9728 protected reso
 
 The disabled `McpAccessTokenIntrospector` can verify compatible RFC 7662 introspection claims from an explicitly configured real OAuth provider. It is not wired to the MCP route and cannot authorize Plan access or convert preparation into approval. The verified external subject still needs a separate, consented, immutable actor identity binding. See [MCP token introspection contract](MCP_TOKEN_INTROSPECTION_CONTRACT.md).
 
+## Inactive identity-link/Plan-consent policy
+
+The MCP foundation now contains initially empty identity-link and delegated
+grant tables and a disabled Plan access policy. These are not created by
+`prepared` sharing preferences. No actor binding or actual OAuth approval
+can occur yet: only a future verified dual-identity flow may create link and
+consent records. See [delegated Plan policy](MCP_DELEGATED_PLAN_POLICY_CONTRACT.md).
+
 ## Future OAuth/MCP — separate gated phase
 
 Never expose the new tables as an access-check substitute. A secure MCP read requires ChatGPT-specific client identification (CIMD/DCR/pre-registered), resource metadata and authorization-server metadata, OAuth 2.1 Authorization Code + PKCE S256, `resource`/audience binding, short-lived tokens, scopes, revocation and token verification on **every** tool call. Do not use existing HMAC activity credentials as OAuth.

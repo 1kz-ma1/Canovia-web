@@ -38,6 +38,14 @@ Canovia includes a **deny-all** `/api/mcp` probe and optional protected resource
 
 A disabled RFC 7662 token introspection adapter is implemented and tested independently. It can verify an IdP's issued resource-bound access token with `active`, `iss`, `sub`, `aud`, `client_id`, `exp` and `scope` claims but **cannot map that external identity to a Canovia user** or grant Plan permission. The public `/api/mcp` remains deny-all. See [MCP token verification contract](MCP_TOKEN_INTROSPECTION_CONTRACT.md).
 
+## Current: internal delegated Plan permission policy (inactive)
+
+New tables model immutable IdP subject links and per-Plan/client/resource consent,
+and an OFF-by-default policy enforces current owner/Development/non-team/scope
+conditions. There is no public account-linking or consent creation route, no
+OAuth callback, no active grants and no live MCP tool. See
+[Delegated Plan policy](MCP_DELEGATED_PLAN_POLICY_CONTRACT.md).
+
 ## Future: direct delegated AI → Canovia read
 
 A coding AI that needs **Canovia-private Plan context** (as opposed to GitHub-public specifications) requires a different authorization boundary. A connected GitHub account alone is not evidence that the agent may read the user's Canovia Plans.
