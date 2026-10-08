@@ -35,6 +35,7 @@
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <a href="{{ route('plans.show', $plan) }}" class="btn-secondary">Planへ戻る</a>
+                        <a href="{{ route('plans.tasks.learning.index', [$plan, $task]) }}" class="btn-secondary" data-adaptive-learning-entry>1問から学習（新方式）</a>
                         <form method="POST" action="{{ route('plans.tasks.study_practice.reset', [$plan, $task]) }}">
                             @csrf
                             <button type="submit" class="btn-secondary">新しい演習を作る</button>
