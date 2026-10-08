@@ -566,3 +566,13 @@
     </div>
 </details>
 </div>
+
+{{-- Personal Development only. Shared/Creative Plans must not expose other actors' Context. --}}
+@if (($canManage ?? false)
+    && $plan->user_id !== null
+    && auth()->check()
+    && (int) $plan->user_id === (int) auth()->id()
+    && ! $plan->is_collaborative
+    && app(\App\Services\PlanCategoryProfileService::class)->forPlan($plan)->key === 'development')
+    @include('workspace.development.partials.private-ai-context-preview')
+@endif
