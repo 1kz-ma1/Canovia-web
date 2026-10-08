@@ -56,7 +56,7 @@ final class McpProtectedResourceGateTest extends TestCase
                     'authorization_servers' => ['https://auth.example.test/tenant'],
                     'scopes_supported' => ['canovia.development.read'],
                 ])
-                ->assertHeader('Cache-Control', 'no-store')
+                ->assertHeader('Cache-Control', 'no-store, private')
                 ->assertHeader('X-Content-Type-Options', 'nosniff');
         }
 
