@@ -66,7 +66,7 @@ final class DevelopmentRoadmapPrEvidenceTest extends TestCase
         Http::assertSent(fn (HttpRequest $request) =>
             str_contains($request->url(), '/commits/'.$headSha.'/check-runs?per_page=30')
         );
-        Http::assertSentCount(12);
+        Http::assertSentCount(15);
     }
 
     public function test_missing_checks_permission_never_fabricates_ci_pass(): void

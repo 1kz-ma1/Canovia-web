@@ -109,7 +109,7 @@ final class DevelopmentGitHubRoadmapWorkspaceTest extends TestCase
         ]);
 
         $sha = str_repeat('f', 40);
-        $markdown = "## Workstreams\n| Priority | Workstream | Existing evidence | Remaining acceptance |\n| --- | --- | --- | --- |\n| P0 | Adaptive Learning | PR merged | iPhone E2E pending |\n";
+        $markdown = "## Workstreams\n| Priority | Workstream | Existing evidence | Remaining acceptance |\n| --- | --- | --- | --- |\n| P0 | Adaptive Learning | PR #12 merged | iPhone E2E pending |\n";
         Http::fake(function (HttpRequest $request) use ($sha, $markdown) {
             $url = $request->url();
             if ($url === 'https://api.github.com/repos/example/repo/installation') {
@@ -118,7 +118,7 @@ final class DevelopmentGitHubRoadmapWorkspaceTest extends TestCase
             if ($url === 'https://api.github.com/app/installations/777/access_tokens') {
                 return Http::response([
                     'token' => 'installation-token',
-                    'permissions' => ['contents' => 'read'],
+                    'permissions' => ['contents' => 'read', 'pull_requests' => 'read', 'checks' => 'read'],
                 ], 201);
             }
             if ($url === 'https://api.github.com/repos/example/repo') {
@@ -130,6 +130,19 @@ final class DevelopmentGitHubRoadmapWorkspaceTest extends TestCase
             }
             if ($url === 'https://api.github.com/repos/example/repo/commits/main') {
                 return Http::response(['sha' => $sha], 200);
+            }
+            if ($url === 'https://api.github.com/repos/example/repo/pulls/12') {
+                return Http::response([
+                    'number' => 12, 'state' => 'closed', 'merged' => true,
+                    'base' => ['ref' => 'main'],
+                    'head' => ['sha' => str_repeat('b', 40)],
+                    'merge_commit_sha' => str_repeat('c', 40),
+                ], 200);
+            }
+            if (str_contains($url, '/check-runs?')) {
+                return Http::response(['total_count' => 1, 'check_runs' => [
+                    ['status' => 'completed', 'conclusion' => 'success'],
+                ]], 200);
             }
             if (str_starts_with($url, 'https://api.github.com/repos/example/repo/contents/docs/development/ROADMAP.md?')) {
                 return Http::response([
@@ -156,6 +169,21 @@ final class DevelopmentGitHubRoadmapWorkspaceTest extends TestCase
             str_contains($request->url(), '/contents/docs/development/ROADMAP.md?ref='.$sha)
             && $request->hasHeader('Authorization', 'Bearer installation-token')
         );
+        Http::assertNotSent(fn (HttpRequest $request) =>
+            str_contains($request->url(), '/pulls/12')
+        );
+
+        $this->actingAs($user)
+            ->get(route('workspace.development.index', [
+                'plan_id' => $plan->id,
+                'surface' => 'roadmap',
+                'verify' => '1',
+            ]))
+            ->assertOk()
+            ->assertSee('data-roadmap-pr-observation', false)
+            ->assertSee('default branchへマージ確認')
+            ->assertSee('PR headの取得済みChecks成功');
+
         $this->assertDatabaseCount('tasks', 0);
         $this->assertDatabaseCount('task_evidences', 0);
     }
