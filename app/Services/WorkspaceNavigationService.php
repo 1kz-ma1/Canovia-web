@@ -87,14 +87,24 @@ final class WorkspaceNavigationService
 
     public function lastMode(Request $request): WorkspaceMode
     {
+        $available = app(WorkspaceModeRegistry::class)->available()
+            ->map(fn ($item) => $item->mode)
+            ->reject(fn (WorkspaceMode $mode) => $mode === WorkspaceMode::Overview)
+            ->values();
         $state = $request->hasSession() ? $request->session()->get($this->key($request), []) : [];
         $raw = data_get($state, 'last');
         $mode = is_string($raw) ? WorkspaceMode::tryFrom($raw) : null;
-        if (! $mode || $mode === WorkspaceMode::Overview
-            || ! in_array($mode->value, app(WorkspaceModeRegistry::class)->publicKeys(), true)) {
+
+        // Preference can outlive a public release-level downgrade. Do not
+        // send users into a hidden Workspace or a redirect back to Overview.
+        if ($mode === null || ! $available->containsStrict($mode)) {
             $mode = app(WorkspaceModePreference::class)->selected($request);
         }
-        return $mode && $mode !== WorkspaceMode::Overview ? $mode : WorkspaceMode::Study;
+        if ($mode === null || ! $available->containsStrict($mode)) {
+            $mode = $available->first();
+        }
+
+        return $mode ?? WorkspaceMode::Overview;
     }
 
     public function resumeUrl(Request $request, WorkspaceMode $mode): string

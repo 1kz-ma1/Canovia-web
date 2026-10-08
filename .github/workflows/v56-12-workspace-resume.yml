@@ -153,6 +153,7 @@ jobs:
         run: php artisan test tests/Feature/IntelligenceEvidenceArrayDiffV5885Test.php
       - name: V58.84 Learning migration partial-deploy recovery
         run: php artisan test tests/Feature/LearningAdjustmentMigrationRecoveryV5884Test.php
+      # V58.86 release downgrade cases live in the V58.83 regression suite.
       - name: V58.83 Contextual workspace navigation
         run: php artisan test tests/Feature/ContextualWorkspaceNavigationV5883Test.php tests/Feature/WorkspaceModeBarV541Test.php tests/Feature/PrimaryNavigationCompanionV510Test.php tests/Feature/MobileWorkspaceModeEntryV566Test.php tests/Feature/DesktopHeaderDensityV579Test.php tests/Feature/ExecutionModeTerminologyV555Test.php
       - name: V56.12 workspace resume and session scope
