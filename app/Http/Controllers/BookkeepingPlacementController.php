@@ -81,6 +81,7 @@ final class BookkeepingPlacementController extends Controller
         if ($existing) {
             abort_unless(
                 (int) $existing->plan_id === (int) $plan->id
+                && $existing->metric_key === BookkeepingPlacementDiagnosticService::METRIC
                 && ($userId
                     ? (int) $existing->user_id === (int) $userId
                     : ($existing->user_id === null
@@ -97,7 +98,11 @@ final class BookkeepingPlacementController extends Controller
             (string) $validated['wants_advance'] === '1',
         );
 
-        StudyScoreObservation::query()->create([
+        // createOrFirst keeps a retried Safari/PWA POST idempotent even when
+        // two requests race past the initial lookup.
+        $saved = StudyScoreObservation::query()->createOrFirst([
+            'request_id' => $validated['request_id'],
+        ], [
             'plan_id' => $plan->id,
             'user_id' => $userId,
             'actor_token' => $actorToken,
@@ -116,6 +121,15 @@ final class BookkeepingPlacementController extends Controller
             ],
             'observed_at' => now(),
         ]);
+
+        abort_unless(
+            (int) $saved->plan_id === (int) $plan->id
+            && $saved->metric_key === BookkeepingPlacementDiagnosticService::METRIC
+            && ($userId
+                ? (int) $saved->user_id === (int) $userId
+                : ($saved->user_id === null && $saved->actor_token === $actorToken)),
+            409,
+        );
 
         return redirect()->route('plans.bookkeeping_placement.show', $plan)
             ->with('bookkeeping.diagnostic.feedback.'.$plan->id, $result)
