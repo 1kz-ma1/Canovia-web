@@ -29,6 +29,7 @@ class Plan extends Model
         'title',
         'description',
         'category',
+        'workspace_domain_override',
         'priority',
         'priority_mode',
         'start_date',
