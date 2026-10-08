@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Plan;
 use App\Services\GitHubIntegrationReadinessService;
+use App\Services\DevelopmentCreativePlanAccessService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanPriorityService;
@@ -16,20 +17,20 @@ final class DevelopmentWorkspaceTopController extends Controller
         Request $request,
         PlanOwnershipService $ownership,
         PlanCategoryProfileService $profiles,
+        DevelopmentCreativePlanAccessService $creativeAccess,
         PlanPriorityService $priorities,
         SpecializedWorkspaceTopService $tops,
         GitHubIntegrationReadinessService $githubReadiness,
     ) {
-        $plans = $ownership->ownedPlans($request, [
+        $accessiblePlans = $ownership->ownedPlans($request, [
             'tasks',
             'workLogs',
             'availabilityRules',
             'availabilityOverrides',
             'artifacts',
-        ])->filter(
-            fn (Plan $plan) =>
-                $profiles->forPlan($plan)->key === 'development',
-        )->sort(
+        ]);
+        $partition = $creativeAccess->partition($request, $accessiblePlans, $profiles);
+        $plans = $partition['plans']->sort(
             fn (Plan $left, Plan $right) =>
                 $this->comparePlans($left, $right, $priorities),
         )->values();
@@ -96,6 +97,7 @@ final class DevelopmentWorkspaceTopController extends Controller
 
         return view('workspace.development.top', [
             'developmentPlans' => $plans,
+            'developmentCreativeCandidates' => $partition['candidates'],
             'developmentPlanSummaries' => $summaries,
             'developmentGithubIntegrationStatus' =>
                 $actorReadiness,

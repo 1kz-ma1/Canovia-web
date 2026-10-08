@@ -82,6 +82,7 @@ use App\Http\Controllers\WorkspaceModeController;
 use App\Http\Controllers\StudyWorkspaceController;
 use App\Http\Controllers\StudyWorkspaceTopController;
 use App\Http\Controllers\DevelopmentWorkspaceController;
+use App\Http\Controllers\DevelopmentCreativePlanSelectionController;
 use App\Http\Controllers\DevelopmentWorkspaceTopController;
 use App\Http\Controllers\DevelopmentActivityObservationController;
 use App\Http\Controllers\OverviewWorkspaceController;
@@ -122,6 +123,12 @@ Route::get('/workspace/study/top', StudyWorkspaceTopController::class)->middlewa
 Route::get('/workspace/study', StudyWorkspaceController::class)->middleware('early_access.visit')->name('workspace.study.index');
 Route::get('/workspace/development/top', DevelopmentWorkspaceTopController::class)->middleware('early_access.visit')->name('workspace.development.top');
 Route::get('/workspace/development', DevelopmentWorkspaceController::class)->middleware('early_access.visit')->name('workspace.development.index');
+Route::post('/workspace/development/creative/{plan}', [DevelopmentCreativePlanSelectionController::class, 'store'])
+    ->middleware('throttle:12,1')
+    ->name('workspace.development.creative.store');
+Route::delete('/workspace/development/creative/{plan}', [DevelopmentCreativePlanSelectionController::class, 'destroy'])
+    ->middleware('throttle:12,1')
+    ->name('workspace.development.creative.destroy');
 Route::post('/plans/{plan}/development-preview', [DevelopmentPreviewController::class, 'store'])
     ->middleware('throttle:20,1')
     ->name('plans.development_preview.store');

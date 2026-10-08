@@ -72,6 +72,9 @@ jobs:
           php -l app/Services/StudyReviewCyclePersonalizationAdapter.php
           php -l tests/Feature/StudyReviewCyclePersonalizationV5833Test.php
           php -l tests/Feature/LongUsageWindowPersonalizationV5834Test.php
+          php -l app/Services/DevelopmentCreativePlanAccessService.php
+          php -l app/Http/Controllers/DevelopmentCreativePlanSelectionController.php
+          php -l tests/Feature/DevelopmentCreativePlanRescueV5863Test.php
       - run: php artisan view:cache
       - run: php artisan migrate --force
       - name: V56.12 workspace resume and session scope
@@ -116,3 +119,5 @@ jobs:
         run: php artisan test tests/Feature/ModelReuseV5195Test.php tests/Feature/HomeCoreBundleCostReductionV5192Test.php
       - name: Specialized Workspace regression
         run: php artisan test tests/Feature/StudyWorkspaceV543Test.php tests/Feature/DevelopmentWorkspaceV544Test.php tests/Feature/DeveloperHomeV573Test.php tests/Feature/OverviewWorkspaceV545Test.php tests/Feature/CareerWorkspaceModeV551Test.php tests/Feature/CareerExplorationEntryV5860Test.php
+      - name: V58.63 Legacy Creative Development Rescue
+        run: php artisan test tests/Feature/DevelopmentCreativePlanRescueV5863Test.php tests/Feature/WorkspaceModeResolverV540Test.php

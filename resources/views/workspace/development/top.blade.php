@@ -26,6 +26,8 @@
         </div>
     </section>
 
+    @include('workspace.development.partials.creative-plan-rescue')
+
     <section
         class="flex flex-col gap-2 rounded-2xl border border-white/8 bg-slate-950/20 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between"
         data-development-top-integration
