@@ -529,6 +529,7 @@ class PersonalizationBootstrapV5825Test extends TestCase
                     'domains' => [$domain],
                     $goalField => $goal,
                     $kindField => $kind,
+                    ...($domain === 'development' ? ['development_experience' => 'beginner'] : []),
                 ])
                 ->assertRedirect(route('personalization.result'));
 
@@ -560,7 +561,8 @@ class PersonalizationBootstrapV5825Test extends TestCase
             $this->actingAs($user)
                 ->get(route($workspaceRoute, ['plan_id' => $plan->id]))
                 ->assertOk()
-                ->assertSee($goal);
+                ->assertSee($goal)
+                ->assertSee('data-' . $domain . '-first-plan-guidance', false);
         }
     }
 
