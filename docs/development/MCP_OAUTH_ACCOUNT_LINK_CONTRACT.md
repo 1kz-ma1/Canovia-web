@@ -142,3 +142,15 @@ matching subject and another explicit Canovia actor confirmation can the
 Plan grant become active. Account linking itself never creates grants.
 This is NOT the external OAuth provider's ChatGPT authorization screen.
 See [per-Plan consent contract](MCP_EXPLICIT_PLAN_CONSENT_CONTRACT.md).
+
+
+## IdP compatibility gating before real account linking
+
+A CLI-only, read-only operator preflight is now available, including an
+optional pinned HTTPS OAuth metadata GET. It tests issuer/endpoint equality,
+S256, RFC9207, confidential-client Basic auth, advertised introspection
+endpoint and compatible ChatGPT client registration without issuing a token.
+**It does not prove** actual token subject/audience/client/scope claims.
+Auth0 and ZITADEL are evaluated as candidates, not adopted production IdPs;
+staging must remain isolated from live Canovia and HINANEX.
+See [staging preflight](MCP_STAGING_IDP_PREFLIGHT_CONTRACT.md).

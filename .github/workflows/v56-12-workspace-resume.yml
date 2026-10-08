@@ -149,6 +149,9 @@ jobs:
           php -l app/Models/McpDelegatedGrant.php
           php -l app/Services/McpDelegatedIdentityFingerprintService.php
           php -l database/migrations/2026_10_09_000300_create_mcp_delegated_access_events_table.php
+          php -l app/Services/McpStagingProviderPreflightService.php
+          php -l tests/Feature/McpStagingProviderPreflightTest.php
+          php -l routes/console.php
           php -l app/Services/McpReadOnlyContextTool.php
           php -l app/Http/Controllers/McpReadOnlyResourceController.php
           php -l tests/Feature/McpReadOnlyResourceTest.php
@@ -186,6 +189,8 @@ jobs:
           php -l tests/Feature/DevelopmentTeamTaskDependencyV5869Test.php
       - run: php artisan view:cache
       - run: php artisan migrate --force
+      - name: MCP staging OAuth provider configuration and safe discovery preflight
+        run: php artisan test tests/Feature/McpStagingProviderPreflightTest.php
       - name: MCP read-only JSON-RPC resource, bearer and Plan isolation
         run: php artisan test tests/Feature/McpReadOnlyResourceTest.php
       - name: MCP explicit Plan consent, fresh OAuth and scope isolation
