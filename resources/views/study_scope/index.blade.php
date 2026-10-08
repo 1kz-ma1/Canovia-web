@@ -15,6 +15,12 @@
 <div class="mx-auto max-w-6xl space-y-5">
     @if (session('success'))
         <div class="assistant-notice assistant-notice-success">{{ session('success') }}</div>
+        @if (session('study_scope_confirmed'))
+            <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-sky-300/20 bg-sky-300/[0.04] px-4 py-3" data-study-scope-next-action>
+                <p class="flex-1 text-sm text-slate-200">確定した範囲をもとに、学習Workspaceで次の行動を確認できます。</p>
+                <a href="{{ route('workspace.study.index', ['plan_id' => $plan->id]) }}" class="btn-primary min-h-11 px-4">次の学習行動を確認する</a>
+            </div>
+        @endif
     @endif
     @if (session('status'))
         <div class="assistant-notice assistant-notice-info">{{ session('status') }}</div>

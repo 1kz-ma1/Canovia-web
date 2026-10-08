@@ -375,7 +375,8 @@ class StudyScopeCaptureController extends Controller
 
         return redirect()
             ->route('plans.study_scope.index', $plan)
-            ->with('success', '試験範囲を確定し、Study Intelligenceを更新しました。Taskや進捗は変更していません。');
+            ->with('success', '試験範囲を確定し、Study Intelligenceを更新しました。Taskや進捗は変更していません。')
+            ->with('study_scope_confirmed', true);
     }
 
     public function destroy(

@@ -52,6 +52,12 @@
 
     @if (session('success'))
         <div class="rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.06] px-4 py-3 text-sm text-emerald-100">{{ session('success') }}</div>
+        @if ($latestObservation)
+            <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.04] px-4 py-3" data-study-score-next-action>
+                <p class="flex-1 text-sm text-slate-200">得点を記録しました。学習Workspaceで最新のEvidenceに基づく次の行動を確認できます。</p>
+                <a href="{{ route('workspace.study.index', ['plan_id' => $plan->id]) }}" class="btn-primary min-h-11 px-4">次の学習行動を確認する</a>
+            </div>
+        @endif
     @endif
     @if (session('status'))
         <div class="rounded-2xl border border-slate-700 bg-slate-900/70 px-4 py-3 text-sm text-slate-300">{{ session('status') }}</div>
