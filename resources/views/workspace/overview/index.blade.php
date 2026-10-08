@@ -242,10 +242,21 @@
                             {{ $plan->title }}
                         </span>
                         <p class="mt-4 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{{ $readinessLabel }}</p>
-                        <p class="mt-1 text-xl font-black text-slate-100">セットアップ中</p>
-                        <p class="mt-2 text-xs leading-5 text-slate-500">
-                            {{ $isStudy ? '確定した試験範囲がまだありません。' : ($isCareer ? 'Career判断に使える現実情報がまだありません。' : 'Release判断に使えるDevelopment Evidenceがまだありません。') }}
-                        </p>
+                        @if ($isStudy && is_array($summary['official_exam_reference'] ?? null))
+                            <p class="mt-1 text-xl font-black text-slate-100">理解度の確認待ち</p>
+                            <p class="mt-2 text-xs leading-5 text-slate-500">
+                                IPAの公式試験範囲は公開済みです。Canoviaへの個別登録がなくても試験範囲は未確定ではありません。
+                                現在の理解度はまだ未測定です。
+                            </p>
+                            @if ($presentation?->action)
+                                <p class="mt-3 text-xs font-black text-amber-200" data-overview-official-study-action>{{ $presentation->action->title }}</p>
+                            @endif
+                        @else
+                            <p class="mt-1 text-xl font-black text-slate-100">セットアップ中</p>
+                            <p class="mt-2 text-xs leading-5 text-slate-500">
+                                {{ $isStudy ? 'Canoviaに個別の学習範囲はまだ登録されていません。' : ($isCareer ? 'Career判断に使える現実情報がまだありません。' : 'Release判断に使えるDevelopment Evidenceがまだありません。') }}
+                            </p>
+                        @endif
                     </div>
                 @elseif ($presentation)
                     <div class="mt-5 grid gap-3 sm:grid-cols-[0.72fr_1.28fr]">

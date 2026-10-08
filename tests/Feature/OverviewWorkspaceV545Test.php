@@ -98,7 +98,9 @@ class OverviewWorkspaceV545Test extends TestCase
             )
             ->assertSee($study->title)
             ->assertSee($development->title)
-            ->assertSee('確定した試験範囲がまだありません。')
+            ->assertSee('理解度の確認待ち')
+            ->assertSee('IPAの公式試験範囲は公開済みです。')
+            ->assertDontSee('確定した試験範囲がまだありません。')
             ->assertSee('Release判断に使えるDevelopment Evidenceがまだありません。')
             ->assertSee('セットアップ中');
     }

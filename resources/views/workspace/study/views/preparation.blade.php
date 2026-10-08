@@ -31,6 +31,25 @@
             </div>
         @endif
 
+        @if (is_array(data_get($studyWorkspaceState ?? [], 'official_exam_reference')))
+            @php $official = data_get($studyWorkspaceState, 'official_exam_reference'); @endphp
+            <aside class="mt-5 rounded-2xl border border-sky-300/15 bg-sky-300/[0.025] p-4"
+                data-study-official-exam-reference="{{ data_get($official, 'key') }}">
+                <p class="text-xs font-black text-sky-200">公式試験範囲は公開済みです</p>
+                <p class="mt-2 text-xs leading-5 text-slate-300">
+                    {{ data_get($official, 'issuer') }}の
+                    {{ data_get($official, 'exam_name') }}シラバス
+                    Ver.{{ data_get($official, 'syllabus_version') }}
+                    （{{ data_get($official, 'applicable_period') }}）を参照します。
+                    Canoviaに個別の範囲登録がなくても、試験範囲そのものが未確定という意味ではありません。
+                    あなたの理解度は演習Evidenceから確認します。
+                </p>
+                <a href="{{ data_get($official, 'source_url') }}" target="_blank" rel="noopener noreferrer"
+                    class="mt-3 inline-flex text-xs font-bold text-sky-300 underline underline-offset-4"
+                    data-study-official-exam-source>IPA公式シラバスを確認 ↗</a>
+            </aside>
+        @endif
+
         <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <a href="{{ route('plans.study_scope.index', $plan) }}" class="rounded-2xl border border-white/8 bg-slate-950/25 p-4 transition hover:border-sky-300/30">
                 <div class="flex items-start justify-between gap-3">

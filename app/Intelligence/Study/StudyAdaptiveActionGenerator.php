@@ -44,6 +44,16 @@ final class StudyAdaptiveActionGenerator implements ActionGenerator
         );
 
         [$kind, $title, $intent, $routeKind, $successSignals] = match ($decision->type) {
+            'establish_official_exam_baseline' => [
+                'study_official_exam_baseline',
+                '最初の演習で理解度を確認する',
+                '応用情報技術者試験の公式シラバスはIPAが公開済みです。'
+                    .'科目A・科目Bの必要範囲をユーザーが決め直す必要はありません。'
+                    .'まず演習結果から現在地を把握しましょう。'
+                    .'なお、公式の試験範囲とCanoviaに登録した学習単元は別の情報です。',
+                $targetTaskId ? 'study_practice' : 'project_task',
+                ['practice_evidence_observed'],
+            ],
             'capture_scope' => [
                 'study_scope_capture',
                 '試験範囲を確定する',
@@ -127,6 +137,8 @@ final class StudyAdaptiveActionGenerator implements ActionGenerator
             successSignals: $successSignals,
             metadata: [
                 'policy_version' => 'study_action_generator_v1',
+                'official_source_url' => data_get($decision->metadata, 'official_source_url'),
+                'official_syllabus_version' => data_get($decision->metadata, 'official_syllabus_version'),
                 'reason_code' => $decision->reasonCode,
                 'target_scope_item_id' => $this->intOrNull(
                     data_get($decision->metadata, 'target_scope_item_id'),

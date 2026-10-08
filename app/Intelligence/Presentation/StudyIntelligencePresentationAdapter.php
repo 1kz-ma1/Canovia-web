@@ -34,7 +34,9 @@ final class StudyIntelligencePresentationAdapter
             action: $action,
             eyebrow: 'STUDY INTELLIGENCE',
             headline: '試験に向けた現在地',
-            sourceNote: 'Task進捗ではなく、確定した試験範囲とPractice / Recall Evidenceから判断しています。',
+            sourceNote: is_array(data_get($state->facts, 'official_exam_reference'))
+                ? 'IPA公式シラバスの出典と、未観測の本人の理解度を分けて判断しています。'
+                : 'Task進捗ではなく、確定した試験範囲とPractice / Recall Evidenceから判断しています。',
             readinessLabel: 'Exam Readiness',
             stateLabel: $this->stateLabel($readiness->level->value),
             gapLabel: $this->gapLabel($result->decision->reasonCode),
@@ -116,6 +118,7 @@ final class StudyIntelligencePresentationAdapter
     {
         return match ($reason) {
             'confirmed_scope_missing' => '試験範囲が未確定',
+            'official_scope_known_mastery_unmeasured' => '公式範囲は公開済み・理解度が未測定',
             'coverage_below_target' => '未観測の試験範囲が残っている',
             'mastery_unmeasured' => '理解度をまだ測り切れていない',
             'mastery_below_target' => '理解度が目標に届いていない',

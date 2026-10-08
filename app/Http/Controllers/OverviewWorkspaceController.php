@@ -287,6 +287,9 @@ final class OverviewWorkspaceController extends Controller
             'plan' => $plan,
             'presentation' => $presentation,
             'setup_needed' => $setupNeeded,
+            'official_exam_reference' => $mode === 'study'
+                ? data_get($presentation->state->facts, 'official_exam_reference')
+                : null,
             'empty' => false,
             'workspace_url' => $workspaceUrl,
         ];
