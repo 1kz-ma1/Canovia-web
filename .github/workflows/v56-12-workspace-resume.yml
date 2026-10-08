@@ -151,6 +151,8 @@ jobs:
           php -l tests/Feature/DevelopmentTeamTaskDependencyV5869Test.php
       - run: php artisan view:cache
       - run: php artisan migrate --force
+      - name: GitHub-native roadmap revision comparator
+        run: php artisan test tests/Unit/DevelopmentRoadmapRevisionDifferTest.php
       - name: V58 GitHub-native roadmap parser, reader and workspace
         run: php artisan test tests/Unit/DevelopmentRoadmapMarkdownParserTest.php tests/Unit/DevelopmentRoadmapTableProjectionTest.php tests/Feature/DevelopmentGitHubRoadmapReaderTest.php tests/Feature/DevelopmentGitHubRoadmapWorkspaceTest.php tests/Unit/DevelopmentRoadmapEvidenceLinkerTest.php tests/Feature/DevelopmentRoadmapPrEvidenceTest.php tests/Unit/DevelopmentRoadmapIssueContextTest.php tests/Feature/DevelopmentRoadmapIssueEvidenceTest.php
       - name: V58.85 Nested evidence regression
