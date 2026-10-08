@@ -25,7 +25,7 @@
         <div class="mt-3 space-y-3">
             @foreach ($added as $source)
                 <div class="rounded-lg border border-slate-200 p-3">
-                    <p class="text-xs text-slate-500">同じPlanの実績ログ #{{ $source['work_log_id'] }}</p>
+                    <p class="text-xs text-slate-500">{{ ($source['kind'] ?? '') === 'task_evidence' ? 'Evidence #'.($source['task_evidence_id'] ?? '-').' · '.($source['source_label'] ?? '記録') : '同じPlanの実績ログ #'.($source['work_log_id'] ?? '-') }}</p>
                     <p class="mt-1 text-sm font-bold">{{ $source['action'] }}</p>
                     <p class="mt-1 whitespace-pre-line text-sm text-slate-700">{{ $source['outcome'] }}</p>
                 </div>
@@ -38,7 +38,11 @@
             <input type="hidden" name="candidate_fingerprint" value="{{ $candidateFingerprint }}">
             <input type="hidden" name="source_fingerprint" value="{{ $sourceFingerprint }}">
             @foreach ($added as $source)
-                <input type="hidden" name="additional_work_log_ids[]" value="{{ $source['work_log_id'] }}">
+                @if (($source['kind'] ?? '') === 'task_evidence')
+                    <input type="hidden" name="additional_task_evidence_ids[]" value="{{ $source['task_evidence_id'] }}">
+                @else
+                    <input type="hidden" name="additional_work_log_ids[]" value="{{ $source['work_log_id'] }}">
+                @endif
             @endforeach
             <button type="submit" class="btn-primary">この差分を提案へ反映する</button>
         </form>

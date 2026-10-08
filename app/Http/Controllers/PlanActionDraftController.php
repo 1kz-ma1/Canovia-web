@@ -7,6 +7,7 @@ use App\Models\PlanActionDraftRevision;
 use App\Models\WorkLog;
 use App\Services\PlanActivityService;
 use App\Services\PlanActionDraftEvidenceService;
+use App\Services\PlanActionDraftTypedEvidenceService;
 use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 
 final class PlanActionDraftController extends Controller
 {
-    public function index(Request $request, Plan $plan, PlanOwnershipService $ownership)
+    public function index(Request $request, Plan $plan, PlanOwnershipService $ownership, PlanActionDraftTypedEvidenceService $typed)
     {
         $ownership->authorizePlan($request, $plan);
         $drafts = PlanActionDraft::with('revisions')->where('plan_id', $plan->id)->latest('id')->limit(20)->get();
@@ -24,7 +25,9 @@ final class PlanActionDraftController extends Controller
             ->latest('id')->limit(15)->get();
         $requestId = (string) Str::uuid();
         $multiRequestId = (string) Str::uuid();
-        return view('plans.action_drafts', compact('plan', 'drafts', 'workLogs', 'requestId', 'multiRequestId'));
+        $observedRequestId = (string) Str::uuid();
+        $typedEvidence = $typed->available($plan);
+        return view('plans.action_drafts', compact('plan', 'drafts', 'workLogs', 'requestId', 'multiRequestId', 'observedRequestId', 'typedEvidence'));
     }
 
     public function store(Request $request, Plan $plan, PlanOwnershipService $ownership)
@@ -155,6 +158,60 @@ final class PlanActionDraftController extends Controller
             ->with('success', '複数の実績に基づく提案を作りました。まだTaskは変わりません。');
     }
 
+
+    /**
+     * One or more owner-selected typed observations, optionally paired with
+     * WorkLogs. No new Task and no background inference are triggered.
+     */
+    public function composeObserved(
+        Request $request,
+        Plan $plan,
+        PlanOwnershipService $ownership,
+        PlanActionDraftEvidenceService $evidence,
+        PlanActionDraftTypedEvidenceService $typed,
+    ) {
+        $ownership->authorizePlan($request, $plan);
+        $validated = $request->validate([
+            'request_id' => ['required', 'uuid'],
+            'task_evidence_ids' => ['required', 'array', 'min:1', 'max:5'],
+            'task_evidence_ids.*' => ['required', 'integer', 'distinct'],
+            'work_log_ids' => ['sometimes', 'array', 'max:4'],
+            'work_log_ids.*' => ['required', 'integer', 'distinct'],
+        ]);
+
+        if (PlanActionDraft::where('plan_id', $plan->id)
+            ->where('request_id', $validated['request_id'])->exists()) {
+            return redirect()->route('plans.action_drafts.index', $plan);
+        }
+
+        $typedSources = $typed->snapshots($plan, $validated['task_evidence_ids']);
+        $logs = empty($validated['work_log_ids'])
+            ? [] : $evidence->snapshotsForLogs($plan, $validated['work_log_ids']);
+        $sources = array_merge($logs, $typedSources);
+        if (count($sources) > PlanActionDraftEvidenceService::MAX_SOURCES) {
+            throw ValidationException::withMessages([
+                'task_evidence_ids' => '根拠として選べる記録は合計5件までです。',
+            ]);
+        }
+
+        $latest = $sources[count($sources) - 1];
+        PlanActionDraft::firstOrCreate(
+            ['plan_id' => $plan->id, 'request_id' => $validated['request_id']],
+            [
+                'source_kind' => $evidence->kindForSources($sources),
+                'source_work_log_id' => $latest['kind'] === 'work_log' ? $latest['work_log_id'] : null,
+                'completed_action' => $latest['action'],
+                'observed_outcome' => $latest['outcome'],
+                'suggested_next_action' => $typed->suggestion($plan, $sources),
+                'evidence_snapshots' => $sources,
+                'status' => PlanActionDraft::PROPOSED,
+            ],
+        );
+
+        return redirect()->route('plans.action_drafts.index', $plan)
+            ->with('success', '選んだEvidenceに基づく行動案を作りました。承認するまでTaskは変わりません。');
+    }
+
     /**
      * Pure preview. No draft, Task, or evidence write occurs here.
      */
@@ -164,15 +221,16 @@ final class PlanActionDraftController extends Controller
         PlanActionDraft $draft,
         PlanOwnershipService $ownership,
         PlanActionDraftEvidenceService $evidence,
+        PlanActionDraftTypedEvidenceService $typed,
     ) {
         $ownership->authorizePlan($request, $plan);
         $this->withinPlan($plan, $draft);
         abort_unless($draft->status === PlanActionDraft::PROPOSED, 409);
 
         $validated = $this->validateRefreshInputs($request);
-        $added = $evidence->snapshotsForLogs($plan, $validated['additional_work_log_ids']);
+        $added = $this->selectedAdditionalSources($plan, $validated, $evidence, $typed);
         $combined = $evidence->appendNew($evidence->existing($draft), $added);
-        $afterAction = $evidence->suggest($combined);
+        $afterAction = $typed->suggestion($plan, $combined);
         $sourceFingerprint = $evidence->fingerprint($combined);
         $candidateFingerprint = $evidence->candidateFingerprint($draft);
 
@@ -192,6 +250,7 @@ final class PlanActionDraftController extends Controller
         PlanActionDraft $draft,
         PlanOwnershipService $ownership,
         PlanActionDraftEvidenceService $evidence,
+        PlanActionDraftTypedEvidenceService $typed,
     ) {
         $ownership->authorizePlan($request, $plan);
         $this->withinPlan($plan, $draft);
@@ -202,7 +261,7 @@ final class PlanActionDraftController extends Controller
             'candidate_fingerprint' => ['required', 'string', 'size:64'],
         ]);
 
-        DB::transaction(function () use ($plan, $draft, $validated, $meta, $evidence) {
+        DB::transaction(function () use ($plan, $draft, $validated, $meta, $evidence, $typed) {
             $locked = PlanActionDraft::where('plan_id', $plan->id)
                 ->whereKey($draft->id)->lockForUpdate()->firstOrFail();
 
@@ -210,18 +269,17 @@ final class PlanActionDraftController extends Controller
             abort_unless((int) $locked->revision_no === (int) $meta['expected_revision'], 409);
             abort_unless(hash_equals($evidence->candidateFingerprint($locked), $meta['candidate_fingerprint']), 409);
 
-            $additional = $evidence->snapshotsForLogs($plan, $validated['additional_work_log_ids']);
+            $additional = $this->selectedAdditionalSources($plan, $validated, $evidence, $typed);
             $combined = $evidence->appendNew($evidence->existing($locked), $additional);
             abort_unless(hash_equals($evidence->fingerprint($combined), $meta['source_fingerprint']), 409);
 
             $before = $locked->suggested_next_action;
-            $after = $evidence->suggest($combined);
+            $after = $typed->suggestion($plan, $combined);
             $beforeRevision = (int) $locked->revision_no;
 
             $locked->update([
                 'evidence_snapshots' => $combined,
-                'source_kind' => collect($combined)->contains(fn ($s) => $s['kind'] === 'self_report')
-                    ? 'mixed' : 'multi_work_log',
+                'source_kind' => $evidence->kindForSources($combined),
                 'suggested_next_action' => $after,
                 'revision_no' => $beforeRevision + 1,
             ]);
@@ -241,13 +299,35 @@ final class PlanActionDraftController extends Controller
             ->with('success', '確認した差分を提案に反映しました。Taskは変更していません。');
     }
 
-    /** @return array{additional_work_log_ids:array<int,int>} */
+    /** @return array<string,mixed> */
     private function validateRefreshInputs(Request $request): array
     {
-        return $request->validate([
-            'additional_work_log_ids' => ['required', 'array', 'min:1', 'max:4'],
+        $validated = $request->validate([
+            'additional_work_log_ids' => ['sometimes', 'array', 'max:5'],
             'additional_work_log_ids.*' => ['required', 'integer', 'distinct'],
+            'additional_task_evidence_ids' => ['sometimes', 'array', 'max:5'],
+            'additional_task_evidence_ids.*' => ['required', 'integer', 'distinct'],
         ]);
+        $count = count($validated['additional_work_log_ids'] ?? [])
+            + count($validated['additional_task_evidence_ids'] ?? []);
+        if ($count < 1 || $count > PlanActionDraftEvidenceService::MAX_SOURCES) {
+            throw ValidationException::withMessages([
+                'additional_work_log_ids' => '追加する根拠を合計1〜5件選んでください。',
+            ]);
+        }
+        return $validated;
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function selectedAdditionalSources(
+        Plan $plan, array $validated, PlanActionDraftEvidenceService $evidence,
+        PlanActionDraftTypedEvidenceService $typed,
+    ): array {
+        $logs = empty($validated['additional_work_log_ids'])
+            ? [] : $evidence->snapshotsForLogs($plan, $validated['additional_work_log_ids']);
+        $observations = empty($validated['additional_task_evidence_ids'])
+            ? [] : $typed->snapshots($plan, $validated['additional_task_evidence_ids']);
+        return array_merge($logs, $observations);
     }
 
     private function withinPlan(Plan $plan, PlanActionDraft $draft): void
