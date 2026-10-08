@@ -28,7 +28,7 @@ class PublicBetaPolishV16Test extends TestCase
             ->assertOk()
             ->assertSee('まず、目標の名前だけ決めよう。')
             ->assertSee('AIで具体化')
-            ->assertSee('計画を作ってAIへ進む')
+            ->assertSee('目標を保存して次の行動へ')
             ->assertSee('>青<', false)
             ->assertSee('>緑<', false)
             ->assertSee('>紫<', false);
