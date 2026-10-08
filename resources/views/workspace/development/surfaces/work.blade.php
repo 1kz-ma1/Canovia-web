@@ -1,4 +1,14 @@
 <div class="space-y-4" data-development-surface-panel="work">
+@php
+    // Without observed Release Evidence, prefer a real next Task over
+    // requiring GitHub setup. Intelligence still owns the Release flow
+    // as soon as repository/activity/focus evidence exists.
+    $localNextTask = $activeTasks->first();
+    $localFirstAction = ! ($developmentGithubRepository ?? null)
+        && collect($developmentRecentActivity ?? [])->isEmpty()
+        && ! ($developmentFocusTask ?? null)
+        && ($localNextTask || $plan->tasks->isEmpty());
+@endphp
 <section
             id="development-current-action"
             class="page-card overflow-hidden border-violet-300/20 bg-[radial-gradient(circle_at_88%_12%,rgba(167,139,250,.12),transparent_28%),rgba(15,23,42,.32)] p-5 sm:p-6"
@@ -8,25 +18,54 @@
             <div class="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(15rem,.75fr)] lg:items-start">
                 <div>
                     <p class="text-[10px] font-black uppercase tracking-[0.18em] text-violet-300">NEXT ACTION</p>
-                    <h2 class="mt-2 text-2xl font-black text-slate-50">
-                        {{ $presentation?->action?->title ?? '開発状態を確認する' }}
-                    </h2>
-                    <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
-                        {{ $presentation?->action?->intent ?? 'TaskとGitHubの現在状態から、次に進める入口を確認します。' }}
-                    </p>
+                    @if ($localFirstAction)
+                        <div data-development-local-first-action>
+                            <h2 class="mt-2 text-2xl font-black text-slate-50">
+                                {{ $localNextTask?->title ?? '最初の開発Taskを作る' }}
+                            </h2>
+                            <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
+                                @if ($localNextTask)
+                                    まずはこのTaskを実行しましょう。GitHubを接続しなくても進められます。成果ができたら、あとからEvidenceを関連付けられます。
+                                @else
+                                    目標を具体的なTaskに分け、最初の一歩を決めましょう。GitHubの接続は任意で、あとから設定できます。
+                                @endif
+                            </p>
+                        </div>
+                    @else
+                        <h2 class="mt-2 text-2xl font-black text-slate-50">
+                            {{ $presentation?->action?->title ?? '開発状態を確認する' }}
+                        </h2>
+                        <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
+                            {{ $presentation?->action?->intent ?? 'TaskとGitHubの現在状態から、次に進める入口を確認します。' }}
+                        </p>
+                    @endif
 
                     <div class="mt-5 flex flex-wrap gap-2">
-                        @if ($presentation)
+                        @if ($localFirstAction && $localNextTask)
+                            @if ($canEdit ?? false)
+                                <a href="{{ route('plans.tasks.execution_orchestration.show', [$plan, $localNextTask]) }}" class="btn-primary min-h-11 px-4" data-development-local-task-action>
+                                    このTaskを実行する
+                                </a>
+                            @endif
+                        @elseif ($localFirstAction)
+                            @if ($canManage ?? false)
+                                <a href="{{ route('plans.ai_task_assistant.show', ['plan' => $plan, 'return_to_workspace' => 1]) }}" class="btn-primary min-h-11 px-4" data-development-local-create-action>
+                                    初期タスクを作る
+                                </a>
+                            @endif
+                        @elseif ($presentation)
                             <a href="{{ $presentation->actionUrl }}" class="btn-primary min-h-11 px-4">
                                 {{ $presentation->actionLabel }}
                             </a>
                         @endif
-                        <a href="{{ route('github_workflow.index', ['plan_id' => $plan->id]) }}" class="btn-secondary min-h-11 px-4">
-                            GitHub / Evidence
-                        </a>
+                        @unless ($localFirstAction)
+                            <a href="{{ route('github_workflow.index', ['plan_id' => $plan->id]) }}" class="btn-secondary min-h-11 px-4">
+                                GitHub / Evidence
+                            </a>
+                        @endunless
                     </div>
 
-                    @if ($presentation?->decision)
+                    @if (! $localFirstAction && $presentation?->decision)
                         <details class="pk-action-details mt-5">
                             <summary>なぜ今これ？</summary>
                             <p class="mt-3 text-xs leading-5 text-slate-400">{{ $presentation->decision->summary }}</p>
