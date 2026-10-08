@@ -3,6 +3,20 @@
 @section('content')
 <div class="mx-auto max-w-3xl space-y-5">
     <a href="{{ route('plans.tasks.study_practice.show', [$plan, $task]) }}" class="text-sm font-semibold text-sky-500">← 従来のAI演習へ</a>
+    <section class="page-card p-5 sm:p-7" data-learning-mode-ranking>
+        <h2 class="text-lg font-bold text-slate-50">今日のおすすめ（参考順位）</h2>
+        <p class="mt-2 text-xs leading-6 text-slate-300">{{ $learningRecommendations['evidence'] }}</p>
+        <p class="mt-1 text-xs leading-6 text-slate-400">{{ $learningRecommendations['diagnostic_hint'] }}</p>
+        <ol class="mt-4 space-y-3">
+            @foreach($learningRecommendations['ranking'] as $rank => $suggestedMode)
+                <li class="rounded-xl border border-slate-600 p-3 text-sm text-slate-200" data-learning-recommendation="{{ $suggestedMode['mode'] }}">
+                    <p class="font-bold">{{ $rank + 1 }}位：{{ $suggestedMode['label'] }}{{ $suggestedMode['available'] ? '' : '（現在は未対応）' }}</p>
+                    <p class="mt-1 leading-6 text-slate-300">{{ $suggestedMode['reason'] }}</p>
+                </li>
+            @endforeach
+        </ol>
+        <p class="mt-3 text-xs leading-6 text-slate-400">順位は説明可能な暫定ルールです。必ずしもこの順番で学習する必要はありません。どのモードを使うかは下の操作で自由に選べます。</p>
+    </section>
     <section class="page-card p-5 sm:p-7" data-adaptive-learning-start>
         <p class="text-xs font-bold tracking-widest text-cyan-400">ADAPTIVE LEARNING / EARLY PILOT</p>
         <h1 class="mt-2 text-2xl font-bold text-slate-50">1問から始める学習</h1>
