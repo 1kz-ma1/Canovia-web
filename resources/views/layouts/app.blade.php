@@ -1,5 +1,11 @@
 @php
     $focusMode = request()->routeIs('work_sessions.active');
+    // Question answering and an active exam use a quiet activity shell.
+    // Historical results stay in the regular navigation to aid review.
+    $learningImmersion = (
+        request()->routeIs('plans.tasks.learning.show')
+        || request()->routeIs('plans.tasks.learning.exam.show')
+    );
     $isCoreScreen = request()->routeIs('home') || request()->routeIs('map.index') || request()->routeIs('inbox.index') || request()->routeIs('navigation.index') || request()->routeIs('roadmap.index') || request()->routeIs('timeline.index') || request()->routeIs('calendar.index');
     $mobileSection = match (true) {
         request()->routeIs('map.*') => 'Explore',
@@ -151,7 +157,7 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body data-navigation-shell="{{ $workspaceNavigationMode ? 'workspace' : 'global' }}" data-release-level="{{ $currentReleaseLevel->value }}" data-release-level-label="{{ $currentReleaseLevel->label() }}" data-focus-mode="{{ $focusMode ? '1' : '0' }}" data-workspace-mode="{{ $workspaceModeDefinition->mode->value }}" data-workspace-mode-source="{{ $workspaceModeContext->source->value }}" data-onboarding-version="{{ $onboardingVersion }}" data-onboarding-auto="{{ $onboardingAuto ? '1' : '0' }}" data-onboarding-authenticated="{{ auth()->check() ? '1' : '0' }}" data-pwa-install-url="{{ route('pwa.install.prepare') }}" data-route-name="{{ request()->route()?->getName() }}" data-canovia-surface="{{ request()->routeIs('map.*') ? 'explore' : (request()->routeIs('home') ? 'home' : 'app') }}" class="pk-cosmic-shell min-h-screen bg-slate-950 text-slate-100 antialiased {{ $focusMode ? 'pace-focus-mode' : '' }}">
+<body data-learning-immersion="{{ $learningImmersion ? 'true' : 'false' }}" data-navigation-shell="{{ $workspaceNavigationMode ? 'workspace' : 'global' }}" data-release-level="{{ $currentReleaseLevel->value }}" data-release-level-label="{{ $currentReleaseLevel->label() }}" data-focus-mode="{{ $focusMode ? '1' : '0' }}" data-workspace-mode="{{ $workspaceModeDefinition->mode->value }}" data-workspace-mode-source="{{ $workspaceModeContext->source->value }}" data-onboarding-version="{{ $onboardingVersion }}" data-onboarding-auto="{{ $onboardingAuto ? '1' : '0' }}" data-onboarding-authenticated="{{ auth()->check() ? '1' : '0' }}" data-pwa-install-url="{{ route('pwa.install.prepare') }}" data-route-name="{{ request()->route()?->getName() }}" data-canovia-surface="{{ request()->routeIs('map.*') ? 'explore' : (request()->routeIs('home') ? 'home' : 'app') }}" class="pk-cosmic-shell min-h-screen bg-slate-950 text-slate-100 antialiased {{ $focusMode ? 'pace-focus-mode' : '' }}">
     <div class="pk-cosmic-backdrop pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
         <span class="pk-space-glow pk-space-glow-a"></span>
         <span class="pk-space-glow pk-space-glow-b"></span>
@@ -161,6 +167,15 @@
     </div>
 
     @unless ($focusMode)
+        @if ($learningImmersion)
+            <header class="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-xl" data-learning-immersion-header>
+                <div class="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
+                    <a href="{{ route('workspace.study.index') }}" class="min-h-11 inline-flex items-center text-sm font-semibold text-sky-200" data-learning-immersion-exit>← 学習Workspace</a>
+                    <span class="truncate text-xs font-semibold text-slate-400">学習に集中</span>
+                    <a href="{{ route('home') }}" class="min-h-11 inline-flex items-center text-xs font-semibold text-slate-300" data-learning-immersion-home>ホーム</a>
+                </div>
+            </header>
+        @else
         <header class="desktop-app-header sticky top-0 z-50 hidden border-b border-slate-800/90 bg-slate-950/90 backdrop-blur-xl md:block">
             <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-6 py-2.5">
                 <div class="flex min-w-0 items-center gap-2.5">
@@ -258,6 +273,7 @@
                 @endauth
             </div>
         </header>
+        @endif
     @endunless
 
     <main class="app-main mx-auto min-h-[calc(100vh-120px)] max-w-7xl px-4 py-5 sm:px-5 md:px-6 md:py-10 {{ $focusMode ? 'focus-main' : '' }}" data-canovia-main>
@@ -316,6 +332,7 @@
     </div>
 
     @unless ($focusMode)
+        @if (! $learningImmersion)
         <footer class="mt-12 hidden border-t border-slate-800 bg-slate-950/70 md:block">
             <div class="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-8 text-sm text-slate-500 md:flex-row md:items-center md:justify-between">
                 <p>Canovia — 自分のペースで、前へ。</p>
@@ -329,6 +346,7 @@
         <div class="md:hidden">
             @include('layouts.partials.mobile-nav')
         </div>
+        @endif
     @endunless
 
     <div class="route-loading-overlay" data-route-loading aria-hidden="true">
