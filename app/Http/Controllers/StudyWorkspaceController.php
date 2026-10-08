@@ -17,6 +17,7 @@ use App\Intelligence\Study\StudyWorkspaceSurfacePolicy;
 use App\Enums\WorkspaceMode;
 use App\Models\Plan;
 use App\Models\Task;
+use App\Models\StudyPracticeSession;
 use App\Services\BehaviorIdentityService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
@@ -222,7 +223,44 @@ final class StudyWorkspaceController extends Controller
             ? $executionSetup->inspect($plan, $navigationTask)
             : null;
 
+        // Older StudyPracticeSession runs remain canonical and recoverable.
+        // Surface the actor-owned unfinished run without converting its drafts
+        // to new LearningRun records or silently creating a fresh session.
+        $legacyPracticeResume = null;
+        if ($canEdit && $studySurface === 'work') {
+            $legacyQuery = StudyPracticeSession::query()
+                ->where('plan_id', $plan->id)
+                ->whereIn('status', [
+                    StudyPracticeSession::STATUS_READY,
+                    StudyPracticeSession::STATUS_IN_PROGRESS,
+                ])
+                ->whereNotNull('questions_snapshot')
+                ->whereHas('task', fn ($query) => $query->where('plan_id', $plan->id));
+            if ($request->user()) {
+                $legacyQuery->where('user_id', $request->user()->id);
+            } else {
+                $legacyQuery->whereNull('user_id')->where('actor_token', $actorToken);
+            }
+            $legacySession = $legacyQuery
+                ->latest('updated_at')->latest('id')->take(10)->get()
+                ->first(fn (StudyPracticeSession $session) =>
+                    is_array($session->questions_snapshot)
+                    && $session->questions_snapshot !== []
+                );
+            if ($legacySession) {
+                $legacyPracticeResume = [
+                    'url' => route('plans.tasks.study_practice.resume', [
+                        $plan, $legacySession->task_id,
+                    ]),
+                    'title' => $legacySession->exercise_title ?: '保存済みの演習',
+                    'total' => count($legacySession->questions_snapshot),
+                    'saved_at' => $legacySession->draft_saved_at ?? $legacySession->updated_at,
+                ];
+            }
+        }
+
         return view('workspace.study.index', [
+            'legacyPracticeResume' => $legacyPracticeResume,
             'studyPlans' => $studyPlans,
             'plan' => $plan,
             'firstPlanContext' => $plan->tasks->isEmpty()

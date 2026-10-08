@@ -131,6 +131,15 @@
             ])
         </div>
     @else
+        @if ($selectedSurface === 'work' && is_array($legacyPracticeResume ?? null))
+            <aside class="rounded-2xl border border-cyan-300/25 bg-cyan-300/[0.055] p-4 sm:p-5" data-legacy-practice-resume>
+                <p class="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-300">CONTINUE SAVED PRACTICE</p>
+                <h2 class="mt-2 text-base font-black text-slate-100">前回の演習の続き</h2>
+                <p class="mt-1 text-sm text-slate-300">{{ $legacyPracticeResume['title'] }} · {{ $legacyPracticeResume['total'] }}問</p>
+                <p class="mt-2 text-xs leading-5 text-slate-400">旧方式で保存された回答をそのまま復元します。新しい演習への移行や回答の初期化は行いません。</p>
+                <a href="{{ $legacyPracticeResume['url'] }}" class="btn-primary mt-4 inline-flex min-h-11 items-center px-4" data-legacy-practice-resume-link>保存済みの演習を再開 →</a>
+            </aside>
+        @endif
         @if (
             filled(data_get($firstPlanContext ?? [], 'goal'))
             && trim((string) data_get($firstPlanContext, 'goal')) === trim((string) $plan->title)
