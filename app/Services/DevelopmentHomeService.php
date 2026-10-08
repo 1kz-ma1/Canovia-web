@@ -21,7 +21,10 @@ final class DevelopmentHomeService
      *   recent_activity:Collection<int,DevelopmentActivityObservation>,
      *   unresolved_activity:Collection<int,DevelopmentActivityObservation>,
      *   association_tasks:Collection<int,Task>,
-     *   active_tasks:Collection<int,Task>
+     *   active_tasks:Collection<int,Task>,
+     *   recent_completed_task:?Task,
+     *   completed_task_count:int,
+     *   recent_completed_has_work_log:bool
      * }
      */
     public function build(
@@ -130,11 +133,35 @@ final class DevelopmentHomeService
             ])
             ->values();
 
+        // A completed Task status is a user-recorded result, not proof of
+        // CI/Deploy/Release success. Surface it as follow-up context without
+        // persisting new Evidence or changing readiness decisions.
+        $completedTasks = $plan->tasks
+            ->filter(fn (Task $task) => $task->status === 'done')
+            ->sort(fn (Task $left, Task $right): int =>
+                (($right->updated_at?->getTimestamp() ?? 0)
+                    <=> ($left->updated_at?->getTimestamp() ?? 0))
+                ?: ((int) $right->id <=> (int) $left->id)
+            )
+            ->values();
+        $recentCompletedTask = $completedTasks->first();
+        $hasWorkLog = $recentCompletedTask instanceof Task
+            && ($plan->relationLoaded('workLogs')
+                ? $plan->workLogs->contains(fn ($log) =>
+                    (int) $log->task_id === (int) $recentCompletedTask->id
+                )
+                : $plan->workLogs()
+                    ->where('task_id', $recentCompletedTask->id)
+                    ->exists());
+
         return [
             'recent_activity' => $recentActivity,
             'unresolved_activity' => $unresolved,
             'association_tasks' => $associationTasks,
             'active_tasks' => $activeTasks,
+            'recent_completed_task' => $recentCompletedTask,
+            'completed_task_count' => $completedTasks->count(),
+            'recent_completed_has_work_log' => $hasWorkLog,
         ];
     }
 }
