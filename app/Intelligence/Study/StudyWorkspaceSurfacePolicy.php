@@ -412,7 +412,9 @@ final class StudyWorkspaceSurfacePolicy
             ];
         }
 
-        if ($hasScope && $presentation) {
+        // Published qualification scope may be known before the learner has
+        // confirmed any personal scope items. Honor its baseline Action.
+        if (($hasScope || is_array($state['official_exam_reference'] ?? null)) && $presentation) {
             return [
                 'eyebrow' => 'CURRENT ACTION',
                 'title' => $presentation->action?->title
