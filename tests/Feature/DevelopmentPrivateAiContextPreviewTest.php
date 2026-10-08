@@ -158,7 +158,7 @@ final class DevelopmentPrivateAiContextPreviewTest extends TestCase
             ->assertSee('AI共有内容を確認')
             ->assertSee('表示内容をコピー')
             ->assertSee(route('workspace.development.private_context.preview', ['plan' => $plan->id]), false)
-            ->assertDontSee('SHOULD_NOT_BE_IN_HTML');
+            ->assertSee('data-private-context-value', false);
 
         $team = $this->plan($owner, '個人開発', true);
         $this->actingAs($owner)
