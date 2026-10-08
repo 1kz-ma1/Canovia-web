@@ -40,25 +40,29 @@ latest main
   -> implementation and relevant regression tests
   -> Pull Request with impact and risk assessment
   -> verify required CI, review the actual diff and branch status
-  -> LOW IMPACT + NO OWNER DECISION: agent may squash merge
-  -> HIGH IMPACT / OWNER DECISION / UNCERTAINTY: leave PR open for manual merge
+  -> PRODUCT OWNER APPROVED ALL PR TYPES (2026-10-08)
+  -> All relevant tests + required CI green and PR mergeable: agent may squash merge
+  -> Failed/pending/insufficient checks, conflicts or unresolved blockers: fix first; no merge
 ```
 
-### Agent may merge without further approval
+### Agent may merge without further approval (owner authorization 2026-10-08)
+
+The product owner has **temporarily authorized agent merge of all PR types, including previously high-impact/manual-review categories**, provided the change is sufficiently verified. This applies to subsequent PRs until explicitly withdrawn or changed by the product owner.
 
 Only when **all** are true:
 
-1. The change is isolated, non-destructive, reversible, and does not require a product-owner decision; production impact is expected to be small. Typical examples: local presentation/copy, help text, small navigation improvements, documentation, targeted tests, or safely scoped bug fixes.
-2. The PR targets `main` from a feature/fix branch; direct pushes to `main` are still prohibited.
-3. The complete diff is inspected for unexpected changes; the PR is mergeable against the current `main` and no reviewer/approval or branch-protection requirement is outstanding.
-4. All required checks have **completed successfully**. Relevant tests actually cover the changed behavior; successful unrelated workflows alone are insufficient. New or changed behavior should gain regression coverage.
-5. No uncertain data integrity, privacy, security, external side effects, or operational risks remain.
+1. The PR targets `main` from a feature/fix branch; direct pushes to `main` are still prohibited.
+2. The full diff and potential data/privacy/security/billing/production side effects are inspected; the PR is mergeable against current `main` and no unresolved required review, branch protection or conflict exists.
+3. All required checks have **completed successfully**. Relevant tests cover the changed behavior, including permissions/data isolation and regression tests appropriate to the actual risk.
+4. No unresolved critical data integrity, privacy, security, external side-effect or operational risk remains. High-impact changes demand more verification rather than a distinct owner click.
+
+The owner authorization is to **merge verified PRs**, not to bypass safety gates, invent a successful deployment, suppress failures or force-merge a conflicting branch.
 
 When all conditions hold, squash merge with an expected head SHA, confirm GitHub reported success, and tell the user the PR number, test result, commit SHA, and any unverified deployment status. Never claim production verification solely from CI.
 
-### User manually reviews and merges
+### Higher-risk PRs: verify more, not automatically stop
 
-Keep the PR open, explain the consequence or choice, and give the user its URL when it includes any of the following (unless the user explicitly approves that PR for agent merge):
+The product owner has approved merges of these categories **after adequate relevant tests and required CI success**. Examples requiring explicit impact assessment, domain-appropriate tests and review of actual diff:
 
 - Database/schema migrations, backfills, destructive data changes, or changes to stored user data semantics.
 - Authentication, authorization, account/session security, secrets, PII or sensitive information, permissions, or privacy boundaries.
@@ -67,7 +71,7 @@ Keep the PR open, explain the consequence or choice, and give the user its URL w
 - GitHub or other third-party write actions, webhooks with side effects, broader automation, cross-cutting architecture, changes to AI actions with material user impact, or removal of existing functionality.
 - Unclear business requirements, trade-offs needing the owner's judgment, production impact that cannot be bounded, failed/pending CI, inadequate tests, conflicts, or pending required human reviews.
 
-When uncertain, **do not merge**; request a manual merge decision. An explicit approval applies to that named PR, not all future risky PRs.
+If verification is insufficient, a conflict remains, required checks are pending, or an unresolved issue cannot be verified, **leave the PR open** and report the blocker. The current authorization is broad and persists until the owner changes it, but does not waive mergeability or safety.
 
 ### Production and emergency exceptions
 
@@ -95,7 +99,7 @@ Render production deploys from `main`.
 
 Creating or updating a feature branch must not be treated as production deployment.
 
-After the user merges the PR, Render auto-deploy may be monitored separately when requested or when production verification is part of the task.
+After the user or agent merges a PR, Render auto-deploy may be monitored separately when requested or when production verification is part of the task.
 
 ## Why this policy exists
 
