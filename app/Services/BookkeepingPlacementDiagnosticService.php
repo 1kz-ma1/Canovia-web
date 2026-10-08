@@ -128,33 +128,59 @@ final class BookkeepingPlacementDiagnosticService
             $scores[$topic] = (int) round(100 * $values['correct'] / max(1, $values['total']));
         }
 
-        $weakTopics = array_keys(array_filter($scores, fn (int $score) => $score < 67));
-        $strongPrerequisites = $correct >= 10 && $weakTopics === [];
-
-        $status = $weakTopics !== []
-            ? 'review_prerequisites'
-            : ($strongPrerequisites && $wantsAdvance
-                ? 'trial_next_grade'
-                : 'review_and_verify');
-
-        $message = match ($status) {
-            'review_prerequisites' => '3級範囲の弱い単元を先に短く復習しましょう。2級の先取りは、関連する基礎を確かめながら少しずつ進められます。',
-            'trial_next_grade' => '今回の3級基礎は概ね安定しています。3級を定期的に復習しつつ、2級の導入単元を試す候補です。',
-            default => '今回の範囲に大きな穴は見えませんが、定着はまだ未確認です。別の問題でも確認しながら復習を続けましょう。',
-        };
+        $scorePercent = (int) round(100 * $correct / count($this->questions()));
+        $placement = $this->placement($scorePercent, $scores, $wantsAdvance);
 
         return [
             'version' => 1,
-            'score_percent' => (int) round(100 * $correct / count($this->questions())),
+            'score_percent' => $scorePercent,
             'correct_count' => $correct,
             'total_count' => count($this->questions()),
             'topic_scores' => $scores,
-            'weak_topics' => $weakTopics,
-            'status' => $status,
-            'message' => $message,
+            ...$placement,
             'wants_advance' => $wantsAdvance,
             'feedback' => $feedback,
             'disclaimer' => '12問の簡易確認です。合格可能性や3級全範囲の習熟を保証せず、2級への進学を制限するものではありません。',
+        ];
+    }
+
+    /**
+     * This policy can be re-evaluated on every revisit from the persisted
+     * per-topic results, without a fixed Grade 3-before-Grade 2 sequence.
+     *
+     * @param array<string,mixed> $recordedScores
+     * @return array{weak_topics:array<int,string>,status:string,message:string}
+     */
+    public function placement(int $scorePercent, array $recordedScores, bool $wantsAdvance): array
+    {
+        $scores = [];
+        foreach (self::TOPICS as $key => $label) {
+            $value = $recordedScores[$key] ?? null;
+            if (! is_numeric($value) || (float) $value < 0 || (float) $value > 100) {
+                return [
+                    'weak_topics' => [],
+                    'status' => 'diagnostic_needed',
+                    'message' => '単元別の確認結果が不足しています。まず基礎診断で現在地を確かめましょう。',
+                ];
+            }
+            $scores[$key] = (int) $value;
+        }
+
+        $weakTopics = array_keys(array_filter($scores, fn (int $score) => $score < 67));
+        $status = $weakTopics !== []
+            ? 'review_prerequisites'
+            : ($scorePercent >= 83 && $wantsAdvance
+                ? 'trial_next_grade'
+                : 'review_and_verify');
+
+        return [
+            'weak_topics' => $weakTopics,
+            'status' => $status,
+            'message' => match ($status) {
+                'review_prerequisites' => '3級範囲の弱い単元を先に短く復習しましょう。2級の先取りは、関連する基礎を確かめながら少しずつ進められます。',
+                'trial_next_grade' => '今回の3級基礎は概ね安定しています。3級を定期的に復習しつつ、2級の導入単元を試す候補です。',
+                default => '今回の範囲に大きな穴は見えませんが、定着はまだ未確認です。別の問題でも確認しながら復習を続けましょう。',
+            ],
         ];
     }
 
