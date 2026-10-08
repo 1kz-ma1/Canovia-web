@@ -628,6 +628,44 @@ class PersonalizationBootstrapV5825Test extends TestCase
         }
     }
 
+    public function test_study_evidence_pages_link_back_to_the_selected_workspace(): void
+    {
+        $user = User::factory()->create();
+        $plan = Plan::query()->create([
+            'user_id' => $user->id,
+            'owner_token' => (string) Str::uuid(),
+            'public_slug' => (string) Str::uuid(),
+            'title' => '資格試験に合格する',
+            'category' => '資格学習',
+            'start_date' => today(),
+            'deadline' => today()->addMonth(),
+            'is_public' => false,
+        ]);
+        $workspaceUrl = route('workspace.study.index', ['plan_id' => $plan->id]);
+
+        $this->actingAs($user)
+            ->withSession(['success' => '学習スコアをEvidenceとして記録しました。'])
+            ->get(route('plans.study_scores.index', $plan))
+            ->assertOk()
+            ->assertSee($workspaceUrl, false);
+
+        $this->actingAs($user)
+            ->withSession([
+                'success' => '試験範囲を確定しました。',
+                'study_scope_confirmed' => true,
+            ])
+            ->get(route('plans.study_scope.index', $plan))
+            ->assertOk()
+            ->assertSee('data-study-scope-next-action', false)
+            ->assertSee($workspaceUrl, false);
+
+        $this->actingAs($user)
+            ->withSession(['success' => '試験範囲を読み取りました。'])
+            ->get(route('plans.study_scope.index', $plan))
+            ->assertOk()
+            ->assertDontSee('data-study-scope-next-action', false);
+    }
+
     private function requestFor(User $user): \Illuminate\Http\Request
     {
         $request = \Illuminate\Http\Request::create(
