@@ -72,6 +72,7 @@ jobs:
           php -l app/Services/StudyReviewCyclePersonalizationAdapter.php
           php -l tests/Feature/StudyReviewCyclePersonalizationV5833Test.php
           php -l tests/Feature/LongUsageWindowPersonalizationV5834Test.php
+          php -l tests/Feature/ActionFirstPlanCreateV5866Test.php
           php -l tests/Feature/OverviewRelevanceV5865Test.php
           php -l app/Services/BookkeepingJournalEntryGrader.php
           php -l app/Services/BookkeepingJournalPracticeService.php
@@ -108,6 +109,8 @@ jobs:
         run: php artisan test tests/Feature/BookkeepingJournalPracticeV5862Test.php tests/Feature/StudyScoreBaselineV5616Test.php
       - name: V58.57 First Plan Import Continuity
         run: php artisan test tests/Feature/InitialPlanJsonReliabilityV387Test.php
+      - name: V58.66 Action-first Plan Creation
+        run: php artisan test tests/Feature/ActionFirstPlanCreateV5866Test.php tests/Feature/PublicBetaPolishV16Test.php tests/Feature/AdaptiveGoalDiscoveryV4114Test.php tests/Feature/PlanVisualPreferencesTest.php tests/Feature/MutationIdempotencyV390Test.php tests/Feature/GoalContextFoundationV4114Test.php tests/Feature/WorkspaceModeOnboardingV547Test.php
       - name: V58.26 Capability Activation
         run: php artisan test tests/Feature/CapabilityActivationV5826Test.php
       - name: V58.27 Living Profile
