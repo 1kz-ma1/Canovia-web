@@ -10,11 +10,17 @@
     $guidanceTask = data_get($guidance, 'task');
     $guidanceTool = data_get($guidance, 'recommended_tool');
     $guidanceAdaptive = data_get($guidance, 'adaptive');
+    // Unused Modes remain discoverable via the Mode switcher.
     $modeSummaries = collect([
         $studySummary ?? [],
         $developmentSummary ?? [],
         $careerSummary ?? [],
-    ]);
+    ])->filter(fn ($summary) => is_array($summary)
+        && ($summary['plan'] ?? null) instanceof \App\Models\Plan)->values();
+    $hasPrimaryAction = $primaryPresentation || ($guidance && $guidancePlan && $guidanceTask);
+    $showPrimarySection = $hasPrimaryAction || collect($firstUseModeChoices ?? [])->isEmpty();
+    $showInbox = (int) ($pendingInboxCount ?? 0) > 0;
+    $showChanges = collect($importantSignals ?? [])->isNotEmpty();
 @endphp
 
 <div class="mx-auto max-w-7xl space-y-5" data-overview-workspace>
@@ -30,10 +36,18 @@
         </div>
 
         <nav class="flex gap-2 overflow-x-auto px-5 py-3 sm:px-6" aria-label="Overview navigation">
-            <a href="#overview-current-action" class="badge badge-slate whitespace-nowrap">Current Action</a>
-            <a href="#overview-modes" class="badge badge-slate whitespace-nowrap">Modes</a>
-            <a href="#overview-inbox" class="badge badge-slate whitespace-nowrap">Inbox</a>
-            <a href="#overview-changes" class="badge badge-slate whitespace-nowrap">Changes</a>
+            @if ($showPrimarySection)
+                <a href="#overview-current-action" class="badge badge-slate whitespace-nowrap">Current Action</a>
+            @endif
+            @if ($modeSummaries->isNotEmpty())
+                <a href="#overview-modes" class="badge badge-slate whitespace-nowrap">Modes</a>
+            @endif
+            @if ($showInbox)
+                <a href="#overview-inbox" class="badge badge-slate whitespace-nowrap">Inbox</a>
+            @endif
+            @if ($showChanges)
+                <a href="#overview-changes" class="badge badge-slate whitespace-nowrap">Changes</a>
+            @endif
         </nav>
     </section>
 
@@ -66,6 +80,7 @@
         </section>
     @endif
 
+    @if ($showPrimarySection)
     <section id="overview-current-action" class="page-card border-violet-300/15 p-5 sm:p-6" data-overview-primary-action>
         <div class="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -91,7 +106,7 @@
                 };
             @endphp
 
-            <div class="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(17rem,0.75fr)]">
+            <div class="mt-5 grid gap-4 {{ $primaryPresentation->readiness->score !== null ? 'lg:grid-cols-[minmax(0,1.25fr)_minmax(17rem,0.75fr)]' : '' }}">
                 <article class="rounded-3xl border border-white/8 bg-slate-950/30 p-5">
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="plan-identity-chip text-[11px]">
@@ -118,6 +133,7 @@
                     </div>
                 </article>
 
+                @if ($primaryPresentation->readiness->score !== null)
                 <aside class="rounded-3xl border border-white/8 bg-slate-950/25 p-5">
                     <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{{ $primaryPresentation->readinessLabel }}</p>
                     <p class="mt-2 text-3xl font-black text-slate-100">{{ $primaryPresentation->readinessDisplay() }}</p>
@@ -129,6 +145,7 @@
                         <p class="mt-1 text-sm font-black text-slate-100">{{ $primaryPresentation->gapLabel }}</p>
                     </div>
                 </aside>
+                @endif
             </div>
         @elseif ($guidance && $guidancePlan && $guidanceTask)
             <div class="mt-5 rounded-3xl border border-white/8 bg-slate-950/30 p-5">
@@ -178,6 +195,7 @@
             </div>
         @endif
     </section>
+    @endif
 
     @if (($intelligenceChanges ?? collect())->isNotEmpty())
         <div class="space-y-3" data-overview-intelligence-changes>
@@ -193,6 +211,7 @@
         </div>
     @endif
 
+    @if ($modeSummaries->isNotEmpty())
     <section id="overview-modes" class="grid gap-4 lg:grid-cols-3" data-overview-mode-summaries>
         @foreach ($modeSummaries as $summary)
             @php
@@ -280,8 +299,11 @@
             </article>
         @endforeach
     </section>
+    @endif
 
-    <div class="grid gap-4 lg:grid-cols-2">
+    @if ($showInbox || $showChanges)
+    <div class="grid gap-4 {{ $showInbox && $showChanges ? 'lg:grid-cols-2' : 'lg:grid-cols-1' }}">
+        @if ($showInbox)
         <section id="overview-inbox" class="page-card p-5 sm:p-6" data-overview-inbox>
             <div class="flex items-start justify-between gap-3">
                 <div>
@@ -309,7 +331,9 @@
 
             <a href="{{ route('inbox.index') }}" class="btn-secondary mt-4 inline-flex min-h-10 items-center px-3 text-xs">Inboxを開く</a>
         </section>
+        @endif
 
+        @if ($showChanges)
         <section id="overview-changes" class="page-card p-5 sm:p-6" data-overview-important-changes>
             <div class="flex items-start justify-between gap-3">
                 <div>
@@ -332,6 +356,8 @@
                 @endforelse
             </div>
         </section>
+        @endif
     </div>
+    @endif
 </div>
 @endsection
