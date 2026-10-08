@@ -94,6 +94,7 @@ use App\Http\Controllers\DevelopmentPrivateAiContextPreviewController;
 use App\Http\Controllers\McpProtectedResourceMetadataController;
 use App\Http\Controllers\McpDelegatedRevocationController;
 use App\Http\Controllers\McpOAuthAccountLinkController;
+use App\Http\Controllers\McpOAuthPlanConsentController;
 use App\Http\Controllers\DevelopmentAiSharingPreferenceController;
 use App\Http\Controllers\DevelopmentCreativePlanSelectionController;
 use App\Http\Controllers\DevelopmentWorkspaceTopController;
@@ -256,6 +257,15 @@ Route::post('/account/mcp/link/confirm', [McpOAuthAccountLinkController::class, 
 Route::post('/account/mcp/link/cancel', [McpOAuthAccountLinkController::class, 'cancel'])
     ->middleware(['auth', 'throttle:10,1'])
     ->name('auth.account.mcp_link.cancel');
+Route::post('/account/mcp/plans/{plan}/consent/start', [McpOAuthPlanConsentController::class, 'start'])
+    ->middleware(['auth', 'throttle:5,1'])
+    ->name('auth.account.mcp_plan_consent.start');
+Route::post('/account/mcp/plans/consent/confirm', [McpOAuthPlanConsentController::class, 'confirm'])
+    ->middleware(['auth', 'throttle:5,1'])
+    ->name('auth.account.mcp_plan_consent.confirm');
+Route::post('/account/mcp/plans/consent/cancel', [McpOAuthPlanConsentController::class, 'cancel'])
+    ->middleware(['auth', 'throttle:10,1'])
+    ->name('auth.account.mcp_plan_consent.cancel');
 Route::delete('/account/mcp/grants/{grant}', [McpDelegatedRevocationController::class, 'grant'])
     ->whereNumber('grant')
     ->middleware(['auth', 'throttle:8,1'])
