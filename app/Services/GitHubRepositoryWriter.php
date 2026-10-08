@@ -2560,6 +2560,73 @@ final class GitHubRepositoryWriter
         return $pending ? 'pending' : ($allSucceeded ? 'observed_pass' : 'unknown');
     }
 
+    /**
+     * Read a bounded set of explicitly linked issues; installation tokens
+     * never authorize private repository disclosure to the Canovia actor.
+     *
+     * @param array<int,int> $numbers
+     * @return array{signals:array<int,array<string,mixed>>, observed_at:string}
+     */
+    public function readDevelopmentRoadmapIssueSignals(string $repoFullName, array $numbers): array
+    {
+        $numbers = array_slice(array_values(array_unique(array_filter(
+            $numbers,
+            fn ($n) => is_int($n) && $n > 0 && $n <= 999999,
+        ))), 0, 10);
+        if ($numbers === []) {
+            return ['signals' => [], 'observed_at' => now()->toIso8601String()];
+        }
+
+        $context = $this->developmentReadContext($repoFullName, 'contents', 'Contents');
+        /** @var PendingRequest $client */
+        $client = $context['client'];
+        $repoPath = (string) $context['repo_path'];
+        $repositoryResponse = $client->get('/repos/'.$repoPath);
+        $repository = $repositoryResponse->successful() ? $repositoryResponse->json() : null;
+        if (! is_array($repository)
+            || ($repository['private'] ?? null) !== false
+            || ($repository['visibility'] ?? null) !== 'public') {
+            throw new RuntimeException('Private / Internal RepositoryのIssue検証には本人のGitHub権限確認が必要です。');
+        }
+
+        $permissions = (array) $context['permissions'];
+        $canReadIssues = in_array($permissions['issues'] ?? null, ['read', 'write'], true);
+        $signals = [];
+        foreach ($numbers as $number) {
+            $signal = [
+                'number' => $number,
+                'url' => 'https://github.com/'.$repoFullName.'/issues/'.$number,
+                'state' => 'unknown',
+            ];
+            if (! $canReadIssues) {
+                $signals[$number] = $signal;
+                continue;
+            }
+            $response = $client->get('/repos/'.$repoPath.'/issues/'.$number);
+            if ($response->status() === 404) {
+                $signal['state'] = 'missing';
+            } elseif ($response->successful()) {
+                $issue = $response->json();
+                // GitHub's Issues endpoint also returns PRs. Reject those
+                // explicitly to avoid accidentally treating PRs as issues.
+                if (is_array($issue) && (int) ($issue['number'] ?? 0) === $number) {
+                    if (isset($issue['pull_request'])) {
+                        $signal['state'] = 'not_issue';
+                    } else {
+                        $signal['state'] = match ((string) ($issue['state'] ?? '')) {
+                            'open' => 'open',
+                            'closed' => 'closed',
+                            default => 'unknown',
+                        };
+                    }
+                }
+            }
+            $signals[$number] = $signal;
+        }
+
+        return ['signals' => $signals, 'observed_at' => now()->toIso8601String()];
+    }
+
     private function developmentReadContext(
         string $repoFullName,
         string $permission,

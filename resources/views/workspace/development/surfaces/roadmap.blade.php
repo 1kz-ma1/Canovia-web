@@ -14,6 +14,13 @@
         'missing' => '参照先なし',
         'unknown' => 'PR未確認',
     ];
+    $issueStates = [
+        'open' => 'Issueオープン',
+        'closed' => 'Issueクローズ（完了とは限りません）',
+        'missing' => 'Issueが見つかりません',
+        'not_issue' => '参照先はPRです',
+        'unknown' => 'Issue未確認',
+    ];
     $ciStates = [
         'observed_pass' => 'PR headの取得済みChecks成功',
         'failed' => 'PR headのChecks失敗',
@@ -40,7 +47,7 @@
                     <a href="{{ $sourceUrl }}" target="_blank" rel="noopener noreferrer" class="btn-secondary min-h-9 px-3 text-xs">仕様書をGitHubで開く ↗</a>
                 @endif
                 @if ($plan && $roadmapSnapshot)
-                    <a href="{{ route('workspace.development.index', ['plan_id' => $plan->id, 'surface' => 'roadmap', 'verify' => '1']) }}" class="btn-secondary min-h-9 px-3 text-xs" data-roadmap-check-github>GitHubのPR・CIを照合</a>
+                    <a href="{{ route('workspace.development.index', ['plan_id' => $plan->id, 'surface' => 'roadmap', 'verify' => '1']) }}" class="btn-secondary min-h-9 px-3 text-xs" data-roadmap-check-github>GitHubのPR・Issue・CIを照合</a>
                 @endif
             </div>
         </div>
@@ -99,6 +106,16 @@
                                         ({{ mb_substr((string) data_get($signal, 'ci_sha'), 0, 8) }})
                                     @endif
                                 </span>
+                            </div>
+                        @endforeach
+                        @foreach (collect(data_get($row, 'issue_signals', [])) as $issue)
+                            <div class="mt-2 rounded-lg border border-amber-300/10 bg-amber-300/[0.025] px-3 py-2 text-xs" data-roadmap-issue-observation>
+                                @if (data_get($issue, 'url'))
+                                    <a href="{{ data_get($issue, 'url') }}" target="_blank" rel="noopener noreferrer" class="font-black text-cyan-300">Issue #{{ (int) data_get($issue, 'number', 0) }} ↗</a>
+                                @else
+                                    <span class="font-black text-cyan-300">Issue #{{ (int) data_get($issue, 'number', 0) }}</span>
+                                @endif
+                                <span class="ml-2 text-slate-300">{{ $issueStates[data_get($issue, 'state', 'unknown')] ?? $issueStates['unknown'] }}</span>
                             </div>
                         @endforeach
                         <p class="mt-3 text-[11px] font-bold text-slate-400">残作業・検証条件</p>

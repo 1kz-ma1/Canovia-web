@@ -21,7 +21,7 @@ Planned = intent. Implemented = code integrated. CI verified = checks for exact 
 ## Next slices
 1. Verify production deployment and iPhone/PWA/desktop Learning regression at an exact SHA.
 2. Validate the read-only Markdown preview on a real device and linked public GitHub repository; record repo/path/SHA and unknowns.
-3. Match explicit PR references and their available Checks on demand; add Issue linkage later. Distinguish deployment and real-device validation.
+3. Validate explicit PR/Issue references and available Checks on demand; distinguish deploy and device verification. Distinguish deployment and real-device validation.
 4. Consider opt-in, reviewable execution Task suggestions **only after** user validation.
 
 2026-12-01 is an initial release-readiness target, not proof of launch. Business success means Canovia-only subscription revenue >= JPY 230,000/month for several months.
