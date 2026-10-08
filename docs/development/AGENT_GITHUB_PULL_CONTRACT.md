@@ -28,7 +28,7 @@ The authenticated Development Work surface now offers an optional private Contex
 
 ## Current: ChatGPT sharing preparation settings (no OAuth permission)
 
-The owner of a personal Development Plan can prepare the proposed `chatgpt` sharing scope (`overview` or `tasks`) and a finite 1/7/30-day preparation lifetime in the Work surface. Each save/update/cancel action is CSRF-protected, session-authenticated, bound to the Plan owner and audited without storing source Context. These records are `prepared`, **never connected, consented or delegated**. No private MCP route, bearer token or OAuth client exists. Revocation remains available to the owner even if the Plan becomes collaborative or changes domain. See [sharing preparation contract](CHATGPT_SHARING_PREFERENCES_SPEC.md).
+The owner of a personal Development Plan can prepare the proposed `chatgpt` sharing scope (`overview` or `tasks`) and a finite 1/7/30-day preparation lifetime in the Work surface. Each save/update/cancel action is CSRF-protected, session-authenticated, bound to the Plan owner and audited without storing source Context. These records are `prepared`, **never connected, consented or delegated**. No private MCP route, bearer token or OAuth client exists. Revocation remains available to the preference creator via the account page even if the Plan becomes collaborative, changes domain or ownership. Neither the account page nor the preparation record grants ChatGPT access. See [sharing preparation contract](CHATGPT_SHARING_PREFERENCES_SPEC.md).
 
 ## Future: direct delegated AI → Canovia read
 
