@@ -59,9 +59,30 @@
                     >{{ old('description', $plan->description) }}</textarea>
                 </div>
 
+                <section class="rounded-2xl border border-cyan-300/20 bg-slate-950/80 p-4" data-plan-domain-override>
+                    <label for="workspace_domain_override" class="block text-sm font-bold text-slate-100">どのWorkspaceで扱いますか？</label>
+                    <p class="mt-2 text-xs leading-5 text-slate-400">
+                        通常はCanoviaに任せて大丈夫です。以前「制作活動」で作ったチーム開発などは、
+                        ここで「開発」を選ぶと次回からDevelopmentに表示できます。
+                        カテゴリ・参加メンバー・共有権限は変わりません。
+                    </p>
+                    <select id="workspace_domain_override" name="workspace_domain_override"
+                        class="form-control mt-3 min-h-11 w-full text-sm">
+                        <option value="auto" @selected(old('workspace_domain_override', $plan->workspace_domain_override ?? 'auto') === 'auto')>Canoviaに任せる（現在：{{ app(\App\Services\PlanCategoryProfileService::class)->forCategory((string) $plan->category)->label }}）</option>
+                        <option value="study" @selected(old('workspace_domain_override', $plan->workspace_domain_override) === 'study')>学習</option>
+                        <option value="development" @selected(old('workspace_domain_override', $plan->workspace_domain_override) === 'development')>開発（個人・チーム共通）</option>
+                        <option value="career" @selected(old('workspace_domain_override', $plan->workspace_domain_override) === 'career')>就活・キャリア</option>
+                        <option value="creative" @selected(old('workspace_domain_override', $plan->workspace_domain_override) === 'creative')>制作活動</option>
+                        <option value="general" @selected(old('workspace_domain_override', $plan->workspace_domain_override) === 'general')>一般</option>
+                    </select>
+                    @error('workspace_domain_override')
+                        <p class="mt-2 text-xs text-rose-300">{{ $message }}</p>
+                    @enderror
+                </section>
+
                 <div>
                     <label for="category" class="mb-2 block text-sm font-medium text-slate-700">
-                        カテゴリ
+                        カテゴリ（旧分類・必要な場合だけ修正）
                     </label>
 
                     <select

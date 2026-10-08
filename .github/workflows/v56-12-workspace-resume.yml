@@ -85,6 +85,8 @@ jobs:
           php -l tests/Feature/PlanActionFirstCreationV5866Test.php
           php -l app/Services/PlanIntentClassificationService.php
           php -l tests/Feature/PlanIntentClassificationV5867Test.php
+          php -l database/migrations/2026_10_08_130000_add_workspace_domain_override_to_plans.php
+          php -l tests/Feature/PlanDomainOverrideV5868Test.php
       - run: php artisan view:cache
       - run: php artisan migrate --force
       - name: V56.12 workspace resume and session scope
@@ -138,4 +140,4 @@ jobs:
       - name: V58.63 Legacy Creative Development Rescue
         run: php artisan test tests/Feature/DevelopmentCreativePlanRescueV5863Test.php tests/Feature/WorkspaceModeResolverV540Test.php
       - name: V58.66 Action-first Plan Creation
-        run: php artisan test tests/Feature/PlanIntentClassificationV5867Test.php tests/Feature/PlanActionFirstCreationV5866Test.php tests/Feature/MutationIdempotencyV390Test.php tests/Feature/PlanVisualPreferencesTest.php tests/Feature/GoalContextFoundationV4114Test.php tests/Feature/WorkspaceModeOnboardingV547Test.php tests/Feature/PublicBetaPolishV16Test.php tests/Feature/AdaptiveGoalDiscoveryV4114Test.php
+        run: php artisan test tests/Feature/PlanDomainOverrideV5868Test.php tests/Feature/PlanIntentClassificationV5867Test.php tests/Feature/PlanActionFirstCreationV5866Test.php tests/Feature/MutationIdempotencyV390Test.php tests/Feature/PlanVisualPreferencesTest.php tests/Feature/GoalContextFoundationV4114Test.php tests/Feature/WorkspaceModeOnboardingV547Test.php tests/Feature/PublicBetaPolishV16Test.php tests/Feature/AdaptiveGoalDiscoveryV4114Test.php

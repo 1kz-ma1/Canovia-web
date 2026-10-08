@@ -7,9 +7,21 @@ use App\Models\Plan;
 
 class PlanCategoryProfileService
 {
+    /** Domain is an explicit owner choice; category remains legacy metadata. */
+    public const DOMAIN_CATEGORIES = [
+        'study' => '資格学習',
+        'development' => 'ソフトウェア開発',
+        'career' => '就活・キャリア',
+        'creative' => '制作活動',
+        'general' => 'その他',
+    ];
+
     public function forPlan(Plan $plan): PlanCategoryProfileData
     {
-        return $this->forCategory((string) ($plan->category ?? ''));
+        $domain = (string) ($plan->workspace_domain_override ?? '');
+        $category = self::DOMAIN_CATEGORIES[$domain] ?? (string) ($plan->category ?? '');
+
+        return $this->forCategory($category);
     }
 
     public function forCategory(string $category): PlanCategoryProfileData
