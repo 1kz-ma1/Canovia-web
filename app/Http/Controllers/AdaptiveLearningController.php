@@ -9,6 +9,7 @@ use App\Models\QuestionPack;
 use App\Models\Task;
 use App\Services\AdaptiveLearningBankQueueService;
 use App\Services\AdaptiveLearningCandidateService;
+use App\Services\AdaptiveExamProfileRegistry;
 use App\Services\BehaviorIdentityService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
@@ -44,7 +45,8 @@ final class AdaptiveLearningController extends Controller
 
     public function index(Request $request, Plan $plan, Task $task,
         PlanOwnershipService $ownership, PlanCategoryProfileService $profiles,
-        BehaviorIdentityService $identity, AdaptiveLearningBankQueueService $queue)
+        BehaviorIdentityService $identity, AdaptiveLearningBankQueueService $queue,
+        AdaptiveExamProfileRegistry $examProfiles)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         $packs = QuestionPack::query()->where('status', 'published')
@@ -59,7 +61,10 @@ final class AdaptiveLearningController extends Controller
 
         return view('learning.index', [
             'plan' => $plan, 'task' => $task, 'packs' => $packs,
-            'activeRuns' => $activeRuns, 'startRequestId' => (string) Str::uuid(),
+            'activeRuns' => $activeRuns,
+            'examProfiles' => $examProfiles->available(),
+            'startRequestId' => (string) Str::uuid(),
+            'examStartRequestId' => (string) Str::uuid(),
         ]);
     }
 
@@ -127,6 +132,7 @@ final class AdaptiveLearningController extends Controller
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         $run = $this->actorRuns($request, $plan, $task, $identity)
             ->whereKey($learningRun->id)->firstOrFail();
+        abort_unless(in_array($run->mode, [LearningRun::MODE_UNDERSTANDING, LearningRun::MODE_PRACTICE], true), 404);
         $item = $run->items()->with('answer')->where('ordinal', $run->current_ordinal)->first();
         $answered = $run->items()->whereHas('answer')->count();
         $correct = $run->items()->whereHas('answer', fn ($q) => $q->where('was_correct', true))->count();
@@ -152,6 +158,7 @@ final class AdaptiveLearningController extends Controller
         DB::transaction(function () use ($request, $plan, $task, $learningRun, $identity, $input, $grader, $candidates) {
             $run = $this->actorRuns($request, $plan, $task, $identity)
                 ->whereKey($learningRun->id)->lockForUpdate()->firstOrFail();
+            abort_unless(in_array($run->mode, [LearningRun::MODE_UNDERSTANDING, LearningRun::MODE_PRACTICE], true), 404);
             $item = $run->items()->where('ordinal', $run->current_ordinal)
                 ->whereKey($input['learning_run_item_id'])->firstOrFail();
 
@@ -205,6 +212,7 @@ final class AdaptiveLearningController extends Controller
         DB::transaction(function () use ($request, $plan, $task, $learningRun, $identity, $queue, $candidates, &$exhausted) {
             $run = $this->actorRuns($request, $plan, $task, $identity)
                 ->whereKey($learningRun->id)->lockForUpdate()->firstOrFail();
+            abort_unless(in_array($run->mode, [LearningRun::MODE_UNDERSTANDING, LearningRun::MODE_PRACTICE], true), 404);
             abort_unless($run->status === LearningRun::STATUS_ACTIVE, 409);
             $current = $run->items()->where('ordinal', $run->current_ordinal)->firstOrFail();
             abort_unless($current->answer()->exists(), 409);
@@ -239,6 +247,7 @@ final class AdaptiveLearningController extends Controller
         DB::transaction(function () use ($request, $plan, $task, $learningRun, $identity) {
             $run = $this->actorRuns($request, $plan, $task, $identity)
                 ->whereKey($learningRun->id)->lockForUpdate()->firstOrFail();
+            abort_unless(in_array($run->mode, [LearningRun::MODE_UNDERSTANDING, LearningRun::MODE_PRACTICE], true), 404);
             if ($run->status === LearningRun::STATUS_COMPLETED) return;
             $run->update(['status' => LearningRun::STATUS_COMPLETED, 'completed_at' => now()]);
         });
