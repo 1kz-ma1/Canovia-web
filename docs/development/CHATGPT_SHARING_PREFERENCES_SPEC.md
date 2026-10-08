@@ -56,3 +56,13 @@ Official source of current platform constraints: https://developers.openai.com/p
 - Revoke remains possible if Plan becomes collaborative/non-development or is transferred to another owner; other actor rejected.
 - No Task/Plan mutation, external GitHub request, OAuth token, data leak or false `connected` status.
 - Tests in required CI, migration retry safety and Render deploy monitored separately.
+
+## Separate future grant cancellation mechanism
+
+The account page also contains a distinct, owner-only **grant/link revocation**
+section for future OAuth consent records. These are NOT the preparation
+preferences described above. This path can only revoke link/grant records
+and cannot create an OAuth connection, active consent or tokens. Current
+production link/grant tables remain empty until the verified identity-linking
+and formal consent flow is implemented. See
+[delegated revocation contract](MCP_DELEGATED_REVOCATION_CONTRACT.md).
