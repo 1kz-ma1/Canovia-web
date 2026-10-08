@@ -96,6 +96,7 @@ class StudyScoreBaselineV5616Test extends TestCase
         $this->actingAs($user)
             ->get(route('workspace.study.index', [
                 'plan_id' => $plan->id,
+                'surface' => 'analysis',
             ]))
             ->assertOk()
             ->assertDontSee(
@@ -139,7 +140,16 @@ class StudyScoreBaselineV5616Test extends TestCase
             ->assertSee(
                 route('plans.study_scores.index', $plan),
                 false,
-            )
+            );
+
+        // Work intentionally surfaces missing baseline; Analysis shows the
+        // independent in-app practice accuracy without turning it into TOEIC.
+        $this->actingAs($user)
+            ->get(route('workspace.study.index', [
+                'plan_id' => $plan->id,
+                'surface' => 'analysis',
+            ]))
+            ->assertOk()
             ->assertSee('84%')
             ->assertSee('外部スコアBaseline待ち')
             ->assertDontSee('CURRENT SCORE</p>'."\n".'                <p class="mt-2 text-2xl font-black text-slate-100">84', false);
@@ -168,6 +178,7 @@ class StudyScoreBaselineV5616Test extends TestCase
         $this->actingAs($user)
             ->get(route('workspace.study.index', [
                 'plan_id' => $plan->id,
+                'surface' => 'analysis',
             ]))
             ->assertOk()
             ->assertSee('510点')
@@ -372,6 +383,15 @@ class StudyScoreBaselineV5616Test extends TestCase
                 'data-study-workspace-missing-context="current_score"',
                 false,
             )
+            ->assertDontSee('700点');
+
+        $this->actingAs($owner)
+            ->get(route('workspace.study.index', [
+                'plan_id' => $plan->id,
+                'surface' => 'analysis',
+            ]))
+            ->assertOk()
+            ->assertSee('外部スコアBaseline待ち')
             ->assertDontSee('700点');
     }
 
