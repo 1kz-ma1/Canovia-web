@@ -79,3 +79,11 @@ PKCE S256, exact RFC9207 callback issuer and independent access-token
 introspection. The user must confirm before a linked-subject HMAC is
 persisted. No ChatGPT Plan sharing consent or MCP read is granted. See
 [account linking contract](MCP_OAUTH_ACCOUNT_LINK_CONTRACT.md).
+
+## Current: Plan approval after fresh PKCE proof (disabled)
+
+The owner can select a personal Development Plan and scope, redo OAuth
+IdP verification for the *same linked subject*, and explicitly confirm
+a finite-time grant. This is a separate, OFF-by-default approval path, not
+a promotion of the prior sharing preparation and **not** a live MCP read.
+See [explicit per-Plan consent](MCP_EXPLICIT_PLAN_CONSENT_CONTRACT.md).

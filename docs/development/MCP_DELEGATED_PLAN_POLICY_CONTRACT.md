@@ -129,3 +129,11 @@ RFC 7662 access-token introspection before offering the owner a separate
 confirmation action. Only the identity HMAC fingerprint is stored; **no
 Plan sharing grant is created**. The ChatGPT OAuth client is separate.
 See [OAuth linking contract](MCP_OAUTH_ACCOUNT_LINK_CONTRACT.md).
+
+## Explicit, verified Plan sharing approval (2026-10-09)
+
+The OFF-by-default, session-authenticated Plan approval flow uses fresh
+Authorization Code + PKCE verification for the *already linked* subject
+and requires separate final owner confirmation before the internal
+`mcp_delegated_grants` row is activated. No MCP read endpoint uses
+these grants yet. See [explicit Plan consent](MCP_EXPLICIT_PLAN_CONSENT_CONTRACT.md).

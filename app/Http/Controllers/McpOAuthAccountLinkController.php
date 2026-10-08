@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Plan;
+use App\Services\McpExplicitPlanConsentService;
 use App\Services\McpDelegatedIdentityFingerprintService;
 use App\Services\McpOAuthAccountLinkCommitter;
 use App\Services\McpOAuthAccountLinkConfiguration;
@@ -30,7 +32,11 @@ final class McpOAuthAccountLinkController extends Controller
         abort_unless($user, 403);
 
         // Clear older verified and pending state before every fresh attempt.
-        $request->session()->forget([self::PENDING_SESSION, self::VERIFIED_SESSION]);
+        $request->session()->forget([
+            self::PENDING_SESSION,
+            self::VERIFIED_SESSION,
+            McpOAuthPlanConsentController::VERIFIED_SESSION,
+        ]);
 
         if (! $provider->isProviderVerified()) {
             return $this->failure();
@@ -60,13 +66,17 @@ final class McpOAuthAccountLinkController extends Controller
         McpOAuthAccountLinkConfiguration $configuration,
         McpOAuthAccountLinkProvider $provider,
         McpDelegatedIdentityFingerprintService $fingerprints,
+        McpExplicitPlanConsentService $consent,
     ): RedirectResponse {
         $user = $request->user();
         abort_unless($user, 403);
 
         // One-time use even for failures; stale state can never be replayed.
         $pending = $request->session()->pull(self::PENDING_SESSION);
-        $request->session()->forget(self::VERIFIED_SESSION);
+        $request->session()->forget([
+            self::VERIFIED_SESSION,
+            McpOAuthPlanConsentController::VERIFIED_SESSION,
+        ]);
 
         $state = $request->query('state');
         $code = $request->query('code');
@@ -101,6 +111,41 @@ final class McpOAuthAccountLinkController extends Controller
 
         $fingerprint = $fingerprints->subject($principal->issuer, $principal->subject);
         if ($fingerprint === null) {
+            return $this->failure();
+        }
+
+        // A Plan consent needs its OWN verified outcome. Never turn a grant
+        // OAuth callback into an implicit identity-link confirmation.
+        if (($pending['purpose'] ?? null) === 'plan_consent') {
+            $planId = $pending['plan_id'] ?? null;
+            $scope = $pending['scope'] ?? null;
+            $days = $pending['duration_days'] ?? null;
+            $plan = is_int($planId) ? Plan::query()->find($planId) : null;
+
+            if (! $consent->isEnabled()
+                || ! is_string($scope) || ! is_int($days)
+                || ! $consent->isScopeAndDurationAllowed($scope, $days)
+                || $plan === null
+                || ! $consent->isPersonalDevelopmentOwner($user, $plan)
+                || ! $consent->matchesLinkedIdentity($user, $fingerprint)) {
+                return $this->failure();
+            }
+
+            $request->session()->put(McpOAuthPlanConsentController::VERIFIED_SESSION, [
+                'actor_id' => (int) $user->id,
+                'identity_fingerprint' => $fingerprint,
+                'plan_id' => (int) $plan->id,
+                'scope' => $scope,
+                'duration_days' => $days,
+                'verified_at' => now()->timestamp,
+            ]);
+            return redirect()->route('auth.account')->with(
+                'status',
+                '本人IDの再確認が完了しました。対象Plan・共有範囲・期限を確認して、共有許可を確定してください。',
+            );
+        }
+        if (isset($pending['purpose'])) {
+            // Unknown purpose must fail; a crafted flow is not link consent.
             return $this->failure();
         }
 
@@ -147,7 +192,11 @@ final class McpOAuthAccountLinkController extends Controller
 
     public function cancel(Request $request): RedirectResponse
     {
-        $request->session()->forget([self::PENDING_SESSION, self::VERIFIED_SESSION]);
+        $request->session()->forget([
+            self::PENDING_SESSION,
+            self::VERIFIED_SESSION,
+            McpOAuthPlanConsentController::VERIFIED_SESSION,
+        ]);
 
         return redirect()->route('auth.account')->with(
             'status', '外部IDの紐付け操作を中止しました。',

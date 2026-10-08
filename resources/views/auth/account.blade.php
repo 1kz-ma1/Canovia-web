@@ -128,6 +128,7 @@
     </section>
 
     @include('auth.partials.mcp-account-link')
+    @include('auth.partials.mcp-plan-consent-confirmation')
     @include('auth.partials.mcp-delegated-access-revocation')
 
     <section class="page-card border border-rose-400/20 p-6 sm:p-8">

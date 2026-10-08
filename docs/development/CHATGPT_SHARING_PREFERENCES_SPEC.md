@@ -74,3 +74,13 @@ IdP actor verification and explicit external subject linking from the
 account page. This does not reuse ChatGPT's client credentials or redirect
 URI, and does not activate prepared scopes, issue access tokens, or approve
 Plan access. See [OAuth account linking](MCP_OAUTH_ACCOUNT_LINK_CONTRACT.md).
+
+## Independent explicit per-Plan consent
+
+A user with a linked and freshly reverified external subject may now,
+**only when the new OFF-by-default consent switch is enabled**, explicitly
+approve a selected personal Development Plan, `overview|tasks` scope and
+1/7/30-day lifetime. The `prepared` preference is never accepted as the
+approval. OAuth IdP verification is repeated and the owner confirms again
+from Account. This is not a working ChatGPT MCP connection.
+See [explicit Plan consent contract](MCP_EXPLICIT_PLAN_CONSENT_CONTRACT.md).
