@@ -130,7 +130,7 @@ Learning Run -> [locked/served: CURRENT+nearby] -> AnswerEvent(immutable scoring
 | Phase 3 | DB/API依存・互換性・コスト/試験再現性の分割計画 | CONFIRMED | In Progress |
 | Phase 4a | Bank限定の新Run/1問回答イベント、1件終了/再開、既存Task/Attempt不変、リトライ耐性 | CONFIRMED（境界）/ PROPOSED（schema） | In Progress（V58.78初期実装・CI検証待ち） |
 | Phase 4b | Understanding/Practice体験、表示分離、問題集合、履歴共通投影 | CONFIRMED / PROPOSED | In Progress（V58.78 Bank単一選択UIのみ） |
-| Phase 4c | 確定/候補/戦略キュー、適応更新と重複回避、AI不可時のBank fallback | PROPOSED / EXPERIMENTAL | Not Started |
+| Phase 4c | 確定/候補/戦略キュー、適応更新と重複回避、AI不可時のBank fallback | PROPOSED / EXPERIMENTAL | In Progress（V58.79繰り返し誤答に基づくBank候補層のみ、他は未実装） |
 | Phase 4d | 試験別profile + C完全固定・採点終了後開示、模試停止/再開ポリシー | CONFIRMED（制約）/ UNDECIDED（各試験詳細） | Not Started |
 | Phase 4e | 診断任意入口、3モードランキング、誤操作調整と校正 | PROPOSED / EXPERIMENTAL | Not Started |
 | Phase 5 | 費用/負荷/重複/権限/アクセシビリティ/モバイルと実機E2E | CONFIRMED | Not Started |
@@ -176,3 +176,12 @@ Learning Run -> [locked/served: CURRENT+nearby] -> AnswerEvent(immutable scoring
 - 新UIは従来のStudyPractice画面から任意に入れる。既存ルートは維持。模試Cは開始不可、公式Exam profile未確認の模擬試験を名乗らない。
 - 未実装：汎用入力（数値/複数選択/記述・追加思考過程）、将来候補キューの再ランキング、共通履歴の横断集計/理解度反映、誤タップの調整、問題集のその他の論理Collection、検証済み試験別固定模試、モード推薦。旧Attemptの変換なし。
 - Verification: V58.78 Featureテスト（1問終了・再開・同一POST・同Plan権限/所有者境界・固定Bank snapshot・先読み・A/B UI・C不可・Task旧Attempt不変）＋既存QuestionBank/StudyPractice回帰＋CI。**PWA/iOS/Render実機E2Eは別ゲート。**
+
+## 2026-10-08 Phase 4c 初期Slice（V58.79）
+
+- **PROPOSED / EXPERIMENTAL**: `learning_run_candidates`に、確定済み`learning_run_items`と別の「入替可能な先の候補」を保存。候補生成は既存公開Bankかつ同一Run内で未出題の問題だけから行う。追加出題では候補を優先し、足りない場合はBank順に戻る。
+- 各回答を原子保存した後に候補を再計算。**一度確定した出題順・出題スナップショットは変更しない。** 候補generation/position/reasonを残し、強制AI API呼出しはしない。
+- 候補の先頭優先は「同じ概念の独立した複数問での繰り返し誤答」のみ。単発1問の誤答は分野を即時変更しない。直近2回の同概念正解は通常のBank順に戻す弱い証拠として使用。これは暫定的な分岐であり、実力・習熟を断定しない。
+- `study.adaptive_learning.minimum_misses`、`signal_window`、`candidate_limit`、`locked_queue_size`はすべて**EXPERIMENTAL**の設定であり、試験・利用状況・コストから再校正する。デフォルトを最適解として固定しない。
+- 既存V58.78のSnapshotに`learning_metadata`が存在しない場合はBank順へ安全に戻る。旧`StudyPracticeAttempt`から正誤の根拠を捏造せず、現時点では新Run内の回答イベントのみを使う。
+- **未実装**: Plan横断履歴の重み付き統合、本人希望の細分化、難易度校正/解答時間重みづけ、AI事前生成・非同期、模試C、正式な信頼度推定。Phase 4cの完了扱いはしない。

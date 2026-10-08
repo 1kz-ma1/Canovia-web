@@ -3,6 +3,7 @@ namespace App\Services;
 
 use App\Models\LearningRun;
 use App\Models\LearningRunItem;
+use App\Models\LearningRunCandidate;
 use App\Models\Question;
 use App\Models\QuestionPack;
 use Illuminate\Validation\ValidationException;
@@ -49,10 +50,19 @@ final class AdaptiveLearningBankQueueService
 
         $used = $run->items()->pluck('question_id')->filter()->map(fn ($id) => (int) $id)->all();
         $nextOrdinal = (int) LearningRunItem::where('learning_run_id', $run->id)->max('ordinal') + 1;
-        $candidates = $pack->questions()->where('is_active', true)
-            ->whereNotIn('id', $used)->get()->filter(fn (Question $q) => $this->isSupported($q));
+        $available = $pack->questions()->where('is_active', true)
+            ->whereNotIn('id', $used)->get()
+            ->filter(fn (Question $q) => $this->isSupported($q))
+            ->keyBy('id');
+        $candidateIds = LearningRunCandidate::where('learning_run_id', $run->id)
+            ->orderBy('position')->pluck('question_id')->all();
+        $preferred = collect($candidateIds)
+            ->map(fn ($id) => $available->get((int) $id))->filter()->values();
+        $preferredIds = $preferred->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $fallback = $available->reject(fn (Question $q) =>
+            in_array((int) $q->id, $preferredIds, true))->values();
 
-        foreach ($candidates->take($target - $reserved) as $question) {
+        foreach ($preferred->concat($fallback)->take($target - $reserved) as $question) {
             $input = collect($question->response_schema)->firstWhere('id', 'answer');
             $run->items()->create([
                 'ordinal' => $nextOrdinal++,
@@ -62,6 +72,7 @@ final class AdaptiveLearningBankQueueService
                     'source_type' => $question->source_type,
                     'source_reference' => $question->source_reference,
                     'pack_version' => $run->pack_version_snapshot,
+                    'learning_metadata' => $question->learning_metadata ?? [],
                     'response_field' => [
                         'id' => 'answer',
                         'label' => (string) ($input['label'] ?? '回答'),

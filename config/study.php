@@ -5,6 +5,9 @@ return [
     // Understanding/Practice pilot, NOT a final adaptive queue optimum.
     'adaptive_learning' => [
         'locked_queue_size' => 2,
+        'candidate_limit' => 6,
+        'signal_window' => 8,
+        'minimum_misses' => 2,
     ],
 
     'question_bank_selection' => [
