@@ -9,7 +9,7 @@ Planned = intent. Implemented = code integrated. CI verified = checks for exact 
 | --- | --- | --- | --- |
 | P0 | Release stability | V58 Workspace/Learning work, PR #373 merged | Confirm specific Render deploy; old/new Learning resume, permissions, autosave, iPhone/PWA/PC E2E |
 | P0 | Adaptive Learning | PR #362–#366 single-question events, candidate queue, exam framework, mode recommendation, adjustment; PR #371–#373 legacy resume/immersion | Multiple response types, calibrated evidence/history, real-world study verification; official exam profiles only with verified sources |
-| P0 | GitHub-native roadmap | GitHub App read-only Markdown preview merged in PR #377; optional PR/CI matching being implemented | Verify linked PR states, missing permissions, CI-vs-deploy distinction; no bulk Task JSON mutation |
+| P0 | GitHub-native roadmap | Read-only Markdown parser/importer, explicit PR/Issue/CI evidence, and opt-in scoped Context endpoint merged in PR #375–#380 | Review real-device copied Context, actor access and API budgets; revision-aware diffs and live AI retrieval not implemented; no Task bulk JSON mutation |
 | P1 | iOS | V52.0 SwiftUI/WKWebView bridge foundation | Latest regression E2E, signing, TestFlight, StoreKit purchase/restore |
 | P1 | Pricing / telemetry | ProductKey/Entitlement, BehaviorEvent and AI telemetry | Numerical prices/allowances, MRR/MAU/AI cost/gross-margin dashboard |
 | P1 | Evidence-first Plan Draft | V58.71–V58.76 work described in [active plan](../wip/2026-10-08_STATE_FIRST_PRE_RELEASE_EXECUTION_SPEC.md) | Verify actual main and approval/notification flows; cost limits, multiple candidates |
@@ -20,8 +20,8 @@ Planned = intent. Implemented = code integrated. CI verified = checks for exact 
 
 ## Next slices
 1. Verify production deployment and iPhone/PWA/desktop Learning regression at an exact SHA.
-2. Validate the read-only Markdown preview on a real device and linked public GitHub repository; record repo/path/SHA and unknowns.
-3. Validate explicit PR/Issue references and available Checks on demand; distinguish deploy and device verification. Distinguish deployment and real-device validation.
+2. Validate read-only Markdown preview and the user-triggered scoped AI Context copy on a real device, using a linked public GitHub repository; record repo/path/SHA and unknowns.
+3. Validate explicit PR/Issue references and available Checks on demand; separately verify deploy and device behavior. Add revision-aware SHA diffs only after confirming evidence and authorization boundaries.
 4. Consider opt-in, reviewable execution Task suggestions **only after** user validation.
 
 2026-12-01 is an initial release-readiness target, not proof of launch. Business success means Canovia-only subscription revenue >= JPY 230,000/month for several months.
