@@ -33,7 +33,7 @@ class GoalContextFoundationV4114Test extends TestCase
 
         $plan = Plan::query()->where('title', 'サッカーが上手くなりたい')->firstOrFail();
 
-        $response->assertRedirect(route('plans.ai_task_assistant.show', $plan));
+        $response->assertRedirect(route('plans.show', $plan));
 
         $context = GoalContext::query()->where('plan_id', $plan->id)->firstOrFail();
         $this->assertSame('サッカーが上手くなりたい', $context->desired_state);
