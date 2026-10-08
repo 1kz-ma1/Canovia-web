@@ -131,3 +131,14 @@ Sources:
 - https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization
 - https://www.rfc-editor.org/rfc/rfc9207
 - https://www.rfc-editor.org/rfc/rfc7636
+
+## Separate fresh OAuth verification before Plan-specific consent
+
+A new, independent OFF-by-default `McpOAuthPlanConsentController` uses
+the confidential Canovia account-linking client to reverify the *already
+linked* IdP subject for one current personal Development Plan, scoped to
+`overview|tasks` for 1/7/30 days. Only after a fresh OAuth callback,
+matching subject and another explicit Canovia actor confirmation can the
+Plan grant become active. Account linking itself never creates grants.
+This is NOT the external OAuth provider's ChatGPT authorization screen.
+See [per-Plan consent contract](MCP_EXPLICIT_PLAN_CONSENT_CONTRACT.md).
