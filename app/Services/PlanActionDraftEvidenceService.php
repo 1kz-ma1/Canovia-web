@@ -51,7 +51,7 @@ final class PlanActionDraftEvidenceService
                 'kind' => 'work_log',
                 'work_log_id' => (int) $log->id,
                 'action' => mb_substr($action, 0, 255),
-                'outcome' => $outcome,
+                'outcome' => mb_substr($outcome, 0, 2000),
                 'worked_on' => $log->worked_on?->toDateString(),
             ];
         })->all();

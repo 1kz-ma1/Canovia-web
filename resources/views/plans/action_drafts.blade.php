@@ -52,7 +52,7 @@
         <div class="mt-4 space-y-4">
             @forelse ($drafts as $draft)
                 <article class="rounded-xl border border-slate-200 p-4" data-plan-action-draft="{{ $draft->id }}">
-                    <p class="text-xs text-slate-500">{{ $draft->source_kind === 'work_log' ? '保存済みの実績ログ' : '自己申告の行動' }} · {{ $draft->created_at?->format('Y/m/d') }} · {{ ['proposed'=>'提案中','accepted'=>'承認済み','dismissed'=>'却下済み'][$draft->status] ?? '未確定' }}</p>
+                    <p class="text-xs text-slate-500">{{ match ($draft->source_kind) { 'work_log' => '保存済みの実績ログ', 'multi_work_log' => '複数の実績ログ', 'mixed' => '自己申告と実績ログ', default => '自己申告の行動' } }} · {{ $draft->created_at?->format('Y/m/d') }} · {{ ['proposed'=>'提案中','accepted'=>'承認済み','dismissed'=>'却下済み'][$draft->status] ?? '未確定' }}</p>
                     <p class="mt-2 text-sm font-semibold text-slate-800">{{ $draft->completed_action }}</p>
                     <p class="mt-1 whitespace-pre-line text-sm text-slate-600">{{ $draft->observed_outcome }}</p>
                     @php
