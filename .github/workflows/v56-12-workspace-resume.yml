@@ -72,6 +72,10 @@ jobs:
           php -l app/Services/StudyReviewCyclePersonalizationAdapter.php
           php -l tests/Feature/StudyReviewCyclePersonalizationV5833Test.php
           php -l tests/Feature/LongUsageWindowPersonalizationV5834Test.php
+          php -l app/Services/BookkeepingJournalEntryGrader.php
+          php -l app/Services/BookkeepingJournalPracticeService.php
+          php -l app/Http/Controllers/BookkeepingJournalPracticeController.php
+          php -l tests/Feature/BookkeepingJournalPracticeV5862Test.php
           php -l app/Services/StudyOfficialExamReferenceService.php
           php -l tests/Feature/OfficialExamScopeAwareStudyV5864Test.php
           php -l app/Services/DevelopmentCreativePlanAccessService.php
@@ -99,6 +103,8 @@ jobs:
         run: php artisan test tests/Feature/OfficialExamScopeAwareStudyV5864Test.php tests/Feature/StudyAdaptiveActionV536Test.php tests/Feature/StudyWorkspaceV543Test.php tests/Feature/OverviewWorkspaceV545Test.php
       - name: V58.61 Adaptive Bookkeeping Starting Point
         run: php artisan test tests/Feature/BookkeepingPlacementV5861Test.php
+      - name: V58.62 Structured Bookkeeping Journal Practice
+        run: php artisan test tests/Feature/BookkeepingJournalPracticeV5862Test.php tests/Feature/StudyScoreBaselineV5616Test.php
       - name: V58.57 First Plan Import Continuity
         run: php artisan test tests/Feature/InitialPlanJsonReliabilityV387Test.php
       - name: V58.26 Capability Activation

@@ -62,6 +62,7 @@ use App\Http\Controllers\StudyResourceActivityController;
 use App\Http\Controllers\StudyScopeCaptureController;
 use App\Http\Controllers\StudyScoreController;
 use App\Http\Controllers\BookkeepingPlacementController;
+use App\Http\Controllers\BookkeepingJournalPracticeController;
 use App\Http\Controllers\StudyLearningTypeController;
 use App\Http\Controllers\StudyAdaptiveActionController;
 use App\Http\Controllers\StudyRecallController;
@@ -497,6 +498,14 @@ Route::get('/plans/{plan}/bookkeeping-placement', [BookkeepingPlacementControlle
 Route::post('/plans/{plan}/bookkeeping-placement', [BookkeepingPlacementController::class, 'store'])
     ->middleware(['release.level:1', 'throttle:12,1'])
     ->name('plans.bookkeeping_placement.store');
+
+// V58.62 explicit, Plan-scoped bookkeeping journal practice.
+Route::get('/plans/{plan}/bookkeeping-journal', [BookkeepingJournalPracticeController::class, 'show'])
+    ->middleware('release.level:1')
+    ->name('plans.bookkeeping_journal.show');
+Route::post('/plans/{plan}/bookkeeping-journal', [BookkeepingJournalPracticeController::class, 'store'])
+    ->middleware(['release.level:1', 'throttle:12,1'])
+    ->name('plans.bookkeeping_journal.store');
 
 // V56.16 Score / Baseline Evidence: external score scale is kept separate from Practice accuracy.
 Route::get('/plans/{plan}/study-scores', [StudyScoreController::class, 'index'])
