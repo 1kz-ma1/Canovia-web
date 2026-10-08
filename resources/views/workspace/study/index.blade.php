@@ -140,6 +140,12 @@
                 <p class="text-xs font-bold text-cyan-300">診断をもとにした初回ガイド</p>
                 <p class="mt-2 text-sm text-slate-200">まずは現在の理解度を確認し、学習範囲と最初の演習を決めましょう。</p>
                 <p class="mt-1 text-xs text-slate-400">タスクや実績が登録されると、実際の進捗に基づく案内を優先します。</p>
+                @if ($canEdit ?? false)
+                    <div class="mt-4 flex flex-wrap gap-2" data-study-first-plan-actions>
+                        <a href="{{ route('plans.study_scope.index', $plan) }}" class="btn-primary min-h-11 px-4">学習範囲を登録する</a>
+                        <a href="{{ route('plans.study_scores.index', $plan) }}" class="btn-secondary min-h-11 px-4">現在の得点を記録する</a>
+                    </div>
+                @endif
             </aside>
         @endif
         @switch($selectedSurface)
