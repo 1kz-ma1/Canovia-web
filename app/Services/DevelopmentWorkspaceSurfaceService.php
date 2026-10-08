@@ -9,6 +9,10 @@ use Illuminate\Support\Collection;
 
 final class DevelopmentWorkspaceSurfaceService
 {
+    public function __construct(
+        private readonly DevelopmentTeamTaskProjectionService $teamTasks,
+    ) {}
+
     public const SURFACES = [
         'work',
         'repository',
@@ -155,6 +159,7 @@ final class DevelopmentWorkspaceSurfaceService
             'members' => $members->values(),
             'member_count' => $members->count(),
             'is_collaborative' => (bool) $plan->is_collaborative,
+            'task_overview' => $this->teamTasks->project($plan),
         ];
     }
 
