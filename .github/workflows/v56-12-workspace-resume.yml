@@ -72,6 +72,8 @@ jobs:
           php -l app/Services/StudyReviewCyclePersonalizationAdapter.php
           php -l tests/Feature/StudyReviewCyclePersonalizationV5833Test.php
           php -l tests/Feature/LongUsageWindowPersonalizationV5834Test.php
+          php -l app/Services/StudyOfficialExamReferenceService.php
+          php -l tests/Feature/OfficialExamScopeAwareStudyV5864Test.php
           php -l app/Services/DevelopmentCreativePlanAccessService.php
           php -l app/Http/Controllers/DevelopmentCreativePlanSelectionController.php
           php -l tests/Feature/DevelopmentCreativePlanRescueV5863Test.php
@@ -93,6 +95,8 @@ jobs:
         run: php artisan test tests/Feature/ReleaseReviewV5824Test.php
       - name: V58.25 Personalization Bootstrap
         run: php artisan test tests/Feature/PersonalizationBootstrapV5825Test.php tests/Feature/FirstRunUxV4123Test.php tests/Feature/ConversationalOnboardingV4116Test.php
+      - name: V58.64 Official AP Scope Awareness
+        run: php artisan test tests/Feature/OfficialExamScopeAwareStudyV5864Test.php tests/Feature/StudyAdaptiveActionV536Test.php tests/Feature/StudyWorkspaceV543Test.php tests/Feature/OverviewWorkspaceV545Test.php
       - name: V58.61 Adaptive Bookkeeping Starting Point
         run: php artisan test tests/Feature/BookkeepingPlacementV5861Test.php
       - name: V58.57 First Plan Import Continuity
