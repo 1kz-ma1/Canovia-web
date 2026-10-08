@@ -257,6 +257,13 @@ final class DevelopmentWorkspaceController extends Controller
         return view('workspace.development.index', [
             'developmentPlans' => $developmentPlans,
             'plan' => $plan,
+            'firstPlanContext' => $plan->tasks->isEmpty()
+                ? data_get(
+                    $personalizationContexts->current($request),
+                    'domain_context.development',
+                    [],
+                )
+                : [],
             'canEdit' => $canEdit,
             'developmentAdaptiveAction' => $adaptiveAction,
             'intelligencePresentation' => $presentation,
