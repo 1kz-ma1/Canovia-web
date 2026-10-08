@@ -41,7 +41,7 @@
             </form>
         @endif
     </section>
-    @if(($examProfiles ?? collect())->isNotEmpty() && $packs->isNotEmpty())
+    @if(($examProfiles ?? collect())->isNotEmpty() && ($examPacks ?? collect())->isNotEmpty())
         <section class="page-card p-5 sm:p-7" data-adaptive-exam-entry>
             <h2 class="text-lg font-bold text-slate-50">模擬試験モード（本番形式）</h2>
             <p class="mt-2 text-sm leading-6 text-slate-300">検証済みの試験別設定だけを使用し、開始前に全問と時間を確定します。終了するまで正誤・解説は表示しません。途中離脱中も制限時間は進みます。</p>
@@ -55,7 +55,7 @@
                 </select>
                 <label class="block text-sm font-semibold text-slate-100" for="exam-pack">検証済み静的問題集</label>
                 <select name="question_pack_id" id="exam-pack" class="form-control w-full" required>
-                    @foreach($packs as $pack)
+                    @foreach($examPacks as $pack)
                         <option value="{{ $pack->id }}">{{ $pack->title }} (v{{ $pack->version }})</option>
                     @endforeach
                 </select>

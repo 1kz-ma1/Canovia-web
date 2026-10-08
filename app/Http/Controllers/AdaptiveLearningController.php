@@ -55,6 +55,16 @@ final class AdaptiveLearningController extends Controller
             ->filter(fn (QuestionPack $pack) =>
                 $pack->questions->contains(fn ($q) => $queue->isSupported($q)))->values();
 
+        $availableExamProfiles = $examProfiles->available();
+        $examPacks = $packs->filter(fn ($pack) =>
+            $availableExamProfiles->contains(function (array $profile) use ($pack) {
+                $meta = $pack->metadata ?? [];
+                return $pack->exam_code === $profile['exam_code']
+                    && $pack->subject === $profile['subject']
+                    && ($meta['exam_simulation_profile_key'] ?? '') === $profile['key']
+                    && ($meta['exam_simulation_profile_version'] ?? '') === (string) $profile['version'];
+            }))->values();
+
         $activeRuns = $this->actorRuns($request, $plan, $task, $identity)
             ->where('status', LearningRun::STATUS_ACTIVE)
             ->latest('id')->limit(10)->get();
@@ -62,7 +72,7 @@ final class AdaptiveLearningController extends Controller
         return view('learning.index', [
             'plan' => $plan, 'task' => $task, 'packs' => $packs,
             'activeRuns' => $activeRuns,
-            'examProfiles' => $examProfiles->available(),
+            'examProfiles' => $availableExamProfiles, 'examPacks' => $examPacks,
             'startRequestId' => (string) Str::uuid(),
             'examStartRequestId' => (string) Str::uuid(),
         ]);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\LearningAnswerEvent;
 use App\Models\LearningExamResponseDraft;
 use App\Models\LearningRun;
+use App\Models\LearningRunItem;
 use App\Models\Plan;
 use App\Models\QuestionPack;
 use App\Models\Task;
@@ -212,7 +213,7 @@ final class AdaptiveLearningExamController extends Controller
                 ]);
             }
 
-            $total = $run->items()->count();
+            $total = LearningRunItem::where('learning_run_id', $run->id)->count();
             if ((int) $run->current_ordinal < $total) {
                 $run->update(['current_ordinal' => $run->current_ordinal + 1]);
             }
