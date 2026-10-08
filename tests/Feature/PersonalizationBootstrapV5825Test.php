@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Enums\BehaviorEventType;
 use App\Models\BehaviorEvent;
 use App\Models\Plan;
+use App\Models\PlanArtifact;
+use App\Models\StudyScoreObservation;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\UserPersonalizationContext;
@@ -582,6 +584,41 @@ class PersonalizationBootstrapV5825Test extends TestCase
                 'activation_cost' => 2,
                 'sort_order' => 1,
             ]);
+
+            $this->actingAs($user)
+                ->get(route($workspaceRoute, ['plan_id' => $plan->id]))
+                ->assertOk()
+                ->assertDontSee('data-' . $domain . '-first-plan-guidance', false)
+                ->assertDontSee('data-' . $domain . '-first-plan-actions', false);
+
+            // A Plan can have no tasks while already carrying useful evidence.
+            // Do not reintroduce the self-report bootstrap in that situation.
+            $plan->tasks()->delete();
+
+            if ($domain === 'study') {
+                StudyScoreObservation::query()->create([
+                    'plan_id' => $plan->id,
+                    'user_id' => $user->id,
+                    'request_id' => (string) Str::uuid(),
+                    'metric_key' => 'exam_score',
+                    'metric_label' => '現在の得点',
+                    'score_value' => 65,
+                    'scale_min' => 0,
+                    'scale_max' => 100,
+                    'unit' => 'score',
+                    'source_kind' => 'self_reported',
+                    'observed_at' => now(),
+                ]);
+            } else {
+                PlanArtifact::query()->create([
+                    'plan_id' => $plan->id,
+                    'created_by_user_id' => $user->id,
+                    'provider' => 'github',
+                    'artifact_type' => 'repository',
+                    'title' => 'App Repository',
+                    'url' => 'https://github.com/example/app',
+                ]);
+            }
 
             $this->actingAs($user)
                 ->get(route($workspaceRoute, ['plan_id' => $plan->id]))
