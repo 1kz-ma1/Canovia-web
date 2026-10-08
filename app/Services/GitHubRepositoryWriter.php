@@ -2336,9 +2336,16 @@ final class GitHubRepositoryWriter
         }
 
         $repository = $repositoryResponse->json();
-        $branch = is_array($repository)
-            ? trim((string) ($repository['default_branch'] ?? ''))
-            : '';
+        // GitHub App installation permission is not proof that the current
+        // Canovia actor has GitHub membership in a private repository.
+        // Fail closed until actor-scoped GitHub authorization is available.
+        if (! is_array($repository)
+            || ($repository['private'] ?? null) !== false
+            || ($repository['visibility'] ?? null) !== 'public') {
+            throw new RuntimeException('Private / Internal Repositoryのロードマップ閲覧には本人のGitHub権限確認が必要です。');
+        }
+
+        $branch = trim((string) ($repository['default_branch'] ?? ''));
         if ($branch === '' || strlen($branch) > 255) {
             throw new RuntimeException('Default branchを確認できませんでした。');
         }

@@ -73,6 +73,20 @@ final class DevelopmentGitHubRoadmapReaderTest extends TestCase
         app(DevelopmentGitHubRoadmapReader::class)->read('example/repo');
     }
 
+    public function test_private_repository_is_blocked_until_actor_scoped_github_authorization_exists(): void
+    {
+        $this->fakeGitHub(str_repeat('e', 40), "## Private\\n- confidential", private: true);
+
+        try {
+            app(DevelopmentGitHubRoadmapReader::class)->read('example/repo');
+            $this->fail('Private roadmap should not be accessible through installation token alone.');
+        } catch (\\RuntimeException $exception) {
+            $this->assertStringContainsString('Private / Internal Repository', $exception->getMessage());
+        }
+
+        Http::assertSentCount(3);
+    }
+
     public function test_missing_contents_permission_is_rejected_before_file_access(): void
     {
         $this->fakeGitHub(str_repeat('d', 40), "## Roadmap\n- item\n", contentsAllowed: false);
@@ -86,8 +100,9 @@ final class DevelopmentGitHubRoadmapReaderTest extends TestCase
         ?string $markdown,
         bool $corrupt = false,
         bool $contentsAllowed = true,
+        bool $private = false,
     ): void {
-        Http::fake(function (HttpRequest $request) use ($sha, $markdown, $corrupt, $contentsAllowed) {
+        Http::fake(function (HttpRequest $request) use ($sha, $markdown, $corrupt, $contentsAllowed, $private) {
             $url = $request->url();
             if ($url === 'https://api.github.com/repos/example/repo/installation') {
                 return Http::response(['id' => 777], 200);
@@ -99,7 +114,11 @@ final class DevelopmentGitHubRoadmapReaderTest extends TestCase
                 ], 201);
             }
             if ($url === 'https://api.github.com/repos/example/repo') {
-                return Http::response(['default_branch' => 'main'], 200);
+                return Http::response([
+                    'default_branch' => 'main',
+                    'private' => $private,
+                    'visibility' => $private ? 'private' : 'public',
+                ], 200);
             }
             if ($url === 'https://api.github.com/repos/example/repo/commits/main') {
                 return Http::response(['sha' => $sha], 200);
