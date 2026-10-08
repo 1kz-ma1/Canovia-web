@@ -125,18 +125,23 @@ final class McpAccessTokenIntrospectorTest extends TestCase
             ['token_type' => 'refresh_token'],
         ];
 
+        $sequence = Http::fakeSequence();
         foreach ($variants as $difference) {
-            // Array union changes only fields named in $difference.
-            $this->respond(array_replace($valid, $difference));
+            $sequence->push(array_replace($valid, $difference), 200, [
+                'Content-Type' => 'application/json',
+            ]);
+        }
+        foreach ($variants as $difference) {
             $this->assertNull(
                 app(McpAccessTokenIntrospector::class)->verify(self::TOKEN),
-                'An invalid/missing claim must never become a principal.',
+                'An invalid/missing claim must never become a principal: '.json_encode($difference),
             );
         }
     }
 
     public function test_non_json_redirect_provider_failure_and_excess_response_all_fail_closed(): void
     {
+        $sequence = Http::fakeSequence();
         foreach ([
             [200, 'text/html', '{"active":true}'],
             [302, 'application/json', '{"active":true}'],
@@ -145,12 +150,15 @@ final class McpAccessTokenIntrospectorTest extends TestCase
             [200, 'application/json', str_repeat('a', 13000)],
             [200, 'application/json', '{"active":true}'],
         ] as [$status, $contentType, $body]) {
-            Http::fake([self::ENDPOINT => Http::response($body, $status, [
-                'Content-Type' => $contentType,
-            ])]);
+            $sequence->push($body, $status, ['Content-Type' => $contentType]);
+        }
+        for ($i = 0; $i < 6; $i++) {
             $this->assertNull(app(McpAccessTokenIntrospector::class)->verify(self::TOKEN));
         }
+    }
 
+    public function test_idp_network_exception_is_not_exposed_or_trusted(): void
+    {
         Http::fake([self::ENDPOINT => static function () {
             throw new RuntimeException('Simulated network failure with potentially sensitive details');
         }]);
