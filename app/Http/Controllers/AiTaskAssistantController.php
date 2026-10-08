@@ -326,6 +326,15 @@ PROMPT;
             $message .= ' 形式の違いはCanovia側で'.count($normalizationNotes).'件調整しました。';
         }
 
+        // Development-first onboarding should return to its State-first
+        // workspace once the first tasks have actually been persisted.
+        // Other categories keep the established Plan detail destination.
+        if (app(\App\Services\PlanCategoryProfileService::class)->forPlan($plan)->key === 'development') {
+            return redirect()
+                ->route('workspace.development.index', ['plan_id' => $plan->id])
+                ->with('success', $message);
+        }
+
         return redirect()->route('plans.show', $plan)->with('success', $message);
     }
 
