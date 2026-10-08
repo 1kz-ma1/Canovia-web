@@ -89,6 +89,10 @@ jobs:
           php -l tests/Feature/PlanDomainOverrideV5868Test.php
           php -l app/Http/Controllers/PlanActionDraftController.php
           php -l app/Models/PlanActionDraft.php
+          php -l app/Models/PlanActionDraftRevision.php
+          php -l app/Services/PlanActionDraftEvidenceService.php
+          php -l database/migrations/2026_10_08_160000_add_evidence_revisions_to_plan_action_drafts.php
+          php -l tests/Feature/PlanActionDraftV5872Test.php
           php -l database/migrations/2026_10_08_150000_create_plan_action_drafts_table.php
           php -l tests/Feature/PlanActionDraftV5871Test.php
           php -l app/Services/PlanSpecializationService.php
@@ -150,6 +154,8 @@ jobs:
         run: php artisan test tests/Feature/DevelopmentCreativePlanRescueV5863Test.php tests/Feature/WorkspaceModeResolverV540Test.php
       - name: V58.69 Team Task Dependencies
         run: php artisan test tests/Feature/DevelopmentTeamTaskDependencyV5869Test.php tests/Feature/DeveloperWorkspaceSurfacesV580Test.php tests/Feature/DevelopmentCreativePlanRescueV5863Test.php
+      - name: V58.72 Multi-evidence Draft and Revision Diff
+        run: php artisan test tests/Feature/PlanActionDraftV5872Test.php tests/Feature/PlanActionDraftV5871Test.php
       - name: V58.71 Action-grounded Draft and Owner Approval
         run: php artisan test tests/Feature/PlanActionDraftV5871Test.php tests/Feature/PlanActionFirstCreationV5866Test.php
       - name: V58.70 Plan Specialization Domain and Ownership

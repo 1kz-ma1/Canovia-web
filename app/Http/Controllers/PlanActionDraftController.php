@@ -3,8 +3,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Plan;
 use App\Models\PlanActionDraft;
+use App\Models\PlanActionDraftRevision;
 use App\Models\WorkLog;
 use App\Services\PlanActivityService;
+use App\Services\PlanActionDraftEvidenceService;
 use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,12 +18,13 @@ final class PlanActionDraftController extends Controller
     public function index(Request $request, Plan $plan, PlanOwnershipService $ownership)
     {
         $ownership->authorizePlan($request, $plan);
-        $drafts = PlanActionDraft::where('plan_id', $plan->id)->latest('id')->limit(20)->get();
+        $drafts = PlanActionDraft::with('revisions')->where('plan_id', $plan->id)->latest('id')->limit(20)->get();
         $workLogs = $plan->workLogs()
             ->where(fn ($q) => $q->where('outcome', '!=', '')->orWhere('memo', '!=', ''))
             ->latest('id')->limit(15)->get();
         $requestId = (string) Str::uuid();
-        return view('plans.action_drafts', compact('plan', 'drafts', 'workLogs', 'requestId'));
+        $multiRequestId = (string) Str::uuid();
+        return view('plans.action_drafts', compact('plan', 'drafts', 'workLogs', 'requestId', 'multiRequestId'));
     }
 
     public function store(Request $request, Plan $plan, PlanOwnershipService $ownership)
@@ -107,6 +110,144 @@ final class PlanActionDraftController extends Controller
             $draft->update(['status' => PlanActionDraft::DISMISSED]);
         }
         return redirect()->route('plans.action_drafts.index', $plan);
+    }
+
+
+    /**
+     * Combine only explicitly selected, same-Plan WorkLogs. Existing one-source
+     * creation remains unchanged for compatibility with V58.71 clients.
+     */
+    public function compose(
+        Request $request,
+        Plan $plan,
+        PlanOwnershipService $ownership,
+        PlanActionDraftEvidenceService $evidence,
+    ) {
+        $ownership->authorizePlan($request, $plan);
+        $validated = $request->validate([
+            'request_id' => ['required', 'uuid'],
+            'work_log_ids' => ['required', 'array', 'min:2', 'max:5'],
+            'work_log_ids.*' => ['required', 'integer', 'distinct'],
+        ]);
+
+        // Retried POST must not create a second row or rewrite prior selections.
+        if (PlanActionDraft::where('plan_id', $plan->id)
+            ->where('request_id', $validated['request_id'])->exists()) {
+            return redirect()->route('plans.action_drafts.index', $plan);
+        }
+
+        $sources = $evidence->snapshotsForLogs($plan, $validated['work_log_ids']);
+        $latest = $sources[count($sources) - 1];
+        PlanActionDraft::firstOrCreate([
+            'plan_id' => $plan->id,
+            'request_id' => $validated['request_id'],
+        ], [
+            'source_work_log_id' => $latest['work_log_id'],
+            'source_kind' => 'multi_work_log',
+            'completed_action' => $latest['action'],
+            'observed_outcome' => $latest['outcome'],
+            'suggested_next_action' => $evidence->suggest($sources),
+            'status' => PlanActionDraft::PROPOSED,
+            'evidence_snapshots' => $sources,
+        ]);
+
+        return redirect()->route('plans.action_drafts.index', $plan)
+            ->with('success', '複数の実績に基づく提案を作りました。まだTaskは変わりません。');
+    }
+
+    /**
+     * Pure preview. No draft, Task, or evidence write occurs here.
+     */
+    public function previewRefresh(
+        Request $request,
+        Plan $plan,
+        PlanActionDraft $draft,
+        PlanOwnershipService $ownership,
+        PlanActionDraftEvidenceService $evidence,
+    ) {
+        $ownership->authorizePlan($request, $plan);
+        $this->withinPlan($plan, $draft);
+        abort_unless($draft->status === PlanActionDraft::PROPOSED, 409);
+
+        $validated = $this->validateRefreshInputs($request);
+        $added = $evidence->snapshotsForLogs($plan, $validated['additional_work_log_ids']);
+        $combined = $evidence->appendNew($evidence->existing($draft), $added);
+        $afterAction = $evidence->suggest($combined);
+        $sourceFingerprint = $evidence->fingerprint($combined);
+        $candidateFingerprint = $evidence->candidateFingerprint($draft);
+
+        return view('plans.action_draft_refresh_preview', compact(
+            'plan', 'draft', 'added', 'combined', 'afterAction',
+            'sourceFingerprint', 'candidateFingerprint',
+        ));
+    }
+
+    /**
+     * Explicitly apply the exact previewed evidence selection and base version.
+     * A stale preview fails with 409 rather than silently replacing a user edit.
+     */
+    public function applyRefresh(
+        Request $request,
+        Plan $plan,
+        PlanActionDraft $draft,
+        PlanOwnershipService $ownership,
+        PlanActionDraftEvidenceService $evidence,
+    ) {
+        $ownership->authorizePlan($request, $plan);
+        $this->withinPlan($plan, $draft);
+        $validated = $this->validateRefreshInputs($request);
+        $meta = $request->validate([
+            'expected_revision' => ['required', 'integer', 'min:1'],
+            'source_fingerprint' => ['required', 'string', 'size:64'],
+            'candidate_fingerprint' => ['required', 'string', 'size:64'],
+        ]);
+
+        DB::transaction(function () use ($plan, $draft, $validated, $meta, $evidence) {
+            $locked = PlanActionDraft::where('plan_id', $plan->id)
+                ->whereKey($draft->id)->lockForUpdate()->firstOrFail();
+
+            abort_unless($locked->status === PlanActionDraft::PROPOSED, 409);
+            abort_unless((int) $locked->revision_no === (int) $meta['expected_revision'], 409);
+            abort_unless(hash_equals($evidence->candidateFingerprint($locked), $meta['candidate_fingerprint']), 409);
+
+            $additional = $evidence->snapshotsForLogs($plan, $validated['additional_work_log_ids']);
+            $combined = $evidence->appendNew($evidence->existing($locked), $additional);
+            abort_unless(hash_equals($evidence->fingerprint($combined), $meta['source_fingerprint']), 409);
+
+            $before = $locked->suggested_next_action;
+            $after = $evidence->suggest($combined);
+            $beforeRevision = (int) $locked->revision_no;
+
+            $locked->update([
+                'evidence_snapshots' => $combined,
+                'source_kind' => collect($combined)->contains(fn ($s) => $s['kind'] === 'self_report')
+                    ? 'mixed' : 'multi_work_log',
+                'suggested_next_action' => $after,
+                'revision_no' => $beforeRevision + 1,
+            ]);
+
+            PlanActionDraftRevision::create([
+                'plan_action_draft_id' => $locked->id,
+                'from_revision' => $beforeRevision,
+                'to_revision' => $beforeRevision + 1,
+                'before_action' => $before,
+                'after_action' => $after,
+                'added_evidence_snapshots' => $additional,
+                'created_at' => now(),
+            ]);
+        });
+
+        return redirect()->route('plans.action_drafts.index', $plan)
+            ->with('success', '確認した差分を提案に反映しました。Taskは変更していません。');
+    }
+
+    /** @return array{additional_work_log_ids:array<int,int>} */
+    private function validateRefreshInputs(Request $request): array
+    {
+        return $request->validate([
+            'additional_work_log_ids' => ['required', 'array', 'min:1', 'max:4'],
+            'additional_work_log_ids.*' => ['required', 'integer', 'distinct'],
+        ]);
     }
 
     private function withinPlan(Plan $plan, PlanActionDraft $draft): void
