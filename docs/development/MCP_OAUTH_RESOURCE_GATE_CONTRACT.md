@@ -31,6 +31,10 @@ For isolated staging discovery tests only, a valid configuration would use `CANO
 
 The OAuth identity provider must be selected and set up separately. No `/.well-known/oauth-authorization-server` document is served by Canovia in this stage: that discovery endpoint is the real provider's responsibility. The provider must handle `resource`, audience, client identity/CIMD or DCR, actual authorization/consent, PKCE S256, short-lived token issuance and revocation.
 
+## Independent token verifier foundation (2026-10-09)
+
+A disabled-by-default `McpAccessTokenIntrospector` now supports RFC 7662 introspection at a **server-configured, HTTPS, same-issuer** IdP endpoint, returning only an external identity description after strict token audience, issuer, client, lifetime and scope checks. This does not authenticate a Canovia User, does not constitute consent, and is **not invoked by /api/mcp**. A provider must explicitly support RFC 7662 with all required claims. If the chosen IdP instead uses signed JWTs without compatible introspection, select a maintained signature-verification library and document the specific issuer/JWKS before enabling it. Details: [Introspection contract](MCP_TOKEN_INTROSPECTION_CONTRACT.md).
+
 ## Next independent implementation gates
 
 1. Select a security-reviewed OAuth identity provider; confirm OpenAI client identification (prefer CIMD, or DCR / pre-registered client) and production callback URI, token methods and configured resource audience.
