@@ -563,7 +563,7 @@ class PersonalizationBootstrapV5825Test extends TestCase
 
             $firstActionUrl = $domain === 'study'
                 ? route('plans.study_scope.index', $plan)
-                : route('plans.ai_task_assistant.show', $plan);
+                : route('plans.ai_task_assistant.show', ['plan' => $plan, 'return_to_workspace' => 1]);
 
             $this->actingAs($user)
                 ->get(route($workspaceRoute, ['plan_id' => $plan->id]))

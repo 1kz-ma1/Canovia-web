@@ -157,6 +157,9 @@
                     data-ai-plan-generation-import
                 >
                     @csrf
+                    @if (request()->boolean('return_to_workspace'))
+                        <input type="hidden" name="return_to_workspace" value="1">
+                    @endif
 
                     <button
                         type="button"
