@@ -56,6 +56,7 @@ class Plan extends Model
             'is_public' => 'boolean',
             'is_collaborative' => 'boolean',
             'last_ai_context_exported_at' => 'datetime',
+            'action_draft_spotlight_acknowledged_at' => 'datetime',
             'study_learning_type_confirmed_at' => 'datetime',
         ];
     }

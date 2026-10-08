@@ -203,6 +203,29 @@
     @endif
 
     @if ($canManage ?? false)
+    @if (($canManage ?? false) && ($draftSpotlightReady ?? null))
+        <section class="mb-5 rounded-2xl border border-slate-300 bg-slate-50 p-4 sm:p-5"
+                 role="status" data-plan-draft-ready-spotlight data-plan-draft-id="{{ $draftSpotlightReady->id }}">
+            <div>
+                <p class="text-xs font-bold tracking-wider text-slate-600">計画案が準備できました</p>
+                <h2 class="mt-1 text-base font-bold text-slate-900">3段階の次の行動を、確認・修正できます</h2>
+                <p class="mt-2 text-sm leading-6 text-slate-700">記録をもとにした未承認の案です。今の作業を止める必要はありません。Taskへの追加は確認して承認した場合だけ行われます。</p>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-3">
+                <form method="POST" action="{{ route('plans.action_drafts.spotlight.acknowledge', $plan) }}">
+                    @csrf
+                    <input type="hidden" name="action" value="open">
+                    <button type="submit" class="btn-primary">計画案を確認する</button>
+                </form>
+                <form method="POST" action="{{ route('plans.action_drafts.spotlight.acknowledge', $plan) }}">
+                    @csrf
+                    <input type="hidden" name="action" value="dismiss">
+                    <button type="submit" class="btn-secondary">今は閉じる</button>
+                </form>
+            </div>
+        </section>
+    @endif
+
         <section class="mb-8 adaptive-entry-card">
             <div>
                 <h2 class="mt-1 text-xl font-bold text-slate-900">{{ $plan->tasks->isEmpty() ? '最初の行動から始めましょう' : '計画外の作業も記録できます' }}</h2>

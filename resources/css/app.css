@@ -10270,3 +10270,15 @@ html[data-canovia-keyboard="open"] .workspace-mode-menu {
         width: 100%;
     }
 }
+
+/* V58.76: quiet one-time guide; never loops or animates in reduced-motion. */
+@media (prefers-reduced-motion: no-preference) {
+    [data-plan-draft-ready-spotlight] {
+        animation: plan-draft-ready-outline 850ms ease-out 1 both;
+    }
+
+    @keyframes plan-draft-ready-outline {
+        0%, 100% { outline: 0 solid transparent; }
+        48% { outline: 2px solid rgb(100 116 139 / 0.34); outline-offset: 3px; }
+    }
+}
