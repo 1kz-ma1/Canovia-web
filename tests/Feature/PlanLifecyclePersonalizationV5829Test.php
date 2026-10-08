@@ -44,7 +44,7 @@ class PlanLifecyclePersonalizationV5829Test extends TestCase
             ->firstOrFail();
 
         $response->assertRedirect(
-            route('plans.ai_task_assistant.show', $plan),
+            route('workspace.study.index', ['plan_id' => $plan->id]),
         );
 
         $context = UserPersonalizationContext::query()
