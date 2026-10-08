@@ -79,8 +79,9 @@ final class DevelopmentAiSharingPreferenceService
      */
     public function revoke(User $user, Plan $plan): ?DevelopmentAiSharingPreference
     {
-        $this->assertPersonalPlanOwner($user, $plan);
-
+        // Cancellation is bound to the preference creator, not current Plan
+        // ownership: the original owner must be able to withdraw a stale
+        // preparation after a Plan is shared, recategorized or transferred.
         return DB::transaction(function () use ($user, $plan) {
             $preference = DevelopmentAiSharingPreference::query()
                 ->where('user_id', $user->id)
