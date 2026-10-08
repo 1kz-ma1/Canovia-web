@@ -222,7 +222,7 @@ final class DevelopmentGitHubRoadmapWorkspaceTest extends TestCase
             ->assertJsonPath('matched', 1)
             ->assertJsonPath('items.0.title', 'Adaptive Learning')
             ->assertJsonPath('items.0.completion', 'unverified')
-            ->assertHeader('Cache-Control', 'private, no-store');
+            ->assertHeader('Cache-Control', 'no-store, private');
 
         $this->actingAs($user)
             ->get(route('workspace.development.context', ['plan' => $plan->id, 'scope' => 'priority', 'priority' => 'P2']))
