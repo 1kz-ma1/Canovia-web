@@ -3,6 +3,10 @@
     $roadmapRows = collect(data_get($roadmapSnapshot, 'workstreams', []));
     $roadmapSections = collect(data_get($roadmapSnapshot, 'sections', []));
     $roadmapWarnings = collect(data_get($roadmapSnapshot, 'warnings', []));
+    $githubAgentPull = app(\App\Services\DevelopmentAgentGitHubPullHandoffService::class);
+    $agentPullPrompt = $roadmapSnapshot && $roadmapRows->isNotEmpty()
+        ? $githubAgentPull->build($roadmapSnapshot)
+        : null;
     $roadmapError = trim((string) ($developmentRoadmapError ?? ''));
     $verifiedAt = (string) data_get($roadmapSnapshot, 'github_evidence_observed_at', '');
     $evidenceChecked = data_get($roadmapSnapshot, 'github_evidence_checked', false) === true;
@@ -50,6 +54,13 @@
                 @if ($plan && $roadmapSnapshot)
                     <button type="button" class="btn-secondary min-h-9 px-3 text-xs"
                         data-roadmap-compare>仕様書の変更を確認</button>
+                    @if ($agentPullPrompt !== null)
+                        <button type="button" class="btn-secondary min-h-9 px-3 text-xs"
+                            data-development-agent-pull
+                            data-development-agent-prompt-target="development-agent-github-pull-overview">
+                            GitHubからAIに直接読ませる
+                        </button>
+                    @endif
                     <button type="button" class="btn-secondary min-h-9 px-3 text-xs"
                         data-roadmap-context-copy data-roadmap-context-scope="overview">AI用Contextをコピー</button>
                     <a href="{{ route('workspace.development.index', ['plan_id' => $plan->id, 'surface' => 'roadmap', 'verify' => '1']) }}" class="btn-secondary min-h-9 px-3 text-xs" data-roadmap-check-github>GitHubのPR・Issue・CIを照合</a>
@@ -59,6 +70,13 @@
 
         @if ($roadmapSnapshot)
             <p class="mt-3 text-xs text-slate-400">必要な時だけ最新の仕様書から取得します。外部AIへ自動送信せず、Taskや進捗は更新しません。</p>
+            @if ($agentPullPrompt !== null)
+                <p class="mt-1 text-xs text-slate-400" data-development-agent-github-notice>
+                    GitHub連携済みのAI向けです。依頼文だけをコピーします。Canoviaの認証情報は渡さず、外部AIへの自動送信もしません。
+                </p>
+                <textarea readonly id="development-agent-github-pull-overview" class="sr-only"
+                    tabindex="-1" aria-hidden="true">{{ $agentPullPrompt }}</textarea>
+            @endif
             <p class="mt-1 text-xs text-cyan-300" aria-live="polite" role="status" data-roadmap-context-status></p>
             <div class="mt-3 hidden rounded-xl border border-cyan-300/15 bg-slate-950/30 p-4" data-roadmap-diff-panel>
                 <p class="text-xs font-bold text-slate-100">前回の仕様書更新との差分</p>
@@ -140,6 +158,20 @@
                         <button type="button" class="btn-secondary mt-3 min-h-9 px-3 text-xs"
                             data-roadmap-context-copy data-roadmap-context-scope="workstream"
                             data-roadmap-context-title="{{ data_get($row, 'title', '') }}">この項目をAIへ共有</button>
+                        @php
+                            $agentItemPrompt = $agentPullPrompt !== null
+                                ? $githubAgentPull->build($roadmapSnapshot, (string) data_get($row, 'title', ''))
+                                : null;
+                        @endphp
+                        @if ($agentItemPrompt !== null)
+                            <button type="button" class="btn-secondary mt-3 min-h-9 px-3 text-xs"
+                                data-development-agent-pull
+                                data-development-agent-prompt-target="development-agent-github-pull-{{ $loop->index }}">
+                                GitHubからこの項目をAIに読ませる
+                            </button>
+                            <textarea readonly id="development-agent-github-pull-{{ $loop->index }}"
+                                tabindex="-1" aria-hidden="true" class="sr-only">{{ $agentItemPrompt }}</textarea>
+                        @endif
                     </article>
                 @empty
                     <p class="text-xs text-slate-400">定義済みの開発項目テーブルはありません。仕様書の箇条書きを以下で確認できます。</p>
@@ -197,6 +229,34 @@
             input.remove();
             return copied;
         };
+
+        root.addEventListener('click', async (event) => {
+            const button = event.target.closest('[data-development-agent-pull]');
+            if (!button || !root.contains(button) || button.disabled) return;
+            const targetId = button.dataset.developmentAgentPromptTarget;
+            const target = targetId ? document.getElementById(targetId) : null;
+            if (!(target instanceof HTMLTextAreaElement) || !root.contains(target)) return;
+
+            button.disabled = true;
+            if (manual) manual.classList.add('hidden');
+            if (manualText) manualText.value = '';
+            try {
+                const copied = await copy(target.value);
+                if (copied) {
+                    setStatus('GitHub接続済みAI向けの短い依頼文をコピーしました。自動送信はしていません。');
+                } else if (manual && manualText) {
+                    manualText.value = target.value;
+                    manual.classList.remove('hidden');
+                    manualText.focus();
+                    manualText.select();
+                    setStatus('端末側のコピー制限のため、表示した依頼文を長押ししてコピーしてください。');
+                } else {
+                    setStatus('依頼文のコピーに失敗しました。端末の設定をご確認ください。');
+                }
+            } finally {
+                button.disabled = false;
+            }
+        });
 
         root.addEventListener('click', async (event) => {
             const button = event.target.closest('[data-roadmap-context-copy]');
