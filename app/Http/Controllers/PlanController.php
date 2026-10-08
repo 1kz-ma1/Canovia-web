@@ -15,6 +15,7 @@ use App\Services\PlanOwnershipService;
 use App\Services\PlanCollaborationService;
 use App\Services\PlanActivityService;
 use App\Services\PlanCategoryProfileService;
+use App\Services\PlanIntentClassificationService;
 use App\Services\PlanProgressService;
 use App\Services\PlanPriorityService;
 use App\Services\PlanLifecyclePersonalizationAdapter;
@@ -72,6 +73,7 @@ class PlanController extends Controller
         GoalContextService $goalContexts,
         GoalContextAccessService $goalContextAccess,
         PlanCategoryProfileService $categoryProfiles,
+        PlanIntentClassificationService $intentClassification,
         WorkspaceModeRegistry $workspaceModes,
         PlanLifecyclePersonalizationAdapter $planLifecycle,
     ) {
@@ -157,6 +159,23 @@ class PlanController extends Controller
             return back()->withErrors(['is_collaborative' => '共同計画を作るにはログインが必要です。'])->withInput();
         }
 
+        // Domain, team membership and specialization are separate concepts.
+        // Infer only a conservative domain-compatible legacy category when
+        // the user did not explicitly choose one. A Workspace entry point
+        // overrides a generic title heuristic, never an explicit category.
+        $category = trim((string) ($validated['category'] ?? ''));
+        if ($category === '') {
+            $category = match ($validated['workspace_mode'] ?? null) {
+                'study' => '資格学習',
+                'development' => 'ソフトウェア開発',
+                'career' => '就活・キャリア',
+                default => $intentClassification->suggest(
+                    (string) $validated['title'],
+                    (string) ($validated['description'] ?? ''),
+                )['category'] ?? '',
+            };
+        }
+
         $ownerToken = Str::random(64);
         $createRequestId = $validated['create_request_id'] ?? (string) Str::uuid();
 
@@ -180,7 +199,7 @@ class PlanController extends Controller
                 'public_slug' => Str::uuid()->toString(),
                 'title' => $validated['title'],
                 'description' => $validated['description'] ?? null,
-                'category' => $validated['category'] ?? null,
+                'category' => $category !== '' ? $category : null,
                 'priority' => $validated['priority'] ?? 3,
                 'priority_mode' => $validated['priority_mode'] ?? 'auto',
                 'visual_icon' => $validated['visual_icon'] ?? null,
