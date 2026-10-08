@@ -32,10 +32,10 @@ class MutationIdempotencyV390Test extends TestCase
 
         $first = $this->actingAs($user)->post(route('plans.store'), $payload);
         $plan = Plan::firstOrFail();
-        $first->assertRedirect(route('plans.ai_task_assistant.show', $plan));
+        $first->assertRedirect(route('workspace.development.index', ['plan_id' => $plan->id]));
 
         $second = $this->actingAs($user)->post(route('plans.store'), $payload);
-        $second->assertRedirect(route('plans.ai_task_assistant.show', $plan));
+        $second->assertRedirect(route('workspace.development.index', ['plan_id' => $plan->id]));
 
         $this->assertDatabaseCount('plans', 1);
         $this->assertSame($requestId, $plan->fresh()->creation_request_id);
