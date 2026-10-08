@@ -10,6 +10,7 @@ use App\Http\Controllers\CapabilityActivationController;
 use App\Http\Controllers\MapPersonalizationController;
 use App\Http\Controllers\FirstRunController;
 use App\Http\Controllers\PlanController;
+use App\Http\Controllers\PlanSpecializationController;
 use App\Http\Controllers\PlanDashboardController;
 use App\Http\Controllers\GoalDiscoveryController;
 use App\Http\Controllers\TemplateController;
@@ -372,6 +373,7 @@ Route::get('/plans/{plan}/dashboard', PlanDashboardController::class)->name('pla
 Route::get('/plans/{plan}', [PlanController::class, 'show'])->name('plans.show');
 Route::get('/plans/{plan}/edit', [PlanController::class, 'edit'])->name('plans.edit');
 Route::put('/plans/{plan}', [PlanController::class, 'update'])->name('plans.update');
+Route::put('/plans/{plan}/specialization', [PlanSpecializationController::class, 'update'])->middleware('throttle:12,1')->name('plans.specialization.update');
 Route::delete('/plans/{plan}', [PlanController::class, 'destroy'])->name('plans.destroy');
 Route::get('/plans/{plan}/resources', [PlanResourceController::class, 'index'])->name('plans.resources.index');
 Route::post('/plans/{plan}/resources', [PlanResourceController::class, 'store'])->name('plans.resources.store');

@@ -15,6 +15,7 @@ use App\Services\PlanOwnershipService;
 use App\Services\PlanCollaborationService;
 use App\Services\PlanActivityService;
 use App\Services\PlanCategoryProfileService;
+use App\Services\PlanSpecializationService;
 use App\Services\DevelopmentCreativePlanAccessService;
 use App\Services\PlanIntentClassificationService;
 use App\Services\PlanProgressService;
@@ -538,6 +539,8 @@ class PlanController extends Controller
         PlanActivityService $activity,
         GoalContextService $goalContexts,
         DevelopmentCreativePlanAccessService $creativeAccess,
+        PlanCategoryProfileService $categoryProfiles,
+        PlanSpecializationService $specializations,
     ) {
         $ownership->authorizePlan($request, $plan);
 
@@ -568,18 +571,32 @@ class PlanController extends Controller
             return back()->withErrors(['deadline' => '期限は開始日以降にしてください。'])->withInput();
         }
 
-        $before = $plan->only(['title', 'description', 'category', 'workspace_domain_override', 'priority', 'priority_mode', 'start_date', 'deadline', 'is_public']);
+        $before = $plan->only(['title', 'description', 'category', 'workspace_domain_override', 'workspace_specialization_override', 'priority', 'priority_mode', 'start_date', 'deadline', 'is_public']);
         $previousTitle = (string) $plan->title;
+
+        // A confirmed specialization cannot remain attached to an unrelated
+        // Domain if the owner edits the Workspace or legacy category.
+        $nextDomainOverride = array_key_exists('workspace_domain_override', $validated)
+            ? (in_array($validated['workspace_domain_override'], ['auto', null, ''], true)
+                ? null
+                : $validated['workspace_domain_override'])
+            : $plan->workspace_domain_override;
+        $nextCategory = array_key_exists('category', $validated)
+            ? (string) $validated['category']
+            : (string) $plan->category;
+        $nextDomain = $nextDomainOverride ?: $categoryProfiles->forCategory($nextCategory)->key;
+        $specializationOptions = $specializations->optionsForDomain($nextDomain);
+        $currentSpecialization = (string) ($plan->workspace_specialization_override ?? '');
+        $nextSpecialization = array_key_exists($currentSpecialization, $specializationOptions)
+            ? $currentSpecialization
+            : null;
 
         $plan->update([
             'title' => $validated['title'],
             'description' => array_key_exists('description', $validated) ? $validated['description'] : $plan->description,
             'category' => array_key_exists('category', $validated) ? $validated['category'] : $plan->category,
-            'workspace_domain_override' => array_key_exists('workspace_domain_override', $validated)
-                ? (in_array($validated['workspace_domain_override'], ['auto', null, ''], true)
-                    ? null
-                    : $validated['workspace_domain_override'])
-                : $plan->workspace_domain_override,
+            'workspace_domain_override' => $nextDomainOverride,
+            'workspace_specialization_override' => $nextSpecialization,
             'priority' => $validated['priority'] ?? (int) ($plan->priority ?? 3),
             'priority_mode' => $validated['priority_mode'] ?? ($plan->priority_mode ?: 'auto'),
             'visual_icon' => array_key_exists('visual_icon', $validated) ? $validated['visual_icon'] : $plan->visual_icon,
