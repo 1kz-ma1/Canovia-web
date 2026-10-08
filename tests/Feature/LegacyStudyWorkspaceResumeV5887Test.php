@@ -40,7 +40,7 @@ class LegacyStudyWorkspaceResumeV5887Test extends TestCase
         return [$plan, $task];
     }
 
-    private function session(User $user, Plan $plan, Task $task, array $overrides = []): StudyPracticeSession
+    private function createPracticeSession(User $user, Plan $plan, Task $task, array $overrides = []): StudyPracticeSession
     {
         return StudyPracticeSession::create(array_replace([
             'plan_id' => $plan->id, 'task_id' => $task->id,
@@ -67,7 +67,7 @@ class LegacyStudyWorkspaceResumeV5887Test extends TestCase
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);
         [$plan, $task] = $this->planAndTask($user);
-        $this->session($user, $plan, $task);
+        $this->createPracticeSession($user, $plan, $task);
 
         $this->actingAs($user)->get(route('workspace.study.index', ['plan_id' => $plan->id]))
             ->assertOk()
@@ -81,11 +81,11 @@ class LegacyStudyWorkspaceResumeV5887Test extends TestCase
         $user = User::factory()->create(['first_run_completed_at' => now()]);
         $other = User::factory()->create();
         [$plan, $task] = $this->planAndTask($user);
-        $this->session($other, $plan, $task);
+        $this->createPracticeSession($other, $plan, $task);
         $this->actingAs($user)->get(route('workspace.study.index', ['plan_id' => $plan->id]))
             ->assertOk()->assertDontSee('data-legacy-practice-resume', false);
 
-        $this->session($user, $plan, $task, ['status' => StudyPracticeSession::STATUS_COMPLETED]);
+        $this->createPracticeSession($user, $plan, $task, ['status' => StudyPracticeSession::STATUS_COMPLETED]);
         $this->get(route('workspace.study.index', ['plan_id' => $plan->id]))
             ->assertOk()->assertDontSee('data-legacy-practice-resume', false);
     }
