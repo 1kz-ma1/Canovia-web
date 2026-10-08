@@ -31,7 +31,7 @@ final class PlanIntentClassificationService
             'ソフトウェア開発', 'システム開発', 'アプリ開発', 'ゲーム開発',
             'webアプリ', 'webサービス', 'アプリを制作', 'システムを制作',
             'プログラミング', 'github', 'リポジトリ',
-        ])) {
+        ]) || preg_match('/(?:システム|アプリ|ソフトウェア|ゲーム|web).{0,24}(?:開発|実装)/u', $text) === 1) {
             return $this->result(
                 'development', 'ソフトウェア開発',
                 $this->has($text, ['ゲーム']) ? 'game_development' : 'software_development',
