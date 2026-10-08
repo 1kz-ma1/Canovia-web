@@ -144,6 +144,9 @@ jobs:
           php -l tests/Feature/PlanActionDraftV5872Test.php
           php -l database/migrations/2026_10_08_150000_create_plan_action_drafts_table.php
           php -l tests/Feature/PlanActionDraftV5871Test.php
+          php -l app/Services/McpVerifiedTokenPrincipal.php
+          php -l app/Services/McpAccessTokenIntrospector.php
+          php -l tests/Feature/McpAccessTokenIntrospectorTest.php
           php -l config/canovia_mcp.php
           php -l app/Services/McpProtectedResourceConfiguration.php
           php -l app/Http/Controllers/McpProtectedResourceMetadataController.php
@@ -162,6 +165,8 @@ jobs:
           php -l tests/Feature/DevelopmentTeamTaskDependencyV5869Test.php
       - run: php artisan view:cache
       - run: php artisan migrate --force
+      - name: MCP trusted IdP token introspection contract
+        run: php artisan test tests/Feature/McpAccessTokenIntrospectorTest.php
       - name: MCP OAuth protected-resource fail-closed gate
         run: php artisan test tests/Feature/McpProtectedResourceGateTest.php
       - name: ChatGPT sharing preparation and revocation
