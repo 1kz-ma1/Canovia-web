@@ -105,6 +105,7 @@ jobs:
           php -l tests/Feature/IntelligenceEvidenceArrayDiffV5885Test.php
           php -l app/Services/WorkspaceNavigationService.php
           php -l app/Http/Middleware/RememberWorkspaceScreen.php
+          php -l tests/Feature/LearningImmersionShellV5888Test.php
           php -l tests/Feature/LegacyStudyWorkspaceResumeV5887Test.php
           php -l tests/Feature/ContextualWorkspaceNavigationV5883Test.php
           php -l tests/Feature/ReleaseLevelFoundationV5820Test.php
@@ -155,6 +156,8 @@ jobs:
       - name: V58.84 Learning migration partial-deploy recovery
         run: php artisan test tests/Feature/LearningAdjustmentMigrationRecoveryV5884Test.php
       # V58.86 release downgrade cases live in the V58.83 regression suite.
+      - name: V58.88 Learning immersive shell
+        run: php artisan test tests/Feature/LearningImmersionShellV5888Test.php
       - name: V58.87 Legacy Study Practice workspace resume
         run: php artisan test tests/Feature/LegacyStudyWorkspaceResumeV5887Test.php
       - name: V58.83 Contextual workspace navigation
