@@ -42,7 +42,8 @@ final class DevelopmentGitHubRoadmapWorkspaceTest extends TestCase
             ->assertOk()
             ->assertSee('data-development-roadmap', false)
             ->assertSee('GitHub接続を確認する')
-            ->assertSee('READ ONLY');
+            ->assertSee('READ ONLY')
+            ->assertDontSee('data-roadmap-context-copy', false);
 
         Http::assertNothingSent();
         $this->assertDatabaseCount('tasks', 0);
@@ -193,7 +194,13 @@ final class DevelopmentGitHubRoadmapWorkspaceTest extends TestCase
             ->assertOk()
             ->assertSee('Adaptive Learning')
             ->assertSee('iPhone E2E pending')
-            ->assertSee('GitHub記述 · 検証前');
+            ->assertSee('GitHub記述 · 検証前')
+            ->assertSee('data-roadmap-context-copy', false)
+            ->assertSee('data-roadmap-context-scope="workstream"', false)
+            ->assertSee('data-roadmap-context-title="Adaptive Learning"', false)
+            ->assertSee('この項目をAIへ共有')
+            ->assertSee('AI用Contextをコピー')
+            ->assertSee(route('workspace.development.context', ['plan' => $plan->id]));
 
         Http::assertSent(fn (HttpRequest $request) =>
             str_contains($request->url(), '/contents/docs/development/ROADMAP.md?ref='.$sha)
@@ -235,6 +242,33 @@ final class DevelopmentGitHubRoadmapWorkspaceTest extends TestCase
             ->assertOk()
             ->assertJsonPath('items.0.pr_evidence.0.merge', 'merged_default')
             ->assertJsonPath('items.0.pr_evidence.0.ci', 'observed_pass');
+
+        // A selected workstream is fetched only through an explicit, scoped GET.
+        // Copying does not depend on AI credentials or create Task records.
+        $this->actingAs($user)
+            ->get(route('workspace.development.context', [
+                'plan' => $plan->id,
+                'scope' => 'workstream',
+                'title' => 'Adaptive Learning',
+                'limit' => 1,
+            ]))
+            ->assertOk()
+            ->assertJsonPath('matched', 1)
+            ->assertJsonPath('items.0.title', 'Adaptive Learning')
+            ->assertJsonPath('items.0.completion', 'unverified')
+            ->assertJsonPath('verification_requested', false)
+            ->assertHeader('Cache-Control', 'no-store, private');
+
+        $this->actingAs($user)
+            ->get(route('workspace.development.context', [
+                'plan' => $plan->id,
+                'scope' => 'workstream',
+                'title' => 'Not in this roadmap',
+                'limit' => 1,
+            ]))
+            ->assertOk()
+            ->assertJsonPath('matched', 0)
+            ->assertJsonCount(0, 'items');
 
         $this->assertDatabaseCount('tasks', 0);
         $this->assertDatabaseCount('task_evidences', 0);

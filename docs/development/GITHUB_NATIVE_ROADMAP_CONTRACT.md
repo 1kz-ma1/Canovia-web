@@ -1,11 +1,11 @@
-# GitHub-native roadmap contract — PROPOSED, not implemented
+# GitHub-native roadmap contract — PARTIALLY IMPLEMENTED
 Updated: 2026-10-08.
 
 ## Goal and separation
 For development, GitHub Markdown is the primary **intent** source; PR/Commit/CI is implementation evidence; deployment is operational evidence; device E2E is usability evidence. Canovia WorkLog/Task/Evidence remains the source for personal execution history. This avoids `GitHub → huge AI JSON → bulk Task updates` and duplicate roadmap administration.
 
 ## Read-only MVP
-Authorized repo → discover explicit roadmap (or provisional README/Issues/PRs fallback) → fetch pinned SHA → parse untrusted Markdown safely → show workstreams, provenance, uncertainty → join PR/Issue/CI evidence → suggest next actions. Missing docs must not force guessed status. Never convert a heading or position to an existing `task_id`.
+Authorized public repo → discover explicit roadmap (or provisional README/Issues/PRs fallback) → fetch pinned SHA → parse untrusted Markdown safely → show workstreams, provenance, uncertainty → join PR/Issue/CI evidence → suggest next actions. Missing docs must not force guessed status. Never convert a heading or position to an existing `task_id`.
 
 ## Identity and safety
 - Canonical roadmap: `docs/development/ROADMAP.md` for this repo; optional future stable `roadmap_key` is **not** a Canovia Task ID.
@@ -45,3 +45,9 @@ An explicit `Issue #N` in the workstream evidence or remaining-acceptance column
 ## Phase 3: first-party on-demand context endpoint
 
 `GET /workspace/development/context/{plan}` is an authenticated, throttled, read-only **session endpoint** (not a public API, AI tool, or cross-user integration). The actor must have Plan view access, the Plan must be included in their Development Workspace selection, and the linked GitHub App must have read entitlement and ready connection. Inputs: `scope=overview|priority|workstream`, exact `priority=P0..P3` or `title=<exact workstream title>`, `limit=1..12`, and optional `verify=1` to incur bounded GitHub PR/Issue/CI reads. Default is no evidence refresh. Responses are no-store, source-SHA-attributed `canovia.development_context.v1` JSON. The returned Markdown-derived titles and remaining acceptance text are untrusted **data**, never AI instructions. No Task writes or inferred completion. Private/internal GitHub repositories remain unavailable pending actor-scoped GitHub authorization. The endpoint does not itself send data to an LLM or provide third-party OAuth credentials.
+
+## Phase 3: opt-in contextual handoff from Development Workspace
+
+The Development **ロードマップ** surface shows a user-triggered `AI用Contextをコピー` (up to 8 workstreams) and a per-workstream `この項目をAIへ共有` control (1 matched workstream). Both buttons make a **same-origin authenticated GET only after a click** to the Phase 3 session endpoint, with `verify=0` (no PR/Issue/CI refresh). The selected title is an exact filter; an absent/mismatched title returns no items, not another workstream. The copied text is small, source-referenced by repository/path/commit SHA, quotes untrusted field values, and labels all completion as unverified. No AI API is called, and data is not transmitted to an external AI without the user's further action. Clipboard use is attempted in secure contexts with a selected-text fallback for WKWebView; clipboard or permission failure is shown without silent completion.
+
+This is a **manual bridge** for external coding AI while preserving user control, not autonomous AI tool calling or API/OAuth delegation. Future direct on-demand AI retrieval requires an explicit authenticated provider integration, per-actor authorization, untrusted-context segregation and auditing. The control creates no Task/progress records or external writes; the existing bulk JSON update mechanism is not removed from unrelated legacy workflows by this slice. The UI and endpoint require current session/Plan/repo authorization and currently support only public repos. Server-side regression coverage checks gating and scope; iOS/PWA/PC clipboard E2E remains unverified.
