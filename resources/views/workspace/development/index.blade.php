@@ -241,6 +241,9 @@
             filled(data_get($firstPlanContext ?? [], 'goal'))
             && trim((string) data_get($firstPlanContext, 'goal')) === trim((string) $plan->title)
             && (string) data_get($firstPlanContext, 'experience') === 'beginner'
+            && ($developmentSurface ?? 'work') === 'work'
+            && ($developmentRecentActivity ?? collect())->isEmpty()
+            && ! ($developmentGithubRepository ?? null)
         )
             <aside class="page-card p-4 sm:p-5" data-development-first-plan-guidance>
                 <p class="text-xs font-bold text-cyan-300">診断をもとにした初回ガイド</p>
