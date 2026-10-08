@@ -26,11 +26,27 @@ final class McpDelegatedPlanAccessPolicy
         Plan $plan,
         string $requestedScope = 'overview',
     ): bool {
+        return $this->authorizedGrant($principal, $plan, $requestedScope) !== null;
+    }
+
+    /**
+     * Return only grant metadata, never private Plan content.
+     *
+     * For tool reads call this INSIDE a DB transaction with lockForRead=true
+     * and a locked Plan row, so concurrent revocation cannot race the
+     * private projection. Legacy callers continue to use allows().
+     */
+    public function authorizedGrant(
+        McpVerifiedTokenPrincipal $principal,
+        Plan $plan,
+        string $requestedScope = 'overview',
+        bool $lockForRead = false,
+    ): ?McpDelegatedGrant {
         if (config('canovia_mcp.delegated_policy_enabled') !== true
             || config('canovia_mcp.token_introspection_enabled') !== true
             || ! $this->resource->isReady()
             || ! in_array($requestedScope, ['overview', 'tasks'], true)) {
-            return false;
+            return null;
         }
 
         $now = now();
@@ -40,7 +56,7 @@ final class McpDelegatedPlanAccessPolicy
             || $principal->expiresAt <= $now->getTimestamp()
             || $principal->expiresAt > $now->getTimestamp() + 3600
             || ! in_array(McpProtectedResourceConfiguration::READ_SCOPE, $principal->scopes, true)) {
-            return false;
+            return null;
         }
 
         $subjectFingerprint = $this->fingerprints->subject(
@@ -51,7 +67,7 @@ final class McpDelegatedPlanAccessPolicy
         );
 
         if ($subjectFingerprint === null || $clientResourceFingerprint === null) {
-            return false;
+            return null;
         }
 
         $link = McpLinkedSubject::query()
@@ -61,6 +77,7 @@ final class McpDelegatedPlanAccessPolicy
             ->whereNull('revoked_at')
             ->whereNotNull('linked_at')
             ->where('linked_at', '<=', $now)
+            ->when($lockForRead, fn ($query) => $query->lockForUpdate())
             ->first();
 
         if ($link === null
@@ -68,7 +85,7 @@ final class McpDelegatedPlanAccessPolicy
             || (int) $plan->user_id !== (int) $link->user_id
             || (bool) $plan->is_collaborative
             || $this->profiles->forPlan($plan)->key !== 'development') {
-            return false;
+            return null;
         }
 
         $grant = McpDelegatedGrant::query()
@@ -81,13 +98,16 @@ final class McpDelegatedPlanAccessPolicy
             ->whereNotNull('consented_at')
             ->where('consented_at', '<=', $now)
             ->where('expires_at', '>', $now)
-            ->first(['id', 'scope']);
+            ->when($lockForRead, fn ($query) => $query->lockForUpdate())
+            ->first(['id', 'user_id', 'subject_link_id', 'scope']);
 
         if ($grant === null || ! in_array($grant->scope, ['overview', 'tasks'], true)) {
-            return false;
+            return null;
         }
 
         // An overview-only grant must NEVER authorize Task title/progress data.
-        return $requestedScope === 'overview' || $grant->scope === 'tasks';
+        return $requestedScope === 'overview' || $grant->scope === 'tasks'
+            ? $grant
+            : null;
     }
 }
