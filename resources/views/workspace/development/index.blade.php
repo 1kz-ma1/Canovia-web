@@ -246,6 +246,11 @@
                 <p class="text-xs font-bold text-cyan-300">診断をもとにした初回ガイド</p>
                 <p class="mt-2 text-sm text-slate-200">最初に作りたいものを小さく分け、最初の実装タスクを1件決めましょう。</p>
                 <p class="mt-1 text-xs text-slate-400">タスクや実績が登録されると、実際の進捗に基づく案内を優先します。</p>
+                @if ($canManage ?? false)
+                    <div class="mt-4 flex flex-wrap gap-2" data-development-first-plan-actions>
+                        <a href="{{ route('plans.ai_task_assistant.show', $plan) }}" class="btn-primary min-h-11 px-4">初期タスクを作る</a>
+                    </div>
+                @endif
             </aside>
         @endif
         @if (($developmentSurface ?? 'work') === 'work' && ($modeOnboarding ?? null))
