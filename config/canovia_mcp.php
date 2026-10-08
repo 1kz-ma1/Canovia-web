@@ -39,6 +39,11 @@ return [
     // Canovia's own confidential OAuth client for linking its logged-in
     // actor with the IdP subject. NEVER reuse ChatGPT's OAuth client ID.
     // This independent flow is OFF until an audited IdP is configured.
+    // Separate safety switch: neither a linked subject nor a 'prepared'
+    // preference can grant access. Explicit per-Plan consent requires a
+    // fresh PKCE IdP verification and a second user confirmation.
+    'plan_consent_enabled' => env('CANOVIA_MCP_PLAN_CONSENT_ENABLED', false),
+
     'account_link_enabled' => env('CANOVIA_MCP_ACCOUNT_LINK_ENABLED', false),
     'account_link_client_id' => env('CANOVIA_MCP_ACCOUNT_LINK_CLIENT_ID', ''),
     'account_link_client_secret' => env('CANOVIA_MCP_ACCOUNT_LINK_CLIENT_SECRET', ''),
