@@ -80,7 +80,7 @@ final class DevelopmentGitHubRoadmapReaderTest extends TestCase
         try {
             app(DevelopmentGitHubRoadmapReader::class)->read('example/repo');
             $this->fail('Private roadmap should not be accessible through installation token alone.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertStringContainsString('Private / Internal Repository', $exception->getMessage());
         }
 
