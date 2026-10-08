@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\ReleaseLevel;
 use App\Models\User;
+use App\Models\DevelopmentAiSharingPreference;
 use App\Services\AccountDeletionService;
 use App\Services\GuestPlanClaimService;
 use App\Services\FutureMemoService;
@@ -189,6 +190,13 @@ class AuthController extends Controller
 
         return view('auth.account', [
             'user' => $user,
+            'chatgptPreparedPreferences' => DevelopmentAiSharingPreference::query()
+                ->where('user_id', $user->id)
+                ->where('provider_key', DevelopmentAiSharingPreference::PROVIDER_CHATGPT)
+                ->where('status', DevelopmentAiSharingPreference::STATUS_PREPARED)
+                ->with(['plan:id,user_id,title'])
+                ->orderByDesc('updated_at')
+                ->paginate(8, ['*'], 'sharing_page'),
             'personalizationContext' => $user->personalizationContext,
             'livingProfileSummary' => $livingProfile->summary($request),
             'showPersonalizationBootstrap' =>
