@@ -237,6 +237,75 @@ final class DevelopmentAiSharingPreferenceTest extends TestCase
             ->assertDontSee('data-development-chatgpt-sharing-preference', false);
     }
 
+    public function test_account_can_revoke_a_preparation_after_plan_ownership_transfers_without_leaking_new_owner_data(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $newOwner = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($owner);
+
+        $this->actingAs($owner)
+            ->post(route('workspace.development.sharing_preference.store', $plan), [
+                'scope' => 'tasks', 'duration_days' => 7,
+            ])->assertRedirect();
+
+        $this->actingAs($owner)
+            ->get(route('auth.account'))
+            ->assertOk()
+            ->assertSee('data-chatgpt-sharing-account', false)
+            ->assertSee('準備保存済み（未接続）')
+            ->assertSee('この準備設定を取り消す');
+
+        $plan->update([
+            'user_id' => $newOwner->id,
+            'title' => 'SECRET_NEW_OWNER_PLAN_NAME',
+        ]);
+
+        $this->actingAs($owner)
+            ->get(route('auth.account'))
+            ->assertOk()
+            ->assertSee('以前の開発Plan（現在の内容は表示しません）')
+            ->assertDontSee('SECRET_NEW_OWNER_PLAN_NAME');
+
+        $this->actingAs($newOwner)
+            ->delete(route('workspace.development.sharing_preference.destroy', $plan), [
+                'return_to' => 'account',
+            ])->assertNotFound();
+
+        $this->actingAs($owner)
+            ->delete(route('workspace.development.sharing_preference.destroy', $plan), [
+                'return_to' => 'account',
+            ])
+            ->assertRedirect(route('auth.account'));
+
+        $this->assertDatabaseHas('development_ai_sharing_preferences', [
+            'user_id' => $owner->id,
+            'plan_id' => $plan->id,
+            'status' => 'revoked',
+        ]);
+        $this->assertDatabaseCount('development_ai_sharing_preference_events', 2);
+        $this->actingAs($owner)
+            ->get(route('auth.account'))
+            ->assertOk()
+            ->assertDontSee('data-chatgpt-preference-account-row', false);
+    }
+
+    public function test_account_shows_only_original_users_preparations(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $outsider = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($owner);
+        $this->actingAs($owner)
+            ->post(route('workspace.development.sharing_preference.store', $plan), [
+                'scope' => 'overview', 'duration_days' => 7,
+            ])->assertRedirect();
+
+        $this->actingAs($outsider)
+            ->get(route('auth.account'))
+            ->assertOk()
+            ->assertDontSee('data-chatgpt-preference-account-row', false)
+            ->assertDontSee('この準備設定を取り消す');
+    }
+
     private function plan(User $user, string $category = '個人開発', bool $collaborative = false): Plan
     {
         return Plan::query()->create([
