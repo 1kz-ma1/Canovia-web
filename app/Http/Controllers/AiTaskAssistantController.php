@@ -329,7 +329,8 @@ PROMPT;
         // Development-first onboarding should return to its State-first
         // workspace once the first tasks have actually been persisted.
         // Other categories keep the established Plan detail destination.
-        if (app(\App\Services\PlanCategoryProfileService::class)->forPlan($plan)->key === 'development') {
+        if ($request->boolean('return_to_workspace')
+            && app(\App\Services\PlanCategoryProfileService::class)->forPlan($plan)->key === 'development') {
             return redirect()
                 ->route('workspace.development.index', ['plan_id' => $plan->id])
                 ->with('success', $message);
