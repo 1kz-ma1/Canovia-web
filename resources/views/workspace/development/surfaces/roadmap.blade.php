@@ -4,6 +4,22 @@
     $roadmapSections = collect(data_get($roadmapSnapshot, 'sections', []));
     $roadmapWarnings = collect(data_get($roadmapSnapshot, 'warnings', []));
     $roadmapError = trim((string) ($developmentRoadmapError ?? ''));
+    $verifiedAt = (string) data_get($roadmapSnapshot, 'github_evidence_observed_at', '');
+    $evidenceChecked = data_get($roadmapSnapshot, 'github_evidence_checked', false) === true;
+    $mergeStates = [
+        'merged_default' => 'default branchへマージ確認',
+        'merged_other' => '別branchへマージ',
+        'open' => 'PRオープン',
+        'closed_unmerged' => '未マージでクローズ',
+        'missing' => '参照先なし',
+        'unknown' => 'PR未確認',
+    ];
+    $ciStates = [
+        'observed_pass' => 'PR headの取得済みChecks成功',
+        'failed' => 'PR headのChecks失敗',
+        'pending' => 'PR headのChecks進行中',
+        'unknown' => 'CI未確認',
+    ];
     $sourceRepository = (string) data_get($roadmapSnapshot, 'source.repository', '');
     $sourceSha = (string) data_get($roadmapSnapshot, 'source.sha', '');
     $sourceUrl = $sourceRepository !== '' && $sourceSha !== ''
@@ -19,15 +35,23 @@
                 <h2 class="mt-1 text-lg font-black text-slate-50">開発ロードマップ</h2>
                 <p class="mt-2 text-xs leading-5 text-slate-400">GitHubの仕様書を参照しています。計画上の記述は実装・CI・デプロイ・実機検証の証拠とは別です。CanoviaのTaskは変更しません。</p>
             </div>
-            @if ($sourceUrl)
-                <a href="{{ $sourceUrl }}" target="_blank" rel="noopener noreferrer" class="btn-secondary min-h-9 px-3 text-xs">仕様書をGitHubで開く ↗</a>
-            @endif
+            <div class="flex flex-wrap gap-2">
+                @if ($sourceUrl)
+                    <a href="{{ $sourceUrl }}" target="_blank" rel="noopener noreferrer" class="btn-secondary min-h-9 px-3 text-xs">仕様書をGitHubで開く ↗</a>
+                @endif
+                @if ($plan && $roadmapSnapshot)
+                    <a href="{{ route('workspace.development.index', ['plan_id' => $plan->id, 'surface' => 'roadmap', 'verify' => '1']) }}" class="btn-secondary min-h-9 px-3 text-xs" data-roadmap-check-github>GitHubのPR・CIを照合</a>
+                @endif
+            </div>
         </div>
 
         @if ($roadmapSnapshot)
             <p class="mt-3 break-all text-[11px] text-slate-500">
                 {{ $sourceRepository }} · {{ data_get($roadmapSnapshot, 'source.path') }} · {{ mb_substr($sourceSha, 0, 12) }}
             </p>
+            @if ($evidenceChecked)
+                <p class="mt-2 text-xs text-cyan-300">PR状態の照合を試行 · {{ $verifiedAt }} · CIはPR headの観測値であり必須CI・本番・実機の完了を意味しません。</p>
+            @endif
             @foreach ($roadmapWarnings as $warning)
                 <p class="mt-2 text-xs text-amber-200">{{ $warning }}</p>
             @endforeach
@@ -62,6 +86,21 @@
                         <h4 class="mt-2 text-sm font-black text-slate-100">{{ data_get($row, 'title', '') }}</h4>
                         <p class="mt-3 text-[11px] font-bold text-slate-400">仕様書に記載された実装Evidence</p>
                         <p class="mt-1 text-xs leading-5 text-slate-300">{{ data_get($row, 'evidence', '') }}</p>
+                        @foreach (collect(data_get($row, 'github_signals', [])) as $signal)
+                            <div class="mt-2 rounded-lg border border-cyan-300/10 bg-cyan-300/[0.025] px-3 py-2 text-xs" data-roadmap-pr-observation>
+                                @if (data_get($signal, 'url'))
+                                    <a href="{{ data_get($signal, 'url') }}" target="_blank" rel="noopener noreferrer" class="font-black text-cyan-300">PR #{{ (int) data_get($signal, 'number', 0) }} ↗</a>
+                                @else
+                                    <span class="font-black text-cyan-300">PR #{{ (int) data_get($signal, 'number', 0) }}</span>
+                                @endif
+                                <span class="ml-2 text-slate-300">{{ $mergeStates[data_get($signal, 'merge_state', 'unknown')] ?? $mergeStates['unknown'] }}</span>
+                                <span class="mt-1 block text-[11px] text-slate-500">{{ $ciStates[data_get($signal, 'ci_state', 'unknown')] ?? $ciStates['unknown'] }}
+                                    @if (data_get($signal, 'ci_sha'))
+                                        ({{ mb_substr((string) data_get($signal, 'ci_sha'), 0, 8) }})
+                                    @endif
+                                </span>
+                            </div>
+                        @endforeach
                         <p class="mt-3 text-[11px] font-bold text-slate-400">残作業・検証条件</p>
                         <p class="mt-1 text-xs leading-5 text-slate-300">{{ data_get($row, 'next', '') }}</p>
                     </article>

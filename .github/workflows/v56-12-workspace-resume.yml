@@ -152,7 +152,7 @@ jobs:
       - run: php artisan view:cache
       - run: php artisan migrate --force
       - name: V58 GitHub-native roadmap parser, reader and workspace
-        run: php artisan test tests/Unit/DevelopmentRoadmapMarkdownParserTest.php tests/Unit/DevelopmentRoadmapTableProjectionTest.php tests/Feature/DevelopmentGitHubRoadmapReaderTest.php tests/Feature/DevelopmentGitHubRoadmapWorkspaceTest.php
+        run: php artisan test tests/Unit/DevelopmentRoadmapMarkdownParserTest.php tests/Unit/DevelopmentRoadmapTableProjectionTest.php tests/Feature/DevelopmentGitHubRoadmapReaderTest.php tests/Feature/DevelopmentGitHubRoadmapWorkspaceTest.php tests/Unit/DevelopmentRoadmapEvidenceLinkerTest.php tests/Feature/DevelopmentRoadmapPrEvidenceTest.php
       - name: V58.85 Nested evidence regression
         run: php artisan test tests/Feature/IntelligenceEvidenceArrayDiffV5885Test.php
       - name: V58.84 Learning migration partial-deploy recovery

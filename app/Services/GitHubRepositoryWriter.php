@@ -2392,6 +2392,174 @@ final class GitHubRepositoryWriter
         return ['sha' => $sha, 'content' => $content];
     }
 
+    /**
+     * Read a small, explicit set of PR references. No Plan/Task updates.
+     * An installed GitHub App is NOT user authorization for private repos:
+     * the Phase 2 reader fails closed on private/internal repositories.
+     *
+     * @param array<int,int> $numbers
+     * @return array{signals:array<int,array<string,mixed>>, observed_at:string, warning:?string}
+     */
+    public function readDevelopmentRoadmapPullRequestSignals(
+        string $repoFullName,
+        array $numbers,
+    ): array {
+        $numbers = array_values(array_unique(array_filter(
+            $numbers,
+            fn ($number) => is_int($number) && $number > 0 && $number <= 999999,
+        )));
+        $numbers = array_slice($numbers, 0, 10);
+
+        if ($numbers === []) {
+            return ['signals' => [], 'observed_at' => now()->toIso8601String(), 'warning' => null];
+        }
+
+        $context = $this->developmentReadContext(
+            $repoFullName,
+            'contents',
+            'Contents',
+        );
+        /** @var PendingRequest $client */
+        $client = $context['client'];
+        $repoPath = (string) $context['repo_path'];
+        $permissions = (array) $context['permissions'];
+
+        $repoResponse = $client->get('/repos/'.$repoPath);
+        $repository = $repoResponse->successful() ? $repoResponse->json() : null;
+        if (! is_array($repository)
+            || ($repository['private'] ?? null) !== false
+            || ($repository['visibility'] ?? null) !== 'public') {
+            throw new RuntimeException(
+                'Private / Internal RepositoryのPR検証には本人のGitHub権限確認が必要です。',
+            );
+        }
+
+        $defaultBranch = (string) ($repository['default_branch'] ?? '');
+        if ($defaultBranch === '' || strlen($defaultBranch) > 255) {
+            throw new RuntimeException('GitHubのdefault branchを確認できませんでした。');
+        }
+
+        $signals = [];
+        $canReadPulls = in_array($permissions['pull_requests'] ?? null, ['read', 'write'], true);
+        $canReadChecks = in_array($permissions['checks'] ?? null, ['read', 'write'], true);
+        $checkBudget = 4;
+
+        foreach ($numbers as $number) {
+            $signal = [
+                'number' => $number,
+                'url' => 'https://github.com/'.$repoFullName.'/pull/'.$number,
+                'merge_state' => 'unknown',
+                'merge_sha' => null,
+                'ci_state' => 'unknown',
+                'ci_sha' => null,
+            ];
+
+            if (! $canReadPulls) {
+                $signals[$number] = $signal;
+                continue;
+            }
+
+            $response = $client->get('/repos/'.$repoPath.'/pulls/'.$number);
+            if ($response->status() === 404) {
+                $signal['merge_state'] = 'missing';
+                $signals[$number] = $signal;
+                continue;
+            }
+            if (! $response->successful()) {
+                $signals[$number] = $signal;
+                continue;
+            }
+
+            $pr = $response->json();
+            if (! is_array($pr) || (int) ($pr['number'] ?? 0) !== $number) {
+                $signals[$number] = $signal;
+                continue;
+            }
+
+            $merged = ($pr['merged'] ?? null) === true;
+            $baseBranch = (string) data_get($pr, 'base.ref', '');
+            $prState = (string) ($pr['state'] ?? '');
+            $signal['merge_state'] = $merged
+                ? ($baseBranch === $defaultBranch ? 'merged_default' : 'merged_other')
+                : match ($prState) {
+                    'open' => 'open',
+                    'closed' => 'closed_unmerged',
+                    default => 'unknown',
+                };
+            $mergeSha = (string) ($pr['merge_commit_sha'] ?? '');
+            $signal['merge_sha'] = $merged && preg_match('/^[a-f0-9]{40}$/D', $mergeSha)
+                ? $mergeSha
+                : null;
+
+            // CI applies to the exact PR head SHA, not to the merge commit,
+            // deployed artifact or entire roadmap workstream.
+            $headSha = (string) data_get($pr, 'head.sha', '');
+            if ($canReadChecks && $checkBudget > 0
+                && preg_match('/^[a-f0-9]{40}$/D', $headSha)) {
+                $checkBudget--;
+                $signal['ci_sha'] = $headSha;
+                $checksResponse = $client->get(
+                    '/repos/'.$repoPath.'/commits/'.$headSha.'/check-runs',
+                    ['per_page' => 30],
+                );
+
+                if ($checksResponse->successful()) {
+                    $checks = $checksResponse->json();
+                    if (is_array($checks)) {
+                        $count = (int) ($checks['total_count'] ?? 0);
+                        $runs = (array) ($checks['check_runs'] ?? []);
+                        if ($count > 0 && $count <= 30
+                            && count($runs) === $count) {
+                            $signal['ci_state'] = $this->roadmapObservedCheckState($runs);
+                        }
+                    }
+                }
+            }
+
+            $signals[$number] = $signal;
+        }
+
+        return [
+            'signals' => $signals,
+            'observed_at' => now()->toIso8601String(),
+            'warning' => ! $canReadPulls
+                ? 'GitHub AppにPull Requestsのread権限がないためPR状態は未確認です。'
+                : (! $canReadChecks
+                    ? 'Checksのread権限がないためCI状態は未確認です。'
+                    : null),
+        ];
+    }
+
+    /**
+     * An observed check-run summary is never proof that required branch
+     * protection checks passed, or that production/device verification passed.
+     *
+     * @param array<int,mixed> $runs
+     */
+    private function roadmapObservedCheckState(array $runs): string
+    {
+        $pending = false;
+        $allSucceeded = true;
+        foreach ($runs as $run) {
+            if (! is_array($run)) {
+                return 'unknown';
+            }
+            $status = (string) ($run['status'] ?? '');
+            $conclusion = (string) ($run['conclusion'] ?? '');
+            if (in_array($conclusion, ['failure', 'timed_out', 'cancelled', 'action_required'], true)) {
+                return 'failed';
+            }
+            if ($status !== 'completed') {
+                $pending = true;
+            }
+            if ($status !== 'completed' || $conclusion !== 'success') {
+                $allSucceeded = false;
+            }
+        }
+
+        return $pending ? 'pending' : ($allSucceeded ? 'observed_pass' : 'unknown');
+    }
+
     private function developmentReadContext(
         string $repoFullName,
         string $permission,

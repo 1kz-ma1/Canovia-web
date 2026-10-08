@@ -278,7 +278,10 @@ final class DevelopmentWorkspaceController extends Controller
 
             if (($parsed['valid'] ?? false) && $repoFullName !== '') {
                 try {
-                    $developmentRoadmap = $roadmapReader->read($repoFullName);
+                    $developmentRoadmap = $roadmapReader->read(
+                        $repoFullName,
+                        $request->query('verify') === '1',
+                    );
                 } catch (\RuntimeException|\InvalidArgumentException $exception) {
                     $developmentRoadmapError = $exception->getMessage();
                 }
