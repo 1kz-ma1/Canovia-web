@@ -3,7 +3,8 @@
     // Question answering and an active exam use a quiet activity shell.
     // Historical results stay in the regular navigation to aid review.
     $learningImmersion = (
-        request()->routeIs('plans.tasks.learning.show')
+        request()->routeIs('plans.tasks.study_practice.show')
+        || request()->routeIs('plans.tasks.learning.show')
         || request()->routeIs('plans.tasks.learning.exam.show')
     );
     $isCoreScreen = request()->routeIs('home') || request()->routeIs('map.index') || request()->routeIs('inbox.index') || request()->routeIs('navigation.index') || request()->routeIs('roadmap.index') || request()->routeIs('timeline.index') || request()->routeIs('calendar.index');

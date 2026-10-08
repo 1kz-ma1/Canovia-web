@@ -853,7 +853,7 @@
                                         @elseif ($field['type'] === 'short_text')
                                             <input type="text" name="{{ $fieldName }}" value="{{ $fieldValue }}" class="form-control mt-2" placeholder="{{ ($field['placeholder'] ?? '') ?: '短く回答' }}">
                                         @else
-                                            <textarea name="{{ $fieldName }}" class="form-control mt-2 min-h-28" placeholder="{{ ($field['placeholder'] ?? '') ?: '回答・考え方を入力' }}">{{ $fieldValue }}</textarea>
+                                            <textarea name="{{ $fieldName }}" class="form-control mt-2 min-h-[168px] w-full resize-y sm:min-h-[192px]" rows="6" placeholder="{{ ($field['placeholder'] ?? '') ?: '回答・考え方を入力' }}">{{ $fieldValue }}</textarea>
                                         @endif
 
                                         @error($fieldError)<p class="mt-2 text-sm font-semibold text-rose-300">{{ $message }}</p>@enderror
