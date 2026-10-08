@@ -156,14 +156,18 @@ final class IntelligenceStateChangeFeedbackService
         IntelligenceDecisionTrace $previous,
         IntelligenceDecisionTrace $current,
     ): array {
-        $before = collect(
-            $previous->stateSnapshot?->evidence_references ?? [],
-        )->filter()->unique();
-        $after = collect(
-            $current->stateSnapshot?->evidence_references ?? [],
-        )->filter()->unique();
+        // Snapshot references can be structured arrays; Collection::diff()
+        // uses PHP array_diff() and crashes when comparing those values.
+        $before = collect($previous->stateSnapshot?->evidence_references ?? [])
+            ->filter(fn ($value) => is_string($value) || is_array($value))
+            ->uniqueStrict();
+        $after = collect($current->stateSnapshot?->evidence_references ?? [])
+            ->filter(fn ($value) => is_string($value) || is_array($value))
+            ->uniqueStrict();
 
-        $added = $after->diff($before)->values();
+        $added = $after->reject(
+            fn ($value) => $before->containsStrict($value),
+        )->values();
         $ids = $added
             ->map(function (mixed $reference): ?int {
                 if (! is_string($reference)) {
