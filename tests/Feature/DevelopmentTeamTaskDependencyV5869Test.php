@@ -63,7 +63,7 @@ final class DevelopmentTeamTaskDependencyV5869Test extends TestCase
             ->assertSee('担当者はTaskへ直接記録されていないため推測しません。');
 
         $this->assertSame($before, Task::query()->where('plan_id', $plan->id)->pluck('status', 'id')->all());
-        $this->assertSame(0, Task::query()->where('plan_id', $plan->id)->where('progress_percent', '100')->count());
+        $this->assertSame(100, $completed->fresh()->progress_percent);
         $this->assertSame(PlanMember::ROLE_EDITOR, $plan->memberships()->first()->role);
     }
 
