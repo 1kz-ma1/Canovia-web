@@ -228,6 +228,36 @@
         </div>
     </section>
 
+    @include('workspace.development.partials.creative-plan-rescue')
+
+    @if (($developmentLegacyCreativeActive ?? false) && $plan)
+        <aside class="page-card border-cyan-300/15 p-4 sm:p-5" data-development-creative-active="{{ $plan->id }}">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <p class="text-xs font-black text-cyan-300">既存の制作Planを開発として表示中</p>
+                    <p class="mt-1 text-xs leading-5 text-slate-400">
+                        {{ $plan->title }} をこのブラウザの開発Workspaceで表示しています。
+                        Planの元カテゴリ・共同編集設定・権限は変更していません。
+                        ほかの制作活動が自動で開発扱いになることもありません。
+                    </p>
+                </div>
+                <form method="POST" action="{{ route('workspace.development.creative.destroy', $plan) }}">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn-secondary min-h-11 px-4 text-xs" data-development-creative-stop>
+                        この表示を解除
+                    </button>
+                </form>
+            </div>
+            @if ($plan->is_collaborative)
+                <a class="mt-3 inline-flex text-xs font-bold text-cyan-300" data-development-creative-team-link
+                    href="{{ route('workspace.development.index', ['plan_id' => $plan->id, 'surface' => 'team']) }}">
+                    チームの役割・担当状況を見る →
+                </a>
+            @endif
+        </aside>
+    @endif
+
     @if (! $plan)
         @if (filled(data_get($firstUseContext ?? [], 'goal')))
             <section class="page-card p-4 sm:p-5" data-development-first-use-context>
