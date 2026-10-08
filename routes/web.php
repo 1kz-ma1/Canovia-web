@@ -92,6 +92,7 @@ use App\Http\Controllers\DevelopmentWorkspaceController;
 use App\Http\Controllers\DevelopmentRoadmapContextController;
 use App\Http\Controllers\DevelopmentPrivateAiContextPreviewController;
 use App\Http\Controllers\McpProtectedResourceMetadataController;
+use App\Http\Controllers\McpDelegatedRevocationController;
 use App\Http\Controllers\DevelopmentAiSharingPreferenceController;
 use App\Http\Controllers\DevelopmentCreativePlanSelectionController;
 use App\Http\Controllers\DevelopmentWorkspaceTopController;
@@ -242,6 +243,14 @@ Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->middl
 Route::get('/reset-password/{token}', [AuthController::class, 'showResetPassword'])->middleware('guest')->name('password.reset');
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware(['guest', 'throttle:6,1'])->name('password.update');
 Route::get('/account', [AuthController::class, 'account'])->middleware('auth')->name('auth.account');
+Route::delete('/account/mcp/grants/{grant}', [McpDelegatedRevocationController::class, 'grant'])
+    ->whereNumber('grant')
+    ->middleware(['auth', 'throttle:8,1'])
+    ->name('auth.account.mcp_grant.revoke');
+Route::delete('/account/mcp/subjects/{subject}', [McpDelegatedRevocationController::class, 'subject'])
+    ->whereNumber('subject')
+    ->middleware(['auth', 'throttle:8,1'])
+    ->name('auth.account.mcp_subject.revoke');
 Route::delete('/account', [AuthController::class, 'destroyAccount'])
     ->middleware(['auth', 'throttle:3,1'])
     ->name('auth.account.destroy');
