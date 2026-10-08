@@ -109,3 +109,13 @@ Official sources:
 - [OpenAI MCP authentication](https://developers.openai.com/plugins/build/auth)
 - [MCP authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)
 - [RFC 7662](https://www.rfc-editor.org/rfc/rfc7662)
+
+## Canovia's separate account-linking client
+
+An optional `verifyAccountLink` method reuses strict IdP introspection
+requirements but compares `client_id` with **Canovia's own confidential
+account-linking OAuth client**, never ChatGPT's client ID. This runs only
+after PKCE code exchange and independently validated callback state+issuer.
+The resulting `sub` is a prerequisite for an owner-confirmed identity
+link only; it does not authorize private MCP reads. See
+[account linking](MCP_OAUTH_ACCOUNT_LINK_CONTRACT.md).
