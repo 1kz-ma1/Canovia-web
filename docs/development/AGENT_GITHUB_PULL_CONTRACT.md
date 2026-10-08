@@ -4,7 +4,7 @@ Updated: 2026-10-09. This document is an implementation contract, not permission
 
 ## Current: user-approved, GitHub-native pull
 
-The Development Workspace's **ロードマップ** panel already reads only the linked, authorized **public** GitHub repository and pins `docs/development/ROADMAP.md` to the observed default-branch SHA. A user may choose `GitHubからAIに直接読ませる` for an overview or one explicit workstream. Canovia creates a **small text locator** using `DevelopmentAgentGitHubPullHandoffService`; this text can be pasted into an AI conversation whose GitHub connector is already authorized by that AI's user.
+The Development Workspace's **ロードマップ** panel already reads only the linked, authorized **public** GitHub repository and pins `docs/development/ROADMAP.md` to the observed default-branch SHA. A user may choose `AI向けGitHub参照依頼をコピー` for an overview or one explicit workstream. Canovia creates a **small text locator** using `DevelopmentAgentGitHubPullHandoffService`; this text can be pasted into an AI conversation whose GitHub connector is already authorized by that AI's user.
 
 The locator contains only:
 - GitHub `owner/repo`, canonical spec path and the **display-time** commit SHA (potentially stale).
