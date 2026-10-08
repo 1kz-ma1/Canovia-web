@@ -35,7 +35,7 @@
 | P0.2 | P0 | **Studyの既知試験範囲/未観測理解度の分離**。公的試験の登録Scope=0は「公式範囲が未確定」の根拠にしない。既知の試験は取得元/版を示し診断へ、学校別テストは必要なら範囲表を求める | APの初回Actionで「試験範囲を確定する」が最優先にならない。未取得時は取得状況を正直に表示、公式範囲を捏造しない。公式内容のソース・適用年を検証 | [x] (PR #346 / AP 2026シラバスVer.7.2参照、理解度Actionへ) |
 | P0.3 | P0 | **Overview関連性フィルタ**。未使用Mode・空Inbox・無Evidence Readiness・重複Actionを抑制。モード発見は別の導線に残す | Studyだけ/Developmentだけ/三分野/未利用/共有Plan/通知0の画面を回帰検証。優先推薦の投影元とアクセス制御は保持 | [x] (PR #347 / V58.65) |
 | P0.4 | P0 | **旧Roadmap/Plan作成案内の更新**。手動・AI/JSONは上級者/互換導線へ後退、通常は「目標→今できる行動」へ | 既存Plan編集・旧Roadmap自体は削除しない。新規/既存ユーザー双方の復帰・手動編集が可能 | [x] (PR #348 / V58.66) |
-| P1.1 | P1 | **Domain / Collaboration / Specializationの分離**。既存`category`との後方互換、本人の訂正、曖昧なときだけ確認。チーム専用のTask/担当/依存関係投影を段階拡張 | 制作活動を一律開発にしない。所属・表示・通知の誤分類を防ぐ。新DB・一括マイグレーションは手動判断 | [ ] (PR #349 + #350 merged; PR #352 adds read-only Team Task prerequisites (CI/merge pending); persistent Specialization and explicit Task ownership remain pending) |
+| P1.1 | P1 | **Domain / Collaboration / Specializationの分離**。既存`category`との後方互換、本人の訂正、曖昧なときだけ確認。チーム専用のTask/担当/依存関係投影を段階拡張 | 制作活動を一律開発にしない。所属・表示・通知の誤分類を防ぐ。新DB・一括マイグレーションは手動判断 | [ ] (PR #349/#350/#352 merged. PR #353 (Specialization owner correction) in CI; direct Task assignee model remains a later optional slice) |
 | P1.2 | P1 | **行動起点のPlan Draft**。小さな最初の行動→実績から候補構造を作る。draft/proposed/accepted を区別、既存Taskを勝手に変更しない | 生成根拠の提示、本人承認/修正/却下、冪等、再生成時の差分、AI費用上限・失敗時の実行継続 | [ ] |
 | P1.3 | P1 | **計画案の完成通知/スポットライト**。準備ができたとき一度だけ光る案内で計画を閲覧・修正可能にする | 重要な作業を遮らない、スクリーンリーダー・reduced-motion・PWA/Swift WKWebView・何度も表示しない | [ ] |
 | P1.4 | P1 | **簿記の実力に応じた演習と復習/先取り**。V58.61/62をより豊富な原問題・回答形式・定着確認・依存グラフへ | 誤採点ゼロ/出題版・範囲明示。4問/12問の繰返しで習熟を過大評価しない | [ ] |
