@@ -305,7 +305,7 @@ class CareerWorkspaceModeV551Test extends TestCase
                 'data-overview-first-use-workspace="career"',
                 false,
             )
-            ->assertSee('data-overview-mode="career"', false);
+            ->assertDontSee('data-overview-mode="career"', false);
 
         $plan = $this->plan($user);
 
@@ -314,7 +314,9 @@ class CareerWorkspaceModeV551Test extends TestCase
             ->assertOk()
             ->assertDontSee('data-overview-first-use-workspaces', false)
             ->assertSee($plan->title)
-            ->assertSee('Career判断に使える現実情報がまだありません。');
+            ->assertSee('data-overview-mode="career"', false)
+            ->assertSee('Careerの活動状況を確認中')
+            ->assertDontSee('Career判断に使える現実情報がまだありません。');
 
         CareerCapture::query()->create([
             'plan_id' => $plan->id,

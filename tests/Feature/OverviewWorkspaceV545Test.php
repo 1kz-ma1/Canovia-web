@@ -43,13 +43,16 @@ class OverviewWorkspaceV545Test extends TestCase
             ->get(route('workspace.overview.index'))
             ->assertOk()
             ->assertSee('data-overview-workspace', false)
-            ->assertSee('data-overview-primary-action', false)
-            ->assertSee('data-overview-mode="study"', false)
-            ->assertSee('data-overview-mode="development"', false)
-            ->assertSee('data-overview-mode="career"', false)
+            ->assertDontSee('data-overview-primary-action', false)
+            ->assertSee('data-overview-first-use-workspaces', false)
+            ->assertDontSee('data-overview-mode="study"', false)
+            ->assertDontSee('data-overview-mode="development"', false)
+            ->assertDontSee('data-overview-mode="career"', false)
+            ->assertDontSee('data-overview-inbox', false)
+            ->assertDontSee('data-overview-important-changes', false)
             ->assertSee('data-current-workspace-mode="overview"', false)
             ->assertSee('data-workspace-mode-source="route_hint"', false)
-            ->assertSee('まだ優先Actionはありません。');
+            ->assertDontSee('まだ優先Actionはありません。');
 
         $this->assertSame(
             'study',
@@ -101,8 +104,12 @@ class OverviewWorkspaceV545Test extends TestCase
             ->assertSee('理解度の確認待ち')
             ->assertSee('IPAの公式試験範囲は公開済みです。')
             ->assertDontSee('確定した試験範囲がまだありません。')
-            ->assertSee('Release判断に使えるDevelopment Evidenceがまだありません。')
-            ->assertSee('セットアップ中');
+            ->assertSee('開発の作業状況を確認中')
+            ->assertDontSee('Release判断に使えるDevelopment Evidenceがまだありません。')
+            ->assertDontSee('セットアップ中')
+            ->assertDontSee('data-overview-mode="career"', false)
+            ->assertDontSee('data-overview-inbox', false)
+            ->assertDontSee('data-overview-important-changes', false);
     }
 
     public function test_mode_summaries_use_existing_study_and_development_readiness_when_observed(): void

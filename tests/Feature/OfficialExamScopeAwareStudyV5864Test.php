@@ -67,7 +67,7 @@ final class OfficialExamScopeAwareStudyV5864Test extends TestCase
         $this->actingAs($user)
             ->get(route('workspace.overview.index'))
             ->assertOk()
-            ->assertSee('data-overview-official-study-action', false)
+            ->assertDontSee('data-overview-official-study-action', false)
             ->assertSee('理解度の確認待ち')
             ->assertDontSee('確定した試験範囲がまだありません。');
 
