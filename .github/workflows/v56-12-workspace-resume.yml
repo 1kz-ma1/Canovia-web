@@ -31,6 +31,7 @@ jobs:
           php -l tests/Feature/WorkspaceResumeAndSessionScopeV5612Test.php
           php -l tests/Feature/WorkspaceModePersistenceV542Test.php
           php -l tests/Feature/ReleaseLevelFoundationV5820Test.php
+          php -l tests/Feature/ReleaseReviewV5824Test.php
           php -l app/Services/ReleaseGateService.php
           php -l app/Http/Controllers/AdminReleaseGateController.php
           php -l tests/Feature/ReleaseGateInventoryV5821Test.php
