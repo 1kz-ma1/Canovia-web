@@ -148,6 +148,10 @@ jobs:
           php -l app/Models/McpLinkedSubject.php
           php -l app/Models/McpDelegatedGrant.php
           php -l app/Services/McpDelegatedIdentityFingerprintService.php
+          php -l database/migrations/2026_10_09_000300_create_mcp_delegated_access_events_table.php
+          php -l app/Services/McpDelegatedRevocationService.php
+          php -l app/Http/Controllers/McpDelegatedRevocationController.php
+          php -l tests/Feature/McpDelegatedRevocationTest.php
           php -l app/Services/McpDelegatedPlanAccessPolicy.php
           php -l tests/Feature/McpDelegatedPlanAccessPolicyTest.php
           php -l app/Services/McpVerifiedTokenPrincipal.php
@@ -171,6 +175,8 @@ jobs:
           php -l tests/Feature/DevelopmentTeamTaskDependencyV5869Test.php
       - run: php artisan view:cache
       - run: php artisan migrate --force
+      - name: MCP session-only revocation, audit and ownership isolation
+        run: php artisan test tests/Feature/McpDelegatedRevocationTest.php
       - name: MCP future delegated Plan permission and isolation contract
         run: php artisan test tests/Feature/McpDelegatedPlanAccessPolicyTest.php
       - name: MCP trusted IdP token introspection contract
