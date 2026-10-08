@@ -27,6 +27,9 @@ final class McpOAuthAccountLinkTest extends TestCase
     {
         parent::setUp();
         $this->withoutVite();
+        // Each scenario exercises many one-time OAuth operations; separate
+        // middleware throttle integration tests cover the rate limits.
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
         config([
             'native_ai.driver' => 'disabled',
             'canovia_mcp.discovery_enabled' => true,
@@ -208,32 +211,42 @@ final class McpOAuthAccountLinkTest extends TestCase
         Http::assertNotSent(static fn (ClientRequest $r) => $r->url() === self::INTROSPECT);
     }
 
-    public function test_incompatible_metadata_provider_and_forged_token_claims_fail_closed(): void
+    public function test_incompatible_oauth_metadata_never_starts_a_link(): void
     {
         $owner = User::factory()->create(['first_run_completed_at' => now()]);
-
         $invalid = $this->metadata();
         $invalid['code_challenge_methods_supported'] = ['plain'];
         $this->stubProvider(metadata: $invalid);
+
         $this->actingAs($owner)
             ->post(route('auth.account.mcp_link.start'))
             ->assertRedirect(route('auth.account'));
         $this->assertNull(session('mcp.account_link.pending'));
+        $this->assertDatabaseCount('mcp_linked_subjects', 0);
+        Http::assertNotSent(static fn (ClientRequest $r) => $r->url() === self::TOKEN_ENDPOINT);
+    }
 
+    public function test_provider_subject_of_chatgpt_oauth_client_cannot_link_canovia_account(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
         $this->stubProvider(claims: array_replace($this->claims(), [
             'client_id' => 'https://chatgpt.com/oauth/client.json',
         ]));
         $state = $this->query($this->start($owner))['state'];
         $this->oauthCallback($state)->assertRedirect(route('auth.account'));
         $this->assertNull(session('mcp.account_link.verified'));
+        $this->assertDatabaseCount('mcp_linked_subjects', 0);
+    }
 
+    public function test_provider_token_for_other_resource_cannot_link_canovia_account(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
         $this->stubProvider(claims: array_replace($this->claims(), [
             'aud' => 'https://other.example.test/api/mcp',
         ]));
         $state = $this->query($this->start($owner))['state'];
         $this->oauthCallback($state)->assertRedirect(route('auth.account'));
         $this->assertNull(session('mcp.account_link.verified'));
-
         $this->assertDatabaseCount('mcp_linked_subjects', 0);
     }
 
