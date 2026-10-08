@@ -92,3 +92,11 @@ subject through a fresh, short-lived, verified OAuth authorization-code +
 PKCE handshake and a separate final confirmation. Any previously revoked
 Plan grants remain revoked; relinking never automatically approves them.
 See [account linking](MCP_OAUTH_ACCOUNT_LINK_CONTRACT.md).
+
+## Revocation vs fresh consent
+
+A formerly revoked grant can be reapproved only through a new, valid
+PKCE IdP subject verification and explicit Plan-specific consent. Relinking
+an external subject alone never restores its previous grants. A Plan transfer
+or collaboration change between verification and final approval must block
+grant activation. See [explicit Plan consent](MCP_EXPLICIT_PLAN_CONSENT_CONTRACT.md).
