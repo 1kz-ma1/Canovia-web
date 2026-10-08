@@ -8,6 +8,8 @@ return [
         'candidate_limit' => 6,
         'signal_window' => 8,
         'minimum_misses' => 2,
+        // EXPERIMENTAL: minimum distinct answer evidence for mode ranking.
+        'ranking_evidence_min' => 6,
     ],
 
     'question_bank_selection' => [

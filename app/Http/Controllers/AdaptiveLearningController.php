@@ -10,6 +10,7 @@ use App\Models\Task;
 use App\Services\AdaptiveLearningBankQueueService;
 use App\Services\AdaptiveLearningCandidateService;
 use App\Services\AdaptiveExamProfileRegistry;
+use App\Services\AdaptiveLearningModeRecommendationService;
 use App\Services\BehaviorIdentityService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
@@ -46,7 +47,8 @@ final class AdaptiveLearningController extends Controller
     public function index(Request $request, Plan $plan, Task $task,
         PlanOwnershipService $ownership, PlanCategoryProfileService $profiles,
         BehaviorIdentityService $identity, AdaptiveLearningBankQueueService $queue,
-        AdaptiveExamProfileRegistry $examProfiles)
+        AdaptiveExamProfileRegistry $examProfiles,
+        AdaptiveLearningModeRecommendationService $recommendations)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         $packs = QuestionPack::query()->where('status', 'published')
@@ -65,6 +67,10 @@ final class AdaptiveLearningController extends Controller
                     && ($meta['exam_simulation_profile_version'] ?? '') === (string) $profile['version'];
             }))->values();
 
+        $learningRecommendations = $recommendations->forPlanTask(
+            $request, $plan, $task, $identity->resolve($request), $examPacks->isNotEmpty(),
+        );
+
         $activeRuns = $this->actorRuns($request, $plan, $task, $identity)
             ->where('status', LearningRun::STATUS_ACTIVE)
             ->latest('id')->limit(10)->get();
@@ -73,6 +79,7 @@ final class AdaptiveLearningController extends Controller
             'plan' => $plan, 'task' => $task, 'packs' => $packs,
             'activeRuns' => $activeRuns,
             'examProfiles' => $availableExamProfiles, 'examPacks' => $examPacks,
+            'learningRecommendations' => $learningRecommendations,
             'startRequestId' => (string) Str::uuid(),
             'examStartRequestId' => (string) Str::uuid(),
         ]);
