@@ -302,6 +302,9 @@
             @case('repository')
                 @include('workspace.development.surfaces.repository')
                 @break
+            @case('roadmap')
+                @include('workspace.development.surfaces.roadmap')
+                @break
 
             @case('team')
                 @include('workspace.development.surfaces.team')
