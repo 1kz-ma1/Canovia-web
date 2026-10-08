@@ -35,6 +35,7 @@
             </div>
         </div>
 
+        @if ($showPrimarySection || $modeSummaries->isNotEmpty() || $showInbox || $showChanges)
         <nav class="flex gap-2 overflow-x-auto px-5 py-3 sm:px-6" aria-label="Overview navigation">
             @if ($showPrimarySection)
                 <a href="#overview-current-action" class="badge badge-slate whitespace-nowrap">Current Action</a>
@@ -49,6 +50,7 @@
                 <a href="#overview-changes" class="badge badge-slate whitespace-nowrap">Changes</a>
             @endif
         </nav>
+        @endif
     </section>
 
     @if (($firstUseModeChoices ?? collect())->isNotEmpty())
@@ -284,7 +286,7 @@
                         @endif
                     </div>
                 @elseif ($presentation)
-                    <div class="mt-5 grid gap-3 sm:grid-cols-[0.72fr_1.28fr]">
+                    <div class="mt-5 grid gap-3 {{ $duplicatesGlobalAction ? '' : 'sm:grid-cols-[0.72fr_1.28fr]' }}">
                         <div class="rounded-2xl border border-white/8 bg-slate-950/25 p-4">
                             <span class="plan-identity-chip text-[11px]">
                                 <span aria-hidden="true">{{ $plan->displayIcon() }}</span>
