@@ -30,6 +30,19 @@ class PersonalizationBootstrapV5825Test extends TestCase
         ]);
     }
 
+    public function test_first_run_date_field_has_mobile_width_constraints(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('personalization.show'))
+            ->assertOk()
+            ->assertSee('data-personalization-bootstrap', false)
+            ->assertSee('grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2', false)
+            ->assertSee('name="deadline"', false)
+            ->assertSee('class="form-control mt-2 block w-full min-w-0 max-w-full"', false);
+    }
+
     public function test_existing_user_is_not_forced_into_personalization_and_has_optional_account_entry(): void
     {
         $user = User::factory()->create();
