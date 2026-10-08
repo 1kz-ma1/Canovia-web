@@ -128,8 +128,8 @@ Learning Run -> [locked/served: CURRENT+nearby] -> AnswerEvent(immutable scoring
 | Phase 1 | 既存コード・DB・UI・履歴・認可の調査 | CONFIRMED | Verified（リポジトリ静的調査） |
 | Phase 2 | 本暫定仕様書の作成・永続保持 | CONFIRMED | In Progress |
 | Phase 3 | DB/API依存・互換性・コスト/試験再現性の分割計画 | CONFIRMED | In Progress |
-| Phase 4a | Bank限定の新Run/1問回答イベント、1件終了/再開、既存Task/Attempt不変、リトライ耐性 | CONFIRMED（境界）/ PROPOSED（schema） | Not Started |
-| Phase 4b | Understanding/Practice体験、表示分離、問題集合、履歴共通投影 | CONFIRMED / PROPOSED | Not Started |
+| Phase 4a | Bank限定の新Run/1問回答イベント、1件終了/再開、既存Task/Attempt不変、リトライ耐性 | CONFIRMED（境界）/ PROPOSED（schema） | In Progress（V58.78初期実装・CI検証待ち） |
+| Phase 4b | Understanding/Practice体験、表示分離、問題集合、履歴共通投影 | CONFIRMED / PROPOSED | In Progress（V58.78 Bank単一選択UIのみ） |
 | Phase 4c | 確定/候補/戦略キュー、適応更新と重複回避、AI不可時のBank fallback | PROPOSED / EXPERIMENTAL | Not Started |
 | Phase 4d | 試験別profile + C完全固定・採点終了後開示、模試停止/再開ポリシー | CONFIRMED（制約）/ UNDECIDED（各試験詳細） | Not Started |
 | Phase 4e | 診断任意入口、3モードランキング、誤操作調整と校正 | PROPOSED / EXPERIMENTAL | Not Started |
@@ -164,3 +164,15 @@ Learning Run -> [locked/served: CURRENT+nearby] -> AnswerEvent(immutable scoring
 - 各PRで該当Sliceを `Not Started→In Progress→Implemented→Verified` のどこまで到達したか更新する。**CI成功だけで実機Verifiedと書かない。**
 - 1問イベントのschemaなど変更決定後に `PROPOSED→CONFIRMED` を更新し、差分・理由・回帰テストを記録。設計上の未確定を埋めるためにアルゴリズムの定数を先に固定しない。
 - 恒久資料として残す。本書を作業完了時に削除しない。
+
+## 2026-10-08 Phase 4a 初期Slice（V58.78、PR進行中）
+
+設計ゲートはV58.77相当の仕様書PR #361として先にmain統合済み。以下の実装がCI通過したときのみ `Implemented` に更新する。
+
+- `learning_runs`（actor/runと選択mode・pack情報）、`learning_run_items`（Bankの問題・解説・正答ルールのサーバ側スナップショット、ordinal）、`learning_answer_events`（1問1イベント、UUID冪等、採点結果、解答時刻、解答経過時間）を**旧StudyPracticeSession/Attemptと別**に用意。
+- A/Bに共通のBank-only単一選択`exact_choice`体験を先行実装。Aは回答後に解説を開示、Bは任意のdetailsで表示。解答前のHTTP画面には正解/採点ルールを渡さない。
+- モードと公開Packを独立に選択。初回キューは暫定`config('study.adaptive_learning.locked_queue_size')=2`件。確定済みの先の問題は勝手に変更しない。出題済みBank IDはそのRun内で再利用しない。補充はBankのみ。AI呼出しなし。
+- 1問採点が即時コミットされ、保存後に終了/再開しても残る。同じ問題の二重投稿は上書きしない。回答内容が変わった再送は409。旧Attemptの追加・Task進捗の更新は**行わない**。
+- 新UIは従来のStudyPractice画面から任意に入れる。既存ルートは維持。模試Cは開始不可、公式Exam profile未確認の模擬試験を名乗らない。
+- 未実装：汎用入力（数値/複数選択/記述・追加思考過程）、将来候補キューの再ランキング、共通履歴の横断集計/理解度反映、誤タップの調整、問題集のその他の論理Collection、検証済み試験別固定模試、モード推薦。旧Attemptの変換なし。
+- Verification: V58.78 Featureテスト（1問終了・再開・同一POST・同Plan権限/所有者境界・固定Bank snapshot・先読み・A/B UI・C不可・Task旧Attempt不変）＋既存QuestionBank/StudyPractice回帰＋CI。**PWA/iOS/Render実機E2Eは別ゲート。**

@@ -98,6 +98,13 @@ jobs:
           php -l app/Http/Controllers/PlanActionDraftSpotlightController.php
           php -l database/migrations/2026_10_08_190000_add_action_draft_spotlight_acknowledged_to_plans.php
           php -l tests/Feature/PlanActionDraftSpotlightV5876Test.php
+          php -l app/Http/Controllers/AdaptiveLearningController.php
+          php -l app/Services/AdaptiveLearningBankQueueService.php
+          php -l app/Models/LearningRun.php
+          php -l app/Models/LearningRunItem.php
+          php -l app/Models/LearningAnswerEvent.php
+          php -l database/migrations/2026_10_08_200000_create_learning_runs_and_answer_events.php
+          php -l tests/Feature/AdaptiveLearningSingleQuestionV5878Test.php
           php -l database/migrations/2026_10_08_180000_add_proposal_fingerprint_to_action_draft_steps.php
           php -l tests/Feature/PlanActionDraftV5875Test.php
           php -l app/Models/PlanActionDraftStep.php
@@ -167,6 +174,8 @@ jobs:
         run: php artisan test tests/Feature/DevelopmentCreativePlanRescueV5863Test.php tests/Feature/WorkspaceModeResolverV540Test.php
       - name: V58.69 Team Task Dependencies
         run: php artisan test tests/Feature/DevelopmentTeamTaskDependencyV5869Test.php tests/Feature/DeveloperWorkspaceSurfacesV580Test.php tests/Feature/DevelopmentCreativePlanRescueV5863Test.php
+      - name: V58.78 Adaptive Learning Single Question and Legacy Regression
+        run: php artisan test tests/Feature/AdaptiveLearningSingleQuestionV5878Test.php tests/Feature/QuestionBankV402Test.php tests/Feature/StudyPracticeDraftPersistenceV4071Test.php tests/Feature/StudyPracticeResumeFastPathV565Test.php tests/Feature/StudyPracticeRoutingV564Test.php
       - name: V58.76 Quiet Once-only Plan Draft Spotlight
         run: php artisan test tests/Feature/PlanActionDraftSpotlightV5876Test.php tests/Feature/PlanActionDraftV5875Test.php tests/Feature/PlanActionDraftV5874Test.php
       - name: V58.75 Draft Quality and Staleness Guard
