@@ -251,7 +251,7 @@
                 <p class="mt-1 text-xs text-slate-400">タスクや実績が登録されると、実際の進捗に基づく案内を優先します。</p>
                 @if ($canManage ?? false)
                     <div class="mt-4 flex flex-wrap gap-2" data-development-first-plan-actions>
-                        <a href="{{ route('plans.ai_task_assistant.show', $plan) }}" class="btn-primary min-h-11 px-4">初期タスクを作る</a>
+                        <a href="{{ route('plans.ai_task_assistant.show', ['plan' => $plan, 'return_to_workspace' => 1]) }}" class="btn-primary min-h-11 px-4">初期タスクを作る</a>
                     </div>
                 @endif
             </aside>
