@@ -28,4 +28,13 @@ return [
     // including CIMD URL when used. Never infer identity from email.
     'allowed_client_id' => env('CANOVIA_MCP_ALLOWED_CLIENT_ID', ''),
 
+    // Separate from the OAuth verifier and OFF until verified dual-identity
+    // linking, formal OAuth consent and reviewed MCP handler are completed.
+    'delegated_policy_enabled' => env('CANOVIA_MCP_DELEGATED_POLICY_ENABLED', false),
+
+    // Dedicated high-entropy HMAC key, not the Laravel APP_KEY. Rotation will
+    // invalidate all subject/client fingerprints until users re-link.
+    'identity_fingerprint_key' => env('CANOVIA_MCP_IDENTITY_FINGERPRINT_KEY', ''),
+
+
 ];
