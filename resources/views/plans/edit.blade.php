@@ -13,6 +13,10 @@
         </p>
     </section>
 
+    @if (session('success'))
+        <div class="assistant-notice assistant-notice-success mb-6" role="status">{{ session('success') }}</div>
+    @endif
+
     <section class="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             @if ($errors->any())
@@ -212,6 +216,70 @@
                     </a>
                 </div>
             </form>
+
+            @php
+                $specialization = app(\App\Services\PlanSpecializationService::class)->forPlan($plan);
+                $specializationChoices = $specialization['allowed'];
+                $specializationSelected = old('workspace_specialization_override', $plan->workspace_specialization_override ?? 'auto');
+            @endphp
+            <section class="mt-6 rounded-2xl border border-cyan-300/20 bg-slate-950/80 p-5" data-plan-specialization>
+                <p class="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-300">SPECIALIZATION</p>
+                <h2 class="mt-2 text-base font-bold text-slate-100">どんな活動ですか？（任意）</h2>
+                <p class="mt-2 text-xs leading-5 text-slate-400">
+                    {{ $specialization['source'] === 'owner_confirmed'
+                        ? '本人が確認した活動内容です。'
+                        : ($specialization['source'] === 'inferred'
+                            ? 'Canoviaが目標文から推定した活動内容です。まだ確定情報ではありません。'
+                            : '現在の活動内容は未確認です。必要なら選んでください。') }}
+                    現在のWorkspace：{{ app(\App\Services\PlanCategoryProfileService::class)->forPlan($plan)->label }}。
+                    ここで変更してもWorkspace・カテゴリ・共同計画・Taskは変わりません。
+                </p>
+                @if ($specialization['label'])
+                    <p class="mt-2 text-xs text-cyan-200" data-plan-specialization-current>
+                        現在の{{ $specialization['source'] === 'owner_confirmed' ? '確定値' : '推定候補' }}：
+                        {{ $specialization['label'] }}
+                    </p>
+                @endif
+                @if ($specializationChoices !== [])
+                    <form action="{{ route('plans.specialization.update', $plan) }}" method="POST" class="mt-4">
+                        @csrf
+                        @method('PUT')
+                        <label for="workspace_specialization_override" class="block text-xs font-bold text-slate-200">
+                            活動内容を修正する
+                        </label>
+                        <select id="workspace_specialization_override" name="workspace_specialization_override"
+                            class="form-control mt-2 min-h-11 w-full text-sm">
+                            <option value="auto" @selected($specializationSelected === 'auto')>
+                                Canoviaに任せる（{{ $specialization['source'] === 'inferred' ? '推定あり' : '未確認' }}）
+                            </option>
+                            @foreach ($specializationChoices as $key => $label)
+                                <option value="{{ $key }}" @selected($specializationSelected === $key)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        @error('workspace_specialization_override')
+                            <p class="mt-2 text-xs text-rose-300">{{ $message }}</p>
+                        @enderror
+                        <p class="mt-2 text-[11px] leading-5 text-slate-500">
+                            Workspaceを変える場合は、上の計画編集を先に保存してください。
+                            異なる活動分野の設定を組み合わせることはできません。
+                        </p>
+                        <button type="submit" class="btn-secondary mt-3 min-h-11 px-4 text-xs"
+                            data-plan-specialization-save>活動内容を保存</button>
+                    </form>
+                @else
+                    <p class="mt-3 text-xs leading-5 text-slate-500">
+                        このWorkspaceには活動内容の細分類をまだ用意していません。必要なときに追加します。
+                    </p>
+                    @if ($plan->workspace_specialization_override)
+                        <form action="{{ route('plans.specialization.update', $plan) }}" method="POST" class="mt-3">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" name="workspace_specialization_override" value="auto">
+                            <button type="submit" class="btn-secondary min-h-11 px-4 text-xs">古い活動内容の設定を解除する</button>
+                        </form>
+                    @endif
+                @endif
+            </section>
         </div>
 
         <aside class="space-y-6">
