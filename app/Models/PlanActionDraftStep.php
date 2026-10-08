@@ -8,7 +8,7 @@ final class PlanActionDraftStep extends Model
 {
     protected $fillable = [
         'plan_action_draft_id', 'sort_order', 'evidence_revision',
-        'title', 'accepted_task_id',
+        'title', 'accepted_task_id', 'proposal_fingerprint',
     ];
 
     protected function casts(): array
