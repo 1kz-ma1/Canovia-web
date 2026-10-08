@@ -47,12 +47,46 @@
             </form>
         </section>
     @endif
+    @if ($typedEvidence->isNotEmpty())
+        <section class="page-card p-5 sm:p-7" data-typed-evidence-compose>
+            <h2 class="text-lg font-bold text-slate-900">保存済みEvidenceから行動案を作る</h2>
+            <p class="mt-2 text-sm leading-6 text-slate-600">学習・開発・就活で記録した事実や自己申告を選びます。Evidenceの種類に合った次の一歩を提示しますが、能力・合格可能性・選考確率を判定するものではありません。必ず本人が確認してからTaskにできます。</p>
+            <form method="POST" action="{{ route('plans.action_drafts.compose_observed', $plan) }}" class="mt-4 space-y-3">
+                @csrf <input type="hidden" name="request_id" value="{{ $observedRequestId }}">
+                <p class="text-xs font-bold text-slate-700">Evidenceを1〜5件選択</p>
+                @foreach ($typedEvidence as $observed)
+                    <label class="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-sm">
+                        <input type="checkbox" name="task_evidence_ids[]" value="{{ $observed->id }}">
+                        <span>
+                            <strong>{{ $observed->typeLabel() }}</strong> · {{ $observed->sourceLabel() }}<br>
+                            <span class="text-slate-600">{{ \Illuminate\Support\Str::limit($observed->summary(), 130) }}</span>
+                        </span>
+                    </label>
+                @endforeach
+                @if ($workLogs->isNotEmpty())
+                    <details class="rounded-xl border border-slate-200 p-3">
+                        <summary class="cursor-pointer text-sm font-semibold text-slate-700">作業実績も組み合わせる（任意）</summary>
+                        <div class="mt-3 space-y-2">
+                            @foreach ($workLogs as $log)
+                                <label class="flex items-start gap-2 text-sm text-slate-700">
+                                    <input type="checkbox" name="work_log_ids[]" value="{{ $log->id }}">
+                                    <span>{{ $log->task_title_snapshot ?: '作業' }} · {{ \Illuminate\Support\Str::limit($log->outcome ?: $log->memo, 65) }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </details>
+                @endif
+                <p class="text-xs text-slate-500">根拠は合計5件まで。提案の保存後、Taskは自動作成されません。</p>
+                <button type="submit" class="btn-primary">このEvidenceから行動案を作る</button>
+            </form>
+        </section>
+    @endif
     <section class="page-card p-5 sm:p-7">
         <h2 class="text-lg font-bold text-slate-900">提案一覧</h2>
         <div class="mt-4 space-y-4">
             @forelse ($drafts as $draft)
                 <article class="rounded-xl border border-slate-200 p-4" data-plan-action-draft="{{ $draft->id }}">
-                    <p class="text-xs text-slate-500">{{ match ($draft->source_kind) { 'work_log' => '保存済みの実績ログ', 'multi_work_log' => '複数の実績ログ', 'mixed' => '自己申告と実績ログ', default => '自己申告の行動' } }} · {{ $draft->created_at?->format('Y/m/d') }} · {{ ['proposed'=>'提案中','accepted'=>'承認済み','dismissed'=>'却下済み'][$draft->status] ?? '未確定' }}</p>
+                    <p class="text-xs text-slate-500">{{ match ($draft->source_kind) { 'work_log' => '保存済みの実績ログ', 'multi_work_log' => '複数の実績ログ', 'mixed' => '複数の記録を組み合わせた案', 'task_evidence' => '保存済みのEvidence', default => '自己申告の行動' } }} · {{ $draft->created_at?->format('Y/m/d') }} · {{ ['proposed'=>'提案中','accepted'=>'承認済み','dismissed'=>'却下済み'][$draft->status] ?? '未確定' }}</p>
                     <p class="mt-2 text-sm font-semibold text-slate-800">{{ $draft->completed_action }}</p>
                     <p class="mt-1 whitespace-pre-line text-sm text-slate-600">{{ $draft->observed_outcome }}</p>
                     @php
@@ -63,14 +97,16 @@
                             'outcome' => $draft->observed_outcome,
                         ]];
                         $includedLogIds = collect($sources)->where('kind', 'work_log')->pluck('work_log_id')->filter()->map(fn ($id) => (int) $id)->all();
+                        $includedEvidenceIds = collect($sources)->where('kind', 'task_evidence')->pluck('task_evidence_id')->filter()->map(fn ($id) => (int) $id)->all();
                         $availableLogs = $workLogs->filter(fn ($log) => ! in_array((int) $log->id, $includedLogIds, true));
+                        $availableEvidence = $typedEvidence->filter(fn ($item) => ! in_array((int) $item->id, $includedEvidenceIds, true));
                     @endphp
                     <details class="mt-3 rounded-lg border border-slate-200 p-3" data-draft-evidence-list>
                         <summary class="cursor-pointer text-xs font-bold text-slate-700">根拠 {{ count($sources) }}件 · 第{{ $draft->revision_no }}版（出所・原文）</summary>
                         <ol class="mt-3 space-y-3">
                             @foreach ($sources as $source)
                                 <li class="text-sm text-slate-700">
-                                    <span class="text-xs text-slate-500">{{ ($source['kind'] ?? '') === 'work_log' ? '実績ログ #'.($source['work_log_id'] ?? '-') : '自己申告' }}</span>
+                                    <span class="text-xs text-slate-500">{{ match ($source['kind'] ?? '') { 'work_log' => '実績ログ #'.($source['work_log_id'] ?? '-'), 'task_evidence' => 'Evidence #'.($source['task_evidence_id'] ?? '-').' · '.($source['source_label'] ?? '出所不明'), default => '自己申告' } }}</span>
                                     <p class="font-semibold">{{ $source['action'] ?? '' }}</p>
                                     <p class="whitespace-pre-line">{{ $source['outcome'] ?? '' }}</p>
                                 </li>
@@ -97,7 +133,7 @@
                             <input id="next-{{ $draft->id }}" name="suggested_next_action" class="form-control w-full" maxlength="255" required value="{{ $draft->suggested_next_action }}">
                             <button type="submit" class="btn-secondary">案を修正する</button>
                         </form>
-                        @if (count($sources) < 5 && $availableLogs->isNotEmpty())
+                        @if (count($sources) < 5 && ($availableLogs->isNotEmpty() || $availableEvidence->isNotEmpty()))
                             <details class="mt-3 rounded-lg border border-sky-200 p-3" data-draft-refresh>
                                 <summary class="cursor-pointer text-xs font-bold text-sky-700">新しい実績を加えて案を再検討する</summary>
                                 <p class="mt-2 text-xs leading-5 text-slate-600">結果はまず差分プレビューで確認できます。確定しなければ現在の案は保持されます。手動修正した文言も適用時には置き換わります。</p>
@@ -107,6 +143,12 @@
                                         <label class="flex items-start gap-2 text-sm text-slate-700">
                                             <input type="checkbox" name="additional_work_log_ids[]" value="{{ $log->id }}">
                                             <span>{{ $log->task_title_snapshot ?: '作業' }} — {{ \Illuminate\Support\Str::limit($log->outcome ?: $log->memo, 70) }}</span>
+                                        </label>
+                                    @endforeach
+                                    @foreach ($availableEvidence as $item)
+                                        <label class="flex items-start gap-2 text-sm text-slate-700">
+                                            <input type="checkbox" name="additional_task_evidence_ids[]" value="{{ $item->id }}">
+                                            <span>{{ $item->typeLabel() }} · {{ $item->sourceLabel() }} — {{ \Illuminate\Support\Str::limit($item->summary(), 60) }}</span>
                                         </label>
                                     @endforeach
                                     <button type="submit" class="btn-secondary">変更前後をプレビュー</button>
