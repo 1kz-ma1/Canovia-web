@@ -346,7 +346,7 @@ final class McpReadOnlyResourceTest extends TestCase
             $body['params'] = $params;
         }
 
-        return $this->withHeaders($headers)->postJson('/api/mcp', $body);
+        return $this->postJson('/api/mcp', $body, $headers);
     }
 
     private function deniedPlan(int $id, bool $expectError = true): void
