@@ -114,6 +114,52 @@ class InitialPlanJsonReliabilityV387Test extends TestCase
             ->assertDontSee('別の計画向けの回答のようです。この画面の相談用文章から作った回答を貼り付けてください。');
     }
 
+    public function test_development_first_use_import_returns_to_workspace_only_when_requested(): void
+    {
+        $user = User::factory()->create();
+        $plan = $this->plan($user, '初めての開発');
+
+        $this->actingAs($user)
+            ->get(route('plans.ai_task_assistant.show', [
+                'plan' => $plan,
+                'return_to_workspace' => 1,
+            ]))
+            ->assertOk()
+            ->assertSee('name="return_to_workspace" value="1"', false);
+
+        $payload = [
+            'schema_version' => '2.0',
+            'flow' => 'plan_generation',
+            'target_plan' => ['id' => $plan->id, 'title' => $plan->title],
+            'summary' => '最初の開発タスク',
+            'operations' => [[
+                'type' => 'add_task',
+                'client_ref' => 'task_1',
+                'title' => '画面を1つ作る',
+                'description' => '動作を確認する',
+                'estimated_minutes' => 60,
+                'remaining_minutes' => 60,
+                'progress_percent' => 0,
+                'status' => 'todo',
+                'priority' => 1,
+                'activation_cost' => 1,
+            ]],
+        ];
+
+        $this->actingAs($user)
+            ->post(route('plans.ai_task_assistant.import', $plan), [
+                'return_to_workspace' => 1,
+                'tasks_json' => json_encode($payload, JSON_UNESCAPED_UNICODE),
+            ])
+            ->assertRedirect(route('workspace.development.index', ['plan_id' => $plan->id]));
+
+        $this->assertSame(1, Task::query()->where('plan_id', $plan->id)->count());
+        $this->actingAs($user)
+            ->get(route('workspace.development.index', ['plan_id' => $plan->id]))
+            ->assertOk()
+            ->assertSee('画面を1つ作る');
+    }
+
     private function plan(User $user, string $title): Plan
     {
         return Plan::create([
