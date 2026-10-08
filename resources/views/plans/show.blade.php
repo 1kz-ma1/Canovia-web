@@ -213,6 +213,7 @@
                 </p>
             </div>
             <div class="flex flex-wrap gap-3">
+                <a href="{{ route('plans.action_drafts.index', $plan) }}" class="btn-secondary" data-plan-action-drafts-entry>行動から計画案を育てる</a>
                 <a href="{{ route('plans.review_assistant.show', $plan) }}" class="btn-primary">
                     {{ $plan->tasks->isEmpty() ? '現在の状況・やったことを記録する' : '実績・方針をまとめて更新' }}
                 </a>
