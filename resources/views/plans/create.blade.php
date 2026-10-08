@@ -9,7 +9,7 @@
                 <p class="text-[10px] font-black uppercase tracking-[.18em] text-cyan-300">CREATE A PLAN</p>
                 <h1 class="mt-2 text-2xl font-black tracking-tight text-slate-50 sm:text-3xl">まず、目標の名前だけ決めよう。</h1>
                 <p class="mt-3 max-w-xl text-sm leading-7 text-slate-400">
-                    細かいタスクや進め方は、作成後にAIと一緒に整えます。ここでは「何を達成したいか」が分かれば十分です。
+                    タスクやロードマップを先に完成させる必要はありません。「何を達成したいか」を保存したら、今できることから始められます。
                 </p>
             </div>
 
@@ -25,14 +25,14 @@
                     <div class="flex items-center gap-2">
                         <span class="grid h-6 w-6 place-items-center rounded-full border border-slate-600 text-[11px] font-black text-slate-400">2</span>
                         <strong class="text-xs text-slate-300">
-                            {{ ($workspaceModeContext ?? null) ? ($workspaceModeContext['label'].' Workspace') : 'AIで具体化' }}
+                            {{ ($workspaceModeContext ?? null) ? ($workspaceModeContext['label'].' Workspace') : '次の行動へ' }}
                         </strong>
                     </div>
                     <p class="mt-2 text-[11px] leading-5 text-slate-500">
                         @if ($workspaceModeContext ?? null)
                             Plan作成後、その目的専用のセットアップへ戻ります
                         @else
-                            タスク・順番・必要時間を一緒に整理
+                            今の状況を確認し、できることから開始
                         @endif
                     </p>
                 </div>
@@ -54,7 +54,7 @@
                 <p class="mt-2 text-sm font-black text-slate-100">{{ $workspaceModeContext['label'] }} WorkspaceからPlanを作成中</p>
                 <p class="mt-1 text-xs leading-5 text-slate-500">{{ $workspaceModeContext['description'] }}</p>
                 <p class="mt-2 text-[11px] text-slate-600">
-                    カテゴリは {{ $workspaceModeContext['suggested_plan_category'] }} を初期値にしています。変更すると、内容に合わないWorkspaceへは強制的に戻しません。
+                    目的に合うカテゴリを初期値にしています。必要なら変更できます。変更後の分類が異なる場合は、別のWorkspaceへ強制移動しません。
                 </p>
             </section>
         @endif
@@ -117,7 +117,7 @@
                                 期限 <span class="font-normal text-slate-500">（任意）</span>
                             </label>
                             <p class="mt-1 text-xs leading-5 text-slate-500">
-                                決まっていなければ空欄のままでOK。次のAI相談で決められます。
+                                決まっていなければ空欄のままでOK。後から変更できます。
                             </p>
                         </div>
                         <span class="shrink-0 rounded-full border border-slate-700 px-2 py-1 text-[10px] font-bold text-slate-400">あとで設定可</span>
@@ -264,11 +264,11 @@
                         @else
                             <div class="flex gap-3">
                                 <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-700 text-[10px] font-black text-slate-400">2</span>
-                                <p class="text-xs leading-5 text-slate-400">AIへ相談文をコピーして、タスクと順番を作成</p>
+                                <p class="text-xs leading-5 text-slate-400">目標と今わかっている状況を確認する</p>
                             </div>
                             <div class="flex gap-3">
                                 <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-700 text-[10px] font-black text-slate-400">3</span>
-                                <p class="text-xs leading-5 text-slate-400">JSONを戻してロードマップを完成</p>
+                                <p class="text-xs leading-5 text-slate-400">今できることから進める。タスクと道筋は必要に応じて整理する</p>
                             </div>
                         @endif
                     </div>
@@ -284,7 +284,7 @@
                         @if ($workspaceModeContext ?? null)
                             Planを作って{{ $workspaceModeContext['label'] }} Workspaceへ
                         @else
-                            計画を作ってAIへ進む
+                            目標を保存して次の行動へ
                         @endif
                     </button>
                     <a
