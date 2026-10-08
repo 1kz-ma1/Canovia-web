@@ -598,4 +598,7 @@
 @endphp
 @if ($sharingEligible || $sharingPreference)
     @include('workspace.development.partials.chatgpt-sharing-preference')
+    @if ($sharingEligible)
+        @include('workspace.development.partials.mcp-plan-consent')
+    @endif
 @endif
