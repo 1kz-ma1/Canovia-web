@@ -36,13 +36,8 @@ class WorkspaceModePolishTelemetryV548Test extends TestCase
             ->get(route('workspace.study.index'))
             ->assertOk()
             ->assertSee('data-workspace-mode-source="route_hint"', false)
-            ->assertSee(
-                'data-workspace-mode-event-url="'.
-                route('behavior_events.store').
-                '"',
-                false,
-            )
-            ->assertSee('data-workspace-mode-reset-form', false);
+            ->assertSee('data-navigation-shell="workspace"', false)
+            ->assertSee('data-workspace-exit', false);
     }
 
     public function test_workspace_mode_selected_telemetry_keeps_only_safe_metadata(): void

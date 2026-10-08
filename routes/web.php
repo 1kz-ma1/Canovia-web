@@ -148,6 +148,7 @@ Route::middleware('release.level:3')->group(function () {
     Route::post('/workspace/career/explore', [CareerExplorationController::class, 'store'])->middleware('throttle:12,1')->name('career.explore.store');
     Route::post('/workspace/career/explore/plan', [CareerExplorationController::class, 'createPlan'])->name('career.explore.plan');
 });
+Route::get('/workspace', [WorkspaceModeController::class, 'resume'])->name('workspace_modes.resume');
 Route::get('/workspace/mode/{workspaceMode}', [WorkspaceModeController::class, 'enter'])->name('workspace_modes.enter');
 Route::post('/workspace/{workspaceMode}/select', [WorkspaceModeController::class, 'select'])->name('workspace_modes.select');
 Route::delete('/workspace/preference', [WorkspaceModeController::class, 'reset'])->name('workspace_modes.preference.reset');

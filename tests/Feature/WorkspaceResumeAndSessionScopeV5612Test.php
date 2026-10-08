@@ -44,7 +44,7 @@ class WorkspaceResumeAndSessionScopeV5612Test extends TestCase
 
             $this->actingAs($user)
                 ->get(route('home'))
-                ->assertRedirect(route($routeName));
+                ->assertOk()->assertSee('data-navigation-shell="global"', false);
 
             auth()->logout();
         }
@@ -72,7 +72,7 @@ class WorkspaceResumeAndSessionScopeV5612Test extends TestCase
         $this->actingAs($user)
             ->get(route('home', ['workspace_mode' => 'overview']))
             ->assertOk()
-            ->assertSee('data-current-workspace-mode="overview"', false);
+            ->assertSee('data-workspace-mode="overview"', false);;
     }
 
     public function test_home_continuity_excludes_sessions_outside_editable_plan_scope(): void

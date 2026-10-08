@@ -50,7 +50,7 @@ class OverviewWorkspaceV545Test extends TestCase
             ->assertDontSee('data-overview-mode="career"', false)
             ->assertDontSee('data-overview-inbox', false)
             ->assertDontSee('data-overview-important-changes', false)
-            ->assertSee('data-current-workspace-mode="overview"', false)
+            ->assertSee('data-workspace-mode="overview"', false)
             ->assertSee('data-workspace-mode-source="route_hint"', false)
             ->assertDontSee('まだ優先Actionはありません。');
 

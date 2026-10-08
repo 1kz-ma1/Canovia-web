@@ -253,7 +253,10 @@ class ReleaseReviewV5824Test extends TestCase
             ->get(route('home'))
             ->assertOk()
             ->assertSee('data-release-level="2"', false)
-            ->assertSee('data-workspace-mode-option="study"', false);
+            ->assertSee('data-canovia-nav-key="mobile-workspace"', false);
+
+        $this->actingAs($user)->get(route('workspace.study.top'))->assertOk()
+            ->assertSee('data-canovia-nav-key="mobile-workspace-study"', false);
 
         config([
             'release_levels.public_level' => ReleaseLevel::CoreStable->value,
@@ -263,8 +266,8 @@ class ReleaseReviewV5824Test extends TestCase
             ->get(route('home'))
             ->assertOk()
             ->assertSee('data-release-level="0"', false)
-            ->assertDontSee('data-workspace-mode-option="study"', false)
-            ->assertDontSee('data-workspace-mode-option="development"', false);
+            ->assertDontSee('data-canovia-nav-key="mobile-workspace-study"', false)
+            ->assertDontSee('data-canovia-nav-key="mobile-workspace-development"', false);
 
         $this->actingAs($user)
             ->get(route('plans.show', $plan))

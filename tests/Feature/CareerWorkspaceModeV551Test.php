@@ -59,7 +59,7 @@ class CareerWorkspaceModeV551Test extends TestCase
                 false,
             )
             ->assertSee(
-                'data-current-workspace-mode="career"',
+                'data-workspace-mode="career"',
                 false,
             )
             ->assertSee(
@@ -238,7 +238,7 @@ class CareerWorkspaceModeV551Test extends TestCase
             ->get(route('plans.career.index', $plan))
             ->assertOk()
             ->assertSee(
-                'data-current-workspace-mode="career"',
+                'data-workspace-mode="career"',
                 false,
             )
             ->assertSee(

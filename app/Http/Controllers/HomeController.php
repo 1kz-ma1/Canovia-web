@@ -2,14 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\WorkspaceMode;
-use App\Enums\WorkspaceModeSource;
 use App\Models\Plan;
 use App\Models\WorkLog;
 use App\Services\HomePageDataService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanProgressService;
-use App\Services\WorkspaceModeResolver;
 use Illuminate\Http\Request;
 
 class HomeController extends Controller
@@ -17,21 +14,7 @@ class HomeController extends Controller
     public function index(
         Request $request,
         HomePageDataService $page,
-        WorkspaceModeResolver $workspaceModes,
     ) {
-        $workspace = $workspaceModes->resolve($request);
-
-        if ($workspace->source === WorkspaceModeSource::ManualPreference) {
-            return redirect()->route(
-                match ($workspace->mode) {
-                    WorkspaceMode::Overview => 'workspace.overview.index',
-                    WorkspaceMode::Study => 'workspace.study.top',
-                    WorkspaceMode::Development => 'workspace.development.top',
-                    WorkspaceMode::Career => 'workspace.career.index',
-                },
-            );
-        }
-
         return view(
             'dashboard.index',
             $page->build(

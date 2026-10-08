@@ -69,7 +69,7 @@ class SpecializedWorkspaceTopsV582Test extends TestCase
             ->assertSee('data-specialized-top-compact-header', false)
             ->assertSee('data-specialized-top-plan-row', false)
             ->assertSee('data-specialized-top-plan-tools', false)
-            ->assertSee('data-current-workspace-mode="study"', false)
+            ->assertSee('data-workspace-mode="study"', false)
             ->assertSee('data-workspace-mode-source="route_hint"', false)
             ->assertSee($study->title)
             ->assertDontSee($development->title)
@@ -182,7 +182,7 @@ class SpecializedWorkspaceTopsV582Test extends TestCase
             ->assertSee('data-specialized-top-plan-row', false)
             ->assertSee('data-development-top-repository-inline', false)
             ->assertSee(
-                'data-current-workspace-mode="development"',
+                'data-workspace-mode="development"',
                 false,
             )
             ->assertSee('data-workspace-mode-source="route_hint"', false)

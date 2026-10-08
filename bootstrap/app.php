@@ -13,6 +13,7 @@ use App\Http\Middleware\NormalizeAiJsonInput;
 use App\Http\Middleware\RedirectLegacyCanoviaHost;
 use App\Http\Middleware\TrackAiPlanFunnel;
 use App\Http\Middleware\TrackEarlyAccessVisit;
+use App\Http\Middleware\RememberWorkspaceScreen;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -53,6 +54,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', TrackAiPlanFunnel::class);
         $middleware->appendToGroup('web', NormalizeAiJsonInput::class);
         $middleware->appendToGroup('web', EnsureFirstRunStarted::class);
+        $middleware->appendToGroup('web', RememberWorkspaceScreen::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

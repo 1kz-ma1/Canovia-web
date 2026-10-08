@@ -36,7 +36,11 @@ class ReleaseLevelFoundationV5820Test extends TestCase
             ->get(route('home'))
             ->assertOk()
             ->assertSee('data-release-level="4"', false)
-            ->assertSee('Career');
+            ->assertSee('data-navigation-shell="global"', false);
+
+        $this->actingAs($user)
+            ->get(route('workspace.study.top'))->assertOk()
+            ->assertSee('data-canovia-nav-key="mobile-workspace-career"', false);
     }
 
     public function test_public_level_two_hides_career_and_blocks_direct_workspace_entry(): void
@@ -53,10 +57,7 @@ class ReleaseLevelFoundationV5820Test extends TestCase
             ->get(route('home'))
             ->assertOk()
             ->assertSee('data-release-level="2"', false)
-            ->assertDontSee(
-                'data-workspace-mode-option="career"',
-                false,
-            );
+            ->assertDontSee('data-canovia-nav-key="mobile-workspace-career"', false);
 
         $this->actingAs($user)
             ->get(route('workspace_modes.enter', [
@@ -88,10 +89,7 @@ class ReleaseLevelFoundationV5820Test extends TestCase
             ->get(route('home'))
             ->assertOk()
             ->assertSee('data-workspace-mode="overview"', false)
-            ->assertDontSee(
-                'data-workspace-mode-option="career"',
-                false,
-            );
+            ->assertDontSee('data-canovia-nav-key="mobile-workspace-career"', false);
 
         $this->assertSame(
             'career',
@@ -123,23 +121,20 @@ class ReleaseLevelFoundationV5820Test extends TestCase
             ->get(route('home'))
             ->assertOk()
             ->assertSee('data-release-level="4"', false)
-            ->assertSee(
-                'data-workspace-mode-option="career"',
-                false,
-            )
+            ->assertSee('data-navigation-shell="global"', false)
             ->assertSessionHas(
                 ReleaseLevelService::ADMIN_PREVIEW_SESSION_KEY,
                 ReleaseLevel::InternalPreview->value,
             );
 
+        $this->actingAs($admin)->get(route('workspace.study.top'))->assertOk()
+            ->assertSee('data-canovia-nav-key="mobile-workspace-career"', false);
+
         $this->actingAs($user)
             ->get(route('home'))
             ->assertOk()
             ->assertSee('data-release-level="2"', false)
-            ->assertDontSee(
-                'data-workspace-mode-option="career"',
-                false,
-            );
+            ->assertDontSee('data-canovia-nav-key="mobile-workspace-career"', false);
     }
 
     public function test_admin_can_grant_and_revoke_beta_level_for_one_user(): void
@@ -179,18 +174,14 @@ class ReleaseLevelFoundationV5820Test extends TestCase
             ->get(route('home'))
             ->assertOk()
             ->assertSee('data-release-level="3"', false)
-            ->assertSee(
-                'data-workspace-mode-option="career"',
-                false,
-            );
+            ->assertSee('data-navigation-shell="global"', false);
+        $this->actingAs($beta)->get(route('workspace.study.top'))->assertOk()
+            ->assertSee('data-canovia-nav-key="mobile-workspace-career"', false);
 
         $this->actingAs($normal)
             ->get(route('home'))
             ->assertOk()
-            ->assertDontSee(
-                'data-workspace-mode-option="career"',
-                false,
-            );
+            ->assertDontSee('data-canovia-nav-key="mobile-workspace-career"', false);
 
         $this->actingAs($admin)
             ->post(
