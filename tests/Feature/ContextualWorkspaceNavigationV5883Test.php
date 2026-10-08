@@ -81,7 +81,7 @@ class ContextualWorkspaceNavigationV5883Test extends TestCase
     }
     public function test_downgraded_release_level_never_resumes_hidden_career_mode(): void
     {
-        config(['release_levels.public_level' => \App\Enums\\ReleaseLevel::ProductPreview->value]);
+        config(['release_levels.public_level' => \App\Enums\ReleaseLevel::ProductPreview->value]);
         $user = User::factory()->create([
             'first_run_completed_at' => now(),
             'workspace_mode_preference' => 'career',
@@ -99,7 +99,7 @@ class ContextualWorkspaceNavigationV5883Test extends TestCase
 
     public function test_workspace_entry_with_no_specialized_modes_falls_back_to_overview(): void
     {
-        config(['release_levels.public_level' => \App\Enums\\ReleaseLevel::CoreStable->value]);
+        config(['release_levels.public_level' => \App\Enums\ReleaseLevel::CoreStable->value]);
         $user = User::factory()->create([
             'first_run_completed_at' => now(),
             'workspace_mode_preference' => 'development',
