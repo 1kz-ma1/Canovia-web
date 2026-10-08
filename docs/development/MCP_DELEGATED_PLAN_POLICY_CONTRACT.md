@@ -109,3 +109,12 @@ ownership transfer, collaboration, Study classification, changed
 issuer/client/audience/subject/scope, malformed or rotated HMAC key, plus a
 unique external subject mapping. A migration-retry-safe table setup and
 existing deny-all MCP probe tests remain required.
+
+## Session-only cancellation and audit (2026-10-09)
+
+The account page now lets the original Canovia actor withdraw a simulated/future
+specific grant or unlink an entire external subject, atomically revoking its
+grants. No user registration, OAuth callback, consent approval or direct MCP
+read route has been introduced. An append-only metadata audit records actual
+transitions. Linked subjects and grants are not active in production.
+See [revocation contract](MCP_DELEGATED_REVOCATION_CONTRACT.md).
