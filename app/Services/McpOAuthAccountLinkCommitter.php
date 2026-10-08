@@ -49,7 +49,7 @@ final class McpOAuthAccountLinkCommitter
                     ->where('provider_key', 'chatgpt')
                     ->where('status', McpLinkedSubject::STATUS_LINKED)
                     ->whereNull('revoked_at')
-                    ->when($existing !== null, fn ($query) => $query->whereKeyNot($existing->id))
+                    ->when($existing !== null, fn ($query) => $query->where('id', '!=', $existing->id))
                     ->exists();
                 if ($otherActive) {
                     return false;
