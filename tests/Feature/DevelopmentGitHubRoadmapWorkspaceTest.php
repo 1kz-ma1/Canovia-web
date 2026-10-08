@@ -43,7 +43,8 @@ final class DevelopmentGitHubRoadmapWorkspaceTest extends TestCase
             ->assertSee('data-development-roadmap', false)
             ->assertSee('GitHub接続を確認する')
             ->assertSee('READ ONLY')
-            ->assertDontSee('data-roadmap-context-copy', false);
+            ->assertDontSee('data-roadmap-context-copy', false)
+            ->assertDontSee('data-development-agent-pull', false);
 
         Http::assertNothingSent();
         $this->assertDatabaseCount('tasks', 0);
@@ -209,6 +210,12 @@ final class DevelopmentGitHubRoadmapWorkspaceTest extends TestCase
             ->assertSee('data-roadmap-context-title="Adaptive Learning"', false)
             ->assertSee('この項目をAIへ共有')
             ->assertSee('AI用Contextをコピー')
+            ->assertSee('data-development-agent-pull', false)
+            ->assertSee('GitHubからAIに直接読ませる')
+            ->assertSee('GitHubからこの項目をAIに読ませる')
+            ->assertSee('Repository: example/repo')
+            ->assertSee('AGENTS.md')
+            ->assertSee('Canoviaの認証情報は渡さず')
             ->assertSee('data-roadmap-compare', false)
             ->assertSee('仕様書の変更を確認')
             ->assertSee(route('workspace.development.context', ['plan' => $plan->id]));
