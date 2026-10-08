@@ -5,9 +5,12 @@
     // as soon as repository/activity/focus evidence exists.
     $localNextTask = $activeTasks->first();
     $recentCompletedTask = $developmentRecentCompletedTask ?? null;
-    $localFirstAction = ! ($developmentGithubRepository ?? null)
-        && collect($developmentRecentActivity ?? [])->isEmpty()
-        && ! ($developmentFocusTask ?? null);
+    // Legacy Creative Plans may use the local Task/Team surface after an
+    // explicit user choice, but must not imply Development Release Intelligence.
+    $localFirstAction = ($developmentLegacyCreativeActive ?? false)
+        || (! ($developmentGithubRepository ?? null)
+            && collect($developmentRecentActivity ?? [])->isEmpty()
+            && ! ($developmentFocusTask ?? null));
 @endphp
 <section
             id="development-current-action"
