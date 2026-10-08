@@ -172,7 +172,7 @@ final class BookkeepingPlacementDiagnosticService
                 'review_prerequisites' => '3級範囲の弱い単元を先に短く復習しましょう。2級の先取りは、関連する基礎を確かめながら少しずつ進められます。',
                 'trial_next_grade' => '今回の3級基礎は概ね安定しています。3級を定期的に復習しつつ、2級の導入単元を試す候補です。',
                 default => '今回の範囲に大きな穴は見えませんが、定着はまだ未確認です。別の問題でも確認しながら復習を続けましょう。',
-            ],
+            },
         ];
     }
 
