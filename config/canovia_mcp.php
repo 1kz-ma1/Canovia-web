@@ -42,6 +42,7 @@ return [
     'account_link_enabled' => env('CANOVIA_MCP_ACCOUNT_LINK_ENABLED', false),
     'account_link_client_id' => env('CANOVIA_MCP_ACCOUNT_LINK_CLIENT_ID', ''),
     'account_link_client_secret' => env('CANOVIA_MCP_ACCOUNT_LINK_CLIENT_SECRET', ''),
+    'account_link_metadata_url' => env('CANOVIA_MCP_ACCOUNT_LINK_METADATA_URL', ''),
     'account_link_authorization_endpoint' => env('CANOVIA_MCP_ACCOUNT_LINK_AUTHORIZATION_ENDPOINT', ''),
     'account_link_token_endpoint' => env('CANOVIA_MCP_ACCOUNT_LINK_TOKEN_ENDPOINT', ''),
     'account_link_redirect_uri' => env('CANOVIA_MCP_ACCOUNT_LINK_REDIRECT_URI', ''),
