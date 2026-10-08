@@ -10,6 +10,7 @@ use App\Http\Controllers\CapabilityActivationController;
 use App\Http\Controllers\MapPersonalizationController;
 use App\Http\Controllers\FirstRunController;
 use App\Http\Controllers\PlanController;
+use App\Http\Controllers\PlanActionDraftController;
 use App\Http\Controllers\PlanSpecializationController;
 use App\Http\Controllers\PlanDashboardController;
 use App\Http\Controllers\GoalDiscoveryController;
@@ -371,6 +372,12 @@ Route::get('/plans/create/manual', [PlanController::class, 'create'])->name('pla
 Route::post('/plans', [PlanController::class, 'store'])->name('plans.store');
 Route::get('/plans/{plan}/dashboard', PlanDashboardController::class)->name('plans.dashboard');
 Route::get('/plans/{plan}', [PlanController::class, 'show'])->name('plans.show');
+// V58.71: a proposal is inert until the owner accepts it as a new Task.
+Route::get('/plans/{plan}/action-drafts', [PlanActionDraftController::class, 'index'])->name('plans.action_drafts.index');
+Route::post('/plans/{plan}/action-drafts', [PlanActionDraftController::class, 'store'])->middleware('throttle:12,1')->name('plans.action_drafts.store');
+Route::patch('/plans/{plan}/action-drafts/{draft}', [PlanActionDraftController::class, 'update'])->name('plans.action_drafts.update');
+Route::post('/plans/{plan}/action-drafts/{draft}/accept', [PlanActionDraftController::class, 'accept'])->name('plans.action_drafts.accept');
+Route::post('/plans/{plan}/action-drafts/{draft}/dismiss', [PlanActionDraftController::class, 'dismiss'])->name('plans.action_drafts.dismiss');
 Route::get('/plans/{plan}/edit', [PlanController::class, 'edit'])->name('plans.edit');
 Route::put('/plans/{plan}', [PlanController::class, 'update'])->name('plans.update');
 Route::put('/plans/{plan}/specialization', [PlanSpecializationController::class, 'update'])->middleware('throttle:12,1')->name('plans.specialization.update');

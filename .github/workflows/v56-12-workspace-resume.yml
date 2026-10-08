@@ -87,6 +87,10 @@ jobs:
           php -l tests/Feature/PlanIntentClassificationV5867Test.php
           php -l database/migrations/2026_10_08_130000_add_workspace_domain_override_to_plans.php
           php -l tests/Feature/PlanDomainOverrideV5868Test.php
+          php -l app/Http/Controllers/PlanActionDraftController.php
+          php -l app/Models/PlanActionDraft.php
+          php -l database/migrations/2026_10_08_150000_create_plan_action_drafts_table.php
+          php -l tests/Feature/PlanActionDraftV5871Test.php
           php -l app/Services/PlanSpecializationService.php
           php -l app/Http/Controllers/PlanSpecializationController.php
           php -l tests/Feature/PlanSpecializationOverrideV5870Test.php
@@ -146,6 +150,8 @@ jobs:
         run: php artisan test tests/Feature/DevelopmentCreativePlanRescueV5863Test.php tests/Feature/WorkspaceModeResolverV540Test.php
       - name: V58.69 Team Task Dependencies
         run: php artisan test tests/Feature/DevelopmentTeamTaskDependencyV5869Test.php tests/Feature/DeveloperWorkspaceSurfacesV580Test.php tests/Feature/DevelopmentCreativePlanRescueV5863Test.php
+      - name: V58.71 Action-grounded Draft and Owner Approval
+        run: php artisan test tests/Feature/PlanActionDraftV5871Test.php tests/Feature/PlanActionFirstCreationV5866Test.php
       - name: V58.70 Plan Specialization Domain and Ownership
         run: php artisan test tests/Feature/PlanSpecializationOverrideV5870Test.php tests/Feature/PlanDomainOverrideV5868Test.php tests/Feature/PlanIntentClassificationV5867Test.php
       - name: V58.66 Action-first Plan Creation
