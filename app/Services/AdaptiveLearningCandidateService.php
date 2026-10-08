@@ -24,7 +24,8 @@ final class AdaptiveLearningCandidateService
         $limit = max(2, min(30, (int) config('study.adaptive_learning.signal_window', 8)));
         $threshold = max(2, min(5, (int) config('study.adaptive_learning.minimum_misses', 2)));
         $recent = LearningRunItem::query()->where('learning_run_id', $run->id)
-            ->whereHas('answer')->with('answer')
+            ->whereHas('answer', fn ($q) => $q->whereDoesntHave('evaluationAdjustment'))
+            ->with('answer')
             ->orderByDesc('ordinal')->limit($limit)->get();
 
         $histories = [];

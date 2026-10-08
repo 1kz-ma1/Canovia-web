@@ -92,6 +92,14 @@
                         <p class="mt-2 whitespace-pre-line">{{ data_get($it->question_snapshot, 'prompt', '') }}</p>
                         <p class="mt-2">回答：{{ $result?->answer_value ?: 'なし' }}</p>
                         <p class="mt-1">正答：{{ $correctId }} · {{ $correctLabel }}</p>
+                        @if($result && ! $result->evaluationAdjustment)
+                            <form method="POST" action="{{ route('plans.tasks.learning.evaluation_adjustments.store', [$plan, $task, $result]) }}" class="mt-3">
+                                @csrf <input type="hidden" name="reason" value="accidental_tap">
+                                <button type="submit" class="btn-secondary">誤タップとして評価への影響を除外</button>
+                            </form>
+                        @elseif($result)
+                            <p class="mt-2 text-xs text-slate-400">誤タップ申告済み：採点結果は保持しています。</p>
+                        @endif
                         <details class="mt-3">
                             <summary class="cursor-pointer font-semibold text-sky-300">解説を読む</summary>
                             <p class="mt-2 whitespace-pre-line leading-7">{{ $it->explanation_snapshot ?: '解説は未登録です。' }}</p>

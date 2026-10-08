@@ -23,6 +23,7 @@ final class AdaptiveLearningModeRecommendationService
         string $actorToken, bool $examAvailable): array
     {
         $q = LearningAnswerEvent::query()
+            ->whereDoesntHave('evaluationAdjustment')
             ->whereHas('item.run', function ($runs) use ($request, $plan, $task, $actorToken) {
                 $runs->where('plan_id', $plan->id)->where('task_id', $task->id);
                 if ($request->user()) {

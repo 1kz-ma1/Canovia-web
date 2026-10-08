@@ -9,5 +9,6 @@ final class LearningAnswerEvent extends Model {
         return ['was_correct'=>'boolean','answered_at'=>'datetime',
             'explanation_seen_at'=>'datetime','elapsed_ms'=>'integer'];
     }
+    public function evaluationAdjustment() {return $this->hasOne(LearningAnswerEvaluationAdjustment::class,'learning_answer_event_id');}
     public function item() { return $this->belongsTo(LearningRunItem::class,'learning_run_item_id'); }
 }
