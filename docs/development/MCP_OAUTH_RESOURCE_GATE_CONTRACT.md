@@ -64,3 +64,14 @@ Relevant sources:
 - [OpenAI: plugin MCP authentication](https://developers.openai.com/plugins/build/auth)
 - [OpenAI: build an MCP server](https://developers.openai.com/plugins/build/mcp-server)
 - [MCP authorization specification](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)
+
+## Read-only MCP tool implementation, still OFF (2026-10-09)
+
+The former denial probe now has an independently gated read-only
+Streamable HTTP JSON-RPC handler. With `CANOVIA_MCP_TOOLS_ENABLED=false`
+(default), the original 404/401 denial behavior is **unchanged**.
+After a separately reviewed future activation, it will authenticate each
+ChatGPT bearer through RFC 7662, enforce the per-Plan grant and respond
+with bounded read-only Development Context. This code is **not live** and
+no real IdP/ChatGPT account connection has been tested. See
+[read-only resource contract](MCP_READ_ONLY_RESOURCE_CONTRACT.md).

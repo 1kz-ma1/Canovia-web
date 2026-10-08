@@ -125,3 +125,13 @@ Sources:
 - https://www.rfc-editor.org/rfc/rfc7636
 - https://www.rfc-editor.org/rfc/rfc9207
 - https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization
+
+## Follow-up: independently gated MCP read-only resource
+
+A small Streamable HTTP JSON-RPC endpoint can consume approved Plan grants
+only after a fresh ChatGPT bearer introspection and a current subject/Plan/
+scope/expiry check inside a locked database transaction. The new
+`CANOVIA_MCP_TOOLS_ENABLED=false` gate is **independent** and remains
+OFF in production. No real IdP tenant, ChatGPT client or live MCP connection
+has yet been configured; the unenabled endpoint preserves deny-all.
+See [MCP read-only resource contract](MCP_READ_ONLY_RESOURCE_CONTRACT.md).

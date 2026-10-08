@@ -2,9 +2,9 @@
 
 return [
     /*
-     * No MCP tool or delegated OAuth token is accepted by this implementation.
-     * The discovery + challenge probe is opt-in to avoid advertising a
-     * non-existent authorization server to ChatGPT.
+     * MCP discovery, IdP introspection, Plan grants and tool execution each
+     * require separately enabled switches. All are OFF by default; no
+     * real ChatGPT client or OAuth IdP is pre-connected.
      */
     'discovery_enabled' => env('CANOVIA_MCP_DISCOVERY_ENABLED', false),
 
@@ -15,6 +15,17 @@ return [
     'oauth_issuer' => env('CANOVIA_MCP_OAUTH_ISSUER', ''),
 
     'read_scope' => 'canovia.development.read',
+
+    // Additional independent last-mile switch. OFF unless real IdP,
+    // ChatGPT client registration, individual account links and Plan consent
+    // have been security-reviewed in staging. Existing discovery alone cannot
+    // activate a private-data MCP endpoint.
+    'tools_enabled' => env('CANOVIA_MCP_TOOLS_ENABLED', false),
+
+    // Exact HTTPS origins permitted when a browser supplies Origin.
+    // An absent Origin from a server-side ChatGPT client is allowed.
+    'allowed_origins' => env('CANOVIA_MCP_ALLOWED_ORIGINS', ''),
+
 
     // RFC 7662 introspection is a separate disabled component. The real IdP
     // MUST support introspection and return strict iss/aud/sub/client_id/exp
