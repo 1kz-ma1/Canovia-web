@@ -16,6 +16,17 @@ return [
 
     'read_scope' => 'canovia.development.read',
 
+    // Additional independent last-mile switch. OFF unless real IdP,
+    // ChatGPT client registration, individual account links and Plan consent
+    // have been security-reviewed in staging. Existing discovery alone cannot
+    // activate a private-data MCP endpoint.
+    'tools_enabled' => env('CANOVIA_MCP_TOOLS_ENABLED', false),
+
+    // Exact HTTPS origins permitted when a browser supplies Origin.
+    // An absent Origin from a server-side ChatGPT client is allowed.
+    'allowed_origins' => env('CANOVIA_MCP_ALLOWED_ORIGINS', ''),
+
+
     // RFC 7662 introspection is a separate disabled component. The real IdP
     // MUST support introspection and return strict iss/aud/sub/client_id/exp
     // claims. Enabling it does not enable the MCP endpoint or grant consent.
