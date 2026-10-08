@@ -157,7 +157,12 @@ final class StudyWorkspaceSurfacePolicy
             $navigationTask,
             $canEdit,
         );
-        if (! $usesRecommendation && ! $hasMethodRecommendation) {
+        // Even when a learning-method card is available, the first action
+        // for a known official exam must be immediately visible and actionable.
+        $officialBaselineNeeded = ! $hasScope
+            && is_array($state['official_exam_reference'] ?? null);
+        if (($officialBaselineNeeded && $presentation)
+            || (! $usesRecommendation && ! $hasMethodRecommendation)) {
             $surfaces[] = $this->registry->surface(
                 'current_action',
                 $primaryAction,
