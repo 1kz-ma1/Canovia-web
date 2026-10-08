@@ -16,6 +16,10 @@
         </p>
     </header>
 
+    <section class="page-card p-4">
+        <a href="{{ route('plans.bookkeeping_journal.show', $plan) }}" class="btn-secondary min-h-11 inline-flex items-center px-4 text-xs" data-bookkeeping-placement-journal-link>4択の次は、借方・貸方を直接入力してみる →</a>
+    </section>
+
     @if ($latest)
         <section class="page-card p-5 sm:p-6" data-bookkeeping-placement-history>
             <p class="text-[10px] font-black uppercase tracking-[.14em] text-amber-300">LATEST RECORDED DIAGNOSIS</p>
