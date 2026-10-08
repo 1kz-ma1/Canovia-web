@@ -87,3 +87,13 @@ IdP verification for the *same linked subject*, and explicitly confirm
 a finite-time grant. This is a separate, OFF-by-default approval path, not
 a promotion of the prior sharing preparation and **not** a live MCP read.
 See [explicit per-Plan consent](MCP_EXPLICIT_PLAN_CONSENT_CONTRACT.md).
+
+## Current: read-only MCP tool foundation (NOT production-connected)
+
+A stateless JSON-RPC resource and a single Development Plan Context read
+tool are implemented behind an additional OFF-by-default switch. They
+require fresh approved ChatGPT OAuth bearer, stable linked subject and
+current owner/Plan/scope consent before any private data; successful
+reads are metadata-audited. This is not yet a registered ChatGPT
+connector or a deployed OAuth provider. See
+[read-only MCP resource](MCP_READ_ONLY_RESOURCE_CONTRACT.md).
