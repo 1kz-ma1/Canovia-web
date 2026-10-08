@@ -118,13 +118,18 @@ final class DevelopmentWorkspaceController extends Controller
             ]);
         }
 
-        $adaptiveAction = $developmentActions->evaluate($plan);
-        $presentation = $presentationAdapter->adapt(
-            $plan,
-            $adaptiveAction,
-        );
+        // A Creative Plan selected for the Development UI still has a
+        // Creative domain profile. Do not bypass the Development Intelligence
+        // domain invariant or imply Release Readiness for this legacy Plan.
+        $legacyCreative = $profiles->forPlan($plan)->key === 'creative';
+        $adaptiveAction = $legacyCreative
+            ? null
+            : $developmentActions->evaluate($plan);
+        $presentation = $adaptiveAction
+            ? $presentationAdapter->adapt($plan, $adaptiveAction)
+            : null;
         $focusState = data_get(
-            $adaptiveAction->intelligence->state->facts,
+            $adaptiveAction?->intelligence?->state?->facts,
             'focus_task_state',
         );
         $focusState = is_array($focusState) ? $focusState : null;
@@ -133,7 +138,7 @@ final class DevelopmentWorkspaceController extends Controller
             $plan,
             $focusTaskId > 0 ? $focusTaskId : null,
         );
-        $primaryAction = $adaptiveAction->primaryAction();
+        $primaryAction = $adaptiveAction?->primaryAction();
         $actionTaskId = (int) data_get(
             $primaryAction?->metadata,
             'target_task_id',
@@ -176,7 +181,8 @@ final class DevelopmentWorkspaceController extends Controller
             : null;
 
         if (
-            $developmentGithubRepository
+            ! $legacyCreative
+            && $developmentGithubRepository
             && is_array($developmentGithubConnection)
         ) {
             $newlyCompleted = $capabilityActivation->syncGithubCompletion(
@@ -195,13 +201,15 @@ final class DevelopmentWorkspaceController extends Controller
             }
         }
 
-        $githubCapabilityActivation = $capabilityActivation->github(
-            $request,
-            $plan,
-            null,
-            $developmentGithubIntegrationStatus,
-            null,
-        );
+        $githubCapabilityActivation = $legacyCreative
+            ? null
+            : $capabilityActivation->github(
+                $request,
+                $plan,
+                null,
+                $developmentGithubIntegrationStatus,
+                null,
+            );
         $canEdit = $ownership->canEdit($request, $plan);
         $canManage = $ownership->owns($request, $plan);
         $completedSteps = ['create_plan'];
@@ -249,7 +257,7 @@ final class DevelopmentWorkspaceController extends Controller
             : null;
 
         $developmentImprovements =
-            $developmentSurface === 'improvements'
+            $developmentSurface === 'improvements' && ! $legacyCreative
                 ? $surfaces->improvements(
                     $adaptiveAction,
                     $home['unresolved_activity'],
@@ -267,7 +275,7 @@ final class DevelopmentWorkspaceController extends Controller
         return view('workspace.development.index', [
             'developmentPlans' => $developmentPlans,
                 'developmentCreativeCandidates' => $developmentCreativeCandidates, 
-                'developmentLegacyCreativeActive' => $profiles->forPlan($plan)->key === 'creative',
+                'developmentLegacyCreativeActive' => $legacyCreative,
             'plan' => $plan,
             'firstPlanContext' => $plan->tasks->isEmpty()
                 ? data_get(
@@ -279,10 +287,12 @@ final class DevelopmentWorkspaceController extends Controller
             'canEdit' => $canEdit,
             'developmentAdaptiveAction' => $adaptiveAction,
             'intelligencePresentation' => $presentation,
-            'intelligenceHistory' => $history->forPlan(
-                $plan,
-                IntelligenceDomain::Development,
-            ),
+            'intelligenceHistory' => $legacyCreative
+                ? []
+                : $history->forPlan(
+                    $plan,
+                    IntelligenceDomain::Development,
+                ),
             'hasReleaseEvidence' => $focusState !== null,
             'developmentFocusTask' => $focusTaskId > 0
                 ? $this->task($plan, $focusTaskId)
@@ -308,10 +318,12 @@ final class DevelopmentWorkspaceController extends Controller
             'developmentImprovements' => $developmentImprovements,
             'developmentPreview' => $developmentPreview,
             'canManage' => $canManage,
-            'intelligenceStateChange' => $stateChanges->latestForPlan(
-                $plan,
-                IntelligenceDomain::Development,
-            ),
+            'intelligenceStateChange' => $legacyCreative
+                ? null
+                : $stateChanges->latestForPlan(
+                    $plan,
+                    IntelligenceDomain::Development,
+                ),
             'modeOnboarding' => $onboarding->build(
                 WorkspaceMode::Development,
                 $completedSteps,
