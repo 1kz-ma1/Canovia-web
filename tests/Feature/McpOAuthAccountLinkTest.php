@@ -114,7 +114,7 @@ final class McpOAuthAccountLinkTest extends TestCase
         $expectedChallenge = rtrim(strtr(base64_encode(hash('sha256', $pending['verifier'], true)), '+/', '-_'), '=');
         $this->assertSame($expectedChallenge, $query['code_challenge']);
 
-        $this->callback($query['state'])
+        $this->oauthCallback($query['state'])
             ->assertRedirect(route('auth.account'));
 
         $this->assertNull(session('mcp.account_link.pending'));
@@ -182,7 +182,7 @@ final class McpOAuthAccountLinkTest extends TestCase
             ['error' => 'access_denied'],
         ] as $change) {
             $query = $this->query($this->start($owner));
-            $this->callback(
+            $this->oauthCallback(
                 $change['state'] ?? $query['state'],
                 $change['iss'] ?? (array_key_exists('iss', $change) ? null : self::ISSUER),
                 $change['error'] ?? null,
@@ -194,12 +194,12 @@ final class McpOAuthAccountLinkTest extends TestCase
 
         $query = $this->query($this->start($owner));
         $this->travel(6)->minutes();
-        $this->callback($query['state'])->assertRedirect(route('auth.account'));
+        $this->oauthCallback($query['state'])->assertRedirect(route('auth.account'));
         $this->travelBack();
 
         $query = $this->query($this->start($owner));
         $this->actingAs($other);
-        $this->callback($query['state'])->assertRedirect(route('auth.account'));
+        $this->oauthCallback($query['state'])->assertRedirect(route('auth.account'));
 
         $this->assertDatabaseCount('mcp_linked_subjects', 0);
         $this->assertDatabaseCount('mcp_delegated_access_events', 0);
@@ -224,14 +224,14 @@ final class McpOAuthAccountLinkTest extends TestCase
             'client_id' => 'https://chatgpt.com/oauth/client.json',
         ]));
         $state = $this->query($this->start($owner))['state'];
-        $this->callback($state)->assertRedirect(route('auth.account'));
+        $this->oauthCallback($state)->assertRedirect(route('auth.account'));
         $this->assertNull(session('mcp.account_link.verified'));
 
         $this->stubProvider(claims: array_replace($this->claims(), [
             'aud' => 'https://other.example.test/api/mcp',
         ]));
         $state = $this->query($this->start($owner))['state'];
-        $this->callback($state)->assertRedirect(route('auth.account'));
+        $this->oauthCallback($state)->assertRedirect(route('auth.account'));
         $this->assertNull(session('mcp.account_link.verified'));
 
         $this->assertDatabaseCount('mcp_linked_subjects', 0);
@@ -242,7 +242,7 @@ final class McpOAuthAccountLinkTest extends TestCase
         $owner = User::factory()->create();
         $this->stubProvider();
 
-        $this->callback($this->query($this->start($owner))['state'])
+        $this->oauthCallback($this->query($this->start($owner))['state'])
             ->assertRedirect(route('auth.account'));
         $this->actingAs($owner)
             ->post(route('auth.account.mcp_link.cancel'))
@@ -251,7 +251,7 @@ final class McpOAuthAccountLinkTest extends TestCase
             ->post(route('auth.account.mcp_link.confirm'))
             ->assertRedirect(route('auth.account'));
 
-        $this->callback($this->query($this->start($owner))['state'])
+        $this->oauthCallback($this->query($this->start($owner))['state'])
             ->assertRedirect(route('auth.account'));
         $this->travel(6)->minutes();
         $this->actingAs($owner)
@@ -267,11 +267,11 @@ final class McpOAuthAccountLinkTest extends TestCase
         $second = User::factory()->create();
         $this->stubProvider();
 
-        $this->callback($this->query($this->start($first))['state']);
+        $this->oauthCallback($this->query($this->start($first))['state']);
         $this->actingAs($first)->post(route('auth.account.mcp_link.confirm'))->assertRedirect();
         $link = McpLinkedSubject::query()->firstOrFail();
 
-        $this->callback($this->query($this->start($second))['state']);
+        $this->oauthCallback($this->query($this->start($second))['state']);
         $this->actingAs($second)->post(route('auth.account.mcp_link.confirm'))->assertRedirect();
         $this->assertSame($first->id, $link->fresh()->user_id);
         $this->assertDatabaseCount('mcp_linked_subjects', 1);
@@ -279,7 +279,7 @@ final class McpOAuthAccountLinkTest extends TestCase
         app(McpDelegatedRevocationService::class)->revokeSubject($first, $link->id);
         $this->assertSame('revoked', $link->fresh()->status);
 
-        $this->callback($this->query($this->start($first))['state']);
+        $this->oauthCallback($this->query($this->start($first))['state']);
         $this->actingAs($first)->post(route('auth.account.mcp_link.confirm'))->assertRedirect();
         $this->assertSame('linked', $link->fresh()->status);
         $this->assertDatabaseCount('mcp_delegated_grants', 0);
@@ -297,7 +297,7 @@ final class McpOAuthAccountLinkTest extends TestCase
         return (string) $response->headers->get('Location');
     }
 
-    private function callback(
+    private function oauthCallback(
         string $state,
         ?string $issuer = self::ISSUER,
         ?string $error = null,
