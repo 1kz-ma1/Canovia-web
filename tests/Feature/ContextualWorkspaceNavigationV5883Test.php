@@ -79,4 +79,35 @@ class ContextualWorkspaceNavigationV5883Test extends TestCase
             ],
         ])->get(route('workspace_modes.resume'))->assertRedirect(route('workspace.study.top'));
     }
+    public function test_downgraded_release_level_never_resumes_hidden_career_mode(): void
+    {
+        config(['release_levels.public_level' => \App\Enums\ReleaseLevel::ProductPreview->value]);
+        $user = User::factory()->create([
+            'first_run_completed_at' => now(),
+            'workspace_mode_preference' => 'career',
+        ]);
+
+        $this->actingAs($user)->withSession([
+            'canovia_workspace_navigation_v1:user:'.$user->id => [
+                'last' => 'career',
+                'screens' => ['career' => ['url' => '/workspace/career', 'plan_id' => null, 'task_id' => null]],
+            ],
+        ])->get(route('workspace_modes.resume'))
+            ->assertRedirect(route('workspace.study.top'));
+        $this->assertSame('career', $user->fresh()->workspace_mode_preference);
+    }
+
+    public function test_workspace_entry_with_no_specialized_modes_falls_back_to_overview(): void
+    {
+        config(['release_levels.public_level' => \App\Enums\ReleaseLevel::CoreStable->value]);
+        $user = User::factory()->create([
+            'first_run_completed_at' => now(),
+            'workspace_mode_preference' => 'development',
+        ]);
+
+        $this->actingAs($user)->get(route('workspace_modes.resume'))
+            ->assertRedirect(route('home'));
+    }
+
+
 }
