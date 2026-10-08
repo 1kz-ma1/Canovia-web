@@ -2,9 +2,9 @@
 
 return [
     /*
-     * No MCP tool or delegated OAuth token is accepted by this implementation.
-     * The discovery + challenge probe is opt-in to avoid advertising a
-     * non-existent authorization server to ChatGPT.
+     * MCP discovery, IdP introspection, Plan grants and tool execution each
+     * require separately enabled switches. All are OFF by default; no
+     * real ChatGPT client or OAuth IdP is pre-connected.
      */
     'discovery_enabled' => env('CANOVIA_MCP_DISCOVERY_ENABLED', false),
 
