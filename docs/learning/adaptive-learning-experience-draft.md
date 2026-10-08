@@ -132,7 +132,7 @@ Learning Run -> [locked/served: CURRENT+nearby] -> AnswerEvent(immutable scoring
 | Phase 4b | Understanding/Practice体験、表示分離、問題集合、履歴共通投影 | CONFIRMED / PROPOSED | In Progress（V58.78 Bank単一選択UIのみ） |
 | Phase 4c | 確定/候補/戦略キュー、適応更新と重複回避、AI不可時のBank fallback | PROPOSED / EXPERIMENTAL | In Progress（V58.79繰り返し誤答に基づくBank候補層のみ、他は未実装） |
 | Phase 4d | 試験別profile + C完全固定・採点終了後開示、模試停止/再開ポリシー | CONFIRMED（制約）/ UNDECIDED（各試験詳細） | In Progress（V58.80 設定ゲート・静的問題・最後に一括採点、正式試験profile未登録） |
-| Phase 4e | 診断任意入口、3モードランキング、誤操作調整と校正 | PROPOSED / EXPERIMENTAL | Not Started |
+| Phase 4e | 診断任意入口、3モードランキング、誤操作調整と校正 | PROPOSED / EXPERIMENTAL | In Progress（V58.81 説明可能なMode推薦と診断任意ガイドのみ） |
 | Phase 5 | 費用/負荷/重複/権限/アクセシビリティ/モバイルと実機E2E | CONFIRMED | Not Started |
 | Phase 6 | 本書更新、根拠付き実装/未実装表・残課題、段階的公開ゲート | CONFIRMED | Not Started |
 
@@ -195,3 +195,9 @@ Learning Run -> [locked/served: CURRENT+nearby] -> AnswerEvent(immutable scoring
 - **EXPERIMENTAL**: 試験別の中断・途中提出・非回答の採点・解答時間の再現性、制限時間UIの視認性は実機検証が必要。暫定の回答形式はBank採点対応の単一選択のみ。他形式は正式出題profileの整備後に追加。
 - **UNDECIDED**: 対応試験別profileの正式採用、学校試験/資格試験ごとの時間/休憩/途中保存/時間延長、実際の公開問題集の利用許諾確認。
 - **未完了**: 複数形式対応、全問の分野別成績/次の学習への統合、推奨ランキング、1問履歴の評価補正や横断集計。試験の再現性を実証した意味での `Verified` は付与しない。CIで設定ゲートと表示分離の機能を確認し、Render・iOS・PWA実機は別。
+
+## 2026-10-08 Phase 4e 初期Slice（V58.81）
+- **PROPOSED / EXPERIMENTAL**: `AdaptiveLearningModeRecommendationService::VERSION=multi_answer_rules_v1`。新Learning Answer Eventの同じPlan/Task/actorへの証拠を最大30件参照。単一正答ではPracticeを1位にしない。複数回答・別Runの根拠が揃って初めてPractice優先を検討。閾値は実験用設定であり最適値ではない。
+- **CONFIRMED**: 3モードの推薦理由・根拠の不足・模試の提供条件を画面に明示。模試が利用できない場合は未対応と表記。ユーザーの選択は強制しない。「おすすめ度%」「合格確率」等の架空の精度は作らない。
+- **CONFIRMED**: 旧`StudyPracticeAttempt`は過去の学習実績として件数だけ参照しても、単問正誤として直接換算しない。任意の現在地確認を案内し、診断を強制しない。1つのユーザー/Plan/Taskの履歴を別人へ混ぜない。
+- **未実装**: 多分野の理解度信頼度統合、速度や残り時間等の個人希望と精密な優先順位、実際の現在地診断専用問題集・誤タップによる理解度調整、ランキングA/B検証、実機E2E。Phase 4eは完了とはしない。
