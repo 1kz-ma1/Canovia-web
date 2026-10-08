@@ -2312,6 +2312,79 @@ final class GitHubRepositoryWriter
      *   client:PendingRequest
      * }
      */
+    /**
+     * Narrow read-only GitHub App interface. Never returns an installation
+     * token or HTTP client to callers; always pins content to a commit SHA.
+     *
+     * @return array{sha: string, content: string|null}
+     */
+    public function readDevelopmentRoadmapMarkdown(string $repoFullName): array
+    {
+        $context = $this->developmentReadContext(
+            $repoFullName,
+            'contents',
+            'Contents',
+        );
+
+        /** @var PendingRequest $client */
+        $client = $context['client'];
+        $repoPath = (string) $context['repo_path'];
+
+        $repositoryResponse = $client->get('/repos/'.$repoPath);
+        if (! $repositoryResponse->successful()) {
+            throw new RuntimeException('Repository情報を取得できませんでした。');
+        }
+
+        $repository = $repositoryResponse->json();
+        $branch = is_array($repository)
+            ? trim((string) ($repository['default_branch'] ?? ''))
+            : '';
+        if ($branch === '' || strlen($branch) > 255) {
+            throw new RuntimeException('Default branchを確認できませんでした。');
+        }
+
+        $headResponse = $client->get(
+            '/repos/'.$repoPath.'/commits/'.rawurlencode($branch),
+        );
+        $head = $headResponse->successful() ? $headResponse->json() : null;
+        $sha = is_array($head) ? (string) ($head['sha'] ?? '') : '';
+        if (! preg_match('/^[a-f0-9]{40}$/D', $sha)) {
+            throw new RuntimeException('Roadmapの参照commitを確認できませんでした。');
+        }
+
+        $response = $client->get(
+            '/repos/'.$repoPath.'/contents/docs/development/ROADMAP.md',
+            ['ref' => $sha],
+        );
+        if ($response->status() === 404) {
+            return ['sha' => $sha, 'content' => null];
+        }
+        if (! $response->successful()) {
+            throw new RuntimeException('Roadmapを取得できませんでした。');
+        }
+
+        $file = $response->json();
+        if (! is_array($file) || ($file['type'] ?? null) !== 'file'
+            || ($file['encoding'] ?? null) !== 'base64'
+            || ! is_string($file['content'] ?? null)
+            || (int) ($file['size'] ?? -1) < 0
+            || (int) ($file['size'] ?? -1) > self::MAX_CONTENT_BYTES) {
+            throw new RuntimeException('Roadmapの形式またはサイズが不正です。');
+        }
+
+        $content = base64_decode(
+            preg_replace('/\s+/', '', $file['content']) ?: '',
+            true,
+        );
+        if (! is_string($content)
+            || strlen($content) > self::MAX_CONTENT_BYTES
+            || strlen($content) !== (int) $file['size']) {
+            throw new RuntimeException('Roadmapを安全に読み取れませんでした。');
+        }
+
+        return ['sha' => $sha, 'content' => $content];
+    }
+
     private function developmentReadContext(
         string $repoFullName,
         string $permission,
