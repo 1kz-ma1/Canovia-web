@@ -23,6 +23,15 @@ final class McpAccessTokenIntrospector
         private readonly McpProtectedResourceConfiguration $resource,
     ) {}
 
+    /**
+     * Safe diagnostic: validates only server-owned endpoint/credential shape.
+     * Does not transmit, persist or inspect any OAuth token.
+     */
+    public function isConfigured(): bool
+    {
+        return $this->settings() !== null;
+    }
+
     public function verify(string $accessToken): ?McpVerifiedTokenPrincipal
     {
         return $this->verifyForConfiguredClient(
