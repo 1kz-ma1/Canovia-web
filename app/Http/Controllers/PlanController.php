@@ -16,6 +16,7 @@ use App\Services\PlanCollaborationService;
 use App\Services\PlanActivityService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanSpecializationService;
+use App\Services\PlanActionDraftSpotlightService;
 use App\Services\DevelopmentCreativePlanAccessService;
 use App\Services\PlanIntentClassificationService;
 use App\Services\PlanProgressService;
@@ -432,6 +433,7 @@ class PlanController extends Controller
         ExecutionActionPolicyService $executionActions,
         PlanPriorityService $priorityService,
         PlanCategoryProfileService $categoryProfiles,
+        PlanActionDraftSpotlightService $draftSpotlight,
     ) {
         $canView = $ownership->canView($request, $plan);
         $canEdit = $ownership->canEdit($request, $plan);
@@ -498,6 +500,8 @@ class PlanController extends Controller
         $planCategoryProfile = $categoryProfiles->forPlan($plan);
         $studyToolCategoryMismatch = $planCategoryProfile->key !== 'study'
             && $toolService->looksLikeStudyPlan($plan);
+        // Collaborators never see the owner's draft state. GET is read-only.
+        $draftSpotlightReady = $canManage ? $draftSpotlight->readyForPlan($plan) : null;
 
         return view('plans.show', compact(
             'plan',
@@ -517,6 +521,7 @@ class PlanController extends Controller
             'studyToolCategoryMismatch',
             'priorityEvaluation',
             'planCategoryProfile',
+            'draftSpotlightReady',
         ));
     }
 
