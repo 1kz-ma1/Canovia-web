@@ -84,3 +84,11 @@ batch per the owner's explicit instruction.
 Sources:
 - https://developers.openai.com/plugins/build/auth
 - https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization
+
+## Relink after revocation
+
+After a user explicitly unlinks, they can only reconnect the same IdP
+subject through a fresh, short-lived, verified OAuth authorization-code +
+PKCE handshake and a separate final confirmation. Any previously revoked
+Plan grants remain revoked; relinking never automatically approves them.
+See [account linking](MCP_OAUTH_ACCOUNT_LINK_CONTRACT.md).
