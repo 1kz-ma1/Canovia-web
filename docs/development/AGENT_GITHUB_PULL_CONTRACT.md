@@ -22,6 +22,10 @@ Only show the control after normal Development Workspace Plan access, GitHub App
 - **Not verified**: end-to-end behavior with each external AI provider and iPhone/WKWebView clipboard after production deployment. Connector access is controlled by each provider, not by Canovia.
 - **Not implemented**: AI directly calling Canovia's session-only `/workspace/development/context/{plan}`; provider authorization; automatic background synchronization; Task auto-update.
 
+## Current: owner-only Canovia-private context preview (no delegated AI access)
+
+The authenticated Development Work surface now offers an optional private Context preview for the current logged-in owner of an individual Development Plan. The owner chooses `overview` (Plan title only, no Tasks) or `tasks` (up to five active Task titles, persisted status and persisted progress). The server uses `GET /workspace/development/private-context/{plan}/preview` with owner-only authorization, no team/guest/non-Development access, no-store and strict field whitelisting. Results are displayed for inspection and copied **only after a separate user action**. The preview cannot be read by ChatGPT independently, is not an MCP tool, does not authorize any AI provider, and sends nothing automatically. No credentials, Task descriptions, WorkLogs or Evidence are returned. See [private preview contract](PRIVATE_AI_CONTEXT_PREVIEW_CONTRACT.md).
+
 ## Future: direct delegated AI → Canovia read
 
 A coding AI that needs **Canovia-private Plan context** (as opposed to GitHub-public specifications) requires a different authorization boundary. A connected GitHub account alone is not evidence that the agent may read the user's Canovia Plans.
