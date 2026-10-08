@@ -78,6 +78,9 @@ final class DevelopmentGitHubRoadmapWorkspaceTest extends TestCase
         $this->actingAs($outsider)
             ->get(route('workspace.development.context', ['plan' => $plan->id]))
             ->assertForbidden();
+        $this->actingAs($outsider)
+            ->get(route('workspace.development.context', ['plan' => $plan->id, 'compare' => '1']))
+            ->assertForbidden();
         Http::assertNothingSent();
     }
 
@@ -140,8 +143,10 @@ final class DevelopmentGitHubRoadmapWorkspaceTest extends TestCase
         ]);
 
         $sha = str_repeat('f', 40);
+        $previousSha = str_repeat('e', 40);
         $markdown = "## Workstreams\n| Priority | Workstream | Existing evidence | Remaining acceptance |\n| --- | --- | --- | --- |\n| P0 | Adaptive Learning | PR #12 merged | iPhone E2E pending |\n";
-        Http::fake(function (HttpRequest $request) use ($sha, $markdown) {
+        $previousMarkdown = "## Workstreams\n| Priority | Workstream | Existing evidence | Remaining acceptance |\n| --- | --- | --- | --- |\n| P0 | Adaptive Learning | PR #12 merged | Browser E2E pending |\n";
+        Http::fake(function (HttpRequest $request) use ($sha, $previousSha, $markdown, $previousMarkdown) {
             $url = $request->url();
             if ($url === 'https://api.github.com/repos/example/repo/installation') {
                 return Http::response(['id' => 777], 200);
@@ -162,6 +167,9 @@ final class DevelopmentGitHubRoadmapWorkspaceTest extends TestCase
             if ($url === 'https://api.github.com/repos/example/repo/commits/main') {
                 return Http::response(['sha' => $sha], 200);
             }
+            if (str_starts_with($url, 'https://api.github.com/repos/example/repo/commits?')) {
+                return Http::response([['sha' => $sha], ['sha' => $previousSha]], 200);
+            }
             if ($url === 'https://api.github.com/repos/example/repo/pulls/12') {
                 return Http::response([
                     'number' => 12, 'state' => 'closed', 'merged' => true,
@@ -176,11 +184,12 @@ final class DevelopmentGitHubRoadmapWorkspaceTest extends TestCase
                 ]], 200);
             }
             if (str_starts_with($url, 'https://api.github.com/repos/example/repo/contents/docs/development/ROADMAP.md?')) {
+                $body = str_contains($url, 'ref='.$previousSha) ? $previousMarkdown : $markdown;
                 return Http::response([
                     'type' => 'file',
                     'encoding' => 'base64',
-                    'content' => base64_encode($markdown),
-                    'size' => strlen($markdown),
+                    'content' => base64_encode($body),
+                    'size' => strlen($body),
                 ], 200);
             }
             return Http::response(['error' => 'unexpected'], 500);
@@ -200,6 +209,8 @@ final class DevelopmentGitHubRoadmapWorkspaceTest extends TestCase
             ->assertSee('data-roadmap-context-title="Adaptive Learning"', false)
             ->assertSee('この項目をAIへ共有')
             ->assertSee('AI用Contextをコピー')
+            ->assertSee('data-roadmap-compare', false)
+            ->assertSee('仕様書の変更を確認')
             ->assertSee(route('workspace.development.context', ['plan' => $plan->id]));
 
         Http::assertSent(fn (HttpRequest $request) =>
@@ -269,6 +280,36 @@ final class DevelopmentGitHubRoadmapWorkspaceTest extends TestCase
             ->assertOk()
             ->assertJsonPath('matched', 0)
             ->assertJsonCount(0, 'items');
+
+        $this->actingAs($user)
+            ->get(route('workspace.development.context', ['plan' => $plan->id, 'compare' => '1']))
+            ->assertOk()
+            ->assertJsonPath('schema', 'canovia.development_roadmap_diff.v1')
+            ->assertJsonPath('status', 'compared')
+            ->assertJsonPath('before_sha', $previousSha)
+            ->assertJsonPath('after_sha', $sha)
+            ->assertJsonPath('changes.0.kind', 'changed')
+            ->assertJsonPath('changes.0.title', 'Adaptive Learning')
+            ->assertJsonPath('changes.0.before.next', 'Browser E2E pending')
+            ->assertJsonPath('changes.0.after.next', 'iPhone E2E pending')
+            ->assertJsonPath('completion', 'unverified')
+            ->assertHeader('Cache-Control', 'no-store, private');
+
+        Http::assertSent(fn (HttpRequest $request) =>
+            str_contains($request->url(), '/commits?')
+            && str_contains($request->url(), 'path=')
+        );
+        Http::assertSent(fn (HttpRequest $request) =>
+            str_contains($request->url(), '/contents/docs/development/ROADMAP.md?ref='.$previousSha)
+            && $request->hasHeader('Authorization', 'Bearer installation-token')
+        );
+
+        $this->actingAs($user)
+            ->get(route('workspace.development.context', [
+                'plan' => $plan->id, 'compare' => '1', 'verify' => '1',
+            ]))
+            ->assertStatus(422)
+            ->assertJsonPath('error', 'incompatible_comparison_options');
 
         $this->assertDatabaseCount('tasks', 0);
         $this->assertDatabaseCount('task_evidences', 0);
