@@ -97,3 +97,12 @@ current owner/Plan/scope consent before any private data; successful
 reads are metadata-audited. This is not yet a registered ChatGPT
 connector or a deployed OAuth provider. See
 [read-only MCP resource](MCP_READ_ONLY_RESOURCE_CONTRACT.md).
+
+## Current: CLI-only OAuth staging compatibility preflight
+
+The `canovia:mcp-staging-preflight` command checks configured issuer,
+PKCE/RFC9207, introspection metadata and ChatGPT registration-mode hints
+without tokens or private Plan content, and reports only safe status codes.
+No dedicated Canovia staging service/DB or real IdP tenant has been created,
+no production connection activated. See
+[isolated staging and provider compatibility](MCP_STAGING_IDP_PREFLIGHT_CONTRACT.md).
