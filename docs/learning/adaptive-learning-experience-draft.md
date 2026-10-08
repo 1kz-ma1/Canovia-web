@@ -201,3 +201,9 @@ Learning Run -> [locked/served: CURRENT+nearby] -> AnswerEvent(immutable scoring
 - **CONFIRMED**: 3モードの推薦理由・根拠の不足・模試の提供条件を画面に明示。模試が利用できない場合は未対応と表記。ユーザーの選択は強制しない。「おすすめ度%」「合格確率」等の架空の精度は作らない。
 - **CONFIRMED**: 旧`StudyPracticeAttempt`は過去の学習実績として件数だけ参照しても、単問正誤として直接換算しない。任意の現在地確認を案内し、診断を強制しない。1つのユーザー/Plan/Taskの履歴を別人へ混ぜない。
 - **未実装**: 多分野の理解度信頼度統合、速度や残り時間等の個人希望と精密な優先順位、実際の現在地診断専用問題集・誤タップによる理解度調整、ランキングA/B検証、実機E2E。Phase 4eは完了とはしない。
+
+## 2026-10-08 Phase 4e 評価調整Slice（V58.82）
+- **CONFIRMED**: 1問ごとの正誤・回答文・解答時刻をimmutableで保持。本人が誤タップを申告した場合、別テーブル`learning_answer_evaluation_adjustments`に理由/effectをappend-only保存し、元の`learning_answer_events`を一切変更しない。
+- **PROPOSED**: 初期実装の理由は`accidental_tap`のみ、効果は`exclude_from_recommendations`。単一回答に対する同じ申告の再送は冪等。A/Bと完了済みC結果から入口を提示。Plan/Task/actor scopeで本人以外の書込を拒否。
+- **CONFIRMED**: 次の候補選択とModeランキングから申告対象を除外し、採点結果の記録やTask進捗は変更しない。「訂正したから正解にする」のではない。
+- **未実装**: 理解度そのものの統計的校正、申告取消・不正申告防止ポリシー、レビュー済み正誤への学習補強、時間制限中の誤タップ申告、実機検証。適切な影響調整の強度はEXPERIMENTAL。
