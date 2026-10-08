@@ -255,7 +255,18 @@ final class McpReadOnlyResourceTest extends TestCase
         $this->deniedPlan($plan->id);
 
         $link->update(['status' => 'linked', 'revoked_at' => null]);
+        $this->assertDatabaseCount('mcp_delegated_access_events', 0);
+    }
+
+    public function test_idp_token_for_wrong_oauth_client_is_rejected_before_any_private_plan_access(): void
+    {
+        // Laravel Http::fake stubs persist within one test; configure this
+        // negative IdP claim in its own fresh isolated test process.
         $this->idp(client: 'wrong-client-id');
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner);
+        $this->linkAndGrant($owner, $plan);
+
         $this->rpc('tools/call', [
             'name' => McpReadOnlyContextTool::NAME,
             'arguments' => ['plan_id' => $plan->id],
