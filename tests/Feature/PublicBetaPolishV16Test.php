@@ -27,8 +27,9 @@ class PublicBetaPolishV16Test extends TestCase
         $this->withCookie(FirstRunService::COOKIE, '1')->get(route('plans.create.manual'))
             ->assertOk()
             ->assertSee('まず、目標の名前だけ決めよう。')
-            ->assertSee('AIで具体化')
-            ->assertSee('計画を作ってAIへ進む')
+            ->assertSee('行動から始める')
+            ->assertSee('目標を登録して今できることへ')
+            ->assertDontSee('JSONを戻してロードマップを完成')
             ->assertSee('>青<', false)
             ->assertSee('>緑<', false)
             ->assertSee('>紫<', false);
