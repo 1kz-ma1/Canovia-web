@@ -19,6 +19,7 @@ final class McpStagingProviderPreflightService
     public function __construct(
         private readonly McpProtectedResourceConfiguration $resource,
         private readonly McpOAuthAccountLinkConfiguration $linkConfig,
+        private readonly McpAccessTokenIntrospector $introspector,
     ) {}
 
     /**
@@ -39,6 +40,8 @@ final class McpStagingProviderPreflightService
         $local = [
             'resource_discovery' => $this->resource->isReady() ? 'pass' : 'blocked',
             'introspection_enabled' => config('canovia_mcp.token_introspection_enabled') === true
+                ? 'pass' : 'blocked',
+            'introspection_configuration' => $this->introspector->isConfigured()
                 ? 'pass' : 'blocked',
             'account_link_configuration' => $this->linkConfig->settings() !== null
                 ? 'pass' : 'blocked',
