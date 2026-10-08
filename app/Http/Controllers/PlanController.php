@@ -15,6 +15,7 @@ use App\Services\PlanOwnershipService;
 use App\Services\PlanCollaborationService;
 use App\Services\PlanActivityService;
 use App\Services\PlanCategoryProfileService;
+use App\Services\DevelopmentCreativePlanAccessService;
 use App\Services\PlanIntentClassificationService;
 use App\Services\PlanProgressService;
 use App\Services\PlanPriorityService;
@@ -536,6 +537,7 @@ class PlanController extends Controller
         PlanOwnershipService $ownership,
         PlanActivityService $activity,
         GoalContextService $goalContexts,
+        DevelopmentCreativePlanAccessService $creativeAccess,
     ) {
         $ownership->authorizePlan($request, $plan);
 
@@ -543,6 +545,9 @@ class PlanController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'category' => ['nullable', 'string', 'max:100'],
+            'workspace_domain_override' => [
+                'sometimes', 'nullable', Rule::in(['auto', 'study', 'development', 'career', 'creative', 'general']),
+            ],
             'priority' => ['nullable', 'integer', 'between:1,5'],
             'priority_mode' => ['nullable', Rule::in(['auto', 'manual'])],
             'visual_icon' => ['nullable', 'string', 'max:16'],
@@ -563,13 +568,18 @@ class PlanController extends Controller
             return back()->withErrors(['deadline' => '期限は開始日以降にしてください。'])->withInput();
         }
 
-        $before = $plan->only(['title', 'description', 'category', 'priority', 'priority_mode', 'start_date', 'deadline', 'is_public']);
+        $before = $plan->only(['title', 'description', 'category', 'workspace_domain_override', 'priority', 'priority_mode', 'start_date', 'deadline', 'is_public']);
         $previousTitle = (string) $plan->title;
 
         $plan->update([
             'title' => $validated['title'],
             'description' => array_key_exists('description', $validated) ? $validated['description'] : $plan->description,
             'category' => array_key_exists('category', $validated) ? $validated['category'] : $plan->category,
+            'workspace_domain_override' => array_key_exists('workspace_domain_override', $validated)
+                ? (in_array($validated['workspace_domain_override'], ['auto', null, ''], true)
+                    ? null
+                    : $validated['workspace_domain_override'])
+                : $plan->workspace_domain_override,
             'priority' => $validated['priority'] ?? (int) ($plan->priority ?? 3),
             'priority_mode' => $validated['priority_mode'] ?? ($plan->priority_mode ?: 'auto'),
             'visual_icon' => array_key_exists('visual_icon', $validated) ? $validated['visual_icon'] : $plan->visual_icon,
@@ -579,6 +589,12 @@ class PlanController extends Controller
             'deadline' => $deadline,
             'is_public' => $request->has('is_public') ? $request->boolean('is_public') : $plan->is_public,
         ]);
+
+        // Reset the old browser-specific "open Creative in Development"
+        // exception when the owner explicitly sets a persistent Domain.
+        if (array_key_exists('workspace_domain_override', $validated)) {
+            $creativeAccess->optOut($request, $plan);
+        }
 
         $changedFields = collect($plan->only(array_keys($before)))
             ->filter(fn ($value, $key) => (string) ($before[$key] ?? '') !== (string) $value)
