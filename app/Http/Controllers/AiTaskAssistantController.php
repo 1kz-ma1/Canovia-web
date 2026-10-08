@@ -172,8 +172,11 @@ PROMPT;
             ->where('plan_id', $plan->id)
             ->where('request_hash', $requestHash)
             ->exists()) {
-            return redirect()->route('plans.show', $plan)
-                ->with('success', 'この初期計画はすでに反映済みです。重複登録せず、既存の計画を開きました。');
+            return $this->redirectAfterImport(
+                $request,
+                $plan,
+                'この初期計画はすでに反映済みです。重複登録せず、続きから開きました。',
+            );
         }
 
         $operations = $decoded['operations'] ?? null;
@@ -317,8 +320,11 @@ PROMPT;
         });
 
         if (! $appliedNow) {
-            return redirect()->route('plans.show', $plan)
-                ->with('success', 'この初期計画はすでに反映済みです。重複登録せず、既存の計画を開きました。');
+            return $this->redirectAfterImport(
+                $request,
+                $plan,
+                'この初期計画はすでに反映済みです。重複登録せず、続きから開きました。',
+            );
         }
 
         $message = 'AIが生成した初期タスクを登録しました。';
@@ -326,11 +332,17 @@ PROMPT;
             $message .= ' 形式の違いはCanovia側で'.count($normalizationNotes).'件調整しました。';
         }
 
-        // Development-first onboarding should return to its State-first
-        // workspace once the first tasks have actually been persisted.
-        // Other categories keep the established Plan detail destination.
-        if ($request->boolean('return_to_workspace')
-            && app(\App\Services\PlanCategoryProfileService::class)->forPlan($plan)->key === 'development') {
+        return $this->redirectAfterImport($request, $plan, $message);
+    }
+
+    private function redirectAfterImport(Request $request, Plan $plan, string $message): \Illuminate\Http\RedirectResponse
+    {
+        // Resubmitted iOS/PWA imports must return to the same destination
+        // as the successful first import, without creating duplicate tasks.
+        if (
+            $request->boolean('return_to_workspace')
+            && app(\App\Services\PlanCategoryProfileService::class)->forPlan($plan)->key === 'development'
+        ) {
             return redirect()
                 ->route('workspace.development.index', ['plan_id' => $plan->id])
                 ->with('success', $message);
