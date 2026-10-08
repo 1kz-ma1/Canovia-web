@@ -10,6 +10,15 @@ class QuestionBankGrader
 {
     public const SUPPORTED_RULES = ['exact_choice', 'exact_multiple', 'numeric_tolerance'];
 
+    /** Grade from an immutable server-only snapshot, independent of later Bank edits. */
+    public function gradeRule(array $rule, mixed $value): ?bool
+    {
+        if (! in_array((string) ($rule['type'] ?? ''), self::SUPPORTED_RULES, true)) {
+            return null;
+        }
+        return $this->isCorrect($rule, $value);
+    }
+
     /**
      * @param array<int, array<string, mixed>> $questions
      * @param array<int, array<string, mixed>> $answers

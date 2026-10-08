@@ -59,6 +59,7 @@ use App\Http\Controllers\DevelopmentProviderTriageController;
 use App\Http\Controllers\DevelopmentCodingAgentHandoffController;
 use App\Http\Controllers\DevelopmentPreviewController;
 use App\Http\Controllers\StudyPracticeController;
+use App\Http\Controllers\AdaptiveLearningController;
 use App\Http\Controllers\StudyActivityController;
 use App\Http\Controllers\StudyLanguageActivityController;
 use App\Http\Controllers\StudyResourceActivityController;
@@ -583,6 +584,13 @@ Route::get('/plans/{plan}/tasks/{task}/study-recall/sources/{source}/file', [Stu
 // Freeは外部AIとのJSON handoffを維持し、Premium CoreはNative AIを同じ演習UIへ接続する。
 Route::middleware('feature.access:'.FeatureKey::AiPractice->value)->group(function () {
     Route::get('/plans/{plan}/tasks/{task}/study-practice', [StudyPracticeController::class, 'show'])->name('plans.tasks.study_practice.show');
+    // Adaptive Learning pilot: Bank-only single-choice A/B. Exam mode remains gated.
+    Route::get('/plans/{plan}/tasks/{task}/learning', [AdaptiveLearningController::class, 'index'])->name('plans.tasks.learning.index');
+    Route::post('/plans/{plan}/tasks/{task}/learning', [AdaptiveLearningController::class, 'start'])->middleware('throttle:12,1')->name('plans.tasks.learning.start');
+    Route::get('/plans/{plan}/tasks/{task}/learning/{learningRun}', [AdaptiveLearningController::class, 'show'])->name('plans.tasks.learning.show');
+    Route::post('/plans/{plan}/tasks/{task}/learning/{learningRun}/answer', [AdaptiveLearningController::class, 'answer'])->middleware('throttle:40,1')->name('plans.tasks.learning.answer');
+    Route::post('/plans/{plan}/tasks/{task}/learning/{learningRun}/next', [AdaptiveLearningController::class, 'next'])->middleware('throttle:40,1')->name('plans.tasks.learning.next');
+    Route::post('/plans/{plan}/tasks/{task}/learning/{learningRun}/finish', [AdaptiveLearningController::class, 'finish'])->middleware('throttle:12,1')->name('plans.tasks.learning.finish');
     Route::get('/plans/{plan}/tasks/{task}/study-practice/resume', [StudyPracticeController::class, 'resume'])->name('plans.tasks.study_practice.resume');
     Route::post('/plans/{plan}/tasks/{task}/study-practice/prepare', [StudyPracticeController::class, 'prepare'])->name('plans.tasks.study_practice.prepare');
     Route::post('/plans/{plan}/tasks/{task}/study-practice/native/prepare', [StudyPracticeController::class, 'prepareNative'])->name('plans.tasks.study_practice.native.prepare');

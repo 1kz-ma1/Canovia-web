@@ -1,6 +1,12 @@
 <?php
 
 return [
+    // EXPERIMENTAL. Deterministic Question Bank lookahead for the first
+    // Understanding/Practice pilot, NOT a final adaptive queue optimum.
+    'adaptive_learning' => [
+        'locked_queue_size' => 2,
+    ],
+
     'question_bank_selection' => [
         'exposure_history_session_limit' => 24,
         'recent_session_window' => 3,
