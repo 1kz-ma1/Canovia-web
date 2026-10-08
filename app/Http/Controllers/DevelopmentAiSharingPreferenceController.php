@@ -58,17 +58,20 @@ final class DevelopmentAiSharingPreferenceController extends Controller
         DevelopmentAiSharingPreferenceService $preferences,
     ) {
         $user = $request->user();
-        abort_unless(
-            $user && $plan->user_id !== null
-                && (int) $plan->user_id === (int) $user->id,
-            404,
-        );
+        abort_unless($user, 404);
         abort_unless($preferences->revoke($user, $plan) !== null, 404);
 
-        return redirect()->route('workspace.development.index', [
-            'plan_id' => $plan->id,
-            'surface' => 'work',
-        ])->with(
+        $validated = $request->validate([
+            'return_to' => ['sometimes', 'in:account'],
+        ]);
+        $destination = ($validated['return_to'] ?? null) === 'account'
+            ? route('auth.account')
+            : route('workspace.development.index', [
+                'plan_id' => $plan->id,
+                'surface' => 'work',
+            ]);
+
+        return redirect()->to($destination)->with(
             'success',
             'ChatGPT向けの共有準備設定を取り消しました。外部連携は開始されていません。',
         );
