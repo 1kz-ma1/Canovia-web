@@ -13,6 +13,7 @@ use App\Models\Task;
 use App\Services\DevelopmentExecutionContextService;
 use App\Services\DevelopmentImplementationBriefService;
 use App\Services\DevelopmentHomeService;
+use App\Services\DevelopmentCreativePlanAccessService;
 use App\Services\DevelopmentWorkspaceSurfaceService;
 use App\Services\CapabilityActivationService;
 use App\Services\GitHubIntegrationReadinessService;
@@ -33,6 +34,7 @@ final class DevelopmentWorkspaceController extends Controller
         Request $request,
         PlanOwnershipService $ownership,
         PlanCategoryProfileService $profiles,
+        DevelopmentCreativePlanAccessService $creativeAccess,
         PlanPriorityService $priorities,
         DevelopmentAdaptiveActionService $developmentActions,
         DevelopmentIntelligencePresentationAdapter $presentationAdapter,
@@ -50,17 +52,20 @@ final class DevelopmentWorkspaceController extends Controller
         CapabilityActivationService $capabilityActivation,
         PersonalizationLivingProfileService $livingProfile,
     ) {
-        $developmentPlans = $ownership->ownedPlans($request, [
+        $accessiblePlans = $ownership->ownedPlans($request, [
             'tasks',
             'workLogs',
             'availabilityRules',
             'availabilityOverrides',
-        ])->filter(
-            fn (Plan $plan) => $profiles->forPlan($plan)->key === 'development',
-        )->sort(
+        ]);
+        // Creative Plans are NOT development by default. Only this actor's
+        // explicitly selected, currently accessible Creative Plans may enter.
+        $partition = $creativeAccess->partition($request, $accessiblePlans, $profiles);
+        $developmentPlans = $partition['plans']->sort(
             fn (Plan $left, Plan $right) =>
                 $this->comparePlans($left, $right, $priorities),
         )->values();
+        $developmentCreativeCandidates = $partition['candidates'];
 
         $plan = $this->selectedPlan($request, $developmentPlans);
 
@@ -70,6 +75,7 @@ final class DevelopmentWorkspaceController extends Controller
         if (! $plan instanceof Plan) {
             return view('workspace.development.index', [
                 'developmentPlans' => $developmentPlans,
+                'developmentCreativeCandidates' => $developmentCreativeCandidates,
                 'plan' => null,
                 'firstUseContext' => data_get(
                     $personalizationContexts->current($request),
@@ -259,6 +265,7 @@ final class DevelopmentWorkspaceController extends Controller
 
         return view('workspace.development.index', [
             'developmentPlans' => $developmentPlans,
+                'developmentCreativeCandidates' => $developmentCreativeCandidates,
             'plan' => $plan,
             'firstPlanContext' => $plan->tasks->isEmpty()
                 ? data_get(
