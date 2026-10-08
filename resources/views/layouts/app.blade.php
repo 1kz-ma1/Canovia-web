@@ -103,6 +103,10 @@
         $workspaceModeContext->mode,
     );
     $workspaceModeOptions = $workspaceModeRegistry->available();
+    $workspaceNavigationMode = app(\App\Services\WorkspaceNavigationService::class)->activeMode(request());
+    $workspaceNavigationOptions = $workspaceModeOptions->reject(
+        fn ($option) => $option->mode === \App\Enums\WorkspaceMode::Overview
+    );
 @endphp
 <!DOCTYPE html>
 <html lang="ja">
@@ -147,7 +151,7 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body data-release-level="{{ $currentReleaseLevel->value }}" data-release-level-label="{{ $currentReleaseLevel->label() }}" data-focus-mode="{{ $focusMode ? '1' : '0' }}" data-workspace-mode="{{ $workspaceModeDefinition->mode->value }}" data-workspace-mode-source="{{ $workspaceModeContext->source->value }}" data-onboarding-version="{{ $onboardingVersion }}" data-onboarding-auto="{{ $onboardingAuto ? '1' : '0' }}" data-onboarding-authenticated="{{ auth()->check() ? '1' : '0' }}" data-pwa-install-url="{{ route('pwa.install.prepare') }}" data-route-name="{{ request()->route()?->getName() }}" data-canovia-surface="{{ request()->routeIs('map.*') ? 'explore' : (request()->routeIs('home') ? 'home' : 'app') }}" class="pk-cosmic-shell min-h-screen bg-slate-950 text-slate-100 antialiased {{ $focusMode ? 'pace-focus-mode' : '' }}">
+<body data-navigation-shell="{{ $workspaceNavigationMode ? 'workspace' : 'global' }}" data-release-level="{{ $currentReleaseLevel->value }}" data-release-level-label="{{ $currentReleaseLevel->label() }}" data-focus-mode="{{ $focusMode ? '1' : '0' }}" data-workspace-mode="{{ $workspaceModeDefinition->mode->value }}" data-workspace-mode-source="{{ $workspaceModeContext->source->value }}" data-onboarding-version="{{ $onboardingVersion }}" data-onboarding-auto="{{ $onboardingAuto ? '1' : '0' }}" data-onboarding-authenticated="{{ auth()->check() ? '1' : '0' }}" data-pwa-install-url="{{ route('pwa.install.prepare') }}" data-route-name="{{ request()->route()?->getName() }}" data-canovia-surface="{{ request()->routeIs('map.*') ? 'explore' : (request()->routeIs('home') ? 'home' : 'app') }}" class="pk-cosmic-shell min-h-screen bg-slate-950 text-slate-100 antialiased {{ $focusMode ? 'pace-focus-mode' : '' }}">
     <div class="pk-cosmic-backdrop pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
         <span class="pk-space-glow pk-space-glow-a"></span>
         <span class="pk-space-glow pk-space-glow-b"></span>
@@ -165,21 +169,13 @@
                         <span class="sr-only">Canovia - 未来までの航路を、一緒に。</span>
                     </a>
 
-                    @include('layouts.partials.workspace-mode-bar', [
-                        'workspaceModeRegistry' => $workspaceModeRegistry,
-                        'workspaceModeContext' => $workspaceModeContext,
-                        'workspaceModeDefinition' => $workspaceModeDefinition,
-                        'workspaceModeOptions' => $workspaceModeOptions,
-                        'workspaceModeInline' => true,
-                    ])
+                    @if ($workspaceNavigationMode)
+                        <a href="{{ route('home') }}" data-workspace-exit class="header-secondary-link whitespace-nowrap">← ホーム</a>
+                        <span data-workspace-location class="text-xs font-bold text-slate-300">{{ $workspaceNavigationMode->value === 'study' ? '学習' : ($workspaceNavigationMode->value === 'development' ? '開発' : 'Career') }}</span>
+                    @endif
                 </div>
 
-                <nav class="pk-desktop-nav flex flex-wrap items-center gap-1 rounded-2xl border border-slate-800 bg-slate-900/75 p-1 text-sm shadow-lg shadow-slate-950/20" aria-label="メインナビゲーション">
-                    <a href="{{ route('home') }}" data-canovia-nav-key="desktop-home" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('home') || request()->routeIs('calendar.*') || request()->routeIs('my_plans.*') || request()->routeIs('plans.show') || request()->routeIs('plans.dashboard') || request()->routeIs('plans.edit') || request()->routeIs('tasks.*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6.8 15.7c-1.8 1.7-2.7 3.4-2.5 4.9 1.5.2 3.2-.7 4.9-2.5M14.5 4.2c2.8-.9 5.2-.9 5.3-.8.1.1.1 2.5-.8 5.3-1 3.2-3.5 6.1-7.2 7.8L7.9 12.6c1.7-3.7 4.6-6.2 6.6-8.4Z"/><path d="m9.1 15 4 4M7.4 12.1l-2.7.6-1.5 2.6 4.2.8M14.8 16.3l.8 4.2 2.6-1.5.6-2.7"/><circle cx="15.2" cy="8.8" r="1.6"/></svg><i></i></span><span>ホーム</span></a>
-                    <a href="{{ route('roadmap.index') }}" data-canovia-nav-key="desktop-constellation" data-onboarding-target="roadmap-nav" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('roadmap.*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="15" r="1.6"/><circle cx="11.5" cy="6.5" r="1.8"/><circle cx="18" cy="11" r="1.7"/><circle cx="15.8" cy="19" r="1.5"/><path d="m7.2 13.8 3.1-5.6m2.8-.7 3.5 2.4m.9 2.7-1.1 4.8m-9-.9 7 2.1"/></svg><i></i></span><span>星座</span></a>
-                    <a href="{{ route('navigation.index') }}" data-canovia-nav-key="desktop-execution" data-onboarding-target="execution-nav" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('navigation.*') || request()->routeIs('work_sessions.*') || request()->routeIs('plans.tasks.guided_execution.*') || request()->routeIs('plans.tasks.execution_orchestration.*') || request()->routeIs('plans.tasks.study_*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h10"/><path d="m12 8 4 4-4 4"/><circle cx="5" cy="12" r="2"/><path d="m18.5 6.5 1.8-1.8m-1.8 12.8 1.8 1.8"/></svg><i></i></span><span>実行</span></a>
-                    <a href="{{ route('timeline.index') }}" data-canovia-nav-key="desktop-timeline" class="nav-link pk-nav-link whitespace-nowrap {{ request()->routeIs('timeline.*') || request()->routeIs('achievements.*') ? 'nav-link-active' : '' }}"><span class="pk-nav-icon pk-nav-icon-timeline" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="M10 7v3.5l2.4 1.5M14.8 15.5h4.4a1.8 1.8 0 0 1 1.8 1.8v1.8a1.8 1.8 0 0 1-1.8 1.8h-1.7l-1.8 1.4.2-1.4h-1.1a1.8 1.8 0 0 1-1.8-1.8v-1.8"/></svg><i></i></span><span>タイムライン</span></a>
-                </nav>
+                @include('layouts.partials.primary-navigation-desktop')
 
                 <div class="hidden items-center gap-2 lg:flex">
                     <a href="{{ route('calendar.index') }}" data-canovia-nav-key="desktop-calendar" class="header-secondary-link">カレンダー</a>
@@ -203,23 +199,21 @@
 
         <header class="mobile-app-header md:hidden">
             <div class="mobile-app-header-inner">
-                @unless ($isCoreScreen)
+                @if ($workspaceNavigationMode)
+                    <a href="{{ route('home') }}" data-workspace-exit class="shrink-0 rounded-lg border border-slate-700 px-2 py-2 text-xs font-bold text-sky-200">← ホーム</a>
+                @elseif (! $isCoreScreen)
                     <button type="button" class="mobile-back-button" data-mobile-back aria-label="前の画面に戻る">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
                     </button>
                 @else
                     <a href="{{ route('home') }}" class="mobile-brand-mark pk-mobile-brand-mark" aria-label="Canovia ホーム"><img src="/brand/logo-mark.svg" alt="" width="32" height="32"></a>
-                @endunless
+                @endif
                 <div class="min-w-0 flex-1">
                     <div class="flex min-w-0 items-center gap-1.5">
                         <p class="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-300">CANOVIA</p>
-                        @include('layouts.partials.workspace-mode-bar', [
-                            'workspaceModeRegistry' => $workspaceModeRegistry,
-                            'workspaceModeContext' => $workspaceModeContext,
-                            'workspaceModeDefinition' => $workspaceModeDefinition,
-                            'workspaceModeOptions' => $workspaceModeOptions,
-                            'workspaceModeCompact' => true,
-                        ])
+                        @if ($workspaceNavigationMode)
+                            <span data-workspace-location class="truncate text-[11px] font-bold text-sky-300">{{ $workspaceNavigationMode->value === 'study' ? '学習 Workspace' : ($workspaceNavigationMode->value === 'development' ? '開発 Workspace' : 'Career Workspace') }}</span>
+                        @endif
                     </div>
                     <p class="truncate text-sm font-bold text-slate-50" data-mobile-section-label>{{ $mobileSection }}</p>
                 </div>

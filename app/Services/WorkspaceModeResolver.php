@@ -29,6 +29,15 @@ final class WorkspaceModeResolver
     ): WorkspaceModeContextData {
         $routeName = $request->route()?->getName();
 
+        // Home is always the global overview, independent of the last Workspace.
+        if ($routeName === 'home') {
+            return new WorkspaceModeContextData(
+                mode: WorkspaceMode::Overview,
+                source: WorkspaceModeSource::Default,
+                routeName: $routeName,
+            );
+        }
+
         if (
             $explicit instanceof WorkspaceMode
             && $this->isPublic($explicit)

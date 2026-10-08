@@ -98,6 +98,9 @@ jobs:
           php -l app/Http/Controllers/PlanActionDraftSpotlightController.php
           php -l database/migrations/2026_10_08_190000_add_action_draft_spotlight_acknowledged_to_plans.php
           php -l tests/Feature/PlanActionDraftSpotlightV5876Test.php
+          php -l app/Services/WorkspaceNavigationService.php
+          php -l app/Http/Middleware/RememberWorkspaceScreen.php
+          php -l tests/Feature/ContextualWorkspaceNavigationV5883Test.php
           php -l app/Http/Controllers/AdaptiveLearningController.php
           php -l app/Services/AdaptiveLearningBankQueueService.php
           php -l app/Models/LearningRun.php
@@ -138,6 +141,8 @@ jobs:
           php -l tests/Feature/DevelopmentTeamTaskDependencyV5869Test.php
       - run: php artisan view:cache
       - run: php artisan migrate --force
+      - name: V58.83 Contextual workspace navigation
+        run: php artisan test tests/Feature/ContextualWorkspaceNavigationV5883Test.php
       - name: V56.12 workspace resume and session scope
         run: php artisan test tests/Feature/WorkspaceResumeAndSessionScopeV5612Test.php
       - name: V54.2 Workspace persistence regression

@@ -49,7 +49,8 @@ class WorkspaceModePersistenceV542Test extends TestCase
 
         $this->actingAs($user)
             ->get(route('home'))
-            ->assertRedirect(route('workspace.study.top'));
+            ->assertOk()
+            ->assertSee('data-workspace-mode="overview"', false);
     }
 
     public function test_plan_deep_link_overrides_manual_choice_without_erasing_it(): void
@@ -62,7 +63,7 @@ class WorkspaceModePersistenceV542Test extends TestCase
         $this->actingAs($user)
             ->get(route('plans.show', $study))
             ->assertOk()
-            ->assertSee('data-current-workspace-mode="study"', false)
+            ->assertSee('data-workspace-mode="study"', false)
             ->assertSee('data-workspace-mode-source="plan_profile"', false)
             ->assertSee('Planに追従');
 
@@ -73,7 +74,8 @@ class WorkspaceModePersistenceV542Test extends TestCase
 
         $this->actingAs($user)
             ->get(route('home'))
-            ->assertRedirect(route('workspace.development.top'));
+            ->assertOk()
+            ->assertSee('data-workspace-mode="overview"', false);
     }
 
     public function test_strong_domain_route_overrides_manual_choice(): void
@@ -108,9 +110,9 @@ class WorkspaceModePersistenceV542Test extends TestCase
         $this->actingAs($user)
             ->get(route('home'))
             ->assertOk()
-            ->assertSee('data-current-workspace-mode="overview"', false)
+            ->assertSee('data-workspace-mode="overview"', false)
             ->assertSee('data-workspace-mode-source="default"', false)
-            ->assertSee('data-workspace-mode-preference="auto"', false);
+            ->assertSee('data-navigation-shell="global"', false);
     }
 
     public function test_guest_manual_choice_uses_session_only(): void
@@ -157,7 +159,8 @@ class WorkspaceModePersistenceV542Test extends TestCase
 
         $this->actingAs($user)
             ->get(route('home'))
-            ->assertRedirect(route('workspace.career.index'));
+            ->assertOk()
+            ->assertSee('data-workspace-mode="overview"', false);
     }
 
     public function test_unknown_mode_cannot_be_persisted(): void

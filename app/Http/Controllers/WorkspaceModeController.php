@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\WorkspaceMode;
 use App\Services\WorkspaceModePreference;
+use App\Services\WorkspaceNavigationService;
 use App\Services\WorkspaceModeRegistry;
 use App\Services\PersonalizationLivingProfileService;
 use Illuminate\Http\RedirectResponse;
@@ -17,7 +18,18 @@ final class WorkspaceModeController extends Controller
     ): RedirectResponse {
         $mode = $this->publicMode($workspaceMode, $registry);
 
-        return $this->redirectForMode($mode);
+        return $mode === WorkspaceMode::Overview
+            ? $this->redirectForMode($mode)
+            : redirect()->to(app(WorkspaceNavigationService::class)->resumeUrl(request(), $mode));
+    }
+
+    public function resume(Request $request, WorkspaceNavigationService $navigation): RedirectResponse
+    {
+        $mode = $navigation->lastMode($request);
+        if (! in_array($mode->value, app(WorkspaceModeRegistry::class)->publicKeys(), true)) {
+            return redirect()->route('home');
+        }
+        return redirect()->to($navigation->resumeUrl($request, $mode));
     }
 
     public function select(
@@ -45,7 +57,9 @@ final class WorkspaceModeController extends Controller
             );
         }
 
-        return $this->redirectForMode($mode);
+        return $mode === WorkspaceMode::Overview
+            ? $this->redirectForMode($mode)
+            : redirect()->to(app(WorkspaceNavigationService::class)->resumeUrl($request, $mode));
     }
 
     public function reset(

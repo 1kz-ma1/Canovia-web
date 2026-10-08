@@ -27,13 +27,9 @@
     };
 
     $desktopHomeActive = in_array($surface, ['home', 'calendar'], true);
-    $desktopConstellationActive = $surface === 'roadmap';
-    $desktopExecutionActive = false;
     $desktopTimelineActive = $surface === 'timeline';
 
     $mobileHomeActive = in_array($surface, ['home', 'calendar'], true);
-    $mobileConstellationActive = $surface === 'roadmap';
-    $mobileExecutionActive = false;
     $mobileTimelineActive = $surface === 'timeline';
 
     $feedbackPlan = request()->route('plan');
@@ -85,12 +81,8 @@
                 'className' => 'nav-link pk-nav-link whitespace-nowrap'.($desktopHomeActive ? ' nav-link-active' : ''),
                 'ariaCurrent' => null,
             ],
-            'desktop-constellation' => [
-                'className' => 'nav-link pk-nav-link whitespace-nowrap'.($desktopConstellationActive ? ' nav-link-active' : ''),
-                'ariaCurrent' => null,
-            ],
-            'desktop-execution' => [
-                'className' => 'nav-link pk-nav-link whitespace-nowrap'.($desktopExecutionActive ? ' nav-link-active' : ''),
+            'desktop-workspace' => [
+                'className' => 'nav-link pk-nav-link whitespace-nowrap',
                 'ariaCurrent' => null,
             ],
             'desktop-timeline' => [
@@ -105,13 +97,9 @@
                 'className' => 'mobile-tabbar-link'.($mobileHomeActive ? ' is-active' : ''),
                 'ariaCurrent' => $mobileHomeActive ? 'page' : 'false',
             ],
-            'mobile-constellation' => [
-                'className' => 'mobile-tabbar-link'.($mobileConstellationActive ? ' is-active' : ''),
-                'ariaCurrent' => $mobileConstellationActive ? 'page' : 'false',
-            ],
-            'mobile-execution' => [
-                'className' => 'mobile-tabbar-link mobile-tabbar-primary'.($mobileExecutionActive ? ' is-active' : ''),
-                'ariaCurrent' => $mobileExecutionActive ? 'page' : 'false',
+            'mobile-workspace' => [
+                'className' => 'mobile-tabbar-link',
+                'ariaCurrent' => 'false',
             ],
             'mobile-timeline' => [
                 'className' => 'mobile-tabbar-link'.($mobileTimelineActive ? ' is-active' : ''),
