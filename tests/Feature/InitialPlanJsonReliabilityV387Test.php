@@ -157,7 +157,61 @@ class InitialPlanJsonReliabilityV387Test extends TestCase
         $this->actingAs($user)
             ->get(route('workspace.development.index', ['plan_id' => $plan->id]))
             ->assertOk()
-            ->assertSee('画面を1つ作る');
+            ->assertSee('画面を1つ作る')
+            ->assertSee('data-development-import-confirmation', false)
+            ->assertSee('AIが生成した初期タスクを登録しました。');
+
+        // Retry after a lost PWA/iOS redirect: same Plan, same destination,
+        // no duplicate Task and an accurate confirmation for this retry.
+        $this->actingAs($user)
+            ->post(route('plans.ai_task_assistant.import', $plan), [
+                'return_to_workspace' => 1,
+                'tasks_json' => json_encode($payload, JSON_UNESCAPED_UNICODE),
+            ])
+            ->assertRedirect(route('workspace.development.index', ['plan_id' => $plan->id]));
+
+        $this->assertSame(1, Task::query()->where('plan_id', $plan->id)->count());
+        $this->actingAs($user)
+            ->get(route('workspace.development.index', ['plan_id' => $plan->id]))
+            ->assertOk()
+            ->assertSee('data-development-import-confirmation', false)
+            ->assertSee('重複登録せず、続きから開きました。');
+    }
+
+    public function test_return_to_workspace_does_not_change_non_development_plan_destinations(): void
+    {
+        $user = User::factory()->create();
+        $plan = $this->plan($user, '生活の計画');
+        $plan->update(['category' => '生活']);
+
+        $payload = [
+            'schema_version' => '2.0',
+            'flow' => 'plan_generation',
+            'target_plan' => ['id' => $plan->id, 'title' => $plan->title],
+            'summary' => '初期タスク',
+            'operations' => [[
+                'type' => 'add_task',
+                'client_ref' => 'task_1',
+                'title' => '最初のタスクを実行',
+                'estimated_minutes' => 30,
+                'remaining_minutes' => 30,
+                'progress_percent' => 0,
+                'status' => 'todo',
+                'priority' => 1,
+                'activation_cost' => 1,
+            ]],
+        ];
+
+        foreach ([1, 2] as $_retry) {
+            $this->actingAs($user)
+                ->post(route('plans.ai_task_assistant.import', $plan), [
+                    'return_to_workspace' => 1,
+                    'tasks_json' => json_encode($payload, JSON_UNESCAPED_UNICODE),
+                ])
+                ->assertRedirect(route('plans.show', $plan));
+        }
+
+        $this->assertSame(1, Task::query()->where('plan_id', $plan->id)->count());
     }
 
     private function plan(User $user, string $title): Plan

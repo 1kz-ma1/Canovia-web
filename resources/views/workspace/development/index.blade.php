@@ -119,6 +119,12 @@
     data-development-home-v1
     data-development-surface="{{ $developmentSurface ?? 'work' }}"
 >
+    @if ($plan && session('success'))
+        <div class="assistant-notice assistant-notice-success" role="status" data-development-import-confirmation>
+            {{ session('success') }}
+        </div>
+    @endif
+
     @include('workspace.development.partials.capability-activation', [
         'activation' => $githubCapabilityActivation ?? null,
         'plan' => $plan ?? null,
