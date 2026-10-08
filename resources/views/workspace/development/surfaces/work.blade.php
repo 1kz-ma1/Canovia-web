@@ -4,10 +4,10 @@
     // requiring GitHub setup. Intelligence still owns the Release flow
     // as soon as repository/activity/focus evidence exists.
     $localNextTask = $activeTasks->first();
+    $recentCompletedTask = $developmentRecentCompletedTask ?? null;
     $localFirstAction = ! ($developmentGithubRepository ?? null)
         && collect($developmentRecentActivity ?? [])->isEmpty()
-        && ! ($developmentFocusTask ?? null)
-        && ($localNextTask || $plan->tasks->isEmpty());
+        && ! ($developmentFocusTask ?? null);
 @endphp
 <section
             id="development-current-action"
@@ -21,11 +21,19 @@
                     @if ($localFirstAction)
                         <div data-development-local-first-action>
                             <h2 class="mt-2 text-2xl font-black text-slate-50">
-                                {{ $localNextTask?->title ?? '最初の開発Taskを作る' }}
+                                @if ($localNextTask)
+                                    {{ $localNextTask->title }}
+                                @elseif ($recentCompletedTask)
+                                    完了記録を振り返り、次の開発を決める
+                                @else
+                                    最初の開発Taskを作る
+                                @endif
                             </h2>
                             <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
                                 @if ($localNextTask)
                                     まずはこのTaskを実行しましょう。GitHubを接続しなくても進められます。成果ができたら、あとからEvidenceを関連付けられます。
+                                @elseif ($recentCompletedTask)
+                                    {{ $recentCompletedTask->title }} はTask上で完了として記録されています。作業結果を確認し、必要なら次のTaskを組み立てましょう。Taskの完了記録だけではCIやリリース成功を意味しません。
                                 @else
                                     目標を具体的なTaskに分け、最初の一歩を決めましょう。GitHubの接続は任意で、あとから設定できます。
                                 @endif
@@ -45,6 +53,15 @@
                             @if ($canEdit ?? false)
                                 <a href="{{ route('plans.tasks.execution_orchestration.show', [$plan, $localNextTask]) }}" class="btn-primary min-h-11 px-4" data-development-local-task-action>
                                     このTaskを実行する
+                                </a>
+                            @endif
+                        @elseif ($localFirstAction && $recentCompletedTask)
+                            @if ($canManage ?? false)
+                                <a href="{{ route('plans.review_assistant.show', $plan) }}" class="btn-primary min-h-11 px-4" data-development-completion-followup>
+                                    作業結果を振り返る
+                                </a>
+                                <a href="{{ route('plans.ai_task_assistant.show', ['plan' => $plan, 'return_to_workspace' => 1]) }}" class="btn-secondary min-h-11 px-4" data-development-plan-next-task>
+                                    次のTaskを計画する
                                 </a>
                             @endif
                         @elseif ($localFirstAction)
@@ -94,6 +111,15 @@
                     @else
                         <p class="mt-2 text-sm font-bold text-slate-300">まだ進行中Taskがありません。</p>
                         <p class="mt-2 text-xs leading-5 text-slate-500">PlanのTaskを作るか、GitHubを接続して開発状態を取り込みます。</p>
+                    @endif
+                    @if ($recentCompletedTask)
+                        <div class="mt-4 border-t border-white/8 pt-3" data-development-completion-context>
+                            <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">RECORDED RESULT</p>
+                            <p class="mt-1 break-words text-xs text-slate-300">{{ $recentCompletedTask->title }}</p>
+                            <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                                完了Task {{ (int) ($developmentCompletedTaskCount ?? 0) }}件 · {{ ($developmentRecentCompletedHasWorkLog ?? false) ? '作業ログあり' : 'Taskステータスのみ' }}（Release検証とは別）
+                            </p>
+                        </div>
                     @endif
                 </div>
             </div>

@@ -7,6 +7,7 @@ use App\Models\Plan;
 use App\Models\PlanArtifact;
 use App\Models\Task;
 use App\Models\User;
+use App\Models\WorkLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -193,6 +194,82 @@ class DeveloperHomeV573Test extends TestCase
             ->assertSee('data-development-home-next-action', false)
             ->assertDontSee('data-development-local-first-action', false)
             ->assertDontSee('data-development-local-task-action', false);
+    }
+
+    public function test_completed_tasks_without_github_lead_to_a_review_instead_of_restarting_onboarding(): void
+    {
+        [$user, $plan, $doing, $todo, $root] = $this->scenario();
+        $root->delete();
+
+        foreach ([$doing, $todo] as $task) {
+            $task->update([
+                'status' => 'done',
+                'progress_percent' => 100,
+                'remaining_minutes' => 0,
+            ]);
+        }
+
+        $url = route('workspace.development.index', ['plan_id' => $plan->id]);
+        $this->actingAs($user)
+            ->get($url)
+            ->assertOk()
+            ->assertSee('data-development-local-first-action', false)
+            ->assertSee('data-development-completion-followup', false)
+            ->assertSee('data-development-completion-context', false)
+            ->assertSee('完了Task 2件')
+            ->assertSee('Taskステータスのみ')
+            ->assertSee(route('plans.review_assistant.show', $plan), false)
+            ->assertDontSee('data-development-local-create-action', false)
+            ->assertDontSee('data-development-local-task-action', false);
+
+        WorkLog::query()->create([
+            'plan_id' => $plan->id,
+            'task_id' => $todo->id,
+            'task_title_snapshot' => $todo->title,
+            'worked_on' => today(),
+            'actual_minutes' => 50,
+            'progress_delta_percent' => 100,
+            'progress_before_percent' => 0,
+            'progress_after_percent' => 100,
+            'remaining_minutes_before' => 50,
+            'remaining_minutes_after' => 0,
+            'memo' => '画面の動作を確認した',
+        ]);
+
+        $this->actingAs($user)
+            ->get($url)
+            ->assertOk()
+            ->assertSee($todo->title)
+            ->assertSee('作業ログあり')
+            ->assertSee('data-development-completion-followup', false)
+            ->assertSee('data-development-plan-next-task', false);
+
+        $this->assertDatabaseCount('task_evidences', 0);
+        $this->assertDatabaseCount('intelligence_action_projections', 0);
+    }
+
+    public function test_completed_task_is_context_while_next_open_task_remains_the_primary_action(): void
+    {
+        [$user, $plan, $doing, $todo, $root] = $this->scenario();
+        $root->delete();
+        $doing->update([
+            'status' => 'done',
+            'progress_percent' => 100,
+            'remaining_minutes' => 0,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('workspace.development.index', ['plan_id' => $plan->id]))
+            ->assertOk()
+            ->assertSee('data-development-local-task-action', false)
+            ->assertSee($todo->title)
+            ->assertSee('data-development-completion-context', false)
+            ->assertSee($doing->title)
+            ->assertDontSee('data-development-completion-followup', false)
+            ->assertSee(
+                route('plans.tasks.execution_orchestration.show', [$plan, $todo]),
+                false,
+            );
     }
 
     private function scenario(): array
