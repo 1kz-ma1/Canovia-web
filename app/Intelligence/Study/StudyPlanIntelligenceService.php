@@ -8,6 +8,7 @@ use App\Intelligence\Enums\IntelligenceDomain;
 use App\Intelligence\Services\StateSnapshotStore;
 use App\Models\Plan;
 use App\Services\StudyExamDateService;
+use App\Services\StudyOfficialExamReferenceService;
 use App\Models\StudyScopeItem;
 use App\Models\Task;
 use App\Models\TaskEvidence;
@@ -24,6 +25,7 @@ final class StudyPlanIntelligenceService
         private readonly StudyExamReadinessEvaluator $readinessEvaluator,
         private readonly StateSnapshotStore $stateStore,
         private readonly StudyExamDateService $examDates,
+        private readonly StudyOfficialExamReferenceService $officialExams,
     ) {}
 
     public function evaluate(
@@ -73,6 +75,17 @@ final class StudyPlanIntelligenceService
             ->all();
 
         $deadline = $this->examDates->resolve($plan);
+        $officialReference = $this->officialExams->forPlan($plan);
+        $practiceTaskId = collect($tasks)
+            ->first(fn (array $task) =>
+                ! in_array($task['status'], ['done', 'completed', 'cancelled'], true)
+                && (int) $task['progress_percent'] < 100
+                && preg_match('/試験範囲.{0,8}(?:確定|決め|設定)/u', (string) $task['title']) !== 1
+                && preg_match('/演習|問題|復習|学習|科目A|科目B|過去問|理解度|診断|対策/u', (string) $task['title']) === 1,
+            );
+        $officialBaselineTaskId = is_array($practiceTaskId)
+            ? (int) $practiceTaskId['id']
+            : null;
 
         $state = $this->stateBuilder->build(
             IntelligenceDomain::Study,
@@ -87,6 +100,8 @@ final class StudyPlanIntelligenceService
                 'exam_date' => $deadline['exam_date'],
                 'exam_date_source' => $deadline['source'],
                 'exam_date_conflict' => $deadline['conflict'],
+                'official_exam_reference' => $officialReference,
+                'official_exam_baseline_task_id' => $officialBaselineTaskId,
             ],
             $evidence,
         );
