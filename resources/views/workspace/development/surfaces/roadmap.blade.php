@@ -49,6 +49,8 @@
                 @endif
                 @if ($plan && $roadmapSnapshot)
                     <button type="button" class="btn-secondary min-h-9 px-3 text-xs"
+                        data-roadmap-compare>仕様書の変更を確認</button>
+                    <button type="button" class="btn-secondary min-h-9 px-3 text-xs"
                         data-roadmap-context-copy data-roadmap-context-scope="overview">AI用Contextをコピー</button>
                     <a href="{{ route('workspace.development.index', ['plan_id' => $plan->id, 'surface' => 'roadmap', 'verify' => '1']) }}" class="btn-secondary min-h-9 px-3 text-xs" data-roadmap-check-github>GitHubのPR・Issue・CIを照合</a>
                 @endif
@@ -58,6 +60,12 @@
         @if ($roadmapSnapshot)
             <p class="mt-3 text-xs text-slate-400">必要な時だけ最新の仕様書から取得します。外部AIへ自動送信せず、Taskや進捗は更新しません。</p>
             <p class="mt-1 text-xs text-cyan-300" aria-live="polite" role="status" data-roadmap-context-status></p>
+            <div class="mt-3 hidden rounded-xl border border-cyan-300/15 bg-slate-950/30 p-4" data-roadmap-diff-panel>
+                <p class="text-xs font-bold text-slate-100">前回の仕様書更新との差分</p>
+                <p class="mt-1 text-xs leading-5 text-slate-400">変更は計画上の意図です。PR・CI・本番・実機の完了を意味しません。Taskや進捗は変更しません。</p>
+                <p class="mt-2 break-all text-[11px] text-slate-400" data-roadmap-diff-meta></p>
+                <div class="mt-3 grid gap-2" data-roadmap-diff-list></div>
+            </div>
             <div class="mt-2 hidden" data-roadmap-context-manual>
                 <p class="text-xs text-slate-400">端末側でコピーを許可できない場合は、以下を選択してコピーしてください。</p>
                 <textarea readonly rows="7" class="form-control mt-2 w-full text-xs" data-roadmap-context-manual-text></textarea>
@@ -252,6 +260,94 @@
                 }
             } catch (_) {
                 setStatus('Contextをコピーできませんでした。GitHub接続・閲覧権限・クリップボード設定を確認してください。');
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        root.addEventListener('click', async (event) => {
+            const button = event.target.closest('[data-roadmap-compare]');
+            if (!button || !root.contains(button) || button.disabled) return;
+
+            const panel = root.querySelector('[data-roadmap-diff-panel]');
+            const meta = root.querySelector('[data-roadmap-diff-meta]');
+            const list = root.querySelector('[data-roadmap-diff-list]');
+            if (!panel || !meta || !list) return;
+
+            button.disabled = true;
+            panel.classList.remove('hidden');
+            meta.textContent = '仕様書の履歴を照合しています…';
+            list.replaceChildren();
+            try {
+                const url = new URL(endpoint, window.location.origin);
+                url.searchParams.set('compare', '1');
+                const response = await fetch(url.toString(), {
+                    credentials: 'same-origin',
+                    headers: { Accept: 'application/json' },
+                    cache: 'no-store',
+                });
+                if (!response.ok || !(response.headers.get('content-type') || '').includes('application/json')) {
+                    throw new Error('diff_unavailable');
+                }
+                const result = await response.json();
+                if (result.schema !== 'canovia.development_roadmap_diff.v1'
+                    || !Array.isArray(result.changes)) {
+                    throw new Error('invalid_diff');
+                }
+
+                if (result.status === 'current_missing') {
+                    meta.textContent = '現在の仕様書が見つからないため、変更を判定できません。';
+                    return;
+                }
+                if (result.status === 'no_previous') {
+                    meta.textContent = '比較できる前回の仕様書revisionがありません。';
+                    return;
+                }
+                if (result.status !== 'compared' || !result.before_sha || !result.after_sha) {
+                    throw new Error('invalid_diff_status');
+                }
+
+                meta.textContent = '比較: ' + String(result.before_sha).slice(0, 12)
+                    + ' → ' + String(result.after_sha).slice(0, 12)
+                    + ' · ' + result.changes.length + '件の変更';
+                if (result.changes.length === 0) {
+                    const note = document.createElement('p');
+                    note.className = 'text-xs text-slate-400';
+                    note.textContent = '前回の仕様書revisionから開発項目テーブルに変更はありません。';
+                    list.appendChild(note);
+                    return;
+                }
+
+                const labels = { added: '追加', changed: '変更', removed: '削除' };
+                const detail = (container, caption, row) => {
+                    if (!row || typeof row !== 'object') return;
+                    const block = document.createElement('p');
+                    block.className = 'mt-1 whitespace-pre-wrap break-words text-[11px] leading-5 text-slate-400';
+                    block.textContent = caption + '：' + String(row.priority ?? 'UNSPECIFIED')
+                        + ' · 残作業 ' + String(row.next ?? '')
+                        + ' · 記載Evidence ' + String(row.evidence ?? '');
+                    container.appendChild(block);
+                };
+
+                result.changes.slice(0, 20).forEach((change) => {
+                    const card = document.createElement('article');
+                    card.className = 'min-w-0 rounded-lg border border-white/10 bg-slate-950/25 p-3';
+                    const title = document.createElement('p');
+                    title.className = 'break-words text-xs font-bold text-slate-100';
+                    title.textContent = (labels[change.kind] || '変更') + ' · ' + String(change.title ?? '');
+                    card.appendChild(title);
+                    detail(card, '変更前', change.before);
+                    detail(card, '変更後', change.after);
+                    list.appendChild(card);
+                });
+                if (result.changes.length > 20) {
+                    const note = document.createElement('p');
+                    note.className = 'text-xs text-amber-200';
+                    note.textContent = '表示は20件までです。残りは省略されています。';
+                    list.appendChild(note);
+                }
+            } catch (_) {
+                meta.textContent = '変更履歴を確認できませんでした。GitHub接続・閲覧権限を確認してください。';
             } finally {
                 button.disabled = false;
             }

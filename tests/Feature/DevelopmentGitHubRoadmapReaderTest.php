@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\DevelopmentGitHubRoadmapReader;
+use App\Services\DevelopmentRoadmapRevisionDiffer;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -52,6 +53,36 @@ final class DevelopmentGitHubRoadmapReaderTest extends TestCase
             && $request->hasHeader('Authorization', 'Bearer installation-token')
         );
 
+        Http::assertSentCount(5);
+    }
+
+    public function test_one_document_revision_is_not_presented_as_an_empty_change(): void
+    {
+        $sha = str_repeat('c', 40);
+        $markdown = "## Workstreams\n| Priority | Workstream | Existing evidence | Remaining acceptance |\n| --- | --- | --- | --- |\n| P0 | Build | - | Pending |\n";
+        $this->fakeGitHub($sha, $markdown);
+
+        $result = app(DevelopmentGitHubRoadmapReader::class)->diffFromPrevious(
+            'example/repo',
+            app(DevelopmentRoadmapRevisionDiffer::class),
+        );
+
+        $this->assertSame('no_previous', $result['status']);
+        $this->assertSame($sha, $result['after_sha']);
+        $this->assertNull($result['before_sha']);
+        $this->assertSame([], $result['changes']);
+    }
+
+    public function test_missing_current_roadmap_does_not_imply_all_items_deleted(): void
+    {
+        $this->fakeGitHub(str_repeat('d', 40), null);
+        $result = app(DevelopmentGitHubRoadmapReader::class)->diffFromPrevious(
+            'example/repo',
+            app(DevelopmentRoadmapRevisionDiffer::class),
+        );
+
+        $this->assertSame('current_missing', $result['status']);
+        $this->assertSame([], $result['changes']);
         Http::assertSentCount(5);
     }
 
@@ -122,6 +153,9 @@ final class DevelopmentGitHubRoadmapReaderTest extends TestCase
             }
             if ($url === 'https://api.github.com/repos/example/repo/commits/main') {
                 return Http::response(['sha' => $sha], 200);
+            }
+            if (str_starts_with($url, 'https://api.github.com/repos/example/repo/commits?')) {
+                return Http::response([['sha' => $sha]], 200);
             }
             if (str_starts_with($url, 'https://api.github.com/repos/example/repo/contents/docs/development/ROADMAP.md?')) {
                 if ($markdown === null) {
