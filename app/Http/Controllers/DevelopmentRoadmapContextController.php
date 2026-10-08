@@ -6,6 +6,7 @@ use App\Models\Plan;
 use App\Services\DevelopmentCreativePlanAccessService;
 use App\Services\DevelopmentGitHubRoadmapReader;
 use App\Services\DevelopmentRoadmapContextProjector;
+use App\Services\DevelopmentRoadmapRevisionDiffer;
 use App\Services\GitHubIntegrationReadinessService;
 use App\Services\GitHubWorkflowService;
 use App\Services\PlanCategoryProfileService;
@@ -29,6 +30,7 @@ final class DevelopmentRoadmapContextController extends Controller
         GitHubWorkflowService $workflow,
         DevelopmentGitHubRoadmapReader $reader,
         DevelopmentRoadmapContextProjector $projector,
+        DevelopmentRoadmapRevisionDiffer $revisionDiffer,
     ): JsonResponse {
         abort_unless($request->user(), 401);
         $ownership->authorizeView($request, $plan);
@@ -46,6 +48,7 @@ final class DevelopmentRoadmapContextController extends Controller
             'title' => ['required_if:scope,workstream', 'nullable', 'string', 'max:180'],
             'limit' => ['sometimes', 'integer', 'min:1', 'max:12'],
             'verify' => ['sometimes', 'in:0,1'],
+            'compare' => ['sometimes', 'in:0,1'],
         ]);
 
         $repository = $plan->artifacts()
@@ -73,7 +76,24 @@ final class DevelopmentRoadmapContextController extends Controller
             return response()->json(['error' => 'invalid_repository_url'], 422);
         }
 
+        $compare = ($validated['compare'] ?? '0') === '1';
+        if ($compare && (($validated['verify'] ?? '0') === '1'
+            || isset($validated['scope'])
+            || isset($validated['title'])
+            || isset($validated['priority']))) {
+            return response()->json(['error' => 'incompatible_comparison_options'], 422);
+        }
+
         try {
+            if ($compare) {
+                $diff = $reader->diffFromPrevious(
+                    (string) $parsed['repo_full_name'],
+                    $revisionDiffer,
+                );
+                return response()->json($diff)
+                    ->header('Cache-Control', 'private, no-store');
+            }
+
             $snapshot = $reader->read(
                 (string) $parsed['repo_full_name'],
                 ($validated['verify'] ?? '0') === '1',
