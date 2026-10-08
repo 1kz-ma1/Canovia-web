@@ -19,6 +19,10 @@ GitHub contains development specifications and source code. Canovia additionally
 
 Development 作業 surface shows **`AI共有内容を確認`** only for an authenticated owner of a personal Development Plan. The first click fetches and renders the candidate data **in a user-visible read-only textbox**, with `概要のみ` / `進行中Taskを含む` scope choice. No context is embedded in initial HTML, stored in session/localStorage, or sent to an LLM. Users can choose **`表示内容をコピー`** after inspecting it, with a manual-select fallback for iOS/WKWebView. Do not label this screen as “ChatGPT connected” or “OAuth authorized”.
 
+## Separate session-only preparation settings (not a connection)
+
+A user may also save/revoke future ChatGPT sharing preferences (`overview|tasks`, 1/7/30 days) in the Development Work surface. This adds only a proposal and an audit history. It never grants access to the private preview, does not issue OAuth tokens, and cannot bypass the existing owner-only endpoint. Details: [ChatGPT sharing preferences](CHATGPT_SHARING_PREFERENCES_SPEC.md).
+
 ## Deferred: ChatGPT MCP OAuth
 
 Official ChatGPT plugin MCP authorization requires an OAuth 2.1 authorization-code + PKCE (S256) flow, protected resource and authorization-server metadata, validated audience/issuer/scopes, client identification, consent and revocation. Use an established provider or a security-reviewed implementation—**do not** adapt existing HMAC provider activity credentials, reuse browser cookies as bearer tokens, mint unsigned Plan links, or expose this preview route unauthenticated. See [OpenAI plugin authentication](https://developers.openai.com/plugins/build/auth) and [MCP server](https://developers.openai.com/plugins/build/mcp-server) for current expectations.
