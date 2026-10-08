@@ -146,6 +146,9 @@ class DeveloperHomeV573Test extends TestCase
                 false,
             )
             ->assertSee('data-development-home-next-action', false)
+            ->assertSee('data-development-local-first-action', false)
+            ->assertSee('data-development-local-task-action', false)
+            ->assertSee(route('plans.tasks.execution_orchestration.show', [$plan, $plan->tasks()->where('status', 'doing')->firstOrFail()]), false)
             ->assertSee('data-development-surface-select', false)
             ->assertSee('value="repository"', false)
             ->assertSee('リポジトリ')
@@ -158,6 +161,38 @@ class DeveloperHomeV573Test extends TestCase
             ]))
             ->assertOk()
             ->assertSee('data-development-home-readiness', false);
+    }
+
+    public function test_empty_development_plan_can_start_without_a_github_repository(): void
+    {
+        [$user, $plan, $doing, $todo, $root] = $this->scenario();
+        $doing->delete();
+        $todo->delete();
+        $root->delete();
+
+        $this->actingAs($user)
+            ->get(route('workspace.development.index', ['plan_id' => $plan->id]))
+            ->assertOk()
+            ->assertSee('data-development-local-first-action', false)
+            ->assertSee('data-development-local-create-action', false)
+            ->assertSee('初期タスクを作る')
+            ->assertSee(route('plans.ai_task_assistant.show', [
+                'plan' => $plan,
+                'return_to_workspace' => 1,
+            ]), false)
+            ->assertDontSee('data-development-local-task-action', false);
+    }
+
+    public function test_connected_development_plan_keeps_release_intelligence_first(): void
+    {
+        [$user, $plan] = $this->scenario();
+
+        $this->actingAs($user)
+            ->get(route('workspace.development.index', ['plan_id' => $plan->id]))
+            ->assertOk()
+            ->assertSee('data-development-home-next-action', false)
+            ->assertDontSee('data-development-local-first-action', false)
+            ->assertDontSee('data-development-local-task-action', false);
     }
 
     private function scenario(): array
