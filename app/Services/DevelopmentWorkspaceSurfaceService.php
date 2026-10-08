@@ -16,6 +16,7 @@ final class DevelopmentWorkspaceSurfaceService
     public const SURFACES = [
         'work',
         'repository',
+        'roadmap',
         'team',
         'improvements',
         'preview',
@@ -78,6 +79,15 @@ final class DevelopmentWorkspaceSurfaceService
                 'category_label' => 'プロジェクト',
                 'category_order' => 30,
                 'surface_order' => 10,
+            ],
+            [
+                'key' => 'roadmap',
+                'label' => 'ロードマップ',
+                'description' => 'GitHub仕様書から現在の計画を確認',
+                'category_key' => 'project',
+                'category_label' => 'プロジェクト',
+                'category_order' => 30,
+                'surface_order' => 15,
             ],
             [
                 'key' => 'team',

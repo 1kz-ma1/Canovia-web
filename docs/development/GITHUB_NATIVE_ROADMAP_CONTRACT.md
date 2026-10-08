@@ -29,3 +29,7 @@ Phase 4: optional owner-approved execution Task proposals, never silent bulk upd
 Test unauthorized repo access, malicious Markdown, nonexistent IDs, missing specs, stale commits, duplicate webhooks, CI-vs-deploy distinctions and nonmutation of existing records. Device E2E remains a separate gate.
 
 Keep `docs/V*.md` as history, `docs/learning/adaptive-learning-experience-draft.md` as an active draft and `docs/wip/*` until fully reconciled. This contract does not remove generic result recording for other domains.
+
+## Phase 1 private-repository safety boundary (2026-10-08)
+
+The first runtime roadmap reader intentionally accepts **public GitHub repositories only**. A GitHub App installation token can access all installed repositories, but an installed repo is not proof that the current Canovia user personally has GitHub access to its private contents. Until actor-scoped GitHub authorization and authorization regression tests exist, the roadmap preview must **fail closed** for private/internal repositories, even when the Plan is linked and the GitHub App installation is ready. Private repository support remains a future implementation goal, not a supported capability of Phase 1.

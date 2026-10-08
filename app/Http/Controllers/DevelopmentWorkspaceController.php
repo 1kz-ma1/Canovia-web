@@ -17,6 +17,7 @@ use App\Services\DevelopmentCreativePlanAccessService;
 use App\Services\DevelopmentWorkspaceSurfaceService;
 use App\Services\CapabilityActivationService;
 use App\Services\GitHubIntegrationReadinessService;
+use App\Services\DevelopmentGitHubRoadmapReader;
 use App\Services\GitHubRepositoryWriter;
 use App\Services\GitHubWorkflowService;
 use App\Services\PlanCategoryProfileService;
@@ -44,6 +45,7 @@ final class DevelopmentWorkspaceController extends Controller
         DevelopmentImplementationBriefService $implementationBriefs,
         GitHubIntegrationReadinessService $githubReadiness,
         GitHubRepositoryWriter $githubRepositoryReader,
+        DevelopmentGitHubRoadmapReader $roadmapReader,
         GitHubWorkflowService $githubWorkflow,
         IntelligencePresentationHistoryService $history,
         IntelligenceStateChangeFeedbackService $stateChanges,
@@ -107,6 +109,8 @@ final class DevelopmentWorkspaceController extends Controller
                 'developmentSurfaceTabs' => $developmentSurfaceTabs,
                 'developmentRepositoryTree' => null,
                 'developmentRepositoryTreeError' => null,
+                'developmentRoadmap' => null,
+                'developmentRoadmapError' => null,
                 'developmentTeam' => null,
                 'developmentImprovements' => [],
                 'developmentPreview' => null,
@@ -252,6 +256,37 @@ final class DevelopmentWorkspaceController extends Controller
             }
         }
 
+        $developmentRoadmap = null;
+        $developmentRoadmapError = null;
+
+        // Only a deliberately opened Roadmap surface makes the extra GitHub
+        // API calls. The default Work surface and unrelated Plans stay fast.
+        if (
+            $developmentSurface === 'roadmap'
+            && $developmentGithubRepository
+            && (bool) data_get(
+                $developmentGithubIntegrationStatus,
+                'evidence.allowed',
+                false,
+            )
+            && (string) data_get($developmentGithubConnection, 'state', '') === 'ready'
+        ) {
+            $parsed = $githubWorkflow->parseUrl(
+                (string) $developmentGithubRepository->url,
+            );
+            $repoFullName = (string) ($parsed['repo_full_name'] ?? '');
+
+            if (($parsed['valid'] ?? false) && $repoFullName !== '') {
+                try {
+                    $developmentRoadmap = $roadmapReader->read($repoFullName);
+                } catch (\RuntimeException|\InvalidArgumentException $exception) {
+                    $developmentRoadmapError = $exception->getMessage();
+                }
+            } else {
+                $developmentRoadmapError = 'RepositoryのURLを確認してください。';
+            }
+        }
+
         $developmentTeam = $developmentSurface === 'team'
             ? $surfaces->team($plan)
             : null;
@@ -314,6 +349,8 @@ final class DevelopmentWorkspaceController extends Controller
             'developmentSurfaceTabs' => $developmentSurfaceTabs,
             'developmentRepositoryTree' => $developmentRepositoryTree,
             'developmentRepositoryTreeError' => $developmentRepositoryTreeError,
+            'developmentRoadmap' => $developmentRoadmap,
+            'developmentRoadmapError' => $developmentRoadmapError,
             'developmentTeam' => $developmentTeam,
             'developmentImprovements' => $developmentImprovements,
             'developmentPreview' => $developmentPreview,
