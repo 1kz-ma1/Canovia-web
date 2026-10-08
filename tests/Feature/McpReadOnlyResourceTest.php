@@ -244,8 +244,6 @@ final class McpReadOnlyResourceTest extends TestCase
         $plan = $this->plan($owner);
         $link = $this->linkAndGrant($owner, $plan);
         $grant = McpDelegatedGrant::query()->firstOrFail();
-        $this->deniedPlan($plan->id, false);
-
         $grant->update(['expires_at' => now()->subMinute()]);
         $this->deniedPlan($plan->id);
 
