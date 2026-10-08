@@ -56,6 +56,29 @@ final class StudyAdaptiveDecisionEngine implements CandidateDecisionEngine
             0,
         ));
 
+        if ($scopeCount === 0 && is_array(data_get($state->facts, 'official_exam_reference'))) {
+            // A published IPA syllabus cannot be "undecided" merely because
+            // the user has not imported personalized scope items.
+            $reference = (array) data_get($state->facts, 'official_exam_reference');
+            $taskId = (int) data_get($state->facts, 'official_exam_baseline_task_id', 0);
+
+            return [new DecisionCandidate(
+                type: 'establish_official_exam_baseline',
+                reasonCode: 'official_scope_known_mastery_unmeasured',
+                summary: '公式試験範囲は公開済みです。最初の演習で理解度を確認します。',
+                priority: 100,
+                confidence: new Confidence(0.94),
+                reasons: ['official_reference_known', 'learner_scope_unobserved'],
+                metadata: [
+                    'target_scope_item_id' => null,
+                    'target_task_id' => $taskId > 0 ? $taskId : null,
+                    'official_source_kind' => (string) ($reference['source_kind'] ?? ''),
+                    'official_source_url' => (string) ($reference['source_url'] ?? ''),
+                    'official_syllabus_version' => (string) ($reference['syllabus_version'] ?? ''),
+                ],
+            )];
+        }
+
         if ($scopeCount === 0) {
             return [new DecisionCandidate(
                 type: 'capture_scope',
