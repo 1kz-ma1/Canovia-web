@@ -28,7 +28,7 @@
                         <input type="radio" name="mode" value="practice" @checked(old('mode') === 'practice')>
                         <span><strong>演習モード</strong><br>正答をすぐ表示し、解説は任意で開けます</span>
                     </label>
-                    <p class="text-xs text-slate-400">模擬試験モードは検証済みの試験プロファイルと対応Question Bankがある場合だけ開始できます。</p>
+                    <p class="text-xs text-slate-400">模擬試験モード：試験別の固定問題セット・制限時間が検証できるまで未提供。検証済み試験プロファイルと対応Question Bankがある場合だけ開始できます。</p>
                 </fieldset>
                 <label class="block text-sm font-bold text-slate-100" for="question-pack">問題集</label>
                 <select class="form-control w-full" name="question_pack_id" id="question-pack" required>
