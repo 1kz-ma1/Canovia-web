@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\BehaviorEventType;
 use App\Models\BehaviorEvent;
 use App\Models\Plan;
+use App\Models\Task;
 use App\Models\User;
 use App\Models\UserPersonalizationContext;
 use App\Services\PersonalizationContextService;
@@ -558,11 +559,35 @@ class PersonalizationBootstrapV5825Test extends TestCase
                 ->where('creation_request_id', $requestId)
                 ->firstOrFail();
 
+            $firstActionUrl = $domain === 'study'
+                ? route('plans.study_scope.index', $plan)
+                : route('plans.ai_task_assistant.show', $plan);
+
             $this->actingAs($user)
                 ->get(route($workspaceRoute, ['plan_id' => $plan->id]))
                 ->assertOk()
                 ->assertSee($goal)
-                ->assertSee('data-' . $domain . '-first-plan-guidance', false);
+                ->assertSee('data-' . $domain . '-first-plan-guidance', false)
+                ->assertSee('data-' . $domain . '-first-plan-actions', false)
+                ->assertSee('href="' . $firstActionUrl . '"', false);
+
+            Task::query()->create([
+                'plan_id' => $plan->id,
+                'title' => '最初の実行タスク',
+                'estimated_minutes' => 60,
+                'remaining_minutes' => 60,
+                'progress_percent' => 0,
+                'status' => 'todo',
+                'priority' => 1,
+                'activation_cost' => 2,
+                'sort_order' => 1,
+            ]);
+
+            $this->actingAs($user)
+                ->get(route($workspaceRoute, ['plan_id' => $plan->id]))
+                ->assertOk()
+                ->assertDontSee('data-' . $domain . '-first-plan-guidance', false)
+                ->assertDontSee('data-' . $domain . '-first-plan-actions', false);
         }
     }
 
