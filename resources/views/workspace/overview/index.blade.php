@@ -223,6 +223,10 @@
                 $setupNeeded = (bool) ($summary['setup_needed'] ?? true);
                 $empty = (bool) ($summary['empty'] ?? true);
                 $workspaceUrl = (string) ($summary['workspace_url'] ?? '#');
+                $duplicatesGlobalAction = $primaryPresentation && $presentation
+                    && (int) $primaryPresentation->plan->id === (int) $plan->id
+                    && $primaryPresentation->domain === $presentation->domain
+                    && $primaryPresentation->action?->kind === $presentation->action?->kind;
                 $modeLabel = match ($mode) {
                     'study' => '学習',
                     'development' => '開発',
@@ -260,20 +264,22 @@
                             <span aria-hidden="true">{{ $plan->displayIcon() }}</span>
                             {{ $plan->title }}
                         </span>
-                        <p class="mt-4 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{{ $readinessLabel }}</p>
+                        <p class="mt-4 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">NEXT CONTEXT</p>
                         @if ($isStudy && is_array($summary['official_exam_reference'] ?? null))
                             <p class="mt-1 text-xl font-black text-slate-100">理解度の確認待ち</p>
                             <p class="mt-2 text-xs leading-5 text-slate-500">
                                 IPAの公式試験範囲は公開済みです。Canoviaへの個別登録がなくても試験範囲は未確定ではありません。
                                 現在の理解度はまだ未測定です。
                             </p>
-                            @if ($presentation?->action)
+                            @if ($presentation?->action && ! $duplicatesGlobalAction)
                                 <p class="mt-3 text-xs font-black text-amber-200" data-overview-official-study-action>{{ $presentation->action->title }}</p>
                             @endif
                         @else
-                            <p class="mt-1 text-xl font-black text-slate-100">セットアップ中</p>
+                            <p class="mt-1 text-sm font-bold text-slate-200">
+                                {{ $isStudy ? '学習の現在地を確認中' : ($isCareer ? 'Careerの活動状況を確認中' : '開発の作業状況を確認中') }}
+                            </p>
                             <p class="mt-2 text-xs leading-5 text-slate-500">
-                                {{ $isStudy ? 'Canoviaに個別の学習範囲はまだ登録されていません。' : ($isCareer ? 'Career判断に使える現実情報がまだありません。' : 'Release判断に使えるDevelopment Evidenceがまだありません。') }}
+                                このPlanの詳細や次の行動は専用Workspaceから確認できます。未観測のReadinessを数値として表示しません。
                             </p>
                         @endif
                     </div>
@@ -288,12 +294,14 @@
                             <p class="mt-1 text-2xl font-black text-slate-100">{{ $presentation->readinessDisplay() }}</p>
                             <p class="mt-1 text-xs font-bold text-slate-400">{{ $presentation->stateLabel }}</p>
                         </div>
+                        @unless ($duplicatesGlobalAction)
                         <div class="rounded-2xl border border-white/8 bg-slate-950/25 p-4">
                             <p class="text-[10px] font-black uppercase tracking-[0.14em] text-amber-200">BIGGEST GAP</p>
                             <p class="mt-1 text-sm font-black text-slate-100">{{ $presentation->gapLabel }}</p>
                             <p class="mt-4 text-[10px] font-black uppercase tracking-[0.14em] text-violet-300">CURRENT ACTION</p>
                             <p class="mt-1 text-sm font-black text-slate-100">{{ $presentation->action->title }}</p>
                         </div>
+                        @endunless
                     </div>
                 @endif
             </article>
