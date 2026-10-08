@@ -90,6 +90,8 @@ jobs:
         run: php artisan test tests/Feature/ReleaseReviewV5824Test.php
       - name: V58.25 Personalization Bootstrap
         run: php artisan test tests/Feature/PersonalizationBootstrapV5825Test.php tests/Feature/FirstRunUxV4123Test.php tests/Feature/ConversationalOnboardingV4116Test.php
+      - name: V58.61 Adaptive Bookkeeping Starting Point
+        run: php artisan test tests/Feature/BookkeepingPlacementV5861Test.php
       - name: V58.57 First Plan Import Continuity
         run: php artisan test tests/Feature/InitialPlanJsonReliabilityV387Test.php
       - name: V58.26 Capability Activation
