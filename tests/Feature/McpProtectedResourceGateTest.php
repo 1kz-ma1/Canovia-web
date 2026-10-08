@@ -8,6 +8,7 @@ use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 final class McpProtectedResourceGateTest extends TestCase
@@ -167,6 +168,32 @@ final class McpProtectedResourceGateTest extends TestCase
                 'jsonrpc' => '2.0', 'method' => 'tools/list', 'id' => 1,
             ])->assertNotFound();
         }
+    }
+
+    public function test_even_configured_idp_introspection_never_authorizes_mcp_without_real_consent_and_tools(): void
+    {
+        $this->enableDiscovery();
+        config([
+            'canovia_mcp.token_introspection_enabled' => true,
+            'canovia_mcp.introspection_url' => 'https://auth.example.test/token/introspect',
+            'canovia_mcp.introspection_client_id' => 'server-verifier',
+            'canovia_mcp.introspection_client_secret' => 'configured-server-only-secret',
+            'canovia_mcp.allowed_client_id' => 'https://chatgpt.com/oauth/client.json',
+        ]);
+        Http::fake();
+
+        $this->withHeader('Authorization', 'Bearer a-realistic-looking-but-unverified-token')
+            ->postJson('/api/mcp', [
+                'jsonrpc' => '2.0', 'id' => 2,
+                'method' => 'tools/call',
+                'params' => ['name' => 'get_development_context', 'arguments' => ['plan_id' => 1]],
+            ])
+            ->assertUnauthorized()
+            ->assertJsonPath('error', 'authorization_required');
+
+        // The isolated validator is deliberately NOT wired to this handler
+        // until session-independent consent and actor-Plan grants are ready.
+        Http::assertNothingSent();
     }
 
     private function enableDiscovery(): void
