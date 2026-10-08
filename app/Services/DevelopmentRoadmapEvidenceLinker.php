@@ -31,18 +31,18 @@ final class DevelopmentRoadmapEvidenceLinker
                 continue;
             }
 
-            // Explicit "PR #12", "PR #12–#14" and subsequent "#20–#22".
-            // Never pick up unrelated single "#123" mentions.
+            // Only explicitly prefixed "PR #12" or "PR #12–#14".
+            // Issue ranges and generic hashtags are never inferred as PRs.
             preg_match_all(
-                '/\bPR\s*#\s*(\d{1,6})(?:\s*[-–—]\s*#?\s*(\d{1,6}))?|(?<![a-z0-9])#\s*(\d{1,6})\s*[-–—]\s*#?\s*(\d{1,6})/iu',
+                '/\bPR\s*#\s*(\d{1,6})(?:\s*[-–—]\s*#?\s*(\d{1,6}))?/iu',
                 $text,
                 $matches,
                 PREG_SET_ORDER | PREG_UNMATCHED_AS_NULL,
             );
 
             foreach ($matches as $match) {
-                $start = (int) ($match[1] ?: ($match[3] ?? 0));
-                $end = (int) ($match[2] ?: ($match[4] ?? $start));
+                $start = (int) ($match[1] ?? 0);
+                $end = (int) ($match[2] ?? $start);
                 if ($start < 1 || $end < $start || $end - $start > 7) {
                     continue;
                 }

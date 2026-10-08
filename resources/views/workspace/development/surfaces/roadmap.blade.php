@@ -50,7 +50,7 @@
                 {{ $sourceRepository }} · {{ data_get($roadmapSnapshot, 'source.path') }} · {{ mb_substr($sourceSha, 0, 12) }}
             </p>
             @if ($evidenceChecked)
-                <p class="mt-2 text-xs text-cyan-300">PR状態をGitHubで照合済み · {{ $verifiedAt }} · CIはPR headの観測値であり必須CI・本番・実機の完了を意味しません。</p>
+                <p class="mt-2 text-xs text-cyan-300">PR状態の照合を試行 · {{ $verifiedAt }} · CIはPR headの観測値であり必須CI・本番・実機の完了を意味しません。</p>
             @endif
             @foreach ($roadmapWarnings as $warning)
                 <p class="mt-2 text-xs text-amber-200">{{ $warning }}</p>
@@ -88,7 +88,11 @@
                         <p class="mt-1 text-xs leading-5 text-slate-300">{{ data_get($row, 'evidence', '') }}</p>
                         @foreach (collect(data_get($row, 'github_signals', [])) as $signal)
                             <div class="mt-2 rounded-lg border border-cyan-300/10 bg-cyan-300/[0.025] px-3 py-2 text-xs" data-roadmap-pr-observation>
-                                <a href="{{ data_get($signal, 'url', '#') }}" target="_blank" rel="noopener noreferrer" class="font-black text-cyan-300">PR #{{ (int) data_get($signal, 'number', 0) }} ↗</a>
+                                @if (data_get($signal, 'url'))
+                                    <a href="{{ data_get($signal, 'url') }}" target="_blank" rel="noopener noreferrer" class="font-black text-cyan-300">PR #{{ (int) data_get($signal, 'number', 0) }} ↗</a>
+                                @else
+                                    <span class="font-black text-cyan-300">PR #{{ (int) data_get($signal, 'number', 0) }}</span>
+                                @endif
                                 <span class="ml-2 text-slate-300">{{ $mergeStates[data_get($signal, 'merge_state', 'unknown')] ?? $mergeStates['unknown'] }}</span>
                                 <span class="mt-1 block text-[11px] text-slate-500">{{ $ciStates[data_get($signal, 'ci_state', 'unknown')] ?? $ciStates['unknown'] }}
                                     @if (data_get($signal, 'ci_sha'))

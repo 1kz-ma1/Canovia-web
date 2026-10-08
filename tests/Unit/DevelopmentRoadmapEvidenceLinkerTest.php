@@ -11,8 +11,8 @@ final class DevelopmentRoadmapEvidenceLinkerTest extends TestCase
     {
         $linker = new DevelopmentRoadmapEvidenceLinker;
         $references = $linker->references([
-            ['evidence' => 'PR #362–#366 shipped; #371–#373 legacy shell'],
-            ['evidence' => 'v58.3, Issue #999, #12, and no explicit PR'],
+            ['evidence' => 'PR #362–#366 shipped; PR #371–#373 legacy shell'],
+            ['evidence' => 'v58.3, Issue #999-#1000, #12, and no explicit PR'],
             ['evidence' => 'PR #373 merged'],
             ['evidence' => 'PR #100–#99999 invalid and PR #7–#6 backward'],
         ]);

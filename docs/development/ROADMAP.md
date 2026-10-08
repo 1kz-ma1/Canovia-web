@@ -8,7 +8,7 @@ Planned = intent. Implemented = code integrated. CI verified = checks for exact 
 | Priority | Workstream | Existing evidence | Remaining acceptance |
 | --- | --- | --- | --- |
 | P0 | Release stability | V58 Workspace/Learning work, PR #373 merged | Confirm specific Render deploy; old/new Learning resume, permissions, autosave, iPhone/PWA/PC E2E |
-| P0 | Adaptive Learning | PR #362–#366 single-question events, candidate queue, exam framework, mode recommendation, adjustment; #371–#373 legacy resume/immersion | Multiple response types, calibrated evidence/history, real-world study verification; official exam profiles only with verified sources |
+| P0 | Adaptive Learning | PR #362–#366 single-question events, candidate queue, exam framework, mode recommendation, adjustment; PR #371–#373 legacy resume/immersion | Multiple response types, calibrated evidence/history, real-world study verification; official exam profiles only with verified sources |
 | P0 | GitHub-native roadmap | GitHub App read-only Markdown preview merged in PR #377; optional PR/CI matching being implemented | Verify linked PR states, missing permissions, CI-vs-deploy distinction; no bulk Task JSON mutation |
 | P1 | iOS | V52.0 SwiftUI/WKWebView bridge foundation | Latest regression E2E, signing, TestFlight, StoreKit purchase/restore |
 | P1 | Pricing / telemetry | ProductKey/Entitlement, BehaviorEvent and AI telemetry | Numerical prices/allowances, MRR/MAU/AI cost/gross-margin dashboard |
