@@ -4,6 +4,12 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void {
+        // MySQL may commit CREATE TABLE before a later index operation fails.
+        // Preserve existing answer adjustments when retrying a partial deploy.
+        if (Schema::hasTable('learning_answer_evaluation_adjustments')) {
+            return;
+        }
+
         Schema::create('learning_answer_evaluation_adjustments', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('learning_answer_event_id')->constrained('learning_answer_events')->cascadeOnDelete();
