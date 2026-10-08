@@ -2468,7 +2468,7 @@ final class GitHubRepositoryWriter
             throw new RuntimeException('Roadmap前回revisionの形式またはサイズが不正です。');
         }
         $content = base64_decode(
-            preg_replace('/\\s+/', '', $file['content']) ?: '',
+            preg_replace('/\s+/', '', $file['content']) ?: '',
             true,
         );
         if (! is_string($content)
