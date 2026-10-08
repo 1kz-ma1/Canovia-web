@@ -128,8 +128,22 @@
                     @endif
                     @php
                         $hasSteps = $draft->steps->isNotEmpty();
-                        $stepsCurrent = $hasSteps && $draft->steps->every(fn ($step) => (int) $step->evidence_revision === (int) $draft->revision_no);
+                        $stepsCurrent = $hasSteps && $stepService->isCurrent($plan, $draft, $draft->steps);
+                        $currentTitles = $hasSteps ? $draft->steps->pluck('title')->all() : [$draft->suggested_next_action];
+                        $qualityReview = $quality->review($plan, $draft, $currentTitles);
                     @endphp
+                    @if ($draft->status === 'proposed')
+                        <aside class="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs leading-6 text-slate-700" data-draft-quality>
+                            <p class="font-bold">承認前の確認</p>
+                            <p>{{ $qualityReview['source_count'] }}件の根拠（{{ $qualityReview['has_observed_evidence'] ? '実績・観測記録を含む' : '自己申告のみ' }}）。内容の正確さや達成度は自動判定していません。</p>
+                            @if ($qualityReview['template_prompt'])
+                                <p>現在の文言は一般的な確認案です。必要なら実行しやすい内容に直してください。</p>
+                            @endif
+                            @if ($qualityReview['duplicate_titles'])
+                                <p class="font-semibold text-amber-800">同じ名前の未完了Taskがすでにあります：{{ implode('／', $qualityReview['duplicate_titles']) }}。重複が意図どおりか確認してください。</p>
+                            @endif
+                        </aside>
+                    @endif
                     @if ($hasSteps)
                         <section class="mt-4 rounded-xl border border-sky-200 p-4" data-action-draft-steps="{{ $draft->id }}">
                             <h3 class="text-sm font-bold text-sky-900">3段階のステップ案（{{ $draft->status === 'accepted' ? '承認済み' : '未承認' }}）</h3>
@@ -153,6 +167,7 @@
                                     <form method="POST" action="{{ route('plans.action_drafts.steps.update', [$plan, $draft]) }}" class="mt-4 space-y-3">
                                         @csrf @method('PATCH')
                                         <input type="hidden" name="evidence_revision" value="{{ $draft->revision_no }}">
+                                        <input type="hidden" name="expected_steps_fingerprint" value="{{ $stepService->fingerprint($draft->steps) }}">
                                         @foreach ($draft->steps as $step)
                                             <label class="block text-xs font-semibold text-slate-700" for="step-title-{{ $step->id }}">STEP {{ $step->sort_order }} の作業名</label>
                                             <input id="step-title-{{ $step->id }}" name="step_titles[{{ $step->id }}]" maxlength="255" required class="form-control w-full" value="{{ $step->title }}">
@@ -178,6 +193,8 @@
                         <form method="POST" action="{{ route('plans.action_drafts.update', [$plan, $draft]) }}" class="mt-3 space-y-2">
                             @csrf @method('PATCH')
                             <label class="block text-xs font-bold text-slate-700" for="next-{{ $draft->id }}">次の行動案（編集可）</label>
+                            <input type="hidden" name="expected_revision" value="{{ $draft->revision_no }}">
+                            <input type="hidden" name="expected_candidate_fingerprint" value="{{ hash('sha256', $draft->suggested_next_action) }}">
                             <input id="next-{{ $draft->id }}" name="suggested_next_action" class="form-control w-full" maxlength="255" required value="{{ $draft->suggested_next_action }}">
                             <button type="submit" class="btn-secondary">案を修正する</button>
                         </form>
@@ -207,11 +224,15 @@
                             @if (! $hasSteps)
                                 <form method="POST" action="{{ route('plans.action_drafts.accept', [$plan, $draft]) }}">
                                     @csrf <input type="hidden" name="accept_mode" value="single">
+                                    <input type="hidden" name="expected_revision" value="{{ $draft->revision_no }}">
+                                    <input type="hidden" name="expected_candidate_fingerprint" value="{{ hash('sha256', $draft->suggested_next_action) }}">
                                     <button type="submit" class="btn-primary">承認してTaskを1件追加</button>
                                 </form>
                             @elseif ($stepsCurrent)
                                 <form method="POST" action="{{ route('plans.action_drafts.accept', [$plan, $draft]) }}">
                                     @csrf <input type="hidden" name="accept_mode" value="bundle">
+                                    <input type="hidden" name="expected_revision" value="{{ $draft->revision_no }}">
+                                    <input type="hidden" name="expected_candidate_fingerprint" value="{{ hash('sha256', $draft->suggested_next_action) }}">
                                     <input type="hidden" name="steps_fingerprint" value="{{ $stepService->fingerprint($draft->steps) }}">
                                     <button type="submit" class="btn-primary">3つのTaskと前提関係を確認して承認</button>
                                 </form>

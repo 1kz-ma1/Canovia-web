@@ -10,6 +10,7 @@ use App\Services\PlanActivityService;
 use App\Services\PlanActionDraftEvidenceService;
 use App\Services\PlanActionDraftTypedEvidenceService;
 use App\Services\PlanActionDraftStepService;
+use App\Services\PlanActionDraftQualityService;
 use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +19,7 @@ use Illuminate\Validation\ValidationException;
 
 final class PlanActionDraftController extends Controller
 {
-    public function index(Request $request, Plan $plan, PlanOwnershipService $ownership, PlanActionDraftTypedEvidenceService $typed, PlanActionDraftStepService $stepService)
+    public function index(Request $request, Plan $plan, PlanOwnershipService $ownership, PlanActionDraftTypedEvidenceService $typed, PlanActionDraftStepService $stepService, PlanActionDraftQualityService $quality)
     {
         $ownership->authorizePlan($request, $plan);
         $drafts = PlanActionDraft::with(['revisions', 'steps'])->where('plan_id', $plan->id)->latest('id')->limit(20)->get();
@@ -29,7 +30,7 @@ final class PlanActionDraftController extends Controller
         $multiRequestId = (string) Str::uuid();
         $observedRequestId = (string) Str::uuid();
         $typedEvidence = $typed->available($plan);
-        return view('plans.action_drafts', compact('plan', 'drafts', 'workLogs', 'requestId', 'multiRequestId', 'observedRequestId', 'typedEvidence', 'stepService'));
+        return view('plans.action_drafts', compact('plan', 'drafts', 'workLogs', 'requestId', 'multiRequestId', 'observedRequestId', 'typedEvidence', 'stepService', 'quality'));
     }
 
     public function store(Request $request, Plan $plan, PlanOwnershipService $ownership)
@@ -73,14 +74,39 @@ final class PlanActionDraftController extends Controller
             ->with('success', '行動案を作成しました。承認するまでTaskは変更されません。');
     }
 
-    public function update(Request $request, Plan $plan, PlanActionDraft $draft, PlanOwnershipService $ownership)
+    public function update(Request $request, Plan $plan, PlanActionDraft $draft, PlanOwnershipService $ownership, PlanActionDraftEvidenceService $evidence)
     {
         $ownership->authorizePlan($request, $plan);
         $this->withinPlan($plan, $draft);
-        abort_unless($draft->status === PlanActionDraft::PROPOSED, 409);
-        $validated = $request->validate(['suggested_next_action' => ['required', 'string', 'max:255']]);
-        $draft->update(['suggested_next_action' => trim($validated['suggested_next_action'])]);
-        return redirect()->route('plans.action_drafts.index', $plan);
+        $validated = $request->validate([
+            'suggested_next_action' => ['required', 'string', 'max:255'],
+            'expected_revision' => ['sometimes', 'integer', 'min:1'],
+            'expected_candidate_fingerprint' => ['sometimes', 'string', 'size:64'],
+        ]);
+        $action = trim($validated['suggested_next_action']);
+        if ($action === '') {
+            throw ValidationException::withMessages(['suggested_next_action' => '具体的な作業名を入力してください。']);
+        }
+
+        DB::transaction(function () use ($plan, $draft, $validated, $action, $evidence) {
+            $locked = PlanActionDraft::where('plan_id', $plan->id)
+                ->whereKey($draft->id)->lockForUpdate()->firstOrFail();
+            abort_unless($locked->status === PlanActionDraft::PROPOSED, 409);
+            if (isset($validated['expected_revision'])) {
+                abort_unless((int) $validated['expected_revision'] === (int) $locked->revision_no, 409);
+            }
+            if (isset($validated['expected_candidate_fingerprint'])) {
+                abort_unless(hash_equals($evidence->candidateFingerprint($locked), $validated['expected_candidate_fingerprint']), 409);
+            }
+            if ($action !== $locked->suggested_next_action) {
+                // Prepared steps deliberately remain on record, but become
+                // stale because their proposal_fingerprint will not match.
+                $locked->update(['suggested_next_action' => $action]);
+            }
+        });
+
+        return redirect()->route('plans.action_drafts.index', $plan)
+            ->with('success', '提案の内容を更新しました。既存のステップ案は必要に応じて再作成してください。');
     }
 
     public function accept(
@@ -99,6 +125,8 @@ final class PlanActionDraftController extends Controller
         $validated = $request->validate([
             'accept_mode' => ['sometimes', 'in:single,bundle'],
             'steps_fingerprint' => ['sometimes', 'string', 'size:64'],
+            'expected_revision' => ['sometimes', 'integer', 'min:1'],
+            'expected_candidate_fingerprint' => ['sometimes', 'string', 'size:64'],
         ]);
 
         DB::transaction(function () use ($plan, $draft, $request, $activity, $stepService, $validated) {
@@ -106,6 +134,13 @@ final class PlanActionDraftController extends Controller
                 ->whereKey($draft->id)->lockForUpdate()->firstOrFail();
             if ($locked->status === PlanActionDraft::ACCEPTED) return;
             abort_unless($locked->status === PlanActionDraft::PROPOSED, 409);
+            if (isset($validated['expected_revision'])) {
+                abort_unless((int) $locked->revision_no === (int) $validated['expected_revision'], 409);
+            }
+            if (isset($validated['expected_candidate_fingerprint'])) {
+                abort_unless(hash_equals(hash('sha256', $locked->suggested_next_action),
+                    $validated['expected_candidate_fingerprint']), 409);
+            }
 
             $steps = $locked->steps()->get();
             $isBundle = $steps->isNotEmpty();
@@ -113,11 +148,7 @@ final class PlanActionDraftController extends Controller
             abort_unless($mode === ($isBundle ? 'bundle' : 'single'), 409);
 
             if ($isBundle) {
-                abort_unless($steps->count() === PlanActionDraftStepService::STEP_COUNT, 409);
-                abort_unless($steps->every(fn ($step) =>
-                    (int) $step->evidence_revision === (int) $locked->revision_no
-                    && trim((string) $step->title) !== ''
-                ), 409);
+                abort_unless($stepService->isCurrent($plan, $locked, $steps), 409);
                 abort_unless(isset($validated['steps_fingerprint'])
                     && hash_equals($stepService->fingerprint($steps), $validated['steps_fingerprint']), 409);
             }
@@ -190,8 +221,7 @@ final class PlanActionDraftController extends Controller
 
             if ($existing->isNotEmpty() && ! ($validated['rebuild'] ?? false)) {
                 // Stale bundles are never silently discarded.
-                abort_unless($existing->every(fn ($step) =>
-                    (int) $step->evidence_revision === (int) $locked->revision_no), 409);
+                abort_unless($stepService->isCurrent($plan, $locked, $existing), 409);
                 return;
             }
 
@@ -200,6 +230,7 @@ final class PlanActionDraftController extends Controller
                 $locked->steps()->create([
                     'sort_order' => $index + 1,
                     'evidence_revision' => (int) $locked->revision_no,
+                    'proposal_fingerprint' => $stepService->proposalFingerprint($plan, $locked),
                     'title' => $title,
                 ]);
             }
@@ -215,25 +246,28 @@ final class PlanActionDraftController extends Controller
         Plan $plan,
         PlanActionDraft $draft,
         PlanOwnershipService $ownership,
+        PlanActionDraftStepService $stepService,
     ) {
         $ownership->authorizePlan($request, $plan);
         $this->withinPlan($plan, $draft);
         $validated = $request->validate([
             'evidence_revision' => ['required', 'integer', 'min:1'],
+            'expected_steps_fingerprint' => ['sometimes', 'string', 'size:64'],
             'step_titles' => ['required', 'array', 'size:3'],
             'step_titles.*' => ['required', 'string', 'max:255'],
         ]);
 
-        DB::transaction(function () use ($plan, $draft, $validated) {
+        DB::transaction(function () use ($plan, $draft, $validated, $stepService) {
             $locked = PlanActionDraft::where('plan_id', $plan->id)
                 ->whereKey($draft->id)->lockForUpdate()->firstOrFail();
             abort_unless($locked->status === PlanActionDraft::PROPOSED, 409);
             abort_unless((int) $locked->revision_no === (int) $validated['evidence_revision'], 409);
 
             $steps = $locked->steps()->get();
-            abort_unless($steps->count() === PlanActionDraftStepService::STEP_COUNT, 409);
-            abort_unless($steps->every(fn ($step) =>
-                (int) $step->evidence_revision === (int) $locked->revision_no), 409);
+            abort_unless($stepService->isCurrent($plan, $locked, $steps), 409);
+            if (isset($validated['expected_steps_fingerprint'])) {
+                abort_unless(hash_equals($stepService->fingerprint($steps), $validated['expected_steps_fingerprint']), 409);
+            }
 
             $actual = $steps->pluck('id')->map(fn ($id) => (int) $id)->sort()->values()->all();
             $provided = array_map('intval', array_keys($validated['step_titles']));

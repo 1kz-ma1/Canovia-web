@@ -19,6 +19,29 @@ final class PlanActionDraftStepService
 
     public function __construct(private readonly PlanCategoryProfileService $profiles) {}
 
+    /** Tie a bundle to both the current action text and the current domain. */
+    public function proposalFingerprint(Plan $plan, PlanActionDraft $draft): string
+    {
+        return hash('sha256', json_encode([
+            'revision' => (int) $draft->revision_no,
+            'candidate' => trim((string) $draft->suggested_next_action),
+            'domain' => $this->profiles->forPlan($plan)->key,
+        ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+    }
+
+    public function isCurrent(Plan $plan, PlanActionDraft $draft, Collection $steps): bool
+    {
+        if ($steps->count() !== self::STEP_COUNT) return false;
+        $fingerprint = $this->proposalFingerprint($plan, $draft);
+
+        return $steps->every(fn ($step) =>
+            (int) $step->evidence_revision === (int) $draft->revision_no
+            && $step->proposal_fingerprint !== null
+            && hash_equals($fingerprint, (string) $step->proposal_fingerprint)
+            && trim((string) $step->title) !== ''
+        );
+    }
+
     /** Stable snapshot of the proposed bundle reviewed in the accept form. */
     public function fingerprint(Collection $steps): string
     {
@@ -27,6 +50,7 @@ final class PlanActionDraftStepService
             (int) $step->sort_order,
             (int) $step->evidence_revision,
             (string) $step->title,
+            (string) $step->proposal_fingerprint,
         ])->values()->all(), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
     }
 
