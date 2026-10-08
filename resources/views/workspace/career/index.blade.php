@@ -20,9 +20,9 @@
             <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div class="max-w-3xl">
                     <p class="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-300">CAREER WORKSPACE</p>
-                    <h1 class="mt-2 text-2xl font-black text-slate-50 sm:text-3xl">選考の事実から、次に処理すべきActionを見る。</h1>
+                    <h1 class="mt-2 text-2xl font-black text-slate-50 sm:text-3xl">{{ $plan ? '選考の事実から、次に処理すべきActionを見る。' : 'やりたい仕事が決まっていなくても、就活を始められます。' }}</h1>
                     <p class="mt-2 text-sm leading-6 text-slate-400">
-                        内定確率や市場価値は評価しません。Career Capture・応募・面接・ReviewのStateから、今のProcess Gapと次Actionだけを判断します。
+                        {{ $plan ? '内定確率や市場価値は評価しません。Career Capture・応募・面接・ReviewのStateから、今のProcess Gapと次Actionだけを判断します。' : '職種が決まっている方も、これから探す方も、自分の現在地から始められます。' }}
                     </p>
                 </div>
 
@@ -59,17 +59,52 @@
     </section>
 
     @if (! $plan)
-        <div data-career-workspace-no-plan>
-            @include('workspace.partials.mode-onboarding', [
-                'modeOnboarding' => $modeOnboarding ?? null,
-            ])
-        </div>
+        <section class="page-card p-5 sm:p-6" data-career-workspace-no-plan data-career-first-use-choices>
+            <p class="text-[10px] font-black uppercase tracking-[.16em] text-emerald-300">START YOUR CAREER</p>
+            <h2 class="mt-2 text-xl font-black text-slate-50">今の状況に近いものを選んでください</h2>
+            <p class="mt-2 text-xs leading-5 text-slate-400">診断は任意です。あとから診断を追加したり、職種への関心を変更したりできます。</p>
+            <div class="mt-5 grid gap-3 md:grid-cols-3">
+                <a
+                    href="{{ route('plans.create.manual', ['workspace_mode' => 'career']) }}"
+                    class="block rounded-2xl border border-white/12 bg-slate-950/30 p-5 transition hover:border-emerald-300/40"
+                    data-career-first-use-known
+                >
+                    <h3 class="text-base font-black text-slate-100">やりたい職種が決まっている</h3>
+                    <p class="mt-2 text-xs leading-5 text-slate-400">希望の仕事をもとにCareer Planを作り、企業・応募・面接を整理します。</p>
+                    <span class="mt-4 inline-block text-xs font-bold text-emerald-300">Planを作る →</span>
+                </a>
+                <a
+                    href="{{ route('career.explore.show') }}"
+                    class="block rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.035] p-5 transition hover:border-emerald-300/40"
+                    data-career-first-use-canovia
+                >
+                    <h3 class="text-base font-black text-slate-100">Canoviaで診断する</h3>
+                    <p class="mt-2 text-xs leading-5 text-slate-400">興味・価値観・希望条件を短く整理し、最初に調べる職種の方向性を見つけます。</p>
+                    <span class="mt-4 inline-block text-xs font-bold text-emerald-300">職種探索を始める →</span>
+                </a>
+                <a
+                    href="https://job.mynavi.jp/conts/2028/cs/matchplus_consent_2/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="block rounded-2xl border border-white/12 bg-slate-950/30 p-5 transition hover:border-emerald-300/40"
+                    data-career-first-use-match-plus
+                >
+                    <h3 class="text-base font-black text-slate-100">MATCH plusで診断する</h3>
+                    <p class="mt-2 text-xs leading-5 text-slate-400">マイナビの公式サイトで診断します。結果PDFは保存しておけます。外部サイトで開きます。</p>
+                    <span class="mt-4 inline-block text-xs font-bold text-emerald-300">公式診断を開く ↗</span>
+                </a>
+            </div>
+            <p class="mt-4 text-[11px] leading-5 text-slate-500">
+                MATCH plusはマイナビが提供する別サービスです。診断結果PDFの解析・取り込みは次の実装段階で対応します。現時点ではPDFのアップロードを求めません。
+            </p>
+        </section>
     @elseif ($modeOnboarding ?? null)
         <div
             @if (data_get($modeOnboarding, 'current_step.key') === 'capture_career_signal')
                 data-career-workspace-signal-first
             @endif
         >
+            <p class="mb-3 text-xs text-slate-400">まだ職種が決まっていなければ、<a href="{{ route('career.explore.show') }}" class="font-bold text-emerald-300">Canoviaの職種探索</a>から始めても構いません。</p>
             @include('workspace.partials.mode-onboarding', [
                 'modeOnboarding' => $modeOnboarding,
             ])

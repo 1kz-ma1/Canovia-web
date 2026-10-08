@@ -45,14 +45,13 @@ class CareerWorkspaceModeV551Test extends TestCase
             ->assertOk()
             ->assertSee('data-career-workspace', false)
             ->assertSee('data-career-workspace-no-plan', false)
-            ->assertSee(
-                'data-workspace-mode-onboarding="career"',
-                false,
-            )
-            ->assertSee(
-                'data-workspace-mode-onboarding-step="create_plan"',
-                false,
-            )
+            ->assertSee('data-career-first-use-choices', false)
+            ->assertSee('data-career-first-use-known', false)
+            ->assertSee('data-career-first-use-canovia', false)
+            ->assertSee('data-career-first-use-match-plus', false)
+            ->assertSee(route('career.explore.show'), false)
+            ->assertSee('https://job.mynavi.jp/conts/2028/cs/matchplus_consent_2/', false)
+            ->assertDontSee('data-workspace-mode-onboarding="career"', false)
             ->assertSee(
                 route('plans.create.manual', [
                     'workspace_mode' => 'career',
