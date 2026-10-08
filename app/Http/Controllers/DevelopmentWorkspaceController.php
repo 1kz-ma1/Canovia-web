@@ -75,7 +75,8 @@ final class DevelopmentWorkspaceController extends Controller
         if (! $plan instanceof Plan) {
             return view('workspace.development.index', [
                 'developmentPlans' => $developmentPlans,
-                'developmentCreativeCandidates' => $developmentCreativeCandidates,
+                'developmentCreativeCandidates' => $developmentCreativeCandidates, 
+                'developmentLegacyCreativeActive' => false,
                 'plan' => null,
                 'firstUseContext' => data_get(
                     $personalizationContexts->current($request),
@@ -265,7 +266,8 @@ final class DevelopmentWorkspaceController extends Controller
 
         return view('workspace.development.index', [
             'developmentPlans' => $developmentPlans,
-                'developmentCreativeCandidates' => $developmentCreativeCandidates,
+                'developmentCreativeCandidates' => $developmentCreativeCandidates, 
+                'developmentLegacyCreativeActive' => $profiles->forPlan($plan)->key === 'creative',
             'plan' => $plan,
             'firstPlanContext' => $plan->tasks->isEmpty()
                 ? data_get(
