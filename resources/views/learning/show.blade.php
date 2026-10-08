@@ -62,6 +62,14 @@
                         </details>
                     @endif
                 </div>
+                @if(! $answer->evaluationAdjustment)
+                    <form method="POST" action="{{ route('plans.tasks.learning.evaluation_adjustments.store', [$plan, $task, $answer]) }}" class="mt-3">
+                        @csrf <input type="hidden" name="reason" value="accidental_tap">
+                        <button type="submit" class="btn-secondary">誤タップとして評価への影響を除外</button>
+                    </form>
+                @else
+                    <p class="mt-3 text-xs text-slate-400">誤タップ申告済み：正誤は保存し、学習推薦には使用しません。</p>
+                @endif
                 <form method="POST" action="{{ route('plans.tasks.learning.next', [$plan, $task, $run]) }}" class="mt-4">
                     @csrf <button type="submit" class="btn-primary">次の問題へ</button>
                 </form>
