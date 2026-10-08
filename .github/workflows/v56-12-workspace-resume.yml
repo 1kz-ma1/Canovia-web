@@ -72,6 +72,7 @@ jobs:
           php -l app/Services/StudyReviewCyclePersonalizationAdapter.php
           php -l tests/Feature/StudyReviewCyclePersonalizationV5833Test.php
           php -l tests/Feature/LongUsageWindowPersonalizationV5834Test.php
+          php -l tests/Feature/OverviewRelevanceV5865Test.php
           php -l app/Services/BookkeepingJournalEntryGrader.php
           php -l app/Services/BookkeepingJournalPracticeService.php
           php -l app/Http/Controllers/BookkeepingJournalPracticeController.php
@@ -129,5 +130,7 @@ jobs:
         run: php artisan test tests/Feature/ModelReuseV5195Test.php tests/Feature/HomeCoreBundleCostReductionV5192Test.php
       - name: Specialized Workspace regression
         run: php artisan test tests/Feature/StudyWorkspaceV543Test.php tests/Feature/DevelopmentWorkspaceV544Test.php tests/Feature/DeveloperHomeV573Test.php tests/Feature/OverviewWorkspaceV545Test.php tests/Feature/CareerWorkspaceModeV551Test.php tests/Feature/CareerExplorationEntryV5860Test.php
+      - name: V58.65 Overview Relevance
+        run: php artisan test tests/Feature/OverviewRelevanceV5865Test.php tests/Feature/OfficialExamScopeAwareStudyV5864Test.php
       - name: V58.63 Legacy Creative Development Rescue
         run: php artisan test tests/Feature/DevelopmentCreativePlanRescueV5863Test.php tests/Feature/WorkspaceModeResolverV540Test.php
