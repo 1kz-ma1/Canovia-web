@@ -18,6 +18,10 @@ final class DevelopmentAiSharingPreferenceService
     public const ALLOWED_DURATIONS = [1, 7, 30];
     public const ALLOWED_SCOPES = ['overview', 'tasks'];
 
+    public function __construct(
+        private readonly PlanCategoryProfileService $profiles,
+    ) {}
+
     public function prepare(
         User $user,
         Plan $plan,
@@ -25,6 +29,9 @@ final class DevelopmentAiSharingPreferenceService
         int $days,
     ): DevelopmentAiSharingPreference {
         $this->assertPersonalPlanOwner($user, $plan);
+        abort_if((bool) $plan->is_collaborative, 404);
+        abort_unless($this->profiles->forPlan($plan)->key === 'development', 404);
+
         if (! in_array($scope, self::ALLOWED_SCOPES, true)
             || ! in_array($days, self::ALLOWED_DURATIONS, true)) {
             throw new InvalidArgumentException('Unsupported scope or preparation lifetime.');
