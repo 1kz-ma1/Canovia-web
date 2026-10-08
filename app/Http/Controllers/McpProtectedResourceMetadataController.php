@@ -14,7 +14,7 @@ final class McpProtectedResourceMetadataController extends Controller
         abort_unless($configuration->isReady(), 404);
 
         return response()->json($configuration->metadata())
-            ->header('Cache-Control', 'no-store')
+            ->header('Cache-Control', 'no-store, private')
             ->header('X-Content-Type-Options', 'nosniff');
     }
 }
