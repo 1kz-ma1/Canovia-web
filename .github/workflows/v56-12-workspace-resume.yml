@@ -144,6 +144,11 @@ jobs:
           php -l tests/Feature/PlanActionDraftV5872Test.php
           php -l database/migrations/2026_10_08_150000_create_plan_action_drafts_table.php
           php -l tests/Feature/PlanActionDraftV5871Test.php
+          php -l config/canovia_mcp.php
+          php -l app/Services/McpProtectedResourceConfiguration.php
+          php -l app/Http/Controllers/McpProtectedResourceMetadataController.php
+          php -l app/Http/Controllers/McpAuthorizationProbeController.php
+          php -l tests/Feature/McpProtectedResourceGateTest.php
           php -l database/migrations/2026_10_09_000100_create_development_ai_sharing_preference_tables.php
           php -l app/Models/DevelopmentAiSharingPreference.php
           php -l app/Models/DevelopmentAiSharingPreferenceEvent.php
@@ -157,6 +162,8 @@ jobs:
           php -l tests/Feature/DevelopmentTeamTaskDependencyV5869Test.php
       - run: php artisan view:cache
       - run: php artisan migrate --force
+      - name: MCP OAuth protected-resource fail-closed gate
+        run: php artisan test tests/Feature/McpProtectedResourceGateTest.php
       - name: ChatGPT sharing preparation and revocation
         run: php artisan test tests/Feature/DevelopmentAiSharingPreferenceTest.php
       - name: Owner-only private development AI Context preview
