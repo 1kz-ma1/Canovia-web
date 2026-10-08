@@ -41,7 +41,7 @@ class StudyWorkspaceV543Test extends TestCase
             ->assertSee('data-study-workspace-no-plan', false)
             ->assertSee('学習Planを作る')
             ->assertSee(route('plans.create'), false)
-            ->assertSee('data-current-workspace-mode="study"', false)
+            ->assertSee('data-workspace-mode="study"', false)
             ->assertSee('data-workspace-mode-source="route_hint"', false);
     }
 
@@ -189,7 +189,7 @@ class StudyWorkspaceV543Test extends TestCase
         $this->actingAs($user)
             ->get(route('workspace.study.index'))
             ->assertOk()
-            ->assertSee('data-current-workspace-mode="study"', false)
+            ->assertSee('data-workspace-mode="study"', false)
             ->assertSee('data-workspace-mode-source="route_hint"', false);
 
         $this->assertSame(

@@ -40,7 +40,7 @@ class DevelopmentWorkspaceV544Test extends TestCase
             ->assertSee('data-development-workspace-no-plan', false)
             ->assertSee('開発Planを作る')
             ->assertSee(route('plans.create'), false)
-            ->assertSee('data-current-workspace-mode="development"', false)
+            ->assertSee('data-workspace-mode="development"', false)
             ->assertSee('data-workspace-mode-source="route_hint"', false);
     }
 
@@ -216,7 +216,7 @@ class DevelopmentWorkspaceV544Test extends TestCase
         $this->actingAs($user)
             ->get(route('workspace.development.index'))
             ->assertOk()
-            ->assertSee('data-current-workspace-mode="development"', false)
+            ->assertSee('data-workspace-mode="development"', false)
             ->assertSee('data-workspace-mode-source="route_hint"', false);
 
         $this->assertSame(
