@@ -7,6 +7,7 @@ use App\Intelligence\Study\StudyScoreScaleService;
 use App\Models\Plan;
 use App\Models\StudyScoreObservation;
 use App\Services\BookkeepingPlacementDiagnosticService;
+use App\Services\BookkeepingJournalPracticeService;
 use App\Services\BehaviorIdentityService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
@@ -42,7 +43,10 @@ final class StudyScoreController extends Controller
             $actorToken,
         )
             // A Canovia in-app placement result is NOT an external score.
-            ->where('metric_key', '!=', BookkeepingPlacementDiagnosticService::METRIC)
+            ->whereNotIn('metric_key', [
+                BookkeepingPlacementDiagnosticService::METRIC,
+                BookkeepingJournalPracticeService::METRIC,
+            ])
             ->latest('observed_at')
             ->latest('id')
             ->take(20)
