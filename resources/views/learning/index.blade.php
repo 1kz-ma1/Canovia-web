@@ -9,7 +9,7 @@
         <p class="mt-2 text-sm leading-7 text-slate-300">{{ $plan->title }} / {{ $task->title }}</p>
         <p class="mt-3 text-sm leading-7 text-slate-300">問題集の選択問題を1問ずつ解けます。回答はその都度保存。1問で終了しても、途中でページを閉じても記録は消えません。以前のAI演習も引き続き利用できます。</p>
         <div class="mt-4 rounded-xl border border-amber-700/35 bg-amber-900/10 p-3 text-sm text-amber-100">
-            初期版はQuestion Bankの単一選択問題のみ対応。問題の順番はまだ単純なBank順で、高度な適応出題ではありません。模擬試験モードは試験別仕様の確認後に提供します。
+            初期版はQuestion Bankの単一選択問題のみ対応。開始直後はBank順で、複数回の誤答が確認できた場合のみ先の候補を再検討します。学力を断定する高度な推論ではありません。模擬試験モードは試験別仕様の確認後に提供します。
         </div>
         @if ($errors->any())<p role="alert" class="mt-3 text-sm text-red-300">{{ $errors->first() }}</p>@endif
         @if ($packs->isEmpty())

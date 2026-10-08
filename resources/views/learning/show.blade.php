@@ -7,7 +7,7 @@
         <p class="text-xs font-bold tracking-widest text-cyan-400">QUESTION BANK / ONE QUESTION AT A TIME</p>
         <h1 class="mt-2 text-xl font-bold text-slate-50">{{ $run->pack_title_snapshot }}</h1>
         <p class="mt-2 text-sm text-slate-300">{{ $run->mode === 'understanding' ? '理解モード' : '演習モード' }} · 回答済 {{ $answeredCount }}問 · 正答 {{ $correctCount }}問</p>
-        <p class="mt-2 text-xs leading-5 text-slate-400">ここでの正答数は記録上の採点結果です。理解度・合格確率を断定しません。Task進捗も自動では変更しません。</p>
+        <p class="mt-2 text-xs leading-5 text-slate-400">ここでの正答数は記録上の採点結果です。理解度・合格確率を断定しません。Task進捗も自動では変更しません。直近の問題は確定済み、その先の候補だけ回答履歴に基づいて再検討します。</p>
     </section>
 
     @if(session('notice'))<p role="status" class="rounded-lg border border-slate-600 p-3 text-sm text-slate-200">{{ session('notice') }}</p>@endif
