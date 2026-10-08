@@ -376,6 +376,7 @@ Route::get('/plans/{plan}', [PlanController::class, 'show'])->name('plans.show')
 Route::get('/plans/{plan}/action-drafts', [PlanActionDraftController::class, 'index'])->name('plans.action_drafts.index');
 Route::post('/plans/{plan}/action-drafts', [PlanActionDraftController::class, 'store'])->middleware('throttle:12,1')->name('plans.action_drafts.store');
 Route::post('/plans/{plan}/action-drafts/compose', [PlanActionDraftController::class, 'compose'])->middleware('throttle:12,1')->name('plans.action_drafts.compose');
+Route::post('/plans/{plan}/action-drafts/compose-observed', [PlanActionDraftController::class, 'composeObserved'])->middleware('throttle:12,1')->name('plans.action_drafts.compose_observed');
 Route::post('/plans/{plan}/action-drafts/{draft}/refresh-preview', [PlanActionDraftController::class, 'previewRefresh'])->middleware('throttle:12,1')->name('plans.action_drafts.refresh.preview');
 Route::post('/plans/{plan}/action-drafts/{draft}/refresh-apply', [PlanActionDraftController::class, 'applyRefresh'])->middleware('throttle:12,1')->name('plans.action_drafts.refresh.apply');
 Route::patch('/plans/{plan}/action-drafts/{draft}', [PlanActionDraftController::class, 'update'])->name('plans.action_drafts.update');

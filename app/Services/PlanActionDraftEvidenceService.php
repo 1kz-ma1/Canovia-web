@@ -80,13 +80,9 @@ final class PlanActionDraftEvidenceService
      */
     public function appendNew(array $existing, array $additional): array
     {
-        $used = array_values(array_filter(array_map(
-            fn ($source) => $source['kind'] === 'work_log' ? (int) ($source['work_log_id'] ?? 0) : 0,
-            $existing,
-        )));
-
+        $used = array_map(fn ($source) => $this->sourceKey($source), $existing);
         $new = array_values(array_filter($additional, fn ($source) =>
-            ! in_array((int) $source['work_log_id'], $used, true)
+            ! in_array($this->sourceKey($source), $used, true)
         ));
         if ($new === []) {
             throw ValidationException::withMessages([
@@ -112,6 +108,28 @@ final class PlanActionDraftEvidenceService
         $last = $sources[count($sources) - 1];
         $action = mb_substr((string) $last['action'], 0, 95);
         return '「'.$action.'」を含む'.count($sources).'件の結果を比較し、次に試す作業を1つ決める';
+    }
+
+    /** A self-report has no remote ID and is never implicitly deduplicated. */
+    private function sourceKey(array $source): string
+    {
+        return match ($source['kind'] ?? '') {
+            'work_log' => 'work_log:'.($source['work_log_id'] ?? '?'),
+            'task_evidence' => 'task_evidence:'.($source['task_evidence_id'] ?? '?'),
+            default => 'self_report:'.hash('sha256', json_encode($source, JSON_UNESCAPED_UNICODE)),
+        };
+    }
+
+    /** @param list<array<string,mixed>> $sources */
+    public function kindForSources(array $sources): string
+    {
+        $kinds = array_values(array_unique(array_column($sources, 'kind')));
+        if (count($kinds) > 1) return 'mixed';
+        return match ($kinds[0] ?? null) {
+            'task_evidence' => 'task_evidence',
+            'work_log' => count($sources) > 1 ? 'multi_work_log' : 'work_log',
+            default => 'self_report',
+        };
     }
 
     public function fingerprint(array $sources): string
