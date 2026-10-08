@@ -27,8 +27,12 @@ final class PlanActionDraftV5871Test extends TestCase
 
     private function plan(User $owner, bool $collaborative = false): Plan
     {
-        return Plan::create(['user_id' => $owner->id, 'title' => '次の一歩',
-            'category' => '資格学習', 'is_collaborative' => $collaborative]);
+        return Plan::create(['user_id' => $owner->id,
+            'owner_token' => Str::random(64), 'public_slug' => (string) Str::uuid(),
+            'title' => '次の一歩', 'category' => '資格学習',
+            'priority' => 3, 'priority_mode' => 'manual',
+            'start_date' => today(), 'deadline' => today()->addDays(30),
+            'is_public' => false, 'is_collaborative' => $collaborative]);
     }
 
     private function proposal(Plan $plan, string $id): PlanActionDraft
