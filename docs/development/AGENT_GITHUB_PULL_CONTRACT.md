@@ -26,6 +26,10 @@ Only show the control after normal Development Workspace Plan access, GitHub App
 
 The authenticated Development Work surface now offers an optional private Context preview for the current logged-in owner of an individual Development Plan. The owner chooses `overview` (Plan title only, no Tasks) or `tasks` (up to five active Task titles, persisted status and persisted progress). The server uses `GET /workspace/development/private-context/{plan}/preview` with owner-only authorization, no team/guest/non-Development access, no-store and strict field whitelisting. Results are displayed for inspection and copied **only after a separate user action**. The preview cannot be read by ChatGPT independently, is not an MCP tool, does not authorize any AI provider, and sends nothing automatically. No credentials, Task descriptions, WorkLogs or Evidence are returned. See [private preview contract](PRIVATE_AI_CONTEXT_PREVIEW_CONTRACT.md).
 
+## Current: ChatGPT sharing preparation settings (no OAuth permission)
+
+The owner of a personal Development Plan can prepare the proposed `chatgpt` sharing scope (`overview` or `tasks`) and a finite 1/7/30-day preparation lifetime in the Work surface. Each save/update/cancel action is CSRF-protected, session-authenticated, bound to the Plan owner and audited without storing source Context. These records are `prepared`, **never connected, consented or delegated**. No private MCP route, bearer token or OAuth client exists. Revocation remains available to the preference creator via the account page even if the Plan becomes collaborative, changes domain or ownership. Neither the account page nor the preparation record grants ChatGPT access. See [sharing preparation contract](CHATGPT_SHARING_PREFERENCES_SPEC.md).
+
 ## Future: direct delegated AI → Canovia read
 
 A coding AI that needs **Canovia-private Plan context** (as opposed to GitHub-public specifications) requires a different authorization boundary. A connected GitHub account alone is not evidence that the agent may read the user's Canovia Plans.

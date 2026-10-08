@@ -85,6 +85,48 @@
         </form>
     </section>
 
+    <section class="page-card min-w-0 p-6 sm:p-8" data-chatgpt-sharing-account>
+        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">CHATGPT · NOT CONNECTED</p>
+        <h2 class="mt-2 text-lg font-bold text-slate-50">ChatGPT共有の準備設定</h2>
+        <p class="mt-2 text-xs leading-5 text-slate-400">
+            これらは接続の準備情報です。ChatGPTへのアクセス許可やデータ送信は行われていません。
+            Planのカテゴリや所有者が変更されたあとも、自分が保存した設定をここから取り消せます。
+        </p>
+
+        @forelse ($chatgptPreparedPreferences as $preference)
+            <div class="mt-3 min-w-0 rounded-xl border border-white/10 bg-slate-950/20 p-3" data-chatgpt-preference-account-row>
+                @php
+                    $stillOwnsPlan = $preference->plan
+                        && (int) $preference->plan->user_id === (int) $user->id;
+                @endphp
+                <p class="break-words text-sm font-bold text-slate-100">
+                    {{ $stillOwnsPlan ? $preference->plan->title : '以前の開発Plan（現在の内容は表示しません）' }}
+                </p>
+                <p class="mt-1 text-xs leading-5 text-slate-400">
+                    希望範囲：{{ $preference->scope === 'tasks' ? '概要＋進行中Task' : '概要のみ' }}
+                    ・期限：{{ $preference->expires_at?->format('Y-m-d H:i') }}
+                </p>
+                <p class="mt-1 text-[11px] text-amber-200">
+                    {{ $preference->isPrepared() ? '準備保存済み（未接続）' : '期限切れ（未接続）' }}
+                </p>
+                <form method="POST"
+                    action="{{ route('workspace.development.sharing_preference.destroy', ['plan' => $preference->plan_id]) }}"
+                    class="mt-3">
+                    @csrf
+                    @method('DELETE')
+                    <input type="hidden" name="return_to" value="account">
+                    <button type="submit" class="btn-secondary min-h-11 px-4 text-xs">この準備設定を取り消す</button>
+                </form>
+            </div>
+        @empty
+            <p class="mt-3 text-xs text-slate-500">現在、ChatGPT向けに保存された準備設定はありません。</p>
+        @endforelse
+
+        @if ($chatgptPreparedPreferences->hasPages())
+            <div class="mt-4">{{ $chatgptPreparedPreferences->links() }}</div>
+        @endif
+    </section>
+
     <section class="page-card border border-rose-400/20 p-6 sm:p-8">
         <p class="text-xs font-black uppercase tracking-[0.16em] text-rose-300">DELETE ACCOUNT</p>
         <h2 class="mt-2 text-xl font-bold text-slate-50">アカウントを削除</h2>

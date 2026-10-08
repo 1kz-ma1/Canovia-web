@@ -576,3 +576,26 @@
     && app(\App\Services\PlanCategoryProfileService::class)->forPlan($plan)->key === 'development')
     @include('workspace.development.partials.private-ai-context-preview')
 @endif
+
+@php
+    // Loading only the current owner's proposed sharing preference; never
+    // fetch private Context or grant external authorization on page render.
+    $sharingActorOwns = ($canManage ?? false)
+        && auth()->check()
+        && $plan->user_id !== null
+        && (int) $plan->user_id === (int) auth()->id();
+    $sharingPreference = null;
+    $sharingEligible = false;
+    if ($sharingActorOwns) {
+        $sharingPreference = \App\Models\DevelopmentAiSharingPreference::query()
+            ->where('user_id', auth()->id())
+            ->where('plan_id', $plan->id)
+            ->where('provider_key', \App\Models\DevelopmentAiSharingPreference::PROVIDER_CHATGPT)
+            ->first();
+        $sharingEligible = ! $plan->is_collaborative
+            && app(\App\Services\PlanCategoryProfileService::class)->forPlan($plan)->key === 'development';
+    }
+@endphp
+@if ($sharingEligible || $sharingPreference)
+    @include('workspace.development.partials.chatgpt-sharing-preference')
+@endif
