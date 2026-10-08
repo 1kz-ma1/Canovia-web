@@ -2,6 +2,7 @@
 namespace App\Services;
 
 use App\Models\LearningRun;
+use App\Models\LearningRunItem;
 use App\Models\Question;
 use App\Models\QuestionPack;
 use Illuminate\Validation\ValidationException;
@@ -42,11 +43,12 @@ final class AdaptiveLearningBankQueueService
 
         // The depth is an experiment setting, not a final optimal constant.
         $target = max(1, min(5, (int) config('study.adaptive_learning.locked_queue_size', 2)));
-        $reserved = $run->items()->where('ordinal', '>=', $run->current_ordinal)->count();
+        $reserved = LearningRunItem::where('learning_run_id', $run->id)
+            ->where('ordinal', '>=', $run->current_ordinal)->count();
         if ($reserved >= $target) return;
 
         $used = $run->items()->pluck('question_id')->filter()->map(fn ($id) => (int) $id)->all();
-        $nextOrdinal = (int) $run->items()->max('ordinal') + 1;
+        $nextOrdinal = (int) LearningRunItem::where('learning_run_id', $run->id)->max('ordinal') + 1;
         $candidates = $pack->questions()->where('is_active', true)
             ->whereNotIn('id', $used)->get()->filter(fn (Question $q) => $this->isSupported($q));
 
