@@ -28,6 +28,7 @@
                 <h3 class="mt-2 text-sm font-black text-slate-100">3級の復習から2級の先取りまで、理解度に合わせて決める</h3>
                 <p class="mt-2 text-xs leading-5 text-slate-400">授業で習った範囲を一律にやり直さず、基礎の12問で復習候補を確認します。結果から2級の導入を試すか判断するための参考にします。</p>
                 <a href="{{ route('plans.bookkeeping_placement.show', $plan) }}" class="btn-secondary mt-3 inline-flex min-h-11 items-center px-4 text-xs" data-study-bookkeeping-diagnostic-link>現在地を診断する →</a>
+                <a href="{{ route('plans.bookkeeping_journal.show', $plan) }}" class="btn-secondary mt-3 ml-2 inline-flex min-h-11 items-center px-4 text-xs" data-study-bookkeeping-journal-link>仕訳を直接入力して練習する →</a>
             </div>
         @endif
 
