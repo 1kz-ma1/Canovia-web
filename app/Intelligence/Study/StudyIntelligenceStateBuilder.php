@@ -140,6 +140,14 @@ final class StudyIntelligenceStateBuilder implements StateBuilder
             facts: [
                 ...$base->facts,
                 'study_intelligence_version' => '53.5',
+                // Official exam's published syllabus is NOT a user-confirmed
+                // subset and does not count as observed mastery or coverage.
+                'official_exam_reference' => is_array($context['official_exam_reference'] ?? null)
+                    ? $context['official_exam_reference']
+                    : null,
+                'official_exam_baseline_task_id' => is_numeric($context['official_exam_baseline_task_id'] ?? null)
+                    ? (int) $context['official_exam_baseline_task_id']
+                    : null,
                 'has_confirmed_scope' => $scopeCount > 0,
                 'exam_date' => $examDate,
                 'exam_date_source' => $context['exam_date_source'] ?? null,
