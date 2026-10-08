@@ -149,6 +149,11 @@ jobs:
           php -l app/Models/McpDelegatedGrant.php
           php -l app/Services/McpDelegatedIdentityFingerprintService.php
           php -l database/migrations/2026_10_09_000300_create_mcp_delegated_access_events_table.php
+          php -l app/Services/McpOAuthAccountLinkConfiguration.php
+          php -l app/Services/McpOAuthAccountLinkProvider.php
+          php -l app/Services/McpOAuthAccountLinkCommitter.php
+          php -l app/Http/Controllers/McpOAuthAccountLinkController.php
+          php -l tests/Feature/McpOAuthAccountLinkTest.php
           php -l app/Services/McpDelegatedRevocationService.php
           php -l app/Http/Controllers/McpDelegatedRevocationController.php
           php -l tests/Feature/McpDelegatedRevocationTest.php
@@ -175,6 +180,8 @@ jobs:
           php -l tests/Feature/DevelopmentTeamTaskDependencyV5869Test.php
       - run: php artisan view:cache
       - run: php artisan migrate --force
+      - name: MCP OAuth PKCE external subject account linking and actor isolation
+        run: php artisan test tests/Feature/McpOAuthAccountLinkTest.php
       - name: MCP session-only revocation, audit and ownership isolation
         run: php artisan test tests/Feature/McpDelegatedRevocationTest.php
       - name: MCP future delegated Plan permission and isolation contract

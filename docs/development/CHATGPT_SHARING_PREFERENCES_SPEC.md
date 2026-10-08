@@ -66,3 +66,11 @@ and cannot create an OAuth connection, active consent or tokens. Current
 production link/grant tables remain empty until the verified identity-linking
 and formal consent flow is implemented. See
 [delegated revocation contract](MCP_DELEGATED_REVOCATION_CONTRACT.md).
+
+## Distinct Canovia OAuth identity-link flow
+
+A disabled, confidential **Canovia-owned** OAuth client is available for
+IdP actor verification and explicit external subject linking from the
+account page. This does not reuse ChatGPT's client credentials or redirect
+URI, and does not activate prepared scopes, issue access tokens, or approve
+Plan access. See [OAuth account linking](MCP_OAUTH_ACCOUNT_LINK_CONTRACT.md).

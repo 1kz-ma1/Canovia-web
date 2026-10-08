@@ -24,8 +24,36 @@ final class McpAccessTokenIntrospector
 
     public function verify(string $accessToken): ?McpVerifiedTokenPrincipal
     {
+        return $this->verifyForConfiguredClient(
+            $accessToken,
+            (string) config('canovia_mcp.allowed_client_id', ''),
+        );
+    }
+
+    /**
+     * Verify tokens minted for Canovia's own account-linking OAuth client.
+     * These tokens are NOT accepted by /api/mcp or the delegated Plan policy.
+     */
+    public function verifyAccountLink(string $accessToken): ?McpVerifiedTokenPrincipal
+    {
+        if (app(McpOAuthAccountLinkConfiguration::class)->settings() === null) {
+            return null;
+        }
+
+        return $this->verifyForConfiguredClient(
+            $accessToken,
+            (string) config('canovia_mcp.account_link_client_id', ''),
+        );
+    }
+
+    private function verifyForConfiguredClient(
+        string $accessToken,
+        string $expectedClientId,
+    ): ?McpVerifiedTokenPrincipal {
         $settings = $this->settings();
         if ($settings === null
+            || $expectedClientId === ''
+            || strlen($expectedClientId) > 255
             || strlen($accessToken) < 16
             || strlen($accessToken) > self::MAX_TOKEN_BYTES
             || preg_match('/\A[\x21-\x7e]+\z/D', $accessToken) !== 1) {
@@ -60,7 +88,7 @@ final class McpAccessTokenIntrospector
         if (! is_array($body) || array_is_list($body)
             || ($body['active'] ?? null) !== true
             || ($body['iss'] ?? null) !== $settings['issuer']
-            || ($body['client_id'] ?? null) !== $settings['allowed_client_id']
+            || ($body['client_id'] ?? null) !== $expectedClientId
             || ! is_string($body['sub'] ?? null)
             || trim($body['sub']) !== $body['sub']
             || strlen($body['sub']) < 1
@@ -105,7 +133,7 @@ final class McpAccessTokenIntrospector
         return new McpVerifiedTokenPrincipal(
             issuer: $settings['issuer'],
             subject: $body['sub'],
-            clientId: $settings['allowed_client_id'],
+            clientId: $expectedClientId,
             audience: $settings['resource'],
             scopes: $scopes,
             expiresAt: $exp,

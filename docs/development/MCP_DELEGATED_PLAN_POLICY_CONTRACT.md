@@ -118,3 +118,14 @@ grants. No user registration, OAuth callback, consent approval or direct MCP
 read route has been introduced. An append-only metadata audit records actual
 transitions. Linked subjects and grants are not active in production.
 See [revocation contract](MCP_DELEGATED_REVOCATION_CONTRACT.md).
+
+## Browser actor → IdP subject verification (2026-10-09)
+
+A separate **disabled by default** confidential Canovia OAuth account-linking
+client can verify the currently signed-in Canovia owner and a stable IdP
+`(issuer,sub)` through a session-bound OAuth authorization-code + PKCE S256
+flow. It checks provider discovery, the RFC 9207 callback `iss`, and
+RFC 7662 access-token introspection before offering the owner a separate
+confirmation action. Only the identity HMAC fingerprint is stored; **no
+Plan sharing grant is created**. The ChatGPT OAuth client is separate.
+See [OAuth linking contract](MCP_OAUTH_ACCOUNT_LINK_CONTRACT.md).

@@ -93,6 +93,7 @@ use App\Http\Controllers\DevelopmentRoadmapContextController;
 use App\Http\Controllers\DevelopmentPrivateAiContextPreviewController;
 use App\Http\Controllers\McpProtectedResourceMetadataController;
 use App\Http\Controllers\McpDelegatedRevocationController;
+use App\Http\Controllers\McpOAuthAccountLinkController;
 use App\Http\Controllers\DevelopmentAiSharingPreferenceController;
 use App\Http\Controllers\DevelopmentCreativePlanSelectionController;
 use App\Http\Controllers\DevelopmentWorkspaceTopController;
@@ -243,6 +244,18 @@ Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->middl
 Route::get('/reset-password/{token}', [AuthController::class, 'showResetPassword'])->middleware('guest')->name('password.reset');
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware(['guest', 'throttle:6,1'])->name('password.update');
 Route::get('/account', [AuthController::class, 'account'])->middleware('auth')->name('auth.account');
+Route::post('/account/mcp/link/start', [McpOAuthAccountLinkController::class, 'start'])
+    ->middleware(['auth', 'throttle:5,1'])
+    ->name('auth.account.mcp_link.start');
+Route::get('/account/mcp/link/callback', [McpOAuthAccountLinkController::class, 'callback'])
+    ->middleware(['auth', 'throttle:10,1'])
+    ->name('auth.account.mcp_link.callback');
+Route::post('/account/mcp/link/confirm', [McpOAuthAccountLinkController::class, 'confirm'])
+    ->middleware(['auth', 'throttle:5,1'])
+    ->name('auth.account.mcp_link.confirm');
+Route::post('/account/mcp/link/cancel', [McpOAuthAccountLinkController::class, 'cancel'])
+    ->middleware(['auth', 'throttle:10,1'])
+    ->name('auth.account.mcp_link.cancel');
 Route::delete('/account/mcp/grants/{grant}', [McpDelegatedRevocationController::class, 'grant'])
     ->whereNumber('grant')
     ->middleware(['auth', 'throttle:8,1'])
