@@ -58,7 +58,7 @@
                         <button type="button" class="btn-secondary min-h-9 px-3 text-xs"
                             data-development-agent-pull
                             data-development-agent-prompt-target="development-agent-github-pull-overview">
-                            GitHubからAIに直接読ませる
+                            AI向けGitHub参照依頼をコピー
                         </button>
                     @endif
                     <button type="button" class="btn-secondary min-h-9 px-3 text-xs"
@@ -167,7 +167,7 @@
                             <button type="button" class="btn-secondary mt-3 min-h-9 px-3 text-xs"
                                 data-development-agent-pull
                                 data-development-agent-prompt-target="development-agent-github-pull-{{ $loop->index }}">
-                                GitHubからこの項目をAIに読ませる
+                                この項目のGitHub参照依頼をコピー
                             </button>
                             <textarea readonly id="development-agent-github-pull-{{ $loop->index }}"
                                 tabindex="-1" aria-hidden="true" class="sr-only">{{ $agentItemPrompt }}</textarea>
