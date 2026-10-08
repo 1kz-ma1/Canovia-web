@@ -116,6 +116,8 @@ final class StudyWorkspaceStateResolver
             },
             'current_position_known' => $currentPositionKnown,
             'has_confirmed_scope' => $scopeCount > 0,
+            'official_exam_reference' => is_array($facts['official_exam_reference'] ?? null)
+                ? $facts['official_exam_reference'] : null,
             'confirmed_scope_count' => $scopeCount,
             'observed_scope_count' => $observedScopeCount,
             'practice_attempt_count' => $attemptCount,
