@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Plan;
+use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -75,6 +76,35 @@ final class PlanActionFirstCreationV5866Test extends TestCase
         }
 
         $this->assertDatabaseCount('plans', 2);
+    }
+
+    public function test_existing_task_plan_still_renders_roadmap_and_does_not_erase_manual_planning(): void
+    {
+        $user = User::factory()->create();
+        $requestId = (string) Str::uuid();
+        $this->actingAs($user)->post(route('plans.store'), [
+            'title' => '作品を完成させる',
+            'category' => 'その他',
+            'create_request_id' => $requestId,
+        ]);
+        $plan = Plan::query()->where('creation_request_id', $requestId)->firstOrFail();
+        Task::query()->create([
+            'plan_id' => $plan->id,
+            'title' => '最初の素材を整理する',
+            'status' => 'todo',
+            'estimated_minutes' => 30,
+            'remaining_minutes' => 30,
+            'progress_percent' => 0,
+            'priority' => 1,
+            'activation_cost' => 1,
+            'sort_order' => 1,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('plans.show', $plan))
+            ->assertOk()
+            ->assertSee('class="mb-8 page-card roadmap-shell', false)
+            ->assertSee('最初の素材を整理する');
     }
 
     public function test_unspecified_or_creative_plan_does_not_force_wrong_workspace_or_ai_task_flow(): void
