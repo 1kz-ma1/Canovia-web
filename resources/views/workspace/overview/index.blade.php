@@ -286,7 +286,7 @@
                         @endif
                     </div>
                 @elseif ($presentation)
-                    <div class="mt-5 grid gap-3 {{ $duplicatesGlobalAction ? '' : 'sm:grid-cols-[0.72fr_1.28fr]' }}">
+                    <div class="mt-5 grid gap-3 sm:grid-cols-[0.72fr_1.28fr]">
                         <div class="rounded-2xl border border-white/8 bg-slate-950/25 p-4">
                             <span class="plan-identity-chip text-[11px]">
                                 <span aria-hidden="true">{{ $plan->displayIcon() }}</span>
@@ -296,14 +296,14 @@
                             <p class="mt-1 text-2xl font-black text-slate-100">{{ $presentation->readinessDisplay() }}</p>
                             <p class="mt-1 text-xs font-bold text-slate-400">{{ $presentation->stateLabel }}</p>
                         </div>
-                        @unless ($duplicatesGlobalAction)
                         <div class="rounded-2xl border border-white/8 bg-slate-950/25 p-4">
                             <p class="text-[10px] font-black uppercase tracking-[0.14em] text-amber-200">BIGGEST GAP</p>
                             <p class="mt-1 text-sm font-black text-slate-100">{{ $presentation->gapLabel }}</p>
-                            <p class="mt-4 text-[10px] font-black uppercase tracking-[0.14em] text-violet-300">CURRENT ACTION</p>
-                            <p class="mt-1 text-sm font-black text-slate-100">{{ $presentation->action->title }}</p>
+                            @unless ($duplicatesGlobalAction)
+                                <p class="mt-4 text-[10px] font-black uppercase tracking-[0.14em] text-violet-300">CURRENT ACTION</p>
+                                <p class="mt-1 text-sm font-black text-slate-100">{{ $presentation->action->title }}</p>
+                            @endunless
                         </div>
-                        @endunless
                     </div>
                 @endif
             </article>
