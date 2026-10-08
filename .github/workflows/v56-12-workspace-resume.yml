@@ -151,6 +151,8 @@ jobs:
           php -l tests/Feature/DevelopmentTeamTaskDependencyV5869Test.php
       - run: php artisan view:cache
       - run: php artisan migrate --force
+      - name: Owner-only private development AI Context preview
+        run: php artisan test tests/Feature/DevelopmentPrivateAiContextPreviewTest.php
       - name: GitHub-first AI handoff contract
         run: php artisan test tests/Unit/DevelopmentAgentGitHubPullHandoffTest.php
       - name: GitHub-native roadmap revision comparator

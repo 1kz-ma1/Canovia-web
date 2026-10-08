@@ -90,6 +90,7 @@ use App\Http\Controllers\StudyWorkspaceController;
 use App\Http\Controllers\StudyWorkspaceTopController;
 use App\Http\Controllers\DevelopmentWorkspaceController;
 use App\Http\Controllers\DevelopmentRoadmapContextController;
+use App\Http\Controllers\DevelopmentPrivateAiContextPreviewController;
 use App\Http\Controllers\DevelopmentCreativePlanSelectionController;
 use App\Http\Controllers\DevelopmentWorkspaceTopController;
 use App\Http\Controllers\DevelopmentActivityObservationController;
@@ -134,6 +135,9 @@ Route::get('/workspace/development', DevelopmentWorkspaceController::class)->mid
 Route::get('/workspace/development/context/{plan}', DevelopmentRoadmapContextController::class)
     ->middleware(['auth', 'throttle:12,1'])
     ->name('workspace.development.context');
+Route::get('/workspace/development/private-context/{plan}/preview', DevelopmentPrivateAiContextPreviewController::class)
+    ->middleware(['auth', 'throttle:10,1'])
+    ->name('workspace.development.private_context.preview');
 Route::post('/workspace/development/creative/{plan}', [DevelopmentCreativePlanSelectionController::class, 'store'])
     ->middleware('throttle:12,1')
     ->name('workspace.development.creative.store');
