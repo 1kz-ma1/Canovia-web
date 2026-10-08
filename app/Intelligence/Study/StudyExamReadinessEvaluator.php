@@ -42,7 +42,9 @@ final class StudyExamReadinessEvaluator implements ReadinessEvaluator
                     'remaining_effort_percent' => null,
                 ],
                 gaps: [[
-                    'code' => 'confirmed_scope_missing',
+                    'code' => is_array(data_get($state->facts, 'official_exam_reference'))
+                        ? 'official_scope_known_mastery_unmeasured'
+                        : 'confirmed_scope_missing',
                     'dimension' => 'scope',
                     'severity' => 'high',
                     'observed' => 0,
