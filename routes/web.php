@@ -91,6 +91,7 @@ use App\Http\Controllers\StudyWorkspaceTopController;
 use App\Http\Controllers\DevelopmentWorkspaceController;
 use App\Http\Controllers\DevelopmentRoadmapContextController;
 use App\Http\Controllers\DevelopmentPrivateAiContextPreviewController;
+use App\Http\Controllers\DevelopmentAiSharingPreferenceController;
 use App\Http\Controllers\DevelopmentCreativePlanSelectionController;
 use App\Http\Controllers\DevelopmentWorkspaceTopController;
 use App\Http\Controllers\DevelopmentActivityObservationController;
@@ -138,6 +139,12 @@ Route::get('/workspace/development/context/{plan}', DevelopmentRoadmapContextCon
 Route::get('/workspace/development/private-context/{plan}/preview', DevelopmentPrivateAiContextPreviewController::class)
     ->middleware(['auth', 'throttle:10,1'])
     ->name('workspace.development.private_context.preview');
+Route::post('/workspace/development/private-context/{plan}/sharing-preference', [DevelopmentAiSharingPreferenceController::class, 'store'])
+    ->middleware(['auth', 'throttle:6,1'])
+    ->name('workspace.development.sharing_preference.store');
+Route::delete('/workspace/development/private-context/{plan}/sharing-preference', [DevelopmentAiSharingPreferenceController::class, 'destroy'])
+    ->middleware(['auth', 'throttle:6,1'])
+    ->name('workspace.development.sharing_preference.destroy');
 Route::post('/workspace/development/creative/{plan}', [DevelopmentCreativePlanSelectionController::class, 'store'])
     ->middleware('throttle:12,1')
     ->name('workspace.development.creative.store');
