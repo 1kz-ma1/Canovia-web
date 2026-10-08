@@ -205,13 +205,21 @@
     @if ($canManage ?? false)
         <section class="mb-8 adaptive-entry-card">
             <div>
-                <h2 class="mt-1 text-xl font-bold text-slate-900">計画外の作業も記録できます</h2>
-                <p class="mt-2 max-w-3xl text-sm leading-7 text-slate-600">やったことをそのまま入力すれば、あとから計画に反映できます。</p>
+                <h2 class="mt-1 text-xl font-bold text-slate-900">{{ $plan->tasks->isEmpty() ? '最初の行動から始めましょう' : '計画外の作業も記録できます' }}</h2>
+                <p class="mt-2 max-w-3xl text-sm leading-7 text-slate-600">
+                    {{ $plan->tasks->isEmpty()
+                        ? 'ロードマップを最初に完成させる必要はありません。いまの状況や実際にやったことを記録して、次の行動を整理できます。'
+                        : 'やったことをそのまま入力すれば、あとから計画に反映できます。' }}
+                </p>
             </div>
             <div class="flex flex-wrap gap-3">
-                <a href="{{ route('plans.review_assistant.show', $plan) }}" class="btn-primary">実績・方針をまとめて更新</a>
+                <a href="{{ route('plans.review_assistant.show', $plan) }}" class="btn-primary">
+                    {{ $plan->tasks->isEmpty() ? '現在の状況・やったことを記録する' : '実績・方針をまとめて更新' }}
+                </a>
                 @if ($plan->tasks->isEmpty())
-                    <a href="{{ route('plans.ai_task_assistant.show', $plan) }}" class="btn-secondary">AIで初期計画を生成</a>
+                    <a href="{{ route('plans.ai_task_assistant.show', $plan) }}" class="btn-secondary" data-plan-optional-task-planning>
+                        必要なら初期タスクを考える
+                    </a>
                 @endif
             </div>
         </section>
@@ -276,6 +284,7 @@
         </section>
     @endif
 
+    @if ($plan->tasks->isNotEmpty())
     <section class="mb-8 page-card roadmap-shell p-4 sm:p-6">
         <div class="mb-5 flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -296,6 +305,7 @@
             'roadmapRecommendationReasons' => $recommendation?->reasons ?? [],
         ])
     </section>
+    @endif
 
     @include('plans.partials.summary-metrics', [
         'plan' => $plan,
