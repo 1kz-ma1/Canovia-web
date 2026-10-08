@@ -11,6 +11,7 @@ use App\Http\Controllers\MapPersonalizationController;
 use App\Http\Controllers\FirstRunController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\PlanActionDraftController;
+use App\Http\Controllers\PlanActionDraftSpotlightController;
 use App\Http\Controllers\PlanSpecializationController;
 use App\Http\Controllers\PlanDashboardController;
 use App\Http\Controllers\GoalDiscoveryController;
@@ -374,7 +375,7 @@ Route::get('/plans/{plan}/dashboard', PlanDashboardController::class)->name('pla
 Route::get('/plans/{plan}', [PlanController::class, 'show'])->name('plans.show');
 // V58.71: a proposal is inert until the owner accepts it as a new Task.
 Route::get('/plans/{plan}/action-drafts', [PlanActionDraftController::class, 'index'])->name('plans.action_drafts.index');
-Route::post('/plans/{plan}/action-drafts/spotlight/acknowledge', [\\App\\Http\\Controllers\\PlanActionDraftSpotlightController::class, 'acknowledge'])->middleware('throttle:12,1')->name('plans.action_drafts.spotlight.acknowledge');
+Route::post('/plans/{plan}/action-drafts/spotlight/acknowledge', [PlanActionDraftSpotlightController::class, 'acknowledge'])->middleware('throttle:12,1')->name('plans.action_drafts.spotlight.acknowledge');
 Route::post('/plans/{plan}/action-drafts', [PlanActionDraftController::class, 'store'])->middleware('throttle:12,1')->name('plans.action_drafts.store');
 Route::post('/plans/{plan}/action-drafts/compose', [PlanActionDraftController::class, 'compose'])->middleware('throttle:12,1')->name('plans.action_drafts.compose');
 Route::post('/plans/{plan}/action-drafts/compose-observed', [PlanActionDraftController::class, 'composeObserved'])->middleware('throttle:12,1')->name('plans.action_drafts.compose_observed');
