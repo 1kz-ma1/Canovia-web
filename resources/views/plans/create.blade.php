@@ -131,6 +131,20 @@
                     >
                 </div>
 
+                @auth
+                    <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-violet-400/20 bg-violet-500/5 p-4" data-plan-create-collaboration>
+                        <input type="checkbox" name="is_collaborative" value="1"
+                            @checked(old('is_collaborative', data_get($prefill ?? [], 'is_collaborative', false)))
+                            class="mt-1">
+                        <span>
+                            <span class="block text-sm font-bold text-slate-200">チーム・共同で進める <span class="font-normal text-slate-500">（任意）</span></span>
+                            <span class="mt-1 block text-xs leading-5 text-slate-400">開発・学習などの目的とは別に、参加者を招待するか選びます。チェックしない限り共同公開は始まりません。後から設定できます。</span>
+                        </span>
+                    </label>
+                @else
+                    <p class="text-xs leading-5 text-slate-500">チームや共同のPlanはログイン後に設定できます。目標の登録だけならこのまま進めます。</p>
+                @endauth
+
                 <details
                     class="group rounded-2xl border border-slate-800 bg-slate-950/30 p-4"
                     @if(old('description') || old('category') || old('start_date') || old('is_public') || old('visual_icon') || old('accent_key') || old('roadmap_world') || old('is_collaborative') || data_get($prefill ?? [], 'is_collaborative') || !empty($prefill)) open @endif
@@ -139,7 +153,7 @@
                         <span class="flex items-center justify-between gap-3">
                             <span>
                                 <span class="block text-sm font-bold text-slate-200">詳細設定</span>
-                                <span class="mt-1 block text-xs font-normal text-slate-500">説明・カテゴリ・公開設定など。必要な人だけ。</span>
+                                <span class="mt-1 block text-xs font-normal text-slate-500">説明・分類の修正・公開設定など。必要な人だけ。</span>
                             </span>
                             <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-slate-700 text-slate-400 transition group-open:rotate-45" aria-hidden="true">＋</span>
                         </span>
@@ -153,9 +167,10 @@
 
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div>
-                                <label for="category" class="form-label">カテゴリ</label>
+                                <label for="category" class="form-label">分類（必要なときだけ変更）</label>
+                                <p class="mt-1 text-[11px] leading-5 text-slate-500">未指定なら目標の内容と入口のWorkspaceから、Canoviaが学習・開発・就活を判断します。分からない場合は未分類にします。</p>
                                 <select id="category" name="category" class="form-control mt-2">
-                                    <option value="">未設定</option>
+                                    <option value="">Canoviaに任せる（自動）</option>
                                     <option value="資格学習" @selected(old('category', data_get($prefill ?? [], 'category')) === '資格学習')>資格学習</option>
                                     <option value="個人開発" @selected(old('category', data_get($prefill ?? [], 'category')) === '個人開発')>個人開発</option>
                                     <option value="制作活動" @selected(old('category', data_get($prefill ?? [], 'category')) === '制作活動')>制作活動</option>
@@ -207,20 +222,7 @@
                             </span>
                         </label>
 
-                        @auth
-                            <label class="flex items-start gap-3 rounded-xl border border-violet-400/20 bg-violet-500/5 p-4">
-                                <input type="checkbox" name="is_collaborative" value="1" @checked(old('is_collaborative', data_get($prefill ?? [], 'is_collaborative', false))) class="mt-1">
-                                <span>
-                                    <span class="block font-medium text-slate-200">共同計画として作る</span>
-                                    <span class="mt-1 block text-xs leading-5 text-slate-500">参加者はURLまたは参加コードで参加できます。最初は閲覧のみで、編集権限はあとからあなたが付与します。</span>
-                                </span>
-                            </label>
-                        @else
-                            <div class="rounded-xl border border-slate-800 bg-slate-950/35 p-4 text-sm text-slate-400">
-                                <strong class="text-slate-200">共同計画はログイン後に使えます。</strong>
-                                <p class="mt-1 text-xs leading-5">計画を作ったあとでアカウントへ紐づけてから有効化できます。</p>
-                            </div>
-                        @endauth
+
                     </div>
                 </details>
             </section>
