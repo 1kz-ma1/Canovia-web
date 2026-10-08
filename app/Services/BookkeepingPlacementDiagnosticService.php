@@ -8,6 +8,10 @@ namespace App\Services;
  */
 final class BookkeepingPlacementDiagnosticService
 {
+    public function __construct(
+        private readonly AdaptiveStartingPointPolicyService $startingPoints,
+    ) {}
+
     public const SOURCE = 'Canovia簿記基礎診断';
     public const METRIC = 'bookkeeping_foundations_percent';
 
@@ -153,30 +157,18 @@ final class BookkeepingPlacementDiagnosticService
      */
     public function placement(int $scorePercent, array $recordedScores, bool $wantsAdvance): array
     {
-        $scores = [];
-        foreach (self::TOPICS as $key => $label) {
-            $value = $recordedScores[$key] ?? null;
-            if (! is_numeric($value) || (float) $value < 0 || (float) $value > 100) {
-                return [
-                    'weak_topics' => [],
-                    'status' => 'diagnostic_needed',
-                    'message' => '単元別の確認結果が不足しています。まず基礎診断で現在地を確かめましょう。',
-                ];
-            }
-            $scores[$key] = (int) $value;
-        }
-
-        $weakTopics = array_keys(array_filter($scores, fn (int $score) => $score < 67));
-        $status = $weakTopics !== []
-            ? 'review_prerequisites'
-            : ($scorePercent >= 83 && $wantsAdvance
-                ? 'trial_next_grade'
-                : 'review_and_verify');
+        $decision = $this->startingPoints->resolve(
+            $scorePercent,
+            $recordedScores,
+            array_keys(self::TOPICS),
+            $wantsAdvance,
+        );
 
         return [
-            'weak_topics' => $weakTopics,
-            'status' => $status,
-            'message' => match ($status) {
+            'weak_topics' => $decision['weak_topics'],
+            'status' => $decision['status'],
+            'message' => match ($decision['status']) {
+                'diagnostic_needed' => '単元別の確認結果が不足しています。まず基礎診断で現在地を確かめましょう.',
                 'review_prerequisites' => '3級範囲の弱い単元を先に短く復習しましょう。2級の先取りは、関連する基礎を確かめながら少しずつ進められます。',
                 'trial_next_grade' => '今回の3級基礎は概ね安定しています。3級を定期的に復習しつつ、2級の導入単元を試す候補です。',
                 default => '今回の範囲に大きな穴は見えませんが、定着はまだ未確認です。別の問題でも確認しながら復習を続けましょう。',
