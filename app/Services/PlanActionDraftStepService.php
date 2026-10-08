@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Plan;
 use App\Models\PlanActionDraft;
+use Illuminate\Support\Collection;
 
 /**
  * Intentional small, deterministic sequence proposal.
@@ -17,6 +18,17 @@ final class PlanActionDraftStepService
     public const STEP_COUNT = 3;
 
     public function __construct(private readonly PlanCategoryProfileService $profiles) {}
+
+    /** Stable snapshot of the proposed bundle reviewed in the accept form. */
+    public function fingerprint(Collection $steps): string
+    {
+        return hash('sha256', json_encode($steps->map(fn ($step) => [
+            (int) $step->id,
+            (int) $step->sort_order,
+            (int) $step->evidence_revision,
+            (string) $step->title,
+        ])->values()->all(), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+    }
 
     /** @return list<string> */
     public function suggest(Plan $plan, PlanActionDraft $draft): array

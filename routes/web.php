@@ -380,6 +380,8 @@ Route::post('/plans/{plan}/action-drafts/compose-observed', [PlanActionDraftCont
 Route::post('/plans/{plan}/action-drafts/{draft}/refresh-preview', [PlanActionDraftController::class, 'previewRefresh'])->middleware('throttle:12,1')->name('plans.action_drafts.refresh.preview');
 Route::post('/plans/{plan}/action-drafts/{draft}/refresh-apply', [PlanActionDraftController::class, 'applyRefresh'])->middleware('throttle:12,1')->name('plans.action_drafts.refresh.apply');
 Route::patch('/plans/{plan}/action-drafts/{draft}', [PlanActionDraftController::class, 'update'])->name('plans.action_drafts.update');
+Route::post('/plans/{plan}/action-drafts/{draft}/prepare-steps', [PlanActionDraftController::class, 'prepareSteps'])->middleware('throttle:12,1')->name('plans.action_drafts.steps.prepare');
+Route::patch('/plans/{plan}/action-drafts/{draft}/steps', [PlanActionDraftController::class, 'updateSteps'])->name('plans.action_drafts.steps.update');
 Route::post('/plans/{plan}/action-drafts/{draft}/accept', [PlanActionDraftController::class, 'accept'])->name('plans.action_drafts.accept');
 Route::post('/plans/{plan}/action-drafts/{draft}/dismiss', [PlanActionDraftController::class, 'dismiss'])->name('plans.action_drafts.dismiss');
 Route::get('/plans/{plan}/edit', [PlanController::class, 'edit'])->name('plans.edit');

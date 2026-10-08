@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 use App\Models\Plan;
 use App\Models\PlanActionDraft;
 use App\Models\PlanActionDraftRevision;
+use App\Models\PlanActionDraftStep;
 use App\Models\WorkLog;
 use App\Services\PlanActivityService;
 use App\Services\PlanActionDraftEvidenceService;
 use App\Services\PlanActionDraftTypedEvidenceService;
+use App\Services\PlanActionDraftStepService;
 use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,10 +18,10 @@ use Illuminate\Validation\ValidationException;
 
 final class PlanActionDraftController extends Controller
 {
-    public function index(Request $request, Plan $plan, PlanOwnershipService $ownership, PlanActionDraftTypedEvidenceService $typed)
+    public function index(Request $request, Plan $plan, PlanOwnershipService $ownership, PlanActionDraftTypedEvidenceService $typed, PlanActionDraftStepService $stepService)
     {
         $ownership->authorizePlan($request, $plan);
-        $drafts = PlanActionDraft::with('revisions')->where('plan_id', $plan->id)->latest('id')->limit(20)->get();
+        $drafts = PlanActionDraft::with(['revisions', 'steps'])->where('plan_id', $plan->id)->latest('id')->limit(20)->get();
         $workLogs = $plan->workLogs()
             ->where(fn ($q) => $q->where('outcome', '!=', '')->orWhere('memo', '!=', ''))
             ->latest('id')->limit(15)->get();
@@ -27,7 +29,7 @@ final class PlanActionDraftController extends Controller
         $multiRequestId = (string) Str::uuid();
         $observedRequestId = (string) Str::uuid();
         $typedEvidence = $typed->available($plan);
-        return view('plans.action_drafts', compact('plan', 'drafts', 'workLogs', 'requestId', 'multiRequestId', 'observedRequestId', 'typedEvidence'));
+        return view('plans.action_drafts', compact('plan', 'drafts', 'workLogs', 'requestId', 'multiRequestId', 'observedRequestId', 'typedEvidence', 'stepService'));
     }
 
     public function store(Request $request, Plan $plan, PlanOwnershipService $ownership)
@@ -81,27 +83,174 @@ final class PlanActionDraftController extends Controller
         return redirect()->route('plans.action_drafts.index', $plan);
     }
 
-    public function accept(Request $request, Plan $plan, PlanActionDraft $draft, PlanOwnershipService $ownership, PlanActivityService $activity)
-    {
+    public function accept(
+        Request $request,
+        Plan $plan,
+        PlanActionDraft $draft,
+        PlanOwnershipService $ownership,
+        PlanActivityService $activity,
+        PlanActionDraftStepService $stepService,
+    ) {
         $ownership->authorizePlan($request, $plan);
         $this->withinPlan($plan, $draft);
-        $task = DB::transaction(function () use ($plan, $draft) {
-            $locked = PlanActionDraft::where('plan_id', $plan->id)->whereKey($draft->id)->lockForUpdate()->firstOrFail();
-            if ($locked->status === PlanActionDraft::ACCEPTED) return null;
+
+        // Older single-task submissions remain compatible. For a bundle the
+        // owner must explicitly review the exact steps that will be accepted.
+        $validated = $request->validate([
+            'accept_mode' => ['sometimes', 'in:single,bundle'],
+            'steps_fingerprint' => ['sometimes', 'string', 'size:64'],
+        ]);
+
+        DB::transaction(function () use ($plan, $draft, $request, $activity, $stepService, $validated) {
+            $locked = PlanActionDraft::where('plan_id', $plan->id)
+                ->whereKey($draft->id)->lockForUpdate()->firstOrFail();
+            if ($locked->status === PlanActionDraft::ACCEPTED) return;
             abort_unless($locked->status === PlanActionDraft::PROPOSED, 409);
-            $task = $plan->tasks()->create([
-                'title' => $locked->suggested_next_action,
-                'description' => '本人が行動記録を確認し、計画案として承認した新しいTaskです。',
-                'estimated_minutes' => 0, 'remaining_minutes' => 0,
-                'progress_percent' => 0, 'status' => 'todo',
-                'priority' => 3, 'activation_cost' => 3, 'sort_order' => 0,
+
+            $steps = $locked->steps()->get();
+            $isBundle = $steps->isNotEmpty();
+            $mode = $validated['accept_mode'] ?? 'single';
+            abort_unless($mode === ($isBundle ? 'bundle' : 'single'), 409);
+
+            if ($isBundle) {
+                abort_unless($steps->count() === PlanActionDraftStepService::STEP_COUNT, 409);
+                abort_unless($steps->every(fn ($step) =>
+                    (int) $step->evidence_revision === (int) $locked->revision_no
+                    && trim((string) $step->title) !== ''
+                ), 409);
+                abort_unless(isset($validated['steps_fingerprint'])
+                    && hash_equals($stepService->fingerprint($steps), $validated['steps_fingerprint']), 409);
+            }
+
+            $proposedTitles = $isBundle
+                ? $steps->pluck('title')->all()
+                : [$locked->suggested_next_action];
+            $previousTask = null;
+            $firstTask = null;
+            $baseOrder = (int) $plan->tasks()->max('sort_order');
+
+            foreach ($proposedTitles as $position => $title) {
+                $task = $plan->tasks()->create([
+                    'title' => $title,
+                    'description' => '本人が行動記録を確認し、計画案として承認した新しいTaskです。',
+                    'estimated_minutes' => 0, 'remaining_minutes' => 0,
+                    'progress_percent' => 0, 'status' => 'todo',
+                    'priority' => 3, 'activation_cost' => 3, 'sort_order' => $baseOrder + $position + 1,
+                    'depends_on_task_id' => $previousTask?->id,
+                ]);
+
+                if ($previousTask) {
+                    // One canonical same-Plan dependency per sequential step.
+                    $task->prerequisites()->attach($previousTask->id);
+                }
+
+                if ($isBundle) {
+                    $steps[$position]->update(['accepted_task_id' => $task->id]);
+                }
+
+                $activity->record($plan, $request->user(), 'task_created',
+                    'task', (int) $task->id, ['task_title' => $task->title, 'action_draft_id' => $locked->id]);
+
+                $firstTask ??= $task;
+                $previousTask = $task;
+            }
+
+            $locked->update([
+                'status' => PlanActionDraft::ACCEPTED,
+                'accepted_task_id' => $firstTask->id,
+                'accepted_at' => now(),
             ]);
-            $locked->update(['status' => PlanActionDraft::ACCEPTED,
-                'accepted_task_id' => $task->id, 'accepted_at' => now()]);
-            return $task;
         });
-        if ($task) $activity->record($plan, $request->user(), 'task_created', 'task', (int) $task->id, ['task_title' => $task->title]);
+
         return redirect()->route('plans.action_drafts.index', $plan);
+    }
+
+
+    /**
+     * Opt-in generation of a 3-step proposal. No Task is touched.
+     * An existing same-revision bundle is kept unless the owner explicitly
+     * requests rebuilding (which discards their edited step titles).
+     */
+    public function prepareSteps(
+        Request $request,
+        Plan $plan,
+        PlanActionDraft $draft,
+        PlanOwnershipService $ownership,
+        PlanActionDraftStepService $stepService,
+    ) {
+        $ownership->authorizePlan($request, $plan);
+        $this->withinPlan($plan, $draft);
+        $validated = $request->validate(['rebuild' => ['sometimes', 'boolean']]);
+
+        DB::transaction(function () use ($plan, $draft, $validated, $stepService) {
+            $locked = PlanActionDraft::where('plan_id', $plan->id)
+                ->whereKey($draft->id)->lockForUpdate()->firstOrFail();
+            abort_unless($locked->status === PlanActionDraft::PROPOSED, 409);
+            $existing = $locked->steps()->get();
+
+            if ($existing->isNotEmpty() && ! ($validated['rebuild'] ?? false)) {
+                // Stale bundles are never silently discarded.
+                abort_unless($existing->every(fn ($step) =>
+                    (int) $step->evidence_revision === (int) $locked->revision_no), 409);
+                return;
+            }
+
+            $locked->steps()->delete();
+            foreach ($stepService->suggest($plan, $locked) as $index => $title) {
+                $locked->steps()->create([
+                    'sort_order' => $index + 1,
+                    'evidence_revision' => (int) $locked->revision_no,
+                    'title' => $title,
+                ]);
+            }
+        });
+
+        return redirect()->route('plans.action_drafts.index', $plan)
+            ->with('success', '3段階の未承認ステップ案を用意しました。タイトルを確認・編集してから承認してください。');
+    }
+
+    /** Update all titles as one revision-bound form, never canonical Tasks. */
+    public function updateSteps(
+        Request $request,
+        Plan $plan,
+        PlanActionDraft $draft,
+        PlanOwnershipService $ownership,
+    ) {
+        $ownership->authorizePlan($request, $plan);
+        $this->withinPlan($plan, $draft);
+        $validated = $request->validate([
+            'evidence_revision' => ['required', 'integer', 'min:1'],
+            'step_titles' => ['required', 'array', 'size:3'],
+            'step_titles.*' => ['required', 'string', 'max:255'],
+        ]);
+
+        DB::transaction(function () use ($plan, $draft, $validated) {
+            $locked = PlanActionDraft::where('plan_id', $plan->id)
+                ->whereKey($draft->id)->lockForUpdate()->firstOrFail();
+            abort_unless($locked->status === PlanActionDraft::PROPOSED, 409);
+            abort_unless((int) $locked->revision_no === (int) $validated['evidence_revision'], 409);
+
+            $steps = $locked->steps()->get();
+            abort_unless($steps->count() === PlanActionDraftStepService::STEP_COUNT, 409);
+            abort_unless($steps->every(fn ($step) =>
+                (int) $step->evidence_revision === (int) $locked->revision_no), 409);
+
+            $actual = $steps->pluck('id')->map(fn ($id) => (int) $id)->sort()->values()->all();
+            $provided = array_map('intval', array_keys($validated['step_titles']));
+            sort($provided);
+            abort_unless($provided === $actual, 409);
+
+            foreach ($steps as $step) {
+                $title = trim((string) $validated['step_titles'][$step->id]);
+                if ($title === '') {
+                    throw ValidationException::withMessages(['step_titles' => '各ステップの作業名が必要です。']);
+                }
+                $step->update(['title' => $title]);
+            }
+        });
+
+        return redirect()->route('plans.action_drafts.index', $plan)
+            ->with('success', '3段階のステップ案を更新しました。まだTaskには追加していません。');
     }
 
     public function dismiss(Request $request, Plan $plan, PlanActionDraft $draft, PlanOwnershipService $ownership)
