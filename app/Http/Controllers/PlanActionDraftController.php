@@ -195,7 +195,7 @@ final class PlanActionDraftController extends Controller
                 return;
             }
 
-            $locked->steps()->delete();
+            PlanActionDraftStep::where('plan_action_draft_id', $locked->id)->delete();
             foreach ($stepService->suggest($plan, $locked) as $index => $title) {
                 $locked->steps()->create([
                     'sort_order' => $index + 1,
