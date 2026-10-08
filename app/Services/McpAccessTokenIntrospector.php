@@ -9,8 +9,9 @@ use Throwable;
  * RFC 7662 opaque access-token introspection through a separately configured
  * trusted OAuth authorization server. The IdP validates the token/signature.
  *
- * This class never receives an HTTP Request, never looks up a Canovia User and
- * is NOT wired to /api/mcp; that endpoint continues to reject everything.
+ * This class never receives an HTTP Request or looks up a Canovia User.
+ * The separately disabled MCP resource invokes verify() only after its
+ * own security gates pass; this principal alone never grants Plan access.
  */
 final class McpAccessTokenIntrospector
 {
