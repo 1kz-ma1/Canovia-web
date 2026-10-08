@@ -70,3 +70,12 @@ Plan grants and linked external subject records from the Canovia account page.
 Unlink also terminates all associated grants, and every real state change
 produces metadata-only audit. No consent issuance or MCP resource read
 is connected. See [delegated revocation](MCP_DELEGATED_REVOCATION_CONTRACT.md).
+
+## Current: OAuth account-linking handshake (disabled)
+
+A separate confidential Canovia OAuth client can, when fully configured,
+verify the signed-in Canovia actor and an IdP `(issuer,sub)` via state,
+PKCE S256, exact RFC9207 callback issuer and independent access-token
+introspection. The user must confirm before a linked-subject HMAC is
+persisted. No ChatGPT Plan sharing consent or MCP read is granted. See
+[account linking contract](MCP_OAUTH_ACCOUNT_LINK_CONTRACT.md).
