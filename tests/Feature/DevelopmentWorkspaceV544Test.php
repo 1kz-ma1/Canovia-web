@@ -105,8 +105,13 @@ class DevelopmentWorkspaceV544Test extends TestCase
             ->assertSee('data-development-home-active', false)
             ->assertDontSee('data-development-home-recent-activity', false)
             ->assertDontSee('data-development-workspace-readiness', false)
+            ->assertSee('data-development-local-first-action', false)
+            ->assertSee('data-development-local-create-action', false)
             ->assertSee(
-                route('github_workflow.index', ['plan_id' => $plan->id]),
+                route('plans.ai_task_assistant.show', [
+                    'plan' => $plan,
+                    'return_to_workspace' => 1,
+                ]),
                 false,
             );
 
