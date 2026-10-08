@@ -183,6 +183,140 @@ class BookkeepingPlacementV5861Test extends TestCase
             ->assertDontSee('data-study-bookkeeping-diagnostic-link', false);
     }
 
+    public function test_in_app_diagnostic_is_not_misclassified_as_external_score_or_study_baseline(): void
+    {
+        $user = User::factory()->create();
+        $plan = $this->plan($user, '簿記3級を復習して2級の先取りを考える');
+        $service = app(BookkeepingPlacementDiagnosticService::class);
+        $answers = collect($service->questions())
+            ->mapWithKeys(fn (array $q) => [$q['id'] => $q['correct']])
+            ->all();
+
+        $this->actingAs($user)
+            ->post(route('plans.bookkeeping_placement.store', $plan), [
+                'request_id' => (string) Str::uuid(),
+                'wants_advance' => '1',
+                'answers' => $answers,
+            ])
+            ->assertRedirect();
+
+        $observation = StudyScoreObservation::query()->sole();
+        $this->actingAs($user)
+            ->get(route('plans.study_scores.index', $plan))
+            ->assertOk()
+            ->assertDontSee('data-study-score-observation="'.$observation->id.'"', false)
+            ->assertSee('まだ外部スコアEvidenceはありません。');
+
+        $this->actingAs($user)
+            ->get(route('workspace.study.index', [
+                'plan_id' => $plan->id,
+                'surface' => 'preparation',
+            ]))
+            ->assertOk()
+            ->assertSee('data-study-bookkeeping-diagnostic-link', false)
+            ->assertDontSee('簿記3級基礎の現在地');
+    }
+
+    public function test_second_assessment_replaces_suggestion_but_retains_prior_record(): void
+    {
+        $user = User::factory()->create();
+        $plan = $this->plan($user, '簿記3級と2級');
+        $service = app(BookkeepingPlacementDiagnosticService::class);
+        $correct = collect($service->questions())
+            ->mapWithKeys(fn (array $q) => [$q['id'] => $q['correct']])
+            ->all();
+        $wrong = $correct;
+        $wrong['q10'] = 'D';
+        $wrong['q11'] = 'D';
+
+        foreach ([$wrong, $correct] as $answers) {
+            $this->actingAs($user)
+                ->post(route('plans.bookkeeping_placement.store', $plan), [
+                    'request_id' => (string) Str::uuid(),
+                    'wants_advance' => '1',
+                    'answers' => $answers,
+                ])
+                ->assertRedirect();
+        }
+
+        $this->assertDatabaseCount('study_score_observations', 2);
+        $this->actingAs($user)
+            ->get(route('plans.bookkeeping_placement.show', $plan))
+            ->assertOk()
+            ->assertSee('前回の確認結果：100%')
+            ->assertSee('data-bookkeeping-placement-next-actions', false)
+            ->assertSee('2級の導入単元を1つ試し');
+    }
+
+    public function test_unknown_prerequisite_or_unwanted_grade_two_stretch_is_not_forced(): void
+    {
+        $service = app(BookkeepingPlacementDiagnosticService::class);
+        $this->assertSame('diagnostic_needed', $service->placement(
+            100,
+            ['basic_journal' => 100],
+            true,
+        )['status']);
+
+        $topicScores = array_fill_keys(array_keys(BookkeepingPlacementDiagnosticService::TOPICS), 100);
+        $this->assertSame('review_and_verify', $service->placement(
+            100,
+            $topicScores,
+            false,
+        )['status']);
+        $this->assertSame('trial_next_grade', $service->placement(
+            100,
+            $topicScores,
+            true,
+        )['status']);
+    }
+
+    public function test_other_plan_request_id_cannot_replay_stored_result_or_change_ownership(): void
+    {
+        $owner = User::factory()->create();
+        $a = $this->plan($owner, '簿記3級の復習');
+        $b = $this->plan($owner, '簿記2級の先取り');
+        $service = app(BookkeepingPlacementDiagnosticService::class);
+        $answers = collect($service->questions())
+            ->mapWithKeys(fn (array $q) => [$q['id'] => $q['correct']])
+            ->all();
+        $payload = [
+            'request_id' => (string) Str::uuid(),
+            'wants_advance' => '1',
+            'answers' => $answers,
+        ];
+
+        $this->actingAs($owner)
+            ->post(route('plans.bookkeeping_placement.store', $a), $payload)
+            ->assertRedirect();
+        $this->actingAs($owner)
+            ->post(route('plans.bookkeeping_placement.store', $b), $payload)
+            ->assertStatus(409);
+
+        $this->assertDatabaseCount('study_score_observations', 1);
+        $this->assertSame($a->id, StudyScoreObservation::query()->sole()->plan_id);
+    }
+
+    public function test_unknown_answer_option_cannot_be_scored(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner, '簿記3級');
+        $service = app(BookkeepingPlacementDiagnosticService::class);
+        $answers = collect($service->questions())
+            ->mapWithKeys(fn (array $q) => [$q['id'] => $q['correct']])
+            ->all();
+        $answers['q12'] = 'NOT_AN_OPTION';
+
+        $this->actingAs($owner)
+            ->post(route('plans.bookkeeping_placement.store', $plan), [
+                'request_id' => (string) Str::uuid(),
+                'wants_advance' => '1',
+                'answers' => $answers,
+            ])
+            ->assertSessionHasErrors('answers.q12');
+
+        $this->assertDatabaseCount('study_score_observations', 0);
+    }
+
     private function plan(User $user, string $title): Plan
     {
         return Plan::query()->create([
