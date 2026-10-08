@@ -101,6 +101,7 @@ jobs:
           php -l app/Services/WorkspaceNavigationService.php
           php -l app/Http/Middleware/RememberWorkspaceScreen.php
           php -l tests/Feature/ContextualWorkspaceNavigationV5883Test.php
+          php -l tests/Feature/ReleaseLevelFoundationV5820Test.php
           php -l tests/Feature/PrimaryNavigationCompanionV510Test.php
           php -l tests/Feature/WorkspaceModeBarV541Test.php
           php -l app/Http/Controllers/AdaptiveLearningController.php

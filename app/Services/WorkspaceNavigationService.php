@@ -56,8 +56,10 @@ final class WorkspaceNavigationService
             'workspace.development.top', 'workspace.development.index',
             'workspace.career.index', 'career.explore.show',
             'plans.study_scope.index', 'plans.tasks.study_practice.show',
+            'plans.tasks.study_practice.resume', 'plans.tasks.study_activity.show',
+            'plans.tasks.study_resource.show', 'plans.tasks.study_recall.show',
             'plans.tasks.learning.index', 'plans.tasks.learning.show',
-            'github_workflow.index',
+            'plans.tasks.learning.exam.show', 'github_workflow.index',
         ], true)) return;
 
         $plan = $request->route('plan');
