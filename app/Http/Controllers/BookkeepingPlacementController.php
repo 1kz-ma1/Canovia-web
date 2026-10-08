@@ -38,6 +38,13 @@ final class BookkeepingPlacementController extends Controller
             'canEdit' => $ownership->canEdit($request, $plan),
             'result' => $request->session()->get('bookkeeping.diagnostic.feedback.'.$plan->id),
             'latest' => $latest,
+            'latestPlacement' => $latest
+                ? $diagnostic->placement(
+                    (int) $latest->score_value,
+                    (array) $latest->components,
+                    (int) data_get($latest->components, '_advance_interest', 0) === 1,
+                )
+                : null,
         ]);
     }
 
