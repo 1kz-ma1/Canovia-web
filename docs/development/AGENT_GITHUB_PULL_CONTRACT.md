@@ -30,6 +30,10 @@ The authenticated Development Work surface now offers an optional private Contex
 
 The owner of a personal Development Plan can prepare the proposed `chatgpt` sharing scope (`overview` or `tasks`) and a finite 1/7/30-day preparation lifetime in the Work surface. Each save/update/cancel action is CSRF-protected, session-authenticated, bound to the Plan owner and audited without storing source Context. These records are `prepared`, **never connected, consented or delegated**. No private MCP route, bearer token or OAuth client exists. Revocation remains available to the preference creator via the account page even if the Plan becomes collaborative, changes domain or ownership. Neither the account page nor the preparation record grants ChatGPT access. See [sharing preparation contract](CHATGPT_SHARING_PREFERENCES_SPEC.md).
 
+## Current: MCP protected-resource discovery (disabled by default)
+
+Canovia includes a **deny-all** `/api/mcp` probe and optional protected resource discovery metadata for testing a future OAuth integration. Even when a legitimate-looking Authorization header is supplied, all MCP requests return unauthorized; prior sharing-preparation records do not grant access. The discovery feature is disabled unless server-owned HTTPS resource/issuer settings are explicitly configured. A real OAuth authorization server, token verifier, formal consent and MCP tool handler are **not** provided in this slice. See [MCP protected-resource contract](MCP_OAUTH_RESOURCE_GATE_CONTRACT.md).
+
 ## Future: direct delegated AI → Canovia read
 
 A coding AI that needs **Canovia-private Plan context** (as opposed to GitHub-public specifications) requires a different authorization boundary. A connected GitHub account alone is not evidence that the agent may read the user's Canovia Plans.

@@ -91,6 +91,7 @@ use App\Http\Controllers\StudyWorkspaceTopController;
 use App\Http\Controllers\DevelopmentWorkspaceController;
 use App\Http\Controllers\DevelopmentRoadmapContextController;
 use App\Http\Controllers\DevelopmentPrivateAiContextPreviewController;
+use App\Http\Controllers\McpProtectedResourceMetadataController;
 use App\Http\Controllers\DevelopmentAiSharingPreferenceController;
 use App\Http\Controllers\DevelopmentCreativePlanSelectionController;
 use App\Http\Controllers\DevelopmentWorkspaceTopController;
@@ -127,6 +128,14 @@ Route::middleware('release.level:1')->group(function () {
     Route::post('/personalization/seeds/{seedKey}', [PersonalizationController::class, 'acceptSeed'])->middleware('throttle:20,1')->name('personalization.seed.accept');
     Route::post('/personalization/capabilities/{capability}/interest', [PersonalizationController::class, 'capabilityInterest'])->middleware('throttle:20,1')->name('personalization.capability.interest');
 });
+// OAuth Protected Resource Metadata (RFC 9728). Non-session clients may
+// discover these routes, but only after explicitly enabling safe IdP config.
+Route::get('/.well-known/oauth-protected-resource', McpProtectedResourceMetadataController::class)
+    ->middleware('throttle:60,1')
+    ->name('mcp.oauth_protected_resource');
+Route::get('/.well-known/oauth-protected-resource/api/mcp', McpProtectedResourceMetadataController::class)
+    ->middleware('throttle:60,1')
+    ->name('mcp.oauth_protected_resource_path');
 Route::get('/', [HomeController::class, 'index'])->middleware('early_access.visit')->name('home');
 Route::get('/workspace/overview', OverviewWorkspaceController::class)->middleware('early_access.visit')->name('workspace.overview.index');
 Route::get('/workspace/study/top', StudyWorkspaceTopController::class)->middleware('early_access.visit')->name('workspace.study.top');
