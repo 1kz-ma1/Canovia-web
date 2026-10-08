@@ -8,6 +8,7 @@ use App\Models\Plan;
 use App\Models\QuestionPack;
 use App\Models\Task;
 use App\Services\AdaptiveLearningBankQueueService;
+use App\Services\AdaptiveLearningCandidateService;
 use App\Services\BehaviorIdentityService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
@@ -64,7 +65,8 @@ final class AdaptiveLearningController extends Controller
 
     public function start(Request $request, Plan $plan, Task $task,
         PlanOwnershipService $ownership, PlanCategoryProfileService $profiles,
-        BehaviorIdentityService $identity, AdaptiveLearningBankQueueService $queue)
+        BehaviorIdentityService $identity, AdaptiveLearningBankQueueService $queue,
+        AdaptiveLearningCandidateService $candidates)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         $input = $request->validate([
@@ -78,7 +80,7 @@ final class AdaptiveLearningController extends Controller
         $userId = $request->user()?->id;
         $token = $userId ? null : $identity->resolve($request);
 
-        $run = DB::transaction(function () use ($input, $pack, $userId, $token, $plan, $task, $queue) {
+        $run = DB::transaction(function () use ($input, $pack, $userId, $token, $plan, $task, $queue, $candidates) {
             $existing = LearningRun::where('start_request_id', $input['start_request_id'])
                 ->lockForUpdate()->first();
 
@@ -111,6 +113,7 @@ final class AdaptiveLearningController extends Controller
                     'question_pack_id' => '現在、この問題集から回答可能な問題を準備できませんでした。',
                 ]);
             }
+            $candidates->refresh($new);
             return $new;
         });
 
@@ -136,7 +139,8 @@ final class AdaptiveLearningController extends Controller
 
     public function answer(Request $request, Plan $plan, Task $task, LearningRun $learningRun,
         PlanOwnershipService $ownership, PlanCategoryProfileService $profiles,
-        BehaviorIdentityService $identity, QuestionBankGrader $grader)
+        BehaviorIdentityService $identity, QuestionBankGrader $grader,
+        AdaptiveLearningCandidateService $candidates)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         $input = $request->validate([
@@ -145,7 +149,7 @@ final class AdaptiveLearningController extends Controller
             'choice' => ['required', 'string', 'max:255'],
         ]);
 
-        DB::transaction(function () use ($request, $plan, $task, $learningRun, $identity, $input, $grader) {
+        DB::transaction(function () use ($request, $plan, $task, $learningRun, $identity, $input, $grader, $candidates) {
             $run = $this->actorRuns($request, $plan, $task, $identity)
                 ->whereKey($learningRun->id)->lockForUpdate()->firstOrFail();
             $item = $run->items()->where('ordinal', $run->current_ordinal)
@@ -184,6 +188,8 @@ final class AdaptiveLearningController extends Controller
                 'evaluation_contribution' => null,
                 'evaluation_confidence' => null,
             ]);
+            // Re-rank only FUTURE candidates; persisted locked items stay fixed.
+            $candidates->refresh($run);
         });
 
         return redirect()->route('plans.tasks.learning.show', [$plan, $task, $learningRun]);
@@ -191,11 +197,12 @@ final class AdaptiveLearningController extends Controller
 
     public function next(Request $request, Plan $plan, Task $task, LearningRun $learningRun,
         PlanOwnershipService $ownership, PlanCategoryProfileService $profiles,
-        BehaviorIdentityService $identity, AdaptiveLearningBankQueueService $queue)
+        BehaviorIdentityService $identity, AdaptiveLearningBankQueueService $queue,
+        AdaptiveLearningCandidateService $candidates)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         $exhausted = false;
-        DB::transaction(function () use ($request, $plan, $task, $learningRun, $identity, $queue, &$exhausted) {
+        DB::transaction(function () use ($request, $plan, $task, $learningRun, $identity, $queue, $candidates, &$exhausted) {
             $run = $this->actorRuns($request, $plan, $task, $identity)
                 ->whereKey($learningRun->id)->lockForUpdate()->firstOrFail();
             abort_unless($run->status === LearningRun::STATUS_ACTIVE, 409);
@@ -216,6 +223,7 @@ final class AdaptiveLearningController extends Controller
             $run->update(['current_ordinal' => $nextOrdinal]);
             if (! $next->presented_at) $next->update(['presented_at' => now()]);
             $queue->refill($run);
+            $candidates->refresh($run);
         });
 
         return redirect()->route('plans.tasks.learning.show', [$plan, $task, $learningRun])

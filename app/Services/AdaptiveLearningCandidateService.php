@@ -8,7 +8,7 @@ use App\Models\Question;
 use App\Models\QuestionPack;
 
 /**
- * EXPRERIMENTAL conservative, deterministic recommendation for the replaceable
+ * EXPERIMENTAL conservative, deterministic recommendation for the replaceable
  * candidate layer. It never touches previously locked LearningRunItems.
  * Uses ONLY recorded answers (not inferred mastery).
  */
