@@ -642,11 +642,25 @@ class PersonalizationBootstrapV5825Test extends TestCase
             'is_public' => false,
         ]);
         $workspaceUrl = route('workspace.study.index', ['plan_id' => $plan->id]);
+        StudyScoreObservation::query()->create([
+            'plan_id' => $plan->id,
+            'user_id' => $user->id,
+            'request_id' => (string) Str::uuid(),
+            'metric_key' => 'exam_score',
+            'metric_label' => '現在の得点',
+            'score_value' => 65,
+            'scale_min' => 0,
+            'scale_max' => 100,
+            'unit' => 'score',
+            'source_kind' => 'self_reported',
+            'observed_at' => now(),
+        ]);
 
         $this->actingAs($user)
             ->withSession(['success' => '学習スコアをEvidenceとして記録しました。'])
             ->get(route('plans.study_scores.index', $plan))
             ->assertOk()
+            ->assertSee('data-study-score-next-action', false)
             ->assertSee($workspaceUrl, false);
 
         $this->actingAs($user)
