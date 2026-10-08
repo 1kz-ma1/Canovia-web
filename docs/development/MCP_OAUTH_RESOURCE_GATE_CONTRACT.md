@@ -35,6 +35,14 @@ The OAuth identity provider must be selected and set up separately. No `/.well-k
 
 A disabled-by-default `McpAccessTokenIntrospector` now supports RFC 7662 introspection at a **server-configured, HTTPS, same-issuer** IdP endpoint, returning only an external identity description after strict token audience, issuer, client, lifetime and scope checks. This does not authenticate a Canovia User, does not constitute consent, and is **not invoked by /api/mcp**. A provider must explicitly support RFC 7662 with all required claims. If the chosen IdP instead uses signed JWTs without compatible introspection, select a maintained signature-verification library and document the specific issuer/JWKS before enabling it. Details: [Introspection contract](MCP_TOKEN_INTROSPECTION_CONTRACT.md).
 
+## Future Plan authorization policy foundation (2026-10-09)
+
+A separate, disabled policy and schema now model immutable linked external
+subjects and Plan/client/resource-scoped consent grants (no link/consent
+creation path, and **no** MCP tool invoking the policy). The UI's prior
+`prepared` preferences are not active grants. See
+[delegated Plan policy contract](MCP_DELEGATED_PLAN_POLICY_CONTRACT.md).
+
 ## Next independent implementation gates
 
 1. Select a security-reviewed OAuth identity provider; confirm OpenAI client identification (prefer CIMD, or DCR / pre-registered client) and production callback URI, token methods and configured resource audience.
