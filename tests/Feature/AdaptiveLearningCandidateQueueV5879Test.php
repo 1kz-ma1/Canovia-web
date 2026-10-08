@@ -136,7 +136,10 @@ final class AdaptiveLearningCandidateQueueV5879Test extends TestCase
         $this->assertSame($initialSecond->id, $run->items()->where('ordinal', 2)->sole()->id);
         $this->assertSame($lockedThird->id, $run->items()->where('ordinal', 3)->sole()->id);
         $this->assertSame($questions[4]->id, $run->items()->where('ordinal', 4)->sole()->question_id);
-        $this->assertSame($questions[3]->id, $run->candidates()->firstOrFail()->question_id);
+        // q6 is another unseen 'net' question and remains the first
+        // candidate; q4 is not locked or lost.
+        $this->assertSame($questions[5]->id, $run->candidates()->firstOrFail()->question_id);
+        $this->assertTrue($run->candidates()->pluck('question_id')->contains($questions[3]->id));
         $this->assertSame(0, $task->fresh()->progress_percent);
         $this->assertDatabaseCount('study_practice_attempts', 0);
     }
