@@ -225,6 +225,13 @@ final class StudyWorkspaceController extends Controller
         return view('workspace.study.index', [
             'studyPlans' => $studyPlans,
             'plan' => $plan,
+            'firstPlanContext' => $plan->tasks->isEmpty()
+                ? data_get(
+                    $personalizationContexts->current($request),
+                    'domain_context.study',
+                    [],
+                )
+                : [],
             'canEdit' => $canEdit,
             'studyAdaptiveAction' => $adaptiveAction,
             'intelligencePresentation' => $presentation,
