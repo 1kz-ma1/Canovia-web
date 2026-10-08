@@ -33,6 +33,29 @@ final class McpDelegatedPlanAccessPolicyTest extends TestCase
         ]);
     }
 
+    public function test_existing_link_and_grant_survive_safe_migration_retry(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner);
+        $principal = $this->principal();
+        [$link, $grant] = $this->linkAndGrant($owner, $plan, $principal);
+
+        $migration = require base_path(
+            'database/migrations/2026_10_09_000200_create_mcp_identity_links_and_delegated_grants.php',
+        );
+        $migration->up();
+
+        $this->assertDatabaseHas('mcp_linked_subjects', [
+            'id' => $link->id,
+            'identity_fingerprint' => $link->identity_fingerprint,
+        ]);
+        $this->assertDatabaseHas('mcp_delegated_grants', [
+            'id' => $grant->id,
+            'scope' => 'tasks',
+            'status' => 'active',
+        ]);
+    }
+
     public function test_no_link_or_only_prepared_preference_never_grants_read(): void
     {
         $owner = User::factory()->create();
