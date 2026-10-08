@@ -30,24 +30,50 @@ See `docs/future/README.md` for the full boundary.
 
 ## Merge policy
 
-**Do not push implementation work directly to `main`.**
+**Never push implementation work directly to `main`.** Render can automatically deploy from `main`, so even a low-impact merge is a production-capable action.
 
-Normal Canovia workflow:
+Normal workflow:
 
 ```text
 latest main
   -> feature/fix branch
-  -> implementation
-  -> syntax / regression review
-  -> Pull Request
-  -> user manually reviews / merges
+  -> implementation and relevant regression tests
+  -> Pull Request with impact and risk assessment
+  -> verify required CI, review the actual diff and branch status
+  -> LOW IMPACT + NO OWNER DECISION: agent may squash merge
+  -> HIGH IMPACT / OWNER DECISION / UNCERTAINTY: leave PR open for manual merge
 ```
 
-ChatGPT / AI-assisted work should stop at PR creation unless the user explicitly requests a different action.
+### Agent may merge without further approval
 
-The user performs the normal merge manually.
+Only when **all** are true:
 
-Direct updates to `main` are exceptions only when the user explicitly authorizes them for that specific operation.
+1. The change is isolated, non-destructive, reversible, and does not require a product-owner decision; production impact is expected to be small. Typical examples: local presentation/copy, help text, small navigation improvements, documentation, targeted tests, or safely scoped bug fixes.
+2. The PR targets `main` from a feature/fix branch; direct pushes to `main` are still prohibited.
+3. The complete diff is inspected for unexpected changes; the PR is mergeable against the current `main` and no reviewer/approval or branch-protection requirement is outstanding.
+4. All required checks have **completed successfully**. Relevant tests actually cover the changed behavior; successful unrelated workflows alone are insufficient. New or changed behavior should gain regression coverage.
+5. No uncertain data integrity, privacy, security, external side effects, or operational risks remain.
+
+When all conditions hold, squash merge with an expected head SHA, confirm GitHub reported success, and tell the user the PR number, test result, commit SHA, and any unverified deployment status. Never claim production verification solely from CI.
+
+### User manually reviews and merges
+
+Keep the PR open, explain the consequence or choice, and give the user its URL when it includes any of the following (unless the user explicitly approves that PR for agent merge):
+
+- Database/schema migrations, backfills, destructive data changes, or changes to stored user data semantics.
+- Authentication, authorization, account/session security, secrets, PII or sensitive information, permissions, or privacy boundaries.
+- Payment/billing, pricing, entitlements, monetization, or externally binding actions.
+- Production infrastructure, deploy/build configuration, environment variables, incident remediation, or changes with notable reliability/cost effects.
+- GitHub or other third-party write actions, webhooks with side effects, broader automation, cross-cutting architecture, changes to AI actions with material user impact, or removal of existing functionality.
+- Unclear business requirements, trade-offs needing the owner's judgment, production impact that cannot be bounded, failed/pending CI, inadequate tests, conflicts, or pending required human reviews.
+
+When uncertain, **do not merge**; request a manual merge decision. An explicit approval applies to that named PR, not all future risky PRs.
+
+### Production and emergency exceptions
+
+An agent merge is **not** direct authorization to deploy, roll back, alter a production database, or change production settings. Render may automatically deploy after merging to `main`; monitor/verify deploys separately when possible, and label them unverified otherwise.
+
+Direct updates to `main` remain exceptions only when the user expressly authorizes that specific operation. Emergency changes should still prefer a reviewed PR with an explicit risk summary.
 
 ## Pull Request expectations
 
