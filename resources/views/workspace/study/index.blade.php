@@ -135,6 +135,9 @@
             filled(data_get($firstPlanContext ?? [], 'goal'))
             && trim((string) data_get($firstPlanContext, 'goal')) === trim((string) $plan->title)
             && (string) data_get($firstPlanContext, 'stage') === 'not_started'
+            && ($selectedSurface ?? 'work') === 'work'
+            && (string) data_get($studyWorkspaceState ?? [], 'phase') === 'context_needed'
+            && ! (bool) data_get($studyWorkspaceState ?? [], 'current_position_known', false)
         )
             <aside class="page-card p-4 sm:p-5" data-study-first-plan-guidance>
                 <p class="text-xs font-bold text-cyan-300">診断をもとにした初回ガイド</p>
