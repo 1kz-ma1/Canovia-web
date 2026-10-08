@@ -11,7 +11,11 @@ final class PlanActionDraft extends Model
 
     protected $fillable = ['plan_id', 'request_id', 'source_work_log_id', 'source_kind',
         'completed_action', 'observed_outcome', 'suggested_next_action', 'status',
-        'accepted_task_id', 'accepted_at'];
+        'accepted_task_id', 'accepted_at', 'evidence_snapshots', 'revision_no'];
 
-    protected function casts(): array { return ['accepted_at' => 'datetime']; }
+    protected function casts(): array { return ['accepted_at' => 'datetime', 'evidence_snapshots' => 'array', 'revision_no' => 'integer']; }
+    public function revisions()
+    {
+        return $this->hasMany(PlanActionDraftRevision::class)->orderByDesc('to_revision');
+    }
 }
