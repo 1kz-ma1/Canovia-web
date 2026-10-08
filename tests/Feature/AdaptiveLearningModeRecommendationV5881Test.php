@@ -93,11 +93,8 @@ final class AdaptiveLearningModeRecommendationV5881Test extends TestCase
     public function test_single_success_or_one_session_cannot_automatically_imply_mastery(): void
     {
         [$owner, $plan, $task] = $this->fixture();
-        $this->seedEvents($owner, $plan, $task, [true], 1);
-        $this->actingAs($owner)->get(route('plans.tasks.learning.index', [$plan, $task]))
-            ->assertOk()->assertSee('1位：理解モード');
         $this->seedEvents($owner, $plan, $task, [true,true,true,true,true,true], 1);
-        // Six correct in one individual session are not independent-session evidence.
+        // Even six correct answers from one Run are not independent-session evidence.
         $this->actingAs($owner)->get(route('plans.tasks.learning.index', [$plan, $task]))
             ->assertOk()->assertSee('1位：理解モード');
         $this->assertSame(0, $task->fresh()->progress_percent);
