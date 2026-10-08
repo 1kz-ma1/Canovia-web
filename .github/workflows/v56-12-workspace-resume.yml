@@ -92,6 +92,10 @@ jobs:
           php -l app/Models/PlanActionDraftRevision.php
           php -l app/Services/PlanActionDraftEvidenceService.php
           php -l app/Services/PlanActionDraftTypedEvidenceService.php
+          php -l app/Services/PlanActionDraftStepService.php
+          php -l app/Models/PlanActionDraftStep.php
+          php -l database/migrations/2026_10_08_170000_create_plan_action_draft_steps_table.php
+          php -l tests/Feature/PlanActionDraftV5874Test.php
           php -l tests/Feature/PlanActionDraftV5873Test.php
           php -l database/migrations/2026_10_08_160000_add_evidence_revisions_to_plan_action_drafts.php
           php -l tests/Feature/PlanActionDraftV5872Test.php
@@ -156,6 +160,8 @@ jobs:
         run: php artisan test tests/Feature/DevelopmentCreativePlanRescueV5863Test.php tests/Feature/WorkspaceModeResolverV540Test.php
       - name: V58.69 Team Task Dependencies
         run: php artisan test tests/Feature/DevelopmentTeamTaskDependencyV5869Test.php tests/Feature/DeveloperWorkspaceSurfacesV580Test.php tests/Feature/DevelopmentCreativePlanRescueV5863Test.php
+      - name: V58.74 Owner-approved Sequential Action Draft
+        run: php artisan test tests/Feature/PlanActionDraftV5874Test.php tests/Feature/PlanActionDraftV5873Test.php tests/Feature/PlanActionDraftV5872Test.php tests/Feature/PlanActionDraftV5871Test.php
       - name: V58.73 Typed Evidence and Domain-aware Plan Draft
         run: php artisan test tests/Feature/PlanActionDraftV5873Test.php tests/Feature/PlanActionDraftV5872Test.php tests/Feature/PlanActionDraftV5871Test.php
       - name: V58.72 Multi-evidence Draft and Revision Diff
