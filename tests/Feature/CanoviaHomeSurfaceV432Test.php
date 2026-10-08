@@ -39,8 +39,8 @@ class CanoviaHomeSurfaceV432Test extends TestCase
             ->assertSee('data-action-home', false)
             ->assertSee('data-canovia-nav-key="desktop-home"', false)
             ->assertSee('href="'.route('home').'"', false)
-            ->assertSee('data-canovia-nav-key="desktop-constellation"', false)
-            ->assertSee('data-canovia-nav-key="desktop-execution"', false)
+            ->assertSee('data-canovia-nav-key="desktop-workspace"', false)
+            ->assertSee('data-canovia-nav-key="desktop-timeline"', false)
             ->assertDontSee('data-canovia-nav-key="desktop-inbox"', false)
             ->assertDontSee('data-canovia-nav-key="desktop-map"', false)
             ->assertDontSee('data-canovia-nav-key="mobile-map"', false);
@@ -51,8 +51,8 @@ class CanoviaHomeSurfaceV432Test extends TestCase
             ->assertSee('data-map-home-fallback', false)
             ->assertSee('data-canovia-surface="explore"', false)
             ->assertSee('data-canovia-nav-key="desktop-home"', false)
-            ->assertSee('data-canovia-nav-key="desktop-constellation"', false)
-            ->assertSee('data-canovia-nav-key="desktop-execution"', false)
+            ->assertSee('data-canovia-nav-key="desktop-workspace"', false)
+            ->assertSee('data-canovia-nav-key="desktop-timeline"', false)
             ->assertDontSee('data-canovia-nav-key="desktop-map"', false)
             ->assertDontSee('data-canovia-nav-key="mobile-map"', false);
     }
@@ -69,8 +69,8 @@ class CanoviaHomeSurfaceV432Test extends TestCase
             ->assertSee('id="canovia-instant-meta"', false)
             ->assertSee('"mobileSection":"Explore"', false)
             ->assertSee('"desktop-home"', false)
-            ->assertSee('"desktop-constellation"', false)
-            ->assertSee('"desktop-execution"', false)
+            ->assertSee('"desktop-workspace"', false)
+            ->assertSee('"desktop-timeline"', false)
             ->assertSee('data-canovia-page', false)
             ->assertSee('data-canovia-companion-slot', false)
             ->assertDontSee('desktop-app-header', false)

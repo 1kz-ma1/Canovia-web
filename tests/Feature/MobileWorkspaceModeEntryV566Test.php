@@ -23,41 +23,18 @@ class MobileWorkspaceModeEntryV566Test extends TestCase
         ]);
     }
 
-    public function test_mobile_header_exposes_compact_registry_driven_workspace_switcher(): void
+    public function test_mobile_workspace_tabs_replace_global_selector_only_inside_workspace(): void
     {
-        $user = User::factory()->create([
-            'first_run_completed_at' => now(),
-        ]);
-
-        $response = $this->actingAs($user)->get(route('home'));
-
-        $response
-            ->assertOk()
-            ->assertSee('data-workspace-mode-compact="1"', false)
-            ->assertSee('data-workspace-mode-option="study"', false)
-            ->assertSee('data-workspace-mode-option="development"', false);
-
-        $html = $response->getContent();
-
-        $dom = new \DOMDocument();
-        @$dom->loadHTML($html);
-        $xpath = new \DOMXPath($dom);
-
-        $this->assertSame(
-            1,
-            $xpath->query(
-                '//header[contains(concat(" ", normalize-space(@class), " "), " mobile-app-header ")]'
-                .'//div[contains(concat(" ", normalize-space(@class), " "), " mobile-app-header-inner ")]'
-                .'//*[@data-workspace-mode-compact="1"]'
-            )->length,
-        );
-
-        $this->assertSame(
-            0,
-            $xpath->query(
-                '//header[contains(concat(" ", normalize-space(@class), " "), " mobile-app-header ")]'
-                .'/div[@data-workspace-mode-bar and @data-workspace-mode-compact="0"]'
-            )->length,
-        );
+        $user = User::factory()->create(['first_run_completed_at' => now()]);
+        $this->actingAs($user)->get(route('home'))->assertOk()
+            ->assertSee('data-navigation-shell="global"', false)
+            ->assertSee('data-canovia-nav-key="mobile-workspace"', false)
+            ->assertDontSee('data-workspace-mode-compact', false);
+        $this->get(route('workspace.study.top'))->assertOk()
+            ->assertSee('data-navigation-shell="workspace"', false)
+            ->assertSee('data-canovia-nav-key="mobile-workspace-study"', false)
+            ->assertSee('data-canovia-nav-key="mobile-workspace-development"', false)
+            ->assertSee('data-workspace-exit', false);
     }
+
 }

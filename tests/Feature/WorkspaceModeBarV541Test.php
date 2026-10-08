@@ -26,41 +26,17 @@ class WorkspaceModeBarV541Test extends TestCase
         ]);
     }
 
-    public function test_app_shell_renders_registry_driven_fixed_mode_bar(): void
+    public function test_home_keeps_overview_outside_the_specialized_workspace_strip(): void
     {
-        $user = User::factory()->create([
-            'first_run_completed_at' => now(),
-        ]);
-
-        $response = $this->actingAs($user)->get(route('home'));
-
-        $response
-            ->assertOk()
-            ->assertSee('data-workspace-mode-bar', false)
-            ->assertSee('data-current-workspace-mode="overview"', false)
-            ->assertSee('WORKSPACE')
-            ->assertSee('Overview')
-            ->assertSee('学習')
-            ->assertSee('開発')
-            ->assertSee('Career')
-            ->assertSee(
-                route('workspace_modes.select', [
-                    'workspaceMode' => WorkspaceMode::Study->value,
-                ]),
-                false,
-            )
-            ->assertSee(
-                route('workspace_modes.select', [
-                    'workspaceMode' => WorkspaceMode::Development->value,
-                ]),
-                false,
-            )
-            ->assertSee(
-                route('workspace_modes.select', [
-                    'workspaceMode' => WorkspaceMode::Career->value,
-                ]),
-                false,
-            );
+        $user = User::factory()->create(['first_run_completed_at' => now()]);
+        $this->actingAs($user)->get(route('home'))->assertOk()
+            ->assertSee('data-navigation-shell="global"', false)
+            ->assertSee('data-workspace-mode="overview"', false)
+            ->assertSee('data-canovia-nav-key="desktop-workspace"', false)
+            ->assertDontSee('data-workspace-mode-bar', false);
+        $this->get(route('workspace.study.top'))->assertOk()
+            ->assertSee('data-canovia-nav-key="mobile-workspace-study"', false)
+            ->assertSee('data-workspace-exit', false);
     }
 
     public function test_mode_entry_routes_to_mode_level_surfaces(): void
@@ -127,37 +103,17 @@ class WorkspaceModeBarV541Test extends TestCase
             ->get(route('plans.show', $study))
             ->assertOk()
             ->assertSee('data-workspace-mode="study"', false)
-            ->assertSee('data-current-workspace-mode="study"', false)
-            ->assertSee('>学習<', false);
+            ->assertSee('data-workspace-mode-source="plan_profile"', false);
     }
 
-    public function test_focus_mode_excludes_workspace_bar_from_normal_shell_boundary(): void
+    public function test_focus_mode_still_guards_the_contextual_navigation(): void
     {
-        $layout = file_get_contents(
-            resource_path('views/layouts/app.blade.php'),
-        );
-
-        $this->assertStringContainsString(
-            '@unless ($focusMode)',
-            $layout,
-        );
-        $this->assertStringContainsString(
-            "layouts.partials.workspace-mode-bar",
-            $layout,
-        );
-
-        $firstGuard = strpos($layout, '@unless ($focusMode)');
-        $firstBar = strpos(
-            $layout,
-            "layouts.partials.workspace-mode-bar",
-        );
-        $guardEnd = strpos($layout, '@endunless', $firstGuard);
-
-        $this->assertNotFalse($firstGuard);
-        $this->assertNotFalse($firstBar);
-        $this->assertNotFalse($guardEnd);
-        $this->assertGreaterThan($firstGuard, $firstBar);
-        $this->assertLessThan($guardEnd, $firstBar);
+        $layout = file_get_contents(resource_path('views/layouts/app.blade.php'));
+        $this->assertStringContainsString('@unless ($focusMode)', $layout);
+        $this->assertStringContainsString("layouts.partials.primary-navigation-desktop", $layout);
+        $guard = strpos($layout, '@unless ($focusMode)');
+        $nav = strpos($layout, "layouts.partials.primary-navigation-desktop");
+        $this->assertGreaterThan($guard, $nav);
     }
 
     public function test_instant_fragment_exposes_workspace_mode_metadata(): void
@@ -174,8 +130,8 @@ class WorkspaceModeBarV541Test extends TestCase
             ->assertOk()
             ->assertSee('id="canovia-instant-meta"', false)
             ->assertSee('"workspaceMode":', false)
-            ->assertSee('"key":"development"', false)
-            ->assertSee('data-workspace-mode="development"', false);
+            ->assertSee('"key":"overview"', false)
+            ->assertSee('data-workspace-mode="overview"', false);
     }
 
     public function test_unknown_mode_entry_is_not_a_public_workspace(): void

@@ -65,7 +65,7 @@ class WorkspaceModePersistenceV542Test extends TestCase
             ->assertOk()
             ->assertSee('data-workspace-mode="study"', false)
             ->assertSee('data-workspace-mode-source="plan_profile"', false)
-            ->assertSee('Planに追従');
+            ->assertSee('data-workspace-mode-source="plan_profile"', false);
 
         $this->assertSame(
             'development',

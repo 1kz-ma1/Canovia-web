@@ -103,7 +103,7 @@ class ExecutionModeTerminologyV555Test extends TestCase
         $this->assertSame('plans.career.index', $career['route_name']);
     }
 
-    public function test_global_workspace_bar_keeps_workspace_identity(): void
+    public function test_global_navigation_keeps_overview_separate_from_activity_mode(): void
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);
 
@@ -111,9 +111,9 @@ class ExecutionModeTerminologyV555Test extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('data-workspace-mode-bar', false)
-            ->assertSee('WORKSPACE')
-            ->assertSee('Overview');
+            ->assertSee('data-navigation-shell="global"', false)
+            ->assertSee('data-canovia-nav-key="mobile-workspace"', false)
+            ->assertDontSee('data-workspace-mode-bar', false);
     }
 
     private function plan(User $user, string $title, string $category): Plan

@@ -23,7 +23,7 @@ class PrimaryNavigationCompanionV510Test extends TestCase
         ]);
     }
 
-    public function test_primary_navigation_is_home_constellation_execution_timeline_without_inbox(): void
+    public function test_primary_navigation_is_home_workspace_timeline_and_more(): void
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);
 
@@ -32,17 +32,17 @@ class PrimaryNavigationCompanionV510Test extends TestCase
         $response
             ->assertOk()
             ->assertSee('data-canovia-nav-key="desktop-home"', false)
-            ->assertSee('data-canovia-nav-key="desktop-constellation"', false)
-            ->assertSee('data-canovia-nav-key="desktop-execution"', false)
+            ->assertSee('data-canovia-nav-key="desktop-workspace"', false)
+            ->assertSee('data-canovia-nav-key="desktop-timeline"', false)
             ->assertSee('data-canovia-nav-key="desktop-timeline"', false)
             ->assertSee('data-canovia-nav-key="mobile-home"', false)
-            ->assertSee('data-canovia-nav-key="mobile-constellation"', false)
-            ->assertSee('data-canovia-nav-key="mobile-execution"', false)
+            ->assertSee('data-canovia-nav-key="mobile-workspace"', false)
+            ->assertSee('data-canovia-nav-key="mobile-timeline"', false)
             ->assertSee('data-canovia-nav-key="mobile-timeline"', false)
             ->assertDontSee('data-canovia-nav-key="desktop-inbox"', false)
             ->assertDontSee('data-canovia-nav-key="mobile-inbox"', false)
-            ->assertSee('>星座<', false)
-            ->assertSee('>実行<', false);
+            ->assertSee('星座・全体俯瞰')
+            ->assertSee('従来の実行');
     }
 
     public function test_companion_is_a_floating_palette_and_remains_available_on_legacy_map(): void
@@ -74,10 +74,10 @@ class PrimaryNavigationCompanionV510Test extends TestCase
         $response
             ->assertOk()
             ->assertSee('"mobileSection":"星座"', false)
-            ->assertSee('"desktop-constellation"', false)
-            ->assertSee('"desktop-execution"', false)
-            ->assertSee('"mobile-constellation"', false)
-            ->assertSee('"mobile-execution"', false)
+            ->assertSee('"desktop-workspace"', false)
+            ->assertSee('"desktop-timeline"', false)
+            ->assertSee('"mobile-workspace"', false)
+            ->assertSee('"mobile-timeline"', false)
             ->assertDontSee('"desktop-inbox"', false)
             ->assertDontSee('"mobile-inbox"', false);
     }
@@ -91,8 +91,8 @@ class PrimaryNavigationCompanionV510Test extends TestCase
             ->assertOk()
             ->assertSee('EXECUTION /')
             ->assertSee('実行方法を選ぶ。')
-            ->assertSee('data-canovia-nav-key="desktop-execution"', false)
-            ->assertSee('nav-link-active', false);
+            ->assertSee('data-canovia-more', false)
+            ->assertSee(route('navigation.index'), false);
     }
 
     public function test_client_contract_mounts_companion_palette_after_full_and_instant_navigation(): void
