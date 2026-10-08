@@ -65,6 +65,36 @@ final class DevelopmentGitHubRoadmapWorkspaceTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_context_requires_auth_and_plan_ownership_before_github_fetch(): void
+    {
+        $owner = User::factory()->create();
+        $outsider = User::factory()->create();
+        $plan = $this->plan($owner);
+        Http::fake();
+
+        $this->get(route('workspace.development.context', ['plan' => $plan->id]))
+            ->assertRedirect();
+        $this->actingAs($outsider)
+            ->get(route('workspace.development.context', ['plan' => $plan->id]))
+            ->assertForbidden();
+        Http::assertNothingSent();
+    }
+
+    public function test_context_requires_linked_repository_and_valid_scope(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner);
+        Http::fake();
+        $this->actingAs($owner)
+            ->get(route('workspace.development.context', ['plan' => $plan->id]))
+            ->assertStatus(409)
+            ->assertJsonPath('error', 'repository_not_connected');
+        $this->actingAs($owner)
+            ->get(route('workspace.development.context', ['plan' => $plan->id, 'scope' => 'priority']))
+            ->assertSessionHasErrors('priority');
+        Http::assertNothingSent();
+    }
+
     public function test_connected_public_roadmap_is_visible_without_writing_tasks(): void
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);
@@ -183,6 +213,28 @@ final class DevelopmentGitHubRoadmapWorkspaceTest extends TestCase
             ->assertSee('data-roadmap-pr-observation', false)
             ->assertSee('default branchへマージ確認')
             ->assertSee('PR headの取得済みChecks成功');
+
+        $this->actingAs($user)
+            ->get(route('workspace.development.context', ['plan' => $plan->id]))
+            ->assertOk()
+            ->assertJsonPath('schema', 'canovia.development_context.v1')
+            ->assertJsonPath('scope', 'overview')
+            ->assertJsonPath('matched', 1)
+            ->assertJsonPath('items.0.title', 'Adaptive Learning')
+            ->assertJsonPath('items.0.completion', 'unverified')
+            ->assertHeader('Cache-Control', 'no-store, private');
+
+        $this->actingAs($user)
+            ->get(route('workspace.development.context', ['plan' => $plan->id, 'scope' => 'priority', 'priority' => 'P2']))
+            ->assertOk()
+            ->assertJsonPath('matched', 0)
+            ->assertJsonCount(0, 'items');
+
+        $this->actingAs($user)
+            ->get(route('workspace.development.context', ['plan' => $plan->id, 'scope' => 'workstream', 'title' => 'Adaptive Learning', 'verify' => '1']))
+            ->assertOk()
+            ->assertJsonPath('items.0.pr_evidence.0.merge', 'merged_default')
+            ->assertJsonPath('items.0.pr_evidence.0.ci', 'observed_pass');
 
         $this->assertDatabaseCount('tasks', 0);
         $this->assertDatabaseCount('task_evidences', 0);
