@@ -68,6 +68,7 @@ use App\Http\Controllers\StudyRecallCandidateController;
 use App\Http\Controllers\FutureMemoController;
 use App\Http\Controllers\CareerWorkspaceController;
 use App\Http\Controllers\CareerModeWorkspaceController;
+use App\Http\Controllers\CareerExplorationController;
 use App\Http\Controllers\InterviewReviewController;
 use App\Http\Controllers\GuidedExecutionController;
 use App\Http\Controllers\ExecutionOrchestrationController;
@@ -127,6 +128,11 @@ Route::delete('/plans/{plan}/development-preview', [DevelopmentPreviewController
     ->middleware('throttle:20,1')
     ->name('plans.development_preview.destroy');
 Route::get('/workspace/career', CareerModeWorkspaceController::class)->middleware(['release.level:3', 'early_access.visit'])->name('workspace.career.index');
+Route::middleware('release.level:3')->group(function () {
+    Route::get('/workspace/career/explore', [CareerExplorationController::class, 'show'])->name('career.explore.show');
+    Route::post('/workspace/career/explore', [CareerExplorationController::class, 'store'])->middleware('throttle:12,1')->name('career.explore.store');
+    Route::post('/workspace/career/explore/plan', [CareerExplorationController::class, 'createPlan'])->name('career.explore.plan');
+});
 Route::get('/workspace/mode/{workspaceMode}', [WorkspaceModeController::class, 'enter'])->name('workspace_modes.enter');
 Route::post('/workspace/{workspaceMode}/select', [WorkspaceModeController::class, 'select'])->name('workspace_modes.select');
 Route::delete('/workspace/preference', [WorkspaceModeController::class, 'reset'])->name('workspace_modes.preference.reset');
