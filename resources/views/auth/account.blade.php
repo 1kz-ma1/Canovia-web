@@ -127,6 +127,8 @@
         @endif
     </section>
 
+    @include('auth.partials.mcp-delegated-access-revocation')
+
     <section class="page-card border border-rose-400/20 p-6 sm:p-8">
         <p class="text-xs font-black uppercase tracking-[0.16em] text-rose-300">DELETE ACCOUNT</p>
         <h2 class="mt-2 text-xl font-bold text-slate-50">アカウントを削除</h2>

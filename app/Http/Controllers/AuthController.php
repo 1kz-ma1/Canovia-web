@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Enums\ReleaseLevel;
 use App\Models\User;
 use App\Models\DevelopmentAiSharingPreference;
+use App\Models\McpDelegatedGrant;
+use App\Models\McpLinkedSubject;
 use App\Services\AccountDeletionService;
 use App\Services\GuestPlanClaimService;
 use App\Services\FutureMemoService;
@@ -190,6 +192,17 @@ class AuthController extends Controller
 
         return view('auth.account', [
             'user' => $user,
+            'mcpActiveGrants' => McpDelegatedGrant::query()
+                ->where('user_id', $user->id)
+                ->where('status', McpDelegatedGrant::STATUS_ACTIVE)
+                ->with(['plan:id,user_id,title'])
+                ->orderByDesc('updated_at')
+                ->paginate(6, ['*'], 'mcp_grants_page'),
+            'mcpLinkedSubjects' => McpLinkedSubject::query()
+                ->where('user_id', $user->id)
+                ->where('status', McpLinkedSubject::STATUS_LINKED)
+                ->orderByDesc('linked_at')
+                ->paginate(6, ['*'], 'mcp_subjects_page'),
             'chatgptPreparedPreferences' => DevelopmentAiSharingPreference::query()
                 ->where('user_id', $user->id)
                 ->where('provider_key', DevelopmentAiSharingPreference::PROVIDER_CHATGPT)

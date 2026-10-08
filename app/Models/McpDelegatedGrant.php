@@ -19,6 +19,11 @@ final class McpDelegatedGrant extends Model
         'consented_at', 'expires_at', 'revoked_at',
     ];
 
+    public function plan()
+    {
+        return $this->belongsTo(Plan::class);
+    }
+
     protected function casts(): array
     {
         return [
