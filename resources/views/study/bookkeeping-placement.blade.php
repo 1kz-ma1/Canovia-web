@@ -31,6 +31,16 @@
             </div>
             @if ($latestPlacement)
                 <p class="mt-4 text-sm leading-6 text-slate-300" data-bookkeeping-placement-suggestion>{{ $latestPlacement['message'] }}</p>
+                @if (! empty($latestPlacement['next_actions']))
+                    <div class="mt-3" data-bookkeeping-placement-next-actions>
+                        <p class="text-xs font-bold text-amber-200">次の行動の候補</p>
+                        <ul class="mt-2 list-inside list-disc space-y-1 text-xs leading-5 text-slate-300">
+                            @foreach ($latestPlacement['next_actions'] as $action)
+                                <li>{{ $action }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
             @endif
             <p class="mt-2 text-xs text-slate-500">前回と異なる問題でも安定して解けるか確認する必要があります。2級へ進むことを制限する判定ではありません。</p>
         </section>
@@ -40,6 +50,17 @@
         <section class="page-card p-5 sm:p-6" data-bookkeeping-placement-result>
             <h2 class="text-lg font-black text-slate-50">今回の診断：{{ (int) $result['correct_count'] }} / {{ (int) $result['total_count'] }}問</h2>
             <p class="mt-3 text-sm leading-6 text-slate-300">{{ $result['message'] }}</p>
+            @if (! empty($result['next_actions']))
+                <div class="mt-3" data-bookkeeping-placement-current-actions>
+                    <p class="text-xs font-black text-amber-200">次に試したいこと</p>
+                    <ul class="mt-2 list-inside list-disc space-y-1 text-xs leading-5 text-slate-300">
+                        @foreach ($result['next_actions'] as $action)
+                            <li>{{ $action }}</li>
+                        @endforeach
+                    </ul>
+                    <a href="{{ route('plans.show', $plan) }}" class="btn-secondary mt-3 inline-flex min-h-11 items-center px-4 text-xs">PlanのTaskを確認・調整する →</a>
+                </div>
+            @endif
             @if (! empty($result['weak_topics']))
                 <p class="mt-2 text-xs font-bold text-amber-200">
                     復習候補：{{ collect($result['weak_topics'])->map(fn ($key) => $topics[$key] ?? $key)->implode('・') }}
@@ -51,6 +72,10 @@
                     @foreach ($result['feedback'] as $feedback)
                         <div class="rounded-lg border border-white/8 p-3">
                             <p class="text-xs font-bold {{ $feedback['correct'] ? 'text-emerald-300' : 'text-amber-300' }}">{{ $feedback['id'] }} · {{ $feedback['correct'] ? '正解' : '要確認' }}</p>
+                            <p class="mt-1 text-xs leading-5 text-slate-300">正解：{{ $feedback['correct_choice'] }}</p>
+                            @if (! $feedback['correct'] && ! empty($feedback['submitted_choice']))
+                                <p class="mt-1 text-xs leading-5 text-slate-500">回答：{{ $feedback['submitted_choice'] }}</p>
+                            @endif
                             <p class="mt-1 text-xs leading-5 text-slate-400">{{ $feedback['explanation'] }}</p>
                         </div>
                     @endforeach
