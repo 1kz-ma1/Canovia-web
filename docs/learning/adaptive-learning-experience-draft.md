@@ -131,7 +131,7 @@ Learning Run -> [locked/served: CURRENT+nearby] -> AnswerEvent(immutable scoring
 | Phase 4a | Bank限定の新Run/1問回答イベント、1件終了/再開、既存Task/Attempt不変、リトライ耐性 | CONFIRMED（境界）/ PROPOSED（schema） | In Progress（V58.78初期実装・CI検証待ち） |
 | Phase 4b | Understanding/Practice体験、表示分離、問題集合、履歴共通投影 | CONFIRMED / PROPOSED | In Progress（V58.78 Bank単一選択UIのみ） |
 | Phase 4c | 確定/候補/戦略キュー、適応更新と重複回避、AI不可時のBank fallback | PROPOSED / EXPERIMENTAL | In Progress（V58.79繰り返し誤答に基づくBank候補層のみ、他は未実装） |
-| Phase 4d | 試験別profile + C完全固定・採点終了後開示、模試停止/再開ポリシー | CONFIRMED（制約）/ UNDECIDED（各試験詳細） | Not Started |
+| Phase 4d | 試験別profile + C完全固定・採点終了後開示、模試停止/再開ポリシー | CONFIRMED（制約）/ UNDECIDED（各試験詳細） | In Progress（V58.80 設定ゲート・静的問題・最後に一括採点、正式試験profile未登録） |
 | Phase 4e | 診断任意入口、3モードランキング、誤操作調整と校正 | PROPOSED / EXPERIMENTAL | Not Started |
 | Phase 5 | 費用/負荷/重複/権限/アクセシビリティ/モバイルと実機E2E | CONFIRMED | Not Started |
 | Phase 6 | 本書更新、根拠付き実装/未実装表・残課題、段階的公開ゲート | CONFIRMED | Not Started |
@@ -185,3 +185,13 @@ Learning Run -> [locked/served: CURRENT+nearby] -> AnswerEvent(immutable scoring
 - `study.adaptive_learning.minimum_misses`、`signal_window`、`candidate_limit`、`locked_queue_size`はすべて**EXPERIMENTAL**の設定であり、試験・利用状況・コストから再校正する。デフォルトを最適解として固定しない。
 - 既存V58.78のSnapshotに`learning_metadata`が存在しない場合はBank順へ安全に戻る。旧`StudyPracticeAttempt`から正誤の根拠を捏造せず、現時点では新Run内の回答イベントのみを使う。
 - **未実装**: Plan横断履歴の重み付き統合、本人希望の細分化、難易度校正/解答時間重みづけ、AI事前生成・非同期、模試C、正式な信頼度推定。Phase 4cの完了扱いはしない。
+
+## 2026-10-08 Phase 4d 初期Slice（V58.80）
+
+- **CONFIRMED**: `config/adaptive_exam_profiles.php` は意図的に `profiles=[]`。公式試験の問題数・時間・範囲を確認せず AP のダミー模試を公開しない。テストでは架空のTEST試験の認定Fixtureだけを設定。
+- **PROPOSED**: `AdaptiveExamProfileRegistry` は管理済みのprofile key/version、試験コード、subject、正式出典、確認日、問題数、時間、採点可能形式をバリデート。対応する公開QuestionPack側のprofile key/versionも一致し、**active問題の全件が**検証済み形式・ちょうど所定件数を満たしている時だけ開始を許す。
+- **CONFIRMED**: 開始トランザクションで問題/出典/採点ルール/解説を全件固定する。回答中は正答・正誤・解説・スコアをDBイベントやHTMLに生成せず、`learning_exam_response_drafts`に選択肢だけ保存。既存A/Bの即時採点経路から完全に分離。
+- **PROPOSED**: v1の中断ルールは `continue_timer`（ブラウザを閉じてもサーバの終了時刻は変わらない）。期限切れ後の回答/移動を拒否。期限後は結果提出操作で一括採点。明示終了前には採点を開示しない。終了後に未回答を分母に含む合計結果/問題別結果を表示。Task進捗・既存Attemptは変えない。
+- **EXPERIMENTAL**: 試験別の中断・途中提出・非回答の採点・解答時間の再現性、制限時間UIの視認性は実機検証が必要。暫定の回答形式はBank採点対応の単一選択のみ。他形式は正式出題profileの整備後に追加。
+- **UNDECIDED**: 対応試験別profileの正式採用、学校試験/資格試験ごとの時間/休憩/途中保存/時間延長、実際の公開問題集の利用許諾確認。
+- **未完了**: 複数形式対応、全問の分野別成績/次の学習への統合、推奨ランキング、1問履歴の評価補正や横断集計。試験の再現性を実証した意味での `Verified` は付与しない。CIで設定ゲートと表示分離の機能を確認し、Render・iOS・PWA実機は別。

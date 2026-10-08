@@ -9,5 +9,6 @@ final class LearningRunItem extends Model {
             'grading_rule_snapshot'=>'array','presented_at'=>'datetime'];
     }
     public function run() { return $this->belongsTo(LearningRun::class,'learning_run_id'); }
+    public function examResponse() {return $this->hasOne(LearningExamResponseDraft::class,'learning_run_item_id');}
     public function answer() { return $this->hasOne(LearningAnswerEvent::class,'learning_run_item_id'); }
 }

@@ -28,7 +28,7 @@
                         <input type="radio" name="mode" value="practice" @checked(old('mode') === 'practice')>
                         <span><strong>演習モード</strong><br>正答をすぐ表示し、解説は任意で開けます</span>
                     </label>
-                    <p class="text-xs text-slate-400">模擬試験モード：試験別の固定問題セット・制限時間が検証できるまで未提供</p>
+                    <p class="text-xs text-slate-400">模擬試験モード：試験別の固定問題セット・制限時間が検証できるまで未提供。検証済み試験プロファイルと対応Question Bankがある場合だけ開始できます。</p>
                 </fieldset>
                 <label class="block text-sm font-bold text-slate-100" for="question-pack">問題集</label>
                 <select class="form-control w-full" name="question_pack_id" id="question-pack" required>
@@ -41,13 +41,36 @@
             </form>
         @endif
     </section>
+    @if(($examProfiles ?? collect())->isNotEmpty() && ($examPacks ?? collect())->isNotEmpty())
+        <section class="page-card p-5 sm:p-7" data-adaptive-exam-entry>
+            <h2 class="text-lg font-bold text-slate-50">模擬試験モード（本番形式）</h2>
+            <p class="mt-2 text-sm leading-6 text-slate-300">検証済みの試験別設定だけを使用し、開始前に全問と時間を確定します。終了するまで正誤・解説は表示しません。途中離脱中も制限時間は進みます。</p>
+            <form method="POST" action="{{ route('plans.tasks.learning.exam.start', [$plan, $task]) }}" class="mt-4 space-y-4">
+                @csrf <input type="hidden" name="start_request_id" value="{{ $examStartRequestId }}">
+                <label class="block text-sm font-semibold text-slate-100" for="exam-profile">試験プロファイル</label>
+                <select name="exam_profile_key" id="exam-profile" class="form-control w-full" required>
+                    @foreach($examProfiles as $profile)
+                        <option value="{{ $profile['key'] }}">{{ $profile['exam_code'] }} {{ $profile['subject'] }}（{{ $profile['question_count'] }}問 / {{ $profile['duration_minutes'] }}分）</option>
+                    @endforeach
+                </select>
+                <label class="block text-sm font-semibold text-slate-100" for="exam-pack">検証済み静的問題集</label>
+                <select name="question_pack_id" id="exam-pack" class="form-control w-full" required>
+                    @foreach($examPacks as $pack)
+                        <option value="{{ $pack->id }}">{{ $pack->title }} (v{{ $pack->version }})</option>
+                    @endforeach
+                </select>
+                <p class="text-xs text-slate-400">選択した試験と問題集の検証済み設定が一致しない場合は開始できません。</p>
+                <button type="submit" class="btn-primary">本番形式で始める</button>
+            </form>
+        </section>
+    @endif
     @if($activeRuns->isNotEmpty())
         <section class="page-card p-5 sm:p-7" data-adaptive-learning-resume>
             <h2 class="text-lg font-bold text-slate-50">前回の続き</h2>
             <div class="mt-3 space-y-3">
                 @foreach($activeRuns as $run)
-                    <a class="block rounded-xl border border-slate-600 p-3 text-sm text-sky-300" href="{{ route('plans.tasks.learning.show', [$plan, $task, $run]) }}">
-                        {{ $run->pack_title_snapshot }} · {{ $run->mode === 'understanding' ? '理解' : '演習' }} · {{ $run->created_at?->format('Y/m/d H:i') }} → 続きを開く
+                    <a class="block rounded-xl border border-slate-600 p-3 text-sm text-sky-300" href="{{ $run->mode === 'exam' ? route('plans.tasks.learning.exam.show', [$plan, $task, $run]) : route('plans.tasks.learning.show', [$plan, $task, $run]) }}">
+                        {{ $run->pack_title_snapshot }} · {{ match ($run->mode) { 'understanding' => '理解', 'practice' => '演習', 'exam' => '模擬試験', default => '学習' } }} · {{ $run->created_at?->format('Y/m/d H:i') }} → 続きを開く
                     </a>
                 @endforeach
             </div>
