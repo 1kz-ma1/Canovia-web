@@ -41,31 +41,48 @@ final class DevelopmentGitHubRoadmapReader
         }
 
         $references = $this->linker->references($roadmap['workstreams']);
-        $numbers = $this->linker->uniqueNumbers($references);
-        if ($numbers === []) {
-            $roadmap['warnings'][] = 'No explicit PR references to verify.';
+        $issueReferences = $this->linker->issueReferences($roadmap['workstreams']);
+        $prNumbers = $this->linker->uniqueNumbers($references);
+        $issueNumbers = $this->linker->uniqueNumbers($issueReferences);
+        if ($prNumbers === [] && $issueNumbers === []) {
+            $roadmap['warnings'][] = 'No explicit PR or Issue references to verify.';
             return $roadmap;
         }
 
-        try {
-            $verification = $this->github->readDevelopmentRoadmapPullRequestSignals(
-                $repository,
-                $numbers,
-            );
-        } catch (\RuntimeException $exception) {
-            $roadmap['warnings'][] = 'GitHub PR verification unavailable: '.$exception->getMessage();
-            return $this->linker->attach($roadmap, $references, []);
+        if ($prNumbers !== []) {
+            try {
+                $verification = $this->github->readDevelopmentRoadmapPullRequestSignals(
+                    $repository,
+                    $prNumbers,
+                );
+                $roadmap = $this->linker->attach(
+                    $roadmap, $references, (array) ($verification['signals'] ?? []),
+                );
+                $roadmap['github_evidence_checked'] = true;
+                $roadmap['github_evidence_observed_at'] = $verification['observed_at'] ?? null;
+                if (! empty($verification['warning'])) {
+                    $roadmap['warnings'][] = (string) $verification['warning'];
+                }
+            } catch (\RuntimeException $exception) {
+                $roadmap['warnings'][] = 'GitHub PR verification unavailable: '.$exception->getMessage();
+                $roadmap = $this->linker->attach($roadmap, $references, []);
+            }
         }
 
-        $roadmap = $this->linker->attach(
-            $roadmap,
-            $references,
-            (array) ($verification['signals'] ?? []),
-        );
-        $roadmap['github_evidence_checked'] = true;
-        $roadmap['github_evidence_observed_at'] = $verification['observed_at'] ?? null;
-        if (! empty($verification['warning'])) {
-            $roadmap['warnings'][] = (string) $verification['warning'];
+        if ($issueNumbers !== []) {
+            try {
+                $verification = $this->github->readDevelopmentRoadmapIssueSignals(
+                    $repository, $issueNumbers,
+                );
+                $roadmap = $this->linker->attachIssues(
+                    $roadmap, $issueReferences, (array) ($verification['signals'] ?? []),
+                );
+                $roadmap['github_evidence_checked'] = true;
+                $roadmap['github_evidence_observed_at'] = $verification['observed_at'] ?? null;
+            } catch (\RuntimeException $exception) {
+                $roadmap['warnings'][] = 'GitHub Issue verification unavailable: '.$exception->getMessage();
+                $roadmap = $this->linker->attachIssues($roadmap, $issueReferences, []);
+            }
         }
 
         return $roadmap;

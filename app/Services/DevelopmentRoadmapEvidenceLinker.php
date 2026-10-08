@@ -74,6 +74,67 @@ final class DevelopmentRoadmapEvidenceLinker
         return $found;
     }
 
+
+    /**
+     * Explicit "Issue #123" references only. PR numbers and arbitrary #123
+     * mentions never count as issues. Bound the request budget.
+     *
+     * @param array<int,array<string,mixed>> $workstreams
+     * @return array<int,array<int,int>>
+     */
+    public function issueReferences(array $workstreams): array
+    {
+        $found = [];
+        $unique = [];
+        foreach ($workstreams as $index => $row) {
+            // Issues are permitted in either the evidence or remaining-acceptance
+            // columns, since they frequently represent unfinished work.
+            $text = (string) ($row['evidence'] ?? '').' '.(string) ($row['next'] ?? '');
+            preg_match_all('/\bIssue\s*#\s*(\d{1,6})\b/iu', $text, $matches);
+            foreach ($matches[1] ?? [] as $match) {
+                $number = (int) $match;
+                if ($number < 1 || in_array($number, $found[$index] ?? [], true)) {
+                    continue;
+                }
+                if (count($found[$index] ?? []) >= 5) {
+                    break;
+                }
+                if (! in_array($number, $unique, true) && count($unique) >= 10) {
+                    break;
+                }
+                $found[$index][] = $number;
+                if (! in_array($number, $unique, true)) {
+                    $unique[] = $number;
+                }
+            }
+        }
+
+        return $found;
+    }
+
+    /**
+     * @param array<string,mixed> $roadmap
+     * @param array<int,array<int,int>> $references
+     * @param array<int,array<string,mixed>> $observed
+     * @return array<string,mixed>
+     */
+    public function attachIssues(array $roadmap, array $references, array $observed): array
+    {
+        foreach ($references as $index => $numbers) {
+            $roadmap['workstreams'][$index]['issue_signals'] = array_map(
+                fn (int $number) => $observed[$number] ?? [
+                    'number' => $number,
+                    'state' => 'unknown',
+                    'url' => null,
+                ],
+                $numbers,
+            );
+            $roadmap['workstreams'][$index]['status'] = 'unverified';
+        }
+
+        return $roadmap;
+    }
+
     /** @param array<int,array<int,int>> $references @return array<int,int> */
     public function uniqueNumbers(array $references): array
     {
