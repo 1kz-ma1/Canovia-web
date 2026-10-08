@@ -14,6 +14,58 @@ final class DevelopmentGitHubRoadmapReader
         private readonly DevelopmentRoadmapEvidenceLinker $linker,
     ) {}
 
+    /**
+     * Compare the current pinned roadmap with its immediately preceding
+     * document edit. Intent differences only; GitHub evidence is not refreshed.
+     *
+     * @return array<string,mixed>
+     */
+    public function diffFromPrevious(
+        string $repository,
+        DevelopmentRoadmapRevisionDiffer $differ,
+    ): array {
+        $current = $this->read($repository);
+        $currentSha = (string) data_get($current, 'source.sha', '');
+
+        // A missing current document is not evidence of a deleted workstream.
+        if (in_array('No canonical roadmap found. Import is read-only; no tasks inferred.',
+            (array) ($current['warnings'] ?? []), true)) {
+            return [
+                'schema' => 'canovia.development_roadmap_diff.v1',
+                'status' => 'current_missing',
+                'before_sha' => null,
+                'after_sha' => $currentSha,
+                'changes' => [],
+                'completion' => 'unverified',
+            ];
+        }
+
+        $previous = $this->github->readPreviousDevelopmentRoadmapMarkdown(
+            $repository,
+            $currentSha,
+        );
+        if ($previous === null) {
+            return [
+                'schema' => 'canovia.development_roadmap_diff.v1',
+                'status' => 'no_previous',
+                'before_sha' => null,
+                'after_sha' => $currentSha,
+                'changes' => [],
+                'completion' => 'unverified',
+            ];
+        }
+
+        $before = $this->parser->parse(
+            $previous['content'],
+            $repository,
+            'docs/development/ROADMAP.md',
+            $previous['sha'],
+        );
+        $result = $differ->compare($before, $current);
+        $result['status'] = 'compared';
+        return $result;
+    }
+
     /** @return array<string, mixed> */
     public function read(string $repository, bool $verifyGithub = false): array
     {
