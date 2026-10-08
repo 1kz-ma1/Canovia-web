@@ -58,6 +58,10 @@
         @if ($roadmapSnapshot)
             <p class="mt-3 text-xs text-slate-400">必要な時だけ最新の仕様書から取得します。外部AIへ自動送信せず、Taskや進捗は更新しません。</p>
             <p class="mt-1 text-xs text-cyan-300" aria-live="polite" role="status" data-roadmap-context-status></p>
+            <div class="mt-2 hidden" data-roadmap-context-manual>
+                <p class="text-xs text-slate-400">端末側でコピーを許可できない場合は、以下を選択してコピーしてください。</p>
+                <textarea readonly rows="7" class="form-control mt-2 w-full text-xs" data-roadmap-context-manual-text></textarea>
+            </div>
             <p class="mt-3 break-all text-[11px] text-slate-500">
                 {{ $sourceRepository }} · {{ data_get($roadmapSnapshot, 'source.path') }} · {{ mb_substr($sourceSha, 0, 12) }}
             </p>
@@ -159,6 +163,8 @@
         if (!root || !endpoint) return;
 
         const status = root.querySelector('[data-roadmap-context-status]');
+        const manual = root.querySelector('[data-roadmap-context-manual]');
+        const manualText = root.querySelector('[data-roadmap-context-manual-text]');
         const setStatus = (message) => { if (status) status.textContent = message; };
         const quote = (value) => JSON.stringify(String(value ?? ''));
         const copy = async (value) => {
@@ -197,6 +203,8 @@
             }
 
             button.disabled = true;
+            if (manual) manual.classList.add('hidden');
+            if (manualText) manualText.value = '';
             setStatus('必要な範囲のContextを取得しています…');
             try {
                 const response = await fetch(url.toString(), {
@@ -229,9 +237,19 @@
                     lines.push('完了判定: 未検証', '');
                 });
                 if (context.truncated) lines.push('注意: 項目数の上限により一部は省略されています。');
-                const copied = await copy(lines.join('\n'));
-                if (!copied) throw new Error('clipboard_unavailable');
-                setStatus(context.items.length + '件の小さなContextをコピーしました。外部AIへの送信は行っていません。');
+                const value = lines.join('\n');
+                const copied = await copy(value);
+                if (copied) {
+                    setStatus(context.items.length + '件のContextをコピーしました。外部AIへの自動送信はありません。');
+                } else if (manual && manualText) {
+                    manualText.value = value;
+                    manual.classList.remove('hidden');
+                    manualText.focus();
+                    manualText.select();
+                    setStatus('Contextを取得しました。端末が自動コピーを拒否したため、下の欄を長押ししてコピーしてください。');
+                } else {
+                    throw new Error('clipboard_unavailable');
+                }
             } catch (_) {
                 setStatus('Contextをコピーできませんでした。GitHub接続・閲覧権限・クリップボード設定を確認してください。');
             } finally {
