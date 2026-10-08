@@ -7,6 +7,7 @@ use App\Models\Plan;
 use App\Models\StudyPracticeAttempt;
 use App\Models\StudyScoreObservation;
 use App\Services\BookkeepingPlacementDiagnosticService;
+use App\Services\BookkeepingJournalPracticeService;
 use App\Models\TaskEvidence;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -39,7 +40,10 @@ final class StudyWorkspaceStateResolver
         )
             // Keep internal placement diagnosis separate from an external
             // exam/score baseline; it has a different evidence contract.
-            ->where('metric_key', '!=', BookkeepingPlacementDiagnosticService::METRIC)
+            ->whereNotIn('metric_key', [
+                BookkeepingPlacementDiagnosticService::METRIC,
+                BookkeepingJournalPracticeService::METRIC,
+            ])
             ->latest('observed_at')
             ->latest('id')
             ->take(6)
