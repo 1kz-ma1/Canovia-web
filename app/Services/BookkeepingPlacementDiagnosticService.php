@@ -123,6 +123,8 @@ final class BookkeepingPlacementDiagnosticService
                 'id' => $question['id'],
                 'topic' => $question['topic'],
                 'correct' => $isCorrect,
+                'submitted_choice' => is_string($answer) ? ($question['choices'][$answer] ?? null) : null,
+                'correct_choice' => $question['choices'][$question['correct']],
                 'explanation' => $question['explanation'],
             ];
         }
@@ -153,7 +155,7 @@ final class BookkeepingPlacementDiagnosticService
      * per-topic results, without a fixed Grade 3-before-Grade 2 sequence.
      *
      * @param array<string,mixed> $recordedScores
-     * @return array{weak_topics:array<int,string>,status:string,message:string}
+     * @return array{weak_topics:array<int,string>,status:string,message:string,next_actions:array<int,string>}
      */
     public function placement(int $scorePercent, array $recordedScores, bool $wantsAdvance): array
     {
@@ -164,9 +166,24 @@ final class BookkeepingPlacementDiagnosticService
             $wantsAdvance,
         );
 
+        $nextActions = match ($decision['status']) {
+            'diagnostic_needed' => ['基礎診断で現在地を確認する'],
+            'review_prerequisites' => array_map(
+                fn (string $topic): string =>
+                    (self::TOPICS[$topic] ?? $topic).'を復習し、別の問題で確かめる',
+                $decision['weak_topics'],
+            ),
+            'trial_next_grade' => [
+                '3級の基礎は短く定期復習する',
+                '2級の導入単元を1つ試し、理解できるか確かめる',
+            ],
+            default => ['別の問題で定着を確かめ、必要な単元を復習する'],
+        };
+
         return [
             'weak_topics' => $decision['weak_topics'],
             'status' => $decision['status'],
+            'next_actions' => $nextActions,
             'message' => match ($decision['status']) {
                 'diagnostic_needed' => '単元別の確認結果が不足しています。まず基礎診断で現在地を確かめましょう.',
                 'review_prerequisites' => '3級範囲の弱い単元を先に短く復習しましょう。2級の先取りは、関連する基礎を確かめながら少しずつ進められます。',
