@@ -88,7 +88,7 @@ final class DevelopmentRoadmapEvidenceLinker
      */
     public function attach(array $roadmap, array $references, array $observed): array
     {
-        foreach ($roadmap['workstreams'] ?? [] as $index => &$row) {
+        foreach (array_keys($roadmap['workstreams'] ?? []) as $index) {
             $signals = [];
             foreach ($references[$index] ?? [] as $number) {
                 $signal = $observed[$number] ?? [
@@ -99,12 +99,11 @@ final class DevelopmentRoadmapEvidenceLinker
                 ];
                 $signals[] = $signal;
             }
-            $row['github_signals'] = $signals;
+            $roadmap['workstreams'][$index]['github_signals'] = $signals;
             // A PR that merged is evidence of a PR merge, not proof the whole
             // workstream or release is complete.
-            $row['status'] = 'unverified';
+            $roadmap['workstreams'][$index]['status'] = 'unverified';
         }
-        unset($row);
 
         return $roadmap;
     }
