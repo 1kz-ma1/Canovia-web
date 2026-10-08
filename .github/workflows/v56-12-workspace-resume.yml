@@ -82,6 +82,7 @@ jobs:
           php -l app/Services/DevelopmentCreativePlanAccessService.php
           php -l app/Http/Controllers/DevelopmentCreativePlanSelectionController.php
           php -l tests/Feature/DevelopmentCreativePlanRescueV5863Test.php
+          php -l tests/Feature/PlanActionFirstCreationV5866Test.php
       - run: php artisan view:cache
       - run: php artisan migrate --force
       - name: V56.12 workspace resume and session scope
@@ -134,3 +135,5 @@ jobs:
         run: php artisan test tests/Feature/OverviewRelevanceV5865Test.php tests/Feature/OfficialExamScopeAwareStudyV5864Test.php
       - name: V58.63 Legacy Creative Development Rescue
         run: php artisan test tests/Feature/DevelopmentCreativePlanRescueV5863Test.php tests/Feature/WorkspaceModeResolverV540Test.php
+      - name: V58.66 Action-first Plan Creation
+        run: php artisan test tests/Feature/PlanActionFirstCreationV5866Test.php tests/Feature/MutationIdempotencyV390Test.php tests/Feature/PlanVisualPreferencesTest.php tests/Feature/GoalContextFoundationV4114Test.php tests/Feature/WorkspaceModeOnboardingV547Test.php tests/Feature/PublicBetaPolishV16Test.php tests/Feature/AdaptiveGoalDiscoveryV4114Test.php
