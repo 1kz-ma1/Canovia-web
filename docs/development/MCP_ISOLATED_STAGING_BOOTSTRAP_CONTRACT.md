@@ -1,7 +1,7 @@
-# Canovia MCP — isolated Render staging bootstrap (not provisioned)
+# Canovia MCP — isolated Render staging bootstrap (Free service provisioned)
 
 Updated: 2026-10-09
-Status: **Blueprint + Docker entrypoint + default-closed middleware implemented. No new Render service has been created.**
+Status: **Free Canovia-only staging service provisioned and initial deploy live; all account/OAuth/MCP endpoints remain configured closed.**
 
 ## Why a staging environment must be isolated
 
@@ -14,7 +14,7 @@ Relevant Render sources:
 - https://render.com/docs/blueprint-spec
 - https://render.com/pricing
 
-## Implemented but not deployed
+## Provisioned separately from production
 
 `deploy/render-mcp-staging.yaml` is an **opt-in** Render Blueprint describing a **new**, separate `canovia-mcp-staging` Web service:
 
@@ -50,9 +50,9 @@ Automated CI includes `tests/Feature/McpIsolatedStagingBootstrapTest.php`. It ch
 
 ## Still not completed
 
-- No real Render stage creation, DB/IdP tenant/ChatGPT app installation or end-to-end OAuth test.
+- The isolated Free Render staging Web service exists; however, no durable staging DB, IdP tenant, ChatGPT client registration or real OAuth end-to-end test exists.
 - No public staging web access, account linking, consent or MCP reads.
-- No consumption of extra Free instance-hours yet.
+- Render staging consumes shared Free instance-hours only while its instance is running; initial deployment and external checks use some of the monthly allowance.
 - No production flags/keys or cost plan changes.
 - No iPhone/PWA/PC device verification (owner requested one combined later test).
 
