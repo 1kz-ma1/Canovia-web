@@ -112,3 +112,7 @@ created or started in this implementation. SQLite is ephemeral; do not
 promote this disposable stage to persistent OAuth consent/evidence tests
 without isolated durable storage and controlled staging access. See
 [isolated staging bootstrap](MCP_ISOLATED_STAGING_BOOTSTRAP_CONTRACT.md).
+
+## Public-launch compute plan decision (2026-10-09)
+
+The product owner plans to move **production Canovia** to the cheapest paid Render Web compute at public launch. At the time of this review, Render lists a $7/month paid Web compute plan, whereas the Hobby workspace subscription is $0. This is **not** a commitment to create or pay for staging today. The independent disposable staging Blueprint stays manual/Free by default; do not use the production database or copy production secrets. Recheck current Render billing terms when launch is scheduled.
