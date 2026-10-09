@@ -19,4 +19,11 @@ return [
     'postgres_user' => env('CANOVIA_STAGING_POSTGRES_USER', ''),
     'allow_synthetic_owner_bootstrap' => env('CANOVIA_STAGING_ALLOW_SYNTHETIC_OWNER_BOOTSTRAP', false),
     'synthetic_owner_password' => env('CANOVIA_STAGING_SYNTHETIC_OWNER_PASSWORD', ''),
+    // Separate, one-shot operator approval for resetting ONLY the fixed
+    // synthetic actor in an isolated, closed stage. Never persist a rotation
+    // secret beyond its single startup.
+    'allow_synthetic_password_rotation' => env('CANOVIA_STAGING_ALLOW_SYNTHETIC_PASSWORD_ROTATION', false),
+    'rotate_synthetic_password_on_start' => env('CANOVIA_STAGING_ROTATE_SYNTHETIC_PASSWORD_ON_START', false),
+    'synthetic_owner_rotated_password' => env('CANOVIA_STAGING_SYNTHETIC_OWNER_ROTATED_PASSWORD', ''),
+
 ];
