@@ -802,7 +802,7 @@
                     @endif
                 >
                     @csrf
-                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.035] p-3" data-study-practice-pager hidden>
+                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.035] p-3" data-study-practice-pager hidden style="display: none">
                         <p class="text-sm font-bold text-cyan-200" aria-live="polite" data-study-practice-question-progress></p>
                         <p class="text-xs text-slate-400">1問ずつ表示します。回答はこれまでどおり自動保存し、採点は最後にまとめて行います。</p>
                     </div>
@@ -827,7 +827,7 @@
                                             ? array_map('strval', $fieldValue)
                                             : [];
                                     @endphp
-                                    <div class="rounded-xl border border-slate-800/80 bg-slate-950/30 p-3">
+                                    <div class="rounded-xl border border-slate-800/80 bg-slate-950/30 p-3" data-practice-required-field="{{ ($field['required'] ?? true) ? 'true' : 'false' }}">
                                         <label class="text-xs font-bold text-slate-300">
                                             {{ $field['label'] }}
                                             <span class="ml-1 text-[10px] {{ ($field['required'] ?? true) ? 'text-cyan-300' : 'text-slate-600' }}">
@@ -867,7 +867,7 @@
                             </div>
                         </fieldset>
                     @endforeach
-                    <div class="flex flex-wrap gap-3" data-study-practice-pager hidden>
+                    <div class="flex flex-wrap gap-3" data-study-practice-pager hidden style="display: none">
                         <button type="button" class="btn-secondary min-h-11" data-study-practice-previous>← 前の問題</button>
                         <button type="button" class="btn-primary min-h-11" data-study-practice-next>次の問題 →</button>
                     </div>
