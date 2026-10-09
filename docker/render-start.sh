@@ -84,6 +84,17 @@ if [ "$isolated_staging" = "true" ] \
     echo "MCP isolated staging synthetic owner bootstrap: completed (identity details suppressed)"
 fi
 
+# An independent, opt-in synthetic Plan fixture runs only in the same
+# closed staging context as the synthetic owner. Suppress all details.
+if [ "$isolated_staging" = "true" ] \\
+    && [ "${CANOVIA_STAGING_SYNTHETIC_PLAN_FIXTURE_ON_START:-false}" = "true" ]; then
+    if ! php artisan canovia:mcp-staging-create-synthetic-plan --json >/dev/null 2>&1; then
+        echo "MCP isolated staging synthetic Plan fixture: blocked or failed (details suppressed)" >&2
+        exit 1
+    fi
+    echo "MCP isolated staging synthetic Plan fixture: completed (details suppressed)"
+fi
+
 echo "Building Laravel production caches..."
 if [ "$isolated_staging" = "true" ]; then
     # Cache commands can invoke application boot logic. Keep their exception
