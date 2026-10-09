@@ -101,6 +101,25 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             ->assertDontSee('synthetic-not-a-real-secret');
     }
 
+    public function test_closed_staging_nginx_does_not_bypass_laravel_for_legacy_health_or_static_files(): void
+    {
+        $config = file_get_contents(base_path('docker/nginx-mcp-staging-closed.conf'));
+        $script = file_get_contents(base_path('docker/mcp-staging-start.sh'));
+
+        $this->assertIsString($config);
+        $this->assertIsString($script);
+        $this->assertStringContainsString('location = /up {', $config);
+        $this->assertStringContainsString('try_files $uri /index.php?$query_string;', $config);
+        $this->assertStringContainsString('location / {', $config);
+        $this->assertStringContainsString('return 503 "Staging service unavailable.";', $config);
+        $this->assertStringNotContainsString('location = /health {', $config);
+        $this->assertStringNotContainsString('location /build/ {', $config);
+        $this->assertStringContainsString(
+            'cp docker/nginx-mcp-staging-closed.conf /etc/nginx/nginx.conf',
+            $script
+        );
+    }
+
     public function test_staging_web_access_requires_independent_approval_and_live_pinned_db(): void
     {
         $this->withoutVite();
