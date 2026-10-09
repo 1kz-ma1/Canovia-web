@@ -95,3 +95,27 @@ Artisan::command(
         return $outcome === 'blocked' ? 1 : 0;
     },
 )->purpose('Prepare a fixed private synthetic Plan and Tasks only in a closed isolated stage');
+
+/**
+ * Inspect only the exact isolated synthetic fixture without revealing IDs,
+ * counts, credentials or plan content. Does not create or mutate anything.
+ */
+Artisan::command(
+    'canovia:mcp-staging-verify-synthetic-plan
+        {--json : Return only safe readiness codes}',
+    function (\App\Services\McpStagingSyntheticPlanFixtureBootstrap $fixture): int {
+        $state = $fixture->verify(app(\App\Services\McpStagingSyntheticActorBootstrap::class));
+
+        if ($this->option('json')) {
+            $this->line((string) json_encode([
+                'schema' => 'canovia.mcp.staging_synthetic_plan_readiness.v1',
+                'status' => $state,
+                'production_authorized' => false,
+            ], JSON_THROW_ON_ERROR));
+        } else {
+            $this->line('Synthetic staging Plan readiness: '.$state);
+        }
+
+        return $state === 'ready' ? 0 : 1;
+    },
+)->purpose('Read-only verify isolated synthetic Plan fixture without exposing its contents');
