@@ -207,3 +207,21 @@ Learning Run -> [locked/served: CURRENT+nearby] -> AnswerEvent(immutable scoring
 - **PROPOSED**: 初期実装の理由は`accidental_tap`のみ、効果は`exclude_from_recommendations`。単一回答に対する同じ申告の再送は冪等。A/Bと完了済みC結果から入口を提示。Plan/Task/actor scopeで本人以外の書込を拒否。
 - **CONFIRMED**: 次の候補選択とModeランキングから申告対象を除外し、採点結果の記録やTask進捗は変更しない。「訂正したから正解にする」のではない。
 - **未実装**: 理解度そのものの統計的校正、申告取消・不正申告防止ポリシー、レビュー済み正誤への学習補強、時間制限中の誤タップ申告、実機検証。適切な影響調整の強度はEXPERIMENTAL。
+
+## 2026-10-09 Learning usability recovery — Question-per-screen entry and immersive header
+
+Status: **PR implementation proposed; CI and actual iOS/PWA/production verification pending**. This slice does **not** reclassify the adaptive Bank Run as a generic AI question generator.
+
+### Confirmed implementation boundary
+
+- The adaptive one-question `LearningRun` still requires a published Question Bank with supported `exact_choice` questions; a bundled JSON file in the repository is **not** evidence that the relevant pack has been imported/published in production. No pack is silently created or published by this change.
+- From Study Activity's question-practice entry, expose direct access to the adaptive mode selection. When no eligible published pack is available, explain the restriction and offer the already-supported legacy StudyPractice route instead of a dead end.
+- In **existing legacy StudyPracticeSession answer forms**, progressively enhance the screen to display one question at a time with previous/next controls, a clear count and a final `回答をまとめて評価へ進む` action. This retains the **single set-wide server-side assessment**, answers payload, durable draft autosave and resume, input types, legacy Attempt and Task progression rules. **Do not claim per-question immediate grading in this fallback.**
+- With JavaScript disabled or failed, the original list of all questions and the original set-wide submit remain accessible. In enhanced mode, restoring a draft selects the first unanswered question (or first server-side field error); navigation does not erase other answers. The submit action stays on the final page and hitting Enter earlier advances rather than submitting the full set.
+- Immersive Learning/legacy Practice/exam header adds a small top inset above its 44px minimum-height exit/home touch targets, including `env(safe-area-inset-top)` for iOS PWA/WKWebView. No main workspace shell/navigation changes.
+
+### Verification and non-goals
+
+Relevant tests: `AdaptiveLearningSingleQuestionV5878Test`, `LegacyPracticeImmersionV5889Test`, `LearningImmersionShellV5888Test`, existing `StudyPracticeDraftPersistenceV4071Test`. Validate frontend build and required CI on exact branch SHA. On device verify responsive safe-area, multi-answer types, autosave after moving backwards/forwards, empty published Bank fallback, new Bank one-question Run, reload/return and normal 403/404 permissions.
+
+No DB schema, pricing, rollout/entitlement, AI provider, official exam profile, source attribution, private user data or per-answer legacy scoring changes. Render live deployment and WKWebView/PWA device checks require separate evidence.
