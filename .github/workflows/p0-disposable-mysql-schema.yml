@@ -6,6 +6,8 @@ on:
     paths:
       - 'database/migrations/**'
       - 'tests/Feature/ProductionMysqlSchemaP0Test.php'
+      - 'scripts/sql/p0_mysql_readonly_schema_inventory.sql'
+      - 'scripts/ci/p0_mysql_readonly_schema_inventory_check.php'
       - '.github/workflows/p0-disposable-mysql-schema.yml'
   workflow_dispatch:
 
@@ -68,3 +70,7 @@ jobs:
         run: php artisan test tests/Feature/ProductionMysqlSchemaP0Test.php --fail-on-skipped
       - name: Final MySQL migration rerun after interrupted-DDL recovery
         run: php artisan migrate --force --no-interaction
+      - name: Verify SELECT-only production schema inventory on disposable MySQL
+        run: |
+          php -l scripts/ci/p0_mysql_readonly_schema_inventory_check.php
+          php scripts/ci/p0_mysql_readonly_schema_inventory_check.php
