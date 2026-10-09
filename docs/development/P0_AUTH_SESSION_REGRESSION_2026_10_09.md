@@ -78,6 +78,9 @@ disposable PHP + SQLite session app; and verifies:
   `SESSION_SECURE_COOKIE=true`; real browser-style cookie storage and an
   authenticated `/account` response establish that the Secure cookie is
   returned over HTTPS.
+- The successful login redirect is also checked for the **same HTTPS scheme
+  and exact localhost origin**; a downgrade redirect to HTTP would otherwise
+  silently discard Secure cookies and could recreate a login loop.
 - The returned session cookie is explicitly **Secure**, **HttpOnly**,
   **SameSite Lax**, and host-only (no configured `SESSION_DOMAIN`).
 - A request to the *different origin host* `https://127.0.0.1:18790`
