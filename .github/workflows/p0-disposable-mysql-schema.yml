@@ -15,6 +15,7 @@ on:
       - 'scripts/sql/p0_mysql_readonly_full_migration_ledger.sql'
       - 'scripts/ci/p0_mysql_full_ledger_offline_check.py'
       - 'scripts/ci/p0_mysql_disposable_restore_smoke.sh'
+      - 'scripts/sql/p0_mysql_disposable_full_schema_fingerprint.sql'
       - 'tests/ci/test_p0_mysql_full_ledger_offline_check.py'
       - '.github/workflows/p0-disposable-mysql-schema.yml'
   workflow_dispatch:
