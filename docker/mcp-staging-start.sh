@@ -30,6 +30,10 @@ case "${CANOVIA_STAGING_DB_MODE:-sqlite}" in
         [ "${DB_DATABASE:-}" = "/var/www/html/storage/app/staging/mcp.sqlite" ] \
             || deny "SQLite database path mismatch"
         [ -z "${DB_URL:-}" ] || deny "external URL forbidden for SQLite"
+        # A partially applied Postgres cutover must never silently boot
+        # the old SQLite DB with an unrelated Render username reference.
+        [ -z "${CANOVIA_STAGING_POSTGRES_USER:-}" ] \
+            || deny "staging Postgres user set while using SQLite"
         ;;
     render_postgres)
         [ "${DB_CONNECTION:-}" = "pgsql" ] || deny "PostgreSQL driver required"
