@@ -9,6 +9,8 @@ on:
       - 'scripts/ci/keycloak_mcp_protocol_smoke.py'
       - 'scripts/ci/keycloak_user_pkce_smoke.py'
       - 'scripts/ci/keycloak_chatgpt_dcr_smoke.py'
+      - 'scripts/ci/keycloak_chatgpt_cimd_smoke.py'
+      - 'scripts/ci/keycloak_chatgpt_static_jwt_smoke.py'
       - '.github/workflows/mcp-keycloak-disposable-oauth-lab.yml'
       - 'docs/development/MCP_KEYCLOAK_DISPOSABLE_PROTOCOL_LAB_2026_10_09.md'
   workflow_dispatch:
@@ -35,10 +37,18 @@ jobs:
       - name: Probe real disposable Keycloak ChatGPT-like public DCR and PKCE
         run: python3 scripts/ci/keycloak_chatgpt_dcr_smoke.py
 
+      - name: Probe current ChatGPT CIMD with disposable domain-restricted Keycloak
+        run: python3 scripts/ci/keycloak_chatgpt_cimd_smoke.py
+
+      - name: Verify disposable signed private_key_jwt human PKCE and exact-resource negatives
+        run: python3 scripts/ci/keycloak_chatgpt_static_jwt_smoke.py
+
       - name: Ensure local ephemeral Keycloak is removed
         if: always()
         run: |
-          docker rm -f canovia-mcp-keycloak-disposable-ci canovia-mcp-keycloak-user-pkce-ci canovia-mcp-keycloak-dcr-ci >/dev/null 2>&1 || true
+          docker rm -f canovia-mcp-keycloak-disposable-ci canovia-mcp-keycloak-user-pkce-ci canovia-mcp-keycloak-dcr-ci canovia-mcp-keycloak-cimd-ci canovia-mcp-keycloak-static-jwt-ci >/dev/null 2>&1 || true
           test -z "$(docker ps -a -q --filter name=^/canovia-mcp-keycloak-disposable-ci$)"
           test -z "$(docker ps -a -q --filter name=^/canovia-mcp-keycloak-user-pkce-ci$)"
           test -z "$(docker ps -a -q --filter name=^/canovia-mcp-keycloak-dcr-ci$)"
+          test -z "$(docker ps -a -q --filter name=^/canovia-mcp-keycloak-cimd-ci$)"
+          test -z "$(docker ps -a -q --filter name=^/canovia-mcp-keycloak-static-jwt-ci$)"
