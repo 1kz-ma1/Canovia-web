@@ -10,7 +10,7 @@ import base64
 from copy import deepcopy
 import hashlib
 from html.parser import HTMLParser
-from http.cookiejar import CookieJar
+from http.cookiejar import CookieJar, DefaultCookiePolicy
 import json
 import os
 from pathlib import Path
@@ -123,9 +123,16 @@ def authorize(username: str, password: str, client_id: str, redirect: str,
         "code_challenge": challenge,
         "code_challenge_method": "S256",
     })
+    # Browsers treat loopback as a potentially trustworthy context and
+    # can send Keycloak's Secure auth-session cookie while testing HTTP
+    # localhost. urllib's default CookieJar does not do this. Allow it
+    # ONLY in this localhost-only, no-proxy, throwaway CI opener.
+    cookie_jar = CookieJar(policy=DefaultCookiePolicy(
+        secure_protocols=("https", "http")
+    ))
     opener = urllib.request.build_opener(
         urllib.request.ProxyHandler({}),
-        urllib.request.HTTPCookieProcessor(CookieJar()),
+        urllib.request.HTTPCookieProcessor(cookie_jar),
         StrictRedirect(redirect),
     )
     try:
@@ -137,6 +144,9 @@ def authorize(username: str, password: str, client_id: str, redirect: str,
     except (urllib.error.URLError, TimeoutError):
         raise Gap("auth_page_unavailable") from None
     require(len(html) <= 98304, "auth_page_too_large")
+    # Diagnostic contains names/booleans only, never cookie values.
+    require(any(c.name.startswith("AUTH_SESSION_ID") for c in cookie_jar),
+            "no_auth_session_cookie_after_auth_page")
     form = LoginForm()
     form.feed(html.decode("utf8", errors="replace"))
     require(isinstance(form.action, str), "login_form_missing")
