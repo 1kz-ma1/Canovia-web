@@ -117,6 +117,9 @@ jobs:
           php -l tests/Feature/WorkspaceModeBarV541Test.php
           php -l app/Http/Controllers/AdaptiveLearningController.php
           php -l app/Http/Controllers/AdaptiveLearningAnswerDraftController.php
+          php -l app/Http/Controllers/AdaptiveLearningHistoryController.php
+          php -l app/Services/AdaptiveLearningHistoryService.php
+          php -l tests/Feature/AdaptiveLearningHistoryUiTest.php
           php -l app/Services/AdaptiveLearningAnswerDraftService.php
           php -l tests/Feature/AdaptiveLearningSessionDraftL3cTest.php
           php -l app/Services/AdaptiveLearningBankQueueService.php
@@ -359,6 +362,9 @@ jobs:
 
       - name: L3-c session-scoped Learning autosave and old answer compatibility
         run: php artisan test tests/Feature/AdaptiveLearningSessionDraftL3cTest.php tests/Feature/AdaptiveLearningSingleQuestionV5878Test.php tests/Feature/AdaptiveLearningTypedAnswersL3Test.php
+
+      - name: Learning history and evidence-safe review UI
+        run: php artisan test tests/Feature/AdaptiveLearningHistoryUiTest.php tests/Feature/AdaptiveLearningSingleQuestionV5878Test.php
 
       - name: L4 Cross-run scoped candidate evidence and diversified Bank queue
         run: php artisan test tests/Feature/AdaptiveLearningCrossRunCandidateL4Test.php tests/Feature/AdaptiveLearningCandidateQueueV5879Test.php tests/Feature/AdaptiveLearningEvaluationAdjustmentV5882Test.php tests/Feature/AdaptiveLearningTypedAnswersL3Test.php
