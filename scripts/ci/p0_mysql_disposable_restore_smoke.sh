@@ -83,6 +83,20 @@ for t in intelligence_state_snapshots intelligence_decision_traces learning_answ
     fi
 done
 
+# Compare complete definitions in ALL tables, columns, FKs and indexes.
+# Output stays only in protected disposable CI temp files; no personal rows.
+source_mysql < scripts/sql/p0_mysql_disposable_full_schema_fingerprint.sql \
+    > "$scratch/source-structural-metadata.tsv"
+restored_mysql < scripts/sql/p0_mysql_disposable_full_schema_fingerprint.sql \
+    > "$scratch/restored-structural-metadata.tsv"
+if [[ ! -s "$scratch/source-structural-metadata.tsv" ||
+      ! -s "$scratch/restored-structural-metadata.tsv" ]] \
+    || ! cmp -s "$scratch/source-structural-metadata.tsv" "$scratch/restored-structural-metadata.tsv"; then
+    printf 'p0_disposable_restore: BLOCK_ALL_TABLE_SCHEMA_PARITY\n'
+    exit 2
+fi
+printf 'p0_disposable_mysql_all_table_schema_parity: pass\n'
+
 # Restore acceptance means valid synthetic data/schema/ledger, NOT production.
 restored_mysql < scripts/sql/p0_mysql_readonly_schema_inventory.sql \
     | python3 scripts/ci/p0_mysql_inventory_tsv_import.py --input - \
@@ -131,6 +145,15 @@ with open(sys.argv[1], encoding="utf-8") as handle:
 if result.get("result") != "BLOCK" or "ADJUSTMENT_APPLIED_CONSTRAINT_DRIFT" not in result.get("codes", []) or result.get("release_authorized") is not False:
     raise SystemExit("p0_disposable_restore: BLOCK_NEGATIVE_CONTROL_UNDETECTED")
 PY
+# The damaged restored copy must differ from the original across all schema.
+restored_mysql < scripts/sql/p0_mysql_disposable_full_schema_fingerprint.sql \
+    > "$scratch/tampered-restored-metadata.tsv"
+if cmp -s "$scratch/source-structural-metadata.tsv" "$scratch/tampered-restored-metadata.tsv"; then
+    printf 'p0_disposable_restore: BLOCK_STRUCTURAL_NEGATIVE_CONTROL\n'
+    exit 2
+fi
+printf 'p0_disposable_mysql_full_schema_drift_detection: pass\n'
+
 # Original source must not have been mutated by the negative control.
 if [[ "$(source_mysql -e "SELECT COUNT(*) FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA='$source_db' AND TABLE_NAME='learning_answer_evaluation_adjustments' AND CONSTRAINT_NAME='laea_answer_event_fk'")" != "1" ]]; then
     printf 'p0_disposable_restore: BLOCK_SOURCE_SCHEMA_CHANGED\n'
