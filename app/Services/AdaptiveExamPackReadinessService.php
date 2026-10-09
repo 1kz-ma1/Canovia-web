@@ -100,6 +100,10 @@ final class AdaptiveExamPackReadinessService
             $blocking[] = "出典情報のない問題が{$attributionMissing}問あります。";
         }
 
+        if (($metadata['explanation_review_state'] ?? '') === 'pending_human_subject_review') {
+            $blocking[] = '解説案が未監修です。全問の説明・根拠と計算を確認してから再申請してください。';
+        }
+
         if (($profile['requires_pack_review'] ?? false) === true) {
             $withoutExplanation = $questions->filter(fn (Question $question) =>
                 trim((string) $question->explanation) === '')->count();
@@ -117,6 +121,7 @@ final class AdaptiveExamPackReadinessService
                 )
                 || ($review['format_checked'] ?? false) !== true
                 || ($review['answer_key_checked'] ?? false) !== true
+                || ($review['explanations_checked'] ?? false) !== true
                 || ($review['content_rights_checked'] ?? false) !== true
                 || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($review['reviewed_at'] ?? ''))) {
                 $blocking[] = '問題・正答・出典に対応するSHA-256指紋と管理者の最終確認記録が不足、または内容変更で失効しています。';

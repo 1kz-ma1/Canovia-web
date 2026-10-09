@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "pack": {
     "slug": "ap-a-2026-cbt-80-candidate-v1",
-    "title": "応用情報 科目A 80問模試候補（未監修・公開前）",
+    "title": "応用情報 科目A 80問模試候補（解説案追加・未監修）",
     "exam_code": "AP",
     "subject": "科目A",
-    "version": "0.1.0-review-required",
+    "version": "0.2.0-review-required",
     "downloadable": false,
     "metadata": {
       "match_terms": [
@@ -34,7 +34,10 @@
       "source_usage_guidance_url": "https://www.ipa.go.jp/shiken/faq.html",
       "selection_note": "This 80-question mixed-source draft only matches number and answer format. Topic distribution, source rights, answer accuracy and content equivalence are NOT reviewed. Not equivalent to a genuine official IPA exam.",
       "curation_date": "2026-10-09",
-      "source_domain_distribution_not_certified": true
+      "source_domain_distribution_not_certified": true,
+      "content_revision": "2026-10-09-explanations-draft",
+      "official_explanation_draft_count": 35,
+      "explanation_review_state": "pending_human_subject_review"
     }
   },
   "questions": [
@@ -112,10 +115,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q03",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はイ。偽陽性率（FPR）は「実際には陰性のもの」を誤って陽性と判定した割合で、FP÷(FP＋TN)で求めます。この設問では「間違い」を陰性、「正しい」を陽性として読み替えるので、実際には間違いのデータを正しいと予測した割合が該当します。アは予測結果を分母に取る適合率系の考え方、ウは真陰性率、エは全体の誤分類率です。",
       "difficulty": 3,
       "sort_order": 1,
       "is_active": true
@@ -270,10 +276,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q04",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はウ。CRCは送信側・受信側が共通の生成多項式を使ってビット列を演算し、送信側が算出した余りに相当する検査ビットを元データへ付けて送ります。受信側は同じ生成多項式で受信ビット列を検査します。検査ビットは常に1ビットとは限らず、受信側で検査ビットそのものを除数にするわけでもありません。余りが0でも全ての誤りを必ず検出できるわけではありません。",
       "difficulty": 2,
       "sort_order": 3,
       "is_active": true
@@ -424,10 +433,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q05",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はイ。ベストフィット（最適適合）は、要求サイズ以上の空き領域の中から、余りが最も小さくなる領域を選んで割り当てます。そのため大きな空きを無駄に切り分けにくい一方、小さな未使用領域が多数生じる外部フラグメンテーションに注意が必要です。先頭に近い場所から探すファーストフィットとは異なります。",
       "difficulty": 3,
       "sort_order": 5,
       "is_active": true
@@ -577,10 +589,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q06",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はイ。1ブロックにm個あるのでブロック数はn/m個。ブロック末尾を順番に調べる段階の平均比較回数は、およそ(n/m)/2＝n/(2m)回です。目的ブロックに入ってから線形探索する平均は、およそm/2回。二段階を足してm/2＋n/(2m)となります。設問はmが十分大きい条件なので端数の補正は省略します。",
       "difficulty": 4,
       "sort_order": 7,
       "is_active": true
@@ -805,10 +820,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q07",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はア。Scalaは静的型付け言語で、クラスやオブジェクトを用いるオブジェクト指向と、高階関数・不変データなどを使う関数型プログラミングを組み合わせられます。通常のクラスの多重継承を前提とはせず、JVM上での実行など複数の実行形態があり、値によって型が実行時に初めて決まる動的型付け言語でもありません。",
       "difficulty": 2,
       "sort_order": 10,
       "is_active": true
@@ -958,10 +976,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q08",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はエ。VLIW（Very Long Instruction Word）は、複数の演算を並列に実行できるようコンパイラが実行可能性を解析し、一つの長い命令語にまとめる方式です。CISCは複雑な命令群、RISCは単純な命令群の設計方針、MIMDは複数の命令列とデータ列を扱う並列処理形態であり、問題の「コンパイル段階で複合命令にまとめる」点とは異なります。",
       "difficulty": 3,
       "sort_order": 12,
       "is_active": true
@@ -1112,10 +1133,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q09",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はイ。ユニファイドメモリ方式では、独立した専用フレームバッファを用意せず、主記憶の一部を画像表示用の記憶領域として共用します。アは専用ビデオメモリを持つ構成です。メモリを共用するかどうかは、描画コマンドの通信形態や画面リフレッシュの要否を直接決めません。",
       "difficulty": 2,
       "sort_order": 14,
       "is_active": true
@@ -1342,10 +1366,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q11",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はイ。元の総コア数は8コア/ノード×1,000ノード＝8,000コアです。更新後はその4倍の32,000コアで、1ノード16コアなのでノード数は32,000÷16＝2,000。1コアの性能は10×2＝20GFLOPSとなり、全体で32,000×20＝640,000GFLOPS＝640TFLOPSです。",
       "difficulty": 4,
       "sort_order": 17,
       "is_active": true
@@ -1496,10 +1523,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q12",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はウ。IaC（Infrastructure as Code）はサーバ・ネットワークなどの構成や設定をコードで記述し、ツールがその宣言内容などに従って自動適用する手法です。変更履歴管理や同じ環境の再現、自動化に役立ちます。手動で資源を割り当てる作業や単なる初期状態のサーバはIaCそのものではありません。",
       "difficulty": 2,
       "sort_order": 19,
       "is_active": true
@@ -1655,10 +1685,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q13",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はア。稼働率は、平均的な稼働時間を「稼働時間＋修復時間」で割るため、MTBF÷(MTBF＋MTTR)です。MTBFは故障と次の故障の間の平均稼働時間、MTTRは故障から復旧までの平均修復時間を表します。初回故障までの平均時間は別の指標（MTTF）であり、MTTRを次の故障までの時間と取り違えないことがポイントです。",
       "difficulty": 2,
       "sort_order": 21,
       "is_active": true
@@ -1810,10 +1843,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q14",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はイ。キャパシティプランニングでは、現在の処理量や応答時間、将来の利用増加を調査・予測し、必要な資源量と増強時期を計画します。現在の応答時間を継続監視して将来もサービス水準を維持するというイが目的に合います。特定のボトルネック調整や直近のチューニングは、計画全体の一部であって目的の全体ではありません。",
       "difficulty": 3,
       "sort_order": 23,
       "is_active": true
@@ -2041,10 +2077,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q15",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はエ（11秒）。処理時間順方式では、実行可能なジョブの中から短いものを選びます。Aを0〜2秒、Cを2〜5秒、Eを5〜6秒、Dを6〜8秒、最後にBを8〜12秒に実行します。Bは時刻1に到着し時刻12に完了するので、ターンアラウンドタイム＝完了時刻−到着時刻＝12−1＝11秒です。単純な処理時間4秒と混同しないでください。",
       "difficulty": 4,
       "sort_order": 26,
       "is_active": true
@@ -2195,10 +2234,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q16",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はイ。セマフォは共有資源への同時アクセスを制御する同期機構です。排他的に使う必要のあるI²Cバスに対し、二つのタスクが取得と解放を行えば、利用が重ならないよう制御できます。キューはメッセージの受け渡し、メモリプールはメモリ管理、マルチスレッドは並行処理そのものを指します。",
       "difficulty": 2,
       "sort_order": 28,
       "is_active": true
@@ -2348,10 +2390,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q17",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はウ。スレッドセーフとは、複数スレッドから同時に利用されても共有状態が競合して不正な結果を生じない性質です。ロック・不変データ・アトミック操作などで実現します。スレッドを一つに制限することや、競合した瞬間に停止することは、複数スレッドに対する安全性の説明ではありません。",
       "difficulty": 2,
       "sort_order": 30,
       "is_active": true
@@ -2573,10 +2618,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q18",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はイ。タスク1が資源A→B、タスク2が資源B→Aの順に獲得すると、互いが相手の保持資源を待つ循環待ちが起こり得ます。両タスクで資源の取得順序をA→Bのように統一すると、循環待ちの条件を崩しデッドロックの予防につながります。優先度を同じ／違う値にしても取得順の問題は解決しません。",
       "difficulty": 3,
       "sort_order": 33,
       "is_active": true
@@ -2724,10 +2772,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q19",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はエ。LRU（Least Recently Used）は最後に参照した時刻が最も古いブロックを追い出します。最終参照時刻はC0=0:08、C1=0:06、C2=0:05、C3=0:10なので、C2が対象です。FIFOはロード時刻が最も古いC0、LFUは参照回数最少のC1、LIFOは最後にロードしたC3に着目します。",
       "difficulty": 3,
       "sort_order": 35,
       "is_active": true
@@ -2877,10 +2928,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q23",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はエ（300マイクロ秒）。16MHzを32分周すると、タイマーの入力は16,000,000÷32＝500,000Hz（0.5MHz）。1カウント当たり2マイクロ秒です。初期値150から0まで150カウント進むので150×2＝300マイクロ秒。16ビットという情報は十分なカウント範囲があることを示し、この計算では桁あふれを考える必要はありません。",
       "difficulty": 3,
       "sort_order": 37,
       "is_active": true
@@ -3034,10 +3088,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q25",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はウ（25マイクロ秒）。標本化定理により最高周波数20kHzの信号を扱うには、標本化周波数は最低でもその2倍の40kHzが必要です。最大の標本化周期は1÷40,000秒＝0.000025秒＝25マイクロ秒となります。「周期」は「周波数」の逆数であることに注意してください。",
       "difficulty": 3,
       "sort_order": 39,
       "is_active": true
@@ -3268,10 +3325,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q26",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はイ。BASEの特徴の一つである結果整合性（Eventual Consistency）は、更新直後はノード間の値が異なっていても、障害なく更新が伝搬すれば最終的に整合する考え方です。したがって全ノードが即時に同じ結果を返す保証はありません。常に2相コミットを使うことや、ネットワーク分断時に必ず全要求を停止することもBASEの定義ではありません。",
       "difficulty": 3,
       "sort_order": 42,
       "is_active": true
@@ -3425,10 +3485,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q27",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はエ。ハッシュインデックスはキーのハッシュ値で検索位置を求めるため、利用者ID='1001'のような等価（完全一致）検索に向きます。一方B+木インデックスはキーの順序を利用できるので、金額の範囲条件、日付範囲、接頭辞から始まる検索などに適しています。",
       "difficulty": 3,
       "sort_order": 44,
       "is_active": true
@@ -3578,10 +3641,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q56",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はア。問題管理は、繰り返し発生するインシデントや潜在的な問題の根本原因を調べ、再発を防ぐための対策を検討する活動です。サービス要求の優先度付けは要求管理、変更要求の記録は変更管理、リリースの検証はリリース管理などの領域です。",
       "difficulty": 2,
       "sort_order": 46,
       "is_active": true
@@ -3807,10 +3873,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q57",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はイ（aとc）。液浸冷却はサーバや機器を電気絶縁性の冷却液に浸して熱を取り除く方法です。冷媒を循環する単相方式と、蒸発・凝縮の潜熱を使う二相方式があります。金属板を当てて熱を受けるbは直接液冷（コールドプレート方式）の説明です。水は一般に電気絶縁性が十分でなく、通常の液浸冷却では専用の絶縁性冷媒を用いるためdは誤りです。",
       "difficulty": 3,
       "sort_order": 49,
       "is_active": true
@@ -3961,10 +4030,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q58",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はエ。システム監査での「独立性」は、監査の判断が対象部門や第三者からの不当な影響・圧力に左右されない状態を含みます。アが述べるのは監査結果を再現できる性質、イは「正当な懐疑心」でなく客観性の説明に近く、ウの「発見に基づく意見」は所見に近い内容です。用語と定義を対応させることがポイントです。",
       "difficulty": 3,
       "sort_order": 51,
       "is_active": true
@@ -4117,10 +4189,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q59",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はウ。監査人のフォローアップでは、提出した改善提案に対して監査対象部門がどこまで対処したか、改善状況と残るリスクを追跡・確認します。監査人が改善作業を指示したり、改善プロジェクトを直接管理したり、改善計画を監査対象側に代わって策定したりすると、監査の独立性を損ない得ます。",
       "difficulty": 2,
       "sort_order": 53,
       "is_active": true
@@ -4271,10 +4346,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q60",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はイ。コントロールの視点は、具体的な統制が現場で適切に機能しているかを確かめます。異常アクセスの検出に対して、定められた対処や報告が適時に実行されているかというイが該当します。投資リターン・経営戦略への技術活用はガバナンス、対策全体のPDCA運用はマネジメントの観点と区別します。",
       "difficulty": 3,
       "sort_order": 55,
       "is_active": true
@@ -4495,10 +4573,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q62",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はエ。SOA（Service-Oriented Architecture）は、業務上の機能を独立性の高いサービスとして定義し、標準化したインタフェースなどを通じて組み合わせ、業務プロセスとの対応やシステム間の連携をしやすくする設計思想です。アはERP、イはFit＆Gap分析、ウはPDCAによる継続的改善の説明です。",
       "difficulty": 2,
       "sort_order": 58,
       "is_active": true
@@ -4648,10 +4729,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q63",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はイ。アソシエーション分析は、購買履歴などから「商品Aを買う人は商品Bも買う」といった共起や関連ルールを見つける方法です。支持度はルールの出現割合、信頼度は前提が成立したときの結果の割合、リフト値は偶然の共起との比較に使います。アは回帰分析、ウは因子分析、エは主成分分析の説明です。",
       "difficulty": 3,
       "sort_order": 60,
       "is_active": true
@@ -4804,10 +4888,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q64",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はウ。PBP（Payback Period、投資回収期間法）は、初期投資を将来のキャッシュフローで回収するまでに必要な期間の長さを基準に評価します。通常の単純回収期間法はお金の時間価値や回収後の収益を十分に考慮しません。割引率を使って現在価値を評価するNPV・IRRとは区別します。",
       "difficulty": 3,
       "sort_order": 62,
       "is_active": true
@@ -5031,10 +5118,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q66",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はウ（B社）。A社とB社はスコープを固定した定額契約なので、B社の作業遅延による追加費用をA社へ当然に転嫁することはできません。C社側の設備に故障はなく、遅延の原因はB社自身の人的リソース不足です。B社・C社間が実費償還契約でも、B社の原因で増えた費用についてA社やC社に責任が移るわけではありません。",
       "difficulty": 4,
       "sort_order": 65,
       "is_active": true
@@ -5186,10 +5276,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q67",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はウ。マーケティングの4Pと4Cの対応は、Product→Customer Value、Price→Customer Cost、Place→Convenience、Promotion→Communicationです。売手側の「販売促進」は買手側から見ると「情報の伝達・双方向の対話」というコミュニケーションに相当します。",
       "difficulty": 2,
       "sort_order": 67,
       "is_active": true
@@ -5343,10 +5436,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q68",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はイ。バランススコアカード（BSC）の戦略マップは「財務・顧客・内部ビジネスプロセス・学習と成長」の4視点について、戦略目標や施策がどうつながって成果を生むか、因果関係を可視化します。単なる2軸マトリクスや顧客層・資源の整理図ではありません。",
       "difficulty": 3,
       "sort_order": 69,
       "is_active": true
@@ -5496,10 +5592,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q69",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はア。フィージビリティスタディは、新規事業や情報システム導入などの投資を実行する前に、技術面・経済面・運用面などから実現可能性を評価する調査です。イはデルファイ法、ウはブレーンストーミング、エはプロダクトライフサイクルの説明です。",
       "difficulty": 2,
       "sort_order": 71,
       "is_active": true
@@ -5726,10 +5825,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q71",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はイ。MES（Manufacturing Execution System、製造実行システム）は、生産現場の作業指示や進捗・品質など、計画を現場の実行につなぐ「実行層」で運用されます。大枠の生産計画は計画層、機械・センサーの直接制御は制御層の役割です。",
       "difficulty": 2,
       "sort_order": 74,
       "is_active": true
@@ -5881,10 +5983,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q72",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はイ。PLM（Product Lifecycle Management）は、企画・設計開発から製造、販売、保守、廃棄・リサイクルまで、製品ライフサイクル全体の情報を一元管理して品質や開発効率・コストを改善する考え方です。アは製造システムの自動化、ウはMRP、エはSCMに近い説明です。",
       "difficulty": 2,
       "sort_order": 76,
       "is_active": true
@@ -6036,10 +6141,13 @@
         "curation": {
           "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
           "source_external_key": "ipa-2025-autumn-ap-am-q73",
-          "selection": "manual_draft_2026_10_09"
+          "selection": "manual_draft_2026_10_09",
+          "explanation_origin": "canovia_independent_draft",
+          "explanation_review_status": "awaiting_subject_expert_check",
+          "answer_key_source": "ipa_2025_autumn_official_answer_pdf"
         }
       },
-      "explanation": null,
+      "explanation": "正答はウ。LPWA（Low Power Wide Area）は小容量データを低消費電力で広域へ送る無線通信の総称です。多数のセンサーを長期間バッテリーで動かすIoT用途に適しています。4K・8K映像の高速伝送は目的外で、電力線通信や基板上の有線シリアル通信でもありません。",
       "difficulty": 2,
       "sort_order": 78,
       "is_active": true

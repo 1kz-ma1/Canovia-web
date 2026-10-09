@@ -13,7 +13,7 @@
 
 ## AP科目A 2026 CBT模試の問題集審査（2026-10-09）
 
-- [80問候補の品質・出典・監修・公開ゲート](learning/AP_A_2026_80_QUESTION_CANDIDATE_AUDIT.md)：IPA過去問35＋Canoviaオリジナル/類題45のDraft候補。実試験に対する範囲・問題精度・権利適合は未認定で、自動公開されない。レビュー内容指紋の一致が必須。
+- [80問候補の品質・出典・監修・公開ゲート](learning/AP_A_2026_80_QUESTION_CANDIDATE_AUDIT.md)：IPA過去問35＋Canoviaオリジナル/類題45のDraft候補。IPA35問のCanovia独自解説案は追加済み（専門レビュー待ち）。実試験に対する範囲・問題精度・権利適合は未認定で、自動公開されない。解説承認とレビュー内容指紋の一致が必須。
 
 ## Authority
 1. Actual latest main code and independently verified PR/CI/deploy/device evidence.
