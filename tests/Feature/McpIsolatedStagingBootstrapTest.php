@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Support\Facades\DB;
+use Mockery;
 use Symfony\Component\Process\Process;
 use Tests\TestCase;
 
@@ -19,6 +21,81 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
         $this->get('/login')->assertStatus(503);
         $this->postJson('/api/mcp', ['jsonrpc' => '2.0', 'id' => 1,
             'method' => 'tools/list'])->assertStatus(503);
+    }
+
+    public function test_stage_postgres_health_fails_closed_without_credentials_or_exact_pin(): void
+    {
+        config([
+            'app.env' => 'staging',
+            'canovia_staging.isolated' => true,
+            'canovia_staging.web_access_enabled' => false,
+            'canovia_staging.database_mode' => 'render_postgres',
+            'canovia_staging.postgres_id' => 'dpg-db43rbbncjis73bmigi0-a',
+            'database.default' => 'sqlite',
+        ]);
+
+        // No DB call is made if the configured runtime is wrong.
+        $this->get('/up')->assertStatus(503)
+            ->assertSee('Staging service unavailable.')
+            ->assertDontSee('postgres')
+            ->assertHeader('Cache-Control', 'no-store, private');
+
+        config(['database.default' => 'pgsql',
+            'database.connections.pgsql.database' => 'canovia_mcp_staging_db']);
+        $this->get('/up')->assertStatus(503);
+
+        config(['canovia_staging.postgres_id' => 'other-resource']);
+        $this->get('/up')->assertStatus(503);
+
+        config(['canovia_staging.database_mode' => 'invalid']);
+        $this->get('/up')->assertStatus(503);
+    }
+
+    public function test_stage_postgres_health_checks_exact_database_and_all_required_tables(): void
+    {
+        config([
+            'app.env' => 'staging',
+            'canovia_staging.isolated' => true,
+            'canovia_staging.web_access_enabled' => false,
+            'canovia_staging.database_mode' => 'render_postgres',
+            'canovia_staging.postgres_id' => 'dpg-db43rbbncjis73bmigi0-a',
+            'database.default' => 'pgsql',
+            'database.connections.pgsql.database' => 'canovia_mcp_staging_db',
+            'database.connections.pgsql.url' =>
+                'postgresql://canovia_mcp_staging_db_user:synthetic-not-a-real-secret@dpg-db43rbbncjis73bmigi0-a:5432/canovia_mcp_staging_db',
+        ]);
+
+        $db = Mockery::mock();
+        $db->shouldReceive('selectOne')->twice()->andReturn(
+            (object) ['db_name' => 'canovia_mcp_staging_db'],
+            (object) ['present_count' => 6],
+        );
+        DB::shouldReceive('connection')->once()->with('pgsql')->andReturn($db);
+        $this->get('/up')->assertOk();
+        $this->get('/login')->assertStatus(503);
+    }
+
+    public function test_stage_postgres_health_cannot_report_ready_if_schema_is_incomplete(): void
+    {
+        config([
+            'app.env' => 'staging',
+            'canovia_staging.isolated' => true,
+            'canovia_staging.database_mode' => 'render_postgres',
+            'canovia_staging.postgres_id' => 'dpg-db43rbbncjis73bmigi0-a',
+            'database.default' => 'pgsql',
+            'database.connections.pgsql.database' => 'canovia_mcp_staging_db',
+            'database.connections.pgsql.url' =>
+                'postgresql://canovia_mcp_staging_db_user:synthetic-not-a-real-secret@dpg-db43rbbncjis73bmigi0-a:5432/canovia_mcp_staging_db',
+        ]);
+
+        $db = Mockery::mock();
+        $db->shouldReceive('selectOne')->twice()->andReturn(
+            (object) ['db_name' => 'canovia_mcp_staging_db'],
+            (object) ['present_count' => 5],
+        );
+        DB::shouldReceive('connection')->once()->with('pgsql')->andReturn($db);
+        $this->get('/up')->assertStatus(503)
+            ->assertDontSee('synthetic-not-a-real-secret');
     }
 
     public function test_staging_cannot_open_without_isolation_marker(): void
