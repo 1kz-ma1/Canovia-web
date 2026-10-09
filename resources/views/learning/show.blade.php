@@ -68,6 +68,15 @@
                             @endforeach
                         </fieldset>
                     @endif
+                    @if ($run->mode === 'understanding')
+                        <div class="space-y-2">
+                            <label for="learning-reasoning-{{ $item->id }}" class="block text-sm font-semibold text-slate-200">考え方・選んだ理由（任意）</label>
+                            <textarea id="learning-reasoning-{{ $item->id }}" name="reasoning"
+                                rows="3" maxlength="1000" class="form-control w-full"
+                                placeholder="例：この公式を使うと考えた理由など" data-learning-reasoning>{{ old('reasoning') }}</textarea>
+                            <p class="text-xs text-slate-400">回答と一緒に記録します。メモの内容は採点・理解度評価には使いません。回答後は編集できません。</p>
+                        </div>
+                    @endif
                     @if ($errors->any())<p role="alert" class="text-sm text-red-300">{{ $errors->first() }}</p>@endif
                     <button type="submit" class="btn-primary">この1問を採点・保存</button>
                 </form>
@@ -75,6 +84,12 @@
                 <div class="mt-5 rounded-xl border border-sky-500/30 p-4" data-learning-answer-feedback>
                     <p class="text-sm font-bold {{ $answer->was_correct ? 'text-emerald-300' : 'text-amber-300' }}">{{ $answer->was_correct ? '正解' : '不正解' }}</p>
                     <p class="mt-2 text-sm text-slate-200">あなたの回答：{{ $displayedAnswerText }}</p>
+                    @if (filled($savedTypedAnswer['reasoning'] ?? null))
+                        <div class="mt-3 rounded-lg border border-slate-600 p-3" data-learning-saved-reasoning>
+                            <p class="text-xs font-semibold text-slate-300">回答時に残した考え方</p>
+                            <p class="mt-2 whitespace-pre-line break-words text-sm leading-6 text-slate-200">{{ $savedTypedAnswer['reasoning'] }}</p>
+                        </div>
+                    @endif
                     @if ($responseType === 'multiple_choice')
                         <p class="mt-2 text-sm text-slate-200">正答：{{ implode(' / ', $correctMultiple) }}</p>
                     @elseif ($responseType === 'number')
