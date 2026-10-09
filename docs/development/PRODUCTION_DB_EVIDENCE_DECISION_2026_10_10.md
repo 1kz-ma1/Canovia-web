@@ -101,3 +101,25 @@ A new fail-closed grant parser replaces the prior loose permission check. A disp
 Aiven's service-user API `mysql_grants` controls privilege *types* when provisioning; its documentation does **not** prove that granting `SELECT` this way is automatically restricted to the `migrations` table ([Aiven service user grants](https://aiven.io/docs/products/mysql/howto/manage-service-users)). **Do not assume `mysql_grants=["REFERENCES","SELECT"]` satisfies the above scope** or create a default admin user. Confirm exact table-scoped grants are available on the actual service in a separate operator-approved action; otherwise **hold** rather than loosen policy.
 
 Evidence boundary is unchanged: no live Aiven database identity/schema/ledger/restore verification and no permission/credential changes. PRs #443 and #459 remain Draft/unmerged pending real safe inspection.
+
+
+## 10. Operator handoff: Aiven Users inventory before any account creation (2026-10-10)
+
+This is the **next independent evidence request**, not an instruction to create resources. No additional CI, migration edits or generalized safety scaffolding can establish which real Aiven service users exist.
+
+### Owner's minimal, no-change console review
+
+1. Sign in to the real [Aiven Console](https://console.aiven.io/) using the account controlling Canovia's existing production MySQL service.
+2. Open that existing service and navigate to **Connect → Users** (documented in [Aiven's official MySQL user management guide](https://aiven.io/docs/products/mysql/howto/manage-service-users)).
+3. **Inspect the list only. Do not click Add/Create user, rotate passwords, change authentication, upgrade, update an IP allowlist, or touch production database settings.**
+4. Answer just one status question in the implementation chat: `Only avnadmin and application user`, `Separate inspection user exists`, or `Unclear`. If uncertain, a *redacted* screenshot of the Users overview may help, hiding all names/identifiers, passwords, generated secrets, URLs, endpoints and other connection details. No screenshot is required when the status can be conveyed in words.
+
+### Why this is not an Aiven auto-provisioning task
+
+Aiven says new users get **admin-level privileges by default** unless created through a supported `mysql_grants` route. Aiven's published grant list controls permitted privilege **types** and mentions database scopes; it does not establish that its API automatically restricts a new account to the exact `REFERENCES ON verified_db.*` and `SELECT ON verified_db.migrations` contract proven in **disposable** MySQL. Do **not** blindly create a service user using `mysql_grants=["SELECT", "REFERENCES"]` and assume that it cannot read actual private rows. An ordinary Aiven service-level admin credential is likewise unacceptable for automated application-style inspection. Reference: [Aiven Manage MySQL service users](https://aiven.io/docs/products/mysql/howto/manage-service-users).
+
+- **If an existing safe inspector exists:** privately verify its real `SHOW GRANTS`, trusted Aiven server identity, intended *logical database*, TLS CA and review the exact PR #443 operator collector. A generic name such as `read-only` does **not** prove its privileges.
+- **If none exists:** prepare a *separate*, explicitly authorized account-access plan, confirm Aiven's support for exact per-database/per-table grants for this existing database (or ask Aiven support); do not provision via the default admin Console UI and do not weaken the collector's grant guard. Only after the user authorizes that independent change should one create/use a new account. No credentials need to enter GitHub or ChatGPT.
+- **If unclear:** stop and inspect only service-user metadata, keeping Issue #418's production migration hold.
+
+This first console step alone cannot establish the live schema/ledger and does **not** grant permission to merge #443/#459. The currently connected GitHub/Render tools lack a privileged Aiven MySQL connector, and the source-inspection + disposable CI results are not a substitute for an authorized real Aiven SQL inspection or an independently restorable backup.
