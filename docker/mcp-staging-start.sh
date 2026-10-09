@@ -174,15 +174,15 @@ case "${CANOVIA_STAGING_SYNTHETIC_PLAN_FIXTURE_ON_START:-false}" in
     *) deny "invalid synthetic Plan fixture startup switch" ;;
 esac
 if [ "${CANOVIA_STAGING_SYNTHETIC_PLAN_FIXTURE_ON_START:-false}" = "true" ]; then
-    [ "${CANOVIA_STAGING_SYNTHETIC_OWNER_BOOTSTRAP_ON_START:-false}" = "true" ] \\
+    [ "${CANOVIA_STAGING_SYNTHETIC_OWNER_BOOTSTRAP_ON_START:-false}" = "true" ] \
         || deny "synthetic Plan fixture requires synthetic owner bootstrap"
-    [ "${CANOVIA_STAGING_DB_MODE:-sqlite}" = "render_postgres" ] \\
+    [ "${CANOVIA_STAGING_DB_MODE:-sqlite}" = "render_postgres" ] \
         || deny "synthetic Plan fixture requires pinned PostgreSQL"
-    [ "${CANOVIA_STAGING_WEB_ACCESS_ENABLED:-false}" = "false" ] \\
+    [ "${CANOVIA_STAGING_WEB_ACCESS_ENABLED:-false}" = "false" ] \
         || deny "synthetic Plan fixture requires closed Web"
-    [ "${CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED:-false}" = "false" ] \\
+    [ "${CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED:-false}" = "false" ] \
         || deny "synthetic Plan fixture requires no public approval"
-    [ "${CANOVIA_MCP_TOOLS_ENABLED:-false}" = "false" ] \\
+    [ "${CANOVIA_MCP_TOOLS_ENABLED:-false}" = "false" ] \
         || deny "synthetic Plan fixture requires MCP tools closed"
 fi
 
