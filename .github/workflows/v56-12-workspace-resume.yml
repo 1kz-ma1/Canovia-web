@@ -120,6 +120,9 @@ jobs:
           php -l app/Models/LearningAnswerEvent.php
           php -l database/migrations/2026_10_08_200000_create_learning_runs_and_answer_events.php
           php -l tests/Feature/AdaptiveLearningSingleQuestionV5878Test.php
+          php -l app/Services/QuestionPackPublicationReadinessService.php
+          php -l app/Http/Controllers/AdminQuestionPackController.php
+          php -l tests/Feature/QuestionPackPublicationReadinessL2Test.php
           php -l app/Models/LearningRunCandidate.php
           php -l app/Services/AdaptiveLearningCandidateService.php
           php -l database/migrations/2026_10_08_210000_create_learning_run_candidates.php
@@ -300,6 +303,9 @@ jobs:
         run: php artisan test tests/Feature/AdaptiveLearningModeRecommendationV5881Test.php tests/Feature/AdaptiveLearningExamSimulationV5880Test.php tests/Feature/AdaptiveLearningCandidateQueueV5879Test.php tests/Feature/AdaptiveLearningSingleQuestionV5878Test.php
       - name: V58.80 Verified Exam Simulation and Legacy Regression
         run: php artisan test tests/Feature/AdaptiveLearningExamSimulationV5880Test.php tests/Feature/AdaptiveLearningCandidateQueueV5879Test.php tests/Feature/AdaptiveLearningSingleQuestionV5878Test.php tests/Feature/QuestionBankV402Test.php
+      - name: L2 Question Bank publication readiness and legacy compatibility
+        run: php artisan test tests/Feature/QuestionPackPublicationReadinessL2Test.php tests/Feature/QuestionBankV402Test.php tests/Feature/ApQuestionPackV403Test.php
+
       - name: V58.79 Adaptive Candidate Queue and V58.78 Compatibility
         run: php artisan test tests/Feature/AdaptiveLearningCandidateQueueV5879Test.php tests/Feature/AdaptiveLearningSingleQuestionV5878Test.php tests/Feature/QuestionBankV402Test.php
       - name: V58.78 Adaptive Learning Single Question and Legacy Regression
