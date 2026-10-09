@@ -313,7 +313,7 @@ static-file and direct PHP entry-point probes returning HTTP 503.
 PR #408 was merged. This establishes *closed external staging* behavior
 for the SQLite deployment; it does **not** prove attachment to Render PostgreSQL.
 
-### Staging-only migration failure redaction and operator gate (pending CI)
+### Staging-only migration failure redaction and operator gate (merged and live)
 
 The shared production startup script previously printed raw Laravel
 migration failures. During the proposed PostgreSQL cutover, an exception
@@ -378,3 +378,28 @@ that its canary, full URL and SQLSTATE do not appear in logs.
 environment/binding UI, ChatGPT cannot safely execute step 3 through
 the currently available connector. Do not replace that operation with
 a guessed URL, a literal secret in code, or public database access.
+
+
+### Cutover-logging protection acceptance evidence (2026-10-09)
+
+- [PR #409](https://github.com/1kz-ma1/Canovia-web/pull/409)
+  merged to `main` as `19c80f28f7e2c22c3d463d87de3ced6faeddf3c3`.
+- PR-head [Docker migration isolation run 37876396208](https://github.com/1kz-ma1/Canovia-web/actions/runs/37876396208)
+  passed: real image boot in both SQLite and disposable PostgreSQL 17,
+  synthetic wrong-password rejection, no canary/DSN/SQLSTATE emitted,
+  PostgreSQL migrations and Nginx lockdown.
+- [Workspace resume/MCP suite 37876396248](https://github.com/1kz-ma1/Canovia-web/actions/runs/37876396248)
+  and [production migration recovery 37876396204](https://github.com/1kz-ma1/Canovia-web/actions/runs/37876396204)
+  both passed.
+- The existing Free staging Web was manually redeployed as
+  `dep-db45dorncjis73bs7120` at PR #409's merged commit;
+  Render reported **live**.
+- Render's **actual startup logs** showed
+  `configured database mode=sqlite (connection not yet verified)`
+  followed by `MCP isolated staging migrations: completed (details suppressed)`.
+- The [external HTTPS lockdown job 37875765667](https://github.com/1kz-ma1/Canovia-web/actions/runs/37875765667)
+  was **rerun after this deploy** and passed again, validating public
+  `/up=200` and all protected/static/legacy health probes closed.
+- The **actual Render database is still not connected**. Do not confuse
+  these readiness/security acceptances with the future, separately gated
+  Render-native PostgreSQL cutover or real OAuth tests.
