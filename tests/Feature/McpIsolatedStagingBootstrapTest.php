@@ -101,6 +101,30 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             ->assertDontSee('synthetic-not-a-real-secret');
     }
 
+    public function test_staging_web_access_requires_independent_approval_and_live_pinned_db(): void
+    {
+        $this->withoutVite();
+        config([
+            'app.env' => 'staging',
+            'canovia_staging.isolated' => true,
+            'canovia_staging.web_access_enabled' => true,
+            'canovia_staging.web_access_explicitly_approved' => false,
+            'canovia_staging.database_mode' => 'sqlite',
+        ]);
+
+        // Neither a single switch nor approving an ephemeral SQLite
+        // stage makes sign-in, registration or OAuth publicly reachable.
+        $this->get('/login')->assertStatus(503);
+        $this->post('/login', [])->assertStatus(503);
+        $this->get('/account/mcp/link/callback')->assertStatus(503);
+        config(['canovia_staging.web_access_explicitly_approved' => true]);
+        $this->get('/login')->assertStatus(503);
+
+        // PostgreSQL mode without its pinned identity/schema also fails.
+        config(['canovia_staging.database_mode' => 'render_postgres']);
+        $this->get('/login')->assertStatus(503);
+    }
+
     public function test_staging_cannot_open_without_isolation_marker(): void
     {
         config([
@@ -131,6 +155,10 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
         foreach ([
             ['APP_ENV' => 'production'],
             ['CANOVIA_STAGING_ISOLATED' => 'false'],
+            ['CANOVIA_STAGING_WEB_ACCESS_ENABLED' => 'true'],
+            ['CANOVIA_STAGING_WEB_ACCESS_ENABLED' => 'true',
+                'CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED' => 'true'],
+            ['CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED' => 'invalid'],
             ['APP_DEBUG' => 'true'],
             ['CANOVIA_STAGING_POSTGRES_USER' => 'wrong_staging_user'],
             ['CANOVIA_STAGING_POSTGRES_USER' => 'UPPERCASE'],
@@ -177,6 +205,28 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             'DB_URL' => $url,
         ]);
         $this->assertTrue($valid->isSuccessful(), $valid->getErrorOutput());
+
+        $webAccess = [
+            'CANOVIA_STAGING_WEB_ACCESS_ENABLED' => 'true',
+            'CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED' => 'true',
+        ];
+        $this->assertTrue($this->guard([...[
+            'CANOVIA_STAGING_DB_MODE' => 'render_postgres',
+            'CANOVIA_STAGING_POSTGRES_ID' => 'dpg-db43rbbncjis73bmigi0-a',
+            'DB_CONNECTION' => 'pgsql',
+            'DB_DATABASE' => 'canovia_mcp_staging_db',
+            'CANOVIA_STAGING_POSTGRES_USER' => 'canovia_mcp_staging_db_user',
+            'DB_URL' => $url,
+        ], ...$webAccess])->isSuccessful());
+        $this->assertSame(42, $this->guard([
+            'CANOVIA_STAGING_DB_MODE' => 'render_postgres',
+            'CANOVIA_STAGING_POSTGRES_ID' => 'dpg-db43rbbncjis73bmigi0-a',
+            'DB_CONNECTION' => 'pgsql',
+            'DB_DATABASE' => 'canovia_mcp_staging_db',
+            'CANOVIA_STAGING_POSTGRES_USER' => 'canovia_mcp_staging_db_user',
+            'DB_URL' => $url,
+            'CANOVIA_STAGING_WEB_ACCESS_ENABLED' => 'true',
+        ])->getExitCode());
 
         foreach ([
             ['CANOVIA_STAGING_POSTGRES_ID' => 'dpg-other-instance'],
@@ -263,6 +313,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
         $this->assertStringContainsString('property: user', $contents);
         $this->assertStringContainsString('key: DB_URL', $contents);
         $this->assertStringContainsString('key: CANOVIA_STAGING_POSTGRES_USER', $contents);
+        $this->assertStringContainsString('key: CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED', $contents);
         $this->assertStringContainsString('value: render_postgres', $contents);
         $this->assertStringContainsString('value: "false"', $contents);
         $this->assertStringNotContainsString('    databases:', $contents);
