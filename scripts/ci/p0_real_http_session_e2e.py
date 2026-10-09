@@ -98,7 +98,7 @@ def wait_ready(opener, process):
     for _ in range(70):
         ensure(process.poll() is None, "local server remains alive")
         try:
-            status, _, _ = request(opener, "GET", "/login")
+            status, _, _ = request(opener, "GET", "/up")
             if status == 200:
                 return
         except (urllib.error.URLError, TimeoutError, ConnectionError):
