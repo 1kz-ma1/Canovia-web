@@ -31,7 +31,8 @@ CONTAINER = "canovia-mcp-keycloak-dcr-ci"
 CALLBACK = "https://chatgpt.invalid/disposable-dcr-callback"
 
 
-def register_client(registration_endpoint: str) -> tuple[int, dict]:
+def register_client(registration_endpoint: str,
+                    initial_access_token: str | None = None) -> tuple[int, dict]:
     parsed = urllib.parse.urlsplit(registration_endpoint)
     require(parsed.scheme == "http"
             and parsed.netloc == f"127.0.0.1:{PORT}"
@@ -48,10 +49,12 @@ def register_client(registration_endpoint: str) -> tuple[int, dict]:
         "scope": "openid " + MCP_SCOPE,
     }
     body = json.dumps(payload).encode("utf-8")
+    headers = {"Accept": "application/json",
+               "Content-Type": "application/json"}
+    if initial_access_token is not None:
+        headers["Authorization"] = "Bearer " + initial_access_token
     request = urllib.request.Request(
-        registration_endpoint, data=body, method="POST",
-        headers={"Accept": "application/json",
-                 "Content-Type": "application/json"},
+        registration_endpoint, data=body, method="POST", headers=headers,
     )
     try:
         with urllib.request.urlopen(request, timeout=8) as resp:
@@ -67,6 +70,48 @@ def register_client(registration_endpoint: str) -> tuple[int, dict]:
         raise Gap("registration_invalid_json") from None
     require(isinstance(result, dict), "registration_not_object")
     return status, result
+
+
+def create_one_use_registration_token(admin_secret: str) -> str:
+    # Private disposable admin token stays only in the in-memory CI process.
+    status, admin = request_json(
+        f"{ORIGIN}/realms/master/protocol/openid-connect/token",
+        payload={
+            "grant_type": "password", "client_id": "admin-cli",
+            "username": "ci-admin", "password": admin_secret,
+        }, http_error_ok=True,
+    )
+    require(status == 200 and isinstance(admin.get("access_token"), str),
+            "local_disposable_admin_auth_failed")
+    temporary_admin_bearer = admin["access_token"]
+    data = json.dumps({"count": 1, "expiration": 120}).encode("utf-8")
+    req = urllib.request.Request(
+        f"{ORIGIN}/admin/realms/{REALM}/clients-initial-access",
+        data=data, method="POST",
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + temporary_admin_bearer,
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            status, data = resp.status, resp.read(16385)
+    except urllib.error.HTTPError as exc:
+        raise Gap("initial_access_token_creation_http_"
+                  + str(exc.code)) from None
+    except (urllib.error.URLError, TimeoutError):
+        raise Gap("local_admin_network_error") from None
+    require(status == 201 and len(data) <= 16384,
+            "initial_access_token_creation_failed")
+    try:
+        decoded = json.loads(data.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        raise Gap("initial_access_token_response_invalid") from None
+    result = decoded.get("token")
+    require(isinstance(result, str) and len(result) >= 20,
+            "initial_access_token_missing")
+    return result
 
 
 def redeem_public(client_id: str, code: str, verifier: str) -> tuple[int, dict]:
@@ -139,10 +184,18 @@ def main():
                     "dcr_not_advertised")
             print("real_keycloak_dcr_endpoint_discovery: pass")
 
-            status, registered = register_client(registration_endpoint)
-            if status != 201:
-                # Intentionally never print server bodies or client detail.
-                raise Gap("anonymous_dcr_http_" + str(status))
+            anonymous_status, _ = register_client(registration_endpoint)
+            require(anonymous_status == 403,
+                    "disposable_anonymous_dcr_not_denied")
+            print("keycloak_anonymous_dcr_rejected_by_default: pass")
+
+            # Keycloak's supported DCR test path uses a one-use, short-lived
+            # *admin-created* Initial Access Token. ChatGPT cannot supply
+            # one: this demonstrates RFC7591, not plug-and-play ChatGPT DCR.
+            initial_access = create_one_use_registration_token(admin_secret)
+            status, registered = register_client(registration_endpoint,
+                                                 initial_access)
+            require(status == 201, "iat_dcr_registration_http_" + str(status))
             client_id = registered.get("client_id")
             require(isinstance(client_id, str) and 8 <= len(client_id) <= 191,
                     "dcr_client_id_missing")
@@ -152,7 +205,7 @@ def main():
                     "dcr_callback_not_registered")
             require(not registered.get("client_secret"),
                     "dcr_public_client_returned_secret")
-            print("real_keycloak_public_dcr_registration: pass")
+            print("real_keycloak_one_use_iat_dcr_registration: pass")
 
             # Reuse proven browser login + PKCE code, with a separate
             # localhost port and off-host redirect *capture only*.
@@ -187,8 +240,9 @@ def main():
             require(MCP_SCOPE in str(principal.get("scope", "")).split(),
                     "dcr_read_scope_missing")
             print("real_keycloak_dcr_resource_subject_introspection: pass")
-            print("disposable_chatgpt_like_dcr: passed")
+            print("disposable_credentialed_dcr: passed")
             print("actual_chatgpt_client: not_tested")
+            print("anonymous_chatgpt_dcr_supported: false")
             print("production_authorized: false")
             success = True
         finally:
