@@ -60,6 +60,7 @@ use App\Http\Controllers\DevelopmentCodingAgentHandoffController;
 use App\Http\Controllers\DevelopmentPreviewController;
 use App\Http\Controllers\StudyPracticeController;
 use App\Http\Controllers\AdaptiveLearningController;
+use App\Http\Controllers\AdaptiveLearningAnswerDraftController;
 use App\Http\Controllers\AdaptiveLearningExamController;
 use App\Http\Controllers\AdaptiveLearningEvaluationAdjustmentController;
 use App\Http\Controllers\StudyActivityController;
@@ -654,6 +655,7 @@ Route::middleware('feature.access:'.FeatureKey::AiPractice->value)->group(functi
     Route::post('/plans/{plan}/tasks/{task}/learning', [AdaptiveLearningController::class, 'start'])->middleware('throttle:12,1')->name('plans.tasks.learning.start');
     Route::get('/plans/{plan}/tasks/{task}/learning/{learningRun}', [AdaptiveLearningController::class, 'show'])->name('plans.tasks.learning.show');
     Route::post('/plans/{plan}/tasks/{task}/learning/{learningRun}/answer', [AdaptiveLearningController::class, 'answer'])->middleware('throttle:40,1')->name('plans.tasks.learning.answer');
+    Route::post('/plans/{plan}/tasks/{task}/learning/{learningRun}/draft', [AdaptiveLearningAnswerDraftController::class, 'store'])->middleware('throttle:90,1')->name('plans.tasks.learning.draft');
     Route::post('/plans/{plan}/tasks/{task}/learning/{learningRun}/next', [AdaptiveLearningController::class, 'next'])->middleware('throttle:40,1')->name('plans.tasks.learning.next');
     Route::post('/plans/{plan}/tasks/{task}/learning/{learningRun}/finish', [AdaptiveLearningController::class, 'finish'])->middleware('throttle:12,1')->name('plans.tasks.learning.finish');
     Route::get('/plans/{plan}/tasks/{task}/study-practice/resume', [StudyPracticeController::class, 'resume'])->name('plans.tasks.study_practice.resume');

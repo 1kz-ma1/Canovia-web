@@ -7,6 +7,7 @@ use App\Models\LearningRun;
 use App\Models\Plan;
 use App\Models\QuestionPack;
 use App\Models\Task;
+use App\Services\AdaptiveLearningAnswerDraftService;
 use App\Services\AdaptiveLearningBankQueueService;
 use App\Services\AdaptiveLearningCandidateService;
 use App\Services\AdaptiveExamProfileRegistry;
@@ -167,7 +168,7 @@ final class AdaptiveLearningController extends Controller
 
     public function show(Request $request, Plan $plan, Task $task, LearningRun $learningRun,
         PlanOwnershipService $ownership, PlanCategoryProfileService $profiles,
-        BehaviorIdentityService $identity)
+        BehaviorIdentityService $identity, AdaptiveLearningAnswerDraftService $drafts)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         $run = $this->actorRuns($request, $plan, $task, $identity)
@@ -180,13 +181,15 @@ final class AdaptiveLearningController extends Controller
             'plan' => $plan, 'task' => $task, 'run' => $run,
             'item' => $item, 'answeredCount' => $answered, 'correctCount' => $correct,
             'answerRequestId' => (string) Str::uuid(),
+            'answerDraft' => $item ? $drafts->restore($request, $run, $item) : [],
         ]);
     }
 
     public function answer(Request $request, Plan $plan, Task $task, LearningRun $learningRun,
         PlanOwnershipService $ownership, PlanCategoryProfileService $profiles,
         BehaviorIdentityService $identity, QuestionBankGrader $grader,
-        AdaptiveLearningCandidateService $candidates, AdaptiveLearningTypedAnswerService $typedAnswers)
+        AdaptiveLearningCandidateService $candidates, AdaptiveLearningTypedAnswerService $typedAnswers,
+        AdaptiveLearningAnswerDraftService $drafts)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         $input = $request->validate([
@@ -196,6 +199,7 @@ final class AdaptiveLearningController extends Controller
             'choices' => ['sometimes', 'array', 'max:8'],
             'choices.*' => ['string', 'max:20'],
             'number' => ['nullable', 'string', 'max:64'],
+            'reasoning' => ['sometimes', 'nullable', 'string', 'max:1000'],
         ]);
 
         DB::transaction(function () use ($request, $plan, $task, $learningRun, $identity, $input, $grader, $candidates, $typedAnswers) {
@@ -211,13 +215,27 @@ final class AdaptiveLearningController extends Controller
                 $input,
             );
 
+            // Optional self-explanation is evidence of what the learner wrote,
+            // never a grade or a verified reasoning assessment. Only the
+            // Understanding mode exposes or accepts this field.
+            $reasoning = trim((string) ($input['reasoning'] ?? ''));
+            if ($run->mode !== LearningRun::MODE_UNDERSTANDING && $reasoning !== '') {
+                throw ValidationException::withMessages([
+                    'reasoning' => '考え方メモは理解モードでのみ保存できます。',
+                ]);
+            }
+            if ($run->mode === LearningRun::MODE_UNDERSTANDING && $reasoning !== '') {
+                $normalized['payload']['reasoning'] = $reasoning;
+            }
+
             $existing = $item->answer;
             if ($existing) {
                 // Old single-choice rows have no payload. Never rewrite them.
                 $identical = $existing->answer_payload !== null
                     ? $existing->answer_payload === $normalized['payload']
                     : $normalized['payload']['type'] === 'single_choice'
-                        && $existing->answer_value === $normalized['stored_value'];
+                        && $existing->answer_value === $normalized['stored_value']
+                        && ! array_key_exists('reasoning', $normalized['payload']);
                 abort_unless($identical, 409);
                 return; // identical retry, even with a different request UUID
             }
@@ -250,6 +268,7 @@ final class AdaptiveLearningController extends Controller
             $candidates->refresh($run);
         });
 
+        $drafts->forgetItem($request, $learningRun, (int) $input['learning_run_item_id']);
         return redirect()->route('plans.tasks.learning.show', [$plan, $task, $learningRun]);
     }
 
@@ -292,7 +311,7 @@ final class AdaptiveLearningController extends Controller
 
     public function finish(Request $request, Plan $plan, Task $task, LearningRun $learningRun,
         PlanOwnershipService $ownership, PlanCategoryProfileService $profiles,
-        BehaviorIdentityService $identity)
+        BehaviorIdentityService $identity, AdaptiveLearningAnswerDraftService $drafts)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         DB::transaction(function () use ($request, $plan, $task, $learningRun, $identity) {
@@ -303,6 +322,7 @@ final class AdaptiveLearningController extends Controller
             $run->update(['status' => LearningRun::STATUS_COMPLETED, 'completed_at' => now()]);
         });
 
+        $drafts->forgetRun($request, $learningRun);
         return redirect()->route('plans.tasks.learning.show', [$plan, $task, $learningRun]);
     }
 }

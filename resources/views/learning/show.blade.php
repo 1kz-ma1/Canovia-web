@@ -39,7 +39,8 @@
             <p class="text-xs font-bold text-slate-400">第{{ $item->ordinal }}問 · {{ $q['source_type'] ?? 'question_bank' }}{{ filled($q['source_reference'] ?? null) ? ' / '.$q['source_reference'] : '' }}</p>
             <h2 class="mt-3 whitespace-pre-line text-lg font-semibold leading-8 text-slate-50">{{ $q['prompt'] ?? '' }}</h2>
             @if(! $answer)
-                <form method="POST" action="{{ route('plans.tasks.learning.answer', [$plan, $task, $run]) }}" class="mt-5 space-y-3" data-learning-answer-form>
+                <form method="POST" action="{{ route('plans.tasks.learning.answer', [$plan, $task, $run]) }}" class="mt-5 space-y-3"
+                    data-learning-answer-form data-learning-draft-url="{{ route('plans.tasks.learning.draft', [$plan, $task, $run]) }}">
                     @csrf
                     <input type="hidden" name="request_id" value="{{ $answerRequestId }}">
                     <input type="hidden" name="learning_run_item_id" value="{{ $item->id }}">
@@ -47,7 +48,7 @@
                         <label for="learning-number-{{ $item->id }}" class="block text-sm font-semibold text-slate-200">数値で回答してください</label>
                         <input id="learning-number-{{ $item->id }}" type="text" name="number"
                             inputmode="decimal" autocomplete="off" required maxlength="64"
-                            value="{{ old('number') }}" class="form-control w-full"
+                            value="{{ old('number', $answerDraft['number'] ?? '') }}" class="form-control w-full"
                             placeholder="例：42 または 10.5" data-learning-number-answer>
                         <p class="text-xs text-slate-400">半角数字で入力してください。許容誤差は採点ルールに従います。</p>
                     @else
@@ -59,15 +60,28 @@
                                 <label class="flex items-start gap-3 rounded-xl border border-slate-600 px-4 py-3 text-sm text-slate-200">
                                     @if ($responseType === 'multiple_choice')
                                         <input type="checkbox" name="choices[]" value="{{ $choice['id'] }}"
-                                            @checked(in_array((string) $choice['id'], (array) old('choices', []), true))>
+                                            @checked(in_array((string) $choice['id'], (array) old('choices', $answerDraft['choices'] ?? []), true))>
                                     @else
-                                        <input type="radio" name="choice" required value="{{ $choice['id'] }}" @checked(old('choice') == $choice['id'])>
+                                        <input type="radio" name="choice" required value="{{ $choice['id'] }}" @checked(old('choice', $answerDraft['choice'] ?? null) == $choice['id'])>
                                     @endif
                                     <span>{{ $choice['id'] }} · {{ $choice['label'] ?? $choice['id'] }}</span>
                                 </label>
                             @endforeach
                         </fieldset>
                     @endif
+                    @if ($run->mode === 'understanding')
+                        <div class="space-y-2">
+                            <label for="learning-reasoning-{{ $item->id }}" class="block text-sm font-semibold text-slate-200">考え方・選んだ理由（任意）</label>
+                            <textarea id="learning-reasoning-{{ $item->id }}" name="reasoning"
+                                rows="3" maxlength="1000" class="form-control w-full"
+                                placeholder="例：この公式を使うと考えた理由など" data-learning-reasoning>{{ old('reasoning', $answerDraft['reasoning'] ?? '') }}</textarea>
+                            <p class="text-xs text-slate-400">回答と一緒に記録します。メモの内容は採点・理解度評価には使いません。回答後は編集できません。</p>
+                        </div>
+                    @endif
+                    <p class="text-xs text-slate-400" data-learning-draft-status role="status" aria-live="polite">
+                        @if ($answerDraft)前回の入力を復元しました。@else 入力中の内容を現在のセッションへ自動保存します。@endif
+                    </p>
+                    <p class="text-xs text-slate-500">保存は現在のログインセッション内のみ有効です。別端末・ログアウト後・セッション期限切れでは復元できません。</p>
                     @if ($errors->any())<p role="alert" class="text-sm text-red-300">{{ $errors->first() }}</p>@endif
                     <button type="submit" class="btn-primary">この1問を採点・保存</button>
                 </form>
@@ -75,6 +89,12 @@
                 <div class="mt-5 rounded-xl border border-sky-500/30 p-4" data-learning-answer-feedback>
                     <p class="text-sm font-bold {{ $answer->was_correct ? 'text-emerald-300' : 'text-amber-300' }}">{{ $answer->was_correct ? '正解' : '不正解' }}</p>
                     <p class="mt-2 text-sm text-slate-200">あなたの回答：{{ $displayedAnswerText }}</p>
+                    @if (filled($savedTypedAnswer['reasoning'] ?? null))
+                        <div class="mt-3 rounded-lg border border-slate-600 p-3" data-learning-saved-reasoning>
+                            <p class="text-xs font-semibold text-slate-300">回答時に残した考え方</p>
+                            <p class="mt-2 whitespace-pre-line break-words text-sm leading-6 text-slate-200">{{ $savedTypedAnswer['reasoning'] }}</p>
+                        </div>
+                    @endif
                     @if ($responseType === 'multiple_choice')
                         <p class="mt-2 text-sm text-slate-200">正答：{{ implode(' / ', $correctMultiple) }}</p>
                     @elseif ($responseType === 'number')

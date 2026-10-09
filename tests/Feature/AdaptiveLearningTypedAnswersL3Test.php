@@ -198,4 +198,24 @@ final class AdaptiveLearningTypedAnswersL3Test extends TestCase
             ->assertOk()->assertSee('あなたの回答：A')
             ->assertSee('正答：A');
     }
+    public function test_optional_understanding_reasoning_does_not_change_multiple_or_numeric_grading(): void
+    {
+        foreach (['multiple', 'number'] as $kind) {
+            [, $plan, $task, , $run, $item] = $this->fixture($kind);
+            $value = $kind === 'multiple' ? ['choices' => ['C', 'A']] : ['number' => '10.55'];
+            $this->submit($plan, $task, $run, $item->id,
+                array_merge($value, ['reasoning' => '自分の計算根拠']))
+                ->assertRedirect()->assertSessionHasNoErrors();
+
+            $answer = $item->answer()->firstOrFail();
+            $this->assertTrue($answer->was_correct);
+            $this->assertSame('自分の計算根拠', $answer->answer_payload['reasoning']);
+            $this->assertSame($kind === 'multiple' ? 'multiple_choice' : 'number',
+                $answer->answer_payload['type']);
+            $this->get(route('plans.tasks.learning.show', [$plan, $task, $run]))
+                ->assertOk()->assertSee('自分の計算根拠');
+            $this->assertSame(35, $task->fresh()->progress_percent);
+        }
+    }
+
 }
