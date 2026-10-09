@@ -81,11 +81,64 @@ those tests, owner approvals and signed-off consent controls are complete.
 ## Progress tracker
 
 - [x] Experiment and safe, ephemeral CI implementation prepared
-- [ ] PR CI success for **real** pinned Keycloak 26.8.0; report resulting
-      named protocol diagnostics and remediate any provider mismatch
+- [x] Real pinned Keycloak 26.8.0 protocol job passed with exact
+      resource URL, strict RFC 7662 introspection and negative-resource
+      checks (GitHub Actions run 37909449399, 2026-10-09 09:10 UTC).
+      Re-run the updated PR's full CI before merging.
 - [ ] User-bound Authorization Code + PKCE, callback issuer, resource
       consistency and introspection verified
 - [ ] Same-actor separate client registration, explicit Plan consent and
       cross-actor revocation tested
 - [ ] Hosted IdP capacity / budget approved, if necessary
 - [ ] Real ChatGPT MCP read-only connection verified (not yet connected)
+
+
+## Concrete Keycloak 26.8.0 result / necessary OAuth client identity
+
+The first real test identified a **security-significant incompatibility**:
+since Keycloak 26.6.2, RFC 7662 introspection returns `active=false`
+unless the authenticated introspection client is itself a member of the
+access token's `aud` claim. This is a Keycloak security safeguard,
+not a reason to relax Canovia's single exact resource audience contract.
+
+Official upgrading guide:
+https://www.keycloak.org/docs/26.8.0/upgrading/
+
+A strict configuration **does work**, without Keycloak's deprecated
+`allow-token-introspection-without-audience-check` compatibility switch:
+
+1. Register the confidential **MCP resource-server client** with
+   **client ID equal to** `https://canovia-mcp-staging.onrender.com/api/mcp`
+   and Keycloak client attribute `resource_url` equal to that exact URI.
+2. Keep a different **OAuth caller/ChatGPT client ID**. Give the caller an
+   audience mapper whose Included Client Audience is the *resource-server
+   client*; request exact `resource` and the allowed read scope.
+3. Let the Canovia token verifier authenticate to the introspection
+   endpoint using its resource-server client ID and its own confidential
+   secret. Introspecting as the caller, with a token intended only for
+   the resource, is correctly denied by modern Keycloak.
+4. Because the resource-server client ID contains `:` and `/`, encode
+   each client credential using RFC 6749 §2.3.1 form encoding **before**
+   assembling HTTP Basic. Plain raw Basic incorrectly interprets the
+   client ID as `https`. Canovia's `McpAccessTokenIntrospector` and a
+   regression test now implement this exact encoding, without changing
+   audience, scope or expiry validation. The change remains feature-
+   gated OFF in production.
+5. Never place the confidential resource verifier's credential in a
+   public ChatGPT client, browser or log.
+
+Actual protocol lab result (run `37909449399`):
+`oauth_metadata_issuer_pkce_introspection: pass`;
+`real_token_rfc8707_audience_and_rfc7662_introspection: pass`;
+`foreign_resource_invalid_target: pass`;
+`introspection_invalid_token: pass`.
+No real token, client secret or user information was printed. The
+workflow sets `production_authorized=false` and
+`chatgpt_oauth_end_to_end=not_tested`.
+
+**Do not overclaim:** this validates Keycloak service-account token
+and protocol compatibility, plus separately faked PHP HTTP header tests.
+It is not a live signed-in end-user grant and does not prove Canovia's
+separate ChatGPT/actor identity-link lifecycle. Keycloak's resource-
+indicators and CIMD remain experimental; pin versions and repeat the
+full browser OAuth/PKCE and revocation suite before any public exposure.
