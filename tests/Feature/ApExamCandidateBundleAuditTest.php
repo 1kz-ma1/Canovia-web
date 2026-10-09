@@ -34,7 +34,7 @@ final class ApExamCandidateBundleAuditTest extends TestCase
         $this->assertSame('AP', $candidate['pack']['exam_code']);
         $this->assertSame('科目A', $candidate['pack']['subject']);
         $this->assertCount(80, $candidate['questions']);
-        $this->assertSame('0.2.0-review-required', $candidate['pack']['version']);
+        $this->assertSame('0.3.0-review-required', $candidate['pack']['version']);
         $this->assertSame('pending_human_subject_review',
             $candidate['pack']['metadata']['explanation_review_state']);
         $this->assertSame(35, $candidate['pack']['metadata']['official_explanation_draft_count']);
@@ -50,6 +50,8 @@ final class ApExamCandidateBundleAuditTest extends TestCase
                 $catalog->payload('ap/ap-a-canovia-core-v1'),
             'ap-a-ipa-2025-autumn-official-v1' =>
                 $catalog->payload('ap/ap-a-ipa-2025-autumn-official-v1'),
+            'ap-a-canovia-business-management-supplement-v1' =>
+                $catalog->payload('ap/ap-a-canovia-business-management-supplement-v1'),
         ];
         $sources = [];
         foreach ($sourceKeys as $slug => $payload) {
@@ -128,7 +130,8 @@ final class ApExamCandidateBundleAuditTest extends TestCase
         }
 
         $this->assertSame(35, $origins['ap-a-ipa-2025-autumn-official-v1']);
-        $this->assertSame(45, $origins['ap-a-canovia-core-v1']);
+        $this->assertSame(35, $origins['ap-a-canovia-core-v1']);
+        $this->assertSame(10, $origins['ap-a-canovia-business-management-supplement-v1']);
         // All formerly missing official explanations are now distinct
         // Canovia drafts. Their presence does NOT mean expert review.
         $this->assertSame([], $missingExplanations);
@@ -139,7 +142,56 @@ final class ApExamCandidateBundleAuditTest extends TestCase
         $this->assertContains('テクノロジ', array_keys($domains));
         $this->assertContains('マネジメント', array_keys($domains));
         $this->assertContains('ストラテジ', array_keys($domains));
+        $totals = ['technology' => 0, 'management' => 0, 'strategy' => 0];
+        foreach ($candidate['questions'] as $question) {
+            $tags = data_get($question, 'learning_metadata.tags', []);
+            $concepts = data_get($question, 'learning_metadata.concepts', []);
+            $domain = in_array('マネジメント', $tags, true)
+                || ($concepts[0] ?? null) === 'マネジメント' ? 'management'
+                : (in_array('ストラテジ', $tags, true)
+                    || ($concepts[0] ?? null) === 'ストラテジ' ? 'strategy' : 'technology');
+            $totals[$domain]++;
+        }
+        $this->assertSame(['technology' => 50, 'management' => 10, 'strategy' => 20], $totals);
+        $this->assertSame($totals, $candidate['pack']['metadata']['domain_distribution']);
+        $semantic = $candidate['pack']['metadata']['semantic_overlap_review'];
+        $this->assertSame('partial_only_not_full_semantic_review', $semantic['status']);
+        $this->assertCount(5, $semantic['superseded_by_official']);
+        foreach ($semantic['superseded_by_official'] as $overlap) {
+            $this->assertNotContains($overlap['core'], $uniqueKeys);
+            $this->assertContains($overlap['official'], $uniqueKeys);
+        }
         $this->assertSame(0, QuestionPack::count());
+    }
+
+    public function test_new_business_questions_are_drafts_with_explicit_correct_answers_and_no_auto_publication(): void
+    {
+        $catalog = app(QuestionPackCatalogService::class);
+        $extension = $catalog->payload('ap/ap-a-canovia-business-management-supplement-v1');
+        $this->assertCount(10, $extension['questions']);
+        $this->assertSame('pending_human_content_and_rights_review',
+            $extension['pack']['metadata']['review_state']);
+        $this->assertSame('pending_human_subject_review',
+            $extension['pack']['metadata']['explanation_review_state']);
+        $this->assertFalse($extension['pack']['downloadable']);
+
+        $expected = [
+            'mgmt-wbs-001' => 'イ', 'mgmt-risk-transfer-002' => 'ウ',
+            'strategy-pest-001' => 'ア', 'strategy-ppm-002' => 'エ',
+            'strategy-stp-003' => 'イ', 'strategy-three-c-004' => 'ウ',
+            'strategy-scm-005' => 'イ', 'strategy-bpr-006' => 'ア',
+            'strategy-roi-007' => 'ウ', 'strategy-valuechain-008' => 'エ',
+        ];
+        foreach ($extension['questions'] as $q) {
+            $this->assertSame($expected[$q['external_key']] ?? null,
+                $q['grading_rule']['answer'], 'Wrong draft answer key');
+            $this->assertSame('canovia_original', $q['source_type']);
+            $this->assertSame('pending_human_subject_review',
+                data_get($q, 'learning_metadata.curation.content_review_status'));
+            $this->assertGreaterThan(50, mb_strlen($q['explanation']));
+            $this->assertCount(4, $q['response_schema'][0]['choices']);
+        }
+        $this->assertDatabaseCount('question_packs', 0);
     }
 
     public function test_key_calculation_explanations_show_the_reasoning_steps_without_changing_source_answers(): void
