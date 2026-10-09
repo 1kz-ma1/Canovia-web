@@ -7,6 +7,7 @@ use App\Services\AdminAccessService;
 use App\Services\AiJsonInputNormalizer;
 use App\Services\QuestionPackCatalogService;
 use App\Services\QuestionPackImportService;
+use App\Services\QuestionPackPublicationReadinessService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -16,17 +17,26 @@ class AdminQuestionPackController extends Controller
 {
     public function __construct(private readonly AdminAccessService $access) {}
 
-    public function index(Request $request, QuestionPackCatalogService $catalog)
+    public function index(
+        Request $request,
+        QuestionPackCatalogService $catalog,
+        QuestionPackPublicationReadinessService $readiness,
+    )
     {
         $this->ensureAuthorized($request);
 
         $packs = QuestionPack::query()
+            ->with(['questions' => fn ($query) => $query->where('is_active', true)])
             ->withCount('questions')
             ->withCount([
                 'questions as active_questions_count' => fn ($query) => $query->where('is_active', true),
             ])
             ->latest('updated_at')
             ->paginate(30);
+
+        $publicationReadiness = $packs->getCollection()->mapWithKeys(
+            fn (QuestionPack $pack) => [$pack->id => $readiness->inspect($pack)]
+        );
 
         $template = [
             'schema_version' => '1.0',
@@ -77,6 +87,7 @@ class AdminQuestionPackController extends Controller
 
         return view('admin.question_packs.index', [
             'packs' => $packs,
+            'publicationReadiness' => $publicationReadiness,
             'bundledPacks' => $catalog->all(),
             'importTemplate' => json_encode(
                 $template,
@@ -143,7 +154,11 @@ class AdminQuestionPackController extends Controller
             );
     }
 
-    public function updateStatus(Request $request, QuestionPack $questionPack)
+    public function updateStatus(
+        Request $request,
+        QuestionPack $questionPack,
+        QuestionPackPublicationReadinessService $readiness,
+    )
     {
         $this->ensureAuthorized($request);
 
@@ -166,44 +181,10 @@ class AdminQuestionPackController extends Controller
         }
 
         if ($status === 'published') {
-            $activeQuestions = $questionPack->questions()->where('is_active', true)->get();
-            if ($activeQuestions->isEmpty()) {
+            $inspection = $readiness->inspect($questionPack);
+            if (! $inspection['publishable']) {
                 throw ValidationException::withMessages([
-                    'status' => '公開するには有効な問題が1問以上必要です。',
-                ]);
-            }
-
-            $missingGradingRule = $activeQuestions->first(
-                fn ($question) => ! is_array($question->grading_rule)
-                    || trim((string) ($question->grading_rule['type'] ?? '')) === ''
-            );
-            if ($missingGradingRule) {
-                throw ValidationException::withMessages([
-                    'status' => '公開する全問題にgrading_ruleが必要です。記述問題はai_rubricを設定してください。',
-                ]);
-            }
-
-            $missingLearningMetadata = $activeQuestions->first(function ($question) {
-                $metadata = collect($question->learning_metadata ?? []);
-
-                return collect(['concepts', 'weakness_targets', 'tags', 'keywords'])
-                    ->flatMap(fn ($key) => collect($metadata->get($key, [])))
-                    ->filter(fn ($item) => is_string($item) && trim($item) !== '')
-                    ->isEmpty();
-            });
-            if ($missingLearningMetadata) {
-                throw ValidationException::withMessages([
-                    'status' => '公開する全問題にconcepts・weakness_targets・tags・keywordsのいずれかを設定してください。',
-                ]);
-            }
-
-            $metadata = collect($questionPack->metadata ?? []);
-            $hasRoutingTerm = trim((string) $questionPack->exam_code) !== ''
-                || collect($metadata->get('match_terms', []))->filter()->isNotEmpty();
-
-            if (! $hasRoutingTerm) {
-                throw ValidationException::withMessages([
-                    'status' => '公開するにはexam_codeまたはmetadata.match_termsが必要です。',
+                    'status' => implode(' ', $inspection['blocking']),
                 ]);
             }
         }
