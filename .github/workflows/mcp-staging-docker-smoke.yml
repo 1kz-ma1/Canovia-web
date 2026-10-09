@@ -34,7 +34,7 @@ jobs:
       - name: Verify PHP SQLite runtime extensions
         run: |
           docker run --rm --entrypoint php canovia-mcp-staging:smoke \
-            -r 'if (!extension_loaded("pdo_sqlite") || !extension_loaded("sqlite3")) { exit(1); }'
+            -r 'if (!extension_loaded("pdo_sqlite") || !extension_loaded("sqlite3") || !extension_loaded("pdo_pgsql")) { exit(1); }'
 
       - name: Verify unsafe configuration fails before startup
         run: |
