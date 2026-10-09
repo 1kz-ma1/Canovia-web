@@ -211,6 +211,15 @@ def introspect(access_token: str, secret: str) -> dict:
     require(claims.get("iss") == ISSUER, "person_token_issuer_mismatch")
     require(claims.get("aud") in (MCP_RESOURCE, [MCP_RESOURCE]),
             "person_token_audience_not_exact")
+    if not isinstance(claims.get("sub"), str):
+        # Emit presence/type only: never a subject, identity or token claim.
+        print("person_introspection_subject_status: "
+              + ("missing" if "sub" not in claims else "non_string"))
+        print("person_introspection_allowed_claim_keys: "
+              + ",".join(sorted(set(claims).intersection({
+                  "sub", "username", "preferred_username", "iss", "aud",
+                  "scope", "active", "client_id", "token_type", "exp"
+              }))))
     require(isinstance(claims.get("sub"), str)
             and 0 < len(claims["sub"]) <= 255,
             "person_token_subject_invalid")
