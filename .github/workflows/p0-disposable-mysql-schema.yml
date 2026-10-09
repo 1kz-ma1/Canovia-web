@@ -145,6 +145,14 @@ jobs:
           set -e
           test "$rc" -eq 2
           printf '%s\n' "$blocked" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["result"]=="BLOCK" and d["code"]=="PREFLIGHT_OPERATOR_GUARD_REJECTED" and d["release_authorized"] is False'
+          # Even explicit opt-in cannot target any non-CI database/host.
+          set +e
+          wrong_target="$(DB_DATABASE=defaultdb php scripts/ops/p0_mysql_readonly_preflight.php --check)"
+          wrong_rc=$?
+          set -e
+          test "$wrong_rc" -eq 2
+          printf '%s\n' "$wrong_target" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["result"]=="BLOCK" and d["code"]=="PREFLIGHT_OPERATOR_GUARD_REJECTED" and d["release_authorized"] is False'
+
 
       - name: Validate standalone SELECT-only data preflight on disposable MySQL and corrupt restore
         env:
