@@ -5,6 +5,9 @@ return [
     // Canovia deployment or copy its keys, sessions or database credentials.
     'isolated' => env('CANOVIA_STAGING_ISOLATED', false),
     'web_access_enabled' => env('CANOVIA_STAGING_WEB_ACCESS_ENABLED', false),
+    // Independent manual approval prevents accidental exposure from a
+    // single web-access toggle. Neither switch is enabled by default.
+    'web_access_explicitly_approved' => env('CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED', false),
     // One-shot synthetic user bootstrap: leave disabled unless an operator
     // explicitly provisions a STAGING-only password out-of-band.
     // Keep SQLite by default. PostgreSQL requires an operator-pinned
