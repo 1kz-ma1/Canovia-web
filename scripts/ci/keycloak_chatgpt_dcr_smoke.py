@@ -195,6 +195,21 @@ def main():
             initial_access = create_one_use_registration_token(admin_secret)
             status, registered = register_client(registration_endpoint,
                                                  initial_access)
+            if status != 201:
+                # Only a finite allowlist of provider error categories.
+                # Never print server bodies, headers, request, JWT or IAT.
+                error = registered.get("error")
+                category = error if error in {
+                    "invalid_token", "insufficient_scope", "invalid_client",
+                    "invalid_request", "unauthorized_client",
+                } else "unclassified"
+                description = str(registered.get("error_description", "")).lower()
+                policy = next((name for name in (
+                    "trusted hosts", "client scope", "protocol mappers",
+                    "consent required", "max clients", "client disabled",
+                ) if name in description), "unknown")
+                print("iat_dcr_safe_error: " + category)
+                print("iat_dcr_safe_policy: " + policy.replace(" ", "_"))
             require(status == 201, "iat_dcr_registration_http_" + str(status))
             client_id = registered.get("client_id")
             require(isinstance(client_id, str) and 8 <= len(client_id) <= 191,
