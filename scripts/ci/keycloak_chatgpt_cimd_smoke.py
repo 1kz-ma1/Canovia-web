@@ -18,7 +18,7 @@ import urllib.parse
 import urllib.request
 
 from keycloak_mcp_protocol_smoke import (
-    KEYCLOAK_IMAGE, MCP_RESOURCE, REALM, Gap, request_json, require,
+    KEYCLOAK_IMAGE, MCP_RESOURCE, MCP_SCOPE, REALM, Gap, request_json, require,
 )
 from keycloak_user_pkce_smoke import synthetic_realm
 
@@ -188,6 +188,104 @@ def configure_cimd_policy(token: str) -> None:
     ), "client_policy_not_enabled")
 
 
+def register_exact_static_client(token: str, metadata: dict) -> None:
+    """Explicit trusted pre-registration; NOT dynamic CIMD nor ChatGPT login."""
+    uri = metadata.get("jwks_uri")
+    url = urllib.parse.urlsplit(uri if isinstance(uri, str) else "")
+    require(url.scheme == "https" and url.netloc == "chatgpt.com"
+            and bool(url.path) and not url.query and not url.fragment
+            and not url.username and not url.password,
+            "static_client_public_jwks_not_allowlisted")
+    status, policies = admin_json(token, "policies")
+    require(status == 200 and isinstance(policies.get("policies"), list),
+            "static_fallback_policy_read_failed")
+    # Switch off the failing CIMD executor, rather than weakening its
+    # trusted-domain policy. Existing explicit client registration is bounded.
+    current = policies["policies"]
+    modified = [dict(item, enabled=False) if item.get("name") == POLICY
+                else item for item in current]
+    status, _ = admin_json(token, "policies", payload={"policies": modified})
+    require(status in (200, 204), "static_fallback_disable_cimd_failed")
+
+    # A confidential private_key_jwt client. JWKS is public only, and only
+    # the exact ChatGPT callback is permitted. Never use a shared secret.
+    client = {
+        "clientId": CLIENT_ID,
+        "name": "Disposable pinned ChatGPT ID JWT-authenticated RP",
+        "enabled": True,
+        "protocol": "openid-connect",
+        "publicClient": False,
+        "clientAuthenticatorType": "client-jwt",
+        "standardFlowEnabled": True,
+        "directAccessGrantsEnabled": False,
+        "serviceAccountsEnabled": False,
+        "implicitFlowEnabled": False,
+        "redirectUris": [CALLBACK],
+        "webOrigins": [],
+        "consentRequired": True,
+        "optionalClientScopes": [MCP_SCOPE],
+        "attributes": {
+            "use.jwks.url": "true",
+            "jwks.url": uri,
+            "pkce.code.challenge.method": "S256",
+        },
+        "protocolMappers": [{
+            "name": "approved-mcp-exact-audience",
+            "protocol": "openid-connect",
+            "protocolMapper": "oidc-audience-mapper",
+            "consentRequired": False,
+            "config": {
+                "included.client.audience": MCP_RESOURCE,
+                "access.token.claim": "true",
+                "id.token.claim": "false",
+            },
+        }, {
+            "name": "canovia-immutable-subject",
+            "protocol": "openid-connect",
+            "protocolMapper": "oidc-sub-mapper",
+            "consentRequired": False,
+            "config": {
+                "access.token.claim": "true",
+                "introspection.token.claim": "true",
+            },
+        }],
+    }
+    req = urllib.request.Request(
+        f"{ORIGIN}/admin/realms/{REALM}/clients",
+        data=json.dumps(client).encode("utf8"), method="POST",
+        headers={"Accept": "application/json",
+                 "Content-Type": "application/json",
+                 "Authorization": "Bearer " + token},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=8) as response:
+            require(response.status == 201,
+                    "static_client_register_not_created")
+    except urllib.error.HTTPError as exc:
+        raise Gap("static_client_registration_http_" + str(exc.code)) from None
+    except (urllib.error.URLError, TimeoutError):
+        raise Gap("static_client_registration_local_network_error") from None
+    request = urllib.request.Request(
+        f"{ORIGIN}/admin/realms/{REALM}/clients?"
+        + urllib.parse.urlencode({"clientId": CLIENT_ID}),
+        headers={"Authorization": "Bearer " + token,
+                 "Accept": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=7) as response:
+            matches = json.loads(response.read(16385).decode("utf8"))
+    except (urllib.error.HTTPError, urllib.error.URLError, ValueError):
+        raise Gap("static_client_registration_verify_unavailable") from None
+    require(isinstance(matches, list) and any(
+        isinstance(item, dict) and item.get("clientId") == CLIENT_ID
+        and item.get("clientAuthenticatorType") == "client-jwt"
+        and item.get("redirectUris") == [CALLBACK]
+        and item.get("attributes", {}).get("jwks.url") == uri
+        and item.get("attributes", {}).get("pkce.code.challenge.method") == "S256"
+        for item in matches
+    ), "static_client_configuration_incorrect")
+
+
 def auth_response(client_id: str, resource: str) -> tuple[int, bool, str]:
     # Capture real Keycloak response, never submit credentials or follow any
     # redirects, notably not the production ChatGPT callback URI.
@@ -244,7 +342,7 @@ def main() -> None:
     require(os.environ.get("GITHUB_ACTIONS") == "true"
             or os.environ.get("CANOVIA_MCP_LOCAL_LAB") == "true",
             "disposable_lab_only")
-    public_metadata()
+    metadata = public_metadata()
     print("live_chatgpt_cimd_document_shape: pass")
     admin_secret = secrets.token_urlsafe(36)
     resource_secret = secrets.token_urlsafe(36)
@@ -320,6 +418,7 @@ def main() -> None:
                 kinds = [label for keyword, label in clues if keyword in details]
                 print("keycloak_cimd_server_error_kinds: " +
                       (",".join(kinds) if kinds else "unclassified"))
+                auto_created = None
                 query = urllib.parse.urlencode({"clientId": CLIENT_ID})
                 request = urllib.request.Request(
                     f"{ORIGIN}/admin/realms/{REALM}/clients?{query}",
@@ -337,8 +436,28 @@ def main() -> None:
                           ("yes" if auto_created else "no"))
                 except (urllib.error.URLError, ValueError, TimeoutError):
                     print("cimd_ephemeral_client_created: unknown")
-            require(status == 200 and login, "chatgpt_cimd_authorization_not_accepted")
-            print("real_keycloak_chatgpt_cimd_initial_authorization: pass")
+            if status != 200 or not login:
+                # CI passes for a PROVEN deny-only compatibility finding,
+                # but never labels this mode CIMD-compatible. A new unexpected
+                # failure category remains a hard error.
+                require(status == 400
+                        and category == "client_metadata_fetch_failed"
+                        and auto_created is False,
+                        "cimd_unexpected_compatibility_failure")
+                print("real_chatgpt_cimd: blocked_by_pinned_keycloak")
+                register_exact_static_client(token, metadata)
+                print("real_chatgpt_exact_static_registration: pass")
+                status, login, static_reason = auth_response(
+                    CLIENT_ID, MCP_RESOURCE
+                )
+                if status != 200 or not login:
+                    print("static_pre_registration_error_category: " +
+                          static_reason)
+                require(status == 200 and login,
+                        "static_fallback_authorization_not_accepted")
+                print("static_chatgpt_id_auth_entry: pass")
+            else:
+                print("real_keycloak_chatgpt_cimd_initial_authorization: pass")
             # A bad resource MUST NOT reach the browser login screen.
             status, login, _ = auth_response(
                 CLIENT_ID, "https://wrong.example.invalid/api/mcp"
@@ -354,6 +473,8 @@ def main() -> None:
             require(not login and status >= 400,
                     "untrusted_cimd_domain_not_rejected")
             print("cimd_untrusted_client_domain_denied: pass")
+            print("chatgpt_private_key_jwt_code_exchange: not_tested")
+            print("actual_chatgpt_client: not_tested")
             print("real_chatgpt_code_exchange: not_tested")
             print("read_scope_token_introspection: not_tested_in_this_slice")
             print("production_authorized: false")
