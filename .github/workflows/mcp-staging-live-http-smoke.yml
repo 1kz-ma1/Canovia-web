@@ -43,8 +43,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for path in /login /register /account /account/mcp/link/callback \
-            /api/mcp /.well-known/oauth-protected-resource \
+          # Guard representative public, account, OAuth and MCP surfaces
+          # against any accidental opening on the *deployed* Render instance.
+          for path in / /welcome /workspace /admin/login \
+            /login /register /forgot-password /account \
+            /account/mcp/link/callback /api/mcp \
+            /.well-known/oauth-protected-resource \
             /.well-known/oauth-protected-resource/api/mcp; do
             status=$(curl --silent --show-error --max-time 20 \
               --dump-header /tmp/canovia-staging-response-headers \
@@ -68,14 +72,26 @@ jobs:
             echo "$path: HTTP 503 (closed)"
           done
 
-          status=$(curl --silent --show-error --max-time 20 \
-            --request POST \
-            --header 'Content-Type: application/json' \
-            --header 'Accept: application/json, text/event-stream' \
-            --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \
-            --output /tmp/canovia-staging-mcp-post-body \
-            --write-out '%{http_code}' \
-            "$STAGING_ORIGIN/api/mcp")
-          test "$status" = "503"
-          echo 'MCP JSON-RPC POST: HTTP 503 (closed)'
-          echo 'External staging HTTP smoke: PASS (no OAuth, sessions, or MCP available)'
+          # Also assert POST entry points stay denied, including CSRF-
+          # protected account flows, without relying on any test identity.
+          for path in /login /register /account/mcp/link/start /api/mcp; do
+            status=$(curl --silent --show-error --max-time 20 \
+              --request POST \
+              --header 'Content-Type: application/json' \
+              --header 'Accept: application/json, text/event-stream' \
+              --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \
+              --dump-header /tmp/canovia-staging-response-headers \
+              --output /tmp/canovia-staging-response-body \
+              --write-out '%{http_code}' \
+              "$STAGING_ORIGIN$path")
+            if [ "$status" != "503" ]; then
+              echo "Unexpected POST exposure on $path: HTTP $status"
+              exit 1
+            fi
+            grep -Fxq 'Staging service unavailable.' \
+              /tmp/canovia-staging-response-body
+            grep -Eiq '^cache-control:[[:space:]]*no-store' \
+              /tmp/canovia-staging-response-headers
+            echo "POST $path: HTTP 503 (closed)"
+          done
+          echo 'External staging HTTP smoke: PASS (all public/account/OAuth/MCP GET/POST probes closed)'
