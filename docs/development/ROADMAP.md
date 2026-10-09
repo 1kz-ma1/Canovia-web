@@ -52,3 +52,10 @@ external GitHub Actions smoke (run `37867353868`) **passed**:
 Aiven database or real ChatGPT/IdP connection was changed. Render Free
 auto-idles after 15 minutes of no traffic: no keepalive automation.
 See [isolated staging contract](MCP_ISOLATED_STAGING_BOOTSTRAP_CONTRACT.md).
+
+
+### V59: Provider selection and short-lived staging PostgreSQL (2026-10-09)
+
+A separate **Render Free Postgres 17** resource `canovia-mcp-staging-db` (id `dpg-db43rbbncjis73bmigi0-a`) is **available**, with hard expiration **2026-11-08** and no Free backups. Production Aiven and production Render services remain unchanged. The staging Canovia Web is STILL on SQLite and **has not been linked** to PostgreSQL; external DB IP allowlist stays empty. New staging-only Docker `pdo_pgsql` and strict pinned resource/hostname/DB guard require explicit reviewed cutover before connecting the staging Web. OAuth/MCP remain OFF.
+
+**Keycloak** is the conditional technical IdP frontrunner because of RFC 7662, DCR and experimental RFC 8707 resource support, but no provider has been provisioned. Its memory requirements make another Render Free 512MiB service an unsafe assumption. Auth0's JWT verification approach and ZITADEL's DCR resource audience mismatch require different reviewed architectures; do not relax the existing token checks. See [decision record](MCP_IDP_SELECTION_AND_STAGING_POSTGRES_2026_10_09.md). Next: confirm exact internal DB hostname privately, attach DB URL only via Render staging Environment (never in GitHub/chat), run real staging migration, then decide separate IdP funding/hosting and synthetic user flow. No production paid plan change until public launch.
