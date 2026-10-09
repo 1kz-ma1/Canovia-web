@@ -17,6 +17,7 @@ block() {
 [[ "${GITHUB_ACTIONS:-}" != "true" ]] || block 'CI_NOT_AN_OPERATOR'
 [[ -z "${MYSQL_PWD:-}" && -z "${DB_URL:-}" && -z "${DATABASE_URL:-}" ]] || block 'ENV_CREDENTIALS_FORBIDDEN'
 [[ -z "${DB_PASSWORD:-}" ]] || block 'APP_CREDENTIALS_FORBIDDEN'
+[[ -z "${MYSQL_TEST_LOGIN_FILE:-}" ]] || block 'UNEXPECTED_LOGIN_PATH_FILE_OVERRIDE'
 
 login="${CANOVIA_P0_LOGIN_PATH:-}"
 database="${CANOVIA_P0_DATABASE:-}"
