@@ -7,7 +7,6 @@ use App\Models\LearningRun;
 use App\Models\Plan;
 use App\Models\Task;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 
 /**
  * Read-only, actor-scoped evidence overview for Understanding/Practice.
@@ -42,7 +41,7 @@ final class AdaptiveLearningHistoryService
             $item = $event->item;
             $metadata = data_get($item->question_snapshot, 'learning_metadata', []);
             if (! is_array($metadata)) continue;
-            $names = collect($metadata['concepts'] ?? [])
+            $names = collect(is_array($metadata['concepts'] ?? null) ? $metadata['concepts'] : [])
                 ->merge(is_array($metadata['weakness_targets'] ?? null) ? $metadata['weakness_targets'] : [])
                 ->filter(fn ($name) => is_string($name) && trim($name) !== ''
                     && mb_strlen(trim($name)) <= 50)

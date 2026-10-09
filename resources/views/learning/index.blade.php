@@ -22,7 +22,7 @@
         <p class="text-xs font-bold tracking-widest text-cyan-400">ADAPTIVE LEARNING / EARLY PILOT</p>
         <h1 class="mt-2 text-2xl font-bold text-slate-50">1問から始める学習</h1>
         <p class="mt-2 text-sm leading-7 text-slate-300">{{ $plan->title }} / {{ $task->title }}</p>
-        <p class="mt-3 text-sm leading-7 text-slate-300">問題集の選択問題を1問ずつ解けます。回答はその都度保存。1問で終了しても、途中でページを閉じても記録は消えません。以前のAI演習も引き続き利用できます。</p>
+        <p class="mt-3 text-sm leading-7 text-slate-300">問題集の問題を1問ずつ解けます。回答確定後の記録は保存され、途中で終了しても学習の続きから再開できます。入力中の下書きは同じセッション内で自動保存します。以前のAI演習も引き続き利用できます。</p>
         <div class="mt-4 rounded-xl border border-amber-700/35 bg-amber-900/10 p-3 text-sm text-amber-100">
             現在の1問ずつ学習はQuestion Bankの単一選択・複数選択・数値問題に対応。開始直後はBank順で、複数回の誤答が確認できた場合のみ先の候補を再検討します。学力を断定する高度な推論ではありません。模擬試験モードは試験別仕様の確認後に提供します。
         </div>
@@ -94,7 +94,7 @@
                 </li>
             @endforeach
         </ol>
-        <p class="mt-3 text-xs leading-6 text-slate-400">順位は説明可能な暫定ルールです。必ずしもこの順番で学習する必要はありません。どのモードを使うかは下の操作で自由に選べます。</p>
+        <p class="mt-3 text-xs leading-6 text-slate-400">順位は説明可能な暫定ルールです。必ずしもこの順番で学習する必要はありません。どのモードを使うかは上の開始操作で自由に選べます。</p>
     </details>
 
     @if(($examProfiles ?? collect())->isNotEmpty())
