@@ -251,6 +251,20 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except (RuntimeError, OSError, sqlite3.Error, urllib.error.URLError,
-            subprocess.TimeoutExpired, ssl.SSLError, ValueError):
-        print("p0_https_secure_cookie_host_isolation_restart: fail")
+            subprocess.TimeoutExpired, ssl.SSLError, ValueError) as exc:
+        # Our fixed labels are generated only by ensure() with constants.
+        # Never reflect arbitrary proxy, cookie, cert, user or request values.
+        msg = str(exc)
+        prefix = "P0 HTTPS boundary check refused: "
+        if isinstance(exc, RuntimeError) and msg.startswith(prefix):
+            tag = msg[len(prefix):]
+            # Restrict output to the fixed internal label alphabet.
+            if tag and len(tag) <= 80 and all(
+                c.isalnum() or c in " -_" for c in tag
+            ):
+                print("p0_https_secure_cookie_host_isolation_restart: fail " + tag)
+            else:
+                print("p0_https_secure_cookie_host_isolation_restart: fail check")
+        else:
+            print("p0_https_secure_cookie_host_isolation_restart: fail transport")
         sys.exit(1)
