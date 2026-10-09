@@ -141,9 +141,9 @@ class FirstRunUxV4123Test extends TestCase
 
         // Explicitly supply the framework's rendered error bag for the next
         // request. HTTP tests do not always retain prior flash across requests.
-        $errors = (new \\Illuminate\\Support\\ViewErrorBag())->put(
+        $errors = (new \Illuminate\Support\ViewErrorBag())->put(
             'default',
-            new \\Illuminate\\Support\\MessageBag([
+            new \Illuminate\Support\MessageBag([
                 'email' => ['メールアドレスまたはパスワードが正しくありません。'],
             ]),
         );
