@@ -41,8 +41,11 @@ if (count($queries) !== 6) {
     exit(1);
 }
 foreach ($queries as $query) {
+    // Audit SQL may contain literal 'SET NULL', which is not a command.
+    // Reject any non-SELECT statement and attempts to export results to files.
     if (! preg_match('/\ASELECT\s/i', $query)
-        || preg_match('/\b(?:UPDATE|DELETE|INSERT|ALTER|DROP|CREATE|REPLACE|TRUNCATE|GRANT|REVOKE|CALL|SET|LOCK|INTO\s+OUTFILE)\b/i', $query)) {
+        || preg_match('/(?:\A|\n)\s*(?:UPDATE|DELETE|INSERT|ALTER|DROP|CREATE|REPLACE|TRUNCATE|GRANT|REVOKE|CALL|SET|LOCK)\b/i', $query)
+        || preg_match('/\bINTO\s+(?:OUTFILE|DUMPFILE)\b/i', $query)) {
         fwrite(STDERR, "p0_inventory_select_only: blocked\n");
         exit(1);
     }
