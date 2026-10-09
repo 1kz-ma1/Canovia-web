@@ -83,3 +83,17 @@ jobs:
         run: |
           php -l scripts/ci/p0_mysql_readonly_schema_inventory_check.php
           php scripts/ci/p0_mysql_readonly_schema_inventory_check.php
+      - name: End-to-end SELECT TSV import and fail-closed offline triage on disposable MySQL
+        env:
+          MYSQL_PWD: ci-only-ephemeral-password
+        run: |
+          set -euo pipefail
+          # Only this disposable MySQL service is used; no production DB access.
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=canovia_ci --database=canovia_p0_ci \
+            --batch --raw --skip-column-names \
+            < scripts/sql/p0_mysql_readonly_schema_inventory.sql \
+            | python3 scripts/ci/p0_mysql_inventory_tsv_import.py --input - \
+            > "$RUNNER_TEMP/p0-sanitized-schema.json"
+          python3 scripts/ci/p0_mysql_inventory_offline_triage.py \
+            --report "$RUNNER_TEMP/p0-sanitized-schema.json"
