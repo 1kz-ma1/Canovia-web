@@ -22,5 +22,16 @@ class LegacyPracticeImmersionV5889Test extends TestCase
         $this->assertStringContainsString('name="{{ $fieldName }}"', $practice);
         $this->assertStringContainsString('min-h-[168px] w-full resize-y sm:min-h-[192px]" rows="6"', $practice);
         $this->assertStringNotContainsString('readonly name="{{ $fieldName }}"', $practice);
+        $this->assertStringContainsString('data-study-practice-one-question', $practice);
+        $this->assertStringContainsString('data-study-practice-pager hidden', $practice);
+        $this->assertStringContainsString('data-study-practice-question>', $practice);
+        $this->assertStringContainsString('data-study-practice-previous', $practice);
+        $this->assertStringContainsString('data-study-practice-next', $practice);
+        $this->assertStringContainsString('data-study-practice-final-submit', $practice);
+        $this->assertStringContainsString('data-practice-answer-error', $practice);
+        $script = file_get_contents(resource_path('js/study-practice-one-question.mjs'));
+        $this->assertStringContainsString("event.preventDefault()", $script);
+        $this->assertStringContainsString("firstIncomplete", $script);
+        $this->assertStringContainsString("pagers.forEach", $script);
     }
 }
