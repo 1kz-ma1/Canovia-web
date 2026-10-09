@@ -143,6 +143,8 @@ jobs:
           php -l tests/Feature/ApExamCandidateBundleAuditTest.php
           php -l tests/Feature/ApExamCandidateReviewQueueTest.php
           php -l tests/Feature/ApExamCandidateRevisionPreviewTest.php
+          php -l tests/Feature/ApExamCandidateQualityReviewTest.php
+          php -l app/Services/ApExamCandidateQualityReviewService.php
           php -l app/Services/ApExamCandidateRevisionPreviewService.php
           php -l app/Services/ApExamCandidateAuditService.php
           php -l app/Services/AdaptiveLearningModeRecommendationService.php
@@ -333,7 +335,7 @@ jobs:
       - name: V58.81 Explainable Learning Mode Ranking
         run: php artisan test tests/Feature/AdaptiveLearningModeRecommendationV5881Test.php tests/Feature/AdaptiveLearningExamSimulationV5880Test.php tests/Feature/AdaptiveLearningCandidateQueueV5879Test.php tests/Feature/AdaptiveLearningSingleQuestionV5878Test.php
       - name: L5 AP A 80-question candidate source audit, Draft and content SHA review gate
-        run: php artisan test tests/Feature/ApExamCandidateBundleAuditTest.php tests/Feature/ApExamCandidateReviewQueueTest.php tests/Feature/ApExamCandidateRevisionPreviewTest.php tests/Feature/AdaptiveLearningVerifiedApExamL5Test.php tests/Feature/QuestionPackPublicationReadinessL2Test.php
+        run: php artisan test tests/Feature/ApExamCandidateBundleAuditTest.php tests/Feature/ApExamCandidateReviewQueueTest.php tests/Feature/ApExamCandidateRevisionPreviewTest.php tests/Feature/ApExamCandidateQualityReviewTest.php tests/Feature/AdaptiveLearningVerifiedApExamL5Test.php tests/Feature/QuestionPackPublicationReadinessL2Test.php
 
       - name: L5 Verified 2026 AP A CBT exam readiness and full synthetic 80-question freeze
         run: php artisan test tests/Feature/AdaptiveLearningVerifiedApExamL5Test.php tests/Feature/AdaptiveLearningExamSimulationV5880Test.php
