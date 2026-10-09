@@ -10,12 +10,12 @@ export function mountLegacyStudyQuestionPager(root = document) {
     if (!form || form.dataset.questionPagerMounted === '1') return;
 
     const questions = [...form.querySelectorAll('[data-study-practice-question]')];
-    const pager = form.querySelector('[data-study-practice-pager]');
+    const pagers = [...form.querySelectorAll('[data-study-practice-pager]')];
     const previous = form.querySelector('[data-study-practice-previous]');
     const next = form.querySelector('[data-study-practice-next]');
     const progress = form.querySelector('[data-study-practice-question-progress]');
     const submit = form.querySelector('[data-study-practice-final-submit]');
-    if (!pager || !previous || !next || !progress || !submit || questions.length < 2) return;
+    if (pagers.length !== 2 || !previous || !next || !progress || !submit || questions.length < 2) return;
 
     // Existing autosave has already restored any local draft before this is mounted.
     const hasAnswer = (fieldset) => [...fieldset.querySelectorAll('[name^="answers["]')]
@@ -40,7 +40,7 @@ export function mountLegacyStudyQuestionPager(root = document) {
         }
     };
 
-    pager.hidden = false;
+    pagers.forEach((pager) => { pager.hidden = false; });
     form.dataset.questionPagerMounted = '1';
     render();
     previous.addEventListener('click', () => { if (index > 0) { index -= 1; render({ focus: true }); } });
