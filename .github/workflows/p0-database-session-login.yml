@@ -1,0 +1,45 @@
+name: P0 Database Session Login Regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Http/Controllers/AuthController.php'
+      - 'config/session.php'
+      - 'tests/Feature/P0DatabaseSessionLoginRegressionTest.php'
+      - '.github/workflows/p0-database-session-login.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  p0-session-login:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      APP_URL: http://localhost
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      DB_URL: ''
+      SESSION_DRIVER: array
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, mbstring, xml
+          coverage: none
+      - name: Install pinned PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Syntax check
+        run: php -l tests/Feature/P0DatabaseSessionLoginRegressionTest.php
+      - name: Persistent database session login and logout regression
+        run: php artisan test tests/Feature/P0DatabaseSessionLoginRegressionTest.php --fail-on-skipped
+      - name: Existing auth failure and onboarding route regression
+        run: php artisan test tests/Feature/FirstRunUxV4123Test.php --filter='test_(existing_account_can_log_in_from_welcome_without_being_forced_back_to_first_run|login_failure_message_is_visible_after_redirect|unfinished_new_account_returns_to_welcome_after_logout_and_login)' --fail-on-skipped
