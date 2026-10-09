@@ -7,7 +7,7 @@ Status: **Blueprint + Docker entrypoint + default-closed middleware implemented.
 
 As inspected from the connected Render workspace, Canovia currently runs as a **Free** Web service using the production `Dockerfile`, in Singapore. HINANEX staging is a **separate project** and cannot be used for Canovia MCP experiments. There is no existing Canovia staging Web service or Render Postgres database.
 
-Render's Free services in the **same workspace share 750 instance-hours/month**. The production Canovia Free service can already use most of this budget, and adding even a free staging Web service could cause Free services to suspend when the pooled budget runs out. Render Free Postgres also expires after 30 days. The owner must review the billing dashboard before initiating the opt-in Blueprint sync.
+Render's Free services in the **same workspace share 750 instance-hours/month**. The production Canovia Free service can already use most of this budget, and adding even a free staging Web service could cause Free services to suspend when the pooled budget runs out. Render Free Postgres also expires after 30 days. The owner must review the billing dashboard before initiating the opt-in Blueprint sync. **Product-owner policy (2026-10-09): move the production Canovia Web service from Free to Render's lowest-cost paid compute plan when Canovia launches publicly.** Current listed smallest paid Web compute is **$7/month per service** on the Render Hobby workspace ($0/month base, plus compute); confirm rates at the actual change. A paid production instance is distinct from a paid workspace subscription. This does NOT approve paying for staging immediately.
 
 Relevant Render sources:
 - https://render.com/docs/free
@@ -32,7 +32,7 @@ This is a **disposable smoke-test** stage for container boot and OAuth discovery
 
 ## Operator instructions — do NOT execute until resource impact accepted
 
-1. Check <https://dashboard.render.com/> for the workspace's **remaining Free service hours** and monthly pipeline usage. Stage can reduce resources available to the live Canovia Free service; don't infer zero impact from `plan: free`.
+1. Check <https://dashboard.render.com/> for the workspace's **remaining Free service hours** and monthly pipeline usage. The production upgrade to the lowest paid Render Web compute plan is planned at **public launch** (not now); do not confuse it with buying a Pro workspace subscription. When production is paid, its instance will no longer consume Free Web hours, but a Free staging service still has its own limits and costs may vary. Stage can reduce resources available to the live Canovia Free service; don't infer zero impact from `plan: free`.
 2. Create a **separate Render Blueprint** using `deploy/render-mcp-staging.yaml`. Do not sync or attach the Blueprint to the existing `Canovia` service. Check that the service name is `canovia-mcp-staging`, distinct from the production `Canovia`.
 3. Input **fresh** `APP_KEY` and the exact staging-origin `APP_URL`, with `APP_ENV=staging`, `DB_CONNECTION=sqlite`, all external credentials absent, MCP switches OFF, and no production environment group copied.
 4. Before starting the public service, verify the separate Dockerfile and startup guard; `php artisan canovia:mcp-staging-preflight --json` is a local/metadata compatibility check (currently expected **blocked**, since the OAuth issuer is unconfigured).
