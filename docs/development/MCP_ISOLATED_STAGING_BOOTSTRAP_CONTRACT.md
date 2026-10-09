@@ -1,7 +1,7 @@
-# Canovia MCP — isolated Render staging bootstrap (not provisioned)
+# Canovia MCP — isolated Render staging bootstrap (Free service provisioned)
 
 Updated: 2026-10-09
-Status: **Blueprint + Docker entrypoint + default-closed middleware implemented. No new Render service has been created.**
+Status: **Free Canovia-only staging service provisioned and initial deploy live; all account/OAuth/MCP endpoints remain configured closed.**
 
 ## Why a staging environment must be isolated
 
@@ -14,7 +14,7 @@ Relevant Render sources:
 - https://render.com/docs/blueprint-spec
 - https://render.com/pricing
 
-## Implemented but not deployed
+## Provisioned separately from production
 
 `deploy/render-mcp-staging.yaml` is an **opt-in** Render Blueprint describing a **new**, separate `canovia-mcp-staging` Web service:
 
@@ -50,9 +50,9 @@ Automated CI includes `tests/Feature/McpIsolatedStagingBootstrapTest.php`. It ch
 
 ## Still not completed
 
-- No real Render stage creation, DB/IdP tenant/ChatGPT app installation or end-to-end OAuth test.
+- The isolated Free Render staging Web service exists; however, no durable staging DB, IdP tenant, ChatGPT client registration or real OAuth end-to-end test exists.
 - No public staging web access, account linking, consent or MCP reads.
-- No consumption of extra Free instance-hours yet.
+- Render staging consumes shared Free instance-hours only while its instance is running; initial deployment and external checks use some of the monthly allowance.
 - No production flags/keys or cost plan changes.
 - No iPhone/PWA/PC device verification (owner requested one combined later test).
 
@@ -60,3 +60,51 @@ A future production connection requires the formal plan in
 [MCP staging IdP preflight](MCP_STAGING_IDP_PREFLIGHT_CONTRACT.md) and a
 real provider/client acceptance test. Never turn the default-off flags on
 merely because the Docker image builds.
+
+## Actual Render isolated staging provisioned (2026-10-09)
+
+The owner confirmed the workspace's Render included-usage panel showed
+**48.78 / 750 Free Web instance-hours consumed** before provisioning.
+A separate **Free Web** staging service was created by the Render connector:
+
+- Service name: `canovia-mcp-staging`
+- Service ID: `srv-db43l4nlk1mc73emseig`
+- URL: https://canovia-mcp-staging.onrender.com
+- Dashboard: https://dashboard.render.com/web/srv-db43l4nlk1mc73emseig
+- Docker source: `main`, `Dockerfile.mcp-staging`
+- Render region/plan: `singapore` / `free`
+- Auto deploy: **OFF**; no production service settings were changed.
+- First deploy: `dep-db43l57lk1mc73emsg3g`, commit `d5865f8`,
+  Render reported **live**, and its startup log showed the isolated SQLite
+  migrations completing successfully.
+- Staging-only `APP_KEY` was generated independently and configured via
+  Render service env vars; its value is intentionally not stored in GitHub.
+- Browser access: **OFF**; OAuth discovery, introspection, account linking,
+  Plan consent, delegated policy, MCP tools: **ALL OFF**.
+- The staging service **has no Aiven/Postgres database, external IdP, user
+  records or real-world Plan data**. Its SQLite DB is ephemeral on sleep,
+  restart and deploy.
+
+This was an explicit owner-approved **Free staging deployment**, not a
+paid upgrade or production launch. Render Free Web services automatically
+spin down after about 15 minutes without inbound requests; spun-down hours
+do not count against the monthly shared 750-hour pool. Therefore **do not
+schedule keepalive pings**; check usage periodically and suspend/delete the
+isolated service in Render if monthly hours become constrained. The connected
+Render tools currently do not support service deletion or suspension.
+
+A dedicated public-network GitHub Actions HTTP smoke job,
+`.github/workflows/mcp-staging-live-http-smoke.yml`, now checks exact
+`/up=200` and account/OAuth/MCP `503` via the Render domain. It runs
+once as a PR check or manually; **not** on a recurring cron that prevents
+Free spin-down. **External HTTP security boundary verified:** GitHub Actions run
+`37867353868` completed successfully against the actual staging Render URL:
+`/up` returned HTTP **200**; login, register, account, GET MCP, OAuth
+metadata and POST MCP JSON-RPC all returned HTTP **503** with the generic
+closed message and no-store cache protection. This is a verified external
+lockdown smoke, **not** a real OAuth/ChatGPT user connection.
+
+Next steps: select an IdP tenant, provision durable *staging-only* storage
+and a reviewed stage access-control mechanism before opening any OAuth,
+account or private MCP capability. Existing Canovia production remains a
+Free service until the owner's **public-launch** paid-compute plan change.

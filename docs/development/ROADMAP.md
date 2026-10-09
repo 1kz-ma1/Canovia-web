@@ -37,3 +37,18 @@ At Canovia public launch, upgrade the **production Web service compute** from Fr
 ### Canovia staging Docker runtime smoke (2026-10-09)
 
 A disposable GitHub Actions job now **builds and boots** the independent staging Docker image with SQLite and a generated test-only APP_KEY, exercises startup guard, migrations, `/up` and the 503 OAuth/MCP lockdown. This is a more realistic check than the earlier unit tests, but **not** a live Render staging deployment. Production Canovia still uses a shared 750-hour/month Free Web instance pool and Render account-level remaining hours cannot be read through the connected service tools; defer creation of a second always-on Free Web instance until the owner verifies remaining hours/budget or approves the early lowest-paid production upgrade. Product owner's agreed paid production launch policy remains unchanged.
+
+
+### Live Canovia MCP staging smoke provisioning (2026-10-09)
+
+Product owner approved short-lived Free-only staging after the Render
+billing snapshot showed 48.78/750 monthly Free hours consumed. A separate
+`canovia-mcp-staging` Free Web service was created in Singapore, ID
+`srv-db43l4nlk1mc73emseig`, autoDeploy OFF, with staging-only Docker/
+SQLite/APP_KEY, all OAuth/MCP features OFF. Render's first deploy of
+`d5865f8` is **live**, with migrations confirmed via Render logs. An
+external GitHub Actions smoke (run `37867353868`) **passed**:
+`/up=200`, login/account/OAuth/MCP GET and POST `=503`. No extra paid subscription, production service,
+Aiven database or real ChatGPT/IdP connection was changed. Render Free
+auto-idles after 15 minutes of no traffic: no keepalive automation.
+See [isolated staging contract](MCP_ISOLATED_STAGING_BOOTSTRAP_CONTRACT.md).
