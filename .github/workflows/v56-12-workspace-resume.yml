@@ -149,6 +149,8 @@ jobs:
           php -l app/Models/McpDelegatedGrant.php
           php -l app/Services/McpDelegatedIdentityFingerprintService.php
           php -l database/migrations/2026_10_09_000300_create_mcp_delegated_access_events_table.php
+          php -l app/Services/McpStagingSyntheticActorBootstrap.php
+          php -l tests/Feature/McpStagingSyntheticActorBootstrapTest.php
           php -l app/Http/Middleware/CloseUnopenedMcpStaging.php
           php -l config/canovia_staging.php
           php -l tests/Feature/McpIsolatedStagingBootstrapTest.php
@@ -193,6 +195,9 @@ jobs:
           php -l tests/Feature/DevelopmentTeamTaskDependencyV5869Test.php
       - run: php artisan view:cache
       - run: php artisan migrate --force
+      - name: MCP staging synthetic actor and strict PostgreSQL isolation
+        run: php artisan test tests/Feature/McpStagingSyntheticActorBootstrapTest.php
+
       - name: MCP isolated staging bootstrap and live service safety regressions
         run: php artisan test tests/Feature/McpIsolatedStagingBootstrapTest.php
 
