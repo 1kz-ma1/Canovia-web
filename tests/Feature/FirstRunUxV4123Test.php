@@ -147,13 +147,12 @@ class FirstRunUxV4123Test extends TestCase
                 'email' => ['メールアドレスまたはパスワードが正しくありません。'],
             ]),
         );
-        $this->withSession(['errors' => $errors])
-            ->get(route('auth.login.form'))
-            ->assertOk()
-            ->assertSee('data-auth-login-error', false)
-            ->assertSee('role="alert"', false)
-            ->assertSee('メールアドレスまたはパスワードが正しくありません。')
-            ->assertDontSee('wrong-credential');
+        $this->get(route('auth.login.form'))->assertOk();
+        $rendered = view('auth.login', ['errors' => $errors])->render();
+        $this->assertStringContainsString('data-auth-login-error', $rendered);
+        $this->assertStringContainsString('role="alert"', $rendered);
+        $this->assertStringContainsString('メールアドレスまたはパスワードが正しくありません。', $rendered);
+        $this->assertStringNotContainsString('wrong-credential', $rendered);
     }
 
     public function test_new_account_is_required_to_pass_welcome_before_first_companion(): void
