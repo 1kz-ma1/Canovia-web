@@ -263,3 +263,37 @@ This evidence proves the *repository change* against tests and the
 the updated Web-access interlock has deployed to Render or that the real
 Render staging PostgreSQL is attached. The existing staging service has
 auto deploy off; subsequent live post-deploy checks are required.
+
+
+### Staging-only Nginx bypass closure (PR #407 — live redeploy pending)
+
+After deploying #405/#406 to the existing Free Render stage
+(`dep-db452ujtqb8s73e3so6g`, commit `4cf895d`, status `live`),
+the expanded real-network HTTPS smoke confirmed `/up=200` and
+`/=503`, but discovered `/health=204`. Root cause: the shared
+production Nginx `docker/nginx.conf` serves `/health` directly
+before Laravel's staging middleware. It also has static asset
+locations that similarly bypass the Laravel gate. No private data
+exposure was demonstrated, but this violated the previously stated
+"only /up public" staging contract.
+
+The isolated staging boot script now installs
+`docker/nginx-mcp-staging-closed.conf` **only when public staging Web
+access is disabled**. This Nginx config does not serve legacy health,
+static files or PHP directly. It routes exact `/up` to Laravel for the
+existing DB/schema readiness check; every other URL, including
+`/health`, static files, and direct `/index.php`, receives the
+generic `503 Staging service unavailable.` with `no-store`.
+The ordinary production `docker/nginx.conf` is left untouched.
+For a future **separately approved** public-stage OAuth experiment,
+the pre-existing two-flag and pinned-Postgres startup/HTTP gates remain
+mandatory; that future access must receive its own security review.
+
+Regression gates: PHPUnit asserts the closed Nginx contract; the
+isolated Docker smoke exercises both SQLite and pinned disposable
+PostgreSQL 17 startup through actual Nginx; and the expanded live HTTPS
+smoke verifies `/up=200`, generic 503 for representative GET and POST
+endpoints (including static/legacy health) plus no-store response
+headers. **This file update is not proof of deployment of the fix**.
+Do not mark the live stage fully closed until the amended commit
+deploys and the post-deploy HTTPS checks pass.
