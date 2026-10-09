@@ -254,6 +254,110 @@ final class ProductionMysqlSchemaP0Test extends TestCase
         $this->assertDatabaseHas('migrations', ['migration' => $name]);
     }
 
+    public function test_reconciliation_blocks_second_table_orphans_before_first_table_ddl(): void
+    {
+        // A failed ADD FOREIGN KEY in the second table previously occurred
+        // after the first table might already have been modified.
+        Schema::table('intelligence_decision_traces', function (Blueprint $table): void {
+            $table->dropForeign('idt_snapshot_fk');
+        });
+        Schema::table('learning_answer_evaluation_adjustments', function (Blueprint $table): void {
+            $table->dropForeign('laea_answer_event_fk');
+        });
+
+        // A deliberately orphaned FK reference is CI-only synthetic data.
+        $id = DB::table('learning_answer_evaluation_adjustments')->insertGetId([
+            'learning_answer_event_id' => 987654321,
+            'reason' => 'ci_preflight',
+            'effect' => 'exclude_from_recommendations',
+            'created_at' => now(),
+        ]);
+
+        $migration = require database_path(
+            'migrations/2026_10_09_235959_reconcile_p0_mysql_applied_constraints.php',
+        );
+
+        try {
+            try {
+                $migration->up();
+                $this->fail('Preflight must block an orphan before the first DDL.');
+            } catch (\\RuntimeException $exception) {
+                $this->assertSame(
+                    'P0 recovery blocked: orphaned foreign-key references.',
+                    $exception->getMessage(),
+                );
+            }
+
+            // If the preflight were to repair the first table first, the FK
+            // would already exist here despite the later orphan exception.
+            $this->assertSame([], array_values(array_filter(
+                Schema::getForeignKeys('intelligence_decision_traces'),
+                fn (array $fk): bool => ($fk['name'] ?? '') === 'idt_snapshot_fk',
+            )));
+        } finally {
+            DB::table('learning_answer_evaluation_adjustments')->where('id', $id)->delete();
+            $migration->up();
+        }
+
+        $this->assertForeignKey(
+            'intelligence_decision_traces',
+            'intelligence_state_snapshot_id',
+            'idt_snapshot_fk',
+            'intelligence_state_snapshots',
+            'cascade',
+        );
+        $this->assertForeignKey(
+            'learning_answer_evaluation_adjustments',
+            'learning_answer_event_id',
+            'laea_answer_event_fk',
+            'learning_answer_events',
+            'cascade',
+        );
+    }
+
+    public function test_reconciliation_blocks_incomplete_second_table_before_first_table_ddl(): void
+    {
+        Schema::table('intelligence_decision_traces', function (Blueprint $table): void {
+            $table->dropForeign('idt_snapshot_fk');
+        });
+        Schema::table('learning_answer_evaluation_adjustments', function (Blueprint $table): void {
+            $table->dropColumn('effect');
+        });
+
+        $migration = require database_path(
+            'migrations/2026_10_09_235959_reconcile_p0_mysql_applied_constraints.php',
+        );
+        try {
+            try {
+                $migration->up();
+                $this->fail('Incomplete second table must fail before first-table DDL.');
+            } catch (\\RuntimeException $exception) {
+                $this->assertSame(
+                    'P0 recovery blocked: incomplete table contract.',
+                    $exception->getMessage(),
+                );
+            }
+
+            $this->assertSame([], array_values(array_filter(
+                Schema::getForeignKeys('intelligence_decision_traces'),
+                fn (array $fk): bool => ($fk['name'] ?? '') === 'idt_snapshot_fk',
+            )));
+        } finally {
+            Schema::table('learning_answer_evaluation_adjustments', function (Blueprint $table): void {
+                $table->string('effect', 32)->default('exclude_from_recommendations');
+            });
+            $migration->up();
+        }
+
+        $this->assertForeignKey(
+            'intelligence_decision_traces',
+            'intelligence_state_snapshot_id',
+            'idt_snapshot_fk',
+            'intelligence_state_snapshots',
+            'cascade',
+        );
+    }
+
     private function assertForeignKey(
         string $table,
         string $column,
