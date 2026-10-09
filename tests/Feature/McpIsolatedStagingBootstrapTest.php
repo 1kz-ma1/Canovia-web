@@ -31,6 +31,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             'canovia_staging.web_access_enabled' => false,
             'canovia_staging.database_mode' => 'render_postgres',
             'canovia_staging.postgres_id' => 'dpg-db43rbbncjis73bmigi0-a',
+            'canovia_staging.postgres_user' => 'canovia_mcp_staging_db_user',
             'database.default' => 'sqlite',
         ]);
 
@@ -59,6 +60,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             'canovia_staging.web_access_enabled' => false,
             'canovia_staging.database_mode' => 'render_postgres',
             'canovia_staging.postgres_id' => 'dpg-db43rbbncjis73bmigi0-a',
+            'canovia_staging.postgres_user' => 'canovia_mcp_staging_db_user',
             'database.default' => 'pgsql',
             'database.connections.pgsql.database' => 'canovia_mcp_staging_db',
             'database.connections.pgsql.url' =>
@@ -82,6 +84,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             'canovia_staging.isolated' => true,
             'canovia_staging.database_mode' => 'render_postgres',
             'canovia_staging.postgres_id' => 'dpg-db43rbbncjis73bmigi0-a',
+            'canovia_staging.postgres_user' => 'canovia_mcp_staging_db_user',
             'database.default' => 'pgsql',
             'database.connections.pgsql.database' => 'canovia_mcp_staging_db',
             'database.connections.pgsql.url' =>
@@ -129,6 +132,9 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             ['APP_ENV' => 'production'],
             ['CANOVIA_STAGING_ISOLATED' => 'false'],
             ['APP_DEBUG' => 'true'],
+            ['CANOVIA_STAGING_POSTGRES_USER' => 'wrong_staging_user'],
+            ['CANOVIA_STAGING_POSTGRES_USER' => ''],
+            ['CANOVIA_STAGING_POSTGRES_USER' => 'UPPERCASE'],
             ['DB_CONNECTION' => 'mysql'],
             ['DB_DATABASE' => 'live'],
             ['DB_HOST' => 'production.example.test'],
@@ -168,6 +174,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             'CANOVIA_STAGING_POSTGRES_ID' => 'dpg-db43rbbncjis73bmigi0-a',
             'DB_CONNECTION' => 'pgsql',
             'DB_DATABASE' => 'canovia_mcp_staging_db',
+            'CANOVIA_STAGING_POSTGRES_USER' => 'canovia_mcp_staging_db_user',
             'DB_URL' => $url,
         ]);
         $this->assertTrue($valid->isSuccessful(), $valid->getErrorOutput());
@@ -199,6 +206,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
                 'CANOVIA_STAGING_POSTGRES_ID' => 'dpg-db43rbbncjis73bmigi0-a',
                 'DB_CONNECTION' => 'pgsql',
                 'DB_DATABASE' => 'canovia_mcp_staging_db',
+                'CANOVIA_STAGING_POSTGRES_USER' => 'canovia_mcp_staging_db_user',
                 'DB_URL' => $url,
                 ...$unsafe,
             ]);
@@ -217,6 +225,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             'CANOVIA_STAGING_POSTGRES_ID' => 'dpg-db43rbbncjis73bmigi0-a',
             'DB_CONNECTION' => 'pgsql',
             'DB_DATABASE' => 'canovia_mcp_staging_db',
+            'CANOVIA_STAGING_POSTGRES_USER' => 'canovia_mcp_staging_db_user',
         ]);
         $this->assertSame(42, $withoutUrl->getExitCode());
 
