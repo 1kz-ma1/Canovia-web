@@ -155,3 +155,20 @@ fresh secret in a private password manager before an actual browser sign-in.
 The remaining Keycloak hosting and ChatGPT OAuth tests still require a
 separate, reviewed decision. See [staging credential rotation procedure](
 MCP_STAGING_SYNTHETIC_READ_FIXTURE_2026_10_09.md).
+
+
+### V59 Keycloak live disposable protocol acceptance (2026-10-09)
+
+A pinned **Keycloak 26.8.0** throwaway OAuth server running on a GitHub
+Actions runner actually issued resource-bound client-credentials access
+tokens for the staging MCP URL. Strict introspection verified exact
+single-resource `aud`, issuer, caller client ID, scope, expiry and bearer;
+a wrong-resource request returned `invalid_target` and fabricated bearer
+was inactive. Keycloak 26.6.2+ enforces that the introspection client's ID
+appears in `aud`: the secure solution is a confidential resource client
+whose ID **equals the resource URL** plus RFC 6749-encoded Basic credentials,
+not a weakened audience check. Canovia's disabled-by-default introspector
+now supports this. **This is NOT browser OAuth or ChatGPT E2E**. Keycloak
+remains unhosted; staging Web/MCP/OAuth remains closed and costs unchanged.
+See [real disposable Keycloak protocol lab](
+MCP_KEYCLOAK_DISPOSABLE_PROTOCOL_LAB_2026_10_09.md).
