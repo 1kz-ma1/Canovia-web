@@ -141,6 +141,8 @@ def main():
     ensure(os.getenv("DB_CONNECTION") == "sqlite", "test SQLite")
     ensure(os.getenv("SESSION_DRIVER") == "database", "durable DB session")
     ensure(os.getenv("SESSION_SECURE_COOKIE") == "true", "HTTPS-only cookie")
+    ensure(os.getenv("CANOVIA_TRUSTED_PROXY_IPS") == "127.0.0.1",
+           "pinned test reverse proxy IP only")
     ensure(os.getenv("SESSION_DOMAIN", "") == "", "host-only cookie")
     ensure(os.getenv("APP_URL") == BASE, "fixed loopback HTTPS origin")
     ensure(os.getenv("DB_DATABASE") ==
