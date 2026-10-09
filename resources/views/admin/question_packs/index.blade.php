@@ -18,6 +18,12 @@
             <div class="rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.06] px-4 py-3 text-sm text-emerald-100">{{ session('status') }}</div>
         @endif
 
+        @error('status')
+            <div role="alert" class="rounded-xl border border-rose-300/30 bg-rose-950/20 p-4 text-sm text-rose-200" data-question-pack-status-error>
+                {{ $message }}
+            </div>
+        @enderror
+
         <section class="page-card border-violet-300/15 p-5 sm:p-6">
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div>
@@ -138,6 +144,38 @@
                                     <span class="badge badge-slate">{{ $term }}</span>
                                 @endforeach
                             </div>
+                        @endif
+
+                        @php($inspection = ($publicationReadiness ?? collect())->get($pack->id))
+                        @if ($inspection)
+                            <section class="mt-4 rounded-xl border border-slate-700 p-4" data-question-pack-readiness="{{ $pack->id }}">
+                                <p class="text-xs font-bold text-slate-200">公開前チェック · 1問ずつ学習への対応</p>
+                                <p class="mt-2 text-sm text-slate-300">
+                                    有効 {{ $inspection['active_count'] }}問 /
+                                    1問採点対応 <strong>{{ $inspection['one_question_count'] }}問</strong>
+                                </p>
+                                <p class="mt-1 text-xs {{ $inspection['publishable'] ? 'text-emerald-300' : 'text-rose-300' }}">
+                                    {{ $inspection['publishable'] ? '公開条件：充足（内容・権利は管理者が最終確認）' : '公開条件：未充足' }}
+                                </p>
+                                @if ($inspection['blocking'] !== [])
+                                    <ul class="mt-2 list-inside list-disc space-y-1 text-xs text-rose-300" data-question-pack-blockers>
+                                        @foreach ($inspection['blocking'] as $reason)
+                                            <li>{{ $reason }}</li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                                @if ($inspection['warnings'] !== [])
+                                    <ul class="mt-2 list-inside list-disc space-y-1 text-xs text-amber-200" data-question-pack-warnings>
+                                        @foreach ($inspection['warnings'] as $warning)
+                                            <li>{{ $warning }}</li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                                <p class="mt-2 text-[11px] leading-5 text-slate-500">
+                                    対応問数は現行Learning Runの単一選択・即時採点に基づきます。
+                                    問題の著作権・正答の妥当性は自動判定していません。公開は明示操作のみです。
+                                </p>
+                            </section>
                         @endif
 
                         <form method="POST" action="{{ route('admin.question_packs.status', $pack) }}" class="mt-4 flex flex-wrap items-center gap-2">
