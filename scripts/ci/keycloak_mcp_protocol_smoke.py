@@ -136,7 +136,11 @@ def run_lab() -> None:
         home = Path(tmp)
         path = home / "canovia-mcp-realm.json"
         path.write_text(json.dumps(new_realm(rp_secret)), encoding="utf8")
-        os.chmod(path, 0o600)
+        # The Keycloak image runs with an unprivileged UID: its bind-mounted
+        # directory and ephemeral file must be readable by that UID. All
+        # credentials here are random CI-only values on an isolated runner.
+        os.chmod(home, 0o755)
+        os.chmod(path, 0o644)
 
         subprocess.run(["docker", "run", "-d", "--name", CONTAINER,
                         "--memory", "2g",
