@@ -193,3 +193,72 @@ resource-indicator audience binding only with the experimental
 DCR, while CIMD is experimental. Verify actual token claims in a disposable
 provider experiment before any Web/MCP gate is opened:
 https://www.keycloak.org/securing-apps/mcp-authz-server
+
+## Pending: closed-stage synthetic password rotation for real OAuth login
+
+The synthetic owner was created for database-level acceptance using an
+ephemeral password that has now been cleared from Render environment variables.
+The initial credential is **not retrievable**. A fresh usable test-login
+credential is a separate, owner-controlled step, NOT a prerequisite for the
+current non-public staging readiness verification.
+
+This branch adds the operator-only CLI
+`canovia:mcp-staging-rotate-synthetic-password --json`. The code is
+OFF by default; only the pinned Render PostgreSQL staging service may run
+it. It requires exactly one matching synthetic actor, one private fixture
+Plan, two fixed Tasks, no external subject links, no delegated grants and
+no MCP audit records. All OAuth/MCP flags and both public Web flags must
+remain OFF. There is no HTTP endpoint, and the command returns only
+`blocked`, `rotated` or `already_current`, never a secret, hash, email
+or Plan ID.
+
+### Operator procedure when a real sign-in test is next
+
+1. On `canovia-mcp-staging` in **My Workspace** only, verify the current
+   Live commit, locked Web status and independent Render PostgreSQL
+   `dpg-db43rbbncjis73bmigi0-a`. Do not use production Aiven,
+   production APP_KEY, production email or production user records.
+2. Generate a **new unique 32-128 character secret** and securely save it
+   yourself in a password manager **before** triggering rotation. Never
+   paste it into GitHub, chat, application logs or issue descriptions.
+   The assistant must not generate and rotate a secret that the owner
+   cannot subsequently retrieve for the planned browser sign-in.
+3. In the stage's *private Render Environment* only, set these three
+   variables atomically (without replacing other existing environment
+   settings): `CANOVIA_STAGING_ALLOW_SYNTHETIC_PASSWORD_ROTATION=true`,
+   `CANOVIA_STAGING_ROTATE_SYNTHETIC_PASSWORD_ON_START=true`, and
+   `CANOVIA_STAGING_SYNTHETIC_OWNER_ROTATED_PASSWORD=<private secret>`.
+   The startup shell also refuses concurrent synthetic user/Plan creation,
+   open Web, non-pinned Postgres and any activated OAuth/MCP capability.
+4. Stage boot executes the credential update after migrations and before
+   Web startup. Private logs report only generic completion; a repeated
+   identical secret produces `already_current` and does not rehash.
+   Stop on any `blocked` or unhealthy deploy. Never lower any safety
+   switch merely to force the command to pass.
+5. Immediately set both rotation flags to `false` and **clear the
+   rotated password variable**. Confirm the sealed follow-up stage deploy
+   is Live; the stage shell refuses stale rotation secrets in its
+   environment. The chosen password persists only as a hash in staging DB
+   and in the operator's password manager. No production settings change.
+6. Actual OAuth/ChatGPT connection is still separate and requires
+   a security-reviewed Keycloak instance, real client registration,
+   exact token audience, same-subject consent and MCP end-to-end tests.
+
+### Provider pilot policy
+
+Keycloak is the conditional front-runner, **not currently deployed**.
+Its official MCP guide says RFC 8707 resource-indicator support and CIMD
+are experimental: enable only in a pinned, disposable provider test
+environment; confirm an access token contains only the specific MCP resource
+URI as its audience. Do not assume that a Keycloak discovery document alone
+proves the RFC 7662 introspection token contract or a working ChatGPT
+redirect URI. Source: https://www.keycloak.org/securing-apps/mcp-authz-server
+
+Keycloak's container guidance recommends **at least 750MB RAM** and 2GB
+for small production-ready deployments; an existing Render Free 512MB
+instance is not an approved hosting plan. Costs and possible paid resources
+remain deferred until technically necessary with fresh pricing and explicit
+owner approval: https://www.keycloak.org/server/containers
+
+The new credential-rotation code does not activate any environment switch
+or create an IdP. No new paid Render service is requested.

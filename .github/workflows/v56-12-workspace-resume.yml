@@ -167,6 +167,8 @@ jobs:
           php -l app/Services/McpStagingSyntheticPlanFixtureBootstrap.php
           php -l tests/Feature/McpStagingSyntheticPlanFixtureBootstrapTest.php
           php -l tests/Feature/McpStagingSyntheticFixtureReadinessTest.php
+          php -l app/Services/McpStagingSyntheticCredentialRotator.php
+          php -l tests/Feature/McpStagingSyntheticCredentialRotatorTest.php
           sh -n docker/render-start.sh
           php -l app/Services/McpStagingProviderPreflightService.php
           php -l tests/Feature/McpStagingProviderPreflightTest.php
@@ -210,6 +212,9 @@ jobs:
       - run: php artisan migrate --force
       - name: MCP staging synthetic actor and strict PostgreSQL isolation
         run: php artisan test tests/Feature/McpStagingSyntheticActorBootstrapTest.php
+
+      - name: MCP staging sealed one-shot synthetic password rotation safety
+        run: php artisan test tests/Feature/McpStagingSyntheticCredentialRotatorTest.php
 
       - name: MCP staging sealed-fixture persistence readiness
         run: php artisan test tests/Feature/McpStagingSyntheticFixtureReadinessTest.php

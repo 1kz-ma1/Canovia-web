@@ -141,3 +141,17 @@ rotation, ChatGPT client registration, same-subject consent and token
 audience/introspection E2E remain incomplete. Paid-plan decisions remain
 deferred to the final pre-publication readiness gate. See
 [dated operational evidence](MCP_STAGING_SYNTHETIC_READ_FIXTURE_2026_10_09.md).
+
+
+### V59 MCP synthetic credential rotation readiness (2026-10-09)
+
+Implemented a **default-OFF, one-shot operator-only password rotation**
+for the fixed, isolated staging MCP synthetic owner. It checks the pinned
+PostgreSQL, sealed HTTP/MCP/OAuth flags, exact private Plan/Task fixture and
+absence of any linked external subjects or delegated grants; it never
+exposes credentials in CLI output or logs. No credential has been rotated
+on the live staging service by this change: the owner must first retain a
+fresh secret in a private password manager before an actual browser sign-in.
+The remaining Keycloak hosting and ChatGPT OAuth tests still require a
+separate, reviewed decision. See [staging credential rotation procedure](
+MCP_STAGING_SYNTHETIC_READ_FIXTURE_2026_10_09.md).

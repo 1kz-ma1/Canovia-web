@@ -106,6 +106,17 @@ if [ "$isolated_staging" = "true" ] \
     echo "MCP isolated staging synthetic fixture verification: ready (details suppressed)"
 fi
 
+# Operator-armed password replacement only after isolated staging migrations.
+# Suppress credentials, queries, identities and exception details in logs.
+if [ "$isolated_staging" = "true" ] \
+    && [ "${CANOVIA_STAGING_ROTATE_SYNTHETIC_PASSWORD_ON_START:-false}" = "true" ]; then
+    if ! php artisan canovia:mcp-staging-rotate-synthetic-password --json >/dev/null 2>&1; then
+        echo "MCP isolated staging synthetic password rotation: blocked (details suppressed)" >&2
+        exit 1
+    fi
+    echo "MCP isolated staging synthetic password rotation: completed (details suppressed)"
+fi
+
 echo "Building Laravel production caches..."
 if [ "$isolated_staging" = "true" ]; then
     # Cache commands can invoke application boot logic. Keep their exception

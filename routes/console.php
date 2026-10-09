@@ -119,3 +119,31 @@ Artisan::command(
         return $state === 'ready' ? 0 : 1;
     },
 )->purpose('Read-only verify isolated synthetic Plan fixture without exposing its contents');
+
+/**
+ * One-shot and stage-only. No route, email, password or token appears in output.
+ * Requires two explicit OFF-by-default environment approvals and a freshly
+ * supplied private secret in the isolated Render staging environment.
+ */
+Artisan::command(
+    'canovia:mcp-staging-rotate-synthetic-password
+        {--json : Print only one safe status code}',
+    function (\App\Services\McpStagingSyntheticCredentialRotator $rotator): int {
+        $result = $rotator->rotate(
+            app(\App\Services\McpStagingSyntheticActorBootstrap::class),
+            app(\App\Services\McpStagingSyntheticPlanFixtureBootstrap::class),
+        );
+
+        if ($this->option('json')) {
+            $this->line((string) json_encode([
+                'schema' => 'canovia.mcp.staging_synthetic_password_rotation.v1',
+                'status' => $result,
+                'production_authorized' => false,
+            ], JSON_THROW_ON_ERROR));
+        } else {
+            $this->line('Synthetic staging credential rotation: '.$result);
+        }
+
+        return $result === 'blocked' ? 1 : 0;
+    },
+)->purpose('Replace the fixed synthetic MCP owner password only in an isolated closed stage');
