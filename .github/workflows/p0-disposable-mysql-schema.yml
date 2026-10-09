@@ -12,6 +12,9 @@ on:
       - 'tests/ci/test_p0_mysql_inventory_offline_triage.py'
       - 'scripts/ci/p0_mysql_inventory_tsv_import.py'
       - 'tests/ci/test_p0_mysql_inventory_tsv_import.py'
+      - 'scripts/sql/p0_mysql_readonly_full_migration_ledger.sql'
+      - 'scripts/ci/p0_mysql_full_ledger_offline_check.py'
+      - 'tests/ci/test_p0_mysql_full_ledger_offline_check.py'
       - '.github/workflows/p0-disposable-mysql-schema.yml'
   workflow_dispatch:
 
@@ -71,6 +74,8 @@ jobs:
         run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_inventory_offline_triage.py' -v
       - name: Verify operator-local MySQL TSV import boundary and error redaction
         run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_inventory_tsv_import.py' -v
+      - name: Verify full Laravel migration ledger offline safety and redaction
+        run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_full_ledger_offline_check.py' -v
       - name: Full MySQL migrations from an empty disposable database
         run: php artisan migrate --force --no-interaction
       - name: Repeat all MySQL migrations (idempotency)
@@ -97,3 +102,15 @@ jobs:
             > "$RUNNER_TEMP/p0-sanitized-schema.json"
           python3 scripts/ci/p0_mysql_inventory_offline_triage.py \
             --report "$RUNNER_TEMP/p0-sanitized-schema.json"
+      - name: Compare full MySQL ledger with all checked-in migration files (disposable CI only)
+        env:
+          MYSQL_PWD: ci-only-ephemeral-password
+        run: |
+          set -euo pipefail
+          # This is the throwaway MySQL 8 GitHub Actions service only.
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=canovia_ci --database=canovia_p0_ci \
+            --batch --raw --skip-column-names \
+            < scripts/sql/p0_mysql_readonly_full_migration_ledger.sql \
+            | python3 scripts/ci/p0_mysql_full_ledger_offline_check.py --input - \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["result"]=="REVIEW_REQUIRED" and d["code"]=="FULL_MIGRATION_LEDGER_MATCH_NOT_RELEASE" and d["release_authorized"] is False'
