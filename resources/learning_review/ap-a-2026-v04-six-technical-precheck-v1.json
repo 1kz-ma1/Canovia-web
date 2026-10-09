@@ -1,0 +1,280 @@
+{
+  "schema_version": 1,
+  "candidate_key": "ap/ap-a-2026-cbt-80-candidate-v2",
+  "candidate_version": "0.4.0-review-required",
+  "review_scope": "Six technically nuanced AP original questions; technical consistency precheck, not professional or legal approval.",
+  "counts": {
+    "technical_prechecks": 6,
+    "professional_quality_approvals": 0,
+    "rights_approvals": 0,
+    "remaining_independent_reviews": 80
+  },
+  "publication_authorized": false,
+  "entries": [
+    {
+      "key": "sec-dkim-023",
+      "finding": "DKIMのd=署名ドメインとRFC5322.Fromの表示ドメインは同じとは限らない。改訂設問はd=署名主体と署名対象の整合性を記述。DMARCは識別子のアライメントを別途扱う。",
+      "candidate_answer": "ア",
+      "tech_checks": [
+        "DKIM-Signatureのd=を署名ドメインとして特定",
+        "検証はDNSで取得した公開鍵に基づく",
+        "Fromの整合性はDKIM単体では保証しない",
+        "OP25B, S/MIME, SPFはこの署名ドメイン検証の定義に一致しない"
+      ],
+      "references": [
+        "https://www.rfc-editor.org/rfc/rfc6376.html",
+        "https://www.rfc-editor.org/rfc/rfc7489.html"
+      ],
+      "risk": "署名ドメインと送信者個人やFromの本人確認との混同",
+      "source_type": "canovia_original",
+      "status": "technical_basis_precheck_not_independent_human_signoff",
+      "reviewer": null,
+      "reviewed_at": null,
+      "quality_approved": false,
+      "rights_approved": false,
+      "snapshot": {
+        "prompt": "電子メールのヘッダーや本文に対して、送信側がDKIM-Signatureヘッダーに示す署名ドメインの秘密鍵で署名し、受信側がDNS公開鍵で検証することで、署名ドメインによる署名と署名対象データの改ざんを確認する技術はどれか。",
+        "answer": "ア",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "DKIM"
+          },
+          {
+            "id": "イ",
+            "label": "OP25B"
+          },
+          {
+            "id": "ウ",
+            "label": "S/MIME"
+          },
+          {
+            "id": "エ",
+            "label": "SPF"
+          }
+        ],
+        "explanation": "DKIMはDKIM-Signatureのd=に示す署名ドメインの公開鍵をDNSから取得し、署名されたメールヘッダーと本文の整合性を検証します。ただし、署名ドメインと受信者に表示されるFromドメインが同一とは限りません。Fromドメインとの整合性確認・なりすまし対策ではDMARCによる識別子アライメント等の考慮が必要です。"
+      }
+    },
+    {
+      "key": "sec-csrf-047",
+      "finding": "CSRFは被害者の認証状態を利用した状態変更要求。問題はトークン等の検証を欠く脆弱な受理条件を指定している。実環境ではCookieのSameSite・トークン・Origin検証によって成立可能性は異なる。",
+      "candidate_answer": "ア",
+      "tech_checks": [
+        "攻撃者が認証情報そのものを知る必要はない",
+        "サーバが偽造要求を受理する脆弱な条件が明示されている",
+        "XSS・総当たり・DNS改ざんとは異なる",
+        "SameSiteやCSRF token等が存在する場合に常に成立するとは書いていない"
+      ],
+      "references": [
+        "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html"
+      ],
+      "risk": "ブラウザが必ずCookieを送信しCSRFが成立すると一般化しない",
+      "source_type": "canovia_original",
+      "status": "technical_basis_precheck_not_independent_human_signoff",
+      "reviewer": null,
+      "reviewed_at": null,
+      "quality_approved": false,
+      "rights_approved": false,
+      "snapshot": {
+        "prompt": "ある銀行のWebサイトでは送金処理時にCSRF対策トークンや要求元の検証を行っておらず、利用者の認証状態を利用した偽造要求を受理する実装になっている。利用者がログイン中に攻撃者のWebサイトへ誘導され、意思に反する送金要求を実行させられた。この攻撃はどれか。",
+        "answer": "ア",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "CSRF"
+          },
+          {
+            "id": "イ",
+            "label": "XSS"
+          },
+          {
+            "id": "ウ",
+            "label": "ブルートフォース攻撃"
+          },
+          {
+            "id": "エ",
+            "label": "DNSキャッシュポイズニング"
+          }
+        ],
+        "explanation": "CSRFは認証済みの利用者のブラウザから、本人が意図しない状態変更要求を対象Webサイトへ送らせる攻撃です。成立には対象アプリに適切な要求検証がないことなどの条件が必要です。実際にはCSRFトークン、Origin/Referer確認、SameSite Cookieなどの対策により拒否できます。Cookie設定やブラウザの動作だけで常に成立するとは限りません。"
+      }
+    },
+    {
+      "key": "db-view-009",
+      "finding": "VIEWでは列エイリアスの指定が可能。WHEREで行絞込、UNIONによるVIEW定義も可能。PostgreSQLの自動更新可能ビューは単一FROMかつ集合演算を含まない等の条件を満たす必要がある。",
+      "candidate_answer": "ア",
+      "tech_checks": [
+        "ア:列の別名定義が可能",
+        "イ:WHEREで行も絞込める",
+        "ウ:JOINのあるVIEWが常に自動更新可能とはいえない",
+        "エ:UNIONのあるVIEWは定義できるが自動更新制約がある"
+      ],
+      "references": [
+        "https://www.postgresql.org/docs/current/sql-createview.html"
+      ],
+      "risk": "更新可能性はDBMS/トリガー/VIEW定義条件に依存する",
+      "source_type": "canovia_original",
+      "status": "technical_basis_precheck_not_independent_human_signoff",
+      "reviewer": null,
+      "reviewed_at": null,
+      "quality_approved": false,
+      "rights_approved": false,
+      "snapshot": {
+        "prompt": "関係データベースのビューに関する説明として適切なものはどれか。",
+        "answer": "ア",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "ビューの列名は、基の表と異なる名前として定義できる。"
+          },
+          {
+            "id": "イ",
+            "label": "ビューは列だけを絞り込めるが、行を条件で絞り込むことはできない。"
+          },
+          {
+            "id": "ウ",
+            "label": "複数表を結合したビューは、どのDBMSでも常に更新可能である。"
+          },
+          {
+            "id": "エ",
+            "label": "和集合を用いたビューは定義できない。"
+          }
+        ],
+        "explanation": "ビューの列には基表と異なる別名を定義でき、WHEREによる行の絞込みやUNIONを用いるビューの定義も可能です。ただし、ビューが定義できることと、そのビューをUPDATEできることは別です。例えばPostgreSQLでは、単純なビューは自動更新可能ですが、JOINやUNIONなどを含むビューは通常、自動更新の条件を満たしません。INSTEAD OFトリガー等の実装により更新可能になる場合もあるため、全DBMSで常に同じ可否とは断定できません。"
+      }
+    },
+    {
+      "key": "quality-reliability-032",
+      "finding": "継続して定められた条件で機能することは一般的に信頼性を問う。互換性、移植性、使用性は提示目的と異なる。可用性は信頼性と関連し、規格版により特性階層が変わる。",
+      "candidate_answer": "ア",
+      "tech_checks": [
+        "設問に障害の起こりにくさと一定期間の正しい機能を指定",
+        "互換性は他製品との共存/連携",
+        "移植性は別の環境への適応",
+        "使用性は理解/操作のしやすさ"
+      ],
+      "references": [
+        "https://www.iso.org/standard/78176.html"
+      ],
+      "risk": "品質規格の版とavailabilityの分類について専門家の確認が必要",
+      "source_type": "canovia_original",
+      "status": "technical_basis_precheck_not_independent_human_signoff",
+      "reviewer": null,
+      "reviewed_at": null,
+      "quality_approved": false,
+      "rights_approved": false,
+      "snapshot": {
+        "prompt": "オンライン予約システムで、障害が起こりにくく、決められた条件下で一定期間継続して正しく機能することを重視している。この要求に最も直接対応する品質特性はどれか。",
+        "answer": "ア",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "信頼性"
+          },
+          {
+            "id": "イ",
+            "label": "互換性"
+          },
+          {
+            "id": "ウ",
+            "label": "移植性"
+          },
+          {
+            "id": "エ",
+            "label": "使用性"
+          }
+        ],
+        "explanation": "正答は信頼性です。一定の条件下で所定期間にわたり必要な機能を適切に果たせることを重視しています。可用性は必要なときに利用できる性質に関係し、信頼性と関連するため完全に独立した反対概念ではありません。品質モデルの特性と副特性はISO/IEC 25010の版によって整理が異なるため、学習時は出題で用いる版や文脈も確認します。"
+      }
+    },
+    {
+      "key": "test-boundary-043",
+      "finding": "ISTQB CTFL v4.0.1の2値境界値分析は境界値と隣接分割側の最も近い値を選ぶ。整数18〜65の境界は17/18と65/66。3値境界ではさらに19/64も考慮する。",
+      "candidate_answer": "イ",
+      "tech_checks": [
+        "下限境界ペアは17,18",
+        "上限境界ペアは65,66",
+        "正解イは2境界ペアを含む",
+        "3値境界なら17,18,19と64,65,66が候補"
+      ],
+      "references": [
+        "https://istqb.org/wp-content/uploads/2024/11/ISTQB_CTFL_Syllabus_v4.0.1.pdf"
+      ],
+      "risk": "2値と3値境界値分析の混同",
+      "source_type": "canovia_original",
+      "status": "technical_basis_precheck_not_independent_human_signoff",
+      "reviewer": null,
+      "reviewed_at": null,
+      "quality_approved": false,
+      "rights_approved": false,
+      "snapshot": {
+        "prompt": "整数の年齢が18歳以上65歳以下のときだけ受理される入力欄を、各境界値と隣接する別の同値クラスの値を1つずつ使う2値境界値分析で試験する。二つの境界を効率よく確認するテストデータの組合せとして最も適切なものはどれか。",
+        "answer": "イ",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "18, 40, 65"
+          },
+          {
+            "id": "イ",
+            "label": "17, 18, 65, 66"
+          },
+          {
+            "id": "ウ",
+            "label": "1, 18, 100"
+          },
+          {
+            "id": "エ",
+            "label": "17, 40, 66"
+          }
+        ],
+        "explanation": "2値境界値分析では、受理境界である18と65、その直外の17と66を確認するため、イが適切です。3値境界値分析なら各境界の両隣も確認するので17・18・19、64・65・66などが候補となります。設問は4肢の中で最も適切な組合せを選ぶもので、すべての境界条件を網羅したとは主張していません。"
+      }
+    },
+    {
+      "key": "calc-mm1-015",
+      "finding": "T>0かつ0≤ρ<1より(1−ρ)>0。ρT/(1−ρ)≥Tはρ/(1−ρ)≥1、2ρ≥1に同値で最小利用率はρ=0.5。",
+      "candidate_answer": "イ",
+      "tech_checks": [
+        "33%は 0.33/0.67=0.4925<1",
+        "50%は 0.50/0.50=1",
+        "67%は 0.67/0.33=2.0303>1だが最小ではない",
+        "80%は 0.80/0.20=4>1だが最小ではない"
+      ],
+      "references": [
+        "https://en.wikipedia.org/wiki/M/M/1_queue"
+      ],
+      "risk": "ρ=1の不安定点での正値掛算を適用しない",
+      "source_type": "canovia_original",
+      "status": "technical_basis_precheck_not_independent_human_signoff",
+      "reviewer": null,
+      "reviewed_at": null,
+      "quality_approved": false,
+      "rights_approved": false,
+      "snapshot": {
+        "prompt": "安定状態のM/M/1待ち行列（平均サービス時間T>0秒、利用率0≤ρ<1）について、平均待ち時間がρT/(1−ρ)で表される。平均待ち時間がT秒以上になる利用率の最小値はどれか。",
+        "answer": "イ",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "33%"
+          },
+          {
+            "id": "イ",
+            "label": "50%"
+          },
+          {
+            "id": "ウ",
+            "label": "67%"
+          },
+          {
+            "id": "エ",
+            "label": "80%"
+          }
+        ],
+        "explanation": "T>0かつ0≤ρ<1の条件でρT/(1−ρ)≥TをTで割ると、ρ/(1−ρ)≥1となります。両辺に正の(1−ρ)を掛けてρ≥1−ρ、したがってρ≥0.5です。50%は条件を満たす最小値で、67%や80%も条件を満たしますが最小ではありません。33%では待ち時間がT未満です。"
+      }
+    }
+  ]
+}
