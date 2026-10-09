@@ -30,7 +30,15 @@ if (count($argv ?? []) !== 2 || ($argv[1] ?? null) !== '--check'
     || getenv('APP_ENV') !== 'testing'
     || getenv('GITHUB_ACTIONS') !== 'true'
     || getenv('CANOVIA_P0_DISPOSABLE_MYSQL_CI') !== '1'
-    || getenv('DB_CONNECTION') !== 'mysql') {
+    || getenv('DB_CONNECTION') !== 'mysql'
+    || getenv('DB_HOST') !== '127.0.0.1'
+    || getenv('DB_PORT') !== '3306'
+    || getenv('DB_DATABASE') !== 'canovia_p0_ci'
+    || getenv('DB_USERNAME') !== 'canovia_ci'
+    || getenv('DB_PASSWORD') !== 'ci-only-ephemeral-password'
+    || getenv('DB_URL') !== ''
+    || getenv('CANOVIA_P0_EXPECTED_DB_HOST') !== '127.0.0.1'
+    || getenv('CANOVIA_P0_EXPECTED_DB_NAME') !== 'canovia_p0_ci') {
     $emit('BLOCK', 'PREFLIGHT_OPERATOR_GUARD_REJECTED');
     exit(2);
 }
