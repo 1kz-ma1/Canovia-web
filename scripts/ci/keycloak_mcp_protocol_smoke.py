@@ -134,7 +134,7 @@ def run_lab() -> None:
 
     with tempfile.TemporaryDirectory(prefix="canovia-keycloak-ci-") as tmp:
         home = Path(tmp)
-        path = home / "canovia-mcp-realm.json"
+        path = home / f"{REALM}-realm.json"
         path.write_text(json.dumps(new_realm(rp_secret)), encoding="utf8")
         # The Keycloak image runs with an unprivileged UID: its bind-mounted
         # directory and ephemeral file must be readable by that UID. All
