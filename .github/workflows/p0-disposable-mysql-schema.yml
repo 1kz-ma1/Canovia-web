@@ -63,6 +63,7 @@ jobs:
         run: |
           php -l database/migrations/2026_10_04_000200_create_intelligence_decision_traces_table.php
           php -l database/migrations/2026_10_08_230000_create_learning_answer_evaluation_adjustments.php
+          php -l database/migrations/2026_10_09_235959_reconcile_p0_mysql_applied_constraints.php
           php -l tests/Feature/ProductionMysqlSchemaP0Test.php
       - name: Verify offline schema and migration-ledger decision matrix
         run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_inventory_offline_triage.py' -v
