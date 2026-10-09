@@ -27,8 +27,8 @@ final class McpStagingSyntheticCredentialRotator
         // Separate human approval, boot arming and secret are all necessary.
         if (config('app.env') !== 'staging'
             || config('canovia_staging.isolated') !== true
-            || config('canovia_staging.database_mode') !== 'render_postgres'
-                && ! app()->runningUnitTests()
+            || (config('canovia_staging.database_mode') !== 'render_postgres'
+                && ! app()->runningUnitTests())
             || config('canovia_staging.web_access_enabled') !== false
             || config('canovia_staging.web_access_explicitly_approved') !== false
             || config('canovia_staging.allow_synthetic_password_rotation') !== true
