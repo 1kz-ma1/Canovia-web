@@ -2,7 +2,54 @@
 
 Date: 2026-10-09
 Decision: **Keycloak is a conditional technical frontrunner, not yet a configured IdP**.
-Stage DB: **Render Free Postgres created and available; app NOT connected yet**.
+Stage DB: **Existing isolated Render Free PostgreSQL 17 connected to staging Web; live DB/schema health and external lockdown accepted on 2026-10-09**.
+
+## CURRENT acceptance — live isolated PostgreSQL cutover (2026-10-09)
+
+The existing **Free** Web service `srv-db43l4nlk1mc73emseig` is now
+running against the existing **Free PostgreSQL 17** resource
+`dpg-db43rbbncjis73bmigi0-a` in Singapore. This replaces the earlier
+SQLite-only status described in the historical preparation steps below.
+The environment update and deploy were **staging only**, with no
+new Render resource, external IP allowance, new paid plan, Aiven change,
+production secret, synthetic owner, IdP tenant or OAuth/MCP enablement.
+
+- Stage deployment: `dep-db460sflk1mc73ev4g3g`,
+  commit `f2f969aa43d2c2a58e0030db727a195343cc5b2e`;
+  Render confirmed **live**.
+- Sanitized boot log confirmed
+  `configured database mode=render_postgres (connection not yet verified)`
+  and `MCP isolated staging migrations: completed (details suppressed)`.
+- The [external HTTPS acceptance workflow](https://github.com/1kz-ma1/Canovia-web/actions/runs/37875765667)
+  was **rerun following this deployment** and completed successfully.
+  `/up=200` depends on a live connection, exact database identity and
+  six required migration tables in PostgreSQL mode, so the successful
+  independent probe is additional proof beyond the boot marker.
+- Public login, account, OAuth, MCP GET/POST, legacy health and static
+  asset probes all remained **503** with generic non-cached responses.
+- The earlier attempts failed closed at boot for mismatched
+  `DB_DATABASE`, then missing `DB_URL`, then missing
+  `CANOVIA_STAGING_POSTGRES_USER`. The name was corrected using
+  nonsecret Render metadata; the user entered the **private** internal
+  database URL directly in Render Environment. No secret value is
+  included in this document or GitHub.
+- The existing DB's external IP allowlist stays empty. Metadata
+  inspection confirmed PostgreSQL was available; no public SQL access
+  or table browsing was used. **Do not infer created synthetic users or
+  successful end-to-end OAuth from this acceptance.**
+
+**Remaining gates:** safely provision a synthetic-only owner inside
+the isolated app without opening registration; select and verify a
+real IdP/ChatGPT client registration, PKCE, exact audience and introspection;
+independently review access before enabling any browser/OAuth/MCP flags.
+Keep both staging Web access flags and all OAuth/MCP switches **OFF**.
+Free PostgreSQL expiry remains **2026-11-08 UTC**, with no free backups.
+Do not store important or production data in this environment.
+
+**Historical note:** headings and statements below dated before this
+cutover preserve implementation reasoning and are not the current live
+status. The earlier manual attachment steps have now been executed.
+
 
 ## Why provider selection is a hard compatibility gate
 
