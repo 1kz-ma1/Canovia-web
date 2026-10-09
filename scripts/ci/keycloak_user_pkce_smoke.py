@@ -169,7 +169,19 @@ def authorize(username: str, password: str, client_id: str, redirect: str,
         with opener.open(f"{BASE}/auth?{params}", timeout=9) as response:
             html = response.read(98305)
             require(response.status == 200, "auth_page_http_failure")
-    except CallbackRedirect:
+    except CallbackRedirect as exc:
+        # A newly DCR-registered client may redirect immediately with an
+        # OAuth error (before login), including an unapproved policy/scope.
+        # Reveal only a fixed allowlisted error name, never the callback
+        # URL, authorization code, state or credentials.
+        data = urllib.parse.parse_qs(
+            urllib.parse.urlsplit(exc.url).query)
+        reason = data.get("error", ["unknown"])[0]
+        allowed = {"invalid_request", "invalid_scope",
+                   "unauthorized_client", "access_denied",
+                   "invalid_target", "server_error"}
+        if reason in allowed:
+            raise Gap("oauth_authorization_redirect_" + reason) from None
         raise Gap("authorization_skipped_user_login") from None
     except (urllib.error.URLError, TimeoutError):
         raise Gap("auth_page_unavailable") from None
