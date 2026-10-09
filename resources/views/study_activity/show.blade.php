@@ -50,7 +50,10 @@
                 <div class="mt-4">
                     @if ($primaryKey === 'question_practice')
                         @if ($canUseAiPractice)
-                            <a href="{{ route('plans.tasks.study_practice.show', [$plan, $task]) }}" class="btn-primary">✦ AI演習で進める</a>
+                            <div class="flex flex-wrap gap-2">
+                                <a href="{{ route('plans.tasks.learning.index', [$plan, $task]) }}" class="btn-primary" data-adaptive-learning-direct-entry>1問から学習する</a>
+                                <a href="{{ route('plans.tasks.study_practice.show', [$plan, $task]) }}" class="btn-secondary">✦ AI演習で進める</a>
+                            </div>
                         @else
                             <p class="text-sm text-slate-400">このTaskには問題演習が合っています。利用可能な問題集や過去問で確認してください。</p>
                         @endif
