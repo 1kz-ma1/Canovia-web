@@ -46,7 +46,9 @@ def register_client(registration_endpoint: str,
         "grant_types": ["authorization_code"],
         "response_types": ["code"],
         "token_endpoint_auth_method": "none",
-        "scope": "openid " + MCP_SCOPE,
+        # Keycloak's default authenticated registration policy rejects
+        # attaching arbitrary non-default client scopes at registration.
+        # No extra privileges requested by an untrusted caller here.
     }
     body = json.dumps(payload).encode("utf-8")
     headers = {"Accept": "application/json",
