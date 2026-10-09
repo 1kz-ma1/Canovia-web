@@ -149,6 +149,12 @@
                         P1：{{ $apCandidateAudit['priority_counts']['P1'] }}問（独自解説・新規問題・重要計算）／
                         P2：{{ $apCandidateAudit['priority_counts']['P2'] }}問（その他）
                     </p>
+                    <p class="mt-2 text-xs text-amber-200" data-ap-a-revision-proposal-summary>
+                        内容再確認：6問中 {{ $apCandidateAudit['content_revision_proposals_current_count'] }}問に未承認の校正提案あり。
+                        内容変更による失効 {{ $apCandidateAudit['content_revision_proposals_stale_count'] }}問、
+                        正式承認 {{ $apCandidateAudit['content_revision_proposals_approved_count'] }}問。
+                        提案は実際の試験問題には適用されていません。
+                    </p>
                     <p class="mt-2 text-xs text-slate-300" data-ap-a-choice-draft-summary>
                         Canovia独自問題の選択肢理由案：
                         {{ $apCandidateAudit['choice_draft_current_count'] }}/45問（誤答135肢）、
@@ -206,6 +212,26 @@
                                     </div>
                                     <p class="font-semibold text-slate-100">正答：{{ $item['answer'] }}</p>
                                     <p class="whitespace-pre-wrap">Canovia解説：{{ $item['explanation'] }}</p>
+                                    @if($item['content_revision_proposal_status'] === 'draft_for_review')
+                                        <div class="rounded-lg border border-amber-500/30 p-3" data-ap-a-content-proposal="{{ $item['key'] }}">
+                                            <p class="font-semibold text-amber-200">問題・解説の修正案（未適用・未承認）</p>
+                                            <p class="mt-1 text-slate-300">{{ $item['content_revision_proposal']['summary'] }}</p>
+                                            <p class="mt-2 font-semibold text-slate-200">提案する設問</p>
+                                            <p class="whitespace-pre-wrap text-slate-300">{{ $item['content_revision_proposal']['proposed_prompt'] }}</p>
+                                            <p class="mt-2 font-semibold text-slate-200">提案する解説</p>
+                                            <p class="whitespace-pre-wrap text-slate-300">{{ $item['content_revision_proposal']['proposed_explanation'] }}</p>
+                                            <p class="mt-2 text-xs text-amber-200">監修・原典再確認後に次のDraft版へ反映してください。正答・選択肢は変更しません。</p>
+                                            @foreach($item['content_revision_proposal']['sources'] as $sourceUrl)
+                                                @if(str_starts_with($sourceUrl, 'https://'))
+                                                    <p class="mt-1"><a href="{{ $sourceUrl }}" class="text-cyan-300 underline"
+                                                        target="_blank" rel="noopener noreferrer">校正案の参考資料を開く</a></p>
+                                                @endif
+                                            @endforeach
+                                        </div>
+                                    @elseif($item['content_revision_proposal_status'] === 'stale_needs_reaudit')
+                                        <p class="text-rose-300" data-ap-a-content-proposal-stale>修正案の根拠が現行の設問・回答と不一致です。再審査が必要です。</p>
+                                    @endif
+
                                     @if($item['choice_draft_state'] === 'current_unreviewed_draft')
                                         <div class="rounded-lg border border-cyan-500/20 p-3" data-ap-a-choice-draft="{{ $item['key'] }}">
                                             <p class="font-semibold text-cyan-200">Canovia独自問題の誤答理由案（未監修）</p>
