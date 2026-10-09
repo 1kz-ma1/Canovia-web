@@ -17,6 +17,9 @@ on:
       - 'scripts/ci/p0_mysql_disposable_restore_smoke.sh'
       - 'scripts/ops/p0_mysql_readonly_preflight.php'
       - 'scripts/ops/p0_mysql_operator_select_only_collect.sh'
+      - 'scripts/ci/p0_mysql_metadata_grants_guard.py'
+      - 'tests/ci/test_p0_mysql_metadata_grants_guard.py'
+      - 'scripts/ci/p0_mysql_metadata_visibility_smoke.sh'
       - 'scripts/sql/p0_mysql_select_only_data_preflight.sql'
       - 'scripts/ci/p0_mysql_select_only_data_preflight_import.py'
       - 'tests/ci/test_p0_mysql_select_only_data_preflight_import.py'
@@ -125,6 +128,15 @@ jobs:
         run: php artisan test tests/Feature/ProductionMysqlSchemaP0Test.php --fail-on-skipped
       - name: Final MySQL migration rerun after interrupted-DDL recovery
         run: php artisan migrate --force --no-interaction
+      - name: Verify narrow metadata visibility, denied user data reads and grant fail-closed
+        env:
+          CANOVIA_P0_DISPOSABLE_ROOT_PASSWORD: ci-only-root-password
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_metadata_grants_guard.py' -v
+          bash -n scripts/ci/p0_mysql_metadata_visibility_smoke.sh
+          bash scripts/ci/p0_mysql_metadata_visibility_smoke.sh
+
       - name: Verify SELECT-only production schema inventory on disposable MySQL
         run: |
           php -l scripts/ci/p0_mysql_readonly_schema_inventory_check.php
