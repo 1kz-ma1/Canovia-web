@@ -35,6 +35,9 @@ class LearningImmersionShellV5888Test extends TestCase
         $this->assertStringContainsString('data-learning-immersion-header', $layout);
         $this->assertStringContainsString('data-learning-immersion-exit', $layout);
         $this->assertStringContainsString('data-learning-immersion-home', $layout);
+        // viewport-fit=cover requires the iOS status-bar safe area above the exit link.
+        $this->assertStringContainsString('calc(env(safe-area-inset-top, 0px) + 0.5rem)', $layout);
+        $this->assertStringContainsString('min-h-11 inline-flex items-center', $layout);
         $this->assertStringContainsString('@if (! $learningImmersion)', $layout);
         $this->assertStringContainsString('@if ($learningImmersion)', $layout);
     }

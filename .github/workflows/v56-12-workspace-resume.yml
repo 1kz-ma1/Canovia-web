@@ -24,6 +24,8 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run build
+      - name: Learning one-question pager client regression
+        run: node --test tests/js/study-practice-one-question.test.mjs
       - name: PHP lint
         run: |
           php -l app/Http/Controllers/HomeController.php
