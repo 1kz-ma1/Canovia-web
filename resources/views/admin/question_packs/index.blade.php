@@ -30,7 +30,7 @@
                     <p class="text-xs font-bold uppercase tracking-[.14em] text-violet-300">BUNDLED PACKS</p>
                     <h2 class="mt-1 text-xl font-black text-slate-50">Canovia同梱問題集</h2>
                     <p class="mt-2 max-w-3xl text-xs leading-5 text-slate-500">
-                        リポジトリで管理している検証済みPackです。まずDraftへ取り込み、内容を確認してからpublishedへ変更します。
+                        リポジトリで管理しているPackです。未監修の候補も含まれるため、同梱や機械検査の成功だけで監修済みとは扱いません。まずDraftへ取り込み、個別に品質・利用条件を確認してください。
                     </p>
                 </div>
                 <span class="badge badge-slate">{{ ($bundledPacks ?? collect())->count() }} packs</span>
