@@ -65,6 +65,46 @@ final class ApExamCandidateReviewQueueTest extends TestCase
         $this->assertDatabaseCount('learning_runs', 0);
     }
 
+    public function test_independently_calculated_answers_match_actual_bank_choice_labels(): void
+    {
+        $items = collect(app(ApExamCandidateAuditService::class)->inspect()['items'])
+            ->keyBy('key');
+
+        // Calculate independently of stored grading rules or explanations;
+        // compare the result with the *actual selected choice label*.
+        $expected = [
+            'net-mtu-002' => (1500 - 20 - 20).'バイト',
+            'calc-mm1-015' => (100 * 0.5).'%',
+            'calc-bayes-disease-025' => '約'.number_format(
+                (0.02 * 0.9) / (0.02 * 0.9 + 0.98 * 0.05) * 100, 1).'%',
+            'calc-mips-026' => number_format(2_000_000_000 / 2.5 / 1_000_000).'MIPS',
+            'calc-da-035' => number_format(51 / 255 * 5, 1).'V',
+            'service-sla-052' => '約'.number_format(30 * 24 * 60 * 0.001, 1).'分',
+            'strategy-break-even-053' => number_format(6_000_000 / (5_000 - 2_000)).'件',
+            'arch-raid5-056' => ((4 - 1) * 2).'TB',
+            'strategy-roi-007' => (int) (80 / 400 * 100).'%',
+        ];
+        $this->assertCount(9, $expected);
+
+        foreach ($expected as $key => $expectedLabel) {
+            $item = $items->get($key);
+            $this->assertNotNull($item, "Missing arithmetic question {$key}");
+            $chosen = collect($item['choices'])->firstWhere('id', $item['answer']);
+            $this->assertNotNull($chosen, "Answer missing among choices: {$key}");
+            $this->assertSame((string) $expectedLabel, $chosen['label'],
+                "Arithmetic and answer choice diverged for {$key}");
+        }
+
+        // The sign of both indices makes the EVM answer objectively checkable.
+        $evm = $items->get('pm-evm-051');
+        $this->assertNotNull($evm);
+        $this->assertSame(-20, 80 - 100); // schedule variance
+        $this->assertSame(-10, 80 - 90);  // cost variance
+        $evmChoice = collect($evm['choices'])->firstWhere('id', $evm['answer']);
+        $this->assertStringContainsString('遅れており', $evmChoice['label']);
+        $this->assertStringContainsString('コストも予算超過', $evmChoice['label']);
+    }
+
     public function test_only_authorized_admin_can_read_source_answers_and_pending_review_queue(): void
     {
         $this->get(route('admin.question_packs.index'))
