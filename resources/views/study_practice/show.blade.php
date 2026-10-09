@@ -797,12 +797,17 @@
                         data-draft-url="{{ route('plans.tasks.study_practice.draft', [$plan, $task]) }}"
                         data-draft-session-id="{{ $currentPracticeSession->id }}"
                         data-draft-session-token="{{ $currentPracticeSession->session_token }}"
+                        data-study-practice-one-question
                         data-draft-saved-at="{{ $currentPracticeSession->draft_saved_at?->toIso8601String() }}"
                     @endif
                 >
                     @csrf
+                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.035] p-3" data-study-practice-pager hidden>
+                        <p class="text-sm font-bold text-cyan-200" aria-live="polite" data-study-practice-question-progress></p>
+                        <p class="text-xs text-slate-400">1問ずつ表示します。回答はこれまでどおり自動保存し、採点は最後にまとめて行います。</p>
+                    </div>
                     @foreach ($questions as $index => $question)
-                        <fieldset class="rounded-2xl border border-white/8 bg-white/[0.025] p-4">
+                        <fieldset class="rounded-2xl border border-white/8 bg-white/[0.025] p-4 scroll-mt-28" tabindex="-1" data-study-practice-question>
                             <legend class="px-1 text-sm font-black text-slate-100">Q{{ $index + 1 }}</legend>
                             <p class="canovia-study-question mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-200">{{ $question['prompt'] }}</p>
                             @if (! empty($question['source_reference']))
@@ -856,13 +861,17 @@
                                             <textarea name="{{ $fieldName }}" class="form-control mt-2 min-h-[168px] w-full resize-y sm:min-h-[192px]" rows="6" placeholder="{{ ($field['placeholder'] ?? '') ?: '回答・考え方を入力' }}">{{ $fieldValue }}</textarea>
                                         @endif
 
-                                        @error($fieldError)<p class="mt-2 text-sm font-semibold text-rose-300">{{ $message }}</p>@enderror
+                                        @error($fieldError)<p class="mt-2 text-sm font-semibold text-rose-300" data-practice-answer-error>{{ $message }}</p>@enderror
                                     </div>
                                 @endforeach
                             </div>
                         </fieldset>
                     @endforeach
-                    <button type="submit" class="btn-primary">回答をまとめて評価へ進む</button>
+                    <div class="flex flex-wrap gap-3" data-study-practice-pager hidden>
+                        <button type="button" class="btn-secondary min-h-11" data-study-practice-previous>← 前の問題</button>
+                        <button type="button" class="btn-primary min-h-11" data-study-practice-next>次の問題 →</button>
+                    </div>
+                    <button type="submit" class="btn-primary" data-study-practice-final-submit>回答をまとめて評価へ進む</button>
                 </form>
                     </div>
                 </details>
