@@ -140,3 +140,24 @@ alone. The default SQLite stage and production `/up` are unchanged.
 A disposable private Docker network test uses the pinned DB hostname
 with a fake non-Render PostgreSQL container, exercising the exact
 startup guard and HTTP lockdown; this does not touch the actual stage DB.
+
+
+## Render-native Postgres username binding (prepared only)
+
+The internal PostgreSQL URL/username is not available through the
+connected Render metadata actions. For safe cutover, use a reviewed
+Render Blueprint's `fromDatabase` references to the **existing**
+`canovia-mcp-staging-db` (`connectionString` into `DB_URL`,
+`user` into `CANOVIA_STAGING_POSTGRES_USER`). Both values remain
+inside Render; the startup guard checks exact equality and still
+restricts the destination host, DB name, ID, and port.
+
+A reference-only file, `deploy/render-mcp-staging-existing-postgres-cutover.yaml`,
+documents the intended change and keeps all application/MCP/public
+access switches OFF. **Do not deploy it blindly**: Render Blueprints
+can create duplicate services if an existing service isn't adopted in
+the reviewed preview. Confirm the stage's actual Render service ID and
+the database ID; if either differs or any new paid resource is proposed,
+cancel. The production Canovia Web service and database are never part
+of this wiring. Until a human-approved sync, the staging Web remains on
+disposable SQLite. No password or internal URL needs to be sent to chat.

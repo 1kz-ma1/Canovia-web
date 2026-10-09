@@ -15,6 +15,7 @@ on:
       - 'tests/Feature/McpIsolatedStagingBootstrapTest.php'
       - '.github/workflows/mcp-staging-docker-smoke.yml'
       - 'deploy/render-mcp-staging.yaml'
+      - 'deploy/render-mcp-staging-existing-postgres-cutover.yaml'
   workflow_dispatch:
 
 permissions:
@@ -175,6 +176,7 @@ jobs:
             -e CANOVIA_STAGING_MCP_EXPLICITLY_APPROVED=false \
             -e CANOVIA_STAGING_DB_MODE=render_postgres \
             -e CANOVIA_STAGING_POSTGRES_ID=dpg-db43rbbncjis73bmigi0-a \
+            -e CANOVIA_STAGING_POSTGRES_USER=canovia_mcp_staging_db_user \
             -e CANOVIA_MCP_DISCOVERY_ENABLED=false \
             -e CANOVIA_MCP_TOKEN_INTROSPECTION_ENABLED=false \
             -e CANOVIA_MCP_ACCOUNT_LINK_ENABLED=false \

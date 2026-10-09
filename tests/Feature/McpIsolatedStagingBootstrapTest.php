@@ -31,6 +31,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             'canovia_staging.web_access_enabled' => false,
             'canovia_staging.database_mode' => 'render_postgres',
             'canovia_staging.postgres_id' => 'dpg-db43rbbncjis73bmigi0-a',
+            'canovia_staging.postgres_user' => 'canovia_mcp_staging_db_user',
             'database.default' => 'sqlite',
         ]);
 
@@ -59,6 +60,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             'canovia_staging.web_access_enabled' => false,
             'canovia_staging.database_mode' => 'render_postgres',
             'canovia_staging.postgres_id' => 'dpg-db43rbbncjis73bmigi0-a',
+            'canovia_staging.postgres_user' => 'canovia_mcp_staging_db_user',
             'database.default' => 'pgsql',
             'database.connections.pgsql.database' => 'canovia_mcp_staging_db',
             'database.connections.pgsql.url' =>
@@ -82,6 +84,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             'canovia_staging.isolated' => true,
             'canovia_staging.database_mode' => 'render_postgres',
             'canovia_staging.postgres_id' => 'dpg-db43rbbncjis73bmigi0-a',
+            'canovia_staging.postgres_user' => 'canovia_mcp_staging_db_user',
             'database.default' => 'pgsql',
             'database.connections.pgsql.database' => 'canovia_mcp_staging_db',
             'database.connections.pgsql.url' =>
@@ -129,6 +132,8 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             ['APP_ENV' => 'production'],
             ['CANOVIA_STAGING_ISOLATED' => 'false'],
             ['APP_DEBUG' => 'true'],
+            ['CANOVIA_STAGING_POSTGRES_USER' => 'wrong_staging_user'],
+            ['CANOVIA_STAGING_POSTGRES_USER' => 'UPPERCASE'],
             ['DB_CONNECTION' => 'mysql'],
             ['DB_DATABASE' => 'live'],
             ['DB_HOST' => 'production.example.test'],
@@ -168,12 +173,15 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             'CANOVIA_STAGING_POSTGRES_ID' => 'dpg-db43rbbncjis73bmigi0-a',
             'DB_CONNECTION' => 'pgsql',
             'DB_DATABASE' => 'canovia_mcp_staging_db',
+            'CANOVIA_STAGING_POSTGRES_USER' => 'canovia_mcp_staging_db_user',
             'DB_URL' => $url,
         ]);
         $this->assertTrue($valid->isSuccessful(), $valid->getErrorOutput());
 
         foreach ([
             ['CANOVIA_STAGING_POSTGRES_ID' => 'dpg-other-instance'],
+            ['CANOVIA_STAGING_POSTGRES_USER' => ''],
+            ['CANOVIA_STAGING_POSTGRES_USER' => 'wrong_user'],
             ['DB_CONNECTION' => 'mysql'],
             ['DB_DATABASE' => 'production'],
             ['DB_URL' => 'postgresql://prod:prod@aiven.example.test/prod'],
@@ -199,6 +207,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
                 'CANOVIA_STAGING_POSTGRES_ID' => 'dpg-db43rbbncjis73bmigi0-a',
                 'DB_CONNECTION' => 'pgsql',
                 'DB_DATABASE' => 'canovia_mcp_staging_db',
+                'CANOVIA_STAGING_POSTGRES_USER' => 'canovia_mcp_staging_db_user',
                 'DB_URL' => $url,
                 ...$unsafe,
             ]);
@@ -210,6 +219,59 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
         }
     }
 
+    public function test_staging_postgres_accepts_the_actual_render_username_reference_not_a_guessed_constant(): void
+    {
+        // An actual Render Postgres username is unavailable through the
+        // secret-free metadata connector. Test a distinct, non-hardcoded
+        // name; only a matching URL and Render reference may pass.
+        $user = 'render_generated_stage_user_2026';
+        $url = 'postgresql://'.$user
+            .':synthetic-password-never-used@dpg-db43rbbncjis73bmigi0-a:5432/'
+            .'canovia_mcp_staging_db';
+        $valid = [
+            'CANOVIA_STAGING_DB_MODE' => 'render_postgres',
+            'CANOVIA_STAGING_POSTGRES_ID' => 'dpg-db43rbbncjis73bmigi0-a',
+            'CANOVIA_STAGING_POSTGRES_USER' => $user,
+            'DB_CONNECTION' => 'pgsql',
+            'DB_DATABASE' => 'canovia_mcp_staging_db',
+            'DB_URL' => $url,
+        ];
+
+        $this->assertTrue($this->guard($valid)->isSuccessful());
+        foreach ([
+            ['CANOVIA_STAGING_POSTGRES_USER' => 'wrong_user'],
+            ['CANOVIA_STAGING_POSTGRES_USER' => ''],
+            ['CANOVIA_STAGING_POSTGRES_USER' => 'not valid'],
+            ['CANOVIA_STAGING_POSTGRES_USER' => 'SUPERUSER'],
+            ['DB_URL' => str_replace($user, 'wrong_user', $url)],
+        ] as $bad) {
+            $this->assertSame(42, $this->guard(array_replace($valid, $bad))->getExitCode());
+        }
+    }
+
+    public function test_render_native_postgres_cutover_blueprint_is_reference_only_and_secretless(): void
+    {
+        $path = base_path('deploy/render-mcp-staging-existing-postgres-cutover.yaml');
+        $this->assertFileExists($path);
+        $contents = file_get_contents($path);
+
+        $this->assertStringContainsString('MANUAL REFERENCE ONLY', $contents);
+        $this->assertStringContainsString('name: canovia-mcp-staging', $contents);
+        $this->assertStringContainsString('autoDeployTrigger: off', $contents);
+        $this->assertStringContainsString('name: canovia-mcp-staging-db', $contents);
+        $this->assertStringContainsString('property: connectionString', $contents);
+        $this->assertStringContainsString('property: user', $contents);
+        $this->assertStringContainsString('key: DB_URL', $contents);
+        $this->assertStringContainsString('key: CANOVIA_STAGING_POSTGRES_USER', $contents);
+        $this->assertStringContainsString('value: render_postgres', $contents);
+        $this->assertStringContainsString('value: "false"', $contents);
+        $this->assertStringNotContainsString('    databases:', $contents);
+        $this->assertStringNotContainsString('://canovia_mcp_staging_db_user:', $contents);
+        $this->assertStringNotContainsString('property: password', $contents);
+        $this->assertStringNotContainsString('key: APP_KEY', $contents);
+        $this->assertStringNotContainsString('name: Canovia\n', $contents);
+    }
+
     public function test_staging_postgres_never_activates_if_no_url_or_on_default_sqlite_mode(): void
     {
         $withoutUrl = $this->guard([
@@ -217,6 +279,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             'CANOVIA_STAGING_POSTGRES_ID' => 'dpg-db43rbbncjis73bmigi0-a',
             'DB_CONNECTION' => 'pgsql',
             'DB_DATABASE' => 'canovia_mcp_staging_db',
+            'CANOVIA_STAGING_POSTGRES_USER' => 'canovia_mcp_staging_db_user',
         ]);
         $this->assertSame(42, $withoutUrl->getExitCode());
 

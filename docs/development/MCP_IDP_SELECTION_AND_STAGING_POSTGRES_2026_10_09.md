@@ -62,7 +62,7 @@ Render database metadata action. **Never paste a DB password or complete URL int
 GitHub, ChatGPT, commits, screenshots, shell command arguments or deploy logs.**
 
 1. In the [Postgres Dashboard](https://dashboard.render.com/d/dpg-db43rbbncjis73bmigi0-a) use **Connect → Internal Database URL**. Verify the hostname is exactly `dpg-db43rbbncjis73bmigi0-a` and the database name is `canovia_mcp_staging_db`. If Render issued a *different* internal hostname, **stop and update the pinned guard by reviewed PR; do not bypass it**.
-2. After the PR implementing the pinned guard and `pdo_pgsql` has passed CI and merged, go to the [Canovia staging Web → Environment](https://dashboard.render.com/web/srv-db43l4nlk1mc73emseig). Set **only that staging service** `DB_URL` to the internal URL in the private Render UI; set `DB_CONNECTION=pgsql`, `DB_DATABASE=canovia_mcp_staging_db`, `CANOVIA_STAGING_DB_MODE=render_postgres`, `CANOVIA_STAGING_POSTGRES_ID=dpg-db43rbbncjis73bmigi0-a`. Leave `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, `DATABASE_URL` and production integration secrets absent.
+2. After the PR implementing the pinned guard and `pdo_pgsql` has passed CI and merged, go to the [Canovia staging Web → Environment](https://dashboard.render.com/web/srv-db43l4nlk1mc73emseig). Set **only that staging service** `DB_URL` to the internal URL and `CANOVIA_STAGING_POSTGRES_USER` to the matching actual DB username using Render's private UI (ideally the two Render-native `fromDatabase` references described below); set `DB_CONNECTION=pgsql`, `DB_DATABASE=canovia_mcp_staging_db`, `CANOVIA_STAGING_DB_MODE=render_postgres`, `CANOVIA_STAGING_POSTGRES_ID=dpg-db43rbbncjis73bmigi0-a`. Leave `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, `DATABASE_URL` and production integration secrets absent.
 3. Keep `CANOVIA_STAGING_WEB_ACCESS_ENABLED=false` and every MCP/OAuth flag OFF. Never import Aiven data or a production Laravel APP_KEY.
 4. **Manual deploy**, since the staging service has autoDeploy OFF. Do **not** trigger a deploy while the DB connection variables are only partially set. If the guard rejects any value, leave staging closed, investigate the DB URL **privately**, and do not weaken the host policy.
 5. In Render logs verify migrations complete without connection details printed; `/up=200`, login/OAuth/MCP GET/POST=503 from independent GitHub Actions. On the DB Dashboard, inspect table creation for the synthetic schema only.
@@ -130,3 +130,48 @@ its migrations/DB health check must pass, and login/OAuth/MCP must
 still return HTTP 503. That is still **not a live connection** to
 the created Render PostgreSQL; the actual internal URL must be set
 privately in the Render staging Environment first.
+
+
+## Secretless, Render-native staging DB attachment (2026-10-09, prepared — not applied)
+
+Render's official Blueprint `fromDatabase` references can retrieve the
+**existing** database's internal `connectionString` and `user` without
+copying either value to a GitHub repository, chat conversation or command
+line. A manual-reference Blueprint is provided at
+`deploy/render-mcp-staging-existing-postgres-cutover.yaml`.
+
+The previous literal staging DB username `canovia_mcp_staging_db_user`
+was an **unverified assumption** (the Render metadata connector reports
+the database name and resource ID, not its actual username). To prevent
+mistaking a guess for evidence, the startup guard, staging HTTP `/up`
+health check and synthetic-only account bootstrap now require an
+independent `CANOVIA_STAGING_POSTGRES_USER` value to exactly match the
+`user` in the configured `DB_URL`. Only Render's verified
+`fromDatabase: {name: canovia-mcp-staging-db, property: user}` reference
+should supply this value. The host/resource ID, scheme, DB name, port,
+absence of query/fragment, DB isolation and closed MCP gates remain enforced.
+
+**Important: this is only a reference; do not blindly create a new
+Blueprint.** Render may replicate resources with suffixes if a newly
+created Blueprint matches existing infrastructure. The only acceptable
+preview identifies the **existing** staging Web service
+`srv-db43l4nlk1mc73emseig` and the **existing** Free PostgreSQL
+`dpg-db43rbbncjis73bmigi0-a`, and shows **no new Web/DB,
+price upgrade, extra secrets, production service or automatic deploy**.
+An existing Blueprint managing this service must be edited instead of
+creating a second one. In Render, generate/import the existing service's
+configuration and keep automatic Blueprint sync **disabled**. Compare
+the prepared reference line by line and review the preview before
+authorizing any sync. If the UI cannot guarantee this, use the existing
+staging Web service's private Environment settings; **never** supply a
+URL/credential through chat.
+
+No Blueprint has been created/synced and no Render DB connection has been
+changed by this PR. The standalone staging SQLite service remains live
+and closed with `CANOVIA_STAGING_DB_MODE=sqlite`. The private Postgres
+connection has not been tested on Render.
+
+References:
+- https://render.com/docs/blueprint-spec
+- https://render.com/docs/infrastructure-as-code
+- https://render.com/tutorials/postgres-on-render/connection-strings

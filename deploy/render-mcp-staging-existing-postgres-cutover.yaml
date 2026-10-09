@@ -1,0 +1,89 @@
+# MANUAL REFERENCE ONLY — NOT AUTO-SYNCED, NOT YET APPLIED.
+#
+# Render Blueprint documentation:
+# https://render.com/docs/blueprint-spec
+#
+# Apply ONLY after a human checks the Render Blueprint preview identifies
+# the EXISTING staging Web service ID srv-db43l4nlk1mc73emseig and
+# EXISTING Free PostgreSQL ID dpg-db43rbbncjis73bmigi0-a.
+# If Render proposes creating any new Web/DB service, cancel and use
+# the staging Dashboard's Environment configuration instead.
+#
+# This file NEVER contains a connection string or DB password.
+# fromDatabase resolves internal connection values inside Render.
+# Keep AUTO SYNC OFF in Render, not only autoDeployTrigger: off here.
+# Production Canovia/HINANEX/Aiven are OUT OF SCOPE.
+services:
+  - type: web
+    name: canovia-mcp-staging
+    runtime: docker
+    repo: https://github.com/1kz-ma1/Canovia-web
+    branch: main
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile.mcp-staging
+    dockerContext: .
+    autoDeployTrigger: off
+    healthCheckPath: /up
+    envVars:
+      - key: APP_ENV
+        value: staging
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_URL
+        value: https://canovia-mcp-staging.onrender.com
+      - key: CANOVIA_STAGING_ISOLATED
+        value: "true"
+      - key: CANOVIA_STAGING_WEB_ACCESS_ENABLED
+        value: "false"
+      - key: CANOVIA_STAGING_MCP_EXPLICITLY_APPROVED
+        value: "false"
+      - key: CANOVIA_STAGING_ALLOW_SYNTHETIC_OWNER_BOOTSTRAP
+        value: "false"
+      - key: CANOVIA_STAGING_DB_MODE
+        value: render_postgres
+      - key: CANOVIA_STAGING_POSTGRES_ID
+        value: dpg-db43rbbncjis73bmigi0-a
+      - key: CANOVIA_STAGING_POSTGRES_USER
+        fromDatabase:
+          name: canovia-mcp-staging-db
+          property: user
+      - key: DB_URL
+        fromDatabase:
+          name: canovia-mcp-staging-db
+          property: connectionString
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_DATABASE
+        value: canovia_mcp_staging_db
+      - key: SESSION_DRIVER
+        value: file
+      - key: SESSION_COOKIE
+        value: canovia_mcp_staging_session
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: SESSION_SAME_SITE
+        value: lax
+      - key: CACHE_STORE
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: MAIL_MAILER
+        value: log
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: CANOVIA_MCP_DISCOVERY_ENABLED
+        value: "false"
+      - key: CANOVIA_MCP_TOKEN_INTROSPECTION_ENABLED
+        value: "false"
+      - key: CANOVIA_MCP_ACCOUNT_LINK_ENABLED
+        value: "false"
+      - key: CANOVIA_MCP_PLAN_CONSENT_ENABLED
+        value: "false"
+      - key: CANOVIA_MCP_DELEGATED_POLICY_ENABLED
+        value: "false"
+      - key: CANOVIA_MCP_TOOLS_ENABLED
+        value: "false"
+# Deliberately no 'databases:' block (must reference already-existing Free DB).
+# Deliberately no APP_KEY entry: existing staging-specific secret is retained
+# only if the preview confirms that the EXISTING Web service is targeted.
