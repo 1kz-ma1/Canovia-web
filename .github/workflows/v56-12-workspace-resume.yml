@@ -157,6 +157,9 @@ jobs:
           php -l config/canovia_staging.php
           php -l tests/Feature/McpIsolatedStagingBootstrapTest.php
           sh -n docker/mcp-staging-start.sh
+          php -l app/Services/McpStagingSyntheticPlanFixtureBootstrap.php
+          php -l tests/Feature/McpStagingSyntheticPlanFixtureBootstrapTest.php
+          sh -n docker/render-start.sh
           php -l app/Services/McpStagingProviderPreflightService.php
           php -l tests/Feature/McpStagingProviderPreflightTest.php
           php -l routes/console.php
@@ -199,6 +202,9 @@ jobs:
       - run: php artisan migrate --force
       - name: MCP staging synthetic actor and strict PostgreSQL isolation
         run: php artisan test tests/Feature/McpStagingSyntheticActorBootstrapTest.php
+
+      - name: MCP staging synthetic private Plan fixture and fail-closed guards
+        run: php artisan test tests/Feature/McpStagingSyntheticPlanFixtureBootstrapTest.php
 
       - name: MCP isolated staging bootstrap and live service safety regressions
         run: php artisan test tests/Feature/McpIsolatedStagingBootstrapTest.php
