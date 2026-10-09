@@ -276,4 +276,78 @@ final class AdaptiveLearningSingleQuestionV5878Test extends TestCase
         ])->assertSessionHasErrors('question_pack_id');
         $this->assertDatabaseCount('learning_runs', 0);
     }
+
+    public function test_compatible_bank_is_not_hidden_behind_thirty_incompatible_published_packs(): void
+    {
+        [$owner, $plan, $task, $compatible] = $this->fixture(1);
+
+        for ($number = 1; $number <= 30; $number++) {
+            $suffix = str_pad((string) $number, 2, '0', STR_PAD_LEFT);
+            $incompatible = QuestionPack::create([
+                'slug' => 'incompatible-bank-'.$suffix,
+                'title' => 'A-非対応'.$suffix,
+                'exam_code' => 'AP', 'subject' => '科目A',
+                'version' => '1', 'status' => 'published',
+                'downloadable' => true,
+            ]);
+            Question::create([
+                'question_pack_id' => $incompatible->id,
+                'external_key' => 'unsupported-'.$suffix,
+                'source_type' => 'canovia_original',
+                'prompt' => '採点方式が未対応の問題 '.$suffix,
+                'response_schema' => [[
+                    'id' => 'answer', 'type' => 'single_choice',
+                    'choices' => [
+                        ['id' => 'A', 'label' => '選択肢A'],
+                        ['id' => 'B', 'label' => '選択肢B'],
+                    ],
+                ]],
+                'grading_rule' => ['type' => 'manual', 'field_id' => 'answer'],
+                'explanation' => '未対応の採点方式',
+                'difficulty' => 3, 'sort_order' => 1, 'is_active' => true,
+            ]);
+        }
+
+        $this->assertDatabaseCount('question_packs', 31);
+        $this->actingAs($owner)
+            ->get(route('plans.tasks.learning.index', [$plan, $task]))
+            ->assertOk()
+            ->assertSee($compatible->title)
+            ->assertSee('value="'.$compatible->id.'"', false)
+            ->assertDontSee('data-adaptive-learning-no-packs', false)
+            ->assertDontSee('A-非対応01');
+
+        $run = $this->start($owner, $plan, $task, $compatible);
+        $this->answer($owner, $plan, $task, $run)->assertRedirect();
+        $this->assertDatabaseCount('learning_answer_events', 1);
+    }
+
+    public function test_saved_run_is_shown_before_mode_ranking_even_if_bank_was_retired(): void
+    {
+        [$owner, $plan, $task, $pack] = $this->fixture(1);
+        $run = $this->start($owner, $plan, $task, $pack);
+        $this->answer($owner, $plan, $task, $run)->assertRedirect();
+        $pack->update(['status' => 'retired']);
+
+        $response = $this->actingAs($owner)
+            ->get(route('plans.tasks.learning.index', [$plan, $task]))
+            ->assertOk()
+            ->assertSee('data-adaptive-learning-no-packs', false)
+            ->assertSee('data-adaptive-learning-resume', false)
+            ->assertSee(route('plans.tasks.learning.show', [$plan, $task, $run]));
+
+        $html = $response->getContent();
+        $resume = strpos($html, 'data-adaptive-learning-resume');
+        $ranking = strpos($html, 'data-learning-mode-ranking');
+        $this->assertNotFalse($resume);
+        $this->assertNotFalse($ranking);
+        $this->assertLessThan($ranking, $resume);
+
+        $this->actingAs($owner)
+            ->get(route('plans.tasks.learning.show', [$plan, $task, $run]))
+            ->assertOk()->assertSee('正答：');
+        $this->assertDatabaseCount('learning_answer_events', 1);
+        $this->assertDatabaseCount('study_practice_attempts', 0);
+        $this->assertSame(35, $task->fresh()->progress_percent);
+    }
 }

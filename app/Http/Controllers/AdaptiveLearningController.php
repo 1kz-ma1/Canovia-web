@@ -51,11 +51,16 @@ final class AdaptiveLearningController extends Controller
         AdaptiveLearningModeRecommendationService $recommendations)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
+        // Filter eligible packs before applying the display cap. Limiting the
+        // first 30 published packs could hide the only usable Bank entirely.
+        // Lazy batches avoid loading every published pack into memory.
         $packs = QuestionPack::query()->where('status', 'published')
+            ->whereHas('questions', fn ($q) => $q->where('is_active', true))
             ->with(['questions' => fn ($q) => $q->where('is_active', true)])
-            ->orderBy('title')->limit(30)->get()
+            ->orderBy('title')->orderBy('id')->lazy(30)
             ->filter(fn (QuestionPack $pack) =>
-                $pack->questions->contains(fn ($q) => $queue->isSupported($q)))->values();
+                $pack->questions->contains(fn ($q) => $queue->isSupported($q)))
+            ->take(30)->collect();
 
         $availableExamProfiles = $examProfiles->available();
         $examPacks = $packs->filter(fn ($pack) =>
