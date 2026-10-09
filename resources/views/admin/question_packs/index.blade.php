@@ -202,6 +202,35 @@
                             </section>
                         @endif
 
+                        @php($examCheck = ($examPublicationReadiness ?? collect())->get($pack->id))
+                        @if($examCheck)
+                            @php($examStatus = $examCheck['inspection'])
+                            @php($examProfile = $examCheck['profile'])
+                            <section class="mt-4 rounded-xl border border-slate-700 p-4"
+                                     data-exam-pack-readiness="{{ $pack->id }}">
+                                <p class="text-xs font-bold text-slate-200">
+                                    本番形式の模試 · {{ $examProfile['exam_code'] }} {{ $examProfile['subject'] }}
+                                    （{{ $examProfile['question_count'] }}問 / {{ $examProfile['duration_minutes'] }}分）
+                                </p>
+                                <p class="mt-2 text-sm {{ $examStatus['ready'] ? 'text-emerald-300' : 'text-amber-300' }}">
+                                    {{ $examStatus['ready'] ? '模試セット：利用可能' : '模試セット：未完成・未承認' }}
+                                </p>
+                                @if(! $examStatus['ready'])
+                                    <ul class="mt-2 list-inside list-disc space-y-1 text-xs text-amber-200">
+                                        @foreach($examStatus['blocking'] as $reason)
+                                            <li>{{ $reason }}</li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                                <p class="mt-3 text-xs leading-5 text-slate-400">
+                                    通常の問題集公開と本番形式の模試提供は別審査です。
+                                    この問題集の JSON metadata.exam_simulation_profile_key / version と
+                                    exam_simulation_review に版・正答・形式・著作権の確認履歴を記録してください。
+                                    公式形式の出典を確認できても、そのまま出題コンテンツの利用許諾を意味しません。
+                                </p>
+                            </section>
+                        @endif
+
                         <form method="POST" action="{{ route('admin.question_packs.status', $pack) }}" class="mt-4 flex flex-wrap items-center gap-2">
                             @csrf
                             @method('PATCH')
