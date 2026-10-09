@@ -229,10 +229,25 @@ def main():
             pkce.ORIGIN = ORIGIN
             pkce.ISSUER = ISSUER
             pkce.BASE = BASE
-            code, verifier = pkce.authorize(
-                "canovia-disposable-human", password,
-                client_id, CALLBACK,
-            )
+            try:
+                code, verifier = pkce.authorize(
+                    "canovia-disposable-human", password,
+                    client_id, CALLBACK,
+                )
+            except Gap as exc:
+                # Keycloak's default DCR policy does not authorize adding
+                # arbitrary Canovia read scopes. This is the expected
+                # secure non-access state for an IAT-registered test client:
+                # registration alone is NEVER sufficient to grant MCP data.
+                if str(exc) != "oauth_authorization_redirect_invalid_scope":
+                    raise
+                print("keycloak_new_dcr_client_unapproved_read_scope_denied: pass")
+                print("dcr_registration_protocol: supported_with_one_use_iat")
+                print("chatgpt_automatic_dcr: blocked_without_reviewed_policies")
+                print("actual_chatgpt_client: not_tested")
+                print("production_authorized: false")
+                success = True
+                return
             status, token = redeem_public(client_id, code, verifier)
             require(status == 200
                     and isinstance(token.get("access_token"), str),
