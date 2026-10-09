@@ -21,6 +21,7 @@
 - The original **109** available questions include **74 Core + 35 IPA**; 29 Core questions are left outside this candidate to reduce a concentrated topic load. The selected 45 Core IDs and source relationships are embedded per question at `learning_metadata.curation`.
 - Question IDs are unique, each has `ア・イ・ウ・エ` choice labels and a matching answer key; the original prompt and answer are copied without rewriting, and the only deliberate changes are the fixed display order (1–80) and additive source mapping.
 - Initial **tentative** broad-domain split by Core question's category/tag and official source-domain labels: **technology 60, management 8, strategy 12**. This is intentionally **not** an official AP domain distribution. In particular strategy/management coverage and depth should be reviewed against the then-current syllabus before claiming comparability.
+- **CI audit found 35 missing explanations, all in the original official-source pack.** None was written as part of candidate assembly. A reviewed AP mock now requires an independently checked explanation for every question; the exam readiness gate blocks missing explanations. Do not fill with invented or generic answer comments.
 - Automated QA can detect exact normalized prompt matches, unsupported choice formats, missing source references, and inconsistent answers. It **cannot** detect subtle reworded duplicates, missing figures/tables, wrong arithmetic assumptions, learning-level calibration or rights sufficiency.
 
 ## Fail-closed release gates
@@ -29,6 +30,7 @@
 2. Pack metadata `review_state: pending_human_content_and_rights_review` intentionally **blocks ordinary published status** even if all 80 are structurally valid. Neither PWA nor Native Learning Run will see an unapproved candidate.
 3. Complete a question-by-question human checklist:
    - Check source problem/answer for all 35 IPA problems, keeping publisher/year/period/section/question number and confirming IPA usage notices;
+   - Author and independently check solution explanations for **all 35 official-source entries** whose original record has no explanation; mark commentary as Canovia's explanation rather than misattributing it to IPA;
    - Check all 45 original/derived items for accurate wording, calculations, answer keys, explanations, credible distractors, the requirement to say `病気` rather than a decontextualized `異常` in Bayesian exercises, and semantic near-duplicates;
    - Inspect four-option format, 80 unique source questions, subject/syllabus scope, domain breadth and accessibility without lost diagrams, tables or mathematical notation;
    - Record reviewer, review date, issues found/resolved, exact source revision, and rights determination outside the exam profile; do **not** mark reviewed based solely on CI.
