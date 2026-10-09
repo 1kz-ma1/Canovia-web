@@ -143,6 +143,59 @@
                     機械的な台帳検査：{{ $apCandidateQualityReview['structurally_consistent'] ? '一致' : '不一致（要修正）' }}。
                     公開可能：{{ $apCandidateQualityReview['can_publish'] ? 'はい' : 'いいえ' }}。
                 </p>
+                @if(isset($apCandidatePrecheckEvidence))
+                    <div class="mt-4 rounded-xl border border-amber-500/20 p-3"
+                        data-ap-a-v04-precheck-summary>
+                        <p class="text-xs font-bold text-amber-200">技術的な事前精査とIPA出典の検査（正式承認ではありません）</p>
+                        <p class="mt-2 text-xs leading-6 text-slate-300">
+                            重点6問の根拠整理 {{ $apCandidatePrecheckEvidence['p0_technical_prechecks_current'] }}/6、
+                            誤答理由18肢の検討 {{ $apCandidatePrecheckEvidence['p0_wrong_choices_explained'] }}/18、
+                            IPA出典メタデータ {{ $apCandidatePrecheckEvidence['ipa_source_label_fields_present'] }}/35問。
+                            機械的整合性：{{ $apCandidatePrecheckEvidence['structurally_consistent'] ? '一致' : '要修正' }}。
+                        </p>
+                        <p class="mt-2 text-xs leading-6 text-amber-100">
+                            独立した専門監修 {{ $apCandidatePrecheckEvidence['independent_human_approved'] }}問／
+                            最終利用条件承認 {{ $apCandidatePrecheckEvidence['rights_approved'] }}問。
+                            問題本文を利用者に表示する際の出典表記：
+                            {{ $apCandidatePrecheckEvidence['learner_facing_credit_checked'] ? '確認済み' : '未確認・公開前要確認' }}。
+                        </p>
+                        <p class="mt-2 text-xs text-slate-300">
+                            <a href="{{ $apCandidatePrecheckEvidence['ipa_source_policy_url'] }}"
+                                target="_blank" rel="noopener noreferrer" class="text-cyan-300 underline">
+                                IPA：過去問題の利用条件（公式FAQ）
+                            </a>
+                            — 公開問題の教育用途、出典表示、改変明示の条件は最終的に確認してください。
+                        </p>
+                        @if($apCandidatePrecheckEvidence['issues'])
+                            <ul class="mt-2 list-inside list-disc text-xs text-rose-300">
+                                @foreach($apCandidatePrecheckEvidence['issues'] as $issue)
+                                    <li>{{ $issue }}</li>
+                                @endforeach
+                            </ul>
+                        @endif
+                        <details class="mt-3 rounded-lg border border-slate-700 p-3"
+                            data-ap-a-v04-p0-prechecks>
+                            <summary class="cursor-pointer text-xs font-semibold text-cyan-200">
+                                重点6問の暫定技術分析を開く（独立監修待ち）
+                            </summary>
+                            <div class="mt-3 space-y-2">
+                                @foreach($apCandidatePrecheckEvidence['items'] as $item)
+                                    <div class="rounded-lg border border-slate-800 p-3"
+                                        data-ap-a-v04-p0-item="{{ $item['key'] }}">
+                                        <p class="text-xs font-semibold text-slate-100">{{ $item['key'] }} — {{ $item['status'] }}</p>
+                                        @if($item['finding'])
+                                            <p class="mt-1 text-xs text-slate-300">{{ $item['finding'] }}</p>
+                                            <p class="mt-1 text-xs text-amber-200">追加確認：{{ $item['risk'] }}</p>
+                                        @else
+                                            <p class="mt-1 text-xs text-rose-300">記録失効・再監査が必要です。</p>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        </details>
+                    </div>
+                @endif
+
                 @if($apCandidateQualityReview['issues'])
                     <ul class="mt-2 list-inside list-disc text-xs text-rose-300">
                         @foreach($apCandidateQualityReview['issues'] as $issue)
