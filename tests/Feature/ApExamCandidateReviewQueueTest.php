@@ -123,6 +123,42 @@ final class ApExamCandidateReviewQueueTest extends TestCase
         $this->assertStringContainsString('コストも予算超過', $evmChoice['label']);
     }
 
+    public function test_all_thirty_five_official_answer_keys_match_ipa_published_2025_autumn_answer_table(): void
+    {
+        // Independently transcribed from the IPA released original answer
+        // table PDF; not generated from candidate grading rules or snapshots.
+        $officialAnswers = [
+            3 => 'イ', 4 => 'ウ', 5 => 'イ', 6 => 'イ', 7 => 'ア',
+            8 => 'エ', 9 => 'イ', 11 => 'イ', 12 => 'ウ', 13 => 'ア',
+            14 => 'イ', 15 => 'エ', 16 => 'イ', 17 => 'ウ',
+            18 => 'イ', 19 => 'エ', 23 => 'エ', 25 => 'ウ',
+            26 => 'イ', 27 => 'エ', 56 => 'ア', 57 => 'イ',
+            58 => 'エ', 59 => 'ウ', 60 => 'イ', 62 => 'エ',
+            63 => 'イ', 64 => 'ウ', 66 => 'ウ', 67 => 'ウ',
+            68 => 'イ', 69 => 'ア', 71 => 'イ', 72 => 'イ',
+            73 => 'ウ',
+        ];
+        $this->assertCount(35, $officialAnswers);
+        $report = app(ApExamCandidateAuditService::class)->inspect();
+        $official = collect($report['items'])->filter(fn (array $i) =>
+            $i['origin_type'] === 'official');
+        $this->assertCount(35, $official);
+        $seen = [];
+        foreach ($official as $item) {
+            $questionNumber = (int) substr($item['key'], -2);
+            $this->assertArrayHasKey($questionNumber, $officialAnswers);
+            $this->assertSame($officialAnswers[$questionNumber], $item['answer'],
+                "IPA answer mismatch for q{$questionNumber}");
+            $seen[] = $questionNumber;
+        }
+        sort($seen);
+        $all = array_keys($officialAnswers);
+        sort($all);
+        $this->assertSame($all, $seen);
+        $this->assertSame(80, $report['independent_review_pending_count']);
+        $this->assertTrue($report['publication_blocked']);
+    }
+
     public function test_visual_source_evidence_invalidates_on_any_unreviewed_content_or_version_change(): void
     {
         $candidate = app(\App\Services\QuestionPackCatalogService::class)
