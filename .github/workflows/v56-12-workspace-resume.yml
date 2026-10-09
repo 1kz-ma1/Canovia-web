@@ -131,6 +131,7 @@ jobs:
           php -l app/Services/AdaptiveLearningCandidateService.php
           php -l database/migrations/2026_10_08_210000_create_learning_run_candidates.php
           php -l tests/Feature/AdaptiveLearningCandidateQueueV5879Test.php
+          php -l tests/Feature/AdaptiveLearningCrossRunCandidateL4Test.php
           php -l app/Models/LearningExamResponseDraft.php
           php -l app/Services/AdaptiveExamProfileRegistry.php
           php -l app/Http/Controllers/AdaptiveLearningExamController.php
@@ -329,6 +330,9 @@ jobs:
 
       - name: L3 Typed single-question multiple and numeric answer compatibility
         run: php artisan test tests/Feature/AdaptiveLearningTypedAnswersL3Test.php tests/Feature/QuestionPackPublicationReadinessL2Test.php tests/Feature/AdaptiveLearningSingleQuestionV5878Test.php
+
+      - name: L4 Cross-run scoped candidate evidence and diversified Bank queue
+        run: php artisan test tests/Feature/AdaptiveLearningCrossRunCandidateL4Test.php tests/Feature/AdaptiveLearningCandidateQueueV5879Test.php tests/Feature/AdaptiveLearningEvaluationAdjustmentV5882Test.php tests/Feature/AdaptiveLearningTypedAnswersL3Test.php
 
       - name: V58.79 Adaptive Candidate Queue and V58.78 Compatibility
         run: php artisan test tests/Feature/AdaptiveLearningCandidateQueueV5879Test.php tests/Feature/AdaptiveLearningSingleQuestionV5878Test.php tests/Feature/QuestionBankV402Test.php
