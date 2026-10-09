@@ -3,6 +3,7 @@ import { mountInstantStartServiceWorker } from './instant-start.mjs';
 import { mountCanoviaInstantNavigation } from './instant-navigation.mjs';
 import { mountCanoviaInteractionPerformance } from './interaction-performance.mjs';
 import { mountWorkspaceModeRuntime } from './workspace-mode-runtime.mjs';
+import './study-practice-one-question.mjs';
 import {
     canoviaClientSurface,
     isCanoviaNativeRuntime,
