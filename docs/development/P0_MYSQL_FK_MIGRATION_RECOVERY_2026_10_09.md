@@ -180,8 +180,9 @@ but missing FK/unique/index metadata.
   disrupt existing features.
 - The MySQL-8 CI runs full migrations first; with the historical ledger
   already APPLIED, it intentionally drops named FKs/indexes on **ephemeral**
-  tables, calls the forward-only `up()` twice, verifies metadata and a
-  synthetic pre-existing user row are preserved. A negative case removes a
+  tables, calls the forward-only `up()` twice, verifies metadata, a
+  synthetic pre-existing user and a synthetic row in the repaired
+  decision-trace table are preserved. A negative case removes a
   synthetic migration ledger entry in CI, asserts the repair is denied, then
   restores only that synthetic ledger entry.
 
