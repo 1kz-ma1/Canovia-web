@@ -718,3 +718,24 @@ bash scripts/ops/p0_mysql_operator_select_only_collect.sh
 5. Even if all metadata/ledger checks report `REVIEW_REQUIRED`, no Aiven restore has been verified, no approval to run DDL is granted, and PR #443 remains Draft. Real Aiven production-backup recoverability and a separate approved restore drill are still release blockers.
 
 This collector is an **operator convenience layer**, not a way for the current GitHub/Render-only ChatGPT connector to query Aiven. The initial CI acceptance should cover Bash syntax, rejection of GitHub Actions/absent opt-ins, and the same two SELECT-only MySQL pipelines already independently tested in disposable CI. No automatic production Aiven query is planned.
+
+
+## Metadata-only grants are necessary for accurate MySQL inventories (2026-10-10)
+
+**New security finding:** MySQL's [INFORMATION_SCHEMA privilege rules](https://dev.mysql.com/doc/refman/8.4/en/information-schema.html) hide metadata for objects on which an account has no privileges. Consequently, an account with `SELECT` **only on `migrations`** may falsely report production tables/FKs as missing. Conversely, a whole-schema `SELECT` account would be able to read private user rows and is too broad for the P0 status-only audit.
+
+The tested candidate least-privilege MySQL account policy is deliberately narrower:
+
+```sql
+-- CONTRACT ONLY — DO NOT RUN AGAINST AIVEN WITHOUT SEPARATE OWNER APPROVAL.
+-- Replace placeholder schema/account only in a privately reviewed grants plan.
+-- Requires a separately provisioned user with NO default administrator grants.
+GRANT REFERENCES ON `<privately verified schema>`.* TO '<read-only metadata user>'@'<allowed host>';
+GRANT SELECT ON `<privately verified schema>`.`migrations` TO '<read-only metadata user>'@'<allowed host>';
+```
+
+`REFERENCES` on the selected schema supplies metadata visibility but does not authorize standalone table creation/ALTER or reading user table rows. `SELECT` is restricted to the migration ledger. **No broad `SELECT`, unknown roles, other DDL/DML grants, grant option or cross-database access** is allowed. `scripts/ci/p0_mysql_metadata_grants_guard.py` checks `SHOW GRANTS FOR CURRENT_USER()` against that exact fixed scope and the operator collector now refuses wider privileges even if they are technically read-only. This is a **proposed grant contract, not a claim that Aiven currently supports the exact table-scoped setup on this service**.
+
+[Official Aiven service-user management](https://aiven.io/docs/products/mysql/howto/manage-service-users) offers `mysql_grants` at user creation and warns that the *default* is admin-level access. Aiven's documented `mysql_grants: ["SELECT", "REFERENCES"]` restricts the *types* of service-user privileges, but alone **does not demonstrate** the exact per-table `migrations` scope demanded here. Do not use that broader array as if it were equivalent. First check whether table-scoped grants are supported **on this actual service** in a separately approved admin process. If they cannot be achieved, treat the production inspection as blocked and redesign the operator procedure, not weaken the grant guard.
+
+`scripts/ci/p0_mysql_metadata_visibility_smoke.sh` creates a **fictional local MySQL account inside pinned GitHub Actions** with exactly those two grants. It checks `SHOW GRANTS`, information_schema visibility, end-to-end targeted FK/index inventory and full migrations ledger, and confirms an attempted user-row read **fails**. Both `mysql:8.0` and `mysql:8.4` matrices must pass before claiming this contract is CI verified. The script never connects to Aiven, creates a real Aiven user, changes production security policy, or authorizes restoration/release.
