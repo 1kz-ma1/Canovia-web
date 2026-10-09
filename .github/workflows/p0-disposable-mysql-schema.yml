@@ -16,6 +16,9 @@ on:
       - 'scripts/ci/p0_mysql_full_ledger_offline_check.py'
       - 'scripts/ci/p0_mysql_disposable_restore_smoke.sh'
       - 'scripts/ops/p0_mysql_readonly_preflight.php'
+      - 'scripts/sql/p0_mysql_select_only_data_preflight.sql'
+      - 'scripts/ci/p0_mysql_select_only_data_preflight_import.py'
+      - 'tests/ci/test_p0_mysql_select_only_data_preflight_import.py'
       - 'scripts/sql/p0_mysql_disposable_full_schema_fingerprint.sql'
       - 'tests/ci/test_p0_mysql_full_ledger_offline_check.py'
       - '.github/workflows/p0-disposable-mysql-schema.yml'
@@ -142,3 +145,34 @@ jobs:
           set -e
           test "$rc" -eq 2
           printf '%s\n' "$blocked" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["result"]=="BLOCK" and d["code"]=="PREFLIGHT_OPERATOR_GUARD_REJECTED" and d["release_authorized"] is False'
+
+      - name: Validate standalone SELECT-only data preflight on disposable MySQL and corrupt restore
+        env:
+          MYSQL_PWD: ci-only-ephemeral-password
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_select_only_data_preflight_import.py' -v
+          # Source database: real MySQL 8 SELECT-only pipeline; no Laravel boot.
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=canovia_ci --database=canovia_p0_ci \
+            --batch --raw --skip-column-names \
+            < scripts/sql/p0_mysql_select_only_data_preflight.sql \
+            | python3 scripts/ci/p0_mysql_select_only_data_preflight_import.py --input - \
+            | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["result"]=="REVIEW_REQUIRED" and r["codes"]==["SELECT_ONLY_DATA_PREFLIGHT_MATCH_NOT_RELEASE"] and r["release_authorized"] is False'
+          # Negative control: damage ONLY the already-restored, throwaway CI
+          # second schema (whose test FK was dropped in the prior stage).
+          MYSQL_PWD=ci-only-root-password mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=root --database=canovia_p0_restore_ci --batch --raw \
+            -e "ALTER TABLE learning_answer_evaluation_adjustments DROP INDEX learning_eval_adjustment_event_unique; INSERT INTO learning_answer_evaluation_adjustments (learning_answer_event_id,reason,effect,created_at) VALUES (987654321,'ci_preflight','exclude_from_recommendations',NOW()),(987654321,'ci_preflight','exclude_from_recommendations',NOW())"
+          set +e
+          denied="$(MYSQL_PWD=ci-only-root-password mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=root --database=canovia_p0_restore_ci \
+            --batch --raw --skip-column-names \
+            < scripts/sql/p0_mysql_select_only_data_preflight.sql \
+            | python3 scripts/ci/p0_mysql_select_only_data_preflight_import.py --input -)"
+          rc=$?
+          set -e
+          test "$rc" -eq 2
+          printf '%s\n' "$denied" \
+            | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["result"]=="BLOCK" and "ORPHANED_REFERENCES_PRESENT" in r["codes"] and "DUPLICATE_UNIQUE_VALUES_PRESENT" in r["codes"] and r["release_authorized"] is False'
+          echo "p0_select_only_data_preflight_and_corruption_negative: pass"
