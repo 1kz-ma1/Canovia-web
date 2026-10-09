@@ -126,7 +126,7 @@ final class McpSyntheticOAuthConsentReadLifecycleTest extends TestCase
 
         // Even an active token has no power without a linked subject + grant.
         $this->mcp($plan->id)->assertOk()->assertJsonPath('result.isError', true);
-        $this->callback($this->begin($owner, route('auth.account.mcp_link.start')))
+        $this->oauthCallback($this->begin($owner, route('auth.account.mcp_link.start')))
             ->assertRedirect(route('auth.account'));
         $this->assertDatabaseCount('mcp_linked_subjects', 0);
         $this->actingAs($owner)->post(route('auth.account.mcp_link.confirm'))
@@ -137,7 +137,7 @@ final class McpSyntheticOAuthConsentReadLifecycleTest extends TestCase
         $this->mcp($plan->id)->assertOk()->assertJsonPath('result.isError', true);
 
         $start = route('auth.account.mcp_plan_consent.start', ['plan' => $plan->id]);
-        $this->callback($this->begin($owner, $start, ['scope' => 'tasks', 'duration_days' => 1]))
+        $this->oauthCallback($this->begin($owner, $start, ['scope' => 'tasks', 'duration_days' => 1]))
             ->assertRedirect(route('auth.account'));
         $this->assertDatabaseCount('mcp_delegated_grants', 0);
         $this->mcp($plan->id, 'tasks')->assertOk()->assertJsonPath('result.isError', true);
@@ -220,7 +220,7 @@ final class McpSyntheticOAuthConsentReadLifecycleTest extends TestCase
         return (string) $query['state'];
     }
 
-    private function callback(string $state): \Illuminate\Testing\TestResponse
+    private function oauthCallback(string $state): \Illuminate\Testing\TestResponse
     {
         return $this->get(route('auth.account.mcp_link.callback').'?'
             .http_build_query([
