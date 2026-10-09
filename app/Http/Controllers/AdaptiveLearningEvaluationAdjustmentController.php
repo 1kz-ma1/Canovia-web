@@ -3,6 +3,8 @@ namespace App\Http\Controllers;
 
 use App\Models\LearningAnswerEvaluationAdjustment;
 use App\Models\LearningAnswerEvent;
+use App\Models\LearningRun;
+use App\Services\AdaptiveLearningCandidateService;
 use App\Models\Plan;
 use App\Models\Task;
 use App\Services\BehaviorIdentityService;
@@ -15,7 +17,8 @@ final class AdaptiveLearningEvaluationAdjustmentController extends Controller
 {
     public function store(Request $request, Plan $plan, Task $task,
         LearningAnswerEvent $answerEvent, PlanOwnershipService $ownership,
-        PlanCategoryProfileService $profiles, BehaviorIdentityService $identity)
+        PlanCategoryProfileService $profiles, BehaviorIdentityService $identity,
+        AdaptiveLearningCandidateService $candidates)
     {
         abort_unless((int) $task->plan_id === (int) $plan->id, 404);
         $ownership->authorizeTask($request, $task);
@@ -31,11 +34,13 @@ final class AdaptiveLearningEvaluationAdjustmentController extends Controller
                 : $run->user_id === null
                     && hash_equals((string) $run->actor_token, (string) $actorToken)), 404);
 
-        DB::transaction(function () use ($answerEvent, $request, $actorToken) {
+        DB::transaction(function () use ($answerEvent, $request, $actorToken, $run, $candidates) {
+            // Maintain answer-route lock order: Run before AnswerEvent.
+            $lockedRun = LearningRun::whereKey($run->id)->lockForUpdate()->firstOrFail();
             $locked = LearningAnswerEvent::whereKey($answerEvent->id)
                 ->lockForUpdate()->firstOrFail();
             // Append-only, idempotent: no mutation of answer/grade/history.
-            LearningAnswerEvaluationAdjustment::firstOrCreate([
+            $adjustment = LearningAnswerEvaluationAdjustment::firstOrCreate([
                 'learning_answer_event_id' => $locked->id,
             ], [
                 'user_id' => $request->user()?->id,
@@ -44,6 +49,16 @@ final class AdaptiveLearningEvaluationAdjustmentController extends Controller
                 'effect' => 'exclude_from_recommendations',
                 'created_at' => now(),
             ]);
+
+            // Reflect a newly excluded answer immediately in the
+            // replaceable candidate layer. Never touch locked questions.
+            if ($adjustment->wasRecentlyCreated
+                && $lockedRun->status === LearningRun::STATUS_ACTIVE
+                && in_array($lockedRun->mode, [
+                    LearningRun::MODE_UNDERSTANDING, LearningRun::MODE_PRACTICE,
+                ], true)) {
+                $candidates->refresh($lockedRun);
+            }
         });
 
         return redirect()->route(
