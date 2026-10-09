@@ -534,3 +534,24 @@ then removes the synthetic collision and verifies successful recovery.
 These tests exercise only pinned throwaway MySQL. They are not proof
 of the actual Aiven schema, backup restorability or production permission
 model. The Release #418 hold and Draft PR status are unchanged.
+
+
+## Duplicate unique-key data preflight negative control (2026-10-09)
+
+A further disposable MySQL 8 negative test now creates two fictional
+`intelligence_decision_traces` records with the **same**
+`decision_reference` after removing its unique index in the isolated
+CI database. It also removes that table's snapshot FK. The forward-only
+reconciliation must recognize the duplicate values **before any DDL**,
+throwing the fixed `P0 recovery blocked: duplicate values for unique
+index.` diagnostic, leaving both fictional rows untouched and the
+snapshot FK still absent. The test then removes only its synthetic
+fixture rows, reruns the migration, and verifies both the named FK and
+unique index are restored.
+
+This specifically tests the data integrity prerequisite of `ADD UNIQUE`,
+complementing the same-schema foreign-key symbol and wrong-column index
+name collision negatives. No customer data is queried or changed; the
+permitted test environment remains pinned to disposable MySQL only.
+The release hold remains independent of green CI and actual Aiven schema,
+ledger and restorable production backup evidence must still be observed.
