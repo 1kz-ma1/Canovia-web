@@ -1,0 +1,6196 @@
+{
+  "schema_version": "1.0",
+  "pack": {
+    "slug": "ap-a-2026-cbt-80-candidate-v1",
+    "title": "応用情報 科目A 80問模試候補（未監修・公開前）",
+    "exam_code": "AP",
+    "subject": "科目A",
+    "version": "0.1.0-review-required",
+    "downloadable": false,
+    "metadata": {
+      "match_terms": [
+        "AP",
+        "応用情報",
+        "科目A"
+      ],
+      "locale": "ja-JP",
+      "content_kind": "mixed_curated_draft_candidate",
+      "review_state": "pending_human_content_and_rights_review",
+      "exam_simulation_profile_key": "ap-a-cbt-2026-v1",
+      "exam_simulation_profile_version": "2026-v1",
+      "candidate_source_packs": [
+        {
+          "slug": "ap-a-ipa-2025-autumn-official-v1",
+          "count": 35,
+          "source_problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "source_answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+        },
+        {
+          "slug": "ap-a-canovia-core-v1",
+          "count": 45,
+          "source_problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf"
+        }
+      ],
+      "source_usage_guidance_url": "https://www.ipa.go.jp/shiken/faq.html",
+      "selection_note": "This 80-question mixed-source draft only matches number and answer format. Topic distribution, source rights, answer accuracy and content equivalence are NOT reviewed. Not equivalent to a genuine official IPA exam.",
+      "curation_date": "2026-10-09",
+      "source_domain_distribution_not_certified": true
+    }
+  },
+  "questions": [
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q03",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問3（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "AIにおける機械学習において，2クラス分類モデルの評価方法の一つであるROC曲線で用いられる偽陽性率の説明として，最も適切なものはどれか。ここで，分類されるデータには正しいものと間違っているものが含まれるものとする。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "“間違い”と予測したデータのうち，実際は“正しい”データの割合"
+            },
+            {
+              "id": "イ",
+              "label": "実際に“間違い”であるデータに対し，誤って“正しい”と予測したデータの割合"
+            },
+            {
+              "id": "ウ",
+              "label": "実際に“間違い”であるデータに対し，正しく“間違い”と予測したデータの割合"
+            },
+            {
+              "id": "エ",
+              "label": "全データのうち，実際に正しく予測できなかったデータの割合"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "AI",
+          "機械学習",
+          "ROC"
+        ],
+        "weakness_targets": [
+          "機械学習",
+          "ROC",
+          "偽陽性率"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "二値分類",
+          "False Positive Rate"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 3,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q03",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 3,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "external_key": "net-mtu-002",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "IPv4でMTUが1,500バイト、IPヘッダー20バイト、TCPヘッダー20バイトでオプションがない。IPフラグメントを避けるため、TCPのMSSとして設定する代表的な最大値はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "1,440バイト"
+            },
+            {
+              "id": "イ",
+              "label": "1,460バイト"
+            },
+            {
+              "id": "ウ",
+              "label": "1,480バイト"
+            },
+            {
+              "id": "エ",
+              "label": "1,500バイト"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ネットワーク",
+          "IPv4",
+          "TCP",
+          "MTU",
+          "MSS"
+        ],
+        "weakness_targets": [
+          "MTU計算",
+          "ネットワーク",
+          "計算"
+        ],
+        "tags": [
+          "科目A",
+          "ネットワーク",
+          "計算"
+        ],
+        "keywords": [
+          "フラグメンテーション",
+          "TCP MSS"
+        ],
+        "explanation_origin": "canovia_original",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "net-mtu-002",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "MSSはTCPデータ部の最大長なので、MTUからIPヘッダー20バイトとTCPヘッダー20バイトを引き、1,460バイトです。",
+      "difficulty": 3,
+      "sort_order": 2,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q04",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問4（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "誤り検出方式であるCRCに関する記述として，適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "検査用のデータは，検査対象のデータを生成多項式で処理して得られる1ビットの値である。"
+            },
+            {
+              "id": "イ",
+              "label": "受信側では，付加されてきた検査用のデータで検査対象のデータを割り，余りがなければ送信が正しかったと判断する。"
+            },
+            {
+              "id": "ウ",
+              "label": "送信側では，生成多項式を用いて検査対象のデータから検査用のデータを作り，これを検査対象のデータに付けて送信する。"
+            },
+            {
+              "id": "エ",
+              "label": "送信側と受信側では，異なる生成多項式が用いられる。"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ウ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "ネットワーク",
+          "CRC"
+        ],
+        "weakness_targets": [
+          "CRC",
+          "誤り検出"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "生成多項式",
+          "巡回冗長検査"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 4,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q04",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 2,
+      "sort_order": 3,
+      "is_active": true
+    },
+    {
+      "external_key": "net-dns-002",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "DNSで、あるドメイン宛ての電子メールを受け取るメールサーバを指定するために用いるレコードはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "A"
+            },
+            {
+              "id": "イ",
+              "label": "CNAME"
+            },
+            {
+              "id": "ウ",
+              "label": "MX"
+            },
+            {
+              "id": "エ",
+              "label": "PTR"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ウ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ネットワーク",
+          "DNS"
+        ],
+        "weakness_targets": [
+          "DNSレコード",
+          "ネットワーク"
+        ],
+        "tags": [
+          "科目A",
+          "ネットワーク"
+        ],
+        "keywords": [
+          "名前解決",
+          "メール"
+        ],
+        "explanation_origin": "canovia_original",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "net-dns-002",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "MXレコードは、そのドメイン宛てメールを配送するメールサーバを指定します。",
+      "difficulty": 2,
+      "sort_order": 4,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q05",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問5（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "記憶領域を管理するアルゴリズムのうち，ベストフィット方式の特徴として，適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "空きブロック群のうち，アドレスが下位のブロックを高い頻度で使用するので，アドレスが上位の方に大きな空きブロックが残る傾向にある。"
+            },
+            {
+              "id": "イ",
+              "label": "空きブロック群のうち，要求された大きさを満たす最小のものを割り当てるので，最終的には小さな空きブロックが多数残る傾向にある。"
+            },
+            {
+              "id": "ウ",
+              "label": "空きブロックの検索にハッシュ関数を使用しているので，高速に検索することができる。"
+            },
+            {
+              "id": "エ",
+              "label": "空きブロックをアドレスの昇順に管理しているので，隣接する空きブロックを簡単に見つけられ，より大きな空きブロックにまとめることができる。"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "OS",
+          "メモリ管理",
+          "ベストフィット"
+        ],
+        "weakness_targets": [
+          "メモリ管理",
+          "動的メモリ割当"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "空きブロック",
+          "フラグメンテーション"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 5,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q05",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 3,
+      "sort_order": 5,
+      "is_active": true
+    },
+    {
+      "external_key": "net-napt-003",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "NAPTの説明として最も適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "複数のプライベートIPアドレスを、IPアドレスとポート番号の組合せを変換して一つ又は少数のグローバルIPアドレスへ対応付ける。"
+            },
+            {
+              "id": "イ",
+              "label": "ドメイン名をIPアドレスへ変換する。"
+            },
+            {
+              "id": "ウ",
+              "label": "IPパケットの経路を最短経路へ固定する。"
+            },
+            {
+              "id": "エ",
+              "label": "暗号化トンネルを用いて拠点間を接続する。"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ネットワーク",
+          "NAPT"
+        ],
+        "weakness_targets": [
+          "NAPT",
+          "ネットワーク"
+        ],
+        "tags": [
+          "科目A",
+          "ネットワーク"
+        ],
+        "keywords": [
+          "NAT",
+          "ポート変換"
+        ],
+        "explanation_origin": "canovia_original",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "net-napt-003",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "NAPTはIPアドレスに加えてポート番号も変換し、多数の内部端末でグローバルIPアドレスを共有できます。",
+      "difficulty": 2,
+      "sort_order": 6,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q06",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問6（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "異なるn個のデータが昇順に整列された表がある。この表をm個のデータごとのブロックに分割し，各ブロックの最後尾のデータだけを線形探索することによって，目的のデータの存在するブロックを探し出す。次に，当該ブロック内を線形探索して目的のデータを探し出す。このときの平均比較回数を表す式はどれか。ここで，mは十分に大きく，nはmの倍数とし，目的のデータは必ず表の中に存在するものとする。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "m + n/m"
+            },
+            {
+              "id": "イ",
+              "label": "m/2 + n/(2m)"
+            },
+            {
+              "id": "ウ",
+              "label": "n/m"
+            },
+            {
+              "id": "エ",
+              "label": "n/(2m)"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "アルゴリズム",
+          "探索"
+        ],
+        "weakness_targets": [
+          "探索",
+          "線形探索"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "ブロック探索",
+          "平均比較回数"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 6,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q06",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 4,
+      "sort_order": 7,
+      "is_active": true
+    },
+    {
+      "external_key": "net-cidr-004",
+      "source_type": "derived",
+      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問32（Canoviaオリジナル類題）",
+      "prompt": "IPv4アドレスをクラスA〜Cの区分に固定せず、プレフィックス長を用いてネットワーク部とホスト部を任意のビット境界で指定する方式はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "CIDR"
+            },
+            {
+              "id": "イ",
+              "label": "DHCP"
+            },
+            {
+              "id": "ウ",
+              "label": "DNS"
+            },
+            {
+              "id": "エ",
+              "label": "NAPT"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ネットワーク",
+          "IPv4",
+          "CIDR"
+        ],
+        "weakness_targets": [
+          "ネットワーク",
+          "サブネット"
+        ],
+        "tags": [
+          "科目A",
+          "ネットワーク"
+        ],
+        "keywords": [
+          "プレフィックス長",
+          "サブネット"
+        ],
+        "explanation_origin": "canovia_original",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "net-cidr-004",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "CIDRはプレフィックス長でネットワーク部を表し、クラスに依存しないアドレス割当てを可能にします。",
+      "difficulty": 2,
+      "sort_order": 8,
+      "is_active": true
+    },
+    {
+      "external_key": "net-tcp-005",
+      "source_type": "derived",
+      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問33（Canoviaオリジナル類題）",
+      "prompt": "TCPヘッダーに含まれ、UDPヘッダーには含まれない情報はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "宛先ポート番号"
+            },
+            {
+              "id": "イ",
+              "label": "シーケンス番号"
+            },
+            {
+              "id": "ウ",
+              "label": "送信元ポート番号"
+            },
+            {
+              "id": "エ",
+              "label": "チェックサム"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ネットワーク",
+          "TCP",
+          "UDP"
+        ],
+        "weakness_targets": [
+          "TCP",
+          "ネットワーク"
+        ],
+        "tags": [
+          "科目A",
+          "ネットワーク"
+        ],
+        "keywords": [
+          "シーケンス番号",
+          "トランスポート層"
+        ],
+        "explanation_origin": "canovia_original",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "net-tcp-005",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "TCPは順序制御・再送制御のためシーケンス番号を持ちます。ポート番号とチェックサムはUDPにもあります。",
+      "difficulty": 2,
+      "sort_order": 9,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q07",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問7（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "OSSとして公開されているプログラム言語であるScalaの特徴はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "オブジェクト指向プログラミングと関数型プログラミングの両方が可能である。"
+            },
+            {
+              "id": "イ",
+              "label": "クラスの多重継承が可能である。"
+            },
+            {
+              "id": "ウ",
+              "label": "実行前にコンパイルして，ネイティブコードを生成する必要がある。"
+            },
+            {
+              "id": "エ",
+              "label": "変数の型が，参照する実際の値によって実行時に決定される動的型付け言語である。"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "プログラミング言語",
+          "Scala"
+        ],
+        "weakness_targets": [
+          "Scala",
+          "関数型プログラミング"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "JVM",
+          "オブジェクト指向"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 7,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q07",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 2,
+      "sort_order": 10,
+      "is_active": true
+    },
+    {
+      "external_key": "net-stp-007",
+      "source_type": "derived",
+      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問34（Canoviaオリジナル類題）",
+      "prompt": "複数のレイヤ2スイッチを冗長に接続したネットワークで、イーサネットフレームのループを防止するために用いるプロトコルはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "IGMP"
+            },
+            {
+              "id": "イ",
+              "label": "RIP"
+            },
+            {
+              "id": "ウ",
+              "label": "SIP"
+            },
+            {
+              "id": "エ",
+              "label": "スパニングツリープロトコル"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "エ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ネットワーク",
+          "レイヤ2",
+          "STP"
+        ],
+        "weakness_targets": [
+          "ネットワーク",
+          "スイッチ"
+        ],
+        "tags": [
+          "科目A",
+          "ネットワーク"
+        ],
+        "keywords": [
+          "Ethernet",
+          "ループ"
+        ],
+        "explanation_origin": "canovia_original",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "net-stp-007",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "スパニングツリープロトコルは冗長経路の一部を論理的にブロックし、レイヤ2ループを防ぎます。",
+      "difficulty": 2,
+      "sort_order": 11,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q08",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問8（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "プロセッサの高速化技法の一つとして，同時に実行可能な複数の動作を，コンパイルの段階でまとめて一つの複合命令とし，高速化を図る方式はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "CISC"
+            },
+            {
+              "id": "イ",
+              "label": "MIMD"
+            },
+            {
+              "id": "ウ",
+              "label": "RISC"
+            },
+            {
+              "id": "エ",
+              "label": "VLIW"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "エ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "コンピュータ構成",
+          "VLIW"
+        ],
+        "weakness_targets": [
+          "VLIW",
+          "プロセッサ"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "命令レベル並列性"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 8,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q08",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 3,
+      "sort_order": 12,
+      "is_active": true
+    },
+    {
+      "external_key": "db-view-009",
+      "source_type": "derived",
+      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問28（Canoviaオリジナル類題）",
+      "prompt": "関係データベースのビューに関する説明として適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "ビューの列名は、基の表と異なる名前として定義できる。"
+            },
+            {
+              "id": "イ",
+              "label": "ビューは列だけを絞り込めるが、行を条件で絞り込むことはできない。"
+            },
+            {
+              "id": "ウ",
+              "label": "複数表を結合したビューは、どのDBMSでも常に更新可能である。"
+            },
+            {
+              "id": "エ",
+              "label": "和集合を用いたビューは定義できない。"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "データベース",
+          "ビュー"
+        ],
+        "weakness_targets": [
+          "DB",
+          "ビュー更新可否",
+          "データベース"
+        ],
+        "tags": [
+          "科目A",
+          "データベース"
+        ],
+        "keywords": [
+          "ビュー",
+          "更新可能ビュー"
+        ],
+        "explanation_origin": "canovia_original",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "db-view-009",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "ビューでは列の別名を定義できます。行の絞込みや集合演算も可能で、更新可能性はビュー定義やDBMSの条件に依存します。",
+      "difficulty": 3,
+      "sort_order": 13,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q09",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問9（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "画面表示用フレームバッファがユニファイドメモリ方式であるシステムの特徴はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "主記憶とは別に専用のフレームバッファをもつ。"
+            },
+            {
+              "id": "イ",
+              "label": "主記憶の一部を表示領域として使用する。"
+            },
+            {
+              "id": "ウ",
+              "label": "シリアル接続した表示デバイスに，描画コマンドを用いて表示する。"
+            },
+            {
+              "id": "エ",
+              "label": "表示リフレッシュが不要である。"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "コンピュータ構成",
+          "メモリ"
+        ],
+        "weakness_targets": [
+          "ユニファイドメモリ",
+          "フレームバッファ"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "主記憶",
+          "GPU"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 9,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q09",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 2,
+      "sort_order": 14,
+      "is_active": true
+    },
+    {
+      "external_key": "db-mvcc-010",
+      "source_type": "derived",
+      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問29（Canoviaオリジナル類題）",
+      "prompt": "RDBMSで、同じデータ項目の複数バージョンを保持し、読取りと更新の競合を減らしてトランザクションの同時実行性を高める仕組みはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "2相ロッキング"
+            },
+            {
+              "id": "イ",
+              "label": "MVCC"
+            },
+            {
+              "id": "ウ",
+              "label": "WAL"
+            },
+            {
+              "id": "エ",
+              "label": "共有ロック"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "データベース",
+          "トランザクション",
+          "MVCC"
+        ],
+        "weakness_targets": [
+          "DB",
+          "データベース"
+        ],
+        "tags": [
+          "科目A",
+          "データベース"
+        ],
+        "keywords": [
+          "同時実行制御",
+          "トランザクション"
+        ],
+        "explanation_origin": "canovia_original",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "db-mvcc-010",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "MVCCは複数バージョンを利用して、読取り処理が更新処理を待つ場面を減らします。",
+      "difficulty": 2,
+      "sort_order": 15,
+      "is_active": true
+    },
+    {
+      "external_key": "db-normalization-013",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "受注明細表に「受注番号、商品番号、商品名、数量」があり、商品番号が決まれば商品名が一意に決まる。商品名の更新不整合を避けるための設計として最も適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "商品名を受注明細表の各行にそのまま保持する。"
+            },
+            {
+              "id": "イ",
+              "label": "商品番号と商品名を商品表へ分離し、受注明細表は商品番号を参照する。"
+            },
+            {
+              "id": "ウ",
+              "label": "商品番号を削除して商品名だけをキーにする。"
+            },
+            {
+              "id": "エ",
+              "label": "受注番号と商品名を連結した文字列を主キーにする。"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "データベース",
+          "正規化",
+          "関数従属性"
+        ],
+        "weakness_targets": [
+          "DB",
+          "データベース"
+        ],
+        "tags": [
+          "科目A",
+          "データベース"
+        ],
+        "keywords": [
+          "第3正規形",
+          "更新異常"
+        ],
+        "explanation_origin": "canovia_original",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "db-normalization-013",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "商品番号→商品名という関数従属性を商品表へ分離することで、商品名の重複と更新不整合を抑えられます。",
+      "difficulty": 3,
+      "sort_order": 16,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q11",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問11（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "現状のHPC（High Performance Computing）マシンの構成を，次の条件で更新することにした。更新後のノード数と総理論ピーク演算性能はどれか。ここで，総理論ピーク演算性能は，コア数に比例するものとする。\n\n[現状の構成]\n(1) 一つのコアの理論ピーク演算性能は10GFLOPSである。\n(2) 一つのノードのコア数は8である。\n(3) ノード数は1,000である。\n\n[更新条件]\n(1) 一つのコアの理論ピーク演算性能を現状の2倍にする。\n(2) 一つのノードのコア数を現状の2倍にする。\n(3) 総コア数を現状の4倍にする。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "ノード数2,000，総理論ピーク演算性能320TFLOPS"
+            },
+            {
+              "id": "イ",
+              "label": "ノード数2,000，総理論ピーク演算性能640TFLOPS"
+            },
+            {
+              "id": "ウ",
+              "label": "ノード数4,000，総理論ピーク演算性能320TFLOPS"
+            },
+            {
+              "id": "エ",
+              "label": "ノード数4,000，総理論ピーク演算性能640TFLOPS"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "性能",
+          "HPC",
+          "並列処理"
+        ],
+        "weakness_targets": [
+          "性能計算",
+          "HPC"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "GFLOPS",
+          "TFLOPS",
+          "コア数"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 11,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q11",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 4,
+      "sort_order": 17,
+      "is_active": true
+    },
+    {
+      "external_key": "db-isolation-014",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "あるトランザクションが、別のトランザクションによってまだコミットされていない更新値を読み取る現象を何というか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "ダーティリード"
+            },
+            {
+              "id": "イ",
+              "label": "ファントムリード"
+            },
+            {
+              "id": "ウ",
+              "label": "ロストアップデート"
+            },
+            {
+              "id": "エ",
+              "label": "デッドロック"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "データベース",
+          "トランザクション",
+          "分離レベル"
+        ],
+        "weakness_targets": [
+          "DB",
+          "データベース"
+        ],
+        "tags": [
+          "科目A",
+          "データベース"
+        ],
+        "keywords": [
+          "ACID",
+          "同時実行"
+        ],
+        "explanation_origin": "canovia_original",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "db-isolation-014",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "未コミットの値を読み取る現象はダーティリードです。分離レベルを上げることで防止できます。",
+      "difficulty": 2,
+      "sort_order": 18,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q12",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問12（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "IaC（Infrastructure as Code）の説明として，適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "OS，仮想化ソフトなどが何もインストールされていない，初期状態のサーバである。"
+            },
+            {
+              "id": "イ",
+              "label": "サーバなどの新規利用申請があった場合に，資源の割当て，設定などを手動で行い，利用可能な状態にする。"
+            },
+            {
+              "id": "ウ",
+              "label": "システムの構成，設定などをプログラムとして記述し，専用のソフトウェアがその内容に従って自動的にシステムに適用する。"
+            },
+            {
+              "id": "エ",
+              "label": "利用者は，OS，アプリケーションなどの任意のソフトウェアをインフラストラクチャに手動で実装し，操作することができる。"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ウ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "クラウド",
+          "IaC"
+        ],
+        "weakness_targets": [
+          "IaC",
+          "インフラ自動化"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "Infrastructure as Code",
+          "構成管理"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 12,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q12",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 2,
+      "sort_order": 19,
+      "is_active": true
+    },
+    {
+      "external_key": "db-nosql-types-036",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "商品カタログをJSON形式で保存し、商品ごとに持つ属性が多少異なっても柔軟に扱いたい。この用途に最も適したNoSQLのデータモデルはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "キー・バリュー型"
+            },
+            {
+              "id": "イ",
+              "label": "ドキュメント型"
+            },
+            {
+              "id": "ウ",
+              "label": "ワイドカラム型"
+            },
+            {
+              "id": "エ",
+              "label": "グラフ型"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "データベース",
+          "NoSQL",
+          "ドキュメント型"
+        ],
+        "weakness_targets": [
+          "NoSQL",
+          "DB",
+          "データベース"
+        ],
+        "tags": [
+          "科目A",
+          "データベース"
+        ],
+        "keywords": [
+          "JSON",
+          "スキーマ柔軟性"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "db-nosql-types-036",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "JSONのような階層構造をもつ文書を柔軟に格納する用途にはドキュメント型が適しています。",
+      "difficulty": 2,
+      "sort_order": 20,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q13",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問13（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "コンピュータシステムの信頼性に関する記述のうち，適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "MTBF/(MTBF+MTTR)は，システムが稼働している時間の割合を表す。"
+            },
+            {
+              "id": "イ",
+              "label": "MTBF−MTTRは，システムが正常であった時間を表す。"
+            },
+            {
+              "id": "ウ",
+              "label": "MTBFは，正常なシステムが運用を開始してから初めて故障が起きるまでの時間を表す。"
+            },
+            {
+              "id": "エ",
+              "label": "MTTRは，システムの故障が回復した時点から次に故障が起きるまでの平均時間を表す。"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "可用性",
+          "信頼性",
+          "MTBF",
+          "MTTR"
+        ],
+        "weakness_targets": [
+          "可用性",
+          "MTBF/MTTR"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "稼働率",
+          "平均故障間隔",
+          "平均修復時間"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 13,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q13",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 2,
+      "sort_order": 21,
+      "is_active": true
+    },
+    {
+      "external_key": "db-sql-join-059",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "顧客表(customer_id, name)と注文表(order_id, customer_id, amount)がある。注文が1件もない顧客も含めて全顧客を一覧表示し、注文がある場合だけ注文情報も表示したい。顧客表を左側にしたとき適切な結合はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "INNER JOIN"
+            },
+            {
+              "id": "イ",
+              "label": "LEFT OUTER JOIN"
+            },
+            {
+              "id": "ウ",
+              "label": "CROSS JOIN"
+            },
+            {
+              "id": "エ",
+              "label": "顧客表を使わず注文表だけを検索する"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "データベース",
+          "SQL",
+          "外部結合"
+        ],
+        "weakness_targets": [
+          "DB",
+          "データベース"
+        ],
+        "tags": [
+          "科目A",
+          "データベース"
+        ],
+        "keywords": [
+          "SQL",
+          "JOIN"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "db-sql-join-059",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "左側の顧客を全件残し、対応する注文があれば結合するのでLEFT OUTER JOINが適切です。",
+      "difficulty": 2,
+      "sort_order": 22,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q14",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問14（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "キャパシティプランニングの目的の一つに関する記述のうち，最も適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "応答時間に最も影響があるボトルネックだけに着目して，適切な変更を行うことによって，そのボトルネックの影響を低減又は排除することである。"
+            },
+            {
+              "id": "イ",
+              "label": "システムの現在の応答時間を調査して，長期的に監視することによって，将来を含めて応答時間を維持することである。"
+            },
+            {
+              "id": "ウ",
+              "label": "ソフトウェアとハードウェアをチューニングして，現状の処理能力を最大限に引き出して，スループットを向上させることである。"
+            },
+            {
+              "id": "エ",
+              "label": "パフォーマンスの問題はリソースの過剰使用によって発生するので，特定のリソースの有効利用を向上させることである。"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "性能",
+          "キャパシティプランニング"
+        ],
+        "weakness_targets": [
+          "キャパシティプランニング",
+          "性能"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "応答時間",
+          "将来需要"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 14,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q14",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 3,
+      "sort_order": 23,
+      "is_active": true
+    },
+    {
+      "external_key": "calc-mm1-015",
+      "source_type": "derived",
+      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問2（Canoviaオリジナル類題）",
+      "prompt": "M/M/1待ち行列で、平均サービス時間をT秒、利用率をρとすると平均待ち時間は ρT/(1−ρ) で表される。平均待ち時間がT秒以上となる利用率の最小値はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "33%"
+            },
+            {
+              "id": "イ",
+              "label": "50%"
+            },
+            {
+              "id": "ウ",
+              "label": "67%"
+            },
+            {
+              "id": "エ",
+              "label": "80%"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "待ち行列",
+          "M/M/1",
+          "性能"
+        ],
+        "weakness_targets": [
+          "計算",
+          "性能計算"
+        ],
+        "tags": [
+          "科目A",
+          "計算"
+        ],
+        "keywords": [
+          "待ち時間",
+          "利用率"
+        ],
+        "explanation_origin": "canovia_original",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "calc-mm1-015",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "ρT/(1−ρ)≧Tより、ρ/(1−ρ)≧1、したがってρ≧0.5です。",
+      "difficulty": 4,
+      "sort_order": 24,
+      "is_active": true
+    },
+    {
+      "external_key": "calc-availability-016",
+      "source_type": "derived",
+      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問13（Canoviaオリジナル類題）",
+      "prompt": "平均故障間隔MTBFと平均修復時間MTTRから定常可用性を求める式はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "MTBF / (MTBF + MTTR)"
+            },
+            {
+              "id": "イ",
+              "label": "MTTR / (MTBF + MTTR)"
+            },
+            {
+              "id": "ウ",
+              "label": "(MTBF − MTTR) / MTBF"
+            },
+            {
+              "id": "エ",
+              "label": "MTBF / MTTR"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "信頼性",
+          "可用性",
+          "MTBF",
+          "MTTR"
+        ],
+        "weakness_targets": [
+          "計算",
+          "可用性",
+          "信頼性"
+        ],
+        "tags": [
+          "科目A",
+          "計算",
+          "信頼性"
+        ],
+        "keywords": [
+          "稼働率"
+        ],
+        "explanation_origin": "canovia_original",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "calc-availability-016",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "定常可用性は、平均稼働時間を1サイクルの平均時間で割った MTBF/(MTBF+MTTR) です。",
+      "difficulty": 3,
+      "sort_order": 25,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q15",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問15（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "五つのジョブA〜Eに対して，ジョブの多重度が1で，処理時間順方式のスケジューリングを適用した場合，ジョブBのターンアラウンドタイムは何秒か。ここで，OSのオーバーヘッドは考慮しないものとする。\n\nジョブA: 到着時刻0，単独実行時の処理時間2秒\nジョブB: 到着時刻1，単独実行時の処理時間4秒\nジョブC: 到着時刻2，単独実行時の処理時間3秒\nジョブD: 到着時刻3，単独実行時の処理時間2秒\nジョブE: 到着時刻4，単独実行時の処理時間1秒",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "8"
+            },
+            {
+              "id": "イ",
+              "label": "9"
+            },
+            {
+              "id": "ウ",
+              "label": "10"
+            },
+            {
+              "id": "エ",
+              "label": "11"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "エ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "OS",
+          "スケジューリング",
+          "ターンアラウンドタイム"
+        ],
+        "weakness_targets": [
+          "スケジューリング",
+          "処理時間順"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "ジョブ",
+          "非プリエンプティブ"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 15,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q15",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 4,
+      "sort_order": 26,
+      "is_active": true
+    },
+    {
+      "external_key": "calc-sampling-018",
+      "source_type": "derived",
+      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問25（Canoviaオリジナル類題）",
+      "prompt": "0〜20kHzの周波数成分を含むアナログ信号を標本化定理に従ってデジタル化する。必要な最大サンプリング周期はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "2.5μs"
+            },
+            {
+              "id": "イ",
+              "label": "5μs"
+            },
+            {
+              "id": "ウ",
+              "label": "25μs"
+            },
+            {
+              "id": "エ",
+              "label": "50μs"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ウ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "信号処理",
+          "標本化定理"
+        ],
+        "weakness_targets": [
+          "計算",
+          "D/A変換",
+          "A/D変換"
+        ],
+        "tags": [
+          "科目A",
+          "計算"
+        ],
+        "keywords": [
+          "サンプリング"
+        ],
+        "explanation_origin": "canovia_original",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "calc-sampling-018",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "最高周波数20kHzの2倍以上、40kHz以上で標本化する必要があります。周期は1/40kHz=25μs以下です。",
+      "difficulty": 3,
+      "sort_order": 27,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q16",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問16（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "一つのI²Cバスに接続された二つのセンサーがある。それぞれのセンサー値を読み込む二つのタスクを排他的に制御したい。利用するリアルタイムOSの機能として，適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "キュー"
+            },
+            {
+              "id": "イ",
+              "label": "セマフォ"
+            },
+            {
+              "id": "ウ",
+              "label": "マルチスレッド"
+            },
+            {
+              "id": "エ",
+              "label": "メモリプール"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "OS",
+          "リアルタイムOS",
+          "排他制御"
+        ],
+        "weakness_targets": [
+          "セマフォ",
+          "排他制御"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "I2C",
+          "タスク"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 16,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q16",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 2,
+      "sort_order": 28,
+      "is_active": true
+    },
+    {
+      "external_key": "sys-cache-019",
+      "source_type": "derived",
+      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問19（Canoviaオリジナル類題）",
+      "prompt": "4ブロックのキャッシュC0〜C3の最終参照時刻が C0=0:08, C1=0:06, C2=0:05, C3=0:10 である。新しいブロックをロードするときC2が置換対象になる方式はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "FIFO"
+            },
+            {
+              "id": "イ",
+              "label": "LFU"
+            },
+            {
+              "id": "ウ",
+              "label": "LIFO"
+            },
+            {
+              "id": "エ",
+              "label": "LRU"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "エ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "コンピュータ構成",
+          "キャッシュ",
+          "LRU"
+        ],
+        "weakness_targets": [
+          "計算",
+          "キャッシュ"
+        ],
+        "tags": [
+          "科目A",
+          "コンピュータ構成"
+        ],
+        "keywords": [
+          "置換アルゴリズム"
+        ],
+        "explanation_origin": "canovia_original",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "sys-cache-019",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "LRUは最も長く参照されていないブロックを置換します。最終参照が最も古いC2が対象です。",
+      "difficulty": 3,
+      "sort_order": 29,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q17",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問17（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "スレッドセーフの説明として，適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "アプリケーションが複数のスレッドから呼び出されないようになっている。"
+            },
+            {
+              "id": "イ",
+              "label": "アプリケーションを複数のスレッドではなく，単一のスレッドで動作させる。"
+            },
+            {
+              "id": "ウ",
+              "label": "アプリケーションを複数のスレッドで並列に実行しても，問題が生じない。"
+            },
+            {
+              "id": "エ",
+              "label": "スレッドの競合が発生したときに，アプリケーションを安全に停止させる。"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ウ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "OS",
+          "並行処理",
+          "スレッド"
+        ],
+        "weakness_targets": [
+          "スレッドセーフ"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "排他",
+          "並列実行"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 17,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q17",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 2,
+      "sort_order": 30,
+      "is_active": true
+    },
+    {
+      "external_key": "sys-semaphore-020",
+      "source_type": "derived",
+      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問16（Canoviaオリジナル類題）",
+      "prompt": "二つのタスクが同じI2Cバス上のセンサーへアクセスする。バスを同時利用しないよう排他的に制御するため、リアルタイムOSの機能として最も適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "キュー"
+            },
+            {
+              "id": "イ",
+              "label": "セマフォ"
+            },
+            {
+              "id": "ウ",
+              "label": "マルチスレッド"
+            },
+            {
+              "id": "エ",
+              "label": "メモリプール"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "OS",
+          "排他制御",
+          "セマフォ"
+        ],
+        "weakness_targets": [
+          "排他制御",
+          "OS"
+        ],
+        "tags": [
+          "科目A",
+          "OS"
+        ],
+        "keywords": [
+          "リアルタイムOS"
+        ],
+        "explanation_origin": "canovia_original",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "sys-semaphore-020",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "共有資源の排他制御にはセマフォやミューテックスを用います。",
+      "difficulty": 2,
+      "sort_order": 31,
+      "is_active": true
+    },
+    {
+      "external_key": "sys-deadlock-021",
+      "source_type": "derived",
+      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問18（Canoviaオリジナル類題）",
+      "prompt": "二つのタスクが二つの資源を排他的に利用する。デッドロックを防止する方法として適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "一方のタスクだけ優先度を高くする。"
+            },
+            {
+              "id": "イ",
+              "label": "両タスクで資源を獲得する順序を同じにする。"
+            },
+            {
+              "id": "ウ",
+              "label": "両タスクで資源を獲得する順序を逆にする。"
+            },
+            {
+              "id": "エ",
+              "label": "両タスクの優先度を同じにする。"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "OS",
+          "デッドロック",
+          "排他制御"
+        ],
+        "weakness_targets": [
+          "OS",
+          "排他制御"
+        ],
+        "tags": [
+          "科目A",
+          "OS"
+        ],
+        "keywords": [
+          "循環待ち"
+        ],
+        "explanation_origin": "canovia_original",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "sys-deadlock-021",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "全タスクで資源獲得順序を統一すると循環待ちを防げるため、デッドロックの成立条件を崩せます。",
+      "difficulty": 3,
+      "sort_order": 32,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q18",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問18（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "二つのタスクが共用する二つの資源を排他的に使用するとき，デッドロックが発生するおそれがある。このデッドロックの発生を防ぐ方法はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "一方のタスクの優先度を高くする。"
+            },
+            {
+              "id": "イ",
+              "label": "資源獲得の順序を両方のタスクで同じにする。"
+            },
+            {
+              "id": "ウ",
+              "label": "資源獲得の順序を両方のタスクで逆にする。"
+            },
+            {
+              "id": "エ",
+              "label": "両方のタスクの優先度を同じにする。"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "OS",
+          "デッドロック",
+          "排他制御"
+        ],
+        "weakness_targets": [
+          "デッドロック"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "資源獲得順序"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 18,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q18",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 3,
+      "sort_order": 33,
+      "is_active": true
+    },
+    {
+      "external_key": "sec-dkim-023",
+      "source_type": "derived",
+      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問45（Canoviaオリジナル類題）",
+      "prompt": "送信側メールサーバが電子メールヘッダーへデジタル署名を付与し、受信側が公開鍵で検証することで、送信元ドメインのなりすましやメール改ざんの検知に利用できる技術はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "DKIM"
+            },
+            {
+              "id": "イ",
+              "label": "OP25B"
+            },
+            {
+              "id": "ウ",
+              "label": "S/MIME"
+            },
+            {
+              "id": "エ",
+              "label": "SPF"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "セキュリティ",
+          "電子メール",
+          "DKIM"
+        ],
+        "weakness_targets": [
+          "セキュリティ"
+        ],
+        "tags": [
+          "科目A",
+          "セキュリティ"
+        ],
+        "keywords": [
+          "メール認証"
+        ],
+        "explanation_origin": "canovia_original",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "sec-dkim-023",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "DKIMは送信ドメイン側がメールへ署名し、DNSで公開される公開鍵を使って受信側が署名を検証します。",
+      "difficulty": 2,
+      "sort_order": 34,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q19",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問19（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "4ブロックのキャッシュメモリC0〜C3が次の状態である。新たに別のブロックの内容をキャッシュメモリにロードする必要が生じたとき，C2のブロックを置換の対象とするアルゴリズムはどれか。\n\nC0: ロード時刻0:00，最終参照時刻0:08，参照回数10\nC1: ロード時刻0:03，最終参照時刻0:06，参照回数1\nC2: ロード時刻0:04，最終参照時刻0:05，参照回数3\nC3: ロード時刻0:05，最終参照時刻0:10，参照回数5",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "FIFO"
+            },
+            {
+              "id": "イ",
+              "label": "LFU"
+            },
+            {
+              "id": "ウ",
+              "label": "LIFO"
+            },
+            {
+              "id": "エ",
+              "label": "LRU"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "エ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "キャッシュ",
+          "LRU"
+        ],
+        "weakness_targets": [
+          "キャッシュ置換",
+          "LRU"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "最終参照時刻"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 19,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q19",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 3,
+      "sort_order": 35,
+      "is_active": true
+    },
+    {
+      "external_key": "sec-sidechannel-024",
+      "source_type": "derived",
+      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問38（Canoviaオリジナル類題）",
+      "prompt": "暗号処理中の装置について、消費電力や処理時間などの物理的な情報を測定・統計解析し、内部の秘密情報を推定する攻撃はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "サイドチャネル攻撃"
+            },
+            {
+              "id": "イ",
+              "label": "既知平文攻撃"
+            },
+            {
+              "id": "ウ",
+              "label": "ショルダーハッキング"
+            },
+            {
+              "id": "エ",
+              "label": "ジャミング"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "セキュリティ",
+          "暗号",
+          "サイドチャネル攻撃"
+        ],
+        "weakness_targets": [
+          "セキュリティ"
+        ],
+        "tags": [
+          "科目A",
+          "セキュリティ"
+        ],
+        "keywords": [
+          "暗号実装"
+        ],
+        "explanation_origin": "canovia_original",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "sec-sidechannel-024",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "サイドチャネル攻撃は、暗号アルゴリズムそのものではなく、実装時に漏れる消費電力や時間などの情報を利用します。",
+      "difficulty": 3,
+      "sort_order": 36,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q23",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問23（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "16ビットのダウンカウンターを用い，カウンターの値が0になると割込みを発生するハードウェアタイマーがある。カウンターに初期値として10進数の150をセットしてタイマーをスタートすると，最初の割込みが発生するまでの時間は何マイクロ秒か。ここで，タイマーの入力クロック周波数は16MHzを32分周したものとする。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "0.3"
+            },
+            {
+              "id": "イ",
+              "label": "2"
+            },
+            {
+              "id": "ウ",
+              "label": "150"
+            },
+            {
+              "id": "エ",
+              "label": "300"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "エ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "組込み",
+          "タイマー",
+          "クロック"
+        ],
+        "weakness_targets": [
+          "クロック計算",
+          "タイマー"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "分周",
+          "割込み"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 23,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q23",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 3,
+      "sort_order": 37,
+      "is_active": true
+    },
+    {
+      "external_key": "calc-bayes-disease-025",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "ある病気の有病率は2%である。病気に罹患している人を検査すると90%の確率で陽性となり、罹患していない人でも5%の確率で陽性となる。検査結果が陽性だった人が実際に病気に罹患している確率に最も近いものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "約15.5%"
+            },
+            {
+              "id": "イ",
+              "label": "約26.9%"
+            },
+            {
+              "id": "ウ",
+              "label": "約36.0%"
+            },
+            {
+              "id": "エ",
+              "label": "約64.3%"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "確率",
+          "ベイズの定理",
+          "条件付き確率"
+        ],
+        "weakness_targets": [
+          "ベイズ",
+          "計算",
+          "確率"
+        ],
+        "tags": [
+          "科目A",
+          "計算"
+        ],
+        "keywords": [
+          "有病率",
+          "陽性",
+          "偽陽性"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "calc-bayes-disease-025",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "陽性になる確率は0.02×0.90+0.98×0.05=0.067。病気かつ陽性は0.018なので、0.018/0.067≈0.269です。",
+      "difficulty": 4,
+      "sort_order": 38,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q25",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問25（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "0kHz〜20kHzの帯域幅のオーディオ信号をデジタル信号に変換するのに必要な最大のサンプリング周期を標本化定理によって求めると，何マイクロ秒か。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "2.5"
+            },
+            {
+              "id": "イ",
+              "label": "5"
+            },
+            {
+              "id": "ウ",
+              "label": "25"
+            },
+            {
+              "id": "エ",
+              "label": "50"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ウ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "信号処理",
+          "標本化定理"
+        ],
+        "weakness_targets": [
+          "標本化定理",
+          "サンプリング"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "ナイキスト",
+          "20kHz"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 25,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q25",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 3,
+      "sort_order": 39,
+      "is_active": true
+    },
+    {
+      "external_key": "calc-mips-026",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "クロック周波数2GHzのCPUがあり、ある命令群を実行したときの平均CPIが2.5であった。このCPUの平均命令実行性能として最も適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "400MIPS"
+            },
+            {
+              "id": "イ",
+              "label": "800MIPS"
+            },
+            {
+              "id": "ウ",
+              "label": "1,250MIPS"
+            },
+            {
+              "id": "エ",
+              "label": "5,000MIPS"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "コンピュータ構成",
+          "MIPS",
+          "CPI"
+        ],
+        "weakness_targets": [
+          "MIPS",
+          "計算",
+          "性能計算"
+        ],
+        "tags": [
+          "科目A",
+          "計算",
+          "コンピュータ構成"
+        ],
+        "keywords": [
+          "クロック周波数",
+          "命令実行性能"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "calc-mips-026",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "1秒当たり2×10^9クロックを平均2.5クロック/命令で割ると8×10^8命令/秒、すなわち800MIPSです。",
+      "difficulty": 3,
+      "sort_order": 40,
+      "is_active": true
+    },
+    {
+      "external_key": "calc-bottleneck-027",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "直列に接続された3工程A、B、Cの最大処理能力が、それぞれ毎分40個、毎分25個、毎分50個である。工程間に十分なバッファがあるとき、システム全体の最大スループットとボトルネックの組合せとして適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "25個/分・工程B"
+            },
+            {
+              "id": "イ",
+              "label": "40個/分・工程A"
+            },
+            {
+              "id": "ウ",
+              "label": "50個/分・工程C"
+            },
+            {
+              "id": "エ",
+              "label": "115個/分・工程B"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "性能",
+          "ボトルネック",
+          "スループット"
+        ],
+        "weakness_targets": [
+          "ボトルネック",
+          "性能計算"
+        ],
+        "tags": [
+          "科目A",
+          "性能"
+        ],
+        "keywords": [
+          "処理能力",
+          "直列工程"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "calc-bottleneck-027",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "直列工程全体の処理能力は最も遅い工程に制約されます。工程Bの25個/分がボトルネックです。",
+      "difficulty": 2,
+      "sort_order": 41,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q26",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問26（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "BASE特性を満たし，次の特徴をもつNoSQLデータベースシステムに関する記述のうち，適切なものはどれか。\n\n[NoSQLデータベースシステムの特徴]\n・ネットワーク上に分散した複数のノードから構成される。\n・一つのノードでデータを更新した後，他の全てのノードにその更新を反映する。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "クライアントからの更新要求を2相コミットによって全てのノードに反映する。"
+            },
+            {
+              "id": "イ",
+              "label": "データの更新結果は，システムに障害がなければ，いつかは全てのノードに反映される。"
+            },
+            {
+              "id": "ウ",
+              "label": "同一の主キーの値による同時の参照要求に対し，全てのノードは同じ結果を返す。"
+            },
+            {
+              "id": "エ",
+              "label": "ノード間のネットワークが分断されると，クライアントからの処理要求を受け付けなくなる。"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "データベース",
+          "NoSQL",
+          "BASE"
+        ],
+        "weakness_targets": [
+          "NoSQL",
+          "BASE",
+          "結果整合性"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "分散データベース",
+          "Eventually Consistent"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 26,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q26",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 3,
+      "sort_order": 42,
+      "is_active": true
+    },
+    {
+      "external_key": "os-roundrobin-028",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "全て時刻0に到着したプロセスP1、P2、P3があり、必要CPU時間はそれぞれ5、3、1である。タイムクォンタム2のラウンドロビン方式でP1、P2、P3の順に実行を開始し、コンテキスト切替時間は無視する。完了順序として正しいものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "P1→P2→P3"
+            },
+            {
+              "id": "イ",
+              "label": "P2→P3→P1"
+            },
+            {
+              "id": "ウ",
+              "label": "P3→P1→P2"
+            },
+            {
+              "id": "エ",
+              "label": "P3→P2→P1"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "エ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "OS",
+          "スケジューリング",
+          "ラウンドロビン"
+        ],
+        "weakness_targets": [
+          "ラウンドロビン",
+          "スケジューリング"
+        ],
+        "tags": [
+          "科目A",
+          "OS"
+        ],
+        "keywords": [
+          "タイムクォンタム",
+          "CPUスケジューリング"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "os-roundrobin-028",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "P1を2、P2を2、P3を1実行してP3完了。その後P1を2、P2を1でP2完了、最後にP1が完了します。",
+      "difficulty": 4,
+      "sort_order": 43,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q27",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問27（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "“売上”表への次の検索処理のうち，B+木インデックスよりもハッシュインデックスを設定した方が適切なものはどれか。ここで，インデックスを設定する列を<>内に示す。\n\n売上（伝票番号，売上年月日，商品名，利用者ID，店舗番号，売上金額）",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "売上金額が1万円以上の売上を検索する。<売上金額>"
+            },
+            {
+              "id": "イ",
+              "label": "売上年月日が今月の売上を検索する。<売上年月日>"
+            },
+            {
+              "id": "ウ",
+              "label": "商品名が“DB”で始まる売上を検索する。<商品名>"
+            },
+            {
+              "id": "エ",
+              "label": "利用者IDが“1001”の売上を検索する。<利用者ID>"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "エ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "テクノロジ",
+          "データベース",
+          "インデックス",
+          "ハッシュ"
+        ],
+        "weakness_targets": [
+          "インデックス",
+          "B+木",
+          "ハッシュインデックス"
+        ],
+        "tags": [
+          "テクノロジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "等価検索",
+          "範囲検索"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 27,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q27",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 3,
+      "sort_order": 44,
+      "is_active": true
+    },
+    {
+      "external_key": "os-starvation-029",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "優先度方式のCPUスケジューリングで、高優先度のプロセスが継続的に到着し、実行可能な低優先度プロセスが長時間CPUを割り当てられない状態が続いた。この現象と、その代表的な緩和策の組合せとして適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "デッドロック・タイムアウト"
+            },
+            {
+              "id": "イ",
+              "label": "スタベーション・エージング"
+            },
+            {
+              "id": "ウ",
+              "label": "スラッシング・ページ置換"
+            },
+            {
+              "id": "エ",
+              "label": "ライブロック・排他ロック"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "OS",
+          "スケジューリング",
+          "スタベーション"
+        ],
+        "weakness_targets": [
+          "スタベーション",
+          "スケジューリング"
+        ],
+        "tags": [
+          "科目A",
+          "OS"
+        ],
+        "keywords": [
+          "エージング",
+          "優先度"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "os-starvation-029",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "低優先度処理が実行機会を得られない現象はスタベーションです。待ち時間に応じて優先度を上げるエージングが代表的な緩和策です。",
+      "difficulty": 3,
+      "sort_order": 45,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q56",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問56（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "サービスマネジメントにおける問題管理の活動はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "根本原因の特定"
+            },
+            {
+              "id": "イ",
+              "label": "サービス要求の優先度付け"
+            },
+            {
+              "id": "ウ",
+              "label": "変更要求の記録"
+            },
+            {
+              "id": "エ",
+              "label": "リリースの検証"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "マネジメント",
+          "サービスマネジメント",
+          "問題管理"
+        ],
+        "weakness_targets": [
+          "問題管理"
+        ],
+        "tags": [
+          "マネジメント",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "根本原因"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 56,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q56",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 2,
+      "sort_order": 46,
+      "is_active": true
+    },
+    {
+      "external_key": "quality-maintainability-031",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "ある業務システムでは、部品を変更したときの影響範囲を限定し、障害修正や機能追加、テストを短時間で行えるようモジュール間の依存を小さくした。この設計で特に向上を狙っている品質特性はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "可用性"
+            },
+            {
+              "id": "イ",
+              "label": "保守性"
+            },
+            {
+              "id": "ウ",
+              "label": "機密性"
+            },
+            {
+              "id": "エ",
+              "label": "使用性"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ソフトウェア品質",
+          "保守性"
+        ],
+        "weakness_targets": [
+          "品質特性",
+          "保守性"
+        ],
+        "tags": [
+          "科目A",
+          "ソフトウェア"
+        ],
+        "keywords": [
+          "変更容易性",
+          "モジュール化"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "quality-maintainability-031",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "変更容易性・修正容易性・試験容易性などは保守性に関係します。",
+      "difficulty": 2,
+      "sort_order": 47,
+      "is_active": true
+    },
+    {
+      "external_key": "quality-reliability-032",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "オンライン予約システムで、障害が起こりにくく、決められた条件下で一定期間継続して正しく機能することを重視している。この要求に最も直接対応する品質特性はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "信頼性"
+            },
+            {
+              "id": "イ",
+              "label": "互換性"
+            },
+            {
+              "id": "ウ",
+              "label": "移植性"
+            },
+            {
+              "id": "エ",
+              "label": "使用性"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ソフトウェア品質",
+          "信頼性"
+        ],
+        "weakness_targets": [
+          "品質特性",
+          "信頼性"
+        ],
+        "tags": [
+          "科目A",
+          "ソフトウェア"
+        ],
+        "keywords": [
+          "障害",
+          "品質モデル"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "quality-reliability-032",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "一定条件・一定期間に正しく機能し続ける性質は信頼性です。可用性は利用可能である時間割合の観点を強く持ちます。",
+      "difficulty": 2,
+      "sort_order": 48,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q57",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問57（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "生成AIの処理などで用いられる，大量に発熱するGPUを搭載したサーバを，空気冷却よりも少ない消費電力で効率良く冷却できる液体冷却の一つに液浸冷却がある。液体冷却の方法の説明のうち，液浸冷却の方法の説明に該当するものの組みはどれか。\n\na 液体を循環させて熱交換器で冷やす単相冷却と，気化熱を利用する二相冷却とがある。\nb サーバに取り付けた金属板と熱交換してサーバを冷却する。\nc サーバを筐体ごと液体に漬けて冷却する。\nd 冷媒となる液体として通常は水を使用する。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "a, b"
+            },
+            {
+              "id": "イ",
+              "label": "a, c"
+            },
+            {
+              "id": "ウ",
+              "label": "b, d"
+            },
+            {
+              "id": "エ",
+              "label": "c, d"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "マネジメント",
+          "設備",
+          "液体冷却",
+          "液浸冷却"
+        ],
+        "weakness_targets": [
+          "液浸冷却"
+        ],
+        "tags": [
+          "マネジメント",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "GPU",
+          "単相冷却",
+          "二相冷却"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 57,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q57",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 3,
+      "sort_order": 49,
+      "is_active": true
+    },
+    {
+      "external_key": "storage-wearleveling-034",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "NAND型フラッシュメモリを用いたSSDで、特定の物理ブロックに書換えが集中することを避け、メモリセルの寿命を均等化する制御はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "ウェアレベリング"
+            },
+            {
+              "id": "イ",
+              "label": "ストライピング"
+            },
+            {
+              "id": "ウ",
+              "label": "デフラグメンテーション"
+            },
+            {
+              "id": "エ",
+              "label": "スプーリング"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストレージ",
+          "フラッシュメモリ",
+          "ウェアレベリング"
+        ],
+        "weakness_targets": [
+          "ウェアレベリング"
+        ],
+        "tags": [
+          "科目A",
+          "コンピュータ構成"
+        ],
+        "keywords": [
+          "SSD",
+          "NAND"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "storage-wearleveling-034",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "ウェアレベリングは書換え回数が特定セルへ偏らないよう配置を分散し、フラッシュメモリの寿命を延ばします。",
+      "difficulty": 2,
+      "sort_order": 50,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q58",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問58（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "システム監査基準（令和5年）において，システム監査で使用される用語の説明として，適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "所見とは，他の標準的な監査人が監査を実施した場合であっても同じ検証結果を得られることである。"
+            },
+            {
+              "id": "イ",
+              "label": "正当な懐疑心とは，客観性の保持という精神的な態度を堅持できることである。"
+            },
+            {
+              "id": "ウ",
+              "label": "正当な注意とは，監査で発見したことに基づく考えや意見のことである。"
+            },
+            {
+              "id": "エ",
+              "label": "独立性とは，第三者から不当な影響や圧力等を受けていない状態のことである。"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "エ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "マネジメント",
+          "システム監査",
+          "監査基準"
+        ],
+        "weakness_targets": [
+          "システム監査",
+          "独立性"
+        ],
+        "tags": [
+          "マネジメント",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "正当な懐疑心",
+          "正当な注意"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 58,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q58",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 3,
+      "sort_order": 51,
+      "is_active": true
+    },
+    {
+      "external_key": "calc-da-035",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "0〜5Vを8ビットで表すD/A変換器がある。デジタル値0を0V、255を5Vに対応させるとき、デジタル値51を入力した場合の出力電圧として最も近いものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "0.5V"
+            },
+            {
+              "id": "イ",
+              "label": "1.0V"
+            },
+            {
+              "id": "ウ",
+              "label": "2.0V"
+            },
+            {
+              "id": "エ",
+              "label": "4.0V"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "D/A変換",
+          "量子化",
+          "電圧"
+        ],
+        "weakness_targets": [
+          "D/A変換",
+          "計算"
+        ],
+        "tags": [
+          "科目A",
+          "計算",
+          "ハードウェア"
+        ],
+        "keywords": [
+          "8ビット",
+          "アナログ"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "calc-da-035",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "51/255=0.2なので、5V×0.2=1.0Vです。",
+      "difficulty": 3,
+      "sort_order": 52,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q59",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問59（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "システム監査報告書の改善提案に対し，システム監査人が行うフォローアップとして，適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "改善提案に対する改善の実施を監査対象部門の長に指示する。"
+            },
+            {
+              "id": "イ",
+              "label": "改善提案に対する監査対象部門の改善実施プロジェクトの管理を行う。"
+            },
+            {
+              "id": "ウ",
+              "label": "改善提案に対する監査対象部門の改善状況をモニタリングする。"
+            },
+            {
+              "id": "エ",
+              "label": "改善提案の内容を監査対象部門に示した上で改善計画を策定する。"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ウ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "マネジメント",
+          "システム監査",
+          "フォローアップ"
+        ],
+        "weakness_targets": [
+          "システム監査",
+          "フォローアップ"
+        ],
+        "tags": [
+          "マネジメント",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "改善状況",
+          "モニタリング"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 59,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q59",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 2,
+      "sort_order": 53,
+      "is_active": true
+    },
+    {
+      "external_key": "algo-binarysearch-039",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "昇順に整列済みの1,024件のデータから二分探索で目的の値を探す。1回の比較ごとに探索範囲をほぼ半分にできるとき、最悪の場合の比較回数のオーダとして最も適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "O(1)"
+            },
+            {
+              "id": "イ",
+              "label": "O(log n)"
+            },
+            {
+              "id": "ウ",
+              "label": "O(n)"
+            },
+            {
+              "id": "エ",
+              "label": "O(n²)"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "アルゴリズム",
+          "二分探索",
+          "計算量"
+        ],
+        "weakness_targets": [
+          "アルゴリズム"
+        ],
+        "tags": [
+          "科目A",
+          "アルゴリズム"
+        ],
+        "keywords": [
+          "探索",
+          "オーダ"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "algo-binarysearch-039",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "二分探索は探索範囲を半分ずつ減らすため、比較回数はデータ件数の対数に比例します。",
+      "difficulty": 2,
+      "sort_order": 54,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q60",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問60（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "システム監査基準（令和5年）に従い，監査目的に基づいて，ガバナンス，マネジメント，コントロールの視点から検証・評価を行う。“コントロールの視点”から行う項目はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "IT投資の結果が適切なリターンを生んでいるか。"
+            },
+            {
+              "id": "イ",
+              "label": "異常なアクセスを検出した際に適時に対処及び報告がなされているか。"
+            },
+            {
+              "id": "ウ",
+              "label": "情報セキュリティ対策がPDCAサイクルに基づいて適切に管理されているか。"
+            },
+            {
+              "id": "エ",
+              "label": "新技術や技術革新を経営戦略推進のために適時適切に利活用できているか。"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "マネジメント",
+          "システム監査",
+          "コントロール"
+        ],
+        "weakness_targets": [
+          "システム監査",
+          "内部統制"
+        ],
+        "tags": [
+          "マネジメント",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "異常アクセス",
+          "報告"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 60,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q60",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 3,
+      "sort_order": 55,
+      "is_active": true
+    },
+    {
+      "external_key": "algo-hashtable-040",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "社員番号をキーとして社員情報を格納し、社員番号が完全一致する検索を非常に多く行う。適切に設計された場合、平均的に高速な検索を期待できるデータ構造はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "ハッシュ表"
+            },
+            {
+              "id": "イ",
+              "label": "スタック"
+            },
+            {
+              "id": "ウ",
+              "label": "キュー"
+            },
+            {
+              "id": "エ",
+              "label": "連結リストだけを先頭から順に探索する構造"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "アルゴリズム",
+          "ハッシュ表"
+        ],
+        "weakness_targets": [
+          "アルゴリズム"
+        ],
+        "tags": [
+          "科目A",
+          "アルゴリズム"
+        ],
+        "keywords": [
+          "等価検索",
+          "ハッシュ関数"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "algo-hashtable-040",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "ハッシュ表はキーの等価検索を平均的に高速に行えます。",
+      "difficulty": 2,
+      "sort_order": 56,
+      "is_active": true
+    },
+    {
+      "external_key": "algo-stack-041",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "Webブラウザの『戻る』機能で、直前に閲覧したページから順に履歴を取り出したい。基本となるデータ構造はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "FIFOキュー"
+            },
+            {
+              "id": "イ",
+              "label": "スタック"
+            },
+            {
+              "id": "ウ",
+              "label": "優先度付きキュー"
+            },
+            {
+              "id": "エ",
+              "label": "ハッシュ表"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "データ構造",
+          "スタック"
+        ],
+        "weakness_targets": [
+          "アルゴリズム"
+        ],
+        "tags": [
+          "科目A",
+          "アルゴリズム"
+        ],
+        "keywords": [
+          "LIFO",
+          "ブラウザ履歴"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "algo-stack-041",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "最後に追加した履歴を最初に取り出すLIFOの動作なのでスタックが適しています。",
+      "difficulty": 1,
+      "sort_order": 57,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q62",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問62（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "SOAの説明はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "会計，人事，製造，購買，在庫管理，販売などの企業の業務プロセスを一元管理することによって，業務の効率化や経営資源の全体最適を図る手法"
+            },
+            {
+              "id": "イ",
+              "label": "企業の業務プロセス，システム化要求などのニーズと，ソフトウェアパッケージの機能性がどれだけ適合し，どれだけかい離しているかを分析する手法"
+            },
+            {
+              "id": "ウ",
+              "label": "業務プロセスの問題点を洗い出して，目標設定，実行，チェック，修正行動のマネジメントサイクルを適用し，継続的な改善を図る手法"
+            },
+            {
+              "id": "エ",
+              "label": "利用者の視点から業務システムの機能を幾つかの独立した部品に分けることによって，業務プロセスとの対応付けや他ソフトウェアとの連携を容易にする手法"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "エ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストラテジ",
+          "システム戦略",
+          "SOA"
+        ],
+        "weakness_targets": [
+          "SOA"
+        ],
+        "tags": [
+          "ストラテジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "サービス指向アーキテクチャ"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 62,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q62",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 2,
+      "sort_order": 58,
+      "is_active": true
+    },
+    {
+      "external_key": "algo-complexity-042",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "要素数nの配列について、外側のループをn回実行し、その各回で内側のループもn回実行する処理がある。各ループ内部の処理時間を一定とすると、時間計算量のオーダはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "O(log n)"
+            },
+            {
+              "id": "イ",
+              "label": "O(n)"
+            },
+            {
+              "id": "ウ",
+              "label": "O(n log n)"
+            },
+            {
+              "id": "エ",
+              "label": "O(n²)"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "エ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "アルゴリズム",
+          "計算量"
+        ],
+        "weakness_targets": [
+          "アルゴリズム",
+          "計算"
+        ],
+        "tags": [
+          "科目A",
+          "アルゴリズム"
+        ],
+        "keywords": [
+          "ネストしたループ"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "algo-complexity-042",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "n回×n回の処理になるため、実行回数はn²に比例します。",
+      "difficulty": 2,
+      "sort_order": 59,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q63",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問63（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "データ分析手法の一つである，アソシエーション分析はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "結果となる数値（目的変数）と要因となる数値（説明変数）との関係性について，最小二乗法を用いて分析する。気温の変化が売行きにどの程度影響するかなどの事象の予測に用いられる。"
+            },
+            {
+              "id": "イ",
+              "label": "商品を購買するときの関連性や同時性などのルールを購買データに基づいて見いだすなど，データ間の統計的なパターンや，意味のある関連性を抽出する。信頼度，支持度及びリフト値によってルールを評価し，有効性を確認する。"
+            },
+            {
+              "id": "ウ",
+              "label": "多数の変数の情報（観測変数）に存在する共通因子を仮定し，モデル化して分析する。共通因子を設けることによってデータの数が増加しても複雑になることを防ぎ，現象を分かりやすく捉えることができる。"
+            },
+            {
+              "id": "エ",
+              "label": "多数の変数の情報（観測変数）をできるだけ少ない指標や次元（合成変数）で要約する。データのもつ情報をできる限り損なわずに全体の傾向を可視化することができる。"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストラテジ",
+          "データ分析",
+          "アソシエーション分析"
+        ],
+        "weakness_targets": [
+          "アソシエーション分析"
+        ],
+        "tags": [
+          "ストラテジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "支持度",
+          "信頼度",
+          "リフト値"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 63,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q63",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 3,
+      "sort_order": 60,
+      "is_active": true
+    },
+    {
+      "external_key": "test-boundary-043",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "年齢を18歳以上65歳以下だけ受け付ける入力欄を境界値分析で確認する。境界付近を効率よく確認するテストデータの組合せとして最も適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "18, 40, 65"
+            },
+            {
+              "id": "イ",
+              "label": "17, 18, 65, 66"
+            },
+            {
+              "id": "ウ",
+              "label": "1, 18, 100"
+            },
+            {
+              "id": "エ",
+              "label": "17, 40, 66"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ソフトウェアテスト",
+          "境界値分析"
+        ],
+        "weakness_targets": [
+          "テスト",
+          "品質特性"
+        ],
+        "tags": [
+          "科目A",
+          "ソフトウェア"
+        ],
+        "keywords": [
+          "ブラックボックステスト",
+          "入力値"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "test-boundary-043",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "下限18と上限65の直前・境界値を確認するため、17,18,65,66が適切です。",
+      "difficulty": 2,
+      "sort_order": 61,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q64",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問64（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "投資の意思決定手法の一つであるPBP法に関する記述として，適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "キャッシュフローの時間的価値が考慮されている。"
+            },
+            {
+              "id": "イ",
+              "label": "投資回収後のキャッシュフローも考慮されている。"
+            },
+            {
+              "id": "ウ",
+              "label": "投資金額の回収期間の長さによって投資を評価する手法である。"
+            },
+            {
+              "id": "エ",
+              "label": "ほかの意思決定手法であるNPV法やIRR法と同様に割引率を用いる手法である。"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ウ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストラテジ",
+          "経営戦略",
+          "投資評価",
+          "PBP"
+        ],
+        "weakness_targets": [
+          "PBP",
+          "投資評価"
+        ],
+        "tags": [
+          "ストラテジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "回収期間法",
+          "NPV",
+          "IRR"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 64,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q64",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 3,
+      "sort_order": 62,
+      "is_active": true
+    },
+    {
+      "external_key": "test-levels-044",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "複数のモジュールを結合し、モジュール間のインタフェースやデータの受渡しが正しく動作することを主に確認するテストはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "単体テスト"
+            },
+            {
+              "id": "イ",
+              "label": "結合テスト"
+            },
+            {
+              "id": "ウ",
+              "label": "受入れテスト"
+            },
+            {
+              "id": "エ",
+              "label": "運用テスト"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ソフトウェアテスト",
+          "結合テスト"
+        ],
+        "weakness_targets": [
+          "テスト"
+        ],
+        "tags": [
+          "科目A",
+          "ソフトウェア"
+        ],
+        "keywords": [
+          "インタフェース"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "test-levels-044",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "モジュール間の接続やインタフェースを確認するのは結合テストです。",
+      "difficulty": 1,
+      "sort_order": 63,
+      "is_active": true
+    },
+    {
+      "external_key": "dev-cicd-045",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "開発者がソースコードを共有リポジトリへ頻繁に統合し、そのたびに自動ビルドや自動テストを実行して不具合を早期に検出する実践はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "継続的インテグレーション"
+            },
+            {
+              "id": "イ",
+              "label": "ウォーターフォール"
+            },
+            {
+              "id": "ウ",
+              "label": "フェールオーバ"
+            },
+            {
+              "id": "エ",
+              "label": "リファクタリングだけを手動で行う運用"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ソフトウェア開発",
+          "CI",
+          "自動テスト"
+        ],
+        "weakness_targets": [
+          "ソフトウェア開発"
+        ],
+        "tags": [
+          "科目A",
+          "ソフトウェア"
+        ],
+        "keywords": [
+          "CI/CD",
+          "DevOps"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "dev-cicd-045",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "継続的インテグレーションでは変更を頻繁に統合し、自動ビルド・テストで統合問題を早期発見します。",
+      "difficulty": 2,
+      "sort_order": 64,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q66",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問66（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "IoTを活用した工場管理システムの開発を行う。システムを構築し，サービスを運営するA社は，B社にボード開発を定額契約で委託した。B社はボードの納入前のネットワーク試験のため，工場の設備を管理するC社と実費償還契約を締結し，工場の一部区画とネットワークを借用した。C社のネットワーク設備に故障はなく，B社の人的リソース不足が原因でネットワーク試験の作業が遅延し，追加の費用が発生したとき，その費用を負担すべき会社はどれか。ここで，各社は契約を正当に履行するものとする。また，定額契約を交わした時点では，開発のスコープは十分明確で，契約以降の変更はないものとする。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "A社"
+            },
+            {
+              "id": "イ",
+              "label": "A社及びB社"
+            },
+            {
+              "id": "ウ",
+              "label": "B社"
+            },
+            {
+              "id": "エ",
+              "label": "B社及びC社"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ウ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストラテジ",
+          "契約",
+          "定額契約",
+          "実費償還契約"
+        ],
+        "weakness_targets": [
+          "契約",
+          "リスク負担"
+        ],
+        "tags": [
+          "ストラテジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "人的リソース不足",
+          "追加費用"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 66,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q66",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 4,
+      "sort_order": 65,
+      "is_active": true
+    },
+    {
+      "external_key": "sec-xss-046",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "掲示板の投稿内容を適切にエスケープせずHTMLへ埋め込んだ結果、攻撃者が投稿したスクリプトが別の利用者のブラウザで実行された。この脆弱性はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "SQLインジェクション"
+            },
+            {
+              "id": "イ",
+              "label": "クロスサイトスクリプティング"
+            },
+            {
+              "id": "ウ",
+              "label": "CSRF"
+            },
+            {
+              "id": "エ",
+              "label": "ディレクトリトラバーサル"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "セキュリティ",
+          "Web",
+          "XSS"
+        ],
+        "weakness_targets": [
+          "セキュリティ"
+        ],
+        "tags": [
+          "科目A",
+          "セキュリティ"
+        ],
+        "keywords": [
+          "エスケープ",
+          "Webアプリ"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "sec-xss-046",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "利用者入力がHTMLへ安全に処理されず、ブラウザ上でスクリプトが実行されるのはXSSです。",
+      "difficulty": 2,
+      "sort_order": 66,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q67",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問67（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "売手側でのマーケティング要素4Pは，買手側での要素4Cに対応するという考え方がある。4Pの一つであるプロモーションに対応する4Cの構成要素はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "顧客価値（Customer Value）"
+            },
+            {
+              "id": "イ",
+              "label": "顧客コスト（Cost）"
+            },
+            {
+              "id": "ウ",
+              "label": "コミュニケーション（Communication）"
+            },
+            {
+              "id": "エ",
+              "label": "利便性（Convenience）"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ウ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストラテジ",
+          "マーケティング",
+          "4P",
+          "4C"
+        ],
+        "weakness_targets": [
+          "4P/4C",
+          "マーケティング"
+        ],
+        "tags": [
+          "ストラテジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "Promotion",
+          "Communication"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 67,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q67",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 2,
+      "sort_order": 67,
+      "is_active": true
+    },
+    {
+      "external_key": "sec-csrf-047",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "利用者が銀行サイトへログインしたまま攻撃者のサイトを閲覧したところ、利用者の意思に反して銀行サイトへの送金要求がブラウザから送信された。この攻撃はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "CSRF"
+            },
+            {
+              "id": "イ",
+              "label": "XSS"
+            },
+            {
+              "id": "ウ",
+              "label": "ブルートフォース攻撃"
+            },
+            {
+              "id": "エ",
+              "label": "DNSキャッシュポイズニング"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "セキュリティ",
+          "Web",
+          "CSRF"
+        ],
+        "weakness_targets": [
+          "セキュリティ"
+        ],
+        "tags": [
+          "科目A",
+          "セキュリティ"
+        ],
+        "keywords": [
+          "認証済みセッション",
+          "Webアプリ"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "sec-csrf-047",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "認証済み利用者の権限を悪用して意図しないリクエストを送らせる攻撃はCSRFです。",
+      "difficulty": 2,
+      "sort_order": 68,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q68",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問68（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "バランススコアカードで使われる戦略マップの説明はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "切り口となる二つの要素をX軸，Y軸として，市場における自社又は自社製品のポジションを表現したもの"
+            },
+            {
+              "id": "イ",
+              "label": "財務，顧客，内部ビジネスプロセス，学習と成長という四つの視点を基に，課題，施策，目標の因果関係を表現したもの"
+            },
+            {
+              "id": "ウ",
+              "label": "市場の魅力度，自社の優位性という二つの軸から成る四象限に自社の製品や事業を分類して表現したもの"
+            },
+            {
+              "id": "エ",
+              "label": "どのような顧客層に対して，どのような経営資源を使用し，どのような製品・サービスを提供するのかを表現したもの"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストラテジ",
+          "経営戦略",
+          "BSC",
+          "戦略マップ"
+        ],
+        "weakness_targets": [
+          "BSC",
+          "戦略マップ"
+        ],
+        "tags": [
+          "ストラテジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "財務",
+          "顧客",
+          "内部ビジネスプロセス",
+          "学習と成長"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 68,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q68",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 3,
+      "sort_order": 69,
+      "is_active": true
+    },
+    {
+      "external_key": "sec-cert-049",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "WebブラウザがHTTPS接続先のサーバ証明書を検証するとき、証明書に記載された公開鍵が正当な主体のものであることを信頼するための基盤として中心的な役割を持つものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "認証局"
+            },
+            {
+              "id": "イ",
+              "label": "DHCPサーバ"
+            },
+            {
+              "id": "ウ",
+              "label": "NTPサーバ"
+            },
+            {
+              "id": "エ",
+              "label": "プロキシARP"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "セキュリティ",
+          "PKI",
+          "サーバ証明書"
+        ],
+        "weakness_targets": [
+          "セキュリティ"
+        ],
+        "tags": [
+          "科目A",
+          "セキュリティ"
+        ],
+        "keywords": [
+          "HTTPS",
+          "認証局"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "sec-cert-049",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "PKIでは信頼された認証局が証明書へ署名し、公開鍵と主体の対応を保証します。",
+      "difficulty": 2,
+      "sort_order": 70,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q69",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問69（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "フィージビリティスタディの説明はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "企業が新規事業立ち上げや海外進出する際の検証，公共事業の採算性検証，情報システムの導入手段の検証など，実現性を調査・検証する投資前評価のこと"
+            },
+            {
+              "id": "イ",
+              "label": "技術革新，社会変動などに関する未来予測によく用いられ，専門家グループなどがもつ直観的意見や経験的判断を，反復型アンケートを使って組織的に集約・洗練して収束すること"
+            },
+            {
+              "id": "ウ",
+              "label": "集団（小グループ）によるアイデア発想法の一つで，会議の参加メンバー各自が自由奔放にアイデアを出し合い，互いの発想の異質さを利用して，連想を行うことによって，更に多数のアイデアを生み出そうという集団思考法・発想法のこと"
+            },
+            {
+              "id": "エ",
+              "label": "商品が市場に投入されてから，次第に売れなくなり姿を消すまでのプロセスを，導入期，成長期，成熟（市場飽和）期，衰退期の4段階で表現して，その市場における製品の寿命を検討すること"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストラテジ",
+          "事業戦略",
+          "フィージビリティスタディ"
+        ],
+        "weakness_targets": [
+          "フィージビリティスタディ"
+        ],
+        "tags": [
+          "ストラテジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "実現可能性",
+          "投資前評価"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 69,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q69",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 2,
+      "sort_order": 71,
+      "is_active": true
+    },
+    {
+      "external_key": "pm-criticalpath-050",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "プロジェクトのネットワーク図で、開始から完了までの経路のうち所要時間が最も長く、その経路上の作業が遅れるとプロジェクト全体の完了も遅れる経路を何というか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "クリティカルパス"
+            },
+            {
+              "id": "イ",
+              "label": "ベースライン"
+            },
+            {
+              "id": "ウ",
+              "label": "スプリント"
+            },
+            {
+              "id": "エ",
+              "label": "バックログ"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "プロジェクトマネジメント",
+          "クリティカルパス"
+        ],
+        "weakness_targets": [
+          "マネジメント"
+        ],
+        "tags": [
+          "科目A",
+          "マネジメント"
+        ],
+        "keywords": [
+          "PERT",
+          "工期"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "pm-criticalpath-050",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "全体工期を決定する最長経路をクリティカルパスといいます。",
+      "difficulty": 1,
+      "sort_order": 72,
+      "is_active": true
+    },
+    {
+      "external_key": "pm-evm-051",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "ある時点でPV=100万円、EV=80万円、AC=90万円であった。EVMの評価として適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "予定より進んでおり、予算も節約できている"
+            },
+            {
+              "id": "イ",
+              "label": "予定より遅れているが、予算は節約できている"
+            },
+            {
+              "id": "ウ",
+              "label": "予定より遅れており、コストも予算超過傾向である"
+            },
+            {
+              "id": "エ",
+              "label": "予定どおりで、コストも予算どおりである"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ウ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "プロジェクトマネジメント",
+          "EVM",
+          "PV",
+          "EV",
+          "AC"
+        ],
+        "weakness_targets": [
+          "マネジメント",
+          "計算"
+        ],
+        "tags": [
+          "科目A",
+          "マネジメント",
+          "計算"
+        ],
+        "keywords": [
+          "SV",
+          "CV"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "pm-evm-051",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "SV=EV−PV=−20で進捗遅れ、CV=EV−AC=−10でコスト超過傾向です。",
+      "difficulty": 3,
+      "sort_order": 73,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q71",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問71（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "生産事業所のシステムを，生産計画などの計画層，各指示や工程管理・製造管理などの実行層，機械・機器の制御を行う制御層の三つの層に大きく分けたとき，MESが運用される層はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "計画層"
+            },
+            {
+              "id": "イ",
+              "label": "実行層"
+            },
+            {
+              "id": "ウ",
+              "label": "制御層"
+            },
+            {
+              "id": "エ",
+              "label": "計画層・実行層・制御層"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストラテジ",
+          "生産管理",
+          "MES"
+        ],
+        "weakness_targets": [
+          "MES"
+        ],
+        "tags": [
+          "ストラテジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "Manufacturing Execution System",
+          "実行層"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 71,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q71",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 2,
+      "sort_order": 74,
+      "is_active": true
+    },
+    {
+      "external_key": "service-sla-052",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "月30日間、24時間提供するサービスで月間可用性99.9%以上をSLAとする。1か月に許容される停止時間の上限に最も近いものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "約4.3分"
+            },
+            {
+              "id": "イ",
+              "label": "約43.2分"
+            },
+            {
+              "id": "ウ",
+              "label": "約7.2時間"
+            },
+            {
+              "id": "エ",
+              "label": "約43.2時間"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "サービスマネジメント",
+          "SLA",
+          "可用性"
+        ],
+        "weakness_targets": [
+          "可用性",
+          "マネジメント",
+          "計算"
+        ],
+        "tags": [
+          "科目A",
+          "マネジメント",
+          "計算"
+        ],
+        "keywords": [
+          "停止時間",
+          "サービスレベル"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "service-sla-052",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "30日×24時間×60分=43,200分。停止可能割合0.1%=0.001なので43.2分です。",
+      "difficulty": 3,
+      "sort_order": 75,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q72",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問72（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "PLM（Product Lifecycle Management）の目的はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "NC工作機械，自動搬送装置，倉庫などを有機的に結合し，コンピュータで集中管理することで多品種少量生産に対応できる生産の自動化を実現する。"
+            },
+            {
+              "id": "イ",
+              "label": "製品開発，製造，販売，保守，リサイクルに至る製造業のプロセスにおいて，製品に関連する情報を一元管理し，商品力向上やコスト低減を図る。"
+            },
+            {
+              "id": "ウ",
+              "label": "製品の生産計画に基づいてその生産に必要な資材の所要量を展開し，これを基準にして資材の需要とその発注時期を算出する。"
+            },
+            {
+              "id": "エ",
+              "label": "部品の供給から製品の販売までの一連のプロセスの情報をリアルタイムで交換することによって，在庫の削減とリードタイムの短縮を実現する。"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストラテジ",
+          "生産管理",
+          "PLM"
+        ],
+        "weakness_targets": [
+          "PLM"
+        ],
+        "tags": [
+          "ストラテジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "Product Lifecycle Management"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 72,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q72",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 2,
+      "sort_order": 76,
+      "is_active": true
+    },
+    {
+      "external_key": "strategy-break-even-053",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "新サービスの固定費が600万円、1件当たりの販売価格が5,000円、1件当たりの変動費が2,000円である。利益が0になる損益分岐点の販売件数はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "1,200件"
+            },
+            {
+              "id": "イ",
+              "label": "2,000件"
+            },
+            {
+              "id": "ウ",
+              "label": "3,000件"
+            },
+            {
+              "id": "エ",
+              "label": "6,000件"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "経営戦略",
+          "損益分岐点"
+        ],
+        "weakness_targets": [
+          "ストラテジ",
+          "計算"
+        ],
+        "tags": [
+          "科目A",
+          "ストラテジ",
+          "計算"
+        ],
+        "keywords": [
+          "固定費",
+          "変動費",
+          "限界利益"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "strategy-break-even-053",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "1件当たりの限界利益は5,000−2,000=3,000円。600万円÷3,000円=2,000件です。",
+      "difficulty": 3,
+      "sort_order": 77,
+      "is_active": true
+    },
+    {
+      "external_key": "ipa-2025-autumn-ap-am-q73",
+      "source_type": "official",
+      "source_reference": "令和7年度 秋期 応用情報技術者試験 午前 問73（Canovia表示用にレイアウトのみ整形）",
+      "prompt": "IoTで活用されているLPWAの特徴として，適切なものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "GHz帯を使う近距離無線通信であり，4K，8Kの映像などの大容量のデータを高速伝送することに適している。"
+            },
+            {
+              "id": "イ",
+              "label": "電力線を通信に使う有線通信技術であり，スマートメーターの自動検針などに適している。"
+            },
+            {
+              "id": "ウ",
+              "label": "一つの基地局で広範囲をカバーできる低消費電力の無線通信技術であり，複数の機器がつながるネットワークに適している。"
+            },
+            {
+              "id": "エ",
+              "label": "有線のシリアル通信であり，同じ基板上の回路及びLSI間の通信に適している。"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ウ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストラテジ",
+          "IoT",
+          "LPWA"
+        ],
+        "weakness_targets": [
+          "LPWA"
+        ],
+        "tags": [
+          "ストラテジ",
+          "科目A",
+          "IPA公式過去問"
+        ],
+        "keywords": [
+          "低消費電力",
+          "広域無線"
+        ],
+        "provenance": {
+          "publisher": "独立行政法人情報処理推進機構（IPA）",
+          "source_year": 2025,
+          "source_era": "令和7年度",
+          "source_period": "秋期",
+          "exam_code": "AP",
+          "exam_name": "応用情報技術者試験",
+          "source_section": "午前",
+          "current_subject_equivalent": "科目A",
+          "question_number": 73,
+          "problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+          "answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf",
+          "transcription_note": "Canovia回答UI向けに改行・表レイアウトのみテキスト整形。問題の意味・選択肢は変更しない。"
+        },
+        "curation": {
+          "source_pack_slug": "ap-a-ipa-2025-autumn-official-v1",
+          "source_external_key": "ipa-2025-autumn-ap-am-q73",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": null,
+      "difficulty": 2,
+      "sort_order": 78,
+      "is_active": true
+    },
+    {
+      "external_key": "strategy-swot-054",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "ある企業がSWOT分析を行ったところ、『自社が保有する高いブランド認知度』が挙げられた。これはどの区分に分類するのが最も適切か。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "Strength"
+            },
+            {
+              "id": "イ",
+              "label": "Weakness"
+            },
+            {
+              "id": "ウ",
+              "label": "Opportunity"
+            },
+            {
+              "id": "エ",
+              "label": "Threat"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "経営戦略",
+          "SWOT"
+        ],
+        "weakness_targets": [
+          "ストラテジ"
+        ],
+        "tags": [
+          "科目A",
+          "ストラテジ"
+        ],
+        "keywords": [
+          "内部環境",
+          "強み"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "strategy-swot-054",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "自社内部の有利な要因なのでStrength（強み）に分類します。",
+      "difficulty": 1,
+      "sort_order": 79,
+      "is_active": true
+    },
+    {
+      "external_key": "arch-raid5-056",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "同容量のディスク4台でRAID5を構成する。各ディスクの容量が2TBのとき、パリティ分を考慮した実効容量はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "2TB"
+            },
+            {
+              "id": "イ",
+              "label": "4TB"
+            },
+            {
+              "id": "ウ",
+              "label": "6TB"
+            },
+            {
+              "id": "エ",
+              "label": "8TB"
+            }
+          ]
+        },
+        {
+          "id": "reasoning",
+          "type": "textarea",
+          "label": "考え方・判断理由",
+          "required": false,
+          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
+          "choices": []
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ウ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストレージ",
+          "RAID5"
+        ],
+        "weakness_targets": [
+          "コンピュータ構成",
+          "計算"
+        ],
+        "tags": [
+          "科目A",
+          "コンピュータ構成",
+          "計算"
+        ],
+        "keywords": [
+          "パリティ",
+          "冗長化"
+        ],
+        "content_rules_version": "1.1",
+        "context_fidelity": "exam_natural",
+        "curation": {
+          "source_pack_slug": "ap-a-canovia-core-v1",
+          "source_external_key": "arch-raid5-056",
+          "selection": "manual_draft_2026_10_09"
+        }
+      },
+      "explanation": "RAID5の実効容量は（台数−1）×1台容量なので、(4−1)×2TB=6TBです。",
+      "difficulty": 2,
+      "sort_order": 80,
+      "is_active": true
+    }
+  ]
+}
