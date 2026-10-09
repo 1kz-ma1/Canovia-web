@@ -281,7 +281,7 @@ final class ProductionMysqlSchemaP0Test extends TestCase
             try {
                 $migration->up();
                 $this->fail('Preflight must block an orphan before the first DDL.');
-            } catch (\\RuntimeException $exception) {
+            } catch (\RuntimeException $exception) {
                 $this->assertSame(
                     'P0 recovery blocked: orphaned foreign-key references.',
                     $exception->getMessage(),
@@ -331,7 +331,7 @@ final class ProductionMysqlSchemaP0Test extends TestCase
             try {
                 $migration->up();
                 $this->fail('Incomplete second table must fail before first-table DDL.');
-            } catch (\\RuntimeException $exception) {
+            } catch (\RuntimeException $exception) {
                 $this->assertSame(
                     'P0 recovery blocked: incomplete table contract.',
                     $exception->getMessage(),
