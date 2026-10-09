@@ -71,7 +71,7 @@ final class McpStagingSyntheticPlanFixtureBootstrap
                 && $tasks[1]->status === 'todo'
                 && (int) $tasks[1]->progress_percent === 0
                     ? 'ready' : 'blocked';
-        } catch (\\Throwable) {
+        } catch (\Throwable) {
             // No SQL, DSN, identity or exception content in operator output.
             return 'blocked';
         }
