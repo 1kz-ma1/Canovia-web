@@ -97,9 +97,12 @@ A dedicated public-network GitHub Actions HTTP smoke job,
 `.github/workflows/mcp-staging-live-http-smoke.yml`, now checks exact
 `/up=200` and account/OAuth/MCP `503` via the Render domain. It runs
 once as a PR check or manually; **not** on a recurring cron that prevents
-Free spin-down. An initial live deploy result alone proves process readiness,
-not the external HTTP security boundary: require this separate network test
-before declaring the staging access gate verified.
+Free spin-down. **External HTTP security boundary verified:** GitHub Actions run
+`37867353868` completed successfully against the actual staging Render URL:
+`/up` returned HTTP **200**; login, register, account, GET MCP, OAuth
+metadata and POST MCP JSON-RPC all returned HTTP **503** with the generic
+closed message and no-store cache protection. This is a verified external
+lockdown smoke, **not** a real OAuth/ChatGPT user connection.
 
 Next steps: select an IdP tenant, provision durable *staging-only* storage
 and a reviewed stage access-control mechanism before opening any OAuth,
