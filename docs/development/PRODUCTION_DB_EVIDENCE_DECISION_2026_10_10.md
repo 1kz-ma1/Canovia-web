@@ -123,3 +123,25 @@ Aiven says new users get **admin-level privileges by default** unless created th
 - **If unclear:** stop and inspect only service-user metadata, keeping Issue #418's production migration hold.
 
 This first console step alone cannot establish the live schema/ledger and does **not** grant permission to merge #443/#459. The currently connected GitHub/Render tools lack a privileged Aiven MySQL connector, and the source-inspection + disposable CI results are not a substitute for an authorized real Aiven SQL inspection or an independently restorable backup.
+
+
+## 11. Owner confirms ONLY `avnadmin` exists (2026-10-10 JST)
+
+**Owner-reported Aiven Console fact:** On the existing production MySQL service's **Connect → Users** view, the only listed service user is **`avnadmin`**. This resolves the previous "does an inspection user already exist?" branch: **NO existing dedicated inspection service user**. Treat this as *reported UI evidence*, not independent SQL proof, and do not infer the current Laravel logical database or application credential scopes.
+
+### Safe, not-yet-executed path
+
+**No Aiven access change has been approved or performed.** The existing `avnadmin` account is a full-access administrative user; never pass it to the operator SELECT-only collector or make its privileges/password/session unusable for Canovia. No reason to rotate the application database credentials as part of this inspection.
+
+Aiven's [official MySQL service-user guide](https://aiven.io/docs/products/mysql/howto/manage-service-users) documents **creating a new service user through the API with `mysql_grants: []`**, deliberately giving it *no privileges beyond service connection*. Omitting this key gives **admin privileges by default**. If granular grants are unsupported by this service, the API returns **HTTP 400**; do not bypass by clicking ordinary console Add user. Creating an Aiven user is a production access change requiring separate owner approval and privately held Aiven API credentials.
+
+After such a **separately approved** low-privilege account is created, this still does **NOT** complete the audit! The tested exact privilege policy requires, for a **privately verified logical schema**: `REFERENCES ON schema.*` for INFORMATION_SCHEMA structural visibility and `SELECT ON schema.migrations` for the non-personal Laravel ledger, with **no** SELECT over the user tables or the full schema. Aiven's documented `mysql_grants` supports privilege *types*, but does not demonstrate this exact table-limited scope. Before provisioning, validate with Aiven support or a safely isolated test that the admin grant path for that actual managed service supports the exact privileges. Do **not** use `mysql_grants: ["REFERENCES", "SELECT"]` as a substitute; broad SELECT may expose Canovia account data.
+
+### Action boundaries and owner handoff
+
+1. **First:** confirm this precise creation/grant model is supported on the existing service, without creating an account or changing credentials/settings. Record a supported method in a separately reviewed plan.
+2. **Only with separate owner authorization:** provision **one dedicated** service user with explicit zero initial grants (API `mysql_grants: []`), privately complete exact grants, and audit `SHOW GRANTS` plus a denied user-table SELECT. If granularity or verification fails, stop and remove only the new unused user through an approved recovery route. Never alter `avnadmin`.
+3. **After successful proof:** run the existing strict TLS-verified operator-local SELECT-only collector against the independently verified correct production logical DB. Do not paste API tokens, SQL passwords, grant strings, service URLs or DB names into GitHub or ChatGPT. Only sanitized status families may be communicated.
+4. **Even then:** separate Aiven backup/restore verification is needed before *any* production DDL/PR #443 merge. Documentation changes in #459 must not be auto-merged while #418's production release hold is active.
+
+**Current verdict:** `ONLY_ADMIN_ACCOUNT_EXISTS` / `DEDICATED_INSPECTOR_NOT_CREATED` / `AIVEN_GRANT_SUPPORT_UNVERIFIED` / `AIVEN_SCHEMA_UNVERIFIED` / `NO_PRODUCTION_RELEASE`.
