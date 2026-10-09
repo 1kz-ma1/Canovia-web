@@ -78,12 +78,12 @@ jobs:
         run: |
           set -euo pipefail
           # Bootstrapping the HTTP kernel must reject wildcard trust.
-          if CANOVIA_TRUSTED_PROXY_IPS='*' php -r 'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(\\Illuminate\\Contracts\\Http\\Kernel::class);' >/dev/null 2>&1; then
+          if CANOVIA_TRUSTED_PROXY_IPS='*' php -r 'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Http\Kernel::class);' >/dev/null 2>&1; then
             echo "p0_proxy_trust_wildcard_block: failed"
             exit 1
           fi
           # An explicitly pinned loopback proxy IP is valid for CI only.
-          CANOVIA_TRUSTED_PROXY_IPS='127.0.0.1' php -r 'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(\\Illuminate\\Contracts\\Http\\Kernel::class);' >/dev/null 2>&1
+          CANOVIA_TRUSTED_PROXY_IPS='127.0.0.1' php -r 'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Http\Kernel::class);' >/dev/null 2>&1
           echo "p0_proxy_trust_wildcard_block: pass"
       - name: Real HTTPS Secure Cookie host isolation and cross-process restart
         env:
