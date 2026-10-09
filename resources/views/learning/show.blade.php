@@ -24,8 +24,16 @@
             $choices = data_get($q, 'response_field.choices', []);
             $answer = $item->answer;
             $rule = $item->grading_rule_snapshot ?? [];
+            $responseType = (string) data_get($q, 'response_field.type', 'single_choice');
             $correctChoiceId = (string) ($rule['answer'] ?? '');
             $correctLabel = collect(is_array($choices) ? $choices : [])->firstWhere('id', $correctChoiceId)['label'] ?? $correctChoiceId;
+            $correctMultiple = is_array($rule['answers'] ?? null) ? $rule['answers'] : [];
+            $correctNumeric = $rule['answer'] ?? null;
+            $numericTolerance = $rule['tolerance'] ?? 0;
+            $savedTypedAnswer = $answer?->answer_payload;
+            $displayedAnswer = $savedTypedAnswer['value'] ?? $answer?->answer_value;
+            $displayedAnswerText = is_array($displayedAnswer)
+                ? implode(' / ', $displayedAnswer) : (string) $displayedAnswer;
         @endphp
         <section class="page-card p-5 sm:p-7" data-learning-question="{{ $item->ordinal }}">
             <p class="text-xs font-bold text-slate-400">第{{ $item->ordinal }}問 · {{ $q['source_type'] ?? 'question_bank' }}{{ filled($q['source_reference'] ?? null) ? ' / '.$q['source_reference'] : '' }}</p>
@@ -35,23 +43,45 @@
                     @csrf
                     <input type="hidden" name="request_id" value="{{ $answerRequestId }}">
                     <input type="hidden" name="learning_run_item_id" value="{{ $item->id }}">
-                    <fieldset class="space-y-3">
-                        <legend class="text-sm font-semibold text-slate-200">回答を選んでください</legend>
-                        @foreach($choices as $choice)
-                            <label class="flex items-start gap-3 rounded-xl border border-slate-600 px-4 py-3 text-sm text-slate-200">
-                                <input type="radio" name="choice" required value="{{ $choice['id'] }}" @checked(old('choice') == $choice['id'])>
-                                <span>{{ $choice['id'] }} · {{ $choice['label'] ?? $choice['id'] }}</span>
-                            </label>
-                        @endforeach
-                    </fieldset>
+                    @if ($responseType === 'number')
+                        <label for="learning-number-{{ $item->id }}" class="block text-sm font-semibold text-slate-200">数値で回答してください</label>
+                        <input id="learning-number-{{ $item->id }}" type="text" name="number"
+                            inputmode="decimal" autocomplete="off" required maxlength="64"
+                            value="{{ old('number') }}" class="form-control w-full"
+                            placeholder="例：42 または 10.5" data-learning-number-answer>
+                        <p class="text-xs text-slate-400">半角数字で入力してください。許容誤差は採点ルールに従います。</p>
+                    @else
+                        <fieldset class="space-y-3">
+                            <legend class="text-sm font-semibold text-slate-200">
+                                {{ $responseType === 'multiple_choice' ? '正しいと思うものをすべて選んでください' : '回答を選んでください' }}
+                            </legend>
+                            @foreach($choices as $choice)
+                                <label class="flex items-start gap-3 rounded-xl border border-slate-600 px-4 py-3 text-sm text-slate-200">
+                                    @if ($responseType === 'multiple_choice')
+                                        <input type="checkbox" name="choices[]" value="{{ $choice['id'] }}"
+                                            @checked(in_array((string) $choice['id'], (array) old('choices', []), true))>
+                                    @else
+                                        <input type="radio" name="choice" required value="{{ $choice['id'] }}" @checked(old('choice') == $choice['id'])>
+                                    @endif
+                                    <span>{{ $choice['id'] }} · {{ $choice['label'] ?? $choice['id'] }}</span>
+                                </label>
+                            @endforeach
+                        </fieldset>
+                    @endif
                     @if ($errors->any())<p role="alert" class="text-sm text-red-300">{{ $errors->first() }}</p>@endif
                     <button type="submit" class="btn-primary">この1問を採点・保存</button>
                 </form>
             @else
                 <div class="mt-5 rounded-xl border border-sky-500/30 p-4" data-learning-answer-feedback>
                     <p class="text-sm font-bold {{ $answer->was_correct ? 'text-emerald-300' : 'text-amber-300' }}">{{ $answer->was_correct ? '正解' : '不正解' }}</p>
-                    <p class="mt-2 text-sm text-slate-200">あなたの回答：{{ $answer->answer_value }}</p>
-                    <p class="mt-2 text-sm text-slate-200">正答：{{ $correctChoiceId }} · {{ $correctLabel }}</p>
+                    <p class="mt-2 text-sm text-slate-200">あなたの回答：{{ $displayedAnswerText }}</p>
+                    @if ($responseType === 'multiple_choice')
+                        <p class="mt-2 text-sm text-slate-200">正答：{{ implode(' / ', $correctMultiple) }}</p>
+                    @elseif ($responseType === 'number')
+                        <p class="mt-2 text-sm text-slate-200">正答：{{ $correctNumeric }}（許容誤差 ±{{ $numericTolerance }}）</p>
+                    @else
+                        <p class="mt-2 text-sm text-slate-200">正答：{{ $correctChoiceId }} · {{ $correctLabel }}</p>
+                    @endif
                     @if($run->mode === 'understanding')
                         <h3 class="mt-4 text-sm font-bold text-slate-100">解説</h3>
                         <p class="mt-1 whitespace-pre-line text-sm leading-7 text-slate-300">{{ $item->explanation_snapshot ?: 'この問題には解説が登録されていません。' }}</p>

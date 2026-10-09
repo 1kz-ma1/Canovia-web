@@ -11,6 +11,7 @@ use App\Services\AdaptiveLearningBankQueueService;
 use App\Services\AdaptiveLearningCandidateService;
 use App\Services\AdaptiveExamProfileRegistry;
 use App\Services\AdaptiveLearningModeRecommendationService;
+use App\Services\AdaptiveLearningTypedAnswerService;
 use App\Services\BehaviorIdentityService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
@@ -168,38 +169,48 @@ final class AdaptiveLearningController extends Controller
     public function answer(Request $request, Plan $plan, Task $task, LearningRun $learningRun,
         PlanOwnershipService $ownership, PlanCategoryProfileService $profiles,
         BehaviorIdentityService $identity, QuestionBankGrader $grader,
-        AdaptiveLearningCandidateService $candidates)
+        AdaptiveLearningCandidateService $candidates, AdaptiveLearningTypedAnswerService $typedAnswers)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         $input = $request->validate([
             'request_id' => ['required', 'uuid'],
             'learning_run_item_id' => ['required', 'integer'],
-            'choice' => ['required', 'string', 'max:255'],
+            'choice' => ['nullable', 'string', 'max:255'],
+            'choices' => ['sometimes', 'array', 'max:8'],
+            'choices.*' => ['string', 'max:20'],
+            'number' => ['nullable', 'string', 'max:64'],
         ]);
 
-        DB::transaction(function () use ($request, $plan, $task, $learningRun, $identity, $input, $grader, $candidates) {
+        DB::transaction(function () use ($request, $plan, $task, $learningRun, $identity, $input, $grader, $candidates, $typedAnswers) {
             $run = $this->actorRuns($request, $plan, $task, $identity)
                 ->whereKey($learningRun->id)->lockForUpdate()->firstOrFail();
             abort_unless(in_array($run->mode, [LearningRun::MODE_UNDERSTANDING, LearningRun::MODE_PRACTICE], true), 404);
             $item = $run->items()->where('ordinal', $run->current_ordinal)
                 ->whereKey($input['learning_run_item_id'])->firstOrFail();
 
+            $normalized = $typedAnswers->normalize(
+                $item->question_snapshot ?? [],
+                $item->grading_rule_snapshot ?? [],
+                $input,
+            );
+
             $existing = $item->answer;
             if ($existing) {
-                abort_unless($existing->answer_value === $input['choice'], 409);
-                return; // identical submission or browser retry is inert.
+                // Old single-choice rows have no payload. Never rewrite them.
+                $identical = $existing->answer_payload !== null
+                    ? $existing->answer_payload === $normalized['payload']
+                    : $normalized['payload']['type'] === 'single_choice'
+                        && $existing->answer_value === $normalized['stored_value'];
+                abort_unless($identical, 409);
+                return; // identical retry, even with a different request UUID
             }
             abort_unless($run->status === LearningRun::STATUS_ACTIVE, 409);
             abort_unless(! LearningAnswerEvent::where('request_id', $input['request_id'])->exists(), 409);
 
-            $choices = data_get($item->question_snapshot, 'response_field.choices', []);
-            $ids = collect(is_array($choices) ? $choices : [])
-                ->pluck('id')->map('strval')->all();
-            if (! in_array($input['choice'], $ids, true)) {
-                throw ValidationException::withMessages(['choice' => '有効な選択肢から回答してください。']);
-            }
-
-            $correct = $grader->gradeRule($item->grading_rule_snapshot ?? [], $input['choice']);
+            $correct = $grader->gradeRule(
+                $item->grading_rule_snapshot ?? [],
+                $normalized['graded_value'],
+            );
             abort_unless($correct !== null, 409); // no fabricated grade
             $elapsed = $item->presented_at
                 ? min(3600000, max(0, (int) $item->presented_at->diffInMilliseconds(now())))
@@ -208,9 +219,10 @@ final class AdaptiveLearningController extends Controller
             LearningAnswerEvent::create([
                 'learning_run_item_id' => $item->id,
                 'request_id' => $input['request_id'],
-                'answer_value' => $input['choice'],
+                'answer_value' => $normalized['stored_value'],
+                'answer_payload' => $normalized['payload'],
                 'was_correct' => $correct,
-                'grading_method' => 'question_bank_exact_choice',
+                'grading_method' => $normalized['grading_method'],
                 'answered_at' => now(),
                 'elapsed_ms' => $elapsed,
                 // Learning inference is intentionally separate from grading.

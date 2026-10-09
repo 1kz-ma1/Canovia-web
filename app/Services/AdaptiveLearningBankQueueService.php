@@ -18,20 +18,54 @@ final class AdaptiveLearningBankQueueService
     {
         $schema = $question->response_schema ?? [];
         $rule = $question->grading_rule ?? [];
-        if (! is_array($schema) || ! is_array($rule)) return false;
-        if (($rule['type'] ?? '') !== 'exact_choice'
-            || ($rule['field_id'] ?? '') !== 'answer') return false;
+        if (! is_array($schema) || ! is_array($rule)
+            || ($rule['field_id'] ?? '') !== 'answer') {
+            return false;
+        }
 
-        $answer = (string) ($rule['answer'] ?? '');
         $input = collect($schema)->firstWhere('id', 'answer');
-        if (! is_array($input) || ($input['type'] ?? '') !== 'single_choice') return false;
-        $choices = $input['choices'] ?? [];
-        if (! is_array($choices) || count($choices) < 2) return false;
-        $ids = collect($choices)->pluck('id')->map('strval')->all();
-        if (! in_array($answer, $ids, true) || count($ids) !== count(array_unique($ids))) return false;
+        if (! is_array($input) || ! (bool) ($input['required'] ?? true)) {
+            return false;
+        }
 
-        return collect($schema)->filter(fn ($field) => is_array($field)
-            && (bool) ($field['required'] ?? true) && ($field['id'] ?? '') !== 'answer')->isEmpty();
+        // The single-answer Run must not claim to grade any other required
+        // field. Optional reasoning can remain available in legacy Practice.
+        if (collect($schema)->contains(fn ($field) => is_array($field)
+            && (bool) ($field['required'] ?? true) && ($field['id'] ?? '') !== 'answer')) {
+            return false;
+        }
+
+        $type = (string) ($rule['type'] ?? '');
+        if ($type === 'numeric_tolerance') {
+            return ($input['type'] ?? '') === 'number'
+                && is_numeric($rule['answer'] ?? null)
+                && is_finite((float) $rule['answer'])
+                && is_numeric($rule['tolerance'] ?? 0)
+                && is_finite((float) ($rule['tolerance'] ?? 0))
+                && (float) ($rule['tolerance'] ?? 0) >= 0;
+        }
+
+        $choices = $input['choices'] ?? [];
+        if (! is_array($choices) || count($choices) < 2 || count($choices) > 8) {
+            return false;
+        }
+        $ids = collect($choices)->pluck('id')->map('strval')->all();
+        if (count($ids) !== count(array_unique($ids))
+            || collect($ids)->contains(fn ($id) => $id === '' || mb_strlen($id) > 20)) {
+            return false;
+        }
+
+        if ($type === 'exact_choice' && ($input['type'] ?? '') === 'single_choice') {
+            return in_array((string) ($rule['answer'] ?? ''), $ids, true);
+        }
+        if ($type === 'exact_multiple' && ($input['type'] ?? '') === 'multiple_choice') {
+            $answers = $rule['answers'] ?? null;
+            return is_array($answers) && count($answers) > 0
+                && collect($answers)->every(fn ($answer) =>
+                    is_string($answer) && in_array($answer, $ids, true))
+                && count($answers) === count(array_unique($answers));
+        }
+        return false;
     }
 
     /** Keep the initial ready queue nonempty without mutating already queued questions. */
@@ -76,8 +110,8 @@ final class AdaptiveLearningBankQueueService
                     'response_field' => [
                         'id' => 'answer',
                         'label' => (string) ($input['label'] ?? '回答'),
-                        'type' => 'single_choice',
-                        'choices' => $input['choices'],
+                        'type' => $input['type'],
+                        'choices' => $input['choices'] ?? [],
                     ],
                 ],
                 'grading_rule_snapshot' => $question->grading_rule,
@@ -93,7 +127,7 @@ final class AdaptiveLearningBankQueueService
         if ($pack->status !== 'published' || ! $pack->questions()->where('is_active', true)
             ->get()->contains(fn (Question $q) => $this->isSupported($q))) {
             throw ValidationException::withMessages([
-                'question_pack_id' => 'この問題集には現在対応している選択問題がありません。',
+                'question_pack_id' => 'この問題集には現在対応している単一選択・複数選択・数値問題がありません。',
             ]);
         }
     }

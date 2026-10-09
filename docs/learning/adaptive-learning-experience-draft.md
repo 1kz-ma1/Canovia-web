@@ -225,3 +225,14 @@ Status: **PR implementation proposed; CI and actual iOS/PWA/production verificat
 Relevant tests: `AdaptiveLearningSingleQuestionV5878Test`, `LegacyPracticeImmersionV5889Test`, `LearningImmersionShellV5888Test`, existing `StudyPracticeDraftPersistenceV4071Test`. Validate frontend build and required CI on exact branch SHA. On device verify responsive safe-area, multi-answer types, autosave after moving backwards/forwards, empty published Bank fallback, new Bank one-question Run, reload/return and normal 403/404 permissions.
 
 No DB schema, pricing, rollout/entitlement, AI provider, official exam profile, source attribution, private user data or per-answer legacy scoring changes. Render live deployment and WKWebView/PWA device checks require separate evidence.
+
+## 2026-10-09 L3 型付き単問回答の初期実装（Feature branch / CI別ゲート）
+
+- Scope: Understanding/PracticeのLearning Runだけ。Exam Simulation、旧StudyPractice/Attempt、Task進捗、自動AI採点は変更しない。
+- Server: published Bankのsingle_choice/exact_choice、multiple_choice/exact_multiple、number/numeric_toleranceの組合せを検証し、1問につき必要な回答形式をimmutableな問題Snapshotへ固定する。追加のrequired field、自由記述、未対応採点ルールは未対応とする。
+- Storage: learning_answer_eventsにnullable JSON answer_payload={type,value}を追加。既存answer_value、was_correctと旧イベントを一切バックフィルしない。旧choiceはpayload=nullでも表示・冪等再送可能。
+- Validation: 複数選択は未定義/重複/空選択を拒否し、順序非依存の正規形で採点・保存。数値は有限値の厳格な形式で入力し、既存QuestionBankGraderに正規化された値を渡す。回答内容の変更再送は409。
+- Legacy varchar(255): 長いUnicode配列は旧列へSHA-256による安定表現を置き、型付きJSONに完全値を保存する。採点・再開はJSONを使用。
+- UI: radio/checkbox/数値入力を形式に合わせて表示し、保存後は型付き回答と正答を表示。解説公開タイミングは従来のモードに従う。
+- Verification: 新形式、型検証、冪等/409、旧履歴互換、管理画面公開前判定、DB追加列をCIで検証。Render liveとPWA/iOS実機は別ゲート。
+- Non-goals: 記述/思考過程の自動採点、学力推定やTask進捗の自動更新、公式模試Cの入力形式変更。
