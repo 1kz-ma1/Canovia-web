@@ -3,6 +3,18 @@
 @section('content')
 <div class="mx-auto max-w-3xl space-y-5">
     <a href="{{ route('plans.tasks.study_practice.show', [$plan, $task]) }}" class="text-sm font-semibold text-sky-500">← 従来のAI演習へ</a>
+    @if($activeRuns->isNotEmpty())
+        <section class="page-card p-5 sm:p-7" data-adaptive-learning-resume>
+            <h2 class="text-lg font-bold text-slate-50">前回の続き</h2>
+            <div class="mt-3 space-y-3">
+                @foreach($activeRuns as $run)
+                    <a class="block rounded-xl border border-slate-600 p-3 text-sm text-sky-300" href="{{ $run->mode === 'exam' ? route('plans.tasks.learning.exam.show', [$plan, $task, $run]) : route('plans.tasks.learning.show', [$plan, $task, $run]) }}">
+                        {{ $run->pack_title_snapshot }} · {{ match ($run->mode) { 'understanding' => '理解', 'practice' => '演習', 'exam' => '模擬試験', default => '学習' } }} · {{ $run->created_at?->format('Y/m/d H:i') }} → 続きを開く
+                    </a>
+                @endforeach
+            </div>
+        </section>
+    @endif
     <section class="page-card p-5 sm:p-7" data-learning-mode-ranking>
         <h2 class="text-lg font-bold text-slate-50">今日のおすすめ（参考順位）</h2>
         <p class="mt-2 text-xs leading-6 text-slate-300">{{ $learningRecommendations['evidence'] }}</p>
@@ -80,17 +92,6 @@
             </form>
         </section>
     @endif
-    @if($activeRuns->isNotEmpty())
-        <section class="page-card p-5 sm:p-7" data-adaptive-learning-resume>
-            <h2 class="text-lg font-bold text-slate-50">前回の続き</h2>
-            <div class="mt-3 space-y-3">
-                @foreach($activeRuns as $run)
-                    <a class="block rounded-xl border border-slate-600 p-3 text-sm text-sky-300" href="{{ $run->mode === 'exam' ? route('plans.tasks.learning.exam.show', [$plan, $task, $run]) : route('plans.tasks.learning.show', [$plan, $task, $run]) }}">
-                        {{ $run->pack_title_snapshot }} · {{ match ($run->mode) { 'understanding' => '理解', 'practice' => '演習', 'exam' => '模擬試験', default => '学習' } }} · {{ $run->created_at?->format('Y/m/d H:i') }} → 続きを開く
-                    </a>
-                @endforeach
-            </div>
-        </section>
-    @endif
+
 </div>
 @endsection
