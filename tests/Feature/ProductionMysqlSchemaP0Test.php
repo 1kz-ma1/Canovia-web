@@ -552,6 +552,108 @@ final class ProductionMysqlSchemaP0Test extends TestCase
         );
     }
 
+    public function test_preflight_rejects_second_table_signed_fk_before_first_table_ddl(): void
+    {
+        // MySQL 8 will reject FK ADD when parent id is UNSIGNED but the
+        // child reference is signed. Only touch synthetic disposable CI DB.
+        Schema::table('intelligence_decision_traces', function (Blueprint $table): void {
+            $table->dropForeign('idt_snapshot_fk');
+        });
+        Schema::table('learning_answer_evaluation_adjustments', function (Blueprint $table): void {
+            $table->dropForeign('laea_user_fk');
+            $table->bigInteger('user_id')->nullable()->change();
+        });
+
+        $migration = require database_path(
+            'migrations/2026_10_09_235959_reconcile_p0_mysql_applied_constraints.php',
+        );
+        try {
+            try {
+                $migration->up();
+                $this->fail('Signed child referencing unsigned parent must fail before DDL.');
+            } catch (\RuntimeException $exception) {
+                $this->assertSame(
+                    'P0 recovery blocked: incompatible foreign-key column types.',
+                    $exception->getMessage(),
+                );
+            }
+
+            $this->assertSame([], array_values(array_filter(
+                Schema::getForeignKeys('intelligence_decision_traces'),
+                fn (array $fk): bool => ($fk['name'] ?? '') === 'idt_snapshot_fk',
+            )));
+        } finally {
+            Schema::table('learning_answer_evaluation_adjustments', function (Blueprint $table): void {
+                $table->unsignedBigInteger('user_id')->nullable()->change();
+            });
+            $migration->up();
+        }
+        $this->assertForeignKey(
+            'intelligence_decision_traces',
+            'intelligence_state_snapshot_id',
+            'idt_snapshot_fk',
+            'intelligence_state_snapshots',
+            'cascade',
+        );
+        $this->assertForeignKey(
+            'learning_answer_evaluation_adjustments',
+            'user_id',
+            'laea_user_fk',
+            'users',
+            'set null',
+        );
+    }
+
+    public function test_preflight_rejects_nonnullable_set_null_fk_before_first_table_ddl(): void
+    {
+        Schema::table('intelligence_decision_traces', function (Blueprint $table): void {
+            $table->dropForeign('idt_snapshot_fk');
+        });
+        Schema::table('learning_answer_evaluation_adjustments', function (Blueprint $table): void {
+            $table->dropForeign('laea_user_fk');
+            $table->unsignedBigInteger('user_id')->nullable(false)->change();
+        });
+
+        $migration = require database_path(
+            'migrations/2026_10_09_235959_reconcile_p0_mysql_applied_constraints.php',
+        );
+        try {
+            try {
+                $migration->up();
+                $this->fail('SET NULL on a NOT NULL column must fail before DDL.');
+            } catch (\RuntimeException $exception) {
+                $this->assertSame(
+                    'P0 recovery blocked: SET NULL foreign key column is not nullable.',
+                    $exception->getMessage(),
+                );
+            }
+
+            $this->assertSame([], array_values(array_filter(
+                Schema::getForeignKeys('intelligence_decision_traces'),
+                fn (array $fk): bool => ($fk['name'] ?? '') === 'idt_snapshot_fk',
+            )));
+        } finally {
+            Schema::table('learning_answer_evaluation_adjustments', function (Blueprint $table): void {
+                $table->unsignedBigInteger('user_id')->nullable()->change();
+            });
+            $migration->up();
+        }
+        $this->assertForeignKey(
+            'intelligence_decision_traces',
+            'intelligence_state_snapshot_id',
+            'idt_snapshot_fk',
+            'intelligence_state_snapshots',
+            'cascade',
+        );
+        $this->assertForeignKey(
+            'learning_answer_evaluation_adjustments',
+            'user_id',
+            'laea_user_fk',
+            'users',
+            'set null',
+        );
+    }
+
     private function assertForeignKey(
         string $table,
         string $column,
