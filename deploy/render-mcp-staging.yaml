@@ -36,6 +36,12 @@ services:
         value: "false"
       - key: CANOVIA_STAGING_MCP_EXPLICITLY_APPROVED
         value: "false"
+      # Default remains disposable SQLite. Upgrading the already-created
+      # staging service to the separately created Free Postgres requires
+      # a reviewed DB_URL secret and explicit CANOVIA_STAGING_DB_MODE switch.
+      # Do NOT copy any production Aiven connection string.
+      - key: CANOVIA_STAGING_DB_MODE
+        value: sqlite
       - key: DB_CONNECTION
         value: sqlite
       - key: DB_DATABASE
