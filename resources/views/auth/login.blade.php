@@ -9,6 +9,12 @@
         <h1 class="mt-2 text-2xl font-bold text-slate-50">Canoviaにログイン</h1>
         <p class="mt-3 text-sm leading-7 text-slate-400">別端末やCookie削除後でも、計画・実績・昨日からの続きへ戻れるようにします。</p>
 
+        @if ($errors->any())
+            <div role="alert" aria-live="polite" data-auth-login-error class="mt-5 rounded-xl border border-rose-400/30 bg-rose-950/25 px-4 py-3 text-sm leading-6 text-rose-200">
+                {{ $errors->first('email') ?: $errors->first() }}
+            </div>
+        @endif
+
         <form method="POST" action="{{ route('auth.login') }}" class="mt-6 space-y-4">
             @csrf
             <label class="block">

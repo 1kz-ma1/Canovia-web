@@ -125,6 +125,36 @@ class FirstRunUxV4123Test extends TestCase
         $this->get(route('home'))->assertOk();
     }
 
+    public function test_login_failure_message_is_visible_after_redirect(): void
+    {
+        User::factory()->create([
+            'email' => 'auth-feedback@example.com',
+            'password' => Hash::make('correct-credential'),
+        ]);
+
+        $this->from(route('auth.login.form'))->post(route('auth.login'), [
+            'email' => 'auth-feedback@example.com',
+            'password' => 'wrong-credential',
+        ])
+            ->assertRedirect(route('auth.login.form'))
+            ->assertSessionHasErrors('email');
+
+        // Explicitly supply the framework's rendered error bag for the next
+        // request. HTTP tests do not always retain prior flash across requests.
+        $errors = (new \Illuminate\Support\ViewErrorBag())->put(
+            'default',
+            new \Illuminate\Support\MessageBag([
+                'email' => ['メールアドレスまたはパスワードが正しくありません。'],
+            ]),
+        );
+        $this->get(route('auth.login.form'))->assertOk();
+        $rendered = view('auth.login', ['errors' => $errors])->render();
+        $this->assertStringContainsString('data-auth-login-error', $rendered);
+        $this->assertStringContainsString('role="alert"', $rendered);
+        $this->assertStringContainsString('メールアドレスまたはパスワードが正しくありません。', $rendered);
+        $this->assertStringNotContainsString('wrong-credential', $rendered);
+    }
+
     public function test_new_account_is_required_to_pass_welcome_before_first_companion(): void
     {
         $this->post(route('auth.register'), [
