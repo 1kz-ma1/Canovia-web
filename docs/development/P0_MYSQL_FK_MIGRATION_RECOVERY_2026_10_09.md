@@ -674,3 +674,17 @@ Aiven connection details are uploaded to CI. **This is not an actual
 Aiven backup restoration or proof of production readiness**. Issue
 #418 release hold, Draft PR #443, main autoDeploy and the owner's
 resolved iPhone DB-name/login incident are unaffected.
+
+
+## Actual Aiven MySQL 8.4 family: dedicated disposable CI acceptance (2026-10-10 JST)
+
+Owner-provided Aiven Console UI evidence shows the live MySQL service is **Running / MySQL 8.4.8** (no SQL connection or schema-level inspection). The previous isolated schema-integrity workflow exercised `mysql:8.0` only, so a **targeted version-parity matrix** was added to `.github/workflows/p0-disposable-mysql-schema.yml` at commit `f1f089b741d14a0cbd222c883b2e24109c96fedd`.
+
+- Matrix jobs `mysql:8.0` and `mysql:8.4` use separate disposable CI containers with the existing pinned `127.0.0.1/canovia_p0_ci` account, `APP_ENV=testing` and strict no-production guards.
+- Each job checks the MySQL server's actual reported major/minor series, performs full migrations twice, an interrupted-DDL FK/index repair test, offline schema/ledger checks, a synthetic independent dump/restore and negative controls, and the SQL-only preflight/importer.
+- **Both MySQL 8.0 and 8.4 jobs PASS**: [exact-commit P0 matrix workflow #37965417969](https://github.com/1kz-ma1/Canovia-web/actions/runs/37965417969).
+- This is compatibility evidence for the **8.4 release family**, not proof of exact patch `8.4.8` parity, nor proof of real Aiven table state, existing DB privileges, production backups or migration/restore readiness. No production connectivity, Aiven data, secrets or Render service was used.
+
+Aiven's official [Free MySQL tier documentation](https://aiven.io/docs/products/mysql/concepts/mysql-free-tier) states that Free has automatic backups **but cannot fork services**. The actual service plan shown to this assistant is still unverified; therefore do not assume a standard `Fork & restore` procedure is available. Aiven's [MySQL backup documentation](https://aiven.io/docs/products/mysql/concepts/mysql-backups) separately describes daily full backups plus binary-log based point-in-time recovery, with retention depending on the plan; historical backup *entries* are not proof that an independent restore was successfully tested. Before production DDL, verify the actual plan and supported recovery method privately and obtain an explicitly authorized, isolated restore drill where feasible. Do not propose a paid fork, upgrade or snapshot action without the owner's approval.
+
+**Result:** `DISPOSABLE_MYSQL_8_0_PASS`, `DISPOSABLE_MYSQL_8_4_PASS`, `AIVEN_SCHEMA_UNVERIFIED`, `AIVEN_BACKUP_RESTORE_UNVERIFIED`, `RELEASE_AUTHORIZED=false`. Issue #418 hold and this Draft/unmerged PR remain unchanged.
