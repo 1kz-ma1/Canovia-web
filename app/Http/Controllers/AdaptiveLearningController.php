@@ -8,6 +8,7 @@ use App\Models\Plan;
 use App\Models\QuestionPack;
 use App\Models\Task;
 use App\Services\AdaptiveLearningAnswerDraftService;
+use App\Services\AdaptiveLearningHistoryService;
 use App\Services\AdaptiveLearningBankQueueService;
 use App\Services\AdaptiveLearningCandidateService;
 use App\Services\AdaptiveExamProfileRegistry;
@@ -52,7 +53,8 @@ final class AdaptiveLearningController extends Controller
         BehaviorIdentityService $identity, AdaptiveLearningBankQueueService $queue,
         AdaptiveExamProfileRegistry $examProfiles,
         AdaptiveExamPackReadinessService $examReadiness,
-        AdaptiveLearningModeRecommendationService $recommendations)
+        AdaptiveLearningModeRecommendationService $recommendations,
+        AdaptiveLearningHistoryService $history)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         // Filter eligible packs before applying the display cap. Limiting the
@@ -100,6 +102,7 @@ final class AdaptiveLearningController extends Controller
             'examProfiles' => $availableExamProfiles, 'examPacks' => $examPacks,
             'examOptions' => $examOptions,
             'learningRecommendations' => $learningRecommendations,
+            'learningHistory' => $history->forPlanTask($request, $plan, $task, $identity->resolve($request)),
             'startRequestId' => (string) Str::uuid(),
             'examStartRequestId' => (string) Str::uuid(),
         ]);
