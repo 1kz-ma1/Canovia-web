@@ -267,4 +267,4 @@ No DB schema, pricing, rollout/entitlement, AI provider, official exam profile, 
 - **Immutable review binding**: `AdaptiveExamPackReadinessService::contentFingerprint` のSHA-256はactive問題の全出題文・選択肢・正答・解説・出典・学習メタデータ・並び順から計算する。内容レビュー後、`metadata.exam_simulation_review.reviewed_content_sha256` と一致しない場合は、従来のversion一致やレビュー真偽だけでは模試開始不可。問題文・正答を版番号そのままで変更しても審査は失効する。
 - 完全な導入・公開・権利監修フローと未完受入条件: [AP_A_2026_80_QUESTION_CANDIDATE_AUDIT.md](AP_A_2026_80_QUESTION_CANDIDATE_AUDIT.md)。実機（PWA/WKWebView）は所有者要望により後日一括検証。
 
-- **2026-10-09実監査で発覚した追加のブロッカー**: IPA公式35問には、元のBundled Packから既に解説が未登録。80問セットを作ったことで付いた問題ではない。根拠なしのAI埋め合わせはせず、各問の解説を検証・記録してから公開。L5模試の公開前チェックで解説未登録数をブロックする。
+- **2026-10-09原典監査で発覚した問題と対応**: IPA公式Bundled Packには元から35問分の解説が未登録。今回、80問候補 v0.2.0にCanovia独自の35問解説案を追加（元のIPA Packは変更しない）。全80問に解説テキストはあるが、専門家によるレビューは未了。`explanation_review_state=pending_human_subject_review` を通常公開・模試利用の両方でブロックし、管理者の `explanations_checked=true` と更新内容SHA-256の一致が必要。IPA公式正答キーは照合済みだが問題文・選択肢の全件PDF目視照合、解説の正確性、再利用条件は引き続き未承認。
