@@ -39,15 +39,19 @@ final class ApExamCandidateReviewQueueTest extends TestCase
             'ap-a-canovia-core-v1' => 35,
             'ap-a-canovia-business-management-supplement-v1' => 10,
         ], $report['source_counts']);
-        $this->assertSame(6, $report['source_visual_spotchecked_count']);
-        $this->assertSame(29, $report['source_visual_unchecked_official_count']);
+        $this->assertSame(35, $report['source_visual_spotchecked_count']);
+        $this->assertSame(0, $report['source_visual_unchecked_official_count']);
         $this->assertSame(80, array_sum($report['priority_counts']));
-        $this->assertSame(29, $report['priority_counts']['P0']);
+        $this->assertSame(0, $report['priority_counts']['P0']);
         $this->assertGreaterThan(0, $report['priority_counts']['P1']);
         $this->assertGreaterThan(0, $report['priority_counts']['P2']);
         $this->assertSame(5, $report['known_overlap_count']);
         $this->assertTrue($report['known_overlap_excluded']);
         $this->assertTrue($report['publication_blocked']);
+        $this->assertSame(80, $report['independent_review_pending_count']);
+        $this->assertSame(35, collect($report['items'])->filter(fn (array $item) =>
+            $item['origin_type'] === 'official' && $item['source_visual_spotcheck'])->count());
+
 
         foreach ($report['items'] as $index => $item) {
             $this->assertSame($index + 1, $item['number']);
@@ -62,14 +66,15 @@ final class ApExamCandidateReviewQueueTest extends TestCase
         $official = collect($report['items'])->firstWhere('origin_type', 'official');
         $this->assertNotNull($official);
         $this->assertStringStartsWith('https://www.ipa.go.jp/', $official['source_url']);
+        $this->assertStringStartsWith('https://www.ipa.go.jp/', $official['source_answer_url']);
         $this->assertContains('Canovia独自の解説案・誤答理由の検証', $official['review_tasks']);
         $checked = collect($report['items'])->firstWhere('key', 'ipa-2025-autumn-ap-am-q11');
         $this->assertTrue($checked['source_visual_spotcheck']);
         $this->assertSame(8, $checked['source_visual_spotcheck_pdf_page']);
         $this->assertSame('P1', $checked['priority']);
         $this->assertSame('pending', $checked['independent_review_status']);
-        $this->assertFalse($official['source_visual_spotcheck']);
-        $this->assertSame('P0', $official['priority']);
+        $this->assertTrue($official['source_visual_spotcheck']);
+        $this->assertSame('P1', $official['priority']);
 
         $supplement = collect($report['items'])->firstWhere('origin_type', 'new');
         $this->assertNotNull($supplement);
@@ -119,6 +124,42 @@ final class ApExamCandidateReviewQueueTest extends TestCase
         $this->assertStringContainsString('コストも予算超過', $evmChoice['label']);
     }
 
+    public function test_all_thirty_five_official_answer_keys_match_ipa_published_2025_autumn_answer_table(): void
+    {
+        // Independently transcribed from the IPA released original answer
+        // table PDF; not generated from candidate grading rules or snapshots.
+        $officialAnswers = [
+            3 => 'イ', 4 => 'ウ', 5 => 'イ', 6 => 'イ', 7 => 'ア',
+            8 => 'エ', 9 => 'イ', 11 => 'イ', 12 => 'ウ', 13 => 'ア',
+            14 => 'イ', 15 => 'エ', 16 => 'イ', 17 => 'ウ',
+            18 => 'イ', 19 => 'エ', 23 => 'エ', 25 => 'ウ',
+            26 => 'イ', 27 => 'エ', 56 => 'ア', 57 => 'イ',
+            58 => 'エ', 59 => 'ウ', 60 => 'イ', 62 => 'エ',
+            63 => 'イ', 64 => 'ウ', 66 => 'ウ', 67 => 'ウ',
+            68 => 'イ', 69 => 'ア', 71 => 'イ', 72 => 'イ',
+            73 => 'ウ',
+        ];
+        $this->assertCount(35, $officialAnswers);
+        $report = app(ApExamCandidateAuditService::class)->inspect();
+        $official = collect($report['items'])->filter(fn (array $i) =>
+            $i['origin_type'] === 'official');
+        $this->assertCount(35, $official);
+        $seen = [];
+        foreach ($official as $item) {
+            $questionNumber = (int) substr($item['key'], -2);
+            $this->assertArrayHasKey($questionNumber, $officialAnswers);
+            $this->assertSame($officialAnswers[$questionNumber], $item['answer'],
+                "IPA answer mismatch for q{$questionNumber}");
+            $seen[] = $questionNumber;
+        }
+        sort($seen);
+        $all = array_keys($officialAnswers);
+        sort($all);
+        $this->assertSame($all, $seen);
+        $this->assertSame(80, $report['independent_review_pending_count']);
+        $this->assertTrue($report['publication_blocked']);
+    }
+
     public function test_visual_source_evidence_invalidates_on_any_unreviewed_content_or_version_change(): void
     {
         $candidate = app(\App\Services\QuestionPackCatalogService::class)
@@ -127,7 +168,11 @@ final class ApExamCandidateReviewQueueTest extends TestCase
         $evidence = json_decode((string) file_get_contents(
             resource_path('learning_review/ap-a-2026-source-spotchecks-v1.json')),
             true, 512, JSON_THROW_ON_ERROR);
-        $this->assertCount(6, $evidence['entries']);
+        $this->assertCount(35, $evidence['entries']);
+        $this->assertSame(35, $evidence['review_summary']['source_visual_comparison_recorded']);
+        $this->assertSame(0, $evidence['review_summary']['independent_subject_review_approved']);
+        $this->assertFalse($evidence['review_summary']['content_rights_approved']);
+        $this->assertCount(35, array_unique(array_column($evidence['entries'], 'key')));
         foreach ($evidence['entries'] as $entry) {
             $question = $questions->get($entry['key']);
             $this->assertNotNull($question);
@@ -177,8 +222,8 @@ final class ApExamCandidateReviewQueueTest extends TestCase
             ->assertSee('data-ap-a-release-blocked', false)
             ->assertSee('data-ap-a-priority-summary', false)
             ->assertSee('data-ap-a-source-spotcheck', false)
-            ->assertSee('P0：29問')
-            ->assertSee('未照合 29問。')
+            ->assertSee('P0：0問')
+            ->assertSee('未照合 0問。')
             ->assertSee('通常公開と本番模試提供はブロック中です。')
             ->assertSee('80問それぞれの出典・正答・解説と監修項目')
             ->assertSee('data-ap-a-review-item="ipa-2025-autumn-ap-am-q03"', false)
@@ -186,6 +231,7 @@ final class ApExamCandidateReviewQueueTest extends TestCase
             ->assertSee('data-ap-a-review-item="strategy-pest-001"', false)
             ->assertSee('専門監修待ち')
             ->assertSee('IPA原問題を確認（別タブ）')
+            ->assertSee('IPA解答例を確認（別タブ）')
             ->assertDontSee('リポジトリで管理している検証済みPackです。');
         $this->assertDatabaseCount('question_packs', 0);
         $this->assertDatabaseCount('learning_answer_events', 0);

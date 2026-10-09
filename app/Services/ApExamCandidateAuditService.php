@@ -200,6 +200,7 @@ final class ApExamCandidateAuditService
                 'explanation' => (string) ($question['explanation'] ?? ''),
                 'source_reference' => (string) ($question['source_reference'] ?? ''),
                 'source_url' => (string) data_get($question, 'learning_metadata.provenance.problem_url', ''),
+                'source_answer_url' => (string) data_get($question, 'learning_metadata.provenance.answer_url', ''),
                 'flags' => $flags,
                 'review_tasks' => $reviewTasks,
                 // No individual sign-off record is provided by the bundle.
