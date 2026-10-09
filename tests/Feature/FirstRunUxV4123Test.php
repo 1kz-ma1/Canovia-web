@@ -132,7 +132,7 @@ class FirstRunUxV4123Test extends TestCase
             'password' => Hash::make('correct-credential'),
         ]);
 
-        $this->post(route('auth.login'), [
+        $this->from(route('auth.login.form'))->post(route('auth.login'), [
             'email' => 'auth-feedback@example.com',
             'password' => 'wrong-credential',
         ])
