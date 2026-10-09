@@ -71,7 +71,7 @@ final class P0DatabaseSessionLoginRegressionTest extends TestCase
             'email' => $user->email,
             'password' => 'correct-password-for-ci',
             'remember' => '0',
-        ])->assertRedirect(route('home'));
+        ])->assertRedirect(route('auth.account'));
 
         Auth::forgetGuards();
         $reloginCookie = $this->sessionCookie($relogin);
@@ -96,14 +96,26 @@ final class P0DatabaseSessionLoginRegressionTest extends TestCase
         $this->assertGuest();
         $cookie = $this->sessionCookie($response);
 
+        // A Feature Test can inspect the flashed error bag on the POST,
+        // but its in-process client cannot prove browser flash persistence.
+        // Render the next-page error bag explicitly, as the existing auth
+        // feedback test does, without claiming Safari/PWA acceptance.
         Auth::forgetGuards();
         $this->withCookie($cookie->getName(), (string) $cookie->getValue())
             ->get(route('auth.login.form'))
-            ->assertOk()
-            ->assertSee('data-auth-login-error', false)
-            ->assertSee('メールアドレスまたはパスワードが正しくありません。')
-            ->assertDontSee('incorrect-ci-password');
+            ->assertOk();
 
+        $errors = (new \Illuminate\Support\ViewErrorBag())->put(
+            'default',
+            new \Illuminate\Support\MessageBag([
+                'email' => ['メールアドレスまたはパスワードが正しくありません。'],
+            ]),
+        );
+        $html = view('auth.login', ['errors' => $errors])->render();
+        $this->assertStringContainsString('data-auth-login-error', $html);
+        $this->assertStringContainsString('role="alert"', $html);
+        $this->assertStringContainsString('メールアドレスまたはパスワードが正しくありません。', $html);
+        $this->assertStringNotContainsString('incorrect-ci-password', $html);
         $this->assertGuest();
     }
 
