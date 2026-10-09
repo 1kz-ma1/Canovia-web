@@ -138,6 +138,8 @@ jobs:
           php -l database/migrations/2026_10_08_220000_add_exam_simulation_to_learning_runs.php
           php -l config/adaptive_exam_profiles.php
           php -l tests/Feature/AdaptiveLearningExamSimulationV5880Test.php
+          php -l app/Services/AdaptiveExamPackReadinessService.php
+          php -l tests/Feature/AdaptiveLearningVerifiedApExamL5Test.php
           php -l app/Services/AdaptiveLearningModeRecommendationService.php
           php -l tests/Feature/AdaptiveLearningModeRecommendationV5881Test.php
           php -l app/Models/LearningAnswerEvaluationAdjustment.php
@@ -325,6 +327,9 @@ jobs:
         run: php artisan test tests/Feature/AdaptiveLearningEvaluationAdjustmentV5882Test.php tests/Feature/AdaptiveLearningModeRecommendationV5881Test.php tests/Feature/AdaptiveLearningCandidateQueueV5879Test.php tests/Feature/AdaptiveLearningExamSimulationV5880Test.php
       - name: V58.81 Explainable Learning Mode Ranking
         run: php artisan test tests/Feature/AdaptiveLearningModeRecommendationV5881Test.php tests/Feature/AdaptiveLearningExamSimulationV5880Test.php tests/Feature/AdaptiveLearningCandidateQueueV5879Test.php tests/Feature/AdaptiveLearningSingleQuestionV5878Test.php
+      - name: L5 Verified 2026 AP A CBT exam readiness and full synthetic 80-question freeze
+        run: php artisan test tests/Feature/AdaptiveLearningVerifiedApExamL5Test.php tests/Feature/AdaptiveLearningExamSimulationV5880Test.php
+
       - name: V58.80 Verified Exam Simulation and Legacy Regression
         run: php artisan test tests/Feature/AdaptiveLearningExamSimulationV5880Test.php tests/Feature/AdaptiveLearningCandidateQueueV5879Test.php tests/Feature/AdaptiveLearningSingleQuestionV5878Test.php tests/Feature/QuestionBankV402Test.php
       - name: L2 Question Bank publication readiness and legacy compatibility
