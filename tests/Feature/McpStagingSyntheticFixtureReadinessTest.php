@@ -52,7 +52,9 @@ final class McpStagingSyntheticFixtureReadinessTest extends TestCase
         ]);
         $this->assertSame(0, Artisan::call('canovia:mcp-staging-verify-synthetic-plan', ['--json' => true]));
         $this->assertStringContainsString('"ready"', Artisan::output());
-        $this->assertStringContainsString('"production_authorized":false', Artisan::output());
+        $decoded = json_decode(trim(Artisan::output()), true);
+        $this->assertIsArray($decoded);
+        $this->assertSame(false, $decoded['production_authorized'] ?? null);
         $this->assertStringNotContainsString(McpStagingSyntheticActorBootstrap::EMAIL, Artisan::output());
         $this->assertStringNotContainsString($ownerToken, Artisan::output());
         $this->assertSame($createdAt->toISOString(), $plan->fresh()->created_at->toISOString());
