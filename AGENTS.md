@@ -46,3 +46,15 @@ These GitHub-native instructions do **not** authorize an AI to call Canovia's se
 - Keep one short-lived independent feature/fix branch and working directory/worktree per lane/session. The lane roster is coordination metadata, **not** an agent that executes unattended or authority to create a second roadmap.
 - Recheck current `main`, shared contracts, PRs and CI before claiming a task is incomplete or implemented. Coordinate changes to shared Plan/Task/auth/navigation/spec hotspots; retain versioned and active WIP specs.
 - Existing verification, merge and deploy restrictions above apply unchanged to every lane, including Hotfix.
+
+## Implementation request lane routing (2026-10-09)
+
+When the user initiates Canovia implementation work, **route the request before selecting a work item**:
+
+1. If the user has already named a lane (Learning, Development, Intelligence, Experience, Platform, Expansion, Hotfix, Orchestrator), selected a work item, or describes a task whose primary owner is unambiguous, **do not ask for the lane again**. Continue with the specified/inferred lane and verify current GitHub state.
+2. If the user only says something like `Canoviaの実装をしたい`, `Canoviaの実装を進めたい`, or `次の実装を進めたい` **and neither this conversation nor a valid handoff establishes the owning lane/work item**, ask **one brief conversational question**: `Canoviaのどの領域を進めますか？` Show the lane choices and one-line descriptions from [parallel development model](docs/development/PARALLEL_DEVELOPMENT_OPERATING_MODEL.md): Learning / Development / Intelligence / Experience / Platform / Expansion / Hotfix / Orchestrator. Accept number or name; no form is required.
+3. If an active lane is already established in the conversation, a short `進めて` means **continue that lane's work**, not rerun the picker. If a concrete bug is described during another lane's implementation, apply the feature-branch-vs-main Hotfix boundary; only clarify ownership when it is genuinely ambiguous.
+4. After the lane is chosen, fetch latest `main` + the lane handoff/roadmap/PR status and execute a scoped slice under the normal branch, verification and merge policy. Do **not** treat a lane selection as authorization to start every backlog item or to bypass an existing dependency gate.
+5. For requests that explicitly ask to classify, reprioritize, coordinate or review **multiple** lanes, default to Orchestrator. If the user requests simultaneous implementation in several areas, coordinate separate branches/contracts rather than merging them into one giant PR.
+
+This is a **repository instruction for agents that read these files**, not a guarantee that an unrelated new ChatGPT chat automatically loaded the repository. For copyable opening prompts, see [lane handoffs](docs/development/ACTIVE_LANE_HANDOFFS.md).
