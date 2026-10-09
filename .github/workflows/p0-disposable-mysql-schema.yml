@@ -8,6 +8,8 @@ on:
       - 'tests/Feature/ProductionMysqlSchemaP0Test.php'
       - 'scripts/sql/p0_mysql_readonly_schema_inventory.sql'
       - 'scripts/ci/p0_mysql_readonly_schema_inventory_check.php'
+      - 'scripts/ci/p0_mysql_inventory_offline_triage.py'
+      - 'tests/ci/test_p0_mysql_inventory_offline_triage.py'
       - '.github/workflows/p0-disposable-mysql-schema.yml'
   workflow_dispatch:
 
@@ -62,6 +64,8 @@ jobs:
           php -l database/migrations/2026_10_04_000200_create_intelligence_decision_traces_table.php
           php -l database/migrations/2026_10_08_230000_create_learning_answer_evaluation_adjustments.php
           php -l tests/Feature/ProductionMysqlSchemaP0Test.php
+      - name: Verify offline schema and migration-ledger decision matrix
+        run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_inventory_offline_triage.py' -v
       - name: Full MySQL migrations from an empty disposable database
         run: php artisan migrate --force --no-interaction
       - name: Repeat all MySQL migrations (idempotency)
