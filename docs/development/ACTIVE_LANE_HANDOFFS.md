@@ -47,7 +47,7 @@
 
 **P2 after P0 gates:** Career/MATCH plus expansion, bookkeeping coverage enhancement within Learning, complex Development agent automation, future platform concepts. P2 does not imply cancelation.
 
-**Known staging boundary (2026-10-09):** An isolated Free Render MCP staging service and an *unattached* Free staging PostgreSQL exist per `ROADMAP.md`. Documentation/CI readiness and isolated smoke tests are not proof of a completed live PostgreSQL cutover. [#409](https://github.com/1kz-ma1/Canovia-web/pull/409) remains independent from parallel development reorganization.
+**Known staging boundary (2026-10-09, verified):** The existing Free Render MCP staging Web is **connected** to its isolated Free PostgreSQL 17; Render deployment `dep-db460sflk1mc73ev4g3g` completed live and an independent HTTPS smoke confirmed `/up=200`, while account/OAuth/MCP, legacy health and static endpoints remained `503`. This is **not** an IdP/ChatGPT OAuth launch or activation of shared Plan data. The Free DB expires on 2026-11-08 UTC. See the [V59 live acceptance](MCP_IDP_SELECTION_AND_STAGING_POSTGRES_2026_10_09.md) and [roadmap](ROADMAP.md); do not duplicate this staging resource.
 
 ## 4. Start-of-chat instruction for each lane
 
