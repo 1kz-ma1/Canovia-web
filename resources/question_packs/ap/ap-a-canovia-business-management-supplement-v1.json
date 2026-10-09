@@ -1,0 +1,631 @@
+{
+  "schema_version": "1.0",
+  "pack": {
+    "slug": "ap-a-canovia-business-management-supplement-v1",
+    "title": "AP 科目A マネジメント・ストラテジ補充10問（未監修）",
+    "exam_code": "AP",
+    "subject": "科目A",
+    "version": "0.1.0-draft",
+    "downloadable": false,
+    "metadata": {
+      "match_terms": [
+        "AP",
+        "応用情報",
+        "科目A"
+      ],
+      "locale": "ja-JP",
+      "content_kind": "canovia_independent_supplement_draft",
+      "review_state": "pending_human_content_and_rights_review",
+      "explanation_review_state": "pending_human_subject_review",
+      "rights_note": "Canovia original drafted questions; independent factual/rights review still required",
+      "content_revision": "2026-10-09",
+      "purpose": "internal source snapshot for 80-question review-only candidate",
+      "domain_counts": {
+        "management": 2,
+        "strategy": 8
+      }
+    }
+  },
+  "questions": [
+    {
+      "external_key": "mgmt-wbs-001",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "プロジェクトの作業範囲を成果物や作業単位へ段階的に分解し、見積り・担当割当て・進捗管理の基礎とするものはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "リスク登録簿"
+            },
+            {
+              "id": "イ",
+              "label": "WBS（Work Breakdown Structure）"
+            },
+            {
+              "id": "ウ",
+              "label": "パレート図"
+            },
+            {
+              "id": "エ",
+              "label": "SLA"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "マネジメント",
+          "プロジェクトマネジメント"
+        ],
+        "weakness_targets": [
+          "プロジェクトマネジメント"
+        ],
+        "tags": [
+          "科目A",
+          "マネジメント",
+          "プロジェクトマネジメント"
+        ],
+        "keywords": [],
+        "curation": {
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review"
+        }
+      },
+      "explanation": "WBSはプロジェクト全体で必要な成果物・作業を階層構造に分解し、作業単位を明確にする手法です。リスク登録簿は不確実性の管理、パレート図は重点項目の抽出、SLAはサービス水準の合意に使うため目的が異なります。",
+      "difficulty": 2,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "external_key": "mgmt-risk-transfer-002",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "システム開発プロジェクトで、機材の損失による金銭的な被害を保険契約によって第三者へ移すリスク対応はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "回避"
+            },
+            {
+              "id": "イ",
+              "label": "低減"
+            },
+            {
+              "id": "ウ",
+              "label": "移転"
+            },
+            {
+              "id": "エ",
+              "label": "受容"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ウ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "マネジメント",
+          "プロジェクトマネジメント"
+        ],
+        "weakness_targets": [
+          "プロジェクトマネジメント"
+        ],
+        "tags": [
+          "科目A",
+          "マネジメント",
+          "プロジェクトマネジメント"
+        ],
+        "keywords": [],
+        "curation": {
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review"
+        }
+      },
+      "explanation": "保険への加入などにより、損失の経済的負担を契約相手へ移す対応はリスク移転です。回避はリスクのある活動自体をやめること、低減は発生確率や影響を小さくすること、受容は対応を加えず残存リスクを引き受けることを意味します。",
+      "difficulty": 3,
+      "sort_order": 2,
+      "is_active": true
+    },
+    {
+      "external_key": "strategy-pest-001",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "企業の外部環境を政治・経済・社会・技術の四つの視点から整理して、事業戦略に影響するマクロ環境の変化を分析する手法はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "PEST分析"
+            },
+            {
+              "id": "イ",
+              "label": "SWOT分析"
+            },
+            {
+              "id": "ウ",
+              "label": "ABC分析"
+            },
+            {
+              "id": "エ",
+              "label": "EVM"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストラテジ",
+          "経営戦略"
+        ],
+        "weakness_targets": [
+          "経営戦略"
+        ],
+        "tags": [
+          "科目A",
+          "ストラテジ",
+          "経営戦略"
+        ],
+        "keywords": [],
+        "curation": {
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review"
+        }
+      },
+      "explanation": "PESTはPolitical（政治）・Economic（経済）・Social（社会）・Technological（技術）の4視点で外部マクロ環境を分析します。SWOTは内部の強み・弱みと外部の機会・脅威、ABC分析は重要度別の分類、EVMはプロジェクトの進捗とコストの評価です。",
+      "difficulty": 2,
+      "sort_order": 3,
+      "is_active": true
+    },
+    {
+      "external_key": "strategy-ppm-002",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "PPM（プロダクトポートフォリオマネジメント）において、市場成長率は低いが相対的な市場占有率が高く、安定した資金を生み出す事業の区分はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "花形（Star）"
+            },
+            {
+              "id": "イ",
+              "label": "問題児（Question Mark）"
+            },
+            {
+              "id": "ウ",
+              "label": "負け犬（Dog）"
+            },
+            {
+              "id": "エ",
+              "label": "金のなる木（Cash Cow）"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "エ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストラテジ",
+          "経営戦略"
+        ],
+        "weakness_targets": [
+          "経営戦略"
+        ],
+        "tags": [
+          "科目A",
+          "ストラテジ",
+          "経営戦略"
+        ],
+        "keywords": [],
+        "curation": {
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review"
+        }
+      },
+      "explanation": "PPMは市場成長率と相対的市場占有率で事業を区分します。低成長率かつ高占有率の『金のなる木』は安定的なキャッシュを生みやすく、他の事業への投資原資にもなります。花形は高成長・高占有率、問題児は高成長・低占有率、負け犬は低成長・低占有率です。",
+      "difficulty": 3,
+      "sort_order": 4,
+      "is_active": true
+    },
+    {
+      "external_key": "strategy-stp-003",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "市場を顧客の特徴ごとに分割し、狙う顧客層を選択した後、自社製品の位置付けを決めるマーケティング戦略の枠組みはどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "4P"
+            },
+            {
+              "id": "イ",
+              "label": "STP"
+            },
+            {
+              "id": "ウ",
+              "label": "BSC"
+            },
+            {
+              "id": "エ",
+              "label": "EAI"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストラテジ",
+          "経営戦略"
+        ],
+        "weakness_targets": [
+          "経営戦略"
+        ],
+        "tags": [
+          "科目A",
+          "ストラテジ",
+          "経営戦略"
+        ],
+        "keywords": [],
+        "curation": {
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review"
+        }
+      },
+      "explanation": "STPはSegmentation（市場細分化）、Targeting（標的市場選定）、Positioning（自社の立ち位置の明確化）の順に市場への働き掛けを設計する枠組みです。4Pは製品・価格・流通・販促の施策、BSCは戦略目標の評価、EAIは企業内アプリケーションの連携です。",
+      "difficulty": 2,
+      "sort_order": 5,
+      "is_active": true
+    },
+    {
+      "external_key": "strategy-three-c-004",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "新規サービスの事業戦略を考えるため、顧客・競合他社・自社の三つの観点から市場と強みを分析する手法はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "PEST分析"
+            },
+            {
+              "id": "イ",
+              "label": "特性要因図"
+            },
+            {
+              "id": "ウ",
+              "label": "3C分析"
+            },
+            {
+              "id": "エ",
+              "label": "バリューチェーン分析"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ウ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストラテジ",
+          "経営戦略"
+        ],
+        "weakness_targets": [
+          "経営戦略"
+        ],
+        "tags": [
+          "科目A",
+          "ストラテジ",
+          "経営戦略"
+        ],
+        "keywords": [],
+        "curation": {
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review"
+        }
+      },
+      "explanation": "3C分析はCustomer（顧客・市場）、Competitor（競合）、Company（自社）の観点から成功要因を整理する手法です。PESTはマクロ環境、特性要因図は問題の原因構造、バリューチェーン分析は企業活動の価値創出工程に着目します。",
+      "difficulty": 3,
+      "sort_order": 6,
+      "is_active": true
+    },
+    {
+      "external_key": "strategy-scm-005",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "需要予測から調達・生産・在庫・配送まで企業間のモノや情報の流れを連携し、全体の在庫削減や納期短縮を目指す管理手法はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "PLM"
+            },
+            {
+              "id": "イ",
+              "label": "SCM"
+            },
+            {
+              "id": "ウ",
+              "label": "CRM"
+            },
+            {
+              "id": "エ",
+              "label": "SFA"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "イ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストラテジ",
+          "ビジネスインダストリ"
+        ],
+        "weakness_targets": [
+          "ビジネスインダストリ"
+        ],
+        "tags": [
+          "科目A",
+          "ストラテジ",
+          "ビジネスインダストリ"
+        ],
+        "keywords": [],
+        "curation": {
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review"
+        }
+      },
+      "explanation": "SCM（Supply Chain Management）は調達から顧客への配送までの供給網を横断してモノ・情報・資金の流れを調整する考え方です。PLMは製品のライフサイクル情報、CRMは顧客関係、SFAは営業活動の支援に重点があります。",
+      "difficulty": 2,
+      "sort_order": 7,
+      "is_active": true
+    },
+    {
+      "external_key": "strategy-bpr-006",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "部門別に細分化された従来の業務手順を前提とせず、顧客価値と業務成果を起点に組織横断の業務プロセスを根本的に再設計する取組はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "BPR"
+            },
+            {
+              "id": "イ",
+              "label": "BCP"
+            },
+            {
+              "id": "ウ",
+              "label": "RTO"
+            },
+            {
+              "id": "エ",
+              "label": "ITIL"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ア"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストラテジ",
+          "システム戦略"
+        ],
+        "weakness_targets": [
+          "システム戦略"
+        ],
+        "tags": [
+          "科目A",
+          "ストラテジ",
+          "システム戦略"
+        ],
+        "keywords": [],
+        "curation": {
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review"
+        }
+      },
+      "explanation": "BPR（Business Process Re-engineering）は業務プロセスを部分的に効率化するだけでなく、仕事の流れを抜本的に見直して再設計します。BCPは事業継続計画、RTOは目標復旧時間、ITILはITサービスマネジメントのベストプラクティスです。",
+      "difficulty": 3,
+      "sort_order": 8,
+      "is_active": true
+    },
+    {
+      "external_key": "strategy-roi-007",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "業務システムへの投資額が400万円で、投資によって1年間に得られる利益が80万円と見込まれる。単純な投資利益率ROIを『年間利益÷投資額×100』と定義した場合、ROIは幾らか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "5%"
+            },
+            {
+              "id": "イ",
+              "label": "10%"
+            },
+            {
+              "id": "ウ",
+              "label": "20%"
+            },
+            {
+              "id": "エ",
+              "label": "50%"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "ウ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストラテジ",
+          "経営戦略"
+        ],
+        "weakness_targets": [
+          "経営戦略"
+        ],
+        "tags": [
+          "科目A",
+          "ストラテジ",
+          "経営戦略"
+        ],
+        "keywords": [],
+        "curation": {
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review"
+        }
+      },
+      "explanation": "設問の定義どおり年間利益80万円を投資額400万円で割り、100を掛けます。80÷400×100＝20%です。投資回収期間のPBPや割引現在価値を使うNPVとは異なり、この問題では年利益と投資額の単純な比率だけを求めます。",
+      "difficulty": 2,
+      "sort_order": 9,
+      "is_active": true
+    },
+    {
+      "external_key": "strategy-valuechain-008",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "企業の活動を購買物流、製造、出荷物流、販売・マーケティング、サービスなどの主活動と、調達・人事管理などの支援活動に分け、どの工程で競争優位を生むか分析する手法はどれか。",
+      "response_schema": [
+        {
+          "id": "answer",
+          "type": "single_choice",
+          "label": "回答",
+          "required": true,
+          "choices": [
+            {
+              "id": "ア",
+              "label": "PPM"
+            },
+            {
+              "id": "イ",
+              "label": "DCF法"
+            },
+            {
+              "id": "ウ",
+              "label": "ファイブフォース分析"
+            },
+            {
+              "id": "エ",
+              "label": "バリューチェーン分析"
+            }
+          ]
+        }
+      ],
+      "grading_rule": {
+        "type": "exact_choice",
+        "field_id": "answer",
+        "answer": "エ"
+      },
+      "learning_metadata": {
+        "concepts": [
+          "ストラテジ",
+          "経営戦略"
+        ],
+        "weakness_targets": [
+          "経営戦略"
+        ],
+        "tags": [
+          "科目A",
+          "ストラテジ",
+          "経営戦略"
+        ],
+        "keywords": [],
+        "curation": {
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review"
+        }
+      },
+      "explanation": "バリューチェーン分析は企業の活動を主活動と支援活動に分け、各工程が顧客価値やコストにどのように関わるかを可視化します。PPMは事業ポートフォリオ、DCF法は将来キャッシュフローの割引評価、ファイブフォース分析は業界の競争構造に着目します。",
+      "difficulty": 3,
+      "sort_order": 10,
+      "is_active": true
+    }
+  ]
+}

@@ -268,3 +268,10 @@ No DB schema, pricing, rollout/entitlement, AI provider, official exam profile, 
 - 完全な導入・公開・権利監修フローと未完受入条件: [AP_A_2026_80_QUESTION_CANDIDATE_AUDIT.md](AP_A_2026_80_QUESTION_CANDIDATE_AUDIT.md)。実機（PWA/WKWebView）は所有者要望により後日一括検証。
 
 - **2026-10-09原典監査で発覚した問題と対応**: IPA公式Bundled Packには元から35問分の解説が未登録。今回、80問候補 v0.2.0にCanovia独自の35問解説案を追加（元のIPA Packは変更しない）。全80問に解説テキストはあるが、専門家によるレビューは未了。`explanation_review_state=pending_human_subject_review` を通常公開・模試利用の両方でブロックし、管理者の `explanations_checked=true` と更新内容SHA-256の一致が必要。IPA公式正答キーは照合済みだが問題文・選択肢の全件PDF目視照合、解説の正確性、再利用条件は引き続き未承認。
+
+## 2026-10-09 L5-c 模試候補の重複抑制・広域分野配分
+
+- 旧AP午前の通常の設問構成はテクノロジ50／マネジメント10／ストラテジ20（[旧試験の形式](https://www.ap-siken.com/s/apkeisiki.html)）。IPAは2026年度CBTで出題範囲/問題数は不変と説明する一方、2026年の科目Aの正確な分野配分そのものを保証する公表値ではない。そのため **過去問ベースの暫定比率** と明記する。
+- 既存L5候補は60/8/12だったが、5件の**具体的な公式/類題の意味上の重複**（MTBF、標本化定理、LRU、I2C排他、デッドロックの資源順）を見つけ、重複Core側を候補から外した。さらに似通った技術問題5件を外し、管理2・戦略8問の新規Canoviaオリジナル案を補った。候補v0.3.0は **IPA公式35 + Core35 + 追加新規10 = 80、分野50/10/20**。
+- 新規10問は `ap-a-canovia-business-management-supplement-v1.json` の別Bundled Draftで保持し、原典のIPA/Coreは不変。候補はsource external keyと出典Pack名を残す。全35 Core既存正答・新規10正答の期待キー固定、代表的な数値式の自動検算、全問の四択・原典一致と未監修ロックをCIで確認。
+- 認証済みの2026年本番模試の**品質承認ではない**。重複の人手探索は特定5組のみを対処した部分的調査、その他の意味上の重複・妥当な誤答選択肢・新規10問の監修・学習分野の粒度・商用の問題利用条件・監修者の内容SHAの確定は未完。実機検証もユーザー希望で後日に一括実施。
