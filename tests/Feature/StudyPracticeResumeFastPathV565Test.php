@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Plan;
+use App\Models\StudyPracticeAttempt;
 use App\Models\StudyPracticeSession;
 use App\Models\Task;
 use App\Models\User;
@@ -218,6 +219,68 @@ class StudyPracticeResumeFastPathV565Test extends TestCase
             ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
             ->assertOk()
             ->assertDontSee('CONTINUE PRACTICE');
+    }
+
+    public function test_compact_legacy_study_ui_keeps_optional_reasoning_closed_and_next_on_the_right(): void
+    {
+        [$user, $plan, $task] = $this->studyPlan();
+        $this->practiceSession($user, $plan, $task);
+
+        $response = $this->actingAs($user)->followingRedirects()
+            ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
+            ->assertOk()
+            ->assertSee('data-study-practice-optional-note', false)
+            ->assertSee('data-study-practice-actions', false)
+            ->assertSee('data-study-practice-next', false)
+            ->assertSee('data-study-practice-question-progress', false)
+            ->assertSee('lg:grid-cols-2', false)
+            ->assertSee('sticky bottom-0', false)
+            ->assertSee('次の問題 →');
+
+        $html = $response->getContent();
+        preg_match('/<details\b[^>]*data-study-practice-optional-note[^>]*>/', $html, $match);
+        $this->assertNotEmpty($match, 'Optional textarea must be inside a native details control');
+        $this->assertStringNotContainsString(' open', $match[0], 'Empty optional notes must start collapsed');
+        $this->assertMatchesRegularExpression(
+            '/data-study-practice-next[^>]*>次の問題 →<\/button>/', $html);
+        // The visible action remains inside the same form to preserve final grading.
+        $this->assertSame(0, \App\Models\StudyPracticeAttempt::count());
+    }
+
+    public function test_saved_optional_reasoning_opens_and_history_is_collapsed_without_deleting_evidence(): void
+    {
+        [$user, $plan, $task] = $this->studyPlan();
+        $this->practiceSession($user, $plan, $task, [
+            'status' => StudyPracticeSession::STATUS_IN_PROGRESS,
+            'draft_answers' => ['q1' => [
+                'answer' => 'A', 'reasoning' => '選択肢を比較した思考過程',
+            ]],
+            'draft_saved_at' => now(),
+        ]);
+        StudyPracticeAttempt::create([
+            'plan_id' => $plan->id, 'task_id' => $task->id,
+            'user_id' => $user->id, 'request_hash' => hash('sha256', (string) Str::uuid()),
+            'exercise_title' => '前回の練習', 'questions' => [],
+            'answers' => [], 'assessment' => [],
+            'score_percent' => 80, 'recommended_task_progress_percent' => 45,
+            'weaknesses' => ['前回の復習メモ'], 'next_action' => 'CNAMEを確認',
+        ]);
+
+        $response = $this->actingAs($user)->followingRedirects()
+            ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
+            ->assertOk()
+            ->assertSee('選択肢を比較した思考過程')
+            ->assertSee('data-study-practice-history', false)
+            ->assertSee('学習履歴を振り返る')
+            ->assertSee('前回の復習メモ');
+        $html = $response->getContent();
+        preg_match('/<details\b[^>]*data-study-practice-optional-note[^>]*>/', $html, $reasoning);
+        $this->assertNotEmpty($reasoning);
+        $this->assertStringContainsString(' open', $reasoning[0], 'Nonempty saved draft stays expanded');
+        preg_match('/<details\b[^>]*data-study-practice-history[^>]*>/', $html, $history);
+        $this->assertNotEmpty($history);
+        $this->assertStringNotContainsString(' open', $history[0], 'Learning history starts collapsed');
+        $this->assertDatabaseCount('study_practice_attempts', 1);
     }
 
     private function practiceSession(
