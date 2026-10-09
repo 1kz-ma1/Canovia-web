@@ -18,6 +18,12 @@
             <div class="rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.06] px-4 py-3 text-sm text-emerald-100">{{ session('status') }}</div>
         @endif
 
+        @error('status')
+            <div role="alert" class="rounded-xl border border-rose-300/30 bg-rose-950/20 p-4 text-sm text-rose-200" data-question-pack-status-error>
+                {{ $message }}
+            </div>
+        @enderror
+
         <section class="page-card border-violet-300/15 p-5 sm:p-6">
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div>
