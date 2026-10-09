@@ -14,6 +14,7 @@ on:
       - 'tests/ci/test_p0_mysql_inventory_tsv_import.py'
       - 'scripts/sql/p0_mysql_readonly_full_migration_ledger.sql'
       - 'scripts/ci/p0_mysql_full_ledger_offline_check.py'
+      - 'scripts/ci/p0_mysql_disposable_restore_smoke.sh'
       - 'tests/ci/test_p0_mysql_full_ledger_offline_check.py'
       - '.github/workflows/p0-disposable-mysql-schema.yml'
   workflow_dispatch:
@@ -114,3 +115,11 @@ jobs:
             < scripts/sql/p0_mysql_readonly_full_migration_ledger.sql \
             | python3 scripts/ci/p0_mysql_full_ledger_offline_check.py --input - \
             | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["result"]=="REVIEW_REQUIRED" and d["code"]=="FULL_MIGRATION_LEDGER_MATCH_NOT_RELEASE" and d["release_authorized"] is False'
+
+      - name: Verify synthetic MySQL dump restoration in a second disposable schema
+        env:
+          CANOVIA_P0_DISPOSABLE_ROOT_PASSWORD: ci-only-root-password
+        run: |
+          set -euo pipefail
+          bash -n scripts/ci/p0_mysql_disposable_restore_smoke.sh
+          bash scripts/ci/p0_mysql_disposable_restore_smoke.sh
