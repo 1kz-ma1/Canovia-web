@@ -108,3 +108,21 @@ Next steps: select an IdP tenant, provision durable *staging-only* storage
 and a reviewed stage access-control mechanism before opening any OAuth,
 account or private MCP capability. Existing Canovia production remains a
 Free service until the owner's **public-launch** paid-compute plan change.
+
+
+## Next phase — strict optional Render Postgres cutover
+
+A separate Free PostgreSQL 17 database **now exists**, resource id
+`dpg-db43rbbncjis73bmigi0-a`, in the same Render Singapore workspace
+as staging, with expiry **2026-11-08**. It is a **30-day test-only DB**,
+not a long-term durable repository for user data. No backups on Free.
+
+The existing staging Web service remains unchanged on disposable SQLite:
+**do not assume it is connected**. The staging Docker image has an
+independent PostgreSQL mode that validates an exact internal Render DB
+host/name/user and pinned resource ID before migration, and excludes
+external Aiven credentials. Render's connected DB metadata omits the
+secret internal URL; only set `DB_URL` in the staging Render dashboard
+after confirming its internal hostname. The external allowlist is empty
+and must stay closed. No OAuth/ChatGPT enablement is authorized.
+See [DB cutover and provider decision](MCP_IDP_SELECTION_AND_STAGING_POSTGRES_2026_10_09.md).
