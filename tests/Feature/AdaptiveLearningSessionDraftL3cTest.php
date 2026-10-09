@@ -186,4 +186,43 @@ final class AdaptiveLearningSessionDraftL3cTest extends TestCase
         ])->assertStatus(409);
         $this->assertDatabaseCount('learning_answer_events', 0);
     }
+
+    public function test_understanding_reasoning_is_restored_then_committed_without_duplicate_grades(): void
+    {
+        [, $plan, $task, , $run, $item] = $this->fixture('single', 'understanding');
+        $draftUrl = $this->draftUrl($plan, $task, $run);
+        $show = route('plans.tasks.learning.show', [$plan, $task, $run]);
+        $this->postJson($draftUrl, [
+            'learning_run_item_id' => $item->id,
+            'choice' => 'B',
+            'reasoning' => '初回の計算判断',
+        ])->assertOk();
+        $this->get($show)->assertOk()
+            ->assertSee('data-learning-reasoning', false)
+            ->assertSee('初回の計算判断')
+            ->assertSee('前回の入力を復元しました。');
+        $this->assertDatabaseCount('learning_answer_events', 0);
+
+        $this->post(route('plans.tasks.learning.answer', [$plan, $task, $run]), [
+            'request_id' => (string) Str::uuid(),
+            'learning_run_item_id' => $item->id,
+            'choice' => 'B',
+            'reasoning' => '  初回の計算判断  ',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $event = LearningAnswerEvent::sole();
+        $this->assertFalse($event->was_correct);
+        $this->assertSame('初回の計算判断', $event->answer_payload['reasoning']);
+        $this->get($show)->assertOk()
+            ->assertSee('回答時に残した考え方')
+            ->assertSee('初回の計算判断')
+            ->assertDontSee('data-learning-answer-form', false);
+        $this->postJson($draftUrl, [
+            'learning_run_item_id' => $item->id,
+            'choice' => 'A', 'reasoning' => '変更',
+        ])->assertStatus(409);
+        $this->assertDatabaseCount('learning_answer_events', 1);
+        $this->assertSame(35, $task->fresh()->progress_percent);
+        $this->assertDatabaseCount('study_practice_attempts', 0);
+    }
+
 }

@@ -337,3 +337,18 @@ No DB schema, pricing, rollout/entitlement, AI provider, official exam profile, 
 - **Lifecycle**: 500ms debounceと入力変更/画面遷移時の可能な範囲の送信。成功レスポンスを確認した時だけ「保存しました」と表示。通信失敗を成功と偽装しない。回答のDB確定後・明示終了後は対応するセッション下書きを削除。新しいItemに進んでも同じRunで古い下書きを再使用しない。既存の1問AnswerEventはimmutableのまま。
 - **Compatibility / limitations**: 従来StudyPracticeSession/Attempt、Exam Simulationの時間・Draft、Task/Plan進捗、AI評価、QuestionPack公開条件・権利審査は変更しない。セッションバックエンドの可用性や実際のPWA/WKWebView再起動跨ぎ復帰は本番で独立確認が必要。サーバ応答前の突然の強制終了には完全な保存保証がない。より長期のDB永続化/端末跨ぎ復元はPlatform DB/Auth復旧後の別設計ゲート。
 - **Acceptance**: 入力復帰、番号/複数/単一、部分入力、未認可・別人物・別Item・終了/既回答拒否、従来成績と旧履歴不変、通信失敗/画面離脱JSをPHP+Node CIで検証。#418のP0復旧完了までDraft PRのmainマージ/本番自動デプロイは禁止。実機はまとめて後日検証。
+
+## 2026-10-09 L3-b: Understandingの任意・思考過程メモ（独立Slice）
+
+- **Purpose**: Understandingで単問の採点可能な回答に「なぜ選んだか」を任意で添付し、直後の採点結果とともに読み返せるようにする。未回答のまま記述だけを提出したり、記述自体を「正解」と採点したりしない。
+- **Scope**: Understandingのsingle_choice・multiple_choice・number回答フォームに任意の1000文字以内テキスト欄を表示。サーバ側でも1000文字と文字列型を検証する。PracticeとExam Simulationに追加入力・追加公開はしない。
+- **Storage contract**: 既存のlearning_answer_events.answer_payloadに、記入時だけ任意のreasoning文字列を付加する。回答内容のtype/valueおよびwas_correct/grading_methodは従来どおり、reasoningを採点にも弱点推定にも利用しない。DB migration・AI呼出・履歴バックフィル・Task/Attempt変更なし。
+- **Immutability**: メモ付き回答は回答イベントと不可分で、同一内容の再送は冪等、メモだけの差替えも409。旧answer_payload=nullの選択式回答はメモなし再送のみ許す。新しいメモの追記要求を黙って受理しない。
+- **Presentation & privacy**: 学習者本人の回答結果画面でのみエスケープしたプレーンテキストとして表示。共有/公開/AI送信機能ではない。保存前の下書き自動保存、採点後の編集、記述式本体の採点は**今回未実装**。
+- **Acceptance**: 成績・Task進捗への非干渉、入力拒否、XSS回避、再送冪等/409、従来の回答互換、他ユーザー権限、回答後のリロード表示を既存AdaptiveLearningSingleQuestionV5878Testと関連回帰で確認。実機Safari/PWA/WKWebViewは後日一括受入。Platform P0 #418が残っている間のmain統合・本番反映は独立ゲート。
+
+### Integrated L3-b + L3-c acceptance (2026-10-09)
+
+- Understandingの任意reasoningは同セッションの未採点下書きから復帰できるが、回答確定前は採点・学習評価の対象としない。回答POST時だけimmutableなAnswerEventへ保存する。PracticeとExamのメモ取扱いは変更しない。
+- 回答とメモの整合性、他人/他Run/回答済み拒否、冪等・409、送信中保存の競合、表示時のHTMLエスケープ、旧回答とTask進捗不変を統合HEADで検証する。
+- この統合PRを出荷候補の一本化先とし、PR #454/#455は先行実装・検証履歴として保持。Issue #418がopenの間はmainへのマージやRender自動デプロイを実行しない。
