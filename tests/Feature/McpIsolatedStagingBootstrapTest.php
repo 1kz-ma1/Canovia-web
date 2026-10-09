@@ -81,6 +81,74 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
         }
     }
 
+    public function test_pinned_staging_postgres_is_the_only_accepted_external_database(): void
+    {
+        $url = 'postgresql://canovia_mcp_staging_db_user:'
+            .'synthetic-do-not-use-this-password@dpg-db43rbbncjis73bmigi0-a:5432/'
+            .'canovia_mcp_staging_db';
+        $valid = $this->guard([
+            'CANOVIA_STAGING_DB_MODE' => 'render_postgres',
+            'CANOVIA_STAGING_POSTGRES_ID' => 'dpg-db43rbbncjis73bmigi0-a',
+            'DB_CONNECTION' => 'pgsql',
+            'DB_DATABASE' => 'canovia_mcp_staging_db',
+            'DB_URL' => $url,
+        ]);
+        $this->assertTrue($valid->isSuccessful(), $valid->getErrorOutput());
+
+        foreach ([
+            ['CANOVIA_STAGING_POSTGRES_ID' => 'dpg-other-instance'],
+            ['DB_CONNECTION' => 'mysql'],
+            ['DB_DATABASE' => 'production'],
+            ['DB_URL' => 'postgresql://prod:prod@aiven.example.test/prod'],
+            ['DB_URL' => 'postgresql://canovia_mcp_staging_db_user:'
+                .'fake-password@dpg-other.render.com:5432/canovia_mcp_staging_db'],
+            ['DB_URL' => 'postgresql://canovia_mcp_staging_db_user:'
+                .'fake-password@dpg-db43rbbncjis73bmigi0-a:5432/prod'],
+            ['DB_URL' => 'postgresql://wrong_user:'
+                .'fake-password@dpg-db43rbbncjis73bmigi0-a:5432/canovia_mcp_staging_db'],
+            ['DB_URL' => 'postgresql://canovia_mcp_staging_db_user:'
+                .'fake-password@dpg-db43rbbncjis73bmigi0-a:6432/canovia_mcp_staging_db'],
+            ['DB_URL' => 'postgresql://canovia_mcp_staging_db_user:'
+                .'fake-password@dpg-db43rbbncjis73bmigi0-a:5432/canovia_mcp_staging_db?sslmode=disable'],
+            ['DB_URL' => 'http://canovia_mcp_staging_db_user:'
+                .'fake-password@dpg-db43rbbncjis73bmigi0-a/canovia_mcp_staging_db'],
+            ['DATABASE_URL' => 'postgresql://test:secret@example.test/live'],
+            ['PGHOST' => 'aiven.example.test'],
+            ['DB_HOST' => 'aiven.example.test'],
+            ['DB_PASSWORD' => 'live-secret'],
+        ] as $unsafe) {
+            $out = $this->guard([
+                'CANOVIA_STAGING_DB_MODE' => 'render_postgres',
+                'CANOVIA_STAGING_POSTGRES_ID' => 'dpg-db43rbbncjis73bmigi0-a',
+                'DB_CONNECTION' => 'pgsql',
+                'DB_DATABASE' => 'canovia_mcp_staging_db',
+                'DB_URL' => $url,
+                ...$unsafe,
+            ]);
+            $this->assertSame(42, $out->getExitCode(),
+                'A production-like DB setting bypassed the staging guard: '.implode(',', array_keys($unsafe)));
+            $this->assertStringNotContainsString('synthetic-do-not-use-this-password',
+                $out->getOutput().$out->getErrorOutput());
+            $this->assertStringContainsString('BLOCKED', $out->getErrorOutput());
+        }
+    }
+
+    public function test_staging_postgres_never_activates_if_no_url_or_on_default_sqlite_mode(): void
+    {
+        $withoutUrl = $this->guard([
+            'CANOVIA_STAGING_DB_MODE' => 'render_postgres',
+            'CANOVIA_STAGING_POSTGRES_ID' => 'dpg-db43rbbncjis73bmigi0-a',
+            'DB_CONNECTION' => 'pgsql',
+            'DB_DATABASE' => 'canovia_mcp_staging_db',
+        ]);
+        $this->assertSame(42, $withoutUrl->getExitCode());
+
+        $sqliteWithUrl = $this->guard([
+            'DB_URL' => 'postgresql://staging:staging@dpg-db43rbbncjis73bmigi0-a/staging',
+        ]);
+        $this->assertSame(42, $sqliteWithUrl->getExitCode());
+    }
+
     public function test_mcp_activation_requires_separate_staging_review(): void
     {
         $check = $this->guard(['CANOVIA_MCP_TOOLS_ENABLED' => 'true',
@@ -99,6 +167,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
         $this->assertStringContainsString('value: sqlite', $blueprint);
         $this->assertStringNotContainsString('fromDatabase:', $blueprint);
         $this->assertStringContainsString('pdo_sqlite', $docker);
+        $this->assertStringContainsString('pdo_pgsql', $docker);
         $this->assertStringContainsString('mcp-staging-start.sh', $docker);
         $this->assertStringContainsString('CMD ["./docker/render-start.sh"]', $prod);
     }
@@ -108,6 +177,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
         $env = [
             'CANOVIA_STAGING_ISOLATED' => 'true',
             'CANOVIA_STAGING_WEB_ACCESS_ENABLED' => 'false',
+            'CANOVIA_STAGING_DB_MODE' => 'sqlite',
             'CANOVIA_STAGING_MCP_EXPLICITLY_APPROVED' => 'false',
             'CANOVIA_MCP_TOOLS_ENABLED' => 'false',
             'APP_ENV' => 'staging',
@@ -123,7 +193,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             'MAIL_MAILER' => 'log',
         ];
         foreach (['DB_URL','DATABASE_URL','DB_HOST','DB_USERNAME','DB_PASSWORD',
-            'MYSQL_ATTR_SSL_CA','PGPASSWORD','SESSION_DOMAIN',
+            'MYSQL_ATTR_SSL_CA','PGPASSWORD','PGHOST','PGDATABASE','DB_SOCKET','SESSION_DOMAIN',
             'GITHUB_READ_TOKEN','GITHUB_APP_ID','GITHUB_APP_PRIVATE_KEY',
             'GITHUB_APP_PRIVATE_KEY_BASE64','GITHUB_APP_WEBHOOK_SECRET',
             'GITHUB_TOKEN','OPENAI_API_KEY','ANTHROPIC_API_KEY',
