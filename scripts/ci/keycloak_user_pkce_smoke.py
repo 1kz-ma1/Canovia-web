@@ -99,6 +99,20 @@ def synthetic_realm(link_secret: str, agent_secret: str,
     link["serviceAccountsEnabled"] = False
     link["redirectUris"] = [CALLBACK_LINK]
     link["consentRequired"] = False
+    # Keycloak's real user introspection omits 'sub' without a matching
+    # OIDC Subject mapper. Map the immutable user ID to access-token
+    # introspection explicitly; NEVER derive identity from username/email.
+    link["protocolMappers"].append({
+        "name": "canovia-immutable-subject",
+        "protocol": "openid-connect",
+        "protocolMapper": "oidc-sub-mapper",
+        "consentRequired": False,
+        "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true",
+            "lightweight.claim": "false",
+        },
+    })
     agent = deepcopy(link)
     agent["clientId"] = RP_AGENT
     agent["secret"] = agent_secret
