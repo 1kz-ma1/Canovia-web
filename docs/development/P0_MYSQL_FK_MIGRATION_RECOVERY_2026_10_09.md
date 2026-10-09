@@ -107,3 +107,50 @@ label without logging schema names, connection strings or personal records.
 
 Do not run `migrate:fresh`, `migrate:rollback`, DDL repair or speculative
 production `php artisan migrate` as part of this inventory.
+
+
+## Offline evidence triage (added 2026-10-09; no Aiven connection)
+
+The [offline classifier](../../scripts/ci/p0_mysql_inventory_offline_triage.py)
+takes an **operator-transcribed, explicitly allowlisted status-only** JSON
+snapshot of the six query results from the SELECT-only inventory. It does
+NOT execute SQL, connect to Aiven, read Render secrets or inspect an actual
+production user. Create an unverified template locally with:
+
+```shell
+python3 scripts/ci/p0_mysql_inventory_offline_triage.py --template > local-unverified-p0.json
+```
+
+Populate only the enumerated statuses by comparing the SQL query output
+**privately** on the correct DB. Never paste a MySQL URL, DB name, credential,
+account email, session cookie, user row, free-form field or raw dump.
+The classifier does not accept arbitrary JSON keys or unknown statuses,
+never reflects input values to stdout, and always returns
+`release_authorized=false` and `production_database_modified=false`.
+Only share its generic, fixed classification codes if necessary.
+The generated template defaults to **UNVERIFIED** and cannot pass.
+
+```shell
+python3 scripts/ci/p0_mysql_inventory_offline_triage.py --report local-unverified-p0.json
+```
+
+The `--report` program returns a code of 2 on `BLOCK` and 0 on
+`REVIEW_REQUIRED`. **Exit 0 is NOT release approval** or a recommendation to
+run a migration. The table below explains the conservative branch decisions:
+
+| Actual metadata + ledger | Classification | Human next step |
+| --- | --- | --- |
+| Core identity/migrations/parent table missing, unsupported engine, no verified DB or incomplete inventory | `BLOCK` | Stop and confirm target, ledger and schema privately |
+| Target table missing, target migration pending, its columns and constraints absent | `REVIEW_REQUIRED` | Backups / reviewed creation path before any migration |
+| Target table present, required columns present, FK/index missing, target migration **pending** | `REVIEW_REQUIRED` | Review the tested idempotent interrupted-DDL recovery; never auto-run |
+| Target table present, FK/index missing, target migration **already applied** | `BLOCK` | **Critical:** Laravel does not rerun applied historical migrations. A separately designed **forward-only reconciliation migration** must be reviewed after real evidence; editing the original `up()` alone cannot repair this state |
+| Target table present but required columns missing; FK targets/rules wrong; migration marked applied with table absent | `BLOCK` | Stop. Independently assess data and manual repair scope without destructive rollback |
+| Expected target tables/columns/constraints/ledger all match | `REVIEW_REQUIRED` | Schema snapshot is one gate only; validate complete ledger, backup/restore, actual login/PWA, owner release decision |
+
+No synthetic test output demonstrates actual Aiven consistency or backup
+restorability. These labels are decision *categories*, not a production
+recovery plan. They must not be used to generate/execute SQL or bypass Issue
+#418's merge and production safety hold. The offline classifier is tested on
+synthetic complete, pending, partially-created, foreign-key mismatch, applied
+drift, ledger-order mismatch, malformed input and output-leak scenarios in
+the disposable MySQL CI workflow.
