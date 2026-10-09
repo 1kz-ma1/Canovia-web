@@ -46,9 +46,9 @@ billing snapshot showed 48.78/750 monthly Free hours consumed. A separate
 `canovia-mcp-staging` Free Web service was created in Singapore, ID
 `srv-db43l4nlk1mc73emseig`, autoDeploy OFF, with staging-only Docker/
 SQLite/APP_KEY, all OAuth/MCP features OFF. Render's first deploy of
-`d5865f8` is **live**, with migrations confirmed via Render logs. A new
-external GitHub Actions one-time HTTP smoke tests /up=200 and private
-login/OAuth/MCP=503. No extra paid subscription, production service,
+`d5865f8` is **live**, with migrations confirmed via Render logs. An
+external GitHub Actions smoke (run `37867353868`) **passed**:
+`/up=200`, login/account/OAuth/MCP GET and POST `=503`. No extra paid subscription, production service,
 Aiven database or real ChatGPT/IdP connection was changed. Render Free
 auto-idles after 15 minutes of no traffic: no keepalive automation.
 See [isolated staging contract](MCP_ISOLATED_STAGING_BOOTSTRAP_CONTRACT.md).
