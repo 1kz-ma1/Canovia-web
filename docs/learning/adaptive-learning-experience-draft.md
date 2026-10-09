@@ -259,3 +259,10 @@ No DB schema, pricing, rollout/entitlement, AI provider, official exam profile, 
 - Entry側の候補制限と開始POSTに **同じ `AdaptiveExamPackReadinessService`** を使用。通常学習の30 Pack表示制限が有効な模試Packを隠さないよう独立検索し、模試対応プロファイルとPackを組にして不正な組合せを提出できないUIにする。開始時も再検証し、全問をsort_order/idの決定的順序でImmutable snapshotへ固定。
 - CIでは合成の80問セットで全面凍結・採点前の正答秘匿・期限・回答Draft保存・終了後の一括採点を検証。合成問題を本番の公式過去問やライセンス取得コンテンツと偽らない。実機はユーザーの希望で後日一括確認。
 - **Operational NOT VERIFIED**: 本番DBに品質・権利審査済み80問Packが登録・公開されているかは未確認。実際の本番模試提供可否・PWA/iOS操作感は別ゲート。L5の検証済み試験プロファイル登録だけで『80問本番模試ができる』とは発表しない。
+
+## 2026-10-09 L5-b 80問候補セット + 改変時に失効する審査
+
+- **Draft candidate in repo only**: `resources/question_packs/ap/ap-a-2026-cbt-80-candidate-v1.json` に、IPA令和7年秋35問 + Canovia Core 45問のテキストを編集せず収録。全80問は4選択肢・確定採点に形式上対応するが、出題分布（暫定テクノロジ60/マネジメント8/ストラテジ12）、意味上の重複・計算正答・権利・表や図の再現性は未監修。2026年公式出題セットと称さない。
+- **No automatic deployment import or publication**. Adminの「Draftへ取り込む」でのみDB登録し、`metadata.review_state=pending_human_content_and_rights_review` のままでは通常公開も拒否する。パックのCI通過は人間の監修を代替しない。
+- **Immutable review binding**: `AdaptiveExamPackReadinessService::contentFingerprint` のSHA-256はactive問題の全出題文・選択肢・正答・解説・出典・学習メタデータ・並び順から計算する。内容レビュー後、`metadata.exam_simulation_review.reviewed_content_sha256` と一致しない場合は、従来のversion一致やレビュー真偽だけでは模試開始不可。問題文・正答を版番号そのままで変更しても審査は失効する。
+- 完全な導入・公開・権利監修フローと未完受入条件: [AP_A_2026_80_QUESTION_CANDIDATE_AUDIT.md](AP_A_2026_80_QUESTION_CANDIDATE_AUDIT.md)。実機（PWA/WKWebView）は所有者要望により後日一括検証。
