@@ -145,6 +145,16 @@
                     機械的な台帳検査：{{ $apCandidateQualityReview['structurally_consistent'] ? '一致' : '不一致（要修正）' }}。
                     公開可能：{{ $apCandidateQualityReview['can_publish'] ? 'はい' : 'いいえ' }}。
                 </p>
+                <p class="mt-3 text-xs leading-6 text-amber-200" data-ap-a-ipa-attribution>
+                    IPA公開問題の出典メタデータ：
+                    {{ $apCandidateQualityReview['ipa_attribution_metadata_present'] }}/35問。
+                    学習者向け画面の出典表示：
+                    {{ $apCandidateQualityReview['ipa_learner_facing_credit_verified'] ? '確認済み' : '未確認' }}。
+                    最終利用条件の承認：{{ $apCandidateQualityReview['ipa_rights_approved'] }}問。
+                    <a class="text-cyan-300 underline" href="{{ $apCandidateQualityReview['ipa_faq_url'] }}"
+                        target="_blank" rel="noopener noreferrer">IPA公式FAQ（過去問題の使用方法）</a>
+                    を確認してください。メタデータの存在は公開許可を意味しません。
+                </p>
                 @if($apCandidateQualityReview['issues'])
                     <ul class="mt-2 list-inside list-disc text-xs text-rose-300">
                         @foreach($apCandidateQualityReview['issues'] as $issue)
