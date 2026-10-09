@@ -27,3 +27,8 @@ Planned = intent. Implemented = code integrated. CI verified = checks for exact 
 2026-12-01 is an initial release-readiness target, not proof of launch. Business success means Canovia-only subscription revenue >= JPY 230,000/month for several months.
 
 References: [Product Spec](../CANOVIA_PRODUCT_SPEC.md), [Learning draft](../learning/adaptive-learning-experience-draft.md), [GitHub-native contract](GITHUB_NATIVE_ROADMAP_CONTRACT.md), [Future architecture](../future/CANOVIA_FUTURE_ARCHITECTURE_OVERVIEW.md).
+
+
+### Render public-launch service plan (owner decision, 2026-10-09)
+
+At Canovia public launch, upgrade the **production Web service compute** from Free to Render's lowest paid tier (currently $7/month compute on Hobby; confirm pricing immediately before purchase). This is not an immediate approval of a paid staging service, workspace Pro subscription, or additional paid database. Keep Canovia MCP staging physically isolated and perform a separate budget review before provisioning. See [staging bootstrap](MCP_ISOLATED_STAGING_BOOTSTRAP_CONTRACT.md).
