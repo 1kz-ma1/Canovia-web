@@ -59,7 +59,7 @@
                                 <label class="flex items-start gap-3 rounded-xl border border-slate-600 px-4 py-3 text-sm text-slate-200">
                                     @if ($responseType === 'multiple_choice')
                                         <input type="checkbox" name="choices[]" value="{{ $choice['id'] }}"
-                                            @checked(in_array((string) $choice['id'], old('choices', []), true))>
+                                            @checked(in_array((string) $choice['id'], (array) old('choices', []), true))>
                                     @else
                                         <input type="radio" name="choice" required value="{{ $choice['id'] }}" @checked(old('choice') == $choice['id'])>
                                     @endif
