@@ -214,3 +214,34 @@ MCP access remain 503. If any gate fails, roll back to staging-only SQLite.
 
 **Change scope:** this handoff is a documentation reconciliation; it has
 not changed live Render environment settings or initiated a deploy.
+
+
+## V59 staging web-access interlock (pending CI / not deployed)
+
+The isolated staging application remains **fully closed**. To prevent a
+single accidentally enabled configuration key from exposing login, account
+linking or the MCP resource, the shell startup guard and Laravel HTTP
+middleware now jointly require **all** of the following before the
+staging Web surface can open:
+
+1. `CANOVIA_STAGING_ISOLATED=true` and `APP_ENV=staging`.
+2. `CANOVIA_STAGING_WEB_ACCESS_ENABLED=true`, **and separately**
+   `CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED=true` after an
+   operator-approved staging-specific review.
+3. `CANOVIA_STAGING_DB_MODE=render_postgres` with exactly the pinned
+   independent staging database identity; the HTTP middleware additionally
+   verifies a live PostgreSQL connection and all required MCP migration
+   tables. Disposable SQLite is **never eligible** for public Web access.
+
+If any condition is absent, non-health endpoints remain HTTP 503.
+The existing default `false` settings remain in both Render YAML
+references, and neither Blueprint reference is automatically applied.
+This is **not authorization to enable either flag**: IdP, synthetic account,
+OAuth client registration, token verification, same-subject binding,
+cross-account denial and external security acceptance remain separate gates.
+Do not use the approval flag to bypass these prerequisites.
+
+Existing live staging env values were not inspected or changed for this
+PR; production code continues to bypass these rules unless its
+`APP_ENV` equals `staging`. A full live/real-IdP security review is
+required before any public access is permitted.
