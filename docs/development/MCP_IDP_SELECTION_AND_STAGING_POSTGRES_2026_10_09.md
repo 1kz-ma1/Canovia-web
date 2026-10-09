@@ -1,8 +1,33 @@
 # Canovia / ChatGPT MCP — OAuth provider decision and staging Postgres
 
 Date: 2026-10-09
-Decision: **Keycloak is a conditional technical frontrunner, not yet a configured IdP**.
+Decision update: **Keycloak 26.8.0 native ChatGPT CIMD is BLOCKED in the disposable compatibility lab; no hosted IdP selected. Auth0 is the next candidate for strictly gated evaluation, not a procurement decision.**
 Stage DB: **Existing isolated Render Free PostgreSQL 17 connected to staging Web; live DB/schema health and external lockdown accepted on 2026-10-09**.
+
+## Superseding 2026-10-09 provider decision — no hosted IdP authorized
+
+This section supersedes the earlier Keycloak *conditional frontrunner* recommendation below; that older material is retained as historical context.
+
+**Observed real probe:** [PR #438](https://github.com/1kz-ma1/Canovia-web/pull/438), Keycloak **26.8.0**, localhost-only synthetic realm. A pinned CI run [37922019705](https://github.com/1kz-ma1/Canovia-web/actions/runs/37922019705) independently fetched the real `https://chatgpt.com/oauth/client.json` and configured a restricted CIMD client policy, but the real authorize request returned **HTTP 400 / `client_metadata_fetch_failed`**; no temporary ChatGPT client was created. This is a **failed compatibility acceptance**, not evidence of an external ChatGPT connection. Do not treat an HTTP 400 alone as proof of a specific Java exception: the bounded diagnostic run must distinguish parser errors from network / TLS errors.
+
+**External provider evidence:** [Keycloak's MCP integration guide](https://www.keycloak.org/securing-apps/mcp-authz-server#chatgpt-integration) explicitly identifies the built-in parser's inability to accept ChatGPT's plural `token_endpoint_auth_methods_supported` representation. [Upstream issue #51039](https://github.com/keycloak/keycloak/issues/51039) documents `UnrecognizedPropertyException` and is closed *not planned*. Therefore **do not provision hosted Keycloak 26.8.0 for ChatGPT CIMD** unless a separately reviewed, reproducible pinned-version fix is proven in a disposable lab.
+
+### Next provider compatibility candidate — Auth0, conditional
+
+- [Auth0 Auth for MCP](https://auth0.com/blog/auth0-auth-for-mcp-servers-generally-available/) documents GA CIMD registration and resource-parameter support. Its [CIMD Management API](https://auth0.com/docs/api/management/v2/clients/post-clients-cimd-register) creates a **mapped internal client ID** from an external metadata URL. Canovia must validate the *actual issued client identity* (and issuer/subject) rather than assuming ChatGPT's metadata URL is automatically the token `client_id`.
+- Auth0's [PHP API guide](https://auth0.com/docs/quickstart/backend/php) primarily documents **JWT/JWKS** bearer validation, while Canovia currently implements **RFC 7662-only** verification. Before choosing a tenant, prove whether that actual tenant offers compatible introspection; if not, a separately scoped, maintained-library JWT/JWKS verification implementation and regression tests are required. **Never silently accept unsigned JWT claims, hand-roll crypto or weaken the exact audience/issuer/client/scope policy.**
+- [Auth0's current pricing](https://auth0.com/pricing) advertises a Free plan, but *actual MCP/CIMD feature eligibility, identity limits, login constraints, application quotas, billing caps and future costs must be checked on the intended tenant*. No tenant, free/paid contract, Render service or identity migration is created by this decision.
+
+**ZITADEL is not a drop-in fallback**: its [documented DCR limitations](https://zitadel.com/docs/guides/integrate/dynamic-client-registration) say `resource` is accepted but ignored for narrowing DCR-issued `aud`, which conflicts with Canovia's single exact audience. Anonymous DCR must not be enabled merely for connectivity.
+
+### Required proof before any hosting/purchase or OAuth enablement
+
+1. Confirm exact OAuth issuer, PKCE S256, RFC 9207 `iss` for callbacks, OpenAI client registration and **real** redirect URI, separate Canovia confidential account-link client, and the true issued OAuth client ID.
+2. Prove a signed/verified (or trusted introspected) human token has immutable `iss+sub` across both clients, **only** the expected MCP resource in `aud`, literal `canovia.development.read` scope, appropriate bearer type and lifetime <= 3600 seconds. Confirm mismatched audience, unknown client, wrong user, expired/revoked token and invalid PKCE are rejected.
+3. Validate Canovia's two explicit user approvals (link plus per-Plan sharing) and immediate read denial after revocation, with a **fictional staging actor and Plan only**. A positive mock test is not a live ChatGPT end-to-end success.
+4. Obtain a *fresh* zero/paid cost comparison (IdP tenant entitlement vs dedicated Keycloak >=2 GiB compute + isolated durable database + backups + HTTPS + operations) and **explicit owner approval before provisioning or charges**. Never repurpose production Aiven or the expiring Free staging database for an IdP.
+5. Keep production MCP and isolated staging public-login/OAuth/MCP access **OFF** throughout this evaluation. A green characterization test or merged specification does not authorize deployment or data access.
+
 
 ## Confirmed Render workspace routing (owner confirmed 2026-10-09)
 
@@ -154,7 +179,7 @@ does not make claims about real issued access tokens.
 | Auth0 | Auth0 for MCP/CIMD integration guidance and a Resource Parameter Compatibility Profile for `resource` audience. | The current **RFC 7662-only Canovia verifier** is not a guaranteed match. Historical Auth0 documentation/community answers explain that JWT/JWKS verification is its primary API bearer validation model. Do **not** substitute an unreviewed hand-built JWT validator or assume introspection exists for the chosen tenant. |
 | ZITADEL | Official RFC 7591 DCR and RFC 7662 introspection with confidential resource client auth. | ZITADEL's documented DCR implementation **ignores the `resource` parameter for `aud`**, and DCR-project JWT audiences include multiple client IDs. This conflicts with Canovia's exact, single resource `aud` requirement. Do not enable a weaker audience check to use this provider. |
 
-**Decision:** prioritize *Keycloak* for a separately reviewed isolated IdP pilot
+**Historical recommendation (superseded by the provider decision above):** prioritize *Keycloak* for a separately reviewed isolated IdP pilot
 **only after** confirming hosting costs and resources. Do not create another
 Render Free Web service, start an insecure development-mode public Keycloak,
 open DCR registration globally, or change real Canovia OAuth env flags yet.
