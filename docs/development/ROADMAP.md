@@ -83,6 +83,22 @@ host/ID guard and checks `/up=200`, private routes=503.
 Default live SQLite mode and prod `/up` remain unchanged.
 
 
+### V59 secretless, existing-resource Postgres wiring (2026-10-09)
+
+Actual Render PostgreSQL internal URL/user are unavailable through the
+connected resource metadata. A **reference-only** Render Blueprint now
+describes `fromDatabase` for the current Free staging DB's internal
+`connectionString` and `user`; startup, DB health and synthetic
+bootstrap require that actual referenced username instead of a guessed
+constant. CI checks the dynamic username contract, wrong-user rejection,
+the no-new-database/no-secrets Blueprint and the existing staging Docker
+smoke. **No Blueprint sync or DB connection cutover has occurred.**
+Before activation, verify the proposed Render Blueprint preview adopts
+the existing service/database without creating duplicates or changing
+production; do not expose credentials or use an unreviewed second
+Blueprint. After a reviewed cutover, confirm `/up=200` and private
+OAuth/MCP endpoints 503 from an external runner.
+
 ### V59 live isolated PostgreSQL acceptance (2026-10-09)
 
 **ACCEPTED — staging only, not production or OAuth rollout.**
@@ -104,19 +120,3 @@ Next: synthetic-only owner and IdP client/issuer preflight under an
 independent private-access review; never turn on public Web/MCP by
 default. The Free DB expires **2026-11-08 UTC** without free backups.
 See the [operational acceptance record](MCP_IDP_SELECTION_AND_STAGING_POSTGRES_2026_10_09.md).
-
-### V59 secretless, existing-resource Postgres wiring (2026-10-09)
-
-Actual Render PostgreSQL internal URL/user are unavailable through the
-connected resource metadata. A **reference-only** Render Blueprint now
-describes `fromDatabase` for the current Free staging DB's internal
-`connectionString` and `user`; startup, DB health and synthetic
-bootstrap require that actual referenced username instead of a guessed
-constant. CI checks the dynamic username contract, wrong-user rejection,
-the no-new-database/no-secrets Blueprint and the existing staging Docker
-smoke. **No Blueprint sync or DB connection cutover has occurred.**
-Before activation, verify the proposed Render Blueprint preview adopts
-the existing service/database without creating duplicates or changing
-production; do not expose credentials or use an unreviewed second
-Blueprint. After a reviewed cutover, confirm `/up=200` and private
-OAuth/MCP endpoints 503 from an external runner.
