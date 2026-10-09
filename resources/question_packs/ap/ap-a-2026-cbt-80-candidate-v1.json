@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "pack": {
     "slug": "ap-a-2026-cbt-80-candidate-v1",
-    "title": "応用情報 科目A 80問模試候補（解説案追加・未監修）",
+    "title": "応用情報 科目A 80問模試候補（分野調整・未監修）",
     "exam_code": "AP",
     "subject": "科目A",
-    "version": "0.2.0-review-required",
+    "version": "0.3.0-review-required",
     "downloadable": false,
     "metadata": {
       "match_terms": [
@@ -21,23 +21,62 @@
       "candidate_source_packs": [
         {
           "slug": "ap-a-ipa-2025-autumn-official-v1",
-          "count": 35,
-          "source_problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
-          "source_answer_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+          "count": 35
         },
         {
           "slug": "ap-a-canovia-core-v1",
-          "count": 45,
-          "source_problem_url": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf"
+          "count": 35
+        },
+        {
+          "slug": "ap-a-canovia-business-management-supplement-v1",
+          "count": 10
         }
       ],
       "source_usage_guidance_url": "https://www.ipa.go.jp/shiken/faq.html",
-      "selection_note": "This 80-question mixed-source draft only matches number and answer format. Topic distribution, source rights, answer accuracy and content equivalence are NOT reviewed. Not equivalent to a genuine official IPA exam.",
+      "selection_note": "Draft-only: 2025 official 35 + Core original/derived 35 + new Canovia original draft 10; historical approximate domain mix of 50/10/20, not a verified 2026 IPA exam distribution. Remove five high-overlap source pairs and five further technology examples. Human semantic duplicate review, answer check, rights check, explanation check pending.",
       "curation_date": "2026-10-09",
       "source_domain_distribution_not_certified": true,
-      "content_revision": "2026-10-09-explanations-draft",
+      "content_revision": "2026-10-09-domain-rebalance",
       "official_explanation_draft_count": 35,
-      "explanation_review_state": "pending_human_subject_review"
+      "explanation_review_state": "pending_human_subject_review",
+      "domain_distribution": {
+        "technology": 50,
+        "management": 10,
+        "strategy": 20
+      },
+      "semantic_overlap_review": {
+        "rule": "exact_concept_pair_manual_flag_2026_10_09",
+        "status": "partial_only_not_full_semantic_review",
+        "excluded_core_question_keys": [
+          "calc-availability-016",
+          "calc-sampling-018",
+          "sys-cache-019",
+          "sys-semaphore-020",
+          "sys-deadlock-021"
+        ],
+        "superseded_by_official": [
+          {
+            "core": "calc-availability-016",
+            "official": "ipa-2025-autumn-ap-am-q13"
+          },
+          {
+            "core": "calc-sampling-018",
+            "official": "ipa-2025-autumn-ap-am-q25"
+          },
+          {
+            "core": "sys-cache-019",
+            "official": "ipa-2025-autumn-ap-am-q19"
+          },
+          {
+            "core": "sys-semaphore-020",
+            "official": "ipa-2025-autumn-ap-am-q16"
+          },
+          {
+            "core": "sys-deadlock-021",
+            "official": "ipa-2025-autumn-ap-am-q18"
+          }
+        ]
+      }
     }
   },
   "questions": [
@@ -601,10 +640,10 @@
       "is_active": true
     },
     {
-      "external_key": "net-cidr-004",
-      "source_type": "derived",
-      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問32（Canoviaオリジナル類題）",
-      "prompt": "IPv4アドレスをクラスA〜Cの区分に固定せず、プレフィックス長を用いてネットワーク部とホスト部を任意のビット境界で指定する方式はどれか。",
+      "external_key": "strategy-three-c-004",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "新規サービスの事業戦略を考えるため、顧客・競合他社・自社の三つの観点から市場と強みを分析する手法はどれか。",
       "response_schema": [
         {
           "id": "answer",
@@ -614,63 +653,53 @@
           "choices": [
             {
               "id": "ア",
-              "label": "CIDR"
+              "label": "PEST分析"
             },
             {
               "id": "イ",
-              "label": "DHCP"
+              "label": "特性要因図"
             },
             {
               "id": "ウ",
-              "label": "DNS"
+              "label": "3C分析"
             },
             {
               "id": "エ",
-              "label": "NAPT"
+              "label": "バリューチェーン分析"
             }
           ]
-        },
-        {
-          "id": "reasoning",
-          "type": "textarea",
-          "label": "考え方・判断理由",
-          "required": false,
-          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
-          "choices": []
         }
       ],
       "grading_rule": {
         "type": "exact_choice",
         "field_id": "answer",
-        "answer": "ア"
+        "answer": "ウ"
       },
       "learning_metadata": {
         "concepts": [
-          "ネットワーク",
-          "IPv4",
-          "CIDR"
+          "ストラテジ",
+          "経営戦略"
         ],
         "weakness_targets": [
-          "ネットワーク",
-          "サブネット"
+          "経営戦略"
         ],
         "tags": [
           "科目A",
-          "ネットワーク"
+          "ストラテジ",
+          "経営戦略"
         ],
-        "keywords": [
-          "プレフィックス長",
-          "サブネット"
-        ],
-        "explanation_origin": "canovia_original",
+        "keywords": [],
         "curation": {
-          "source_pack_slug": "ap-a-canovia-core-v1",
-          "source_external_key": "net-cidr-004",
-          "selection": "manual_draft_2026_10_09"
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review",
+          "source_pack_slug": "ap-a-canovia-business-management-supplement-v1",
+          "source_external_key": "strategy-three-c-004",
+          "selection": "l5_domain_and_semantic_rebalance_2026_10_09",
+          "replaced_candidate_key": "net-cidr-004"
         }
       },
-      "explanation": "CIDRはプレフィックス長でネットワーク部を表し、クラスに依存しないアドレス割当てを可能にします。",
-      "difficulty": 2,
+      "explanation": "3C分析はCustomer（顧客・市場）、Competitor（競合）、Company（自社）の観点から成功要因を整理する手法です。PESTはマクロ環境、特性要因図は問題の原因構造、バリューチェーン分析は企業活動の価値創出工程に着目します。",
+      "difficulty": 3,
       "sort_order": 8,
       "is_active": true
     },
@@ -832,10 +861,10 @@
       "is_active": true
     },
     {
-      "external_key": "net-stp-007",
-      "source_type": "derived",
-      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問34（Canoviaオリジナル類題）",
-      "prompt": "複数のレイヤ2スイッチを冗長に接続したネットワークで、イーサネットフレームのループを防止するために用いるプロトコルはどれか。",
+      "external_key": "strategy-scm-005",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "需要予測から調達・生産・在庫・配送まで企業間のモノや情報の流れを連携し、全体の在庫削減や納期短縮を目指す管理手法はどれか。",
       "response_schema": [
         {
           "id": "answer",
@@ -845,62 +874,52 @@
           "choices": [
             {
               "id": "ア",
-              "label": "IGMP"
+              "label": "PLM"
             },
             {
               "id": "イ",
-              "label": "RIP"
+              "label": "SCM"
             },
             {
               "id": "ウ",
-              "label": "SIP"
+              "label": "CRM"
             },
             {
               "id": "エ",
-              "label": "スパニングツリープロトコル"
+              "label": "SFA"
             }
           ]
-        },
-        {
-          "id": "reasoning",
-          "type": "textarea",
-          "label": "考え方・判断理由",
-          "required": false,
-          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
-          "choices": []
         }
       ],
       "grading_rule": {
         "type": "exact_choice",
         "field_id": "answer",
-        "answer": "エ"
+        "answer": "イ"
       },
       "learning_metadata": {
         "concepts": [
-          "ネットワーク",
-          "レイヤ2",
-          "STP"
+          "ストラテジ",
+          "ビジネスインダストリ"
         ],
         "weakness_targets": [
-          "ネットワーク",
-          "スイッチ"
+          "ビジネスインダストリ"
         ],
         "tags": [
           "科目A",
-          "ネットワーク"
+          "ストラテジ",
+          "ビジネスインダストリ"
         ],
-        "keywords": [
-          "Ethernet",
-          "ループ"
-        ],
-        "explanation_origin": "canovia_original",
+        "keywords": [],
         "curation": {
-          "source_pack_slug": "ap-a-canovia-core-v1",
-          "source_external_key": "net-stp-007",
-          "selection": "manual_draft_2026_10_09"
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review",
+          "source_pack_slug": "ap-a-canovia-business-management-supplement-v1",
+          "source_external_key": "strategy-scm-005",
+          "selection": "l5_domain_and_semantic_rebalance_2026_10_09",
+          "replaced_candidate_key": "net-stp-007"
         }
       },
-      "explanation": "スパニングツリープロトコルは冗長経路の一部を論理的にブロックし、レイヤ2ループを防ぎます。",
+      "explanation": "SCM（Supply Chain Management）は調達から顧客への配送までの供給網を横断してモノ・情報・資金の流れを調整する考え方です。PLMは製品のライフサイクル情報、CRMは顧客関係、SFAは営業活動の支援に重点があります。",
       "difficulty": 2,
       "sort_order": 11,
       "is_active": true
@@ -1145,10 +1164,10 @@
       "is_active": true
     },
     {
-      "external_key": "db-mvcc-010",
-      "source_type": "derived",
-      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問29（Canoviaオリジナル類題）",
-      "prompt": "RDBMSで、同じデータ項目の複数バージョンを保持し、読取りと更新の競合を減らしてトランザクションの同時実行性を高める仕組みはどれか。",
+      "external_key": "strategy-bpr-006",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "部門別に細分化された従来の業務手順を前提とせず、顧客価値と業務成果を起点に組織横断の業務プロセスを根本的に再設計する取組はどれか。",
       "response_schema": [
         {
           "id": "answer",
@@ -1158,63 +1177,53 @@
           "choices": [
             {
               "id": "ア",
-              "label": "2相ロッキング"
+              "label": "BPR"
             },
             {
               "id": "イ",
-              "label": "MVCC"
+              "label": "BCP"
             },
             {
               "id": "ウ",
-              "label": "WAL"
+              "label": "RTO"
             },
             {
               "id": "エ",
-              "label": "共有ロック"
+              "label": "ITIL"
             }
           ]
-        },
-        {
-          "id": "reasoning",
-          "type": "textarea",
-          "label": "考え方・判断理由",
-          "required": false,
-          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
-          "choices": []
         }
       ],
       "grading_rule": {
         "type": "exact_choice",
         "field_id": "answer",
-        "answer": "イ"
+        "answer": "ア"
       },
       "learning_metadata": {
         "concepts": [
-          "データベース",
-          "トランザクション",
-          "MVCC"
+          "ストラテジ",
+          "システム戦略"
         ],
         "weakness_targets": [
-          "DB",
-          "データベース"
+          "システム戦略"
         ],
         "tags": [
           "科目A",
-          "データベース"
+          "ストラテジ",
+          "システム戦略"
         ],
-        "keywords": [
-          "同時実行制御",
-          "トランザクション"
-        ],
-        "explanation_origin": "canovia_original",
+        "keywords": [],
         "curation": {
-          "source_pack_slug": "ap-a-canovia-core-v1",
-          "source_external_key": "db-mvcc-010",
-          "selection": "manual_draft_2026_10_09"
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review",
+          "source_pack_slug": "ap-a-canovia-business-management-supplement-v1",
+          "source_external_key": "strategy-bpr-006",
+          "selection": "l5_domain_and_semantic_rebalance_2026_10_09",
+          "replaced_candidate_key": "db-mvcc-010"
         }
       },
-      "explanation": "MVCCは複数バージョンを利用して、読取り処理が更新処理を待つ場面を減らします。",
-      "difficulty": 2,
+      "explanation": "BPR（Business Process Re-engineering）は業務プロセスを部分的に効率化するだけでなく、仕事の流れを抜本的に見直して再設計します。BCPは事業継続計画、RTOは目標復旧時間、ITILはITサービスマネジメントのベストプラクティスです。",
+      "difficulty": 3,
       "sort_order": 15,
       "is_active": true
     },
@@ -1929,10 +1938,10 @@
       "is_active": true
     },
     {
-      "external_key": "calc-availability-016",
-      "source_type": "derived",
-      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問13（Canoviaオリジナル類題）",
-      "prompt": "平均故障間隔MTBFと平均修復時間MTTRから定常可用性を求める式はどれか。",
+      "external_key": "mgmt-wbs-001",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "プロジェクトの作業範囲を成果物や作業単位へ段階的に分解し、見積り・担当割当て・進捗管理の基礎とするものはどれか。",
       "response_schema": [
         {
           "id": "answer",
@@ -1942,65 +1951,53 @@
           "choices": [
             {
               "id": "ア",
-              "label": "MTBF / (MTBF + MTTR)"
+              "label": "リスク登録簿"
             },
             {
               "id": "イ",
-              "label": "MTTR / (MTBF + MTTR)"
+              "label": "WBS（Work Breakdown Structure）"
             },
             {
               "id": "ウ",
-              "label": "(MTBF − MTTR) / MTBF"
+              "label": "パレート図"
             },
             {
               "id": "エ",
-              "label": "MTBF / MTTR"
+              "label": "SLA"
             }
           ]
-        },
-        {
-          "id": "reasoning",
-          "type": "textarea",
-          "label": "考え方・判断理由",
-          "required": false,
-          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
-          "choices": []
         }
       ],
       "grading_rule": {
         "type": "exact_choice",
         "field_id": "answer",
-        "answer": "ア"
+        "answer": "イ"
       },
       "learning_metadata": {
         "concepts": [
-          "信頼性",
-          "可用性",
-          "MTBF",
-          "MTTR"
+          "マネジメント",
+          "プロジェクトマネジメント"
         ],
         "weakness_targets": [
-          "計算",
-          "可用性",
-          "信頼性"
+          "プロジェクトマネジメント"
         ],
         "tags": [
           "科目A",
-          "計算",
-          "信頼性"
+          "マネジメント",
+          "プロジェクトマネジメント"
         ],
-        "keywords": [
-          "稼働率"
-        ],
-        "explanation_origin": "canovia_original",
+        "keywords": [],
         "curation": {
-          "source_pack_slug": "ap-a-canovia-core-v1",
-          "source_external_key": "calc-availability-016",
-          "selection": "manual_draft_2026_10_09"
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review",
+          "source_pack_slug": "ap-a-canovia-business-management-supplement-v1",
+          "source_external_key": "mgmt-wbs-001",
+          "selection": "l5_domain_and_semantic_rebalance_2026_10_09",
+          "replaced_candidate_key": "calc-availability-016"
         }
       },
-      "explanation": "定常可用性は、平均稼働時間を1サイクルの平均時間で割った MTBF/(MTBF+MTTR) です。",
-      "difficulty": 3,
+      "explanation": "WBSはプロジェクト全体で必要な成果物・作業を階層構造に分解し、作業単位を明確にする手法です。リスク登録簿は不確実性の管理、パレート図は重点項目の抽出、SLAはサービス水準の合意に使うため目的が異なります。",
+      "difficulty": 2,
       "sort_order": 25,
       "is_active": true
     },
@@ -2089,10 +2086,10 @@
       "is_active": true
     },
     {
-      "external_key": "calc-sampling-018",
-      "source_type": "derived",
-      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問25（Canoviaオリジナル類題）",
-      "prompt": "0〜20kHzの周波数成分を含むアナログ信号を標本化定理に従ってデジタル化する。必要な最大サンプリング周期はどれか。",
+      "external_key": "mgmt-risk-transfer-002",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "システム開発プロジェクトで、機材の損失による金銭的な被害を保険契約によって第三者へ移すリスク対応はどれか。",
       "response_schema": [
         {
           "id": "answer",
@@ -2102,29 +2099,21 @@
           "choices": [
             {
               "id": "ア",
-              "label": "2.5μs"
+              "label": "回避"
             },
             {
               "id": "イ",
-              "label": "5μs"
+              "label": "低減"
             },
             {
               "id": "ウ",
-              "label": "25μs"
+              "label": "移転"
             },
             {
               "id": "エ",
-              "label": "50μs"
+              "label": "受容"
             }
           ]
-        },
-        {
-          "id": "reasoning",
-          "type": "textarea",
-          "label": "考え方・判断理由",
-          "required": false,
-          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
-          "choices": []
         }
       ],
       "grading_rule": {
@@ -2134,29 +2123,28 @@
       },
       "learning_metadata": {
         "concepts": [
-          "信号処理",
-          "標本化定理"
+          "マネジメント",
+          "プロジェクトマネジメント"
         ],
         "weakness_targets": [
-          "計算",
-          "D/A変換",
-          "A/D変換"
+          "プロジェクトマネジメント"
         ],
         "tags": [
           "科目A",
-          "計算"
+          "マネジメント",
+          "プロジェクトマネジメント"
         ],
-        "keywords": [
-          "サンプリング"
-        ],
-        "explanation_origin": "canovia_original",
+        "keywords": [],
         "curation": {
-          "source_pack_slug": "ap-a-canovia-core-v1",
-          "source_external_key": "calc-sampling-018",
-          "selection": "manual_draft_2026_10_09"
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review",
+          "source_pack_slug": "ap-a-canovia-business-management-supplement-v1",
+          "source_external_key": "mgmt-risk-transfer-002",
+          "selection": "l5_domain_and_semantic_rebalance_2026_10_09",
+          "replaced_candidate_key": "calc-sampling-018"
         }
       },
-      "explanation": "最高周波数20kHzの2倍以上、40kHz以上で標本化する必要があります。周期は1/40kHz=25μs以下です。",
+      "explanation": "保険への加入などにより、損失の経済的負担を契約相手へ移す対応はリスク移転です。回避はリスクのある活動自体をやめること、低減は発生確率や影響を小さくすること、受容は対応を加えず残存リスクを引き受けることを意味します。",
       "difficulty": 3,
       "sort_order": 27,
       "is_active": true
@@ -2246,10 +2234,10 @@
       "is_active": true
     },
     {
-      "external_key": "sys-cache-019",
-      "source_type": "derived",
-      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問19（Canoviaオリジナル類題）",
-      "prompt": "4ブロックのキャッシュC0〜C3の最終参照時刻が C0=0:08, C1=0:06, C2=0:05, C3=0:10 である。新しいブロックをロードするときC2が置換対象になる方式はどれか。",
+      "external_key": "strategy-pest-001",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "企業の外部環境を政治・経済・社会・技術の四つの視点から整理して、事業戦略に影響するマクロ環境の変化を分析する手法はどれか。",
       "response_schema": [
         {
           "id": "answer",
@@ -2259,62 +2247,53 @@
           "choices": [
             {
               "id": "ア",
-              "label": "FIFO"
+              "label": "PEST分析"
             },
             {
               "id": "イ",
-              "label": "LFU"
+              "label": "SWOT分析"
             },
             {
               "id": "ウ",
-              "label": "LIFO"
+              "label": "ABC分析"
             },
             {
               "id": "エ",
-              "label": "LRU"
+              "label": "EVM"
             }
           ]
-        },
-        {
-          "id": "reasoning",
-          "type": "textarea",
-          "label": "考え方・判断理由",
-          "required": false,
-          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
-          "choices": []
         }
       ],
       "grading_rule": {
         "type": "exact_choice",
         "field_id": "answer",
-        "answer": "エ"
+        "answer": "ア"
       },
       "learning_metadata": {
         "concepts": [
-          "コンピュータ構成",
-          "キャッシュ",
-          "LRU"
+          "ストラテジ",
+          "経営戦略"
         ],
         "weakness_targets": [
-          "計算",
-          "キャッシュ"
+          "経営戦略"
         ],
         "tags": [
           "科目A",
-          "コンピュータ構成"
+          "ストラテジ",
+          "経営戦略"
         ],
-        "keywords": [
-          "置換アルゴリズム"
-        ],
-        "explanation_origin": "canovia_original",
+        "keywords": [],
         "curation": {
-          "source_pack_slug": "ap-a-canovia-core-v1",
-          "source_external_key": "sys-cache-019",
-          "selection": "manual_draft_2026_10_09"
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review",
+          "source_pack_slug": "ap-a-canovia-business-management-supplement-v1",
+          "source_external_key": "strategy-pest-001",
+          "selection": "l5_domain_and_semantic_rebalance_2026_10_09",
+          "replaced_candidate_key": "sys-cache-019"
         }
       },
-      "explanation": "LRUは最も長く参照されていないブロックを置換します。最終参照が最も古いC2が対象です。",
-      "difficulty": 3,
+      "explanation": "PESTはPolitical（政治）・Economic（経済）・Social（社会）・Technological（技術）の4視点で外部マクロ環境を分析します。SWOTは内部の強み・弱みと外部の機会・脅威、ABC分析は重要度別の分類、EVMはプロジェクトの進捗とコストの評価です。",
+      "difficulty": 2,
       "sort_order": 29,
       "is_active": true
     },
@@ -2402,10 +2381,10 @@
       "is_active": true
     },
     {
-      "external_key": "sys-semaphore-020",
-      "source_type": "derived",
-      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問16（Canoviaオリジナル類題）",
-      "prompt": "二つのタスクが同じI2Cバス上のセンサーへアクセスする。バスを同時利用しないよう排他的に制御するため、リアルタイムOSの機能として最も適切なものはどれか。",
+      "external_key": "strategy-ppm-002",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "PPM（プロダクトポートフォリオマネジメント）において、市場成長率は低いが相対的な市場占有率が高く、安定した資金を生み出す事業の区分はどれか。",
       "response_schema": [
         {
           "id": "answer",
@@ -2415,70 +2394,61 @@
           "choices": [
             {
               "id": "ア",
-              "label": "キュー"
+              "label": "花形（Star）"
             },
             {
               "id": "イ",
-              "label": "セマフォ"
+              "label": "問題児（Question Mark）"
             },
             {
               "id": "ウ",
-              "label": "マルチスレッド"
+              "label": "負け犬（Dog）"
             },
             {
               "id": "エ",
-              "label": "メモリプール"
+              "label": "金のなる木（Cash Cow）"
             }
           ]
-        },
-        {
-          "id": "reasoning",
-          "type": "textarea",
-          "label": "考え方・判断理由",
-          "required": false,
-          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
-          "choices": []
         }
       ],
       "grading_rule": {
         "type": "exact_choice",
         "field_id": "answer",
-        "answer": "イ"
+        "answer": "エ"
       },
       "learning_metadata": {
         "concepts": [
-          "OS",
-          "排他制御",
-          "セマフォ"
+          "ストラテジ",
+          "経営戦略"
         ],
         "weakness_targets": [
-          "排他制御",
-          "OS"
+          "経営戦略"
         ],
         "tags": [
           "科目A",
-          "OS"
+          "ストラテジ",
+          "経営戦略"
         ],
-        "keywords": [
-          "リアルタイムOS"
-        ],
-        "explanation_origin": "canovia_original",
+        "keywords": [],
         "curation": {
-          "source_pack_slug": "ap-a-canovia-core-v1",
-          "source_external_key": "sys-semaphore-020",
-          "selection": "manual_draft_2026_10_09"
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review",
+          "source_pack_slug": "ap-a-canovia-business-management-supplement-v1",
+          "source_external_key": "strategy-ppm-002",
+          "selection": "l5_domain_and_semantic_rebalance_2026_10_09",
+          "replaced_candidate_key": "sys-semaphore-020"
         }
       },
-      "explanation": "共有資源の排他制御にはセマフォやミューテックスを用います。",
-      "difficulty": 2,
+      "explanation": "PPMは市場成長率と相対的市場占有率で事業を区分します。低成長率かつ高占有率の『金のなる木』は安定的なキャッシュを生みやすく、他の事業への投資原資にもなります。花形は高成長・高占有率、問題児は高成長・低占有率、負け犬は低成長・低占有率です。",
+      "difficulty": 3,
       "sort_order": 31,
       "is_active": true
     },
     {
-      "external_key": "sys-deadlock-021",
-      "source_type": "derived",
-      "source_reference": "参考：令和7年度 秋期 応用情報技術者試験 午前 問18（Canoviaオリジナル類題）",
-      "prompt": "二つのタスクが二つの資源を排他的に利用する。デッドロックを防止する方法として適切なものはどれか。",
+      "external_key": "strategy-stp-003",
+      "source_type": "canovia_original",
+      "source_reference": null,
+      "prompt": "市場を顧客の特徴ごとに分割し、狙う顧客層を選択した後、自社製品の位置付けを決めるマーケティング戦略の枠組みはどれか。",
       "response_schema": [
         {
           "id": "answer",
@@ -2488,29 +2458,21 @@
           "choices": [
             {
               "id": "ア",
-              "label": "一方のタスクだけ優先度を高くする。"
+              "label": "4P"
             },
             {
               "id": "イ",
-              "label": "両タスクで資源を獲得する順序を同じにする。"
+              "label": "STP"
             },
             {
               "id": "ウ",
-              "label": "両タスクで資源を獲得する順序を逆にする。"
+              "label": "BSC"
             },
             {
               "id": "エ",
-              "label": "両タスクの優先度を同じにする。"
+              "label": "EAI"
             }
           ]
-        },
-        {
-          "id": "reasoning",
-          "type": "textarea",
-          "label": "考え方・判断理由",
-          "required": false,
-          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
-          "choices": []
         }
       ],
       "grading_rule": {
@@ -2520,30 +2482,29 @@
       },
       "learning_metadata": {
         "concepts": [
-          "OS",
-          "デッドロック",
-          "排他制御"
+          "ストラテジ",
+          "経営戦略"
         ],
         "weakness_targets": [
-          "OS",
-          "排他制御"
+          "経営戦略"
         ],
         "tags": [
           "科目A",
-          "OS"
+          "ストラテジ",
+          "経営戦略"
         ],
-        "keywords": [
-          "循環待ち"
-        ],
-        "explanation_origin": "canovia_original",
+        "keywords": [],
         "curation": {
-          "source_pack_slug": "ap-a-canovia-core-v1",
-          "source_external_key": "sys-deadlock-021",
-          "selection": "manual_draft_2026_10_09"
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review",
+          "source_pack_slug": "ap-a-canovia-business-management-supplement-v1",
+          "source_external_key": "strategy-stp-003",
+          "selection": "l5_domain_and_semantic_rebalance_2026_10_09",
+          "replaced_candidate_key": "sys-deadlock-021"
         }
       },
-      "explanation": "全タスクで資源獲得順序を統一すると循環待ちを防げるため、デッドロックの成立条件を崩せます。",
-      "difficulty": 3,
+      "explanation": "STPはSegmentation（市場細分化）、Targeting（標的市場選定）、Positioning（自社の立ち位置の明確化）の順に市場への働き掛けを設計する枠組みです。4Pは製品・価格・流通・販促の施策、BSCは戦略目標の評価、EAIは企業内アプリケーションの連携です。",
+      "difficulty": 2,
       "sort_order": 32,
       "is_active": true
     },
@@ -3177,10 +3138,10 @@
       "is_active": true
     },
     {
-      "external_key": "calc-bottleneck-027",
+      "external_key": "strategy-valuechain-008",
       "source_type": "canovia_original",
       "source_reference": null,
-      "prompt": "直列に接続された3工程A、B、Cの最大処理能力が、それぞれ毎分40個、毎分25個、毎分50個である。工程間に十分なバッファがあるとき、システム全体の最大スループットとボトルネックの組合せとして適切なものはどれか。",
+      "prompt": "企業の活動を購買物流、製造、出荷物流、販売・マーケティング、サービスなどの主活動と、調達・人事管理などの支援活動に分け、どの工程で競争優位を生むか分析する手法はどれか。",
       "response_schema": [
         {
           "id": "answer",
@@ -3190,64 +3151,53 @@
           "choices": [
             {
               "id": "ア",
-              "label": "25個/分・工程B"
+              "label": "PPM"
             },
             {
               "id": "イ",
-              "label": "40個/分・工程A"
+              "label": "DCF法"
             },
             {
               "id": "ウ",
-              "label": "50個/分・工程C"
+              "label": "ファイブフォース分析"
             },
             {
               "id": "エ",
-              "label": "115個/分・工程B"
+              "label": "バリューチェーン分析"
             }
           ]
-        },
-        {
-          "id": "reasoning",
-          "type": "textarea",
-          "label": "考え方・判断理由",
-          "required": false,
-          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
-          "choices": []
         }
       ],
       "grading_rule": {
         "type": "exact_choice",
         "field_id": "answer",
-        "answer": "ア"
+        "answer": "エ"
       },
       "learning_metadata": {
         "concepts": [
-          "性能",
-          "ボトルネック",
-          "スループット"
+          "ストラテジ",
+          "経営戦略"
         ],
         "weakness_targets": [
-          "ボトルネック",
-          "性能計算"
+          "経営戦略"
         ],
         "tags": [
           "科目A",
-          "性能"
+          "ストラテジ",
+          "経営戦略"
         ],
-        "keywords": [
-          "処理能力",
-          "直列工程"
-        ],
-        "content_rules_version": "1.1",
-        "context_fidelity": "exam_natural",
+        "keywords": [],
         "curation": {
-          "source_pack_slug": "ap-a-canovia-core-v1",
-          "source_external_key": "calc-bottleneck-027",
-          "selection": "manual_draft_2026_10_09"
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review",
+          "source_pack_slug": "ap-a-canovia-business-management-supplement-v1",
+          "source_external_key": "strategy-valuechain-008",
+          "selection": "l5_domain_and_semantic_rebalance_2026_10_09",
+          "replaced_candidate_key": "calc-bottleneck-027"
         }
       },
-      "explanation": "直列工程全体の処理能力は最も遅い工程に制約されます。工程Bの25個/分がボトルネックです。",
-      "difficulty": 2,
+      "explanation": "バリューチェーン分析は企業の活動を主活動と支援活動に分け、各工程が顧客価値やコストにどのように関わるかを可視化します。PPMは事業ポートフォリオ、DCF法は将来キャッシュフローの割引評価、ファイブフォース分析は業界の競争構造に着目します。",
+      "difficulty": 3,
       "sort_order": 41,
       "is_active": true
     },
@@ -4358,10 +4308,10 @@
       "is_active": true
     },
     {
-      "external_key": "algo-hashtable-040",
+      "external_key": "strategy-roi-007",
       "source_type": "canovia_original",
       "source_reference": null,
-      "prompt": "社員番号をキーとして社員情報を格納し、社員番号が完全一致する検索を非常に多く行う。適切に設計された場合、平均的に高速な検索を期待できるデータ構造はどれか。",
+      "prompt": "業務システムへの投資額が400万円で、投資によって1年間に得られる利益が80万円と見込まれる。単純な投資利益率ROIを『年間利益÷投資額×100』と定義した場合、ROIは幾らか。",
       "response_schema": [
         {
           "id": "answer",
@@ -4371,61 +4321,52 @@
           "choices": [
             {
               "id": "ア",
-              "label": "ハッシュ表"
+              "label": "5%"
             },
             {
               "id": "イ",
-              "label": "スタック"
+              "label": "10%"
             },
             {
               "id": "ウ",
-              "label": "キュー"
+              "label": "20%"
             },
             {
               "id": "エ",
-              "label": "連結リストだけを先頭から順に探索する構造"
+              "label": "50%"
             }
           ]
-        },
-        {
-          "id": "reasoning",
-          "type": "textarea",
-          "label": "考え方・判断理由",
-          "required": false,
-          "placeholder": "任意：なぜその答えを選んだかを書いてください。AI評価時に思考過程のフィードバックへ使います。",
-          "choices": []
         }
       ],
       "grading_rule": {
         "type": "exact_choice",
         "field_id": "answer",
-        "answer": "ア"
+        "answer": "ウ"
       },
       "learning_metadata": {
         "concepts": [
-          "アルゴリズム",
-          "ハッシュ表"
+          "ストラテジ",
+          "経営戦略"
         ],
         "weakness_targets": [
-          "アルゴリズム"
+          "経営戦略"
         ],
         "tags": [
           "科目A",
-          "アルゴリズム"
+          "ストラテジ",
+          "経営戦略"
         ],
-        "keywords": [
-          "等価検索",
-          "ハッシュ関数"
-        ],
-        "content_rules_version": "1.1",
-        "context_fidelity": "exam_natural",
+        "keywords": [],
         "curation": {
-          "source_pack_slug": "ap-a-canovia-core-v1",
-          "source_external_key": "algo-hashtable-040",
-          "selection": "manual_draft_2026_10_09"
+          "question_origin": "canovia_2026_independent_draft",
+          "content_review_status": "pending_human_subject_review",
+          "source_pack_slug": "ap-a-canovia-business-management-supplement-v1",
+          "source_external_key": "strategy-roi-007",
+          "selection": "l5_domain_and_semantic_rebalance_2026_10_09",
+          "replaced_candidate_key": "algo-hashtable-040"
         }
       },
-      "explanation": "ハッシュ表はキーの等価検索を平均的に高速に行えます。",
+      "explanation": "設問の定義どおり年間利益80万円を投資額400万円で割り、100を掛けます。80÷400×100＝20%です。投資回収期間のPBPや割引現在価値を使うNPVとは異なり、この問題では年利益と投資額の単純な比率だけを求めます。",
       "difficulty": 2,
       "sort_order": 56,
       "is_active": true
