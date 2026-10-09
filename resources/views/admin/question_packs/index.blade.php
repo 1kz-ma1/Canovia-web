@@ -205,7 +205,12 @@
                                         <p>出典表記：{{ $item['source_reference'] }}</p>
                                     @endif
                                     @if(str_starts_with($item['source_url'], 'https://www.ipa.go.jp/'))
-                                        <p><a class="text-cyan-300 underline" href="{{ $item['source_url'] }}" target="_blank" rel="noopener noreferrer">IPA原問題を確認（別タブ）</a></p>
+                                        <p class="flex flex-wrap gap-x-4 gap-y-1">
+                                            <a class="text-cyan-300 underline" href="{{ $item['source_url'] }}" target="_blank" rel="noopener noreferrer">IPA原問題を確認（別タブ）</a>
+                                            @if(str_starts_with($item['source_answer_url'], 'https://www.ipa.go.jp/'))
+                                                <a class="text-cyan-300 underline" href="{{ $item['source_answer_url'] }}" target="_blank" rel="noopener noreferrer">IPA解答例を確認（別タブ）</a>
+                                            @endif
+                                        </p>
                                     @endif
                                     @if(count($item['flags']))
                                         <ul class="list-inside list-disc text-rose-300" data-ap-a-audit-flags>
