@@ -153,3 +153,43 @@ access or send test user content to a third-party IdP.
 Record the exact staging deployment/CI evidence after the first live check;
 until then, treat this code and its CI as implementation, not live persisted
 fixture verification.
+
+## Verified sealed-stage persistence acceptance (2026-10-09, latest)
+
+**ACCEPTED: synthetic owner, Plan and Tasks persisted through the sealed stage
+restart. This supersedes earlier "not yet checked" notes above.**
+
+- [PR #426](https://github.com/1kz-ma1/Canovia-web/pull/426):
+  branch tests / migration regression / isolated PostgreSQL Docker smoke all
+  passed; squash-merged `6a69daa150de57435348c88b42f4f39929ccaec1`.
+- On the actual *isolated* Render stage, one deliberately armed
+  `CANOVIA_STAGING_VERIFY_SYNTHETIC_FIXTURE_ON_START=true` run used
+  the new **read-only** `canovia:mcp-staging-verify-synthetic-plan --json`
+  and emitted only `MCP isolated staging synthetic fixture verification:
+  ready (details suppressed)`. Stage deploy
+  `dep-db4a1j3bc2fs73b53ds0` finished **Live** at
+  `2026-10-09T08:08:37Z`.
+- This verifier requires the exact pinned PostgreSQL and private
+  staging configuration. It checks one fixed synthetic owner, the private
+  Plan, two expected Tasks and absence of unrelated account or
+  delegated consent/grant/audit rows. It does **not** disclose IDs,
+  password hashes, tokens or Plan text.
+- The verification boot switch was subsequently returned to `false`.
+  Original owner/Plan creation flags and temporary provisioning password
+  were already cleared and remain OFF/empty.
+- No change to production Aiven MySQL `pacekeeper`, environment variables,
+  Render compute plan or production MCP exposure was made.
+
+**Still pending:** a supported external OAuth IdP and its real registered
+clients; staging-only synthetic-user credential rotation before browser
+sign-in (the initial secret was intentionally cleared); token introspection
+and exact audience; same-subject Plan consent; actual ChatGPT tool invocation.
+Do not infer completion from the fixture acceptance.
+
+For the staged IdP pilot, Keycloak's official documentation supports
+resource-indicator audience binding only with the experimental
+`resource-indicators` feature enabled and an MCP resource client whose
+`resource_url` matches the exact protected resource. It also supports
+DCR, while CIMD is experimental. Verify actual token claims in a disposable
+provider experiment before any Web/MCP gate is opened:
+https://www.keycloak.org/securing-apps/mcp-authz-server
