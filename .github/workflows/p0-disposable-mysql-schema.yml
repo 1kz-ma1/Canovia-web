@@ -15,6 +15,7 @@ on:
       - 'scripts/sql/p0_mysql_readonly_full_migration_ledger.sql'
       - 'scripts/ci/p0_mysql_full_ledger_offline_check.py'
       - 'scripts/ci/p0_mysql_disposable_restore_smoke.sh'
+      - 'scripts/ops/p0_mysql_readonly_preflight.php'
       - 'scripts/sql/p0_mysql_disposable_full_schema_fingerprint.sql'
       - 'tests/ci/test_p0_mysql_full_ledger_offline_check.py'
       - '.github/workflows/p0-disposable-mysql-schema.yml'
@@ -124,3 +125,20 @@ jobs:
           set -euo pipefail
           bash -n scripts/ci/p0_mysql_disposable_restore_smoke.sh
           bash scripts/ci/p0_mysql_disposable_restore_smoke.sh
+
+      - name: Verify operator read-only preflight guard and sanitized verdict
+        env:
+          CANOVIA_P0_READONLY_PREFLIGHT: '1'
+          CANOVIA_P0_EXPECTED_DB_HOST: 127.0.0.1
+          CANOVIA_P0_EXPECTED_DB_NAME: canovia_p0_ci
+        run: |
+          set -euo pipefail
+          php -l scripts/ops/p0_mysql_readonly_preflight.php
+          php scripts/ops/p0_mysql_readonly_preflight.php --check \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["result"]=="REVIEW_REQUIRED" and d["code"]=="PREFLIGHT_VALID_NOT_RELEASE_AUTHORIZATION" and d["release_authorized"] is False and d["production_database_modified"] is False and d["database_identity_independently_verified"] is False'
+          set +e
+          blocked="$(env -u CANOVIA_P0_READONLY_PREFLIGHT php scripts/ops/p0_mysql_readonly_preflight.php --check)"
+          rc=$?
+          set -e
+          test "$rc" -eq 2
+          printf '%s\n' "$blocked" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["result"]=="BLOCK" and d["code"]=="PREFLIGHT_OPERATOR_GUARD_REJECTED" and d["release_authorized"] is False'
