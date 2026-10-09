@@ -163,6 +163,13 @@ def run_lab() -> None:
                         discovery = metadata
                         break
                 except Gap:
+                    status = subprocess.run(
+                        ["docker", "inspect", "--format", "{{.State.Running}}",
+                         CONTAINER],
+                        capture_output=True, text=True, check=False,
+                    )
+                    if status.returncode != 0 or status.stdout.strip() != "true":
+                        raise Gap("disposable_container_exited_before_discovery")
                     time.sleep(2)
             require(discovery is not None, "realm_discovery_not_ready")
             require(discovery.get("issuer") == ISSUER, "issuer_mismatch")
