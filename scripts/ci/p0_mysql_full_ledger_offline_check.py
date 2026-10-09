@@ -43,6 +43,10 @@ def expected_migration_names(directory: Path = EXPECTED_DIR) -> set[str]:
 def parse_full_ledger(raw: str) -> dict[str, int]:
     if not isinstance(raw, str) or len(raw.encode("utf-8")) > MAX_INPUT_BYTES:
         raise InvalidLedger()
+    # str.splitlines() removes CR before per-row checks; reject CRLF and
+    # Unicode line separators before splitting to avoid format ambiguity.
+    if "\r" in raw or not raw.isascii():
+        raise InvalidLedger()
     if not raw.endswith("\n"):
         raise InvalidLedger()
     rows = raw.splitlines()
