@@ -192,6 +192,7 @@ jobs:
           php -l app/Services/McpVerifiedTokenPrincipal.php
           php -l app/Services/McpAccessTokenIntrospector.php
           php -l tests/Feature/McpAccessTokenIntrospectorTest.php
+          php -l tests/Feature/McpSyntheticOAuthConsentReadLifecycleTest.php
           php -l config/canovia_mcp.php
           php -l app/Services/McpProtectedResourceConfiguration.php
           php -l app/Http/Controllers/McpProtectedResourceMetadataController.php
@@ -229,6 +230,9 @@ jobs:
         run: php artisan test tests/Feature/McpStagingProviderPreflightTest.php
       - name: MCP read-only JSON-RPC resource, bearer and Plan isolation
         run: php artisan test tests/Feature/McpReadOnlyResourceTest.php
+      - name: MCP synthetic actor link through owner consent bounded read and immediate revocation
+        run: php artisan test tests/Feature/McpSyntheticOAuthConsentReadLifecycleTest.php
+
       - name: MCP explicit Plan consent, fresh OAuth and scope isolation
         run: php artisan test tests/Feature/McpExplicitPlanConsentTest.php
       - name: MCP OAuth PKCE external subject account linking and actor isolation

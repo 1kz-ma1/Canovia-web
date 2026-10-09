@@ -236,3 +236,40 @@ Canovia same-subject account link and explicit per-Plan consent,
 revocation and negative cross-user tests, then actual ChatGPT MCP
 read-only invocation. No paid service or staging public access
 was enabled by these tests.
+
+## Full synthetic Canovia authorization lifecycle (2026-10-09 follow-on)
+
+The initial disposable Keycloak 26.8.0 GitHub Action has **already**
+independently validated a real human's authorization-code PKCE flow
+and immutable `iss+sub` stable across two registered clients. Its
+provider is not hosted and its identities are not available to Render.
+
+The newly added **Canovia application-side** integration test
+`tests/Feature/McpSyntheticOAuthConsentReadLifecycleTest.php` exercises
+the real session routes, database and JSON-RPC tool **with simulated
+HTTPS IdP responses** following those verified claim relationships:
+
+1. A valid separate AI-client bearer before account linking cannot read.
+2. The authenticated Canovia owner starts an OAuth link; callback verified
+   by exact issuer and state does **not** create a linked subject until a
+   second user confirmation; linkage alone does **not** create a Plan grant.
+3. A fresh independent PKCE OAuth ceremony for exactly one personal
+   Development Plan is needed. A verified callback still cannot grant
+   anything until the owner explicitly confirms scope (`tasks`) and expiry.
+4. Only after that confirmation does the separate AI-client bearer
+   retrieve bounded Task fields through `/api/mcp`; Task descriptions,
+   owner tokens and unapproved/other-user Plans remain inaccessible.
+5. Revocation immediately denies the exact same previously valid bearer.
+   Replaying the consumed confirmation cannot reinstate consent, and a
+   second Canovia user cannot unlink the owner's identity.
+
+**Critical boundary:** successful test results prove only app
+integration against a **mocked** IdP; they are not a live network link
+between the actual Keycloak user and the existing Render PostgreSQL
+synthetic Canovia user. No new bypass CLI, auto-consent endpoint,
+production MCP flag, real ChatGPT client, provider hosting or paid
+contract is introduced. Full hosted IdP + callback + authenticated
+session + user-driven approval + ChatGPT read remains outstanding.
+
+The status of this test is determined by the specific GitHub PR CI,
+not by the implementation of the test alone.
