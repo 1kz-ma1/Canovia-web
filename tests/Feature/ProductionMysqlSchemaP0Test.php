@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -105,6 +107,103 @@ final class ProductionMysqlSchemaP0Test extends TestCase
             'cascade',
         );
         $this->assertIndex('intelligence_decision_traces', ['domain', 'scope_type', 'scope_id', 'created_at'], false);
+    }
+
+    public function test_forward_only_migration_repairs_applied_ledger_drift_without_losing_existing_user(): void
+    {
+        $historical = [
+            '2026_10_04_000200_create_intelligence_decision_traces_table',
+            '2026_10_08_230000_create_learning_answer_evaluation_adjustments',
+        ];
+
+        foreach ($historical as $name) {
+            $this->assertDatabaseHas('migrations', ['migration' => $name]);
+        }
+
+        // A pre-existing user row is a sentinel for accidental table resets
+        // during forward-only constraint repair. Never use real user data.
+        $user = User::factory()->create();
+        $before = DB::table('users')->where('id', $user->id)->first();
+        $this->assertNotNull($before);
+
+        Schema::table('intelligence_decision_traces', function (Blueprint $table): void {
+            $table->dropForeign('idt_snapshot_fk');
+            $table->dropIndex('intelligence_decision_scope_created_idx');
+        });
+        Schema::table('learning_answer_evaluation_adjustments', function (Blueprint $table): void {
+            $table->dropForeign('laea_answer_event_fk');
+            $table->dropUnique('learning_eval_adjustment_event_unique');
+        });
+
+        // The ledger already says the old migrations ran. Normal "migrate"
+        // would skip them, so a NEW pending forward-only migration is needed.
+        $migration = require database_path(
+            'migrations/2026_10_09_235959_reconcile_p0_mysql_applied_constraints.php',
+        );
+        $migration->up();
+        $migration->up();
+
+        $this->assertForeignKey(
+            'intelligence_decision_traces',
+            'intelligence_state_snapshot_id',
+            'idt_snapshot_fk',
+            'intelligence_state_snapshots',
+            'cascade',
+        );
+        $this->assertIndex(
+            'intelligence_decision_traces',
+            ['domain', 'scope_type', 'scope_id', 'created_at'],
+            false,
+        );
+        $this->assertForeignKey(
+            'learning_answer_evaluation_adjustments',
+            'learning_answer_event_id',
+            'laea_answer_event_fk',
+            'learning_answer_events',
+            'cascade',
+        );
+        $this->assertIndex('learning_answer_evaluation_adjustments', ['learning_answer_event_id'], true);
+
+        $after = DB::table('users')->where('id', $user->id)->first();
+        $this->assertNotNull($after);
+        $this->assertSame($before->email, $after->email);
+        $this->assertSame($before->password, $after->password);
+        foreach ($historical as $name) {
+            $this->assertDatabaseHas('migrations', ['migration' => $name]);
+        }
+    }
+
+    public function test_forward_only_migration_blocks_inconsistent_history_before_any_ddl(): void
+    {
+        $name = '2026_10_08_230000_create_learning_answer_evaluation_adjustments';
+        $row = DB::table('migrations')->where('migration', $name)->first();
+        $this->assertNotNull($row);
+
+        $migration = require database_path(
+            'migrations/2026_10_09_235959_reconcile_p0_mysql_applied_constraints.php',
+        );
+
+        try {
+            DB::table('migrations')->where('migration', $name)->delete();
+
+            try {
+                $migration->up();
+                $this->fail('Forward-only repair must not run with missing historical ledger.');
+            } catch (\RuntimeException $exception) {
+                $this->assertSame(
+                    'P0 recovery blocked: expected table or migration history missing.',
+                    $exception->getMessage(),
+                );
+            }
+        } finally {
+            // CI-only synthetic ledger mutation is always rolled back manually.
+            DB::table('migrations')->insert([
+                'migration' => $name,
+                'batch' => $row->batch,
+            ]);
+        }
+
+        $this->assertDatabaseHas('migrations', ['migration' => $name]);
     }
 
     private function assertForeignKey(
