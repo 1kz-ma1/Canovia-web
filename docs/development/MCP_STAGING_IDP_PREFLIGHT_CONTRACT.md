@@ -95,3 +95,24 @@ Example result shape (status names only; illustrative, not a real run):
 - [ZITADEL OAuth introspection endpoint](https://zitadel.com/docs/apis/openidoauth/endpoints)
 - [ZITADEL DCR](https://zitadel.com/docs/guides/integrate/dynamic-client-registration)
 - [MCP authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)
+
+
+## Isolated disposable Render bootstrap (not yet provisioned)
+
+A separate, **manual opt-in** Render Blueprint and staging-only Docker
+image now allow a disposable, synthetic-data-only SQLite stage that refuses
+all external DB credentials, mismatched host, production keys and accidental
+MCP activation **before any migration**. The staging HTTP middleware starts
+closed except `/up`. Existing production Canovia deployment is unchanged.
+
+**Important cost constraint:** Render's Free Web services in one workspace
+share a 750-hour monthly pool; creating a separate Free staging service can
+consume capacity needed by the live Free Canovia Web service. No stage was
+created or started in this implementation. SQLite is ephemeral; do not
+promote this disposable stage to persistent OAuth consent/evidence tests
+without isolated durable storage and controlled staging access. See
+[isolated staging bootstrap](MCP_ISOLATED_STAGING_BOOTSTRAP_CONTRACT.md).
+
+## Public-launch compute plan decision (2026-10-09)
+
+The product owner plans to move **production Canovia** to the cheapest paid Render Web compute at public launch. At the time of this review, Render lists a $7/month paid Web compute plan, whereas the Hobby workspace subscription is $0. This is **not** a commitment to create or pay for staging today. The independent disposable staging Blueprint stays manual/Free by default; do not use the production database or copy production secrets. Recheck current Render billing terms when launch is scheduled.

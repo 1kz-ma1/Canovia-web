@@ -106,3 +106,13 @@ without tokens or private Plan content, and reports only safe status codes.
 No dedicated Canovia staging service/DB or real IdP tenant has been created,
 no production connection activated. See
 [isolated staging and provider compatibility](MCP_STAGING_IDP_PREFLIGHT_CONTRACT.md).
+
+## Current: opt-in Render staging bootstrap (not deployed)
+
+A staging-only Docker image, Render Blueprint (Free, manual deploy OFF) and
+fail-closed startup/middleware protect synthetic Canovia MCP smoke tests.
+There is **no new Render service**, new datastore, IdP tenant or enabled
+MCP read; production and HINANEX resources must not be reused. Shared
+Render Free instance-hours require billing/capacity review before the
+Blueprint is synced. See
+[staging bootstrap](MCP_ISOLATED_STAGING_BOOTSTRAP_CONTRACT.md).

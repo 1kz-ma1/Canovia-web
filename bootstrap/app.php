@@ -14,6 +14,7 @@ use App\Http\Middleware\RedirectLegacyCanoviaHost;
 use App\Http\Middleware\TrackAiPlanFunnel;
 use App\Http\Middleware\TrackEarlyAccessVisit;
 use App\Http\Middleware\RememberWorkspaceScreen;
+use App\Http\Middleware\CloseUnopenedMcpStaging;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -26,6 +27,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Measure before the web middleware group so database-backed session
         // reads/writes are included in the request total.
         $middleware->prepend(MeasurePagePerformance::class);
+        // Staging always starts inaccessible except /up; no personal data
+        // or OAuth endpoints are reachable before explicit access review.
+        $middleware->prepend(CloseUnopenedMcpStaging::class);
         $middleware->encryptCookies(except: [\App\Services\HomeSurfacePreference::COOKIE]);
         $middleware->redirectGuestsTo(fn (Request $request) => route('auth.login.form'));
         $middleware->redirectUsersTo(fn (Request $request) => app(\App\Services\HomeSurfacePreference::class)->url($request));
