@@ -28,6 +28,11 @@ def zero_grants_payload(username: str) -> dict:
         raise UnsafeIdentity
     if username in RESERVED or not username.startswith("canovia_p0_"):
         raise UnsafeIdentity
+    # A nonempty alphabetic suffix is mandatory; the namespace alone is not
+    # a valid account identity, even if MySQL accepts that string.
+    suffix = username[len("canovia_p0_"):]
+    if not re.fullmatch(r"[a-z][a-z0-9_]*", suffix):
+        raise UnsafeIdentity
     # Intentional explicit empty field. Do NOT replace with omission or
     # ["SELECT", "REFERENCES"] — the latter may expose private records.
     return {"username": username, "mysql_grants": []}
