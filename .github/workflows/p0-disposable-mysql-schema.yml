@@ -20,6 +20,8 @@ on:
       - 'scripts/ci/p0_mysql_metadata_grants_guard.py'
       - 'tests/ci/test_p0_mysql_metadata_grants_guard.py'
       - 'scripts/ci/p0_mysql_metadata_visibility_smoke.sh'
+      - 'scripts/ops/p0_aiven_zero_grants_payload.py'
+      - 'tests/ci/test_p0_aiven_zero_grants_payload.py'
       - 'scripts/sql/p0_mysql_select_only_data_preflight.sql'
       - 'scripts/ci/p0_mysql_select_only_data_preflight_import.py'
       - 'tests/ci/test_p0_mysql_select_only_data_preflight_import.py'
@@ -120,6 +122,12 @@ jobs:
           test "$rc" -eq 2
           test "$output" = 'P0_READONLY_COLLECT: BLOCK (CI_NOT_AN_OPERATOR)'
           echo 'p0_operator_collector_disabled_in_ci: pass'
+      - name: Verify zero-grant Aiven request body (offline only; no Aiven calls)
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/ci -p 'test_p0_aiven_zero_grants_payload.py' -v
+          python3 scripts/ops/p0_aiven_zero_grants_payload.py --username canovia_p0_audit \
+            | python3 -c 'import json,sys; b=json.load(sys.stdin); assert b == {"username":"canovia_p0_audit","mysql_grants":[]}'
       - name: Full MySQL migrations from an empty disposable database
         run: php artisan migrate --force --no-interaction
       - name: Repeat all MySQL migrations (idempotency)
