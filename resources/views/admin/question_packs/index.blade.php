@@ -30,7 +30,7 @@
                     <p class="text-xs font-bold uppercase tracking-[.14em] text-violet-300">BUNDLED PACKS</p>
                     <h2 class="mt-1 text-xl font-black text-slate-50">Canovia同梱問題集</h2>
                     <p class="mt-2 max-w-3xl text-xs leading-5 text-slate-500">
-                        リポジトリで管理している検証済みPackです。まずDraftへ取り込み、内容を確認してからpublishedへ変更します。
+                        リポジトリで管理しているPackです。未監修の候補も含まれるため、同梱や機械検査の成功だけで監修済みとは扱いません。まずDraftへ取り込み、個別に品質・利用条件を確認してください。
                     </p>
                 </div>
                 <span class="badge badge-slate">{{ ($bundledPacks ?? collect())->count() }} packs</span>
@@ -104,6 +104,106 @@
                 <p class="mt-3 text-sm font-semibold text-rose-300">{{ $message }}</p>
             @enderror
         </section>
+
+        @if(isset($apCandidateAudit))
+            <section class="page-card p-5 sm:p-6" data-ap-a-item-review-queue>
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-[.14em] text-amber-300">AP SUBJECT A / QUALITY GATE</p>
+                        <h2 class="mt-1 text-xl font-black text-slate-50">80問候補の内容監査キュー</h2>
+                        <p class="mt-2 max-w-3xl text-xs leading-6 text-slate-400">
+                            リポジトリ内の未公開候補（v{{ $apCandidateAudit['candidate_version'] }}）を出典と比較した読み取り専用の結果です。
+                            自動検査の成功は正答・分野・著作権・解説の専門監修を意味しません。
+                            ここには承認ボタンも公開処理もありません。
+                        </p>
+                    </div>
+                    <span class="badge badge-slate">未監修 / 未公開</span>
+                </div>
+
+                <div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+                    <div class="rounded-xl border border-slate-700 p-3">
+                        <p class="text-[11px] text-slate-400">監査対象</p>
+                        <p class="mt-1 text-xl font-black text-slate-100">{{ $apCandidateAudit['count'] }}問</p>
+                    </div>
+                    <div class="rounded-xl border border-slate-700 p-3">
+                        <p class="text-[11px] text-slate-400">機械的な不整合</p>
+                        <p class="mt-1 text-xl font-black {{ $apCandidateAudit['structural_failure_count'] ? 'text-rose-300' : 'text-slate-100' }}"
+                           data-ap-a-automatic-failures>{{ $apCandidateAudit['structural_failure_count'] }}問</p>
+                    </div>
+                    <div class="rounded-xl border border-slate-700 p-3">
+                        <p class="text-[11px] text-slate-400">人手の内容監修待ち</p>
+                        <p class="mt-1 text-xl font-black text-amber-300" data-ap-a-human-review-pending>{{ $apCandidateAudit['independent_review_pending_count'] }}問</p>
+                    </div>
+                    <div class="rounded-xl border border-slate-700 p-3">
+                        <p class="text-[11px] text-slate-400">分野の暫定内訳</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-200">
+                            技{{ $apCandidateAudit['distribution']['technology'] }}・管{{ $apCandidateAudit['distribution']['management'] }}・戦{{ $apCandidateAudit['distribution']['strategy'] }}
+                        </p>
+                    </div>
+                </div>
+
+                <p class="mt-3 text-xs leading-6 text-amber-200" data-ap-a-release-blocked>
+                    {{ $apCandidateAudit['publication_blocked'] ? '通常公開と本番模試提供はブロック中です。' : '公開ゲートの状態が変わりました。管理者による権利・正答・解説の審査記録を別途確認してください。' }}
+                    既知の重複 {{ $apCandidateAudit['known_overlap_count'] }}組は
+                    {{ $apCandidateAudit['known_overlap_excluded'] ? '候補から除外済み' : '再確認が必要' }}。
+                    未発見の意味上の重複がないと保証するものではありません。
+                </p>
+
+                <details class="mt-4 rounded-xl border border-slate-700 p-3" data-ap-a-review-items>
+                    <summary class="cursor-pointer text-sm font-bold text-cyan-200">
+                        80問それぞれの出典・正答・解説と監修項目を確認する
+                    </summary>
+                    <div class="mt-4 space-y-2">
+                        @foreach($apCandidateAudit['items'] as $item)
+                            <details class="rounded-xl border border-slate-800 bg-slate-950/30 p-3"
+                                     data-ap-a-review-item="{{ $item['key'] }}">
+                                <summary class="cursor-pointer text-xs font-semibold text-slate-100">
+                                    問{{ $item['number'] }} · {{ $item['key'] }}
+                                    · {{ $item['origin_type'] === 'official' ? 'IPA過去問' : ($item['origin_type'] === 'core' ? '既存Canovia' : '新規Canovia') }}
+                                    · {{ $item['domain'] }}
+                                    · {{ count($item['flags']) ? '自動検査で要修正' : '構造検査OK' }}
+                                    · 専門監修待ち
+                                </summary>
+                                <div class="mt-3 space-y-3 text-xs leading-6 text-slate-300">
+                                    <p class="whitespace-pre-wrap text-slate-100">{{ $item['prompt'] }}</p>
+                                    <div class="grid gap-1 sm:grid-cols-2">
+                                        @foreach($item['choices'] as $choice)
+                                            <p class="{{ $choice['id'] === $item['answer'] ? 'font-semibold text-emerald-200' : 'text-slate-300' }}">
+                                                {{ $choice['id'] }}：{{ $choice['label'] }}
+                                            </p>
+                                        @endforeach
+                                    </div>
+                                    <p class="font-semibold text-slate-100">正答：{{ $item['answer'] }}</p>
+                                    <p class="whitespace-pre-wrap">Canovia解説：{{ $item['explanation'] }}</p>
+                                    <p>出典問題集：{{ $item['source_pack'] }} / {{ $item['source_key'] }}</p>
+                                    @if($item['source_reference'])
+                                        <p>出典表記：{{ $item['source_reference'] }}</p>
+                                    @endif
+                                    @if(str_starts_with($item['source_url'], 'https://www.ipa.go.jp/'))
+                                        <p><a class="text-cyan-300 underline" href="{{ $item['source_url'] }}" target="_blank" rel="noopener noreferrer">IPA原問題を確認（別タブ）</a></p>
+                                    @endif
+                                    @if(count($item['flags']))
+                                        <ul class="list-inside list-disc text-rose-300" data-ap-a-audit-flags>
+                                            @foreach($item['flags'] as $flag)
+                                                <li>{{ $flag }}</li>
+                                            @endforeach
+                                        </ul>
+                                    @endif
+                                    <div class="rounded-lg border border-amber-300/20 p-3">
+                                        <p class="font-semibold text-amber-200">未確認の監修項目（自動承認なし）</p>
+                                        <ul class="mt-1 list-inside list-disc text-amber-100">
+                                            @foreach($item['review_tasks'] as $task)
+                                                <li>{{ $task }}</li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                </div>
+                            </details>
+                        @endforeach
+                    </div>
+                </details>
+            </section>
+        @endif
 
         <section class="grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
             <div class="page-card p-5 sm:p-6">
