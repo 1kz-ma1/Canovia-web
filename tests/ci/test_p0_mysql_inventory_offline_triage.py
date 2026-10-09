@@ -1,6 +1,7 @@
 """P0 offline schema inventory triage is conservative and never authorizes deploy."""
 
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -8,7 +9,8 @@ import tempfile
 import unittest
 
 from scripts.ci.p0_mysql_inventory_offline_triage import (
-    ADJUSTMENT, DECISION, MIGRATIONS, RECONCILE_MIGRATION,
+    ADJUSTMENT, DECISION, COLUMNS, FOREIGN_KEYS, INDEXES,
+    MIGRATIONS, RECONCILE_MIGRATION,
     classify, template,
 )
 
@@ -35,6 +37,61 @@ class P0OfflineSchemaTriageTest(unittest.TestCase):
         self.assertIn(code, result["codes"])
         self.assertIs(result["release_authorized"], False)
         self.assertIs(result["production_database_modified"], False)
+
+    def test_select_only_mysql_inventory_manifest_matches_entire_offline_contract(self):
+        """Do not silently classify partial SQL coverage as 'all metadata matches'."""
+        sql = (Path(__file__).parents[2]
+               / "scripts/sql/p0_mysql_readonly_schema_inventory.sql").read_text(
+                   encoding="utf-8"
+               )
+        column_block = sql.split("SELECT 'column' AS section,")[1].split(
+            "SELECT 'foreign_key' AS section,"
+        )[0]
+        foreign_block = sql.split("SELECT 'foreign_key' AS section,")[1].split(
+            "SELECT 'index' AS section,"
+        )[0]
+        index_block = sql.split("SELECT 'index' AS section,")[1].split(
+            "-- The Laravel migration ledger"
+        )[0]
+        def rows(section: str) -> list[tuple[str, ...]]:
+            return [
+                tuple(re.findall(r"'([^']+)'", row))
+                for row in section.splitlines()
+                if re.match(r"\\s*(?:SELECT|UNION ALL SELECT)\\s+'", row)
+            ]
+
+        sql_columns = {(row[0], row[1]) for row in rows(column_block)}
+        sql_foreign_keys = {(row[0], row[2]) for row in rows(foreign_block)}
+        sql_indexes = {(row[0], row[1]) for row in rows(index_block)}
+        self.assertEqual(
+            {(table, col) for table, names in COLUMNS.items() for col in names},
+            sql_columns,
+        )
+        self.assertEqual(
+            {(table, name) for table, names in FOREIGN_KEYS.items() for name in names},
+            sql_foreign_keys,
+        )
+        self.assertEqual(
+            {(table, name) for table, names in INDEXES.items() for name in names},
+            sql_indexes,
+        )
+
+    def test_full_contract_extra_fk_and_lookup_index_drift_is_blocked(self):
+        for kind, key in (
+            ("foreign_keys", "idt_user_fk"),
+            ("foreign_keys", "idt_plan_fk"),
+            ("indexes", "intelligence_decision_traces_input_fingerprint_index"),
+            ("indexes", "intelligence_decision_traces_readiness_fingerprint_index"),
+        ):
+            with self.subTest(kind=kind, key=key):
+                data = complete()
+                data[kind][key] = "MISSING"
+                self.check(data, "BLOCK", "TRACE_APPLIED_CONSTRAINT_DRIFT")
+
+    def test_full_contract_extra_column_drift_is_blocked(self):
+        data = complete()
+        data["columns"][DECISION + ".decision_reasons"] = "MISSING"
+        self.check(data, "BLOCK", "TRACE_PARTIAL_COLUMNS")
 
     def test_default_template_is_not_ever_accepted_as_schema_evidence(self):
         self.check(template(), "BLOCK", "EVIDENCE_INCOMPLETE")
