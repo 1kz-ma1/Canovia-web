@@ -37,6 +37,33 @@ class DenyRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+class CallbackError(Exception):
+    pass
+
+
+class OnlyLocalAuthRedirect(urllib.request.HTTPRedirectHandler):
+    """Allow in-realm login navigation; capture inert callback errors."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        candidate = urllib.parse.urlsplit(newurl)
+        local = urllib.parse.urlsplit(ORIGIN)
+        if (candidate.scheme, candidate.netloc) == (local.scheme, local.netloc):
+            require(candidate.path.startswith(f"/realms/{REALM}/"),
+                    "unexpected_local_redirect_path")
+            return super().redirect_request(req, fp, code, msg, headers, newurl)
+        callback = urllib.parse.urlsplit(CALLBACK)
+        if (candidate.scheme, candidate.netloc, candidate.path) == (
+            callback.scheme, callback.netloc, callback.path
+        ) and not candidate.fragment:
+            query = urllib.parse.parse_qs(candidate.query)
+            if query.get("error", [None])[0] in {
+                "invalid_request", "invalid_scope", "invalid_target",
+                "unauthorized_client", "access_denied",
+            }:
+                raise CallbackError()
+        raise Gap("unexpected_nonlocal_authorization_redirect")
+
+
 def public_metadata() -> dict:
     # Exact, non-configurable allowlisted URL; no redirect or credential.
     opener = urllib.request.build_opener(DenyRedirect())
@@ -175,12 +202,14 @@ def auth_response(client_id: str, resource: str) -> tuple[int, bool]:
         "resource": resource,
     })
     opener = urllib.request.build_opener(
-        urllib.request.ProxyHandler({}), DenyRedirect()
+        urllib.request.ProxyHandler({}), OnlyLocalAuthRedirect()
     )
     try:
         with opener.open(f"{ISSUER}/protocol/openid-connect/auth?{params}",
                          timeout=12) as response:
             code, raw = response.status, response.read(98305)
+    except CallbackError:
+        return 400, False
     except urllib.error.HTTPError as exc:
         code, raw = exc.code, exc.read(98305)
     except (urllib.error.URLError, TimeoutError):
