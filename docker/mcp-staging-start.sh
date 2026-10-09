@@ -145,6 +145,15 @@ fi
 [ "$#" -eq 0 ] || deny "unsupported arguments"
 
 cd /var/www/html
+# Production's standard Nginx serves /health and static assets directly,
+# bypassing Laravel middleware. Override it for the default-closed stage
+# so only Laravel /up is reachable. A separately approved, pinned-DB
+# stage may retain standard Nginx for future protected OAuth testing.
+if [ "${CANOVIA_STAGING_WEB_ACCESS_ENABLED:-false}" = "false" ]; then
+    cp docker/nginx-mcp-staging-closed.conf /etc/nginx/nginx.conf
+    nginx -t >/dev/null 2>&1 || deny "closed staging Nginx configuration invalid"
+fi
+
 if [ "${CANOVIA_STAGING_DB_MODE:-sqlite}" = "sqlite" ]; then
     mkdir -p storage/app/staging
     touch storage/app/staging/mcp.sqlite
