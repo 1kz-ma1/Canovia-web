@@ -688,3 +688,33 @@ Owner-provided Aiven Console UI evidence shows the live MySQL service is **Runni
 Aiven's official [Free MySQL tier documentation](https://aiven.io/docs/products/mysql/concepts/mysql-free-tier) states that Free has automatic backups **but cannot fork services**. The actual service plan shown to this assistant is still unverified; therefore do not assume a standard `Fork & restore` procedure is available. Aiven's [MySQL backup documentation](https://aiven.io/docs/products/mysql/concepts/mysql-backups) separately describes daily full backups plus binary-log based point-in-time recovery, with retention depending on the plan; historical backup *entries* are not proof that an independent restore was successfully tested. Before production DDL, verify the actual plan and supported recovery method privately and obtain an explicitly authorized, isolated restore drill where feasible. Do not propose a paid fork, upgrade or snapshot action without the owner's approval.
 
 **Result:** `DISPOSABLE_MYSQL_8_0_PASS`, `DISPOSABLE_MYSQL_8_4_PASS`, `AIVEN_SCHEMA_UNVERIFIED`, `AIVEN_BACKUP_RESTORE_UNVERIFIED`, `RELEASE_AUTHORIZED=false`. Issue #418 hold and this Draft/unmerged PR remain unchanged.
+
+
+## Operator-only one-command metadata evidence collector (2026-10-10)
+
+A script was added in the **Draft/unmerged** PR, not deployed to production:
+[`scripts/ops/p0_mysql_operator_select_only_collect.sh`](../../scripts/ops/p0_mysql_operator_select_only_collect.sh).
+It performs **only** the already-reviewed targeted schema metadata and full Laravel migration-ledger SELECTs against the independently verified database; the potentially expensive orphan/duplicate existence preflight is deliberately **not run**. It executes `SHOW GRANTS FOR CURRENT_USER()` first to reject any credential exposing admin/DML/DDL/unknown role/grant-option privileges. It requires manual opt-ins, a pre-existing MySQL encrypted login-path for an independently verified **existing SELECT-only account**, and a verified Aiven TLS CA using `--ssl-mode=VERIFY_IDENTITY`. It refuses to execute under GitHub Actions, and does not call Laravel or run migration, backup or restore commands.
+
+**Access-policy trap documented by Aiven:** [Aiven's MySQL service-user guide](https://aiven.io/docs/products/mysql/howto/manage-service-users) states that newly created service users get **admin-level privileges by default**, and that restricting a *new* user's privileges can be done using the API's `mysql_grants` array (e.g. only `SELECT`), where granular grants are supported. **Do not click "Create user" in Console believing it creates a read-only account.** User creation/permission changes are not part of the authorization for this script; if there is no existing SELECT-only identity, **stop** and obtain a separate owner-reviewed least-privilege setup plan. Never use `avnadmin` or Canovia's writable application account, or paste any password/token/hostname/DB identifier into ChatGPT, PRs or CI.
+
+### Private operator procedure (only after independently authorized access)
+
+1. Open the correct Aiven service in the authenticated console. Independently verify service identity, region, MySQL 8.4.x, target **logical database**, and the existing read-only user's access. Do not infer DB name from the historical `defaultdb` exception or a Render `Nothing to migrate` message.
+2. On a trusted computer, separately configure the MySQL encrypted `mysql_config_editor` login-path `canovia_p0_readonly` with that account and Aiven endpoint (privately; not via chat/GitHub). Obtain Aiven's CA certificate privately and verify it belongs to the service. Requires the local `mysql` CLI, `python3`, and trusted checkout of this exact reviewed source.
+3. Execute **locally**, supplying only private values in the local environment; do not paste actual DB identity, CA path or any credentials into shared logs:
+
+```bash
+CANOVIA_P0_OPERATOR_APPROVED=YES \
+CANOVIA_P0_TARGET_VERIFIED=YES \
+CANOVIA_P0_GRANTS_REVIEWED=YES \
+CANOVIA_P0_LOGIN_PATH=canovia_p0_readonly \
+CANOVIA_P0_DATABASE='<the privately verified logical database>' \
+CANOVIA_P0_CA_FILE='<absolute path to the trusted Aiven CA certificate>' \
+bash scripts/ops/p0_mysql_operator_select_only_collect.sh
+```
+
+4. It shows **only fixed `BLOCK` or `REVIEW_REQUIRED` status families**, and never prints the MySQL server/DB/user, grants, raw metadata, credentials or application rows. An error or unrecognized grant stops the scan. **Share only the fixed status codes**, not raw SQL, console details or private files.
+5. Even if all metadata/ledger checks report `REVIEW_REQUIRED`, no Aiven restore has been verified, no approval to run DDL is granted, and PR #443 remains Draft. Real Aiven production-backup recoverability and a separate approved restore drill are still release blockers.
+
+This collector is an **operator convenience layer**, not a way for the current GitHub/Render-only ChatGPT connector to query Aiven. The initial CI acceptance should cover Bash syntax, rejection of GitHub Actions/absent opt-ins, and the same two SELECT-only MySQL pipelines already independently tested in disposable CI. No automatic production Aiven query is planned.
