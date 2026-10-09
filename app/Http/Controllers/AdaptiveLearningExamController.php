@@ -10,6 +10,7 @@ use App\Models\Plan;
 use App\Models\QuestionPack;
 use App\Models\Task;
 use App\Services\AdaptiveExamProfileRegistry;
+use App\Services\AdaptiveExamPackReadinessService;
 use App\Services\AdaptiveLearningBankQueueService;
 use App\Services\BehaviorIdentityService;
 use App\Services\PlanCategoryProfileService;
@@ -47,7 +48,7 @@ final class AdaptiveLearningExamController extends Controller
     public function start(Request $request, Plan $plan, Task $task,
         PlanOwnershipService $ownership, PlanCategoryProfileService $profiles,
         BehaviorIdentityService $identity, AdaptiveExamProfileRegistry $registry,
-        AdaptiveLearningBankQueueService $bank)
+        AdaptiveExamPackReadinessService $readiness)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         $validated = $request->validate([
@@ -58,7 +59,7 @@ final class AdaptiveLearningExamController extends Controller
         $profile = $registry->requireVerified($validated['exam_profile_key']);
         $pack = QuestionPack::where('status', 'published')
             ->findOrFail($validated['question_pack_id']);
-        $meta = $pack->metadata ?? [];
+        $meta = is_array($pack->metadata) ? $pack->metadata : [];
         abort_unless(
             $pack->exam_code === $profile['exam_code']
             && $pack->subject === $profile['subject']
@@ -67,11 +68,14 @@ final class AdaptiveLearningExamController extends Controller
             409,
         );
 
-        $questions = $pack->questions()->where('is_active', true)->get();
-        if ($questions->count() !== (int) $profile['question_count']
-            || ! $questions->every(fn ($q) => $bank->isSupported($q))) {
+        // A verified exam format is not evidence that this particular Bank
+        // is a reviewed, complete static exam. Guard it again at start.
+        $questions = $pack->questions()->where('is_active', true)
+            ->orderBy('sort_order')->orderBy('id')->get();
+        $inspection = $readiness->inspect($pack, $profile, $questions);
+        if (! $inspection['ready']) {
             throw ValidationException::withMessages([
-                'question_pack_id' => 'この試験の問題数・採点可能形式に一致する検証済み問題セットがありません。',
+                'question_pack_id' => implode(' ', $inspection['blocking']),
             ]);
         }
 

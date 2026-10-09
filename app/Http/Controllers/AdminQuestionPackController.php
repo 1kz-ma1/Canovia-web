@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\QuestionPack;
 use App\Services\AdminAccessService;
+use App\Services\AdaptiveExamPackReadinessService;
+use App\Services\AdaptiveExamProfileRegistry;
 use App\Services\AiJsonInputNormalizer;
 use App\Services\QuestionPackCatalogService;
 use App\Services\QuestionPackImportService;
@@ -21,6 +23,8 @@ class AdminQuestionPackController extends Controller
         Request $request,
         QuestionPackCatalogService $catalog,
         QuestionPackPublicationReadinessService $readiness,
+        AdaptiveExamProfileRegistry $examProfiles,
+        AdaptiveExamPackReadinessService $examReadiness,
     )
     {
         $this->ensureAuthorized($request);
@@ -37,6 +41,20 @@ class AdminQuestionPackController extends Controller
         $publicationReadiness = $packs->getCollection()->mapWithKeys(
             fn (QuestionPack $pack) => [$pack->id => $readiness->inspect($pack)]
         );
+
+        $verifiedProfiles = $examProfiles->available();
+        $examPublicationReadiness = collect();
+        foreach ($packs->getCollection() as $pack) {
+            foreach ($verifiedProfiles as $profile) {
+                if ($pack->exam_code === $profile['exam_code']
+                    && $pack->subject === $profile['subject']) {
+                    $examPublicationReadiness->put($pack->id,
+                        ['profile' => $profile,
+                            'inspection' => $examReadiness->inspect($pack, $profile, $pack->questions)]);
+                    break;
+                }
+            }
+        }
 
         $template = [
             'schema_version' => '1.0',
@@ -100,6 +118,7 @@ class AdminQuestionPackController extends Controller
             'packs' => $packs,
             'bundledInstallations' => $bundledInstallations,
             'publicationReadiness' => $publicationReadiness,
+            'examPublicationReadiness' => $examPublicationReadiness,
             'bundledPacks' => $bundledPacks,
             'importTemplate' => json_encode(
                 $template,

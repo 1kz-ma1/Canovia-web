@@ -25,7 +25,11 @@ final class AdaptiveExamProfileRegistry
                     || (int) $p['question_count'] > 200
                     || ! is_numeric($p['duration_minutes'] ?? null)
                     || (int) $p['duration_minutes'] < 1
-                    || (int) $p['duration_minutes'] > 360) return null;
+                    || (int) $p['duration_minutes'] > 360
+                    || (isset($p['choices_per_question'])
+                        && (! is_int($p['choices_per_question'])
+                            || $p['choices_per_question'] < 2
+                            || $p['choices_per_question'] > 8))) return null;
                 return $p;
             })->filter()->values();
     }

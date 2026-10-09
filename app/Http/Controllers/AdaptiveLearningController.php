@@ -10,6 +10,7 @@ use App\Models\Task;
 use App\Services\AdaptiveLearningBankQueueService;
 use App\Services\AdaptiveLearningCandidateService;
 use App\Services\AdaptiveExamProfileRegistry;
+use App\Services\AdaptiveExamPackReadinessService;
 use App\Services\AdaptiveLearningModeRecommendationService;
 use App\Services\AdaptiveLearningTypedAnswerService;
 use App\Services\BehaviorIdentityService;
@@ -49,6 +50,7 @@ final class AdaptiveLearningController extends Controller
         PlanOwnershipService $ownership, PlanCategoryProfileService $profiles,
         BehaviorIdentityService $identity, AdaptiveLearningBankQueueService $queue,
         AdaptiveExamProfileRegistry $examProfiles,
+        AdaptiveExamPackReadinessService $examReadiness,
         AdaptiveLearningModeRecommendationService $recommendations)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
@@ -64,14 +66,24 @@ final class AdaptiveLearningController extends Controller
             ->take(30)->collect();
 
         $availableExamProfiles = $examProfiles->available();
-        $examPacks = $packs->filter(fn ($pack) =>
-            $availableExamProfiles->contains(function (array $profile) use ($pack) {
-                $meta = $pack->metadata ?? [];
-                return $pack->exam_code === $profile['exam_code']
-                    && $pack->subject === $profile['subject']
-                    && ($meta['exam_simulation_profile_key'] ?? '') === $profile['key']
-                    && ($meta['exam_simulation_profile_version'] ?? '') === (string) $profile['version'];
-            }))->values();
+        // Full exam packs must not be hidden by the ordinary 30-pack practice
+        // display cap. Inspect only published packs matching verified profiles.
+        $examOptions = collect();
+        foreach ($availableExamProfiles as $profile) {
+            QuestionPack::query()->where('status', 'published')
+                ->where('exam_code', $profile['exam_code'])
+                ->where('subject', $profile['subject'])
+                ->orderBy('id')->lazy(30)
+                ->each(function (QuestionPack $pack) use ($profile, $examReadiness, $examOptions) {
+                    if ($examOptions->count() >= 30) return false;
+                    if ($examReadiness->inspect($pack, $profile)['ready']) {
+                        $examOptions->push(['pack' => $pack, 'profile' => $profile]);
+                    }
+                    return null;
+                });
+            if ($examOptions->count() >= 30) break;
+        }
+        $examPacks = $examOptions->pluck('pack');
 
         $learningRecommendations = $recommendations->forPlanTask(
             $request, $plan, $task, $identity->resolve($request), $examPacks->isNotEmpty(),
@@ -85,6 +97,7 @@ final class AdaptiveLearningController extends Controller
             'plan' => $plan, 'task' => $task, 'packs' => $packs,
             'activeRuns' => $activeRuns,
             'examProfiles' => $availableExamProfiles, 'examPacks' => $examPacks,
+            'examOptions' => $examOptions,
             'learningRecommendations' => $learningRecommendations,
             'startRequestId' => (string) Str::uuid(),
             'examStartRequestId' => (string) Str::uuid(),

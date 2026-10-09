@@ -69,27 +69,53 @@
             </form>
         @endif
     </section>
-    @if(($examProfiles ?? collect())->isNotEmpty() && ($examPacks ?? collect())->isNotEmpty())
+    @if(($examProfiles ?? collect())->isNotEmpty())
+        <section class="page-card p-5 sm:p-7" data-adaptive-exam-format>
+            <h2 class="text-lg font-bold text-slate-50">確認済みの試験形式</h2>
+            @foreach($examProfiles as $profile)
+                <p class="mt-2 text-sm text-slate-300">
+                    {{ $profile['exam_code'] }} {{ $profile['subject'] }}：
+                    {{ $profile['question_count'] }}問 / {{ $profile['duration_minutes'] }}分
+                    （{{ ($profile['response_format'] ?? '') === 'single_choice' ? '単一選択' : 'その他' }}）
+                </p>
+            @endforeach
+            <p class="mt-2 text-xs leading-6 text-slate-400">
+                試験形式の検証と、実際に出題する問題集の品質・出典・利用条件の検証は別です。
+                管理者が当該版の問題集を明示確認するまでは本番形式の模試を開始できません。
+                科目Bなど記述式の採点が未対応の試験は有効化しません。
+            </p>
+            @if(($examOptions ?? collect())->isEmpty())
+                <p class="mt-3 text-sm font-semibold text-amber-300" data-adaptive-exam-no-ready-pack>
+                    現在、上記試験形式で開始できる検証済みの問題セットはありません。通常の1問ずつ学習をご利用ください。
+                </p>
+            @endif
+        </section>
+    @endif
+    @if(($examOptions ?? collect())->isNotEmpty())
         <section class="page-card p-5 sm:p-7" data-adaptive-exam-entry>
             <h2 class="text-lg font-bold text-slate-50">模擬試験モード（本番形式）</h2>
-            <p class="mt-2 text-sm leading-6 text-slate-300">検証済みの試験別設定だけを使用し、開始前に全問と時間を確定します。終了するまで正誤・解説は表示しません。途中離脱中も制限時間は進みます。</p>
-            <form method="POST" action="{{ route('plans.tasks.learning.exam.start', [$plan, $task]) }}" class="mt-4 space-y-4">
-                @csrf <input type="hidden" name="start_request_id" value="{{ $examStartRequestId }}">
-                <label class="block text-sm font-semibold text-slate-100" for="exam-profile">試験プロファイル</label>
-                <select name="exam_profile_key" id="exam-profile" class="form-control w-full" required>
-                    @foreach($examProfiles as $profile)
-                        <option value="{{ $profile['key'] }}">{{ $profile['exam_code'] }} {{ $profile['subject'] }}（{{ $profile['question_count'] }}問 / {{ $profile['duration_minutes'] }}分）</option>
-                    @endforeach
-                </select>
-                <label class="block text-sm font-semibold text-slate-100" for="exam-pack">検証済み静的問題集</label>
-                <select name="question_pack_id" id="exam-pack" class="form-control w-full" required>
-                    @foreach($examPacks as $pack)
-                        <option value="{{ $pack->id }}">{{ $pack->title }} (v{{ $pack->version }})</option>
-                    @endforeach
-                </select>
-                <p class="text-xs text-slate-400">選択した試験と問題集の検証済み設定が一致しない場合は開始できません。</p>
-                <button type="submit" class="btn-primary">本番形式で始める</button>
-            </form>
+            <p class="mt-2 text-sm leading-6 text-slate-300">
+                開始前に全問と時間を固定し、終了まで正答・解説を表示しません。
+                途中離脱しても制限時間は進みます。
+            </p>
+            @foreach($examOptions as $option)
+                @php($profile = $option['profile'])
+                @php($pack = $option['pack'])
+                <form method="POST" action="{{ route('plans.tasks.learning.exam.start', [$plan, $task]) }}"
+                      class="mt-4 space-y-3 rounded-xl border border-slate-700 p-4"
+                      data-adaptive-exam-option="{{ $profile['key'] }}">
+                    @csrf
+                    <input type="hidden" name="start_request_id" value="{{ \Illuminate\Support\Str::uuid() }}">
+                    <input type="hidden" name="exam_profile_key" value="{{ $profile['key'] }}">
+                    <input type="hidden" name="question_pack_id" value="{{ $pack->id }}">
+                    <p class="text-sm font-semibold text-slate-100">
+                        {{ $profile['exam_code'] }} {{ $profile['subject'] }}
+                        · {{ $profile['question_count'] }}問 / {{ $profile['duration_minutes'] }}分
+                    </p>
+                    <p class="text-xs text-slate-400">{{ $pack->title }}（v{{ $pack->version }}）</p>
+                    <button type="submit" class="btn-primary">この問題集で本番形式を始める</button>
+                </form>
+            @endforeach
         </section>
     @endif
 
