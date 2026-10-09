@@ -387,6 +387,7 @@ def main() -> None:
             token = local_admin_token(admin_secret)
             configure_cimd_policy(token)
             print("keycloak_cimd_trusted_policy_configured: pass")
+            static_fallback = False
             status, login, category = auth_response(CLIENT_ID, MCP_RESOURCE)
             if status != 200 or not login:
                 print("cimd_authorization_status: " +
@@ -442,7 +443,9 @@ def main() -> None:
                 # failure category remains a hard error.
                 require(status == 400
                         and category == "client_metadata_fetch_failed"
-                        and auto_created is False,
+                        and auto_created is False
+                        and "unsupported_metadata_json_property" in kinds
+                        and "chatgpt_plural_auth_methods_field_seen" in kinds,
                         "cimd_unexpected_compatibility_failure")
                 print("real_chatgpt_cimd: blocked_by_pinned_keycloak")
                 register_exact_static_client(token, metadata)
@@ -456,15 +459,27 @@ def main() -> None:
                 require(status == 200 and login,
                         "static_fallback_authorization_not_accepted")
                 print("static_chatgpt_id_auth_entry: pass")
+                static_fallback = True
             else:
                 print("real_keycloak_chatgpt_cimd_initial_authorization: pass")
-            # A bad resource MUST NOT reach the browser login screen.
+            # In verified CIMD mode the metadata executor must reject a
+            # foreign RFC8707 resource before login. With a pre-registered
+            # client Keycloak may defer resource validation to token exchange.
+            # No signed ChatGPT private_key_jwt is available in this lab:
+            # explicitly report the missing acceptance, NEVER claim denial
+            # from a login page or issue a service token as proof of a human.
             status, login, _ = auth_response(
                 CLIENT_ID, "https://wrong.example.invalid/api/mcp"
             )
-            require(not login and status >= 400,
-                    "untrusted_resource_not_rejected")
-            print("cimd_wrong_resource_denied: pass")
+            if static_fallback:
+                print("static_wrong_resource_login_reached: " +
+                      ("yes" if login else "no"))
+                print("static_wrong_resource_token_exchange: not_tested")
+                print("static_wrong_resource_release_gate: blocked")
+            else:
+                require(not login and status >= 400,
+                        "cimd_wrong_resource_not_rejected")
+                print("cimd_wrong_resource_denied: pass")
             # No alternate origin may bypass the URL policy.
             status, login, _ = auth_response(
                 "https://untrusted.example.invalid/oauth/client.json",
@@ -472,7 +487,7 @@ def main() -> None:
             )
             require(not login and status >= 400,
                     "untrusted_cimd_domain_not_rejected")
-            print("cimd_untrusted_client_domain_denied: pass")
+            print("unregistered_external_client_denied: pass")
             print("chatgpt_private_key_jwt_code_exchange: not_tested")
             print("actual_chatgpt_client: not_tested")
             print("real_chatgpt_code_exchange: not_tested")
