@@ -95,3 +95,20 @@ Example result shape (status names only; illustrative, not a real run):
 - [ZITADEL OAuth introspection endpoint](https://zitadel.com/docs/apis/openidoauth/endpoints)
 - [ZITADEL DCR](https://zitadel.com/docs/guides/integrate/dynamic-client-registration)
 - [MCP authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)
+
+
+## Isolated disposable Render bootstrap (not yet provisioned)
+
+A separate, **manual opt-in** Render Blueprint and staging-only Docker
+image now allow a disposable, synthetic-data-only SQLite stage that refuses
+all external DB credentials, mismatched host, production keys and accidental
+MCP activation **before any migration**. The staging HTTP middleware starts
+closed except `/up`. Existing production Canovia deployment is unchanged.
+
+**Important cost constraint:** Render's Free Web services in one workspace
+share a 750-hour monthly pool; creating a separate Free staging service can
+consume capacity needed by the live Free Canovia Web service. No stage was
+created or started in this implementation. SQLite is ephemeral; do not
+promote this disposable stage to persistent OAuth consent/evidence tests
+without isolated durable storage and controlled staging access. See
+[isolated staging bootstrap](MCP_ISOLATED_STAGING_BOOTSTRAP_CONTRACT.md).
