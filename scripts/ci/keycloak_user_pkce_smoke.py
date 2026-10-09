@@ -86,8 +86,12 @@ def synthetic_realm(link_secret: str, agent_secret: str,
     # subject mapping or Canovia User is created.
     realm["users"] = [{
         "username": "canovia-disposable-human",
+        "email": "synthetic-mcp-ci@example.invalid",
+        "firstName": "Synthetic",
+        "lastName": "Mcp",
         "enabled": True,
         "emailVerified": True,
+        "requiredActions": [],
         "credentials": [{"type": "password", "value": user_password,
                          "temporary": False}],
     }]
