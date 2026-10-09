@@ -32,13 +32,29 @@ Official sources:
 - https://www.keycloak.org/securing-apps/mcp-authz-server
 - https://www.keycloak.org/securing-apps/client-registration
 
-## Disposable DCR compatibility trial (implementation, not yet accepted)
+## Disposable DCR compatibility trial (authenticated registration)
+
+Initial real GitHub CI returned **HTTP 403** from Keycloak 26.8.0
+for anonymous public-client DCR. This is the expected secure closed default,
+but is **not compatible with ChatGPT auto-registration through anonymous DCR**.
+A registration endpoint in the metadata does not mean unauthenticated
+registration is permitted.
+
+The CI now requires anonymous registration to remain denied; then a
+separately authenticated disposable administrator creates an Initial
+Access Token usable for exactly **one client** and at most two minutes.
+A second registration request presents that token to prove the
+OIDC/DCR protocol itself works without making the issuer open to
+anonymous registrations. ChatGPT cannot supply this operator-generated
+initial access token: **even if that second test passes, use CIMD or
+pre-registration for a real ChatGPT connection**, or separately review
+a strictly restricted anonymous DCR registration policy.
 
 The GitHub workflow `.github/workflows/mcp-keycloak-disposable-oauth-lab.yml`
 now runs `scripts/ci/keycloak_chatgpt_dcr_smoke.py` against a
 **third disposable Keycloak 26.8.0** instance on loopback. This is
 separate from the previously green synthetic user PKCE and RFC 7662
-tests. The script tries a **public-client** DCR request with
+tests. The script first rejects unauthenticated registration, then uses a **one-use initial access token** for a public-client DCR request with
 `token_endpoint_auth_method=none`, exact callback under `.invalid`,
 and only the consented development read scope; then attempts a
 real login, S256 code exchange, and exact MCP resource/introspection.
