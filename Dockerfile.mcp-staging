@@ -36,13 +36,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libzip-dev \
         libsqlite3-dev \
         $PHPIZE_DEPS \
-    && docker-php-ext-install -j"$(nproc)" \
+    && docker-php-ext-install -j2 \
         intl \
         mbstring \
         opcache \
         pdo_mysql \
         pdo_sqlite \
-        sqlite3 \
         zip \
     && pecl install redis \
     && docker-php-ext-enable redis \
