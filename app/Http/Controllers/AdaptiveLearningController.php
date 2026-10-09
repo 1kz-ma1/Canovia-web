@@ -135,6 +135,10 @@ final class AdaptiveLearningController extends Controller
                 'current_ordinal' => 1, 'queue_policy_version' => 'bank_locked_v1',
                 'started_at' => now(),
             ]);
+            // On a resumed short-session learning habit, carry over only
+            // actor-scoped recorded evidence before locking the first items.
+            // With no history, candidate order remains deterministic Bank order.
+            $candidates->refresh($new);
             $queue->refill($new);
             if ($new->items()->doesntExist()) {
                 throw ValidationException::withMessages([
