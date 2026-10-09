@@ -379,3 +379,57 @@ When newer changes have been merged to main between metadata capture and
 the proposed release, this audit must be repeated using the **actual
 candidate deployed source commit**. A source/ledger match at one SHA is
 not proof that an unrelated later auto-deployment remained safe.
+
+## Disposable MySQL logical backup/restore simulation (2026-10-09)
+
+**New CI regression, NOT an Aiven backup restore:** The disposable MySQL 8
+workflow now runs `scripts/ci/p0_mysql_disposable_restore_smoke.sh` **after**
+its full migrations, partial-DDL repair, target-table contract inventory,
+and complete Laravel migration ledger audit.
+
+- A hard-coded CI-only environment/connection guard requires
+  `GITHUB_ACTIONS=true`, `APP_ENV=testing`, the exact throwaway
+  MySQL user/database `canovia_ci/canovia_p0_ci`, loopback host
+  `127.0.0.1` and matching **synthetic-only** disposable passwords.
+  No Aiven API, real backup or production DB account is accessible.
+- Create one fictional account record as a restore sentinel. Export the
+  **synthetic** MySQL schema and rows with `mysqldump` using
+  `--single-transaction --quick --no-tablespaces --set-gtid-purged=OFF`.
+  The SQL file exists only inside a protected CI temporary directory and
+  is deleted by a trap; no file artifact or raw SQL is uploaded.
+- Abort if the destination schema `canovia_p0_restore_ci` already exists.
+  Restore the dump into that independent schema without deleting or
+  truncating the original. Confirm the fictional user row and target-table
+  row counts, rerun the existing SELECT-only 34-column/5-FK/11-index
+  inventory and *all-file* migration-ledger comparison against the **restored**
+  schema. Neither tool can return `release_authorized=true`.
+- On **only the restored second schema**, drop a reviewed foreign key to
+  simulate corrupt/incomplete restoration; require the schema classifier to
+  return `BLOCK`/`ADJUSTMENT_APPLIED_CONSTRAINT_DRIFT`. Verify that the
+  original disposable source schema's foreign key is intact.
+- This proves **a reproducible CI logical dump/restore pipeline** on
+  synthetic MySQL 8, not Aiven's physical backups, retention, PITR, actual
+  environment size, source-engine compatibility, real user-data consistency,
+  or ability to restore a production Aiven backup.
+
+**Real Aiven restoration remains a hard independent gate.** Current Aiven
+documentation states that MySQL automatically takes backups, with retention
+dependent on the actual service plan, while Free supports backups but **does
+not support forking**. Verify the actual Canovia Aiven plan, recoverable
+restore point and *authorized* independent restore method before any
+production schema change. Do not automatically create a billed service,
+export live user data, grant elevated DB access or move production snapshots
+into GitHub Actions. A production restore drill requires its own approved
+secure environment and a plan-specific operator procedure.
+
+- Aiven backups: https://aiven.io/docs/products/mysql/concepts/mysql-backups
+- Aiven Free limitations: https://aiven.io/docs/products/mysql/concepts/mysql-free-tier
+- Aiven fork/restore: https://aiven.io/docs/products/mysql/howto/fork-service
+- MySQL dump semantics and limitations:
+  https://dev.mysql.com/doc/refman/8.0/en/mysqldump.html
+
+**Auth status correction:** The owner has already reported that the earlier
+iPhone login issue was resolved by correcting the production DB-name
+environment variable. Do not imply this isolated DB restore test is intended
+to debug the resolved login incident. The ongoing blocker is independently
+observing the actual Aiven schema, migration ledger and backup restorability.
