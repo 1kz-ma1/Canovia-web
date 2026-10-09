@@ -237,13 +237,13 @@ Route::get('/health', fn () => response()->noContent()
     ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0'))
     ->name('health');
 Route::get('/login', [AuthController::class, 'showLogin'])->middleware('guest')->name('auth.login.form');
-Route::post('/login', [AuthController::class, 'login'])->middleware(['guest', 'throttle:10,1'])->name('auth.login');
+Route::post('/login', [AuthController::class, 'login'])->middleware(['guest', 'throttle:10,1,auth-login'])->name('auth.login');
 Route::get('/register', [AuthController::class, 'showRegister'])->middleware('guest')->name('auth.register.form');
-Route::post('/register', [AuthController::class, 'register'])->middleware(['guest', 'throttle:6,1'])->name('auth.register');
+Route::post('/register', [AuthController::class, 'register'])->middleware(['guest', 'throttle:6,1,auth-register'])->name('auth.register');
 Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->middleware('guest')->name('password.request');
-Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->middleware(['guest', 'throttle:6,1'])->name('password.email');
+Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->middleware(['guest', 'throttle:6,1,auth-password-request'])->name('password.email');
 Route::get('/reset-password/{token}', [AuthController::class, 'showResetPassword'])->middleware('guest')->name('password.reset');
-Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware(['guest', 'throttle:6,1'])->name('password.update');
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware(['guest', 'throttle:6,1,auth-password-update'])->name('password.update');
 Route::get('/account', [AuthController::class, 'account'])->middleware('auth')->name('auth.account');
 Route::post('/account/mcp/link/start', [McpOAuthAccountLinkController::class, 'start'])
     ->middleware(['auth', 'throttle:5,1'])
