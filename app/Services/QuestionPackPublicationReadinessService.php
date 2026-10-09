@@ -75,6 +75,9 @@ final class QuestionPackPublicationReadinessService
         if (($metadata['review_state'] ?? '') === 'pending_human_content_and_rights_review') {
             $blocking[] = '未監修の模試候補です。品質・正答・出典・利用条件の最終確認とmetadata更新まで通常公開できません。';
         }
+        if (($metadata['explanation_review_state'] ?? '') === 'pending_human_subject_review') {
+            $blocking[] = '解説案は未監修です。解説の内容・数式・根拠の確認が済むまで公開できません。';
+        }
         if ($active->isEmpty()) {
             $blocking[] = '公開には有効な問題が1問以上必要です。';
         }
