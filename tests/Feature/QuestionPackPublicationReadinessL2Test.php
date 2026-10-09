@@ -108,7 +108,7 @@ final class QuestionPackPublicationReadinessL2Test extends TestCase
         $this->assertDatabaseCount('learning_runs', 0);
     }
 
-    public function test_admin_can_publish_legacy_only_pack_without_claiming_single_question_compatibility(): void
+    public function test_admin_can_publish_numeric_pack_and_show_new_single_question_compatibility(): void
     {
         $pack = $this->draft('ap-numeric-only');
         $this->choice($pack, 'numeric', [
@@ -129,7 +129,7 @@ final class QuestionPackPublicationReadinessL2Test extends TestCase
         $this->withSession([AdminAccessService::SESSION_KEY => true])
             ->get(route('admin.question_packs.index'))
             ->assertOk()
-            ->assertSee('1問ずつ学習では未対応です')
+            ->assertSee('1問採点対応 <strong>1問</strong>', false)
             ->assertSee('解説未登録が1問あります。')
             ->assertSee('公開条件：充足');
 
@@ -138,7 +138,7 @@ final class QuestionPackPublicationReadinessL2Test extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->assertSame('published', $pack->fresh()->status);
-        $this->assertSame(0, app(QuestionPackPublicationReadinessService::class)
+        $this->assertSame(1, app(QuestionPackPublicationReadinessService::class)
             ->inspect($pack)['one_question_count']);
         $this->assertDatabaseCount('learning_runs', 0);
     }
