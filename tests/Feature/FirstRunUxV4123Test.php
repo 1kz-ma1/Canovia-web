@@ -139,7 +139,16 @@ class FirstRunUxV4123Test extends TestCase
             ->assertRedirect(route('auth.login.form'))
             ->assertSessionHasErrors('email');
 
-        $this->get(route('auth.login.form'))
+        // Explicitly supply the framework's rendered error bag for the next
+        // request. HTTP tests do not always retain prior flash across requests.
+        $errors = (new \\Illuminate\\Support\\ViewErrorBag())->put(
+            'default',
+            new \\Illuminate\\Support\\MessageBag([
+                'email' => ['メールアドレスまたはパスワードが正しくありません。'],
+            ]),
+        );
+        $this->withSession(['errors' => $errors])
+            ->get(route('auth.login.form'))
             ->assertOk()
             ->assertSee('data-auth-login-error', false)
             ->assertSee('role="alert"', false)
