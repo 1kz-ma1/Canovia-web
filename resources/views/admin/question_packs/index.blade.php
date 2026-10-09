@@ -38,7 +38,8 @@
 
             <div class="mt-4 grid gap-3 lg:grid-cols-2">
                 @forelse (($bundledPacks ?? collect()) as $bundled)
-                    <article class="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
+                    @php($installed = ($bundledInstallations ?? collect())->get($bundled['slug']))
+                    <article class="rounded-2xl border border-slate-800 bg-slate-950/35 p-4" data-bundled-pack="{{ $bundled['key'] }}" data-install-status="{{ $installed?->status ?? 'absent' }}">
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <strong class="text-sm text-slate-100">{{ $bundled['title'] }}</strong>
@@ -63,11 +64,34 @@
                             </p>
                         @endif
 
-                        <form method="POST" action="{{ route('admin.question_packs.import_bundled') }}" class="mt-4">
-                            @csrf
-                            <input type="hidden" name="catalog_key" value="{{ $bundled['key'] }}">
-                            <button type="submit" class="btn-secondary">Draftへ取り込む</button>
-                        </form>
+                        <p class="mt-3 text-xs font-semibold {{ $installed?->status === 'published' ? 'text-emerald-300' : 'text-slate-300' }}">
+                            DB登録状態：
+                            @if (! $installed)
+                                未取込（ユーザーには出題されません）
+                            @else
+                                {{ $installed->status }} · DB版 v{{ $installed->version }}
+                                @if ($installed->status === 'published')
+                                    （公開中）
+                                @elseif ($installed->status === 'retired')
+                                    （公開終了。再取込は不可）
+                                @else
+                                    （確認後に別途公開操作が必要）
+                                @endif
+                            @endif
+                        </p>
+                        @if (! $installed || in_array($installed->status, ['draft', 'review'], true))
+                            <form method="POST" action="{{ route('admin.question_packs.import_bundled') }}" class="mt-4">
+                                @csrf
+                                <input type="hidden" name="catalog_key" value="{{ $bundled['key'] }}">
+                                <button type="submit" class="btn-secondary">
+                                    {{ $installed ? 'Draftを再取込（既存Draftの問題を更新）' : 'Draftへ取り込む' }}
+                                </button>
+                            </form>
+                        @else
+                            <p class="mt-2 text-xs text-slate-500">
+                                公開済み・公開終了済みPackは再取込できません。修正版は新しいslug/versionを作成してください。
+                            </p>
+                        @endif
                     </article>
                 @empty
                     <div class="rounded-2xl border border-slate-800 bg-slate-950/35 p-4 text-sm text-slate-500">

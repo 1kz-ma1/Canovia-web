@@ -85,10 +85,22 @@ class AdminQuestionPackController extends Controller
             ]],
         ];
 
+        // A JSON file in the repository does not imply that this Pack has
+        // been installed in the current database or published to learners.
+        $bundledPacks = $catalog->all();
+        $bundledSlugs = $bundledPacks->pluck('slug')
+            ->filter(fn ($slug) => is_string($slug) && $slug !== '')
+            ->unique()->values()->all();
+        $bundledInstallations = QuestionPack::query()
+            ->whereIn('slug', $bundledSlugs)
+            ->get(['id', 'slug', 'status', 'version'])
+            ->keyBy('slug');
+
         return view('admin.question_packs.index', [
             'packs' => $packs,
+            'bundledInstallations' => $bundledInstallations,
             'publicationReadiness' => $publicationReadiness,
-            'bundledPacks' => $catalog->all(),
+            'bundledPacks' => $bundledPacks,
             'importTemplate' => json_encode(
                 $template,
                 JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT,
