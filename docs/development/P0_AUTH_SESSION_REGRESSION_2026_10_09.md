@@ -103,3 +103,39 @@ or installed iOS PWA storage isolation, or WKWebView. Real HTTPS/PWA E2E and
 read-only production environment/schema evidence are still blocked release
 gates. No new public host, secret, prod service, auth runtime behavior, paid
 resource or deployment has been introduced.
+
+
+## HTTPS redirect loop reproduction and reviewed proxy identity (2026-10-09)
+
+The TLS CI initially reproduced a **post-login HTTP redirect even though
+the external login request used HTTPS**. A browser following that downgrade
+could stop sending a Secure session cookie and appear to return to login.
+This was observed **only with our loopback test proxy**, NOT with the real
+Render network or a real iPhone. Laravel's official documentation describes
+this behavior when TLS terminates upstream and the app has not configured
+trusted proxies (https://laravel.com/docs/12.x/requests#configuring-trusted-proxies).
+
+The candidate implementation in `bootstrap/app.php` now supports a
+strictly **opt-in** `CANOVIA_TRUSTED_PROXY_IPS` setting:
+- Empty/missing setting leaves the existing production behavior untouched.
+- Set it **only after privately verifying the exact source IP(s)** that
+  forward trusted HTTPS requests to the PHP application. Comma-separated
+  **literal IPv4/IPv6 addresses only**; no CIDR, `*`, user-supplied request
+  values or broad trust-all behavior. Invalid values fail closed at boot.
+- Laravel trusts **only** `X-Forwarded-Proto` from these particular IPs.
+  It does not accept forwarded host/client IP/port from unverified sources.
+  The incoming `Host` still requires normal reverse proxy host validation.
+- CI pins `CANOVIA_TRUSTED_PROXY_IPS=127.0.0.1` for its loopback HTTPS
+  proxy and checks that redirect target stays **HTTPS on the same host
+  and port**, while the Secure host-only cookie survives process restart.
+  The plain HTTP test does not opt into proxy trust.
+
+**Owner/operator acceptance gate:** Before any production deployment or
+environment edit, independently establish Render's *actual* reverse-proxy
+topology and source addresses, and whether the production web service already
+has an equivalent trusted-proxy configuration; confirm the correct canonical
+host, HTTPS headers, redirect URLs and effective session store. This PR
+does NOT authorize setting any production env value, trusting a wildcard
+proxy, assuming Render's internal ingress IP, or merging to auto-deploy main.
+Changing just the local test proxy trust demonstrates a plausible technical
+fix; it does not prove the observed PWA login regression originated here.
