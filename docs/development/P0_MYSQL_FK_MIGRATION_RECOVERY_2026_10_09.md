@@ -463,3 +463,44 @@ report that the iPhone login issue was solved by correcting the DB-name
 environment variable remains authoritative; this DB check is a separate
 pre-release recovery-readiness task. PR #443 remains Draft/unmerged pending
 independent Aiven evidence and Issue #418 release hold.
+
+
+## Two-target preflight before any MySQL reconciliation DDL (2026-10-09)
+
+The forward-only migration `2026_10_09_235959_reconcile_p0_mysql_applied_constraints.php`
+previously checked target table and applied migration names before making
+DDL but delegated table-column/FK/index checks to each historical `up()`
+one at a time. Because MySQL DDL is not transactional, a structural problem
+in the **second** table might have emerged *after* the first table was
+repaired. Now a full **read-only preflight** checks both contracts
+**before running either historical migration**:
+
+- Presence of all 34 required columns across both tables and applied
+  historical migration ledger records.
+- FK references: referenced table and `id` exist; any already-present FK
+  has the expected target, referenced column and deletion rule; expected
+  names are not occupied by another constraint.
+- For a currently absent FK, reject **existing orphaned records** through
+  an existence-only anti-join (no user rows or identifiers logged).
+- Index column order, uniqueness and expected name conflicts.
+- For a missing **unique** constraint, reject duplicate key values before
+  attempting `ADD UNIQUE`. An existing incompatible nonunique lookup
+  index blocks the migration rather than triggering partial earlier DDL.
+
+Two disposable MySQL CI negative controls drop the first table's
+snapshot FK, then independently construct **(a) an orphan record** in the
+second table or **(b) an absent required second-table column**.
+Both must reject preflight **before restoring the first-table FK**.
+Finally they clean synthetic fixture drift and verify normal reconciliation
+still repairs the valid schemas. The migration continues to be forward-only
+and idempotent; no user data is automatically altered or deleted.
+
+**Limitations:** Read-only preflight followed by DDL is not atomic. New
+writes/concurrent deployments between validation and `ALTER TABLE`,
+database resource limits, privileges and metadata locks can still cause
+a later step to fail. The release still requires a controlled maintenance
+window, reviewed real Aiven schema/ledger, an independently tested and
+authorized backup restoration, and a forward-recovery strategy. A passing
+disposable MySQL 8 test neither approves nor performs a production change.
+iPhone login was separately resolved by the owner changing the DB-name
+environment variable and is not part of this DB remediation.
