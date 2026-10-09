@@ -188,7 +188,7 @@ def configure_cimd_policy(token: str) -> None:
     ), "client_policy_not_enabled")
 
 
-def auth_response(client_id: str, resource: str) -> tuple[int, bool]:
+def auth_response(client_id: str, resource: str) -> tuple[int, bool, str]:
     # Capture real Keycloak response, never submit credentials or follow any
     # redirects, notably not the production ChatGPT callback URI.
     params = urllib.parse.urlencode({
@@ -209,13 +209,35 @@ def auth_response(client_id: str, resource: str) -> tuple[int, bool]:
                          timeout=12) as response:
             code, raw = response.status, response.read(98305)
     except CallbackError:
-        return 400, False
+        return 400, False, "oauth_error_callback"
     except urllib.error.HTTPError as exc:
         code, raw = exc.code, exc.read(98305)
     except (urllib.error.URLError, TimeoutError):
         raise Gap("cimd_authorize_loopback_failed") from None
     require(len(raw) <= 98304, "cimd_auth_response_too_large")
-    return code, b"kc-form-login" in raw
+    lower = raw.lower()
+    # Report only allowlisted categories; never print HTML or error bodies.
+    if b"kc-form-login" in raw:
+        category = "browser_login"
+    elif b"invalid client metadata" in lower:
+        category = "client_metadata_rejected"
+    elif b"client metadata fetch failed" in lower:
+        category = "client_metadata_fetch_failed"
+    elif b"domain not allowed" in lower:
+        category = "client_domain_rejected"
+    elif b"invalid_target" in lower:
+        category = "resource_target_rejected"
+    elif b"redirect_uri" in lower:
+        category = "redirect_not_accepted"
+    elif b"client not found" in lower or b"invalid_client" in lower:
+        category = "oauth_client_not_accepted"
+    elif b"kc-error-message" in lower:
+        category = "keycloak_error_page"
+    elif code >= 400:
+        category = "oauth_http_error"
+    else:
+        category = "no_login_form"
+    return code, category == "browser_login", category
 
 
 def main() -> None:
@@ -267,18 +289,40 @@ def main() -> None:
             token = local_admin_token(admin_secret)
             configure_cimd_policy(token)
             print("keycloak_cimd_trusted_policy_configured: pass")
-            status, login = auth_response(CLIENT_ID, MCP_RESOURCE)
+            status, login, category = auth_response(CLIENT_ID, MCP_RESOURCE)
+            if status != 200 or not login:
+                print("cimd_authorization_status: " +
+                      (str(status) if status in (200, 302, 400, 401, 403, 404, 500)
+                       else "other"))
+                print("cimd_authorization_failure_category: " + category)
+                query = urllib.parse.urlencode({"clientId": CLIENT_ID})
+                request = urllib.request.Request(
+                    f"{ORIGIN}/admin/realms/{REALM}/clients?{query}",
+                    headers={"Authorization": "Bearer " + token,
+                             "Accept": "application/json"},
+                )
+                try:
+                    with urllib.request.urlopen(request, timeout=7) as resp:
+                        clients = json.loads(resp.read(16385).decode("utf8"))
+                    auto_created = isinstance(clients, list) and any(
+                        isinstance(item, dict) and item.get("clientId") == CLIENT_ID
+                        for item in clients
+                    )
+                    print("cimd_ephemeral_client_created: " +
+                          ("yes" if auto_created else "no"))
+                except (urllib.error.URLError, ValueError, TimeoutError):
+                    print("cimd_ephemeral_client_created: unknown")
             require(status == 200 and login, "chatgpt_cimd_authorization_not_accepted")
             print("real_keycloak_chatgpt_cimd_initial_authorization: pass")
             # A bad resource MUST NOT reach the browser login screen.
-            status, login = auth_response(
+            status, login, _ = auth_response(
                 CLIENT_ID, "https://wrong.example.invalid/api/mcp"
             )
             require(not login and status >= 400,
                     "untrusted_resource_not_rejected")
             print("cimd_wrong_resource_denied: pass")
             # No alternate origin may bypass the URL policy.
-            status, login = auth_response(
+            status, login, _ = auth_response(
                 "https://untrusted.example.invalid/oauth/client.json",
                 MCP_RESOURCE,
             )
