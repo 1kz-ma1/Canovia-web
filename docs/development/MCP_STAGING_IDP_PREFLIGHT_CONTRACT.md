@@ -128,8 +128,10 @@ The isolated Canovia-only Free Render Web service now exists, named
 `canovia-mcp-staging`, id `srv-db43l4nlk1mc73emseig`, with Dockerfile
 `Dockerfile.mcp-staging`, disposable local SQLite, separate Laravel key and
 all OAuth/MCP features OFF. Its first Render deploy is live; the private
-HTTP access surface is being verified separately from an external GitHub
-Actions runner in `.github/workflows/mcp-staging-live-http-smoke.yml`.
+HTTP access surface **passed** external GitHub Actions verification
+(run `37867353868`): public `/up=200`, while login/account/OAuth/MCP
+GET and MCP POST all returned HTTP **503**. The test is maintained in
+`.github/workflows/mcp-staging-live-http-smoke.yml`.
 No real IdP/ChatGPT OAuth client or persistent staging database has been
 configured, so real account linking/Plan consent/MCP data reads are still
 disabled. This deployment must not be mistaken for a complete OAuth
