@@ -9,6 +9,7 @@ on:
       - 'tests/Feature/P0DatabaseSessionLoginRegressionTest.php'
       - 'scripts/ci/p0_http_auth_seed.php'
       - 'scripts/ci/p0_real_http_session_e2e.py'
+      - 'scripts/ci/p0_https_cookie_origin_e2e.py'
       - '.github/workflows/p0-database-session-login.yml'
   workflow_dispatch:
 
@@ -71,3 +72,18 @@ jobs:
           php artisan migrate --force --no-interaction >/dev/null
           php scripts/ci/p0_http_auth_seed.php
           python3 scripts/ci/p0_real_http_session_e2e.py
+
+      - name: Real HTTPS Secure Cookie host isolation and cross-process restart
+        env:
+          CANOVIA_P0_DISPOSABLE_HTTP_CI: '1'
+          APP_URL: https://localhost:18790
+          DB_DATABASE: ${{ github.workspace }}/database/p0_auth_http_ci.sqlite
+          DB_CONNECTION: sqlite
+          DB_URL: ''
+          SESSION_DRIVER: database
+          SESSION_SECURE_COOKIE: 'true'
+          SESSION_DOMAIN: ''
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/ci/p0_https_cookie_origin_e2e.py
+          python3 scripts/ci/p0_https_cookie_origin_e2e.py
