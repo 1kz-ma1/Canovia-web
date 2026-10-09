@@ -39,15 +39,19 @@ final class ApExamCandidateReviewQueueTest extends TestCase
             'ap-a-canovia-core-v1' => 35,
             'ap-a-canovia-business-management-supplement-v1' => 10,
         ], $report['source_counts']);
-        $this->assertSame(6, $report['source_visual_spotchecked_count']);
-        $this->assertSame(29, $report['source_visual_unchecked_official_count']);
+        $this->assertSame(35, $report['source_visual_spotchecked_count']);
+        $this->assertSame(0, $report['source_visual_unchecked_official_count']);
         $this->assertSame(80, array_sum($report['priority_counts']));
-        $this->assertSame(29, $report['priority_counts']['P0']);
+        $this->assertSame(0, $report['priority_counts']['P0']);
         $this->assertGreaterThan(0, $report['priority_counts']['P1']);
         $this->assertGreaterThan(0, $report['priority_counts']['P2']);
         $this->assertSame(5, $report['known_overlap_count']);
         $this->assertTrue($report['known_overlap_excluded']);
         $this->assertTrue($report['publication_blocked']);
+        $this->assertSame(80, $report['independent_review_pending_count']);
+        $this->assertSame(35, collect($report['items'])->filter(fn (array $item) =>
+            $item['origin_type'] === 'official' && $item['source_visual_spotcheck'])->count());
+
 
         foreach ($report['items'] as $index => $item) {
             $this->assertSame($index + 1, $item['number']);
@@ -68,8 +72,8 @@ final class ApExamCandidateReviewQueueTest extends TestCase
         $this->assertSame(8, $checked['source_visual_spotcheck_pdf_page']);
         $this->assertSame('P1', $checked['priority']);
         $this->assertSame('pending', $checked['independent_review_status']);
-        $this->assertFalse($official['source_visual_spotcheck']);
-        $this->assertSame('P0', $official['priority']);
+        $this->assertTrue($official['source_visual_spotcheck']);
+        $this->assertSame('P1', $official['priority']);
 
         $supplement = collect($report['items'])->firstWhere('origin_type', 'new');
         $this->assertNotNull($supplement);
@@ -127,7 +131,11 @@ final class ApExamCandidateReviewQueueTest extends TestCase
         $evidence = json_decode((string) file_get_contents(
             resource_path('learning_review/ap-a-2026-source-spotchecks-v1.json')),
             true, 512, JSON_THROW_ON_ERROR);
-        $this->assertCount(6, $evidence['entries']);
+        $this->assertCount(35, $evidence['entries']);
+        $this->assertSame(35, $evidence['review_summary']['source_visual_comparison_recorded']);
+        $this->assertSame(0, $evidence['review_summary']['independent_subject_review_approved']);
+        $this->assertFalse($evidence['review_summary']['content_rights_approved']);
+        $this->assertCount(35, array_unique(array_column($evidence['entries'], 'key')));
         foreach ($evidence['entries'] as $entry) {
             $question = $questions->get($entry['key']);
             $this->assertNotNull($question);
@@ -177,8 +185,8 @@ final class ApExamCandidateReviewQueueTest extends TestCase
             ->assertSee('data-ap-a-release-blocked', false)
             ->assertSee('data-ap-a-priority-summary', false)
             ->assertSee('data-ap-a-source-spotcheck', false)
-            ->assertSee('P0：29問')
-            ->assertSee('未照合 29問。')
+            ->assertSee('P0：0問')
+            ->assertSee('未照合 0問。')
             ->assertSee('通常公開と本番模試提供はブロック中です。')
             ->assertSee('80問それぞれの出典・正答・解説と監修項目')
             ->assertSee('data-ap-a-review-item="ipa-2025-autumn-ap-am-q03"', false)
