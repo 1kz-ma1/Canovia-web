@@ -26,3 +26,41 @@ The original production observation was POST /login 302 followed by GET /login 2
 5. Maintain the P0 release hold from Issue #418. Keep this PR Draft and unmerged until actual Aiven schema/backup and login/PWA acceptance. Main merges can auto-deploy production even when only tests/docs are changed.
 
 A CI pass is **simulated auth coverage**, not a claim of a resolved production login problem.
+
+## Real HTTP boundary test with persistent SQLite (2026-10-09)
+
+The original feature tests exercised Laravel's in-process HTTP kernel and
+manually reset its cached guard. We now also run a **real loopback HTTP**
+smoke against a genuine PHP web server and **file-backed SQLite database
+sessions** in GitHub Actions, with no access to production Render/Aiven.
+
+- `scripts/ci/p0_http_auth_seed.php` inserts a **synthetic existing account**
+  after checking `APP_ENV=testing`, the explicit disposable opt-in, DB
+  connection `sqlite`, path **exactly**
+  `database/p0_auth_http_ci.sqlite`, and `SESSION_DRIVER=database`.
+  It refuses any other environment and never writes production accounts.
+- `scripts/ci/p0_real_http_session_e2e.py` uses Python's genuine HTTP cookie
+  jar and actual GET/POST requests to a bound `127.0.0.1:18789` PHP
+  process. The test verifies: unauthorized account redirects to login;
+  incorrect password redirects and displays the flashed browser-facing
+  validation error; correct password establishes a session DB row and
+  reaches the protected account; the *same cookie jar* reaches the protected
+  account after stopping and restarting PHP; logout revokes account access;
+  and a fresh valid login succeeds again.
+- The workflow builds Vite assets for real login/account templates, creates
+  only a local SQLite test DB and runs the migration stack in GitHub Actions.
+  The server logs, synthetic credentials, response bodies, session cookie
+  values, tokens and user identifiers are **not printed** to CI output.
+
+**Scope limitations:** The isolated HTTP smoke uses an unencrypted loopback
+HTTP origin, so it explicitly sets `SESSION_SECURE_COOKIE=false` **only
+inside the GitHub Actions test step**. The separate PHP feature regression
+continues to verify Secure, HttpOnly, SameSite Lax and host-only attributes.
+HTTP localhost behavior is **not** a guarantee of Safari/PWA/WKWebView
+cookie persistence, HTTPS reverse proxy forwarding, Redis connectivity,
+real production Aiven selection, or an actual existing customer's login.
+
+The test user, SQLite DB, fake cookie jar and server are temporary CI-only
+fixtures. There is no production auth/controller/session config change.
+As required by Issue #418, this PR remains Draft/unmerged even with green
+CI until the actual production DB, backup and real-device gates are met.
