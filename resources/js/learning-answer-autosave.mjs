@@ -45,7 +45,13 @@ export function mountLearningAnswerAutosave(root = document, options = {}) {
                 headers: { Accept: 'application/json' },
                 body: makeBody(form),
             });
-            if (!result.ok) throw new Error('draft-save-failed');
+            // Auth/session middleware can redirect to a 200 HTML login page.
+            // HTTP success alone is never evidence that a draft persisted.
+            if (!result.ok || result.redirected
+                || !result.headers?.get('content-type')?.toLowerCase().includes('application/json')
+                || (await result.json())?.saved !== true) {
+                throw new Error('draft-save-failed');
+            }
             if (!changed) announce('下書きを保存しました');
         } catch (_) {
             // Never claim success on network/session/CSRF/permission failure.

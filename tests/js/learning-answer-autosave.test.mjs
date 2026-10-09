@@ -9,7 +9,12 @@ globalThis.window = { addEventListener(name, cb) { windowEvents[name] = cb; } };
 const { mountLearningAnswerAutosave } =
     await import('../../resources/js/learning-answer-autosave.mjs');
 
-function fixture(fetcher = async () => ({ ok: true })) {
+function fixture(fetcher = async () => ({
+    ok: true,
+    redirected: false,
+    headers: { get: () => 'application/json; charset=utf-8' },
+    json: async () => ({ saved: true }),
+})) {
     const listeners = {};
     const tasks = new Map();
     const status = { textContent: '未保存' };
@@ -71,6 +76,22 @@ test('save failure never claims success or performs an endless automatic retry',
     a.form.emit('input');
     await a.flushTimer();
     assert.equal(a.requests.length, 2);
+});
+
+
+test('HTTP 200 HTML login redirect and JSON without saved=true cannot fake persistence', async () => {
+    for (const fake of [
+        { ok: true, redirected: true, headers: { get: () => 'text/html' } },
+        { ok: true, redirected: false, headers: { get: () => 'text/html' } },
+        { ok: true, redirected: false, headers: { get: () => 'application/json' }, json: async () => ({ saved: false }) },
+    ]) {
+        const a = fixture(async () => fake);
+        mountLearningAnswerAutosave(a.root, a.opts);
+        a.form.emit('input');
+        await a.flushTimer();
+        assert.match(a.status.textContent, /保存できませんでした/);
+        assert.equal(a.tasks.size, 0);
+    }
 });
 
 test('form submission stops drafts and pending input flushes on navigation', async () => {
