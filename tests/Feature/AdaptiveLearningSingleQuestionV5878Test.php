@@ -249,6 +249,17 @@ final class AdaptiveLearningSingleQuestionV5878Test extends TestCase
         $this->assertSame('active', $run->fresh()->status);
     }
 
+    public function test_unavailable_bank_offers_working_legacy_question_flow_instead_of_dead_end(): void
+    {
+        [$owner, $plan, $task, $pack] = $this->fixture();
+        $pack->update(['status' => 'draft']);
+        $this->actingAs($owner)->get(route('plans.tasks.learning.index', [$plan, $task]))
+            ->assertOk()
+            ->assertSee('data-adaptive-learning-no-packs', false)
+            ->assertSee('AI演習で1問ずつ回答する')
+            ->assertSee(route('plans.tasks.study_practice.show', [$plan, $task]));
+    }
+
     public function test_unpublished_or_nonbank_supported_question_rejected(): void
     {
         [$owner, $plan, $task, $pack] = $this->fixture(1);
