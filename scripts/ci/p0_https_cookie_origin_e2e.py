@@ -202,11 +202,14 @@ def main():
                    "cookie remains host-only")
             ensure(session_cookies[0].domain in ("localhost", "localhost.local"),
                    "cookie scoped to localhost")
-            ensure(session_cookies[0].get_nonstandard_attr("HttpOnly") is not None
-                   or "HttpOnly" in session_cookies[0]._rest,
-                   "HttpOnly attribute")
-            ensure((session_cookies[0]._rest.get("SameSite", "").lower() == "lax"),
-                   "SameSite Lax attribute")
+            # Cookie attribute names are case-insensitive. Python's
+            # CookieJar preserves the response header's original casing.
+            extras = {
+                str(name).lower(): str(value).lower()
+                for name, value in session_cookies[0]._rest.items()
+            }
+            ensure("httponly" in extras, "HttpOnly attribute")
+            ensure(extras.get("samesite") == "lax", "SameSite Lax attribute")
 
             # The same cookie jar must not authenticate on a different host,
             # even though it routes to the very same PHP server/database.
