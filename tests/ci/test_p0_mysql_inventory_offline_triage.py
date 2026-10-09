@@ -57,7 +57,7 @@ class P0OfflineSchemaTriageTest(unittest.TestCase):
             return [
                 tuple(re.findall(r"'([^']+)'", row))
                 for row in section.splitlines()
-                if re.match(r"\\s*(?:SELECT|UNION ALL SELECT)\\s+'", row)
+                if re.match(r"\s*(?:SELECT|UNION ALL SELECT)\s+'", row)
             ]
 
         sql_columns = {(row[0], row[1]) for row in rows(column_block)}
