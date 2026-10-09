@@ -66,6 +66,7 @@ final class ApExamCandidateReviewQueueTest extends TestCase
         $official = collect($report['items'])->firstWhere('origin_type', 'official');
         $this->assertNotNull($official);
         $this->assertStringStartsWith('https://www.ipa.go.jp/', $official['source_url']);
+        $this->assertStringStartsWith('https://www.ipa.go.jp/', $official['source_answer_url']);
         $this->assertContains('Canovia独自の解説案・誤答理由の検証', $official['review_tasks']);
         $checked = collect($report['items'])->firstWhere('key', 'ipa-2025-autumn-ap-am-q11');
         $this->assertTrue($checked['source_visual_spotcheck']);
@@ -230,6 +231,7 @@ final class ApExamCandidateReviewQueueTest extends TestCase
             ->assertSee('data-ap-a-review-item="strategy-pest-001"', false)
             ->assertSee('専門監修待ち')
             ->assertSee('IPA原問題を確認（別タブ）')
+            ->assertSee('IPA解答例を確認（別タブ）')
             ->assertDontSee('リポジトリで管理している検証済みPackです。');
         $this->assertDatabaseCount('question_packs', 0);
         $this->assertDatabaseCount('learning_answer_events', 0);
