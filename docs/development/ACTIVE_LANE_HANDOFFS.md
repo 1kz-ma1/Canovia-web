@@ -57,6 +57,14 @@ When creating a separate execution chat, specify exactly one lane and paste or r
 
 Suggested chat titles: `Canovia｜Learning`, `Canovia｜Development`, `Canovia｜Experience`, `Canovia｜Intelligence`, `Canovia｜Platform`, `Canovia｜Expansion`, `Canovia｜Hotfix`, `Canovia｜Orchestrator`.
 
+### New-chat entry without choosing a lane upfront
+
+When users prefer **the assistant to ask which category to implement**, they can open with:
+
+> Canoviaの実装をしたい。GitHubの `1kz-ma1/Canovia-web` の最新 `AGENTS.md` と `docs/development/PARALLEL_DEVELOPMENT_OPERATING_MODEL.md` を確認して、担当レーンがまだ決まっていなければ分類を聞いて。
+
+If the repository instructions are already available in the conversation, the shorter `Canoviaの実装をしたい` is enough. Agents must **not promise** that arbitrary new chats automatically have access to the repository instructions. Once selected, proceed with the lane's latest handoff without repeatedly asking.
+
 ### PR completion report (mandatory)
 
 `Lane | Slice | Base SHA | PR | Head SHA | Relevant tests | Required CI result | Merge commit | Deploy SHA/environment (or Unknown) | Device E2E (or Unknown) | Cross-lane changes | Next dependency`
