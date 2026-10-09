@@ -172,3 +172,23 @@ now supports this. **This is NOT browser OAuth or ChatGPT E2E**. Keycloak
 remains unhosted; staging Web/MCP/OAuth remains closed and costs unchanged.
 See [real disposable Keycloak protocol lab](
 MCP_KEYCLOAK_DISPOSABLE_PROTOCOL_LAB_2026_10_09.md).
+
+
+### V59 Disposable OAuth user PKCE real-login acceptance (2026-10-09)
+
+**VERIFIED IN EPHEMERAL KEYCLOAK CI**: a synthetic human completed the
+actual Keycloak HTML login, Authorization Code + PKCE S256 exchange,
+RFC 9207 callback issuer and state validation, exact RFC 8707
+resource binding, and user-token introspection with immutable `sub`.
+Both independent test RP clients returned the same `issuer+sub` for
+the same fictitious user and their own correct client IDs; wrong PKCE
+verifier and mismatched token resource were refused. Keycloak 26.8.0
+requires an explicit OIDC `sub` introspection mapper for this imported
+test realm. CI run `37914942240` passed.
+
+This is **not** a user-visible ChatGPT connection or Canovia consent.
+There is no hosted IdP, production/staging OAuth activation, account
+link, Plan sharing or new paid contract. Next: stage-only user consent
+and actual ChatGPT OAuth E2E after IdP release and security gates.
+See [Keycloak disposable protocol lab](
+MCP_KEYCLOAK_DISPOSABLE_PROTOCOL_LAB_2026_10_09.md).
