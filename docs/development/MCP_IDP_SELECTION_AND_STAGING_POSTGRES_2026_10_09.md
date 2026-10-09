@@ -4,6 +4,16 @@ Date: 2026-10-09
 Decision: **Keycloak is a conditional technical frontrunner, not yet a configured IdP**.
 Stage DB: **Existing isolated Render Free PostgreSQL 17 connected to staging Web; live DB/schema health and external lockdown accepted on 2026-10-09**.
 
+## Confirmed Render workspace routing (owner confirmed 2026-10-09)
+
+- Render workspace display name: **`My Workspace`**.
+- Workspace ID: **`tea-d4vb3f6mcj7s73djkrqg`** (non-secret account metadata, independently returned by Render `list_workspaces`).
+- Existing MCP staging Web: `canovia-mcp-staging` / `srv-db43l4nlk1mc73emseig`; its Render `ownerId` matches the workspace ID.
+- Staging database: `canovia-mcp-staging-db` / `dpg-db43rbbncjis73bmigi0-a`, previously verified as the isolated stage DB; do not infer access to other resources from this note.
+- For subsequent Render tool calls relating to this **same** MCP staging environment, use that `workspaceId`; do not prompt the owner to reselect it on each call. Recheck ID/name/ownership when possible in a new session, and stop on mismatch or explicit change.
+- This is an operator routing detail only; **no** authorization to create/upgrade services, trigger deploys, alter environment variables, enable public Web/OAuth/MCP, access production data, or incur charges.
+- Read-only inspection on 2026-10-09 found the existing staged deploy `dep-db46uqbl550s73apf1jg` (`5a521cab`) live and `render_postgres` migrations completed. No `synthetic owner bootstrap: completed` entry was found in the inspected startup window. **Synthetic account creation remains unverified**; absence of a marker is not a database-row inspection.
+
 ## CURRENT acceptance — live isolated PostgreSQL cutover (2026-10-09)
 
 The existing **Free** Web service `srv-db43l4nlk1mc73emseig` is now

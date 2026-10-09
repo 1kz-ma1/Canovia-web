@@ -1,5 +1,13 @@
 # Canovia Agent Instructions
 
+## Render workspace routing — Canovia MCP staging (owner confirmed 2026-10-09)
+
+- The owner explicitly confirmed Render workspace **`My Workspace`**. Render `list_workspaces` independently returned display name `My Workspace` with workspace ID **`tea-d4vb3f6mcj7s73djkrqg`**, and the existing `canovia-mcp-staging` Web service (`srv-db43l4nlk1mc73emseig`) has that exact `ownerId`.
+- For read-only Render inspections and explicitly authorized MCP staging operations, pass `workspaceId=tea-d4vb3f6mcj7s73djkrqg` when a tool requires it. Do **not** repeatedly ask the owner to choose this same workspace.
+- On a fresh connector session, revalidate the ID/name/service owner if available. If the workspace mapping changes, the resource belongs to a different workspace, or the user selects another workspace, **stop and ask**; never silently retarget resources.
+- This routing confirmation is **not** approval to provision resources, modify environment variables, deploy, enable OAuth/MCP, change billing, or touch production. Keep staging and production separation and the normal authorization/verification gates.
+- See `docs/development/MCP_IDP_SELECTION_AND_STAGING_POSTGRES_2026_10_09.md` for staging resource and security context.
+
 ## Repository workflow
 
 - Treat the latest `main` of `1kz-ma1/Canovia-web` as the implementation source of truth.
