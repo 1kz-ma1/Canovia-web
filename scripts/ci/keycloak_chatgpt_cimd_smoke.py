@@ -295,6 +295,29 @@ def main() -> None:
                       (str(status) if status in (200, 302, 400, 401, 403, 404, 500)
                        else "other"))
                 print("cimd_authorization_failure_category: " + category)
+                # Only inspect bounded server-log evidence locally and emit
+                # fixed labels. Never publish raw logs or HTTP payloads.
+                log_result = subprocess.run(
+                    ["docker", "logs", "--tail", "110", CONTAINER],
+                    capture_output=True, text=True, check=False,
+                )
+                details = (log_result.stdout + log_result.stderr).lower()
+                clues = (
+                    ("pkix", "tls_trust_failure"),
+                    ("sslhandshake", "tls_handshake_failure"),
+                    ("403 forbidden", "remote_forbidden"),
+                    ("http status 403", "remote_forbidden"),
+                    (" 403 ", "http_403_seen"),
+                    ("connect timed out", "network_connect_timeout"),
+                    ("read timed out", "network_read_timeout"),
+                    ("unknownhost", "dns_resolution_failure"),
+                    ("connection refused", "network_connection_refused"),
+                    ("redirect", "redirect_behavior_noted"),
+                    ("client metadata", "client_metadata_processing_error"),
+                )
+                kinds = [label for keyword, label in clues if keyword in details]
+                print("keycloak_cimd_server_error_kinds: " +
+                      (",".join(kinds) if kinds else "unclassified"))
                 query = urllib.parse.urlencode({"clientId": CLIENT_ID})
                 request = urllib.request.Request(
                     f"{ORIGIN}/admin/realms/{REALM}/clients?{query}",
