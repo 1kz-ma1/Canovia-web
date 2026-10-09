@@ -34,6 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libicu-dev \
         libonig-dev \
         libzip-dev \
+        libsqlite3-dev \
         $PHPIZE_DEPS \
     && docker-php-ext-install -j"$(nproc)" \
         intl \
