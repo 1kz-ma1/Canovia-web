@@ -120,6 +120,39 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
         );
     }
 
+    public function test_staging_boot_suppresses_migration_and_cache_exceptions_only_in_isolation(): void
+    {
+        $boot = file_get_contents(base_path('docker/render-start.sh'));
+        $stage = file_get_contents(base_path('docker/mcp-staging-start.sh'));
+
+        $this->assertIsString($boot);
+        $this->assertIsString($stage);
+        $this->assertStringContainsString('CANOVIA_STAGING_ISOLATED', $boot);
+        $this->assertStringContainsString('APP_ENV', $boot);
+        $this->assertStringContainsString(
+            'php artisan migrate --force --no-interaction --quiet >/dev/null 2>&1',
+            $boot
+        );
+        $this->assertStringContainsString(
+            'MCP isolated staging migrations: failed (details suppressed)',
+            $boot
+        );
+        $this->assertStringContainsString(
+            'if ! php artisan "$cache_command" >/dev/null 2>&1',
+            $boot
+        );
+        // The original production migration path must remain available.
+        $this->assertStringContainsString(
+            'migration_output="$(php artisan migrate --force 2>&1)"',
+            $boot
+        );
+        $this->assertStringContainsString(
+            'configured database mode=${CANOVIA_STAGING_DB_MODE:-sqlite}',
+            $stage
+        );
+        $this->assertStringContainsString('connection not yet verified', $stage);
+    }
+
     public function test_staging_web_access_requires_independent_approval_and_live_pinned_db(): void
     {
         $this->withoutVite();

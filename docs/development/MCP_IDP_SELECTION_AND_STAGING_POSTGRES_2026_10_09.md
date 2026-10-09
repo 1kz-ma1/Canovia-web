@@ -301,3 +301,80 @@ pre-deployment smoke PASS as evidence that the Nginx bypass is fixed.
 **This file update is not proof of deployment of the fix**.
 Do not mark the live stage fully closed until the amended commit
 deploys and the post-deploy HTTPS checks pass.
+
+
+### Post-deploy Nginx closure accepted (2026-10-09)
+
+The existing Free staging Web service ran commit `5e8915b` (#407) as
+Render deploy `dep-db457g3l550s73aju1r0`, status `live`. The
+separately executed [PR #408 external HTTPS smoke](https://github.com/1kz-ma1/Canovia-web/actions/runs/37875765667)
+passed with `/up=200` and the login/OAuth/MCP, legacy `/health`,
+static-file and direct PHP entry-point probes returning HTTP 503.
+PR #408 was merged. This establishes *closed external staging* behavior
+for the SQLite deployment; it does **not** prove attachment to Render PostgreSQL.
+
+### Staging-only migration failure redaction and operator gate (pending CI)
+
+The shared production startup script previously printed raw Laravel
+migration failures. During the proposed PostgreSQL cutover, an exception
+might contain host or connection metadata. The startup script now uses
+a separate branch **only when** both `APP_ENV=staging` and
+`CANOVIA_STAGING_ISOLATED=true`: it suppresses all migration/cache
+command output (including exceptions), retries failed staging migrations
+within the pre-existing retry budget, then prints only generic successful
+or failed status messages. The production path retains its pre-existing
+migration log/retry behavior. The isolated staging entrypoint also
+prints a safe `configured database mode=sqlite|render_postgres` marker
+after the identity guard has passed. **This marker is not proof that the
+database is connected.** A disposable Docker test intentionally connects
+with an *incorrect synthetic password* and fails the migration, asserting
+that its canary, full URL and SQLSTATE do not appear in logs.
+
+**Operator-only cutover, still unperformed:**
+
+1. Verify the Render Web **existing ID**
+   `srv-db43l4nlk1mc73emseig` and DB **existing ID**
+   `dpg-db43rbbncjis73bmigi0-a`; both are Singapore Free resources.
+   Inspect the *Internal Database URL* directly in the private
+   [database dashboard](https://dashboard.render.com/d/dpg-db43rbbncjis73bmigi0-a).
+   Never transfer the URL or password into GitHub, chat or CI logs.
+2. The current Render connector accepts only **literal environment
+   variable values** and cannot set `fromDatabase` references. Its
+   external PostgreSQL read-only query was also **blocked** by the
+   correctly empty IP allowlist. Do not loosen the allowlist. A
+   reviewed existing-service Blueprint sync is acceptable only if
+   the preview targets the same Web/DB resource IDs and creates
+   **no duplicates**. Otherwise use the [existing Web Environment UI](https://dashboard.render.com/web/srv-db43l4nlk1mc73emseig)
+   privately.
+3. Atomically prepare the **existing staging Web's** `DB_URL`
+   from the private Internal Database URL, and set
+   `DB_CONNECTION=pgsql`, `DB_DATABASE=canovia_mcp_staging_db`,
+   `CANOVIA_STAGING_DB_MODE=render_postgres`,
+   `CANOVIA_STAGING_POSTGRES_ID=dpg-db43rbbncjis73bmigi0-a`,
+   `CANOVIA_STAGING_POSTGRES_USER` to the actual Render DB user
+   (ideally via Render-native `fromDatabase: user`). Use **Save only**
+   until all values have been reviewed together; never deploy a
+   partly configured environment. Existing staging-specific
+   `APP_KEY` and all closed access/OAuth/MCP flags remain unchanged.
+   Check that `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`,
+   `DATABASE_URL` and all production integration secrets remain absent.
+4. Deploy **only** the existing staging Web manually. Inspect the
+   generic mode marker and `MCP isolated staging migrations: completed`
+   in Render logs, then verify from an independent HTTPS runner that
+   `/up=200` while all protected/static/login/MCP endpoints remain
+   `503`. In PostgreSQL mode `/up=200` requires a live query
+   against the pinned database and the six migrated tables.
+   An isolated success marker without healthy `/up` is insufficient.
+5. If anything fails, use **Save only** to restore
+   `CANOVIA_STAGING_DB_MODE=sqlite`,
+   `DB_CONNECTION=sqlite`,
+   `DB_DATABASE=/var/www/html/storage/app/staging/mcp.sqlite`,
+   and **remove** both `DB_URL` and
+   `CANOVIA_STAGING_POSTGRES_USER`. Then manually redeploy the
+   existing stage. Preserve all access/OAuth/MCP flags OFF.
+   Do not touch production Canovia, Aiven, HINANEX or paid plans.
+
+**Stop condition:** without access to the private Render Dashboard
+environment/binding UI, ChatGPT cannot safely execute step 3 through
+the currently available connector. Do not replace that operation with
+a guessed URL, a literal secret in code, or public database access.
