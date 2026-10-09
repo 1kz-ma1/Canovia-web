@@ -56,17 +56,16 @@ final class McpStagingSyntheticActorBootstrap
     {
         $password = config('canovia_staging.synthetic_owner_password');
 
-        return config('app.env') !== 'staging'
-            || config('canovia_staging.isolated') !== true
-            || config('canovia_staging.web_access_enabled') !== false
-            || config('canovia_staging.web_access_explicitly_approved') !== false
-            || config('canovia_mcp.tools_enabled') !== false
-            || config('canovia_staging.allow_synthetic_owner_bootstrap') !== true
-            || ! is_string($password)
-            || strlen($password) < 24 || strlen($password) > 128
-            || preg_match('/[[:cntrl:]]/', $password) === 1
+        return config('app.env') === 'staging'
+            && config('canovia_staging.isolated') === true
+            && config('canovia_staging.web_access_enabled') === false
+            && config('canovia_staging.web_access_explicitly_approved') === false
+            && config('canovia_mcp.tools_enabled') === false
+            && config('canovia_staging.allow_synthetic_owner_bootstrap') === true
+            && is_string($password)
+            && strlen($password) >= 24 && strlen($password) <= 128
+            && preg_match('/[[:cntrl:]]/', $password) !== 1
             && $this->isPinnedDatabase();
-
     }
 
     private function isPinnedDatabase(): bool
