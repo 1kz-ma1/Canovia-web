@@ -150,7 +150,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             'configured database mode=${CANOVIA_STAGING_DB_MODE:-sqlite}',
             $stage
         );
-        $this->assertStringNotContainsString('DB_URL}"', $stage);
+        $this->assertStringContainsString('connection not yet verified', $stage);
     }
 
     public function test_staging_web_access_requires_independent_approval_and_live_pinned_db(): void
