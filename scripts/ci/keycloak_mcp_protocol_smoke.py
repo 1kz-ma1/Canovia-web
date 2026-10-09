@@ -153,6 +153,7 @@ def run_lab() -> None:
                         "--import-realm"],
                        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         print("keycloak_disposable_container: started")
+        passed = False
         try:
             discovery = None
             for _ in range(110):
@@ -242,7 +243,25 @@ def run_lab() -> None:
             print("outcome: protocol_lab_passed")
             print("production_authorized: false")
             print("chatgpt_oauth_end_to_end: not_tested")
+            passed = True
         finally:
+            if not passed:
+                # CI is a throwaway realm with synthetic-only random values.
+                # Print only bounded startup error lines and mask both runtime
+                # credentials, so an unsupported Keycloak image is diagnosable.
+                diagnostics = subprocess.run(
+                    ["docker", "logs", "--tail", "100", CONTAINER],
+                    capture_output=True, text=True, check=False,
+                )
+                lines = (diagnostics.stdout + diagnostics.stderr).splitlines()
+                candidates = [z for z in lines if any(
+                    word in z.lower() for word in
+                    ("error", "failed", "exception", "unrecognized", "unknown")
+                )]
+                for line in candidates[-8:]:
+                    masked = (line.replace(rp_secret, "[REDACTED]")
+                              .replace(admin_password, "[REDACTED]"))
+                    print("keycloak_ephemeral_diagnostic: " + masked[:280])
             subprocess.run(["docker", "rm", "-f", CONTAINER],
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                            check=False)
