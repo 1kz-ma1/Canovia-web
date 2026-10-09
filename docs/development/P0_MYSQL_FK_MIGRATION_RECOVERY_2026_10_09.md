@@ -504,3 +504,33 @@ authorized backup restoration, and a forward-recovery strategy. A passing
 disposable MySQL 8 test neither approves nor performs a production change.
 iPhone login was separately resolved by the owner changing the DB-name
 environment variable and is not part of this DB remediation.
+
+
+## Database-wide MySQL foreign-key symbol and index collision controls (2026-10-09)
+
+MySQL (InnoDB) **foreign-key constraint symbols must be unique within
+the whole database schema**, unlike index names that are unique only within
+their table. The two-target read-only preflight previously compared the
+proposed FK symbol against existing keys **only on its own table**. A
+symbol used by a *different* table could make a late `ALTER TABLE` fail
+after earlier successful non-transactional DDL.
+
+The forward-only reconciliation now also consults
+`information_schema.REFERENTIAL_CONSTRAINTS` for the expected FK name
+in the currently selected database before any DDL, but **only when the
+expected FK is missing**. If the name is already occupied elsewhere,
+it fails with the fixed code
+`P0 recovery blocked: database-wide foreign key name collision.`.
+No unrelated rows, user identifiers or cross-service schema are read.
+
+Disposable MySQL 8 regressions independently verify that a missing FK on
+the *first* incident table remains missing if a required FK name has
+been occupied on an unrelated CI-only table; the fixture is removed and
+normal forward-only repair then succeeds. A second regression creates an
+index with the correct required **name but wrong column** in the second
+table, asserts early fail-closed behavior without repairing the first,
+then removes the synthetic collision and verifies successful recovery.
+
+These tests exercise only pinned throwaway MySQL. They are not proof
+of the actual Aiven schema, backup restorability or production permission
+model. The Release #418 hold and Draft PR status are unchanged.
