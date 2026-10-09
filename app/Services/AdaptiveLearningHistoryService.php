@@ -30,7 +30,7 @@ final class AdaptiveLearningHistoryService
                     $query->whereNull('user_id')->where('actor_token', $actorToken);
                 }
             })
-            ->with(['item.run', 'item.evaluationAdjustment'])
+            ->with(['item.run', 'evaluationAdjustment'])
             ->orderByDesc('id')->limit(self::WINDOW)->get();
 
         $eligible = $events->filter(fn (LearningAnswerEvent $answer) =>
