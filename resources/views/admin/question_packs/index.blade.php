@@ -225,7 +225,9 @@
                                 <p class="mt-3 text-xs leading-5 text-slate-400">
                                     通常の問題集公開と本番形式の模試提供は別審査です。
                                     この問題集の JSON metadata.exam_simulation_profile_key / version と
-                                    exam_simulation_review に版・正答・形式・著作権の確認履歴を記録してください。
+                                    exam_simulation_review に版・正答・形式・解説・著作権の確認履歴を記録してください。
+                                    未監修の解説案がある場合は explanation_review_state を専門家の監修後に更新し、
+                                    exam_simulation_review.explanations_checked=true を明示してください。
                                     全問の内容と正答を確認した最終版の
                                     reviewed_content_sha256 は、次の内容指紋に一致する必要があります。
                                     <code class="mt-2 block break-all text-[11px] select-all" data-exam-content-sha256>{{ $examStatus['content_sha256'] }}</code>
