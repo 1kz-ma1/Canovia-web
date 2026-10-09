@@ -15,7 +15,7 @@ final class CloseUnopenedMcpStaging
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (app()->environment('staging')) {
+        if (config('app.env') === 'staging') {
             // Never permit an unmarked instance to become an open app, even
             // if someone accidentally switches the web-access flag.
             if (config('canovia_staging.isolated') !== true) {
