@@ -34,6 +34,10 @@ final class ApExamCandidateBundleAuditTest extends TestCase
         $this->assertSame('AP', $candidate['pack']['exam_code']);
         $this->assertSame('科目A', $candidate['pack']['subject']);
         $this->assertCount(80, $candidate['questions']);
+        $this->assertSame('0.2.0-review-required', $candidate['pack']['version']);
+        $this->assertSame('pending_human_subject_review',
+            $candidate['pack']['metadata']['explanation_review_state']);
+        $this->assertSame(35, $candidate['pack']['metadata']['official_explanation_draft_count']);
         $this->assertFalse($candidate['pack']['downloadable']);
         $this->assertSame('pending_human_content_and_rights_review',
             $candidate['pack']['metadata']['review_state']);
@@ -56,6 +60,7 @@ final class ApExamCandidateBundleAuditTest extends TestCase
         $uniquePrompts = [];
         $origins = [];
         $domains = [];
+        $newExplanations = [];
         $missingExplanations = [];
         foreach ($candidate['questions'] as $index => $question) {
             $key = $question['external_key'];
@@ -65,13 +70,29 @@ final class ApExamCandidateBundleAuditTest extends TestCase
             $reference = $original->get($key);
             $this->assertNotNull($reference, "Lost provenance for {$key}");
 
-            // The assembled copy may change only the order and add an
-            // explicit source pointer. Never rewrite an answer or the
-            // published IPA text in the merging process.
+            // The source question, options, grading key and provenance
+            // must remain byte-equivalent. Only explanation can be a new
+            // Canovia-authored unreviewed draft for official questions.
             foreach (['source_type','source_reference','prompt','response_schema',
-                'grading_rule','explanation','difficulty','is_active'] as $field) {
+                'grading_rule','difficulty','is_active'] as $field) {
                 $this->assertSame($reference[$field] ?? null,
                     $question[$field] ?? null, "Source change: {$key}/{$field}");
+            }
+            if ($origin === 'ap-a-ipa-2025-autumn-official-v1') {
+                $this->assertNull($reference['explanation'] ?? null);
+                $this->assertSame('canovia_independent_draft',
+                    data_get($question, 'learning_metadata.curation.explanation_origin'));
+                $this->assertSame('awaiting_subject_expert_check',
+                    data_get($question, 'learning_metadata.curation.explanation_review_status'));
+                $this->assertSame('ipa_2025_autumn_official_answer_pdf',
+                    data_get($question, 'learning_metadata.curation.answer_key_source'));
+                $this->assertGreaterThanOrEqual(90, mb_strlen($question['explanation'] ?? ''));
+                $this->assertStringStartsWith('正答は'.$question['grading_rule']['answer'],
+                    $question['explanation']);
+                $newExplanations[] = $key;
+            } else {
+                $this->assertSame($reference['explanation'] ?? null, $question['explanation'] ?? null,
+                    "Original Canovia explanation was unexpectedly rewritten: {$key}");
             }
             $this->assertSame($index + 1, $question['sort_order']);
             $this->assertSame($key,
@@ -108,10 +129,11 @@ final class ApExamCandidateBundleAuditTest extends TestCase
 
         $this->assertSame(35, $origins['ap-a-ipa-2025-autumn-official-v1']);
         $this->assertSame(45, $origins['ap-a-canovia-core-v1']);
-        // Genuine audit finding: all 35 official entries have no authored
-        // explanations in their original Bank. Never silently invent text.
-        $this->assertCount(35, $missingExplanations);
-        $this->assertCount(35, array_filter($missingExplanations,
+        // All formerly missing official explanations are now distinct
+        // Canovia drafts. Their presence does NOT mean expert review.
+        $this->assertSame([], $missingExplanations);
+        $this->assertCount(35, $newExplanations);
+        $this->assertCount(35, array_filter($newExplanations,
             fn (string $key) => str_starts_with($key, 'ipa-2025-autumn-ap-am-q')));
         $this->assertGreaterThan(10, count($domains));
         $this->assertContains('テクノロジ', array_keys($domains));
@@ -145,7 +167,9 @@ final class ApExamCandidateBundleAuditTest extends TestCase
         $this->assertFalse($exam['ready']);
         $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $exam['content_sha256']);
         $this->assertStringContainsString('SHA-256', implode(' ', $exam['blocking']));
-        $this->assertStringContainsString('解説未登録の問題が35問',
+        $this->assertStringContainsString('解説案が未監修',
+            implode(' ', $exam['blocking']));
+        $this->assertStringNotContainsString('解説未登録の問題が',
             implode(' ', $exam['blocking']));
 
         $admin->patch(route('admin.question_packs.status', $pack), [
