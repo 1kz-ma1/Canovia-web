@@ -286,7 +286,9 @@ final class ApExamCandidateAuditService
 
             // Priority does not alter exam item ordering or approval flags.
             // Address unverified original transcription before general theory.
-            $priority = ($flags !== [] || ($originType !== 'official' && ! $choiceDraftCurrent)) ? 'P0'
+            $priority = ($flags !== []
+                || ($originType !== 'official' && ! $choiceDraftCurrent)
+                || ($proposal !== null && ! $proposalCurrent)) ? 'P0'
                 : ($originType === 'official' && ! $visualChecked ? 'P0'
                     : ($originType === 'new' || $originType === 'official'
                         || preg_match('/(計算|ベイズ|MIPS|SLA|ROI|待ち行列|EVM|RAID|D.A|MSS)/ui',
@@ -294,6 +296,7 @@ final class ApExamCandidateAuditService
                         ? 'P1' : 'P2'));
             $priorities[$priority]++;
             $priorityReason = $flags !== [] ? '構造不整合を先に修正'
+                : ($proposal !== null && ! $proposalCurrent ? '校正提案が現行問題から失効・要再監査'
                 : ($originType !== 'official' && ! $choiceDraftCurrent
                     ? '独自問題の誤答肢レビュー案が不足、または問題変更で失効'
                 : ($originType === 'official' && ! $visualChecked
@@ -304,7 +307,7 @@ final class ApExamCandidateAuditService
                             ? '新規Canovia案の正答・誤答肢・解説を第三者が確認'
                             : ($priority === 'P1'
                                 ? '計算・数値条件を独立して検証'
-                                : '通常の独立内容レビュー待ち')))));
+                                : '通常の独立内容レビュー待ち'))))));
 
             $items[] = [
                 'number' => $index + 1,
