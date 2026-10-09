@@ -51,6 +51,76 @@ cutover preserve implementation reasoning and are not the current live
 status. The earlier manual attachment steps have now been executed.
 
 
+## V59 synthetic-only owner startup bootstrap (implementation under CI; live OFF)
+
+The staging-only Artisan command `canovia:mcp-staging-create-synthetic-owner`
+already creates the fixed `mcp-synthetic-owner@canovia.invalid`
+account with a Laravel-hashed password, idempotently, without any
+Plan, linked external subject, consent grant, or MCP audit event.
+It was previously inaccessible on the real Render stage because the
+available connector has no application shell. This change adds an
+**optional startup execution gate** after Laravel migrations and
+before opening HTTP, retaining the existing command and safeguards.
+
+The new startup switch `CANOVIA_STAGING_SYNTHETIC_OWNER_BOOTSTRAP_ON_START`
+defaults to **false**. Enabling it requires all of:
+
+- Exact isolated staging marker, staging Laravel environment, pinned
+  existing private PostgreSQL 17 resource and healthy migration.
+- `CANOVIA_STAGING_ALLOW_SYNTHETIC_OWNER_BOOTSTRAP=true` as a
+  **separate approval**, alongside the one-time startup switch.
+- `CANOVIA_STAGING_SYNTHETIC_OWNER_PASSWORD` privately supplied in
+  Render Environment, 24–128 characters, with no control characters.
+- Both public Web flags **false** and every MCP/OAuth activation
+  flag **false**. Production, SQLite, unpinned DB and one-flag
+  configurations are rejected before bootstrap.
+- No new HTTP endpoint, external database IP rule, CLI arguments with
+  credentials, automatic account registration or public login.
+
+The boot handler suppresses command output and exceptions, logging only
+a generic completion/failure marker. Creation fails closed if the
+bootstrap command rejects the environment or the database. A repeated
+bootstrap is idempotent; it does **not** reset the existing user's password.
+
+**Operation (requires operator action; not yet executed on real Render):**
+
+1. Confirm the Web resource is **exactly** `srv-db43l4nlk1mc73emseig`,
+   its private PostgreSQL `dpg-db43rbbncjis73bmigi0-a` remains connected,
+   and login/OAuth/MCP access remains closed. No password is sent to
+   GitHub or ChatGPT.
+2. In the [private staging Environment](https://dashboard.render.com/web/srv-db43l4nlk1mc73emseig),
+   prepare these three variables in one reviewed operation:
+   `CANOVIA_STAGING_SYNTHETIC_OWNER_BOOTSTRAP_ON_START=true`,
+   `CANOVIA_STAGING_ALLOW_SYNTHETIC_OWNER_BOOTSTRAP=true`, and a new
+   high-entropy private `CANOVIA_STAGING_SYNTHETIC_OWNER_PASSWORD`.
+   Do **not** use a password from any real account. Do not enable Web,
+   OAuth, MCP or public registration. Make sure they are all set
+   before triggering any staging redeploy.
+3. Deploy the existing stage (if the environment update already
+   triggered a deploy, do not launch a duplicate). Check generic
+   `synthetic owner bootstrap: completed` and healthy `/up=200`
+   while the external HTTPS lockdown smoke still passes.
+   The marker indicates command success (created **or** already present),
+   not proof of an external IdP link. Never print passwords or
+   query production data to validate it.
+4. **Immediately remove** the private password environment variable
+   and set both approval switches back to `false`; re-deploy the
+   existing closed staging service if needed, verify `/up=200`,
+   and keep all Web/OAuth/MCP access off. This is a mandatory
+   post-bootstrap cleanup even if provisioning fails. No permanent
+   bootstrap secret should remain in Render.
+5. Only after a separately approved IdP/ChatGPT client security review
+   should login, account linking or real OAuth tokens be considered.
+
+Docker CI uses a **disposable synthetic PostgreSQL** with test-only
+credentials to verify that a default-closed boot creates no actor, the
+armed boot creates exactly one hashed synthetic user, a second
+provisioning attempt remains idempotent, zero Plan/grant/link/audit
+rows exist, and all non-health endpoints continue to return 503.
+The GH workflow is never connected to the real Render database.
+Real Render provisioning remains **unverified** until an explicit
+operator-run accepted deployment.
+
 ## Why provider selection is a hard compatibility gate
 
 Existing Canovia resource configuration requires all of the following:

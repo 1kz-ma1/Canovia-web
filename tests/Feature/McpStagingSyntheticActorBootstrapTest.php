@@ -59,6 +59,8 @@ final class McpStagingSyntheticActorBootstrapTest extends TestCase
             ['app.env' => 'local'],
             ['canovia_staging.isolated' => false],
             ['canovia_staging.web_access_enabled' => true],
+            ['canovia_staging.web_access_explicitly_approved' => true],
+            ['canovia_mcp.tools_enabled' => true],
             ['canovia_staging.allow_synthetic_owner_bootstrap' => false],
             ['canovia_staging.synthetic_owner_password' => 'short'],
             ['canovia_staging.synthetic_owner_password' => ''],

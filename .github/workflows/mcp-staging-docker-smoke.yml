@@ -256,6 +256,107 @@ jobs:
           done
           echo 'Pinned isolated Postgres startup and /up DB schema health PASS; login/MCP closed'
 
+      - name: Verify opt-in synthetic owner startup on disposable PostgreSQL 17
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Existing pinned Postgres CI network is private and disposable.
+          # The other running pinned staging container started with the
+          # default OFF switch and must not have created any user.
+          before=$(docker exec canovia-mcp-pg-ci psql \
+            -U canovia_mcp_staging_db_user -d canovia_mcp_staging_db \
+            -At -c 'SELECT count(*) FROM users')
+          test "$before" = '0'
+
+          APP_KEY="base64:$(openssl rand -base64 32)"
+          fake_password='CI-ONLY-SYNTHETIC-ACTOR-PASSWORD-2026'
+          docker run -d --name canovia-mcp-synthetic-owner-boot \
+            --network canovia-mcp-pg-ci \
+            -p 127.0.0.1:18775:10000 \
+            -e APP_NAME=Canovia-MCP-Staging \
+            -e APP_ENV=staging -e APP_DEBUG=false \
+            -e CANOVIA_STAGING_ISOLATED=true \
+            -e CANOVIA_STAGING_WEB_ACCESS_ENABLED=false \
+            -e CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED=false \
+            -e CANOVIA_STAGING_SYNTHETIC_OWNER_BOOTSTRAP_ON_START=true \
+            -e CANOVIA_STAGING_ALLOW_SYNTHETIC_OWNER_BOOTSTRAP=true \
+            -e CANOVIA_STAGING_SYNTHETIC_OWNER_PASSWORD="$fake_password" \
+            -e CANOVIA_STAGING_DB_MODE=render_postgres \
+            -e CANOVIA_STAGING_POSTGRES_ID=dpg-db43rbbncjis73bmigi0-a \
+            -e CANOVIA_STAGING_POSTGRES_USER=canovia_mcp_staging_db_user \
+            -e CANOVIA_MCP_DISCOVERY_ENABLED=false \
+            -e CANOVIA_MCP_TOKEN_INTROSPECTION_ENABLED=false \
+            -e CANOVIA_MCP_ACCOUNT_LINK_ENABLED=false \
+            -e CANOVIA_MCP_PLAN_CONSENT_ENABLED=false \
+            -e CANOVIA_MCP_DELEGATED_POLICY_ENABLED=false \
+            -e CANOVIA_MCP_TOOLS_ENABLED=false \
+            -e APP_URL=https://canovia-mcp-staging.onrender.com \
+            -e APP_KEY="$APP_KEY" \
+            -e DB_CONNECTION=pgsql \
+            -e DB_DATABASE=canovia_mcp_staging_db \
+            -e DB_URL=postgresql://canovia_mcp_staging_db_user:ci-not-a-real-credential@dpg-db43rbbncjis73bmigi0-a:5432/canovia_mcp_staging_db \
+            -e SESSION_DRIVER=file -e SESSION_COOKIE=canovia_mcp_staging_session \
+            -e SESSION_SECURE_COOKIE=true -e SESSION_SAME_SITE=lax \
+            -e CACHE_STORE=file -e QUEUE_CONNECTION=sync \
+            -e MAIL_MAILER=log -e LOG_CHANNEL=stderr \
+            canovia-mcp-staging:smoke
+
+          ready=0
+          for attempt in $(seq 1 75); do
+            status=$(curl --silent --output /dev/null --max-time 2 \
+              --write-out '%{http_code}' http://127.0.0.1:18775/up || true)
+            if [ "$status" = "200" ]; then
+              ready=1
+              break
+            fi
+            if ! docker ps --format '{{.Names}}' | grep -qx canovia-mcp-synthetic-owner-boot; then
+              echo 'Synthetic owner staging exited unexpectedly'
+              exit 1
+            fi
+            sleep 2
+          done
+          test "$ready" = "1"
+
+          # Assert the user was created, the credential was hashed and
+          # no Plan, external subject, grant, or audit event was granted.
+          result=$(docker exec canovia-mcp-pg-ci psql \
+            -U canovia_mcp_staging_db_user -d canovia_mcp_staging_db \
+            -At -c "SELECT
+              (SELECT count(*) FROM users WHERE email = 'mcp-synthetic-owner@canovia.invalid'),
+              (SELECT count(*) FROM users),
+              (SELECT count(*) FROM plans),
+              (SELECT count(*) FROM mcp_linked_subjects),
+              (SELECT count(*) FROM mcp_delegated_grants),
+              (SELECT count(*) FROM mcp_delegated_access_events)")
+          test "$result" = "1|1|0|0|0|0"
+          password_hash=$(docker exec canovia-mcp-pg-ci psql \
+            -U canovia_mcp_staging_db_user -d canovia_mcp_staging_db \
+            -At -c "SELECT password FROM users WHERE email = 'mcp-synthetic-owner@canovia.invalid'")
+          test "$password_hash" != "$fake_password"
+          test "${#password_hash}" -ge 50
+
+          # Restarts / repeated bootstrap commands may not create a
+          # second user or alter the existing password or consent data.
+          outcome=$(docker exec canovia-mcp-synthetic-owner-boot \
+            php artisan canovia:mcp-staging-create-synthetic-owner --json)
+          printf '%s' "$outcome" | grep -Fq '"already_present"'
+          after=$(docker exec canovia-mcp-pg-ci psql \
+            -U canovia_mcp_staging_db_user -d canovia_mcp_staging_db \
+            -At -c 'SELECT count(*) FROM users')
+          test "$after" = '1'
+
+          log=$(docker logs canovia-mcp-synthetic-owner-boot 2>&1)
+          printf '%s' "$log" | grep -Fq \
+            'synthetic owner bootstrap: completed (identity details suppressed)'
+          ! printf '%s' "$log" | grep -Fq "$fake_password"
+          ! printf '%s' "$log" | grep -Fq 'postgresql://'
+          for endpoint in /login /register /health /api/mcp; do
+            status=$(curl --silent --output /dev/null --max-time 5 \
+              --write-out '%{http_code}' "http://127.0.0.1:18775$endpoint")
+            test "$status" = '503'
+          done
+          echo 'One opt-in synthetic owner created, no Plan/subject/grants, web closed: PASS'
+
       - name: Staging runtime diagnostics on failure (no credentials)
         if: failure()
         run: |
@@ -270,6 +371,7 @@ jobs:
         run: |
           docker rm -f canovia-mcp-staging-smoke 2>/dev/null || true
           docker rm -f canovia-mcp-postgres-boot 2>/dev/null || true
+          docker rm -f canovia-mcp-synthetic-owner-boot 2>/dev/null || true
           docker rm -f canovia-mcp-pg-ci 2>/dev/null || true
           docker network rm canovia-mcp-pg-ci 2>/dev/null || true
           rm -f guard.stdout guard.stderr

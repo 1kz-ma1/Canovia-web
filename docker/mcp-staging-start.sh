@@ -138,6 +138,34 @@ if [ "${CANOVIA_STAGING_WEB_ACCESS_ENABLED:-false}" = "true" ]; then
         || deny "staging public web requires pinned PostgreSQL"
 fi
 
+# A synthetic actor can be provisioned during one deliberately armed
+# staging restart. This is NOT a Web endpoint or a production seed.
+case "${CANOVIA_STAGING_SYNTHETIC_OWNER_BOOTSTRAP_ON_START:-false}" in
+    false|true) ;;
+    *) deny "invalid synthetic owner startup switch" ;;
+esac
+if [ "${CANOVIA_STAGING_SYNTHETIC_OWNER_BOOTSTRAP_ON_START:-false}" = "true" ]; then
+    [ "${CANOVIA_STAGING_DB_MODE:-sqlite}" = "render_postgres" ] \
+        || deny "synthetic owner startup requires pinned PostgreSQL"
+    [ "${CANOVIA_STAGING_WEB_ACCESS_ENABLED:-false}" = "false" ] \
+        || deny "synthetic owner startup requires closed Web"
+    [ "${CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED:-false}" = "false" ] \
+        || deny "synthetic owner startup requires no public approval"
+    [ "${CANOVIA_STAGING_ALLOW_SYNTHETIC_OWNER_BOOTSTRAP:-false}" = "true" ] \
+        || deny "synthetic owner startup requires separate bootstrap approval"
+    [ -n "${CANOVIA_STAGING_SYNTHETIC_OWNER_PASSWORD:-}" ] \
+        || deny "synthetic owner startup requires private password"
+    for name in CANOVIA_MCP_DISCOVERY_ENABLED \
+        CANOVIA_MCP_TOKEN_INTROSPECTION_ENABLED \
+        CANOVIA_MCP_ACCOUNT_LINK_ENABLED \
+        CANOVIA_MCP_PLAN_CONSENT_ENABLED \
+        CANOVIA_MCP_DELEGATED_POLICY_ENABLED \
+        CANOVIA_MCP_TOOLS_ENABLED; do
+        [ "$(printenv "$name" 2>/dev/null || true)" != "true" ] \
+            || deny "synthetic owner startup requires MCP gates closed"
+    done
+fi
+
 if [ "${1:-}" = "--check-only" ]; then
     printf '%s\n' "MCP isolated staging guard: PASS (config only; no DB/network changes)"
     exit 0
