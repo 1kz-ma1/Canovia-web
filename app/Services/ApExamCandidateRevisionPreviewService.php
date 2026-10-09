@@ -20,6 +20,7 @@ final class ApExamCandidateRevisionPreviewService
     public function __construct(
         private readonly QuestionPackCatalogService $catalog,
         private readonly AdaptiveExamPackReadinessService $exam,
+        private readonly QuestionPackImportService $importer,
     ) {}
 
     /**
@@ -241,8 +242,14 @@ final class ApExamCandidateRevisionPreviewService
      */
     private function fingerprint(array $questions): string
     {
-        $active = collect($questions)
-            ->filter(fn (array $row) => ($row['is_active'] ?? false) === true)
+        // The real Draft import always canonicalizes response_schema
+        // (including placeholder keys), grading and learning_metadata
+        // before persisting. Hashing raw bundled rows would misleadingly
+        // differ from the value used at exam publication time.
+        $active = collect(array_values($questions))
+            ->map(fn (array $row, int $index) =>
+                $this->importer->normalizeQuestionDefinition($row, $index))
+            ->filter(fn (array $row) => $row['is_active'] === true)
             ->map(fn (array $row) => new Question($row));
 
         return $this->exam->contentFingerprint($active);
