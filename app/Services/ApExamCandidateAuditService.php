@@ -24,6 +24,29 @@ final class ApExamCandidateAuditService
     public function __construct(private readonly QuestionPackCatalogService $catalog) {}
 
     /**
+     * A source PDF spotcheck expires if its candidate version, official
+     * problem text, choices or answer changes. This never grants expert
+     * explanation/rights approval.
+     *
+     * @param array<string,mixed> $entry
+     * @param array<string,mixed> $question
+     */
+    public static function matchesVisualEvidence(
+        array $entry,
+        array $question,
+        string $candidateVersion,
+        string $evidenceVersion,
+    ): bool {
+        $snapshot = $entry['verified_snapshot'] ?? null;
+        return $candidateVersion === $evidenceVersion
+            && ($entry['status'] ?? '') === 'source_statement_options_visually_spotchecked_only'
+            && is_array($snapshot)
+            && ($snapshot['prompt'] ?? null) === ($question['prompt'] ?? null)
+            && ($snapshot['choices'] ?? null) === data_get($question, 'response_schema.0.choices')
+            && ($snapshot['answer'] ?? null) === data_get($question, 'grading_rule.answer');
+    }
+
+    /**
      * @return array<string,mixed>
      */
     public function inspect(): array
@@ -132,15 +155,14 @@ final class ApExamCandidateAuditService
             // Source visual checks only establish that the visible original
             // statement and options match; they never count as human signoff.
             $spotcheck = $spotchecks->get($key);
-            $snapshot = is_array($spotcheck['verified_snapshot'] ?? null)
-                ? $spotcheck['verified_snapshot'] : [];
             $visualChecked = $originType === 'official'
                 && is_array($spotcheck)
-                && ($spotcheckEvidence['candidate_version'] ?? '') === ($candidate['pack']['version'] ?? '')
-                && ($spotcheck['status'] ?? '') === 'source_statement_options_visually_spotchecked_only'
-                && ($snapshot['prompt'] ?? null) === ($question['prompt'] ?? null)
-                && ($snapshot['choices'] ?? null) === $choices
-                && ($snapshot['answer'] ?? null) === $answer;
+                && self::matchesVisualEvidence(
+                    $spotcheck,
+                    $question,
+                    (string) ($candidate['pack']['version'] ?? ''),
+                    (string) ($spotcheckEvidence['candidate_version'] ?? ''),
+                );
             if ($visualChecked) {
                 $sourceVisualChecked++;
             }
