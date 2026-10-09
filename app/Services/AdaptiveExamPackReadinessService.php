@@ -48,7 +48,7 @@ final class AdaptiveExamPackReadinessService
     /**
      * @param array<string,mixed> $profile
      * @param Collection<int,Question>|null $questions
-     * @return array{ready:bool,active_count:int,blocking:list<string>}
+     * @return array{ready:bool,active_count:int,content_sha256:string,blocking:list<string>}
      */
     public function inspect(QuestionPack $pack, array $profile, ?Collection $questions = null): array
     {
@@ -120,6 +120,7 @@ final class AdaptiveExamPackReadinessService
         return [
             'ready' => $blocking === [],
             'active_count' => $questions->count(),
+            'content_sha256' => $this->contentFingerprint($questions),
             'blocking' => $blocking,
         ];
     }
