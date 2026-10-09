@@ -1,0 +1,70 @@
+# OPT-IN BLUEPRINT. Do not attach/sync this file to the existing
+# "Canovia" production service. This creates a separate free-plan Web
+# service ONLY after a human explicitly syncs it in Render.
+#
+# Caution: Render free Web service hours are shared across the workspace.
+# Running staging can impact the existing free-plan production Canovia.
+# SQLite is DISPOSABLE. No production DB, credentials, or data is connected.
+services:
+  - type: web
+    name: canovia-mcp-staging
+    runtime: docker
+    repo: https://github.com/1kz-ma1/Canovia-web
+    branch: main
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile.mcp-staging
+    dockerContext: .
+    autoDeployTrigger: off
+    healthCheckPath: /up
+    envVars:
+      - key: APP_NAME
+        value: Canovia-MCP-Staging
+      - key: APP_ENV
+        value: staging
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_URL
+        sync: false
+      # Must be independently generated using "php artisan key:generate --show"
+      # and contain "base64:" prefix. Never copy the production APP_KEY.
+      - key: APP_KEY
+        sync: false
+      - key: CANOVIA_STAGING_ISOLATED
+        value: "true"
+      - key: CANOVIA_STAGING_WEB_ACCESS_ENABLED
+        value: "false"
+      - key: CANOVIA_STAGING_MCP_EXPLICITLY_APPROVED
+        value: "false"
+      - key: DB_CONNECTION
+        value: sqlite
+      - key: DB_DATABASE
+        value: /var/www/html/storage/app/staging/mcp.sqlite
+      - key: SESSION_DRIVER
+        value: file
+      - key: SESSION_COOKIE
+        value: canovia_mcp_staging_session
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: SESSION_SAME_SITE
+        value: lax
+      - key: CACHE_STORE
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: MAIL_MAILER
+        value: log
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: CANOVIA_MCP_DISCOVERY_ENABLED
+        value: "false"
+      - key: CANOVIA_MCP_TOKEN_INTROSPECTION_ENABLED
+        value: "false"
+      - key: CANOVIA_MCP_ACCOUNT_LINK_ENABLED
+        value: "false"
+      - key: CANOVIA_MCP_PLAN_CONSENT_ENABLED
+        value: "false"
+      - key: CANOVIA_MCP_DELEGATED_POLICY_ENABLED
+        value: "false"
+      - key: CANOVIA_MCP_TOOLS_ENABLED
+        value: "false"
