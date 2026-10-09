@@ -583,3 +583,81 @@ checks can still cause later ALTER failures. No Aiven backup has been
 restored and no production service settings or credentials have been
 modified. Owner-reported iPhone login recovery (correcting the DB name
 environment variable) remains closed. This PR remains Draft under #418.
+
+
+## Operator-run zero-DDL two-target preflight (2026-10-10)
+
+There is now an explicitly opt-in **SELECT-only** operator diagnostic:
+`scripts/ops/p0_mysql_readonly_preflight.php --check`. It invokes the
+**same** `preflight()` method used immediately before the
+forward-only repair migration, without calling `up()`, `migrate`, or
+any DDL/DML. The preflight includes both tables' historical ledger,
+required columns, foreign-key parent existence, deletion rules,
+schema-wide constraint-name collisions, exact integer signedness,
+`SET NULL` nullability, orphan-reference existence, index
+compatibility, and potential unique-key duplicates.
+
+### Operator safety and target guard
+
+This is **not** a request to run against Aiven automatically. Before an
+operator chooses to execute it, verify the intended Aiven **service
+identity, plan, database and exact host** separately via the authorized
+Aiven console; identify the correct candidate deployed source commit;
+and use an **already-approved SELECT-only DB credential** with no
+`CREATE`, `ALTER`, `DROP`, `INSERT`, `UPDATE`, or `DELETE`
+grants. Use a trusted local environment with the checked-out reviewed
+PR commit and dependencies. Never place credentials, raw DB metadata,
+connection URLs, customer rows, cookies or terminal transcripts in
+GitHub/chat. Do not run this inside a production Web service shell with
+the application's write-capable connection.
+
+With the existing private read-only MySQL connection independently
+established in a controlled local environment, the required **public
+guards** are:
+
+```bash
+# Use the same exact reviewed source checkout as the migration candidate.
+# Independently verify the intended Aiven host and DB name first.
+export APP_ENV=production
+export DB_CONNECTION=mysql
+export CANOVIA_P0_READONLY_PREFLIGHT=1
+export CANOVIA_P0_EXPECTED_DB_HOST='<privately verified exact Aiven host>'
+export CANOVIA_P0_EXPECTED_DB_NAME='<privately verified exact Aiven DB name>'
+# Database login details come from a private, authorized SELECT-only profile.
+php scripts/ops/p0_mysql_readonly_preflight.php --check
+```
+
+This command requires the exact `--check` argument, explicit opt-in,
+production/testing environment, MySQL driver and independently
+supplied expected DB host/name. Before preflight it checks effective
+Laravel config and `SELECT DATABASE()` against the operator's
+expectations. **These comparisons cannot independently authenticate
+the Aiven service identity or prove the credential has read-only
+privileges; the operator must verify both separately.**
+
+Output is a **single redacted fixed-code JSON verdict**, never raw
+SQL, passwords, values, table or column identifiers, e.g.:
+
+```json
+{"result":"REVIEW_REQUIRED","code":"PREFLIGHT_VALID_NOT_RELEASE_AUTHORIZATION","release_authorized":false,"production_database_modified":false,"database_identity_independently_verified":false,"backup_restore_verified":false}
+```
+
+Blocked checks emit a fixed `PREFLIGHT_...` code and process status 2,
+and never echo SQL exception messages. Successful *format and
+preflight* checks exit zero but remain `REVIEW_REQUIRED`; there is
+**no release-authorization state**.
+
+CI verifies (1) invoking `preflight()` twice with missing synthetic
+constraints does not create them or change the Laravel ledger,
+(2) the operator entrypoint passes against a disposable MySQL 8
+schema, and (3) missing opt-in is rejected before bootstrapping
+Laravel. The test-only account/environment is not the actual Aiven DB.
+
+**This cannot approve a release or guarantee later DDL:** read-only
+queries may be expensive on a large table and must run only under
+operator-approved conditions; concurrent modifications may invalidate
+a preflight result; restoring a real backup is a separate P0 gate.
+The earlier iPhone login problem remains resolved following the
+owner's correction of its production database-name setting.
+Issue #418 hold / PR #443 Draft and main autoDeploy precautions
+remain unchanged.
