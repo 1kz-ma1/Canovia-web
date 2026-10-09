@@ -145,6 +145,9 @@ fi
 [ "$#" -eq 0 ] || deny "unsupported arguments"
 
 cd /var/www/html
+# Never print the private DB URL, password, or connection exception.
+# This operator-visible mode marker is not a DB connectivity assertion.
+printf '%s\n' "MCP isolated staging startup: configured database mode=${CANOVIA_STAGING_DB_MODE:-sqlite} (connection not yet verified)"
 # Production's standard Nginx serves /health and static assets directly,
 # bypassing Laravel middleware. Override it for the default-closed stage
 # so only Laravel /up is reachable. A separately approved, pinned-DB
