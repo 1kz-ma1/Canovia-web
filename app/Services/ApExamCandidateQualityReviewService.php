@@ -24,6 +24,7 @@ final class ApExamCandidateQualityReviewService
     public function __construct(
         private readonly QuestionPackCatalogService $catalog,
         private readonly ApExamCandidateRevisionPreviewService $revision,
+        private readonly ApExamIpaAttributionReadinessService $ipaAttribution,
     ) {}
 
     /**
@@ -37,6 +38,7 @@ final class ApExamCandidateQualityReviewService
             resource_path(self::WORKLIST)), true, 512, JSON_THROW_ON_ERROR);
         $candidate = $this->catalog->payload(ApExamCandidateRevisionPreviewService::PREVIEW_KEY);
         $revision = $this->revision->inspect();
+        $ipaEvidence = $this->ipaAttribution->inspect();
         $items = $candidate['questions'] ?? [];
         $entries = $manifest['entries'] ?? [];
         $precheck = json_decode((string) file_get_contents(resource_path(
@@ -180,6 +182,9 @@ final class ApExamCandidateQualityReviewService
             || ($manifest['counts']['source_transcriptions_carried'] ?? null) !== 35) {
             $issues[] = 'Review priority/origin coverage summary is inconsistent.';
         }
+        if (! $ipaEvidence['policy_metadata_precheck_passed']) {
+            $issues[] = 'IPA original problem source credit metadata or published-use policy preflight needs recheck.';
+        }
         if (! $revision['structurally_consistent']) {
             $issues[] = 'The underlying v0.4 source diff or content fingerprint failed inspection.';
         }
@@ -197,6 +202,10 @@ final class ApExamCandidateQualityReviewService
             'total' => count($outputItems),
             'priority_counts' => $priorities,
             'source_counts' => $origins,
+            'ipa_attribution_metadata_present' => $ipaEvidence['metadata_attribution_present'],
+            'ipa_faq_url' => $ipaEvidence['ipa_faq_url'],
+            'ipa_learner_facing_credit_verified' => $ipaEvidence['learner_facing_attribution_verified'],
+            'ipa_rights_approved' => $ipaEvidence['rights_approved'],
             'review_checks_pending' => count($outputItems) * count(self::REQUIRED_DIMENSIONS),
             'independent_human_review_pending' => count($outputItems),
             'technical_prechecks_current' => $validPrechecks,

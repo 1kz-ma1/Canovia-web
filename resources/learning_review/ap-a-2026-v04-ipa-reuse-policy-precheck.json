@@ -1,0 +1,264 @@
+{
+  "schema_version": 1,
+  "candidate_key": "ap/ap-a-2026-cbt-80-candidate-v2",
+  "candidate_version": "0.4.0-review-required",
+  "ipa_policy_page": "https://www.ipa.go.jp/shiken/faq.html",
+  "ipa_policy_last_checked": "2026-10-09",
+  "publisher_statement_summary": "IPA publicly states that use of its published past questions in textbooks/question banks generally needs neither permission nor fee when consistent with educational/exam purposes, but copyright is not waived. State examination year/period/category/session/question number, and note any modifications.",
+  "policy_conditions": [
+    "教育・試験制度の意義に反しない用途であること",
+    "著作権は放棄されていない",
+    "年度・期・区分・時間区分・問番号を明記",
+    "問題の一部を改変した場合はその旨を明記"
+  ],
+  "machine_attribution_format_checked": 35,
+  "legal_compliance_approved": false,
+  "scope_note": "Automated metadata presence checks do not prove the actual learner UI shows the credit, that rendering retains original figures/tables, or that the current subscription/advertising model meets all usage conditions. Check these before release.",
+  "entries": [
+    {
+      "key": "ipa-2025-autumn-ap-am-q03",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問3（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q04",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問4（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q05",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問5（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q06",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問6（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q07",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問7（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q08",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問8（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q09",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問9（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q11",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問11（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q12",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問12（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q13",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問13（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q14",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問14（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q15",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問15（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q16",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問16（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q17",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問17（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q18",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問18（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q19",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問19（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q23",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問23（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q25",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問25（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q26",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問26（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q27",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問27（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q56",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問56（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q57",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問57（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q58",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問58（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q59",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問59（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q60",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問60（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q62",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問62（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q63",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問63（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q64",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問64（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q66",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問66（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q67",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問67（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q68",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問68（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q69",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問69（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q71",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問71（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q72",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問72（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q73",
+      "source_label": "令和7年度 秋期 応用情報技術者試験 午前 問73（Canovia表示用にレイアウトのみ整形）",
+      "claimed_transcription_type": "formatting_and_table_text_layout_only_not_semantic_edition",
+      "attribution_format_check": "required_fields_present_not_legal_approval",
+      "rights_clearance_status": "requires_final_project_context_review"
+    }
+  ]
+}
