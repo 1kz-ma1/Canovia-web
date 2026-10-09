@@ -169,7 +169,7 @@
 
     @unless ($focusMode)
         @if ($learningImmersion)
-            <header class="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-xl" data-learning-immersion-header>
+            <header class="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-xl" style="padding-top: calc(env(safe-area-inset-top, 0px) + 0.5rem)" data-learning-immersion-header>
                 <div class="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
                     <a href="{{ route('workspace.study.index') }}" class="min-h-11 inline-flex items-center text-sm font-semibold text-sky-200" data-learning-immersion-exit>← 学習Workspace</a>
                     <span class="truncate text-xs font-semibold text-slate-400">学習に集中</span>
