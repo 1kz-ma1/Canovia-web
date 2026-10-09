@@ -462,6 +462,96 @@ final class ProductionMysqlSchemaP0Test extends TestCase
         $this->assertIndex('learning_answer_evaluation_adjustments', ['learning_answer_event_id'], true);
     }
 
+    public function test_reconciliation_blocks_duplicate_unique_keys_before_restoring_missing_fk(): void
+    {
+        $user = User::factory()->create();
+        $now = now();
+        $snapshot = DB::table('intelligence_state_snapshots')->insertGetId([
+            'user_id' => $user->id,
+            'domain' => 'development',
+            'scope_type' => 'test',
+            'state_fingerprint' => str_repeat('a', 64),
+            'state_reference' => 'p0-ci-unique-preflight-snapshot',
+            'captured_at' => $now,
+            'metrics' => '{}',
+            'facts' => '{}',
+            'evidence_references' => '[]',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $decisionReference = 'p0-ci-duplicate-decision-reference';
+        Schema::table('intelligence_decision_traces', function (Blueprint $table): void {
+            $table->dropForeign('idt_snapshot_fk');
+            $table->dropUnique('intelligence_decision_traces_decision_reference_unique');
+        });
+
+        $row = [
+            'user_id' => $user->id,
+            'intelligence_state_snapshot_id' => $snapshot,
+            'domain' => 'development',
+            'scope_type' => 'test',
+            'state_reference' => 'p0-ci-duplicate-state',
+            'state_fingerprint' => str_repeat('b', 64),
+            'readiness_fingerprint' => str_repeat('c', 64),
+            'readiness_level' => 'ready',
+            'readiness_confidence' => 0.5,
+            'readiness_components' => '{}',
+            'readiness_gaps' => '[]',
+            'decision_reference' => $decisionReference,
+            'decision_type' => 'recommend',
+            'reason_code' => 'ci_only',
+            'decision_summary' => 'Duplicate-key preflight on CI-only synthetic records',
+            'decision_confidence' => 0.5,
+            'input_fingerprint' => str_repeat('d', 64),
+            'decision_reasons' => '[]',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ];
+        DB::table('intelligence_decision_traces')->insert([$row, $row]);
+
+        $migration = require database_path(
+            'migrations/2026_10_09_235959_reconcile_p0_mysql_applied_constraints.php',
+        );
+        try {
+            try {
+                $migration->up();
+                $this->fail('Duplicate values must block before any repair DDL.');
+            } catch (\RuntimeException $exception) {
+                $this->assertSame(
+                    'P0 recovery blocked: duplicate values for unique index.',
+                    $exception->getMessage(),
+                );
+            }
+
+            // Even the missing FK in this SAME table must not be repaired
+            // before duplicate unique-key values are rejected.
+            $this->assertSame([], array_values(array_filter(
+                Schema::getForeignKeys('intelligence_decision_traces'),
+                fn (array $fk): bool => ($fk['name'] ?? '') === 'idt_snapshot_fk',
+            )));
+            $this->assertSame(2, DB::table('intelligence_decision_traces')
+                ->where('decision_reference', $decisionReference)->count());
+        } finally {
+            // Clean ONLY the CI-inserted test records and restore the reviewed
+            // original FK and UNIQUE index via the forward-only migration.
+            DB::table('intelligence_decision_traces')
+                ->where('decision_reference', $decisionReference)->delete();
+            $migration->up();
+            DB::table('intelligence_state_snapshots')->where('id', $snapshot)->delete();
+            $user->delete();
+        }
+
+        $this->assertIndex('intelligence_decision_traces', ['decision_reference'], true);
+        $this->assertForeignKey(
+            'intelligence_decision_traces',
+            'intelligence_state_snapshot_id',
+            'idt_snapshot_fk',
+            'intelligence_state_snapshots',
+            'cascade',
+        );
+    }
+
     private function assertForeignKey(
         string $table,
         string $column,
