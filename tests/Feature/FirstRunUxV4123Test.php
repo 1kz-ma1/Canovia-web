@@ -155,6 +155,41 @@ class FirstRunUxV4123Test extends TestCase
         $this->assertStringNotContainsString('wrong-credential', $rendered);
     }
 
+    public function test_login_attempts_do_not_exhaust_password_reset_throttle(): void
+    {
+        // A series of bad sign-in attempts must not consume the separate
+        // password recovery budget from the same guest/IP.
+        for ($attempt = 0; $attempt < 7; $attempt++) {
+            $this->from(route('auth.login.form'))
+                ->post(route('auth.login'), [
+                    'email' => 'not-registered@example.test',
+                    'password' => 'incorrect-credential',
+                ])
+                ->assertRedirect(route('auth.login.form'))
+                ->assertSessionHasErrors('email');
+        }
+
+        $this->from(route('password.request'))
+            ->post(route('password.email'), [
+                'email' => 'not-registered@example.test',
+            ])
+            ->assertRedirect(route('password.request'))
+            ->assertSessionHas('status');
+
+        // Each endpoint still enforces its own protection.
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->from(route('password.request'))
+                ->post(route('password.email'), [
+                    'email' => 'not-registered@example.test',
+                ])
+                ->assertRedirect(route('password.request'));
+        }
+
+        $this->post(route('password.email'), [
+            'email' => 'not-registered@example.test',
+        ])->assertStatus(429);
+    }
+
     public function test_new_account_is_required_to_pass_welcome_before_first_companion(): void
     {
         $this->post(route('auth.register'), [
