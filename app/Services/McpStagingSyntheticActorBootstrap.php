@@ -38,10 +38,16 @@ final class McpStagingSyntheticActorBootstrap
                 [
                     'name' => 'Canovia MCP Synthetic Owner',
                     'password' => $password,
-                    'email_verified_at' => now(),
                     'first_run_completed_at' => now(),
                 ],
             );
+
+            if ($actor->wasRecentlyCreated) {
+                // email_verified_at is intentionally not mass-assignable
+                // on the normal User model. The synthetic CLI can set it
+                // only after all environment and database gates pass.
+                $actor->forceFill(['email_verified_at' => now()])->save();
+            }
 
             return $actor->wasRecentlyCreated;
         });
