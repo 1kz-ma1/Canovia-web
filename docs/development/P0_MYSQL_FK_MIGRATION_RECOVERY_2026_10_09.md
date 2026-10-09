@@ -55,3 +55,55 @@ mark it migrated.
 
 No production Render/Aiven environment, private data, connection string,
 credentials, staging MCP access, hosted IdP, or billing is changed here.
+
+
+## Read-only production schema inventory — inspection prepared, NOT run
+
+The checked-in [SELECT-only MySQL query](../../scripts/sql/p0_mysql_readonly_schema_inventory.sql)
+reads **only** selected `information_schema.TABLES`, `COLUMNS`,
+`KEY_COLUMN_USAGE`, `REFERENTIAL_CONSTRAINTS`, `STATISTICS` and the
+**non-personal Laravel `migrations` ledger**. It checks whether two
+affected tables and their parent tables exist, key columns, three expected
+foreign keys (names / target / ON DELETE), expected unique/composite indexes,
+selected migration names/batches, and the MySQL version. It does **not** read
+`users`, `plans`, `tasks`, answer events, login sessions or any user row.
+Every database statement is a `SELECT`. It does not open a connection,
+apply fixes, set session options or grant database permissions by itself.
+
+The accompanying [disposable-CI checker](../../scripts/ci/p0_mysql_readonly_schema_inventory_check.php)
+refuses to run outside the pinned localhost MySQL-8 CI database
+`canovia_p0_ci`. It executes the actual checked-in SQL **only against that
+throwaway database**, rejects mismatched status, and writes a fixed pass/block
+label without logging schema names, connection strings or personal records.
+
+### Owner/operator-only production inspection
+
+1. **First establish a safe route through Aiven**, outside this chat:
+   identify the exact expected production MySQL service/database and engine
+   version from the trusted Aiven console. Prefer a pre-existing read-only
+   MySQL account with permissions to inspect `information_schema` and
+   **SELECT only on `migrations`**. Do not add an account, alter grants,
+   change database network allowlists or expose credentials automatically.
+   The current connected GitHub/Render tools cannot query the Aiven MySQL
+   tables directly. The Aiven Console's PostgreSQL PG Studio editor must
+   **not** be mistaken for a MySQL query editor.
+2. In a trusted MySQL client connected to the confirmed target, first
+   verify current connection **privately**. Execute only the reviewed
+   `scripts/sql/p0_mysql_readonly_schema_inventory.sql`, using a
+   read-only credential or equivalent read-only access; never upload a
+   dump, cookie, URL, password, user row or private configuration.
+3. Record a **sanitized outcome** for each named check:
+   `PRESENT/MISSING` table/column, `PASS/MISSING/MISMATCH` FK/index,
+   `APPLIED/PENDING` selected migrations, engine version. A missing ledger
+   table, wrong DB or query failure is a blocker, **not** proof of data loss.
+   Any schema not exactly matching the expected pre-/post-fix state must be
+   reviewed before generating targeted migration SQL.
+4. This is a *targeted* audit of incident-critical schema, not a full
+   comparison of every deployed migration nor a restorable backup check.
+   Compare the complete migration ledger, Aiven backup/restore readiness,
+   data preservation, login/PWA E2E and exact deployed SHA separately before
+   changing the P0 release hold. Schema metadata does not authenticate
+   individual users and does not certify production readiness.
+
+Do not run `migrate:fresh`, `migrate:rollback`, DDL repair or speculative
+production `php artisan migrate` as part of this inventory.
