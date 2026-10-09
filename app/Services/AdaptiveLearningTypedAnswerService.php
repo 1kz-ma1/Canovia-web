@@ -47,9 +47,14 @@ final class AdaptiveLearningTypedAnswerService
                 $this->fail('choices', '選択肢から重複なく1つ以上選んでください。');
             }
             sort($value, SORT_STRING);
+            $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+            // Legacy answer_value is varchar(255). Typed JSON is the source
+            // of truth for long Unicode choice IDs; never truncate an answer.
+            $legacyValue = strlen($encoded) <= 255
+                ? $encoded : 'multiple:sha256:'.hash('sha256', $encoded);
             return [
                 'payload' => ['type' => $type, 'value' => $value],
-                'stored_value' => json_encode($value, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+                'stored_value' => $legacyValue,
                 'graded_value' => $value,
                 'grading_method' => 'question_bank_exact_multiple',
             ];
