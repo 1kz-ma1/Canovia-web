@@ -291,9 +291,13 @@ mandatory; that future access must receive its own security review.
 
 Regression gates: PHPUnit asserts the closed Nginx contract; the
 isolated Docker smoke exercises both SQLite and pinned disposable
-PostgreSQL 17 startup through actual Nginx; and the expanded live HTTPS
-smoke verifies `/up=200`, generic 503 for representative GET and POST
-endpoints (including static/legacy health) plus no-store response
-headers. **This file update is not proof of deployment of the fix**.
+PostgreSQL 17 startup through actual Nginx; and the existing live HTTPS smoke confirms the previously closed
+authentication/OAuth/MCP GET and POST surfaces while the old staging image
+remains deployed. Since the existing image is known to expose the old
+`/health=204` behavior, the expanded **static and legacy-health HTTPS
+checks must be run only after the patched image is deployed** as a
+separate follow-up PR. This two-phase release does not treat the
+pre-deployment smoke PASS as evidence that the Nginx bypass is fixed.
+**This file update is not proof of deployment of the fix**.
 Do not mark the live stage fully closed until the amended commit
 deploys and the post-deploy HTTPS checks pass.
