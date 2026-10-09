@@ -32,3 +32,8 @@ References: [Product Spec](../CANOVIA_PRODUCT_SPEC.md), [Learning draft](../lear
 ### Render public-launch service plan (owner decision, 2026-10-09)
 
 At Canovia public launch, upgrade the **production Web service compute** from Free to Render's lowest paid tier (currently $7/month compute on Hobby; confirm pricing immediately before purchase). This is not an immediate approval of a paid staging service, workspace Pro subscription, or additional paid database. Keep Canovia MCP staging physically isolated and perform a separate budget review before provisioning. See [staging bootstrap](MCP_ISOLATED_STAGING_BOOTSTRAP_CONTRACT.md).
+
+
+### Canovia staging Docker runtime smoke (2026-10-09)
+
+A disposable GitHub Actions job now **builds and boots** the independent staging Docker image with SQLite and a generated test-only APP_KEY, exercises startup guard, migrations, `/up` and the 503 OAuth/MCP lockdown. This is a more realistic check than the earlier unit tests, but **not** a live Render staging deployment. Production Canovia still uses a shared 750-hour/month Free Web instance pool and Render account-level remaining hours cannot be read through the connected service tools; defer creation of a second always-on Free Web instance until the owner verifies remaining hours/budget or approves the early lowest-paid production upgrade. Product owner's agreed paid production launch policy remains unchanged.
