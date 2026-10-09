@@ -6,6 +6,7 @@ use App\Models\QuestionPack;
 use App\Services\AdminAccessService;
 use App\Services\AdaptiveExamPackReadinessService;
 use App\Services\AdaptiveExamProfileRegistry;
+use App\Services\ApExamCandidateAuditService;
 use App\Services\AiJsonInputNormalizer;
 use App\Services\QuestionPackCatalogService;
 use App\Services\QuestionPackImportService;
@@ -25,6 +26,7 @@ class AdminQuestionPackController extends Controller
         QuestionPackPublicationReadinessService $readiness,
         AdaptiveExamProfileRegistry $examProfiles,
         AdaptiveExamPackReadinessService $examReadiness,
+        ApExamCandidateAuditService $candidateAudit,
     )
     {
         $this->ensureAuthorized($request);
@@ -120,6 +122,7 @@ class AdminQuestionPackController extends Controller
             'publicationReadiness' => $publicationReadiness,
             'examPublicationReadiness' => $examPublicationReadiness,
             'bundledPacks' => $bundledPacks,
+            'apCandidateAudit' => $candidateAudit->inspect(),
             'importTemplate' => json_encode(
                 $template,
                 JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT,
