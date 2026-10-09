@@ -24,6 +24,8 @@ final class McpStagingSyntheticActorBootstrap
         if (config('app.env') !== 'staging'
             || config('canovia_staging.isolated') !== true
             || config('canovia_staging.web_access_enabled') !== false
+            || config('canovia_staging.web_access_explicitly_approved') !== false
+            || config('canovia_mcp.tools_enabled') !== false
             || config('canovia_staging.allow_synthetic_owner_bootstrap') !== true
             || ! is_string($password)
             || strlen($password) < 24 || strlen($password) > 128
