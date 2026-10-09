@@ -132,9 +132,15 @@ final class ApExamCandidateAuditService
             // Source visual checks only establish that the visible original
             // statement and options match; they never count as human signoff.
             $spotcheck = $spotchecks->get($key);
+            $snapshot = is_array($spotcheck['verified_snapshot'] ?? null)
+                ? $spotcheck['verified_snapshot'] : [];
             $visualChecked = $originType === 'official'
                 && is_array($spotcheck)
-                && ($spotcheck['status'] ?? '') === 'source_statement_options_visually_spotchecked_only';
+                && ($spotcheckEvidence['candidate_version'] ?? '') === ($candidate['pack']['version'] ?? '')
+                && ($spotcheck['status'] ?? '') === 'source_statement_options_visually_spotchecked_only'
+                && ($snapshot['prompt'] ?? null) === ($question['prompt'] ?? null)
+                && ($snapshot['choices'] ?? null) === $choices
+                && ($snapshot['answer'] ?? null) === $answer;
             if ($visualChecked) {
                 $sourceVisualChecked++;
             }
