@@ -258,3 +258,65 @@ uses exactly six SELECT statements and queries no personal/business rows.
 
 Aiven backup and fork features are documentation facts, **not evidence that
 Canovia has an accessible restorable backup or any particular paid plan**.
+
+
+## Local-only read-only SQL output ingestion — operator runbook (2026-10-09)
+
+The audited SELECT-only SQL and fail-closed offline classifier are now joined
+by a strict TSV **importer**:
+`scripts/ci/p0_mysql_inventory_tsv_import.py`.
+
+It accepts exactly the reviewed six SQL result sets in MySQL CLI
+`--batch --raw --skip-column-names` tab-separated row format.
+The importer **does not open a database connection**, does not call MySQL,
+and never echoes raw input, FK names, batch numbers, credentials, server
+packaging suffixes, unexpected rows or error messages. It outputs only the
+allowlisted section/object status labels and a sanitized version triple.
+It fails with fixed code `INVENTORY_IMPORT_REJECTED` for any missing,
+duplicate, partial, invalid or unexpectedly formatted rows. CI tests the
+normal, incomplete, stale, malformed, unauthorized and secret-like cases.
+
+**Operator-only, on a trusted computer after independently confirming that the
+configured MySQL login-path is the intended production Aiven service AND an
+existing SELECT-only account:**
+
+```bash
+# Never execute in GitHub Actions or Render; no credentials in command history.
+# mysql login-path must have been set up privately by the operator beforehand.
+# Do NOT use the deployment account or relax Aiven network restrictions.
+set -o pipefail
+umask 077
+mysql --login-path=canovia_p0_readonly --batch --raw --skip-column-names \
+  < scripts/sql/p0_mysql_readonly_schema_inventory.sql \
+  | python3 scripts/ci/p0_mysql_inventory_tsv_import.py --input - \
+  > local-p0-sanitized-inventory.json
+
+# Import success is NOT a passing schema; classify it independently.
+python3 scripts/ci/p0_mysql_inventory_offline_triage.py \
+  --report local-p0-sanitized-inventory.json
+```
+
+If MySQL client reports an error, **stop**, confirm the actual selected DB
+and account permissions privately, and do not retry with root/write
+credentials. This deliberately requires the operator to set up an appropriate
+read-only MySQL client profile; neither the agent nor CI provisions one.
+The MySQL client may display its own diagnostic to the operator's local
+terminal; **never upload that output, a raw SQL capture or this login profile
+to GitHub, a chat or public log**. The GitHub CI tests use only synthetic
+status TSV and a separate disposable MySQL service, never live Aiven access.
+
+No claim is made that the login-path named in the example exists, that the
+production MySQL plan is known or that any existing account has logged in.
+A sanitized status report is **not an attestation of database identity,
+backup restorability, deployment readiness or owner release approval**.
+
+Final release sign-off still requires all of the following **separately
+verified** in the actual production environment: (1) true database target
+and full migration ledger, (2) valid prior restore point and **tested**
+restoration on an authorized isolated environment, (3) reviewed migration
+and MySQL nontransactional DDL failure/forward-recovery plan, (4) an
+explicitly approved maintenance window and current live/main/PR commit
+mapping, (5) existing-account Safari/PWA/WKWebView login continuity,
+(6) Learning resume/answer persistence, (7) the owner decision to lift
+Issue #418's release hold. Neither importer nor classifier ever authorizes
+a merge, migration, resource provisioning, or spending.
