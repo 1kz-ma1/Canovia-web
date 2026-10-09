@@ -39,7 +39,12 @@ final class ApExamCandidateQualityReviewService
         $revision = $this->revision->inspect();
         $items = $candidate['questions'] ?? [];
         $entries = $manifest['entries'] ?? [];
+        $precheck = json_decode((string) file_get_contents(resource_path(
+            'learning_review/ap-a-2026-v04-six-technical-precheck-v1.json'
+        )), true, 512, JSON_THROW_ON_ERROR);
+        $precheckEntries = collect($precheck['entries'] ?? [])->keyBy('key');
         $issues = [];
+        $validPrechecks = 0;
         $priorities = ['P0' => 0, 'P1' => 0, 'P2' => 0];
         $origins = ['official' => 0, 'canovia' => 0];
         $proposed = array_fill_keys($revision['changed_keys'], true);
@@ -114,6 +119,29 @@ final class ApExamCandidateQualityReviewService
                 $issues[] = "Incorrect automatic evidence/proposal flag for {$key}.";
             }
 
+            $technical = $precheckEntries->get($key);
+            $technicalMatched = is_array($technical)
+                && ($precheck['candidate_version'] ?? '') === ($candidate['pack']['version'] ?? '')
+                && ($technical['status'] ?? '') === 'technical_basis_precheck_not_independent_human_signoff'
+                && ($technical['quality_approved'] ?? true) === false
+                && ($technical['rights_approved'] ?? true) === false
+                && ($technical['reviewer'] ?? 'invalid') === null
+                && ($technical['reviewed_at'] ?? 'invalid') === null
+                && ($technical['candidate_answer'] ?? null) === ($q['grading_rule']['answer'] ?? null)
+                && ($technical['snapshot'] ?? null) === [
+                    'prompt' => $q['prompt'] ?? null,
+                    'answer' => data_get($q, 'grading_rule.answer'),
+                    'choices' => data_get($q, 'response_schema.0.choices', []),
+                    'explanation' => $q['explanation'] ?? null,
+                ];
+            if ($technical !== null) {
+                if ($technicalMatched) {
+                    $validPrechecks++;
+                } else {
+                    $issues[] = "Invalid/stale technical precheck: {$key}.";
+                }
+            }
+
             $outputItems[] = [
                 'number' => $index + 1,
                 'key' => $key,
@@ -123,9 +151,24 @@ final class ApExamCandidateQualityReviewService
                 'reason' => $row['known_caveat'] ?? null,
                 'todo' => $row['review_tasks'] ?? [],
                 'machine_evidence' => $expectedMachine,
+                'technical_precheck' => $technicalMatched ? [
+                    'finding' => $technical['finding'],
+                    'checks' => $technical['tech_checks'],
+                    'risk' => $technical['risk'],
+                    'references' => $technical['references'],
+                ] : null,
             ];
         }
 
+        if (($precheck['candidate_key'] ?? null) !== ApExamCandidateRevisionPreviewService::PREVIEW_KEY
+            || ($precheck['publication_authorized'] ?? true) !== false
+            || ($precheck['counts']['professional_quality_approvals'] ?? -1) !== 0
+            || ($precheck['counts']['rights_approvals'] ?? -1) !== 0
+            || $precheckEntries->count() !== 6 || $validPrechecks !== 6
+            || $precheckEntries->keys()->diff($revision['changed_keys'])->isNotEmpty()
+            || count(array_intersect($precheckEntries->keys()->all(), $revision['changed_keys'])) !== 6) {
+            $issues[] = 'Six-item technical evidence does not match the revised questions.';
+        }
         if ($priorities !== ['P0' => 6, 'P1' => 35, 'P2' => 39]
             || $origins !== ['official' => 35, 'canovia' => 45]
             || ($manifest['counts']['priority'] ?? null) !== $priorities
@@ -154,6 +197,8 @@ final class ApExamCandidateQualityReviewService
             'source_counts' => $origins,
             'review_checks_pending' => count($outputItems) * count(self::REQUIRED_DIMENSIONS),
             'independent_human_review_pending' => count($outputItems),
+            'technical_prechecks_current' => $validPrechecks,
+            'technical_prechecks_human_approved' => 0,
             'quality_approved' => 0,
             'rights_approved' => 0,
             'signed_off' => 0,
