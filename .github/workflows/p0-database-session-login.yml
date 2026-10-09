@@ -7,6 +7,8 @@ on:
       - 'app/Http/Controllers/AuthController.php'
       - 'config/session.php'
       - 'tests/Feature/P0DatabaseSessionLoginRegressionTest.php'
+      - 'scripts/ci/p0_http_auth_seed.php'
+      - 'scripts/ci/p0_real_http_session_e2e.py'
       - '.github/workflows/p0-database-session-login.yml'
   workflow_dispatch:
 
@@ -43,3 +45,29 @@ jobs:
         run: php artisan test tests/Feature/P0DatabaseSessionLoginRegressionTest.php --fail-on-skipped
       - name: Existing auth failure and onboarding route regression
         run: php artisan test tests/Feature/FirstRunUxV4123Test.php --filter='test_(existing_account_can_log_in_from_welcome_without_being_forced_back_to_first_run|login_failure_message_is_visible_after_redirect|unfinished_new_account_returns_to_welcome_after_logout_and_login)' --fail-on-skipped
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build real login view assets for loopback HTTP
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - name: Real HTTP login, DB session persistence, PHP restart, logout and re-login
+        env:
+          CANOVIA_P0_DISPOSABLE_HTTP_CI: '1'
+          APP_URL: http://127.0.0.1:18789
+          DB_DATABASE: ${{ github.workspace }}/database/p0_auth_http_ci.sqlite
+          DB_CONNECTION: sqlite
+          DB_URL: ''
+          SESSION_DRIVER: database
+          SESSION_SECURE_COOKIE: 'false'
+          SESSION_DOMAIN: ''
+        run: |
+          set -euo pipefail
+          touch database/p0_auth_http_ci.sqlite
+          php -l scripts/ci/p0_http_auth_seed.php
+          python3 -m py_compile scripts/ci/p0_real_http_session_e2e.py
+          php artisan migrate --force --no-interaction >/dev/null
+          php scripts/ci/p0_http_auth_seed.php
+          python3 scripts/ci/p0_real_http_session_e2e.py
