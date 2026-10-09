@@ -25,23 +25,44 @@ LEFT JOIN information_schema.TABLES AS actual
  AND actual.TABLE_NAME = expected.table_name
 ORDER BY expected.table_name;
 
+-- Every historical table column checked by the actual up() contract.
 SELECT 'column' AS section,
        CONCAT(expected.table_name, '.', expected.column_name) AS object_id,
        IF(actual.COLUMN_NAME IS NULL, 'MISSING', 'PRESENT') AS status
 FROM (
     SELECT 'intelligence_decision_traces' AS table_name, 'id' AS column_name
+    UNION ALL SELECT 'intelligence_decision_traces', 'user_id'
+    UNION ALL SELECT 'intelligence_decision_traces', 'plan_id'
     UNION ALL SELECT 'intelligence_decision_traces', 'intelligence_state_snapshot_id'
-    UNION ALL SELECT 'intelligence_decision_traces', 'decision_reference'
     UNION ALL SELECT 'intelligence_decision_traces', 'domain'
     UNION ALL SELECT 'intelligence_decision_traces', 'scope_type'
     UNION ALL SELECT 'intelligence_decision_traces', 'scope_id'
+    UNION ALL SELECT 'intelligence_decision_traces', 'state_reference'
+    UNION ALL SELECT 'intelligence_decision_traces', 'state_fingerprint'
+    UNION ALL SELECT 'intelligence_decision_traces', 'readiness_fingerprint'
+    UNION ALL SELECT 'intelligence_decision_traces', 'readiness_score'
+    UNION ALL SELECT 'intelligence_decision_traces', 'readiness_level'
+    UNION ALL SELECT 'intelligence_decision_traces', 'readiness_confidence'
+    UNION ALL SELECT 'intelligence_decision_traces', 'readiness_components'
+    UNION ALL SELECT 'intelligence_decision_traces', 'readiness_gaps'
+    UNION ALL SELECT 'intelligence_decision_traces', 'readiness_metadata'
+    UNION ALL SELECT 'intelligence_decision_traces', 'decision_reference'
+    UNION ALL SELECT 'intelligence_decision_traces', 'decision_type'
+    UNION ALL SELECT 'intelligence_decision_traces', 'reason_code'
+    UNION ALL SELECT 'intelligence_decision_traces', 'decision_summary'
+    UNION ALL SELECT 'intelligence_decision_traces', 'decision_confidence'
+    UNION ALL SELECT 'intelligence_decision_traces', 'input_fingerprint'
+    UNION ALL SELECT 'intelligence_decision_traces', 'decision_reasons'
+    UNION ALL SELECT 'intelligence_decision_traces', 'decision_metadata'
+    UNION ALL SELECT 'intelligence_decision_traces', 'metadata'
     UNION ALL SELECT 'intelligence_decision_traces', 'created_at'
+    UNION ALL SELECT 'intelligence_decision_traces', 'updated_at'
     UNION ALL SELECT 'learning_answer_evaluation_adjustments', 'id'
     UNION ALL SELECT 'learning_answer_evaluation_adjustments', 'learning_answer_event_id'
     UNION ALL SELECT 'learning_answer_evaluation_adjustments', 'user_id'
+    UNION ALL SELECT 'learning_answer_evaluation_adjustments', 'actor_token'
     UNION ALL SELECT 'learning_answer_evaluation_adjustments', 'reason'
     UNION ALL SELECT 'learning_answer_evaluation_adjustments', 'effect'
-    UNION ALL SELECT 'learning_answer_evaluation_adjustments', 'actor_token'
     UNION ALL SELECT 'learning_answer_evaluation_adjustments', 'created_at'
 ) AS expected
 LEFT JOIN information_schema.COLUMNS AS actual
@@ -50,12 +71,14 @@ LEFT JOIN information_schema.COLUMNS AS actual
  AND actual.COLUMN_NAME = expected.column_name
 ORDER BY expected.table_name, expected.column_name;
 
+-- Legacy decision user/plan foreign keys have alternative valid names.
+-- Check source table/column, parent table/id and ON DELETE, not name alone.
 SELECT 'foreign_key' AS section,
        expected.expected_name AS object_id,
        COALESCE(actual.CONSTRAINT_NAME, 'NOT_FOUND') AS observed_name,
        CASE
          WHEN actual.CONSTRAINT_NAME IS NULL THEN 'MISSING'
-         WHEN actual.CONSTRAINT_NAME = expected.expected_name
+         WHEN actual.CONSTRAINT_NAME IN (expected.expected_name, expected.compatible_name)
           AND actual.REFERENCED_TABLE_NAME = expected.parent_table
           AND actual.REFERENCED_COLUMN_NAME = 'id'
           AND referential.DELETE_RULE = expected.delete_rule
@@ -63,23 +86,11 @@ SELECT 'foreign_key' AS section,
          ELSE 'MISMATCH'
        END AS status
 FROM (
-    SELECT 'intelligence_decision_traces' AS table_name,
-           'intelligence_state_snapshot_id' AS column_name,
-           'idt_snapshot_fk' AS expected_name,
-           'intelligence_state_snapshots' AS parent_table,
-           'CASCADE' AS delete_rule
-    UNION ALL
-    SELECT 'learning_answer_evaluation_adjustments',
-           'learning_answer_event_id',
-           'laea_answer_event_fk',
-           'learning_answer_events',
-           'CASCADE'
-    UNION ALL
-    SELECT 'learning_answer_evaluation_adjustments',
-           'user_id',
-           'laea_user_fk',
-           'users',
-           'SET NULL'
+    SELECT 'intelligence_decision_traces' AS table_name, 'user_id' AS column_name, 'idt_user_fk' AS expected_name, 'intelligence_decision_traces_user_id_foreign' AS compatible_name, 'users' AS parent_table, 'SET NULL' AS delete_rule
+    UNION ALL SELECT 'intelligence_decision_traces', 'plan_id', 'idt_plan_fk', 'intelligence_decision_traces_plan_id_foreign', 'plans', 'SET NULL'
+    UNION ALL SELECT 'intelligence_decision_traces', 'intelligence_state_snapshot_id', 'idt_snapshot_fk', 'idt_snapshot_fk', 'intelligence_state_snapshots', 'CASCADE'
+    UNION ALL SELECT 'learning_answer_evaluation_adjustments', 'learning_answer_event_id', 'laea_answer_event_fk', 'laea_answer_event_fk', 'learning_answer_events', 'CASCADE'
+    UNION ALL SELECT 'learning_answer_evaluation_adjustments', 'user_id', 'laea_user_fk', 'laea_user_fk', 'users', 'SET NULL'
 ) AS expected
 LEFT JOIN information_schema.KEY_COLUMN_USAGE AS actual
   ON actual.CONSTRAINT_SCHEMA = DATABASE()
@@ -92,6 +103,7 @@ LEFT JOIN information_schema.REFERENTIAL_CONSTRAINTS AS referential
  AND referential.CONSTRAINT_NAME = actual.CONSTRAINT_NAME
 ORDER BY expected.table_name, expected.column_name;
 
+-- Named lookup/unique indexes required by the historical up() contract.
 SELECT 'index' AS section,
        expected.index_name AS object_id,
        CASE
@@ -102,25 +114,17 @@ SELECT 'index' AS section,
          ELSE 'MISMATCH'
        END AS status
 FROM (
-    SELECT 'learning_answer_evaluation_adjustments' AS table_name,
-           'learning_eval_adjustment_event_unique' AS index_name,
-           'learning_answer_event_id' AS index_columns,
-           0 AS non_unique
-    UNION ALL
-    SELECT 'intelligence_decision_traces',
-           'intelligence_decision_traces_decision_reference_unique',
-           'decision_reference',
-           0
-    UNION ALL
-    SELECT 'intelligence_decision_traces',
-           'intelligence_decision_scope_created_idx',
-           'domain,scope_type,scope_id,created_at',
-           1
-    UNION ALL
-    SELECT 'intelligence_decision_traces',
-           'intelligence_decision_plan_domain_idx',
-           'plan_id,domain,created_at',
-           1
+    SELECT 'intelligence_decision_traces' AS table_name, 'intelligence_decision_traces_domain_index' AS index_name, 'domain' AS index_columns, 1 AS non_unique
+    UNION ALL SELECT 'intelligence_decision_traces', 'intelligence_decision_traces_state_reference_index', 'state_reference', 1
+    UNION ALL SELECT 'intelligence_decision_traces', 'intelligence_decision_traces_state_fingerprint_index', 'state_fingerprint', 1
+    UNION ALL SELECT 'intelligence_decision_traces', 'intelligence_decision_traces_readiness_fingerprint_index', 'readiness_fingerprint', 1
+    UNION ALL SELECT 'intelligence_decision_traces', 'intelligence_decision_traces_decision_reference_unique', 'decision_reference', 0
+    UNION ALL SELECT 'intelligence_decision_traces', 'intelligence_decision_traces_decision_type_index', 'decision_type', 1
+    UNION ALL SELECT 'intelligence_decision_traces', 'intelligence_decision_traces_reason_code_index', 'reason_code', 1
+    UNION ALL SELECT 'intelligence_decision_traces', 'intelligence_decision_traces_input_fingerprint_index', 'input_fingerprint', 1
+    UNION ALL SELECT 'intelligence_decision_traces', 'intelligence_decision_scope_created_idx', 'domain,scope_type,scope_id,created_at', 1
+    UNION ALL SELECT 'intelligence_decision_traces', 'intelligence_decision_plan_domain_idx', 'plan_id,domain,created_at', 1
+    UNION ALL SELECT 'learning_answer_evaluation_adjustments', 'learning_eval_adjustment_event_unique', 'learning_answer_event_id', 0
 ) AS expected
 LEFT JOIN (
     SELECT TABLE_NAME, INDEX_NAME,
