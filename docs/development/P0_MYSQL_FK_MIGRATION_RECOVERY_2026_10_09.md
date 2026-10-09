@@ -585,79 +585,89 @@ modified. Owner-reported iPhone login recovery (correcting the DB name
 environment variable) remains closed. This PR remains Draft under #418.
 
 
-## Operator-run zero-DDL two-target preflight (2026-10-10)
+## Operator P0 data preflight without Laravel boot (2026-10-10)
 
-There is now an explicitly opt-in **SELECT-only** operator diagnostic:
-`scripts/ops/p0_mysql_readonly_preflight.php --check`. It invokes the
-**same** `preflight()` method used immediately before the
-forward-only repair migration, without calling `up()`, `migrate`, or
-any DDL/DML. The preflight includes both tables' historical ledger,
-required columns, foreign-key parent existence, deletion rules,
-schema-wide constraint-name collisions, exact integer signedness,
-`SET NULL` nullability, orphan-reference existence, index
-compatibility, and potential unique-key duplicates.
+**Production-preferred path:** `scripts/sql/p0_mysql_select_only_data_preflight.sql`
+contains only fixed `SELECT` statements. It does **not** load Laravel,
+bootstrap PHP, migrate or issue DDL/DML. MySQL returns exactly **13**
+fixed-label `PASS` / `BLOCK` rows for: MySQL 8 engine, 5 FK metadata
+compatibility checks (types including signedness, `SET NULL` nullability,
+foreign-key name collisions across the selected schema), 5 foreign-key
+orphan existence checks and 2 unique-key duplicate existence checks
+(excluding `NULL` values accepted by MySQL UNIQUE).
 
-### Operator safety and target guard
+The offline `scripts/ci/p0_mysql_select_only_data_preflight_import.py`
+requires all 13 distinct expected rows in strict MySQL CLI batch TSV
+format; rejects unknown, partial, duplicate, truncated and malformed
+output without ever printing raw rows or secrets. It emits only
+`REVIEW_REQUIRED`/`BLOCK`, fixed reason families such as
+`ORPHANED_REFERENCES_PRESENT` and
+`DUPLICATE_UNIQUE_VALUES_PRESENT`, and hardcoded
+`release_authorized=false`, `production_database_modified=false`,
+`database_identity_independently_verified=false` and
+`backup_restore_verified=false`. Exit code 0 means only that evidence
+was complete with no blockers; it is **never permission to deploy or run
+DDL**.
 
-This is **not** a request to run against Aiven automatically. Before an
-operator chooses to execute it, verify the intended Aiven **service
-identity, plan, database and exact host** separately via the authorized
-Aiven console; identify the correct candidate deployed source commit;
-and use an **already-approved SELECT-only DB credential** with no
-`CREATE`, `ALTER`, `DROP`, `INSERT`, `UPDATE`, or `DELETE`
-grants. Use a trusted local environment with the checked-out reviewed
-PR commit and dependencies. Never place credentials, raw DB metadata,
-connection URLs, customer rows, cookies or terminal transcripts in
-GitHub/chat. Do not run this inside a production Web service shell with
-the application's write-capable connection.
+### Operator use: separate privately approved read-only MySQL identity
 
-With the existing private read-only MySQL connection independently
-established in a controlled local environment, the required **public
-guards** are:
+**Do not execute on Aiven until the operator has approved the check.**
+First privately verify the actual Aiven service, region, DB plan, host,
+database name and applicable schema, and review the exact PR SHA / SQL
+content. Use **existing credentials with only SELECT permissions**,
+not the application's production write-capable credential. The sample
+uses an *operator-private* MySQL client login-path profile containing
+the verified host and SELECT-only account; it does not create one.
 
 ```bash
-# Use the same exact reviewed source checkout as the migration candidate.
-# Independently verify the intended Aiven host and DB name first.
-export APP_ENV=production
-export DB_CONNECTION=mysql
-export CANOVIA_P0_READONLY_PREFLIGHT=1
-export CANOVIA_P0_EXPECTED_DB_HOST='<privately verified exact Aiven host>'
-export CANOVIA_P0_EXPECTED_DB_NAME='<privately verified exact Aiven DB name>'
-# Database login details come from a private, authorized SELECT-only profile.
-php scripts/ops/p0_mysql_readonly_preflight.php --check
+set -euo pipefail
+umask 077
+# Login path and target DB MUST be verified by the operator on a trusted
+# machine. Do not paste either or any credentials into GitHub/chat.
+mysql --login-path=canovia_p0_readonly \
+  --database='<privately verified database name>' \
+  --batch --raw --skip-column-names \
+  < scripts/sql/p0_mysql_select_only_data_preflight.sql \
+  | python3 scripts/ci/p0_mysql_select_only_data_preflight_import.py --input -
 ```
 
-This command requires the exact `--check` argument, explicit opt-in,
-production/testing environment, MySQL driver and independently
-supplied expected DB host/name. Before preflight it checks effective
-Laravel config and `SELECT DATABASE()` against the operator's
-expectations. **These comparisons cannot independently authenticate
-the Aiven service identity or prove the credential has read-only
-privileges; the operator must verify both separately.**
+Run the **existing** `p0_mysql_readonly_schema_inventory.sql` and
+`p0_mysql_readonly_full_migration_ledger.sql` separately using their
+reviewed offline importers before interpreting this data preflight.
+The data-specific query will fail closed if relevant tables/columns are
+absent; it does **not** certify that all expected named indexes/FKs are
+present, every Laravel migration has been applied, or the database is
+the intended Aiven service. It can perform substantial reads on large
+tables: use an approved maintenance window with a tested rollback plan
+and no expectation of instantaneous execution. Pipefail is required:
+a MySQL client error cannot be treated as passing evidence just because
+the offline importer produced JSON.
 
-Output is a **single redacted fixed-code JSON verdict**, never raw
-SQL, passwords, values, table or column identifiers, e.g.:
+### Why the prior Laravel-based operator CLI is now test-only
 
-```json
-{"result":"REVIEW_REQUIRED","code":"PREFLIGHT_VALID_NOT_RELEASE_AUTHORIZATION","release_authorized":false,"production_database_modified":false,"database_identity_independently_verified":false,"backup_restore_verified":false}
-```
+The former `scripts/ops/p0_mysql_readonly_preflight.php` invoked the
+preflight-only migration method without DDL but **bootstrapped Laravel**,
+which may initialize unrelated services. It is therefore now
+**fail-closed restricted to disposable GitHub Actions CI**
+(`APP_ENV=testing`, `GITHUB_ACTIONS=true`,
+`CANOVIA_P0_DISPOSABLE_MYSQL_CI=1`) and must **never** be used against
+production Aiven. The forward-only migration itself continues to run
+the same detailed preflight immediately before reviewed DDL if, much
+later, a separate production migration is authorized.
 
-Blocked checks emit a fixed `PREFLIGHT_...` code and process status 2,
-and never echo SQL exception messages. Successful *format and
-preflight* checks exit zero but remain `REVIEW_REQUIRED`; there is
-**no release-authorization state**.
+CI independently tests the stand-alone SQL:
+1. Complete SELECT-only source results on disposable MySQL 8 must be
+   `REVIEW_REQUIRED` with `release_authorized=false`.
+2. Synthetic orphan **and** duplicate-key records injected into a
+   separate **restored throwaway schema** must produce
+   `BLOCK` without exposing any row values.
+3. Malformed/partial TSV, duplicated status keys, unknown sections,
+   CRLF and invented credentials embedded in input are rejected.
+4. The old PHP entrypoint still proves that valid synthetic preflight
+   does not modify constraints, and refuses absent opt-in.
 
-CI verifies (1) invoking `preflight()` twice with missing synthetic
-constraints does not create them or change the Laravel ledger,
-(2) the operator entrypoint passes against a disposable MySQL 8
-schema, and (3) missing opt-in is rejected before bootstrapping
-Laravel. The test-only account/environment is not the actual Aiven DB.
-
-**This cannot approve a release or guarantee later DDL:** read-only
-queries may be expensive on a large table and must run only under
-operator-approved conditions; concurrent modifications may invalidate
-a preflight result; restoring a real backup is a separate P0 gate.
-The earlier iPhone login problem remains resolved following the
-owner's correction of its production database-name setting.
-Issue #418 hold / PR #443 Draft and main autoDeploy precautions
-remain unchanged.
+No customer rows, SQL dumps, raw MySQL diagnostics, credentials or
+Aiven connection details are uploaded to CI. **This is not an actual
+Aiven backup restoration or proof of production readiness**. Issue
+#418 release hold, Draft PR #443, main autoDeploy and the owner's
+resolved iPhone DB-name/login incident are unaffected.
