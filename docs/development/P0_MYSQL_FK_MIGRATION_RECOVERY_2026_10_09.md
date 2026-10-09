@@ -650,8 +650,11 @@ preflight-only migration method without DDL but **bootstrapped Laravel**,
 which may initialize unrelated services. It is therefore now
 **fail-closed restricted to disposable GitHub Actions CI**
 (`APP_ENV=testing`, `GITHUB_ACTIONS=true`,
-`CANOVIA_P0_DISPOSABLE_MYSQL_CI=1`) and must **never** be used against
-production Aiven. The forward-only migration itself continues to run
+`CANOVIA_P0_DISPOSABLE_MYSQL_CI=1`) **AND** is pinned to the exact
+throwaway loopback MySQL account `127.0.0.1:3306/canovia_p0_ci`
+(`canovia_ci`, dedicated CI-only test password and no `DB_URL`).
+It rejects wrong host/database even if opt-in is present, before
+bootstrapping Laravel, and must **never** be used against production Aiven. The forward-only migration itself continues to run
 the same detailed preflight immediately before reviewed DDL if, much
 later, a separate production migration is authorized.
 
