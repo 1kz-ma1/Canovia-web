@@ -6,6 +6,11 @@
 - [Active lane handoffs](development/ACTIVE_LANE_HANDOFFS.md): current lane intake, dependency queue and instructions for separate execution chats. This is a dated snapshot; re-check latest `main` and live PR/CI evidence.
 - These are **development-process documents**, not new app features or a second roadmap. Product intent remains in [development roadmap](development/ROADMAP.md), with existing active WIP preserved.
 
+## MCP staging and public-release readiness (2026-10-09)
+
+- [Closed staging synthetic Plan/Task read fixture](development/MCP_STAGING_SYNTHETIC_READ_FIXTURE_2026_10_09.md): operator-only fixed sample Plan; no live OAuth/ChatGPT access yet.
+- [Final pre-publication environment and billing checklist](development/RELEASE_ENVIRONMENT_BILLING_READINESS_2026_10_09.md): owner defers paid upgrades until needed and reviews pricing, backup, mail and session safety before public launch.
+
 ## Authority
 1. Actual latest main code and independently verified PR/CI/deploy/device evidence.
 2. [Product specification](CANOVIA_PRODUCT_SPEC.md), [release levels](CANOVIA_RELEASE_LEVEL_SPEC.md), [monetization](CANOVIA_MONETIZATION_SPEC.md).
