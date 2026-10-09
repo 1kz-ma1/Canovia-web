@@ -85,3 +85,18 @@ scope, expiry, revocation, consent narrowing and cross-account denial.
 Proof must use the *real* IdP server rather than GitHub CI mocks.
 ChatGPT's actual client registration and connector activation remain
 a separate gate. Until then, `CANOVIA_MCP_TOOLS_ENABLED=false`.
+
+
+## Disposable PostgreSQL migration compatibility gate
+
+A dedicated GitHub Actions step now boots `postgres:17-alpine` on a
+private ephemeral Docker network alongside the **actual** built Canovia
+staging PHP image, then applies all Laravel migrations twice and asserts
+that the user/Plan/MCP subject/grant/audit tables exist. This catches
+DB portability issues before attaching the dedicated Render PostgreSQL.
+The step bypasses the **instance-specific startup host guard only inside CI**
+using entirely fake credentials and `APP_ENV=testing` to target its own
+local container. It has **no connection to** the created Render staging DB,
+production Aiven DB or Render app secrets; the temporary DB is deleted
+after each run. The actual Render DB still requires a separate private
+staging env update and security review.
