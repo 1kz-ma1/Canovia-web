@@ -28,7 +28,7 @@ final class McpStagingSyntheticFixtureReadinessTest extends TestCase
         ]);
     }
 
-    private function seed(): void
+    private function seedFixture(): void
     {
         $this->assertSame(0, Artisan::call('canovia:mcp-staging-create-synthetic-owner'));
         $this->assertSame(0, Artisan::call('canovia:mcp-staging-create-synthetic-plan'));
@@ -39,7 +39,7 @@ final class McpStagingSyntheticFixtureReadinessTest extends TestCase
         $this->assertSame(1, Artisan::call('canovia:mcp-staging-verify-synthetic-plan', ['--json' => true]));
         $this->assertStringContainsString('"blocked"', Artisan::output());
 
-        $this->seed();
+        $this->seedFixture();
         $plan = Plan::query()->sole();
         $createdAt = $plan->created_at;
         $ownerToken = $plan->owner_token;
@@ -66,7 +66,7 @@ final class McpStagingSyntheticFixtureReadinessTest extends TestCase
 
     public function test_readiness_refuses_production_exposure_or_wrong_database(): void
     {
-        $this->seed();
+        $this->seedFixture();
         $fixture = app(McpStagingSyntheticPlanFixtureBootstrap::class);
         $owner = app(McpStagingSyntheticActorBootstrap::class);
 
@@ -93,7 +93,7 @@ final class McpStagingSyntheticFixtureReadinessTest extends TestCase
 
     public function test_readiness_refuses_mutated_fixture_without_repairing_it(): void
     {
-        $this->seed();
+        $this->seedFixture();
         $task = Task::query()->orderBy('sort_order')->firstOrFail();
         $task->update(['progress_percent' => 99]);
         $this->assertSame(1, Artisan::call('canovia:mcp-staging-verify-synthetic-plan'));
