@@ -46,3 +46,11 @@
 
 - CI: source composition audit (35 IPA + 35 Core + 10 supplemental original), source problem and answer fidelity, 50/10/20 *provisional historical* domain target, five explicit known semantic duplicates excluded, distinct authored candidate-only explanations for each IPA source question, explanation-review status, four choices, unique keys/prompts, provenance, Draft-only import, unauthorized admin denial, publication blocked; SHA-256 invalidation when a correct answer changes; synthetic 80-question exam route, timeout and final grading.
 - Not yet done: full question/choice-by-question visual comparison with IPA source PDF (the official **answer keys** have been checked against IPA's published answer table, but that alone does not verify all transcription), expert verification/sign-off of all 35 draft explanations, accuracy/sign-off of 45 Core questions, semantic duplicate review, syllabus-proportional coverage calibration, owner approval and rights determination, production DB import, production availability, real iOS/PWA operation. Do not report these as completed.
+
+## 2026-10-09 L5-d: 実務監修用の問題別検査・確認キュー
+
+- `ApExamCandidateAuditService` は静的Bundled JSONだけを読み取り、80問それぞれの出典元Packと外部キー、正答、選択肢、解説、問題番号、IPA原問題リンク、未確認の人手監修項目を返す。DB変更や承認・公開操作は一切行わない。
+- 管理者専用 `/admin/question-packs` に折り畳み式の80問監査キューを表示する。一般利用者には正答を公開せず、問別の検査フラグと「人手監修待ち」の区別を確認できる。**検査が0件失敗しても80件全てが専門監修待ち** であり、機械的な原典コピー照合を「正答確認済み」と表現しない。
+- 現状構造監査: 全80問の元問題・4択・正答キー・出典紐付け・完全一致重複チェックは通過。候補v0.3.0の分野は暫定50/10/20、既知の5組の明示的な重複除外を再チェック。
+- 代表的なCore/追加の9問は、MSS・M/M/1・ベイズ・MIPS・D/A・SLA・損益分岐・RAID5・ROIの式を別に計算し、**実際の選択肢ラベル**と一致することをCIで確認。EVMのSV/CVも別計算。これは**限られた計算問題の客観的な検算**であって、残りの正答や説明全体への独立専門認定ではない。
+- 監修者はIPA35問について原問題PDFとCanovia独立解説35件の照合、Core35問と新規10問について正答・誤答選択肢の理由・類似性・現行シラバスの深度・適法利用を問題別に確認。結果や修正履歴を記録し、レビューの最終版だけに `exam_simulation_review.explanations_checked` と `reviewed_content_sha256` を適用。**このPRで承認メタデータは設定しない**。
