@@ -328,3 +328,12 @@ No DB schema, pricing, rollout/entitlement, AI provider, official exam profile, 
 - IPA FAQにより、教育目的等での公表済み過去問題の問題集・テキスト利用について原則個別許諾/使用料は不要。ただし著作権は維持され、年度・期・試験区分・問番号等と、改変した場合の注記が必要。詳細は `AP_A_2026_80_QUESTION_CANDIDATE_AUDIT.md` 。
 - IPA公式由来35問の出典メタデータは存在することを確認。学習者の画面への出典表示・商用提供における留意点・他の著作物の混在の最終確認は未完了。独立監修済みとみなさず、公開ゲートを閉じる。
 - 6問の技術精査は先行統合済みのPR #451で処理済み。本変更は重複実装を避け、IPA出典の機械的確認と管理者向けFAQ導線に限定。
+
+## 2026-10-09 L3-b: Understandingの任意・思考過程メモ（独立Slice）
+
+- **Purpose**: Understandingで単問の採点可能な回答に「なぜ選んだか」を任意で添付し、直後の採点結果とともに読み返せるようにする。未回答のまま記述だけを提出したり、記述自体を「正解」と採点したりしない。
+- **Scope**: Understandingのsingle_choice・multiple_choice・number回答フォームに任意の1000文字以内テキスト欄を表示。サーバ側でも1000文字と文字列型を検証する。PracticeとExam Simulationに追加入力・追加公開はしない。
+- **Storage contract**: 既存のlearning_answer_events.answer_payloadに、記入時だけ任意のreasoning文字列を付加する。回答内容のtype/valueおよびwas_correct/grading_methodは従来どおり、reasoningを採点にも弱点推定にも利用しない。DB migration・AI呼出・履歴バックフィル・Task/Attempt変更なし。
+- **Immutability**: メモ付き回答は回答イベントと不可分で、同一内容の再送は冪等、メモだけの差替えも409。旧answer_payload=nullの選択式回答はメモなし再送のみ許す。新しいメモの追記要求を黙って受理しない。
+- **Presentation & privacy**: 学習者本人の回答結果画面でのみエスケープしたプレーンテキストとして表示。共有/公開/AI送信機能ではない。保存前の下書き自動保存、採点後の編集、記述式本体の採点は**今回未実装**。
+- **Acceptance**: 成績・Task進捗への非干渉、入力拒否、XSS回避、再送冪等/409、従来の回答互換、他ユーザー権限、回答後のリロード表示を既存AdaptiveLearningSingleQuestionV5878Testと関連回帰で確認。実機Safari/PWA/WKWebViewは後日一括受入。Platform P0 #418が残っている間のmain統合・本番反映は独立ゲート。
