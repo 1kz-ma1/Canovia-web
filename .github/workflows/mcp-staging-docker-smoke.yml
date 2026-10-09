@@ -103,7 +103,9 @@ jobs:
             exit 1
           fi
 
-          for endpoint in /login /api/mcp /.well-known/oauth-protected-resource; do
+          for endpoint in / /health /welcome /workspace /login /register /api/mcp \
+            /sw.js /app.webmanifest /build/not-a-real-asset.js /index.php \
+            /.well-known/oauth-protected-resource; do
             status=$(curl --silent --output /dev/null --max-time 5 \
               --write-out '%{http_code}' "http://127.0.0.1:18773$endpoint")
             if [ "$status" -ne 503 ]; then
@@ -211,7 +213,9 @@ jobs:
           done
           test "$pg_boot_ready" = "1"
 
-          for endpoint in /login /api/mcp /.well-known/oauth-protected-resource; do
+          for endpoint in / /health /welcome /workspace /login /register /api/mcp \
+            /sw.js /app.webmanifest /build/not-a-real-asset.js /index.php \
+            /.well-known/oauth-protected-resource; do
             status=$(curl --silent --output /dev/null --max-time 5 \
               --write-out '%{http_code}' "http://127.0.0.1:18774$endpoint")
             test "$status" = "503"
