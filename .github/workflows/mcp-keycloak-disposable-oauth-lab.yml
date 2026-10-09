@@ -4,6 +4,8 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'app/Services/McpAccessTokenIntrospector.php'
+      - 'tests/Feature/McpAccessTokenIntrospectorTest.php'
       - 'scripts/ci/keycloak_mcp_protocol_smoke.py'
       - '.github/workflows/mcp-keycloak-disposable-oauth-lab.yml'
       - 'docs/development/MCP_KEYCLOAK_DISPOSABLE_PROTOCOL_LAB_2026_10_09.md'
