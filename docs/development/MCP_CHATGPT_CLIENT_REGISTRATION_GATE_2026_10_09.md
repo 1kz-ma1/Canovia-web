@@ -1,0 +1,84 @@
+# Canovia / ChatGPT MCP — OAuth client registration acceptance
+
+Date: 2026-10-09
+Stage: My Workspace / `canovia-mcp-staging` (still **Web/OAuth/MCP OFF**).
+
+## Current reality and distinction
+
+A registered OAuth client that imitates an AI host in Keycloak's
+GitHub Actions test is **not ChatGPT**. Real ChatGPT requires an actual
+plugin connection and the exact callback/metadata URI the ChatGPT
+interface supplies. No real Canovia Plan or person is to be used
+until synthetic account link, consent and tool read pass review.
+
+The current official OpenAI plugin/MCP authentication reference supports
+three registration paths:
+
+1. **CIMD** (Client ID Metadata Document): preferred when the authorization
+   server supports it. ChatGPT advertises a stable
+   `https://chatgpt.com/oauth/client.json` client ID metadata document
+   when the IdP advertises RFC 9207 issuer identification. ChatGPT's
+   published authentication methods include `none` and
+   `private_key_jwt`. Keycloak's CIMD feature is **experimental**.
+2. **DCR** (RFC 7591): if configured for DCR, ChatGPT calls the
+   `registration_endpoint` once per connection and reuses the
+   client ID. A DCR endpoint being advertised is not proof that
+   anonymous, unauthenticated registration is authorized or safe.
+3. **Pre-registered client**: possible when the real ChatGPT callback
+   and client details are explicitly available to the operator.
+
+Official sources:
+- https://developers.openai.com/plugins/build/auth
+- https://www.keycloak.org/securing-apps/mcp-authz-server
+- https://www.keycloak.org/securing-apps/client-registration
+
+## Disposable DCR compatibility trial (implementation, not yet accepted)
+
+The GitHub workflow `.github/workflows/mcp-keycloak-disposable-oauth-lab.yml`
+now runs `scripts/ci/keycloak_chatgpt_dcr_smoke.py` against a
+**third disposable Keycloak 26.8.0** instance on loopback. This is
+separate from the previously green synthetic user PKCE and RFC 7662
+tests. The script tries a **public-client** DCR request with
+`token_endpoint_auth_method=none`, exact callback under `.invalid`,
+and only the consented development read scope; then attempts a
+real login, S256 code exchange, and exact MCP resource/introspection.
+All cookies, codes, passwords, tokens and subjects remain within
+CI memory and the ephemeral realm is discarded.
+
+A failed experiment must **not** cause enabling unrestricted anonymous
+registration or disabling token audience checks on any hosted issuer.
+Record the error as a provider configuration gap, and use a secured
+CIMD/pre-registered path or narrowly controlled DCR under separate
+approval. Any DCR deployment requires explicit registration policy
+on allowed origins, trusted hosts, client scopes, redirect allowlist,
+quota/abuse prevention and removal/revocation. Never silently enable
+open-to-the-internet anonymous client registration.
+
+Acceptance checklist for an actual hosted connection:
+
+- [ ] Provider is independent, durable, HTTPS-only and cost-approved.
+- [ ] Provider metadata exposes issuer, registration approach and PKCE S256.
+- [ ] If CIMD is chosen, experimentally validate Keycloak 26.8's
+      `cimd` trusted-domains and resource-indicator client policy,
+      client assertion method intersection, stable ChatGPT client ID
+      and no untrusted URL fetches.
+- [ ] If DCR is chosen, restrict abuse and prove the actual registration
+      response, client type, allowed callback and read-only audience.
+      Do not assume anonymous DCR is available by default.
+- [ ] Exact ChatGPT callback is copied from the plugin management
+      screen; never infer it from this synthetic test.
+- [ ] Two-provider-client flow includes separate Canovia account-link
+      RP and confidential resource-server verifier whose client ID is
+      exactly the MCP URL.
+- [ ] The **real Canovia staging owner** deliberately confirms
+      subject association and a **single Plan** grant. Linking alone
+      never grants access.
+- [ ] An authentic ChatGPT bearer reaches the read-only tool with
+      matching immutable `iss+sub`, exact `aud`, scope and caller
+      identity; the same token fails immediately after consent revoke.
+- [ ] All stage/production controls, subscription upgrade, backup,
+      rollback and privacy review signed off separately.
+
+**Boundary:** no Render service or database has been added,
+no flags switched, no real ChatGPT connection established and no
+billing contract changed by the CI experiment.
