@@ -21,6 +21,62 @@ final class McpStagingSyntheticPlanFixtureBootstrap
     public const FIRST_TASK = 'Review synthetic roadmap context';
     public const SECOND_TASK = 'Verify scoped task retrieval';
 
+    /**
+     * Read-only persisted-fixture verification after a sealed stage reboot.
+     * Neither the secret bootstrap password nor the creation flags are needed.
+     *
+     * @return 'ready'|'blocked'
+     */
+    public function verify(McpStagingSyntheticActorBootstrap $actorBootstrap): string
+    {
+        if (config('app.env') !== 'staging'
+            || config('canovia_staging.isolated') !== true
+            || config('canovia_staging.web_access_enabled') !== false
+            || config('canovia_staging.web_access_explicitly_approved') !== false
+            || config('canovia_mcp.tools_enabled') !== false
+            || (config('canovia_staging.database_mode') !== 'render_postgres'
+                && ! app()->runningUnitTests())
+            || ! $actorBootstrap->isPinnedDatabase()) {
+            return 'blocked';
+        }
+
+        try {
+            if (User::query()->count() !== 1
+                || Plan::query()->count() !== 1
+                || Task::query()->count() !== 2
+                || DB::table('mcp_linked_subjects')->exists()
+                || DB::table('mcp_delegated_grants')->exists()
+                || DB::table('mcp_delegated_access_events')->exists()) {
+                return 'blocked';
+            }
+
+            $actor = User::query()->sole();
+            $plan = Plan::query()->sole();
+            $tasks = Task::query()->where('plan_id', $plan->id)
+                ->orderBy('sort_order')->orderBy('id')->get();
+
+            return $actor->email === McpStagingSyntheticActorBootstrap::EMAIL
+                && $actor->name === 'Canovia MCP Synthetic Owner'
+                && $actor->email_verified_at !== null
+                && (int) $plan->user_id === (int) $actor->id
+                && $plan->creation_request_id === self::REQUEST_ID
+                && $plan->title === self::TITLE
+                && ! (bool) $plan->is_public
+                && ! (bool) $plan->is_collaborative
+                && $tasks->count() === 2
+                && $tasks[0]->title === self::FIRST_TASK
+                && $tasks[0]->status === 'doing'
+                && (int) $tasks[0]->progress_percent === 25
+                && $tasks[1]->title === self::SECOND_TASK
+                && $tasks[1]->status === 'todo'
+                && (int) $tasks[1]->progress_percent === 0
+                    ? 'ready' : 'blocked';
+        } catch (\\Throwable) {
+            // No SQL, DSN, identity or exception content in operator output.
+            return 'blocked';
+        }
+    }
+
     /** @return 'blocked'|'created'|'already_present' */
     public function provision(McpStagingSyntheticActorBootstrap $actorBootstrap): string
     {
