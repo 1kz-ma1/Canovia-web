@@ -61,9 +61,9 @@ final class AdaptiveLearningBankQueueService
         if ($type === 'exact_multiple' && ($input['type'] ?? '') === 'multiple_choice') {
             $answers = $rule['answers'] ?? null;
             return is_array($answers) && count($answers) > 0
-                && count($answers) === count(array_unique($answers))
                 && collect($answers)->every(fn ($answer) =>
-                    is_string($answer) && in_array($answer, $ids, true));
+                    is_string($answer) && in_array($answer, $ids, true))
+                && count($answers) === count(array_unique($answers));
         }
         return false;
     }
