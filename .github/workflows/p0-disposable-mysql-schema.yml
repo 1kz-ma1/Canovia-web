@@ -30,10 +30,15 @@ permissions:
 jobs:
   mysql-p0-schema-integrity:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        mysql_series: ['8.0', '8.4']
+    name: "P0 schema integrity (MySQL ${{ matrix.mysql_series }})"
     services:
       mysql:
-        image: mysql:8.0
+        image: mysql:${{ matrix.mysql_series }}
         env:
           MYSQL_ROOT_PASSWORD: ci-only-root-password
           MYSQL_DATABASE: canovia_p0_ci
@@ -68,6 +73,21 @@ jobs:
           php-version: '8.4'
           extensions: pdo_mysql, mbstring, xml
           coverage: none
+      - name: Assert isolated MySQL major/minor engine for this matrix job
+        env:
+          MYSQL_PWD: ci-only-ephemeral-password
+          EXPECTED_MYSQL_SERIES: ${{ matrix.mysql_series }}
+        run: |
+          set -euo pipefail
+          # Hard-pin this check to the disposable CI container and account.
+          # This is not an Aiven connection or a production version probe.
+          version="$(mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=canovia_ci --database=canovia_p0_ci \
+            --batch --raw --skip-column-names -e 'SELECT VERSION()')"
+          case "$version" in
+            "${EXPECTED_MYSQL_SERIES}."*) echo "p0_disposable_mysql_engine_${EXPECTED_MYSQL_SERIES}: pass" ;;
+            *) echo 'p0_disposable_mysql_engine_version: blocked' >&2; exit 1 ;;
+          esac
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
       - name: Lint repair migrations and MySQL test
