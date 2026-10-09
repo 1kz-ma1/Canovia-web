@@ -125,6 +125,18 @@ case "${CANOVIA_STAGING_WEB_ACCESS_ENABLED:-false}" in
     false|true) ;;
     *) deny "invalid staging public-access switch" ;;
 esac
+case "${CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED:-false}" in
+    false|true) ;;
+    *) deny "invalid staging public-access approval" ;;
+esac
+# Merely switching on web access must NEVER expose login/OAuth/MCP.
+# A separate operator approval and a pinned durable staging DB are required.
+if [ "${CANOVIA_STAGING_WEB_ACCESS_ENABLED:-false}" = "true" ]; then
+    [ "${CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED:-false}" = "true" ] \
+        || deny "staging public web requires independent approval"
+    [ "${CANOVIA_STAGING_DB_MODE:-sqlite}" = "render_postgres" ] \
+        || deny "staging public web requires pinned PostgreSQL"
+fi
 
 if [ "${1:-}" = "--check-only" ]; then
     printf '%s\n' "MCP isolated staging guard: PASS (config only; no DB/network changes)"

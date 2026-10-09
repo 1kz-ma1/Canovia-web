@@ -35,7 +35,13 @@ final class CloseUnopenedMcpStaging
                 return $next($request);
             }
 
-            if (config('canovia_staging.web_access_enabled') !== true) {
+            // A single mistaken environment switch is not sufficient to
+            // expose staging. Require independently reviewed authorization,
+            // a durable isolated database and its live schema readiness.
+            if (config('canovia_staging.web_access_enabled') !== true
+                || config('canovia_staging.web_access_explicitly_approved') !== true
+                || config('canovia_staging.database_mode') !== 'render_postgres'
+                || ! $this->databaseReady()) {
                 return $this->unavailable();
             }
         }

@@ -43,8 +43,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for path in /login /register /account /api/mcp \
-            /.well-known/oauth-protected-resource; do
+          for path in /login /register /account /account/mcp/link/callback \
+            /api/mcp /.well-known/oauth-protected-resource \
+            /.well-known/oauth-protected-resource/api/mcp; do
             status=$(curl --silent --show-error --max-time 20 \
               --dump-header /tmp/canovia-staging-response-headers \
               --output /tmp/canovia-staging-response-body \
