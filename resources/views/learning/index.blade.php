@@ -2,7 +2,10 @@
 @section('title', '1問から始める学習 | Canovia')
 @section('content')
 <div class="mx-auto max-w-3xl space-y-5">
-    <a href="{{ route('plans.tasks.study_practice.show', [$plan, $task]) }}" class="text-sm font-semibold text-sky-500">← 従来のAI演習へ</a>
+    <nav class="flex flex-wrap items-center justify-between gap-3 text-sm" aria-label="学習の移動先">
+        <a href="{{ route('plans.tasks.study_practice.show', [$plan, $task]) }}" class="font-semibold text-sky-400">← 従来のAI演習へ</a>
+        <a href="{{ route('plans.tasks.learning.history', [$plan, $task]) }}" class="font-semibold text-sky-300" data-learning-history-link>学習履歴・復習のヒント →</a>
+    </nav>
     @if($activeRuns->isNotEmpty())
         <section class="page-card p-5 sm:p-7" data-adaptive-learning-resume>
             <h2 class="text-lg font-bold text-slate-50">前回の続き</h2>
@@ -15,27 +18,13 @@
             </div>
         </section>
     @endif
-    <section class="page-card p-5 sm:p-7" data-learning-mode-ranking>
-        <h2 class="text-lg font-bold text-slate-50">今日のおすすめ（参考順位）</h2>
-        <p class="mt-2 text-xs leading-6 text-slate-300">{{ $learningRecommendations['evidence'] }}</p>
-        <p class="mt-1 text-xs leading-6 text-slate-400">{{ $learningRecommendations['diagnostic_hint'] }}</p>
-        <ol class="mt-4 space-y-3">
-            @foreach($learningRecommendations['ranking'] as $rank => $suggestedMode)
-                <li class="rounded-xl border border-slate-600 p-3 text-sm text-slate-200" data-learning-recommendation="{{ $suggestedMode['mode'] }}">
-                    <p class="font-bold">{{ $rank + 1 }}位：{{ $suggestedMode['label'] }}{{ $suggestedMode['available'] ? '' : '（現在は未対応）' }}</p>
-                    <p class="mt-1 leading-6 text-slate-300">{{ $suggestedMode['reason'] }}</p>
-                </li>
-            @endforeach
-        </ol>
-        <p class="mt-3 text-xs leading-6 text-slate-400">順位は説明可能な暫定ルールです。必ずしもこの順番で学習する必要はありません。どのモードを使うかは下の操作で自由に選べます。</p>
-    </section>
     <section class="page-card p-5 sm:p-7" data-adaptive-learning-start>
         <p class="text-xs font-bold tracking-widest text-cyan-400">ADAPTIVE LEARNING / EARLY PILOT</p>
         <h1 class="mt-2 text-2xl font-bold text-slate-50">1問から始める学習</h1>
         <p class="mt-2 text-sm leading-7 text-slate-300">{{ $plan->title }} / {{ $task->title }}</p>
         <p class="mt-3 text-sm leading-7 text-slate-300">問題集の選択問題を1問ずつ解けます。回答はその都度保存。1問で終了しても、途中でページを閉じても記録は消えません。以前のAI演習も引き続き利用できます。</p>
         <div class="mt-4 rounded-xl border border-amber-700/35 bg-amber-900/10 p-3 text-sm text-amber-100">
-            初期版はQuestion Bankの単一選択問題のみ対応。開始直後はBank順で、複数回の誤答が確認できた場合のみ先の候補を再検討します。学力を断定する高度な推論ではありません。模擬試験モードは試験別仕様の確認後に提供します。
+            現在の1問ずつ学習はQuestion Bankの単一選択・複数選択・数値問題に対応。開始直後はBank順で、複数回の誤答が確認できた場合のみ先の候補を再検討します。学力を断定する高度な推論ではありません。模擬試験モードは試験別仕様の確認後に提供します。
         </div>
         @if ($errors->any())<p role="alert" class="mt-3 text-sm text-red-300">{{ $errors->first() }}</p>@endif
         @if ($packs->isEmpty())
@@ -69,6 +58,45 @@
             </form>
         @endif
     </section>
+
+    <section class="page-card p-5 sm:p-7" data-learning-history-overview>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 class="text-lg font-bold text-slate-50">これまでの学習</h2>
+            <a href="{{ route('plans.tasks.learning.history', [$plan, $task]) }}" class="text-sm font-semibold text-sky-300">履歴を振り返る →</a>
+        </div>
+        @if($learningHistory['saved_count'] === 0)
+            <p class="mt-3 text-sm leading-6 text-slate-300">まだ新方式の回答履歴はありません。1問解くと、回答や考え方をここから見直せます。</p>
+        @else
+            <p class="mt-2 text-sm text-slate-300">直近の回答記録：{{ $learningHistory['saved_count'] }}件・記録上の正解：{{ $learningHistory['correct_count'] }}件 <span class="text-xs text-slate-400">（最大{{ $learningHistory['window'] }}件）</span></p>
+            @if($learningHistory['review_topics']->isNotEmpty())
+                <div class="mt-3 flex flex-wrap gap-2">
+                    @foreach($learningHistory['review_topics']->take(3) as $topic)
+                        <span class="rounded-full border border-amber-700/50 px-3 py-1 text-xs text-amber-200">{{ $topic['name'] }}：復習候補</span>
+                    @endforeach
+                </div>
+            @else
+                <p class="mt-2 text-xs text-slate-400">繰り返しの誤答に基づく復習候補はまだありません。</p>
+            @endif
+        @endif
+        <p class="mt-2 text-xs leading-5 text-slate-400">復習候補は直近の記録を整理したもので、苦手分野や習熟度の判定ではありません。</p>
+    </section>
+
+    <details class="page-card p-5 sm:p-7" data-learning-mode-ranking>
+        <summary class="cursor-pointer text-base font-semibold text-slate-100">おすすめモードと、その根拠を見る</summary>
+        <h2 class="mt-4 text-base font-bold text-slate-50">今日のおすすめ（参考順位）</h2>
+        <p class="mt-2 text-xs leading-6 text-slate-300">{{ $learningRecommendations['evidence'] }}</p>
+        <p class="mt-1 text-xs leading-6 text-slate-400">{{ $learningRecommendations['diagnostic_hint'] }}</p>
+        <ol class="mt-4 space-y-3">
+            @foreach($learningRecommendations['ranking'] as $rank => $suggestedMode)
+                <li class="rounded-xl border border-slate-600 p-3 text-sm text-slate-200" data-learning-recommendation="{{ $suggestedMode['mode'] }}">
+                    <p class="font-bold">{{ $rank + 1 }}位：{{ $suggestedMode['label'] }}{{ $suggestedMode['available'] ? '' : '（現在は未対応）' }}</p>
+                    <p class="mt-1 leading-6 text-slate-300">{{ $suggestedMode['reason'] }}</p>
+                </li>
+            @endforeach
+        </ol>
+        <p class="mt-3 text-xs leading-6 text-slate-400">順位は説明可能な暫定ルールです。必ずしもこの順番で学習する必要はありません。どのモードを使うかは下の操作で自由に選べます。</p>
+    </details>
+
     @if(($examProfiles ?? collect())->isNotEmpty())
         <section class="page-card p-5 sm:p-7" data-adaptive-exam-format>
             <h2 class="text-lg font-bold text-slate-50">確認済みの試験形式</h2>
