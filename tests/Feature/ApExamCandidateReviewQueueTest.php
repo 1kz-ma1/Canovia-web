@@ -121,7 +121,7 @@ final class ApExamCandidateReviewQueueTest extends TestCase
 
     public function test_visual_source_evidence_invalidates_on_any_unreviewed_content_or_version_change(): void
     {
-        $candidate = app(\\App\\Services\\QuestionPackCatalogService::class)
+        $candidate = app(\App\Services\QuestionPackCatalogService::class)
             ->payload(ApExamCandidateAuditService::CANDIDATE);
         $questions = collect($candidate['questions'])->keyBy('external_key');
         $evidence = json_decode((string) file_get_contents(
