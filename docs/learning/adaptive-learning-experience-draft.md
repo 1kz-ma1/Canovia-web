@@ -247,3 +247,15 @@ No DB schema, pricing, rollout/entitlement, AI provider, official exam profile, 
 - 誤タップを新規申告したら、activeなA/B Runに限り候補を再計算する。誤タップの採点履歴は保存したまま変更しない。同じ申告の再送で候補生成を繰り返さない。
 - ルールは決定的で、AI呼び出し・DB Migration・追加課金なし。時系列・信頼区間・分野横断学習に関する最適パラメータは**EXPERIMENTAL**。不正な学力推定を表示しない。
 - CIの独立したL4 Featureテストおよび既存V58.79候補キュー・V58.78回答・V58.82評価調整テストで検証。PWA/iOSの入力・表示・端末側復帰はユーザー意向により後日の一括実機検証。
+
+## 2026-10-09 L5 AP科目A試験プロファイル・模試セット審査（Implementation）
+
+- IPA公式試験区分ページ https://www.ipa.go.jp/shiken/kubun/ap.html（最終更新 2026-07-06、確認 2026-10-09）: 2026年度のAPはCBT。科目Aは150分 / 80問出題・80問解答 / 四肢択一。科目Bは150分 / 記述式11問出題・5問解答。2026年度CBT移行で試験時間・形式・出題数は変わらない。補足参照 https://www.ipa.go.jp/shiken/2026/ap_koudo_sc_kikan.html。
+- `config/adaptive_exam_profiles.php` にAP科目Aの **format only VERIFIED** プロファイル `ap-a-cbt-2026-v1`（80問/150分/4選択肢/単一選択）を登録。`source_reference`/`verified_at`と内容検証条件を記録。形式を確認したことは問題集・商用利用権の確認ではない。
+- 科目Bは記述式・11問中5問解答の機能が未実装なため、実際の開始可能な模試プロファイルには登録しない。単一選択のUIで記述式を模倣して公開しない。
+- 試験用問題集は通常の `published` に加え、`exam_code=AP`, `subject=科目A`, `exam_simulation_profile_key=ap-a-cbt-2026-v1`, `exam_simulation_profile_version=2026-v1` と有効問題 **80問ちょうど**、全問 `single_choice/exact_choice`、各4つのラベル付き選択肢・採点ルール、有効な出典、管理者による該当版の記録が必要。
+- 検証済み版の管理者記録は pack.metadata.exam_simulation_review に `reviewed_pack_version`（pack.versionと同一）, `reviewed_at`（YYYY-MM-DD）, `format_checked:true`, `answer_key_checked:true`, `content_rights_checked:true` を保存。これらは担当者のレビュー結果であり機械的な著作権保証ではない。`QuestionPackImportService` のDraft importで当該metadataを設定し、内容を独立に確認した後で明示公開する。既存published Packは上書き不可。改訂は新slug/versionのDraftとして審査。
+- 画面の「試験形式は確認済み」表示と「試験問題集の検証・提供可能」は別。利用可能なPackが0件のときは模試開始を提供せず、通常の1問ずつ学習へ案内。Admin Pack一覧には不足理由（問数・形式・出典・版レビュー）を表示。
+- Entry側の候補制限と開始POSTに **同じ `AdaptiveExamPackReadinessService`** を使用。通常学習の30 Pack表示制限が有効な模試Packを隠さないよう独立検索し、模試対応プロファイルとPackを組にして不正な組合せを提出できないUIにする。開始時も再検証し、全問をsort_order/idの決定的順序でImmutable snapshotへ固定。
+- CIでは合成の80問セットで全面凍結・採点前の正答秘匿・期限・回答Draft保存・終了後の一括採点を検証。合成問題を本番の公式過去問やライセンス取得コンテンツと偽らない。実機はユーザーの希望で後日一括確認。
+- **Operational NOT VERIFIED**: 本番DBに品質・権利審査済み80問Packが登録・公開されているかは未確認。実際の本番模試提供可否・PWA/iOS操作感は別ゲート。L5の検証済み試験プロファイル登録だけで『80問本番模試ができる』とは発表しない。
