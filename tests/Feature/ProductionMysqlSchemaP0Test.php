@@ -421,6 +421,9 @@ final class ProductionMysqlSchemaP0Test extends TestCase
             $table->dropForeign('idt_snapshot_fk');
         });
         Schema::table('learning_answer_evaluation_adjustments', function (Blueprint $table): void {
+            // InnoDB may use this UNIQUE index to enforce the event FK;
+            // remove the CI-only FK first before creating an index collision.
+            $table->dropForeign('laea_answer_event_fk');
             $table->dropUnique('learning_eval_adjustment_event_unique');
             $table->index('reason', 'learning_eval_adjustment_event_unique');
         });
