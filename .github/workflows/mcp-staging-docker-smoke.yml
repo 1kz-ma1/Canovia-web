@@ -31,6 +31,11 @@ jobs:
           docker build --progress=plain --pull -f Dockerfile.mcp-staging \
             -t canovia-mcp-staging:smoke .
 
+      - name: Verify PHP SQLite runtime extensions
+        run: |
+          docker run --rm --entrypoint php canovia-mcp-staging:smoke \
+            -r 'if (!extension_loaded("pdo_sqlite") || !extension_loaded("sqlite3")) { exit(1); }'
+
       - name: Verify unsafe configuration fails before startup
         run: |
           set -eu
