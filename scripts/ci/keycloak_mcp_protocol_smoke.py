@@ -71,7 +71,7 @@ def request_json(url: str, *, payload: dict | None = None,
     return code, result
 
 
-def new_realm(secret: str) -> dict:
+def new_realm(secret: str, resource_secret: str) -> dict:
     # A confidential RP (not ChatGPT), a separate resource client, and
     # a synthetic optional read scope. No user accounts or passwords.
     return {
@@ -90,7 +90,8 @@ def new_realm(secret: str) -> dict:
         }],
         "clients": [
             {
-                "clientId": "canovia-ci-mcp-resource",
+                "clientId": MCP_RESOURCE,
+                "secret": resource_secret,
                 "enabled": True,
                 "protocol": "openid-connect",
                 "publicClient": False,
@@ -116,7 +117,7 @@ def new_realm(secret: str) -> dict:
                     "protocolMapper": "oidc-audience-mapper",
                     "consentRequired": False,
                     "config": {
-                        "included.client.audience": "canovia-ci-mcp-resource",
+                        "included.client.audience": MCP_RESOURCE,
                         "id.token.claim": "false",
                         "access.token.claim": "true"
                     }
@@ -130,12 +131,13 @@ def run_lab() -> None:
     if os.environ.get("GITHUB_ACTIONS") != "true" and os.environ.get("CANOVIA_MCP_LOCAL_LAB") != "true":
         raise Gap("requires_ephemeral_ci_or_explicit_local_lab")
     rp_secret = secrets.token_urlsafe(36)
+    resource_secret = secrets.token_urlsafe(36)
     admin_password = secrets.token_urlsafe(36)
 
     with tempfile.TemporaryDirectory(prefix="canovia-keycloak-ci-") as tmp:
         home = Path(tmp)
         path = home / f"{REALM}-realm.json"
-        path.write_text(json.dumps(new_realm(rp_secret)), encoding="utf8")
+        path.write_text(json.dumps(new_realm(rp_secret, resource_secret)), encoding="utf8")
         # The Keycloak image runs with an unprivileged UID: its bind-mounted
         # directory and ephemeral file must be readable by that UID. All
         # credentials here are random CI-only values on an isolated runner.
@@ -202,7 +204,7 @@ def run_lab() -> None:
 
             status, inspect = request_json(f"{BASE}/token/introspect",
                 payload={"token": token, "token_type_hint": "access_token"},
-                basic=client, http_error_ok=True)
+                basic=(MCP_RESOURCE, resource_secret), http_error_ok=True)
             require(status == 200, "introspection_http_failed")
             require(inspect.get("active") is True, "introspection_not_active")
             require(inspect.get("client_id") == client[0], "client_id_claim_mismatch")
@@ -235,7 +237,7 @@ def run_lab() -> None:
 
             status, revoked = request_json(f"{BASE}/token/introspect",
                 payload={"token": "synthetic-invalid-token-ci-not-a-real-bearer"},
-                basic=client, http_error_ok=True)
+                basic=(MCP_RESOURCE, resource_secret), http_error_ok=True)
             require(status == 200 and revoked.get("active") is False,
                     "invalid_token_not_rejected")
             print("introspection_invalid_token: pass")
@@ -260,6 +262,7 @@ def run_lab() -> None:
                 )]
                 for line in candidates[-8:]:
                     masked = (line.replace(rp_secret, "[REDACTED]")
+                              .replace(resource_secret, "[REDACTED]")
                               .replace(admin_password, "[REDACTED]"))
                     print("keycloak_ephemeral_diagnostic: " + masked[:280])
             subprocess.run(["docker", "rm", "-f", CONTAINER],
