@@ -133,6 +133,17 @@ return new class extends Migration
                 }
             }
 
+            // InnoDB constraint symbols must be unique in the DATABASE,
+            // not merely within this table. A same-name FK on a different
+            // table can make the second ALTER fail after earlier repairs.
+            // Check metadata only: never inspect or output customer rows.
+            if (DB::table('information_schema.REFERENTIAL_CONSTRAINTS')
+                ->where('CONSTRAINT_SCHEMA', DB::connection()->getDatabaseName())
+                ->where('CONSTRAINT_NAME', $expectedName)
+                ->exists()) {
+                throw new RuntimeException('P0 recovery blocked: database-wide foreign key name collision.');
+            }
+
             // Orphaned rows make an ADD FOREIGN KEY fail after earlier DDL.
             // Check existence only: no user identifiers or row contents leave DB.
             if (DB::table($table.' as child')
