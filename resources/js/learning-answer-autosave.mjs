@@ -52,7 +52,8 @@ export function mountLearningAnswerAutosave(root = document, options = {}) {
             announce('下書きを保存できませんでした。接続を確認してください。');
         } finally {
             saving = false;
-            if ((pending || changed) && !stopped && form.isConnected) schedule();
+            // Retry only after fresh edits; do not spin on an offline session.
+            if (pending && !stopped && form.isConnected) schedule();
         }
     }
 
