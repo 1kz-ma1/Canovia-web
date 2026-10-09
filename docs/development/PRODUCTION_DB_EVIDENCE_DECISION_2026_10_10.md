@@ -1,0 +1,157 @@
+# Production DB evidence gate — 2026-10-10
+
+Status: **READ-ONLY TRIAGE / NOT RELEASE AUTHORIZATION**. Platform-owned decision note for [Issue #418](https://github.com/1kz-ma1/Canovia-web/issues/418) and [Draft PR #443](https://github.com/1kz-ma1/Canovia-web/pull/443).
+
+This note changes no runtime code, migrations, databases, credentials, billing, Render setting or deployment. Its purpose is to stop expanding disposable test machinery without evidence from the **actual** Aiven production MySQL, while retaining the schema/data safety hold until the evidence supports a narrower decision.
+
+## 1. Evidence ledger: observed vs unknown
+
+| Observation (2026-10-09 unless specified) | Source / exact artifact | What it proves | What it does **not** prove |
+| --- | --- | --- | --- |
+| 14:02 JST: MySQL 1059 for the two long foreign-key symbols, in a Render exception that named `defaultdb` | Production Render log at 05:02 UTC; Issue #418 | That one deployment attempted invalid FK names on the then-selected connection | That the currently active, owner-corrected DB is `defaultdb`; or that the same failure persists there |
+| Owner reported the iPhone sign-in problem resolved by correcting a DB-name environment setting | Issue #418, PR #443 | This **specific incident is closed by owner report** | The actual current DB name, MySQL schema integrity, PWA E2E or absence of other bugs |
+| Four later production boots at 21:47, 21:59, 22:13 and 22:21 JST emitted `Nothing to migrate` | Render `Canovia` startup log; latest observed deployment `dep-db4ek9e0tbcc73d0g470`, commit `1153e31345ad988885d405e85bebc0c2ab34427e`, Live | The migration command completed without applying new migrations to the then-selected DB | Complete migration ledger/source parity, presence and correctness of FKs/indexes, durable backup, user-data integrity, or device acceptance |
+| PR #443 has guarded historical FK fixes, a forward-only reconciliation, SELECT-only inspection tools and disposable MySQL 8 CI | PR #443 head `279fe06b5ea5aaee7db52a7d3a6de1f8d90ba3eb`; runs [37956354199](https://github.com/1kz-ma1/Canovia-web/actions/runs/37956354199), [37956354157](https://github.com/1kz-ma1/Canovia-web/actions/runs/37956354157), [37956354139](https://github.com/1kz-ma1/Canovia-web/actions/runs/37956354139) all successful | Synthetic engine-specific compatibility and tested fail-closed paths at that SHA | That production needs the same repair or is safe to mutate now; CI has non-failing warnings |
+| Production service is configured to auto-deploy `main`; `docker/render-start.sh` runs `php artisan migrate --force` on boot | Render service metadata + `main` Docker/start script | Even a docs-only `main` merge can trigger a deployment and re-evaluation of migrations | That every docs-only merge necessarily makes a data change |
+
+**Important correction:** do not infer the correct current DB name or an Aiven repair outcome from the previous `defaultdb` exception, the user's login recovery, or `Nothing to migrate`. Independently verify the *current* production target outside chat before interpreting schema output. No current Aiven connection, full schema/ledger or real backup restoration has been independently inspected via the connected tools.
+
+## 2. Reuse the existing tools; avoid a second audit implementation
+
+On a trusted operator machine, after independent confirmation of the Aiven service, region, expected database identity, actual MySQL engine/version, current plan and permission boundary, use an **existing** SELECT-only MySQL identity. Do **not** create/change DB users, allowlists, Render env vars, App credentials, or secrets as part of this issue triage.
+
+Review the *exact source* on PR #443 before execution; all three artifacts remain **unmerged** and are not available on the current `main`:
+
+1. [Targeted schema / FK / index / selected migration inventory](https://github.com/1kz-ma1/Canovia-web/blob/fix/p0-mysql-long-fk-recovery-20261009/scripts/sql/p0_mysql_readonly_schema_inventory.sql) with [status-only classifier](https://github.com/1kz-ma1/Canovia-web/blob/fix/p0-mysql-long-fk-recovery-20261009/scripts/ci/p0_mysql_inventory_offline_triage.py).
+2. [Full Laravel migration ledger SELECT](https://github.com/1kz-ma1/Canovia-web/blob/fix/p0-mysql-long-fk-recovery-20261009/scripts/sql/p0_mysql_readonly_full_migration_ledger.sql) and [offline source comparison](https://github.com/1kz-ma1/Canovia-web/blob/fix/p0-mysql-long-fk-recovery-20261009/scripts/ci/p0_mysql_full_ledger_offline_check.py).
+3. [Optional bounded existence-only orphan/duplicate and type preflight](https://github.com/1kz-ma1/Canovia-web/blob/fix/p0-mysql-long-fk-recovery-20261009/scripts/sql/p0_mysql_select_only_data_preflight.sql) and [strict fixed-status importer](https://github.com/1kz-ma1/Canovia-web/blob/fix/p0-mysql-long-fk-recovery-20261009/scripts/ci/p0_mysql_select_only_data_preflight_import.py), **only after** schema and ledger inspection and assessment of potential query cost on the real data volume.
+
+Use the operator instructions in [PR #443's P0 MySQL gate spec](https://github.com/1kz-ma1/Canovia-web/blob/fix/p0-mysql-long-fk-recovery-20261009/docs/development/P0_MYSQL_FK_MIGRATION_RECOVERY_2026_10_09.md). The Laravel-bootstrap `scripts/ops/p0_mysql_readonly_preflight.php` has been restricted to disposable CI and **must not be used against production**.
+
+Do not share DB name, host, login profile, connection URL, token, raw CLI output, dumps, user rows, identifiers or operational secrets in ChatGPT/GitHub. Only share approved sanitized outcomes: verified/unverified environment, schema status, complete-ledger classification, backup readiness and fixed PASS/BLOCK families. Permission errors and incomplete SQL output are blockers. A successful importer exit status is **REVIEW_REQUIRED**, never migration permission.
+
+## 3. Evidence-driven classification and minimal remediation
+
+| Verified actual Aiven outcome | Decision | Treatment of PR #443 |
+| --- | --- | --- |
+| Correct independently verified target; source/ledger consistent; required FK/index/schema constraints present; read-only preflight acceptable | **No confirmed active schema incident**; close/downgrade only the specific active incident after documented evidence; retain separate pre-launch backup/recovery review | Reassess and split the fresh-install long-FK *preventive* compatibility fix from any unnecessary production-reconciliation migration. Do not ship repair DDL just because CI is green |
+| Expected migration not applied, corresponding table absent or partially created | **Controlled migration needed**, not cleared | Confirm exact pending DDL, data preservation, restorable backup and reviewed maintenance window; target the tested non-destructive creation/reconciliation path |
+| Migration marked applied but FK/index missing | **Verified schema drift** | Historical `up()` edits alone cannot rerun; use reviewed **forward-only** reconciliation only after real preflight, restorable backup, and operator-approved migration |
+| Wrong/unknown DB, missing columns, incompatible keys, unknown ledger entries, conflicting MySQL version, duplicate/orphan checks blocked, or no proven rollback | **BLOCK** | Do not merge/apply; investigate only the identified mismatch rather than adding broad new CI scaffolding |
+| Aiven cannot be safely inspected with existing read-only access | **UNVERIFIED** | Keep migration-affecting PR on hold; request a separately authorized operator route and do not treat synthetic results as real |
+
+The Aiven service plan, restorable recovery point, retention and (where permitted) a separately authorized restore drill remain independent checks. **No production backup, restore or DDL may be initiated from this triage.** MySQL DDL is not fully transactional; plan for forward recovery and concurrent-write/metadata-lock effects.
+
+## 4. Release / merge boundary
+
+- **Keep PR #443 Draft and unmerged** pending the actual Aiven evidence and per-change production review. A fresh current-main rebase, complete diff review, exact-head CI and schema-sensitive tests will be needed before any integration.
+- **Do not interpret Issue #418 as proof that the old iPhone login incident is open.** It is owner-reported resolved; real multi-device regression remains a **separate pre-launch acceptance**.
+- **Do not silently lift the blanket production deployment/migration safety hold yet.** Because the currently configured production startup runs `migrate --force` on every deploy, even a docs-only merge needs a release-risk decision until real Aiven state and pending migrations are understood. PR review may proceed independently without merging.
+- Once the read-only evidence is complete, narrow the hold to actual migration/data risks. Evaluate safe non-schema changes separately under repository CI/merge rules and explicitly distinguish `PR merged` vs `Render live` vs `Aiven schema accepted` vs `device verified`.
+- No change to My Workspace, MCP staging PostgreSQL, OAuth, iOS auth/session or billing is included.
+
+## 5. Next evidence handoff (operator-controlled)
+
+- **Still missing:** independently verified current Aiven DB identity/version, actual targeted schema status, complete migration ledger vs checked-in main, presence/absence of the two original FKs and needed indexes, and Aiven plan/backup restoration evidence.
+- **Next action:** use the *already implemented* PR #443 SELECT-only tools against the **privately verified intended Aiven service** with a pre-existing least-privilege identity, using a trusted local client. Classify results; update Issue #418 with **sanitized status only**. The current ChatGPT GitHub/Render connection does not supply authorized Aiven SQL inspection.
+- **Stop condition:** no existing read-only route, mismatched environment, data query too costly, or unclear backup mechanism → stop. Do not use the production app's write-capable credentials or broaden access for convenience.
+- **Success:** an evidence-backed, small decision either to retire the active incident and retain a preventive fix, or to execute precisely one reviewed non-destructive, restorable schema repair. Avoid additional generalized P0 test expansion before this decision.
+
+## 6. Owner-provided Aiven Console screen-recording observations (2026-10-10 JST)
+
+**Provenance:** The owner supplied two short Aiven Console screen recordings in the chat and asked whether the requested Overview/Backup review was sufficient. These observations are UI evidence only. **Do not upload or reproduce the recordings, sensitive console information or private connection details on GitHub.** They do not authorize production SQL/DDL, credential creation, network changes, purchase or backup restoration.
+
+| UI evidence | Status / boundary |
+| --- | --- |
+| Aiven MySQL service shows `Running` and maintenance version **MySQL 8.4.8** | Confirms displayed service health/version, not the currently selected Laravel database/schema, SQL privileges or data integrity. Existing disposable PR #443 CI targets MySQL 8.0, so production 8.4.8 compatibility should be explicitly reviewed before any DDL authorization. |
+| Aiven Backups shows three **Full** entries: **2026-10-07 02:21:13 UTC**, **2026-10-08 02:22:10 UTC**, and **2026-10-09 02:22:09 UTC**; last is about 346.9 MiB | Establishes that backup entries exist. Does NOT establish ability to fork/restore, retention policy, consistency of target DB or that any backup is restorable. The latest visible backup **predates** the historical 2026-10-09 05:02 UTC MySQL 1059 error, so it is not a post-incident recovery checkpoint. |
+| Aiven Overview shows network IP allowlist **Open to all** | Configuration exposure finding: must separately assess and reduce scope when a safe connectivity plan is known; do NOT impulsively change this setting and break Render's production DB connectivity. No change performed. |
+| Overview references unavailable features on the Free tier; platform-trial banner also shown | Actual active Aiven **billing plan remains unverified** from these recordings, as do backup retention and fork/restore eligibility. Confirm in the authenticated billing/service plan area without sharing payment details. |
+
+**Triage result:** `SERVICE_VERSION_OBSERVED` + `BACKUP_RECORDS_PRESENT`, but `SCHEMA_UNVERIFIED`, `LEDGER_UNVERIFIED`, `RESTORE_UNVERIFIED` and `RELEASE_NOT_AUTHORIZED`. Preserve Issue #418's data-change hold and PR #443's Draft status. The next evidence gap is not another screenshot of Backups: it is the actual schema/ledger via the existing, reviewed SELECT-only route with a verified production DB identity, plus separately demonstrated recovery readiness. No read-only Aiven access has been connected to this chat.
+
+## 7. Cross-check: production-series MySQL 8.4 isolated CI and backup-plan limits (2026-10-10 JST)
+
+**Implementation evidence advanced, production acceptance unchanged.** [Draft PR #443](https://github.com/1kz-ma1/Canovia-web/pull/443) was updated to run its complete P0 disposable MySQL integration suite with **both MySQL 8.0 and MySQL 8.4** service images and an explicit observed-server-series check. Both matrix jobs finished **SUCCESS** on the source-change commit `f1f089b741d14a0cbd222c883b2e24109c96fedd` ([run #37965417969](https://github.com/1kz-ma1/Canovia-web/actions/runs/37965417969)). This addresses the *minor-series compatibility* test gap observed after the owner-provided Aiven version `8.4.8`, but not exact patch parity or actual production evidence. No Aiven contact/backup restore has occurred.
+
+Official Aiven [MySQL Free tier features](https://aiven.io/docs/products/mysql/concepts/mysql-free-tier) include automatic backups **but exclude forks**. The [Aiven MySQL backups reference](https://aiven.io/docs/products/mysql/concepts/mysql-backups) describes daily full and continuous binary-log backup with plan-dependent retention. Since the owner's *actual plan* and restore eligibility remain unverified, do **not** equate three visible full-backup entries with a proven operator-available `Fork & restore` option or restorable current recovery point; choose the allowed backup/restore path only after privately checking the plan. Do not provision paid resources or touch the production database without a separately approved plan.
+
+**Gate stays:** `8_0_CI_PASS` / `8_4_CI_PASS`, `AIVEN_SCHEMA_UNKNOWN`, `AIVEN_LEDGER_UNKNOWN`, `ACTUAL_RESTORE_UNTESTED`, `NO_PRODUCTION_RELEASE`.
+
+## 8. Operator-only SELECT evidence route is prepared, not executed (2026-10-10)
+
+In parallel Draft [PR #443](https://github.com/1kz-ma1/Canovia-web/pull/443), the existing targeted schema SELECT, full-ledger SELECT and strict status importers are now exposed via a **manual, TLS-identity-verified and read-only-grant-checked local shell entrypoint**: [`scripts/ops/p0_mysql_operator_select_only_collect.sh`](https://github.com/1kz-ma1/Canovia-web/blob/fix/p0-mysql-long-fk-recovery-20261009/scripts/ops/p0_mysql_operator_select_only_collect.sh). It is guarded against automated CI and absent owner/operator opt-in; it is *not* a live Aiven query and does not run the expensive optional orphan/duplicate scans or any write.
+
+Aiven's [official MySQL service user management guide](https://aiven.io/docs/products/mysql/howto/manage-service-users) is important: **a newly created user has admin-level privileges by default** unless `mysql_grants` is explicitly restricted through supported Aiven API capabilities. Do **not** treat the Console's ordinary Add service user button as a safe SELECT-only creation path. Never automatically create/grant/modify users, reuse `avnadmin`, modify production network policy, or request credentials in GitHub or ChatGPT. If the owner has no *existing* verified SELECT-only service user, the next step is an **independently approved least-privilege account-access change**, not a speculative SQL connection.
+
+The verified Render production log continues to show startup `Nothing to migrate` on later restarts (including 2026-10-09 17:19 UTC), but this still does **not** prove actual FK/index state. Release verdict stays `AIVEN_SCHEMA_UNVERIFIED / BACKUP_RESTORE_UNVERIFIED / HOLD`. Additional synthetic CI alone cannot close the real evidence gap.
+
+
+## 9. MySQL metadata privilege visibility and exact-scope gate (2026-10-10)
+
+MySQL 8.4 documentation confirms that an ordinary account sees `INFORMATION_SCHEMA` metadata **only for objects on which it holds an applicable privilege** ([MySQL 8.4 INFORMATION_SCHEMA privilege model](https://dev.mysql.com/doc/refman/8.4/en/information-schema.html)). Therefore a `SELECT` grant solely on `migrations` can yield **false-negative MISSING** tables/FKs; a schema-wide `SELECT` would permit private data reads and is also unacceptable.
+
+[Draft PR #443](https://github.com/1kz-ma1/Canovia-web/pull/443) now requires exactly:
+- `REFERENCES` on the **independently verified target schema** to expose structural metadata, without user-table row reads
+- `SELECT` on that schema's `migrations` table **only**
+- optional `USAGE`; no `SELECT` on `users`, schema-wide `SELECT`, roles, DDL/DML, grant option or other database grants
+
+A new fail-closed grant parser replaces the prior loose permission check. A disposable MySQL 8.0/8.4 CI test creates a **synthetic local MySQL user**, verifies the FK/index metadata inventory and full ledger under precisely those grants and confirms that a `users` row read is rejected. This does not connect to Aiven or create users in its service.
+
+Aiven's service-user API `mysql_grants` controls privilege *types* when provisioning; its documentation does **not** prove that granting `SELECT` this way is automatically restricted to the `migrations` table ([Aiven service user grants](https://aiven.io/docs/products/mysql/howto/manage-service-users)). **Do not assume `mysql_grants=["REFERENCES","SELECT"]` satisfies the above scope** or create a default admin user. Confirm exact table-scoped grants are available on the actual service in a separate operator-approved action; otherwise **hold** rather than loosen policy.
+
+Evidence boundary is unchanged: no live Aiven database identity/schema/ledger/restore verification and no permission/credential changes. PRs #443 and #459 remain Draft/unmerged pending real safe inspection.
+
+
+## 10. Operator handoff: Aiven Users inventory before any account creation (2026-10-10)
+
+This is the **next independent evidence request**, not an instruction to create resources. No additional CI, migration edits or generalized safety scaffolding can establish which real Aiven service users exist.
+
+### Owner's minimal, no-change console review
+
+1. Sign in to the real [Aiven Console](https://console.aiven.io/) using the account controlling Canovia's existing production MySQL service.
+2. Open that existing service and navigate to **Connect → Users** (documented in [Aiven's official MySQL user management guide](https://aiven.io/docs/products/mysql/howto/manage-service-users)).
+3. **Inspect the list only. Do not click Add/Create user, rotate passwords, change authentication, upgrade, update an IP allowlist, or touch production database settings.**
+4. Answer just one status question in the implementation chat: `Only avnadmin and application user`, `Separate inspection user exists`, or `Unclear`. If uncertain, a *redacted* screenshot of the Users overview may help, hiding all names/identifiers, passwords, generated secrets, URLs, endpoints and other connection details. No screenshot is required when the status can be conveyed in words.
+
+### Why this is not an Aiven auto-provisioning task
+
+Aiven says new users get **admin-level privileges by default** unless created through a supported `mysql_grants` route. Aiven's published grant list controls permitted privilege **types** and mentions database scopes; it does not establish that its API automatically restricts a new account to the exact `REFERENCES ON verified_db.*` and `SELECT ON verified_db.migrations` contract proven in **disposable** MySQL. Do **not** blindly create a service user using `mysql_grants=["SELECT", "REFERENCES"]` and assume that it cannot read actual private rows. An ordinary Aiven service-level admin credential is likewise unacceptable for automated application-style inspection. Reference: [Aiven Manage MySQL service users](https://aiven.io/docs/products/mysql/howto/manage-service-users).
+
+- **If an existing safe inspector exists:** privately verify its real `SHOW GRANTS`, trusted Aiven server identity, intended *logical database*, TLS CA and review the exact PR #443 operator collector. A generic name such as `read-only` does **not** prove its privileges.
+- **If none exists:** prepare a *separate*, explicitly authorized account-access plan, confirm Aiven's support for exact per-database/per-table grants for this existing database (or ask Aiven support); do not provision via the default admin Console UI and do not weaken the collector's grant guard. Only after the user authorizes that independent change should one create/use a new account. No credentials need to enter GitHub or ChatGPT.
+- **If unclear:** stop and inspect only service-user metadata, keeping Issue #418's production migration hold.
+
+This first console step alone cannot establish the live schema/ledger and does **not** grant permission to merge #443/#459. The currently connected GitHub/Render tools lack a privileged Aiven MySQL connector, and the source-inspection + disposable CI results are not a substitute for an authorized real Aiven SQL inspection or an independently restorable backup.
+
+
+## 11. Owner confirms ONLY `avnadmin` exists (2026-10-10 JST)
+
+**Owner-reported Aiven Console fact:** On the existing production MySQL service's **Connect → Users** view, the only listed service user is **`avnadmin`**. This resolves the previous "does an inspection user already exist?" branch: **NO existing dedicated inspection service user**. Treat this as *reported UI evidence*, not independent SQL proof, and do not infer the current Laravel logical database or application credential scopes.
+
+### Safe, not-yet-executed path
+
+**No Aiven access change has been approved or performed.** The existing `avnadmin` account is a full-access administrative user; never pass it to the operator SELECT-only collector or make its privileges/password/session unusable for Canovia. No reason to rotate the application database credentials as part of this inspection.
+
+Aiven's [official MySQL service-user guide](https://aiven.io/docs/products/mysql/howto/manage-service-users) documents **creating a new service user through the API with `mysql_grants: []`**, deliberately giving it *no privileges beyond service connection*. Omitting this key gives **admin privileges by default**. If granular grants are unsupported by this service, the API returns **HTTP 400**; do not bypass by clicking ordinary console Add user. Creating an Aiven user is a production access change requiring separate owner approval and privately held Aiven API credentials.
+
+After such a **separately approved** low-privilege account is created, this still does **NOT** complete the audit! The tested exact privilege policy requires, for a **privately verified logical schema**: `REFERENCES ON schema.*` for INFORMATION_SCHEMA structural visibility and `SELECT ON schema.migrations` for the non-personal Laravel ledger, with **no** SELECT over the user tables or the full schema. Aiven's documented `mysql_grants` supports privilege *types*, but does not demonstrate this exact table-limited scope. Before provisioning, validate with Aiven support or a safely isolated test that the admin grant path for that actual managed service supports the exact privileges. Do **not** use `mysql_grants: ["REFERENCES", "SELECT"]` as a substitute; broad SELECT may expose Canovia account data.
+
+### Action boundaries and owner handoff
+
+1. **First:** confirm this precise creation/grant model is supported on the existing service, without creating an account or changing credentials/settings. Record a supported method in a separately reviewed plan.
+2. **Only with separate owner authorization:** provision **one dedicated** service user with explicit zero initial grants (API `mysql_grants: []`), privately complete exact grants, and audit `SHOW GRANTS` plus a denied user-table SELECT. If granularity or verification fails, stop and remove only the new unused user through an approved recovery route. Never alter `avnadmin`.
+3. **After successful proof:** run the existing strict TLS-verified operator-local SELECT-only collector against the independently verified correct production logical DB. Do not paste API tokens, SQL passwords, grant strings, service URLs or DB names into GitHub or ChatGPT. Only sanitized status families may be communicated.
+4. **Even then:** separate Aiven backup/restore verification is needed before *any* production DDL/PR #443 merge. Documentation changes in #459 must not be auto-merged while #418's production release hold is active.
+
+**Current verdict:** `ONLY_ADMIN_ACCOUNT_EXISTS` / `DEDICATED_INSPECTOR_NOT_CREATED` / `AIVEN_GRANT_SUPPORT_UNVERIFIED` / `AIVEN_SCHEMA_UNVERIFIED` / `NO_PRODUCTION_RELEASE`.
+
+## 11. Owner-confirmed Aiven Users = only avnadmin; safe two-stage bootstrap prepared (2026-10-10)
+
+Owner directly inspected the existing production Aiven MySQL service's **Connect → Users** list and confirmed **only `avnadmin` exists**. There is **no pre-existing dedicated inspection account**. Do not use the administrator for the P0 metadata collector. This does not independently prove which identity the deployed Laravel app uses; inspect that separately during release-readiness review, without exposing credentials or changing production login.
+
+[Draft PR #443](https://github.com/1kz-ma1/Canovia-web/pull/443) contains the new [two-stage bootstrap handoff](https://github.com/1kz-ma1/Canovia-web/blob/fix/p0-mysql-long-fk-recovery-20261009/docs/development/AIVEN_P0_INSPECTOR_TWO_STAGE_SETUP_2026_10_10.md) and a **no-network**, local payload-only generator `scripts/ops/p0_aiven_zero_grants_payload.py`. The generated Aiven API body always includes `"mysql_grants":[]`, never omits that property or substitutes blanket `SELECT`. This follows [Aiven's published zero-grant creation contract](https://aiven.io/docs/products/mysql/howto/manage-service-users). If the real service does not support granular grant creation, an API 400 is a **STOP**, not permission to fall back to Console/default-admin creation.
+
+The second stage — **if independently supported and separately owner-approved** — is granting `REFERENCES` on exactly the verified logical schema and `SELECT` on exactly its `migrations` table, then rejecting any wider effective privileges. No API call, Aiven user creation, GRANT, production SELECT, DDL, Render change, production backup/restore test, billing or deployment has been performed by this preparation. The end of the implementation-side preparation is now a **real service capability + account provisioning decision**; further synthetic CI is not a substitute for it.
+
+**Gate:** `AIVEN_USERS_ONLY_AVNADMIN_OBSERVED`, `ZERO_GRANTS_BODY_READY`, `EXACT_SCOPE_AIVEN_SUPPORT_UNKNOWN`, `INSPECTOR_NOT_CREATED`, `SCHEMA_UNKNOWN`, `RESTORE_UNTESTED`, `RELEASE_HOLD`.
