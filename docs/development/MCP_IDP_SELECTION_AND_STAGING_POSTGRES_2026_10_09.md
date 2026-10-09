@@ -530,3 +530,8 @@ a guessed URL, a literal secret in code, or public database access.
 - The **actual Render database is still not connected**. Do not confuse
   these readiness/security acceptances with the future, separately gated
   Render-native PostgreSQL cutover or real OAuth tests.
+
+
+## Latest cross-checked staging handoff (2026-10-09; supersedes older SQLite-only snapshots)
+
+The existing staging Render Web has been confirmed **connected** to its independent PostgreSQL database. Its live boot logged `render_postgres` with migrations completed; HTTP probes still show `/up=200` and OAuth/MCP/login `503`. Do not infer that an IdP, OAuth session, synthetic Plan or ChatGPT connection is active. The pre-cutover statements elsewhere in this historical decision record refer to earlier deployments and must not override this validated state. The synthetic-read test fixture is prepared in [the dated acceptance contract](MCP_STAGING_SYNTHETIC_READ_FIXTURE_2026_10_09.md). Paid services will be reviewed at the [final pre-publication gate](RELEASE_ENVIRONMENT_BILLING_READINESS_2026_10_09.md), not upgraded as a prerequisite of this source-only change.

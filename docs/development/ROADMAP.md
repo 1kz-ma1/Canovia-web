@@ -31,7 +31,7 @@ References: [Product Spec](../CANOVIA_PRODUCT_SPEC.md), [Learning draft](../lear
 
 ### Render public-launch service plan (owner decision, 2026-10-09)
 
-At Canovia public launch, upgrade the **production Web service compute** from Free to Render's lowest paid tier (currently $7/month compute on Hobby; confirm pricing immediately before purchase). This is not an immediate approval of a paid staging service, workspace Pro subscription, or additional paid database. Keep Canovia MCP staging physically isolated and perform a separate budget review before provisioning. See [staging bootstrap](MCP_ISOLATED_STAGING_BOOTSTRAP_CONTRACT.md).
+**Owner decision (2026-10-09): no paid upgrade now.** Review the production Web compute tier, staging/IdP requirements, current provider prices and Free resource limits in the **final pre-publication release-readiness review**. Upgrade only when a demonstrated technical or launch need exists, with explicit owner approval; no automatic purchase or paid staging provisioning is authorized. Keep Canovia MCP staging physically isolated from production. See the [final environment/billing checklist](RELEASE_ENVIRONMENT_BILLING_READINESS_2026_10_09.md) and [staging bootstrap](MCP_ISOLATED_STAGING_BOOTSTRAP_CONTRACT.md).
 
 
 ### Canovia staging Docker runtime smoke (2026-10-09)
@@ -120,3 +120,8 @@ Next: synthetic-only owner and IdP client/issuer preflight under an
 independent private-access review; never turn on public Web/MCP by
 default. The Free DB expires **2026-11-08 UTC** without free backups.
 See the [operational acceptance record](MCP_IDP_SELECTION_AND_STAGING_POSTGRES_2026_10_09.md).
+
+
+### V59: isolated synthetic Plan/Task fixture preparation (2026-10-09)
+
+A staging-only, operator-armed CLI fixture is implemented to create one **private invented Plan with two synthetic Tasks** for the previously created synthetic owner, with closed HTTP/OAuth/MCP gates. Idempotence, foreign-user refusal and a pinned isolated DB guard have dedicated regression tests. **This does not mean that the fixture was created on live staging, or that the IdP/ChatGPT OAuth E2E is complete.** No changes to production credentials, Aiven, Render plans or staging flags were made by this code. See [fixture and next OAuth acceptance](MCP_STAGING_SYNTHETIC_READ_FIXTURE_2026_10_09.md).

@@ -71,3 +71,27 @@ Artisan::command(
         return $outcome === 'blocked' ? 1 : 0;
     },
 )->purpose('Create one fixed synthetic Canovia user only in closed isolated staging with a private test password');
+
+/**
+ * Deliberately separate from owner creation. Run only after the isolated
+ * synthetic owner exists; no external IdP identities or grants are created.
+ */
+Artisan::command(
+    'canovia:mcp-staging-create-synthetic-plan
+        {--json : Emit only a safe status code, never account or Plan details}',
+    function (\App\Services\McpStagingSyntheticPlanFixtureBootstrap $bootstrap): int {
+        $outcome = $bootstrap->provision(app(\App\Services\McpStagingSyntheticActorBootstrap::class));
+
+        if ($this->option('json')) {
+            $this->line((string) json_encode([
+                'schema' => 'canovia.mcp.staging_synthetic_plan.v1',
+                'status' => $outcome,
+                'production_authorized' => false,
+            ], JSON_THROW_ON_ERROR));
+        } else {
+            $this->line('Synthetic staging Plan fixture: '.$outcome);
+        }
+
+        return $outcome === 'blocked' ? 1 : 0;
+    },
+)->purpose('Prepare a fixed private synthetic Plan and Tasks only in a closed isolated stage');
