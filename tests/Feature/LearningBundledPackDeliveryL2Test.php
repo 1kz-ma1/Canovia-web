@@ -103,8 +103,11 @@ final class LearningBundledPackDeliveryL2Test extends TestCase
                 ->assertSee('data-install-status="draft"', false)
                 ->assertSee('公開条件：充足');
 
+            // A Draft title may be mentioned in informational content, but
+            // it must not be an eligible Learning start-form option.
             $this->actingAs($user)->get(route('plans.tasks.learning.index', [$plan, $task]))
-                ->assertOk()->assertDontSee($pack->title);
+                ->assertOk()
+                ->assertDontSee('<option value="'.$pack->id.'"', false);
 
             $admin->patch(route('admin.question_packs.status', $pack), ['status' => 'review'])
                 ->assertSessionHasNoErrors();
