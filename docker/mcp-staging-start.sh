@@ -203,6 +203,38 @@ if [ "${CANOVIA_STAGING_VERIFY_SYNTHETIC_FIXTURE_ON_START:-false}" = "true" ]; t
         || deny "fixture verification requires MCP tools closed"
 fi
 
+# Staging-only synthetic password rotation: no caller-supplied identities
+# and no web endpoint. Explicit approval, one-shot boot, private credential.
+case "${CANOVIA_STAGING_ROTATE_SYNTHETIC_PASSWORD_ON_START:-false}" in
+    false|true) ;;
+    *) deny "invalid synthetic password rotation switch" ;;
+esac
+if [ "${CANOVIA_STAGING_ROTATE_SYNTHETIC_PASSWORD_ON_START:-false}" = "true" ]; then
+    [ "${CANOVIA_STAGING_ALLOW_SYNTHETIC_PASSWORD_ROTATION:-false}" = "true" ] \
+        || deny "rotation requires independent operator approval"
+    [ "${CANOVIA_STAGING_DB_MODE:-sqlite}" = "render_postgres" ] \
+        || deny "rotation requires pinned PostgreSQL"
+    [ "${CANOVIA_STAGING_WEB_ACCESS_ENABLED:-false}" = "false" ] \
+        || deny "rotation requires closed Web"
+    [ "${CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED:-false}" = "false" ] \
+        || deny "rotation requires no public approval"
+    [ "${CANOVIA_STAGING_SYNTHETIC_OWNER_BOOTSTRAP_ON_START:-false}" = "false" ] \
+        || deny "rotation must not coincide with owner bootstrap"
+    [ "${CANOVIA_STAGING_SYNTHETIC_PLAN_FIXTURE_ON_START:-false}" = "false" ] \
+        || deny "rotation must not coincide with Plan bootstrap"
+    [ -n "${CANOVIA_STAGING_SYNTHETIC_OWNER_ROTATED_PASSWORD:-}" ] \
+        || deny "rotation requires private new password"
+    for name in CANOVIA_MCP_DISCOVERY_ENABLED CANOVIA_MCP_TOKEN_INTROSPECTION_ENABLED \
+        CANOVIA_MCP_ACCOUNT_LINK_ENABLED CANOVIA_MCP_PLAN_CONSENT_ENABLED \
+        CANOVIA_MCP_DELEGATED_POLICY_ENABLED CANOVIA_MCP_TOOLS_ENABLED; do
+        [ "$(printenv "$name" 2>/dev/null || true)" != "true" ] \
+            || deny "rotation requires all OAuth/MCP gates closed"
+    done
+else
+    [ -z "${CANOVIA_STAGING_SYNTHETIC_OWNER_ROTATED_PASSWORD:-}" ] \
+        || deny "stale synthetic password secret must be cleared"
+fi
+
 if [ "${1:-}" = "--check-only" ]; then
     printf '%s\n' "MCP isolated staging guard: PASS (config only; no DB/network changes)"
     exit 0
