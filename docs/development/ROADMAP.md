@@ -125,3 +125,19 @@ See the [operational acceptance record](MCP_IDP_SELECTION_AND_STAGING_POSTGRES_2
 ### V59: isolated synthetic Plan/Task fixture preparation (2026-10-09)
 
 A staging-only, operator-armed CLI fixture is implemented to create one **private invented Plan with two synthetic Tasks** for the previously created synthetic owner, with closed HTTP/OAuth/MCP gates. Idempotence, foreign-user refusal and a pinned isolated DB guard have dedicated regression tests. **This does not mean that the fixture was created on live staging, or that the IdP/ChatGPT OAuth E2E is complete.** No changes to production credentials, Aiven, Render plans or staging flags were made by this code. See [fixture and next OAuth acceptance](MCP_STAGING_SYNTHETIC_READ_FIXTURE_2026_10_09.md).
+
+
+### V59 sealed MCP staging synthetic data persistence (2026-10-09)
+
+**LIVE VERIFIED — staging only.** A synthetic owner and one private
+invented Plan/two Tasks were provisioned in the separately pinned
+Render PostgreSQL; temporary credential and bootstrap switches were
+cleared. [PR #426](https://github.com/1kz-ma1/Canovia-web/pull/426)
+adds a strictly staging-only read-only verifier. Deploy
+`dep-db4a1j3bc2fs73b53ds0` reached Live after reporting synthetic
+fixture verification `ready` on the sealed restart. This is **not**
+ChatGPT OAuth or MCP delegated access. Real IdP, synthetic credential
+rotation, ChatGPT client registration, same-subject consent and token
+audience/introspection E2E remain incomplete. Paid-plan decisions remain
+deferred to the final pre-publication readiness gate. See
+[dated operational evidence](MCP_STAGING_SYNTHETIC_READ_FIXTURE_2026_10_09.md).
