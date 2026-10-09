@@ -60,3 +60,48 @@ A future production connection requires the formal plan in
 [MCP staging IdP preflight](MCP_STAGING_IDP_PREFLIGHT_CONTRACT.md) and a
 real provider/client acceptance test. Never turn the default-off flags on
 merely because the Docker image builds.
+
+## Actual Render isolated staging provisioned (2026-10-09)
+
+The owner confirmed the workspace's Render included-usage panel showed
+**48.78 / 750 Free Web instance-hours consumed** before provisioning.
+A separate **Free Web** staging service was created by the Render connector:
+
+- Service name: `canovia-mcp-staging`
+- Service ID: `srv-db43l4nlk1mc73emseig`
+- URL: https://canovia-mcp-staging.onrender.com
+- Dashboard: https://dashboard.render.com/web/srv-db43l4nlk1mc73emseig
+- Docker source: `main`, `Dockerfile.mcp-staging`
+- Render region/plan: `singapore` / `free`
+- Auto deploy: **OFF**; no production service settings were changed.
+- First deploy: `dep-db43l57lk1mc73emsg3g`, commit `d5865f8`,
+  Render reported **live**, and its startup log showed the isolated SQLite
+  migrations completing successfully.
+- Staging-only `APP_KEY` was generated independently and configured via
+  Render service env vars; its value is intentionally not stored in GitHub.
+- Browser access: **OFF**; OAuth discovery, introspection, account linking,
+  Plan consent, delegated policy, MCP tools: **ALL OFF**.
+- The staging service **has no Aiven/Postgres database, external IdP, user
+  records or real-world Plan data**. Its SQLite DB is ephemeral on sleep,
+  restart and deploy.
+
+This was an explicit owner-approved **Free staging deployment**, not a
+paid upgrade or production launch. Render Free Web services automatically
+spin down after about 15 minutes without inbound requests; spun-down hours
+do not count against the monthly shared 750-hour pool. Therefore **do not
+schedule keepalive pings**; check usage periodically and suspend/delete the
+isolated service in Render if monthly hours become constrained. The connected
+Render tools currently do not support service deletion or suspension.
+
+A dedicated public-network GitHub Actions HTTP smoke job,
+`.github/workflows/mcp-staging-live-http-smoke.yml`, now checks exact
+`/up=200` and account/OAuth/MCP `503` via the Render domain. It runs
+once as a PR check or manually; **not** on a recurring cron that prevents
+Free spin-down. An initial live deploy result alone proves process readiness,
+not the external HTTP security boundary: require this separate network test
+before declaring the staging access gate verified.
+
+Next steps: select an IdP tenant, provision durable *staging-only* storage
+and a reviewed stage access-control mechanism before opening any OAuth,
+account or private MCP capability. Existing Canovia production remains a
+Free service until the owner's **public-launch** paid-compute plan change.
