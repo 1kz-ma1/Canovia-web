@@ -194,6 +194,71 @@ final class ApExamCandidateBundleAuditTest extends TestCase
         $this->assertDatabaseCount('question_packs', 0);
     }
 
+    public function test_retained_original_core_answers_and_representative_arithmetic_are_frozen_for_review(): void
+    {
+        $candidate = app(QuestionPackCatalogService::class)->payload(self::CANDIDATE);
+        $originalCore = collect($candidate['questions'])->filter(
+            fn (array $q) => data_get($q, 'learning_metadata.curation.source_pack_slug')
+                === 'ap-a-canovia-core-v1'
+        )->keyBy('external_key');
+        $expected = [
+            'net-mtu-002' => 'イ',
+            'net-dns-002' => 'ウ',
+            'net-napt-003' => 'ア',
+            'net-tcp-005' => 'イ',
+            'db-view-009' => 'ア',
+            'db-normalization-013' => 'イ',
+            'db-isolation-014' => 'ア',
+            'db-nosql-types-036' => 'イ',
+            'db-sql-join-059' => 'イ',
+            'calc-mm1-015' => 'イ',
+            'sec-dkim-023' => 'ア',
+            'sec-sidechannel-024' => 'ア',
+            'calc-bayes-disease-025' => 'イ',
+            'calc-mips-026' => 'イ',
+            'os-roundrobin-028' => 'エ',
+            'os-starvation-029' => 'イ',
+            'quality-maintainability-031' => 'イ',
+            'quality-reliability-032' => 'ア',
+            'storage-wearleveling-034' => 'ア',
+            'calc-da-035' => 'イ',
+            'algo-binarysearch-039' => 'イ',
+            'algo-stack-041' => 'イ',
+            'algo-complexity-042' => 'エ',
+            'test-boundary-043' => 'イ',
+            'test-levels-044' => 'イ',
+            'dev-cicd-045' => 'ア',
+            'sec-xss-046' => 'イ',
+            'sec-csrf-047' => 'ア',
+            'sec-cert-049' => 'ア',
+            'pm-criticalpath-050' => 'ア',
+            'pm-evm-051' => 'ウ',
+            'service-sla-052' => 'イ',
+            'strategy-break-even-053' => 'イ',
+            'strategy-swot-054' => 'ア',
+            'arch-raid5-056' => 'ウ',
+        ];
+        $this->assertCount(35, $expected);
+        $this->assertCount(35, $originalCore);
+        foreach ($expected as $key => $answer) {
+            $this->assertSame($answer,
+                data_get($originalCore->get($key), 'grading_rule.answer'),
+                "Core candidate answer must be independently reviewed before publication: {$key}");
+        }
+
+        // Calculations are deterministic cross-checks for key failure modes,
+        // not an expert sign-off on all distractors or the full syllabus.
+        $this->assertEqualsWithDelta(0.018 / (0.018 + 0.98 * 0.05),
+            0.2686567164, 0.000001); // Bayes
+        $this->assertSame(800, (int) ((2_000_000_000 / 2.5) / 1_000_000)); // MIPS
+        $this->assertSame(2_000, (int) (6_000_000 / (5_000 - 2_000))); // break-even
+        $this->assertEqualsWithDelta(30 * 24 * 60 * (1 - 0.999), 43.2, 0.000001); // SLA
+        $this->assertSame(6, (4 - 1) * 2); // RAID5 TB
+        $this->assertEqualsWithDelta(51 / 255 * 5, 1.0, 0.000001); // D/A
+        $this->assertSame(20, (int) (80 / 400 * 100)); // new ROI
+        $this->assertDatabaseCount('question_packs', 0);
+    }
+
     public function test_key_calculation_explanations_show_the_reasoning_steps_without_changing_source_answers(): void
     {
         $items = collect(app(QuestionPackCatalogService::class)
