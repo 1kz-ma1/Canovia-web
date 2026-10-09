@@ -56,6 +56,7 @@ final class ApExamCandidateBundleAuditTest extends TestCase
         $uniquePrompts = [];
         $origins = [];
         $domains = [];
+        $missingExplanations = [];
         foreach ($candidate['questions'] as $index => $question) {
             $key = $question['external_key'];
             $origin = data_get($question, 'learning_metadata.curation.source_pack_slug');
@@ -88,7 +89,9 @@ final class ApExamCandidateBundleAuditTest extends TestCase
             $this->assertSame('exact_choice', $question['grading_rule']['type']);
             $this->assertContains($question['grading_rule']['answer'],
                 array_column($choices, 'id'));
-            $this->assertNotEmpty($question['explanation']);
+            if (trim((string) ($question['explanation'] ?? '')) === '') {
+                $missingExplanations[] = $key;
+            }
 
             $normalizedPrompt = mb_strtolower(preg_replace(
                 '/[\s　、。・.,，．:：;；!?？！（）()［］「」『』]+/u', '', $question['prompt'],
@@ -105,6 +108,11 @@ final class ApExamCandidateBundleAuditTest extends TestCase
 
         $this->assertSame(35, $origins['ap-a-ipa-2025-autumn-official-v1']);
         $this->assertSame(45, $origins['ap-a-canovia-core-v1']);
+        // Genuine audit finding: all 35 official entries have no authored
+        // explanations in their original Bank. Never silently invent text.
+        $this->assertCount(35, $missingExplanations);
+        $this->assertCount(35, array_filter($missingExplanations,
+            fn (string $key) => str_starts_with($key, 'ipa-2025-autumn-ap-am-q')));
         $this->assertGreaterThan(10, count($domains));
         $this->assertContains('テクノロジ', array_keys($domains));
         $this->assertContains('マネジメント', array_keys($domains));
@@ -137,6 +145,8 @@ final class ApExamCandidateBundleAuditTest extends TestCase
         $this->assertFalse($exam['ready']);
         $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $exam['content_sha256']);
         $this->assertStringContainsString('SHA-256', implode(' ', $exam['blocking']));
+        $this->assertStringContainsString('解説未登録の問題が35問',
+            implode(' ', $exam['blocking']));
 
         $admin->patch(route('admin.question_packs.status', $pack), [
             'status' => 'published',
