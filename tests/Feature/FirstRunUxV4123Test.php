@@ -125,6 +125,28 @@ class FirstRunUxV4123Test extends TestCase
         $this->get(route('home'))->assertOk();
     }
 
+    public function test_login_failure_message_is_visible_after_redirect(): void
+    {
+        User::factory()->create([
+            'email' => 'auth-feedback@example.com',
+            'password' => Hash::make('correct-credential'),
+        ]);
+
+        $this->post(route('auth.login'), [
+            'email' => 'auth-feedback@example.com',
+            'password' => 'wrong-credential',
+        ])
+            ->assertRedirect(route('auth.login.form'))
+            ->assertSessionHasErrors('email');
+
+        $this->get(route('auth.login.form'))
+            ->assertOk()
+            ->assertSee('data-auth-login-error', false)
+            ->assertSee('role="alert"', false)
+            ->assertSee('メールアドレスまたはパスワードが正しくありません。')
+            ->assertDontSee('wrong-credential');
+    }
+
     public function test_new_account_is_required_to_pass_welcome_before_first_companion(): void
     {
         $this->post(route('auth.register'), [
