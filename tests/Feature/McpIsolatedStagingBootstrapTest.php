@@ -133,7 +133,6 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             ['CANOVIA_STAGING_ISOLATED' => 'false'],
             ['APP_DEBUG' => 'true'],
             ['CANOVIA_STAGING_POSTGRES_USER' => 'wrong_staging_user'],
-            ['CANOVIA_STAGING_POSTGRES_USER' => ''],
             ['CANOVIA_STAGING_POSTGRES_USER' => 'UPPERCASE'],
             ['DB_CONNECTION' => 'mysql'],
             ['DB_DATABASE' => 'live'],
@@ -181,6 +180,8 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
 
         foreach ([
             ['CANOVIA_STAGING_POSTGRES_ID' => 'dpg-other-instance'],
+            ['CANOVIA_STAGING_POSTGRES_USER' => ''],
+            ['CANOVIA_STAGING_POSTGRES_USER' => 'wrong_user'],
             ['DB_CONNECTION' => 'mysql'],
             ['DB_DATABASE' => 'production'],
             ['DB_URL' => 'postgresql://prod:prod@aiven.example.test/prod'],
