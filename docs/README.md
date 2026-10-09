@@ -11,6 +11,10 @@
 - [Closed staging synthetic Plan/Task read fixture](development/MCP_STAGING_SYNTHETIC_READ_FIXTURE_2026_10_09.md): operator-only fixed sample Plan; no live OAuth/ChatGPT access yet.
 - [Final pre-publication environment and billing checklist](development/RELEASE_ENVIRONMENT_BILLING_READINESS_2026_10_09.md): owner defers paid upgrades until needed and reviews pricing, backup, mail and session safety before public launch.
 
+## AP科目A 2026 CBT模試の問題集審査（2026-10-09）
+
+- [80問候補の品質・出典・監修・公開ゲート](learning/AP_A_2026_80_QUESTION_CANDIDATE_AUDIT.md)：IPA過去問35＋Canoviaオリジナル/類題45のDraft候補。実試験に対する範囲・問題精度・権利適合は未認定で、自動公開されない。レビュー内容指紋の一致が必須。
+
 ## Authority
 1. Actual latest main code and independently verified PR/CI/deploy/device evidence.
 2. [Product specification](CANOVIA_PRODUCT_SPEC.md), [release levels](CANOVIA_RELEASE_LEVEL_SPEC.md), [monetization](CANOVIA_MONETIZATION_SPEC.md).

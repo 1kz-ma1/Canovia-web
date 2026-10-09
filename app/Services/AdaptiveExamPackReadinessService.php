@@ -16,9 +16,39 @@ final class AdaptiveExamPackReadinessService
     public function __construct(private readonly AdaptiveLearningBankQueueService $bank) {}
 
     /**
+     * Content-addressed review: a metadata flag or unchanged version alone
+     * must never approve altered answer keys or altered source materials.
+     * Do not include DB PK or timestamps: Draft re-import preserves the
+     * reviewed content, while any content change invalidates the signature.
+     *
+     * @param Collection<int,Question> $questions active questions only
+     */
+    public function contentFingerprint(Collection $questions): string
+    {
+        $rows = $questions->sort(fn (Question $a, Question $b) =>
+            [(int) $a->sort_order, (string) $a->external_key]
+            <=> [(int) $b->sort_order, (string) $b->external_key])
+            ->map(fn (Question $question) => [
+                'external_key' => $question->external_key,
+                'sort_order' => (int) $question->sort_order,
+                'source_type' => $question->source_type,
+                'source_reference' => $question->source_reference,
+                'prompt' => $question->prompt,
+                'response_schema' => $question->response_schema,
+                'grading_rule' => $question->grading_rule,
+                'learning_metadata' => $question->learning_metadata,
+                'explanation' => $question->explanation,
+                'difficulty' => (int) $question->difficulty,
+            ])->values()->all();
+
+        return hash('sha256', json_encode($rows,
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+    }
+
+    /**
      * @param array<string,mixed> $profile
      * @param Collection<int,Question>|null $questions
-     * @return array{ready:bool,active_count:int,blocking:list<string>}
+     * @return array{ready:bool,active_count:int,content_sha256:string,blocking:list<string>}
      */
     public function inspect(QuestionPack $pack, array $profile, ?Collection $questions = null): array
     {
@@ -71,20 +101,32 @@ final class AdaptiveExamPackReadinessService
         }
 
         if (($profile['requires_pack_review'] ?? false) === true) {
+            $withoutExplanation = $questions->filter(fn (Question $question) =>
+                trim((string) $question->explanation) === '')->count();
+            if ($withoutExplanation > 0) {
+                $blocking[] = "解説未登録の問題が{$withoutExplanation}問あります。全問の内容を検証してから模試へ提供してください。";
+            }
+
             $review = is_array($metadata['exam_simulation_review'] ?? null)
                 ? $metadata['exam_simulation_review'] : [];
             if (($review['reviewed_pack_version'] ?? '') !== $pack->version
+                || ! preg_match('/^[a-f0-9]{64}$/D', (string) ($review['reviewed_content_sha256'] ?? ''))
+                || ! hash_equals(
+                    $this->contentFingerprint($questions),
+                    (string) ($review['reviewed_content_sha256'] ?? ''),
+                )
                 || ($review['format_checked'] ?? false) !== true
                 || ($review['answer_key_checked'] ?? false) !== true
                 || ($review['content_rights_checked'] ?? false) !== true
                 || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($review['reviewed_at'] ?? ''))) {
-                $blocking[] = 'この版の80問・正答・利用条件に対する管理者の最終確認が未記録です。';
+                $blocking[] = '問題・正答・出典に対応するSHA-256指紋と管理者の最終確認記録が不足、または内容変更で失効しています。';
             }
         }
 
         return [
             'ready' => $blocking === [],
             'active_count' => $questions->count(),
+            'content_sha256' => $this->contentFingerprint($questions),
             'blocking' => $blocking,
         ];
     }

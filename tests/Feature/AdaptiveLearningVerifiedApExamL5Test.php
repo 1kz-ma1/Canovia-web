@@ -92,6 +92,8 @@ final class AdaptiveLearningVerifiedApExamL5Test extends TestCase
         $metadata = $pack->metadata;
         $metadata['exam_simulation_review'] = array_merge([
             'reviewed_pack_version' => $pack->version,
+            'reviewed_content_sha256' => app(AdaptiveExamPackReadinessService::class)
+                ->contentFingerprint($pack->questions()->where('is_active', true)->get()),
             'reviewed_at' => '2026-10-09',
             'format_checked' => true,
             'answer_key_checked' => true,
@@ -172,6 +174,28 @@ final class AdaptiveLearningVerifiedApExamL5Test extends TestCase
         // A pack may be published for ordinary practice yet fail the
         // separate official-format exam gate.
         $this->assertSame('published', $pack->fresh()->status);
+        $this->assertDatabaseCount('learning_runs', 0);
+    }
+
+    public function test_review_signature_is_invalidated_when_correct_answer_changes_without_version_bump(): void
+    {
+        [$user, $plan, $task, $pack, $questions] = $this->fixture();
+        $this->review($pack);
+
+        $registry = app(AdaptiveExamProfileRegistry::class);
+        $readiness = app(AdaptiveExamPackReadinessService::class);
+        $this->assertTrue($readiness->inspect($pack->fresh(),
+            $registry->requireVerified('ap-a-cbt-2026-v1'))['ready']);
+
+        $questions[0]->update(['grading_rule' => [
+            'type' => 'exact_choice', 'field_id' => 'answer', 'answer' => 'B',
+        ]]);
+        $inspection = $readiness->inspect($pack->fresh(),
+            $registry->requireVerified('ap-a-cbt-2026-v1'));
+        $this->assertFalse($inspection['ready']);
+        $this->assertStringContainsString('SHA-256', implode(' ', $inspection['blocking']));
+
+        $this->attempt($user, $plan, $task, $pack)->assertSessionHasErrors('question_pack_id');
         $this->assertDatabaseCount('learning_runs', 0);
     }
 

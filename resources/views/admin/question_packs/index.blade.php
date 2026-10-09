@@ -226,6 +226,10 @@
                                     通常の問題集公開と本番形式の模試提供は別審査です。
                                     この問題集の JSON metadata.exam_simulation_profile_key / version と
                                     exam_simulation_review に版・正答・形式・著作権の確認履歴を記録してください。
+                                    全問の内容と正答を確認した最終版の
+                                    reviewed_content_sha256 は、次の内容指紋に一致する必要があります。
+                                    <code class="mt-2 block break-all text-[11px] select-all" data-exam-content-sha256>{{ $examStatus['content_sha256'] }}</code>
+                                    この値のコピーだけで監修済み・利用権取得済みになるわけではありません。
                                     公式形式の出典を確認できても、そのまま出題コンテンツの利用許諾を意味しません。
                                 </p>
                             </section>

@@ -72,6 +72,9 @@ final class QuestionPackPublicationReadinessService
             ->filter(fn ($term) => is_string($term) && trim($term) !== '');
 
         $blocking = [];
+        if (($metadata['review_state'] ?? '') === 'pending_human_content_and_rights_review') {
+            $blocking[] = '未監修の模試候補です。品質・正答・出典・利用条件の最終確認とmetadata更新まで通常公開できません。';
+        }
         if ($active->isEmpty()) {
             $blocking[] = '公開には有効な問題が1問以上必要です。';
         }
