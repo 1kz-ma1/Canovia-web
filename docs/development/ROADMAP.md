@@ -69,3 +69,15 @@ to the Canovia staging service. A separate GH Actions disposable Postgres
 twice and checks that all MCP tables exist. This is a DB-engine
 compatibility test **without** private credentials or any live database.
 Do not use successful CI as proof of actual Render PostgreSQL connectivity.
+
+
+### V59 PostgreSQL readiness hardening (2026-10-09)
+
+The actual created Render Free PostgreSQL DB remains **unattached**.
+The isolated staging `/up` now includes a **real database+schema
+health check only after Postgres mode is deliberately enabled**:
+wrong resource/host, unavailable DB or missing MCP tables -> generic
+HTTP 503. The CI Docker smoke now starts a full second staging instance
+against a fake disposable PostgreSQL using the exact production-like
+host/ID guard and checks `/up=200`, private routes=503.
+Default live SQLite mode and prod `/up` remain unchanged.
