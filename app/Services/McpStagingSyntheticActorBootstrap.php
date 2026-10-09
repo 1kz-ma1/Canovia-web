@@ -78,7 +78,10 @@ final class McpStagingSyntheticActorBootstrap
         return is_array($parts)
             && in_array($parts['scheme'] ?? null, ['postgres', 'postgresql'], true)
             && ($parts['host'] ?? null) === 'dpg-db43rbbncjis73bmigi0-a'
-            && ($parts['user'] ?? null) === 'canovia_mcp_staging_db_user'
+            && is_string(config('canovia_staging.postgres_user'))
+            && preg_match('/\\A[a-z][a-z0-9_]{2,127}\\z/D',
+                config('canovia_staging.postgres_user')) === 1
+            && ($parts['user'] ?? null) === config('canovia_staging.postgres_user')
             && ($parts['path'] ?? null) === '/canovia_mcp_staging_db'
             && ($parts['port'] ?? 5432) === 5432
             && isset($parts['pass']) && strlen($parts['pass']) >= 8
