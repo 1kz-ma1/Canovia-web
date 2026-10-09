@@ -214,9 +214,6 @@ jobs:
               --write-out '%{http_code}' "http://127.0.0.1:18774$endpoint")
             test "$status" = "503"
           done
-          test ! -f "$(docker inspect --format '{{.GraphDriver.Data.MergedDir}}' \
-            canovia-mcp-postgres-boot 2>/dev/null)/var/www/html/storage/app/staging/mcp.sqlite" \
-            || echo 'Host-mounted Docker overlay cannot be inspected; rely on guarded mode'
           echo 'Pinned isolated Postgres startup and /up DB schema health PASS; login/MCP closed'
 
       - name: Staging runtime diagnostics on failure (no credentials)
