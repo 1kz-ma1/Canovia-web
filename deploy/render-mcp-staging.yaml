@@ -34,6 +34,8 @@ services:
         value: "true"
       - key: CANOVIA_STAGING_WEB_ACCESS_ENABLED
         value: "false"
+      - key: CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED
+        value: "false"
       - key: CANOVIA_STAGING_MCP_EXPLICITLY_APPROVED
         value: "false"
       # Default remains disposable SQLite. Upgrading the already-created
