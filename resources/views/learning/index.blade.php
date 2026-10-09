@@ -86,7 +86,7 @@
             </p>
             @if(($examOptions ?? collect())->isEmpty())
                 <p class="mt-3 text-sm font-semibold text-amber-300" data-adaptive-exam-no-ready-pack>
-                    現在、上記試験形式で開始できる検証済み80問セットはありません。通常の1問ずつ学習をご利用ください。
+                    現在、上記試験形式で開始できる検証済みの問題セットはありません。通常の1問ずつ学習をご利用ください。
                 </p>
             @endif
         </section>
