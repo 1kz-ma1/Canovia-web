@@ -80,7 +80,8 @@ class LoginForm(HTMLParser):
 
 
 def synthetic_realm(link_secret: str, agent_secret: str,
-                    resource_secret: str, user_password: str) -> dict:
+                    resource_secret: str, user_password: str,
+                    second_password: str) -> dict:
     realm = new_realm(link_secret, resource_secret)
     # The username/password belong to a throwaway realm ONLY; no grant,
     # subject mapping or Canovia User is created.
@@ -93,6 +94,16 @@ def synthetic_realm(link_secret: str, agent_secret: str,
         "emailVerified": True,
         "requiredActions": [],
         "credentials": [{"type": "password", "value": user_password,
+                         "temporary": False}],
+    }, {
+        "username": "canovia-disposable-other",
+        "email": "synthetic-other-mcp-ci@example.invalid",
+        "firstName": "Other",
+        "lastName": "Synthetic",
+        "enabled": True,
+        "emailVerified": True,
+        "requiredActions": [],
+        "credentials": [{"type": "password", "value": second_password,
                          "temporary": False}],
     }]
     link = realm["clients"][1]
@@ -247,11 +258,55 @@ def introspect(access_token: str, secret: str) -> dict:
     return claims
 
 
+def revoke_token(access_token: str, client_id: str,
+                 client_secret: str) -> None:
+    """RFC 7009 revocation as the ORIGINAL confidential issuing client.
+
+    Revocation replies have no JSON body. Never print or log a token,
+    secret or server response.
+    """
+    body = urllib.parse.urlencode({
+        "token": access_token,
+        "token_type_hint": "access_token",
+    }).encode("ascii")
+    user = urllib.parse.quote(client_id, safe="")
+    password = urllib.parse.quote(client_secret, safe="")
+    basic = base64.b64encode(f"{user}:{password}".encode()).decode("ascii")
+    request = urllib.request.Request(
+        f"{BASE}/revoke", data=body, method="POST",
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": f"Basic {basic}",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=6) as response:
+            require(response.status == 200, "provider_revocation_http_failed")
+            require(len(response.read(4097)) <= 4096,
+                    "provider_revocation_response_too_large")
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError):
+        raise Gap("provider_revocation_http_failed") from None
+
+
+def revoked_is_inactive(access_token: str, verifier_secret: str) -> bool:
+    status, claims = request_json(
+        f"{BASE}/token/introspect",
+        payload={
+            "token": access_token,
+            "token_type_hint": "access_token",
+        },
+        basic=(RESOURCE_CLIENT_ID, verifier_secret),
+        http_error_ok=True,
+    )
+    return status == 200 and claims.get("active") is False
+
+
 def main() -> None:
     require(os.getenv("GITHUB_ACTIONS") == "true"
             or os.getenv("CANOVIA_MCP_LOCAL_LAB") == "true",
             "disposable_lab_only")
     password = secrets.token_urlsafe(36)
+    second_password = secrets.token_urlsafe(36)
     link_secret = secrets.token_urlsafe(36)
     agent_secret = secrets.token_urlsafe(36)
     resource_secret = secrets.token_urlsafe(36)
@@ -261,7 +316,8 @@ def main() -> None:
         directory = Path(temp)
         file = directory / f"{REALM}-realm.json"
         file.write_text(json.dumps(synthetic_realm(
-            link_secret, agent_secret, resource_secret, password
+            link_secret, agent_secret, resource_secret, password,
+            second_password
         )), encoding="utf8")
         os.chmod(directory, 0o755)
         os.chmod(file, 0o644)
@@ -329,12 +385,43 @@ def main() -> None:
             require(status == 200
                     and isinstance(response.get("access_token"), str),
                     "person_agent_code_exchange_failed")
-            agent_claims = introspect(response["access_token"], resource_secret)
+            original_agent_bearer = response["access_token"]
+            agent_claims = introspect(original_agent_bearer, resource_secret)
             require(agent_claims.get("client_id") == RP_AGENT,
                     "agent_client_claim_mismatch")
             require(agent_claims["sub"] == link_claims["sub"],
                     "cross_client_subject_mismatch")
             print("same_user_separate_client_issuer_subject: pass")
+
+            # A second *different* human authenticating with the same
+            # separate OAuth caller must never be accepted as the first
+            # person's immutable subject, even when client/aud/issuer match.
+            code, verifier = authorize(
+                "canovia-disposable-other", second_password,
+                RP_AGENT, CALLBACK_AGENT)
+            status, other_response = redeem(
+                RP_AGENT, agent_secret, CALLBACK_AGENT, code, verifier)
+            require(status == 200 and
+                    isinstance(other_response.get("access_token"), str),
+                    "second_user_token_exchange_failed")
+            other_agent_bearer = other_response["access_token"]
+            other_claims = introspect(other_agent_bearer, resource_secret)
+            require(other_claims.get("client_id") == RP_AGENT
+                    and other_claims["sub"] != agent_claims["sub"]
+                    and other_claims["iss"] == agent_claims["iss"],
+                    "different_human_subject_not_isolated")
+            print("different_human_same_client_immutable_subject_isolated: pass")
+
+            # Revoking the first user's token must take effect at the IdP.
+            # The second human's token and the first human's separately
+            # issued link-client token must remain active. Canovia's own
+            # per-Plan revoke policy has independent feature tests.
+            revoke_token(original_agent_bearer, RP_AGENT, agent_secret)
+            require(revoked_is_inactive(original_agent_bearer, resource_secret),
+                    "revoked_bearer_still_active")
+            require(introspect(other_agent_bearer, resource_secret)["sub"]
+                    == other_claims["sub"], "other_person_token_affected")
+            print("rfc7009_revoked_token_inactive_other_person_unaffected: pass")
 
             code, verifier = authorize(
                 username, password, RP_AGENT, CALLBACK_AGENT)
@@ -364,8 +451,8 @@ def main() -> None:
                            ("error", "failed", "exception", "unknown"))
                 ]
                 for line in filtered[-5:]:
-                    for secret in (password, link_secret, agent_secret,
-                                   resource_secret, admin_password):
+                    for secret in (password, second_password, link_secret,
+                                   agent_secret, resource_secret, admin_password):
                         line = line.replace(secret, "[REDACTED]")
                     # Only in the disposable CI realm; no production data.
                     if 'LOGIN_ERROR' in line:
