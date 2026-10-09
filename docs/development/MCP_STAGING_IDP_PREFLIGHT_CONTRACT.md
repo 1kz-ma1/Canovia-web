@@ -136,3 +136,21 @@ No real IdP/ChatGPT OAuth client or persistent staging database has been
 configured, so real account linking/Plan consent/MCP data reads are still
 disabled. This deployment must not be mistaken for a complete OAuth
 integration test.
+
+
+## Real provider limitations discovered and test-only PostgreSQL created
+
+Keycloak is now the **conditional technical frontrunner** (RFC 7662,
+DCR, experimental MCP CIMD/RFC 8707 `resource` support) rather than a
+configured IdP. Auth0 does not guarantee the current RFC7662 contract,
+while ZITADEL's DCR token audience behavior conflicts with the exact
+resource-only `aud` requirement. Keycloak's RAM guidance exceeds the
+safe assumption of a Free 512 MiB Render service, so no Keycloak/IdP
+service has been created or linked.
+
+A separate Free 30-day Render PostgreSQL 17 staging DB is **available**,
+but NOT yet attached to Canovia staging Web. No production data copied,
+DB external access is blocked, SQLite live stage remains closed. For the
+resource-specific guard, finite expiration, private credential-only
+connection steps and candidate comparison, see
+[OAuth provider decision and Postgres staging cutover](MCP_IDP_SELECTION_AND_STAGING_POSTGRES_2026_10_09.md).
