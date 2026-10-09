@@ -47,7 +47,12 @@ def request_json(url: str, *, payload: dict | None = None,
         body = urllib.parse.urlencode(payload).encode("ascii")
         headers["Content-Type"] = "application/x-www-form-urlencoded"
     if basic is not None:
-        encoded = base64.b64encode(f"{basic[0]}:{basic[1]}".encode()).decode("ascii")
+        # RFC 6749 §2.3.1 requires application/x-www-form-urlencoded
+        # encoding of each client credential BEFORE HTTP Basic encoding.
+        # A URL-valued client_id contains ':' and '/' and must be encoded.
+        user = urllib.parse.quote(basic[0], safe="")
+        password = urllib.parse.quote(basic[1], safe="")
+        encoded = base64.b64encode(f"{user}:{password}".encode()).decode("ascii")
         headers["Authorization"] = f"Basic {encoded}"
     req = urllib.request.Request(url, data=body, headers=headers,
                                  method="POST" if body is not None else "GET")
