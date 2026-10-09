@@ -59,6 +59,15 @@ final class AdaptiveLearningExamController extends Controller
         $profile = $registry->requireVerified($validated['exam_profile_key']);
         $pack = QuestionPack::where('status', 'published')
             ->findOrFail($validated['question_pack_id']);
+        $meta = is_array($pack->metadata) ? $pack->metadata : [];
+        abort_unless(
+            $pack->exam_code === $profile['exam_code']
+            && $pack->subject === $profile['subject']
+            && ($meta['exam_simulation_profile_key'] ?? '') === $profile['key']
+            && ($meta['exam_simulation_profile_version'] ?? '') === (string) $profile['version'],
+            409,
+        );
+
         // A verified exam format is not evidence that this particular Bank
         // is a reviewed, complete static exam. Guard it again at start.
         $questions = $pack->questions()->where('is_active', true)
