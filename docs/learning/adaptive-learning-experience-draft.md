@@ -352,3 +352,13 @@ No DB schema, pricing, rollout/entitlement, AI provider, official exam profile, 
 - Understandingの任意reasoningは同セッションの未採点下書きから復帰できるが、回答確定前は採点・学習評価の対象としない。回答POST時だけimmutableなAnswerEventへ保存する。PracticeとExamのメモ取扱いは変更しない。
 - 回答とメモの整合性、他人/他Run/回答済み拒否、冪等・409、送信中保存の競合、表示時のHTMLエスケープ、旧回答とTask進捗不変を統合HEADで検証する。
 - この統合PRを出荷候補の一本化先とし、PR #454/#455は先行実装・検証履歴として保持。Issue #418がopenの間はmainへのマージやRender自動デプロイを実行しない。
+
+## 2026-10-09 L3-d: Learning UIの操作順と読み取り専用履歴（統合PR #456への依存）
+
+- **目的**: ユーザーが1問学習へ復帰/開始する操作を最初に見つけられ、必要なときだけ推薦根拠を開き、記録済みの回答・考え方・解説を振り返れること。従来PracticeとExamの画面は保持。
+- **UI優先順位**: Learning開始ページは［従来演習 / 履歴リンク］→既存Runの再開→新しいRunの開始→最近の記録と復習候補→折り畳みの参考推薦→検証済み模試（あれば）の順。単一選択だけという古い但し書きを修正して単一/複数/数値対応と明記。既存ルート・識別子・mode選択を変えない。
+- **History**: 新しいGET読取専用 /plans/{plan}/tasks/{task}/learning/history を追加。現在Plan/Taskの本人のUnderstanding/Practiceに紐づいた保存済みLearningAnswerEventのみ表示し、直近最大60件を集計・最新15件を詳細表示。Exam、旧StudyPracticeAttempt、他Plan/Task/actorは混ぜない。権限とStudy分類は既存Learningと同じ。未回答問題の正答/解説を先読みさせない。
+- **事実と推定を区別**: 回答/正解/誤タップ除外件数は記録上の生データ。誤タップ評価除外は元の採点を改変せず復習候補からだけ除外。分野候補はItem snapshotの learning_metadata.concepts / weakness_targets に依存。直近60件のうち別Question IDの2件以上の不正解、さらに同分野の直近2回が連続正解ではないときのみ「復習候補」と表示。「弱点確定」「習熟度」「合格予測」に換算しない。metadataがない場合も捏造しない。
+- **Reasoning note**: 統合Draft PR #456のanswer_payload.reasoningを保有する場合だけ履歴詳細へBladeエスケープして表示。旧answer_payload=nullでも正常。回答済みItemのみで表示。編集/再採点/AI API要求なし。
+- **Performance/privacy**: AnswerEventの取得件数を上限付きとしEager LoadでN+1を避ける。新しいDB migration・AnswerEvent mutation・旧Task進捗更新なし。統合Draft #456にスタックし差分競合・二重マージを防ぐ。
+- **テスト/リリース**: 空履歴、別Questionでの繰り返し誤答、連続正解で候補解除、同一Questionの誤答反復、誤タップ除外、別Actor/Plan拒否、模試回答秘匿、HTML escape、従来学習回帰のCIを要求。Issue #418がOPENの間は本番自動デプロイを避けてmainへマージしない。Safari/PWA/WKWebView/PC実機は後日まとめて確認。

@@ -2,7 +2,10 @@
 @section('title', '1問ずつ学習 | Canovia')
 @section('content')
 <div class="mx-auto max-w-3xl space-y-5" data-adaptive-learning-run="{{ $run->id }}">
-    <a href="{{ route('plans.tasks.learning.index', [$plan, $task]) }}" class="text-sm font-semibold text-sky-400">← 学習モードと問題集</a>
+    <nav class="flex flex-wrap items-center justify-between gap-3 text-sm" aria-label="学習の移動先">
+        <a href="{{ route('plans.tasks.learning.index', [$plan, $task]) }}" class="font-semibold text-sky-400">← 学習モードと問題集</a>
+        <a href="{{ route('plans.tasks.learning.history', [$plan, $task]) }}" class="font-semibold text-sky-300">回答履歴を見る →</a>
+    </nav>
     <section class="page-card p-5 sm:p-7">
         <p class="text-xs font-bold tracking-widest text-cyan-400">QUESTION BANK / ONE QUESTION AT A TIME</p>
         <h1 class="mt-2 text-xl font-bold text-slate-50">{{ $run->pack_title_snapshot }}</h1>
