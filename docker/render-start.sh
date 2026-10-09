@@ -95,6 +95,17 @@ if [ "$isolated_staging" = "true" ] \
     echo "MCP isolated staging synthetic Plan fixture: completed (details suppressed)"
 fi
 
+# Closed-stage-only, read-only proof that a synthetic fixture survived
+# the previous restart. No password, external IdP or user content is exposed.
+if [ "$isolated_staging" = "true" ] \
+    && [ "${CANOVIA_STAGING_VERIFY_SYNTHETIC_FIXTURE_ON_START:-false}" = "true" ]; then
+    if ! php artisan canovia:mcp-staging-verify-synthetic-plan --json >/dev/null 2>&1; then
+        echo "MCP isolated staging synthetic fixture verification: blocked (details suppressed)" >&2
+        exit 1
+    fi
+    echo "MCP isolated staging synthetic fixture verification: ready (details suppressed)"
+fi
+
 echo "Building Laravel production caches..."
 if [ "$isolated_staging" = "true" ]; then
     # Cache commands can invoke application boot logic. Keep their exception

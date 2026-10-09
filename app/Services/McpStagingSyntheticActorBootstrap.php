@@ -68,7 +68,7 @@ final class McpStagingSyntheticActorBootstrap
             && $this->isPinnedDatabase();
     }
 
-    private function isPinnedDatabase(): bool
+    public function isPinnedDatabase(): bool
     {
         $driver = config('database.default');
 
