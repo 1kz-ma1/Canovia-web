@@ -225,3 +225,74 @@ Status: **PR implementation proposed; CI and actual iOS/PWA/production verificat
 Relevant tests: `AdaptiveLearningSingleQuestionV5878Test`, `LegacyPracticeImmersionV5889Test`, `LearningImmersionShellV5888Test`, existing `StudyPracticeDraftPersistenceV4071Test`. Validate frontend build and required CI on exact branch SHA. On device verify responsive safe-area, multi-answer types, autosave after moving backwards/forwards, empty published Bank fallback, new Bank one-question Run, reload/return and normal 403/404 permissions.
 
 No DB schema, pricing, rollout/entitlement, AI provider, official exam profile, source attribution, private user data or per-answer legacy scoring changes. Render live deployment and WKWebView/PWA device checks require separate evidence.
+
+
+## 2026-10-09 復旧後のLearning実装計画（PLAN ONLY / 実装保留）
+
+> **BLOCKED BY PLATFORM P0**: この章は学習仕様書と現行コードを照合した実装順序案。機能実装、本番デプロイ、DB変更、課金やAI機能の有効化を承認しない。再開前に最新mainを再確認する。
+> 照合基点: b39ba5bbbee8d095041131f4bdba89396067ef95。前提となる復旧は Issue #418 と Platform Draft PR #419。
+> 本章を正式な第二ロードマップとせず、既存のPhase 4a–4e、docs/development/ROADMAP.md、既存WIPを保持する。
+
+### 1. 実装済みコードと残る受入条件
+
+| 領域 | mainに存在する実装証拠 | 未達・未確認 |
+| --- | --- | --- |
+| Bank単問のUnderstanding/Practice | PR #362、AdaptiveLearningController、LearningRun、LearningAnswerEvent | 本番にpublished + active + exact_choiceのBankが存在するか、本番DB整合、実機E2E |
+| 将来候補キュー | PR #363、AdaptiveLearningCandidateService | Plan横断の理解度校正、難度、生成待ち/費用の実測 |
+| Examの固定・非開示構造 | PR #364、AdaptiveLearningExamController | 正式プロファイル未登録。config/adaptive_exam_profiles.php は意図的に空 |
+| モード推薦/誤タップ評価除外 | PR #365/#366 | 推薦品質の実測。評価調整テーブルは本番MySQL外部キー制約名エラーの対象 |
+| Legacy StudyPractice再開・単問画面ページャ | PR #371–#373、#413、StudyPracticeController/Blade/JS | 旧方式の採点はセット一括。JS不動時、永続ドラフト、端末E2Eの確認 |
+| Learning集中表示の上部余白 | PR #372/#373/#413 | iPhone PWA/WKWebViewでの安全領域・タップ領域の実測 |
+
+本表は「mainへ統合された実装」の確認であり、CI成功、Render配布、実機完了を混同しない。
+
+### 2. 再開ゲート: L0 / Platform復旧が先
+
+- Issue #418の本番MySQL migration・外部キー/index整合と本番アカウント/PWAログイン継続性を、安全な確認と復旧手順によって受け入れる。
+- Learningの新しいmigration/API変更、実機用の新規デプロイ、正式模試開放はその後。現段階はコード調査・仕様の準備だけ。
+- 変更再開時は最新main、現在のQuestion Bank利用状態、既存ユーザーのRun/Attempt/Task履歴と権限を確認し、既に直っている問題を再実装しない。
+
+### 3. 復旧後の実装順序
+
+**L1（最優先）実際に1問目を開始できるか**
+
+- Study Workspace → Study Activity → 演習 → Bank単問開始、1問保存、終了、再開を確認。Bank有/無、非公開、非対応形式の各状態で受け入れテストを実施。
+- 新Learning Runはpublished QuestionPackのactive・single_choice/exact_choiceのみ。リポジトリ内の問題JSONが本番Bankにインポート済みであるとは推定しない。Bankが無い時は理由を明示し、従来のAI演習へ明瞭に案内する。
+- Legacy Practiceの単問ページャは表示切替であり、即時採点ではない。戻る/進む、最初の未回答へ復帰、回答ドラフト自動保存、最終まとめ採点、JS無効時の全問表示、エラー/認可を確認。
+- 入口/空状態の修正は小さなPRとし、認証、共有シェル、Task自動更新、既存Attemptの意味には触れない。
+
+**L2 問題供給を使える状態にする**
+
+- 出典・権利・バージョン・正答・解説・対応形式をチェックできるBank登録/公開の安全な運用を決める。問題の自動公開や製品内にないBankの存在を偽装しない。
+- まず自作または利用許諾済みの問題集でA/Bを成立させる。Planの学習対象に対するBankの関連性とカバレッジを表示する。
+- mode（理解/演習/模試）とcollection（問題集・分野・年度・間違い等）は独立。年度別過去問・誤答・お気に入りは権利と履歴基盤確認後に追加する。
+- AI生成は費用/品質/待機の制約を確認してからオプション化し、回答のたびに同期AI呼出しを強制しない。
+
+**L3 回答形式を拡張する**
+
+- 現在のQuestionBankGraderはexact_choice、exact_multiple、numeric_toleranceを扱えるが、新Learning RunのController/UIは選択肢1個の文字列保存だけ。複数選択と数値を対応させる前に型付き回答保存・DB migration/互換性・採点結果の型を仕様化する。
+- 記述と途中思考過程は任意の追加入力。AIが評価できない場合は未採点を表現し、無理に正誤や理解度を断定しない。
+- 重複POST、並列タップ、端末復帰、別ユーザーの回答隔離、旧履歴不変を回帰検証する。
+
+**L4 将来候補・履歴・テンポの改善**
+
+- 確定問題を回答中に差し替えない。複数の独立した証拠から弱点候補を作り、誤タップ除外を尊重。新AnswerEventと理解度推定、初見と復習、解説閲覧後の回答を区別する。
+- 回答→結果→次問は極力待たせず、Bank先読みとフォールバックを優先。応答時間、候補重複、SQL負荷、AI利用費を測定してから閾値を調整する。
+- 旧StudyPracticeAttemptと新Runを勝手に合算したり、Task進捗を無断で上書きしたりしない。
+
+**L5 正式模試の準備**
+
+- 試験ごとの公式出典・確認日・問題数・制限時間・問題権利・形式を検証し、適合する全問固定QuestionPackが完成した試験だけ模試を有効にする。
+- 中途採点/正答/解説を漏らさない。時間切れ・中断・再開・未回答分母・複数端末・権限・終了後一括採点をテストする。公式未確認のAP等を本番形式と呼ばない。
+
+**L6 実機受入・公開**
+
+- iPhone Safari/PWA、iOS WKWebView、PC。初回/履歴なし/Bankなし、弱い通信、再ログイン、復帰、空状態、403/404/500、集中ヘッダー、画面回転/キーボード操作を確認。
+- Learning専用UIはLearning、共通ナビゲーションはExperience、auth/DBはPlatformに境界を分ける。
+- Verifiedの内訳は、テスト結果、exact CI SHA、Render deploy SHA、ユーザー端末E2Eを分離して記録する。
+
+### 4. 最初の実装PR候補と承認条件
+
+- 復旧後の第1PRはL1の実利用導線・Bank有無・旧Practiceの1問/再開の検証と必要最小の修正。新しいDB/API、外部AIの強制実行、課金、公式模試開放は含めない。
+- 新しく発見した不具合に着手する前に既存実装とテストを再確認し、問題が既に解消していればL2へ進む。
+- 本章を含む文書PRも本番Renderの自動デプロイに影響し得るため、Issue #418の安定化復旧中はDraft/未マージとする。学習実装もそれまでは着手しない。
