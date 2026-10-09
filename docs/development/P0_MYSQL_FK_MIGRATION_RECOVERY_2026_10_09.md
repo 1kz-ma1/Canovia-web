@@ -194,3 +194,67 @@ Even a passing disposable MySQL test is **not** approval to execute production
 DDL. The tested synthetic user is NOT proof of all production user data
 preservation. Wrong versions, different constraints, unverified production
 rows or partially missing columns require a separate manual review.
+
+
+## Full contract inventory coverage and Aiven backup-plan limitation (2026-10-09)
+
+The first version of the read-only MySQL SQL reported only a **subset** of
+the migration's schema contract, so a "all observed checks PASS" classification
+could falsely suggest complete target-table coverage. This version explicitly
+enumerates every one of the two historical migrations' **34 required columns,
+5 foreign-key relationships and 11 required named indexes** (10 trace, one
+adjustment). The corresponding offline classifier has the same enumerated
+manifest; CI checks the manifests against one another and asserts that a
+missing auxiliary FK/index/column blocks a historical APPLIED ledger state.
+Legacy trace user/plan FKs may have a valid Laravel-generated name; the SQL
+allows only the known legacy name or the reviewed short new name while
+requiring correct parent, referenced id and ON DELETE behavior.
+
+**Caution:** This is still a *targeted* incident-schema inspection; it does
+not establish that every other Canovia table/index is intact. The baseline
+manifest describes the reviewed code, not an observed Aiven schema. The SQL
+uses exactly six SELECT statements and queries no personal/business rows.
+
+**Aiven MySQL plan / backup gate, official references (checked 2026-10-09):**
+
+- Aiven states that MySQL automated full backups are ordinarily daily and
+  binlogs are continuous, but retention and available restore points depend
+  on the actual service plan:
+  https://aiven.io/docs/products/mysql/concepts/mysql-backups
+- Aiven's Free MySQL tier advertises **backups but explicitly no forking**:
+  https://aiven.io/docs/products/mysql/concepts/mysql-free-tier
+- Eligible plans can fork an existing backup into an independent MySQL service;
+  this **provisions a new service and may incur billing**. No such operation is
+  permitted by this release checklist without separate owner authorization:
+  https://aiven.io/docs/products/mysql/howto/fork-service
+- Aiven documents logical `mysqldump` / `mydumper` export and restore;
+  an export contains **sensitive production rows** and can consume database
+  CPU, IO and storage. This is not a read-only metadata inspection or
+  something CI should run against production automatically:
+  https://aiven.io/docs/products/mysql/howto/migrate-database-mysqldump
+
+### Evidence needed before changing the hold (operator, private)
+
+1. Verify in the **Aiven Console** the actual MySQL plan, engine/version,
+   service/database identity and its **Backups** panel. Do not assume the
+   service is Free based on Render's separate Free Web plan.
+2. Record only **non-secret** backup facts privately: a recoverable restore
+   point available **before** the proposed DDL, retention, health and whether
+   an **independent restore method is actually possible on this plan**.
+   Backup-listed and restore-tested are distinct states.
+3. On Free, **do not claim "fork & restore tested"**; fork is not offered. An
+   alternative isolated restore test would require a separate approved
+   environment or a locally controlled backup/restore plan, explicit budget
+   and secret-data handling decision; no production dump, access expansion,
+   cost or new service is approved by this document.
+4. Separately review the exact current P0 migration chain (including new
+   forward-only migration), observe the current production ledger and FK/index
+   metadata using the SELECT-only SQL, and choose a controlled maintenance
+   window. Stop on unknown/partial/wrong-version metadata.
+5. Before authorizing main merge, confirm verified backup restoration,
+   known rollback/forward-fix strategy for non-transactional MySQL DDL,
+   production login/PWA acceptance, and that the plan can tolerate
+   DDL/backup locks. The offline classifier *never authorizes release*.
+
+Aiven backup and fork features are documentation facts, **not evidence that
+Canovia has an accessible restorable backup or any particular paid plan**.
