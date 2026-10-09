@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "scope": "partial_visual_source_spotcheck_not_human_content_signoff",
+  "candidate_slug": "ap-a-2026-cbt-80-candidate-v1",
+  "candidate_version": "0.3.0-review-required",
+  "source_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+  "checked_at": "2026-10-09",
+  "verification_limitations": "The 6 named questions were compared visually to selected IPA PDF pages for statement/options. Not an independent expert proof of explanation correctness; not an exhaustive comparison of the other 29 IPA questions; not rights review or release authorization. Records are pinned to the candidate's exact statement, four options, answer key, and bundle version; changing them invalidates the spotcheck.",
+  "entries": [
+    {
+      "key": "ipa-2025-autumn-ap-am-q11",
+      "pdf_page_index": 7,
+      "evidence": "原冊子のHPC条件と表の4選択肢を照合。1,000ノード×8コア→総コア4倍で32,000コア、1ノード16コア→2,000ノード、20GFLOPS×32,000=640TFLOPS。",
+      "status": "source_statement_options_visually_spotchecked_only",
+      "verified_snapshot": {
+        "prompt": "現状のHPC（High Performance Computing）マシンの構成を，次の条件で更新することにした。更新後のノード数と総理論ピーク演算性能はどれか。ここで，総理論ピーク演算性能は，コア数に比例するものとする。\n\n[現状の構成]\n(1) 一つのコアの理論ピーク演算性能は10GFLOPSである。\n(2) 一つのノードのコア数は8である。\n(3) ノード数は1,000である。\n\n[更新条件]\n(1) 一つのコアの理論ピーク演算性能を現状の2倍にする。\n(2) 一つのノードのコア数を現状の2倍にする。\n(3) 総コア数を現状の4倍にする。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "ノード数2,000，総理論ピーク演算性能320TFLOPS"
+          },
+          {
+            "id": "イ",
+            "label": "ノード数2,000，総理論ピーク演算性能640TFLOPS"
+          },
+          {
+            "id": "ウ",
+            "label": "ノード数4,000，総理論ピーク演算性能320TFLOPS"
+          },
+          {
+            "id": "エ",
+            "label": "ノード数4,000，総理論ピーク演算性能640TFLOPS"
+          }
+        ],
+        "answer": "イ"
+      }
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q15",
+      "pdf_page_index": 9,
+      "evidence": "原冊子のジョブA〜Eの到着時刻・処理時間表、選択肢8/9/10/11を照合。ターンアラウンド11秒（選択肢エ）。",
+      "status": "source_statement_options_visually_spotchecked_only",
+      "verified_snapshot": {
+        "prompt": "五つのジョブA〜Eに対して，ジョブの多重度が1で，処理時間順方式のスケジューリングを適用した場合，ジョブBのターンアラウンドタイムは何秒か。ここで，OSのオーバーヘッドは考慮しないものとする。\n\nジョブA: 到着時刻0，単独実行時の処理時間2秒\nジョブB: 到着時刻1，単独実行時の処理時間4秒\nジョブC: 到着時刻2，単独実行時の処理時間3秒\nジョブD: 到着時刻3，単独実行時の処理時間2秒\nジョブE: 到着時刻4，単独実行時の処理時間1秒",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "8"
+          },
+          {
+            "id": "イ",
+            "label": "9"
+          },
+          {
+            "id": "ウ",
+            "label": "10"
+          },
+          {
+            "id": "エ",
+            "label": "11"
+          }
+        ],
+        "answer": "エ"
+      }
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q23",
+      "pdf_page_index": 13,
+      "evidence": "原冊子の16ビット、初期値150、16MHzの32分周、選択肢0.3/2/150/300を照合。結果300μs。",
+      "status": "source_statement_options_visually_spotchecked_only",
+      "verified_snapshot": {
+        "prompt": "16ビットのダウンカウンターを用い，カウンターの値が0になると割込みを発生するハードウェアタイマーがある。カウンターに初期値として10進数の150をセットしてタイマーをスタートすると，最初の割込みが発生するまでの時間は何マイクロ秒か。ここで，タイマーの入力クロック周波数は16MHzを32分周したものとする。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "0.3"
+          },
+          {
+            "id": "イ",
+            "label": "2"
+          },
+          {
+            "id": "ウ",
+            "label": "150"
+          },
+          {
+            "id": "エ",
+            "label": "300"
+          }
+        ],
+        "answer": "エ"
+      }
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q25",
+      "pdf_page_index": 13,
+      "evidence": "原冊子の0〜20kHz、選択肢2.5/5/25/50を照合。最大周期25μs。",
+      "status": "source_statement_options_visually_spotchecked_only",
+      "verified_snapshot": {
+        "prompt": "0kHz〜20kHzの帯域幅のオーディオ信号をデジタル信号に変換するのに必要な最大のサンプリング周期を標本化定理によって求めると，何マイクロ秒か。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "2.5"
+          },
+          {
+            "id": "イ",
+            "label": "5"
+          },
+          {
+            "id": "ウ",
+            "label": "25"
+          },
+          {
+            "id": "エ",
+            "label": "50"
+          }
+        ],
+        "answer": "ウ"
+      }
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q57",
+      "pdf_page_index": 26,
+      "evidence": "原冊子の単相・二相冷却、金属板、筐体浸漬、通常の水の4記述およびa,b/a,c/b,d/c,dの選択肢を照合。a,cの組。",
+      "status": "source_statement_options_visually_spotchecked_only",
+      "verified_snapshot": {
+        "prompt": "生成AIの処理などで用いられる，大量に発熱するGPUを搭載したサーバを，空気冷却よりも少ない消費電力で効率良く冷却できる液体冷却の一つに液浸冷却がある。液体冷却の方法の説明のうち，液浸冷却の方法の説明に該当するものの組みはどれか。\n\na 液体を循環させて熱交換器で冷やす単相冷却と，気化熱を利用する二相冷却とがある。\nb サーバに取り付けた金属板と熱交換してサーバを冷却する。\nc サーバを筐体ごと液体に漬けて冷却する。\nd 冷媒となる液体として通常は水を使用する。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "a, b"
+          },
+          {
+            "id": "イ",
+            "label": "a, c"
+          },
+          {
+            "id": "ウ",
+            "label": "b, d"
+          },
+          {
+            "id": "エ",
+            "label": "c, d"
+          }
+        ],
+        "answer": "イ"
+      }
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q64",
+      "pdf_page_index": 29,
+      "evidence": "原冊子のPBP選択肢（時間価値、回収後CF、回収期間、割引率）を照合。期間の長さで評価するウ。",
+      "status": "source_statement_options_visually_spotchecked_only",
+      "verified_snapshot": {
+        "prompt": "投資の意思決定手法の一つであるPBP法に関する記述として，適切なものはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "キャッシュフローの時間的価値が考慮されている。"
+          },
+          {
+            "id": "イ",
+            "label": "投資回収後のキャッシュフローも考慮されている。"
+          },
+          {
+            "id": "ウ",
+            "label": "投資金額の回収期間の長さによって投資を評価する手法である。"
+          },
+          {
+            "id": "エ",
+            "label": "ほかの意思決定手法であるNPV法やIRR法と同様に割引率を用いる手法である。"
+          }
+        ],
+        "answer": "ウ"
+      }
+    }
+  ]
+}

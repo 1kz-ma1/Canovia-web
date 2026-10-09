@@ -142,6 +142,20 @@
                     </div>
                 </div>
 
+                <div class="mt-4 rounded-xl border border-slate-700/80 p-3" data-ap-a-priority-summary>
+                    <p class="text-xs font-bold text-slate-200">監修の優先順位</p>
+                    <p class="mt-2 text-xs leading-6 text-slate-300">
+                        P0：{{ $apCandidateAudit['priority_counts']['P0'] }}問（IPA原文未照合・構造要修正）／
+                        P1：{{ $apCandidateAudit['priority_counts']['P1'] }}問（独自解説・新規問題・重要計算）／
+                        P2：{{ $apCandidateAudit['priority_counts']['P2'] }}問（その他）
+                    </p>
+                    <p class="mt-2 text-xs text-slate-400">
+                        IPA原問題のスポット照合 {{ $apCandidateAudit['source_visual_spotchecked_count'] }}/35問。
+                        未照合 {{ $apCandidateAudit['source_visual_unchecked_official_count'] }}問。
+                        照合済みの問題も正答・解説・著作権の独立監修は未完了です。
+                    </p>
+                </div>
+
                 <p class="mt-3 text-xs leading-6 text-amber-200" data-ap-a-release-blocked>
                     {{ $apCandidateAudit['publication_blocked'] ? '通常公開と本番模試提供はブロック中です。' : '公開ゲートの状態が変わりました。管理者による権利・正答・解説の審査記録を別途確認してください。' }}
                     既知の重複 {{ $apCandidateAudit['known_overlap_count'] }}組は
@@ -154,17 +168,28 @@
                         80問それぞれの出典・正答・解説と監修項目を確認する
                     </summary>
                     <div class="mt-4 space-y-2">
-                        @foreach($apCandidateAudit['items'] as $item)
+                        @foreach(collect($apCandidateAudit['items'])->sortBy(fn ($item) => [$item['priority'], $item['number']]) as $item)
                             <details class="rounded-xl border border-slate-800 bg-slate-950/30 p-3"
                                      data-ap-a-review-item="{{ $item['key'] }}">
                                 <summary class="cursor-pointer text-xs font-semibold text-slate-100">
                                     問{{ $item['number'] }} · {{ $item['key'] }}
                                     · {{ $item['origin_type'] === 'official' ? 'IPA過去問' : ($item['origin_type'] === 'core' ? '既存Canovia' : '新規Canovia') }}
                                     · {{ $item['domain'] }}
+                                    · {{ $item['priority'] }}優先
                                     · {{ count($item['flags']) ? '自動検査で要修正' : '構造検査OK' }}
                                     · 専門監修待ち
                                 </summary>
                                 <div class="mt-3 space-y-3 text-xs leading-6 text-slate-300">
+                                    <p class="font-semibold text-amber-300" data-ap-a-review-priority="{{ $item['priority'] }}">
+                                        {{ $item['priority'] }}：{{ $item['priority_reason'] }}
+                                    </p>
+                                    @if($item['source_visual_spotcheck'])
+                                        <p class="text-cyan-200" data-ap-a-source-spotcheck>
+                                            原文のスポット照合記録：PDF {{ $item['source_visual_spotcheck_pdf_page'] }}ページ。
+                                            {{ $item['source_visual_spotcheck_note'] }}
+                                            （専門監修済みではありません）
+                                        </p>
+                                    @endif
                                     <p class="whitespace-pre-wrap text-slate-100">{{ $item['prompt'] }}</p>
                                     <div class="grid gap-1 sm:grid-cols-2">
                                         @foreach($item['choices'] as $choice)

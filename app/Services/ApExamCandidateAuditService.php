@@ -24,6 +24,29 @@ final class ApExamCandidateAuditService
     public function __construct(private readonly QuestionPackCatalogService $catalog) {}
 
     /**
+     * A source PDF spotcheck expires if its candidate version, official
+     * problem text, choices or answer changes. This never grants expert
+     * explanation/rights approval.
+     *
+     * @param array<string,mixed> $entry
+     * @param array<string,mixed> $question
+     */
+    public static function matchesVisualEvidence(
+        array $entry,
+        array $question,
+        string $candidateVersion,
+        string $evidenceVersion,
+    ): bool {
+        $snapshot = $entry['verified_snapshot'] ?? null;
+        return $candidateVersion === $evidenceVersion
+            && ($entry['status'] ?? '') === 'source_statement_options_visually_spotchecked_only'
+            && is_array($snapshot)
+            && ($snapshot['prompt'] ?? null) === ($question['prompt'] ?? null)
+            && ($snapshot['choices'] ?? null) === data_get($question, 'response_schema.0.choices')
+            && ($snapshot['answer'] ?? null) === data_get($question, 'grading_rule.answer');
+    }
+
+    /**
      * @return array<string,mixed>
      */
     public function inspect(): array
@@ -34,6 +57,14 @@ final class ApExamCandidateAuditService
             $sourceQuestions[$slug] = collect($this->catalog->payload($catalogKey)['questions'] ?? [])
                 ->keyBy('external_key');
         }
+
+        $spotcheckFile = resource_path('learning_review/ap-a-2026-source-spotchecks-v1.json');
+        $spotcheckEvidence = json_decode((string) file_get_contents($spotcheckFile), true,
+            512, JSON_THROW_ON_ERROR);
+        $spotchecks = collect($spotcheckEvidence['entries'] ?? [])
+            ->keyBy('key');
+        $sourceVisualChecked = 0;
+        $priorities = ['P0' => 0, 'P1' => 0, 'P2' => 0];
 
         $items = [];
         $normalizedPrompts = [];
@@ -121,6 +152,41 @@ final class ApExamCandidateAuditService
                     '他79問との意味上の重複確認',
                     'オリジナル/派生の権利・出典確認'];
 
+            // Source visual checks only establish that the visible original
+            // statement and options match; they never count as human signoff.
+            $spotcheck = $spotchecks->get($key);
+            $visualChecked = $originType === 'official'
+                && is_array($spotcheck)
+                && self::matchesVisualEvidence(
+                    $spotcheck,
+                    $question,
+                    (string) ($candidate['pack']['version'] ?? ''),
+                    (string) ($spotcheckEvidence['candidate_version'] ?? ''),
+                );
+            if ($visualChecked) {
+                $sourceVisualChecked++;
+            }
+
+            // Priority does not alter exam item ordering or approval flags.
+            // Address unverified original transcription before general theory.
+            $priority = $flags !== [] ? 'P0'
+                : ($originType === 'official' && ! $visualChecked ? 'P0'
+                    : ($originType === 'new' || $originType === 'official'
+                        || preg_match('/(計算|ベイズ|MIPS|SLA|ROI|待ち行列|EVM|RAID|D.A|MSS)/ui',
+                            implode(' ', array_merge($concepts, $tags)) . ' '. $key)
+                        ? 'P1' : 'P2'));
+            $priorities[$priority]++;
+            $priorityReason = $flags !== [] ? '構造不整合を先に修正'
+                : ($originType === 'official' && ! $visualChecked
+                    ? 'IPA原問題PDFと本文・選択肢の未照合'
+                    : ($originType === 'official'
+                        ? '原文スポット照合済み・独自解説と利用条件は未承認'
+                        : ($originType === 'new'
+                            ? '新規Canovia案の正答・誤答肢・解説を第三者が確認'
+                            : ($priority === 'P1'
+                                ? '計算・数値条件を独立して検証'
+                                : '通常の独立内容レビュー待ち'))));
+
             $items[] = [
                 'number' => $index + 1,
                 'key' => $key,
@@ -138,6 +204,13 @@ final class ApExamCandidateAuditService
                 'review_tasks' => $reviewTasks,
                 // No individual sign-off record is provided by the bundle.
                 'independent_review_status' => 'pending',
+                'priority' => $priority,
+                'priority_reason' => $priorityReason,
+                'source_visual_spotcheck' => $visualChecked,
+                'source_visual_spotcheck_pdf_page' => $visualChecked
+                    ? ((int) $spotcheck['pdf_page_index'] + 1) : null,
+                'source_visual_spotcheck_note' => $visualChecked
+                    ? (string) $spotcheck['evidence'] : null,
             ];
 
             if ($flags !== []) {
@@ -164,6 +237,10 @@ final class ApExamCandidateAuditService
             'source_counts' => $sourceCounts,
             'known_overlap_excluded' => $knownOverlapExcluded,
             'known_overlap_count' => count($knownOverlapPairs),
+            'source_visual_spotchecked_count' => $sourceVisualChecked,
+            'source_visual_unchecked_official_count' =>
+                $sourceCounts['ap-a-ipa-2025-autumn-official-v1'] - $sourceVisualChecked,
+            'priority_counts' => $priorities,
             'publication_blocked' =>
                 ($metadata['review_state'] ?? '') === 'pending_human_content_and_rights_review'
                 && ($metadata['explanation_review_state'] ?? '') === 'pending_human_subject_review'

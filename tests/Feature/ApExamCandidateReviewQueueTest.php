@@ -39,6 +39,12 @@ final class ApExamCandidateReviewQueueTest extends TestCase
             'ap-a-canovia-core-v1' => 35,
             'ap-a-canovia-business-management-supplement-v1' => 10,
         ], $report['source_counts']);
+        $this->assertSame(6, $report['source_visual_spotchecked_count']);
+        $this->assertSame(29, $report['source_visual_unchecked_official_count']);
+        $this->assertSame(80, array_sum($report['priority_counts']));
+        $this->assertSame(29, $report['priority_counts']['P0']);
+        $this->assertGreaterThan(0, $report['priority_counts']['P1']);
+        $this->assertGreaterThan(0, $report['priority_counts']['P2']);
         $this->assertSame(5, $report['known_overlap_count']);
         $this->assertTrue($report['known_overlap_excluded']);
         $this->assertTrue($report['publication_blocked']);
@@ -57,6 +63,14 @@ final class ApExamCandidateReviewQueueTest extends TestCase
         $this->assertNotNull($official);
         $this->assertStringStartsWith('https://www.ipa.go.jp/', $official['source_url']);
         $this->assertContains('Canovia独自の解説案・誤答理由の検証', $official['review_tasks']);
+        $checked = collect($report['items'])->firstWhere('key', 'ipa-2025-autumn-ap-am-q11');
+        $this->assertTrue($checked['source_visual_spotcheck']);
+        $this->assertSame(8, $checked['source_visual_spotcheck_pdf_page']);
+        $this->assertSame('P1', $checked['priority']);
+        $this->assertSame('pending', $checked['independent_review_status']);
+        $this->assertFalse($official['source_visual_spotcheck']);
+        $this->assertSame('P0', $official['priority']);
+
         $supplement = collect($report['items'])->firstWhere('origin_type', 'new');
         $this->assertNotNull($supplement);
         $this->assertStringContainsString('strategy-', $supplement['key']);
@@ -105,6 +119,48 @@ final class ApExamCandidateReviewQueueTest extends TestCase
         $this->assertStringContainsString('コストも予算超過', $evmChoice['label']);
     }
 
+    public function test_visual_source_evidence_invalidates_on_any_unreviewed_content_or_version_change(): void
+    {
+        $candidate = app(\App\Services\QuestionPackCatalogService::class)
+            ->payload(ApExamCandidateAuditService::CANDIDATE);
+        $questions = collect($candidate['questions'])->keyBy('external_key');
+        $evidence = json_decode((string) file_get_contents(
+            resource_path('learning_review/ap-a-2026-source-spotchecks-v1.json')),
+            true, 512, JSON_THROW_ON_ERROR);
+        $this->assertCount(6, $evidence['entries']);
+        foreach ($evidence['entries'] as $entry) {
+            $question = $questions->get($entry['key']);
+            $this->assertNotNull($question);
+            $this->assertTrue(ApExamCandidateAuditService::matchesVisualEvidence(
+                $entry, $question, $candidate['pack']['version'], $evidence['candidate_version']
+            ), 'Spotcheck should match only its exact source snapshot');
+
+            $changed = $question;
+            $changed['prompt'] .= '（変更）';
+            $this->assertFalse(ApExamCandidateAuditService::matchesVisualEvidence(
+                $entry, $changed, $candidate['pack']['version'], $evidence['candidate_version']
+            ));
+            $changed = $question;
+            $changed['grading_rule']['answer'] = 'ア';
+            // q64's genuine answer is ウ, etc.; when a changed value
+            // equals the original, force a different alternative.
+            if ($question['grading_rule']['answer'] === 'ア') {
+                $changed['grading_rule']['answer'] = 'イ';
+            }
+            $this->assertFalse(ApExamCandidateAuditService::matchesVisualEvidence(
+                $entry, $changed, $candidate['pack']['version'], $evidence['candidate_version']
+            ));
+            $changed = $question;
+            $changed['response_schema'][0]['choices'][0]['label'] .= '（変更）';
+            $this->assertFalse(ApExamCandidateAuditService::matchesVisualEvidence(
+                $entry, $changed, $candidate['pack']['version'], $evidence['candidate_version']
+            ));
+            $this->assertFalse(ApExamCandidateAuditService::matchesVisualEvidence(
+                $entry, $question, '0.4.0-review-required', $evidence['candidate_version']
+            ));
+        }
+    }
+
     public function test_only_authorized_admin_can_read_source_answers_and_pending_review_queue(): void
     {
         $this->get(route('admin.question_packs.index'))
@@ -119,6 +175,10 @@ final class ApExamCandidateReviewQueueTest extends TestCase
             ->assertSee('data-ap-a-automatic-failures', false)
             ->assertSee('data-ap-a-human-review-pending', false)
             ->assertSee('data-ap-a-release-blocked', false)
+            ->assertSee('data-ap-a-priority-summary', false)
+            ->assertSee('data-ap-a-source-spotcheck', false)
+            ->assertSee('P0：29問')
+            ->assertSee('未照合 29問。')
             ->assertSee('通常公開と本番模試提供はブロック中です。')
             ->assertSee('80問それぞれの出典・正答・解説と監修項目')
             ->assertSee('data-ap-a-review-item="ipa-2025-autumn-ap-am-q03"', false)
