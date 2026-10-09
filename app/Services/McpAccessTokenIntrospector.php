@@ -73,9 +73,18 @@ final class McpAccessTokenIntrospector
         // The bearer token is sent only in the POST body to the configured,
         // HTTPS, same-issuer IdP. Never log or cache it or forward redirects.
         try {
+            // RFC 6749 §2.3.1: form-encode each credential before
+            // constructing Basic. A resource-URL-valued Keycloak client ID
+            // contains ':' and '/' and must not be split at its first colon.
+            // This preserves the exact single-MCP-resource audience rule.
+            $basicCredentials = rawurlencode($settings['credential_id'])
+                .':'.rawurlencode($settings['credential_secret']);
+
             $response = Http::asForm()
                 ->acceptJson()
-                ->withBasicAuth($settings['credential_id'], $settings['credential_secret'])
+                ->withHeaders([
+                    'Authorization' => 'Basic '.base64_encode($basicCredentials),
+                ])
                 ->withoutRedirecting()
                 ->connectTimeout(2)
                 ->timeout(5)

@@ -1,0 +1,34 @@
+name: MCP Keycloak Disposable OAuth Protocol Lab
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/McpAccessTokenIntrospector.php'
+      - 'tests/Feature/McpAccessTokenIntrospectorTest.php'
+      - 'scripts/ci/keycloak_mcp_protocol_smoke.py'
+      - '.github/workflows/mcp-keycloak-disposable-oauth-lab.yml'
+      - 'docs/development/MCP_KEYCLOAK_DISPOSABLE_PROTOCOL_LAB_2026_10_09.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  keycloak-ephemeral-protocol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch pinned ephemeral Keycloak version
+        run: docker pull quay.io/keycloak/keycloak:26.8.0
+
+      - name: Run real disposable RFC 8707 and RFC 7662 protocol probe
+        run: python3 scripts/ci/keycloak_mcp_protocol_smoke.py
+
+      - name: Ensure local ephemeral Keycloak is removed
+        if: always()
+        run: |
+          docker rm -f canovia-mcp-keycloak-disposable-ci >/dev/null 2>&1 || true
+          test -z "$(docker ps -a -q --filter name=^/canovia-mcp-keycloak-disposable-ci$)"
