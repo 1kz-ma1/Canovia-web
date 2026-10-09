@@ -111,6 +111,52 @@ jobs:
           done
           echo 'Isolated SQLite migration boot PASS; /up=200; private routes=503'
 
+      - name: Verify real Laravel migrations on isolated PostgreSQL 17
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker network create canovia-mcp-pg-ci
+          docker run -d --name canovia-mcp-pg-ci \
+            --network canovia-mcp-pg-ci \
+            --network-alias pg-test \
+            --env POSTGRES_USER=canovia_test \
+            --env POSTGRES_PASSWORD=ci-not-a-real-credential \
+            --env POSTGRES_DB=canovia_mcp_staging_db \
+            postgres:17-alpine
+
+          ready=0
+          for attempt in $(seq 1 40); do
+            if docker exec canovia-mcp-pg-ci \
+              pg_isready -U canovia_test -d canovia_mcp_staging_db \
+              > /dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" = "1"
+
+          # Deliberately bypass the Render-instance-specific startup guard
+          # ONLY within this private, disposable CI test. The guard is
+          # independently verified above and refuses all other live DBs.
+          # No production connection URL or actual Render DB is supplied.
+          docker run --rm \
+            --network canovia-mcp-pg-ci \
+            --entrypoint sh \
+            --env APP_ENV=testing --env APP_DEBUG=false \
+            --env APP_KEY=base64:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa= \
+            --env DB_CONNECTION=pgsql \
+            --env DB_URL=postgresql://canovia_test:ci-not-a-real-credential@pg-test:5432/canovia_mcp_staging_db \
+            --env CACHE_STORE=array --env SESSION_DRIVER=array \
+            --env QUEUE_CONNECTION=sync --env MAIL_MAILER=log \
+            canovia-mcp-staging:smoke -c \
+            'php artisan migrate --force --no-interaction --quiet && php artisan migrate --force --no-interaction --quiet'
+
+          users=$(docker exec canovia-mcp-pg-ci sh -c \
+            "psql -U canovia_test -d canovia_mcp_staging_db -At -c \"SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('users','plans','mcp_linked_subjects','mcp_delegated_grants','mcp_delegated_access_events')\"")
+          test "$users" = "5"
+          echo 'Disposable PostgreSQL 17: real Canovia migrations, idempotence and MCP tables PASS'
+
       - name: Staging runtime diagnostics on failure (no credentials)
         if: failure()
         run: |
@@ -124,4 +170,6 @@ jobs:
         if: always()
         run: |
           docker rm -f canovia-mcp-staging-smoke 2>/dev/null || true
+          docker rm -f canovia-mcp-pg-ci 2>/dev/null || true
+          docker network rm canovia-mcp-pg-ci 2>/dev/null || true
           rm -f guard.stdout guard.stderr
