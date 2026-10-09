@@ -320,3 +320,62 @@ mapping, (5) existing-account Safari/PWA/WKWebView login continuity,
 (6) Learning resume/answer persistence, (7) the owner decision to lift
 Issue #418's release hold. Neither importer nor classifier ever authorizes
 a merge, migration, resource provisioning, or spending.
+
+
+## Full migration ledger / source tree comparison (2026-10-09)
+
+The prior SELECT-only inventory only checked three incident-related Laravel
+migration identifiers. This is insufficient to know whether the **entire
+production migrations ledger** agrees with the deployed migration source tree.
+A separate operator-only query and offline comparator now address this gap:
+
+- `scripts/sql/p0_mysql_readonly_full_migration_ledger.sql` contains exactly
+  one `SELECT` of the **migration identifiers and batch numbers only** from the
+  `migrations` table. It does NOT query users, sessions, tasks, answers or
+  other private data, and does not modify the schema.
+- `scripts/ci/p0_mysql_full_ledger_offline_check.py` compares that raw SQL
+  response locally to every checked-in `database/migrations/*.php`
+  filename from the **same exact source revision**. It rejects invalid,
+  duplicated, malformed or unsupported names, nonpositive batches,
+  unexpected/obsolete applied identifiers and empty/unreadable ledger data.
+  Known un-applied files are `KNOWN_PENDING_MIGRATIONS` requiring a separate
+  human review. A complete match is still `REVIEW_REQUIRED`, **never**
+  release authorization.
+- The comparator prints **fixed classifications only**, never raw migration
+  names, file contents, batch numbers, connection strings or input lines.
+  GitHub CI uses only a disposable MySQL instance and tests ordinary,
+  tampered, duplicated, truncated, absent and unexpected-identifier cases.
+
+Run locally on an operator-controlled computer only, with the original,
+already authorized **read-only MySQL login profile** and a reviewed source
+checkout corresponding to the candidate deployment:
+
+```bash
+set -euo pipefail
+# Actual account/DB identity must be checked privately beforehand.
+# No credentials or raw MySQL output should leave this trusted computer.
+mysql --login-path=canovia_p0_readonly --batch --raw --skip-column-names \
+  < scripts/sql/p0_mysql_readonly_full_migration_ledger.sql \
+  | python3 scripts/ci/p0_mysql_full_ledger_offline_check.py --input -
+```
+
+**Interpretation:**
+
+| Code | Meaning | Action |
+| --- | --- | --- |
+| `FULL_MIGRATION_LEDGER_MATCH_NOT_RELEASE` | Every checked-in migration is recorded as applied and no unexpected entries observed | Still confirm database identity, 34-column/5-FK/11-index schema, backup restoration, deploy SHA and E2E |
+| `KNOWN_PENDING_MIGRATIONS` | Some source migration files have not been applied | Review **which** migrations are pending privately, migration ordering and planned DDL, backups and maintenance window before release |
+| `UNKNOWN_APPLIED_MIGRATION` | DB ledger references a migration absent from the checked-out source tree | **BLOCK**: investigate branch/history mismatch or deleted/renamed migration; do not change ledger by hand |
+| `LEDGER_EMPTY_OR_UNVERIFIED`, `FULL_LEDGER_INPUT_REJECTED`, `LEDGER_INVALID` | Missing, malformed, oversized, duplicate or otherwise untrusted evidence | **BLOCK**, re-check target, permissions and operator-only acquisition |
+
+The comparator returns code 0 for `REVIEW_REQUIRED` **only because the
+input was parsed safely**; it never approves a migration/merge. The
+production Aiven database has NOT been accessed via these changes. A full
+migration-name comparison does NOT certify physical schema integrity or
+prove restoration. It must be paired with the incident-specific inventory,
+owner-verified backup plan and full release checklist tracked by Issue #418.
+
+When newer changes have been merged to main between metadata capture and
+the proposed release, this audit must be repeated using the **actual
+candidate deployed source commit**. A source/ledger match at one SHA is
+not proof that an unrelated later auto-deployment remained safe.
