@@ -1,10 +1,11 @@
 <?php
 
 /**
- * Explicitly operator-run, SELECT-only P0 MySQL recovery preflight.
+ * CI-ONLY Laravel boot-based P0 preflight. DO NOT USE IN PRODUCTION.
  *
- * Never calls Migration::up(), artisan migrate, schema alteration or updates.
- * Must use an independently verified, existing MySQL SELECT-only account.
+ * Although this entrypoint never calls up()/DDL/DML, Laravel bootstrap may
+ * initialize unrelated application services. For operator production checks,
+ * run the separate pure SELECT SQL and offline importer instead.
  * Outputs fixed classifications only (never names, row values or secrets).
  */
 
@@ -26,7 +27,9 @@ $emit = static function (string $status, string $code): void {
 
 if (count($argv ?? []) !== 2 || ($argv[1] ?? null) !== '--check'
     || getenv('CANOVIA_P0_READONLY_PREFLIGHT') !== '1'
-    || ! in_array(getenv('APP_ENV'), ['production', 'testing'], true)
+    || getenv('APP_ENV') !== 'testing'
+    || getenv('GITHUB_ACTIONS') !== 'true'
+    || getenv('CANOVIA_P0_DISPOSABLE_MYSQL_CI') !== '1'
     || getenv('DB_CONNECTION') !== 'mysql') {
     $emit('BLOCK', 'PREFLIGHT_OPERATOR_GUARD_REJECTED');
     exit(2);
@@ -41,9 +44,8 @@ if (! is_string($expectedHost) || trim($expectedHost) === ''
     exit(2);
 }
 
-// Only the fixed P0 migration is imported; its preflight() is SELECT-only.
-// Kernel boot may initialize local application services; use an operator-owned
-// isolated environment with an existing read-only DB credential.
+// Laravel boot can run arbitrary app initialization: strictly synthetic CI only.
+// Production must use reviewed SELECT SQL (no application bootstrap).
 try {
     require dirname(__DIR__, 2).'/vendor/autoload.php';
     $app = require dirname(__DIR__, 2).'/bootstrap/app.php';
