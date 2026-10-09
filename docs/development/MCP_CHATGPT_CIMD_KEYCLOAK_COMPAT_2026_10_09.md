@@ -114,3 +114,23 @@ Acceptance requires CI to distinguish `real_chatgpt_cimd: blocked_by_pinned_keyc
 **Important negative finding:** Keycloak still presented the login screen with an incorrect RFC8707 resource for that explicitly registered client. The release gate is therefore **not satisfied** at authorization entry. A hosted pilot MUST prove the wrong resource cannot produce an accepted issued token (and ensure Canovia's strict single-audience validator rejects it). This lab does not exchange a signed ChatGPT token, so its CI emits `static_wrong_resource_token_exchange: not_tested` and `static_wrong_resource_release_gate: blocked` rather than pretending the negative check passed. Separate synthetic machine / human PKCE tests continue to cover the provider's token-bound resource behavior for other test clients.
 
 Never allow this compatibility CI alone to authorize a deployment, billing action, public registration, user consent or MCP Plan read. Keycloak 26.8.0 should be selected only with **static pre-registration as an explicit, independently reviewed alternative** and all hosted OAuth, token, signed-assertion and cost gates fulfilled.
+
+
+## Additional acceptance slice: disposable *synthetic* private_key_jwt (2026-10-09)
+
+The real ChatGPT client cannot sign a test assertion in this CI runner, and Keycloak 26.8.0 native CIMD remains **blocked**. To test Keycloak's actual **token endpoint** and the negative resource behavior independently of the unavailable real ChatGPT signing key, this branch adds \`scripts/ci/keycloak_chatgpt_static_jwt_smoke.py\` to the pinned disposable workflow.
+
+This script uses a **separate, invented JWT-authenticated OAuth RP**, never the public ChatGPT client ID. An OpenSSL-generated disposable RSA private key is confined to the runner and **is not mounted into the Keycloak container**. Only its one-day, public self-signed certificate is embedded in the localhost-only temporary realm. The fake human logs in through the same real Authorization Code + S256 browser harness already used for the two-person subject isolation test, with callbacks intercepted at \`.invalid\`.
+
+**Acceptance, per exact CI commit:**
+1. Correct RS256-signed \`private_key_jwt\` + matching S256 verifier must exchange the fake user's code for a short-lived access token.
+2. RFC 7662 introspection as the **distinct confidential MCP resource client** must return \`active=true\`, exact issuer, immutable \`sub\`, synthetic RP \`client_id\`, only the protected MCP URI in \`aud\`, read scope, bearer type and <=3600s expiry.
+3. A token request substituting a foreign resource for a code authorized to the true resource must fail as \`invalid_target\` **without issuing a token**. A forged client assertion and incorrect PKCE verifier must fail independently.
+4. RFC 7009 revocation using a new valid signed client assertion must make the formerly active token inactive.
+5. Remove the entire synthetic realm, private keys and container; CI emits only fixed safe statuses and no secrets, tokens, codes, user subjects or HTML.
+
+**Interpretation:** Even if this independent synthetic exchange passes, it **does not prove** actual ChatGPT signing, JWKS rollover/retrieval, real ChatGPT callback, production token validation, per-Plan consent, or a working Canovia MCP connection. Do not promote static pre-registration or native CIMD to release-ready on that basis alone. If it fails, the exact failed assertion is an actionable Keycloak/token-configuration gap and must remain fail closed.
+
+### Production P0 dependency (hard merge gate)
+
+[Issue #418](https://github.com/1kz-ma1/Canovia-web/issues/418) requires production MySQL migration integrity and PWA login restoration before new \`main\` merges, including docs/CI-only merges, because \`main\` can auto-deploy. **Keep PR #438 in Draft and do not merge** until the P0 owner confirms the gate resolved and the exact final SHA passes all CI. This disposable investigation does not change Render, Aiven, hosted IdP, paid plans or environment flags.
