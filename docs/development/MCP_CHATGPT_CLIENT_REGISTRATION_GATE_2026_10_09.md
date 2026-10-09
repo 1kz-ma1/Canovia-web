@@ -98,3 +98,51 @@ Acceptance checklist for an actual hosted connection:
 **Boundary:** no Render service or database has been added,
 no flags switched, no real ChatGPT connection established and no
 billing contract changed by the CI experiment.
+
+## Real Keycloak 26.8.0 DCR security baseline (CI, 2026-10-09)
+
+Repeated disposable CI runs identified the following **real responses**
+without ever weakening provider policies:
+
+- Keycloak OIDC discovery advertises `registration_endpoint`.
+- Anonymous OIDC Dynamic Client Registration returns **403** under
+  default anonymous registration policy.
+- With a *single-use, 120-second Initial Access Token*, attempting to
+  include the extra `canovia.development.read` client scope at
+  registration returns **403** (`insufficient_scope` under Client
+  Scope Policy). This is an appropriate least-privilege protection.
+- Omitting that unapproved client-scope request lets the **public**
+  test client register through the real Keycloak OIDC DCR endpoint,
+  with `token_endpoint_auth_method=none`, generated `client_id`
+  and the selected callback.
+- The newly registered client is **not allowed to use**
+  `canovia.development.read` during authorization by default; the
+  OAuth redirect returns **`invalid_scope`** before user login.
+  Registration success is emphatically **not** permission to read
+  a user's MCP Plan.
+
+The regression now accepts **only** the safe default `invalid_scope`
+denial or a full correctly-validated user PKCE + audience/subject/scope
+grant if a future Keycloak version changes the defaults. All unexpected
+errors must fail CI, and **neither result** should be interpreted as
+authorization to expose unrestricted anonymous DCR publicly.
+
+### Selected direction for the live ChatGPT connection
+
+Keep **pre-registration** as the low-surprise initial fallback if ChatGPT's
+exact callback and chosen client registration mode support it. Otherwise,
+prioritize an explicitly reviewed **CIMD** design using ChatGPT's real
+`https://chatgpt.com/oauth/client.json`, `none` or
+`private_key_jwt` and Keycloak's separately pinned experimental CIMD
+client policy. Its trusted-domains, JWKS, allowed resources and redirect
+validation must be tested before hosting or activation.
+
+The **default Keycloak DCR configuration is not plug-and-play with
+ChatGPT**. A DCR-specific rollout would require a separate opt-in,
+client registration policies, read-scope allowlisting and exact
+resource-audience policy; this has not been authorized.
+
+Next true blocker is an externally reachable, production-mode,
+persistent HTTPS IdP with acceptable capacity/database and explicit
+owner signoff. Until then the staging Web remains non-public and
+OAuth/consent/MCP switches remain OFF.
