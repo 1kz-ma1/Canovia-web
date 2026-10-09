@@ -190,8 +190,16 @@ def main():
                 "password": http_test.PASSWORD, "remember": "0",
             })
             ensure(status == 302, "HTTPS login redirects")
-            ensure(urllib.parse.urlsplit(headers.get("Location", "")).path != "/login",
+            redirected = urllib.parse.urlsplit(headers.get("Location", ""))
+            ensure(redirected.path != "/login",
                    "login did not send back to login")
+            # Following an accidental HTTP Location would drop a Secure
+            # cookie on the next browser request and recreate the PWA loop.
+            ensure(redirected.scheme == "https",
+                   "HTTPS login redirect preserves scheme")
+            ensure(redirected.hostname == "localhost"
+                   and redirected.port == HTTPS_PORT,
+                   "HTTPS login redirect preserves host")
             ensure(request(opener, "GET", BASE + "/account")[0] == 200,
                    "authenticated account on exact HTTPS origin")
 
