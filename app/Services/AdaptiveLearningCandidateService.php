@@ -7,6 +7,7 @@ use App\Models\LearningRunCandidate;
 use App\Models\LearningRunItem;
 use App\Models\Question;
 use App\Models\QuestionPack;
+use Illuminate\Support\Collection;
 
 /**
  * EXPERIMENTAL conservative, deterministic recommendation for the replaceable
@@ -24,10 +25,14 @@ final class AdaptiveLearningCandidateService
      * Grade events are immutable; adjusted answers are excluded. Do not mix
      * different owners, Plan/Task, or exam simulation data into this ranking.
      *
-     * @return \Illuminate\Support\Collection<int, LearningAnswerEvent>
+     * @return Collection<int, LearningAnswerEvent>
      */
-    private function recentEvidence(LearningRun $run): \Illuminate\Support\Collection
+    private function recentEvidence(LearningRun $run): Collection
     {
+        // Never aggregate anonymous events whose actor identity is absent.
+        if ($run->user_id === null && ! filled($run->actor_token)) {
+            return collect();
+        }
         $limit = max(2, min(30, (int) config('study.adaptive_learning.signal_window', 8)));
 
         return LearningAnswerEvent::query()
@@ -51,12 +56,12 @@ final class AdaptiveLearningCandidateService
     }
 
     /** @return list<string> */
-    public function recurringMissedTopics(LearningRun $run): array
+    public function recurringMissedTopics(LearningRun $run, ?Collection $evidence = null): array
     {
         $threshold = max(2, min(5, (int) config('study.adaptive_learning.minimum_misses', 2)));
         $histories = [];
 
-        foreach ($this->recentEvidence($run) as $event) {
+        foreach (($evidence ?? $this->recentEvidence($run)) as $event) {
             $item = $event->item;
             // A missing source Question ID cannot provide independent
             // question evidence for a repeated weakness.
@@ -101,10 +106,11 @@ final class AdaptiveLearningCandidateService
 
         $reserved = LearningRunItem::where('learning_run_id', $run->id)
             ->whereNotNull('question_id')->pluck('question_id')->map('intval')->all();
-        $topics = $this->recurringMissedTopics($run);
+        $evidence = $this->recentEvidence($run);
+        $topics = $this->recurringMissedTopics($run, $evidence);
         // Recently seen questions are not permanently banned: tiny Banks
         // remain usable, but unseen candidates get a deterministic first look.
-        $recentlySeen = $this->recentEvidence($run)
+        $recentlySeen = $evidence
             ->pluck('item.question_id')->filter()->map('intval')->unique()->all();
         $limit = max(1, min(12, (int) config('study.adaptive_learning.candidate_limit', 6)));
 
