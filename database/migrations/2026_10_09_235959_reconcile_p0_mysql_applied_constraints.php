@@ -16,6 +16,24 @@ return new class extends Migration
      */
     public function up(): void
     {
+        $this->preflight();
+
+        foreach ([
+            '2026_10_04_000200_create_intelligence_decision_traces_table',
+            '2026_10_08_230000_create_learning_answer_evaluation_adjustments',
+        ] as $migrationName) {
+            $migration = require database_path('migrations/'.$migrationName.'.php');
+            $migration->up();
+        }
+    }
+
+    /**
+     * Perform SELECT-only validation of both target contracts with NO DDL.
+     * Public solely to support an operator-controlled read-only diagnostic.
+     * A passing preflight never grants authorization to run up().
+     */
+    public function preflight(): void
+    {
         $contracts = [
             [
                 'intelligence_decision_traces',
@@ -87,12 +105,6 @@ return new class extends Migration
             $this->preflightIndexes($table, $indexes);
         }
 
-        // Historical up() is itself idempotent and validates its own contract.
-        // This is deliberately not transactional: MySQL cannot roll back DDL.
-        foreach ($contracts as [, $migrationName]) {
-            $migration = require database_path('migrations/'.$migrationName.'.php');
-            $migration->up();
-        }
     }
 
     /**
