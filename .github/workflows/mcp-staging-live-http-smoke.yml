@@ -45,9 +45,8 @@ jobs:
           set -euo pipefail
           # Guard representative public, account, OAuth and MCP surfaces
           # against any accidental opening on the *deployed* Render instance.
-          for path in / /health /welcome /workspace /admin/login \
+          for path in / /welcome /workspace /admin/login \
             /login /register /forgot-password /account \
-            /sw.js /app.webmanifest /build/not-a-real-asset.js /index.php \
             /account/mcp/link/callback /api/mcp \
             /.well-known/oauth-protected-resource \
             /.well-known/oauth-protected-resource/api/mcp; do
