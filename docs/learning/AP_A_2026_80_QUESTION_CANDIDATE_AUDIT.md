@@ -89,3 +89,12 @@
 - `calc-mm1-015` はT>0、0≤ρ<1の安定条件を明示し、不等式の変形根拠を補う案。
 - どの提案も候補v0.3.0の設問本文・選択肢・正答・解説を**変更していない**。既存Core Packと本番DBも変更しない。原設問・全4肢・正答・解説・候補版に紐付けた `ApExamCandidateAuditService::matchesRevisionProposal` で、後から内容が編集された場合には提案が失効・再監査に戻る。管理者画面で未適用・未承認と明記して比較できる。
 - 次の工程で独立した内容監修者が承認・調整し、新バージョンの候補に取り込む際は、原典との変更点を記録し、IPA原典35問の照合証拠・独自45問の誤答理由135肢・公開前レビューSHAを適切に更新する。**この作業では監修者の承認を偽装しないし、正式模試の公開はしない**。
+
+## 2026-10-09 L5-i：v0.4独立Draftプレビューと改変証拠の再生成
+
+- **v0.3候補はそのまま保護**し、新slug `ap-a-2026-cbt-80-candidate-v2` / 版 `0.4.0-review-required` の**未公開Draftプレビュー**を別同梱として作成。`resources/question_packs/ap/ap-a-2026-cbt-80-candidate-v2.json`。重点6問に前段L5-hの未承認校正案（設問4件、解説6件）を反映したが、**正答キー・四択の変更なし、IPA35問と他39問は完全不変**。原典Core/Supplement3 Pack、v0.3候補も変更しない。
+- 変更は `resources/learning_review/ap-a-2026-v04-preview-change-ledger.json` に、元の版と別slug、変わった各問・各フィールド・元ソース・未監修状態を追跡する。v0.4の `learning_metadata.curation` に `revision_overlay_from`、`revision_proposal_key`、`revision_review_status=not_independently_reviewed` を追加して元の出典に対する差分を明示。
+- `resources/learning_review/ap-a-2026-canovia-45-choice-audit-v2.json` は現行の45問の選択肢理由草案を問題文・解説変更後のスナップショットに再紐付け。元の135誤答理由は一切自動承認せず、人間による説明・誤答肢の再検証が必要。 `resources/learning_review/ap-a-2026-source-spotchecks-v2.json` はIPA原典35問**不変**を検証してから旧版の原文・4択照合記録を引き継いだもの。再度35件を人手で審査したと偽らない。
+- `ApExamCandidateRevisionPreviewService` は旧版v0.3とプレビューv0.4を全80件比較し、**提案6件以外の変更ゼロ**、設問4件/解説6件、正答と選択肢不変、IPA35件不変、45問監査草案・35件原典照合の新スナップショット一致、変更履歴の整合性を確認する。 `AdaptiveExamPackReadinessService::contentFingerprint` と**同じ**実装で旧版・新版の内容SHA-256を個別算出。ハッシュが変わっても専門監修が付いたとはみなさない。
+- 管理者のQuestion Pack画面に両版の内容指紋・差分数・監修待ち80問と構造検査結果を読み取り専用で表示。 `review_state` と `explanation_review_state` は両方とも**pending**、 `exam_simulation_review` は新Draftに付与しない。学習者公開・自動DB取込なし。CIでは一時テストDBにv0.4をDraft importしても通常公開・模試スタートが拒否されること、DB回答や実績が変わらないことを確認する。
+- 今後、6問の校正案に人間の専門レビュー・出典チェックが済んだ後に、監修者・日付・権利根拠・正答/誤答肢の妥当性を記録し公開前審査を進める。**v0.4はその承認済み版ではない。**
