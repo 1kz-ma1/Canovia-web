@@ -57,7 +57,8 @@ class StrictRedirect(urllib.request.HTTPRedirectHandler):
             base.scheme, base.netloc, base.path
         ) and not candidate.fragment and not candidate.username and not candidate.password:
             raise CallbackRedirect(newurl)
-        if (candidate.scheme, candidate.netloc) != ("http", "127.0.0.1:18081"):
+        loopback = urllib.parse.urlsplit(ORIGIN)
+        if (candidate.scheme, candidate.netloc) != (loopback.scheme, loopback.netloc):
             raise Gap("unexpected_external_redirect")
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
