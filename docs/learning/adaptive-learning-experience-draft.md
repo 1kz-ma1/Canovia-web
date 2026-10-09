@@ -328,3 +328,12 @@ No DB schema, pricing, rollout/entitlement, AI provider, official exam profile, 
 - IPA FAQにより、教育目的等での公表済み過去問題の問題集・テキスト利用について原則個別許諾/使用料は不要。ただし著作権は維持され、年度・期・試験区分・問番号等と、改変した場合の注記が必要。詳細は `AP_A_2026_80_QUESTION_CANDIDATE_AUDIT.md` 。
 - IPA公式由来35問の出典メタデータは存在することを確認。学習者の画面への出典表示・商用提供における留意点・他の著作物の混在の最終確認は未完了。独立監修済みとみなさず、公開ゲートを閉じる。
 - 6問の技術精査は先行統合済みのPR #451で処理済み。本変更は重複実装を避け、IPA出典の機械的確認と管理者向けFAQ導線に限定。
+
+## 2026-10-09 L3-c: Learning Run 単問のセッション下書き・復帰
+
+- **Scope / decision**: Understanding/Practiceの回答確定前のラジオ・チェックボックス・数値入力を、従来StudyPracticeSessionやExam Response Draftと混在させず独立して自動保存。回答/採点とは明確に分離する。
+- **Storage**: 新規DB表/カラムは増やさない。CSRF必須のPOST `/plans/{plan}/tasks/{task}/learning/{learningRun}/draft`が、Laravelサーバセッション中の本人＋Run＋現在のItemにひもづく未採点下書きを保存。保存期限は認証/ブラウザのセッション寿命に依存し、異なる端末/ブラウザ、期限切れ、ログアウト後の復帰は対象外。公開HTMLに正解・採点ルール・個人セッション識別情報を露出させない。
+- **Validation / privacy**: Plan/Task所有権・Study分類・Run本人・active状態・current ordinal/item一致・未回答をサーバで検証。不正な選択肢、重複選択、任意メモの上限・モード境界を拒否。回答途中の数値（`-`等）は保管できるが、Gradeは実行しない。メモの取扱いは別PR #454のL3-bと整合し、理解モードだけ任意の`reasoning`を保存可能な前方互換性を用意する。#454の実装はまだmainではない。
+- **Lifecycle**: 500ms debounceと入力変更/画面遷移時の可能な範囲の送信。成功レスポンスを確認した時だけ「保存しました」と表示。通信失敗を成功と偽装しない。回答のDB確定後・明示終了後は対応するセッション下書きを削除。新しいItemに進んでも同じRunで古い下書きを再使用しない。既存の1問AnswerEventはimmutableのまま。
+- **Compatibility / limitations**: 従来StudyPracticeSession/Attempt、Exam Simulationの時間・Draft、Task/Plan進捗、AI評価、QuestionPack公開条件・権利審査は変更しない。セッションバックエンドの可用性や実際のPWA/WKWebView再起動跨ぎ復帰は本番で独立確認が必要。サーバ応答前の突然の強制終了には完全な保存保証がない。より長期のDB永続化/端末跨ぎ復元はPlatform DB/Auth復旧後の別設計ゲート。
+- **Acceptance**: 入力復帰、番号/複数/単一、部分入力、未認可・別人物・別Item・終了/既回答拒否、従来成績と旧履歴不変、通信失敗/画面離脱JSをPHP+Node CIで検証。#418のP0復旧完了までDraft PRのmainマージ/本番自動デプロイは禁止。実機はまとめて後日検証。
