@@ -24,7 +24,7 @@ $emit = static function (string $status, string $code): void {
     ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)."\n";
 };
 
-if (($argv ?? []) !== [__FILE__, '--check']
+if (count($argv ?? []) !== 2 || ($argv[1] ?? null) !== '--check'
     || getenv('CANOVIA_P0_READONLY_PREFLIGHT') !== '1'
     || ! in_array(getenv('APP_ENV'), ['production', 'testing'], true)
     || getenv('DB_CONNECTION') !== 'mysql') {
