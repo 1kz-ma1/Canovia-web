@@ -144,6 +144,33 @@ return new class extends Migration
                 throw new RuntimeException('P0 recovery blocked: database-wide foreign key name collision.');
             }
 
+            // InnoDB requires compatible child/parent column types,
+            // including integer signedness. A nullable child is also
+            // mandatory when this new FK uses ON DELETE SET NULL.
+            // Verify metadata for both sides before the first table's DDL.
+            $schemaName = DB::connection()->getDatabaseName();
+            $childMetadata = DB::table('information_schema.COLUMNS')
+                ->where('TABLE_SCHEMA', $schemaName)
+                ->where('TABLE_NAME', $table)
+                ->where('COLUMN_NAME', $column)
+                ->first(['COLUMN_TYPE', 'IS_NULLABLE']);
+            $parentMetadata = DB::table('information_schema.COLUMNS')
+                ->where('TABLE_SCHEMA', $schemaName)
+                ->where('TABLE_NAME', $parent)
+                ->where('COLUMN_NAME', 'id')
+                ->first(['COLUMN_TYPE']);
+            if ($childMetadata === null
+                || $parentMetadata === null
+                || strtolower((string) $childMetadata->COLUMN_TYPE)
+                    !== strtolower((string) $parentMetadata->COLUMN_TYPE)) {
+                throw new RuntimeException('P0 recovery blocked: incompatible foreign-key column types.');
+            }
+
+            if ($deleteRule === 'set null'
+                && strtoupper((string) $childMetadata->IS_NULLABLE) !== 'YES') {
+                throw new RuntimeException('P0 recovery blocked: SET NULL foreign key column is not nullable.');
+            }
+
             // Orphaned rows make an ADD FOREIGN KEY fail after earlier DDL.
             // Check existence only: no user identifiers or row contents leave DB.
             if (DB::table($table.' as child')
