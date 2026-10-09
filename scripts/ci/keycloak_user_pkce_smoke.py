@@ -169,6 +169,9 @@ def authorize(username: str, password: str, client_id: str, redirect: str,
                 "authorization_code_missing")
         require("error" not in data, "authorization_error_redirect")
         return code[0], verifier
+    except urllib.error.HTTPError as exc:
+        # Do not leak error bodies or cookies: record only the HTTP status.
+        raise Gap("login_http_status_" + str(exc.code)) from None
     except (urllib.error.URLError, TimeoutError):
         raise Gap("login_request_unavailable") from None
 
@@ -328,7 +331,14 @@ def main() -> None:
                                    resource_secret, admin_password):
                         line = line.replace(secret, "[REDACTED]")
                     # Only in the disposable CI realm; no production data.
-                    print("ephemeral_keycloak_error: " + line[:220])
+                    if 'LOGIN_ERROR' in line:
+                        import re
+                        found = re.search(r'error="([a-z_]+)"', line)
+                        print("ephemeral_keycloak_login_error: "
+                              + (found.group(1) if found else "unspecified"))
+                    else:
+                        # Suppress full identity/cookie/session log records.
+                        print("ephemeral_keycloak_startup_error: present")
             subprocess.run(["docker", "rm", "-f", CONTAINER],
                            stdout=subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL, check=False)
