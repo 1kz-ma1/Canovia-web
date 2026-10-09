@@ -433,3 +433,33 @@ iPhone login issue was resolved by correcting the production DB-name
 environment variable. Do not imply this isolated DB restore test is intended
 to debug the resolved login incident. The ongoing blocker is independently
 observing the actual Aiven schema, migration ledger and backup restorability.
+
+
+## Full disposable restore schema parity (2026-10-09)
+
+The synthetic MySQL backup/restore drill now verifies **every table's
+column definitions, indexes and foreign-key metadata**, not only the two
+incident tables. The shared SELECT-only
+`scripts/sql/p0_mysql_disposable_full_schema_fingerprint.sql` inspects
+`information_schema.TABLES`, `COLUMNS`, `KEY_COLUMN_USAGE`,
+`REFERENTIAL_CONSTRAINTS` and `STATISTICS`, excluding the connection's
+database name so an original and independently restored disposable schema
+can be compared directly.
+
+The guarded `p0_mysql_disposable_restore_smoke.sh` runs the exact query on
+both schemas, stores each result only in its **protected CI temporary
+directory** and requires byte-for-byte metadata equivalence. After
+deliberately dropping a reviewed FK on the **restored copy only**, a negative
+check requires those fingerprints to differ as well as requiring the
+previous incident classifier to `BLOCK`. It explicitly confirms the
+source copy's FK remains intact. No table contents, credentials, SQL dumps,
+raw metadata or user identifiers are logged or uploaded.
+
+This expands test coverage beyond the narrower known-incident metadata and
+is **not** a production Aiven restore result. It does not check production
+row contents, Aiven physical backups, recovery point objective, restore
+timing, environment identity or backup retention. The original owner
+report that the iPhone login issue was solved by correcting the DB-name
+environment variable remains authoritative; this DB check is a separate
+pre-release recovery-readiness task. PR #443 remains Draft/unmerged pending
+independent Aiven evidence and Issue #418 release hold.
