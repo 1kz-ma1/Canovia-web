@@ -303,6 +303,8 @@ def main() -> None:
                 )
                 details = (log_result.stdout + log_result.stderr).lower()
                 clues = (
+                    ("unrecognizedpropertyexception", "unsupported_metadata_json_property"),
+                    ("token_endpoint_auth_methods_supported", "chatgpt_plural_auth_methods_field_seen"),
                     ("pkix", "tls_trust_failure"),
                     ("sslhandshake", "tls_handshake_failure"),
                     ("403 forbidden", "remote_forbidden"),
