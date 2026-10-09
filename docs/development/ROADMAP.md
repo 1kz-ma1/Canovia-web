@@ -192,3 +192,19 @@ link, Plan sharing or new paid contract. Next: stage-only user consent
 and actual ChatGPT OAuth E2E after IdP release and security gates.
 See [Keycloak disposable protocol lab](
 MCP_KEYCLOAK_DISPOSABLE_PROTOCOL_LAB_2026_10_09.md).
+
+
+### V59 hosted Keycloak feasibility + cross-human revocation CI (2026-10-09)
+
+Render **My Workspace** contains Free Canovia and Free isolated MCP staging
+Web services, plus **one expiring Free Postgres** for MCP staging (2026-11-08
+expiry). Render Free Web has 512MB RAM, below Keycloak's documented
+750MB minimal memory and 2GB small production-ready recommendation.
+Therefore **do not provision a new hosted IdP or force a free plan**:
+an externally reachable HTTPS issuer, independent durable IdP DB and
+potential paid service require fresh quote and owner approval.
+Continue safe GitHub Actions local-only Keycloak 26.8.0 PKCE tests with
+two distinct synthetic humans and RFC7009 revocation, before any hosted
+IdP decision. These tests do **not** connect real ChatGPT and do not
+alter the closed MCP staging state. See
+[hosted Keycloak release gate](MCP_HOSTED_KEYCLOAK_RELEASE_GATE_2026_10_09.md).
