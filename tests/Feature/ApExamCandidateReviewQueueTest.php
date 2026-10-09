@@ -73,7 +73,7 @@ final class ApExamCandidateReviewQueueTest extends TestCase
         // Calculate independently of stored grading rules or explanations;
         // compare the result with the *actual selected choice label*.
         $expected = [
-            'net-mtu-002' => (1500 - 20 - 20).'バイト',
+            'net-mtu-002' => number_format(1500 - 20 - 20).'バイト',
             'calc-mm1-015' => (100 * 0.5).'%',
             'calc-bayes-disease-025' => '約'.number_format(
                 (0.02 * 0.9) / (0.02 * 0.9 + 0.98 * 0.05) * 100, 1).'%',
