@@ -145,3 +145,13 @@ After such a **separately approved** low-privilege account is created, this stil
 4. **Even then:** separate Aiven backup/restore verification is needed before *any* production DDL/PR #443 merge. Documentation changes in #459 must not be auto-merged while #418's production release hold is active.
 
 **Current verdict:** `ONLY_ADMIN_ACCOUNT_EXISTS` / `DEDICATED_INSPECTOR_NOT_CREATED` / `AIVEN_GRANT_SUPPORT_UNVERIFIED` / `AIVEN_SCHEMA_UNVERIFIED` / `NO_PRODUCTION_RELEASE`.
+
+## 11. Owner-confirmed Aiven Users = only avnadmin; safe two-stage bootstrap prepared (2026-10-10)
+
+Owner directly inspected the existing production Aiven MySQL service's **Connect → Users** list and confirmed **only `avnadmin` exists**. There is **no pre-existing dedicated inspection account**. Do not use the administrator for the P0 metadata collector. This does not independently prove which identity the deployed Laravel app uses; inspect that separately during release-readiness review, without exposing credentials or changing production login.
+
+[Draft PR #443](https://github.com/1kz-ma1/Canovia-web/pull/443) contains the new [two-stage bootstrap handoff](https://github.com/1kz-ma1/Canovia-web/blob/fix/p0-mysql-long-fk-recovery-20261009/docs/development/AIVEN_P0_INSPECTOR_TWO_STAGE_SETUP_2026_10_10.md) and a **no-network**, local payload-only generator `scripts/ops/p0_aiven_zero_grants_payload.py`. The generated Aiven API body always includes `"mysql_grants":[]`, never omits that property or substitutes blanket `SELECT`. This follows [Aiven's published zero-grant creation contract](https://aiven.io/docs/products/mysql/howto/manage-service-users). If the real service does not support granular grant creation, an API 400 is a **STOP**, not permission to fall back to Console/default-admin creation.
+
+The second stage — **if independently supported and separately owner-approved** — is granting `REFERENCES` on exactly the verified logical schema and `SELECT` on exactly its `migrations` table, then rejecting any wider effective privileges. No API call, Aiven user creation, GRANT, production SELECT, DDL, Render change, production backup/restore test, billing or deployment has been performed by this preparation. The end of the implementation-side preparation is now a **real service capability + account provisioning decision**; further synthetic CI is not a substitute for it.
+
+**Gate:** `AIVEN_USERS_ONLY_AVNADMIN_OBSERVED`, `ZERO_GRANTS_BODY_READY`, `EXACT_SCOPE_AIVEN_SUPPORT_UNKNOWN`, `INSPECTOR_NOT_CREATED`, `SCHEMA_UNKNOWN`, `RESTORE_UNTESTED`, `RELEASE_HOLD`.
