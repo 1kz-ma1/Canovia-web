@@ -18,11 +18,14 @@ export function mountLegacyStudyQuestionPager(root = document) {
     if (pagers.length !== 2 || !previous || !next || !progress || !submit || questions.length < 2) return;
 
     // Existing autosave has already restored any local draft before this is mounted.
-    const hasAnswer = (fieldset) => [...fieldset.querySelectorAll('[name^="answers["]')]
-        .some((input) => {
-            if (input.type === 'radio' || input.type === 'checkbox') return input.checked;
-            return String(input.value ?? '').trim() !== '';
-        });
+    const filled = (input) => input.type === 'radio' || input.type === 'checkbox'
+        ? input.checked
+        : String(input.value ?? '').trim() !== '';
+    const hasAnswer = (fieldset) => {
+        const required = [...fieldset.querySelectorAll('[data-practice-required-field="true"]')];
+        return required.length > 0 && required.every((group) =>
+            [...group.querySelectorAll('[name^="answers["]')].some(filled));
+    };
     const firstIncomplete = questions.findIndex((question) => !hasAnswer(question));
     const firstError = questions.findIndex((question) => question.querySelector('[data-practice-answer-error]'));
     let index = firstError >= 0 ? firstError : (firstIncomplete < 0 ? questions.length - 1 : firstIncomplete);
@@ -31,8 +34,11 @@ export function mountLegacyStudyQuestionPager(root = document) {
         questions.forEach((question, i) => { question.hidden = i !== index; });
         progress.textContent = `問題 ${index + 1} / ${questions.length}`;
         previous.hidden = index === 0;
+        previous.style.display = previous.hidden ? 'none' : 'inline-flex';
         next.hidden = index === questions.length - 1;
+        next.style.display = next.hidden ? 'none' : 'inline-flex';
         submit.hidden = index !== questions.length - 1;
+        submit.style.display = submit.hidden ? 'none' : 'inline-flex';
         if (focus) {
             // Keep keyboard and screen-reader users on the newly shown question.
             questions[index].focus({ preventScroll: true });
@@ -40,7 +46,10 @@ export function mountLegacyStudyQuestionPager(root = document) {
         }
     };
 
-    pagers.forEach((pager) => { pager.hidden = false; });
+    pagers.forEach((pager) => {
+        pager.hidden = false;
+        pager.style.display = 'flex';
+    });
     form.dataset.questionPagerMounted = '1';
     render();
     previous.addEventListener('click', () => { if (index > 0) { index -= 1; render({ focus: true }); } });
