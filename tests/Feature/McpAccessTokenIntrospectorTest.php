@@ -63,6 +63,35 @@ final class McpAccessTokenIntrospectorTest extends TestCase
         );
     }
 
+    public function test_resource_url_client_id_is_encoded_per_rfc6749_for_keycloak_audience_binding(): void
+    {
+        // Keycloak >=26.6.2 permits token introspection only when the
+        // introspecting client appears in aud. The resource-server client
+        // therefore uses the exact resource URL as its OAuth client ID;
+        // ordinary unencoded Basic would misread only "https" as the ID.
+        $resourceClientId = 'https://canovia.example.test/api/mcp';
+        $clientSecret = 'stage-test-client-secret:/%+?';
+        config([
+            'canovia_mcp.introspection_client_id' => $resourceClientId,
+            'canovia_mcp.introspection_client_secret' => $clientSecret,
+        ]);
+        $this->respond($this->claims());
+
+        $principal = app(McpAccessTokenIntrospector::class)->verify(self::TOKEN);
+        $this->assertInstanceOf(McpVerifiedTokenPrincipal::class, $principal);
+        $this->assertSame($resourceClientId, $principal->audience);
+
+        $expected = 'Basic '.base64_encode(
+            rawurlencode($resourceClientId).':'.rawurlencode($clientSecret)
+        );
+        Http::assertSent(static fn (Request $request) =>
+            $request->method() === 'POST'
+            && $request->url() === self::ENDPOINT
+            && $request->hasHeader('Authorization', $expected)
+        );
+        Http::assertSentCount(1);
+    }
+
     public function test_disabled_or_incomplete_idp_settings_fail_without_network_activity(): void
     {
         $variants = [
