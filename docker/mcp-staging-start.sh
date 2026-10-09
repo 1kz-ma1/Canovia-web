@@ -11,17 +11,54 @@ deny() {
 [ "${APP_ENV:-}" = "staging" ] || deny "APP_ENV must equal staging"
 [ "${APP_DEBUG:-}" = "false" ] || deny "debug must be disabled"
 
-# Disposable container-local SQLite only. Never connect to a production DB.
-[ "${DB_CONNECTION:-}" = "sqlite" ] || deny "SQLite required"
-[ "${DB_DATABASE:-}" = "/var/www/html/storage/app/staging/mcp.sqlite" ] \
-    || deny "database must be the isolated staging file"
+# Database mode is explicit: retain disposable SQLite by default, or use
+# ONLY the pre-created, independent Free Render staging PostgreSQL instance.
+# Reject all unapproved Aiven/live database hosts before ANY migration.
+[ -z "${DATABASE_URL:-}" ] || deny "DATABASE_URL unsupported"
+[ -z "${PGPASSWORD:-}" ] || deny "PGPASSWORD unsupported"
+[ -z "${PGHOST:-}" ] || deny "PGHOST unsupported"
+[ -z "${PGDATABASE:-}" ] || deny "PGDATABASE unsupported"
+[ -z "${MYSQL_ATTR_SSL_CA:-}" ] || deny "MySQL CA unsupported"
+[ -z "${DB_HOST:-}" ] || deny "DB_HOST override forbidden"
+[ -z "${DB_USERNAME:-}" ] || deny "DB_USERNAME override forbidden"
+[ -z "${DB_PASSWORD:-}" ] || deny "DB_PASSWORD override forbidden"
+[ -z "${DB_SOCKET:-}" ] || deny "DB_SOCKET override forbidden"
 
-for name in DB_URL DATABASE_URL DB_HOST DB_USERNAME DB_PASSWORD \
-    MYSQL_ATTR_SSL_CA PGPASSWORD; do
-    if [ -n "$(printenv "$name" 2>/dev/null || true)" ]; then
-        deny "external database configuration forbidden"
-    fi
-done
+case "${CANOVIA_STAGING_DB_MODE:-sqlite}" in
+    sqlite)
+        [ "${DB_CONNECTION:-}" = "sqlite" ] || deny "SQLite driver required"
+        [ "${DB_DATABASE:-}" = "/var/www/html/storage/app/staging/mcp.sqlite" ] \
+            || deny "SQLite database path mismatch"
+        [ -z "${DB_URL:-}" ] || deny "external URL forbidden for SQLite"
+        ;;
+    render_postgres)
+        [ "${DB_CONNECTION:-}" = "pgsql" ] || deny "PostgreSQL driver required"
+        [ "${DB_DATABASE:-}" = "canovia_mcp_staging_db" ] \
+            || deny "Postgres database name mismatch"
+        [ "${CANOVIA_STAGING_POSTGRES_ID:-}" = "dpg-db43rbbncjis73bmigi0-a" ] \
+            || deny "Postgres resource ID mismatch"
+
+        # Database URL is read as a process environment variable, never
+        # logged or accepted from user input; compare immutable host and DB
+        # name to the exact Render staging instance. Internal Render only.
+        [ -n "${DB_URL:-}" ] || deny "staging PostgreSQL URL missing"
+        php -r '
+            $raw = getenv("DB_URL");
+            $p = is_string($raw) ? parse_url($raw) : false;
+            if (!is_array($p)
+                || !in_array($p["scheme"] ?? "", ["postgres", "postgresql"], true)
+                || ($p["host"] ?? "") !== "dpg-db43rbbncjis73bmigi0-a"
+                || ($p["user"] ?? "") !== "canovia_mcp_staging_db_user"
+                || ($p["path"] ?? "") !== "/canovia_mcp_staging_db"
+                || ($p["port"] ?? 5432) !== 5432
+                || !isset($p["pass"]) || strlen($p["pass"]) < 8
+                || isset($p["query"]) || isset($p["fragment"])) {
+                exit(42);
+            }
+        ' || deny "Postgres URL fails pinned staging resource validation"
+        ;;
+    *) deny "unsupported staging database mode" ;;
+esac
 
 [ "${SESSION_DRIVER:-}" = "file" ] || deny "local sessions required"
 [ "${CACHE_STORE:-}" = "file" ] || deny "local cache required"
@@ -86,9 +123,11 @@ fi
 [ "$#" -eq 0 ] || deny "unsupported arguments"
 
 cd /var/www/html
-mkdir -p storage/app/staging
-touch storage/app/staging/mcp.sqlite
-chown -R www-data:www-data storage/app/staging
+if [ "${CANOVIA_STAGING_DB_MODE:-sqlite}" = "sqlite" ]; then
+    mkdir -p storage/app/staging
+    touch storage/app/staging/mcp.sqlite
+    chown -R www-data:www-data storage/app/staging
+fi
 
 # Production boot script runs migrations only AFTER staging DB guard.
 exec ./docker/render-start.sh
