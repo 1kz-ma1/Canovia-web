@@ -273,3 +273,29 @@ session + user-driven approval + ChatGPT read remains outstanding.
 
 The status of this test is determined by the specific GitHub PR CI,
 not by the implementation of the test alone.
+
+
+## Two-human subject isolation and IdP token revocation acceptance (2026-10-09)
+
+The disposable **real Keycloak 26.8.0** user-PKCE script now additionally
+creates a *second* fictitious human with independent random credentials
+inside the same throwaway realm. Both use the exact same independent
+caller-client identity and protected MCP audience. The test requires
+that `iss` is identical but immutable `sub` differs for the two users,
+preventing a cross-actor identity collapse.
+
+The first human's AI-client access token is then revoked through
+Keycloak's real **RFC7009 revocation endpoint** using the original
+confidential caller client. RFC7662 introspection through the separate
+confidential resource-server client must return `active=false` for
+that token while a different human's token remains independently valid.
+Revoking a provider token is **not the same** as revoking Canovia's
+Plan consent; the latter has its own database/JSON-RPC CI tests.
+
+This is a provider-side protocol test **only**. It does not create
+real Canovia users, a hosted IdP, actual ChatGPT client registration,
+a persisted grant or real HTTPS link between hosted services.
+The fresh CI result controls whether the new acceptance is checked off.
+
+Hosted Keycloak is deferred: see
+[Render feasibility and paid-service decision gate](MCP_HOSTED_KEYCLOAK_RELEASE_GATE_2026_10_09.md).
