@@ -1,0 +1,127 @@
+name: MCP Isolated Staging Docker Smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Dockerfile.mcp-staging'
+      - 'docker/mcp-staging-start.sh'
+      - 'docker/render-start.sh'
+      - 'docker/nginx.conf'
+      - 'docker/supervisord.conf'
+      - 'bootstrap/app.php'
+      - 'config/canovia_staging.php'
+      - 'app/Http/Middleware/CloseUnopenedMcpStaging.php'
+      - '.github/workflows/mcp-staging-docker-smoke.yml'
+      - 'deploy/render-mcp-staging.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-staging-boot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build actual staging Docker image
+        run: |
+          docker build --progress=plain --pull -f Dockerfile.mcp-staging \
+            -t canovia-mcp-staging:smoke .
+
+      - name: Verify PHP SQLite runtime extensions
+        run: |
+          docker run --rm --entrypoint php canovia-mcp-staging:smoke \
+            -r 'if (!extension_loaded("pdo_sqlite") || !extension_loaded("sqlite3")) { exit(1); }'
+
+      - name: Verify unsafe configuration fails before startup
+        run: |
+          set -eu
+          set +e
+          docker run --rm \
+            -e APP_ENV=production \
+            -e CANOVIA_STAGING_ISOLATED=true \
+            canovia-mcp-staging:smoke \
+            sh ./docker/mcp-staging-start.sh --check-only > guard.stdout 2> guard.stderr
+          status=$?
+          set -e
+          test "$status" -eq 42
+          grep -q 'BLOCKED' guard.stderr
+          ! grep -q 'PASS' guard.stdout
+
+      - name: Run isolated staging and verify startup migrations and HTTP lockdown
+        env:
+          STAGING_HOST: https://canovia-mcp-staging.onrender.com
+        run: |
+          set -eu
+          APP_KEY="base64:$(openssl rand -base64 32)"
+          docker run -d --name canovia-mcp-staging-smoke \
+            -p 127.0.0.1:18773:10000 \
+            -e APP_ENV=staging -e APP_DEBUG=false \
+            -e APP_NAME=Canovia-MCP-Staging \
+            -e CANOVIA_STAGING_ISOLATED=true \
+            -e CANOVIA_STAGING_WEB_ACCESS_ENABLED=false \
+            -e CANOVIA_STAGING_MCP_EXPLICITLY_APPROVED=false \
+            -e CANOVIA_MCP_DISCOVERY_ENABLED=false \
+            -e CANOVIA_MCP_TOKEN_INTROSPECTION_ENABLED=false \
+            -e CANOVIA_MCP_ACCOUNT_LINK_ENABLED=false \
+            -e CANOVIA_MCP_PLAN_CONSENT_ENABLED=false \
+            -e CANOVIA_MCP_DELEGATED_POLICY_ENABLED=false \
+            -e CANOVIA_MCP_TOOLS_ENABLED=false \
+            -e APP_URL="$STAGING_HOST" -e APP_KEY="$APP_KEY" \
+            -e DB_CONNECTION=sqlite \
+            -e DB_DATABASE=/var/www/html/storage/app/staging/mcp.sqlite \
+            -e SESSION_DRIVER=file \
+            -e SESSION_COOKIE=canovia_mcp_staging_session \
+            -e SESSION_SECURE_COOKIE=true \
+            -e SESSION_SAME_SITE=lax \
+            -e CACHE_STORE=file -e QUEUE_CONNECTION=sync \
+            -e MAIL_MAILER=log -e LOG_CHANNEL=stderr \
+            canovia-mcp-staging:smoke
+
+          ready=0
+          for attempt in $(seq 1 75); do
+            if curl --fail --silent --show-error \
+                 --max-time 2 http://127.0.0.1:18773/up > /dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            if ! docker ps --format '{{.Names}}' | grep -qx canovia-mcp-staging-smoke; then
+              echo 'Isolated staging exited before health readiness'
+              docker logs --tail 100 canovia-mcp-staging-smoke || true
+              exit 1
+            fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo 'Isolated staging never became healthy'
+            docker logs --tail 100 canovia-mcp-staging-smoke || true
+            exit 1
+          fi
+
+          for endpoint in /login /api/mcp /.well-known/oauth-protected-resource; do
+            status=$(curl --silent --output /dev/null --max-time 5 \
+              --write-out '%{http_code}' "http://127.0.0.1:18773$endpoint")
+            if [ "$status" -ne 503 ]; then
+              echo "Staging lockdown failed for $endpoint: HTTP $status"
+              exit 1
+            fi
+          done
+          echo 'Isolated SQLite migration boot PASS; /up=200; private routes=503'
+
+      - name: Staging runtime diagnostics on failure (no credentials)
+        if: failure()
+        run: |
+          docker ps -a --filter name=canovia-mcp-staging-smoke \
+            --format '{{.Names}} {{.Status}}' || true
+          # App boot log can include DB credentials if isolation fails.
+          # Guard prints generic errors only; avoid tailing all app output
+          # except at the immediate failure point in the controlled test.
+
+      - name: Stop disposable staging instance
+        if: always()
+        run: |
+          docker rm -f canovia-mcp-staging-smoke 2>/dev/null || true
+          rm -f guard.stdout guard.stderr

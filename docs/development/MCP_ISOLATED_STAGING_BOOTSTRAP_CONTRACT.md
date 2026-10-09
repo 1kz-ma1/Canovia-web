@@ -44,6 +44,8 @@ This is a **disposable smoke-test** stage for container boot and OAuth discovery
 
 To test the isolated configuration without booting migrations or making network calls, run the shell script with `--check-only` **in a disposable local environment** where the required `CANOVIA_STAGING_*`, `DB_*`, `APP_*` and session variables are set. It returns `PASS (config only)` when valid, or exit code 42 with generic `BLOCKED` details otherwise; it never prints credential contents.
 
+In addition to PHP/shell configuration assertions, a dedicated **ephemeral GitHub Actions Docker smoke** now builds `Dockerfile.mcp-staging` into an actual container, tests that a production-like environment exits before startup, and boots a disposable staging instance with its own randomly generated testing-only `APP_KEY` and SQLite. It checks that migrations and `/up` succeed and that `/login`, `/api/mcp` and OAuth metadata return HTTP 503. The image and container are destroyed after the job. It does not create a Render service or consume Render Free Web instance-hours. The smoke test **must pass** before real Render provisioning; failures mean this Blueprint is not deployment-ready.
+
 Automated CI includes `tests/Feature/McpIsolatedStagingBootstrapTest.php`. It checks current staging HTTP lock behavior, unmarked environment rejection, production route nonregression, refusal of production-like DB URLs, hostnames, integration credentials, and MCP activation without a separate stage authorization, as well as Blueprint isolation/auto-deploy-off invariants.
 
 ## Still not completed
