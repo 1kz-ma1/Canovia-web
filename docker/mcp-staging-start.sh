@@ -186,6 +186,23 @@ if [ "${CANOVIA_STAGING_SYNTHETIC_PLAN_FIXTURE_ON_START:-false}" = "true" ]; the
         || deny "synthetic Plan fixture requires MCP tools closed"
 fi
 
+# Optional read-only fixture integrity check after synthetic seeding.
+# It never provisions users, Plans or secrets and keeps the Web fully closed.
+case "${CANOVIA_STAGING_VERIFY_SYNTHETIC_FIXTURE_ON_START:-false}" in
+    false|true) ;;
+    *) deny "invalid synthetic fixture verification switch" ;;
+esac
+if [ "${CANOVIA_STAGING_VERIFY_SYNTHETIC_FIXTURE_ON_START:-false}" = "true" ]; then
+    [ "${CANOVIA_STAGING_DB_MODE:-sqlite}" = "render_postgres" ] \
+        || deny "fixture verification requires pinned staging PostgreSQL"
+    [ "${CANOVIA_STAGING_WEB_ACCESS_ENABLED:-false}" = "false" ] \
+        || deny "fixture verification requires closed Web"
+    [ "${CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED:-false}" = "false" ] \
+        || deny "fixture verification requires no public approval"
+    [ "${CANOVIA_MCP_TOOLS_ENABLED:-false}" = "false" ] \
+        || deny "fixture verification requires MCP tools closed"
+fi
+
 if [ "${1:-}" = "--check-only" ]; then
     printf '%s\n' "MCP isolated staging guard: PASS (config only; no DB/network changes)"
     exit 0
