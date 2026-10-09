@@ -32,6 +32,9 @@ final class ApExamCandidateReviewQueueTest extends TestCase
         $this->assertCount(80, $report['items']);
         $this->assertSame(0, $report['structural_failure_count']);
         $this->assertSame(80, $report['independent_review_pending_count']);
+        $this->assertSame(45, $report['choice_draft_current_count']);
+        $this->assertSame(0, $report['choice_draft_stale_count']);
+        $this->assertSame(0, $report['choice_draft_independent_approvals']);
         $this->assertSame(['technology' => 50, 'management' => 10, 'strategy' => 20],
             $report['distribution']);
         $this->assertSame([
@@ -122,6 +125,93 @@ final class ApExamCandidateReviewQueueTest extends TestCase
         $evmChoice = collect($evm['choices'])->firstWhere('id', $evm['answer']);
         $this->assertStringContainsString('遅れており', $evmChoice['label']);
         $this->assertStringContainsString('コストも予算超過', $evmChoice['label']);
+    }
+
+    public function test_all_forty_five_canovia_questions_have_three_unapproved_wrong_answer_rationales(): void
+    {
+        $candidate = app(\App\Services\QuestionPackCatalogService::class)
+            ->payload(ApExamCandidateAuditService::CANDIDATE);
+        $report = app(ApExamCandidateAuditService::class)->inspect();
+        $notes = json_decode((string) file_get_contents(resource_path(
+            'learning_review/ap-a-2026-canovia-45-choice-audit-v1.json')),
+            true, 512, JSON_THROW_ON_ERROR);
+        $this->assertCount(45, $notes['entries']);
+        $this->assertSame(135, $notes['audit_summary']['wrong_option_explanations']);
+        $this->assertSame(0, $notes['audit_summary']['independent_human_approvals']);
+        $this->assertFalse($notes['audit_summary']['public_release_permitted']);
+        $questions = collect($candidate['questions'])->keyBy('external_key');
+        $expected = collect($notes['entries'])->keyBy('key');
+        $this->assertCount(45, $expected);
+        $this->assertSame(45, $report['choice_draft_current_count']);
+
+        foreach ($report['items'] as $item) {
+            if ($item['origin_type'] === 'official') {
+                $this->assertSame('not_applicable', $item['choice_draft_state']);
+                $this->assertSame([], $item['choice_draft_reasons']);
+                continue;
+            }
+            $this->assertSame('current_unreviewed_draft', $item['choice_draft_state']);
+            $this->assertSame('pending', $item['independent_review_status']);
+            $this->assertCount(3, $item['choice_draft_reasons']);
+            $note = $expected->get($item['key']);
+            $this->assertNotNull($note, $item['key']);
+            $q = $questions->get($item['key']);
+            $this->assertTrue(ApExamCandidateAuditService::matchesChoiceDraft(
+                $note, $q, $candidate['pack']['version'], $notes['candidate_version']
+            ), $item['key']);
+            foreach ($item['choices'] as $choice) {
+                if ($choice['id'] === $item['answer']) {
+                    $this->assertArrayNotHasKey($choice['id'], $item['choice_draft_reasons']);
+                } else {
+                    $this->assertArrayHasKey($choice['id'], $item['choice_draft_reasons']);
+                    $this->assertNotEmpty($item['choice_draft_reasons'][$choice['id']]);
+                }
+            }
+        }
+        $this->assertDatabaseCount('question_packs', 0);
+    }
+
+    public function test_changed_question_or_explanation_invalidates_unapproved_distractor_analysis(): void
+    {
+        $catalog = app(\App\Services\QuestionPackCatalogService::class)
+            ->payload(ApExamCandidateAuditService::CANDIDATE);
+        $questions = collect($catalog['questions'])->keyBy('external_key');
+        $doc = json_decode((string) file_get_contents(resource_path(
+            'learning_review/ap-a-2026-canovia-45-choice-audit-v1.json')),
+            true, 512, JSON_THROW_ON_ERROR);
+        foreach ($doc['entries'] as $entry) {
+            $q = $questions->get($entry['key']);
+            $this->assertTrue(ApExamCandidateAuditService::matchesChoiceDraft(
+                $entry, $q, $catalog['pack']['version'], $doc['candidate_version']
+            ));
+            $wrong = collect($q['response_schema'][0]['choices'])->first(
+                fn (array $opt) => $opt['id'] !== $q['grading_rule']['answer']);
+            foreach (['prompt', 'explanation'] as $field) {
+                $modified = $q;
+                $modified[$field] .= ' edited';
+                $this->assertFalse(ApExamCandidateAuditService::matchesChoiceDraft(
+                    $entry, $modified, $catalog['pack']['version'], $doc['candidate_version']
+                ));
+            }
+            $modified = $q;
+            $modified['grading_rule']['answer'] = $wrong['id'];
+            $this->assertFalse(ApExamCandidateAuditService::matchesChoiceDraft(
+                $entry, $modified, $catalog['pack']['version'], $doc['candidate_version']
+            ));
+            $modified = $q;
+            $modified['response_schema'][0]['choices'][0]['label'] .= ' edited';
+            $this->assertFalse(ApExamCandidateAuditService::matchesChoiceDraft(
+                $entry, $modified, $catalog['pack']['version'], $doc['candidate_version']
+            ));
+            $this->assertFalse(ApExamCandidateAuditService::matchesChoiceDraft(
+                $entry, $q, '0.4.0-review-required', $doc['candidate_version']
+            ));
+            $missing = $entry;
+            unset($missing['incorrect_choices'][$wrong['id']]);
+            $this->assertFalse(ApExamCandidateAuditService::matchesChoiceDraft(
+                $missing, $q, $catalog['pack']['version'], $doc['candidate_version']
+            ));
+        }
     }
 
     public function test_all_thirty_five_official_answer_keys_match_ipa_published_2025_autumn_answer_table(): void
@@ -221,6 +311,9 @@ final class ApExamCandidateReviewQueueTest extends TestCase
             ->assertSee('data-ap-a-human-review-pending', false)
             ->assertSee('data-ap-a-release-blocked', false)
             ->assertSee('data-ap-a-priority-summary', false)
+            ->assertSee('data-ap-a-choice-draft-summary', false)
+            ->assertSee('data-ap-a-choice-draft="net-mtu-002"', false)
+            ->assertSee('監修時の注意：')
             ->assertSee('data-ap-a-source-spotcheck', false)
             ->assertSee('P0：0問')
             ->assertSee('未照合 0問。')
