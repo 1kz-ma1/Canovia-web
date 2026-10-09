@@ -140,15 +140,21 @@ copying either value to a GitHub repository, chat conversation or command
 line. A manual-reference Blueprint is provided at
 `deploy/render-mcp-staging-existing-postgres-cutover.yaml`.
 
-The previous literal staging DB username `canovia_mcp_staging_db_user`
-was an **unverified assumption** (the Render metadata connector reports
-the database name and resource ID, not its actual username). To prevent
+At the time of PR #403, the literal staging DB username `canovia_mcp_staging_db_user`
+was treated as an **unverified assumption**. A subsequent read-only Render
+`get_postgres` metadata inspection on 2026-10-09 confirmed that the
+existing resource `dpg-db43rbbncjis73bmigi0-a` reports
+`databaseUser=canovia_mcp_staging_db_user`, alongside
+`databaseName=canovia_mcp_staging_db`, region Singapore, PostgreSQL 17,
+Free plan, and status available. This metadata corroborates identity but
+**does not** expose or validate the private internal URL or establish
+that the Web app is connected. To prevent
 mistaking a guess for evidence, the startup guard, staging HTTP `/up`
 health check and synthetic-only account bootstrap now require an
 independent `CANOVIA_STAGING_POSTGRES_USER` value to exactly match the
-`user` in the configured `DB_URL`. Only Render's verified
+`user` in the configured `DB_URL`. Prefer Render's live
 `fromDatabase: {name: canovia-mcp-staging-db, property: user}` reference
-should supply this value. The host/resource ID, scheme, DB name, port,
+to supply this value, rather than copying a literal identity. The host/resource ID, scheme, DB name, port,
 absence of query/fragment, DB isolation and closed MCP gates remain enforced.
 
 **Important: this is only a reference; do not blindly create a new
@@ -175,3 +181,36 @@ References:
 - https://render.com/docs/blueprint-spec
 - https://render.com/docs/infrastructure-as-code
 - https://render.com/tutorials/postgres-on-render/connection-strings
+
+
+## Read-only operational handoff after PR #403 (2026-10-09)
+
+Read-only Render inspection confirmed:
+
+- Existing Web service `srv-db43l4nlk1mc73emseig` remains **Free**, Docker,
+  Singapore, `main`, and has automatic deploy **off**.
+- Its latest deployment `dep-db44jqrbc2fs73ajkg20` for commit
+  `51097fb8545f1da4d61b6386f63c1368faf7245d` reports **live**.
+  This is a deployment status, **not** proof of a PostgreSQL connection.
+- Existing PostgreSQL `dpg-db43rbbncjis73bmigi0-a` reports
+  `databaseUser=canovia_mcp_staging_db_user`, version 17, Free, available,
+  expiry **2026-11-08T01:04:45Z**, and an **empty external IP allowlist**.
+- The Render service metadata interface does not report environment variable
+  values, so the active `CANOVIA_STAGING_DB_MODE` and runtime HTTP results
+  are **not freshly verified** by this read-only inspection.
+- A separate public URL inspection did **not** successfully fetch the
+  `/up` or `/login` pages. No live HTTP status is claimed from that attempt.
+
+**Next gated operation:** review the existing service's Blueprint ownership
+and any proposed changes before attempting `fromDatabase` references.
+Do not create a second Blueprint or Web/DB service. If no safe existing-service
+binding workflow can be proven, stop at the current isolated deployment and
+use the private Render dashboard for a single coordinated environment update.
+No credential, URL containing a password, production integration or
+external IP allowlist change should enter GitHub or chat. Only after the
+actual existing Web service is connected and manually redeployed should
+an independent HTTP smoke check verify `/up=200` and `/login`, OAuth and
+MCP access remain 503. If any gate fails, roll back to staging-only SQLite.
+
+**Change scope:** this handoff is a documentation reconciliation; it has
+not changed live Render environment settings or initiated a deploy.
