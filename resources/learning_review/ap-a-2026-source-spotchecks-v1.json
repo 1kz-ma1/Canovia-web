@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "scope": "partial_visual_source_spotcheck_not_human_content_signoff",
+  "candidate_slug": "ap-a-2026-cbt-80-candidate-v1",
+  "candidate_version": "0.3.0-review-required",
+  "source_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+  "checked_at": "2026-10-09",
+  "verification_limitations": "The 6 named questions were compared visually to selected IPA PDF pages for statement/options. Not an independent expert proof of explanation correctness; not an exhaustive comparison of the other 29 IPA questions; not rights review or release authorization.",
+  "entries": [
+    {
+      "key": "ipa-2025-autumn-ap-am-q11",
+      "pdf_page_index": 7,
+      "evidence": "原冊子のHPC条件と表の4選択肢を照合。1,000ノード×8コア→総コア4倍で32,000コア、1ノード16コア→2,000ノード、20GFLOPS×32,000=640TFLOPS。",
+      "status": "source_statement_options_visually_spotchecked_only"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q15",
+      "pdf_page_index": 9,
+      "evidence": "原冊子のジョブA〜Eの到着時刻・処理時間表、選択肢8/9/10/11を照合。ターンアラウンド11秒（選択肢エ）。",
+      "status": "source_statement_options_visually_spotchecked_only"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q23",
+      "pdf_page_index": 13,
+      "evidence": "原冊子の16ビット、初期値150、16MHzの32分周、選択肢0.3/2/150/300を照合。結果300μs。",
+      "status": "source_statement_options_visually_spotchecked_only"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q25",
+      "pdf_page_index": 13,
+      "evidence": "原冊子の0〜20kHz、選択肢2.5/5/25/50を照合。最大周期25μs。",
+      "status": "source_statement_options_visually_spotchecked_only"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q57",
+      "pdf_page_index": 26,
+      "evidence": "原冊子の単相・二相冷却、金属板、筐体浸漬、通常の水の4記述およびa,b/a,c/b,d/c,dの選択肢を照合。a,cの組。",
+      "status": "source_statement_options_visually_spotchecked_only"
+    },
+    {
+      "key": "ipa-2025-autumn-ap-am-q64",
+      "pdf_page_index": 29,
+      "evidence": "原冊子のPBP選択肢（時間価値、回収後CF、回収期間、割引率）を照合。期間の長さで評価するウ。",
+      "status": "source_statement_options_visually_spotchecked_only"
+    }
+  ]
+}
