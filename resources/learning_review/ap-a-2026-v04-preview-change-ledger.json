@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "base_candidate_key": "ap/ap-a-2026-cbt-80-candidate-v1",
+  "base_slug": "ap-a-2026-cbt-80-candidate-v1",
+  "base_version": "0.3.0-review-required",
+  "preview_candidate_key": "ap/ap-a-2026-cbt-80-candidate-v2",
+  "preview_slug": "ap-a-2026-cbt-80-candidate-v2",
+  "preview_version": "0.4.0-review-required",
+  "proposal_manifest": "learning_review/ap-a-2026-six-priority-clarifications-v1.json",
+  "review_state": "pending_independent_subject_and_rights_review",
+  "publication_authorized": false,
+  "source_packs_unchanged": true,
+  "counts": {
+    "questions": 80,
+    "official_unchanged": 35,
+    "original_questions": 45,
+    "changed_original_questions": 6,
+    "changed_prompt_count": 4,
+    "changed_explanation_count": 6,
+    "answer_key_changes": 0,
+    "other_question_changes": 0,
+    "old_distractor_drafts_regenerated": 45,
+    "official_pdf_source_snapshots_carried": 35
+  },
+  "limitations": "A non-published preview incorporates proposed edits, not independent human approval. All original source packs and v0.3 candidate remain unchanged. Preview candidate and preview audit manifest remain fail-closed until human review, copyright clearance and content-fingerprint signoff.",
+  "changed_questions": [
+    {
+      "key": "sec-dkim-023",
+      "from_source_pack": "ap-a-canovia-core-v1",
+      "change_set": {
+        "prompt_changed": true,
+        "explanation_changed": true,
+        "answer_changed": false,
+        "choices_changed": false
+      },
+      "review_status": "pending_independent_subject_review",
+      "proposed_revision_source": "six-priority-clarifications-v1"
+    },
+    {
+      "key": "sec-csrf-047",
+      "from_source_pack": "ap-a-canovia-core-v1",
+      "change_set": {
+        "prompt_changed": true,
+        "explanation_changed": true,
+        "answer_changed": false,
+        "choices_changed": false
+      },
+      "review_status": "pending_independent_subject_review",
+      "proposed_revision_source": "six-priority-clarifications-v1"
+    },
+    {
+      "key": "db-view-009",
+      "from_source_pack": "ap-a-canovia-core-v1",
+      "change_set": {
+        "prompt_changed": false,
+        "explanation_changed": true,
+        "answer_changed": false,
+        "choices_changed": false
+      },
+      "review_status": "pending_independent_subject_review",
+      "proposed_revision_source": "six-priority-clarifications-v1"
+    },
+    {
+      "key": "quality-reliability-032",
+      "from_source_pack": "ap-a-canovia-core-v1",
+      "change_set": {
+        "prompt_changed": false,
+        "explanation_changed": true,
+        "answer_changed": false,
+        "choices_changed": false
+      },
+      "review_status": "pending_independent_subject_review",
+      "proposed_revision_source": "six-priority-clarifications-v1"
+    },
+    {
+      "key": "test-boundary-043",
+      "from_source_pack": "ap-a-canovia-core-v1",
+      "change_set": {
+        "prompt_changed": true,
+        "explanation_changed": true,
+        "answer_changed": false,
+        "choices_changed": false
+      },
+      "review_status": "pending_independent_subject_review",
+      "proposed_revision_source": "six-priority-clarifications-v1"
+    },
+    {
+      "key": "calc-mm1-015",
+      "from_source_pack": "ap-a-canovia-core-v1",
+      "change_set": {
+        "prompt_changed": true,
+        "explanation_changed": true,
+        "answer_changed": false,
+        "choices_changed": false
+      },
+      "review_status": "pending_independent_subject_review",
+      "proposed_revision_source": "six-priority-clarifications-v1"
+    }
+  ]
+}

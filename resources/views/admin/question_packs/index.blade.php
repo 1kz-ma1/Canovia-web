@@ -105,6 +105,70 @@
             @enderror
         </section>
 
+        @if(isset($apCandidateRevisionPreview))
+            <section class="page-card p-5 sm:p-6" data-ap-a-v04-preview>
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-[.14em] text-cyan-300">AP SUBJECT A / REVISION PREVIEW</p>
+                        <h2 class="mt-1 text-xl font-black text-slate-50">80問の校正候補 v0.4（未承認・未公開）</h2>
+                        <p class="mt-2 max-w-3xl text-xs leading-6 text-slate-400">
+                            現行のv0.3を上書きせず、独立した未監修Draftに重点6問の校正案を反映した比較結果です。
+                            検査成功や指紋の再計算は、解説の品質・利用権・公開を承認する操作ではありません。
+                        </p>
+                    </div>
+                    <span class="badge badge-slate">専門監修待ち</span>
+                </div>
+                <div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+                    <div class="rounded-lg border border-slate-700 p-3">
+                        <p class="text-xs text-slate-400">対象</p>
+                        <p class="mt-1 text-lg font-semibold text-slate-100">{{ $apCandidateRevisionPreview['question_count'] }}問</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-700 p-3">
+                        <p class="text-xs text-slate-400">校正対象</p>
+                        <p class="mt-1 text-lg font-semibold text-slate-100">{{ count($apCandidateRevisionPreview['changed_keys']) }}問</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-700 p-3">
+                        <p class="text-xs text-slate-400">設問・解説</p>
+                        <p class="mt-1 text-lg font-semibold text-slate-100">{{ $apCandidateRevisionPreview['prompt_changes'] }} / {{ $apCandidateRevisionPreview['explanation_changes'] }}件</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-700 p-3">
+                        <p class="text-xs text-slate-400">監修待ち</p>
+                        <p class="mt-1 text-lg font-semibold text-amber-300">{{ $apCandidateRevisionPreview['independent_review_pending'] }}問</p>
+                    </div>
+                </div>
+                <p class="mt-3 text-xs leading-6 {{ $apCandidateRevisionPreview['structurally_consistent'] ? 'text-cyan-200' : 'text-rose-300' }}"
+                    data-ap-a-v04-integrity>
+                    差分・監査記録の機械的整合性：
+                    {{ $apCandidateRevisionPreview['structurally_consistent'] ? '一致' : '不一致・要修正' }}。
+                    IPA{{ $apCandidateRevisionPreview['official_unchanged'] }}問は不変、
+                    誤答理由案{{ $apCandidateRevisionPreview['choice_draft_current'] }}/45件、
+                    公式原典照合の引継ぎ{{ $apCandidateRevisionPreview['official_source_evidence_carried'] }}/35件。
+                    公開承認は{{ $apCandidateRevisionPreview['publication_authorized'] ? 'あり' : 'なし' }}です。
+                </p>
+                @if($apCandidateRevisionPreview['issues'])
+                    <ul class="mt-2 list-inside list-disc text-xs text-rose-300">
+                        @foreach($apCandidateRevisionPreview['issues'] as $issue)
+                            <li>{{ $issue }}</li>
+                        @endforeach
+                    </ul>
+                @endif
+                <details class="mt-4 rounded-lg border border-slate-700 p-3" data-ap-a-v04-fingerprints>
+                    <summary class="cursor-pointer text-xs font-semibold text-cyan-200">変更対象と内容SHA-256を確認（承認操作なし）</summary>
+                    <p class="mt-3 text-xs text-slate-300">v0.3 内容指紋：</p>
+                    <p class="mt-1 break-all font-mono text-xs text-slate-200" data-ap-a-v03-sha>{{ $apCandidateRevisionPreview['base_content_sha256'] }}</p>
+                    <p class="mt-3 text-xs text-slate-300">v0.4 内容指紋（新規計算）：</p>
+                    <p class="mt-1 break-all font-mono text-xs text-slate-200" data-ap-a-v04-sha>{{ $apCandidateRevisionPreview['preview_content_sha256'] }}</p>
+                    <p class="mt-3 text-xs text-amber-200">指紋をコピーして貼るだけでは品質・出典・権利の監修完了になりません。</p>
+                    <p class="mt-3 text-xs text-slate-300">変更対象：</p>
+                    <ul class="mt-1 list-inside list-disc text-xs text-slate-300">
+                        @foreach($apCandidateRevisionPreview['changed_keys'] as $key)
+                            <li>{{ $key }}</li>
+                        @endforeach
+                    </ul>
+                </details>
+            </section>
+        @endif
+
         @if(isset($apCandidateAudit))
             <section class="page-card p-5 sm:p-6" data-ap-a-item-review-queue>
                 <div class="flex flex-wrap items-start justify-between gap-4">
