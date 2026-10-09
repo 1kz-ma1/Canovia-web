@@ -85,8 +85,11 @@ those tests, owner approvals and signed-off consent controls are complete.
       resource URL, strict RFC 7662 introspection and negative-resource
       checks (GitHub Actions run 37909449399, 2026-10-09 09:10 UTC).
       Re-run the updated PR's full CI before merging.
-- [ ] User-bound Authorization Code + PKCE, callback issuer, resource
-      consistency and introspection verified
+- [x] Disposable, **real synthetic human** Authorization Code + PKCE,
+      callback state and issuer, explicit `sub` introspection mapper, exact
+      resource audience and a second caller with the same immutable
+      issuer+subject verified (CI run 37914942240 on 2026-10-09).
+      This is **not** actual ChatGPT or Canovia account consent.
 - [ ] Same-actor separate client registration, explicit Plan consent and
       cross-actor revocation tested
 - [ ] Hosted IdP capacity / budget approved, if necessary
@@ -197,3 +200,39 @@ Pending after this slice: synthetic Canovia account-link credential
 rotation, hosted IdP feasibility, staging HTTPS/oauth reachability
 review, explicit per-Plan consent, genuine ChatGPT client registration,
 cross-user denial, production readiness and rollback.
+
+
+### Actual CI results and Keycloak user-mapper requirement (2026-10-09)
+
+[GitHub Actions run 37914942240](https://github.com/1kz-ma1/Canovia-web/actions/runs/37914942240)
+passed both the original client-credentials protocol test and the separate
+browser-user PKCE test. The latter emitted only the following safe statuses:
+`synthetic_keycloak_user_realm_ready: pass`,
+`authorization_code_browser_login_and_rfc9207: pass`,
+`wrong_pkce_verifier_rejected: pass`,
+`user_link_client_resource_bound_introspection: pass`,
+`same_user_separate_client_issuer_subject: pass`,
+`resource_changed_between_auth_and_token_denied: pass`.
+No real users, actual ChatGPT credentials, Canovia Plan content or
+production/staging database access participated.
+
+Keycloak 26.8.0 did **not** include the immutable `sub` in the
+human-user introspection payload by default, even though the caller token
+was valid and carried `username`. The correct fix for this throwaway
+realm was an explicit `oidc-sub-mapper` with
+`access.token.claim=true` and `introspection.token.claim=true`
+on **both** RP clients. Do not use mutable username or email as an
+identity key, and never loosen Canovia's immutable-subject guard.
+
+The browser simulator also needs a trusted-loopback-only cookie policy to
+accept local Keycloak Secure cookies under HTTP; it **never follows off-host
+redirects**, instead intercepting test callbacks under invalid domains.
+This exception is confined to disposable CI. A hosted IdP must use HTTPS
+and normal browser cookie restrictions.
+
+**Next gate remains**: external OAuth hosting and real client
+registration/PKCE callback, user-controlled synthetic credential,
+Canovia same-subject account link and explicit per-Plan consent,
+revocation and negative cross-user tests, then actual ChatGPT MCP
+read-only invocation. No paid service or staging public access
+was enabled by these tests.
