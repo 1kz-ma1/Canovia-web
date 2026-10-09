@@ -12,6 +12,10 @@ from pathlib import Path
 import re
 import sys
 
+# Support both `python3 scripts/ci/...` and package-imported CI tests from
+# the repository root; only checked-in local code is imported.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 from scripts.ci.p0_mysql_inventory_offline_triage import (
     STATUS_ALLOWED, expected_keys, template,
 )
