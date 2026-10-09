@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Cookie;
 use Tests\TestCase;
 
@@ -43,7 +44,7 @@ final class P0DatabaseSessionLoginRegressionTest extends TestCase
         $this->assertTrue($cookie->isHttpOnly());
         $this->assertSame('lax', strtolower((string) $cookie->getSameSite()));
         $this->assertNull($cookie->getDomain());
-        $this->assertGreaterThan(0, \DB::table('sessions')->count());
+        $this->assertGreaterThan(0, DB::table('sessions')->count());
 
         // Forget the cached user resolver between requests. Only a valid
         // client-provided session cookie may restore auth on this request.
