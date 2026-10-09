@@ -16,6 +16,7 @@ on:
       - 'scripts/ci/p0_mysql_full_ledger_offline_check.py'
       - 'scripts/ci/p0_mysql_disposable_restore_smoke.sh'
       - 'scripts/ops/p0_mysql_readonly_preflight.php'
+      - 'scripts/ops/p0_mysql_operator_select_only_collect.sh'
       - 'scripts/sql/p0_mysql_select_only_data_preflight.sql'
       - 'scripts/ci/p0_mysql_select_only_data_preflight_import.py'
       - 'tests/ci/test_p0_mysql_select_only_data_preflight_import.py'
@@ -102,6 +103,20 @@ jobs:
         run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_inventory_tsv_import.py' -v
       - name: Verify full Laravel migration ledger offline safety and redaction
         run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_full_ledger_offline_check.py' -v
+      - name: Validate the operator-only read-only collector without any connection
+        run: |
+          set -euo pipefail
+          bash -n scripts/ops/p0_mysql_operator_select_only_collect.sh
+          # CI must never be accepted as a production operator.
+          set +e
+          output="$(CANOVIA_P0_OPERATOR_APPROVED=YES \
+            CANOVIA_P0_TARGET_VERIFIED=YES CANOVIA_P0_GRANTS_REVIEWED=YES \
+            bash scripts/ops/p0_mysql_operator_select_only_collect.sh 2>&1)"
+          rc=$?
+          set -e
+          test "$rc" -eq 2
+          test "$output" = 'P0_READONLY_COLLECT: BLOCK (CI_NOT_AN_OPERATOR)'
+          echo 'p0_operator_collector_disabled_in_ci: pass'
       - name: Full MySQL migrations from an empty disposable database
         run: php artisan migrate --force --no-interaction
       - name: Repeat all MySQL migrations (idempotency)
