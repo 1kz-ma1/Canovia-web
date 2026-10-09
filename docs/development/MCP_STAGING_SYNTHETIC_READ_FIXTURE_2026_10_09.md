@@ -102,3 +102,54 @@ before changing a paid plan or incurring a new recurring charge.
 
 The authoritative checklist is
 [release environment/billing readiness](RELEASE_ENVIRONMENT_BILLING_READINESS_2026_10_09.md).
+
+## Live closed-stage acceptance (2026-10-09, later than the preparation notes above)
+
+**The synthetic fixture is now provisioned on the existing isolated stage.**
+After PR #424 merged as `a2d0ebdd3395b8a33329c9819746e072297a8744`:
+
+1. Only `canovia-mcp-staging` in **My Workspace** was temporarily armed
+   through its private Render environment, not the production service.
+2. Deployment `dep-db49r860tbcc73dlmfmg` reached **Live**. Private logs
+   confirmed pinned `render_postgres`, migrations, synthetic owner bootstrap
+   completed, and synthetic private Plan fixture completed. Command outputs
+   suppressed identity, passwords, IDs and Plan content.
+3. Bootstrap approval, owner startup and Plan startup switches were reset
+   to `false`; the private synthetic bootstrap password was cleared.
+   Sealed follow-up deployment `dep-db49rrks728c73a36fkg` reached
+   **Live** with no synthetic-bootstrap command on startup. Its logs showed
+   migrations complete and `HEAD /` plus `GET /` blocked with HTTP 503.
+4. **What this proves:** the initial creation commands exited successfully
+   against isolated staging PostgreSQL and the stage remained sealed.
+   **What it does not yet prove:** after-restart DB row integrity, a browser
+   sign-in to the synthetic owner, external IdP identity association, token
+   issuance, or any actual ChatGPT MCP read. No account-link or grant was
+   intentionally authorized.
+
+The synthetic account password used for initial provisioning is deliberately
+not exposed or retained in source or chat, and its Render environment
+variable is cleared. Before real browser/OAuth sign-in, establish a new
+private password via a deliberately reviewed *staging-only* credential
+rotation procedure; merely rerunning `firstOrCreate` does not change an
+existing user's password.
+
+### Read-only persistence check (subsequent PR)
+
+The new CLI `canovia:mcp-staging-verify-synthetic-plan --json` needs no
+bootstrap secret and prints only `ready` or `blocked`, with
+`production_authorized=false`. It checks one fixed synthetic owner,
+one private Plan and two exact Tasks, and rejects any foreign user,
+unexpected data, tampered fixture, prior IdP association or delegated grant.
+The validator runs only after strict staging/DB guards, and it never
+mutates a row or discloses account information.
+
+To verify persistence on the existing **closed staging** service, the
+operator can temporarily set `CANOVIA_STAGING_VERIFY_SYNTHETIC_FIXTURE_ON_START=true`
+and redeploy *only staging*. Startup logs report generic readiness and
+fail-closed on any mismatch. Keep `CANOVIA_STAGING_WEB_ACCESS_ENABLED=false`
+and every OAuth/MCP switch OFF. This switch does not enable public HTTP
+access or send test user content to a third-party IdP.
+
+Record the exact staging deployment/CI evidence after the first live check;
+until then, treat this code and its CI as implementation, not live persisted
+fixture verification.
