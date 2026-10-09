@@ -39,3 +39,10 @@ When continuing or implementing Canovia Development work, use GitHub itself as t
 5. Follow the feature branch → tests → PR → required CI → reviewed merge policy above. **Do not** require giant AI-to-Canovia JSON Task update payloads to keep the development roadmap current.
 
 These GitHub-native instructions do **not** authorize an AI to call Canovia's session-only context endpoint or to read a private Canovia Plan. Do not pass Canovia cookies or GitHub tokens in handoff text. Future delegated AI-to-Canovia access requires explicit actor-bound authorization and consent as described in `docs/development/AGENT_GITHUB_PULL_CONTRACT.md`. Do not silently edit progress or personal Task history.
+
+## Concurrent lane development (2026-10-09)
+
+- For simultaneous Canovia work, read `docs/development/PARALLEL_DEVELOPMENT_OPERATING_MODEL.md` and the dated `docs/development/ACTIVE_LANE_HANDOFFS.md` after `docs/README.md` and the canonical roadmap.
+- Keep one short-lived independent feature/fix branch and working directory/worktree per lane/session. The lane roster is coordination metadata, **not** an agent that executes unattended or authority to create a second roadmap.
+- Recheck current `main`, shared contracts, PRs and CI before claiming a task is incomplete or implemented. Coordinate changes to shared Plan/Task/auth/navigation/spec hotspots; retain versioned and active WIP specs.
+- Existing verification, merge and deploy restrictions above apply unchanged to every lane, including Hotfix.
