@@ -140,6 +140,40 @@ jobs:
           done
           test "$ready" = "1"
 
+          # The pinned staging guard must accept this synthetic hostname,
+          # but an intentionally incorrect password must fail migrations
+          # without leaking SQL exceptions, DSN, or the fake canary.
+          APP_KEY="base64:$(openssl rand -base64 32)"
+          canary='ci-redaction-canary-not-a-real-password'
+          set +e
+          docker run --rm \
+            --network canovia-mcp-pg-ci \
+            -e APP_ENV=staging -e APP_DEBUG=false \
+            -e APP_NAME=Canovia-MCP-Staging \
+            -e CANOVIA_STAGING_ISOLATED=true \
+            -e CANOVIA_STAGING_WEB_ACCESS_ENABLED=false \
+            -e CANOVIA_STAGING_DB_MODE=render_postgres \
+            -e CANOVIA_STAGING_POSTGRES_ID=dpg-db43rbbncjis73bmigi0-a \
+            -e CANOVIA_STAGING_POSTGRES_USER=canovia_mcp_staging_db_user \
+            -e APP_URL=https://canovia-mcp-staging.onrender.com \
+            -e APP_KEY="$APP_KEY" \
+            -e DB_CONNECTION=pgsql -e DB_DATABASE=canovia_mcp_staging_db \
+            -e DB_URL="postgresql://canovia_mcp_staging_db_user:${canary}@dpg-db43rbbncjis73bmigi0-a:5432/canovia_mcp_staging_db" \
+            -e SESSION_DRIVER=file -e SESSION_COOKIE=canovia_mcp_staging_session \
+            -e CACHE_STORE=file -e QUEUE_CONNECTION=sync -e MAIL_MAILER=log \
+            -e CANOVIA_MIGRATION_MAX_ATTEMPTS=1 \
+            canovia-mcp-staging:smoke > /tmp/mcp-stage-failed-boot.log 2>&1
+          failed_boot_status=$?
+          set -e
+          test "$failed_boot_status" -ne 0
+          grep -Fq 'configured database mode=render_postgres' /tmp/mcp-stage-failed-boot.log
+          grep -Fq 'MCP isolated staging migrations: failed (details suppressed)' /tmp/mcp-stage-failed-boot.log
+          ! grep -Fq "$canary" /tmp/mcp-stage-failed-boot.log
+          ! grep -Fq 'postgresql://' /tmp/mcp-stage-failed-boot.log
+          ! grep -Fq 'SQLSTATE' /tmp/mcp-stage-failed-boot.log
+          rm -f /tmp/mcp-stage-failed-boot.log
+          echo 'Failed staging PostgreSQL connection redacts credentials and SQL exception details PASS'
+
           # Deliberately bypass the Render-instance-specific startup guard
           # ONLY within this private, disposable CI test. The guard is
           # independently verified above and refuses all other live DBs.
