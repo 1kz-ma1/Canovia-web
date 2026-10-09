@@ -216,7 +216,7 @@ MCP access remain 503. If any gate fails, roll back to staging-only SQLite.
 not changed live Render environment settings or initiated a deploy.
 
 
-## V59 staging web-access interlock (pending CI / not deployed)
+## V59 staging web-access interlock (merged #405, CI passed / not deployed)
 
 The isolated staging application remains **fully closed**. To prevent a
 single accidentally enabled configuration key from exposing login, account
@@ -245,3 +245,21 @@ Existing live staging env values were not inspected or changed for this
 PR; production code continues to bypass these rules unless its
 `APP_ENV` equals `staging`. A full live/real-IdP security review is
 required before any public access is permitted.
+
+
+### V59 web-access interlock acceptance evidence (2026-10-09)
+
+PR [#405](https://github.com/1kz-ma1/Canovia-web/pull/405) was
+squash-merged as commit `795949915325b516bf9073a34e805814e5fa01ba`.
+The PR-head GitHub Actions jobs all **completed successfully**:
+
+- [MCP isolated staging Docker smoke](https://github.com/1kz-ma1/Canovia-web/actions/runs/37874300721): real staging image build, SQLite closed startup, disposable PostgreSQL 17 Laravel migration, pinned Postgres boot and health.
+- [MCP live staging HTTP lockdown](https://github.com/1kz-ma1/Canovia-web/actions/runs/37874300807): existing deployed Render staging /up 200; public account, OAuth discovery/callback, MCP GET/POST closed at 503.
+- [Production migration recovery](https://github.com/1kz-ma1/Canovia-web/actions/runs/37874300705): passed.
+- [Workspace resume / MCP regression](https://github.com/1kz-ma1/Canovia-web/actions/runs/37874300740): passed, including `McpIsolatedStagingBootstrapTest`.
+
+This evidence proves the *repository change* against tests and the
+*previously deployed stage* remained closed. It is **not** evidence that
+the updated Web-access interlock has deployed to Render or that the real
+Render staging PostgreSQL is attached. The existing staging service has
+auto deploy off; subsequent live post-deploy checks are required.
