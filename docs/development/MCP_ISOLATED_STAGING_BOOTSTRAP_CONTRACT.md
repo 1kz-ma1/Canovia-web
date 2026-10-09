@@ -126,3 +126,17 @@ secret internal URL; only set `DB_URL` in the staging Render dashboard
 after confirming its internal hostname. The external allowlist is empty
 and must stay closed. No OAuth/ChatGPT enablement is authorized.
 See [DB cutover and provider decision](MCP_IDP_SELECTION_AND_STAGING_POSTGRES_2026_10_09.md).
+
+
+## Strict stage PostgreSQL health mode (V59)
+
+After switching **only the staging service** to its approved internal
+Render PostgreSQL, public `/up` validates real PostgreSQL connectivity
+and the six required Canovia/MCP schema tables. This cannot be used
+to fetch credentials or identify user data; all failures return the
+generic 503 staging error. If an internal DB migration fails, Render
+will not falsely signal a healthy stage on the basis of PHP/Nginx
+alone. The default SQLite stage and production `/up` are unchanged.
+A disposable private Docker network test uses the pinned DB hostname
+with a fake non-Render PostgreSQL container, exercising the exact
+startup guard and HTTP lockdown; this does not touch the actual stage DB.
