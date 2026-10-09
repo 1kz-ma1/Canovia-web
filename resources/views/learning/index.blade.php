@@ -27,7 +27,9 @@
         </div>
         @if ($errors->any())<p role="alert" class="mt-3 text-sm text-red-300">{{ $errors->first() }}</p>@endif
         @if ($packs->isEmpty())
-            <p class="mt-5 text-sm text-slate-300">現在、対応する公開問題集がありません。従来のAI演習は利用できます。</p>
+            <p class="mt-5 text-sm text-slate-300" data-adaptive-learning-no-packs>現在、1問ごとに採点できる公開済みQuestion Bankがありません。問題集の公開が必要です。</p>
+            <p class="mt-2 text-sm text-slate-400">今すぐ取り組む場合は、従来のAI演習で問題を準備すると、1問ずつ画面を切り替えて回答できます（採点はセット終了時です）。</p>
+            <a href="{{ route('plans.tasks.study_practice.show', [$plan, $task]) }}" class="btn-primary mt-4 inline-flex">AI演習で1問ずつ回答する</a>
         @else
             <form method="POST" action="{{ route('plans.tasks.learning.start', [$plan, $task]) }}" class="mt-5 space-y-5">
                 @csrf
