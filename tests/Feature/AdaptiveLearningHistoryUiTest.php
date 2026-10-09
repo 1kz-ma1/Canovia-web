@@ -149,7 +149,7 @@ final class AdaptiveLearningHistoryUiTest extends TestCase
         $this->answer($run, $pack, true);
         $this->get($url)->assertOk()
             ->assertDontSee('data-learning-review-topic>', false)
-            ->assertSee('4件');
+            ->assertSee('>4<span', false);
         $this->assertDatabaseCount('learning_answer_events', 4);
         $this->assertSame(35, $task->fresh()->progress_percent);
     }
