@@ -35,6 +35,7 @@ for f in \
   scripts/sql/p0_mysql_readonly_full_migration_ledger.sql \
   scripts/ci/p0_mysql_inventory_tsv_import.py \
   scripts/ci/p0_mysql_inventory_offline_triage.py \
+  scripts/ci/p0_mysql_metadata_grants_guard.py \
   scripts/ci/p0_mysql_full_ledger_offline_check.py; do
   [[ -r "$repo/$f" ]] || block 'PINNED_SOURCE_REQUIRED'
 done
@@ -55,23 +56,21 @@ mysql_args=(
 scratch="$(mktemp -d)" || block 'PRIVATE_TEMP_REQUIRED'
 trap 'rm -rf -- "$scratch"' EXIT
 
-# SHOW GRANTS is read-only and intentionally used *before* the SELECT inventory.
-# Explicitly reject admin/DML/DDL privileges, grant options, dynamic roles and
-# unknown permission formats. Do not print the identity, host or grant strings.
+# SHOW GRANTS is read-only and runs *before* the inventory. A schema-wide
+# SELECT account could access personal records; a SELECT-on-migrations-only
+# account might see misleading MISSING metadata for other tables. Accept ONLY:
+# REFERENCES on the selected schema, SELECT on selected-schema migrations,
+# and optional USAGE. Reject dynamic roles, wider SELECT and all DML/DDL.
+# Actual grant strings, account, hostname and DB identifiers remain private.
 if ! mysql "${mysql_args[@]}" -e 'SHOW GRANTS FOR CURRENT_USER()' \
     > "$scratch/grants" 2>/dev/null; then
   block 'GRANT_INSPECTION_FAILED'
 fi
-has_select=0
-while IFS= read -r grant || [[ -n "$grant" ]]; do
-  case "$grant" in
-    "GRANT USAGE ON "* ) ;;
-    "GRANT SELECT ON "* ) has_select=1 ;;
-    * ) block 'NON_SELECT_GRANT_OR_UNVERIFIED_ROLE' ;;
-  esac
-  [[ "$grant" != *" WITH GRANT OPTION"* ]] || block 'GRANT_OPTION_FORBIDDEN'
-done < "$scratch/grants"
-[[ "$has_select" -eq 1 ]] || block 'SELECT_ONLY_GRANT_NOT_PROVEN'
+if ! python3 "$repo/scripts/ci/p0_mysql_metadata_grants_guard.py" \
+    --database "$database" --input "$scratch/grants" \
+    > "$scratch/grant-verdict" 2>/dev/null; then
+  block 'METADATA_ONLY_GRANTS_REQUIRED'
+fi
 
 # mysql failures and SQL source/errors are not echoed. The GitHub-reviewed
 # SQL reads information_schema and the non-personal Laravel migrations ledger.
