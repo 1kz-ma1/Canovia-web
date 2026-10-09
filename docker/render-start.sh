@@ -86,7 +86,7 @@ fi
 
 # An independent, opt-in synthetic Plan fixture runs only in the same
 # closed staging context as the synthetic owner. Suppress all details.
-if [ "$isolated_staging" = "true" ] \\
+if [ "$isolated_staging" = "true" ] \
     && [ "${CANOVIA_STAGING_SYNTHETIC_PLAN_FIXTURE_ON_START:-false}" = "true" ]; then
     if ! php artisan canovia:mcp-staging-create-synthetic-plan --json >/dev/null 2>&1; then
         echo "MCP isolated staging synthetic Plan fixture: blocked or failed (details suppressed)" >&2
