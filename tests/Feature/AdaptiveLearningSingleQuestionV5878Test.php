@@ -350,4 +350,143 @@ final class AdaptiveLearningSingleQuestionV5878Test extends TestCase
         $this->assertDatabaseCount('study_practice_attempts', 0);
         $this->assertSame(35, $task->fresh()->progress_percent);
     }
+
+    public function test_understanding_accepts_optional_reasoning_as_immutable_self_note_without_changing_grade(): void
+    {
+        [$owner, $plan, $task, $pack] = $this->fixture(2);
+        $run = $this->start($owner, $plan, $task, $pack);
+        $item = $run->items()->where('ordinal', 1)->firstOrFail();
+        $show = route('plans.tasks.learning.show', [$plan, $task, $run]);
+        $post = route('plans.tasks.learning.answer', [$plan, $task, $run]);
+
+        $this->actingAs($owner)->get($show)->assertOk()
+            ->assertSee('data-learning-reasoning', false);
+        $requestId = (string) Str::uuid();
+        $this->actingAs($owner)->post($post, [
+            'request_id' => $requestId,
+            'learning_run_item_id' => $item->id,
+            'choice' => 'B',
+            'reasoning' => '  理由：再計算では選択肢Bになると考えた。  ',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $answer = LearningAnswerEvent::sole();
+        $this->assertFalse($answer->was_correct);
+        $this->assertSame('B', $answer->answer_value);
+        $this->assertSame([
+            'type' => 'single_choice', 'value' => 'B',
+            'reasoning' => '理由：再計算では選択肢Bになると考えた。',
+        ], $answer->answer_payload);
+        $this->actingAs($owner)->get($show)->assertOk()
+            ->assertSee('回答時に残した考え方')
+            ->assertSee('理由：再計算では選択肢Bになると考えた。');
+        $this->assertSame(35, $task->fresh()->progress_percent);
+        $this->assertDatabaseCount('study_practice_attempts', 0);
+
+        // Equivalent request is idempotent; changing just the note is not.
+        $this->actingAs($owner)->post($post, [
+            'request_id' => $requestId,
+            'learning_run_item_id' => $item->id,
+            'choice' => 'B',
+            'reasoning' => '理由：再計算では選択肢Bになると考えた。',
+        ])->assertRedirect();
+        $this->actingAs($owner)->post($post, [
+            'request_id' => $requestId,
+            'learning_run_item_id' => $item->id,
+            'choice' => 'B',
+            'reasoning' => '後から変更されたメモ',
+        ])->assertStatus(409);
+        $this->assertDatabaseCount('learning_answer_events', 1);
+    }
+
+    public function test_understanding_note_is_escaped_and_invalid_input_cannot_create_an_answer(): void
+    {
+        [$owner, $plan, $task, $pack] = $this->fixture(2);
+        $run = $this->start($owner, $plan, $task, $pack);
+        $item = $run->items()->where('ordinal', 1)->firstOrFail();
+        $post = route('plans.tasks.learning.answer', [$plan, $task, $run]);
+
+        foreach ([str_repeat('a', 1001), ['unexpected' => 'array']] as $invalid) {
+            $this->actingAs($owner)->post($post, [
+                'request_id' => (string) Str::uuid(),
+                'learning_run_item_id' => $item->id,
+                'choice' => 'A',
+                'reasoning' => $invalid,
+            ])->assertSessionHasErrors('reasoning');
+        }
+        $this->assertDatabaseCount('learning_answer_events', 0);
+
+        $this->actingAs($owner)->post($post, [
+            'request_id' => (string) Str::uuid(),
+            'learning_run_item_id' => $item->id,
+            'choice' => 'A',
+            'reasoning' => '<script>alert(1)</script>',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->actingAs($owner)->get(route('plans.tasks.learning.show', [$plan, $task, $run]))
+            ->assertOk()
+            ->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;', false)
+            ->assertDontSee('<script>alert(1)</script>', false);
+    }
+
+    public function test_practice_does_not_accept_reasoning_and_existing_answers_remain_compatible(): void
+    {
+        [$owner, $plan, $task, $pack] = $this->fixture(2);
+        $run = $this->start($owner, $plan, $task, $pack, 'practice');
+        $item = $run->items()->where('ordinal', 1)->firstOrFail();
+        $show = route('plans.tasks.learning.show', [$plan, $task, $run]);
+        $post = route('plans.tasks.learning.answer', [$plan, $task, $run]);
+
+        $this->actingAs($owner)->get($show)
+            ->assertOk()->assertDontSee('data-learning-reasoning', false);
+        $this->actingAs($owner)->post($post, [
+            'request_id' => (string) Str::uuid(),
+            'learning_run_item_id' => $item->id,
+            'choice' => 'A',
+            'reasoning' => '演習モードでは拒否',
+        ])->assertSessionHasErrors('reasoning');
+        $this->assertDatabaseCount('learning_answer_events', 0);
+
+        $this->actingAs($owner)->post($post, [
+            'request_id' => (string) Str::uuid(),
+            'learning_run_item_id' => $item->id,
+            'choice' => 'A',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame(
+            ['type' => 'single_choice', 'value' => 'A'],
+            LearningAnswerEvent::sole()->answer_payload,
+        );
+
+        // A legacy single-choice event with no typed payload must never gain
+        // a silently discarded new note on an otherwise equivalent replay.
+        $this->assertDatabaseCount('study_practice_attempts', 0);
+    }
+
+    public function test_legacy_answer_replay_with_new_reasoning_is_rejected_without_backfill(): void
+    {
+        [$owner, $plan, $task, $pack] = $this->fixture(2);
+        $run = $this->start($owner, $plan, $task, $pack);
+        $item = $run->items()->where('ordinal', 1)->firstOrFail();
+        LearningAnswerEvent::create([
+            'learning_run_item_id' => $item->id,
+            'request_id' => (string) Str::uuid(),
+            'answer_value' => 'A',
+            'was_correct' => true,
+            'grading_method' => 'question_bank_exact_choice',
+            'answered_at' => now(),
+        ]);
+        $post = route('plans.tasks.learning.answer', [$plan, $task, $run]);
+        $this->actingAs($owner)->post($post, [
+            'request_id' => (string) Str::uuid(),
+            'learning_run_item_id' => $item->id,
+            'choice' => 'A',
+        ])->assertRedirect();
+        $this->actingAs($owner)->post($post, [
+            'request_id' => (string) Str::uuid(),
+            'learning_run_item_id' => $item->id,
+            'choice' => 'A',
+            'reasoning' => '過去の回答へ追記はしない',
+        ])->assertStatus(409);
+        $this->assertDatabaseCount('learning_answer_events', 1);
+        $this->assertNull(LearningAnswerEvent::sole()->answer_payload);
+    }
+
 }
