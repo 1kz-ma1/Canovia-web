@@ -41,6 +41,7 @@ export function mountLearningAnswerAutosave(root = document, options = {}) {
             const result = await fetcher(form.dataset.learningDraftUrl, {
                 method: 'POST',
                 credentials: 'same-origin',
+                keepalive: true,
                 headers: { Accept: 'application/json' },
                 body: makeBody(form),
             });
