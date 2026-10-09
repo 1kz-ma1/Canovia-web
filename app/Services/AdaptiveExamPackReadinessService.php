@@ -101,6 +101,12 @@ final class AdaptiveExamPackReadinessService
         }
 
         if (($profile['requires_pack_review'] ?? false) === true) {
+            $withoutExplanation = $questions->filter(fn (Question $question) =>
+                trim((string) $question->explanation) === '')->count();
+            if ($withoutExplanation > 0) {
+                $blocking[] = "解説未登録の問題が{$withoutExplanation}問あります。全問の内容を検証してから模試へ提供してください。";
+            }
+
             $review = is_array($metadata['exam_simulation_review'] ?? null)
                 ? $metadata['exam_simulation_review'] : [];
             if (($review['reviewed_pack_version'] ?? '') !== $pack->version
