@@ -71,6 +71,19 @@ while true; do
     sleep "$migration_retry_delay"
 done
 
+# On-demand, staging-only synthetic account creation occurs strictly
+# after migrations and before HTTP startup. Both approval switches and
+# the private password are checked by the staging entrypoint and Artisan.
+# Keep command output (including exceptions) out of Render logs.
+if [ "$isolated_staging" = "true" ] \
+    && [ "${CANOVIA_STAGING_SYNTHETIC_OWNER_BOOTSTRAP_ON_START:-false}" = "true" ]; then
+    if ! php artisan canovia:mcp-staging-create-synthetic-owner --json >/dev/null 2>&1; then
+        echo "MCP isolated staging synthetic owner bootstrap: blocked or failed (details suppressed)" >&2
+        exit 1
+    fi
+    echo "MCP isolated staging synthetic owner bootstrap: completed (identity details suppressed)"
+fi
+
 echo "Building Laravel production caches..."
 if [ "$isolated_staging" = "true" ]; then
     # Cache commands can invoke application boot logic. Keep their exception
