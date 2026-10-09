@@ -154,3 +154,42 @@ recovery plan. They must not be used to generate/execute SQL or bypass Issue
 synthetic complete, pending, partially-created, foreign-key mismatch, applied
 drift, ledger-order mismatch, malformed input and output-leak scenarios in
 the disposable MySQL CI workflow.
+
+
+## Forward-only repair for *already applied* migration ledger (proposed, NOT deployed)
+
+A new, separate **forward-only migration file** has been added to this same Draft P0 DB PR:
+`database/migrations/2026_10_09_235959_reconcile_p0_mysql_applied_constraints.php`.
+
+**Reason:** Laravel does not rerun a historical migration after its identifier is
+already in the `migrations` ledger. Consequently, the edited historical
+`up()` methods alone cannot recover a table with an *applied* ledger entry
+but missing FK/unique/index metadata.
+
+**Design:**
+- Before any change, assert that both incident tables **and both historical
+  migration ledger entries exist**. Missing history/table stops with a
+  non-sensitive error, not a reconstructed table or overwritten ledger.
+- Rerun only their known idempotent `up()` **constraint checks** on tables
+  whose old migrations are applied. The earlier table-contract implementations
+  verify expected columns and FK referential actions, restoring missing
+  named FKs, unique constraints and indexes. Wrong FK references or columns
+  still stop, instead of silently accepting drift.
+- This forward-only `down()` is a **no-op**. Rolling back or dropping repaired
+  schema objects would break the historical table contract and possibly
+  disrupt existing features.
+- The MySQL-8 CI runs full migrations first; with the historical ledger
+  already APPLIED, it intentionally drops named FKs/indexes on **ephemeral**
+  tables, calls the forward-only `up()` twice, verifies metadata and a
+  synthetic pre-existing user row are preserved. A negative case removes a
+  synthetic migration ledger entry in CI, asserts the repair is denied, then
+  restores only that synthetic ledger entry.
+
+**Critical release restrictions:** This new migration would run automatically
+in production after a merge into auto-deploying `main`. **Do not merge PR
+#443** while the real Aiven schema/ledger, backup restore-readiness, migration
+execution window and existing account PWA/login recovery remain unverified.
+Even a passing disposable MySQL test is **not** approval to execute production
+DDL. The tested synthetic user is NOT proof of all production user data
+preservation. Wrong versions, different constraints, unverified production
+rows or partially missing columns require a separate manual review.
