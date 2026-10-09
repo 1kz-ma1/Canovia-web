@@ -81,3 +81,20 @@ HTTP 503. The CI Docker smoke now starts a full second staging instance
 against a fake disposable PostgreSQL using the exact production-like
 host/ID guard and checks `/up=200`, private routes=503.
 Default live SQLite mode and prod `/up` remain unchanged.
+
+
+### V59 secretless, existing-resource Postgres wiring (2026-10-09)
+
+Actual Render PostgreSQL internal URL/user are unavailable through the
+connected resource metadata. A **reference-only** Render Blueprint now
+describes `fromDatabase` for the current Free staging DB's internal
+`connectionString` and `user`; startup, DB health and synthetic
+bootstrap require that actual referenced username instead of a guessed
+constant. CI checks the dynamic username contract, wrong-user rejection,
+the no-new-database/no-secrets Blueprint and the existing staging Docker
+smoke. **No Blueprint sync or DB connection cutover has occurred.**
+Before activation, verify the proposed Render Blueprint preview adopts
+the existing service/database without creating duplicates or changing
+production; do not expose credentials or use an unreviewed second
+Blueprint. After a reviewed cutover, confirm `/up=200` and private
+OAuth/MCP endpoints 503 from an external runner.
