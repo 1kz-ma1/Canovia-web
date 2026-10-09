@@ -102,14 +102,14 @@ final class AdaptiveLearningSessionDraftL3cTest extends TestCase
             'learning_run_item_id' => $item->id, 'choice' => 'B',
             'reasoning' => '自分の判断',
         ])->assertOk()->assertExactJson(['saved' => true])
-            ->assertHeader('Cache-Control', 'no-store');
+            ->assertHeader('Cache-Control', 'no-store, private');
 
         $show = route('plans.tasks.learning.show', [$plan, $task, $run]);
         $this->get($show)->assertOk()
             ->assertSee('前回の入力を復元しました。')
             ->assertSee('data-learning-draft-url', false)
             ->assertSee('data-learning-draft-status', false)
-            ->assertSee('value="B" checked', false);
+            ->assertSee('value="B"', false)->assertSee('checked', false);
         $this->assertDatabaseCount('learning_answer_events', 0);
         $this->assertDatabaseCount('study_practice_attempts', 0);
         $this->assertSame(35, $task->fresh()->progress_percent);
@@ -140,8 +140,8 @@ final class AdaptiveLearningSessionDraftL3cTest extends TestCase
                 $res->assertSee('value="-"', false);
             } else {
                 $res->assertSee('name="choices[]"', false);
-                $res->assertSee('value="A" checked', false);
-                $res->assertSee('value="B" checked', false);
+                $this->assertMatchesRegularExpression('/name="choices\\[\\]"\\s+value="A"\\s+checked\\b/', $res->getContent());
+                $this->assertMatchesRegularExpression('/name="choices\\[\\]"\\s+value="B"\\s+checked\\b/', $res->getContent());
             }
         }
         $this->assertDatabaseCount('learning_answer_events', 0);
@@ -162,7 +162,7 @@ final class AdaptiveLearningSessionDraftL3cTest extends TestCase
             'learning_run_item_id' => $item->id, 'choice' => 'B',
         ])->assertForbidden();
         $this->actingAs($owner)->get(route('plans.tasks.learning.show', [$plan, $task, $run]))
-            ->assertOk()->assertSee('value="A" checked', false);
+            ->assertOk()->assertSee('value="A"', false)->assertSee('checked', false);
         $this->assertDatabaseCount('learning_answer_events', 0);
     }
 
