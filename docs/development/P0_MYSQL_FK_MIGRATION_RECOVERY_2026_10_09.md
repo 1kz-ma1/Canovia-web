@@ -555,3 +555,31 @@ name collision negatives. No customer data is queried or changed; the
 permitted test environment remains pinned to disposable MySQL only.
 The release hold remains independent of green CI and actual Aiven schema,
 ledger and restorable production backup evidence must still be observed.
+
+
+## MySQL child-parent FK type and SET NULL nullability preflight (2026-10-10)
+
+The forward-only P0 reconciliation now inspects read-only
+`information_schema.COLUMNS` metadata for any **missing** FK before adding
+it. Besides the previously checked constraint symbol, parent table,
+referenced ID and orphan rows, preflight requires child and parent
+`COLUMN_TYPE` compatibility (including the signed/unsigned distinction)
+and rejects a nonnullable child column whenever the proposed FK uses
+`ON DELETE SET NULL`.
+
+These prevent two additional potential MySQL `ALTER TABLE` failures
+that could otherwise occur after the first incident table was already
+changed. Two new **disposable MySQL 8 only** tests independently alter
+the second table's synthetic `user_id` to (a) signed BIGINT against
+the parent's unsigned BIGINT and (b) nonnullable unsigned BIGINT for
+the required `SET NULL` action. In both cases the first table's
+missing FK must remain missing when the forward-only migration aborts.
+Each test restores the reviewed column definition and reruns the
+idempotent recovery successfully. The tests never touch live Aiven.
+
+Read-only preflight is **not atomic** with MySQL DDL: concurrent writes,
+engine capabilities, privileges, metadata locks and changes between
+checks can still cause later ALTER failures. No Aiven backup has been
+restored and no production service settings or credentials have been
+modified. Owner-reported iPhone login recovery (correcting the DB name
+environment variable) remains closed. This PR remains Draft under #418.
