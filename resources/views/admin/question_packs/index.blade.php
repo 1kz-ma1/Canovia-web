@@ -149,6 +149,12 @@
                         P1：{{ $apCandidateAudit['priority_counts']['P1'] }}問（独自解説・新規問題・重要計算）／
                         P2：{{ $apCandidateAudit['priority_counts']['P2'] }}問（その他）
                     </p>
+                    <p class="mt-2 text-xs text-slate-300" data-ap-a-choice-draft-summary>
+                        Canovia独自問題の選択肢理由案：
+                        {{ $apCandidateAudit['choice_draft_current_count'] }}/45問（誤答135肢）、
+                        未記録・改変による失効 {{ $apCandidateAudit['choice_draft_stale_count'] }}問。
+                        これらは監修者の承認ではなく、独立した品質確認が引き続き必要です。
+                    </p>
                     <p class="mt-2 text-xs text-slate-400">
                         IPA原問題のスポット照合 {{ $apCandidateAudit['source_visual_spotchecked_count'] }}/35問。
                         未照合 {{ $apCandidateAudit['source_visual_unchecked_official_count'] }}問。
@@ -200,6 +206,31 @@
                                     </div>
                                     <p class="font-semibold text-slate-100">正答：{{ $item['answer'] }}</p>
                                     <p class="whitespace-pre-wrap">Canovia解説：{{ $item['explanation'] }}</p>
+                                    @if($item['choice_draft_state'] === 'current_unreviewed_draft')
+                                        <div class="rounded-lg border border-cyan-500/20 p-3" data-ap-a-choice-draft="{{ $item['key'] }}">
+                                            <p class="font-semibold text-cyan-200">Canovia独自問題の誤答理由案（未監修）</p>
+                                            <ul class="mt-2 list-inside list-disc space-y-1 text-slate-300">
+                                                @foreach($item['choice_draft_reasons'] as $choiceId => $reason)
+                                                    <li>{{ $choiceId }}：{{ $reason }}</li>
+                                                @endforeach
+                                            </ul>
+                                            @if(($item['choice_draft_review_focus']['level'] ?? 'standard') !== 'standard')
+                                                <p class="mt-2 text-amber-200">
+                                                    監修時の注意：{{ $item['choice_draft_review_focus']['note'] }}
+                                                </p>
+                                                @if(str_starts_with($item['choice_draft_review_focus']['reference'] ?? '', 'https://'))
+                                                    <p class="mt-1">
+                                                        <a class="text-cyan-300 underline" href="{{ $item['choice_draft_review_focus']['reference'] }}"
+                                                            target="_blank" rel="noopener noreferrer">注意事項の参考資料を開く</a>
+                                                    </p>
+                                                @endif
+                                            @endif
+                                        </div>
+                                    @elseif($item['choice_draft_state'] === 'missing_or_stale')
+                                        <p class="font-semibold text-rose-300" data-ap-a-choice-draft-stale>
+                                            監査用の誤答理由案が不足、または現行内容と不一致です。再確認が必要です。
+                                        </p>
+                                    @endif
                                     <p>出典問題集：{{ $item['source_pack'] }} / {{ $item['source_key'] }}</p>
                                     @if($item['source_reference'])
                                         <p>出典表記：{{ $item['source_reference'] }}</p>

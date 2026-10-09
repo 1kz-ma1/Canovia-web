@@ -1,0 +1,1731 @@
+{
+  "schema_version": 1,
+  "candidate_slug": "ap-a-2026-cbt-80-candidate-v1",
+  "candidate_version": "0.3.0-review-required",
+  "content_kind": "unreviewed_canovia_original_answer_distractor_reason_drafts",
+  "audit_summary": {
+    "candidate_original_questions": 45,
+    "wrong_option_explanations": 135,
+    "independent_human_approvals": 0,
+    "public_release_permitted": false
+  },
+  "limitations": "All rationale entries are authored drafts. No human approval. Changes to candidate wording, choices, answer, explanation or version invalidate the draft match. Does not authorize final review or public release.",
+  "entries": [
+    {
+      "key": "net-mtu-002",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "MSSはTCPデータ部の最大長なので、MTUからIPヘッダー20バイトとTCPヘッダー20バイトを引き、1,460バイトです。",
+      "incorrect_choices": {
+        "ア": "1,440は過剰にヘッダー分を引いている",
+        "ウ": "1,480はTCPヘッダー分を差し引いていない",
+        "エ": "1,500はIP・TCPヘッダーを無視"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "IPv4でMTUが1,500バイト、IPヘッダー20バイト、TCPヘッダー20バイトでオプションがない。IPフラグメントを避けるため、TCPのMSSとして設定する代表的な最大値はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "1,440バイト"
+          },
+          {
+            "id": "イ",
+            "label": "1,460バイト"
+          },
+          {
+            "id": "ウ",
+            "label": "1,480バイト"
+          },
+          {
+            "id": "エ",
+            "label": "1,500バイト"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "MSSはTCPデータ部の最大長なので、MTUからIPヘッダー20バイトとTCPヘッダー20バイトを引き、1,460バイトです。"
+      }
+    },
+    {
+      "key": "net-dns-002",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "MXレコードは、そのドメイン宛てメールを配送するメールサーバを指定します。",
+      "incorrect_choices": {
+        "ア": "AはIPv4アドレスを登録",
+        "イ": "CNAMEは別名を登録",
+        "エ": "PTRは逆引きに利用"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "DNSで、あるドメイン宛ての電子メールを受け取るメールサーバを指定するために用いるレコードはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "A"
+          },
+          {
+            "id": "イ",
+            "label": "CNAME"
+          },
+          {
+            "id": "ウ",
+            "label": "MX"
+          },
+          {
+            "id": "エ",
+            "label": "PTR"
+          }
+        ],
+        "answer": "ウ",
+        "explanation": "MXレコードは、そのドメイン宛てメールを配送するメールサーバを指定します。"
+      }
+    },
+    {
+      "key": "net-napt-003",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "NAPTはIPアドレスに加えてポート番号も変換し、多数の内部端末でグローバルIPアドレスを共有できます。",
+      "incorrect_choices": {
+        "イ": "DNSの名前解決でありポート変換ではない",
+        "ウ": "ルーティングとアドレス変換は別",
+        "エ": "VPNによる暗号化とは別"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "NAPTの説明として最も適切なものはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "複数のプライベートIPアドレスを、IPアドレスとポート番号の組合せを変換して一つ又は少数のグローバルIPアドレスへ対応付ける。"
+          },
+          {
+            "id": "イ",
+            "label": "ドメイン名をIPアドレスへ変換する。"
+          },
+          {
+            "id": "ウ",
+            "label": "IPパケットの経路を最短経路へ固定する。"
+          },
+          {
+            "id": "エ",
+            "label": "暗号化トンネルを用いて拠点間を接続する。"
+          }
+        ],
+        "answer": "ア",
+        "explanation": "NAPTはIPアドレスに加えてポート番号も変換し、多数の内部端末でグローバルIPアドレスを共有できます。"
+      }
+    },
+    {
+      "key": "strategy-three-c-004",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "3C分析はCustomer（顧客・市場）、Competitor（競合）、Company（自社）の観点から成功要因を整理する手法です。PESTはマクロ環境、特性要因図は問題の原因構造、バリューチェーン分析は企業活動の価値創出工程に着目します。",
+      "incorrect_choices": {
+        "ア": "PESTは政治・経済・社会・技術の外部環境",
+        "イ": "特性要因図は問題の原因分析",
+        "エ": "バリューチェーンは企業活動の価値分析"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "新規サービスの事業戦略を考えるため、顧客・競合他社・自社の三つの観点から市場と強みを分析する手法はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "PEST分析"
+          },
+          {
+            "id": "イ",
+            "label": "特性要因図"
+          },
+          {
+            "id": "ウ",
+            "label": "3C分析"
+          },
+          {
+            "id": "エ",
+            "label": "バリューチェーン分析"
+          }
+        ],
+        "answer": "ウ",
+        "explanation": "3C分析はCustomer（顧客・市場）、Competitor（競合）、Company（自社）の観点から成功要因を整理する手法です。PESTはマクロ環境、特性要因図は問題の原因構造、バリューチェーン分析は企業活動の価値創出工程に着目します。"
+      }
+    },
+    {
+      "key": "net-tcp-005",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "TCPは順序制御・再送制御のためシーケンス番号を持ちます。ポート番号とチェックサムはUDPにもあります。",
+      "incorrect_choices": {
+        "ア": "宛先ポート番号はUDPにもある",
+        "ウ": "送信元ポート番号はUDPにもある",
+        "エ": "チェックサム欄はUDPにもある"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "TCPヘッダーに含まれ、UDPヘッダーには含まれない情報はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "宛先ポート番号"
+          },
+          {
+            "id": "イ",
+            "label": "シーケンス番号"
+          },
+          {
+            "id": "ウ",
+            "label": "送信元ポート番号"
+          },
+          {
+            "id": "エ",
+            "label": "チェックサム"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "TCPは順序制御・再送制御のためシーケンス番号を持ちます。ポート番号とチェックサムはUDPにもあります。"
+      }
+    },
+    {
+      "key": "strategy-scm-005",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "SCM（Supply Chain Management）は調達から顧客への配送までの供給網を横断してモノ・情報・資金の流れを調整する考え方です。PLMは製品のライフサイクル情報、CRMは顧客関係、SFAは営業活動の支援に重点があります。",
+      "incorrect_choices": {
+        "ア": "PLMは製品ライフサイクルの情報管理",
+        "ウ": "CRMは顧客関係の管理",
+        "エ": "SFAは営業活動の支援"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "需要予測から調達・生産・在庫・配送まで企業間のモノや情報の流れを連携し、全体の在庫削減や納期短縮を目指す管理手法はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "PLM"
+          },
+          {
+            "id": "イ",
+            "label": "SCM"
+          },
+          {
+            "id": "ウ",
+            "label": "CRM"
+          },
+          {
+            "id": "エ",
+            "label": "SFA"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "SCM（Supply Chain Management）は調達から顧客への配送までの供給網を横断してモノ・情報・資金の流れを調整する考え方です。PLMは製品のライフサイクル情報、CRMは顧客関係、SFAは営業活動の支援に重点があります。"
+      }
+    },
+    {
+      "key": "db-view-009",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "ビューでは列の別名を定義できます。行の絞込みや集合演算も可能で、更新可能性はビュー定義やDBMSの条件に依存します。",
+      "incorrect_choices": {
+        "イ": "ビューはWHEREで行も絞れる",
+        "ウ": "JOINビューがすべて更新可能とは限らない",
+        "エ": "UNIONを使うビューも定義できる"
+      },
+      "review_focus": {
+        "level": "contextual",
+        "note": "ビューはDBMS・定義条件によって更新可能性が異なる。JOINやUNIONを絶対的に不可とは断定しない。",
+        "reference": "https://www.postgresql.org/docs/current/sql-createview.html"
+      },
+      "verified_snapshot": {
+        "prompt": "関係データベースのビューに関する説明として適切なものはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "ビューの列名は、基の表と異なる名前として定義できる。"
+          },
+          {
+            "id": "イ",
+            "label": "ビューは列だけを絞り込めるが、行を条件で絞り込むことはできない。"
+          },
+          {
+            "id": "ウ",
+            "label": "複数表を結合したビューは、どのDBMSでも常に更新可能である。"
+          },
+          {
+            "id": "エ",
+            "label": "和集合を用いたビューは定義できない。"
+          }
+        ],
+        "answer": "ア",
+        "explanation": "ビューでは列の別名を定義できます。行の絞込みや集合演算も可能で、更新可能性はビュー定義やDBMSの条件に依存します。"
+      }
+    },
+    {
+      "key": "strategy-bpr-006",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "BPR（Business Process Re-engineering）は業務プロセスを部分的に効率化するだけでなく、仕事の流れを抜本的に見直して再設計します。BCPは事業継続計画、RTOは目標復旧時間、ITILはITサービスマネジメントのベストプラクティスです。",
+      "incorrect_choices": {
+        "イ": "BCPは事業継続計画",
+        "ウ": "RTOは目標復旧時間",
+        "エ": "ITILはITサービス管理の知識体系"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "部門別に細分化された従来の業務手順を前提とせず、顧客価値と業務成果を起点に組織横断の業務プロセスを根本的に再設計する取組はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "BPR"
+          },
+          {
+            "id": "イ",
+            "label": "BCP"
+          },
+          {
+            "id": "ウ",
+            "label": "RTO"
+          },
+          {
+            "id": "エ",
+            "label": "ITIL"
+          }
+        ],
+        "answer": "ア",
+        "explanation": "BPR（Business Process Re-engineering）は業務プロセスを部分的に効率化するだけでなく、仕事の流れを抜本的に見直して再設計します。BCPは事業継続計画、RTOは目標復旧時間、ITILはITサービスマネジメントのベストプラクティスです。"
+      }
+    },
+    {
+      "key": "db-normalization-013",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "商品番号→商品名という関数従属性を商品表へ分離することで、商品名の重複と更新不整合を抑えられます。",
+      "incorrect_choices": {
+        "ア": "同じ商品名の重複保持が更新不整合を生む",
+        "ウ": "商品名だけでは商品番号との関数従属性に対処できない",
+        "エ": "連結文字列のキーでは更新不整合が残る"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "受注明細表に「受注番号、商品番号、商品名、数量」があり、商品番号が決まれば商品名が一意に決まる。商品名の更新不整合を避けるための設計として最も適切なものはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "商品名を受注明細表の各行にそのまま保持する。"
+          },
+          {
+            "id": "イ",
+            "label": "商品番号と商品名を商品表へ分離し、受注明細表は商品番号を参照する。"
+          },
+          {
+            "id": "ウ",
+            "label": "商品番号を削除して商品名だけをキーにする。"
+          },
+          {
+            "id": "エ",
+            "label": "受注番号と商品名を連結した文字列を主キーにする。"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "商品番号→商品名という関数従属性を商品表へ分離することで、商品名の重複と更新不整合を抑えられます。"
+      }
+    },
+    {
+      "key": "db-isolation-014",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "未コミットの値を読み取る現象はダーティリードです。分離レベルを上げることで防止できます。",
+      "incorrect_choices": {
+        "イ": "ファントムリードは検索結果の行集合が変わる",
+        "ウ": "ロストアップデートは更新が上書きされ失われる",
+        "エ": "デッドロックは資源の循環待ち"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "あるトランザクションが、別のトランザクションによってまだコミットされていない更新値を読み取る現象を何というか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "ダーティリード"
+          },
+          {
+            "id": "イ",
+            "label": "ファントムリード"
+          },
+          {
+            "id": "ウ",
+            "label": "ロストアップデート"
+          },
+          {
+            "id": "エ",
+            "label": "デッドロック"
+          }
+        ],
+        "answer": "ア",
+        "explanation": "未コミットの値を読み取る現象はダーティリードです。分離レベルを上げることで防止できます。"
+      }
+    },
+    {
+      "key": "db-nosql-types-036",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "JSONのような階層構造をもつ文書を柔軟に格納する用途にはドキュメント型が適しています。",
+      "incorrect_choices": {
+        "ア": "キー・バリュー型は構造化文書の属性管理が主目的でない",
+        "ウ": "ワイドカラム型は列集合による格納に向く",
+        "エ": "グラフ型はノードと関係の探索に向く"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "商品カタログをJSON形式で保存し、商品ごとに持つ属性が多少異なっても柔軟に扱いたい。この用途に最も適したNoSQLのデータモデルはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "キー・バリュー型"
+          },
+          {
+            "id": "イ",
+            "label": "ドキュメント型"
+          },
+          {
+            "id": "ウ",
+            "label": "ワイドカラム型"
+          },
+          {
+            "id": "エ",
+            "label": "グラフ型"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "JSONのような階層構造をもつ文書を柔軟に格納する用途にはドキュメント型が適しています。"
+      }
+    },
+    {
+      "key": "db-sql-join-059",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "左側の顧客を全件残し、対応する注文があれば結合するのでLEFT OUTER JOINが適切です。",
+      "incorrect_choices": {
+        "ア": "INNER JOINでは注文ゼロの顧客が落ちる",
+        "ウ": "CROSS JOINでは対応のない全組合せを生成",
+        "エ": "注文表からは注文ゼロの顧客が得られない"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "顧客表(customer_id, name)と注文表(order_id, customer_id, amount)がある。注文が1件もない顧客も含めて全顧客を一覧表示し、注文がある場合だけ注文情報も表示したい。顧客表を左側にしたとき適切な結合はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "INNER JOIN"
+          },
+          {
+            "id": "イ",
+            "label": "LEFT OUTER JOIN"
+          },
+          {
+            "id": "ウ",
+            "label": "CROSS JOIN"
+          },
+          {
+            "id": "エ",
+            "label": "顧客表を使わず注文表だけを検索する"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "左側の顧客を全件残し、対応する注文があれば結合するのでLEFT OUTER JOINが適切です。"
+      }
+    },
+    {
+      "key": "calc-mm1-015",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "ρT/(1−ρ)≧Tより、ρ/(1−ρ)≧1、したがってρ≧0.5です。",
+      "incorrect_choices": {
+        "ア": "33%では平均待ち時間がT未満",
+        "ウ": "67%は条件を満たすが最小値ではない",
+        "エ": "80%も条件を満たすが最小値ではない"
+      },
+      "review_focus": {
+        "level": "assumption",
+        "note": "M/M/1待ち行列は安定条件0≤ρ<1、T>0を前提とする。",
+        "reference": null
+      },
+      "verified_snapshot": {
+        "prompt": "M/M/1待ち行列で、平均サービス時間をT秒、利用率をρとすると平均待ち時間は ρT/(1−ρ) で表される。平均待ち時間がT秒以上となる利用率の最小値はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "33%"
+          },
+          {
+            "id": "イ",
+            "label": "50%"
+          },
+          {
+            "id": "ウ",
+            "label": "67%"
+          },
+          {
+            "id": "エ",
+            "label": "80%"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "ρT/(1−ρ)≧Tより、ρ/(1−ρ)≧1、したがってρ≧0.5です。"
+      }
+    },
+    {
+      "key": "mgmt-wbs-001",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "WBSはプロジェクト全体で必要な成果物・作業を階層構造に分解し、作業単位を明確にする手法です。リスク登録簿は不確実性の管理、パレート図は重点項目の抽出、SLAはサービス水準の合意に使うため目的が異なります。",
+      "incorrect_choices": {
+        "ア": "リスク登録簿は不確実性を管理",
+        "ウ": "パレート図は重点課題の分析",
+        "エ": "SLAはサービス水準の合意"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "プロジェクトの作業範囲を成果物や作業単位へ段階的に分解し、見積り・担当割当て・進捗管理の基礎とするものはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "リスク登録簿"
+          },
+          {
+            "id": "イ",
+            "label": "WBS（Work Breakdown Structure）"
+          },
+          {
+            "id": "ウ",
+            "label": "パレート図"
+          },
+          {
+            "id": "エ",
+            "label": "SLA"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "WBSはプロジェクト全体で必要な成果物・作業を階層構造に分解し、作業単位を明確にする手法です。リスク登録簿は不確実性の管理、パレート図は重点項目の抽出、SLAはサービス水準の合意に使うため目的が異なります。"
+      }
+    },
+    {
+      "key": "mgmt-risk-transfer-002",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "保険への加入などにより、損失の経済的負担を契約相手へ移す対応はリスク移転です。回避はリスクのある活動自体をやめること、低減は発生確率や影響を小さくすること、受容は対応を加えず残存リスクを引き受けることを意味します。",
+      "incorrect_choices": {
+        "ア": "回避は活動そのものを取りやめる",
+        "イ": "低減は損害や頻度を縮小",
+        "エ": "受容は残存リスクを自ら引き受ける"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "システム開発プロジェクトで、機材の損失による金銭的な被害を保険契約によって第三者へ移すリスク対応はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "回避"
+          },
+          {
+            "id": "イ",
+            "label": "低減"
+          },
+          {
+            "id": "ウ",
+            "label": "移転"
+          },
+          {
+            "id": "エ",
+            "label": "受容"
+          }
+        ],
+        "answer": "ウ",
+        "explanation": "保険への加入などにより、損失の経済的負担を契約相手へ移す対応はリスク移転です。回避はリスクのある活動自体をやめること、低減は発生確率や影響を小さくすること、受容は対応を加えず残存リスクを引き受けることを意味します。"
+      }
+    },
+    {
+      "key": "strategy-pest-001",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "PESTはPolitical（政治）・Economic（経済）・Social（社会）・Technological（技術）の4視点で外部マクロ環境を分析します。SWOTは内部の強み・弱みと外部の機会・脅威、ABC分析は重要度別の分類、EVMはプロジェクトの進捗とコストの評価です。",
+      "incorrect_choices": {
+        "イ": "SWOTは内部強弱・外部機会脅威",
+        "ウ": "ABC分析は重要度順の分類",
+        "エ": "EVMは計画対実績の予算・進捗管理"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "企業の外部環境を政治・経済・社会・技術の四つの視点から整理して、事業戦略に影響するマクロ環境の変化を分析する手法はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "PEST分析"
+          },
+          {
+            "id": "イ",
+            "label": "SWOT分析"
+          },
+          {
+            "id": "ウ",
+            "label": "ABC分析"
+          },
+          {
+            "id": "エ",
+            "label": "EVM"
+          }
+        ],
+        "answer": "ア",
+        "explanation": "PESTはPolitical（政治）・Economic（経済）・Social（社会）・Technological（技術）の4視点で外部マクロ環境を分析します。SWOTは内部の強み・弱みと外部の機会・脅威、ABC分析は重要度別の分類、EVMはプロジェクトの進捗とコストの評価です。"
+      }
+    },
+    {
+      "key": "strategy-ppm-002",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "PPMは市場成長率と相対的市場占有率で事業を区分します。低成長率かつ高占有率の『金のなる木』は安定的なキャッシュを生みやすく、他の事業への投資原資にもなります。花形は高成長・高占有率、問題児は高成長・低占有率、負け犬は低成長・低占有率です。",
+      "incorrect_choices": {
+        "ア": "花形は高成長かつ高占有率",
+        "イ": "問題児は高成長かつ低占有率",
+        "ウ": "負け犬は低成長かつ低占有率"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "PPM（プロダクトポートフォリオマネジメント）において、市場成長率は低いが相対的な市場占有率が高く、安定した資金を生み出す事業の区分はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "花形（Star）"
+          },
+          {
+            "id": "イ",
+            "label": "問題児（Question Mark）"
+          },
+          {
+            "id": "ウ",
+            "label": "負け犬（Dog）"
+          },
+          {
+            "id": "エ",
+            "label": "金のなる木（Cash Cow）"
+          }
+        ],
+        "answer": "エ",
+        "explanation": "PPMは市場成長率と相対的市場占有率で事業を区分します。低成長率かつ高占有率の『金のなる木』は安定的なキャッシュを生みやすく、他の事業への投資原資にもなります。花形は高成長・高占有率、問題児は高成長・低占有率、負け犬は低成長・低占有率です。"
+      }
+    },
+    {
+      "key": "strategy-stp-003",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "STPはSegmentation（市場細分化）、Targeting（標的市場選定）、Positioning（自社の立ち位置の明確化）の順に市場への働き掛けを設計する枠組みです。4Pは製品・価格・流通・販促の施策、BSCは戦略目標の評価、EAIは企業内アプリケーションの連携です。",
+      "incorrect_choices": {
+        "ア": "4Pは販売施策の組合せ",
+        "ウ": "BSCは多面的な戦略評価",
+        "エ": "EAIは業務アプリケーションの連携"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "市場を顧客の特徴ごとに分割し、狙う顧客層を選択した後、自社製品の位置付けを決めるマーケティング戦略の枠組みはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "4P"
+          },
+          {
+            "id": "イ",
+            "label": "STP"
+          },
+          {
+            "id": "ウ",
+            "label": "BSC"
+          },
+          {
+            "id": "エ",
+            "label": "EAI"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "STPはSegmentation（市場細分化）、Targeting（標的市場選定）、Positioning（自社の立ち位置の明確化）の順に市場への働き掛けを設計する枠組みです。4Pは製品・価格・流通・販促の施策、BSCは戦略目標の評価、EAIは企業内アプリケーションの連携です。"
+      }
+    },
+    {
+      "key": "sec-dkim-023",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "DKIMは送信ドメイン側がメールへ署名し、DNSで公開される公開鍵を使って受信側が署名を検証します。",
+      "incorrect_choices": {
+        "イ": "OP25BはSMTP送信制限",
+        "ウ": "S/MIMEはエンドツーエンドでの署名・暗号化",
+        "エ": "SPFは送信サーバIPの許可判定で署名なし"
+      },
+      "review_focus": {
+        "level": "contextual",
+        "note": "DKIMが認証する署名ドメインとFromドメインは必ずしも一致しない。",
+        "reference": null
+      },
+      "verified_snapshot": {
+        "prompt": "送信側メールサーバが電子メールヘッダーへデジタル署名を付与し、受信側が公開鍵で検証することで、送信元ドメインのなりすましやメール改ざんの検知に利用できる技術はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "DKIM"
+          },
+          {
+            "id": "イ",
+            "label": "OP25B"
+          },
+          {
+            "id": "ウ",
+            "label": "S/MIME"
+          },
+          {
+            "id": "エ",
+            "label": "SPF"
+          }
+        ],
+        "answer": "ア",
+        "explanation": "DKIMは送信ドメイン側がメールへ署名し、DNSで公開される公開鍵を使って受信側が署名を検証します。"
+      }
+    },
+    {
+      "key": "sec-sidechannel-024",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "サイドチャネル攻撃は、暗号アルゴリズムそのものではなく、実装時に漏れる消費電力や時間などの情報を利用します。",
+      "incorrect_choices": {
+        "イ": "既知平文攻撃は平文・暗号文ペアを利用",
+        "ウ": "ショルダーハックは画面や動作の覗き見",
+        "エ": "ジャミングは電波妨害"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "暗号処理中の装置について、消費電力や処理時間などの物理的な情報を測定・統計解析し、内部の秘密情報を推定する攻撃はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "サイドチャネル攻撃"
+          },
+          {
+            "id": "イ",
+            "label": "既知平文攻撃"
+          },
+          {
+            "id": "ウ",
+            "label": "ショルダーハッキング"
+          },
+          {
+            "id": "エ",
+            "label": "ジャミング"
+          }
+        ],
+        "answer": "ア",
+        "explanation": "サイドチャネル攻撃は、暗号アルゴリズムそのものではなく、実装時に漏れる消費電力や時間などの情報を利用します。"
+      }
+    },
+    {
+      "key": "calc-bayes-disease-025",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "陽性になる確率は0.02×0.90+0.98×0.05=0.067。病気かつ陽性は0.018なので、0.018/0.067≈0.269です。",
+      "incorrect_choices": {
+        "ア": "15.5%は真陽性を全陽性で割った値でない",
+        "ウ": "36.0%は真陽性0.018と全陽性0.067に一致しない",
+        "エ": "64.3%も真陽性0.018と全陽性0.067に一致しない"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "ある病気の有病率は2%である。病気に罹患している人を検査すると90%の確率で陽性となり、罹患していない人でも5%の確率で陽性となる。検査結果が陽性だった人が実際に病気に罹患している確率に最も近いものはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "約15.5%"
+          },
+          {
+            "id": "イ",
+            "label": "約26.9%"
+          },
+          {
+            "id": "ウ",
+            "label": "約36.0%"
+          },
+          {
+            "id": "エ",
+            "label": "約64.3%"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "陽性になる確率は0.02×0.90+0.98×0.05=0.067。病気かつ陽性は0.018なので、0.018/0.067≈0.269です。"
+      }
+    },
+    {
+      "key": "calc-mips-026",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "1秒当たり2×10^9クロックを平均2.5クロック/命令で割ると8×10^8命令/秒、すなわち800MIPSです。",
+      "incorrect_choices": {
+        "ア": "400MIPSは2GHz÷2.5に一致しない",
+        "ウ": "1,250MIPSは2GHz÷2.5に一致しない",
+        "エ": "5,000MIPSは2GHz÷2.5に一致しない"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "クロック周波数2GHzのCPUがあり、ある命令群を実行したときの平均CPIが2.5であった。このCPUの平均命令実行性能として最も適切なものはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "400MIPS"
+          },
+          {
+            "id": "イ",
+            "label": "800MIPS"
+          },
+          {
+            "id": "ウ",
+            "label": "1,250MIPS"
+          },
+          {
+            "id": "エ",
+            "label": "5,000MIPS"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "1秒当たり2×10^9クロックを平均2.5クロック/命令で割ると8×10^8命令/秒、すなわち800MIPSです。"
+      }
+    },
+    {
+      "key": "strategy-valuechain-008",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "バリューチェーン分析は企業の活動を主活動と支援活動に分け、各工程が顧客価値やコストにどのように関わるかを可視化します。PPMは事業ポートフォリオ、DCF法は将来キャッシュフローの割引評価、ファイブフォース分析は業界の競争構造に着目します。",
+      "incorrect_choices": {
+        "ア": "PPMは事業の成長率・占有率による分類",
+        "イ": "DCFは将来現金収支を割引評価",
+        "ウ": "ファイブフォースは業界の競争構造"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "企業の活動を購買物流、製造、出荷物流、販売・マーケティング、サービスなどの主活動と、調達・人事管理などの支援活動に分け、どの工程で競争優位を生むか分析する手法はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "PPM"
+          },
+          {
+            "id": "イ",
+            "label": "DCF法"
+          },
+          {
+            "id": "ウ",
+            "label": "ファイブフォース分析"
+          },
+          {
+            "id": "エ",
+            "label": "バリューチェーン分析"
+          }
+        ],
+        "answer": "エ",
+        "explanation": "バリューチェーン分析は企業の活動を主活動と支援活動に分け、各工程が顧客価値やコストにどのように関わるかを可視化します。PPMは事業ポートフォリオ、DCF法は将来キャッシュフローの割引評価、ファイブフォース分析は業界の競争構造に着目します。"
+      }
+    },
+    {
+      "key": "os-roundrobin-028",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "P1を2、P2を2、P3を1実行してP3完了。その後P1を2、P2を1でP2完了、最後にP1が完了します。",
+      "incorrect_choices": {
+        "ア": "P1はCPU処理時間が長く最初に完了しない",
+        "イ": "最短のP3が先に完了する",
+        "ウ": "P1よりP2が先に完了する"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "全て時刻0に到着したプロセスP1、P2、P3があり、必要CPU時間はそれぞれ5、3、1である。タイムクォンタム2のラウンドロビン方式でP1、P2、P3の順に実行を開始し、コンテキスト切替時間は無視する。完了順序として正しいものはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "P1→P2→P3"
+          },
+          {
+            "id": "イ",
+            "label": "P2→P3→P1"
+          },
+          {
+            "id": "ウ",
+            "label": "P3→P1→P2"
+          },
+          {
+            "id": "エ",
+            "label": "P3→P2→P1"
+          }
+        ],
+        "answer": "エ",
+        "explanation": "P1を2、P2を2、P3を1実行してP3完了。その後P1を2、P2を1でP2完了、最後にP1が完了します。"
+      }
+    },
+    {
+      "key": "os-starvation-029",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "低優先度処理が実行機会を得られない現象はスタベーションです。待ち時間に応じて優先度を上げるエージングが代表的な緩和策です。",
+      "incorrect_choices": {
+        "ア": "デッドロックは資源を互いに待つ状態",
+        "ウ": "スラッシングはページ入替の過多",
+        "エ": "ライブロックは実行が継続しても前進しない状態"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "優先度方式のCPUスケジューリングで、高優先度のプロセスが継続的に到着し、実行可能な低優先度プロセスが長時間CPUを割り当てられない状態が続いた。この現象と、その代表的な緩和策の組合せとして適切なものはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "デッドロック・タイムアウト"
+          },
+          {
+            "id": "イ",
+            "label": "スタベーション・エージング"
+          },
+          {
+            "id": "ウ",
+            "label": "スラッシング・ページ置換"
+          },
+          {
+            "id": "エ",
+            "label": "ライブロック・排他ロック"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "低優先度処理が実行機会を得られない現象はスタベーションです。待ち時間に応じて優先度を上げるエージングが代表的な緩和策です。"
+      }
+    },
+    {
+      "key": "quality-maintainability-031",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "変更容易性・修正容易性・試験容易性などは保守性に関係します。",
+      "incorrect_choices": {
+        "ア": "可用性はサービス利用可能性",
+        "ウ": "機密性は不正な情報開示の防止",
+        "エ": "使用性はユーザーの操作・学習のしやすさ"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "ある業務システムでは、部品を変更したときの影響範囲を限定し、障害修正や機能追加、テストを短時間で行えるようモジュール間の依存を小さくした。この設計で特に向上を狙っている品質特性はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "可用性"
+          },
+          {
+            "id": "イ",
+            "label": "保守性"
+          },
+          {
+            "id": "ウ",
+            "label": "機密性"
+          },
+          {
+            "id": "エ",
+            "label": "使用性"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "変更容易性・修正容易性・試験容易性などは保守性に関係します。"
+      }
+    },
+    {
+      "key": "quality-reliability-032",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "一定条件・一定期間に正しく機能し続ける性質は信頼性です。可用性は利用可能である時間割合の観点を強く持ちます。",
+      "incorrect_choices": {
+        "イ": "互換性は他製品との共存・相互運用",
+        "ウ": "移植性は別環境への適応のしやすさ",
+        "エ": "使用性はユーザーの理解・操作の容易さ"
+      },
+      "review_focus": {
+        "level": "contextual",
+        "note": "品質特性の規格版・信頼性と可用性の近接性を踏まえ、学習時の説明を最終確認。",
+        "reference": "https://www.iso.org/standard/78176.html"
+      },
+      "verified_snapshot": {
+        "prompt": "オンライン予約システムで、障害が起こりにくく、決められた条件下で一定期間継続して正しく機能することを重視している。この要求に最も直接対応する品質特性はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "信頼性"
+          },
+          {
+            "id": "イ",
+            "label": "互換性"
+          },
+          {
+            "id": "ウ",
+            "label": "移植性"
+          },
+          {
+            "id": "エ",
+            "label": "使用性"
+          }
+        ],
+        "answer": "ア",
+        "explanation": "一定条件・一定期間に正しく機能し続ける性質は信頼性です。可用性は利用可能である時間割合の観点を強く持ちます。"
+      }
+    },
+    {
+      "key": "storage-wearleveling-034",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "ウェアレベリングは書換え回数が特定セルへ偏らないよう配置を分散し、フラッシュメモリの寿命を延ばします。",
+      "incorrect_choices": {
+        "イ": "ストライピングはデータの分散記録",
+        "ウ": "デフラグは断片化の整理",
+        "エ": "スプーリングはI/Oを一時的に貯める"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "NAND型フラッシュメモリを用いたSSDで、特定の物理ブロックに書換えが集中することを避け、メモリセルの寿命を均等化する制御はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "ウェアレベリング"
+          },
+          {
+            "id": "イ",
+            "label": "ストライピング"
+          },
+          {
+            "id": "ウ",
+            "label": "デフラグメンテーション"
+          },
+          {
+            "id": "エ",
+            "label": "スプーリング"
+          }
+        ],
+        "answer": "ア",
+        "explanation": "ウェアレベリングは書換え回数が特定セルへ偏らないよう配置を分散し、フラッシュメモリの寿命を延ばします。"
+      }
+    },
+    {
+      "key": "calc-da-035",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "51/255=0.2なので、5V×0.2=1.0Vです。",
+      "incorrect_choices": {
+        "ア": "0.5Vは51/255×5Vの結果でない",
+        "ウ": "2.0Vは入力の40%相当でない",
+        "エ": "4.0Vは入力の80%相当でない"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "0〜5Vを8ビットで表すD/A変換器がある。デジタル値0を0V、255を5Vに対応させるとき、デジタル値51を入力した場合の出力電圧として最も近いものはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "0.5V"
+          },
+          {
+            "id": "イ",
+            "label": "1.0V"
+          },
+          {
+            "id": "ウ",
+            "label": "2.0V"
+          },
+          {
+            "id": "エ",
+            "label": "4.0V"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "51/255=0.2なので、5V×0.2=1.0Vです。"
+      }
+    },
+    {
+      "key": "algo-binarysearch-039",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "二分探索は探索範囲を半分ずつ減らすため、比較回数はデータ件数の対数に比例します。",
+      "incorrect_choices": {
+        "ア": "O(1)は比較回数が入力件数に依存しない",
+        "ウ": "O(n)は線形探索の増加傾向",
+        "エ": "O(n²)は典型的な二重反復"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "昇順に整列済みの1,024件のデータから二分探索で目的の値を探す。1回の比較ごとに探索範囲をほぼ半分にできるとき、最悪の場合の比較回数のオーダとして最も適切なものはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "O(1)"
+          },
+          {
+            "id": "イ",
+            "label": "O(log n)"
+          },
+          {
+            "id": "ウ",
+            "label": "O(n)"
+          },
+          {
+            "id": "エ",
+            "label": "O(n²)"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "二分探索は探索範囲を半分ずつ減らすため、比較回数はデータ件数の対数に比例します。"
+      }
+    },
+    {
+      "key": "strategy-roi-007",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "設問の定義どおり年間利益80万円を投資額400万円で割り、100を掛けます。80÷400×100＝20%です。投資回収期間のPBPや割引現在価値を使うNPVとは異なり、この問題では年利益と投資額の単純な比率だけを求めます。",
+      "incorrect_choices": {
+        "ア": "5%は80万円÷400万円ではない",
+        "イ": "10%も80万円÷400万円と不一致",
+        "エ": "50%も80万円÷400万円と不一致"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "業務システムへの投資額が400万円で、投資によって1年間に得られる利益が80万円と見込まれる。単純な投資利益率ROIを『年間利益÷投資額×100』と定義した場合、ROIは幾らか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "5%"
+          },
+          {
+            "id": "イ",
+            "label": "10%"
+          },
+          {
+            "id": "ウ",
+            "label": "20%"
+          },
+          {
+            "id": "エ",
+            "label": "50%"
+          }
+        ],
+        "answer": "ウ",
+        "explanation": "設問の定義どおり年間利益80万円を投資額400万円で割り、100を掛けます。80÷400×100＝20%です。投資回収期間のPBPや割引現在価値を使うNPVとは異なり、この問題では年利益と投資額の単純な比率だけを求めます。"
+      }
+    },
+    {
+      "key": "algo-stack-041",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "最後に追加した履歴を最初に取り出すLIFOの動作なのでスタックが適しています。",
+      "incorrect_choices": {
+        "ア": "FIFOでは古い履歴から取り出す",
+        "ウ": "優先度付きキューは閲覧順で取り出さない",
+        "エ": "ハッシュ表は後入れ先出しを保証しない"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "Webブラウザの『戻る』機能で、直前に閲覧したページから順に履歴を取り出したい。基本となるデータ構造はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "FIFOキュー"
+          },
+          {
+            "id": "イ",
+            "label": "スタック"
+          },
+          {
+            "id": "ウ",
+            "label": "優先度付きキュー"
+          },
+          {
+            "id": "エ",
+            "label": "ハッシュ表"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "最後に追加した履歴を最初に取り出すLIFOの動作なのでスタックが適しています。"
+      }
+    },
+    {
+      "key": "algo-complexity-042",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "n回×n回の処理になるため、実行回数はn²に比例します。",
+      "incorrect_choices": {
+        "ア": "対数オーダにはならずn²回実行",
+        "イ": "線形オーダにはならずn²回実行",
+        "ウ": "n log nでなく厳密にn×n回"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "要素数nの配列について、外側のループをn回実行し、その各回で内側のループもn回実行する処理がある。各ループ内部の処理時間を一定とすると、時間計算量のオーダはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "O(log n)"
+          },
+          {
+            "id": "イ",
+            "label": "O(n)"
+          },
+          {
+            "id": "ウ",
+            "label": "O(n log n)"
+          },
+          {
+            "id": "エ",
+            "label": "O(n²)"
+          }
+        ],
+        "answer": "エ",
+        "explanation": "n回×n回の処理になるため、実行回数はn²に比例します。"
+      }
+    },
+    {
+      "key": "test-boundary-043",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "下限18と上限65の直前・境界値を確認するため、17,18,65,66が適切です。",
+      "incorrect_choices": {
+        "ア": "17と66の境界外側の確認を欠く",
+        "ウ": "65や66の周辺境界を欠く",
+        "エ": "18と65の境界内部値を欠く"
+      },
+      "review_focus": {
+        "level": "contextual",
+        "note": "4つの境界値は選択肢の中で最適だが、19と64などの境界直内値も実務検証では重要。",
+        "reference": null
+      },
+      "verified_snapshot": {
+        "prompt": "年齢を18歳以上65歳以下だけ受け付ける入力欄を境界値分析で確認する。境界付近を効率よく確認するテストデータの組合せとして最も適切なものはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "18, 40, 65"
+          },
+          {
+            "id": "イ",
+            "label": "17, 18, 65, 66"
+          },
+          {
+            "id": "ウ",
+            "label": "1, 18, 100"
+          },
+          {
+            "id": "エ",
+            "label": "17, 40, 66"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "下限18と上限65の直前・境界値を確認するため、17,18,65,66が適切です。"
+      }
+    },
+    {
+      "key": "test-levels-044",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "モジュール間の接続やインタフェースを確認するのは結合テストです。",
+      "incorrect_choices": {
+        "ア": "単体テストはモジュール単独を確認",
+        "ウ": "受入れテストはユーザー要件への適合確認",
+        "エ": "運用テストは業務運用条件で確認"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "複数のモジュールを結合し、モジュール間のインタフェースやデータの受渡しが正しく動作することを主に確認するテストはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "単体テスト"
+          },
+          {
+            "id": "イ",
+            "label": "結合テスト"
+          },
+          {
+            "id": "ウ",
+            "label": "受入れテスト"
+          },
+          {
+            "id": "エ",
+            "label": "運用テスト"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "モジュール間の接続やインタフェースを確認するのは結合テストです。"
+      }
+    },
+    {
+      "key": "dev-cicd-045",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "継続的インテグレーションでは変更を頻繁に統合し、自動ビルド・テストで統合問題を早期発見します。",
+      "incorrect_choices": {
+        "イ": "ウォーターフォールは工程順に進める開発形態",
+        "ウ": "フェールオーバは冗長構成への切替",
+        "エ": "手作業だけでは継続的自動テストにならない"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "開発者がソースコードを共有リポジトリへ頻繁に統合し、そのたびに自動ビルドや自動テストを実行して不具合を早期に検出する実践はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "継続的インテグレーション"
+          },
+          {
+            "id": "イ",
+            "label": "ウォーターフォール"
+          },
+          {
+            "id": "ウ",
+            "label": "フェールオーバ"
+          },
+          {
+            "id": "エ",
+            "label": "リファクタリングだけを手動で行う運用"
+          }
+        ],
+        "answer": "ア",
+        "explanation": "継続的インテグレーションでは変更を頻繁に統合し、自動ビルド・テストで統合問題を早期発見します。"
+      }
+    },
+    {
+      "key": "sec-xss-046",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "利用者入力がHTMLへ安全に処理されず、ブラウザ上でスクリプトが実行されるのはXSSです。",
+      "incorrect_choices": {
+        "ア": "SQLインジェクションはDBへの不正クエリ注入",
+        "ウ": "CSRFは本人の意図しない要求の実行",
+        "エ": "ディレクトリトラバーサルは不適切なパス参照"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "掲示板の投稿内容を適切にエスケープせずHTMLへ埋め込んだ結果、攻撃者が投稿したスクリプトが別の利用者のブラウザで実行された。この脆弱性はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "SQLインジェクション"
+          },
+          {
+            "id": "イ",
+            "label": "クロスサイトスクリプティング"
+          },
+          {
+            "id": "ウ",
+            "label": "CSRF"
+          },
+          {
+            "id": "エ",
+            "label": "ディレクトリトラバーサル"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "利用者入力がHTMLへ安全に処理されず、ブラウザ上でスクリプトが実行されるのはXSSです。"
+      }
+    },
+    {
+      "key": "sec-csrf-047",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "認証済み利用者の権限を悪用して意図しないリクエストを送らせる攻撃はCSRFです。",
+      "incorrect_choices": {
+        "イ": "XSSはWebページ内で悪意あるコードを実行",
+        "ウ": "ブルートフォースは認証候補を総当たり",
+        "エ": "DNSポイズニングは名前解決データの改ざん"
+      },
+      "review_focus": {
+        "level": "contextual",
+        "note": "SameSiteやCSRFトークン等で成立可否が変わる。設問は脆弱なサーバの攻撃分類として用いる。",
+        "reference": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html"
+      },
+      "verified_snapshot": {
+        "prompt": "利用者が銀行サイトへログインしたまま攻撃者のサイトを閲覧したところ、利用者の意思に反して銀行サイトへの送金要求がブラウザから送信された。この攻撃はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "CSRF"
+          },
+          {
+            "id": "イ",
+            "label": "XSS"
+          },
+          {
+            "id": "ウ",
+            "label": "ブルートフォース攻撃"
+          },
+          {
+            "id": "エ",
+            "label": "DNSキャッシュポイズニング"
+          }
+        ],
+        "answer": "ア",
+        "explanation": "認証済み利用者の権限を悪用して意図しないリクエストを送らせる攻撃はCSRFです。"
+      }
+    },
+    {
+      "key": "sec-cert-049",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "PKIでは信頼された認証局が証明書へ署名し、公開鍵と主体の対応を保証します。",
+      "incorrect_choices": {
+        "イ": "DHCPはネットワーク設定値を配布",
+        "ウ": "NTPは端末時刻を同期",
+        "エ": "プロキシARPは代理でARP応答する"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "WebブラウザがHTTPS接続先のサーバ証明書を検証するとき、証明書に記載された公開鍵が正当な主体のものであることを信頼するための基盤として中心的な役割を持つものはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "認証局"
+          },
+          {
+            "id": "イ",
+            "label": "DHCPサーバ"
+          },
+          {
+            "id": "ウ",
+            "label": "NTPサーバ"
+          },
+          {
+            "id": "エ",
+            "label": "プロキシARP"
+          }
+        ],
+        "answer": "ア",
+        "explanation": "PKIでは信頼された認証局が証明書へ署名し、公開鍵と主体の対応を保証します。"
+      }
+    },
+    {
+      "key": "pm-criticalpath-050",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "全体工期を決定する最長経路をクリティカルパスといいます。",
+      "incorrect_choices": {
+        "イ": "ベースラインは計画比較の基準",
+        "ウ": "スプリントは短い開発反復期間",
+        "エ": "バックログは未実施の作業一覧"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "プロジェクトのネットワーク図で、開始から完了までの経路のうち所要時間が最も長く、その経路上の作業が遅れるとプロジェクト全体の完了も遅れる経路を何というか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "クリティカルパス"
+          },
+          {
+            "id": "イ",
+            "label": "ベースライン"
+          },
+          {
+            "id": "ウ",
+            "label": "スプリント"
+          },
+          {
+            "id": "エ",
+            "label": "バックログ"
+          }
+        ],
+        "answer": "ア",
+        "explanation": "全体工期を決定する最長経路をクリティカルパスといいます。"
+      }
+    },
+    {
+      "key": "pm-evm-051",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "SV=EV−PV=−20で進捗遅れ、CV=EV−AC=−10でコスト超過傾向です。",
+      "incorrect_choices": {
+        "ア": "SVとCVはいずれも負なので先行・節約でない",
+        "イ": "CVが負でコスト超過",
+        "エ": "SVとCVが0でない"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "ある時点でPV=100万円、EV=80万円、AC=90万円であった。EVMの評価として適切なものはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "予定より進んでおり、予算も節約できている"
+          },
+          {
+            "id": "イ",
+            "label": "予定より遅れているが、予算は節約できている"
+          },
+          {
+            "id": "ウ",
+            "label": "予定より遅れており、コストも予算超過傾向である"
+          },
+          {
+            "id": "エ",
+            "label": "予定どおりで、コストも予算どおりである"
+          }
+        ],
+        "answer": "ウ",
+        "explanation": "SV=EV−PV=−20で進捗遅れ、CV=EV−AC=−10でコスト超過傾向です。"
+      }
+    },
+    {
+      "key": "service-sla-052",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "30日×24時間×60分=43,200分。停止可能割合0.1%=0.001なので43.2分です。",
+      "incorrect_choices": {
+        "ア": "4.3分は停止率を1桁小さく誤認",
+        "ウ": "7.2時間は許容停止の10倍",
+        "エ": "43.2時間は分と時間の単位誤り"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "月30日間、24時間提供するサービスで月間可用性99.9%以上をSLAとする。1か月に許容される停止時間の上限に最も近いものはどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "約4.3分"
+          },
+          {
+            "id": "イ",
+            "label": "約43.2分"
+          },
+          {
+            "id": "ウ",
+            "label": "約7.2時間"
+          },
+          {
+            "id": "エ",
+            "label": "約43.2時間"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "30日×24時間×60分=43,200分。停止可能割合0.1%=0.001なので43.2分です。"
+      }
+    },
+    {
+      "key": "strategy-break-even-053",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "1件当たりの限界利益は5,000−2,000=3,000円。600万円÷3,000円=2,000件です。",
+      "incorrect_choices": {
+        "ア": "1,200件の限界利益は360万円で不足",
+        "ウ": "3,000件は既に固定費を回収している",
+        "エ": "6,000件は既に固定費を回収している"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "新サービスの固定費が600万円、1件当たりの販売価格が5,000円、1件当たりの変動費が2,000円である。利益が0になる損益分岐点の販売件数はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "1,200件"
+          },
+          {
+            "id": "イ",
+            "label": "2,000件"
+          },
+          {
+            "id": "ウ",
+            "label": "3,000件"
+          },
+          {
+            "id": "エ",
+            "label": "6,000件"
+          }
+        ],
+        "answer": "イ",
+        "explanation": "1件当たりの限界利益は5,000−2,000=3,000円。600万円÷3,000円=2,000件です。"
+      }
+    },
+    {
+      "key": "strategy-swot-054",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "自社内部の有利な要因なのでStrength（強み）に分類します。",
+      "incorrect_choices": {
+        "イ": "Weaknessは内部の弱点",
+        "ウ": "Opportunityは外部の機会",
+        "エ": "Threatは外部の脅威"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "ある企業がSWOT分析を行ったところ、『自社が保有する高いブランド認知度』が挙げられた。これはどの区分に分類するのが最も適切か。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "Strength"
+          },
+          {
+            "id": "イ",
+            "label": "Weakness"
+          },
+          {
+            "id": "ウ",
+            "label": "Opportunity"
+          },
+          {
+            "id": "エ",
+            "label": "Threat"
+          }
+        ],
+        "answer": "ア",
+        "explanation": "自社内部の有利な要因なのでStrength（強み）に分類します。"
+      }
+    },
+    {
+      "key": "arch-raid5-056",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "canovia_draft_not_independently_approved",
+      "correct_basis_draft": "RAID5の実効容量は（台数−1）×1台容量なので、(4−1)×2TB=6TBです。",
+      "incorrect_choices": {
+        "ア": "2TBはパリティ差引後の容量より少ない",
+        "イ": "4TBは実効3台×2TB未満",
+        "エ": "8TBはパリティ分を差し引いていない"
+      },
+      "review_focus": {
+        "level": "standard",
+        "note": "独立した専門監修と曖昧な選択肢がないことの確認は未完了。"
+      },
+      "verified_snapshot": {
+        "prompt": "同容量のディスク4台でRAID5を構成する。各ディスクの容量が2TBのとき、パリティ分を考慮した実効容量はどれか。",
+        "choices": [
+          {
+            "id": "ア",
+            "label": "2TB"
+          },
+          {
+            "id": "イ",
+            "label": "4TB"
+          },
+          {
+            "id": "ウ",
+            "label": "6TB"
+          },
+          {
+            "id": "エ",
+            "label": "8TB"
+          }
+        ],
+        "answer": "ウ",
+        "explanation": "RAID5の実効容量は（台数−1）×1台容量なので、(4−1)×2TB=6TBです。"
+      }
+    }
+  ]
+}

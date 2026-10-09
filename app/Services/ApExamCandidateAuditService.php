@@ -24,6 +24,48 @@ final class ApExamCandidateAuditService
     public function __construct(private readonly QuestionPackCatalogService $catalog) {}
 
     /**
+     * Per-option reasoning drafts are a tool for reviewers, never human
+     * approval. A changed question or explanation expires the draft.
+     *
+     * @param array<string,mixed> $entry
+     * @param array<string,mixed> $question
+     */
+    public static function matchesChoiceDraft(
+        array $entry,
+        array $question,
+        string $candidateVersion,
+        string $auditVersion,
+    ): bool {
+        $snapshot = $entry['verified_snapshot'] ?? null;
+        if ($candidateVersion !== $auditVersion
+            || ($entry['review_status'] ?? '') !== 'canovia_draft_not_independently_approved'
+            || ! is_array($snapshot)
+            || ($entry['key'] ?? '') !== ($question['external_key'] ?? '')) {
+            return false;
+        }
+
+        $choices = data_get($question, 'response_schema.0.choices', []);
+        $answer = data_get($question, 'grading_rule.answer');
+        $incorrectIds = array_values(array_filter(array_column($choices, 'id'),
+            fn ($id) => $id !== $answer));
+        $reasons = $entry['incorrect_choices'] ?? null;
+        if (count($incorrectIds) !== 3 || ! is_array($reasons)
+            || count($reasons) !== 3 || array_keys($reasons) !== $incorrectIds) {
+            return false;
+        }
+        foreach ($reasons as $reason) {
+            if (! is_string($reason) || trim($reason) === '') {
+                return false;
+            }
+        }
+
+        return ($snapshot['prompt'] ?? null) === ($question['prompt'] ?? null)
+            && ($snapshot['choices'] ?? null) === $choices
+            && ($snapshot['answer'] ?? null) === $answer
+            && ($snapshot['explanation'] ?? null) === ($question['explanation'] ?? null);
+    }
+
+    /**
      * A source PDF spotcheck expires if its candidate version, official
      * problem text, choices or answer changes. This never grants expert
      * explanation/rights approval.
@@ -63,6 +105,13 @@ final class ApExamCandidateAuditService
             512, JSON_THROW_ON_ERROR);
         $spotchecks = collect($spotcheckEvidence['entries'] ?? [])
             ->keyBy('key');
+        $choiceAuditFile = resource_path('learning_review/ap-a-2026-canovia-45-choice-audit-v1.json');
+        $choiceAuditData = json_decode((string) file_get_contents($choiceAuditFile),
+            true, 512, JSON_THROW_ON_ERROR);
+        $choiceDrafts = collect($choiceAuditData['entries'] ?? [])->keyBy('key');
+        $choiceDraftMatched = 0;
+        $choiceDraftStale = 0;
+
         $sourceVisualChecked = 0;
         $priorities = ['P0' => 0, 'P1' => 0, 'P2' => 0];
 
@@ -167,9 +216,24 @@ final class ApExamCandidateAuditService
                 $sourceVisualChecked++;
             }
 
+            $choiceDraft = $originType === 'official' ? null : $choiceDrafts->get($key);
+            $choiceDraftCurrent = $originType !== 'official'
+                && is_array($choiceDraft)
+                && self::matchesChoiceDraft(
+                    $choiceDraft,
+                    $question,
+                    (string) ($candidate['pack']['version'] ?? ''),
+                    (string) ($choiceAuditData['candidate_version'] ?? ''),
+                );
+            if ($choiceDraftCurrent) {
+                $choiceDraftMatched++;
+            } elseif ($originType !== 'official') {
+                $choiceDraftStale++;
+            }
+
             // Priority does not alter exam item ordering or approval flags.
             // Address unverified original transcription before general theory.
-            $priority = $flags !== [] ? 'P0'
+            $priority = ($flags !== [] || ($originType !== 'official' && ! $choiceDraftCurrent)) ? 'P0'
                 : ($originType === 'official' && ! $visualChecked ? 'P0'
                     : ($originType === 'new' || $originType === 'official'
                         || preg_match('/(計算|ベイズ|MIPS|SLA|ROI|待ち行列|EVM|RAID|D.A|MSS)/ui',
@@ -177,6 +241,8 @@ final class ApExamCandidateAuditService
                         ? 'P1' : 'P2'));
             $priorities[$priority]++;
             $priorityReason = $flags !== [] ? '構造不整合を先に修正'
+                : ($originType !== 'official' && ! $choiceDraftCurrent
+                    ? '独自問題の誤答肢レビュー案が不足、または問題変更で失効'
                 : ($originType === 'official' && ! $visualChecked
                     ? 'IPA原問題PDFと本文・選択肢の未照合'
                     : ($originType === 'official'
@@ -185,7 +251,7 @@ final class ApExamCandidateAuditService
                             ? '新規Canovia案の正答・誤答肢・解説を第三者が確認'
                             : ($priority === 'P1'
                                 ? '計算・数値条件を独立して検証'
-                                : '通常の独立内容レビュー待ち'))));
+                                : '通常の独立内容レビュー待ち')))));
 
             $items[] = [
                 'number' => $index + 1,
@@ -207,6 +273,12 @@ final class ApExamCandidateAuditService
                 'independent_review_status' => 'pending',
                 'priority' => $priority,
                 'priority_reason' => $priorityReason,
+                'choice_draft_state' => $originType === 'official' ? 'not_applicable'
+                    : ($choiceDraftCurrent ? 'current_unreviewed_draft' : 'missing_or_stale'),
+                'choice_draft_reasons' => $choiceDraftCurrent
+                    ? $choiceDraft['incorrect_choices'] : [],
+                'choice_draft_review_focus' => $choiceDraftCurrent
+                    ? ($choiceDraft['review_focus'] ?? []) : [],
                 'source_visual_spotcheck' => $visualChecked,
                 'source_visual_spotcheck_pdf_page' => $visualChecked
                     ? ((int) $spotcheck['pdf_page_index'] + 1) : null,
@@ -238,6 +310,9 @@ final class ApExamCandidateAuditService
             'source_counts' => $sourceCounts,
             'known_overlap_excluded' => $knownOverlapExcluded,
             'known_overlap_count' => count($knownOverlapPairs),
+            'choice_draft_current_count' => $choiceDraftMatched,
+            'choice_draft_stale_count' => $choiceDraftStale,
+            'choice_draft_independent_approvals' => 0,
             'source_visual_spotchecked_count' => $sourceVisualChecked,
             'source_visual_unchecked_official_count' =>
                 $sourceCounts['ap-a-ipa-2025-autumn-official-v1'] - $sourceVisualChecked,
