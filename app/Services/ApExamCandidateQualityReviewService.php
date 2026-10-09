@@ -125,8 +125,10 @@ final class ApExamCandidateQualityReviewService
                 && ($technical['status'] ?? '') === 'technical_basis_precheck_not_independent_human_signoff'
                 && ($technical['quality_approved'] ?? true) === false
                 && ($technical['rights_approved'] ?? true) === false
-                && ($technical['reviewer'] ?? 'invalid') === null
-                && ($technical['reviewed_at'] ?? 'invalid') === null
+                && array_key_exists('reviewer', $technical)
+                && $technical['reviewer'] === null
+                && array_key_exists('reviewed_at', $technical)
+                && $technical['reviewed_at'] === null
                 && ($technical['candidate_answer'] ?? null) === ($q['grading_rule']['answer'] ?? null)
                 && ($technical['snapshot'] ?? null) === [
                     'prompt' => $q['prompt'] ?? null,
