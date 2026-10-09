@@ -83,6 +83,28 @@ host/ID guard and checks `/up=200`, private routes=503.
 Default live SQLite mode and prod `/up` remain unchanged.
 
 
+### V59 live isolated PostgreSQL acceptance (2026-10-09)
+
+**ACCEPTED — staging only, not production or OAuth rollout.**
+The existing Free `canovia-mcp-staging` Web service
+(`srv-db43l4nlk1mc73emseig`) was linked through private Render
+Environment settings to the existing Free PostgreSQL 17 database
+(`dpg-db43rbbncjis73bmigi0-a`), with no new Web/DB resource,
+production/Aiven modifications or external IP allowance.
+The successful Render deployment `dep-db460sflk1mc73ev4g3g`
+(commit `f2f969aa`) logged `render_postgres` and
+migrations completed. Independently rerun
+[GitHub HTTPS lockdown CI](https://github.com/1kz-ma1/Canovia-web/actions/runs/37875765667)
+passed: `/up=200` with the pinned PostgreSQL database/schema health
+gate, and protected account/OAuth/MCP/static/legacy routes `503`.
+No synthetic identity, real OAuth/ChatGPT connection or user data
+sharing was enabled. Historical V59 notes below marked
+"unattached"/"SQLite" describe the **pre-cutover** period only.
+Next: synthetic-only owner and IdP client/issuer preflight under an
+independent private-access review; never turn on public Web/MCP by
+default. The Free DB expires **2026-11-08 UTC** without free backups.
+See the [operational acceptance record](MCP_IDP_SELECTION_AND_STAGING_POSTGRES_2026_10_09.md).
+
 ### V59 secretless, existing-resource Postgres wiring (2026-10-09)
 
 Actual Render PostgreSQL internal URL/user are unavailable through the
