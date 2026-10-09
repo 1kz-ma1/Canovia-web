@@ -8,6 +8,7 @@ on:
       - 'tests/Feature/McpAccessTokenIntrospectorTest.php'
       - 'scripts/ci/keycloak_mcp_protocol_smoke.py'
       - 'scripts/ci/keycloak_user_pkce_smoke.py'
+      - 'scripts/ci/keycloak_chatgpt_dcr_smoke.py'
       - '.github/workflows/mcp-keycloak-disposable-oauth-lab.yml'
       - 'docs/development/MCP_KEYCLOAK_DISPOSABLE_PROTOCOL_LAB_2026_10_09.md'
   workflow_dispatch:
@@ -31,9 +32,13 @@ jobs:
       - name: Run real synthetic human browser Authorization Code PKCE and subject-bound tokens
         run: python3 scripts/ci/keycloak_user_pkce_smoke.py
 
+      - name: Probe real disposable Keycloak ChatGPT-like public DCR and PKCE
+        run: python3 scripts/ci/keycloak_chatgpt_dcr_smoke.py
+
       - name: Ensure local ephemeral Keycloak is removed
         if: always()
         run: |
-          docker rm -f canovia-mcp-keycloak-disposable-ci canovia-mcp-keycloak-user-pkce-ci >/dev/null 2>&1 || true
+          docker rm -f canovia-mcp-keycloak-disposable-ci canovia-mcp-keycloak-user-pkce-ci canovia-mcp-keycloak-dcr-ci >/dev/null 2>&1 || true
           test -z "$(docker ps -a -q --filter name=^/canovia-mcp-keycloak-disposable-ci$)"
           test -z "$(docker ps -a -q --filter name=^/canovia-mcp-keycloak-user-pkce-ci$)"
+          test -z "$(docker ps -a -q --filter name=^/canovia-mcp-keycloak-dcr-ci$)"
