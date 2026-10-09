@@ -64,3 +64,39 @@ The test user, SQLite DB, fake cookie jar and server are temporary CI-only
 fixtures. There is no production auth/controller/session config change.
 As required by Issue #418, this PR remains Draft/unmerged even with green
 CI until the actual production DB, backup and real-device gates are met.
+
+## Local TLS proxy, Secure host-only Cookie isolation (2026-10-09)
+
+The previous HTTP E2E deliberately disabled Secure cookies on a localhost HTTP
+origin, which is not how the deployed browser receives HTTPS cookies. A second,
+isolated CI probe `scripts/ci/p0_https_cookie_origin_e2e.py` now generates an
+**ephemeral, locally trusted self-signed TLS certificate** for localhost and
+127.0.0.1; runs a pinned, loopback-only HTTPS reverse proxy to the same
+disposable PHP + SQLite session app; and verifies:
+
+- Correct sign-in at `https://localhost:18790` succeeds with
+  `SESSION_SECURE_COOKIE=true`; real browser-style cookie storage and an
+  authenticated `/account` response establish that the Secure cookie is
+  returned over HTTPS.
+- The returned session cookie is explicitly **Secure**, **HttpOnly**,
+  **SameSite Lax**, and host-only (no configured `SESSION_DOMAIN`).
+- A request to the *different origin host* `https://127.0.0.1:18790`
+  on the identical backend must **not** be authenticated from the
+  localhost-scoped session cookie. This is a synthetic host-boundary
+  demonstration only, not a real legacy Canovia domain migration.
+- The same HTTPS cookie jar remains authenticated after fully restarting
+  the PHP server process, with the persisted disposable database sessions.
+
+The proxy is **not** a general HTTP proxy, and allows only a fixed
+127.0.0.1 backend. The certificate/key remain in a temporary CI directory,
+not committed or exposed. No credentials, cookies, session IDs or response
+bodies are printed. Original HTTP/invalid-password/flash/logout/relogin CI
+continues to run independently and is not replaced.
+
+**Scope limitations:** CI TLS termination is a self-signed local proxy; it
+does not prove Render's actual proxy trust rules, redirect scheme generation
+in all production configurations, login against live Aiven/MySQL/Redis, Safari
+or installed iOS PWA storage isolation, or WKWebView. Real HTTPS/PWA E2E and
+read-only production environment/schema evidence are still blocked release
+gates. No new public host, secret, prod service, auth runtime behavior, paid
+resource or deployment has been introduced.
