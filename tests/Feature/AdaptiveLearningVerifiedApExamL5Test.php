@@ -97,6 +97,7 @@ final class AdaptiveLearningVerifiedApExamL5Test extends TestCase
             'reviewed_at' => '2026-10-09',
             'format_checked' => true,
             'answer_key_checked' => true,
+            'explanations_checked' => true,
             'content_rights_checked' => true,
         ], $overrides);
         $pack->update(['metadata' => $metadata]);
@@ -174,6 +175,19 @@ final class AdaptiveLearningVerifiedApExamL5Test extends TestCase
         // A pack may be published for ordinary practice yet fail the
         // separate official-format exam gate.
         $this->assertSame('published', $pack->fresh()->status);
+        $this->assertDatabaseCount('learning_runs', 0);
+    }
+
+    public function test_reviewed_exam_requires_explicit_explanation_signoff_even_with_matching_hash(): void
+    {
+        [$user, $plan, $task, $pack] = $this->fixture();
+        $this->review($pack, ['explanations_checked' => false]);
+        $profile = app(AdaptiveExamProfileRegistry::class)
+            ->requireVerified('ap-a-cbt-2026-v1');
+        $readiness = app(AdaptiveExamPackReadinessService::class);
+        $inspection = $readiness->inspect($pack->fresh(), $profile);
+        $this->assertFalse($inspection['ready']);
+        $this->attempt($user, $plan, $task, $pack)->assertSessionHasErrors('question_pack_id');
         $this->assertDatabaseCount('learning_runs', 0);
     }
 
