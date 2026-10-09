@@ -24,6 +24,25 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // The public site may terminate TLS at a reverse proxy. Trust only
+        // explicitly reviewed proxy IPs (never arbitrary client headers);
+        // accept only the X-Forwarded-Proto signal needed for HTTPS URLs.
+        // Empty/default configuration changes nothing in production.
+        $rawTrustedProxyIps = trim((string) env('CANOVIA_TRUSTED_PROXY_IPS', ''));
+        if ($rawTrustedProxyIps !== '') {
+            $trustedProxyIps = array_map('trim', explode(',', $rawTrustedProxyIps));
+            foreach ($trustedProxyIps as $trustedIp) {
+                if (filter_var($trustedIp, FILTER_VALIDATE_IP) === false) {
+                    throw new RuntimeException('Invalid Canovia trusted proxy IP configuration.');
+                }
+            }
+
+            $middleware->trustProxies(
+                at: $trustedProxyIps,
+                headers: Request::HEADER_X_FORWARDED_PROTO,
+            );
+        }
+
         // Measure before the web middleware group so database-backed session
         // reads/writes are included in the request total.
         $middleware->prepend(MeasurePagePerformance::class);
