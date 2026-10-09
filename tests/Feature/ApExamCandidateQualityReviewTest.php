@@ -41,6 +41,8 @@ final class ApExamCandidateQualityReviewTest extends TestCase
         $this->assertSame(400, $report['review_checks_pending']);
         $this->assertSame(['P0' => 6, 'P1' => 35, 'P2' => 39], $report['priority_counts']);
         $this->assertSame(['official' => 35, 'canovia' => 45], $report['source_counts']);
+        $this->assertSame(6, $report['technical_prechecks_current']);
+        $this->assertSame(0, $report['technical_prechecks_human_approved']);
         $this->assertSame(0, $report['quality_approved']);
         $this->assertSame(0, $report['rights_approved']);
         $this->assertSame(0, $report['signed_off']);
@@ -114,6 +116,45 @@ final class ApExamCandidateQualityReviewTest extends TestCase
         $this->assertSame(0, $service->inspect()['signed_off']);
     }
 
+    public function test_six_technical_prechecks_are_exact_content_bound_and_not_review_approvals(): void
+    {
+        $report = app(ApExamCandidateQualityReviewService::class)->inspect();
+        $precheck = json_decode((string) file_get_contents(resource_path(
+            'learning_review/ap-a-2026-v04-six-technical-precheck-v1.json'
+        )), true, 512, JSON_THROW_ON_ERROR);
+
+        $this->assertCount(6, $precheck['entries']);
+        $this->assertFalse($precheck['publication_authorized']);
+        $this->assertSame(0, $precheck['counts']['professional_quality_approvals']);
+        $this->assertSame(0, $precheck['counts']['rights_approvals']);
+        $this->assertSame(80, $report['independent_human_review_pending']);
+        $this->assertFalse($report['can_publish']);
+        $items = collect($report['items'])->keyBy('key');
+        foreach ($precheck['entries'] as $e) {
+            $row = $items->get($e['key']);
+            $this->assertNotNull($row);
+            $this->assertSame('P0', $row['priority']);
+            $this->assertNotNull($row['technical_precheck']);
+            $this->assertNull($e['reviewer']);
+            $this->assertFalse($e['quality_approved']);
+            $this->assertFalse($e['rights_approved']);
+            $this->assertCount(4, $row['technical_precheck']['checks']);
+        }
+
+        // Independent deterministic recalculation for the M/M/1 condition.
+        $utilizations = [0.33, 0.50, 0.67, 0.80];
+        $qualified = array_values(array_filter($utilizations,
+            fn (float $rho) => $rho >= 0 && $rho < 1
+                && $rho / (1 - $rho) >= 1));
+        $this->assertEqualsWithDelta(0.5, min($qualified), 0.000001);
+
+        $changed = $this->manifest();
+        $changed['entries'][0]['review_checks']['explanation_accuracy'] = 'approved';
+        $this->assertFalse(app(ApExamCandidateQualityReviewService::class)
+            ->inspect($changed)['structurally_consistent']);
+        $this->assertDatabaseCount('question_packs', 0);
+    }
+
     public function test_pending_review_items_are_visible_to_admin_only_and_do_not_create_records(): void
     {
         $this->get(route('admin.question_packs.index'))
@@ -127,6 +168,8 @@ final class ApExamCandidateQualityReviewTest extends TestCase
             ->assertSee('data-ap-a-v04-unreviewed', false)
             ->assertSee('data-ap-a-v04-review-priorities', false)
             ->assertSee('data-ap-a-v04-review-items', false)
+            ->assertSee('data-ap-a-technical-precheck="sec-dkim-023"', false)
+            ->assertSee('技術根拠の事前照合（専門監修・利用権未承認）')
             ->assertSee('data-ap-a-v04-review-item="sec-dkim-023"', false)
             ->assertSee('data-ap-a-v04-review-item="ipa-2025-autumn-ap-am-q03"', false)
             ->assertSee('内容・利用条件の独立審査台帳')

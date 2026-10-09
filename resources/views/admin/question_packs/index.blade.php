@@ -140,6 +140,8 @@
 
                 <p class="mt-3 text-xs leading-6 text-slate-300" data-ap-a-v04-review-priorities>
                     P0：校正した6問／P1：IPA由来35問／P2：他の独自39問。
+                    技術根拠の事前照合：{{ $apCandidateQualityReview['technical_prechecks_current'] }}/6問、
+                    独立監修承認：{{ $apCandidateQualityReview['technical_prechecks_human_approved'] }}問。
                     機械的な台帳検査：{{ $apCandidateQualityReview['structurally_consistent'] ? '一致' : '不一致（要修正）' }}。
                     公開可能：{{ $apCandidateQualityReview['can_publish'] ? 'はい' : 'いいえ' }}。
                 </p>
@@ -163,6 +165,23 @@
                                 <div class="mt-2 space-y-2 text-xs leading-6 text-slate-300">
                                     @if($item['reason'])
                                         <p class="text-amber-200">重点理由：{{ $item['reason'] }}</p>
+                                    @endif
+                                    @if($item['technical_precheck'])
+                                        <div class="rounded-lg border border-cyan-500/20 p-3" data-ap-a-technical-precheck="{{ $item['key'] }}">
+                                            <p class="font-semibold text-cyan-200">技術根拠の事前照合（専門監修・利用権未承認）</p>
+                                            <p class="mt-1">{{ $item['technical_precheck']['finding'] }}</p>
+                                            <p class="mt-2 text-amber-200">残る注意：{{ $item['technical_precheck']['risk'] }}</p>
+                                            <ul class="mt-2 list-inside list-disc">
+                                                @foreach($item['technical_precheck']['checks'] as $check)
+                                                    <li>{{ $check }}</li>
+                                                @endforeach
+                                            </ul>
+                                            @foreach($item['technical_precheck']['references'] as $source)
+                                                @if(str_starts_with($source, 'https://'))
+                                                    <p class="mt-1"><a class="text-cyan-300 underline" href="{{ $source }}" target="_blank" rel="noopener noreferrer">技術参考資料を開く</a></p>
+                                                @endif
+                                            @endforeach
+                                        </div>
                                     @endif
                                     <p class="text-slate-400">機械的な照合情報は人手の承認には換算されません。</p>
                                     <ul class="list-inside list-disc">
