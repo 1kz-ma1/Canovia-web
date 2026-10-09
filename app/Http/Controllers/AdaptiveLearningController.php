@@ -196,6 +196,7 @@ final class AdaptiveLearningController extends Controller
             'choices' => ['sometimes', 'array', 'max:8'],
             'choices.*' => ['string', 'max:20'],
             'number' => ['nullable', 'string', 'max:64'],
+            'reasoning' => ['sometimes', 'nullable', 'string', 'max:1000'],
         ]);
 
         DB::transaction(function () use ($request, $plan, $task, $learningRun, $identity, $input, $grader, $candidates, $typedAnswers) {
@@ -211,13 +212,27 @@ final class AdaptiveLearningController extends Controller
                 $input,
             );
 
+            // Optional self-explanation is evidence of what the learner wrote,
+            // never a grade or a verified reasoning assessment. Only the
+            // Understanding mode exposes or accepts this field.
+            $reasoning = trim((string) ($input['reasoning'] ?? ''));
+            if ($run->mode !== LearningRun::MODE_UNDERSTANDING && $reasoning !== '') {
+                throw ValidationException::withMessages([
+                    'reasoning' => '考え方メモは理解モードでのみ保存できます。',
+                ]);
+            }
+            if ($run->mode === LearningRun::MODE_UNDERSTANDING && $reasoning !== '') {
+                $normalized['payload']['reasoning'] = $reasoning;
+            }
+
             $existing = $item->answer;
             if ($existing) {
                 // Old single-choice rows have no payload. Never rewrite them.
                 $identical = $existing->answer_payload !== null
                     ? $existing->answer_payload === $normalized['payload']
                     : $normalized['payload']['type'] === 'single_choice'
-                        && $existing->answer_value === $normalized['stored_value'];
+                        && $existing->answer_value === $normalized['stored_value']
+                        && ! array_key_exists('reasoning', $normalized['payload']);
                 abort_unless($identical, 409);
                 return; // identical retry, even with a different request UUID
             }
