@@ -1,4 +1,4 @@
-# STAGING ONLY: isolated, ephemeral SQLite synthetic data; never select
+# STAGING ONLY: isolated SQLite or the pinned staging Render PostgreSQL; never select
 # Dockerfile.mcp-staging for the production Canovia Render service.
 # Keep frontend/runtime package versions aligned with ./Dockerfile.
 # syntax=docker/dockerfile:1
@@ -35,6 +35,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libonig-dev \
         libzip-dev \
         libsqlite3-dev \
+        libpq-dev \
         $PHPIZE_DEPS \
     && docker-php-ext-install -j2 \
         intl \
@@ -42,6 +43,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         opcache \
         pdo_mysql \
         pdo_sqlite \
+        pdo_pgsql \
         zip \
     && pecl install redis \
     && docker-php-ext-enable redis \
