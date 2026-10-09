@@ -126,6 +126,48 @@ final class ProductionMysqlSchemaP0Test extends TestCase
         $before = DB::table('users')->where('id', $user->id)->first();
         $this->assertNotNull($before);
 
+        // Also preserve a *row in the repaired table itself*, not merely an
+        // unrelated account. Both rows are synthetic throwaway CI records.
+        $now = now();
+        $fingerprint = str_repeat('a', 64);
+        $snapshotId = DB::table('intelligence_state_snapshots')->insertGetId([
+            'user_id' => $user->id,
+            'domain' => 'development',
+            'scope_type' => 'test',
+            'state_fingerprint' => $fingerprint,
+            'state_reference' => 'p0-ci-state-reference',
+            'captured_at' => $now,
+            'metrics' => '{}',
+            'facts' => '{}',
+            'evidence_references' => '[]',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $traceId = DB::table('intelligence_decision_traces')->insertGetId([
+            'user_id' => $user->id,
+            'intelligence_state_snapshot_id' => $snapshotId,
+            'domain' => 'development',
+            'scope_type' => 'test',
+            'state_reference' => 'p0-ci-trace-state',
+            'state_fingerprint' => $fingerprint,
+            'readiness_fingerprint' => str_repeat('b', 64),
+            'readiness_level' => 'ready',
+            'readiness_confidence' => 0.5,
+            'readiness_components' => '{}',
+            'readiness_gaps' => '[]',
+            'decision_reference' => 'p0-ci-decision-trace',
+            'decision_type' => 'recommend',
+            'reason_code' => 'ci_only',
+            'decision_summary' => 'Disposable database row preservation probe',
+            'decision_confidence' => 0.5,
+            'input_fingerprint' => str_repeat('c', 64),
+            'decision_reasons' => '[]',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $beforeTrace = DB::table('intelligence_decision_traces')->where('id', $traceId)->first();
+        $this->assertNotNull($beforeTrace);
+
         Schema::table('intelligence_decision_traces', function (Blueprint $table): void {
             $table->dropForeign('idt_snapshot_fk');
             $table->dropIndex('intelligence_decision_scope_created_idx');
@@ -163,6 +205,12 @@ final class ProductionMysqlSchemaP0Test extends TestCase
             'cascade',
         );
         $this->assertIndex('learning_answer_evaluation_adjustments', ['learning_answer_event_id'], true);
+
+        $afterTrace = DB::table('intelligence_decision_traces')->where('id', $traceId)->first();
+        $this->assertNotNull($afterTrace);
+        $this->assertSame($beforeTrace->decision_reference, $afterTrace->decision_reference);
+        $this->assertSame($beforeTrace->intelligence_state_snapshot_id, $afterTrace->intelligence_state_snapshot_id);
+        $this->assertSame($beforeTrace->decision_summary, $afterTrace->decision_summary);
 
         $after = DB::table('users')->where('id', $user->id)->first();
         $this->assertNotNull($after);
