@@ -22,21 +22,36 @@ TABLES = CORE_TABLES + (DECISION, ADJUSTMENT)
 
 COLUMNS = {
     DECISION: (
-        "id", "intelligence_state_snapshot_id", "decision_reference",
-        "domain", "scope_type", "scope_id", "created_at",
+        "id", "user_id", "plan_id", "intelligence_state_snapshot_id",
+        "domain", "scope_type", "scope_id", "state_reference",
+        "state_fingerprint", "readiness_fingerprint", "readiness_score",
+        "readiness_level", "readiness_confidence", "readiness_components",
+        "readiness_gaps", "readiness_metadata", "decision_reference",
+        "decision_type", "reason_code", "decision_summary",
+        "decision_confidence", "input_fingerprint", "decision_reasons",
+        "decision_metadata", "metadata", "created_at", "updated_at",
     ),
     ADJUSTMENT: (
         "id", "learning_answer_event_id", "user_id", "reason",
         "effect", "actor_token", "created_at",
     ),
 }
+# These names are status report identifiers, not necessarily the physical
+# MySQL name: decision user/plan FKs can use legacy Laravel auto-generated names.
 FOREIGN_KEYS = {
-    DECISION: ("idt_snapshot_fk",),
+    DECISION: ("idt_user_fk", "idt_plan_fk", "idt_snapshot_fk"),
     ADJUSTMENT: ("laea_answer_event_fk", "laea_user_fk"),
 }
 INDEXES = {
     DECISION: (
+        "intelligence_decision_traces_domain_index",
+        "intelligence_decision_traces_state_reference_index",
+        "intelligence_decision_traces_state_fingerprint_index",
+        "intelligence_decision_traces_readiness_fingerprint_index",
         "intelligence_decision_traces_decision_reference_unique",
+        "intelligence_decision_traces_decision_type_index",
+        "intelligence_decision_traces_reason_code_index",
+        "intelligence_decision_traces_input_fingerprint_index",
         "intelligence_decision_scope_created_idx",
         "intelligence_decision_plan_domain_idx",
     ),
