@@ -24,6 +24,38 @@ final class ApExamCandidateAuditService
     public function __construct(private readonly QuestionPackCatalogService $catalog) {}
 
     /**
+     * Proposed edits have no effect on the canonical source or published
+     * question. Any stale source snapshot must be re-reviewed first.
+     *
+     * @param array<string,mixed> $proposal
+     * @param array<string,mixed> $question
+     */
+    public static function matchesRevisionProposal(
+        array $proposal,
+        array $question,
+        string $candidateVersion,
+        string $proposalVersion,
+    ): bool {
+        $snapshot = $proposal['source_snapshot'] ?? null;
+        if (! is_array($snapshot)
+            || $candidateVersion !== $proposalVersion
+            || ($proposal['key'] ?? '') !== ($question['external_key'] ?? '')
+            || ($proposal['requires_expert_signoff'] ?? false) !== true
+            || ! is_string($proposal['proposed_prompt'] ?? null)
+            || trim($proposal['proposed_prompt']) === ''
+            || ! is_string($proposal['proposed_explanation'] ?? null)
+            || trim($proposal['proposed_explanation']) === '') {
+            return false;
+        }
+        return ($snapshot['prompt'] ?? null) === ($question['prompt'] ?? null)
+            && ($snapshot['choices'] ?? null) === data_get($question, 'response_schema.0.choices')
+            && ($snapshot['answer'] ?? null) === data_get($question, 'grading_rule.answer')
+            && ($snapshot['explanation'] ?? null) === ($question['explanation'] ?? null)
+            && ($proposal['proposed_choices'] ?? null) === $snapshot['choices']
+            && ($proposal['proposed_answer'] ?? null) === $snapshot['answer'];
+    }
+
+    /**
      * Per-option reasoning drafts are a tool for reviewers, never human
      * approval. A changed question or explanation expires the draft.
      *
@@ -111,6 +143,13 @@ final class ApExamCandidateAuditService
         $choiceDrafts = collect($choiceAuditData['entries'] ?? [])->keyBy('key');
         $choiceDraftMatched = 0;
         $choiceDraftStale = 0;
+
+        $revisionFile = resource_path('learning_review/ap-a-2026-six-priority-clarifications-v1.json');
+        $revisionData = json_decode((string) file_get_contents($revisionFile), true,
+            512, JSON_THROW_ON_ERROR);
+        $revisionProposals = collect($revisionData['entries'] ?? [])->keyBy('key');
+        $revisionCurrent = 0;
+        $revisionStale = 0;
 
         $sourceVisualChecked = 0;
         $priorities = ['P0' => 0, 'P1' => 0, 'P2' => 0];
@@ -231,9 +270,25 @@ final class ApExamCandidateAuditService
                 $choiceDraftStale++;
             }
 
+            $proposal = $originType === 'official' ? null : $revisionProposals->get($key);
+            $proposalCurrent = $originType !== 'official'
+                && is_array($proposal)
+                && self::matchesRevisionProposal(
+                    $proposal, $question,
+                    (string) ($candidate['pack']['version'] ?? ''),
+                    (string) ($revisionData['candidate_version'] ?? ''),
+                );
+            if ($proposalCurrent) {
+                $revisionCurrent++;
+            } elseif ($proposal !== null) {
+                $revisionStale++;
+            }
+
             // Priority does not alter exam item ordering or approval flags.
             // Address unverified original transcription before general theory.
-            $priority = ($flags !== [] || ($originType !== 'official' && ! $choiceDraftCurrent)) ? 'P0'
+            $priority = ($flags !== []
+                || ($originType !== 'official' && ! $choiceDraftCurrent)
+                || ($proposal !== null && ! $proposalCurrent)) ? 'P0'
                 : ($originType === 'official' && ! $visualChecked ? 'P0'
                     : ($originType === 'new' || $originType === 'official'
                         || preg_match('/(計算|ベイズ|MIPS|SLA|ROI|待ち行列|EVM|RAID|D.A|MSS)/ui',
@@ -241,6 +296,7 @@ final class ApExamCandidateAuditService
                         ? 'P1' : 'P2'));
             $priorities[$priority]++;
             $priorityReason = $flags !== [] ? '構造不整合を先に修正'
+                : ($proposal !== null && ! $proposalCurrent ? '校正提案が現行問題から失効・要再監査'
                 : ($originType !== 'official' && ! $choiceDraftCurrent
                     ? '独自問題の誤答肢レビュー案が不足、または問題変更で失効'
                 : ($originType === 'official' && ! $visualChecked
@@ -251,7 +307,7 @@ final class ApExamCandidateAuditService
                             ? '新規Canovia案の正答・誤答肢・解説を第三者が確認'
                             : ($priority === 'P1'
                                 ? '計算・数値条件を独立して検証'
-                                : '通常の独立内容レビュー待ち')))));
+                                : '通常の独立内容レビュー待ち'))))));
 
             $items[] = [
                 'number' => $index + 1,
@@ -273,6 +329,15 @@ final class ApExamCandidateAuditService
                 'independent_review_status' => 'pending',
                 'priority' => $priority,
                 'priority_reason' => $priorityReason,
+                'content_revision_proposal_status' => $proposal === null ? 'none'
+                    : ($proposalCurrent ? 'draft_for_review' : 'stale_needs_reaudit'),
+                'content_revision_proposal' => $proposalCurrent ? [
+                    'severity' => $proposal['severity'],
+                    'summary' => $proposal['summary'],
+                    'proposed_prompt' => $proposal['proposed_prompt'],
+                    'proposed_explanation' => $proposal['proposed_explanation'],
+                    'sources' => $proposal['sources'],
+                ] : null,
                 'choice_draft_state' => $originType === 'official' ? 'not_applicable'
                     : ($choiceDraftCurrent ? 'current_unreviewed_draft' : 'missing_or_stale'),
                 'choice_draft_reasons' => $choiceDraftCurrent
@@ -310,6 +375,9 @@ final class ApExamCandidateAuditService
             'source_counts' => $sourceCounts,
             'known_overlap_excluded' => $knownOverlapExcluded,
             'known_overlap_count' => count($knownOverlapPairs),
+            'content_revision_proposals_current_count' => $revisionCurrent,
+            'content_revision_proposals_stale_count' => $revisionStale,
+            'content_revision_proposals_approved_count' => 0,
             'choice_draft_current_count' => $choiceDraftMatched,
             'choice_draft_stale_count' => $choiceDraftStale,
             'choice_draft_independent_approvals' => 0,

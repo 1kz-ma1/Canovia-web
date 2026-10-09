@@ -214,6 +214,79 @@ final class ApExamCandidateReviewQueueTest extends TestCase
         }
     }
 
+    public function test_six_high_priority_question_clarifications_are_source_bound_and_never_approved(): void
+    {
+        $candidate = app(\App\Services\QuestionPackCatalogService::class)
+            ->payload(ApExamCandidateAuditService::CANDIDATE);
+        $report = app(ApExamCandidateAuditService::class)->inspect();
+        $draft = json_decode((string) file_get_contents(resource_path(
+            'learning_review/ap-a-2026-six-priority-clarifications-v1.json'
+        )), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(6, $draft['counts']['proposal_count']);
+        $this->assertSame(4, $draft['counts']['prompt_edits']);
+        $this->assertSame(6, $draft['counts']['explanation_edits']);
+        $this->assertSame(0, $draft['counts']['answer_key_edits']);
+        $this->assertFalse($draft['publication_allowed']);
+        $this->assertSame(6, $report['content_revision_proposals_current_count']);
+        $this->assertSame(0, $report['content_revision_proposals_stale_count']);
+        $this->assertSame(0, $report['content_revision_proposals_approved_count']);
+        $this->assertTrue($report['publication_blocked']);
+        $this->assertSame(80, $report['independent_review_pending_count']);
+
+        $questions = collect($candidate['questions'])->keyBy('external_key');
+        $items = collect($report['items'])->keyBy('key');
+        $allProposalIds = [];
+        foreach ($draft['entries'] as $entry) {
+            $key = $entry['key'];
+            $allProposalIds[] = $key;
+            $question = $questions->get($key);
+            $this->assertNotNull($question);
+            $this->assertTrue(ApExamCandidateAuditService::matchesRevisionProposal(
+                $entry, $question, $candidate['pack']['version'], $draft['candidate_version']
+            ), $key);
+            $this->assertSame('draft_for_review', $items->get($key)['content_revision_proposal_status']);
+            $this->assertSame('pending', $items->get($key)['independent_review_status']);
+            $this->assertSame($question['grading_rule']['answer'], $entry['proposed_answer']);
+            $this->assertSame($question['response_schema'][0]['choices'], $entry['proposed_choices']);
+            $this->assertNotSame($question['explanation'], $entry['proposed_explanation']);
+            $this->assertNotEmpty($entry['sources']);
+            $this->assertSame($question['prompt'], $entry['source_snapshot']['prompt']);
+            $this->assertFalse($entry['requires_expert_signoff'] === false);
+
+            foreach (['prompt', 'explanation'] as $field) {
+                $changed = $question;
+                $changed[$field] .= ' (updated)';
+                $this->assertFalse(ApExamCandidateAuditService::matchesRevisionProposal(
+                    $entry, $changed, $candidate['pack']['version'], $draft['candidate_version']
+                ));
+            }
+            $changed = $question;
+            $changed['response_schema'][0]['choices'][0]['label'] .= ' changed';
+            $this->assertFalse(ApExamCandidateAuditService::matchesRevisionProposal(
+                $entry, $changed, $candidate['pack']['version'], $draft['candidate_version']
+            ));
+            $changed = $question;
+            $changed['grading_rule']['answer'] = $question['grading_rule']['answer'] === 'ア'
+                ? 'イ' : 'ア';
+            $this->assertFalse(ApExamCandidateAuditService::matchesRevisionProposal(
+                $entry, $changed, $candidate['pack']['version'], $draft['candidate_version']
+            ));
+            $this->assertFalse(ApExamCandidateAuditService::matchesRevisionProposal(
+                $entry, $question, '0.4.0-review-required', $draft['candidate_version']
+            ));
+        }
+        $this->assertCount(6, array_unique($allProposalIds));
+        $dkim = collect($draft['entries'])->firstWhere('key', 'sec-dkim-023');
+        $this->assertStringContainsString('From', $dkim['proposed_explanation']);
+        $this->assertStringContainsString('DMARC', $dkim['proposed_explanation']);
+        $csrf = collect($draft['entries'])->firstWhere('key', 'sec-csrf-047');
+        $this->assertStringContainsString('CSRF対策トークン', $csrf['proposed_prompt']);
+        $boundary = collect($draft['entries'])->firstWhere('key', 'test-boundary-043');
+        $this->assertStringContainsString('2値境界値分析', $boundary['proposed_prompt']);
+        $this->assertDatabaseCount('question_packs', 0);
+        $this->assertDatabaseCount('learning_runs', 0);
+    }
+
     public function test_all_thirty_five_official_answer_keys_match_ipa_published_2025_autumn_answer_table(): void
     {
         // Independently transcribed from the IPA released original answer
@@ -312,6 +385,9 @@ final class ApExamCandidateReviewQueueTest extends TestCase
             ->assertSee('data-ap-a-release-blocked', false)
             ->assertSee('data-ap-a-priority-summary', false)
             ->assertSee('data-ap-a-choice-draft-summary', false)
+            ->assertSee('data-ap-a-revision-proposal-summary', false)
+            ->assertSee('data-ap-a-content-proposal="sec-dkim-023"', false)
+            ->assertSee('問題・解説の修正案（未適用・未承認）')
             ->assertSee('data-ap-a-choice-draft="net-mtu-002"', false)
             ->assertSee('監修時の注意：')
             ->assertSee('data-ap-a-source-spotcheck', false)
