@@ -116,3 +116,7 @@ without isolated durable storage and controlled staging access. See
 ## Public-launch compute plan decision (2026-10-09)
 
 The product owner plans to move **production Canovia** to the cheapest paid Render Web compute at public launch. At the time of this review, Render lists a $7/month paid Web compute plan, whereas the Hobby workspace subscription is $0. This is **not** a commitment to create or pay for staging today. The independent disposable staging Blueprint stays manual/Free by default; do not use the production database or copy production secrets. Recheck current Render billing terms when launch is scheduled.
+
+## Disposable Docker boot validation before provisioning
+
+The staging-only Docker image now has an ephemeral GitHub Actions smoke job, `.github/workflows/mcp-staging-docker-smoke.yml`. It builds the actual image, runs a temporary SQLite migration boot, verifies `/up` and requires unauthenticated/login/OAuth/MCP access to remain HTTP 503. This gives container-level evidence without creating another Render Free service, whose pooled instance-hour balance is not currently available through the connected account actions. Review that budget in the Render dashboard before any persistent staging creation.
