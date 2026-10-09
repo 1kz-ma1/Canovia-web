@@ -171,6 +171,7 @@ final class AdaptiveLearningCrossRunCandidateL4Test extends TestCase
 
     public function test_repeating_one_source_question_does_not_become_a_new_weakness(): void
     {
+        config(['study.adaptive_learning.candidate_limit' => 12]);
         [$owner, $plan, $task, $pack, $q] = $this->fixture();
         $this->historicalAnswer($owner, $plan, $task, $pack, $q[2]);
         $this->historicalAnswer($owner, $plan, $task, $pack, $q[2]);
