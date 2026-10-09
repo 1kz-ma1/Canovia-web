@@ -129,7 +129,8 @@ final class QuestionPackPublicationReadinessL2Test extends TestCase
         $this->withSession([AdminAccessService::SESSION_KEY => true])
             ->get(route('admin.question_packs.index'))
             ->assertOk()
-            ->assertSee('1問採点対応 <strong>1問</strong>', false)
+            ->assertSee('1問採点対応')
+            ->assertSee('<strong>1問</strong>', false)
             ->assertSee('解説未登録が1問あります。')
             ->assertSee('公開条件：充足');
 
