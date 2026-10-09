@@ -100,3 +100,33 @@ local container. It has **no connection to** the created Render staging DB,
 production Aiven DB or Render app secrets; the temporary DB is deleted
 after each run. The actual Render DB still requires a separate private
 staging env update and security review.
+
+
+## PostgreSQL-only public health gate (pending release)
+
+The isolated staging `/up` handler now reports HTTP **200** only when
+all of the following are true in PostgreSQL mode:
+
+- `APP_ENV=staging` + `CANOVIA_STAGING_ISOLATED=true`.
+- `CANOVIA_STAGING_DB_MODE=render_postgres`, exact known resource ID
+  `dpg-db43rbbncjis73bmigi0-a` and the pinned private internal
+  hostname/user/database matching the hard fail-closed boot contract.
+- The actual database answers `SELECT current_database()` with
+  `canovia_mcp_staging_db`.
+- Required migrated tables `migrations`, `users`, `plans`,
+  `mcp_linked_subjects`, `mcp_delegated_grants` and
+  `mcp_delegated_access_events` all exist in `public`.
+
+Any mismatch, connection error or missing migration returns the same
+**503 Staging service unavailable** response with `no-store`, never
+the hostname, DB URL, password, SQL exception or schema content.
+The default SQLite stage remains `/up=200`; production is unaffected.
+
+The GitHub Actions staging Docker smoke also starts a **real isolated
+staging app image with PostgreSQL** on a disposable Docker network,
+using the exact pinned synthetic hostname/DB name/user and an explicitly
+fake password. Its shell startup guard must pass *without bypasses*,
+its migrations/DB health check must pass, and login/OAuth/MCP must
+still return HTTP 503. That is still **not a live connection** to
+the created Render PostgreSQL; the actual internal URL must be set
+privately in the Render staging Environment first.

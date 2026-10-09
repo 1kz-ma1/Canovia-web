@@ -12,6 +12,7 @@ on:
       - 'bootstrap/app.php'
       - 'config/canovia_staging.php'
       - 'app/Http/Middleware/CloseUnopenedMcpStaging.php'
+      - 'tests/Feature/McpIsolatedStagingBootstrapTest.php'
       - '.github/workflows/mcp-staging-docker-smoke.yml'
       - 'deploy/render-mcp-staging.yaml'
   workflow_dispatch:
@@ -118,8 +119,8 @@ jobs:
           docker network create canovia-mcp-pg-ci
           docker run -d --name canovia-mcp-pg-ci \
             --network canovia-mcp-pg-ci \
-            --network-alias pg-test \
-            --env POSTGRES_USER=canovia_test \
+            --network-alias dpg-db43rbbncjis73bmigi0-a \
+            --env POSTGRES_USER=canovia_mcp_staging_db_user \
             --env POSTGRES_PASSWORD=ci-not-a-real-credential \
             --env POSTGRES_DB=canovia_mcp_staging_db \
             postgres:17-alpine
@@ -127,7 +128,7 @@ jobs:
           ready=0
           for attempt in $(seq 1 40); do
             if docker exec canovia-mcp-pg-ci \
-              pg_isready -U canovia_test -d canovia_mcp_staging_db \
+              pg_isready -U canovia_mcp_staging_db_user -d canovia_mcp_staging_db \
               > /dev/null 2>&1; then
               ready=1
               break
@@ -146,16 +147,74 @@ jobs:
             --env APP_ENV=testing --env APP_DEBUG=false \
             --env APP_KEY=base64:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa= \
             --env DB_CONNECTION=pgsql \
-            --env DB_URL=postgresql://canovia_test:ci-not-a-real-credential@pg-test:5432/canovia_mcp_staging_db \
+            --env DB_URL=postgresql://canovia_mcp_staging_db_user:ci-not-a-real-credential@dpg-db43rbbncjis73bmigi0-a:5432/canovia_mcp_staging_db \
             --env CACHE_STORE=array --env SESSION_DRIVER=array \
             --env QUEUE_CONNECTION=sync --env MAIL_MAILER=log \
             canovia-mcp-staging:smoke -c \
             'php artisan migrate --force --no-interaction --quiet && php artisan migrate --force --no-interaction --quiet'
 
           users=$(docker exec canovia-mcp-pg-ci sh -c \
-            "psql -U canovia_test -d canovia_mcp_staging_db -At -c \"SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('users','plans','mcp_linked_subjects','mcp_delegated_grants','mcp_delegated_access_events')\"")
+            "psql -U canovia_mcp_staging_db_user -d canovia_mcp_staging_db -At -c \"SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('users','plans','mcp_linked_subjects','mcp_delegated_grants','mcp_delegated_access_events')\"")
           test "$users" = "5"
           echo 'Disposable PostgreSQL 17: real Canovia migrations, idempotence and MCP tables PASS'
+
+
+          # Run the EXACT production-like shell guard with the pinned fake
+          # internal DB host. The CI-only Docker network alias points at
+          # this disposable PostgreSQL container, NOT at a Render resource.
+          # The stage must be healthy only when both DB and all MCP tables
+          # are present; the regular login and OAuth/MCP surfaces stay 503.
+          APP_KEY="base64:$(openssl rand -base64 32)"
+          docker run -d --name canovia-mcp-postgres-boot \
+            --network canovia-mcp-pg-ci \
+            -p 127.0.0.1:18774:10000 \
+            -e APP_NAME=Canovia-MCP-Staging \
+            -e APP_ENV=staging -e APP_DEBUG=false \
+            -e CANOVIA_STAGING_ISOLATED=true \
+            -e CANOVIA_STAGING_WEB_ACCESS_ENABLED=false \
+            -e CANOVIA_STAGING_MCP_EXPLICITLY_APPROVED=false \
+            -e CANOVIA_STAGING_DB_MODE=render_postgres \
+            -e CANOVIA_STAGING_POSTGRES_ID=dpg-db43rbbncjis73bmigi0-a \
+            -e CANOVIA_MCP_DISCOVERY_ENABLED=false \
+            -e CANOVIA_MCP_TOKEN_INTROSPECTION_ENABLED=false \
+            -e CANOVIA_MCP_ACCOUNT_LINK_ENABLED=false \
+            -e CANOVIA_MCP_PLAN_CONSENT_ENABLED=false \
+            -e CANOVIA_MCP_DELEGATED_POLICY_ENABLED=false \
+            -e CANOVIA_MCP_TOOLS_ENABLED=false \
+            -e APP_URL=https://canovia-mcp-staging.onrender.com \
+            -e APP_KEY="$APP_KEY" \
+            -e DB_CONNECTION=pgsql \
+            -e DB_DATABASE=canovia_mcp_staging_db \
+            -e DB_URL=postgresql://canovia_mcp_staging_db_user:ci-not-a-real-credential@dpg-db43rbbncjis73bmigi0-a:5432/canovia_mcp_staging_db \
+            -e SESSION_DRIVER=file -e SESSION_COOKIE=canovia_mcp_staging_session \
+            -e SESSION_SECURE_COOKIE=true -e SESSION_SAME_SITE=lax \
+            -e CACHE_STORE=file -e QUEUE_CONNECTION=sync \
+            -e MAIL_MAILER=log -e LOG_CHANNEL=stderr \
+            canovia-mcp-staging:smoke
+
+          pg_boot_ready=0
+          for attempt in $(seq 1 75); do
+            status=$(curl --silent --output /dev/null --max-time 2 \
+              --write-out '%{http_code}' \
+              http://127.0.0.1:18774/up || true)
+            if [ "$status" = "200" ]; then
+              pg_boot_ready=1
+              break
+            fi
+            if ! docker ps --format '{{.Names}}' | grep -qx canovia-mcp-postgres-boot; then
+              echo 'Pinned Postgres staging exited before health readiness'
+              exit 1
+            fi
+            sleep 2
+          done
+          test "$pg_boot_ready" = "1"
+
+          for endpoint in /login /api/mcp /.well-known/oauth-protected-resource; do
+            status=$(curl --silent --output /dev/null --max-time 5 \
+              --write-out '%{http_code}' "http://127.0.0.1:18774$endpoint")
+            test "$status" = "503"
+          done
+          echo 'Pinned isolated Postgres startup and /up DB schema health PASS; login/MCP closed'
 
       - name: Staging runtime diagnostics on failure (no credentials)
         if: failure()
@@ -170,6 +229,7 @@ jobs:
         if: always()
         run: |
           docker rm -f canovia-mcp-staging-smoke 2>/dev/null || true
+          docker rm -f canovia-mcp-postgres-boot 2>/dev/null || true
           docker rm -f canovia-mcp-pg-ci 2>/dev/null || true
           docker network rm canovia-mcp-pg-ci 2>/dev/null || true
           rm -f guard.stdout guard.stderr
