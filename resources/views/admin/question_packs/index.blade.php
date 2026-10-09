@@ -105,6 +105,79 @@
             @enderror
         </section>
 
+        @if(isset($apCandidateQualityReview))
+            <section class="page-card p-5 sm:p-6" data-ap-a-v04-review-worklist>
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-[.14em] text-amber-300">AP SUBJECT A / HUMAN CONTENT REVIEW</p>
+                        <h2 class="mt-1 text-xl font-black text-slate-50">v0.4 内容・利用条件の独立審査台帳</h2>
+                        <p class="mt-2 max-w-3xl text-xs leading-6 text-slate-400">
+                            原典・正答表との一致や自動監査は、学習解説の妥当性や教材利用権の承認ではありません。
+                            この台帳は審査待ちの対象を整理する読み取り専用資料で、承認・公開操作はありません。
+                        </p>
+                    </div>
+                    <span class="badge badge-slate">未承認・未公開</span>
+                </div>
+
+                <div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+                    <div class="rounded-xl border border-slate-700 p-3">
+                        <p class="text-xs text-slate-400">独立監修待ち</p>
+                        <p class="mt-1 text-lg font-black text-amber-200" data-ap-a-v04-unreviewed>{{ $apCandidateQualityReview['independent_human_review_pending'] }}問</p>
+                    </div>
+                    <div class="rounded-xl border border-slate-700 p-3">
+                        <p class="text-xs text-slate-400">未確認の審査項目</p>
+                        <p class="mt-1 text-lg font-black text-slate-100">{{ $apCandidateQualityReview['review_checks_pending'] }}件</p>
+                    </div>
+                    <div class="rounded-xl border border-slate-700 p-3">
+                        <p class="text-xs text-slate-400">内容・権利承認</p>
+                        <p class="mt-1 text-lg font-black text-slate-100">{{ $apCandidateQualityReview['quality_approved'] }} / {{ $apCandidateQualityReview['rights_approved'] }}問</p>
+                    </div>
+                    <div class="rounded-xl border border-slate-700 p-3">
+                        <p class="text-xs text-slate-400">承認者の記録</p>
+                        <p class="mt-1 text-lg font-black text-slate-100">{{ $apCandidateQualityReview['signed_off'] }}件</p>
+                    </div>
+                </div>
+
+                <p class="mt-3 text-xs leading-6 text-slate-300" data-ap-a-v04-review-priorities>
+                    P0：校正した6問／P1：IPA由来35問／P2：他の独自39問。
+                    機械的な台帳検査：{{ $apCandidateQualityReview['structurally_consistent'] ? '一致' : '不一致（要修正）' }}。
+                    公開可能：{{ $apCandidateQualityReview['can_publish'] ? 'はい' : 'いいえ' }}。
+                </p>
+                @if($apCandidateQualityReview['issues'])
+                    <ul class="mt-2 list-inside list-disc text-xs text-rose-300">
+                        @foreach($apCandidateQualityReview['issues'] as $issue)
+                            <li>{{ $issue }}</li>
+                        @endforeach
+                    </ul>
+                @endif
+                <details class="mt-4 rounded-xl border border-slate-700 p-3" data-ap-a-v04-review-items>
+                    <summary class="cursor-pointer text-sm font-bold text-cyan-200">80問の審査対象と未完了項目を確認する</summary>
+                    <div class="mt-3 space-y-2">
+                        @foreach(collect($apCandidateQualityReview['items'])->sortBy(fn ($item) => [$item['priority'], $item['number']]) as $item)
+                            <details class="rounded-xl border border-slate-800 bg-slate-950/30 p-3"
+                                data-ap-a-v04-review-item="{{ $item['key'] }}">
+                                <summary class="cursor-pointer text-xs font-semibold text-slate-100">
+                                    {{ $item['priority'] }} · 問{{ $item['number'] }} · {{ $item['key'] }}
+                                    · 独立した正答・解説・権利監修待ち
+                                </summary>
+                                <div class="mt-2 space-y-2 text-xs leading-6 text-slate-300">
+                                    @if($item['reason'])
+                                        <p class="text-amber-200">重点理由：{{ $item['reason'] }}</p>
+                                    @endif
+                                    <p class="text-slate-400">機械的な照合情報は人手の承認には換算されません。</p>
+                                    <ul class="list-inside list-disc">
+                                        @foreach($item['todo'] as $todo)
+                                            <li>{{ $todo }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            </details>
+                        @endforeach
+                    </div>
+                </details>
+            </section>
+        @endif
+
         @if(isset($apCandidateRevisionPreview))
             <section class="page-card p-5 sm:p-6" data-ap-a-v04-preview>
                 <div class="flex flex-wrap items-start justify-between gap-3">

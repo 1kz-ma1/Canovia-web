@@ -1,0 +1,2842 @@
+{
+  "schema_version": 1,
+  "title": "AP科目A 2026 80問 v0.4 内容監修・権利審査ワークシート",
+  "candidate_key": "ap/ap-a-2026-cbt-80-candidate-v2",
+  "candidate_slug": "ap-a-2026-cbt-80-candidate-v2",
+  "candidate_version": "0.4.0-review-required",
+  "base_candidate_key": "ap/ap-a-2026-cbt-80-candidate-v1",
+  "source_change_ledger": "learning_review/ap-a-2026-v04-preview-change-ledger.json",
+  "review_scope": "Human expert quality, mistake-proofness, rights, CBT representation; status is a work queue only.",
+  "trust_boundary": "No row is reviewed, signed, rights-approved or publishable. Machine source comparison and draft rationales are not independent content approval. Draft modifications require re-review. No auto-publish based on this file.",
+  "publication_authorized": false,
+  "approval_counts": {
+    "item_quality_approved": 0,
+    "item_rights_approved": 0,
+    "reviewer_signoffs": 0,
+    "complete_items": 0
+  },
+  "priority_buckets": {
+    "P0": "校正した6問を再審査",
+    "P1": "IPA公式由来35問の解説・教材権利確認",
+    "P2": "その他独自39問の回答・誤答肢・重複審査"
+  },
+  "counts": {
+    "total": 80,
+    "priority": {
+      "P0": 6,
+      "P1": 35,
+      "P2": 39
+    },
+    "official": 35,
+    "canovia": 45,
+    "revision_items": 6,
+    "draft_wrong_choice_notes": 135,
+    "source_transcriptions_carried": 35,
+    "pending_human_review": 80
+  },
+  "review_dimensions": [
+    "answer_key_and_domain",
+    "incorrect_choice_uniqueness",
+    "explanation_accuracy",
+    "semantic_overlap_and_difficulty",
+    "content_rights_and_attribution"
+  ],
+  "entries": [
+    {
+      "number": 1,
+      "key": "ipa-2025-autumn-ap-am-q03",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 2,
+      "key": "net-mtu-002",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "net-mtu-002"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 3,
+      "key": "ipa-2025-autumn-ap-am-q04",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 4,
+      "key": "net-dns-002",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "net-dns-002"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 5,
+      "key": "ipa-2025-autumn-ap-am-q05",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 6,
+      "key": "net-napt-003",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "net-napt-003"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 7,
+      "key": "ipa-2025-autumn-ap-am-q06",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 8,
+      "key": "strategy-three-c-004",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "strategy-three-c-004"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 9,
+      "key": "net-tcp-005",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "net-tcp-005"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 10,
+      "key": "ipa-2025-autumn-ap-am-q07",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 11,
+      "key": "strategy-scm-005",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "strategy-scm-005"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 12,
+      "key": "ipa-2025-autumn-ap-am-q08",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 13,
+      "key": "db-view-009",
+      "source_type": "canovia_revised_unapproved",
+      "priority": "P0",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present",
+        "unapproved_six_item_wording_proposal_applied"
+      ],
+      "review_tasks": [
+        "v0.3からの変更前後の条件・解説の再監修",
+        "正答が一意であること・誤答3肢の専門確認",
+        "条件/例外に関する根拠資料の有効性確認",
+        "出典・利用条件と分野・難易度・重複確認",
+        "v0.4の内容指紋に紐付いた査読記録作成"
+      ],
+      "known_caveat": "更新可能条件とビュー定義の可否を明確に分ける",
+      "links": {
+        "source_question_id": "db-view-009"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 14,
+      "key": "ipa-2025-autumn-ap-am-q09",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 15,
+      "key": "strategy-bpr-006",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "strategy-bpr-006"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 16,
+      "key": "db-normalization-013",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "db-normalization-013"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 17,
+      "key": "ipa-2025-autumn-ap-am-q11",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 18,
+      "key": "db-isolation-014",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "db-isolation-014"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 19,
+      "key": "ipa-2025-autumn-ap-am-q12",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 20,
+      "key": "db-nosql-types-036",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "db-nosql-types-036"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 21,
+      "key": "ipa-2025-autumn-ap-am-q13",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 22,
+      "key": "db-sql-join-059",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "db-sql-join-059"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 23,
+      "key": "ipa-2025-autumn-ap-am-q14",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 24,
+      "key": "calc-mm1-015",
+      "source_type": "canovia_revised_unapproved",
+      "priority": "P0",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present",
+        "unapproved_six_item_wording_proposal_applied"
+      ],
+      "review_tasks": [
+        "v0.3からの変更前後の条件・解説の再監修",
+        "正答が一意であること・誤答3肢の専門確認",
+        "条件/例外に関する根拠資料の有効性確認",
+        "出典・利用条件と分野・難易度・重複確認",
+        "v0.4の内容指紋に紐付いた査読記録作成"
+      ],
+      "known_caveat": "平均サービス時間と利用率の正の安定条件を示す",
+      "links": {
+        "source_question_id": "calc-mm1-015"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 25,
+      "key": "mgmt-wbs-001",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "mgmt-wbs-001"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 26,
+      "key": "ipa-2025-autumn-ap-am-q15",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 27,
+      "key": "mgmt-risk-transfer-002",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "mgmt-risk-transfer-002"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 28,
+      "key": "ipa-2025-autumn-ap-am-q16",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 29,
+      "key": "strategy-pest-001",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "strategy-pest-001"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 30,
+      "key": "ipa-2025-autumn-ap-am-q17",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 31,
+      "key": "strategy-ppm-002",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "strategy-ppm-002"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 32,
+      "key": "strategy-stp-003",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "strategy-stp-003"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 33,
+      "key": "ipa-2025-autumn-ap-am-q18",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 34,
+      "key": "sec-dkim-023",
+      "source_type": "canovia_revised_unapproved",
+      "priority": "P0",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present",
+        "unapproved_six_item_wording_proposal_applied"
+      ],
+      "review_tasks": [
+        "v0.3からの変更前後の条件・解説の再監修",
+        "正答が一意であること・誤答3肢の専門確認",
+        "条件/例外に関する根拠資料の有効性確認",
+        "出典・利用条件と分野・難易度・重複確認",
+        "v0.4の内容指紋に紐付いた査読記録作成"
+      ],
+      "known_caveat": "DKIM単体で可視Fromドメインの本人性まで保証するように読める",
+      "links": {
+        "source_question_id": "sec-dkim-023"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 35,
+      "key": "ipa-2025-autumn-ap-am-q19",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 36,
+      "key": "sec-sidechannel-024",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "sec-sidechannel-024"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 37,
+      "key": "ipa-2025-autumn-ap-am-q23",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 38,
+      "key": "calc-bayes-disease-025",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "calc-bayes-disease-025"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 39,
+      "key": "ipa-2025-autumn-ap-am-q25",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 40,
+      "key": "calc-mips-026",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "calc-mips-026"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 41,
+      "key": "strategy-valuechain-008",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "strategy-valuechain-008"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 42,
+      "key": "ipa-2025-autumn-ap-am-q26",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 43,
+      "key": "os-roundrobin-028",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "os-roundrobin-028"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 44,
+      "key": "ipa-2025-autumn-ap-am-q27",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 45,
+      "key": "os-starvation-029",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "os-starvation-029"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 46,
+      "key": "ipa-2025-autumn-ap-am-q56",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 47,
+      "key": "quality-maintainability-031",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "quality-maintainability-031"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 48,
+      "key": "quality-reliability-032",
+      "source_type": "canovia_revised_unapproved",
+      "priority": "P0",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present",
+        "unapproved_six_item_wording_proposal_applied"
+      ],
+      "review_tasks": [
+        "v0.3からの変更前後の条件・解説の再監修",
+        "正答が一意であること・誤答3肢の専門確認",
+        "条件/例外に関する根拠資料の有効性確認",
+        "出典・利用条件と分野・難易度・重複確認",
+        "v0.4の内容指紋に紐付いた査読記録作成"
+      ],
+      "known_caveat": "信頼性と可用性を完全に排他的な概念と誤読させない",
+      "links": {
+        "source_question_id": "quality-reliability-032"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 49,
+      "key": "ipa-2025-autumn-ap-am-q57",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 50,
+      "key": "storage-wearleveling-034",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "storage-wearleveling-034"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 51,
+      "key": "ipa-2025-autumn-ap-am-q58",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 52,
+      "key": "calc-da-035",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "calc-da-035"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 53,
+      "key": "ipa-2025-autumn-ap-am-q59",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 54,
+      "key": "algo-binarysearch-039",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "algo-binarysearch-039"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 55,
+      "key": "ipa-2025-autumn-ap-am-q60",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 56,
+      "key": "strategy-roi-007",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-business-management-supplement-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "strategy-roi-007"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 57,
+      "key": "algo-stack-041",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "algo-stack-041"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 58,
+      "key": "ipa-2025-autumn-ap-am-q62",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 59,
+      "key": "algo-complexity-042",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "algo-complexity-042"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 60,
+      "key": "ipa-2025-autumn-ap-am-q63",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 61,
+      "key": "test-boundary-043",
+      "source_type": "canovia_revised_unapproved",
+      "priority": "P0",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present",
+        "unapproved_six_item_wording_proposal_applied"
+      ],
+      "review_tasks": [
+        "v0.3からの変更前後の条件・解説の再監修",
+        "正答が一意であること・誤答3肢の専門確認",
+        "条件/例外に関する根拠資料の有効性確認",
+        "出典・利用条件と分野・難易度・重複確認",
+        "v0.4の内容指紋に紐付いた査読記録作成"
+      ],
+      "known_caveat": "2値境界値分析と3値境界値分析を区別",
+      "links": {
+        "source_question_id": "test-boundary-043"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 62,
+      "key": "ipa-2025-autumn-ap-am-q64",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 63,
+      "key": "test-levels-044",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "test-levels-044"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 64,
+      "key": "dev-cicd-045",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "dev-cicd-045"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 65,
+      "key": "ipa-2025-autumn-ap-am-q66",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 66,
+      "key": "sec-xss-046",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "sec-xss-046"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 67,
+      "key": "ipa-2025-autumn-ap-am-q67",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 68,
+      "key": "sec-csrf-047",
+      "source_type": "canovia_revised_unapproved",
+      "priority": "P0",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present",
+        "unapproved_six_item_wording_proposal_applied"
+      ],
+      "review_tasks": [
+        "v0.3からの変更前後の条件・解説の再監修",
+        "正答が一意であること・誤答3肢の専門確認",
+        "条件/例外に関する根拠資料の有効性確認",
+        "出典・利用条件と分野・難易度・重複確認",
+        "v0.4の内容指紋に紐付いた査読記録作成"
+      ],
+      "known_caveat": "ブラウザのSameSiteやCSRFトークン検証の有無を明示しない",
+      "links": {
+        "source_question_id": "sec-csrf-047"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 69,
+      "key": "ipa-2025-autumn-ap-am-q68",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 70,
+      "key": "sec-cert-049",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "sec-cert-049"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 71,
+      "key": "ipa-2025-autumn-ap-am-q69",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 72,
+      "key": "pm-criticalpath-050",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "pm-criticalpath-050"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 73,
+      "key": "pm-evm-051",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "pm-evm-051"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 74,
+      "key": "ipa-2025-autumn-ap-am-q71",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 75,
+      "key": "service-sla-052",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "service-sla-052"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 76,
+      "key": "ipa-2025-autumn-ap-am-q72",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 77,
+      "key": "strategy-break-even-053",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "strategy-break-even-053"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 78,
+      "key": "ipa-2025-autumn-ap-am-q73",
+      "source_type": "ipa_2025_autumn",
+      "priority": "P1",
+      "source_pack": "ap-a-ipa-2025-autumn-official-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "2025_ipa_original_question_snapshot_carried",
+        "2025_ipa_official_answer_key_crosscheck"
+      ],
+      "review_tasks": [
+        "公開問題PDF上の図表・設問条件の最終照合",
+        "公式正答キー・誤答肢の独立論拠の確認",
+        "Canovia独自解説・数式の別解確認",
+        "IPAの公開問題の教材・商用利用条件の審査",
+        "他79問との類似性と難易度確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "question_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_qs.pdf",
+        "answer_pdf": "https://www.ipa.go.jp/shiken/mondai-kaiotu/nl10bi0000009lh8-att/2025r07a_ap_am_ans.pdf"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 79,
+      "key": "strategy-swot-054",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "strategy-swot-054"
+      },
+      "notes_for_reviewer": ""
+    },
+    {
+      "number": 80,
+      "key": "arch-raid5-056",
+      "source_type": "canovia_unrevised_unapproved",
+      "priority": "P2",
+      "source_pack": "ap-a-canovia-core-v1",
+      "review_status": "awaiting_independent_human_content_and_rights_review",
+      "reviewer_id": null,
+      "reviewed_at": null,
+      "approval_decision": null,
+      "content_sha256": null,
+      "review_checks": {
+        "answer_key_and_domain": "pending",
+        "incorrect_choice_uniqueness": "pending",
+        "explanation_accuracy": "pending",
+        "semantic_overlap_and_difficulty": "pending",
+        "content_rights_and_attribution": "pending"
+      },
+      "machine_evidence": [
+        "canovia_draft_answer_choice_rationale_present"
+      ],
+      "review_tasks": [
+        "正答が一意であること・誤答3肢の専門確認",
+        "Canovia解説の計算・数値・定義の別解検証",
+        "IPA過去問を含む残79問との意味上の重複確認",
+        "難易度・科目A出題範囲・解説粒度の確認",
+        "独自問題の創作・派生出典と利用条件の確認"
+      ],
+      "known_caveat": null,
+      "links": {
+        "source_question_id": "arch-raid5-056"
+      },
+      "notes_for_reviewer": ""
+    }
+  ]
+}
