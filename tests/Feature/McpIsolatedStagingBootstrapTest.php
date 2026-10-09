@@ -153,6 +153,57 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
         $this->assertStringContainsString('connection not yet verified', $stage);
     }
 
+    public function test_synthetic_owner_startup_requires_pinned_closed_stage_and_separate_approvals(): void
+    {
+        $url = 'postgresql://canovia_mcp_staging_db_user:fake-ci-password-only'
+            .'@dpg-db43rbbncjis73bmigi0-a:5432/canovia_mcp_staging_db';
+        $pinned = [
+            'CANOVIA_STAGING_DB_MODE' => 'render_postgres',
+            'CANOVIA_STAGING_POSTGRES_ID' => 'dpg-db43rbbncjis73bmigi0-a',
+            'CANOVIA_STAGING_POSTGRES_USER' => 'canovia_mcp_staging_db_user',
+            'DB_CONNECTION' => 'pgsql',
+            'DB_DATABASE' => 'canovia_mcp_staging_db',
+            'DB_URL' => $url,
+        ];
+        $armed = [
+            'CANOVIA_STAGING_SYNTHETIC_OWNER_BOOTSTRAP_ON_START' => 'true',
+            'CANOVIA_STAGING_ALLOW_SYNTHETIC_OWNER_BOOTSTRAP' => 'true',
+            'CANOVIA_STAGING_SYNTHETIC_OWNER_PASSWORD' => str_repeat('z', 36),
+        ];
+
+        // An explicitly armed, closed, real-DB stage is the only accepted case.
+        $this->assertTrue($this->guard([...$pinned, ...$armed])->isSuccessful());
+
+        foreach ([
+            ['CANOVIA_STAGING_DB_MODE' => 'sqlite'],
+            ['CANOVIA_STAGING_WEB_ACCESS_ENABLED' => 'true'],
+            ['CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED' => 'true'],
+            ['CANOVIA_STAGING_ALLOW_SYNTHETIC_OWNER_BOOTSTRAP' => 'false'],
+            ['CANOVIA_STAGING_SYNTHETIC_OWNER_PASSWORD' => ''],
+            ['CANOVIA_MCP_TOOLS_ENABLED' => 'true'],
+            ['CANOVIA_MCP_DISCOVERY_ENABLED' => 'true'],
+            ['CANOVIA_MCP_PLAN_CONSENT_ENABLED' => 'true'],
+            ['DB_URL' => 'postgresql://fake:password@aiven.example.test/live'],
+            ['CANOVIA_STAGING_SYNTHETIC_OWNER_BOOTSTRAP_ON_START' => 'invalid'],
+        ] as $unsafe) {
+            $out = $this->guard([...$pinned, ...$armed, ...$unsafe]);
+            $this->assertSame(42, $out->getExitCode(),
+                'Synthetic staging bootstrap guard allowed: '.implode(',', array_keys($unsafe)));
+            $this->assertStringContainsString('BLOCKED', $out->getErrorOutput());
+            $this->assertStringNotContainsString(str_repeat('z', 36),
+                $out->getErrorOutput());
+        }
+
+        // The shared production startup only executes the command in isolated staging.
+        $start = file_get_contents(base_path('docker/render-start.sh'));
+        $this->assertIsString($start);
+        $this->assertStringContainsString('if [ "$isolated_staging" = "true" ]', $start);
+        $this->assertStringContainsString(
+            'php artisan canovia:mcp-staging-create-synthetic-owner --json >/dev/null 2>&1',
+            $start
+        );
+    }
+
     public function test_staging_web_access_requires_independent_approval_and_live_pinned_db(): void
     {
         $this->withoutVite();
