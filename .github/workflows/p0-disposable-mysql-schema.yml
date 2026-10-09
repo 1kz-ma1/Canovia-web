@@ -1,0 +1,70 @@
+name: P0 Disposable MySQL Migration Integrity
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'database/migrations/**'
+      - 'tests/Feature/ProductionMysqlSchemaP0Test.php'
+      - '.github/workflows/p0-disposable-mysql-schema.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mysql-p0-schema-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only-root-password
+          MYSQL_DATABASE: canovia_p0_ci
+          MYSQL_USER: canovia_ci
+          MYSQL_PASSWORD: ci-only-ephemeral-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_DATABASE: canovia_p0_ci
+      DB_USERNAME: canovia_ci
+      DB_PASSWORD: ci-only-ephemeral-password
+      DB_URL: ''
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      CANOVIA_P0_DISPOSABLE_MYSQL_CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, mbstring, xml
+          coverage: none
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Lint repair migrations and MySQL test
+        run: |
+          php -l database/migrations/2026_10_04_000200_create_intelligence_decision_traces_table.php
+          php -l database/migrations/2026_10_08_230000_create_learning_answer_evaluation_adjustments.php
+          php -l tests/Feature/ProductionMysqlSchemaP0Test.php
+      - name: Full MySQL migrations from an empty disposable database
+        run: php artisan migrate --force --no-interaction
+      - name: Repeat all MySQL migrations (idempotency)
+        run: php artisan migrate --force --no-interaction
+      - name: Reproduce interrupted MySQL DDL and verify constraint repair
+        run: php artisan test tests/Feature/ProductionMysqlSchemaP0Test.php --fail-on-skipped
+      - name: Final MySQL migration rerun after interrupted-DDL recovery
+        run: php artisan migrate --force --no-interaction
