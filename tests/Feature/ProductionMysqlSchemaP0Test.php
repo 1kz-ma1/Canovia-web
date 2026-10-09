@@ -654,6 +654,60 @@ final class ProductionMysqlSchemaP0Test extends TestCase
         );
     }
 
+    public function test_explicit_readonly_preflight_does_not_alter_missing_repair_constraints(): void
+    {
+        // Real MySQL 8 CI only, and a separate test from the repair operation.
+        // The SELECT-only operator surface must not indirectly call up().
+        Schema::table('intelligence_decision_traces', function (Blueprint $table): void {
+            $table->dropForeign('idt_snapshot_fk');
+            $table->dropIndex('intelligence_decision_scope_created_idx');
+        });
+        Schema::table('learning_answer_evaluation_adjustments', function (Blueprint $table): void {
+            $table->dropForeign('laea_answer_event_fk');
+        });
+
+        $migration = require database_path(
+            'migrations/2026_10_09_235959_reconcile_p0_mysql_applied_constraints.php',
+        );
+
+        try {
+            $beforeLedger = DB::table('migrations')->count();
+            $this->assertNull($migration->preflight());
+            $this->assertNull($migration->preflight());
+
+            $this->assertSame($beforeLedger, DB::table('migrations')->count());
+            $this->assertSame([], array_values(array_filter(
+                Schema::getForeignKeys('intelligence_decision_traces'),
+                fn (array $fk): bool => ($fk['name'] ?? '') === 'idt_snapshot_fk',
+            )));
+            $this->assertSame([], array_values(array_filter(
+                Schema::getIndexes('intelligence_decision_traces'),
+                fn (array $idx): bool => ($idx['name'] ?? '') === 'intelligence_decision_scope_created_idx',
+            )));
+            $this->assertSame([], array_values(array_filter(
+                Schema::getForeignKeys('learning_answer_evaluation_adjustments'),
+                fn (array $fk): bool => ($fk['name'] ?? '') === 'laea_answer_event_fk',
+            )));
+        } finally {
+            $migration->up();
+        }
+
+        $this->assertForeignKey(
+            'intelligence_decision_traces',
+            'intelligence_state_snapshot_id',
+            'idt_snapshot_fk',
+            'intelligence_state_snapshots',
+            'cascade',
+        );
+        $this->assertForeignKey(
+            'learning_answer_evaluation_adjustments',
+            'learning_answer_event_id',
+            'laea_answer_event_fk',
+            'learning_answer_events',
+            'cascade',
+        );
+    }
+
     private function assertForeignKey(
         string $table,
         string $column,
