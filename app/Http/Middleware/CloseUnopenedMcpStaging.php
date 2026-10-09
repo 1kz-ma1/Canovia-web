@@ -4,6 +4,8 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Throwable;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -23,6 +25,13 @@ final class CloseUnopenedMcpStaging
             }
 
             if ($request->is('up')) {
+                // The old SQLite-only stage remains unchanged. In the
+                // separately approved PostgreSQL mode, a healthy PHP
+                // process is NOT sufficient: migration tables, exact
+                // database and private DB identity must also be ready.
+                if (! $this->databaseReady()) {
+                    return $this->unavailable();
+                }
                 return $next($request);
             }
 
@@ -32,6 +41,59 @@ final class CloseUnopenedMcpStaging
         }
 
         return $next($request);
+    }
+
+    private function databaseReady(): bool
+    {
+        $mode = config('canovia_staging.database_mode');
+        if ($mode === 'sqlite') {
+            return true;
+        }
+        if ($mode !== 'render_postgres'
+            || config('canovia_staging.postgres_id') !== 'dpg-db43rbbncjis73bmigi0-a'
+            || config('database.default') !== 'pgsql'
+            || config('database.connections.pgsql.database') !== 'canovia_mcp_staging_db') {
+            return false;
+        }
+
+        // Defense-in-depth if a custom boot accidentally bypasses the
+        // staging shell's stricter pinned host/user/resource checks.
+        $url = config('database.connections.pgsql.url');
+        $parts = is_string($url) ? parse_url($url) : false;
+        if (! is_array($parts)
+            || ! in_array($parts['scheme'] ?? null, ['postgres', 'postgresql'], true)
+            || ($parts['host'] ?? null) !== 'dpg-db43rbbncjis73bmigi0-a'
+            || ($parts['user'] ?? null) !== 'canovia_mcp_staging_db_user'
+            || ($parts['path'] ?? null) !== '/canovia_mcp_staging_db'
+            || ($parts['port'] ?? 5432) !== 5432
+            || ! isset($parts['pass']) || strlen($parts['pass']) < 8
+            || isset($parts['query']) || isset($parts['fragment'])) {
+            return false;
+        }
+
+        try {
+            $connection = DB::connection('pgsql');
+            $database = $connection->selectOne('SELECT current_database() AS db_name');
+            if (($database->db_name ?? null) !== 'canovia_mcp_staging_db') {
+                return false;
+            }
+
+            $tables = $connection->selectOne(
+                "SELECT COUNT(*) AS present_count
+                 FROM information_schema.tables
+                 WHERE table_schema = 'public'
+                   AND table_name IN (
+                     'migrations', 'users', 'plans',
+                     'mcp_linked_subjects', 'mcp_delegated_grants',
+                     'mcp_delegated_access_events'
+                   )"
+            );
+
+            return (int) ($tables->present_count ?? 0) === 6;
+        } catch (Throwable) {
+            // No DB exception or credential may escape to the response.
+            return false;
+        }
     }
 
     private function unavailable(): Response
