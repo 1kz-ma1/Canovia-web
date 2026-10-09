@@ -85,3 +85,19 @@ In parallel Draft [PR #443](https://github.com/1kz-ma1/Canovia-web/pull/443), th
 Aiven's [official MySQL service user management guide](https://aiven.io/docs/products/mysql/howto/manage-service-users) is important: **a newly created user has admin-level privileges by default** unless `mysql_grants` is explicitly restricted through supported Aiven API capabilities. Do **not** treat the Console's ordinary Add service user button as a safe SELECT-only creation path. Never automatically create/grant/modify users, reuse `avnadmin`, modify production network policy, or request credentials in GitHub or ChatGPT. If the owner has no *existing* verified SELECT-only service user, the next step is an **independently approved least-privilege account-access change**, not a speculative SQL connection.
 
 The verified Render production log continues to show startup `Nothing to migrate` on later restarts (including 2026-10-09 17:19 UTC), but this still does **not** prove actual FK/index state. Release verdict stays `AIVEN_SCHEMA_UNVERIFIED / BACKUP_RESTORE_UNVERIFIED / HOLD`. Additional synthetic CI alone cannot close the real evidence gap.
+
+
+## 9. MySQL metadata privilege visibility and exact-scope gate (2026-10-10)
+
+MySQL 8.4 documentation confirms that an ordinary account sees `INFORMATION_SCHEMA` metadata **only for objects on which it holds an applicable privilege** ([MySQL 8.4 INFORMATION_SCHEMA privilege model](https://dev.mysql.com/doc/refman/8.4/en/information-schema.html)). Therefore a `SELECT` grant solely on `migrations` can yield **false-negative MISSING** tables/FKs; a schema-wide `SELECT` would permit private data reads and is also unacceptable.
+
+[Draft PR #443](https://github.com/1kz-ma1/Canovia-web/pull/443) now requires exactly:
+- `REFERENCES` on the **independently verified target schema** to expose structural metadata, without user-table row reads
+- `SELECT` on that schema's `migrations` table **only**
+- optional `USAGE`; no `SELECT` on `users`, schema-wide `SELECT`, roles, DDL/DML, grant option or other database grants
+
+A new fail-closed grant parser replaces the prior loose permission check. A disposable MySQL 8.0/8.4 CI test creates a **synthetic local MySQL user**, verifies the FK/index metadata inventory and full ledger under precisely those grants and confirms that a `users` row read is rejected. This does not connect to Aiven or create users in its service.
+
+Aiven's service-user API `mysql_grants` controls privilege *types* when provisioning; its documentation does **not** prove that granting `SELECT` this way is automatically restricted to the `migrations` table ([Aiven service user grants](https://aiven.io/docs/products/mysql/howto/manage-service-users)). **Do not assume `mysql_grants=["REFERENCES","SELECT"]` satisfies the above scope** or create a default admin user. Confirm exact table-scoped grants are available on the actual service in a separate operator-approved action; otherwise **hold** rather than loosen policy.
+
+Evidence boundary is unchanged: no live Aiven database identity/schema/ledger/restore verification and no permission/credential changes. PRs #443 and #459 remain Draft/unmerged pending real safe inspection.
