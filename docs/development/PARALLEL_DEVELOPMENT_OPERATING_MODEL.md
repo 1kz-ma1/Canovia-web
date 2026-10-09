@@ -44,6 +44,33 @@ A lane owns a **decision boundary**, not all the files it may touch. Shared file
 
 Map-specific parallel file ownership remains in [MAP_UI_PARALLEL_DEVELOPMENT_BOUNDARIES.md](../MAP_UI_PARALLEL_DEVELOPMENT_BOUNDARIES.md); do not replace it.
 
+### Chat entry: choose the lane only when needed
+
+**Intent:** make `Canoviaの実装をしたい` an easy start, without interrupting specific implementation requests.
+
+| User message/context | Expected response |
+| --- | --- |
+| `Canoviaの実装をしたい` or `次の実装を進めたい`, with no known lane/task in the conversation or handoff | Ask once which lane to work on; offer the eight choices below. |
+| `Learningの実装を進めて`, `初回画面のはみ出しを修正して`, or equivalent clear scope | Resolve named/primary lane and start after checking latest GitHub; no redundant classification question. |
+| `進めて` when the conversation already has an active lane and slice | Continue existing lane/slice; preserve context. |
+| `開発全体を分類して` or `複数レーンを調整して` | Route to Orchestrator without asking which product lane. |
+| User reports a defect found during another feature branch | If only on the unmerged feature, keep it there; if on latest main, route to Hotfix; ask only if evidence is insufficient. |
+
+Suggested one-question reply when ownership is unspecified:
+
+> Canoviaのどの領域の実装を進めますか？
+>
+> ① Learning — 学習/AI演習  ② Development — GitHub/開発支援
+> ③ Intelligence — AI/パーソナライズ  ④ Experience — UI/UX/Map
+> ⑤ Platform — iOS/課金/インフラ  ⑥ Expansion — Career/新分野
+> ⑦ Hotfix — バグ/軽微な修正  ⑧ Orchestrator — 開発全体の調整
+>
+> 番号か名前で指定できます。
+
+A normal conversational question is sufficient; **do not require a form, eight separate prompts or explicit confirmation after the choice**. When relevant, mention that up to three primary feature lanes are prioritized (Learning / Development / Experience), but do not force that priority over an explicit choice. After the answer, read [ACTIVE_LANE_HANDOFFS.md](ACTIVE_LANE_HANDOFFS.md) and latest repo evidence before choosing work.
+
+This is **repository-level guidance** for agents/chats that read these files. It does not itself configure the global behavior of unrelated new ChatGPT conversations. If the repository context is missing in a new chat, the user may need to point the chat at `AGENTS.md` or use the entry prompt documented in the handoffs.
+
 ## 3. Concurrency policy
 
 Start with **three primary feature lanes concurrently**: Learning, Development and Experience. Intelligence and Platform may each run a bounded dependency or stability/security slice when needed; Expansion remains intake/design-first until P0 validation capacity is available. Hotfix is always available, but not an unlimited fourth product feature.
