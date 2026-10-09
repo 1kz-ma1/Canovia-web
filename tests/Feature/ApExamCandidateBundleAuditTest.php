@@ -142,6 +142,31 @@ final class ApExamCandidateBundleAuditTest extends TestCase
         $this->assertSame(0, QuestionPack::count());
     }
 
+    public function test_key_calculation_explanations_show_the_reasoning_steps_without_changing_source_answers(): void
+    {
+        $items = collect(app(QuestionPackCatalogService::class)
+            ->payload(self::CANDIDATE)['questions'])
+            ->keyBy(fn (array $q) => (int) data_get($q,
+                'learning_metadata.provenance.question_number', 0));
+
+        $expectations = [
+            6 => ['m/2', 'n/(2m)'],
+            11 => ['32,000', '640TFLOPS'],
+            15 => ['12−1＝11秒', 'Cを2〜5秒'],
+            23 => ['500,000Hz', '300マイクロ秒'],
+            25 => ['40kHz', '25マイクロ秒'],
+        ];
+        foreach ($expectations as $questionNumber => $parts) {
+            $question = $items->get($questionNumber);
+            $this->assertNotNull($question, "Missing official q{$questionNumber}");
+            $explanation = (string) ($question['explanation'] ?? '');
+            foreach ($parts as $part) {
+                $this->assertStringContainsString($part, $explanation,
+                    "Missing worked step in official q{$questionNumber}");
+            }
+        }
+    }
+
     public function test_bundled_candidate_imports_as_draft_and_cannot_be_published_until_explicit_review(): void
     {
         $this->get(route('admin.question_packs.index'))->assertForbidden();
