@@ -26,6 +26,8 @@ jobs:
       - run: npm run build
       - name: Learning one-question pager client regression
         run: node --test tests/js/study-practice-one-question.test.mjs
+      - name: Learning session draft autosave client regression
+        run: node --test tests/js/learning-answer-autosave.test.mjs
       - name: PHP lint
         run: |
           php -l app/Http/Controllers/HomeController.php
@@ -114,6 +116,9 @@ jobs:
           php -l tests/Feature/PrimaryNavigationCompanionV510Test.php
           php -l tests/Feature/WorkspaceModeBarV541Test.php
           php -l app/Http/Controllers/AdaptiveLearningController.php
+          php -l app/Http/Controllers/AdaptiveLearningAnswerDraftController.php
+          php -l app/Services/AdaptiveLearningAnswerDraftService.php
+          php -l tests/Feature/AdaptiveLearningSessionDraftL3cTest.php
           php -l app/Services/AdaptiveLearningBankQueueService.php
           php -l app/Models/LearningRun.php
           php -l app/Models/LearningRunItem.php
@@ -351,6 +356,9 @@ jobs:
 
       - name: L3 Typed single-question multiple and numeric answer compatibility
         run: php artisan test tests/Feature/AdaptiveLearningTypedAnswersL3Test.php tests/Feature/QuestionPackPublicationReadinessL2Test.php tests/Feature/AdaptiveLearningSingleQuestionV5878Test.php
+
+      - name: L3-c session-scoped Learning autosave and old answer compatibility
+        run: php artisan test tests/Feature/AdaptiveLearningSessionDraftL3cTest.php tests/Feature/AdaptiveLearningSingleQuestionV5878Test.php tests/Feature/AdaptiveLearningTypedAnswersL3Test.php
 
       - name: L4 Cross-run scoped candidate evidence and diversified Bank queue
         run: php artisan test tests/Feature/AdaptiveLearningCrossRunCandidateL4Test.php tests/Feature/AdaptiveLearningCandidateQueueV5879Test.php tests/Feature/AdaptiveLearningEvaluationAdjustmentV5882Test.php tests/Feature/AdaptiveLearningTypedAnswersL3Test.php
