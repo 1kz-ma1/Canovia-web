@@ -39,18 +39,48 @@ class FullMigrationLedgerAuditTest(unittest.TestCase):
         self.assertEqual("FULL_MIGRATION_LEDGER_MATCH_NOT_RELEASE", result["code"])
         self.assertIs(result["release_authorized"], False)
         self.assertIs(result["production_database_modified"], False)
+        self.assertEqual(2, result["expected_count"])
+        self.assertEqual(2, result["applied_count"])
+        self.assertEqual(0, result["pending_count"])
+        self.assertEqual(0, result["other_pending_count"])
+        self.assertIs(result["forward_repair_pending"], False)
 
     def test_known_pending_migrations_require_human_review(self):
         result = compare_ledger({ONE, TWO, THREE}, parse_full_ledger(output([(ONE, 5), (TWO, 7)])))
         self.assertEqual("REVIEW_REQUIRED", result["result"])
         self.assertEqual("KNOWN_PENDING_MIGRATIONS", result["code"])
         self.assertIs(result["release_authorized"], False)
+        self.assertEqual(3, result["expected_count"])
+        self.assertEqual(2, result["applied_count"])
+        self.assertEqual(1, result["pending_count"])
+        self.assertEqual(0, result["other_pending_count"])
+        self.assertIs(result["forward_repair_pending"], True)
+        self.assertNotIn(THREE, json.dumps(result))
+
+    def test_other_pending_migrations_are_counted_separately(self):
+        pending_other = "2026_10_10_000000_another_pending_migration"
+        known_applied = parse_full_ledger(output([(ONE, 5), (TWO, 7)]))
+        result = compare_ledger({ONE, TWO, THREE, pending_other}, known_applied)
+        self.assertEqual("KNOWN_PENDING_MIGRATIONS", result["code"])
+        self.assertEqual(4, result["expected_count"])
+        self.assertEqual(2, result["applied_count"])
+        self.assertEqual(2, result["pending_count"])
+        self.assertEqual(1, result["other_pending_count"])
+        self.assertIs(result["forward_repair_pending"], True)
+        self.assertNotIn(pending_other, json.dumps(result))
+
+        result_without_repair = compare_ledger({ONE, TWO}, parse_full_ledger(output([(ONE, 5)])))
+        self.assertEqual(1, result_without_repair["pending_count"])
+        self.assertEqual(1, result_without_repair["other_pending_count"])
+        self.assertIs(result_without_repair["forward_repair_pending"], False)
 
     def test_unknown_applied_migrations_are_blocked(self):
         unknown = "2026_10_09_235958_removed_or_renamed_migration"
         result = compare_ledger({ONE}, parse_full_ledger(output([(ONE, 5), (unknown, 8)])))
         self.assertEqual("BLOCK", result["result"])
         self.assertEqual("UNKNOWN_APPLIED_MIGRATION", result["code"])
+        self.assertNotIn("pending_count", result)
+        self.assertNotIn(unknown, json.dumps(result))
 
     def test_empty_inventory_blocks(self):
         with self.assertRaises(InvalidLedger):
