@@ -16,6 +16,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 EXPECTED_DIR = REPO_ROOT / "database" / "migrations"
 MAX_INPUT_BYTES = 131072
 MAX_RECORDS = 4000
+
+# A fixed, reviewed migration identifier; never reflected in output.
+FORWARD_REPAIR_MIGRATION = "2026_10_09_235959_reconcile_p0_mysql_applied_constraints"
 VALID_MIGRATION = re.compile(r"^\d{4}_\d{2}_\d{2}_\d{6}_[a-z][a-z0-9_]*$")
 VALID_BATCH = re.compile(r"^[1-9][0-9]{0,8}$")
 
@@ -81,9 +84,21 @@ def compare_ledger(expected: set[str], applied: dict[str, int]) -> dict:
         return result("BLOCK", "LEDGER_INVALID")
     if set(applied) - expected:
         return result("BLOCK", "UNKNOWN_APPLIED_MIGRATION")
-    if expected - set(applied):
-        return result("REVIEW_REQUIRED", "KNOWN_PENDING_MIGRATIONS")
-    return result("REVIEW_REQUIRED", "FULL_MIGRATION_LEDGER_MATCH_NOT_RELEASE")
+
+    pending = expected - set(applied)
+    forward_repair_pending = FORWARD_REPAIR_MIGRATION in pending
+    # Output aggregate counts and one fixed boolean ONLY. No migration names,
+    # file paths, SQL values, or raw account/server details are emitted.
+    summary = {
+        "expected_count": len(expected),
+        "applied_count": len(applied),
+        "pending_count": len(pending),
+        "forward_repair_pending": forward_repair_pending,
+        "other_pending_count": len(pending) - int(forward_repair_pending),
+    }
+    if pending:
+        return {**result("REVIEW_REQUIRED", "KNOWN_PENDING_MIGRATIONS"), **summary}
+    return {**result("REVIEW_REQUIRED", "FULL_MIGRATION_LEDGER_MATCH_NOT_RELEASE"), **summary}
 
 
 def result(status: str, reason: str) -> dict:
