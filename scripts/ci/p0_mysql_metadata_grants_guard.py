@@ -25,22 +25,32 @@ def verify_grants(raw: str, database: str) -> bool:
     if not raw.isascii() or "\r" in raw or "\x00" in raw or not raw.endswith("\n"):
         return False
 
-    # MySQL SHOW GRANTS normally quotes identifiers using backticks.
-    permitted = {
-        ("USAGE", "*.*"): "usage",
-        ("REFERENCES", f"`{database}`.*"): "metadata",
-        ("SELECT", f"`{database}`.`migrations`"): "ledger",
-    }
+    # MySQL SHOW GRANTS can quote object names and account identifiers with
+    # either backticks or double quotes (e.g. under ANSI_QUOTES). Accept those
+    # *exact* forms only. Never normalize arbitrary SQL or strip quote chars.
+    permitted = {("USAGE", "*.*"): "usage"}
+    for quote in ("`", '"'):
+        permitted[("REFERENCES", f"{quote}{database}{quote}.*")] = "metadata"
+        permitted[("SELECT", f"{quote}{database}{quote}.{quote}migrations{quote}")] = "ledger"
+
     found = set()
+    seen_account = None
     for line in raw.splitlines():
         match = GRANT_LINE.fullmatch(line)
         if match is None:
             return False
         privilege, target, account = match.groups()
         # Reject WITH GRANT OPTION, roles, arbitrary targets, broad SELECT,
-        # and unknown user/account decorations. The actual account is not echoed.
-        if not re.fullmatch(r"`[A-Za-z0-9_%-]{1,64}`@`[A-Za-z0-9_%.:-]{1,255}`", account):
+        # cross-database access, mismatched accounts and unknown decorations.
+        # The current account is intentionally never written to output.
+        if not re.fullmatch(
+            r'([`"])[A-Za-z0-9_%-]{1,64}\\1@([`"])[A-Za-z0-9_%.:-]{1,255}\\2',
+            account,
+        ):
             return False
+        if seen_account is not None and account != seen_account:
+            return False
+        seen_account = account
         kind = permitted.get((privilege, target))
         if kind is None or kind in found:
             return False
