@@ -44,7 +44,7 @@ def verify_grants(raw: str, database: str) -> bool:
         # cross-database access, mismatched accounts and unknown decorations.
         # The current account is intentionally never written to output.
         if not re.fullmatch(
-            r'([`"])[A-Za-z0-9_%-]{1,64}\\1@([`"])[A-Za-z0-9_%.:-]{1,255}\\2',
+            r'([`"])[A-Za-z0-9_%-]{1,64}\1@([`"])[A-Za-z0-9_%.:-]{1,255}\2',
             account,
         ):
             return False
