@@ -4,6 +4,7 @@
 
 - [v0.5 architecture review candidate](development/ADAPTIVE_CONTEXT_PIPELINE_V05_ARCHITECTURE_REVIEW_2026_10_12.md): Shared Core + Domain Pipelines, Facts / Context / Capability contracts, policy and decisions. **Review proposal; not a runtime or billing change.**
 - [v0.5 non-destructive migration and acceptance plan](development/ADAPTIVE_CONTEXT_PIPELINE_V05_MIGRATION_ACCEPTANCE_2026_10_12.md): existing V53/V55/V58 reuse, phased gates, risk and security tests. **Not an active implementation backlog.**
+- [v0.5 Phase 0 static baseline audit](development/ADAPTIVE_CONTEXT_PIPELINE_V05_PHASE0_STATIC_AUDIT_2026_10_12.md): verified code paths, G1–G8 risk distinctions and prioritized A20/A01/A06/A04 regression gates. **Static only; runtime and CI results are not certified.**
 
 ## Parallel execution lanes (2026-10-09)
 
