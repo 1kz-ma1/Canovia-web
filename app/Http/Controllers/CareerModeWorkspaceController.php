@@ -85,11 +85,13 @@ final class CareerModeWorkspaceController extends Controller
             'careerAdaptiveAction' => $adaptiveAction,
             'intelligencePresentation' => $presentation,
             'intelligenceHistory' => $history->forPlan(
+                $request,
                 $plan,
                 IntelligenceDomain::Career,
             ),
             'hasCareerSignal' => $hasCareerSignal,
             'intelligenceStateChange' => $stateChanges->latestForPlan(
+                $request,
                 $plan,
                 IntelligenceDomain::Career,
             ),
