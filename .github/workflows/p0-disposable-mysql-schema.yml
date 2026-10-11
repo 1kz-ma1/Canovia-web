@@ -1,0 +1,241 @@
+name: P0 Disposable MySQL Migration Integrity
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'database/migrations/**'
+      - 'tests/Feature/ProductionMysqlSchemaP0Test.php'
+      - 'scripts/sql/p0_mysql_readonly_schema_inventory.sql'
+      - 'scripts/ci/p0_mysql_readonly_schema_inventory_check.php'
+      - 'scripts/ci/p0_mysql_inventory_offline_triage.py'
+      - 'tests/ci/test_p0_mysql_inventory_offline_triage.py'
+      - 'scripts/ci/p0_mysql_inventory_tsv_import.py'
+      - 'tests/ci/test_p0_mysql_inventory_tsv_import.py'
+      - 'scripts/sql/p0_mysql_readonly_full_migration_ledger.sql'
+      - 'scripts/ci/p0_mysql_full_ledger_offline_check.py'
+      - 'scripts/ci/p0_mysql_disposable_restore_smoke.sh'
+      - 'scripts/ops/p0_mysql_readonly_preflight.php'
+      - 'scripts/ops/p0_mysql_operator_select_only_collect.sh'
+      - 'scripts/ci/p0_mysql_metadata_grants_guard.py'
+      - 'tests/ci/test_p0_mysql_metadata_grants_guard.py'
+      - 'scripts/ci/p0_mysql_metadata_visibility_smoke.sh'
+      - 'scripts/ops/p0_aiven_zero_grants_payload.py'
+      - 'tests/ci/test_p0_aiven_zero_grants_payload.py'
+      - 'scripts/sql/p0_mysql_select_only_data_preflight.sql'
+      - 'scripts/ci/p0_mysql_select_only_data_preflight_import.py'
+      - 'tests/ci/test_p0_mysql_select_only_data_preflight_import.py'
+      - 'scripts/sql/p0_mysql_disposable_full_schema_fingerprint.sql'
+      - 'tests/ci/test_p0_mysql_full_ledger_offline_check.py'
+      - '.github/workflows/p0-disposable-mysql-schema.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mysql-p0-schema-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        mysql_series: ['8.0', '8.4']
+    name: "P0 schema integrity (MySQL ${{ matrix.mysql_series }})"
+    services:
+      mysql:
+        image: mysql:${{ matrix.mysql_series }}
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only-root-password
+          MYSQL_DATABASE: canovia_p0_ci
+          MYSQL_USER: canovia_ci
+          MYSQL_PASSWORD: ci-only-ephemeral-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_DATABASE: canovia_p0_ci
+      DB_USERNAME: canovia_ci
+      DB_PASSWORD: ci-only-ephemeral-password
+      DB_URL: ''
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      CANOVIA_P0_DISPOSABLE_MYSQL_CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, mbstring, xml
+          coverage: none
+      - name: Assert isolated MySQL major/minor engine for this matrix job
+        env:
+          MYSQL_PWD: ci-only-ephemeral-password
+          EXPECTED_MYSQL_SERIES: ${{ matrix.mysql_series }}
+        run: |
+          set -euo pipefail
+          # Hard-pin this check to the disposable CI container and account.
+          # This is not an Aiven connection or a production version probe.
+          version="$(mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=canovia_ci --database=canovia_p0_ci \
+            --batch --raw --skip-column-names -e 'SELECT VERSION()')"
+          case "$version" in
+            "${EXPECTED_MYSQL_SERIES}."*) echo "p0_disposable_mysql_engine_${EXPECTED_MYSQL_SERIES}: pass" ;;
+            *) echo 'p0_disposable_mysql_engine_version: blocked' >&2; exit 1 ;;
+          esac
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Lint repair migrations and MySQL test
+        run: |
+          php -l database/migrations/2026_10_04_000200_create_intelligence_decision_traces_table.php
+          php -l database/migrations/2026_10_08_230000_create_learning_answer_evaluation_adjustments.php
+          php -l database/migrations/2026_10_09_235959_reconcile_p0_mysql_applied_constraints.php
+          php -l tests/Feature/ProductionMysqlSchemaP0Test.php
+      - name: Verify offline schema and migration-ledger decision matrix
+        run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_inventory_offline_triage.py' -v
+      - name: Verify operator-local MySQL TSV import boundary and error redaction
+        run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_inventory_tsv_import.py' -v
+      - name: Verify full Laravel migration ledger offline safety and redaction
+        run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_full_ledger_offline_check.py' -v
+      - name: Validate the operator-only read-only collector without any connection
+        run: |
+          set -euo pipefail
+          bash -n scripts/ops/p0_mysql_operator_select_only_collect.sh
+          # CI must never be accepted as a production operator.
+          set +e
+          output="$(CANOVIA_P0_OPERATOR_APPROVED=YES \
+            CANOVIA_P0_TARGET_VERIFIED=YES CANOVIA_P0_GRANTS_REVIEWED=YES \
+            bash scripts/ops/p0_mysql_operator_select_only_collect.sh 2>&1)"
+          rc=$?
+          set -e
+          test "$rc" -eq 2
+          test "$output" = 'P0_READONLY_COLLECT: BLOCK (CI_NOT_AN_OPERATOR)'
+          echo 'p0_operator_collector_disabled_in_ci: pass'
+      - name: Verify zero-grant Aiven request body (offline only; no Aiven calls)
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/ci -p 'test_p0_aiven_zero_grants_payload.py' -v
+          python3 scripts/ops/p0_aiven_zero_grants_payload.py --username canovia_p0_audit \
+            | python3 -c 'import json,sys; b=json.load(sys.stdin); assert b == {"username":"canovia_p0_audit","mysql_grants":[]}'
+      - name: Full MySQL migrations from an empty disposable database
+        run: php artisan migrate --force --no-interaction
+      - name: Repeat all MySQL migrations (idempotency)
+        run: php artisan migrate --force --no-interaction
+      - name: Reproduce interrupted MySQL DDL and verify constraint repair
+        run: php artisan test tests/Feature/ProductionMysqlSchemaP0Test.php --fail-on-skipped
+      - name: Final MySQL migration rerun after interrupted-DDL recovery
+        run: php artisan migrate --force --no-interaction
+      - name: Verify narrow metadata visibility, denied user data reads and grant fail-closed
+        env:
+          CANOVIA_P0_DISPOSABLE_ROOT_PASSWORD: ci-only-root-password
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_metadata_grants_guard.py' -v
+          bash -n scripts/ci/p0_mysql_metadata_visibility_smoke.sh
+          bash scripts/ci/p0_mysql_metadata_visibility_smoke.sh
+
+      - name: Verify SELECT-only production schema inventory on disposable MySQL
+        run: |
+          php -l scripts/ci/p0_mysql_readonly_schema_inventory_check.php
+          php scripts/ci/p0_mysql_readonly_schema_inventory_check.php
+      - name: End-to-end SELECT TSV import and fail-closed offline triage on disposable MySQL
+        env:
+          MYSQL_PWD: ci-only-ephemeral-password
+        run: |
+          set -euo pipefail
+          # Only this disposable MySQL service is used; no production DB access.
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=canovia_ci --database=canovia_p0_ci \
+            --batch --raw --skip-column-names \
+            < scripts/sql/p0_mysql_readonly_schema_inventory.sql \
+            | python3 scripts/ci/p0_mysql_inventory_tsv_import.py --input - \
+            > "$RUNNER_TEMP/p0-sanitized-schema.json"
+          python3 scripts/ci/p0_mysql_inventory_offline_triage.py \
+            --report "$RUNNER_TEMP/p0-sanitized-schema.json"
+      - name: Compare full MySQL ledger with all checked-in migration files (disposable CI only)
+        env:
+          MYSQL_PWD: ci-only-ephemeral-password
+        run: |
+          set -euo pipefail
+          # This is the throwaway MySQL 8 GitHub Actions service only.
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=canovia_ci --database=canovia_p0_ci \
+            --batch --raw --skip-column-names \
+            < scripts/sql/p0_mysql_readonly_full_migration_ledger.sql \
+            | python3 scripts/ci/p0_mysql_full_ledger_offline_check.py --input - \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["result"]=="REVIEW_REQUIRED" and d["code"]=="FULL_MIGRATION_LEDGER_MATCH_NOT_RELEASE" and d["release_authorized"] is False'
+
+      - name: Verify synthetic MySQL dump restoration in a second disposable schema
+        env:
+          CANOVIA_P0_DISPOSABLE_ROOT_PASSWORD: ci-only-root-password
+        run: |
+          set -euo pipefail
+          bash -n scripts/ci/p0_mysql_disposable_restore_smoke.sh
+          bash scripts/ci/p0_mysql_disposable_restore_smoke.sh
+
+      - name: Verify operator read-only preflight guard and sanitized verdict
+        env:
+          CANOVIA_P0_READONLY_PREFLIGHT: '1'
+          CANOVIA_P0_EXPECTED_DB_HOST: 127.0.0.1
+          CANOVIA_P0_EXPECTED_DB_NAME: canovia_p0_ci
+        run: |
+          set -euo pipefail
+          php -l scripts/ops/p0_mysql_readonly_preflight.php
+          php scripts/ops/p0_mysql_readonly_preflight.php --check \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["result"]=="REVIEW_REQUIRED" and d["code"]=="PREFLIGHT_VALID_NOT_RELEASE_AUTHORIZATION" and d["release_authorized"] is False and d["production_database_modified"] is False and d["database_identity_independently_verified"] is False'
+          set +e
+          blocked="$(env -u CANOVIA_P0_READONLY_PREFLIGHT php scripts/ops/p0_mysql_readonly_preflight.php --check)"
+          rc=$?
+          set -e
+          test "$rc" -eq 2
+          printf '%s\n' "$blocked" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["result"]=="BLOCK" and d["code"]=="PREFLIGHT_OPERATOR_GUARD_REJECTED" and d["release_authorized"] is False'
+          # Even explicit opt-in cannot target any non-CI database/host.
+          set +e
+          wrong_target="$(DB_DATABASE=defaultdb php scripts/ops/p0_mysql_readonly_preflight.php --check)"
+          wrong_rc=$?
+          set -e
+          test "$wrong_rc" -eq 2
+          printf '%s\n' "$wrong_target" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["result"]=="BLOCK" and d["code"]=="PREFLIGHT_OPERATOR_GUARD_REJECTED" and d["release_authorized"] is False'
+
+
+      - name: Validate standalone SELECT-only data preflight on disposable MySQL and corrupt restore
+        env:
+          MYSQL_PWD: ci-only-ephemeral-password
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_select_only_data_preflight_import.py' -v
+          # Source database: real MySQL 8 SELECT-only pipeline; no Laravel boot.
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=canovia_ci --database=canovia_p0_ci \
+            --batch --raw --skip-column-names \
+            < scripts/sql/p0_mysql_select_only_data_preflight.sql \
+            | python3 scripts/ci/p0_mysql_select_only_data_preflight_import.py --input - \
+            | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["result"]=="REVIEW_REQUIRED" and r["codes"]==["SELECT_ONLY_DATA_PREFLIGHT_MATCH_NOT_RELEASE"] and r["release_authorized"] is False'
+          # Negative control: damage ONLY the already-restored, throwaway CI
+          # second schema (whose test FK was dropped in the prior stage).
+          MYSQL_PWD=ci-only-root-password mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=root --database=canovia_p0_restore_ci --batch --raw \
+            -e "ALTER TABLE learning_answer_evaluation_adjustments DROP INDEX learning_eval_adjustment_event_unique; INSERT INTO learning_answer_evaluation_adjustments (learning_answer_event_id,reason,effect,created_at) VALUES (987654321,'ci_preflight','exclude_from_recommendations',NOW()),(987654321,'ci_preflight','exclude_from_recommendations',NOW())"
+          set +e
+          denied="$(MYSQL_PWD=ci-only-root-password mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=root --database=canovia_p0_restore_ci \
+            --batch --raw --skip-column-names \
+            < scripts/sql/p0_mysql_select_only_data_preflight.sql \
+            | python3 scripts/ci/p0_mysql_select_only_data_preflight_import.py --input -)"
+          rc=$?
+          set -e
+          test "$rc" -eq 2
+          printf '%s\n' "$denied" \
+            | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["result"]=="BLOCK" and "ORPHANED_REFERENCES_PRESENT" in r["codes"] and "DUPLICATE_UNIQUE_VALUES_PRESENT" in r["codes"] and r["release_authorized"] is False'
+          echo "p0_select_only_data_preflight_and_corruption_negative: pass"

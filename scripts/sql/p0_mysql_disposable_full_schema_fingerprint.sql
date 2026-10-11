@@ -1,0 +1,36 @@
+-- P0 disposable CI: MySQL 8 structural fingerprint for source/restore parity.
+-- READ ONLY. Run the exact same SQL once per separate local CI schema.
+-- Table names/columns/constraints may expose application internals: output
+-- stays on the private disposable CI runner and must never be uploaded.
+-- Schema names are intentionally excluded so independent copies compare.
+SELECT 'table', TABLE_NAME, TABLE_TYPE, COALESCE(ENGINE, ''), COALESCE(TABLE_COLLATION, '')
+FROM information_schema.TABLES
+WHERE TABLE_SCHEMA = DATABASE()
+ORDER BY TABLE_NAME;
+
+SELECT 'column', TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, COLUMN_TYPE,
+       IS_NULLABLE, CASE WHEN COLUMN_DEFAULT IS NULL THEN 'NULL'
+                         ELSE CONCAT('VALUE:', COLUMN_DEFAULT) END,
+       EXTRA, COLUMN_KEY, COALESCE(COLLATION_NAME, '')
+FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = DATABASE()
+ORDER BY TABLE_NAME, ORDINAL_POSITION;
+
+SELECT 'foreign_key', k.TABLE_NAME, k.CONSTRAINT_NAME, k.ORDINAL_POSITION,
+       k.COLUMN_NAME, k.REFERENCED_TABLE_NAME, k.REFERENCED_COLUMN_NAME,
+       r.UPDATE_RULE, r.DELETE_RULE
+FROM information_schema.KEY_COLUMN_USAGE AS k
+INNER JOIN information_schema.REFERENTIAL_CONSTRAINTS AS r
+  ON r.CONSTRAINT_SCHEMA = k.CONSTRAINT_SCHEMA
+ AND r.TABLE_NAME = k.TABLE_NAME
+ AND r.CONSTRAINT_NAME = k.CONSTRAINT_NAME
+WHERE k.TABLE_SCHEMA = DATABASE()
+ AND k.REFERENCED_TABLE_NAME IS NOT NULL
+ORDER BY k.TABLE_NAME, k.CONSTRAINT_NAME, k.ORDINAL_POSITION;
+
+SELECT 'index', TABLE_NAME, INDEX_NAME, NON_UNIQUE, SEQ_IN_INDEX,
+       COALESCE(COLUMN_NAME, ''), COALESCE(SUB_PART, 0),
+       INDEX_TYPE, IS_VISIBLE
+FROM information_schema.STATISTICS
+WHERE TABLE_SCHEMA = DATABASE()
+ORDER BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX;
