@@ -120,6 +120,9 @@ final class McpReadOnlyResourceTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'result.tools')
             ->assertJsonPath('result.tools.0.name', McpReadOnlyContextTool::NAME)
+            ->assertJsonCount(1, 'result.tools.0.securitySchemes')
+            ->assertJsonPath('result.tools.0.securitySchemes.0.type', 'oauth2')
+            ->assertJsonPath('result.tools.0.securitySchemes.0.scopes', ['canovia.development.read'])
             ->assertJsonPath('result.tools.0.annotations.readOnlyHint', true)
             ->assertJsonPath('result.tools.0.inputSchema.additionalProperties', false);
 
