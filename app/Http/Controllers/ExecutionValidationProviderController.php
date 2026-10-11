@@ -103,23 +103,23 @@ final class ExecutionValidationProviderController extends Controller
         ) {
             $activity = $activities->record(
                 providerKey:
-                ExecutionLaunchResolver::VALIDATION_STUDY_PRACTICE_PROVIDER,
-            capability: ExecutionCapability::STUDY_PRACTICE,
-            type: 'study_practice_completed',
-            title: 'External Practice result',
-            status: 'completed',
-            metrics: [
-                'score_percent' => (int) $validated['score_percent'],
-                'strengths' => $strengths,
-                'weaknesses' => $weaknesses,
-                'weakness_topics' => $weaknesses,
-            ],
-            metadata: [
-                'validation_surface' => true,
-            ],
-            externalKey: (string) $validated['activity_key'],
-            userId: (int) $request->user()->id,
-            completedAt: now(),
+                    ExecutionLaunchResolver::VALIDATION_STUDY_PRACTICE_PROVIDER,
+                capability: ExecutionCapability::STUDY_PRACTICE,
+                type: 'study_practice_completed',
+                title: 'External Practice result',
+                status: 'completed',
+                metrics: [
+                    'score_percent' => (int) $validated['score_percent'],
+                    'strengths' => $strengths,
+                    'weaknesses' => $weaknesses,
+                    'weakness_topics' => $weaknesses,
+                ],
+                metadata: [
+                    'validation_surface' => true,
+                ],
+                externalKey: (string) $validated['activity_key'],
+                userId: (int) $request->user()->id,
+                completedAt: now(),
                 durationSeconds: $durationMinutes !== null
                     ? $durationMinutes * 60
                     : null,
