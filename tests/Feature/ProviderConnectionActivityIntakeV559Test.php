@@ -377,8 +377,9 @@ class ProviderConnectionActivityIntakeV559Test extends TestCase
         $firstId = (int) $first->json('activity_id');
         $firstEvidenceId = (int) $first->json('evidence_id');
 
+        // Preserve the original practice classification so Provider selection
+        // is valid; only the Task identity differs for this guard test.
         $differentTask = $task->replicate();
-        $differentTask->title = 'Another distinct practice task';
         $differentTask->save();
         $differentContext = $this->issueContext(
             $user, $plan, $differentTask, $connectionId,
