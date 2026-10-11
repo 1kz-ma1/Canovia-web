@@ -27,11 +27,10 @@ jobs:
           extensions: mbstring, xml, ctype, tokenizer, openssl
           tools: composer:v2
           coverage: none
-      - name: Resolve locked JWT package using Composer in clean CI
-        run: composer update firebase/php-jwt --no-scripts --no-plugins --no-interaction --no-progress --prefer-dist
-      - name: Publish exactly the resolved package and Composer content hash for review
+      - name: Install reviewed locked JWT dependencies
         run: |
-          php -r '$lock=json_decode(file_get_contents("composer.lock"),true); $p=array_values(array_filter($lock["packages"],fn($p)=>$p["name"]==="firebase/php-jwt")); echo "CANOVIA_COMPOSER_LOCK_META_BEGIN",json_encode(["hash"=>$lock["content-hash"],"package"=>$p],JSON_UNESCAPED_SLASHES),"CANOVIA_COMPOSER_LOCK_META_END\n";'
+          composer validate --strict --no-interaction
+          composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
       - name: PHP syntax and signed token regression
         run: |
           php -l app/Services/McpAuth0JwtTokenVerifier.php
