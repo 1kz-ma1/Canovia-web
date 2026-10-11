@@ -95,3 +95,37 @@ Official references:
 - https://developers.openai.com/plugins/build/auth
 
 **Pending:** A human-created Free Auth0 test tenant and public domain, actual domain-specific metadata, original Auth0 client registration/claim proof, reviewed JWT cryptographic verification, per-Plan synthetic consent, staging rollout approval, and observed ChatGPT E2E. None is claimed complete.
+
+
+## 2026-10-12 VERIFIED: actual owner's Auth0 JP Free evaluation tenant (public metadata only)
+
+The owner created and disclosed the **public** evaluation domain `canovia-mcp-dev.jp.auth0.com`. Verified **actual public provider responses** from an isolated GitHub Actions job. This supersedes the historical "no tenant created" observations above, which were true when first written. No Auth0 Management API credentials were used, no client or API was created by the agent, and no private user identities, bearer tokens or Canovia resources were touched.
+
+- Observation PR: [#464](https://github.com/1kz-ma1/Canovia-web/pull/464); GitHub CI [38152126711](https://github.com/1kz-ma1/Canovia-web/actions/runs/38152126711), original [38152021249](https://github.com/1kz-ma1/Canovia-web/actions/runs/38152021249).
+- Verified issuer exactly `https://canovia-mcp-dev.jp.auth0.com/`.
+- OIDC discovery `/.well-known/openid-configuration`: **PASS** for exact issuer, tenant-owned HTTPS authorization/token/JWKS endpoints, PKCE `S256`, authorization response `iss` per RFC 9207, and available `none` plus `private_key_jwt` token endpoint methods.
+- OAuth AS discovery `/.well-known/oauth-authorization-server`: **accessible**, issuer exact, `S256` advertised. `registration_endpoint` present; **not proof that unauthenticated DCR is enabled/allowed**, nor that a real ChatGPT client has registered.
+- Public JWKS `/.well-known/jwks.json`: at least one RSA key advertises `alg=RS256`. This proves a verification key is discoverable; it **does not validate any token** or authorize the Laravel MCP server.
+- `client_id_metadata_document_supported`: **NOT ADVERTISED** in either observed discovery endpoint. Cannot claim CIMD is enabled or unsupported without checking actual tenant entitlement and registration. Auth0 Management API supports explicit `/api/v2/clients/cimd/register` registration separately.
+- `introspection_endpoint`: **NOT ADVERTISED**. Existing Canovia `McpAccessTokenIntrospector` cannot be declared compatible with Auth0 on the evidence. A separate signed JWT/JWKS verifier remains a necessary candidate, behind tests and an independent security review.
+- `scopes_supported`: standard OIDC scopes, but **does not advertise `canovia.development.read`**. This is not proof the custom API cannot support that scope; the tenant's MCP-specific API and permission still need to be created/configured and tested with real tokens.
+- Resource Parameter Compatibility Profile: **NOT VERIFYABLE FROM PUBLIC METADATA**; operator must check tenant Advanced settings. The token must be bound to `https://canovia-mcp-staging.onrender.com/api/mcp`.
+- `actual_chatgpt_client_id`, `iss+sub` across separate account-link and ChatGPT clients, token `aud`, signature, scope, lifetime/revocation and real `tools/call`: **NOT TESTED**.
+
+### Concrete owner setup, isolated Auth0 Free tenant only
+
+**No production changes or external MCP exposure.** Settings apply only to the owner-created isolated JP evaluation tenant. Keep tenant on Free; **do not** add payment methods or buy addons. Record screenshots of dashboard settings if any menu differs, avoiding private tokens/credentials.
+
+1. [Auth0 Dashboard](https://manage.auth0.com/) → select `canovia-mcp-dev` → **Settings → Advanced**. Enable **Resource Parameter Compatibility Profile** (RFC 8707 `resource` → correct API audience). Save. This is required for ChatGPT to ask for tokens bound to the specified MCP resource URI; keep DCR and third-party features disabled unless separate approval confirms the needed client-registration path. Source: https://support.auth0.com/center/s/article/mcp-audience-error-with-auth0
+2. **Applications → APIs → Create API**. Set **Name** = `Canovia MCP Staging Read`; **Identifier** = `https://canovia-mcp-staging.onrender.com/api/mcp` **exactly** (without a trailing slash; immutable once created); signing algorithm = **RS256**; JWT profile = **Auth0** initially (re-evaluate against actual audience/client/scope claims); user access policy = **Allow via client-grant** where available (explicit per-client API permission; never default allow-all). Auth0 does not need to contact the staged MCP service when this API identifier is registered. Source: https://auth0.com/docs/get-started/auth0-overview/set-up-apis
+3. In the new API **Settings**, cap **Maximum Access Token Lifetime** to **3600 seconds or less** to align with the current strict Canovia token lifespan. **Enable RBAC** for scoped access and **Add Permissions in the Access Token** only if that is necessary and understood; the Canovia verifier must still validate the **literal `scope` claim** and must never substitute permission names from unrelated claims without design review. Source: https://auth0.com/docs/get-started/apis/api-settings
+4. In the API **Permissions**, add **`canovia.development.read`**, description `Read an explicitly approved personal Development Plan`. Do **not** add mutation or admin scopes. Source: https://auth0.com/docs/get-started/apis/add-api-permissions
+5. In **Settings → Advanced**, check whether **Client ID Metadata Documents (CIMD)** can be enabled on this Free tenant. Do not blindly open anonymous Dynamic Client Registration (DCR) as a fallback: third-party clients also require an explicit API client grant. Public discovery omitted the CIMD flag, so this remains unresolved. Do **not** perform ChatGPT client registration until the OAuth client-ID mapping, account-link client and security gates are reviewed.
+6. Share only which items are set/enabled (not credentials), or use a settings screenshot with secrets hidden. No Auth0 API/client secret, JWT access token, user password, management token, refresh token, admin invite, or fake Plan data is needed at this step.
+
+### Remaining engineering work and acceptance
+
+- Implement and independently review JWT/JWKS validation for access tokens with **exact** issuer, checked signature/RS256/KID and refresh/key-rotation safety, true OAuth client identity, immutable `iss+sub`, audience policy, `canovia.development.read`, `nbf/iat/exp` <= 3600 seconds; strict negative tests. Do not relax Canovia's one-audience rule based on a mere Auth0 OIDC token with `/userinfo`. If actual requested token has two audiences, stop for a separate security model decision.
+- Validate CIMD or restricted pre-registration end to end with the actual ChatGPT OAuth client and exact callback. `registration_endpoint` on public metadata is not enough.
+- Independently verify and approve Canovia isolated staged service's public login/OAuth/MCP gates, exact deployed SHA, synthetic local actor linking and per-Plan permission. The existing Free stage DB expires on 2026-11-08 UTC.
+- **Actual ChatGPT E2E remains NOT DONE**. The public OAuth and JWKS checks are **PASS**, but real ChatGPT `tools/list`, `tools/call` and revocation behavior are still unknown.
