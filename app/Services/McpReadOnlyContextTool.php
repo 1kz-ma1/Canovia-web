@@ -113,6 +113,13 @@ final class McpReadOnlyContextTool
                 'required' => ['plan_id'],
                 'additionalProperties' => false,
             ],
+            // ChatGPT requires explicit per-tool OAuth metadata for linking UI.
+            // This is declarative only; the resource still verifies bearer,
+            // issuer, audience, client ID, scope and Plan consent on each call.
+            'securitySchemes' => [[
+                'type' => 'oauth2',
+                'scopes' => [McpProtectedResourceConfiguration::READ_SCOPE],
+            ]],
             'annotations' => [
                 'readOnlyHint' => true,
                 'destructiveHint' => false,
