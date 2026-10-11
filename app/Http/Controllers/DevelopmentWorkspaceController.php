@@ -328,6 +328,7 @@ final class DevelopmentWorkspaceController extends Controller
             'intelligenceHistory' => $legacyCreative
                 ? []
                 : $history->forPlan(
+                    $request,
                     $plan,
                     IntelligenceDomain::Development,
                 ),
@@ -361,6 +362,7 @@ final class DevelopmentWorkspaceController extends Controller
             'intelligenceStateChange' => $legacyCreative
                 ? null
                 : $stateChanges->latestForPlan(
+                    $request,
                     $plan,
                     IntelligenceDomain::Development,
                 ),
