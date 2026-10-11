@@ -166,7 +166,7 @@ final class McpAuth0JwtTokenVerifierTest extends TestCase
     {
         $this->fakeJwks(['keys' => [$this->jwk]]);
         $claims = $this->validClaims();
-        $this->assertNull($this->verifier()->verify(JWT::encode($claims, 'synthetic-hmac-secret', 'HS256', self::TOKEN_KID)));
+        $this->assertNull($this->verifier()->verify(JWT::encode($claims, str_repeat('x', 64), 'HS256', self::TOKEN_KID)));
 
         $token = $this->token();
         [$header, $payload, $sig] = explode('.', $token);
