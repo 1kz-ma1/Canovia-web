@@ -119,19 +119,19 @@ final class ProviderActivityIntakeService
         ): ExecutionActivity {
             $activity = $this->activities->record(
                 providerKey: (string) $connection->provider_key,
-            capability: $context->capability,
-            type: $type,
-            title: $title,
-            status: $status,
-            metrics: $metrics,
-            metadata: [
-                'intake_schema_version' => '1.0',
-                'provider_connection_id' => (int) $connection->id,
-            ],
-            externalKey: $externalKey,
-            userId: (int) $connection->user_id,
-            startedAt: $startedAt,
-            completedAt: $completedAt,
+                capability: $context->capability,
+                type: $type,
+                title: $title,
+                status: $status,
+                metrics: $metrics,
+                metadata: [
+                    'intake_schema_version' => '1.0',
+                    'provider_connection_id' => (int) $connection->id,
+                ],
+                externalKey: $externalKey,
+                userId: (int) $connection->user_id,
+                startedAt: $startedAt,
+                completedAt: $completedAt,
                 durationSeconds: $durationSeconds,
             );
 
