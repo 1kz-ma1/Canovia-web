@@ -55,3 +55,38 @@ jobs:
               print("public_discovery_fetch_class=" + type(e).__name__)
               raise SystemExit(1)
           PY
+      - name: Inspect public OAuth AS discovery and JWKS shape only
+        continue-on-error: true
+        run: |
+          python3 - <<'PY'
+          import json
+          import urllib.error
+          import urllib.request
+
+          domain = "canovia-mcp-dev.jp.auth0.com"
+          base = "https://" + domain
+          for label, path in (
+              ("oauth_authorization_server", "/.well-known/oauth-authorization-server"),
+              ("jwks", "/.well-known/jwks.json"),
+          ):
+              req = urllib.request.Request(base + path, headers={"Accept": "application/json"})
+              try:
+                  with urllib.request.urlopen(req, timeout=8) as response:
+                      body = response.read(32769)
+                      if len(body) > 32768:
+                          raise ValueError("public_response_too_large")
+                      payload = json.loads(body)
+                  if label == "jwks":
+                      keys = payload.get("keys", [])
+                      print(json.dumps({"source": label, "public_keys_present": bool(keys),
+                              "rs256_advertised": any(k.get("kty") == "RSA" and k.get("alg") == "RS256" for k in keys if isinstance(k, dict))}))
+                  else:
+                      print(json.dumps({"source": label, "issuer_exact": payload.get("issuer") == base + "/",
+                          "cimd_flag": payload.get("client_id_metadata_document_supported", "not_advertised"),
+                          "dcr_endpoint_advertised": isinstance(payload.get("registration_endpoint"), str),
+                          "pkce_s256_advertised": "S256" in payload.get("code_challenge_methods_supported", [])}))
+              except urllib.error.HTTPError as exc:
+                  print(json.dumps({"source": label, "status": "http_" + str(exc.code)}))
+              except Exception as exc:
+                  print(json.dumps({"source": label, "status": type(exc).__name__}))
+          PY
