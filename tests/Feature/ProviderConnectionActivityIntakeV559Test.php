@@ -363,6 +363,47 @@ class ProviderConnectionActivityIntakeV559Test extends TestCase
         $this->assertDatabaseCount('task_evidences', 2);
     }
 
+    public function test_rejected_task_reassociation_rolls_back_activity_update(): void
+    {
+        [$user, $plan, $task] = $this->studyContext();
+        [$connectionId, $secret] = $this->createConnection($user);
+        $originalContext = $this->issueContext($user, $plan, $task, $connectionId);
+
+        $first = $this->signedActivityRequest(
+            $connectionId,
+            $secret,
+            $this->practicePayload($originalContext, 'reassociation-rejected-key', 65),
+        )->assertStatus(202);
+        $firstId = (int) $first->json('activity_id');
+        $firstEvidenceId = (int) $first->json('evidence_id');
+
+        $differentTask = $task->replicate();
+        $differentTask->title = 'Another distinct practice task';
+        $differentTask->save();
+        $differentContext = $this->issueContext(
+            $user, $plan, $differentTask, $connectionId,
+        );
+
+        $this->signedActivityRequest(
+            $connectionId,
+            $secret,
+            $this->practicePayload($differentContext, 'reassociation-rejected-key', 99),
+        )
+            ->assertStatus(422)
+            ->assertJson(['status' => 'invalid_activity']);
+
+        $activity = ExecutionActivity::query()->findOrFail($firstId);
+        $this->assertSame((int) $task->id, (int) $activity->task_id);
+        $this->assertSame($firstEvidenceId, (int) $activity->task_evidence_id);
+        $this->assertSame(65, data_get($activity->metrics, 'score_percent'));
+        $this->assertSame(
+            65,
+            data_get(TaskEvidence::query()->findOrFail($firstEvidenceId)->metadata, 'score_percent'),
+        );
+        $this->assertDatabaseCount('execution_activities', 1);
+        $this->assertDatabaseCount('task_evidences', 1);
+    }
+
     public function test_invalid_signature_and_stale_timestamp_are_rejected_before_activity_persistence(): void
     {
         [$user, $plan, $task] = $this->studyContext();
