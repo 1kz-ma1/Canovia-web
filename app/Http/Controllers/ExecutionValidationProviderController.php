@@ -12,6 +12,7 @@ use App\Services\ExecutionResolver;
 use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 final class ExecutionValidationProviderController extends Controller
 {
@@ -90,31 +91,42 @@ final class ExecutionValidationProviderController extends Controller
             ? (int) $validated['duration_minutes']
             : null;
 
-        $activity = $activities->record(
-            providerKey:
-                ExecutionLaunchResolver::VALIDATION_STUDY_PRACTICE_PROVIDER,
-            capability: ExecutionCapability::STUDY_PRACTICE,
-            type: 'study_practice_completed',
-            title: 'External Practice result',
-            status: 'completed',
-            metrics: [
-                'score_percent' => (int) $validated['score_percent'],
-                'strengths' => $strengths,
-                'weaknesses' => $weaknesses,
-                'weakness_topics' => $weaknesses,
-            ],
-            metadata: [
-                'validation_surface' => true,
-            ],
-            externalKey: (string) $validated['activity_key'],
-            userId: (int) $request->user()->id,
-            completedAt: now(),
-            durationSeconds: $durationMinutes !== null
-                ? $durationMinutes * 60
-                : null,
-        );
+        // Activity and Evidence must commit or roll back together.
+        $linked = DB::transaction(function () use (
+            $activities,
+            $validated,
+            $strengths,
+            $weaknesses,
+            $request,
+            $durationMinutes,
+            $task,
+        ) {
+            $activity = $activities->record(
+                providerKey:
+                    ExecutionLaunchResolver::VALIDATION_STUDY_PRACTICE_PROVIDER,
+                capability: ExecutionCapability::STUDY_PRACTICE,
+                type: 'study_practice_completed',
+                title: 'External Practice result',
+                status: 'completed',
+                metrics: [
+                    'score_percent' => (int) $validated['score_percent'],
+                    'strengths' => $strengths,
+                    'weaknesses' => $weaknesses,
+                    'weakness_topics' => $weaknesses,
+                ],
+                metadata: [
+                    'validation_surface' => true,
+                ],
+                externalKey: (string) $validated['activity_key'],
+                userId: (int) $request->user()->id,
+                completedAt: now(),
+                durationSeconds: $durationMinutes !== null
+                    ? $durationMinutes * 60
+                    : null,
+            );
 
-        $linked = $activities->linkToTask($activity, $task);
+            return $activities->linkToTask($activity, $task);
+        }, 3);
 
         $studyActions->tryRefresh($plan, now());
 

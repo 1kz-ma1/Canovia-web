@@ -1,0 +1,37 @@
+name: Adaptive Context A20 Activity Identity
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - app/Services/ExecutionActivityService.php
+      - app/Services/ProviderActivityIntakeService.php
+      - app/Http/Controllers/ExecutionValidationProviderController.php
+      - tests/Feature/ProviderConnectionActivityIntakeV559Test.php
+      - tests/Feature/ExecutionActivityIntegrationV558Test.php
+      - .github/workflows/adaptive-context-a20-identity.yml
+
+jobs:
+  actor-isolated-activity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: PHP lint — affected Activity intake and tests
+        run: |
+          php -l app/Services/ExecutionActivityService.php
+          php -l app/Services/ProviderActivityIntakeService.php
+          php -l app/Http/Controllers/ExecutionValidationProviderController.php
+          php -l tests/Feature/ProviderConnectionActivityIntakeV559Test.php
+          php -l tests/Feature/ExecutionActivityIntegrationV558Test.php
+      - name: A20 authenticated intake and cross-actor collision
+        run: php artisan test tests/Feature/ProviderConnectionActivityIntakeV559Test.php
+      - name: V55.8 validation provider and TaskEvidence regression
+        run: php artisan test tests/Feature/ExecutionActivityIntegrationV558Test.php
+      - name: V55.6 execution ecosystem regression
+        run: php artisan test tests/Feature/ExecutionEcosystemFoundationV556Test.php

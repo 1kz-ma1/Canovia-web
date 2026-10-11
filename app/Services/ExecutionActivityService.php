@@ -102,13 +102,75 @@ final class ExecutionActivityService
         ];
 
         if ($externalKey !== null) {
-            return ExecutionActivity::query()->updateOrCreate(
-                [
-                    'provider_key' => $providerKey,
-                    'external_key' => $externalKey,
-                ],
+            // External business keys are provider-local, not global actor IDs.
+            // Keep the existing (provider_key, external_key) unique index while
+            // making each persisted identity actor/connection-qualified.
+            $connectionId = max(0, (int) ($metadata['provider_connection_id'] ?? 0));
+            $scopedKey = 'actor:v2:'.hash('sha256', json_encode([
+                $userId !== null ? 'user' : 'guest',
+                $userId !== null ? (string) $userId : $actorToken,
+                $connectionId,
+                $externalKey,
+            ], JSON_THROW_ON_ERROR));
+
+            return DB::transaction(function () use (
+                $providerKey,
+                $externalKey,
+                $scopedKey,
+                $userId,
+                $actorToken,
+                $connectionId,
                 $values,
-            );
+            ): ExecutionActivity {
+                $scope = ['provider_key' => $providerKey, 'external_key' => $scopedKey];
+
+                // Prefer the scoped identity when it already exists. Check
+                // ownership BEFORE updating any row, including a hash collision.
+                $existing = ExecutionActivity::query()
+                    ->where($scope)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($existing) {
+                    if (! $this->matchesActor($existing, $userId, $actorToken, $connectionId)) {
+                        throw new InvalidArgumentException('Activity identity belongs to a different actor.');
+                    }
+
+                    $existing->update($values);
+
+                    return $existing->fresh();
+                }
+
+                // Adopt an existing V55.9 row only if its historical owner
+                // AND connection match. This preserves Activity IDs and
+                // projected Evidence IDs for valid same-connection retries.
+                $legacy = ExecutionActivity::query()
+                    ->where('provider_key', $providerKey)
+                    ->where('external_key', $externalKey)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($legacy && $this->matchesActor($legacy, $userId, $actorToken, $connectionId)) {
+                    $legacy->update(['external_key' => $scopedKey, ...$values]);
+
+                    return $legacy->fresh();
+                }
+
+                // An unrelated actor's legacy key is deliberately left alone.
+                // createOrFirst handles concurrent insertion into the existing
+                // unique (provider_key, external_key) index.
+                $created = ExecutionActivity::query()->createOrFirst($scope, $values);
+
+                if (! $this->matchesActor($created, $userId, $actorToken, $connectionId)) {
+                    throw new InvalidArgumentException('Activity identity belongs to a different actor.');
+                }
+
+                if (! $created->wasRecentlyCreated) {
+                    $created->update($values);
+                }
+
+                return $created->fresh();
+            }, 3);
         }
 
         return ExecutionActivity::query()->create([
@@ -116,6 +178,23 @@ final class ExecutionActivityService
             'external_key' => null,
             ...$values,
         ]);
+    }
+
+    private function matchesActor(
+        ExecutionActivity $activity,
+        ?int $userId,
+        ?string $actorToken,
+        int $connectionId,
+    ): bool {
+        $sameActor = $userId !== null
+            ? $activity->user_id !== null
+                && (int) $activity->user_id === $userId
+                && blank($activity->actor_token)
+            : $activity->user_id === null
+                && (string) $activity->actor_token === (string) $actorToken;
+
+        return $sameActor
+            && (int) data_get($activity->metadata, 'provider_connection_id', 0) === $connectionId;
     }
 
     public function linkToTask(

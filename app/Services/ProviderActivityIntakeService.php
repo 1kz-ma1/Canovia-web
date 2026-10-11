@@ -9,6 +9,7 @@ use App\Models\ExecutionActivity;
 use App\Models\ProviderConnection;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Throwable;
 
@@ -104,28 +105,38 @@ final class ProviderActivityIntakeService
                 : [],
         );
 
-        $activity = $this->activities->record(
-            providerKey: (string) $connection->provider_key,
-            capability: $context->capability,
-            type: $type,
-            title: $title,
-            status: $status,
-            metrics: $metrics,
-            metadata: [
-                'intake_schema_version' => '1.0',
-                'provider_connection_id' => (int) $connection->id,
-            ],
-            externalKey: $externalKey,
-            userId: (int) $connection->user_id,
-            startedAt: $startedAt,
-            completedAt: $completedAt,
-            durationSeconds: $durationSeconds,
-        );
+        $linked = DB::transaction(function () use (
+            $connection,
+            $context,
+            $type,
+            $title,
+            $status,
+            $metrics,
+            $externalKey,
+            $startedAt,
+            $completedAt,
+            $durationSeconds,
+        ): ExecutionActivity {
+            $activity = $this->activities->record(
+                providerKey: (string) $connection->provider_key,
+                capability: $context->capability,
+                type: $type,
+                title: $title,
+                status: $status,
+                metrics: $metrics,
+                metadata: [
+                    'intake_schema_version' => '1.0',
+                    'provider_connection_id' => (int) $connection->id,
+                ],
+                externalKey: $externalKey,
+                userId: (int) $connection->user_id,
+                startedAt: $startedAt,
+                completedAt: $completedAt,
+                durationSeconds: $durationSeconds,
+            );
 
-        $linked = $this->activities->linkToTask(
-            $activity,
-            $context->task,
-        );
+            return $this->activities->linkToTask($activity, $context->task);
+        }, 3);
 
         if (
             $context->capability === ExecutionCapability::STUDY_PRACTICE
