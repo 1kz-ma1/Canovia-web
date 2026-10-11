@@ -1,0 +1,40 @@
+name: MCP Auth0 RS256 JWT Signature Verification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'composer.json'
+      - 'composer.lock'
+      - 'app/Services/McpAuth0JwtTokenVerifier.php'
+      - 'app/Services/McpJwtClaimConstraints.php'
+      - 'config/canovia_mcp.php'
+      - 'tests/Feature/McpAuth0JwtTokenVerifierTest.php'
+      - '.github/workflows/mcp-auth0-rs256-jwks.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  auth0-rs256-verifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl
+          tools: composer:v2
+          coverage: none
+      - name: Resolve locked JWT package using Composer in clean CI
+        run: composer update firebase/php-jwt --no-scripts --no-plugins --no-interaction --no-progress --prefer-dist
+      - name: Publish exactly the resolved package and Composer content hash for review
+        run: |
+          php -r '$lock=json_decode(file_get_contents("composer.lock"),true); $p=array_values(array_filter($lock["packages"],fn($p)=>$p["name"]==="firebase/php-jwt")); echo "CANOVIA_COMPOSER_LOCK_META_BEGIN",json_encode(["hash"=>$lock["content-hash"],"package"=>$p],JSON_UNESCAPED_SLASHES),"CANOVIA_COMPOSER_LOCK_META_END\n";'
+      - name: PHP syntax and signed token regression
+        run: |
+          php -l app/Services/McpAuth0JwtTokenVerifier.php
+          php -l config/canovia_mcp.php
+          php -l tests/Feature/McpAuth0JwtTokenVerifierTest.php
+          php artisan test tests/Feature/McpAuth0JwtTokenVerifierTest.php --colors=never
