@@ -1,5 +1,17 @@
 # Adaptive Context Pipeline v0.5 — Non-destructive Migration and Acceptance Plan
 
+## 日本語サマリー（移行方針）
+
+**方針：既存のEvidence・Intelligence・Personalization・Action Draftを極力再利用し、段階的に不足する契約だけを補う。** 新しい巨大なコンテキストDBや自律AIエンジンを最初から構築しない。
+
+実装の順序は、**Phase 0 現行実装と権限の確認 → Phase 1 出典・訂正・再計算の共通化 → Phase 2 Freeの活動可視化 → Phase 3 用途別Resolverと個別最適化 → Phase 4 Premium 2の活動調整 → Phase 5 利用準備・個別案内** を候補とする。料金体系の正式変更は別途承認・検証する。
+
+重点調査は、①Snapshotを読み出す際のユーザー分離、②GitHubイベントの順不同更新、③派生情報の削除・許可取消しへの追随、④旧料金仕様との差異、⑤ゲスト・共同計画の権限境界。いずれも**コードから発見した確認課題であって、本番障害や情報漏えいを確認したという意味ではない**。
+
+実装する各Sliceは独立PRで、権限・整合性の否定テスト、CI、必要に応じたDB移行リハーサル・実機検証まで通して判断する。この文書だけで作業着手、マージ、デプロイ、MCP有効化、支払い導入は行わない。
+
+
+
 > Updated: 2026-10-12 / Status: **review proposal, documentation-only**
 > Review target: existing main implementation, not a greenfield app.
 > Companion: [architecture candidate](ADAPTIVE_CONTEXT_PIPELINE_V05_ARCHITECTURE_REVIEW_2026_10_12.md).
