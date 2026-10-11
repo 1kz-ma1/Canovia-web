@@ -33,7 +33,7 @@ final class McpJwtClaimConstraintsTest extends TestCase
         ];
     }
 
-    private function matches(array $claims, string $client = self::CHATGPT_INTERNAL_CLIENT): bool
+    private function acceptsClaims(array $claims, string $client = self::CHATGPT_INTERNAL_CLIENT): bool
     {
         return (new McpJwtClaimConstraints)->matches(
             $claims,
@@ -46,10 +46,10 @@ final class McpJwtClaimConstraintsTest extends TestCase
 
     public function test_exact_single_resource_and_auth0_default_azp_profile_pass_synthetic_constraints(): void
     {
-        $this->assertTrue($this->matches($this->validClaims()));
+        $this->assertTrue($this->acceptsClaims($this->validClaims()));
         $claims = $this->validClaims();
         $claims['aud'] = [self::RESOURCE];
-        $this->assertTrue($this->matches($claims));
+        $this->assertTrue($this->acceptsClaims($claims));
     }
 
     public function test_rfc9068_client_id_profile_can_match_only_exact_registered_client(): void
@@ -57,8 +57,8 @@ final class McpJwtClaimConstraintsTest extends TestCase
         $claims = $this->validClaims();
         unset($claims['azp']);
         $claims['client_id'] = self::CHATGPT_INTERNAL_CLIENT;
-        $this->assertTrue($this->matches($claims));
-        $this->assertFalse($this->matches($claims, self::CANOVIA_LINK_CLIENT));
+        $this->assertTrue($this->acceptsClaims($claims));
+        $this->assertFalse($this->acceptsClaims($claims, self::CANOVIA_LINK_CLIENT));
     }
 
     public function test_wrong_audience_client_and_issuer_fail_closed(): void
@@ -81,12 +81,12 @@ final class McpJwtClaimConstraintsTest extends TestCase
         ];
         foreach ($variants as $variant) {
             $this->assertFalse(
-                $this->matches(array_replace($valid, $variant)),
+                $this->acceptsClaims(array_replace($valid, $variant)),
                 'Invalid verified-claim variant must fail closed: '.implode(',', array_keys($variant)),
             );
         }
 
-        $this->assertFalse($this->matches($valid, self::CANOVIA_LINK_CLIENT));
+        $this->assertFalse($this->acceptsClaims($valid, self::CANOVIA_LINK_CLIENT));
         $this->assertFalse((new McpJwtClaimConstraints)->matches(
             $valid, self::ISSUER, self::RESOURCE, '', self::NOW,
         ));
@@ -97,19 +97,19 @@ final class McpJwtClaimConstraintsTest extends TestCase
         $valid = $this->validClaims();
         $noClient = $valid;
         unset($noClient['azp']);
-        $this->assertFalse($this->matches($noClient));
+        $this->assertFalse($this->acceptsClaims($noClient));
 
         $both = $valid;
         $both['client_id'] = self::CHATGPT_INTERNAL_CLIENT;
-        $this->assertFalse($this->matches($both));
+        $this->assertFalse($this->acceptsClaims($both));
 
         $wrongType = $valid;
         $wrongType['azp'] = [self::CHATGPT_INTERNAL_CLIENT];
-        $this->assertFalse($this->matches($wrongType));
+        $this->assertFalse($this->acceptsClaims($wrongType));
 
         $bothDifferent = $valid;
         $bothDifferent['client_id'] = 'attacker-client';
-        $this->assertFalse($this->matches($bothDifferent));
+        $this->assertFalse($this->acceptsClaims($bothDifferent));
     }
 
     public function test_expiry_issued_at_and_not_before_boundaries_fail_closed(): void
@@ -130,9 +130,9 @@ final class McpJwtClaimConstraintsTest extends TestCase
             ['nbf' => self::NOW + 1300],
         ];
         foreach ($variants as $variant) {
-            $this->assertFalse($this->matches(array_replace($valid, $variant)));
+            $this->assertFalse($this->acceptsClaims(array_replace($valid, $variant)));
         }
-        $this->assertTrue($this->matches(array_replace($valid, [
+        $this->assertTrue($this->acceptsClaims(array_replace($valid, [
             'exp' => self::NOW + 3600,
             'iat' => self::NOW,
             'nbf' => self::NOW,
@@ -153,9 +153,9 @@ final class McpJwtClaimConstraintsTest extends TestCase
             ['scope' => "canovia.development.read\nadmin"],
             ['scope' => str_repeat('s', 513)],
         ] as $variant) {
-            $this->assertFalse($this->matches(array_replace($valid, $variant)));
+            $this->assertFalse($this->acceptsClaims(array_replace($valid, $variant)));
         }
-        $this->assertTrue($this->matches(array_replace($valid, [
+        $this->assertTrue($this->acceptsClaims(array_replace($valid, [
             'scope' => 'canovia.development.read',
         ])));
     }
