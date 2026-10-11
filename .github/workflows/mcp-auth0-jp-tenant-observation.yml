@@ -1,0 +1,92 @@
+name: MCP Auth0 JP Tenant Public Metadata Observation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcp-auth0-jp-tenant-observation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  auth0-tenant-observation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Auth0 probe regression checks (synthetic only)
+        run: python3 -m unittest discover -s tests/ci -p test_mcp_auth0_metadata_characterization.py -v
+      - name: Observe owner's public Auth0 JP tenant discovery (no authentication)
+        # A false outcome signals metadata incompatibility or a network issue;
+        # neither result authorizes activation. Never obtain a token or secret.
+        continue-on-error: true
+        run: python3 scripts/ci/mcp_auth0_metadata_characterization.py --tenant-domain canovia-mcp-dev.jp.auth0.com
+      - name: Observe public metadata capability names only (no raw body)
+        # Print an allowlist of public protocol metadata, not account/user data.
+        continue-on-error: true
+        env:
+          AUTH0_TENANT_DOMAIN: canovia-mcp-dev.jp.auth0.com
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+          domain = os.environ["AUTH0_TENANT_DOMAIN"]
+          request = urllib.request.Request(
+              "https://" + domain + "/.well-known/openid-configuration",
+              headers={"Accept": "application/json"},
+          )
+          try:
+              with urllib.request.urlopen(request, timeout=8) as response:
+                  doc = json.loads(response.read(12289))
+              allowed = ("issuer", "code_challenge_methods_supported",
+                         "authorization_response_iss_parameter_supported",
+                         "token_endpoint_auth_methods_supported",
+                         "client_id_metadata_document_supported",
+                         "registration_endpoint", "introspection_endpoint",
+                         "scopes_supported")
+              print(json.dumps({k: doc.get(k, "not_advertised") for k in allowed}, sort_keys=True))
+          except Exception as e:
+              # Never log URLs/response bodies; classify the error only.
+              print("public_discovery_fetch_class=" + type(e).__name__)
+              raise SystemExit(1)
+          PY
+      - name: Inspect public OAuth AS discovery and JWKS shape only
+        continue-on-error: true
+        run: |
+          python3 - <<'PY'
+          import json
+          import urllib.error
+          import urllib.request
+
+          domain = "canovia-mcp-dev.jp.auth0.com"
+          base = "https://" + domain
+          for label, path in (
+              ("oauth_authorization_server", "/.well-known/oauth-authorization-server"),
+              ("jwks", "/.well-known/jwks.json"),
+          ):
+              req = urllib.request.Request(base + path, headers={"Accept": "application/json"})
+              try:
+                  with urllib.request.urlopen(req, timeout=8) as response:
+                      body = response.read(32769)
+                      if len(body) > 32768:
+                          raise ValueError("public_response_too_large")
+                      payload = json.loads(body)
+                  if label == "jwks":
+                      keys = payload.get("keys", [])
+                      print(json.dumps({"source": label, "public_keys_present": bool(keys),
+                              "rs256_advertised": any(k.get("kty") == "RSA" and k.get("alg") == "RS256" for k in keys if isinstance(k, dict))}))
+                  else:
+                      print(json.dumps({"source": label, "issuer_exact": payload.get("issuer") == base + "/",
+                          "cimd_flag": payload.get("client_id_metadata_document_supported", "not_advertised"),
+                          "dcr_endpoint_advertised": isinstance(payload.get("registration_endpoint"), str),
+                          "pkce_s256_advertised": "S256" in payload.get("code_challenge_methods_supported", [])}))
+              except urllib.error.HTTPError as exc:
+                  print(json.dumps({"source": label, "status": "http_" + str(exc.code)}))
+              except Exception as exc:
+                  print(json.dumps({"source": label, "status": type(exc).__name__}))
+          PY
