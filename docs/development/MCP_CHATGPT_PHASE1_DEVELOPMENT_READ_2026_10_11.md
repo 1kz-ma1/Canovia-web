@@ -129,3 +129,23 @@ The owner created and disclosed the **public** evaluation domain `canovia-mcp-de
 - Validate CIMD or restricted pre-registration end to end with the actual ChatGPT OAuth client and exact callback. `registration_endpoint` on public metadata is not enough.
 - Independently verify and approve Canovia isolated staged service's public login/OAuth/MCP gates, exact deployed SHA, synthetic local actor linking and per-Plan permission. The existing Free stage DB expires on 2026-11-08 UTC.
 - **Actual ChatGPT E2E remains NOT DONE**. The public OAuth and JWKS checks are **PASS**, but real ChatGPT `tools/list`, `tools/call` and revocation behavior are still unknown.
+
+## 2026-10-12 owner-confirmed Auth0 API and Resource Profile
+
+- Owner confirmed via Auth0 Dashboard that the custom API named **Canovia MCP Staging Read** already exists, its Identifier is exactly `https://canovia-mcp-staging.onrender.com/api/mcp`, and the permission `canovia.development.read` is already registered. Do not edit the built-in **Auth0 Management API**.
+- Owner additionally confirmed the **Resource Parameter Compatibility Profile** is **ON** in the dedicated Free tenant `canovia-mcp-dev.jp.auth0.com`. This is an operator report, **not** cryptographic evidence of a token bound to the intended resource.
+- No user/token/password/secret was provided. Registration of the actual ChatGPT OAuth client, verified signed JWT claims, separate Canovia account-link OAuth client, and consent remain pending.
+
+### Next fail-closed security implementation slice
+
+- Introduce `app/Services/McpJwtClaimConstraints.php`: pure, signature-**independent** policy checks intended **only after** trusted JWT/JWKS cryptographic verification. Allows an independently verified Auth0 default-token `azp` **or** RFC 9068 `client_id` matching the **actual Auth0-issued** client ID; fails closed when neither/both present or mismatched.
+- Reject multi-audience tokens, wrong issuer/resource, malformed/expired/future/overlong lifetime, absent exact `canovia.development.read` scope, and malformed subjects. Preserve legacy introspection-only live runtime; do not wire any raw decoded claims into MCP endpoints.
+- `tests/Unit/McpJwtClaimConstraintsTest.php` adds positive and negative claim-policy regression cases. This proves **claim constraints only**, never RS256 signature validation.
+- **UNRESOLVED:** choose a maintained JWT/JWKS verifier (e.g. a Composer-library dependency with a reviewed lockfile), enforce allowed algorithms, `kid`/key rotation, trusted fixed JWKS URL, cache and network caps, and reject invalid signatures/alg confusion. Then confirm a **real** Auth0-issued token's `aud`, `iss+sub`, `azp`/`client_id` and `scope`. No anonymous DCR enablement and no synthetic stage exposure by this PR.
+- Compatibility nuance: Auth0 default JWT access tokens use `azp`, whereas Auth0's RFC 9068 API JWT tokens expose `client_id`. Do not change the Auth0 access-token profile merely to satisfy this policy: compare actual verified claims, actual issuer and client registration first. Sources: https://support.auth0.com/center/s/article/receive-the-client-id-claim-instead-of-the-azp-claim-in-an-auth0-access-token ; https://auth0.com/blog/jwt-access-tokens-profiles-now-in-ga/ ; https://developers.openai.com/plugins/build/auth
+
+### Operator boundary
+
+The human-visible Free tenant settings are now in place. For future registered-client work, **do not paste an Auth0 access or management token** into ChatGPT or public GitHub issues. Check dashboard CIMD or restricted client registration separately, as discovery had no CIMD advertisement; the public Auth0 `registration_endpoint` is not proof of usable unauthenticated DCR. A client created through Auth0's CIMD Management API can have a different internal `client_id` than the external metadata URL.
+
+**Actual ChatGPT-to-Canovia read E2E still NOT DONE.** This commit changes no authentication routes, flags, env vars, packages, database schema, service deployment, or authorization grant data.
