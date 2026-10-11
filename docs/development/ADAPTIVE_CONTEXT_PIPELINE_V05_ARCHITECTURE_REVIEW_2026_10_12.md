@@ -88,6 +88,16 @@ The existing [V53 Intelligence Contract](../V53.0_INTELLIGENCE_CONTRACT.md) alre
 - Capability Contract: domain-registered operations and prerequisites, not the same as current simple per-Task ExecutionCapability selection; existing capability and activation services are reusable inputs.
 - External MCP: a purpose-bound read projection **only when OAuth, actor-bound grant and provider compatibility have passed their own release gate**. No implicit write permission from this architecture.
 
+## 2.1 Review amendment — activity without a Plan and decision autonomy
+
+**A current Plan is not the identity of a person's activity.** Existing \`ExecutionActivity\` accepts an actor with no Plan/Task linkage; V53 Study/Development evaluation and presentation are often Plan-scoped. The shared activity foundation must distinguish **actor-owned, Plan-optional observations** from **Plan-scoped domain readiness**. No automatic creation of a Goal, Plan or Task to make an activity visible. When the user later associates a fact with a Goal/Plan, retain its original occurrence, source, owner and independent identity; association is a versioned, authorized relationship, not a rewrite of the source event.
+
+A Free activity timeline can include authorized, unlinked factual activity. However, a Goal-based readiness score **must not** claim to cover unlinked activity without an explicit, verified association and coverage rule. Guest-to-account claim, collaboration, multiple Plans and source removal must be tested before exposing such linkage.
+
+**Generated Action and user's Decision Context have different lifecycles.** Existing \`ActionProjectionStore::persist()\` may reactivate an existing Action and clear \`dismissed_at\` when the same semantic action is persisted again. This is not, by itself, proof of a current UX defect, but Premium 2 must not use this action state as the authoritative record of a user's temporary rejection/deferral. Store the user's choice separately, including actor, proposal/revision, expiry, reason if provided, suppression scope and material-change conditions. Every evaluator invocation checks that choice before resurfacing an Action or sending a notification. A genuinely changed evidence/urgency state may propose a new decision; trivial re-evaluation cannot silently erase a refusal.
+
+**Business-event identity must be safe across actors and connections.** Existing \`ExecutionActivityService::record()\` uses \`provider_key + external_key\` as its \`updateOrCreate\` lookup. For every real provider, verify that the external key is globally unique within that provider or move to a stable owner/connection-scoped identity without breaking historical references. In particular, two separate actors returning the same provider-local key must never overwrite one another's activity. Existing connectors may constrain this elsewhere; verify the full authenticated intake path and schema before claiming vulnerability or changing a live constraint.
+
 ## 3. Shared Fact / Context / Capability contracts
 
 ### 3.1 Fact reference envelope (logical fields, NOT an approved DB migration)
