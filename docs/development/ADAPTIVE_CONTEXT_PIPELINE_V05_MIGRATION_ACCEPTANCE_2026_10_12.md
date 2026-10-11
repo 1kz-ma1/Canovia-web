@@ -67,6 +67,15 @@ Current published/internal specification Free=Execute / Premium=Guide / Pro=Unde
 ### G5. Guest and collaborative data domains (policy P0 before multi-domain launch)
 Some original Evidence/Study activity and plans support guest tokens, owner and collaboration. A design with nullable owner IDs must explicitly prevent cross-guest, foreign-Plan, team/nonteam and ownership-transfer leaks. Model source identity and authorization separately from a free-form reference string.
 
+### G6. Goal/Plan-optional activity must be supported (product invariant before Free rollout)
+`ExecutionActivity` can record an actor-linked activity before association to a Plan, while Study/Development Intelligence commonly evaluates Plan-specific scopes. Design an actor-owned, Plan-optional fact read/index and an explicit, consent/ownership-checked *later association*. Do not silently manufacture Plans/Tasks or equate unlinked evidence with a particular Goal. Audit orphan/guest/claimed-guest, team/owner changes and edits; preserve original source-event identity across a link/unlink. This is a **design gap**, not a declaration that every native Learning or Developer action currently works without a Plan.
+
+### G7. Proposal reactivation versus remembered refusal (P0 before Premium 2)
+`app/Intelligence/Services/ActionProjectionStore.php::persist()` reactivates the matching action_reference and resets `dismissed_at` to null on an existing row. That existing Plan-specific behavior may be intentional; it is not equivalent to the v0.5 **Decision Context** contract. Premium 2 requires independently persisted user choice, deferral expiry, scope and material-change recheck rules. Test same semantic proposal repeated after dismissal, concurrent device use and a genuinely new urgent situation. Avoid changing established V53 domain Action history until owner/UX compatibility is evaluated.
+
+### G8. Provider idempotency key collision across actors (security/data integrity P0 before broader provider support)
+`app/Services/ExecutionActivityService.php::record()` calls `updateOrCreate()` using `provider_key + external_key` and may set `user_id` in updated values. This is safe only if the authenticated provider contract guarantees this key is unique across all actors within that provider. Prove that guarantee for each provider **or** implement actor/connection-qualified identity with a reviewed migration and compatibility tests. Two unrelated users with the same provider-local key must never overwrite/claim each other's observations. Inspect the existing authenticated intake, unique index and provider generator; do not label a live data leak without a reproducing negative test.
+
 ## 4. Staged implementation roadmap (proposal, not active backlog)
 
 | Slice | Work | Minimum acceptance/gate | Safe exit / rollback |
@@ -110,6 +119,9 @@ Do not present current Adaptive Learning as guaranteed per-answer AI optimality;
 | A15 | Downgrade Pro → Free while data remains | No destruction of core facts; export/correction/deletion still accessible; premium analysis gated |
 | A16 | Paid user missing GitHub/calendar connection | Shows exactly usable features, missing setup and optional value; no "fully active" mislabel |
 | A17 | AI provider unavailable or cost limit reached | Deterministic fallback where meaningful; no dropped facts or false success |
+| A18 | User records a valid unlinked activity, then later links or unlinks a Goal/Plan | Activity remains visible to its owner, source identity unchanged; Goal readiness changes only from authorized associations |
+| A19 | Previously dismissed Action is recomputed with the same semantic State and Action | No repeated Premium 2 interruption; independently retained Decision Context survives action-row reactivation until recheck conditions |
+| A20 | Two distinct actors submit the same provider-local external_key | Neither actor's activity can be overwritten, reassigned or disclosed to the other; provider identity and schema guarantee verified |
 
 Only claim an acceptance test **passed** after running it against the exact SHA and actual relevant backend. Test design ≠ passing test; CI ≠ deployed; deployed ≠ device-verified. Security invariants also require negative tests over multiple permission combinations and manual review.
 
@@ -125,7 +137,7 @@ Cost/market evidence: compare Free infra per active user, Premium 1 AI costs, Pr
 
 Before implementation:
 - [ ] Current main SHA and relevant open PRs, AGENTS and active lane handoffs rechecked.
-- [ ] Owner and Intelligence/Platform review the contract changes and G1–G5 risk ranking.
+- [ ] Owner and Intelligence/Platform review the contract changes and G1–G8 risk ranking.
 - [ ] Existing source-of-truth models, all read call sites, cache usage and derived data lifecycles inventoried.
 - [ ] Chosen smallest implementation slice has failure repros and explicit non-goals.
 - [ ] Exact data/schema/API/entitlement changes reviewed separately and compatible with Free and guest/team usage.
