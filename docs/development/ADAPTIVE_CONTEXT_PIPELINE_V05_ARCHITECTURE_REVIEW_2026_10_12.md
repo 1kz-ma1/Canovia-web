@@ -1,5 +1,19 @@
 # Canovia Adaptive Context Pipeline v0.5 — Architecture Review Candidate
 
+## 日本語サマリー（レビュー時の確認事項）
+
+**設計の結論：既存のV53 Intelligenceを置き換えず、Learning・Development・Careerの専門処理を共通Contextとして安全に再利用する。** ユーザーの活動を事実として正規化して保持し、解釈や活動間の調整は利用目的に応じて必要な範囲だけ生成する。
+
+- **Free**：日常活動の基本記録・可視化・訂正。**Premium 1**：適応学習など個別活動の最適化。**Premium 2**：学習と開発など、複数活動の優先判断・切り替え・再評価。課金境界は提案であり、現行Free/Premium/Proの実際の権限は変更しない。
+- **共通契約は薄くする**：Fact（何が起きたか）、Context（そこから何が分かるか）、Capability（何を準備・実行できるか）を分離。カテゴリ固有の採点・CI判定・選考評価を共通スコアへ無理に統合しない。
+- **自動化の標準**：準備と変更案作成までは自動化し、重要な変更は本人が承認。承認後も、権限や対象データが変わっていないことを再確認する。
+- **安全性**：外部AIへの情報提供を含め、取得・分析・保存済み派生データ・出力に目的別の権限を適用する。元データの削除・訂正・許可取消しが発生した場合は、古い推定を利用させない。
+- **保留事項**：具体的なDB型、依存関係の無効化粒度、外部サービスごとの観測能力、Premiumの価格・正式な料金移行、iOS通知と実機検証。
+
+**この文書はレビュー候補であり、実装済みの宣言・本番公開・課金変更を意味しない。**
+
+
+
 > Updated: 2026-10-12 / Status: **REVIEW CANDIDATE — NOT IMPLEMENTED AS A WHOLE**
 > Owner decision: conceptual direction accepted in discussion; concrete schema, runtime behavior, entitlement migration, and rollout are NOT approved by this document.
 > Scope: Canovia product-wide Context Foundation, Learning / Development / Career, Intelligence, Personalized Capability Activation, External AI.
