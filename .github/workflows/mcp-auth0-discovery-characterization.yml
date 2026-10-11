@@ -1,0 +1,34 @@
+name: MCP Auth0 Public Discovery Characterization
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ci/mcp_auth0_metadata_characterization.py'
+      - 'tests/ci/test_mcp_auth0_metadata_characterization.py'
+      - '.github/workflows/mcp-auth0-discovery-characterization.yml'
+  workflow_dispatch:
+    inputs:
+      tenant_domain:
+        description: 'Optional public Auth0 tenant domain (no credentials)'
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  auth0-discovery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Synthetic-only metadata compatibility and fail-closed checks
+        run: python3 -m unittest discover -s tests/ci -p test_mcp_auth0_metadata_characterization.py -v
+      - name: Optional read-only public Auth0 metadata probe
+        if: inputs.tenant_domain != ''
+        env:
+          TENANT_DOMAIN: ${{ inputs.tenant_domain }}
+        run: python3 scripts/ci/mcp_auth0_metadata_characterization.py --tenant-domain "$TENANT_DOMAIN"

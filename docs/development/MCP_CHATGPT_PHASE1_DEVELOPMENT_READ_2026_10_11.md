@@ -55,3 +55,43 @@ Auth0 is a **candidate**, not an active Canovia provider.
 - Document exact CI run, stage deploy and external ChatGPT E2E evidence separately. A mock token, test container or live Render health check cannot substitute.
 
 No production release is authorized by successful staging acceptance.
+
+
+## Auth0 public discovery characterization (2026-10-11)
+
+Status: **synthetic/offline tests only**, not a hosted tenant acceptance and not ChatGPT E2E. The product owner approved proceeding with a **Free Auth0 evaluation**, with no authorization to create paid services or expose staging endpoints. There is no authenticated Auth0 tenant management connection in this development session; no tenant or client has been created.
+
+The existing `McpStagingProviderPreflightService` validates Canovia's actual RFC 7662 introspection-based runtime configuration; it is not an Auth0/JWT verifier. Do not disable or weaken it to mark Auth0 ready. A separate **diagnostic-only** script in `scripts/ci/mcp_auth0_metadata_characterization.py` evaluates public OAuth discovery metadata without requiring private credentials, Canovia stage access, user accounts or bearer tokens. Its output consists only of named statuses, with `stage_mcp_activation_authorized=false` and `real_chatgpt_oauth_verified=false` for every outcome. Absence of advertised capabilities is reported, not silently filled in.
+
+### Verification
+
+```bash
+# Local synthetic fixtures, no external network calls or tenant required.
+python3 -m unittest discover -s tests/ci -p test_mcp_auth0_metadata_characterization.py -v
+
+# After a Free tenant exists, only its *public* Auth0 domain is needed.
+python3 scripts/ci/mcp_auth0_metadata_characterization.py \
+  --tenant-domain YOUR-TENANT.us.auth0.com
+```
+
+Optional GitHub Actions `MCP Auth0 Public Discovery Characterization` runs this same check via `workflow_dispatch` with a public tenant domain, **never** a token, client secret, account password or user data. A failed check can mean the metadata does not advertise the needed feature; it cannot prove Auth0 is impossible to configure. It must be separately investigated before any activation.
+
+### Free tenant operator checklist (requires human signup, never paste secrets in GitHub/chat)
+
+1. In the official [Auth0 dashboard](https://manage.auth0.com/), create/use a dedicated **Free evaluation tenant** disconnected from production accounts; verify current Free entitlements, Auth for MCP availability and billing policy in the dashboard. Do not add a payment method or subscribe to add-ons without an independent approval.
+2. Share **only the public tenant domain** (for example `sample.us.auth0.com`), or execute the public metadata characterization in the workflow. Never paste credentials, access/refresh/ID tokens, JWT strings, synthetic-user passwords or internal Render URLs.
+3. Confirm the Auth0 tenant's **Resource Parameter Compatibility Profile** is supported/enabled for the MCP `resource` parameter before any real authorize attempt. This is an Auth0 tenant-only setting that still requires a separate reviewed operator action.
+4. Inspect the CIMD Management API response privately. Auth0 maps the ChatGPT external metadata URL to a tenant-internal client ID; compare the actual authorization result and **cryptographically verified** token claim with the allowlist. Never assume external URL and internal ID are interchangeable.
+5. Create separate clients for ChatGPT and for the Canovia account-link. Use the exact callback URI advertised by the current ChatGPT connection UI; do not infer stable callback support if RFC 9207 is unadvertised.
+6. The existing Canovia token verifier is RFC 7662 only. Auth0 often issues **RS256 JWTs** and ChatGPT may request `openid` by default. Auth0 documents that an API audience plus `openid` can yield `aud=[API,/userinfo]`, violating our **single exact** audience rule. Treat the resulting real token as incompatible and keep stage sealed until a reviewed security-preserving design and proper JWT/JWKS verifier address this. No unverified JWT claims, no wildcard audience, no removed scope checks.
+7. Never enable Canovia stage OAuth/login/MCP flags solely because public metadata passes. User-to-Plan authorization, real ChatGPT OAuth, negative tests and human-approved staging exposure are separate gates.
+
+Official references:
+- https://auth0.com/jp/pricing
+- https://auth0.com/blog/auth0-auth-for-mcp-servers-generally-available/
+- https://support.auth0.com/center/s/article/mcp-audience-error-with-auth0
+- https://auth0.com/docs/secure/tokens/access-tokens/get-access-tokens
+- https://auth0.com/docs/api/management/v2/clients/post-clients-cimd-register
+- https://developers.openai.com/plugins/build/auth
+
+**Pending:** A human-created Free Auth0 test tenant and public domain, actual domain-specific metadata, original Auth0 client registration/claim proof, reviewed JWT cryptographic verification, per-Plan synthetic consent, staging rollout approval, and observed ChatGPT E2E. None is claimed complete.
