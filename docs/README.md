@@ -1,5 +1,10 @@
 # Canovia documentation index (2026-10-08)
 
+## Adaptive Context Pipeline v0.5 — architecture review (2026-10-12)
+
+- [v0.5 architecture review candidate](development/ADAPTIVE_CONTEXT_PIPELINE_V05_ARCHITECTURE_REVIEW_2026_10_12.md): Shared Core + Domain Pipelines, Facts / Context / Capability contracts, policy and decisions. **Review proposal; not a runtime or billing change.**
+- [v0.5 non-destructive migration and acceptance plan](development/ADAPTIVE_CONTEXT_PIPELINE_V05_MIGRATION_ACCEPTANCE_2026_10_12.md): existing V53/V55/V58 reuse, phased gates, risk and security tests. **Not an active implementation backlog.**
+
 ## Parallel execution lanes (2026-10-09)
 
 - [Parallel development operating model](development/PARALLEL_DEVELOPMENT_OPERATING_MODEL.md): lane ownership, concurrency limits, branch/worktree isolation, shared contracts, PR integration and verification vocabulary.
