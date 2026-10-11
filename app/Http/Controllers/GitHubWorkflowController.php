@@ -86,6 +86,7 @@ final class GitHubWorkflowController extends Controller
                 $developmentAction,
             );
             $intelligenceHistory = $history->forPlan(
+                $request,
                 $selectedPlan,
                 IntelligenceDomain::Development,
             );
