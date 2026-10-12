@@ -127,15 +127,20 @@ class GitHubAppConnectionV465Test extends TestCase
         $this->grantAllAccess($user);
         $url = route('github_workflow.app.check', $repo);
 
-        $connected = Http::response([
+        $connected = [
             'id' => 777,
             'account' => ['login' => '1kz-ma1', 'type' => 'User'],
             'target_type' => 'User',
             'repository_selection' => 'selected',
             'permissions' => ['contents' => 'read', 'pull_requests' => 'read'],
-        ], 200);
+        ];
         Http::fake([
-            'https://api.github.com/repos/1kz-ma1/HINANEX/installation' => $connected,
+            'https://api.github.com/repos/1kz-ma1/HINANEX/installation' =>
+                Http::sequence()
+                    ->push($connected, 200)
+                    ->push($connected, 200)
+                    ->push(['message' => 'Not Found'], 404)
+                    ->push($connected, 200),
         ]);
 
         $this->actingAs($user)->post($url)->assertSessionHas('success');
@@ -149,10 +154,6 @@ class GitHubAppConnectionV465Test extends TestCase
             $repo->fresh()->metadata, 'github_app_connection.source_epoch',
         ));
 
-        Http::fake([
-            'https://api.github.com/repos/1kz-ma1/HINANEX/installation' =>
-                Http::response(['message' => 'Not Found'], 404),
-        ]);
         $this->actingAs($user)->post($url)->assertSessionHas('status');
         $this->assertSame('revoked', data_get(
             $repo->fresh()->metadata, 'github_app_connection.status',
@@ -161,9 +162,6 @@ class GitHubAppConnectionV465Test extends TestCase
             $repo->fresh()->metadata, 'github_app_connection.source_epoch',
         ));
 
-        Http::fake([
-            'https://api.github.com/repos/1kz-ma1/HINANEX/installation' => $connected,
-        ]);
         $this->actingAs($user)->post($url)->assertSessionHas('success');
         $second = data_get($repo->fresh()->metadata, 'github_app_connection.source_epoch');
         $this->assertNotSame($first, $second);
