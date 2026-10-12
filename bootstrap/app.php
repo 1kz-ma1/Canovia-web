@@ -15,6 +15,7 @@ use App\Http\Middleware\TrackAiPlanFunnel;
 use App\Http\Middleware\TrackEarlyAccessVisit;
 use App\Http\Middleware\RememberWorkspaceScreen;
 use App\Http\Middleware\CloseUnopenedMcpStaging;
+use App\Http\Middleware\EnsureMcpStagingSyntheticPilotActor;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -53,6 +54,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'early_access.visit' => TrackEarlyAccessVisit::class,
         ]);
         $middleware->appendToGroup('web', RedirectLegacyCanoviaHost::class);
+        $middleware->appendToGroup('web', EnsureMcpStagingSyntheticPilotActor::class);
         // Track the AI plan funnel before JSON normalization so even parser
         // failures are visible in diagnostics.
         $middleware->appendToGroup('web', TrackAiPlanFunnel::class);
