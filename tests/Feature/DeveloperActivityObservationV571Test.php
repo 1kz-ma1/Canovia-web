@@ -162,6 +162,7 @@ class DeveloperActivityObservationV571Test extends TestCase
             'source_updated_at' => '2026-10-07T03:00:00Z',
         ];
         $current = $this->persistFact($root, $recent);
+        $originalOccurredAt = $current->occurred_at?->toIso8601String();
         $current->update(['resolution_status' => 'ignored']);
 
         $stale = $this->persistFact($root, $staleBootstrap);
@@ -169,7 +170,7 @@ class DeveloperActivityObservationV571Test extends TestCase
         $this->assertSame('merged', $stale->state);
         $this->assertSame(str_repeat('b', 40), $stale->sha);
         $this->assertSame('ignored', $stale->resolution_status);
-        $this->assertSame('2026-10-08 03:00:00', $stale->occurred_at?->utc()->format('Y-m-d H:i:s'));
+        $this->assertSame($originalOccurredAt, $stale->occurred_at?->toIso8601String());
 
         // A newer edit is allowed, but it cannot undo a human resolution.
         $fresh = $this->persistFact($root, [
