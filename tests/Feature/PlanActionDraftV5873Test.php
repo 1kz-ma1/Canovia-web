@@ -74,6 +74,125 @@ final class PlanActionDraftV5873Test extends TestCase
         return $m[1];
     }
 
+    public function test_changed_typed_evidence_metadata_blocks_acceptance_without_creating_a_task(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner, '資格学習');
+        $task = $this->task($plan);
+        $evidence = $this->observed($plan, $task, 'study_practice_assessed',
+            'native', ['score_percent' => 60, 'evidence_summary' => '要復習']);
+        $rid = (string) Str::uuid();
+
+        $this->actingAs($owner)->post(route('plans.action_drafts.compose_observed', $plan), [
+            'request_id' => $rid, 'task_evidence_ids' => [$evidence->id],
+        ])->assertRedirect();
+
+        $draft = PlanActionDraft::where('request_id', $rid)->sole();
+        $this->assertMatchesRegularExpression(
+            '/^[a-f0-9]{64}$/', (string) $draft->evidence_snapshots[0]['source_signature'],
+        );
+        // The UI summary remains identical, but the source revision changed.
+        $evidence->update(['metadata' => [
+            'score_percent' => 60, 'evidence_summary' => '要復習',
+            'private_correction' => 'changed',
+        ]]);
+
+        $this->actingAs($owner)->post(route('plans.action_drafts.accept', [$plan, $draft]))
+            ->assertStatus(409);
+        $this->assertDatabaseCount('tasks', 1);
+        $this->assertSame('proposed', $draft->fresh()->status);
+        $this->assertDatabaseCount('plan_activity_logs', 0);
+    }
+
+    public function test_deleted_or_transferred_evidence_rejects_prepared_bundle_atomically(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner, '資格学習');
+        $other = $this->plan($owner, '資格学習');
+        $task = $this->task($plan);
+        $evidence = $this->observed($plan, $task, 'study_practice_assessed',
+            'native', ['score_percent' => 50]);
+
+        $this->actingAs($owner)->post(route('plans.action_drafts.compose_observed', $plan), [
+            'request_id' => (string) Str::uuid(), 'task_evidence_ids' => [$evidence->id],
+        ])->assertRedirect();
+        $draft = PlanActionDraft::sole();
+        $this->actingAs($owner)->post(route('plans.action_drafts.steps.prepare', [$plan, $draft]))
+            ->assertRedirect();
+        $steps = $draft->fresh()->steps;
+        $fingerprint = app(\App\Services\PlanActionDraftStepService::class)
+            ->fingerprint($steps);
+
+        $evidence->update(['plan_id' => $other->id]);
+        $this->actingAs($owner)->post(route('plans.action_drafts.accept', [$plan, $draft]), [
+            'accept_mode' => 'bundle', 'steps_fingerprint' => $fingerprint,
+        ])->assertStatus(409);
+        $this->assertDatabaseCount('tasks', 1);
+        $this->assertSame('proposed', $draft->fresh()->status);
+        $this->assertSame(0, $draft->fresh()->steps()->whereNotNull('accepted_task_id')->count());
+
+        $evidence->delete();
+        $this->actingAs($owner)->post(route('plans.action_drafts.accept', [$plan, $draft]), [
+            'accept_mode' => 'bundle', 'steps_fingerprint' => $fingerprint,
+        ])->assertStatus(409);
+        $this->assertDatabaseCount('tasks', 1);
+        $this->assertDatabaseCount('task_dependencies', 0);
+    }
+
+    public function test_work_log_outcome_correction_blocks_single_acceptance_but_valid_source_is_accepted(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner, '資格学習');
+        $task = $this->task($plan);
+        $log = $this->workLog($plan, $task);
+
+        $this->actingAs($owner)->post(route('plans.action_drafts.store', $plan), [
+            'request_id' => (string) Str::uuid(), 'source_work_log_id' => $log->id,
+        ])->assertRedirect();
+        $draft = PlanActionDraft::sole();
+
+        // Historical single-WorkLog rows do not carry a source digest:
+        // keep the original human-authorized action/outcome comparison.
+        $log->update(['outcome' => '修正された学習結果']);
+        $this->actingAs($owner)->post(route('plans.action_drafts.accept', [$plan, $draft]))
+            ->assertStatus(409);
+        $this->assertDatabaseCount('tasks', 1);
+        $this->assertSame('proposed', $draft->fresh()->status);
+
+        $log->update(['outcome' => '本人が復習の必要性を記録']);
+        $this->actingAs($owner)->post(route('plans.action_drafts.accept', [$plan, $draft]))
+            ->assertRedirect();
+        $this->assertDatabaseCount('tasks', 2);
+        $this->assertSame('accepted', $draft->fresh()->status);
+    }
+
+    public function test_work_log_task_move_and_owner_transfer_deny_acceptance(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner, '資格学習');
+        $other = $this->plan($owner, '資格学習');
+        $task = $this->task($plan);
+        $log = $this->workLog($plan, $task);
+
+        $this->actingAs($owner)->post(route('plans.action_drafts.store', $plan), [
+            'request_id' => (string) Str::uuid(),
+            'source_work_log_id' => $log->id,
+        ])->assertRedirect();
+        $draft = PlanActionDraft::sole();
+        $task->update(['plan_id' => $other->id]);
+
+        $this->actingAs($owner)->post(route('plans.action_drafts.accept', [$plan, $draft]))
+            ->assertStatus(409);
+        $this->assertDatabaseCount('tasks', 1);
+        $task->update(['plan_id' => $plan->id]);
+
+        $plan->update(['user_id' => User::factory()->create()->id]);
+        $this->actingAs($owner)->post(route('plans.action_drafts.accept', [$plan, $draft]))
+            ->assertForbidden();
+        $this->assertSame('proposed', $draft->fresh()->status);
+        $this->assertDatabaseCount('tasks', 1);
+    }
+
     public function test_study_evidence_creates_specific_unapplied_suggestion_and_accepts_once(): void
     {
         $owner = User::factory()->create();
