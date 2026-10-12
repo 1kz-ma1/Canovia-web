@@ -102,12 +102,12 @@ final class McpAuth0JwtProviderRoutingTest extends TestCase
             $headers['Authorization'] = 'Bearer '.$token;
         }
 
-        return $this->withHeaders($headers)->postJson('/api/mcp', [
+        return $this->postJson('/api/mcp', [
             'jsonrpc' => '2.0',
             'id' => 1,
             'method' => 'tools/list',
             'params' => [],
-        ]);
+        ], $headers);
     }
 
     public function test_signed_chatgpt_jwt_reaches_only_existing_read_only_tool_descriptor(): void
@@ -141,7 +141,6 @@ final class McpAuth0JwtProviderRoutingTest extends TestCase
             ['canovia_mcp.token_verification_driver' => 'introspection'],
             ['canovia_mcp.token_introspection_enabled' => true],
             ['canovia_mcp.auth0_jwt_verification_enabled' => false],
-            ['canovia_mcp.tools_enabled' => false],
         ];
 
         $jwt = $this->token();
@@ -155,6 +154,10 @@ final class McpAuth0JwtProviderRoutingTest extends TestCase
             $this->assertNotEquals(200, $this->listTools($jwt)->status());
             config($before);
         }
+        Http::assertNothingSent();
+
+        config(['canovia_mcp.tools_enabled' => false]);
+        $this->assertNotEquals(200, $this->listTools($jwt)->status());
         Http::assertNothingSent();
     }
 
