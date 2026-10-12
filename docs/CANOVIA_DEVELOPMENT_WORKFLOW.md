@@ -103,8 +103,7 @@ starts at last verified Render Live SHA `15abdc9de6f24b5250fb255c579d1aa55facaf1
 No direct or force pushes to production.
 
 Release routine:
-1. Pin exact main SHA, freeze release scope, review *all* unshipped paths, migrations,
-   Composer/deployment/startup changes, data/privacy/feature flags, and required CI.
+1. Pin exact main SHA and cut a release candidate branch `release/YYYY-MM-DD-<shortsha>` **before any live DB audit**. Freeze release scope and review *all* unshipped paths, migrations, Composer/deployment/startup changes, data/privacy/feature flags, and required CI.
 2. For MySQL migrations, rehearse all pending operations on disposable MySQL 8.0/8.4
    (including legacy-row retention and repeatability); run the reviewed Mac
    metadata-only Aiven audit against the **exact chosen source SHA**.
@@ -114,7 +113,7 @@ Release routine:
    the owner's acceptance of **untested restore risk** on the Free service,
    plus current effective Render security/session/DB/worker configuration.
    Snapshot existence is not a successful fork/restore test.
-4. Cut an immutable-candidate `release/YYYY-MM-DD-<shortsha>` branch from the exact tested `main` SHA **before** the Aiven live audit. Never audit moving `main` and then promote a different commit. Open a **release/* -> production** PR; the workflow rejects a release head that is not an ancestor of current `main`. The PR requires owner
+4. Never audit moving `main` and then promote a different commit. Open a **release/* -> production** PR from the pinned candidate; the workflow rejects a release head that is not an ancestor of current `main`. The PR requires owner
    production go/no-go, a reviewed diff, and passing **Production Promotion Policy
    Gate**, **P0 Disposable MySQL Migration Integrity**, **V56.12 Workspace Resume
    Validation**, and **Production Migration Recovery Validation** where applicable.
