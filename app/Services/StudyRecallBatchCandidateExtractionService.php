@@ -157,85 +157,85 @@ final class StudyRecallBatchCandidateExtractionService
                 $createdPerSource = array_fill(0, $sources->count(), 0);
 
                 foreach ($cards as $candidate) {
-            $sourceIndex = (int) ($candidate['source_index'] ?? -1);
-            $source = $sources->get($sourceIndex);
+                    $sourceIndex = (int) ($candidate['source_index'] ?? -1);
+                    $source = $sources->get($sourceIndex);
 
-            if (! $source instanceof StudyRecallSource) {
-                continue;
-            }
+                    if (! $source instanceof StudyRecallSource) {
+                        continue;
+                    }
 
-            $promptText = trim((string) ($candidate['prompt'] ?? ''));
-            $answer = trim((string) ($candidate['answer'] ?? ''));
+                    $promptText = trim((string) ($candidate['prompt'] ?? ''));
+                    $answer = trim((string) ($candidate['answer'] ?? ''));
 
-            if ($promptText === '' || $answer === '') {
-                continue;
-            }
+                    if ($promptText === '' || $answer === '') {
+                        continue;
+                    }
 
-            $fingerprint = hash(
-                'sha256',
-                $this->normalize($promptText)
-                .'|'
-                .$this->normalize($answer),
-            );
+                    $fingerprint = hash(
+                        'sha256',
+                        $this->normalize($promptText)
+                        .'|'
+                        .$this->normalize($answer),
+                    );
 
-            $model = StudyRecallCandidate::query()->firstOrCreate(
-                [
-                    'task_id' => (int) $task->id,
-                    'fingerprint' => $fingerprint,
-                ],
-                [
-                    'study_recall_source_id' => (int) $source->id,
-                    'plan_id' => (int) $plan->id,
-                    'prompt' => mb_substr($promptText, 0, 1000),
-                    'answer' => mb_substr($answer, 0, 8000),
-                    'note' => filled($candidate['note'] ?? null)
-                        ? mb_substr(
-                            trim((string) $candidate['note']),
-                            0,
-                            4000,
-                        )
-                        : null,
-                    'tags' => collect($candidate['tags'] ?? [])
-                        ->filter(
-                            fn ($tag) =>
-                                is_string($tag)
-                                && trim($tag) !== '',
-                        )
-                        ->map(
-                            fn ($tag) =>
-                                mb_substr(trim($tag), 0, 80),
-                        )
-                        ->unique()
-                        ->take(5)
-                        ->values()
-                        ->all(),
-                    'source_excerpt' =>
-                        filled($candidate['source_excerpt'] ?? null)
-                            ? mb_substr(
-                                trim(
-                                    (string)
-                                    $candidate['source_excerpt'],
-                                ),
+                    $model = StudyRecallCandidate::query()->firstOrCreate(
+                        [
+                            'task_id' => (int) $task->id,
+                            'fingerprint' => $fingerprint,
+                        ],
+                        [
+                            'study_recall_source_id' => (int) $source->id,
+                            'plan_id' => (int) $plan->id,
+                            'prompt' => mb_substr($promptText, 0, 1000),
+                            'answer' => mb_substr($answer, 0, 8000),
+                            'note' => filled($candidate['note'] ?? null)
+                                ? mb_substr(
+                                    trim((string) $candidate['note']),
+                                    0,
+                                    4000,
+                                )
+                                : null,
+                            'tags' => collect($candidate['tags'] ?? [])
+                                ->filter(
+                                    fn ($tag) =>
+                                        is_string($tag)
+                                        && trim($tag) !== '',
+                                )
+                                ->map(
+                                    fn ($tag) =>
+                                        mb_substr(trim($tag), 0, 80),
+                                )
+                                ->unique()
+                                ->take(5)
+                                ->values()
+                                ->all(),
+                            'source_excerpt' =>
+                                filled($candidate['source_excerpt'] ?? null)
+                                    ? mb_substr(
+                                        trim(
+                                            (string)
+                                            $candidate['source_excerpt'],
+                                        ),
+                                        0,
+                                        1000,
+                                    )
+                                    : null,
+                            'confidence' => max(
                                 0,
-                                1000,
-                            )
-                            : null,
-                    'confidence' => max(
-                        0,
-                        min(
-                            100,
-                            (int) ($candidate['confidence'] ?? 50),
-                        ),
-                    ),
-                    'status' => 'pending',
-                ],
-            );
+                                min(
+                                    100,
+                                    (int) ($candidate['confidence'] ?? 50),
+                                ),
+                            ),
+                            'status' => 'pending',
+                        ],
+                    );
 
-            if ($model->wasRecentlyCreated) {
-                $created++;
-                $createdPerSource[$sourceIndex]++;
-            }
-        }
+                    if ($model->wasRecentlyCreated) {
+                        $created++;
+                        $createdPerSource[$sourceIndex]++;
+                    }
+                }
 
                 foreach ($sources as $index => $source) {
                     $source->update([
@@ -269,7 +269,8 @@ final class StudyRecallBatchCandidateExtractionService
         ?int $userId,
         NativeAiExecutionException $exception,
     ): void {
-        if ($userId === null) {
+        if ($userId === null || $exception->errorCode === 'native_ai_target_changed') {
+            // Do not mutate a Source when its Plan/Task authorization moved.
             return;
         }
 
