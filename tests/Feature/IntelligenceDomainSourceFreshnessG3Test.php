@@ -7,6 +7,7 @@ use App\Intelligence\Career\CareerAdaptiveActionService;
 use App\Intelligence\Development\DevelopmentAdaptiveActionService;
 use App\Intelligence\Enums\IntelligenceDomain;
 use App\Intelligence\Presentation\IntelligencePresentationHistoryService;
+use App\Intelligence\Presentation\IntelligenceStateChangeFeedbackService;
 use App\Intelligence\Services\ActionProjectionStore;
 use App\Intelligence\Services\IntelligenceEvidenceFreshnessGuard;
 use App\Intelligence\Services\StateSnapshotStore;
@@ -73,6 +74,42 @@ final class IntelligenceDomainSourceFreshnessG3Test extends TestCase
         $this->assertSame(1, IntelligenceStateSnapshot::count());
         $this->assertSame(1, IntelligenceDecisionTrace::count());
         $this->assertSame(1, IntelligenceActionProjection::count());
+    }
+
+    public function test_career_refresh_can_show_safe_update_notice_without_old_private_decision(): void
+    {
+        [$user, $plan] = $this->scenario('就活・キャリア');
+        $capture = CareerCapture::query()->create([
+            'plan_id' => $plan->id,
+            'user_id' => $user->id,
+            'source_type' => 'manual',
+            'status' => 'pending',
+            'raw_text' => 'SECRET EMPLOYER BEFORE',
+            'captured_at' => now(),
+        ]);
+        $this->persistCareer($plan);
+        $application = $this->application($plan);
+        $capture->update([
+            'status' => 'linked',
+            'career_application_id' => $application->id,
+        ]);
+        $this->persistCareer($plan);
+
+        $feedback = app(IntelligenceStateChangeFeedbackService::class)
+            ->latestForPlan($this->request($user), $plan, IntelligenceDomain::Career);
+
+        $this->assertNotNull($feedback);
+        $this->assertSame('source_updated', $feedback['kind']);
+        $this->assertNull($feedback['readiness_before']);
+        $this->assertSame('', $feedback['decision_before']);
+        $this->assertNull($feedback['action_before']);
+        $this->assertStringContainsString('Current Actionを更新', $feedback['summary']);
+        $this->assertStringNotContainsString(
+            'SECRET EMPLOYER BEFORE',
+            json_encode($feedback, JSON_UNESCAPED_UNICODE),
+        );
+        $this->assertCount(1, app(IntelligencePresentationHistoryService::class)
+            ->forPlan($this->request($user), $plan, IntelligenceDomain::Career)['states']);
     }
 
     public function test_new_career_application_invalidates_empty_state_even_without_task_evidence(): void
