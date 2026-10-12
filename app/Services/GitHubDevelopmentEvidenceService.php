@@ -89,8 +89,8 @@ final class GitHubDevelopmentEvidenceService
             (int) data_get($repository?->metadata, 'github_app_connection.installation_id', 0),
             $repository?->plan?->user_id === null
                 ? null : (int) $repository->plan->user_id,
-            fn (Task $liveTask, array $validIds) => $this->recordTargetEvidence(
-                $liveTask, $validIds, $target, $snapshot,
+            fn (Task $liveTask, array $validIds, PlanArtifact $lockedRoot) => $this->recordTargetEvidence(
+                $liveTask, $validIds, $target, $snapshot, $lockedRoot,
             ),
             $this->epochs->current((array) $repository?->metadata),
         );
@@ -263,8 +263,8 @@ final class GitHubDevelopmentEvidenceService
                     $installationId,
                     $sourcePlan?->user_id === null
                         ? null : (int) $sourcePlan->user_id,
-                    fn (Task $liveTask, array $validIds) => $this->recordTargetEvidence(
-                        $liveTask, $validIds, $target, $snapshot,
+                    fn (Task $liveTask, array $validIds, PlanArtifact $lockedRoot) => $this->recordTargetEvidence(
+                        $liveTask, $validIds, $target, $snapshot, $lockedRoot,
                     ),
                     $epochByPlan[(int) $task->plan_id] ?? null,
                 );
@@ -508,6 +508,7 @@ final class GitHubDevelopmentEvidenceService
         array $artifactIds,
         array $target,
         array $snapshot,
+        ?PlanArtifact $lockedRoot = null,
     ): ?\App\Models\TaskEvidence {
         $kind = (string) ($target['kind'] ?? '');
 
@@ -527,6 +528,7 @@ final class GitHubDevelopmentEvidenceService
                 $artifactIds,
                 $target,
                 $snapshot,
+                $lockedRoot,
             ),
             'commit' => $this->recordCommit(
                 $task,
@@ -628,14 +630,21 @@ final class GitHubDevelopmentEvidenceService
         array $artifactIds,
         array $target,
         array $snapshot,
+        ?PlanArtifact $lockedRoot = null,
     ): ?\App\Models\TaskEvidence {
         $branchSnapshot = (array) ($snapshot['branch_snapshot'] ?? []);
         if (is_array($branchSnapshot['branch'] ?? null)) {
-            $this->recordBranch(
-                $task,
-                $artifactIds,
-                $branchSnapshot,
-            );
+            $branch = $this->recordBranch($task, $artifactIds, $branchSnapshot);
+            if ($branch !== null && $lockedRoot !== null) {
+                $epoch = $this->epochs->current((array) $lockedRoot->metadata);
+                if ($epoch !== null) {
+                    $branch->update(['metadata' => [
+                        ...(array) $branch->metadata,
+                        'github_source_epoch' => $epoch,
+                        'github_repository_artifact_id' => (int) $lockedRoot->id,
+                    ]]);
+                }
+            }
         }
 
         $commitSnapshot = (array) ($snapshot['commit_snapshot'] ?? []);
