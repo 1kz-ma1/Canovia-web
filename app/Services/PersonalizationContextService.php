@@ -12,6 +12,7 @@ final class PersonalizationContextService
 
     public function __construct(
         private readonly StudyDerivedContextFreshnessGuard $freshness,
+        private readonly DevelopmentDerivedContextFreshnessGuard $developmentFreshness,
     ) {}
 
     /**
@@ -78,7 +79,10 @@ final class PersonalizationContextService
 
         // Gate derived Study signals on live source identity before they reach
         // a workspace, recommendation, or another AI-facing context adapter.
-        return $this->freshness->filter($current, (int) $user->id);
+        return $this->developmentFreshness->filter(
+            $this->freshness->filter($current, (int) $user->id),
+            $user,
+        );
     }
 
     /**
