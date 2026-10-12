@@ -97,6 +97,7 @@ final class ExecutionDistributionService
                 if ($this->packets->nativeConfigured()) {
                     try {
                         $generated = $this->packets->generateNative(
+                            $request,
                             $context,
                             $plan,
                             $task,
@@ -110,13 +111,21 @@ final class ExecutionDistributionService
                         $target['native_run_id'] = $generated['run_id'];
                     } catch (NativeAiExecutionException $exception) {
                         $target['native_error'] = mb_substr($exception->getMessage(), 0, 1200);
-                        $target['handoff_prompt'] = $this->packets->prompt(
-                            $context,
-                            $actorType,
-                            $availableMinutes,
-                            $executionRequest,
-                            $actorLabel,
-                        );
+                        if (! in_array($exception->errorCode, [
+                            'native_ai_target_changed', 'native_ai_source_changed',
+                            'native_ai_purpose_not_entitled', 'native_ai_actor_unverified',
+                            'native_ai_authorization_unavailable',
+                        ], true)) {
+                            // Ordinary provider errors may use the Free external
+                            // path; stale/revoked private Context may not.
+                            $target['handoff_prompt'] = $this->packets->prompt(
+                                $context,
+                                $actorType,
+                                $availableMinutes,
+                                $executionRequest,
+                                $actorLabel,
+                            );
+                        }
                     }
                 } else {
                     $target['native_error'] = 'Native AIが利用できないため、外部AI用Promptへ切り替えました。';
@@ -152,7 +161,7 @@ final class ExecutionDistributionService
             ->values()
             ->all();
 
-        return [
+        $bundle = [
             'schema_version' => '1.0',
             'flow' => 'execution_distribution',
             'plan' => [
@@ -166,6 +175,9 @@ final class ExecutionDistributionService
                 (string) json_encode($fingerprintPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             ),
         ];
+
+        // An earlier AI target can become stale while generating later ones.
+        return $this->refreshStaleness($request, $plan, $bundle);
     }
 
     /**
@@ -199,6 +211,10 @@ final class ExecutionDistributionService
                 if (! $task instanceof Task) {
                     $target['stale'] = true;
                     $target['stale_reason'] = '対象Taskが現在のPlanに存在しません。';
+                    if ((int) ($target['native_run_id'] ?? 0) > 0) {
+                        $target['packet'] = null;
+                        unset($target['native_run_id']);
+                    }
 
                     return $target;
                 }
@@ -212,6 +228,17 @@ final class ExecutionDistributionService
                     ? 'Task / Dependency / EvidenceなどのContextが生成後に変わっています。'
                     : null;
                 $target['dependency_state'] = (string) ($context['dependency_state'] ?? 'ready');
+
+                if ((int) ($target['native_run_id'] ?? 0) > 0
+                    && ($target['stale']
+                        || ! $this->packets->nativePacketCurrent($request, $plan, $task, $context))) {
+                    // Withhold stale/revoked Native output even from a
+                    // previously generated multi-target session bundle.
+                    $target['stale'] = true;
+                    $target['stale_reason'] = 'Native AIの元Contextまたは現在の利用権限を再確認できません。';
+                    $target['packet'] = null;
+                    unset($target['native_run_id']);
+                }
 
                 return $target;
             })
