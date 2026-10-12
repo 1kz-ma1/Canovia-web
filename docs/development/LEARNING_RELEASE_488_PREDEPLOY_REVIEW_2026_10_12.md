@@ -1,0 +1,45 @@
+# Release #488 — Whole-production-delta safety review (2026-10-12)
+
+Status: **PREDEPLOY / NOT AUTHORIZED**. Review only; no production data read/write or Render deploy. This is an operational snapshot, **not a certificate that a subsequent `main` is safe**.
+
+## Verified starting point
+
+| Surface | Pinned observation | Limit |
+| --- | --- | --- |
+| GitHub `main` at review start | `7f73cbdc4e620f5d36ce97a1b7ec169ebeff8e2b` | Re-pin if main advances; do not deploy a moving branch without exact SHA |
+| Render `My Workspace` / Canovia production | `srv-dagfn2id0e5s73cac7ng` — `dep-db5fgl942hec738pbq30` **live** at `15abdc9de6f24b5250fb255c579d1aa55facaf1a` | Live deployment != latest main |
+| Deployment policy | `autoDeploy=no` and `autoDeployTrigger=off`; Free Docker Web, Singapore | Must remain disabled; do not upgrade hosting |
+| GitHub compare | `15abdc9..7f73cbd` = **28 commits / 152 paths**, including new Learning features | Review *all* paths, not only PR #490 |
+| Production DB repair | #418 closed after verified FK 5/5, index 11/11, ledger 94/94 and owner Mac/iPhone smoke | Those were historical post-P0 observations, not a current SELECT-only preflight |
+| Learning integration | #490 merged as `0d36dac`; source PRs #456/#457/#484 closed unmerged | Automated tests passed for integration, physical-device UX of new code unknown |
+
+## Blast-radius and disposition
+
+| Area | Actual unshipped changes | Gate |
+| --- | --- | --- |
+| Database — **schema write on startup** | Single added migration `2026_10_12_010000_add_source_revision_to_development_activity_observations.php`, adding nullable `source_updated_at` TIMESTAMP and nullable `source_revision_id` BIGINT UNSIGNED. No default data rewrites and no new FK/index in the source. | **HOLD until disposable MySQL 8.0/8.4 tests** run full migrations, repeat migrations and rehearse legacy synthetic row survival. Confirm exact pending migration against live read-only Aiven ledger with no leaked names/user rows. Existing production data may contain writes since the last backup. MySQL DDL is not automatically rollback-safe. |
+| Database — concurrent ingress | Development GitHub observation service now records source revision/order and locks rows for serialization. | Check new columns exist before webhook/bootstrap workers write; verify ordering and actor/repository bounds; ensure worker restart behavior. |
+| Auth0 / MCP and JWT | New `firebase/php-jwt`, alternate signed JWT provider, account link mode selection, OAuth/MCP configuration. All newly introduced switches default OFF **in source**. | Verify effective **production runtime flags**, not just code defaults. Explicitly keep private delegated MCP tools/account-link/Plan consent OFF until separately approved. Test token mode denial, issuer/audience/client binding, revoked permissions, and no unauthorized scope fallback. Never print environment values, secrets, bearer tokens or JWT claims. |
+| Native AI | Purpose authorization checked before and after provider call; feature entitlement and actor/Plan/Task scoped. | Run focused denial tests and verify typical allowed user journey; no subscription purchase or new API call authorized. |
+| Intelligence / Planning | State snapshot, evidence freshness, plan draft guards, multi-domain continuity. | Run previous and new suites; ensure no cross-tenant data flow, stale authorization accepted, or background mutation. These are substantive runtime changes even though they do not migrate schema. |
+| Learning UI | StudyPractice Focus + grade-to-continue, per-answer draft, saved reasoning, read-only history & recommendation. | Regression and mobile/desktop smoke after release, not claimed complete by CI; verify no Task progress mutation merely for continuing. |
+| Startup / build | `Dockerfile` and `docker/render-start.sh` compare unchanged in this range; `render-start.sh` **automatically executes `php artisan migrate --force` before starting php-fpm/Nginx**. Composer lock changes due to new JWT dependency. | Code merge does not deploy while Render autoDeploy is OFF. Triggering a manual deploy WILL run schema migrations; separate explicit go/no-go required. Evaluate build, dependency lock, migrations, app health and runtime logs. |
+
+## Added disposable CI protections (this release)
+1. `.github/workflows/p0-disposable-mysql-schema.yml` runs full Laravel migrations on MySQL **8.0 and 8.4**, repeats migration, checks prior P0 interrupted-DDL restoration and now requires `NextReleaseMysqlSourceRevisionMigrationTest`.
+2. The new test re-creates legacy table column shape **only on the disposable isolated MySQL instance**, inserts synthetic legacy observation with authorized parent rows, applies only the new migration, verifies all existing identity fields and row counts remain and new nullable column metadata agrees, then checks a new revision value can be stored. A second full Laravel migration invocation follows; never call `down()` on live data.
+3. Workspace CI runs Auth0 JWT/Account Link routing and denial, Native AI purpose fence and Development Observation ordering regressions together with prior Learning suites. This is automated coverage, not a real production OAuth or paid Native AI E2E.
+4. Both workflows must complete **success at the exact PR SHA**. Record results before any merge.
+
+## Production go/no-go (all steps not yet accepted)
+
+- [ ] Re-pin exact GitHub `main` / release commit and compare with current Render live SHA; inspect new commits, migration diff, Docker startup, dependencies and any changed deployment toggles. CI result for old SHA does not cover new commits.
+- [ ] Operator: obtain **fresh limited-scope SELECT-only** Aiven inventory of applied/pending migration names via approved restricted connection; expect exactly the one new nullable-column migration, and no unknown/unexpected pending DDL. Never accept summary count alone if it cannot distinguish an unknown pending migration. Do not use defaultdb; verify `pacekeeper` identity.
+- [ ] Operator: ensure restorable **fresh** encrypted backup and separate tested recovery path, timestamp, capacity and agreed minimal write window. Previous P0 backup and restore evidence cannot stand in for an updated current snapshot.
+- [ ] Explicitly inspect effective Render flags (MCP discovery/tools/delegated/consent, account link, Auth0 verifier selection), session/DB identity, Native AI driver and queue/bootstrap behavior **without exposing values**; preserve production MCP OFF unless owner separately approves activation.
+- [ ] Review deployment startup `migrate --force` semantics, migration failure rollback contingency (fail closed; do not run `migrate:fresh`, drop columns or restore over live writes), and coordinated operator pause; agree exact target commit.
+- [ ] Owner approves the manual Render deployment in its own step; do not turn on Auto Deploy. Live code remains old until that occurs.
+- [ ] After deploy, read actual live SHA/healthy status and migration logs; check live schema columns/ledger with **read-only** metadata (no DDL by audit), SQL/5xx errors, login/session after restart, and the focused Learning flow across iPhone WKWebView/PWA/Safari and desktop.
+- [ ] Keep rollback/backout strategy explicit. Application-image rollback does **not** rollback additive DB columns. If migration fails, avoid blind rollback/restore; halt, inspect affected data/state and choose an operator-reviewed forward repair.
+
+**Security exclusions:** no user data, connection strings, secrets, sample production records, raw JWTs, backup file contents, workspace billing or production config edits are collected in this document. Issue #488 is source-of-truth for release gate and owner acceptance.
