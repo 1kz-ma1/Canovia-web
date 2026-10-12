@@ -7,6 +7,8 @@ use App\Intelligence\Contracts\ReadinessEvaluator;
 use App\Intelligence\Data\ReasonedDecisionEvaluationResult;
 use App\Intelligence\Data\ReasoningRequest;
 use App\Intelligence\Data\StateSnapshot;
+use App\Models\Plan;
+use Illuminate\Support\Facades\DB;
 
 final class ReasonedDecisionOrchestrator
 {
@@ -37,37 +39,67 @@ final class ReasonedDecisionOrchestrator
             $context,
         );
 
-        $routed = $this->router->route(
-            new ReasoningRequest(
-                state: $state,
-                readiness: $readiness,
-                candidates: $candidates,
-                baselineDecision: $baseline,
-                userId: $userId,
-                planId: $planId,
-            ),
-            $context,
+        $request = new ReasoningRequest(
+            state: $state,
+            readiness: $readiness,
+            candidates: $candidates,
+            baselineDecision: $baseline,
+            userId: $userId,
+            planId: $planId,
         );
+        $routed = $this->router->route($request, $context);
 
-        $trace = $this->decisionTraceStore->persist(
-            $state,
-            $readiness,
-            $routed->decision,
-            $userId,
-            $planId,
-            [
-                'engine' => $decisionEngine::class,
-                'engine_version' => $metadata['engine_version'] ?? null,
-                'policy_version' => $routed->decision->metadata['policy_version']
-                    ?? $baseline->metadata['policy_version']
-                    ?? null,
-            ],
-        );
+        // Router and Native AI Gateway guard their own disclosure paths,
+        // but grant/Plan revocation may occur AFTER router returns and BEFORE
+        // the materialized Decision is committed. Recheck at the final write.
+        // Lock the Plan across the authorization read and trace association.
+        $trace = DB::transaction(function () use (
+            $state, $readiness, $baseline, $routed, $request,
+            $userId, $planId, $decisionEngine, $metadata,
+        ) {
+            if ($routed->reasoningRun->route_selected === 'openai') {
+                if ($planId !== null) {
+                    $livePlan = Plan::query()->whereKey($planId)
+                        ->lockForUpdate()->first();
+                    abort_unless(
+                        $livePlan !== null
+                            && $userId !== null
+                            && (int) $livePlan->user_id === $userId
+                            && ! $livePlan->is_collaborative,
+                        409,
+                        'Decision保存前にPlanのアクセス条件が変更されました。',
+                    );
+                }
 
-        $this->reasoningRunStore->attachDecisionTrace(
-            $routed->reasoningRun,
-            $trace,
-        );
+                abort_unless(
+                    $this->router->aiAuthorizationFailure($request) === null,
+                    409,
+                    'Decision保存前にNative AIの利用権限が変更されました。',
+                );
+            }
+
+            $stored = $this->decisionTraceStore->persist(
+                $state,
+                $readiness,
+                $routed->decision,
+                $userId,
+                $planId,
+                [
+                    'engine' => $decisionEngine::class,
+                    'engine_version' => $metadata['engine_version'] ?? null,
+                    'policy_version' => $routed->decision->metadata['policy_version']
+                        ?? $baseline->metadata['policy_version']
+                        ?? null,
+                ],
+            );
+
+            $this->reasoningRunStore->attachDecisionTrace(
+                $routed->reasoningRun,
+                $stored,
+            );
+
+            return $stored;
+        }, 3);
 
         return new ReasonedDecisionEvaluationResult(
             readiness: $readiness,
