@@ -6,6 +6,7 @@ use App\Enums\FeatureKey;
 use App\Models\Plan;
 use App\Models\PlanArtifact;
 use App\Models\Task;
+use App\Models\TaskEvidence;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -18,6 +19,7 @@ final class GitHubTaskEvidenceCommitGuard
         private readonly GitHubWorkflowService $workflow,
         private readonly FeatureAccessService $access,
         private readonly PlanCategoryProfileService $profiles,
+        private readonly GitHubSourceEpochService $epochs,
     ) {}
 
     /**
@@ -31,6 +33,7 @@ final class GitHubTaskEvidenceCommitGuard
         int $installationId,
         ?int $sourceOwnerId,
         callable $write,
+        ?string $expectedSourceEpoch = null,
     ): mixed {
         if ($installationId <= 0 || $sourceOwnerId === null
             || trim($repoFullName) === '' || $artifactIds === []) {
@@ -39,7 +42,7 @@ final class GitHubTaskEvidenceCommitGuard
 
         return DB::transaction(function () use (
             $task, $artifactIds, $repoFullName, $installationId,
-            $sourceOwnerId, $write,
+            $sourceOwnerId, $write, $expectedSourceEpoch,
         ) {
             $plan = Plan::query()
                 ->whereKey($task->plan_id)
@@ -67,8 +70,8 @@ final class GitHubTaskEvidenceCommitGuard
                 ->lockForUpdate()
                 ->get();
 
-            $sourceValid = $roots->contains(function (PlanArtifact $root) use (
-                $repoFullName, $installationId,
+            $sourceRoot = $roots->first(function (PlanArtifact $root) use (
+                $repoFullName, $installationId, $expectedSourceEpoch,
             ): bool {
                 $parsed = $this->workflow->parseUrl((string) $root->url);
 
@@ -79,10 +82,13 @@ final class GitHubTaskEvidenceCommitGuard
                     ) === 0
                     && data_get($root->metadata, 'github_app_connection.status') === 'connected'
                     && (int) data_get($root->metadata, 'github_app_connection.installation_id', 0)
-                        === $installationId;
+                        === $installationId
+                    // The provider read was authorized for one specific
+                    // connection epoch; never re-sign it after reconnect.
+                    && $this->epochs->current((array) $root->metadata) === $expectedSourceEpoch;
             });
 
-            if (! $sourceValid
+            if (! $sourceRoot
                 || ! $this->access->canUse(
                     $plan->user,
                     FeatureKey::DeveloperGithubEvidence,
@@ -116,7 +122,35 @@ final class GitHubTaskEvidenceCommitGuard
                 ->values()
                 ->all();
 
-            return $targets === [] ? null : $write($liveTask, $targets);
+            if ($targets === []) {
+                return null;
+            }
+
+            $result = $write($liveTask, $targets);
+            if ($expectedSourceEpoch !== null) {
+                $ids = $result instanceof TaskEvidence
+                    ? [(int) $result->id]
+                    : (is_array($result) ? (array) ($result['evidence_ids'] ?? []) : []);
+
+                // Signed provenance is part of the same DB transaction as
+                // the new/re-fetched Evidence, never a background backfill.
+                TaskEvidence::query()
+                    ->where('plan_id', $plan->id)
+                    ->where('task_id', $liveTask->id)
+                    ->where('source', 'github')
+                    ->whereIn('id', array_filter(array_map('intval', $ids)))
+                    ->get()
+                    ->each(function (TaskEvidence $row) use (
+                        $expectedSourceEpoch, $sourceRoot,
+                    ): void {
+                        $metadata = is_array($row->metadata) ? $row->metadata : [];
+                        $metadata['github_source_epoch'] = $expectedSourceEpoch;
+                        $metadata['github_repository_artifact_id'] = (int) $sourceRoot->id;
+                        $row->update(['metadata' => $metadata]);
+                    });
+            }
+
+            return $result;
         }, 3);
     }
 }
