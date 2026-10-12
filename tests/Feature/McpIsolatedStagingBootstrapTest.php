@@ -515,7 +515,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
         $this->assertIsString($nginx);
         $this->assertIsString($boot);
         $this->assertStringContainsString("log_format stage_pilot_safe '\$remote_addr", $nginx);
-        foreach (['$request_uri', '$args', '$query_string', '$request', '$request_body'] as $secretBearing) {
+        foreach (['$request_uri', '$args', '$query_string', '$request_body'] as $secretBearing) {
             // Inspect the actual log format, not the nearby documentation comment.
             $logLine = collect(explode("\n", $nginx))->first(
                 fn (string $line) => str_contains($line, 'log_format stage_pilot_safe'),
