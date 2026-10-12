@@ -225,9 +225,13 @@ final class McpStagingProviderPreflightTest extends TestCase
         ];
         $uri = 'https://canovia-mcp-dev.jp.auth0.com/.well-known/openid-configuration';
         $cimdMeta = array_replace($meta, ['client_id_metadata_document_supported' => true]);
+        $noOidcMeta = array_replace($meta, ['scopes_supported' => ['canovia.development.read']]);
+        $badScopesMeta = array_replace($meta, ['scopes_supported' => [['openid']]]);
         Http::fake([$uri => Http::sequence()
             ->push($meta, 200, ['Content-Type' => 'application/json'])
-            ->push($cimdMeta, 200, ['Content-Type' => 'application/json'])]);
+            ->push($cimdMeta, 200, ['Content-Type' => 'application/json'])
+            ->push($noOidcMeta, 200, ['Content-Type' => 'application/json'])
+            ->push($badScopesMeta, 200, ['Content-Type' => 'application/json'])]);
 
         $report = app(McpStagingProviderPreflightService::class)->check(true);
         $this->assertSame('pass', $report['local_checks']['token_verification_mode']);
@@ -238,6 +242,12 @@ final class McpStagingProviderPreflightTest extends TestCase
         $this->assertSame('pass', $report['provider_checks']['pkce_and_callback_issuer']);
         $this->assertSame('pass', $report['provider_checks']['canovia_confidential_client']);
         $this->assertSame('requires_signed_token', $report['provider_checks']['resource_scope']);
+        // Public OIDC metadata advertises scopes ChatGPT may request by
+        // default, yet Auth0 enhanced third-party clients reject OIDC scopes.
+        $this->assertSame('requires_live_flow_validation',
+            $report['provider_checks']['third_party_oidc_scopes']);
+        $this->assertContains('check_chatgpt_default_oidc_scopes_against_auth0_third_party_restrictions',
+            $report['remaining_external_checks']);
         $this->assertSame('not_applicable', $report['provider_checks']['introspection_endpoint']);
         $this->assertSame('requires_issued_client', $report['provider_checks']['chatgpt_client_registration']);
         $this->assertFalse($report['preflight_passed']);
@@ -252,6 +262,19 @@ final class McpStagingProviderPreflightTest extends TestCase
         $report = app(McpStagingProviderPreflightService::class)->check(true);
         $this->assertContains('cimd', $report['supported_client_modes']);
         $this->assertSame('requires_issued_client', $report['provider_checks']['chatgpt_client_registration']);
+        $this->assertFalse($report['preflight_passed']);
+
+        // Absence of OIDC scopes avoids this particular warning, but never
+        // establishes compatible login, registered client or signed tokens.
+        $report = app(McpStagingProviderPreflightService::class)->check(true);
+        $this->assertSame('not_advertised', $report['provider_checks']['third_party_oidc_scopes']);
+        $this->assertFalse($report['preflight_passed']);
+        $this->assertFalse($report['production_authorized']);
+
+        // A malformed discovery scope array is data, never executable or
+        // a reason to throw a warning/exception during operator diagnosis.
+        $report = app(McpStagingProviderPreflightService::class)->check(true);
+        $this->assertSame('unknown_metadata', $report['provider_checks']['third_party_oidc_scopes']);
         $this->assertFalse($report['preflight_passed']);
     }
 
