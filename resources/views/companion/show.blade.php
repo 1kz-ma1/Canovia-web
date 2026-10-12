@@ -240,8 +240,13 @@
                                     @endif
 
                                     @if ($candidate->status === 'pending')
+                                        @if (! empty($preview['source_stale']))
+                                            <p class="mt-3 text-xs text-amber-200" data-companion-source-stale>
+                                                この変更候補のGitHub根拠は現在確認できません。履歴として残しますが、新しい情報で再提案が必要です。
+                                            </p>
+                                        @endif
                                         <div class="mt-3 flex flex-wrap gap-2">
-                                            @if ($canApplyCompanionCandidates && ! empty($previewChanges))
+                                            @if ($canApplyCompanionCandidates && ! empty($previewChanges) && empty($preview['source_stale']))
                                                 <form method="POST" action="{{ route('companion.candidates.apply', [$thread, $candidate]) }}" data-mutation-once>
                                                     @csrf
                                                     <input type="hidden" name="apply_request_id" value="{{ $candidateApplyRequestIds[$candidate->id] ?? '' }}">
