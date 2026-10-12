@@ -172,3 +172,5 @@ Normal Free external AI handoff and deterministic Question Bank grading remain u
 Dedicated positive/negative tests cover legitimate native generation, alternative Study category/domain, Plan transfer, Task revision or human completion, and grant expiry **after provider success**, with existing V41.8, Hybrid and #499 assessment regression. No controller UX, task progress, billing/entitlements, external AI manual flow, new schema, MCP scopes or production credentials are changed.
 
 **Residual G3 OPEN:** later controller follow-up mutations, independent writers lacking matching locks, historical generated sessions after subsequent context edits, attempts outside the signed task, multi-worker PostgreSQL and deployed/device acceptance still require separate verification.
+
+**Study completion compatibility:** An already-completed Task may still be used for review. The new generation fence denies cancelled targets but does **not** deny an unchanged `done` / 100%-progress Task merely for its status; changing status while the provider is running still changes the signed Task attributes and refuses the stale output. A dedicated regression protects this distinction.
