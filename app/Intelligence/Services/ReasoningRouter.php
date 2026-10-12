@@ -348,7 +348,7 @@ final class ReasoningRouter
      * This is not ChatGPT OAuth consent: MCP external disclosure is governed
      * separately by McpDelegatedPlanAccessPolicy and its locked read path.
      */
-    private function aiAuthorizationFailure(ReasoningRequest $request): ?string
+    public function aiAuthorizationFailure(ReasoningRequest $request): ?string
     {
         try {
             $actor = $request->userId !== null && $request->userId > 0
