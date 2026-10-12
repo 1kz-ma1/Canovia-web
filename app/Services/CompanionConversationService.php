@@ -195,7 +195,7 @@ class CompanionConversationService
                 ];
             }
 
-            if (! $this->derivedSources->isCurrent($plan, $sourceProvenance)) {
+            if (! $this->derivedSources->isCurrentForCommit($plan, $sourceProvenance)) {
                 throw new NativeAiExecutionException(
                     'Companion生成中にGitHubの根拠が変更されました。現在の情報で再生成してください。',
                     'native_ai_source_changed',
