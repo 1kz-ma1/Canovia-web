@@ -592,6 +592,29 @@ class ProviderConnectionActivityIntakeV559Test extends TestCase
         $this->assertDatabaseCount('execution_activities', 0);
     }
 
+    public function test_revoked_connection_cannot_commit_using_previously_valid_context(): void
+    {
+        [$user, $plan, $task] = $this->studyContext();
+        [$publicId] = $this->createConnection($user);
+        $issued = $this->issueContext($user, $plan, $task, $publicId);
+        $connection = ProviderConnection::where('public_id', $publicId)->firstOrFail();
+        $resolved = app(ProviderExecutionContextService::class)->resolve($issued, $connection);
+
+        app(ProviderConnectionService::class)->revoke($connection);
+        $this->assertTrue($connection->isActive());
+
+        try {
+            app(ProviderActivityIntakeService::class)->accept(
+                $connection, $resolved,
+                $this->practicePayload($issued, 'revoked-preflight', 75)['activity'],
+            );
+            $this->fail('Revoked connection accepted a stale context.');
+        } catch (ProviderConnectionRevokedException) {
+            $this->assertDatabaseCount('execution_activities', 0);
+            $this->assertDatabaseCount('task_evidences', 0);
+        }
+    }
+
     private function createConnection(
         User $user,
         string $label = 'Validation connection',
