@@ -35,11 +35,29 @@ final class ExecutionOrchestrationController extends Controller
         GitHubRepositoryWriter $githubWriter,
         GitHubEvidenceDecisionService $githubDecision,
         ExecutionCoordinationService $coordination,
+        ExecutionRequestHandoffService $handoffSources,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
 
         $context = $contexts->snapshot($request, $plan, $task);
         $state = $request->session()->get($this->sessionKey($plan, $task), []);
+        $handoffSourceStale = is_array($state['execution_request'] ?? null)
+            && ! $handoffSources->sourceIsCurrent(
+                $state['execution_request'], $plan, $task,
+            );
+        if ($handoffSourceStale) {
+            // Drop only session-scoped stale executable projections; the
+            // already applied Companion candidate remains historical.
+            $state['execution_request'] = null;
+            $state['handoff_prompt'] = null;
+            $state['packet'] = null;
+            unset($state['native_run_id']);
+            $request->session()->put($this->sessionKey($plan, $task), $state);
+            // Clear the GitHub change preview derived from the same
+            // superseded Packet, rather than displaying an executable-
+            // looking candidate after its origin instruction is withdrawn.
+            $githubHandoff->clear($request, $plan, $task);
+        }
         $hasGeneratedState = is_array($state['packet'] ?? null)
             || filled($state['handoff_prompt'] ?? null);
         $stale = $hasGeneratedState
@@ -111,6 +129,7 @@ final class ExecutionOrchestrationController extends Controller
             'actorType' => (string) ($state['actor_type'] ?? 'human_ai'),
             'availableMinutes' => $state['available_minutes'] ?? null,
             'packetStale' => $stale,
+            'handoffSourceStale' => $handoffSourceStale,
             'nativeAiAvailable' => $nativeDecision->allowed && $packets->nativeConfigured(),
             'nativeAiEntitled' => $nativeDecision->allowed,
             'nativeAiConfigured' => $packets->nativeConfigured(),
@@ -156,6 +175,7 @@ final class ExecutionOrchestrationController extends Controller
         ExecutionOrchestrationContextService $contexts,
         ExecutionPacketService $packets,
         FeatureAccessService $access,
+        ExecutionRequestHandoffService $handoffSources,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
 
@@ -181,6 +201,12 @@ final class ExecutionOrchestrationController extends Controller
         $executionRequest = is_array($existingState['execution_request'] ?? null)
             ? $existingState['execution_request']
             : null;
+
+        if (! $handoffSources->sourceIsCurrent($executionRequest, $plan, $task)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'candidate' => '以前のCompanion実行候補の根拠を現在確認できません。新しい候補から実行を準備してください。',
+            ]);
+        }
 
         if ($executionRequest) {
             // The prepare form is another explicit human confirmation point.
