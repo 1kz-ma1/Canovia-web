@@ -53,6 +53,10 @@ final class ExecutionOrchestrationController extends Controller
             $state['packet'] = null;
             unset($state['native_run_id']);
             $request->session()->put($this->sessionKey($plan, $task), $state);
+            // Clear the GitHub change preview derived from the same
+            // superseded Packet, rather than displaying an executable-
+            // looking candidate after its origin instruction is withdrawn.
+            $githubHandoff->clear($request, $plan, $task);
         }
         $hasGeneratedState = is_array($state['packet'] ?? null)
             || filled($state['handoff_prompt'] ?? null);
