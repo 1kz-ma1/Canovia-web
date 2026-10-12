@@ -86,7 +86,7 @@ final class McpAuth0SealedStagingWiringTest extends TestCase
 
         config([
             'canovia_mcp.allowed_client_id' => 'a-client-id-that-must-never-appear',
-            'canovia_mcp.account_link_client_secret' => 'private-value-that-must-never-appear',
+            'canovia_mcp.account_link_client_secret' => 'sensitive',
             'canovia_mcp.identity_fingerprint_key' => 'weak',
         ]);
         $exit = Artisan::call('canovia:mcp-auth0-sealed-wiring-check', [
@@ -100,7 +100,7 @@ final class McpAuth0SealedStagingWiringTest extends TestCase
         );
         $this->assertMatchesRegularExpression('/\\A[a-z_,]+\\z/D', $output);
         $this->assertStringNotContainsString('a-client-id-that-must-never-appear', $output);
-        $this->assertStringNotContainsString('private-value-that-must-never-appear', $output);
+        $this->assertStringNotContainsString('sensitive', $output);
         $this->assertFalse(app(McpAuth0SealedStagingWiringReadiness::class)->check()['production_authorized']);
         Http::assertNothingSent();
     }
