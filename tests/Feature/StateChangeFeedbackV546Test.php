@@ -16,6 +16,7 @@ use App\Models\TaskEvidence;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -71,7 +72,7 @@ class StateChangeFeedbackV546Test extends TestCase
         );
 
         $feedback = app(IntelligenceStateChangeFeedbackService::class)
-            ->latestForPlan($plan, IntelligenceDomain::Development);
+            ->latestForPlan($this->actorRequest($user), $plan, IntelligenceDomain::Development);
 
         $this->assertNotNull($feedback);
         $this->assertSame('action_changed', $feedback['kind']);
@@ -89,7 +90,7 @@ class StateChangeFeedbackV546Test extends TestCase
 
     public function test_small_score_only_change_is_suppressed(): void
     {
-        [, $plan] = $this->studyScenario();
+        [$user, $plan] = $this->studyScenario();
 
         $this->historyPair(
             $plan,
@@ -109,13 +110,13 @@ class StateChangeFeedbackV546Test extends TestCase
 
         $this->assertNull(
             app(IntelligenceStateChangeFeedbackService::class)
-                ->latestForPlan($plan, IntelligenceDomain::Study),
+                ->latestForPlan($this->actorRequest($user), $plan, IntelligenceDomain::Study),
         );
     }
 
     public function test_five_point_readiness_change_is_meaningful_even_when_action_stays_same(): void
     {
-        [, $plan, $task] = $this->studyScenario();
+        [$user, $plan, $task] = $this->studyScenario();
         $practice = $this->evidence(
             $task,
             'study_practice_assessed',
@@ -140,7 +141,7 @@ class StateChangeFeedbackV546Test extends TestCase
         );
 
         $feedback = app(IntelligenceStateChangeFeedbackService::class)
-            ->latestForPlan($plan, IntelligenceDomain::Study);
+            ->latestForPlan($this->actorRequest($user), $plan, IntelligenceDomain::Study);
 
         $this->assertNotNull($feedback);
         $this->assertSame('readiness_improved', $feedback['kind']);
@@ -223,7 +224,10 @@ class StateChangeFeedbackV546Test extends TestCase
         );
 
         $this->actingAs($user)
-            ->get(route('workspace.development.index', ['plan_id' => $plan->id]))
+            ->get(route('workspace.development.index', [
+                'plan_id' => $plan->id,
+                'surface' => 'repository',
+            ]))
             ->assertOk()
             ->assertSee('data-intelligence-state-change', false)
             ->assertSee('次にやることが変わりました')
@@ -297,6 +301,14 @@ class StateChangeFeedbackV546Test extends TestCase
                 'data-intelligence-state-change-kind="',
             ),
         );
+    }
+
+    private function actorRequest(User $user): Request
+    {
+        $request = Request::create('/', 'GET');
+        $request->setUserResolver(fn () => $user);
+
+        return $request;
     }
 
     private function studyScenario(): array

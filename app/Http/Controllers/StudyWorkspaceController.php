@@ -275,6 +275,7 @@ final class StudyWorkspaceController extends Controller
             'intelligencePresentation' => $presentation,
             'intelligenceHistory' => $studySurface === 'history'
                 ? $history->forPlan(
+                    $request,
                     $plan,
                     IntelligenceDomain::Study,
                 )
@@ -283,6 +284,7 @@ final class StudyWorkspaceController extends Controller
             'navigationTask' => $navigationTask,
             'intelligenceStateChange' => $studySurface === 'work'
                 ? $stateChanges->latestForPlan(
+                    $request,
                     $plan,
                     IntelligenceDomain::Study,
                 )

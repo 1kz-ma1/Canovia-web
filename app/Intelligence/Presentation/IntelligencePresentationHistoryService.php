@@ -7,9 +7,15 @@ use App\Models\IntelligenceActionProjection;
 use App\Models\IntelligenceDecisionTrace;
 use App\Models\IntelligenceStateSnapshot;
 use App\Models\Plan;
+use App\Services\PlanOwnershipService;
+use Illuminate\Http\Request;
 
 final class IntelligencePresentationHistoryService
 {
+    public function __construct(
+        private readonly PlanOwnershipService $ownership,
+    ) {}
+
     /**
      * @return array{
      *   actions:\Illuminate\Support\Collection,
@@ -18,10 +24,13 @@ final class IntelligencePresentationHistoryService
      * }
      */
     public function forPlan(
+        Request $request,
         Plan $plan,
         IntelligenceDomain $domain,
         int $limit = 6,
     ): array {
+        $this->ownership->authorizeView($request, $plan);
+
         $limit = max(1, min(12, $limit));
 
         return [

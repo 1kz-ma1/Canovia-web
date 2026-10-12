@@ -16,6 +16,7 @@ use App\Models\TaskEvidence;
 use App\Models\User;
 use DateTimeImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -274,9 +275,11 @@ class IntelligenceStateEvidenceV531Test extends TestCase
             $laterSnapshot->state_reference,
         );
         $this->assertArrayNotHasKey('provider_payload', $sameSnapshot->metadata ?? []);
+        $request = Request::create('/', 'GET');
+        $request->setUserResolver(fn () => $user);
         $this->assertSame(
             $laterSnapshot->id,
-            $store->latest(IntelligenceDomain::Study, 'plan', $plan->id)?->id,
+            $store->latestForPlan($request, $plan, IntelligenceDomain::Study, 'plan')?->id,
         );
         $this->assertDatabaseCount('intelligence_state_snapshots', 2);
     }

@@ -7,19 +7,28 @@ use App\Intelligence\Enums\ReadinessLevel;
 use App\Models\IntelligenceActionProjection;
 use App\Models\IntelligenceDecisionTrace;
 use App\Models\Plan;
+use App\Services\PlanOwnershipService;
+use Illuminate\Http\Request;
 use App\Models\TaskEvidence;
 
 final class IntelligenceStateChangeFeedbackService
 {
     private const SCORE_CHANGE_THRESHOLD = 5;
 
+    public function __construct(
+        private readonly PlanOwnershipService $ownership,
+    ) {}
+
     /**
      * @return array<string,mixed>|null
      */
     public function latestForPlan(
+        Request $request,
         Plan $plan,
         IntelligenceDomain $domain,
     ): ?array {
+        $this->ownership->authorizeView($request, $plan);
+
         $traces = IntelligenceDecisionTrace::query()
             ->with('stateSnapshot')
             ->where('plan_id', $plan->id)
