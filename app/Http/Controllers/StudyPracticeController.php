@@ -342,6 +342,7 @@ class StudyPracticeController extends Controller
             'practiceReliability' => $practiceReliability,
             'practiceCheckpoint' => $practiceCheckpoint,
             'practiceStage' => $practiceStage,
+            'compactContinueSetup' => (bool) $request->session()->get('study_practice_continuing', false),
             'currentAttempt' => $currentAttempt,
             'recentAttempts' => $recentAttempts,
             'nativeAiEntitled' => $nativeAiEntitled,
@@ -1361,24 +1362,28 @@ class StudyPracticeController extends Controller
             if (($progressionDecision['kind'] ?? null) === 'verify_mastery') {
                 return redirect()
                     ->route('plans.tasks.study_practice.show', [$plan, $task])
+                    ->with('study_practice_continuing', true)
                     ->with('status', 'Task完了前の仕上げ確認を行います。別の問題で理解が安定しているか確認します。');
             }
 
             if (($progressionDecision['kind'] ?? null) === 'reinforce_current') {
                 return redirect()
                     ->route('plans.tasks.study_practice.show', [$plan, $task])
+                    ->with('study_practice_continuing', true)
                     ->with('status', '前回の結果を引き継いで、弱点補強を続けます。');
             }
 
             if (($progressionDecision['kind'] ?? null) === 'general_practice_return') {
                 return redirect()
                     ->route('plans.tasks.study_practice.show', [$plan, $task])
+                    ->with('study_practice_continuing', true)
                     ->with('status', '弱点の集中補完を区切り、総合演習で全体成績を再確認します。');
             }
 
             if (($progressionDecision['kind'] ?? null) === 'exam_mode') {
                 return redirect()
                     ->route('plans.tasks.study_practice.show', [$plan, $task])
+                    ->with('study_practice_continuing', true)
                     ->with('status', '試験日が近いため、本番形式の総合演習を優先します。');
             }
 
@@ -1388,17 +1393,20 @@ class StudyPracticeController extends Controller
                     ->with('status', '前のTaskを完了しました。次のTask内容から演習方針を組み立てます。');
             }
 
-            if (($progressionDecision['kind'] ?? null) === 'review_plan') {
+            if (($progressionDecision['kind'] ?? null) === 'plan_complete') {
                 return redirect()
-                    ->route('plans.review_assistant.show', $plan)
-                    ->with('status', '学習結果を反映しました。計画全体を見直します。');
+                    ->route('workspace.study.index')
+                    ->with('status', '今回のPlanの学習を完了しました。学習Workspaceから次の取り組みを選べます。');
             }
 
+            // Keep studying inside the Learning lane. Plan review is available
+            // explicitly from Plan management; it is never an involuntary hop.
             return redirect()
-                ->route('plans.show', $plan)
-                ->with('status', ($progressionDecision['kind'] ?? null) === 'plan_complete'
-                    ? 'このPlanで次に実行可能な学習Taskはありません。学習全体を確認してください。'
-                    : '学習結果をTaskへ反映しました。次の行動を確認してください。');
+                ->route('plans.tasks.study_practice.show', [$plan, $task])
+                ->with('study_practice_continuing', true)
+                ->with('status', ($progressionDecision['kind'] ?? null) === 'review_plan'
+                    ? '学習結果を反映しました。計画の見直しは任意で、ここからも学習を続けられます。'
+                    : '学習結果を反映しました。続きの演習を準備できます。');
         }
 
         return redirect()
@@ -1436,7 +1444,8 @@ class StudyPracticeController extends Controller
             ->route('plans.tasks.study_practice.show', [$plan, $task])
             ->with('status', $continuing
                 ? '前回の結果を引き継いで、次の演習を準備します。'
-                : 'この演習をリセットしました。');
+                : 'この演習をリセットしました。')
+            ->with('study_practice_continuing', $continuing);
     }
 
     private function resumablePracticeSession(

@@ -69,7 +69,7 @@ class StudyPracticeDraftPersistenceV4071Test extends TestCase
             ->followingRedirects()
             ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
             ->assertOk()
-            ->assertSee('CONTINUE PRACTICE')
+            ->assertSee('data-study-focus-space', false)
             ->assertSee('DNS確認')
             ->assertSee('ここまで考えた内容を保持する')
             ->assertSee('途中回答')
