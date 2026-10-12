@@ -1,4 +1,11 @@
-# Canovia documentation index (2026-10-08)
+# Canovia documentation index (2026-10-13)
+
+## Product direction and decision memory (2026-10-13)
+
+- [Product Decision Memory operating specification](development/PRODUCT_DECISION_MEMORY_OPERATING_SPEC_2026_10_13.md): **active lightweight GitHub documentation practice**, not a Dev Pro runtime implementation.
+- [Core early access / internal Dev Pro / World strategic decisions](development/decisions/2026-10-13_CANOVIA_STRATEGY_DEVPRO_WORLD.md): explicit decision status, provisional validation signals, security/release boundaries and follow-up ledger.
+- [Canovia World independent app concept](future/CANOVIA_WORLD_COMPANION_APP_CONCEPT.md): future-only first-party app candidate; no separate Beta launch or cross-app authorization implemented.
+
 
 ## Adaptive Context Pipeline v0.5 — architecture review (2026-10-12)
 
