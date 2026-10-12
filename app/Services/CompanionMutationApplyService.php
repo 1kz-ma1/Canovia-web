@@ -142,7 +142,7 @@ class CompanionMutationApplyService
                 $locked->plan, data_get($locked->metadata, 'source_provenance'),
             )) {
                 throw ValidationException::withMessages([
-                    'candidate' => '変更候補のGitHub根拠を現在確認できません。再同期して新しい候補を作成してください。',
+                    'candidate' => '変更候補のAI根拠または出典を現在確認できません。新しい情報で候補を作成してください。',
                 ]);
             }
 
