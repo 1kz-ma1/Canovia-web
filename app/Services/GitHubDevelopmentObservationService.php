@@ -48,7 +48,11 @@ final class GitHubDevelopmentObservationService
             }
 
             foreach ($roots as $root) {
-                $item = $this->persist($root, $repo, $fact);
+                $item = $this->persist($root, $repo, $fact, $installationId);
+                if ($item === null) {
+                    continue; // Connection was revoked while fetching GitHub.
+                }
+
                 if ($item->wasRecentlyCreated || $item->wasChanged()) {
                     $observed++;
                 }
@@ -78,13 +82,21 @@ final class GitHubDevelopmentObservationService
             return ['observed' => 0, 'plan_ids' => []];
         }
 
+        $installationId = (int) data_get(
+            $root->metadata, 'github_app_connection.installation_id', 0,
+        );
+
         $observed = 0;
         foreach ($this->github->bootstrapDevelopmentActivity($repo, 20) as $fact) {
             if (! is_array($fact)) {
                 continue;
             }
 
-            $item = $this->persist($root, $repo, $fact);
+            $item = $this->persist($root, $repo, $fact, $installationId);
+            if ($item === null) {
+                continue;
+            }
+
             if ($item->wasRecentlyCreated || $item->wasChanged()) {
                 $observed++;
             }
@@ -274,7 +286,12 @@ final class GitHubDevelopmentObservationService
     }
 
     /** @param array<string,mixed> $fact */
-    private function persist(PlanArtifact $root, string $repo, array $fact): DevelopmentActivityObservation
+    private function persist(
+        PlanArtifact $root,
+        string $repo,
+        array $fact,
+        ?int $installationId = null,
+    ): ?DevelopmentActivityObservation
     {
         $kind = trim((string) ($fact['kind'] ?? ''));
         $identity = trim((string) ($fact['identity'] ?? ''));
@@ -321,7 +338,34 @@ final class GitHubDevelopmentObservationService
         // The REST read happened before this transaction. Serialize competing
         // writers under a row lock and compare GitHub's entity revision, not
         // webhook arrival order or the local processing timestamp.
-        return DB::transaction(function () use ($identity, $values, $revision, $revisionId, $kind) {
+        return DB::transaction(function () use (
+            $identity, $values, $revision, $revisionId, $kind,
+            $root, $repo, $installationId,
+        ): ?DevelopmentActivityObservation {
+            // Upstream REST calls happened outside this transaction. The root
+            // can be disconnected, deleted or moved between fetch and commit.
+            // Lock it again and check the SAME installation (not merely a
+            // newly connected installation for the same repository).
+            $liveRoot = PlanArtifact::query()
+                ->whereKey($root->id)
+                ->lockForUpdate()
+                ->first();
+            if (! $liveRoot) {
+                return null;
+            }
+            $liveRoot->load('plan.user');
+            $parsed = $this->workflow->parseUrl((string) $liveRoot->url);
+            if (($parsed['kind'] ?? null) !== 'repository'
+                || strcasecmp((string) ($parsed['repo_full_name'] ?? ''), $repo) !== 0
+                || ($installationId !== null && (
+                    $installationId <= 0
+                    || (int) data_get($liveRoot->metadata, 'github_app_connection.installation_id', 0) !== $installationId
+                ))
+                || ! $this->eligible($liveRoot)
+                || (int) $liveRoot->plan_id !== (int) $identity['plan_id']) {
+                return null;
+            }
+
             $observation = DevelopmentActivityObservation::query()
                 ->createOrFirst($identity, $values);
 
