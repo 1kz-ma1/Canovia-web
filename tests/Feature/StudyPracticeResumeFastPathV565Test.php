@@ -274,16 +274,14 @@ class StudyPracticeResumeFastPathV565Test extends TestCase
             ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
             ->assertOk()
             ->assertSee('選択肢を比較した思考過程')
-            ->assertSee('data-study-practice-history', false)
-            ->assertSee('学習履歴を振り返る')
-            ->assertSee('前回の復習メモ');
+            ->assertDontSee('data-study-practice-history', false)
+            ->assertDontSee('学習履歴を振り返る')
+            ->assertDontSee('前回の復習メモ');
         $html = $response->getContent();
         preg_match('/<details\b[^>]*data-study-practice-optional-note[^>]*>/', $html, $reasoning);
         $this->assertNotEmpty($reasoning);
         $this->assertStringContainsString(' open', $reasoning[0], 'Nonempty saved draft stays expanded');
-        preg_match('/<details\b[^>]*data-study-practice-history[^>]*>/', $html, $history);
-        $this->assertNotEmpty($history);
-        $this->assertStringNotContainsString(' open', $history[0], 'Learning history starts collapsed');
+        // Attempt history remains persisted but is hidden during the Focus state.
         $this->assertDatabaseCount('study_practice_attempts', 1);
     }
 
