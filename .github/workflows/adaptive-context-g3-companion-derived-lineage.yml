@@ -1,0 +1,49 @@
+name: Adaptive Context G3 Companion Derived Source Lineage
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/CompanionDerivedEvidenceSourceGuard.php'
+      - 'app/Services/CompanionContextService.php'
+      - 'app/Services/CompanionConversationService.php'
+      - 'app/Services/CompanionContinuityService.php'
+      - 'app/Services/CompanionMutationApplyService.php'
+      - 'resources/views/companion/show.blade.php'
+      - 'tests/Feature/CompanionDerivedEvidenceLineageG3Test.php'
+      - '.github/workflows/adaptive-context-g3-companion-derived-lineage.yml'
+
+jobs:
+  companion-derived-source-lineage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/CompanionDerivedEvidenceSourceGuard.php
+          php -l app/Services/CompanionContextService.php
+          php -l app/Services/CompanionConversationService.php
+          php -l app/Services/CompanionContinuityService.php
+          php -l app/Services/CompanionMutationApplyService.php
+          php -l tests/Feature/CompanionDerivedEvidenceLineageG3Test.php
+      - name: Companion derived source freshness, message replay, stale candidate approval
+        run: php artisan test tests/Feature/CompanionDerivedEvidenceLineageG3Test.php
+      - name: Existing Companion continuity, history, candidate and mutation regression
+        run: |
+          php artisan test \
+            tests/Feature/CanoviaCompanionContinuityV4115Test.php \
+            tests/Feature/CanoviaCompanionContextualEntryV4115Test.php \
+            tests/Feature/CanoviaCompanionMutationApplyV4115Test.php \
+            tests/Feature/CompanionAiCommitFenceV05Test.php \
+            tests/Feature/GitHubDerivedContextSourceEpochG3Test.php

@@ -23,6 +23,7 @@ class CompanionMutationApplyService
         private readonly GoalContextService $goalContexts,
         private readonly FutureMemoService $futureMemos,
         private readonly ExecutionRequestHandoffService $executionRequests,
+        private readonly CompanionDerivedEvidenceSourceGuard $derivedSources,
     ) {}
 
     /**
@@ -84,6 +85,9 @@ class CompanionMutationApplyService
         return [
             'changes' => $changes,
             'blocked_fields' => $blocked,
+            'source_stale' => ! $this->derivedSources->isCurrent(
+                $candidate->plan, data_get($candidate->metadata, 'source_provenance'),
+            ),
             'target_label' => match ($candidate->type) {
                 'create_task' => $candidate->plan?->title ? 'Plan: '.$candidate->plan->title : 'Plan未選択',
                 'update_task' => $candidate->task?->title ? 'Task: '.$candidate->task->title : 'Task未選択',
@@ -129,6 +133,16 @@ class CompanionMutationApplyService
             if ($locked->status !== CompanionMutationCandidate::STATUS_PENDING) {
                 throw ValidationException::withMessages([
                     'candidate' => 'この変更候補は現在反映できません。',
+                ]);
+            }
+
+            // Human confirmation does not renew the authority of a
+            // previously generated AI claim when its GitHub source changed.
+            if (! $this->derivedSources->isCurrent(
+                $locked->plan, data_get($locked->metadata, 'source_provenance'),
+            )) {
+                throw ValidationException::withMessages([
+                    'candidate' => '変更候補のGitHub根拠を現在確認できません。再同期して新しい候補を作成してください。',
                 ]);
             }
 
