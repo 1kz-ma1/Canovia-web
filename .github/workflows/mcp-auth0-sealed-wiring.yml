@@ -5,6 +5,11 @@ on:
     branches: [main]
     paths:
       - 'app/Services/McpAuth0SealedStagingWiringReadiness.php'
+      - 'app/Services/McpStagingLoginPilotPolicy.php'
+      - 'app/Http/Middleware/EnsureMcpStagingSyntheticPilotActor.php'
+      - 'app/Http/Middleware/CloseUnopenedMcpStaging.php'
+      - 'tests/Feature/McpStagingLoginPilotPolicyTest.php'
+      - 'tests/Feature/McpIsolatedStagingBootstrapTest.php'
       - 'tests/Feature/McpAuth0SealedStagingWiringTest.php'
       - 'routes/console.php'
       - 'docker/mcp-staging-start.sh'
@@ -33,6 +38,11 @@ jobs:
           php -l app/Services/McpAuth0SealedStagingWiringReadiness.php
           php -l tests/Feature/McpAuth0SealedStagingWiringTest.php
           php -l routes/console.php
+          php -l app/Services/McpStagingLoginPilotPolicy.php
+          php -l app/Http/Middleware/EnsureMcpStagingSyntheticPilotActor.php
+          php -l app/Http/Middleware/CloseUnopenedMcpStaging.php
+          php -l tests/Feature/McpStagingLoginPilotPolicyTest.php
+          php -l tests/Feature/McpIsolatedStagingBootstrapTest.php
           sh -n docker/mcp-staging-start.sh
           sh -n docker/render-start.sh
       - name: Assert no stage access, tokens, network or credentials
@@ -44,4 +54,4 @@ jobs:
           SESSION_DRIVER: array
           CACHE_STORE: array
         run: |
-          php artisan test tests/Feature/McpAuth0SealedStagingWiringTest.php tests/Feature/McpStagingProviderPreflightTest.php --colors=never
+          php artisan test tests/Feature/McpAuth0SealedStagingWiringTest.php tests/Feature/McpStagingProviderPreflightTest.php tests/Feature/McpStagingLoginPilotPolicyTest.php tests/Feature/McpIsolatedStagingBootstrapTest.php --colors=never
