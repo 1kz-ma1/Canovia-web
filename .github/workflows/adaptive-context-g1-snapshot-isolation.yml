@@ -1,0 +1,50 @@
+name: Adaptive Context G1 Snapshot Isolation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Intelligence/Services/StateSnapshotStore.php'
+      - 'app/Intelligence/Presentation/IntelligencePresentationHistoryService.php'
+      - 'app/Intelligence/Presentation/IntelligenceStateChangeFeedbackService.php'
+      - 'app/Http/Controllers/**WorkspaceController.php'
+      - 'app/Http/Controllers/StudyScopeCaptureController.php'
+      - 'app/Http/Controllers/GitHubWorkflowController.php'
+      - 'tests/Feature/StateSnapshotActorIsolationG1Test.php'
+      - 'tests/Feature/IntelligenceStateEvidenceV531Test.php'
+      - 'tests/Feature/StateChangeFeedbackV546Test.php'
+      - '.github/workflows/adaptive-context-g1-snapshot-isolation.yml'
+jobs:
+  snapshot-actor-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: PHP lint — G1 scope
+        run: |
+          php -l app/Intelligence/Services/StateSnapshotStore.php
+          php -l app/Intelligence/Presentation/IntelligencePresentationHistoryService.php
+          php -l app/Intelligence/Presentation/IntelligenceStateChangeFeedbackService.php
+          php -l app/Http/Controllers/StudyWorkspaceController.php
+          php -l app/Http/Controllers/DevelopmentWorkspaceController.php
+          php -l app/Http/Controllers/CareerModeWorkspaceController.php
+          php -l app/Http/Controllers/StudyScopeCaptureController.php
+          php -l app/Http/Controllers/GitHubWorkflowController.php
+          php -l app/Http/Controllers/OverviewWorkspaceController.php
+          php -l tests/Feature/StateSnapshotActorIsolationG1Test.php
+          php -l tests/Feature/IntelligenceStateEvidenceV531Test.php
+          php -l tests/Feature/StateChangeFeedbackV546Test.php
+      - name: G1 adversarial Snapshot / history / guest / collaborative reader matrix
+        run: php artisan test tests/Feature/StateSnapshotActorIsolationG1Test.php
+      - name: V53.1 State Evidence regression
+        run: php artisan test tests/Feature/IntelligenceStateEvidenceV531Test.php
+      - name: V54.6 State Change Feedback regression
+        run: php artisan test tests/Feature/StateChangeFeedbackV546Test.php
+      - name: V58.85 structured evidence feedback regression
+        run: php artisan test tests/Feature/IntelligenceEvidenceArrayDiffV5885Test.php
+      - name: Study / Development / Career workspace regressions
+        run: php artisan test tests/Feature/StudyWorkspaceV543Test.php tests/Feature/DevelopmentWorkspaceV544Test.php tests/Feature/CareerIntelligenceV550Test.php
