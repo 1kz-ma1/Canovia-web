@@ -226,10 +226,12 @@ final class McpStagingProviderPreflightTest extends TestCase
         $uri = 'https://canovia-mcp-dev.jp.auth0.com/.well-known/openid-configuration';
         $cimdMeta = array_replace($meta, ['client_id_metadata_document_supported' => true]);
         $noOidcMeta = array_replace($meta, ['scopes_supported' => ['canovia.development.read']]);
+        $badScopesMeta = array_replace($meta, ['scopes_supported' => [['openid']]]);
         Http::fake([$uri => Http::sequence()
             ->push($meta, 200, ['Content-Type' => 'application/json'])
             ->push($cimdMeta, 200, ['Content-Type' => 'application/json'])
-            ->push($noOidcMeta, 200, ['Content-Type' => 'application/json'])]);
+            ->push($noOidcMeta, 200, ['Content-Type' => 'application/json'])
+            ->push($badScopesMeta, 200, ['Content-Type' => 'application/json'])]);
 
         $report = app(McpStagingProviderPreflightService::class)->check(true);
         $this->assertSame('pass', $report['local_checks']['token_verification_mode']);
@@ -268,6 +270,12 @@ final class McpStagingProviderPreflightTest extends TestCase
         $this->assertSame('not_advertised', $report['provider_checks']['third_party_oidc_scopes']);
         $this->assertFalse($report['preflight_passed']);
         $this->assertFalse($report['production_authorized']);
+
+        // A malformed discovery scope array is data, never executable or
+        // a reason to throw a warning/exception during operator diagnosis.
+        $report = app(McpStagingProviderPreflightService::class)->check(true);
+        $this->assertSame('unknown_metadata', $report['provider_checks']['third_party_oidc_scopes']);
+        $this->assertFalse($report['preflight_passed']);
     }
 
     public function test_auth0_jwt_mixed_modes_and_invalid_issuer_are_blocked_without_http(): void
