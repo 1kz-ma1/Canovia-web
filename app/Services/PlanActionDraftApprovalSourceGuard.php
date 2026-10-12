@@ -89,7 +89,7 @@ final class PlanActionDraftApprovalSourceGuard
         if ($taskIds !== []) {
             $validTasks = Task::query()->where('plan_id', $plan->id)
                 ->whereIn('id', $taskIds)->orderBy('id')
-                ->lockForUpdate()->count();
+                ->lockForUpdate()->get()->count();
             if ($validTasks !== count($taskIds)) {
                 abort(409, '根拠に関連するTaskの所属が変更されました。');
             }
