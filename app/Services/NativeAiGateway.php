@@ -14,6 +14,10 @@ use Throwable;
 
 class NativeAiGateway
 {
+    public function __construct(
+        private readonly NativeAiPurposeAuthorizationGuard $purposeGuard,
+    ) {}
+
     public function isConfigured(): bool
     {
         $driver = (string) config('native_ai.driver', 'disabled');
@@ -63,6 +67,19 @@ class NativeAiGateway
             );
         }
 
+        $effectiveFeature = $featureKey ?? FeatureKey::AutomaticAiExecution;
+        // The caller's earlier UI/controller authorization is not a usable
+        // permission snapshot for a queued or slow provider request.
+        $denied = $this->purposeGuard->failure(
+            $userId, $plan?->id, $task?->id, $effectiveFeature,
+        );
+        if ($denied !== null) {
+            throw new NativeAiExecutionException(
+                'Native AIを実行する現在の権限を確認できませんでした。',
+                $denied,
+            );
+        }
+
         $driver = $this->provider();
         if ($driver !== 'openai') {
             throw new NativeAiExecutionException(
@@ -77,7 +94,7 @@ class NativeAiGateway
             'plan_id' => $plan?->id,
             'task_id' => $task?->id,
             'study_practice_session_id' => $studyPracticeSessionId,
-            'feature_key' => ($featureKey ?? FeatureKey::AutomaticAiExecution)->value,
+            'feature_key' => $effectiveFeature->value,
             'purpose' => $purpose,
             'provider' => $driver,
             'model' => $model,
@@ -117,6 +134,20 @@ class NativeAiGateway
                     'Native AIの構造化結果をJSONとして読み取れませんでした。',
                     'native_ai_invalid_json',
                     $run->id,
+                );
+            }
+
+            // External request already completed. Do not release the model
+            // output or mark success when the declared purpose, Plan or Task
+            // changed during its network round trip.
+            $denied = $this->purposeGuard->failure(
+                $userId, $plan?->id, $task?->id, $effectiveFeature,
+            );
+            if ($denied !== null) {
+                throw new NativeAiExecutionException(
+                    'Native AI実行中に利用権限または対象が変更されました。',
+                    $denied,
+                    (int) $run->id,
                 );
             }
 
