@@ -111,15 +111,42 @@ class CompanionMutationApplyService
         $user = $request->user();
         abort_unless($user, 401);
 
-        return DB::transaction(function () use ($request, $candidate, $requestId, $user) {
+        // The bound Candidate is a locator, not proof of the target's
+        // current relationship. Acquiring its FOR UPDATE lock before Plan
+        // created a Candidate -> Plan inversion against Plan-first writers.
+        // Lock selected targets first and reject any re-targeting once the
+        // canonical Candidate is locked. Never trust its old Eloquent
+        // relations as the authority for applying a mutation.
+        $selectedPlanId = $candidate->plan_id === null ? null : (int) $candidate->plan_id;
+        $selectedTaskId = $candidate->task_id === null ? null : (int) $candidate->task_id;
+
+        return DB::transaction(function () use (
+            $request, $candidate, $requestId, $user, $selectedPlanId, $selectedTaskId,
+        ) {
+            // Shared G3 order: Plan -> Task -> Candidate -> Repository roots
+            // -> Evidence. Source locks are held through the DB commit.
+            $livePlan = $selectedPlanId === null ? null : Plan::query()
+                ->whereKey($selectedPlanId)->lockForUpdate()->first();
+            $liveTask = $selectedTaskId === null ? null : Task::query()
+                ->whereKey($selectedTaskId)->lockForUpdate()->first();
+
             /** @var CompanionMutationCandidate $locked */
             $locked = CompanionMutationCandidate::query()
-                ->with(['plan', 'task'])
                 ->whereKey($candidate->id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
             abort_unless((int) $locked->user_id === (int) $user->id, 404);
+
+            // The candidate might have been moved, unlinked or deleted
+            // while Plan/Task locks were pending. Do not silently switch to
+            // a different target or reuse the old human confirmation.
+            if ((int) ($locked->plan_id ?? 0) !== (int) ($selectedPlanId ?? 0)
+                || (int) ($locked->task_id ?? 0) !== (int) ($selectedTaskId ?? 0)) {
+                throw ValidationException::withMessages([
+                    'candidate' => '変更候補の対象が変更されました。内容を再確認してください。',
+                ]);
+            }
 
             if ($locked->status === CompanionMutationCandidate::STATUS_APPLIED) {
                 return [
@@ -136,25 +163,19 @@ class CompanionMutationApplyService
                 ]);
             }
 
-            // Keep the source-lock order compatible with Evidence ingestion:
-            // Plan -> Task -> repository roots -> Evidence rows. The Candidate
-            // is already locked to preserve idempotent human approval.
-            if ($locked->plan_id !== null) {
-                $livePlan = Plan::query()->whereKey($locked->plan_id)
-                    ->lockForUpdate()->first();
-                if (! $livePlan) {
-                    throw ValidationException::withMessages(['candidate' => '対象Planを現在確認できません。']);
-                }
-                $locked->setRelation('plan', $livePlan);
+            if ($selectedPlanId !== null && $livePlan === null) {
+                throw ValidationException::withMessages(['candidate' => '対象Planを現在確認できません。']);
             }
-            if ($locked->task_id !== null) {
-                $liveTask = Task::query()->whereKey($locked->task_id)
-                    ->lockForUpdate()->first();
-                if (! $liveTask || (int) $liveTask->plan_id !== (int) $locked->plan_id) {
-                    throw ValidationException::withMessages(['candidate' => '対象Taskを現在確認できません。']);
-                }
-                $locked->setRelation('task', $liveTask);
+            if ($selectedTaskId !== null && (
+                $liveTask === null || $selectedPlanId === null
+                || (int) $liveTask->plan_id !== $selectedPlanId
+            )) {
+                throw ValidationException::withMessages(['candidate' => '対象Taskを現在確認できません。']);
             }
+            // Suppress a second, unlocked relationship read during source
+            // validation, preview and the downstream human-approved write.
+            $locked->setRelation('plan', $livePlan);
+            $locked->setRelation('task', $liveTask);
 
             // Human confirmation does not renew the authority of a
             // previously generated AI claim when its GitHub source changed.
