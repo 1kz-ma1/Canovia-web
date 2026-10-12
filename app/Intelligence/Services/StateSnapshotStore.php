@@ -41,11 +41,19 @@ final class StateSnapshotStore
                 'metrics' => $state->metrics,
                 'facts' => $state->facts,
                 'evidence_references' => $state->evidenceReferences,
-                'metadata' => Arr::only($metadata, [
-                    'schema_version',
-                    'builder',
-                    'builder_version',
-                ]),
+                'metadata' => [
+                    ...Arr::only($metadata, [
+                        'schema_version',
+                        'builder',
+                        'builder_version',
+                    ]),
+                    // New rows retain a bounded normalized source signature
+                    // for legacy string-only Evidence references.
+                    'evidence_signatures' => $planId !== null
+                        ? app(IntelligenceEvidenceFreshnessGuard::class)
+                            ->signaturesFor((int) $planId, $state->evidenceReferences)
+                        : [],
+                ],
             ],
         );
 
@@ -77,7 +85,7 @@ final class StateSnapshotStore
     ): ?IntelligenceStateSnapshot {
         $this->ownership->authorizeView($request, $plan);
 
-        return IntelligenceStateSnapshot::query()
+        $latest = IntelligenceStateSnapshot::query()
             ->where('plan_id', $plan->id)
             ->where('domain', $domain->value)
             ->where('scope_type', $scopeType)
@@ -85,5 +93,10 @@ final class StateSnapshotStore
             ->orderByDesc('captured_at')
             ->orderByDesc('id')
             ->first();
+
+        // Never fall back to an older snapshot when the newest source is
+        // invalid: doing so would imply an obsolete Decision is current.
+        return app(IntelligenceEvidenceFreshnessGuard::class)->isCurrent($latest)
+            ? $latest : null;
     }
 }
