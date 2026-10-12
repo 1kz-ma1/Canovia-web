@@ -118,7 +118,7 @@ final class StudyScopeAiCommitFenceG3Test extends TestCase
             'confirmed_at' => now(),
         ]));
 
-        $this->assertDenied('native_ai_target_changed', $capture, $plan, $actor);
+        $this->assertDenied('native_ai_target_changed', $capture, $plan, $actor, 'confirmed');
         $this->assertSame('confirmed', $capture->fresh()->status);
         $this->assertSame('ユーザー確定の試験', $capture->fresh()->exam_title);
         $this->assertSame('国語', data_get($capture->fresh()->draft_data, 'items.0.subject'));
@@ -223,6 +223,7 @@ final class StudyScopeAiCommitFenceG3Test extends TestCase
         StudyScopeCapture $capture,
         Plan $plan,
         User $actor,
+        string $expectedCaptureStatus = 'captured',
     ): void {
         try {
             app(StudyScopeCaptureAnalysisService::class)->analyze($capture, $plan, $actor->id);
@@ -232,9 +233,11 @@ final class StudyScopeAiCommitFenceG3Test extends TestCase
             $this->assertNotNull($exception->runId);
         }
 
-        $this->assertSame('captured', $capture->fresh()->status);
-        $this->assertNull($capture->fresh()->draft_data);
-        $this->assertNull($capture->fresh()->native_ai_run_id);
+        $this->assertSame($expectedCaptureStatus, $capture->fresh()->status);
+        if ($expectedCaptureStatus === 'captured') {
+            $this->assertNull($capture->fresh()->draft_data);
+            $this->assertNull($capture->fresh()->native_ai_run_id);
+        }
         $this->assertDatabaseCount('study_scope_items', 0);
         $this->assertSame('succeeded', NativeAiRun::firstOrFail()->status);
         Http::assertSentCount(1);
