@@ -61,6 +61,11 @@ class StudyPracticeResumeFastPathV565Test extends TestCase
             ->assertSee('1/2問 回答済み')
             ->assertSee('続きから回答')
             ->assertSee('DNSは名前解決を行うため。')
+            ->assertSee('data-study-focus-space', false)
+            ->assertSee('data-study-focus-personalization', false)
+            ->assertDontSee('PRACTICE RELIABILITY')
+            ->assertDontSee('PRACTICE STRATEGY')
+            ->assertDontSee('data-study-practice-history', false)
             ->assertSee('data-study-practice-resume-fast-path', false)
             ->assertSee('data-study-practice-scroll-to="practice-questions"', false)
             ->assertDontSee('PRACTICE STRATEGY')
@@ -103,9 +108,10 @@ class StudyPracticeResumeFastPathV565Test extends TestCase
             ])
             ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
             ->assertOk()
-            ->assertSee('PRACTICE STRATEGY')
-            ->assertSee('PRACTICE RELIABILITY')
-            ->assertSee('aria-label="AI演習の進行状況"', false)
+            ->assertSee('data-study-focus-space', false)
+            ->assertDontSee('PRACTICE STRATEGY')
+            ->assertDontSee('PRACTICE RELIABILITY')
+            ->assertDontSee('aria-label="AI演習の進行状況"', false)
             ->assertDontSee('CONTINUE PRACTICE')
             ->assertDontSee('data-study-practice-resume-fast-path', false);
     }
@@ -280,6 +286,41 @@ class StudyPracticeResumeFastPathV565Test extends TestCase
         preg_match('/<details\b[^>]*data-study-practice-history[^>]*>/', $html, $history);
         $this->assertNotEmpty($history);
         $this->assertStringNotContainsString(' open', $history[0], 'Learning history starts collapsed');
+        $this->assertDatabaseCount('study_practice_attempts', 1);
+    }
+
+    public function test_continue_after_result_keeps_recorded_attempt_and_task_unchanged_with_compact_setup(): void
+    {
+        [$user, $plan, $task] = $this->studyPlan();
+        $practiceSession = $this->practiceSession($user, $plan, $task, [
+            'status' => StudyPracticeSession::STATUS_ASSESSED,
+        ]);
+        StudyPracticeAttempt::create([
+            'plan_id' => $plan->id, 'task_id' => $task->id,
+            'study_practice_session_id' => $practiceSession->id,
+            'user_id' => $user->id,
+            'request_hash' => hash('sha256', (string) Str::uuid()),
+            'exercise_title' => '前回の演習',
+            'questions' => [], 'answers' => [], 'assessment' => [],
+            'score_percent' => 70, 'recommended_task_progress_percent' => 80,
+        ]);
+        $taskBefore = $task->fresh()->progress_percent;
+        $this->actingAs($user)->withSession([
+            "study_practice.{$plan->id}.{$task->id}" => [
+                'title' => '前回の演習',
+                'questions' => $this->questions(),
+                'assessment' => ['score_percent' => 70],
+                'practice_session_id' => $practiceSession->id,
+            ],
+        ])->post(route('plans.tasks.study_practice.reset', [$plan, $task]), ['continue' => '1'])
+            ->assertRedirect(route('plans.tasks.study_practice.show', [$plan, $task]))
+            ->assertSessionHas('study_practice_continuing', true);
+        $this->actingAs($user)->get(route('plans.tasks.study_practice.show', [$plan, $task]))
+            ->assertOk()
+            ->assertSee('data-study-focus-space', false)
+            ->assertSee('前回の結果を記録しています')
+            ->assertDontSee('PRACTICE RELIABILITY');
+        $this->assertSame($taskBefore, $task->fresh()->progress_percent);
         $this->assertDatabaseCount('study_practice_attempts', 1);
     }
 
