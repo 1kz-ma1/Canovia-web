@@ -49,9 +49,49 @@ final class IntelligenceStateChangeFeedbackService
         $previous = $traces->get(1);
 
         $freshness = app(IntelligenceEvidenceFreshnessGuard::class);
-        if (! $freshness->isCurrent($current->stateSnapshot)
-            || ! $freshness->isCurrent($previous->stateSnapshot)) {
+        if (! $freshness->isCurrent($current->stateSnapshot)) {
             return null;
+        }
+
+        if (! $freshness->isCurrent($previous->stateSnapshot)) {
+            // Career direct source records can be corrected/deleted between
+            // two legitimate refreshes. The OLD insight is no longer safe
+            // to compare or disclose. Keep the workspace's generic update
+            // affordance using only the CURRENT verified action.
+            if ($domain !== IntelligenceDomain::Career
+                || (int) $previous->user_id !== (int) $current->user_id
+                || (int) $current->user_id !== (int) $plan->user_id) {
+                return null;
+            }
+
+            $safeAction = $this->actionForTrace($current);
+
+            return [
+                'domain' => $domain->value,
+                'plan' => $plan,
+                'occurred_at' => $current->created_at,
+                'kind' => 'source_updated',
+                'title' => 'Career情報を更新しました',
+                'summary' => '情報の変更を確認し、Current Actionを更新。古い比較結果は表示しません。',
+                'readiness_before' => null,
+                'readiness_after' => null,
+                'readiness_delta' => null,
+                'level_before' => null,
+                'level_after' => null,
+                'level_before_label' => '',
+                'level_after_label' => '',
+                'level_changed' => false,
+                'decision_before' => '',
+                'decision_after' => '',
+                'decision_changed' => false,
+                'reason_before' => '',
+                'reason_after' => '',
+                'action_before' => null,
+                'action_after' => $safeAction?->title,
+                'action_changed' => $safeAction !== null,
+                'added_evidence_count' => 0,
+                'added_evidence_labels' => [],
+            ];
         }
 
         $currentAction = $this->actionForTrace($current);
