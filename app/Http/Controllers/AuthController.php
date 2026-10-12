@@ -289,6 +289,11 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
+        if (config('app.env') === 'staging'
+            && config('canovia_staging.login_pilot_enabled') === true) {
+            return redirect()->route('auth.login.form')->with('status', '検証用アカウントからログアウトしました。');
+        }
+
         return redirect()->route('home')->with('status', 'ログアウトしました。保護済みの計画は、再ログインすると表示されます。');
     }
 }
