@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\InboxItem;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class InboxIntelligenceService
@@ -28,7 +29,28 @@ class InboxIntelligenceService
 
     public function __construct(
         private readonly NativeAiGateway $nativeAi,
+        private readonly InboxAiSuggestionCommitFence $commitFence,
     ) {}
+
+    /**
+     * Both Chat capture and explicit Suggest use the same durable fence.
+     * The source signature is calculated before making the provider request,
+     * but is never written into the Inbox metadata.
+     *
+     * @return array<string,mixed>
+     */
+    public function suggestAndPersist(
+        InboxItem $item,
+        Request $request,
+        ReleaseLevelService $releaseLevels,
+    ): array {
+        $signature = $this->commitFence->signature($item);
+        $suggestion = $this->suggest($item, $request->user()?->id);
+
+        return $this->commitFence->commit(
+            $item, $signature, $suggestion, $request, $releaseLevels,
+        );
+    }
 
     /**
      * @return array<string,mixed>

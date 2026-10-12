@@ -147,3 +147,49 @@ Artisan::command(
         return $result === 'blocked' ? 1 : 0;
     },
 )->purpose('Replace the fixed synthetic MCP owner password only in an isolated closed stage');
+
+
+/**
+ * Inspect only pinned configuration shape while external OAuth/MCP remain
+ * disabled. No credentials, real tokens, network or database access.
+ */
+Artisan::command(
+    'canovia:mcp-auth0-sealed-wiring-check
+        {--json : Emit only named boolean status codes}
+        {--blocked-codes : Emit ONLY allowlisted failed check identifiers}',
+    function (\App\Services\McpAuth0SealedStagingWiringReadiness $readiness): int {
+        $report = $readiness->check();
+        if ($this->option('blocked-codes')) {
+            // Keys are fixed literals from our own code, never values from
+            // Auth0, Render or the user. Only allow known identifiers.
+            $allowedCodes = [
+                'sealed_isolated_stage',
+                'pinned_staging_postgres',
+                'oauth_mcp_capabilities_disabled',
+                'exclusive_jwt_candidate',
+                'trusted_issuer_and_resource',
+                'issued_chatgpt_third_party_client',
+                'separate_confidential_link_client',
+                'pinned_account_link_endpoints',
+                'fingerprint_key_configured',
+            ];
+            $blockedCodes = [];
+            foreach ($allowedCodes as $code) {
+                if (($report['checks'][$code] ?? null) === 'blocked') {
+                    $blockedCodes[] = $code;
+                }
+            }
+            $this->line($blockedCodes === [] ? 'none' : implode(',', $blockedCodes));
+        } elseif ($this->option('json')) {
+            $this->line((string) json_encode($report, JSON_THROW_ON_ERROR));
+        } else {
+            $this->info('Auth0 sealed-stage configuration inventory (no OAuth proof)');
+            foreach ($report['checks'] as $key => $value) {
+                $this->line('  '.$key.': '.$value);
+            }
+            $this->warn('Live issued tokens, API grants, user consent and stage activation remain unverified.');
+        }
+
+        return $report['configuration_ready'] ? 0 : 1;
+    },
+)->purpose('Check stage-only Auth0 wiring without revealing credentials or enabling external access');

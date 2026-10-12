@@ -27,7 +27,11 @@ final class PlanActionDraftTypedEvidenceService
         'career' => ['interview_review_completed', 'interview_result_recorded'],
     ];
 
-    public function __construct(private readonly PlanCategoryProfileService $profiles) {}
+    public function __construct(
+        private readonly PlanCategoryProfileService $profiles,
+        private readonly PlanActionDraftSourceFingerprint $sourceFingerprint,
+        private readonly GitHubTaskEvidenceReuseGuard $reuseGuard,
+    ) {}
 
     public function domain(Plan $plan): string
     {
@@ -52,8 +56,11 @@ final class PlanActionDraftTypedEvidenceService
             ->whereIn('type', $types)
             ->orderByDesc('occurred_at')
             ->orderByDesc('id')
-            ->limit(20)
-            ->get();
+            ->limit(60)
+            ->get()
+            ->filter(fn (TaskEvidence $row) => $this->reuseGuard->eligible($plan, $row))
+            ->take(20)
+            ->values();
     }
 
     /**
@@ -74,7 +81,10 @@ final class PlanActionDraftTypedEvidenceService
             ->whereIn('id', $ids)->get();
 
         // Cross-Plan and wrong-Domain records share the same non-disclosure result.
-        if ($rows->count() !== count($ids)) {
+        if ($rows->count() !== count($ids)
+            || $rows->contains(fn (TaskEvidence $row) =>
+                ! $this->reuseGuard->eligible($plan, $row)
+            )) {
             abort(404);
         }
 
@@ -85,6 +95,7 @@ final class PlanActionDraftTypedEvidenceService
             return [
                 'kind' => 'task_evidence',
                 'task_evidence_id' => (int) $row->id,
+                'source_signature' => $this->sourceFingerprint->taskEvidence($row),
                 'evidence_type' => $row->type,
                 'evidence_source' => $row->source->value,
                 'source_label' => $row->sourceLabel(),

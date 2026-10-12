@@ -1,0 +1,29 @@
+name: MCP ChatGPT CIMD Auth0 Free Read-Only Preflight
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ci/mcp_chatgpt_auth0_cimd_preflight.py'
+      - 'tests/ci/test_mcp_chatgpt_auth0_cimd_preflight.py'
+      - '.github/workflows/mcp-chatgpt-cimd-auth0-free-preflight.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  cimd-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Negative test matrix (all synthetic)
+        run: python3 -m unittest discover -s tests/ci -p test_mcp_chatgpt_auth0_cimd_preflight.py -v
+      - name: Observe only pinned public ChatGPT CIMD/JWKS and Auth0 discovery
+        # A network outage is not acceptance failure; no secrets, real
+        # registrations, delegated access, user logins or MCP requests.
+        continue-on-error: true
+        run: python3 scripts/ci/mcp_chatgpt_auth0_cimd_preflight.py --live

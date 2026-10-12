@@ -6,6 +6,7 @@ use App\Enums\FeatureKey;
 use App\Models\Plan;
 use App\Models\Task;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 final class ExecutionPacketService
@@ -23,6 +24,7 @@ final class ExecutionPacketService
         private readonly NativeAiGateway $nativeAi,
         private readonly AiCapacityService $capacity,
         private readonly AiJsonInputNormalizer $normalizer,
+        private readonly ExecutionPacketCommitFence $commitFence,
     ) {}
 
     public function nativeConfigured(): bool
@@ -34,6 +36,7 @@ final class ExecutionPacketService
      * @return array{packet:array<string,mixed>,run_id:int}
      */
     public function generateNative(
+        Request $request,
         array $context,
         Plan $plan,
         Task $task,
@@ -61,10 +64,26 @@ final class ExecutionPacketService
             featureKey: FeatureKey::AutomaticAiExecution,
         );
 
+        // The provider checked entitlement at HTTP return, but cannot
+        // authorize this later, session-visible derivative on its behalf.
+        $this->commitFence->assertFresh(
+            $request, $plan, $task, $context, (int) $result['run_id'],
+        );
+
         return [
             'packet' => $this->normalizePacket($result['data'], $context),
             'run_id' => (int) $result['run_id'],
         ];
+    }
+
+    /** @param array<string,mixed> $expectedContext */
+    public function nativePacketCurrent(
+        Request $request,
+        Plan $plan,
+        Task $task,
+        array $expectedContext,
+    ): bool {
+        return $this->commitFence->isFresh($request, $plan, $task, $expectedContext);
     }
 
     public function prompt(

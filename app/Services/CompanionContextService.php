@@ -14,6 +14,7 @@ class CompanionContextService
     public function __construct(
         private readonly GoalContextService $goalContexts,
         private readonly FutureMemoService $memories,
+        private readonly GitHubTaskEvidenceReuseGuard $evidenceGuard,
     ) {}
 
     /**
@@ -133,9 +134,15 @@ class CompanionContextService
             $evidenceQuery->where('task_id', $task->id);
         }
 
+        // Archived GitHub Evidence is retained, but cannot be prompted as
+        // fresh Companion context after revocation, reconnect or owner loss.
+        // Fetch past the display limit so eligible native facts still fill
+        // the bounded window when newer GitHub rows become historical.
         $snapshot['recent_evidence'] = $evidenceQuery
-            ->limit(6)
+            ->limit(36)
             ->get()
+            ->filter(fn (TaskEvidence $evidence) => $this->evidenceGuard->eligible($plan, $evidence))
+            ->take(6)
             ->map(fn (TaskEvidence $evidence) => [
                 'task_id' => (int) $evidence->task_id,
                 'type' => $evidence->type,

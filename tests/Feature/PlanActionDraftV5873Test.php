@@ -3,13 +3,16 @@
 namespace Tests\Feature;
 
 use App\Enums\EvidenceSource;
+use App\Enums\ProductKey;
 use App\Models\Plan;
+use App\Models\PlanArtifact;
 use App\Models\PlanActionDraft;
 use App\Models\PlanActionDraftRevision;
 use App\Models\PlanMember;
 use App\Models\Task;
 use App\Models\TaskEvidence;
 use App\Models\User;
+use App\Models\UserProductGrant;
 use App\Models\WorkLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -49,6 +52,32 @@ final class PlanActionDraftV5873Test extends TestCase
 
     private function observed(Plan $plan, Task $task, string $type, string $source = 'native', array $metadata = []): TaskEvidence
     {
+        if ($source === 'github') {
+            $root = PlanArtifact::query()->firstOrCreate(
+                ['plan_id' => $plan->id, 'provider' => 'github', 'artifact_type' => 'repository'],
+                [
+                    'created_by_user_id' => $plan->user_id,
+                    'title' => 'Canovia-web',
+                    'url' => 'https://github.com/1kz-ma1/Canovia-web',
+                    'metadata' => ['github_app_connection' => [
+                        'status' => 'connected',
+                        'installation_id' => 777,
+                        'source_epoch' => '18edfd47-0fa5-4020-aa2d-d273c603ec90',
+                    ]],
+                ],
+            );
+            UserProductGrant::query()->firstOrCreate([
+                'user_id' => $plan->user_id,
+                'product_key' => ProductKey::AllAccess,
+            ], ['source' => 'manual', 'starts_at' => now()->subMinute()]);
+            $metadata = [
+                ...$metadata,
+                'repo_full_name' => '1kz-ma1/Canovia-web',
+                'github_repository_artifact_id' => (int) $root->id,
+                'github_source_epoch' => data_get($root->metadata, 'github_app_connection.source_epoch'),
+            ];
+        }
+
         return TaskEvidence::create([
             'plan_id' => $plan->id, 'task_id' => $task->id,
             'source' => $source, 'type' => $type,
@@ -72,6 +101,125 @@ final class PlanActionDraftV5873Test extends TestCase
     {
         $this->assertSame(1, preg_match('/name="'.preg_quote($name, '/').'" value="([^"]+)"/', $html, $m));
         return $m[1];
+    }
+
+    public function test_changed_typed_evidence_metadata_blocks_acceptance_without_creating_a_task(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner, '資格学習');
+        $task = $this->task($plan);
+        $evidence = $this->observed($plan, $task, 'study_practice_assessed',
+            'native', ['score_percent' => 60, 'evidence_summary' => '要復習']);
+        $rid = (string) Str::uuid();
+
+        $this->actingAs($owner)->post(route('plans.action_drafts.compose_observed', $plan), [
+            'request_id' => $rid, 'task_evidence_ids' => [$evidence->id],
+        ])->assertRedirect();
+
+        $draft = PlanActionDraft::where('request_id', $rid)->sole();
+        $this->assertMatchesRegularExpression(
+            '/^[a-f0-9]{64}$/', (string) $draft->evidence_snapshots[0]['source_signature'],
+        );
+        // The UI summary remains identical, but the source revision changed.
+        $evidence->update(['metadata' => [
+            'score_percent' => 60, 'evidence_summary' => '要復習',
+            'private_correction' => 'changed',
+        ]]);
+
+        $this->actingAs($owner)->post(route('plans.action_drafts.accept', [$plan, $draft]))
+            ->assertStatus(409);
+        $this->assertDatabaseCount('tasks', 1);
+        $this->assertSame('proposed', $draft->fresh()->status);
+        $this->assertDatabaseCount('plan_activity_logs', 0);
+    }
+
+    public function test_deleted_or_transferred_evidence_rejects_prepared_bundle_atomically(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner, '資格学習');
+        $other = $this->plan($owner, '資格学習');
+        $task = $this->task($plan);
+        $evidence = $this->observed($plan, $task, 'study_practice_assessed',
+            'native', ['score_percent' => 50]);
+
+        $this->actingAs($owner)->post(route('plans.action_drafts.compose_observed', $plan), [
+            'request_id' => (string) Str::uuid(), 'task_evidence_ids' => [$evidence->id],
+        ])->assertRedirect();
+        $draft = PlanActionDraft::sole();
+        $this->actingAs($owner)->post(route('plans.action_drafts.steps.prepare', [$plan, $draft]))
+            ->assertRedirect();
+        $steps = $draft->fresh()->steps;
+        $fingerprint = app(\App\Services\PlanActionDraftStepService::class)
+            ->fingerprint($steps);
+
+        $evidence->update(['plan_id' => $other->id]);
+        $this->actingAs($owner)->post(route('plans.action_drafts.accept', [$plan, $draft]), [
+            'accept_mode' => 'bundle', 'steps_fingerprint' => $fingerprint,
+        ])->assertStatus(409);
+        $this->assertDatabaseCount('tasks', 1);
+        $this->assertSame('proposed', $draft->fresh()->status);
+        $this->assertSame(0, $draft->fresh()->steps()->whereNotNull('accepted_task_id')->count());
+
+        $evidence->delete();
+        $this->actingAs($owner)->post(route('plans.action_drafts.accept', [$plan, $draft]), [
+            'accept_mode' => 'bundle', 'steps_fingerprint' => $fingerprint,
+        ])->assertStatus(409);
+        $this->assertDatabaseCount('tasks', 1);
+        $this->assertDatabaseCount('task_dependencies', 0);
+    }
+
+    public function test_work_log_outcome_correction_blocks_single_acceptance_but_valid_source_is_accepted(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner, '資格学習');
+        $task = $this->task($plan);
+        $log = $this->workLog($plan, $task);
+
+        $this->actingAs($owner)->post(route('plans.action_drafts.store', $plan), [
+            'request_id' => (string) Str::uuid(), 'source_work_log_id' => $log->id,
+        ])->assertRedirect();
+        $draft = PlanActionDraft::sole();
+
+        // Historical single-WorkLog rows do not carry a source digest:
+        // keep the original human-authorized action/outcome comparison.
+        $log->update(['outcome' => '修正された学習結果']);
+        $this->actingAs($owner)->post(route('plans.action_drafts.accept', [$plan, $draft]))
+            ->assertStatus(409);
+        $this->assertDatabaseCount('tasks', 1);
+        $this->assertSame('proposed', $draft->fresh()->status);
+
+        $log->update(['outcome' => '本人が復習の必要性を記録']);
+        $this->actingAs($owner)->post(route('plans.action_drafts.accept', [$plan, $draft]))
+            ->assertRedirect();
+        $this->assertDatabaseCount('tasks', 2);
+        $this->assertSame('accepted', $draft->fresh()->status);
+    }
+
+    public function test_work_log_task_move_and_owner_transfer_deny_acceptance(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner, '資格学習');
+        $other = $this->plan($owner, '資格学習');
+        $task = $this->task($plan);
+        $log = $this->workLog($plan, $task);
+
+        $this->actingAs($owner)->post(route('plans.action_drafts.store', $plan), [
+            'request_id' => (string) Str::uuid(),
+            'source_work_log_id' => $log->id,
+        ])->assertRedirect();
+        $draft = PlanActionDraft::sole();
+        $task->update(['plan_id' => $other->id]);
+
+        $this->actingAs($owner)->post(route('plans.action_drafts.accept', [$plan, $draft]))
+            ->assertStatus(409);
+        $this->assertDatabaseCount('tasks', 1);
+        $task->update(['plan_id' => $plan->id]);
+
+        $plan->update(['user_id' => User::factory()->create()->id]);
+        $this->actingAs($owner)->post(route('plans.action_drafts.accept', [$plan, $draft]))
+            ->assertForbidden();
+        $this->assertSame('proposed', $draft->fresh()->status);
+        $this->assertDatabaseCount('tasks', 1);
     }
 
     public function test_study_evidence_creates_specific_unapplied_suggestion_and_accepts_once(): void
@@ -130,6 +278,67 @@ final class PlanActionDraftV5873Test extends TestCase
             $this->assertSame(50, $t->fresh()->progress_percent);
         }
         $this->assertDatabaseCount('tasks', 2);
+    }
+
+    public function test_github_disconnect_after_draft_composition_refuses_final_task_approval(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner, '個人開発');
+        $task = $this->task($plan);
+        $evidence = $this->observed($plan, $task, 'pull_request_merged', 'github', [
+            'pull_request_number' => 41,
+        ]);
+        $this->actingAs($owner)->post(route('plans.action_drafts.compose_observed', $plan), [
+            'request_id' => (string) Str::uuid(),
+            'task_evidence_ids' => [$evidence->id],
+        ])->assertRedirect();
+        $draft = PlanActionDraft::sole();
+
+        $root = PlanArtifact::query()->where('plan_id', $plan->id)
+            ->where('artifact_type', 'repository')->firstOrFail();
+        $metadata = $root->metadata;
+        $metadata['github_app_connection']['status'] = 'revoked';
+        $root->update(['metadata' => $metadata]);
+
+        $this->actingAs($owner)->get(route('plans.action_drafts.index', $plan))
+            ->assertOk()->assertDontSee(
+                'name="task_evidence_ids[]" value="'.$evidence->id.'"', false,
+            );
+
+        $this->actingAs($owner)
+            ->post(route('plans.action_drafts.accept', [$plan, $draft]))
+            ->assertStatus(409);
+        $this->assertSame('proposed', $draft->fresh()->status);
+        $this->assertDatabaseCount('tasks', 1);
+        $this->assertDatabaseCount('task_evidences', 1);
+
+        $metadata['github_app_connection']['status'] = 'connected';
+        $metadata['github_app_connection']['source_epoch'] = (string) Str::uuid();
+        $root->update(['metadata' => $metadata]);
+        $this->actingAs($owner)
+            ->post(route('plans.action_drafts.accept', [$plan, $draft]))
+            ->assertStatus(409);
+        $this->assertDatabaseCount('tasks', 1);
+    }
+
+    public function test_unsigned_legacy_github_evidence_cannot_compose_new_action_draft(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner, '個人開発');
+        $task = $this->task($plan);
+        $evidence = $this->observed($plan, $task, 'pull_request_merged', 'github', [
+            'pull_request_number' => 41,
+        ]);
+        $metadata = (array) $evidence->metadata;
+        unset($metadata['github_source_epoch']);
+        $evidence->update(['metadata' => $metadata]);
+
+        $this->actingAs($owner)->post(route('plans.action_drafts.compose_observed', $plan), [
+            'request_id' => (string) Str::uuid(),
+            'task_evidence_ids' => [$evidence->id],
+        ])->assertNotFound();
+        $this->assertDatabaseCount('plan_action_drafts', 0);
+        $this->assertDatabaseCount('task_evidences', 1);
     }
 
     public function test_mixed_evidence_and_worklog_keep_provenance_and_never_mutate_tasks(): void

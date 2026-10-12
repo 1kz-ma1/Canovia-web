@@ -5,9 +5,11 @@ namespace App\Services;
 use App\Enums\FeatureKey;
 use App\Models\DevelopmentActivityObservation;
 use App\Models\GitHubWebhookDelivery;
+use App\Models\Plan;
 use App\Models\PlanArtifact;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 final class GitHubDevelopmentObservationService
@@ -17,6 +19,7 @@ final class GitHubDevelopmentObservationService
         private readonly GitHubWorkflowService $workflow,
         private readonly FeatureAccessService $access,
         private readonly PlanCategoryProfileService $profiles,
+        private readonly GitHubSourceEpochService $epochs,
     ) {}
 
     /** @return array{observed:int,plan_ids:array<int,int>} */
@@ -47,7 +50,11 @@ final class GitHubDevelopmentObservationService
             }
 
             foreach ($roots as $root) {
-                $item = $this->persist($root, $repo, $fact);
+                $item = $this->persist($root, $repo, $fact, $installationId);
+                if ($item === null) {
+                    continue; // Connection was revoked while fetching GitHub.
+                }
+
                 if ($item->wasRecentlyCreated || $item->wasChanged()) {
                     $observed++;
                 }
@@ -77,13 +84,21 @@ final class GitHubDevelopmentObservationService
             return ['observed' => 0, 'plan_ids' => []];
         }
 
+        $installationId = (int) data_get(
+            $root->metadata, 'github_app_connection.installation_id', 0,
+        );
+
         $observed = 0;
         foreach ($this->github->bootstrapDevelopmentActivity($repo, 20) as $fact) {
             if (! is_array($fact)) {
                 continue;
             }
 
-            $item = $this->persist($root, $repo, $fact);
+            $item = $this->persist($root, $repo, $fact, $installationId);
+            if ($item === null) {
+                continue;
+            }
+
             if ($item->wasRecentlyCreated || $item->wasChanged()) {
                 $observed++;
             }
@@ -200,6 +215,7 @@ final class GitHubDevelopmentObservationService
             'sha' => $pull['head_sha'] ?? null,
             'url' => $pull['url'] ?? null,
             'occurred_at' => $pull['merged_at'] ?? $pull['closed_at'] ?? $pull['updated_at'] ?? $snapshot['fetched_at'] ?? null,
+            'source_updated_at' => $pull['updated_at'] ?? null,
         ];
     }
 
@@ -215,6 +231,7 @@ final class GitHubDevelopmentObservationService
             'state' => $issue['state'] ?? null,
             'url' => $issue['url'] ?? null,
             'occurred_at' => $issue['closed_at'] ?? $issue['updated_at'] ?? $snapshot['fetched_at'] ?? null,
+            'source_updated_at' => $issue['updated_at'] ?? null,
         ];
     }
 
@@ -230,6 +247,9 @@ final class GitHubDevelopmentObservationService
             'ref' => $name,
             'sha' => $branch['head_sha'] ?? null,
             'occurred_at' => $snapshot['fetched_at'] ?? null,
+            // Branch REST has no entity updated_at. The fetch time is only
+            // an observation watermark, not a Git ancestry/revision proof.
+            'source_updated_at' => $snapshot['fetched_at'] ?? null,
         ];
     }
 
@@ -262,11 +282,18 @@ final class GitHubDevelopmentObservationService
             'ref' => $deployment['ref'] ?? null,
             'sha' => $deployment['sha'] ?? null,
             'occurred_at' => $deployment['latest_status_at'] ?? $deployment['updated_at'] ?? $deployment['created_at'] ?? $snapshot['fetched_at'] ?? null,
+            'source_updated_at' => $deployment['latest_status_at'] ?? $deployment['updated_at'] ?? $deployment['created_at'] ?? null,
+            'source_revision_id' => $deployment['latest_status_id'] ?? null,
         ];
     }
 
     /** @param array<string,mixed> $fact */
-    private function persist(PlanArtifact $root, string $repo, array $fact): DevelopmentActivityObservation
+    private function persist(
+        PlanArtifact $root,
+        string $repo,
+        array $fact,
+        ?int $installationId = null,
+    ): ?DevelopmentActivityObservation
     {
         $kind = trim((string) ($fact['kind'] ?? ''));
         $identity = trim((string) ($fact['identity'] ?? ''));
@@ -280,25 +307,204 @@ final class GitHubDevelopmentObservationService
             $key = 'github:sha256:'.hash('sha256', $key);
         }
 
-        return DevelopmentActivityObservation::query()->updateOrCreate(
-            [
-                'plan_id' => (int) $root->plan_id,
-                'provider' => 'github',
-                'external_key' => $key,
-            ],
-            [
-                'repository_artifact_id' => (int) $root->id,
-                'kind' => $kind,
-                'provider_number' => isset($fact['provider_number']) ? (int) $fact['provider_number'] : null,
-                'url' => $this->url($fact['url'] ?? null),
-                'title' => $this->text($fact['title'] ?? null, 255),
-                'state' => $this->text($fact['state'] ?? null, 64),
-                'ref' => $this->text($fact['ref'] ?? null, 255),
-                'sha' => $this->sha($fact['sha'] ?? null),
-                'occurred_at' => $this->date($fact['occurred_at'] ?? null),
-                'last_observed_at' => now(),
-            ],
-        );
+        $identity = [
+            'plan_id' => (int) $root->plan_id,
+            'provider' => 'github',
+            'external_key' => $key,
+        ];
+
+        // Database timestamp columns carry no timezone. Normalize the
+        // *source revision* to the application's storage timezone before
+        // Eloquent serializes it; GitHub's occurred_at keeps V57.1 behavior.
+        $revision = $this->date($fact['source_updated_at'] ?? null)
+            ?->setTimezone(config('app.timezone', 'UTC'));
+        $revisionId = $kind === 'deployment'
+            ? max(0, (int) ($fact['source_revision_id'] ?? 0))
+            : 0;
+
+        $values = [
+            'repository_artifact_id' => (int) $root->id,
+            'kind' => $kind,
+            'provider_number' => isset($fact['provider_number']) ? (int) $fact['provider_number'] : null,
+            'url' => $this->url($fact['url'] ?? null),
+            'title' => $this->text($fact['title'] ?? null, 255),
+            'state' => $this->text($fact['state'] ?? null, 64),
+            'ref' => $this->text($fact['ref'] ?? null, 255),
+            'sha' => $this->sha($fact['sha'] ?? null),
+            'occurred_at' => $this->date($fact['occurred_at'] ?? null),
+            'last_observed_at' => now(),
+            'source_updated_at' => $revision,
+            'source_revision_id' => $revisionId > 0 ? $revisionId : null,
+        ];
+
+        // Capture the actor at selection time. A Plan transfer cannot
+        // authorize a fact fetched using a former owner's connection.
+        $sourceOwnerId = $root->plan?->user_id === null
+            ? null : (int) $root->plan->user_id;
+        // Capture the connection generation before network work; a
+        // disconnected/reconnected repository cannot authorize old results.
+        $sourceEpoch = $this->epochs->current((array) $root->metadata);
+
+        // The REST read happened before this transaction. Serialize competing
+        // writers under a row lock and compare GitHub's entity revision, not
+        // webhook arrival order or the local processing timestamp.
+        $stored = DB::transaction(function () use (
+            $identity, $values, $revision, $revisionId, $kind,
+            $root, $repo, $installationId, $sourceOwnerId, $sourceEpoch,
+        ): ?DevelopmentActivityObservation {
+            // Upstream REST calls happened outside this transaction. The root
+            // can be disconnected, deleted or moved between fetch and commit.
+            // Lock it again and check the SAME installation (not merely a
+            // newly connected installation for the same repository).
+            $liveRoot = PlanArtifact::query()
+                ->whereKey($root->id)
+                ->lockForUpdate()
+                ->first();
+            if (! $liveRoot) {
+                return null;
+            }
+            $livePlan = Plan::query()
+                ->whereKey($liveRoot->plan_id)
+                ->lockForUpdate()
+                ->first();
+            if (! $livePlan
+                || ($livePlan->user_id === null ? null : (int) $livePlan->user_id)
+                    !== $sourceOwnerId) {
+                return null;
+            }
+            $livePlan->load('user');
+            $liveRoot->setRelation('plan', $livePlan);
+            $parsed = $this->workflow->parseUrl((string) $liveRoot->url);
+            if (($parsed['kind'] ?? null) !== 'repository'
+                || strcasecmp((string) ($parsed['repo_full_name'] ?? ''), $repo) !== 0
+                || ($installationId !== null && (
+                    $installationId <= 0
+                    || (int) data_get($liveRoot->metadata, 'github_app_connection.installation_id', 0) !== $installationId
+                ))
+                || ! $this->eligible($liveRoot)
+                || $this->epochs->current((array) $liveRoot->metadata) !== $sourceEpoch
+                || (int) $liveRoot->plan_id !== (int) $identity['plan_id']) {
+                return null;
+            }
+
+            $effectiveEpoch = $sourceEpoch;
+            if ($effectiveEpoch === null) {
+                // Upgrade path for already-connected pre-epoch repositories:
+                // issue the first epoch only AFTER a successful authoritative
+                // REST fetch, with exact same installation/owner under lock.
+                // This signs only this fetched fact; old rows stay NULL.
+                $selectedInstallation = (int) data_get(
+                    $root->metadata, 'github_app_connection.installation_id', 0,
+                );
+                $currentInstallation = (int) data_get(
+                    $liveRoot->metadata, 'github_app_connection.installation_id', 0,
+                );
+                if (data_get($root->metadata, 'github_app_connection.status') !== 'connected'
+                    || $selectedInstallation <= 0
+                    || $selectedInstallation !== $currentInstallation) {
+                    return null;
+                }
+
+                $metadata = (array) $liveRoot->metadata;
+                $metadata['github_app_connection'] = $this->epochs->verified(
+                    $metadata, (array) data_get($metadata, 'github_app_connection', []),
+                );
+                $liveRoot->update(['metadata' => $metadata]);
+                $effectiveEpoch = $this->epochs->current($metadata);
+                if ($effectiveEpoch === null) {
+                    return null;
+                }
+            }
+
+            $values['source_epoch'] = $effectiveEpoch;
+            $observation = DevelopmentActivityObservation::query()
+                ->createOrFirst($identity, $values);
+
+            if ($observation->wasRecentlyCreated) {
+                return $observation;
+            }
+
+            $locked = DevelopmentActivityObservation::query()
+                ->where($identity)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // A commit SHA is immutable. Replayed push deliveries must not
+            // reassign its originally observed ref or its Task resolution.
+            if ($kind === 'commit' || $revision === null) {
+                // Immutable commit refetched through the current connection
+                // is independently proven in the new epoch. Preserve its
+                // human-chosen Task association and immutable payload.
+                if ($effectiveEpoch !== null && $locked->source_epoch !== $effectiveEpoch) {
+                    if ($kind === 'commit' && (string) $locked->sha !== (string) $values['sha']) {
+                        return $locked;
+                    }
+                    $locked->update([
+                        'source_epoch' => $effectiveEpoch,
+                        'last_observed_at' => now(),
+                    ]);
+                }
+
+                return $locked;
+            }
+
+            // For legacy pre-G2 observations use the original event time as
+            // a conservative lower bound, without bulk rewriting history.
+            $previous = $locked->source_updated_at;
+            if ($previous === null && filled($locked->getRawOriginal('occurred_at'))) {
+                // Legacy V57.1 wrote GitHub ISO-8601 UTC values into a naive
+                // timestamp. Reinterpret that raw historical value as UTC;
+                // casting it in the local app timezone shifts the watermark.
+                $previous = CarbonImmutable::parse(
+                    (string) $locked->getRawOriginal('occurred_at'),
+                    'UTC',
+                );
+            }
+            if ($previous !== null) {
+                $comparison = $revision->getTimestamp() <=> $previous->getTimestamp();
+
+                if ($comparison < 0) {
+                    return $locked;
+                }
+
+                if ($comparison === 0) {
+                    $previousId = (int) ($locked->source_revision_id ?? 0);
+                    if ($kind !== 'deployment' || $revisionId <= $previousId) {
+                        // Do not change same-version fields, but an exact
+                        // re-fetch of unchanged state can re-establish source
+                        // provenance for a new connection generation.
+                        if ($sourceEpoch !== null
+                            && $locked->source_epoch !== $sourceEpoch
+                            && (string) $locked->state === (string) $values['state']
+                            && (string) $locked->sha === (string) $values['sha']
+                            && (string) $locked->ref === (string) $values['ref']) {
+                            $locked->update([
+                                'source_epoch' => $effectiveEpoch,
+                                'last_observed_at' => now(),
+                            ]);
+                        }
+
+                        return $locked;
+                    }
+                }
+            }
+
+            // A new version updates provider observations, never confirmed
+            // resolution fields, suggested Task links, or TaskEvidence.
+            $locked->fill($values);
+            $locked->save();
+
+            return $locked;
+        }, 3);
+
+        if ($stored !== null && $sourceEpoch === null && $stored->source_epoch !== null) {
+            // Bootstrap/Webhook may fetch several facts using one selected
+            // legacy root. Carry the newly minted epoch into subsequent
+            // independently fetched facts, without approving old rows.
+            $root->refresh();
+        }
+
+        return $stored;
     }
 
     private function text(mixed $value, int $max): ?string

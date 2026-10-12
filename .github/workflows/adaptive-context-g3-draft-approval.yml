@@ -1,0 +1,46 @@
+name: Adaptive Context G3 Draft Approval Source Gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/PlanActionDraftApprovalSourceGuard.php'
+      - 'app/Services/PlanActionDraftSourceFingerprint.php'
+      - 'app/Services/PlanActionDraftEvidenceService.php'
+      - 'app/Services/PlanActionDraftTypedEvidenceService.php'
+      - 'app/Http/Controllers/PlanActionDraftController.php'
+      - 'tests/Feature/PlanActionDraftV5873Test.php'
+      - '.github/workflows/adaptive-context-g3-draft-approval.yml'
+
+jobs:
+  approval-source-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/PlanActionDraftApprovalSourceGuard.php
+          php -l app/Services/PlanActionDraftSourceFingerprint.php
+          php -l app/Services/PlanActionDraftEvidenceService.php
+          php -l app/Services/PlanActionDraftTypedEvidenceService.php
+          php -l app/Http/Controllers/PlanActionDraftController.php
+          php -l tests/Feature/PlanActionDraftV5873Test.php
+      - name: G3 corrected/moved/deleted source and owner approval
+        run: php artisan test tests/Feature/PlanActionDraftV5873Test.php
+      - name: Multi-log, refresh, sequential owner approval and legacy replay
+        run: php artisan test tests/Feature/PlanActionDraftV5871Test.php tests/Feature/PlanActionDraftV5872Test.php tests/Feature/PlanActionDraftV5874Test.php tests/Feature/PlanActionDraftV5875Test.php tests/Feature/PlanActionDraftSpotlightV5876Test.php
+      - name: Actor authorization and bounded source freshness
+        run: php artisan test tests/Feature/StateSnapshotActorIsolationG1Test.php tests/Feature/IntelligenceDomainSourceFreshnessG3Test.php
+      - name: MCP per-Plan consent and permissions stay independent
+        run: php artisan test tests/Feature/McpReadOnlyResourceTest.php tests/Feature/McpSyntheticOAuthConsentReadLifecycleTest.php

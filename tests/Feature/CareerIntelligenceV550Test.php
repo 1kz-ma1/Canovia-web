@@ -224,8 +224,10 @@ class CareerIntelligenceV550Test extends TestCase
             'scheduled_at' => now()->addHours(24),
         ]);
 
+        // Use the frozen fixture clock as the decision instant. The default
+        // DateTimeImmutable system clock is not affected by Carbon::setTestNow.
         $result = app(CareerAdaptiveActionService::class)
-            ->evaluate($plan);
+            ->evaluate($plan, now());
 
         $this->assertSame('prepare_interview', $result->decision->type);
         $this->assertSame(

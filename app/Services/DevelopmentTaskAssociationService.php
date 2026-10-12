@@ -17,6 +17,7 @@ final class DevelopmentTaskAssociationService
         private readonly GitHubReturnEvidenceService $pullRequestEvidence,
         private readonly GitHubDevelopmentEvidenceService $developmentEvidence,
         private readonly DevelopmentAdaptiveActionService $developmentActions,
+        private readonly DevelopmentObservationReuseGuard $reuseGuard,
     ) {}
 
     /**
@@ -30,16 +31,36 @@ final class DevelopmentTaskAssociationService
         $this->assertLinkable($plan, $task, $observation);
 
         $artifact = DB::transaction(function () use ($plan, $task, $observation) {
-            $artifact = $this->artifactForObservation($plan, $observation);
-            $artifact->tasks()->syncWithoutDetaching([(int) $task->id]);
+            $currentPlan = Plan::query()->whereKey($plan->id)->lockForUpdate()->first();
+            $currentTask = Task::query()->whereKey($task->id)->lockForUpdate()->first();
+            $currentRoot = PlanArtifact::query()
+                ->whereKey($observation->repository_artifact_id)
+                ->lockForUpdate()->first();
+            $currentObservation = DevelopmentActivityObservation::query()
+                ->whereKey($observation->id)->lockForUpdate()->first();
 
-            $observation->update([
+            if ($currentPlan === null || $currentTask === null
+                || $currentObservation === null
+                || (int) $currentTask->plan_id !== (int) $currentPlan->id) {
+                throw ValidationException::withMessages([
+                    'observation' => '対象のPlan・Task・GitHub活動を再確認してください。',
+                ]);
+            }
+
+            $this->assertLinkable($currentPlan, $currentTask, $currentObservation);
+            $currentPlan->load('user');
+            $this->reuseGuard->assertLocked($currentPlan, $currentRoot, $currentObservation);
+
+            $artifact = $this->artifactForObservation($currentPlan, $currentObservation);
+            $artifact->tasks()->syncWithoutDetaching([(int) $currentTask->id]);
+
+            $currentObservation->update([
                 'resolution_status' => 'linked',
                 'resolved_artifact_id' => (int) $artifact->id,
             ]);
 
             return $artifact->fresh('tasks');
-        });
+        }, 3);
 
         $synced = false;
         $warning = null;

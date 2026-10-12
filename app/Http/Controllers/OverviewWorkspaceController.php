@@ -77,18 +77,21 @@ final class OverviewWorkspaceController extends Controller
         $intelligenceChanges = collect([
             $studyPlan instanceof Plan
                 ? $stateChanges->latestForPlan(
+                    $request,
                     $studyPlan,
                     IntelligenceDomain::Study,
                 )
                 : null,
             $developmentPlan instanceof Plan
                 ? $stateChanges->latestForPlan(
+                    $request,
                     $developmentPlan,
                     IntelligenceDomain::Development,
                 )
                 : null,
             $careerSpecializedPlan instanceof Plan
                 ? $stateChanges->latestForPlan(
+                    $request,
                     $careerSpecializedPlan,
                     IntelligenceDomain::Career,
                 )

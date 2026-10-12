@@ -8,6 +8,7 @@ use App\Models\FutureMemo;
 use App\Models\GoalContext;
 use App\Models\GoalDiscoveryMessage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class GoalDiscoveryConversationService
 {
@@ -19,6 +20,7 @@ class GoalDiscoveryConversationService
         private readonly FeatureFlagService $flags,
         private readonly AiCapacityService $capacity,
         private readonly FutureMemoService $memories,
+        private readonly GoalDiscoveryAiCommitFence $commitFence,
     ) {}
 
     public function begin(Request $request, GoalContext $context, string $userText): void
@@ -48,14 +50,13 @@ class GoalDiscoveryConversationService
     {
         $context = $this->goalContexts->recalculate($context->fresh(['facts']));
         $question = $this->policy->nextQuestion($context);
+        $sourceFingerprint = $this->commitFence->fingerprint($context);
+        $prompt = $this->prompt($context, $question, $latestUserText);
 
         if (! $this->canUseNative($request)) {
-            $this->storeAssistantMessage(
-                $request,
-                $context,
-                $this->fallbackReply($question),
-                null,
-                ['mode' => 'deterministic_fallback'],
+            $this->storeFallbackIfCurrent(
+                $request, $context, $sourceFingerprint, $this->fallbackReply($question),
+                'deterministic_fallback',
             );
 
             return;
@@ -64,7 +65,7 @@ class GoalDiscoveryConversationService
         try {
             $result = $this->nativeAi->generateStructured(
                 purpose: 'conversational_onboarding_reply',
-                prompt: $this->prompt($context, $question, $latestUserText),
+                prompt: $prompt,
                 schema: $this->schema(),
                 schemaName: 'conversational_onboarding_reply',
                 plan: null,
@@ -80,37 +81,76 @@ class GoalDiscoveryConversationService
                 featureKey: FeatureKey::ConversationalOnboarding,
             );
 
-            $data = $result['data'];
-            $reply = trim((string) ($data['reply'] ?? ''));
-            if ($reply === '') {
-                $reply = $this->fallbackReply($question);
-            }
-
-            $this->captureMemories(
-                $request,
-                $context,
-                $latestUserText,
-                is_array($data['memories'] ?? null) ? $data['memories'] : [],
-            );
-
-            $this->storeAssistantMessage(
-                $request,
-                $context,
-                $reply,
-                (int) $result['run_id'],
-                [
-                    'mode' => 'native_ai',
-                    'next_question_id' => $question['id'] ?? null,
-                ],
-            );
         } catch (NativeAiExecutionException) {
-            $this->storeAssistantMessage(
-                $request,
-                $context,
-                $this->fallbackReply($question),
-                null,
-                ['mode' => 'provider_fallback'],
+            // Provider failures can use deterministic text, but only while
+            // this user's Goal Context has not moved or changed.
+            $this->storeFallbackIfCurrent(
+                $request, $context, $sourceFingerprint, $this->fallbackReply($question),
+                'provider_fallback',
             );
+
+            return;
+        }
+
+        $data = $result['data'];
+        $reply = trim((string) ($data['reply'] ?? ''));
+        if ($reply === '') {
+            $reply = $this->fallbackReply($question);
+        }
+
+        try {
+            DB::transaction(function () use (
+                $request, $context, $sourceFingerprint, $latestUserText, $data,
+                $reply, $result, $question,
+            ): void {
+                $liveContext = $this->commitFence->assertCanCommit(
+                    $request, $context, $sourceFingerprint, true, (int) $result['run_id'],
+                );
+
+                // Both AI derivatives are committed or rolled back together.
+                $this->captureMemories(
+                    $request,
+                    $liveContext,
+                    $latestUserText,
+                    is_array($data['memories'] ?? null) ? $data['memories'] : [],
+                );
+                $this->storeAssistantMessage(
+                    $request,
+                    $liveContext,
+                    $reply,
+                    (int) $result['run_id'],
+                    [
+                        'mode' => 'native_ai',
+                        'next_question_id' => $question['id'] ?? null,
+                    ],
+                );
+            }, 3);
+        } catch (NativeAiExecutionException) {
+            // The user's original answer remains, with no old AI text or
+            // substitute reply persisted into a changed context.
+            return;
+        }
+    }
+
+    private function storeFallbackIfCurrent(
+        Request $request,
+        GoalContext $context,
+        string $sourceFingerprint,
+        string $reply,
+        string $mode,
+    ): void {
+        try {
+            DB::transaction(function () use ($request, $context, $sourceFingerprint, $reply, $mode): void {
+                $live = $this->commitFence->assertCanCommit(
+                    $request, $context, $sourceFingerprint, false,
+                );
+                $this->storeAssistantMessage(
+                    $request, $live, $reply, null, ['mode' => $mode],
+                );
+            }, 3);
+        } catch (NativeAiExecutionException) {
+            // An old fallback must not be persisted against updated context.
+            return;
         }
     }
 

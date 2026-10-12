@@ -5,6 +5,9 @@ namespace Tests\Feature;
 use App\Enums\EvidenceSource;
 use App\Intelligence\Enums\IntelligenceDomain;
 use App\Intelligence\Presentation\IntelligenceStateChangeFeedbackService;
+use App\Intelligence\Presentation\IntelligencePresentationHistoryService;
+use App\Intelligence\Services\IntelligenceEvidenceFreshnessGuard;
+use App\Intelligence\Services\ActionProjectionStore;
 use App\Models\IntelligenceActionProjection;
 use App\Models\IntelligenceDecisionTrace;
 use App\Models\IntelligenceStateSnapshot;
@@ -16,6 +19,7 @@ use App\Models\TaskEvidence;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -71,7 +75,7 @@ class StateChangeFeedbackV546Test extends TestCase
         );
 
         $feedback = app(IntelligenceStateChangeFeedbackService::class)
-            ->latestForPlan($plan, IntelligenceDomain::Development);
+            ->latestForPlan($this->actorRequest($user), $plan, IntelligenceDomain::Development);
 
         $this->assertNotNull($feedback);
         $this->assertSame('action_changed', $feedback['kind']);
@@ -89,7 +93,7 @@ class StateChangeFeedbackV546Test extends TestCase
 
     public function test_small_score_only_change_is_suppressed(): void
     {
-        [, $plan] = $this->studyScenario();
+        [$user, $plan] = $this->studyScenario();
 
         $this->historyPair(
             $plan,
@@ -109,13 +113,13 @@ class StateChangeFeedbackV546Test extends TestCase
 
         $this->assertNull(
             app(IntelligenceStateChangeFeedbackService::class)
-                ->latestForPlan($plan, IntelligenceDomain::Study),
+                ->latestForPlan($this->actorRequest($user), $plan, IntelligenceDomain::Study),
         );
     }
 
     public function test_five_point_readiness_change_is_meaningful_even_when_action_stays_same(): void
     {
-        [, $plan, $task] = $this->studyScenario();
+        [$user, $plan, $task] = $this->studyScenario();
         $practice = $this->evidence(
             $task,
             'study_practice_assessed',
@@ -140,7 +144,7 @@ class StateChangeFeedbackV546Test extends TestCase
         );
 
         $feedback = app(IntelligenceStateChangeFeedbackService::class)
-            ->latestForPlan($plan, IntelligenceDomain::Study);
+            ->latestForPlan($this->actorRequest($user), $plan, IntelligenceDomain::Study);
 
         $this->assertNotNull($feedback);
         $this->assertSame('readiness_improved', $feedback['kind']);
@@ -223,7 +227,10 @@ class StateChangeFeedbackV546Test extends TestCase
         );
 
         $this->actingAs($user)
-            ->get(route('workspace.development.index', ['plan_id' => $plan->id]))
+            ->get(route('workspace.development.index', [
+                'plan_id' => $plan->id,
+                'surface' => 'repository',
+            ]))
             ->assertOk()
             ->assertSee('data-intelligence-state-change', false)
             ->assertSee('次にやることが変わりました')
@@ -297,6 +304,89 @@ class StateChangeFeedbackV546Test extends TestCase
                 'data-intelligence-state-change-kind="',
             ),
         );
+    }
+
+    public function test_evidence_correction_or_deletion_invalidates_current_decision_and_action_without_erasing_history(): void
+    {
+        [$user, $plan, $task] = $this->developmentScenario();
+        $ci = $this->evidence($task, 'pull_request_ci_observed', EvidenceSource::GitHub);
+
+        $this->historyPair(
+            $plan,
+            IntelligenceDomain::Development,
+            previousScore: 25,
+            currentScore: 45,
+            previousLevel: 'developing',
+            currentLevel: 'developing',
+            previousReason: 'ci_unverified',
+            currentReason: 'review_unverified',
+            previousDecision: 'CI / Testを確認する必要があります。',
+            currentDecision: 'Reviewを確認する必要があります。',
+            previousAction: 'CIを確認',
+            currentAction: 'Reviewを確認',
+            currentEvidence: ['task_evidence:'.$ci->id],
+        );
+
+        $request = $this->actorRequest($user);
+        $history = app(IntelligencePresentationHistoryService::class);
+        $feedback = app(IntelligenceStateChangeFeedbackService::class);
+        $actions = app(ActionProjectionStore::class);
+        $this->assertNotNull($feedback->latestForPlan($request, $plan, IntelligenceDomain::Development));
+        $this->assertNotNull($actions->latestActiveForPlan((int) $plan->id));
+
+        $beforeCount = IntelligenceStateSnapshot::query()->where('plan_id', $plan->id)->count();
+        $beforeDecisions = IntelligenceDecisionTrace::query()->where('plan_id', $plan->id)->count();
+        $beforeActions = IntelligenceActionProjection::query()->where('plan_id', $plan->id)->count();
+
+        $ci->update(['metadata' => [...(array) $ci->metadata, 'ci_state' => 'failure']]);
+
+        $this->assertNull($feedback->latestForPlan($request, $plan, IntelligenceDomain::Development));
+        $this->assertNull($actions->latestActiveForPlan((int) $plan->id));
+        $visible = $history->forPlan($request, $plan, IntelligenceDomain::Development);
+        $this->assertCount(1, $visible['states']);
+        $this->assertCount(1, $visible['decisions']);
+        $this->assertCount(1, $visible['actions']);
+
+        $ci->delete();
+        $this->assertNull($feedback->latestForPlan($request, $plan, IntelligenceDomain::Development));
+        $this->assertNull($actions->latestActiveForPlan((int) $plan->id));
+        $this->assertCount(1, $history->forPlan(
+            $request, $plan, IntelligenceDomain::Development,
+        )['states']);
+
+        $this->assertSame($beforeCount, IntelligenceStateSnapshot::query()->where('plan_id', $plan->id)->count());
+        $this->assertSame($beforeDecisions, IntelligenceDecisionTrace::query()->where('plan_id', $plan->id)->count());
+        $this->assertSame($beforeActions, IntelligenceActionProjection::query()->where('plan_id', $plan->id)->count());
+    }
+
+    public function test_same_evidence_id_moved_to_another_plan_does_not_authorize_old_derivation(): void
+    {
+        [$user, $plan, $task] = $this->studyScenario();
+        $evidence = $this->evidence($task, 'study_practice_assessed', EvidenceSource::Native);
+        $this->historyPair(
+            $plan, IntelligenceDomain::Study,
+            previousScore: 40, currentScore: 60,
+            previousLevel: 'developing', currentLevel: 'ready',
+            previousReason: 'needs_practice', currentReason: 'practice_recorded',
+            previousDecision: '演習する', currentDecision: '次へ進む',
+            previousAction: '演習', currentAction: '次へ',
+            currentEvidence: ['task_evidence:'.$evidence->id],
+        );
+
+        $this->assertNotNull(app(ActionProjectionStore::class)->latestActiveForPlan((int) $plan->id));
+        $otherPlan = $this->plan($user, '別の計画', '資格学習', 2);
+        $evidence->update(['plan_id' => $otherPlan->id]);
+        $this->assertNull(app(ActionProjectionStore::class)->latestActiveForPlan((int) $plan->id));
+        $this->assertNull(app(IntelligenceStateChangeFeedbackService::class)
+            ->latestForPlan($this->actorRequest($user), $plan, IntelligenceDomain::Study));
+    }
+
+    private function actorRequest(User $user): Request
+    {
+        $request = Request::create('/', 'GET');
+        $request->setUserResolver(fn () => $user);
+
+        return $request;
     }
 
     private function studyScenario(): array
@@ -533,7 +623,10 @@ class StateChangeFeedbackV546Test extends TestCase
             'metrics' => [],
             'facts' => [],
             'evidence_references' => $evidenceReferences,
-            'metadata' => [],
+            'metadata' => [
+                'evidence_signatures' => app(IntelligenceEvidenceFreshnessGuard::class)
+                    ->signaturesFor((int) $plan->id, $evidenceReferences),
+            ],
         ]);
     }
 

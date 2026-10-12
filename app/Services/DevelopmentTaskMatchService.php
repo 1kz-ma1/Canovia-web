@@ -12,6 +12,10 @@ final class DevelopmentTaskMatchService
     public const MIN_CONFIDENCE = 0.72;
     public const MIN_GAP = 0.10;
 
+    public function __construct(
+        private readonly DevelopmentObservationReuseGuard $reuseGuard,
+    ) {}
+
     /**
      * Refresh deterministic suggestions for unresolved GitHub observations.
      *
@@ -55,6 +59,24 @@ final class DevelopmentTaskMatchService
     ): DevelopmentActivityObservation {
         if (in_array($observation->resolution_status, ['linked', 'ignored'], true)) {
             return $observation;
+        }
+
+        $plan = Plan::query()->find($observation->plan_id);
+        if ($plan === null || ! $this->reuseGuard->eligible($plan, $observation)) {
+            // Suggested is an inferred current-use recommendation, not a
+            // human decision. Withhold it when its source is disconnected.
+            if ($observation->resolution_status === 'suggested'
+                || $observation->suggested_task_id !== null
+                || $observation->suggestion_basis !== null) {
+                $observation->update([
+                    'suggested_task_id' => null,
+                    'suggestion_confidence' => null,
+                    'suggestion_basis' => null,
+                    'resolution_status' => 'unlinked',
+                ]);
+            }
+
+            return $observation->fresh();
         }
 
         $ranked = $tasks

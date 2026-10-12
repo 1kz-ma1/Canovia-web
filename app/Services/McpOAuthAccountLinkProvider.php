@@ -14,7 +14,7 @@ final class McpOAuthAccountLinkProvider
 {
     public function __construct(
         private readonly McpOAuthAccountLinkConfiguration $configuration,
-        private readonly McpAccessTokenIntrospector $introspector,
+        private readonly McpExternalTokenVerifier $verifier,
     ) {}
 
     public function isProviderVerified(): bool
@@ -50,8 +50,13 @@ final class McpOAuthAccountLinkProvider
             && in_array('S256', $meta['code_challenge_methods_supported'], true)
             && is_array($meta['token_endpoint_auth_methods_supported'] ?? null)
             && in_array('client_secret_basic', $meta['token_endpoint_auth_methods_supported'], true)
-            && is_array($meta['scopes_supported'] ?? null)
-            && in_array(McpProtectedResourceConfiguration::READ_SCOPE, $meta['scopes_supported'], true);
+            // Auth0's general OIDC metadata omits custom API permissions,
+            // so require metadata scope only in the legacy introspection
+            // path. Signed JWT verification still MUST enforce the exact
+            // custom scope and resource audience on every real token.
+            && ($this->verifier->mode() === 'auth0_jwt'
+                || (is_array($meta['scopes_supported'] ?? null)
+                    && in_array(McpProtectedResourceConfiguration::READ_SCOPE, $meta['scopes_supported'], true)));
     }
 
     public function authorizationUrl(string $state, string $challenge): ?string
@@ -119,6 +124,6 @@ final class McpOAuthAccountLinkProvider
         // The introspection endpoint independently checks active, issuer,
         // subject, exact resource audience, linking-client ID and read scope.
         // The token is never stored or returned to a browser.
-        return $this->introspector->verifyAccountLink($body['access_token']);
+        return $this->verifier->verifyAccountLink($body['access_token']);
     }
 }

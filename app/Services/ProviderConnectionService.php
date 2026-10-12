@@ -8,6 +8,7 @@ use App\Enums\ExecutionProviderKind;
 use App\Models\ProviderConnection;
 use App\Models\User;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Throwable;
@@ -59,14 +60,24 @@ final class ProviderConnectionService
 
     public function revoke(ProviderConnection $connection): ProviderConnection
     {
-        if ($connection->status !== ProviderConnection::STATUS_REVOKED) {
-            $connection->update([
-                'status' => ProviderConnection::STATUS_REVOKED,
-                'revoked_at' => now(),
-            ]);
-        }
+        // Serialize with the activity intake commit lock. Once revoke
+        // returns, an already-authenticated stale request cannot commit.
+        return DB::transaction(function () use ($connection): ProviderConnection {
+            $locked = ProviderConnection::query()
+                ->whereKey($connection->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        return $connection->fresh();
+            if ($locked->status !== ProviderConnection::STATUS_REVOKED
+                || $locked->revoked_at === null) {
+                $locked->update([
+                    'status' => ProviderConnection::STATUS_REVOKED,
+                    'revoked_at' => now(),
+                ]);
+            }
+
+            return $locked->fresh();
+        }, 3);
     }
 
     public function authenticate(

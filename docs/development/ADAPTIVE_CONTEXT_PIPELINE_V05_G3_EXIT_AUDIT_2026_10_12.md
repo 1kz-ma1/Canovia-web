@@ -1,0 +1,244 @@
+# Adaptive Context Pipeline v0.5 — G3 Exit Audit / Decision Record (2026-10-12)
+
+> Status: **CONDITIONAL / OPEN** — G3 has multiple merged and CI-verified safeguards; **full G3 exit is NOT certified**. This is a bounded source and CI audit, not a whole-repository proof or a release authorization.
+>
+> Baseline inspected: `1kz-ma1/Canovia-web` `main@36402448f38abdd335ca075654b020750454241b` (after #483), at 2026-10-12 Japan time. #481/#482 are separate MCP track merges preceding #483. Exact release/deploy SHA must be independently established.
+
+## 1. Purpose and decision rule
+
+G3 asks: when original Evidence, permission, ownership, task membership or delegated purpose changes, can **derived private context** be reused/disclosed or drive an important commit? Do not mark `closed` on the strength of one passed unit test, one feature mode, or a merged PR. Separate:
+
+1. **Code present**: implementation merged in `main`.
+2. **Isolated regression**: a named negative test and its exact-commit CI passed.
+3. **Live policy verified**: on real isolated PostgreSQL with more than one worker and representative source/actor changes.
+4. **Public release gate**: specific enabled product behavior uses only the protected routes, or its unsafe route is off.
+5. **Full G3 exit**: all supported source/derived read/commit paths have an inventoried ownership+purpose contract, deletion/revoke behavior, and acceptance evidence.
+
+Unknown is **not** pass. No inference that any privacy incident has occurred.
+
+## 2. Current source → derivative → consumer inventory
+
+| Data source / input | Current intermediate result | Reader / commit point | Merged protection / proof | Residual |
+|---|---|---|---|---|
+| Study Practice and Recall `TaskEvidence` | V53 Study State, Readiness, Decision, Action; Study Living Profile | `StateSnapshotStore::latestForPlan`, `IntelligencePresentationHistoryService`, `StudyActionTaskProjector::project` | #473 Study LivingProfile freshness; #474 V53 source signature; #483 locked Study Task commit; dedicated CI | Cross-worker source write versus projector commit not exercised on real PostgreSQL; non-TaskEvidence Study inputs outside official Study projector are not globally covered |
+| GitHub repository / artifact and Task-linked Evidence | `TaskEvidence`, `DevelopmentActivityObservation`, Development State and Living Profile | `GitHubTaskEvidenceCommitGuard`, `DevelopmentDerivedContextFreshnessGuard`, Development V53 reader | #475 commit-time source/connection fence; #476 Developer profile and TaskEvidence write checks; #479 official builder-source replay | Historical observations after disconnect: explicit source retention/eligibility contract **not yet product-approved**. Remote disconnection not yet observed locally; no impossible retroactive deletion promise |
+| Career capture, application, event, interview review | Career V53 State, Decision, Action | `IntelligenceDomainSourceFreshnessGuard`, current/history/feedback views | #479 official Career semantic state fingerprint replay; sanitized update notice; CI | Raw-only edits that do not alter the intentionally sanitized state projection are not a semantic change; other Career caches and off-builder readers need independent map |
+| Native AI provider response | `NativeAiRun`, selected reasoning run, cached Decision | `NativeAiGateway::generateStructured`, `ReasoningRouter::route`, `ReasonedDecisionOrchestrator::evaluateAndPersist` | #477 router cache/in-flight checks; #478 gateway pre/post entitlement+Plan/Task; **this audit branch** adds final V53 AI Decision trace commit fence | Provider request already sent cannot be retracted. Feature entitlement is not MCP OAuth consent. Other AI caller post-return writes need individual review; narrow post-check grant TOCTOU remains |
+| WorkLog, selected TaskEvidence, Plan Action Draft | `PlanActionDraft` and optional sequential steps | `PlanActionDraftController::accept` → Task creation | #480 hashes source revision and rechecks actor/Plan/source at locked approval commit, 409 stale, preserves self-report | Legacy V58.71 WorkLog source has no original full hash; content visible at review can be checked but hidden field changes cannot be retroactively proven |
+| Plan-scoped V53 action + current Task | `IntelligenceActionProjection.projected_task_id` | `StudyActionTaskProjector::project` → Task association | #483 same-transaction Plan/Action locks, Study full projection replay, owner/editor reauthorization | Extra audit event is written after Task transaction. Source writers need shared lock discipline for a linearizable multiworker promise |
+| OAuth / ChatGPT private MCP shared Development Plan | Controlled delegated context read, not Native AI generation | MCP OAuth token/grant/Plan read boundaries | Existing MCP off-by-default and grant/revoke read fences; separate staging Auth0 track (#481/#482) | **No live ChatGPT OAuth E2E** asserted. Never equate `FeatureKey::AutomaticAiExecution` with per-Plan delegated consent |
+| User provided / inferred personal preferences | Living Profile candidate claims, dismissed/confirmed human decisions | `PersonalizationContextService::current`, `PersonalizationLivingProfileService` | #473 and #476 selected Study/Development dependency fences | Other domain inference provenance, arbitrary external source erasure, multi-domain purpose-bound Resolver are not complete |
+
+**Bounded coverage:** This table lists inspected documented paths, **not all call sites** of the application. `StateSnapshotStore::persist` has globally unique `state_reference` with actor mismatch protection; that does not establish cross-user Plan-free snapshot identity (G6). Official Career/Development builder verification does not apply to arbitrary custom V53 scopes or manually assembled history.
+
+## 3. Newly confirmed gap found in this audit: V53 post-Router commit
+
+`ReasonedDecisionOrchestrator::evaluateAndPersist` previously called `ReasoningRouter::route()`, which authorizes before/after HTTP and on cache reuse, **then** persisted `DecisionTrace` without re-reading entitlement or Plan ownership. Grant expiry or a Plan transfer between successful `IntelligenceReasoningRun` creation and Decision materialization could attach an unauthorized AI-selected Decision even though every earlier provider check had passed.
+
+This bounded fix reuses `ReasoningRouter::aiAuthorizationFailure()` at the **final AI Decision write**. It locks the current Plan for the duration of transaction and preserves the Router's owner-only/non-collaborative, feature entitlement policy. A newly revoked grant/owner/scope yields HTTP **409** before `StateSnapshot` or `DecisionTrace` is written. `ReasoningRun` remains an auditable prior provider result without Decision linkage. The entire Decision Trace + reasoning-run link is committed or rolled back together. Deterministic and already-fallback decisions retain their existing behavior.
+
+Negative tests inject a grant revoke and Plan transfer *after Router success is recorded but before it returns*; verify no Decision or State persisted and no trace link. They run under the exact PR CI head, not proof of live multiworker serializability.
+
+## 4. Release gates — priority and disposition
+
+### P0 before **any enabled external/private cross-domain agent or automatic important mutations**
+
+- **G3-R1 (OPEN):** enumerate all native-AI output consumers that store a derivative *after* `NativeAiGateway` returns; add explicit current actor, source-version, purpose and Plan recheck at their durable commit/read point. Where unavailable, **keep the external cross-domain resolver/write capability disabled**. The common gateway cannot authorize later writes on behalf of a returned model result.
+- **G3-R2 (OPEN):** define a product-visible distinction between **disconnect**, **revoke sharing**, **hide old historical evidence**, and **delete source**. Retaining an old GitHub observation as user-owned history can be correct, but silently treating it as freshly synced evidence is not. Specify current/unknown/source-offline freshness semantics and retention before expanded connected context sharing.
+- **G3-R3 (OPEN):** complete actor/scope/purpose dependency inventory across source stores and all materialized caches, including Plan-free/guest/team scopes and legacy snapshots. For unverifiable pre-signature rows, return UNKNOWN/review-required rather than certifying full source immutability.
+- **G3-R4 (OPEN):** real isolated **PostgreSQL** acceptance for Plan transfer, member revocation, source correction/deletion/Task move and two concurrent accept/project attempts, checking zero partial Task and no foreign/old Decision. SQLite and ordinary feature test transactions are **not** equivalent to PostgreSQL two-worker proof.
+- **G3-R5 (OPEN):** verify current production/staging deployed SHA, scoped permission/consent defaults, read performance and log signals. A GitHub merge/CI green is not production deployment, device E2E or privacy sign-off.
+
+### Separate rollout / product policy gates (do **not** claim closed by G3)
+
+- **G7 / Premium 2:** `ActionProjectionStore::persist()` intentionally resets `dismissed_at` on replay. This is **not** durable remembered deferral/refusal; needs an independently scoped Decision Context policy before interruption-heavy Premium 2.
+- **G5/G6:** actor-owned Plan-free activity and guest/team association cannot be inferred from current per-Plan intelligence; require explicit link/unlink and cross-actor tests.
+- **G4:** price and Entitlement definitions remain a separate commercial decision. No new paid tier is activated by this audit.
+- **MCP Phase 1:** Auth0/CIMD staging constraints and public integration are separately gated; nothing here enables delegated private access or MCP write.
+
+### Scope currently eligible for continued gated testing
+
+Current **user-driven** Study execution and V58 owner Action Draft acceptance have narrow current-Plan/server-side commit checks and dedicated feature CI. They may proceed to representative isolated DB/device validation **without** representing the overall G3 as closed. Do not silently enable cross-domain AI auto-actions or grant data export.
+
+## 5. Acceptance checklist / release evidence
+
+| Proof | Current status | Required evidence to close |
+|---|---|---|
+| Named G3 code boundaries and negative examples | **Implemented in slices; CI** | PR #473–#480/#483 merge SHAs and exact test runs, plus this audit PR |
+| V53 AI post-router Decision commit | **This PR; pending its CI until complete** | Two new negative tests, exact SHA green |
+| Privileged historical source/cache deletion contract | **Open** | Approved semantics, source-family replay/deny tests |
+| Legacy partial source identity coverage | **Partial** | explicit UNKNOWN/review gate or safe migration after data audit |
+| Native AI caller outputs and purpose-bound post-return commits | **Partial** | call graph + per-consumer negative tests |
+| GitHub disconnect retained-observation policy | **Open** | disconnect/revoke/delete matrix, offline/unknown UI contract |
+| Actual multiworker PostgreSQL concurrency | **Not tested** | independent DB and parallel connection test evidence |
+| Staging/live deployed SHA and iPhone/PWA/desktop | **Not certified in this audit** | environment evidence and device flows |
+| Complete G3 exit decision | **NOT APPROVED** | all above required P0 acceptance, owner/security review |
+
+## 6. Execution order
+
+1. Merge this **bounded** V53 post-Router fix only after all relevant CI passes.
+2. Establish the post-return Native AI output consumer list and earliest unsafe durable commit; one PR per proven gap. No new universal Fact table.
+3. Write explicit connector disconnect/revocation retention semantics and tests (separate behavior-policy review).
+4. Add isolated PostgreSQL two-worker acceptance job, fail closed on partial commit and repeat it before cross-domain enablement.
+5. Re-audit legacy and guest/team materialized source references, log/measure stale-withheld rate and P95 read cost.
+6. Only then change **G3** from OPEN to PASS; P1 architecture / Premium 2 remain separate.
+
+No schema migrations, production operations, Auth0 staging activation, MCP sharing permissions, billing changes, or private user data are needed for this audit itself.
+
+## 7. Follow-on slice — Companion after-provider response commit fence (2026-10-12)
+
+This independent G3-R1 follow-on PR guards `CompanionConversationService::send` after `NativeAiGateway::generateStructured` has already returned but **before** writing the AI assistant message, suggested mutation candidates, or user-quoted Future Memories. The service locks the current Companion thread, Plan and Task, verifies the original user and thread target, and reuses `NativeAiPurposeAuthorizationGuard::failure` with `FeatureKey::CanoviaCompanion` at the durable write boundary. Changed thread/Plan/Task context or expired entitlement rejects the AI-derived transaction. The user's original message and the already completed `NativeAiRun` remain as separate auditable facts.
+
+A dedicated workflow exercises a simulated revocation, Plan transfer, Task move and thread scope change **after a successful, authorized provider response**, along with a positive unchanged-context control and existing Companion regressions. These are isolated database feature regressions, **not** proof of simultaneous multi-worker PostgreSQL authorization or production deployment. The per-user product-grant write and grant-check are not serialized together; later policy retraction/read-surface rechecks are out of this slice. Historical previously saved assistant text is not retroactively erased. The feature entitlement remains independent of MCP OAuth / per-Plan external sharing consent.
+
+**Exit remains CONDITIONAL / OPEN**. This slice does not establish all Native AI caller return/commit gates, all previously derived cache/record invalidations, connector history deletion semantics, or universal G3 acceptance. Refer to actual PR/CI and merge evidence rather than treating this document as proof of execution.
+
+
+## 8. Follow-on slice — Recall AI candidate extraction commit fence (2026-10-12)
+
+A subsequent bounded G3-R1 branch addresses both single-source and batch Recall AI output consumers. The baseline implementation permitted a successful Native AI response to create pending `StudyRecallCandidate` rows and mark `StudyRecallSource` ready without revalidating current actor entitlement, Plan/Task membership, or the private source material after provider return. Single-source and batch writes were not wrapped in a common all-or-nothing transaction.
+
+The new `StudyRecallExtractionCommitFence` snapshots source metadata and SHA-256 of source text or saved bytes **before sending provider input**. At the candidate/source-result commit transaction it locks the Plan, Task and each Source in deterministic order and checks current authorized actor, edit role for collaborators, `AutomaticAiExecution` entitlement, original Source ownership and unchanged material/signature. A change refuses the entire AI-derived candidate/source-ready transaction, returning a retryable error with the already-completed Native AI run reference. Where the source still belongs to the original user/Plan/Task and is pending/failed, an extraction error marks it failed for the existing explicit V58.7 retry flow; deleted or retargeted source rows are never recreated by this code. No automatic deck promotion or Task mutation is added.
+
+Dedicated negative tests simulate grant expiry, Plan transfer, Task move, source text edit/deletion and batch file replacement **after a successful provider response**, plus unchanged positive regressions. Reuse the existing Recall single/batch and Native AI feature tests. **This section describes the proposed PR diff, not proof of passed CI/merge/deployment until independently confirmed.**
+
+**Residual G3 OPEN:** serialized Plan/Task/Source row locks are insufficient by themselves to prove cross-worker grant invalidation unless source and grant writers follow compatible locking. Previously materialized candidates, human-promoted Recall items, broader Native AI callers, historic invalidation and live multiworker PostgreSQL are out of scope. No schema migration, pricing, MCP activation, production deploy or credentials are included.
+
+
+## 9. Follow-on slice — Study Scope Capture post-provider AI draft fence (2026-10-12)
+
+**Scope/contract:** V53.4 `StudyScopeCaptureAnalysisService::analyze` retains its Free `FeatureKey::StudyScopeCapture`, private `InboxItem` upload, human review / manual confirmation, retry after provider failure and no automatic Task or State creation. Previously, after `NativeAiGateway` returned, `StudyScopeCapture.review` could be committed from stale input without a final ownership, entitlement, source or human-confirmation recheck.
+
+The new `StudyScopeCaptureCommitFence` verifies a current Study Plan and owner/editor role, creator-linked private Inbox source and the existing purpose entitlement; it signs exact source note/metadata and private file bytes (SHA-256), plus Plan category/domain/deadline used in the prompt. The beginning-of-extraction `captured` reset is transactional. After the provider result but before any AI draft write, the service locks current Plan, Capture and Inbox rows, revalidates current authority/source fingerprint and ensures the Capture is still `captured`. The final `review` draft and model run linkage are atomic. Any human `confirmed` status prevents a delayed AI result overwriting the human decision. On ordinary provider errors, `failed` is recorded only if the same user-editable original target still validates; source files and manual entry/retry remain available.
+
+Regression covers post-provider Plan transfer, domain reassignment, file/note alteration, source deletion, human confirmation and entitlement change, plus authorized Free extraction and provider-failure recovery. **The referenced PR must separately establish exact-SHA CI and integration; this note alone is not certification.** Cross-worker grant writer locking, historical confirmed scope re-invalidation after source correction, external source file concurrent write serialization and production/device checks remain OPEN under G3. No schema migration, billing change, MCP/OAuth activation, public sharing or production operation.
+
+
+## 10. Follow-on slice — Goal Discovery reply and Canovia Memory commit fence (2026-10-12)
+
+**Observed residual G3-R1 gap:** `GoalDiscoveryConversationService::respond` previously used `NativeAiGateway` for `conversational_onboarding_reply` (Free capability) and independently wrote AI-proposed literal-quote `FutureMemo` records followed by an assistant `GoalDiscoveryMessage`. A Goal Context ownership change, newly confirmed answer, fact mutation, Plan attach, feature revocation, or another message after the provider response could leave derived Memory/reply attached to an outdated or foreign context. Atomicity across these two derivatives was absent.
+
+This bounded slice adds `GoalDiscoveryAiCommitFence` and an application transaction encompassing both AI-derived writes. A snapshot signature covers GoalContext identity, user/guest binding, attached Plan ID, goal/readiness/interaction state, all persisted Facts, and the recent Conversation messages used by the prompt. A final locked GoalContext re-read verifies actor identity, Plan ownership when linked, unchanged signature, and current `ConversationalOnboarding` entitlement and flag. Any stale/unauthorized reply is discarded with its candidate Memory; the original user message stays. Valid replies preserve the existing literal source-quote check and duplicate suppression. Provider failures and no-provider cases still have a deterministic response, but fallback writes also reject stale/foreign Goal Context. Guest deterministic access remains available; guest Native AI still cannot bypass `NativeAiPurposeAuthorizationGuard`'s verified-actor requirement. No Goal Fact/Plan/Task is automatically confirmed or mutated by the model.
+
+Dedicated negative tests simulate ownership transfer, changed Facts, newly appended message, Plan attachment, revoked capability/flag **after successful provider response**. A rollback regression tests that failure to write the assistant does not leave AI-generated Memory behind. Free positive response, provider failure, guest fallback and existing V41.16 regression are included in a dedicated CI workflow. The feature is **not** G3 global completion: independent Fact/Message writers do not yet all coordinate on the GoalContext lock; multiworker PostgreSQL and past AI-derived Memory invalidation remain open. Historical user-origin content is not retroactively deleted. No schema migration, price/entitlement change, MCP access activation or production operation.
+
+
+## 11. Follow-on slice — Inbox and Space Station Native AI suggestion commit fence (2026-10-12)
+
+The residual `InboxIntelligenceService::suggest` consumer at both `InboxController::store` (chat intake, including Space Station) and `InboxController::suggest` (explicit interpret) previously saved the AI's `routing_suggestion` after `NativeAiGateway` returned, without rechecking current Inbox source, ownership, linked Plan or feature entitlement. An edit/deletion of private source content/file or human routing confirmation while the provider was in flight could have been overwritten by a stale recommendation.
+
+This bounded G3-R1 change routes both entry points through `InboxIntelligenceService::suggestAndPersist` and `InboxAiSuggestionCommitFence`. Immediately before the model request, sign Inbox source text/URL/file SHA-256, metadata, status, ownership and Plan association. After the response, re-read the Inbox row with a lock, verify actor ownership or authenticated claimant of the exact private guest token, current `AutomaticAiExecution` feature, and linked Plan owner/editor right, and compare the complete original source signature; only then atomically persist the recommendation and `review` status. Career availability is evaluated at the final commit, not before the slow provider returns.
+
+Denying a stale, archived, processed, deleted or retargeted source leaves the original Inbox Item and any human-confirmed routing untouched (a deleted item is never resurrected). No automatic Task, Plan, Evidence, or routed destination is created by AI. The pre-existing completed Native AI Run remains for audit. Unavailable AI still leaves a usable raw Inbox capture; manual routing remains the human authority.
+
+The new negative regression suite injects source note and attachment replacement, deleted/moved Item, Plan transfer, prior human confirmation and entitlement expiry after provider success; the positive and compatibility suites exercise chat/Space Station and explicit suggestion paths. **Do not interpret this text as CI or deployment evidence until exact PR-head checks and integration are verified.** Remaining G3 gates include independent source/file writer serialization, historical suggestion revocation and all disconnected external evidence, two-worker PostgreSQL concurrency, and deployed/device acceptance. No DB schema, billing, MCP delegation, public sharing or production operation is modified.
+
+
+**Legacy UI regression distinction at PR review:** running all historical `SpaceStationV442Test` and `SpaceStationIntakeHubV483Test` cases in this branch also surfaced two outdated Map presentation assertions: `test_capture_from_space_station_creates_only_inbox_item_and_returns_to_station_focus` still expects `LATEST INPUT`, and `test_docked_space_station_uses_current_plan_only_as_a_confirmation_candidate` expects `data-space-station-context-candidate`. Neither assertion tests AI candidate authorization or post-provider persistence, and the PR does not change Map views. The dedicated G3 CI runs the existing explicit routing/candidate and chat auto-interpret tests by name, plus all existing Inbox Intelligence and Native AI purpose regressions; outdated Map UI assertions remain separately unresolved rather than being mislabeled green. Their UI expectations require Experience/Map contract reconciliation outside this security slice.
+
+
+## 12. Follow-on slice — Native Execution Packet session reuse/commit fence (2026-10-13)
+
+**Observed:** `ExecutionPacketService::generateNative` returned AI-selected instructions after the gateway's post-provider authorization check. `ExecutionOrchestrationController::prepare` and `ExecutionDistributionService::prepare` then kept that response in a session-only Execution Packet. A Plan transfer, Task move, changed Dependency/Evidence, Task completion or product grant expiry **after** `NativeAiGateway` success but before the later session write could surface stale private instructions. Existing `context_fingerprint` on GET displayed stale warnings, but grant revocation did not explicitly hide the prior Native AI Packet; multi-target distribution could outlive its first target's inputs while generating later targets.
+
+The bounded fence `ExecutionPacketCommitFence` re-reads and row-locks Plan/Task, verifies current owner/editor (not viewer) role, noncompleted Task, `AutomaticAiExecution` purpose entitlement and a fresh `ExecutionOrchestrationContextService` snapshot fingerprint. The native generator checks immediately after model return; the single-target controller checks again before session write. On stale/revoked input it stores neither the AI packet nor an old-context fallback handoff prompt. `show` invalidates stored native session output upon context or entitlement changes; manual external Packet imports clear stale native-run provenance. Multi-target Distribution rechecks all target fingerprints and permissions before returning the bundle and on subsequent read, redacting native Packet content for invalidated targets and persisting its redaction to the session. `ExecutionGitHubHandoffService::prepare` refuses a revoked Native AI source Packet even if the session was never revisited.
+
+**Not a new durable model:** Execution Packet remains session-only, no automatic Task/Plan/GitHub writes; explicit human-reviewed GitHub handoff is still separate. Existing Free external-AI prompt/import and normal provider-error fallbacks remain. Regression tests inject post-gateway owner transfer, Task move, dependency completion, feature grant expiry and read-time revocation; two-target distribution simulation exercises invalidation of a previous result while a later AI call is running. Exact-head CI and integration must be separately verified.
+
+**Residual OPEN:** locking during validation cannot serialize the later session store with independent Plan/Task/Entitlement writers. Real multi-worker PostgreSQL G3-R4, other native consumers, history/revocation G3-R2/R3 and production/device verification G3-R5 remain gates. No schema, entitlement policy, billing, MCP/OAuth or production infrastructure change.
+
+**CI-discovered cache boundary:** The initial post-provider dependency-completion and two-target tests failed: `ExecutionOrchestrationContextService::snapshot` reused `CoreContextService`'s already-loaded Plan/Task graph within the same HTTP Request. Re-running that method without a cache bypass can return the **same old fingerprint** even after a committed dependency update. A scoped `freshSnapshot` uses a distinct Request identity to force fresh loading; the commit fence and distribution source/read checks now use it. This is a targeted invalidation at security-sensitive points, not global removal of the navigation performance cache. The exact-head dedicated CI must prove dependency-change rejection before merge.
+
+
+## 13. Follow-on slice — Native Study assessment answer/session commit fence (2026-10-13)
+
+**Observed G3-R1 risk:** `StudyPracticeOrchestrator::prepareAssessment` previously awaited `NativeAiStudyPracticeAssessmentProvider::prepare`, then independently updated `StudyPracticeSession.assessment_payload`; `StudyPracticeController::submitAnswers` normalized the result and persisted `StudyPracticeAttempt`, `TaskEvidence` and `ASSESSED` state with no final signature/actor/purpose verification. After provider return, an alternate autosave could edit `draft_answers`, a human could close the session, a Task could be reassigned, or a Plan/AI grant could be revoked, yet an old AI grading result could survive.
+
+The bounded `StudyPracticeAssessmentCommitFence` captures the exact persisted question and answer draft, session state/identity, Plan domain/ownership/context and target Task properties before the provider call. The orchestrator only writes Native AI `assessment_payload` inside a final locked recheck of current Plan, Task and Session plus editor rights and `AutomaticAiExecution` entitlement. A second, identical fingerprint check protects the controller's durable Attempt+TaskEvidence+ASSESSMENT status transaction, with an error if any input has changed between AI completion and grading persistence. A stale/revoked Native AI result is withheld, rather than generating an old-source manual evaluation prompt. The learner's draft answers remain available for regrading against the new state.
+
+Normal Free external AI handoff and deterministic Question Bank grading remain unchanged; direct Native assessment still requires an authenticated entitled actor and keeps the existing human-confirmed Task progress apply boundary. Dedicated negative tests simulate post-provider draft edit, session completion, question change, Task move/context edit, Plan transfer, and grant expiry, plus a positive assessment/attempt/Evidence case. Existing V41.8 and hybrid bank/native tests are run by dedicated CI. The NativeAI run may be marked provider-success even when its later consumer vetoes persistence: do not confuse provider call success with accepted grading.
+
+**Residual G3 OPEN:** independent draft/source/grant writers do not yet guarantee two-worker serialization with these row locks; historic attempts/evidence eligibility following later source corrections, provider generation routes, model access to dynamic QuestionBank grading rules and real isolated PostgreSQL multiworker tests remain separate gates. No schema, prices, release flags, MCP scope, Render infrastructure or production data changed.
+
+
+## 14. Follow-on slice — Native/Hybrid Study question generation commit fence (2026-10-13)
+
+**Precedence:** merged PR #499 already owns the Native *assessment* result/source check and is preserved unchanged. The earlier overlapping draft PR #500 is superseded rather than merged over #499. This slice is limited to new *question generation* sessions and their candidate/demand derivatives.
+
+**Observed:** `StudyPracticeOrchestrator::prepare` previously created a `StudyPracticeSession` immediately after `NativeAiStudyPracticeQuestionProvider` / the Native side of `HybridStudyPracticeQuestionProvider` returned. Subsequent `PracticeQuestionDemandRecorder` / `PracticeQuestionCandidateRecorder` writes could materialize old questions or leave partially saved derivatives if user Plan or Task was edited, owner/editor access removed, Premium grant expired or Study history changed while the provider request ran. Gateway's immediate post-provider entitlement check did not authorize this later materialization.
+
+`StudyPracticeGenerationCommitFence` snapshots the original current Plan/Task row attributes and actor-bound recent practice Attempt records, revalidates Plan Study domain with `PlanCategoryProfileService` (including `workspace_domain_override='study'`), current Plan owner/editor, Task noncompleted status, actor-specific `AutomaticAiExecution` entitlement, and unchanged snapshot under row locks **inside the same DB transaction** that creates the generated Session, Demand and Candidate rows. A stale/revoked result does not create partial AI derivatives. The original NativeAiRun may legitimately indicate that the provider completed; provider success is not permission to commit stale content.
+
+Dedicated positive/negative tests cover legitimate native generation, alternative Study category/domain, Plan transfer, Task revision or human completion, and grant expiry **after provider success**, with existing V41.8, Hybrid and #499 assessment regression. No controller UX, task progress, billing/entitlements, external AI manual flow, new schema, MCP scopes or production credentials are changed.
+
+**Residual G3 OPEN:** later controller follow-up mutations, independent writers lacking matching locks, historical generated sessions after subsequent context edits, attempts outside the signed task, multi-worker PostgreSQL and deployed/device acceptance still require separate verification.
+
+**Study completion compatibility:** An already-completed Task may still be used for review. The new generation fence denies cancelled targets but does **not** deny an unchanged `done` / 100%-progress Task merely for its status; changing status while the provider is running still changes the signed Task attributes and refuses the stale output. A dedicated regression protects this distinction.
+
+
+## 15. Follow-on slice — Native/Hybrid Study generation replay and finalization fence (2026-10-13)
+
+**Main baseline:** #501 already merged a G3-R1 post-provider transaction covering **first-time** Study Practice Session, Demand and candidate materialization. This new slice is deliberately confined to its still-unprotected reentry and controller continuation. Do not merge or duplicate the superseded #500 draft.
+
+**Observed:** `StudyPracticeOrchestrator::prepare` had an early existing `prepare_request_id` replay that reconstructed Demand and Candidate records regardless of the initial Native generation's authority/source freshness. The controller's `prepareNative` subsequently performed a separate non-fenced READY/normalized-questions update and `NativeAiRun` attachment. Replaying the same request after the learner started answering could rewind a durable `IN_PROGRESS`/assessed Session and browser draft to READY/empty answers. Changes in Plan/Task or entitlement between the initial atomic creation and this later update could also attach old Native output.
+
+**Bounded change:** Newly accepted Native/Hybrid Session `selection_context` carries its pre-provider `native_generation_source_fingerprint` from #501's exact Plan/Task/attempt source. Duplicate `prepare_request_id` for Native/Hybrid becomes read-only: compare the saved original fingerprint against current actor-specific Study/Plan/Task/history, purpose entitlement and editor access under Plan→Task→Session locks. Do not reissue Demand/Candidate or re-sign historical rows that lack original provenance (legacy rows remain available through normal Study resume/history, subject to their existing permission controls). A controller-finalization transaction checks this **same original fingerprint**, unchanged Session identity/status/question snapshot and absence of a concurrent draft before normalizing and binding a NativeAiRun. Invalid generated questions can mark a session abandoned only under the same conditions. Already-started exercises are never reset by a duplicate preparation.
+
+**Regression** tests include exact-ID idempotent replay, changed Task replay, unverifiable historical row, concurrent learner draft, and Plan/Task mutation after the Orchestrator commit before controller finalization, plus previous generation/assessment/Hybrid suites. Normal Free/manual external AI flows and the separate Study assessment fence (#499) are preserved. No automatic Task progress, new schema, pricing/entitlement change, MCP/IdP access or production operation.
+
+**G3 remains OPEN:** later browser session writes are not serializable with independent source writers; historical already-saved derivatives cannot be automatically invalidated without separate policy. PostgreSQL multiworker, external question-bank source revision and deployed/device end-to-end must be tested separately. Exact PR-head CI and merge are not inferred from this document.
+
+
+## 16. G3-R2 bounded slice — GitHub historical observation versus current Task reuse (2026-10-13)
+
+**Observed:** Developer Home previously called `DevelopmentTaskMatchService::refreshPlan` against all unresolved persisted `DevelopmentActivityObservation` records, even when the source Repository GitHub App connection had been disconnected or its `DeveloperGithubEvidence` capability had expired. The workspace still offered a Task link action from those observations and `DevelopmentTaskAssociationService::link` could create a new Task–Artifact relation based on the historical local record. This did **not** itself claim the remote GitHub source was freshly fetched, but did silently promote historical external evidence into a new current planning association.
+
+**Bounded correction:** `DevelopmentObservationReuseGuard` verifies the current Plan's Development domain, owner entitlement, observation→same-Plan repository linkage and GitHub identity, repository status `connected`, positive current installation ID, and expected external-key repository prefix. It is a *local eligibility* test, not a remote GitHub HTTP check or historical revision proof. The matching path drops only automated `suggested` status/confidence when ineligible (does not modify ignored/linked human decisions). Developer Home preserves and explicitly labels original observations as **past / currently unverified**, excludes them from the actionable unresolved Task queue, and hides new Task-link forms. Direct forged or stale-browser link POSTs re-read/lock Plan, Task, repository and observation and refuse the new association before attaching any Artifact/Task or requesting Evidence. Existing linked Task relations and Evidence remain untouched historical records; source disconnection is not an erasure request.
+
+**Regression:** dedicated negative tests for disconnect with previously suggested Task, direct stale-link POST, expired paid GitHub evidence entitlement, mismatched repository identity, preserved human linked history, plus existing Developer Home, webhook observation, and evidence/personalization regressions.
+
+**Non-goals/open:** Do **not** certify pre-G3 observations as fresh solely because the same repository is *reconnected*; the observation schema currently lacks an immutable recorded source-installation epoch, and the local status check cannot establish original GitHub source continuity, deletion, or per-event freshness. This slice therefore does not approve expanded cross-domain AI/MCP replay or a global retention/deletion policy. A separate G3-R2 decision must define explicit owner-facing history hide/delete and reconnect provenance; R3/R4/R5 multi-scope, real PostgreSQL workers and live/device evidence remain OPEN. No data purge, schema change, OAuth/MCP scope, product pricing, paid entitlement or production operation.
+
+
+## 17. G3-R2 continuation — GitHub Source Epoch and reconnect provenance (2026-10-13)
+
+**Gap after #505:** local `connected` and `installation_id` checks do not show whether an observation came from the *same continuous authorization*. A GitHub App installation may be reauthorized for a repository using its **unchanged numerical installation ID** after a disconnect; the old activity then becomes erroneously actionable. Legacy activity has no verified installation lineage.
+
+**Scoped contract:**
+
+- Add an opaque random `source_epoch` (UUID) to `github_app_connection` after an authoritative connection check. Checks for the same continuously connected installation preserve it; new connections, reconnects, app setup starts, failed/lost confirmations and replacement installations mint a new epoch only after an authorized connected verification. The metadata update is serialized on the Repository Artifact row to avoid out-of-order connection updates. **Upgrade compatibility:** an already-connected legacy Repository without an epoch can mint its first epoch on the first successfully fetched, current-installation, current-owner GitHub observation under the locked commit gate. Only the fetched observation is signed; other historical observations remain NULL, and a multi-fact bootstrap refreshes its selected Repository after first mint.
+- Add a **nullable** `development_activity_observations.source_epoch` in an additive migration. **Do not bulk-backfill** legacy rows. NULL means **unverified history**, regardless of their GitHub timestamp.
+- An observation loaded before an external GitHub REST fetch retains its original epoch. When the response arrives, the writer checks that exact epoch and installation against the live, locked root before saving. Fresh observations carry that epoch. Existing immutable commit rows and identical revision rows may adopt the new epoch **only after an authoritative re-fetch**, without erasing a human decision. Older revision/same-version conflicting fields remain blocked by G2 ordering protections.
+- Developer Home's G3-R2 action/Task matching fence requires exact observation→repository epoch equality, along with connection, owner, entitlement and identity. Developer personalization uses only currently signed observations; the source lineage fingerprint also includes epoch, so reconnect invalidates old derived recommendations.
+- Historical Activity, previously linked Task Evidence and human decisions remain accessible subject to existing permissions, but **not automatically accepted as current**. No source data deletion, automatic Plan/Task mutation, extra GitHub API requests merely to view history, MCP scope expansion, pricing change or data backfill.
+
+**Known limitations (still OPEN):** The source epoch proves current local verification provenance, not remote GitHub revocation or continuous operation between observations. A webhook received before reconnect may trigger a *new* authoritative REST fetch after reconnect; this verifies current provider state, not event delivery epoch. Existing historical linked TaskEvidence beyond this Observation path, full delete/hide semantics, live PostgreSQL two-worker and production/device checks remain future gates. Migration safety, exact-head CI and merge are assessed separately.
+
+
+## 18. G3-R2 follow-on — GitHub TaskEvidence current-use fence (2026-10-13)
+
+**Observed:** Even after #505 and #506 fenced raw GitHub `DevelopmentActivityObservation`, immutable `TaskEvidence` produced by the GitHub Return/Evidence adapters was still queried as if it were *current* on the Development Execution Context screen, V53 Developer Intelligence Collector, and user-selected `PlanActionDraftTypedEvidenceService`. An old persisted CI failure, merged PR, issue or deploy could reappear as a current suggestion after repository disconnection, owner entitlement expiry, or Source Epoch rotation, because its Eloquent payload fingerprint stayed unchanged.
+
+**Scoped contract:**
+- `GitHubTaskEvidenceCommitGuard` verifies the same pre-REST-fetched `source_epoch` against the locked current Repository Artifact as well as Plan owner, linked Task and current paid capability. Inside its existing write transaction it stamps **only actually recorded/refetched** TaskEvidence with `github_source_epoch` and `github_repository_artifact_id` metadata. PR callback can return multiple IDs; Push Branch and Commit evidence both receive the stamp. Existing unsigned TaskEvidence remains untouched historical evidence, not silently backfilled.
+- `GitHubTaskEvidenceReuseGuard` reads current Plan owner/Development profile, GitHub App state, repository URL/identity, matching epoch and `DeveloperGithubEvidence` entitlement. It does not call GitHub on display. An unsigned, revoked, moved or mismatched GitHub source fails closed.
+- Only eligible GitHub evidence contributes to the current V53 Development Evidence Collector or Developer Execution Context. Human-confirmed native quality-gate Evidence, non-GitHub Study/Career evidence and historical rows remain intact.
+- New typed Action Draft selection excludes ineligible GitHub evidence. A stale direct POST cannot snapshot it. Critically, final Action Draft approval repeats the source eligibility test **within the existing locked acceptance transaction**, returning 409 even if the stored source hash is unchanged; no Task is created.
+- Run positive and negative CI regression against linked GitHub Return/Evidence, Workspaces, V53 read models and V58.73 typed drafts. No schema change, deletion, billing, MCP scope, auto progress or production release.
+
+**Still OPEN:** GitHub REST state correction after same-epoch source changes, previously persisted generic Execution/Companion/Reflection memory text, cross-domain inference source families, history hide/delete UI and two-worker PostgreSQL transaction ordering are separate G3 gates. This stage certifies only its named consumers, not global provenance or remote revocation.
+
+
+## 19. G3-R2 follow-on — Companion + Execution derived current-context source fence (2026-10-13)
+
+**Gap after #507:** The V53 Developer Evidence Collector, Developer Execution Context and V58 typed Draft flows already reject historical GitHub TaskEvidence. Two other *current AI-facing* projections still selected raw `TaskEvidence` without that gate: `CompanionContextService::snapshot()` and `ExecutionOrchestrationContextService::snapshot()`. A disconnected / reconnected GitHub source could consequently be surfaced as `recent_evidence`, or `guided_execution.latest_evidence`, and copied into current Companion prompts / Execution Packet contexts. The old Packet context fingerprint did not include the GitHub connection revision when no Evidence was selected, leaving a source-epoch-only reconnect unobservable.
+
+**Bounded implementation:**
+
+- Reuse existing `GitHubTaskEvidenceReuseGuard::eligible(plan,evidence)` in both AI-facing projections. Fetch a small bounded surplus of recent historical rows, then filter and keep only the original 6 (Companion) or 12 (Execution) current records. This avoids newer revoked facts starving valid historical **native** reflections and current signed GitHub facts.
+- `CompanionContextService` derives `guided_execution.latest_evidence` from the already filtered list. User-authored/explicit FutureMemo records are never deleted, modified or auto-disqualified by GitHub disconnection: an explicitly saved user preference is **not** the same as an automatically inferred GitHub fact. Historic Assistant prose remains conversation history, not a newly verified provider observation.
+- `ExecutionOrchestrationContextService` adds a deterministic **non-secret connection-lineage hash** to its canonical read-only snapshot, based only on ordered Repository Artifact IDs, URLs, connection status, installation ID and `source_epoch`. The existing `context_fingerprint` and `ExecutionPacketCommitFence` therefore become sensitive to revocation/reconnect even if the 12 Evidence entries remain empty. FreshSnapshot re-fetches via a cloned Request to bypass stale CoreContextService request cache; no cached/derived Packet remains authorized under a changed lineage.
+- No old TaskEvidence or FutureMemo row is deleted, no Plan/Task mutation, no DB migration, no additional GitHub reads merely for AI prompt, no billing/entitlement or OAuth/MCP changes.
+- Verification includes current signed, unsigned legacy, revoked, same-installation/new-epoch, re-fetched, native Evidence, explicit user memory, Packet fingerprint, plus existing Companion and Orchestration regressions.
+
+**Residual G3 OPEN:** This does not retroactively remove quoted GitHub facts from historical assistant messages, manually captured FutureMemo, external handoff text already copied elsewhere, broad Reflection Timeline, other domain derivative families, independent PostgreSQL multi-worker serializability, or production/device evidence. Future integration must track source-tagged derivatives rather than pattern-match user-authored prose.

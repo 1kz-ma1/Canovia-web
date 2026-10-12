@@ -60,6 +60,7 @@ class StudyScopeCaptureController extends Controller
             $adaptiveAction,
         );
         $intelligenceHistory = $history->forPlan(
+            $request,
             $plan,
             IntelligenceDomain::Study,
         );

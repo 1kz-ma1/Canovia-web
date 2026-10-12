@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Plan;
+use App\Models\PlanArtifact;
 use App\Models\Task;
 use App\Models\TaskEvidence;
 use Illuminate\Http\Request;
@@ -12,6 +13,7 @@ final class ExecutionOrchestrationContextService
 {
     public function __construct(
         private readonly CoreContextService $core,
+        private readonly GitHubTaskEvidenceReuseGuard $evidenceGuard,
     ) {}
 
     /**
@@ -64,11 +66,37 @@ final class ExecutionOrchestrationContextService
             ->where('plan_id', $canonicalPlan->id)
             ->latest('occurred_at')
             ->latest('id')
-            ->limit(12)
-            ->get();
+            ->limit(72)
+            ->get()
+            ->filter(fn (TaskEvidence $evidence) => $this->evidenceGuard->eligible(
+                $canonicalPlan, $evidence,
+            ))
+            ->take(12)
+            ->values();
+
+        // The list and signed epoch may change without a Plan/Task text edit.
+        // Bind Packet fingerprints to current Repository connection lineage,
+        // even if no GitHub Evidence survived the reuse filter.
+        $sourceLineage = PlanArtifact::query()
+            ->where('plan_id', $canonicalPlan->id)
+            ->where('provider', 'github')
+            ->where('artifact_type', 'repository')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (PlanArtifact $root) => [
+                'id' => (int) $root->id,
+                'url' => (string) $root->url,
+                'status' => data_get($root->metadata, 'github_app_connection.status'),
+                'installation_id' => data_get($root->metadata, 'github_app_connection.installation_id'),
+                'source_epoch' => data_get($root->metadata, 'github_app_connection.source_epoch'),
+            ])->values()->all();
 
         $snapshot = [
             'version' => 1,
+            'github_source_lineage_hash' => hash(
+                'sha256',
+                (string) json_encode($sourceLineage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            ),
             'plan' => [
                 'id' => (int) $canonicalPlan->id,
                 'title' => (string) $canonicalPlan->title,
@@ -157,6 +185,18 @@ final class ExecutionOrchestrationContextService
         );
 
         return $snapshot;
+    }
+
+    /**
+     * Use a different Request identity to bypass CoreContextService's
+     * request-scoped loaded Plan/Task graph. G3 commit/read revalidation must
+     * not compare a provider's old context against that same cached snapshot.
+     *
+     * @return array<string,mixed>
+     */
+    public function freshSnapshot(Request $request, Plan $plan, Task $task): array
+    {
+        return $this->snapshot(clone $request, $plan, $task);
     }
 
     /** @return array<string,mixed> */

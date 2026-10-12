@@ -1,0 +1,33 @@
+name: MCP Auth0 JWT Claim Constraints
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/McpJwtClaimConstraints.php'
+      - 'tests/Unit/McpJwtClaimConstraintsTest.php'
+      - '.github/workflows/mcp-auth0-jwt-claims.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  mcp-claims:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl
+          tools: composer:v2
+          coverage: none
+      - name: Install pinned dependencies (no application scripts)
+        run: composer install --no-interaction --no-progress --prefer-dist --no-scripts
+      - name: PHP syntax validation
+        run: |
+          php -l app/Services/McpJwtClaimConstraints.php
+          php -l tests/Unit/McpJwtClaimConstraintsTest.php
+      - name: Verify bounded Auth0 claims policy (not JWT signature)
+        run: vendor/bin/phpunit tests/Unit/McpJwtClaimConstraintsTest.php --colors=never

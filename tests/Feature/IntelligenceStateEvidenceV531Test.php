@@ -16,6 +16,7 @@ use App\Models\TaskEvidence;
 use App\Models\User;
 use DateTimeImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -274,11 +275,62 @@ class IntelligenceStateEvidenceV531Test extends TestCase
             $laterSnapshot->state_reference,
         );
         $this->assertArrayNotHasKey('provider_payload', $sameSnapshot->metadata ?? []);
-        $this->assertSame(
-            $laterSnapshot->id,
-            $store->latest(IntelligenceDomain::Study, 'plan', $plan->id)?->id,
+        $request = Request::create('/', 'GET');
+        $request->setUserResolver(fn () => $user);
+        // The synthetic Evidence ID 100 has no durable TaskEvidence source.
+        // Keep the historical rows, but do not expose an unverifiable latest.
+        $this->assertNull(
+            $store->latestForPlan($request, $plan, IntelligenceDomain::Study, 'plan'),
         );
         $this->assertDatabaseCount('intelligence_state_snapshots', 2);
+    }
+
+    public function test_structured_trace_from_actual_task_evidence_stops_being_current_after_source_correction(): void
+    {
+        [$user, $plan, $task] = $this->studyContext();
+        $source = TaskEvidence::query()->create([
+            'plan_id' => $plan->id,
+            'task_id' => $task->id,
+            'user_id' => $user->id,
+            'source' => EvidenceSource::Native->value,
+            'type' => 'study_practice_assessed',
+            'external_key' => 'v53-g3-'.$plan->id,
+            'confidence' => 1,
+            'occurred_at' => now(),
+            'metadata' => [
+                'score_percent' => 80,
+                'strengths' => ['OS'],
+                'weaknesses' => ['network'],
+            ],
+        ]);
+        $adapter = app(TaskEvidenceAdapter::class);
+        $state = app(StudyStateBuilder::class)->build(
+            IntelligenceDomain::Study,
+            [
+                'scope_type' => 'plan',
+                'scope_id' => $plan->id,
+                'captured_at' => now()->toIso8601String(),
+            ],
+            [$adapter->adapt($source)],
+        );
+        $store = app(StateSnapshotStore::class);
+        $stored = $store->persist($state, $user->id, $plan->id);
+        $request = Request::create('/', 'GET');
+        $request->setUserResolver(fn () => $user);
+
+        $this->assertSame($stored->id, $store->latestForPlan(
+            $request, $plan, IntelligenceDomain::Study, 'plan',
+        )?->id);
+
+        $source->update(['metadata' => [
+            'score_percent' => 40,
+            'strengths' => [],
+            'weaknesses' => ['database'],
+        ]]);
+        $this->assertNull($store->latestForPlan(
+            $request, $plan, IntelligenceDomain::Study, 'plan',
+        ));
+        $this->assertDatabaseHas('intelligence_state_snapshots', ['id' => $stored->id]);
     }
 
     private function studyContext(): array

@@ -1,0 +1,42 @@
+name: Adaptive Context G3 V53 Evidence Freshness
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Intelligence/Services/IntelligenceEvidenceFreshnessGuard.php'
+      - 'app/Intelligence/Services/StateSnapshotStore.php'
+      - 'app/Intelligence/Services/ActionProjectionStore.php'
+      - 'app/Intelligence/Presentation/IntelligencePresentationHistoryService.php'
+      - 'app/Intelligence/Presentation/IntelligenceStateChangeFeedbackService.php'
+      - 'tests/Feature/IntelligenceStateEvidenceV531Test.php'
+      - 'tests/Feature/StateChangeFeedbackV546Test.php'
+      - '.github/workflows/adaptive-context-g3-v53-evidence-freshness.yml'
+
+jobs:
+  v53-source-freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: PHP lint
+        run: |
+          php -l app/Intelligence/Services/IntelligenceEvidenceFreshnessGuard.php
+          php -l app/Intelligence/Services/StateSnapshotStore.php
+          php -l app/Intelligence/Services/ActionProjectionStore.php
+          php -l app/Intelligence/Presentation/IntelligencePresentationHistoryService.php
+          php -l app/Intelligence/Presentation/IntelligenceStateChangeFeedbackService.php
+          php -l tests/Feature/IntelligenceStateEvidenceV531Test.php
+          php -l tests/Feature/StateChangeFeedbackV546Test.php
+      - name: G3 V53 source and presentation regression
+        run: php artisan test tests/Feature/IntelligenceStateEvidenceV531Test.php tests/Feature/StateChangeFeedbackV546Test.php
+      - name: Actor and Plan isolation
+        run: php artisan test tests/Feature/StateSnapshotActorIsolationG1Test.php
+      - name: Readiness and proposal regressions
+        run: php artisan test tests/Feature/IntelligenceDecisionReadinessV532Test.php tests/Feature/StudyAdaptiveActionV536Test.php tests/Feature/DeveloperReadinessV538Test.php
+      - name: Career Intelligence regression
+        run: php artisan test tests/Feature/CareerIntelligenceV550Test.php

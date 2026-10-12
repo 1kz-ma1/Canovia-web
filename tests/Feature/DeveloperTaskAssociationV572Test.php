@@ -198,6 +198,7 @@ class DeveloperTaskAssociationV572Test extends TestCase
         $this->actingAs($user)
             ->get(route('workspace.development.index', [
                 'plan_id' => $plan->id,
+                'surface' => 'repository',
             ]))
             ->assertOk()
             ->assertSee('最近GitHubで何が起きたか')
@@ -207,6 +208,255 @@ class DeveloperTaskAssociationV572Test extends TestCase
 
         $observation->refresh();
         $this->assertSame((int) $task->id, (int) $observation->suggested_task_id);
+        $this->assertDatabaseCount('plan_artifact_task', 0);
+    }
+
+    public function test_disconnected_github_history_remains_visible_but_is_not_a_current_task_suggestion(): void
+    {
+        [$user, $plan, $task, $root] = $this->scenario(
+            taskTitle: 'Fix GitHub webhook routing',
+        );
+        $observation = $this->observation($plan, $root, [
+            'kind' => 'issue',
+            'provider_number' => 88,
+            'title' => 'Fix GitHub webhook routing',
+            'url' => 'https://github.com/1kz-ma1/HINANEX/issues/88',
+        ]);
+
+        app(DevelopmentTaskMatchService::class)->refreshPlan($plan);
+        $this->assertSame('suggested', $observation->fresh()->resolution_status);
+
+        $root->update(['metadata' => [
+            'github_app_connection' => [
+                'status' => 'disconnected', 'installation_id' => 777,
+            ],
+        ]]);
+
+        app(DevelopmentTaskMatchService::class)->refreshPlan($plan);
+        $this->assertSame('unlinked', $observation->fresh()->resolution_status);
+        $this->assertNull($observation->fresh()->suggested_task_id);
+
+        $this->actingAs($user)
+            ->get(route('workspace.development.index', ['plan_id' => $plan->id, 'surface' => 'repository']))
+            ->assertOk()
+            ->assertSee('Fix GitHub webhook routing')
+            ->assertSee('過去の観測・現在は未検証')
+            ->assertSee('履歴として表示していますが')
+            ->assertDontSee('data-development-observation-suggestion', false)
+            ->assertDontSee('action="'.route('plans.development_observations.link', [$plan, $observation]).'"', false);
+
+        $this->assertDatabaseCount('development_activity_observations', 1);
+        $this->assertDatabaseCount('plan_artifact_task', 0);
+        $this->assertDatabaseCount('task_evidences', 0);
+    }
+
+    public function test_disconnect_after_suggestion_blocks_direct_link_post_without_creating_evidence(): void
+    {
+        [$user, $plan, $task, $root] = $this->scenario();
+        $observation = $this->observation($plan, $root, [
+            'kind' => 'issue',
+            'provider_number' => 91,
+            'title' => 'Issue 91',
+            'url' => 'https://github.com/1kz-ma1/HINANEX/issues/91',
+        ]);
+        $root->update(['metadata' => [
+            'github_app_connection' => [
+                'status' => 'disconnected', 'installation_id' => 777,
+            ],
+        ]]);
+
+        $this->actingAs($user)
+            ->post(route('plans.development_observations.link', [$plan, $observation]), [
+                'task_id' => $task->id,
+            ])
+            ->assertSessionHasErrors('observation');
+
+        $this->assertSame('unlinked', $observation->fresh()->resolution_status);
+        $this->assertNull($observation->fresh()->resolved_artifact_id);
+        $this->assertDatabaseCount('plan_artifact_task', 0);
+        $this->assertDatabaseCount('task_evidences', 0);
+    }
+
+    public function test_revoked_github_evidence_entitlement_stops_reuse_but_preserves_observation(): void
+    {
+        [$user, $plan, $task, $root] = $this->scenario(
+            taskTitle: 'Fix GitHub webhook routing',
+        );
+        $observation = $this->observation($plan, $root, [
+            'kind' => 'branch',
+            'ref' => 'feature/task-'.$task->id.'-github-webhook',
+            'sha' => str_repeat('c', 40),
+        ]);
+        app(DevelopmentTaskMatchService::class)->refreshPlan($plan);
+        $this->assertSame('suggested', $observation->fresh()->resolution_status);
+
+        UserProductGrant::query()
+            ->where('user_id', $user->id)
+            ->update(['expires_at' => now()->subMinute()]);
+
+        app(DevelopmentTaskMatchService::class)->refreshPlan($plan);
+        $this->assertSame('unlinked', $observation->fresh()->resolution_status);
+
+        $this->actingAs($user)
+            ->post(route('plans.development_observations.link', [$plan, $observation]), [
+                'task_id' => $task->id,
+            ])
+            ->assertSessionHasErrors('observation');
+
+        $this->assertDatabaseCount('development_activity_observations', 1);
+        $this->assertDatabaseCount('task_evidences', 0);
+        $this->assertDatabaseCount('plan_artifact_task', 0);
+    }
+
+    public function test_disconnection_does_not_erase_a_human_confirmed_historical_task_link(): void
+    {
+        [$user, $plan, $task, $root] = $this->scenario();
+        $observation = $this->observation($plan, $root, [
+            'kind' => 'issue',
+            'provider_number' => 92,
+            'title' => 'Historical issue 92',
+            'url' => 'https://github.com/1kz-ma1/HINANEX/issues/92',
+        ]);
+        $this->fakeIssue(92, 'closed');
+
+        app(DevelopmentTaskAssociationService::class)->link(
+            $plan, $task, $observation,
+        );
+        $artifactId = $observation->fresh()->resolved_artifact_id;
+        $this->assertNotNull($artifactId);
+        $evidenceCount = TaskEvidence::query()->count();
+
+        $root->update(['metadata' => [
+            'github_app_connection' => [
+                'status' => 'disconnected', 'installation_id' => 777,
+            ],
+        ]]);
+
+        $this->actingAs($user)
+            ->get(route('workspace.development.index', ['plan_id' => $plan->id, 'surface' => 'repository']))
+            ->assertOk()
+            ->assertSee('Historical issue 92')
+            ->assertSee('過去の観測・現在は未検証')
+            ->assertSee('Task連携済み');
+
+        $this->assertSame('linked', $observation->fresh()->resolution_status);
+        $this->assertEquals($artifactId, $observation->fresh()->resolved_artifact_id);
+        $this->assertTrue(PlanArtifact::query()->findOrFail($artifactId)
+            ->tasks()->whereKey($task->id)->exists());
+        $this->assertSame($evidenceCount, TaskEvidence::query()->count());
+    }
+
+    public function test_missing_or_mismatched_repository_is_history_only(): void
+    {
+        [$user, $plan, $task, $root] = $this->scenario();
+        $observation = $this->observation($plan, $root, [
+            'kind' => 'issue',
+            'provider_number' => 93,
+            'title' => 'Historical issue 93',
+            'url' => 'https://github.com/1kz-ma1/HINANEX/issues/93',
+        ]);
+        $observation->update(['external_key' => 'github:another/repo:issue:93']);
+
+        $this->actingAs($user)
+            ->get(route('workspace.development.index', ['plan_id' => $plan->id, 'surface' => 'repository']))
+            ->assertOk()
+            ->assertSee('Historical issue 93')
+            ->assertSee('過去の観測・現在は未検証');
+
+        $this->actingAs($user)
+            ->post(route('plans.development_observations.link', [$plan, $observation]), [
+                'task_id' => $task->id,
+            ])
+            ->assertSessionHasErrors('observation');
+
+        $this->assertDatabaseCount('plan_artifact_task', 0);
+        $this->assertDatabaseCount('task_evidences', 0);
+    }
+
+    public function test_reconnect_same_installation_does_not_reuse_old_epoch_until_fresh_source_observation(): void
+    {
+        [$user, $plan, $task, $root] = $this->scenario(
+            taskTitle: 'Fix GitHub webhook routing',
+        );
+        $observation = $this->observation($plan, $root, [
+            'kind' => 'issue',
+            'provider_number' => 97,
+            'title' => 'Fix GitHub webhook routing',
+            'state' => 'open',
+            'url' => 'https://github.com/1kz-ma1/HINANEX/issues/97',
+        ]);
+        app(DevelopmentTaskMatchService::class)->refreshPlan($plan);
+        $this->assertSame('suggested', $observation->fresh()->resolution_status);
+
+        $oldEpoch = (string) $observation->source_epoch;
+        $newEpoch = (string) Str::uuid();
+        $root->update(['metadata' => [
+            'github_app_connection' => [
+                'status' => 'connected',
+                'installation_id' => 777,
+                'source_epoch' => $newEpoch,
+            ],
+        ]]);
+
+        app(DevelopmentTaskMatchService::class)->refreshPlan($plan);
+        $this->assertSame('unlinked', $observation->fresh()->resolution_status);
+        $this->assertSame($oldEpoch, $observation->fresh()->source_epoch);
+
+        $this->actingAs($user)
+            ->post(route('plans.development_observations.link', [$plan, $observation]), [
+                'task_id' => $task->id,
+            ])->assertSessionHasErrors('observation');
+        $this->assertDatabaseCount('plan_artifact_task', 0);
+        $this->assertDatabaseCount('task_evidences', 0);
+
+        // Equivalent to a freshly fetched authoritative GitHub issue after
+        // reconnect: a new observation write, not an epoch-only bulk backfill.
+        $root->refresh()->load('plan.user');
+        $method = new \ReflectionMethod(
+            \App\Services\GitHubDevelopmentObservationService::class, 'persist',
+        );
+        $fetched = $method->invoke(
+            app(\App\Services\GitHubDevelopmentObservationService::class),
+            $root,
+            '1kz-ma1/HINANEX',
+            [
+                'kind' => 'issue',
+                'identity' => '97',
+                'provider_number' => 97,
+                'title' => 'Fix GitHub webhook routing',
+                'state' => 'open',
+                'url' => 'https://github.com/1kz-ma1/HINANEX/issues/97',
+                'source_updated_at' => now()->toIso8601String(),
+            ],
+            777,
+        );
+        // Direct fixture external_key and real persist identity differ; the
+        // proof applies to the independently fetched, canonical observation.
+        $this->assertSame($newEpoch, $fetched?->source_epoch);
+        $this->assertSame($oldEpoch, $observation->fresh()->source_epoch);
+        $this->assertTrue(app(\App\Services\DevelopmentObservationReuseGuard::class)
+            ->eligible($plan, $fetched));
+    }
+
+    public function test_legacy_unsigned_github_observation_is_historical_even_when_repo_connected(): void
+    {
+        [$user, $plan, $task, $root] = $this->scenario();
+        $observation = $this->observation($plan, $root, [
+            'kind' => 'issue',
+            'provider_number' => 98,
+            'title' => 'Fix GitHub webhook routing',
+        ]);
+        $observation->update(['source_epoch' => null]);
+
+        app(DevelopmentTaskMatchService::class)->refreshPlan($plan);
+        $this->assertNull($observation->fresh()->suggested_task_id);
+
+        $this->actingAs($user)
+            ->post(route('plans.development_observations.link', [$plan, $observation]), [
+                'task_id' => $task->id,
+            ])->assertSessionHasErrors('observation');
+
+        $this->assertDatabaseCount('development_activity_observations', 1);
         $this->assertDatabaseCount('plan_artifact_task', 0);
     }
 
@@ -261,6 +511,7 @@ class DeveloperTaskAssociationV572Test extends TestCase
                 'github_app_connection' => [
                     'status' => 'connected',
                     'installation_id' => 777,
+                    'source_epoch' => 'c6e3b784-4679-4fac-a2d5-e58c3dbadf11',
                 ],
             ],
         ]);
@@ -277,6 +528,7 @@ class DeveloperTaskAssociationV572Test extends TestCase
             'plan_id' => $plan->id,
             'repository_artifact_id' => $root->id,
             'provider' => 'github',
+            'source_epoch' => data_get($root->metadata, 'github_app_connection.source_epoch'),
             'kind' => $overrides['kind'] ?? 'issue',
             'external_key' => 'github:1kz-ma1/hinanex:'
                 .($overrides['kind'] ?? 'issue').':'

@@ -7,6 +7,7 @@ use App\Models\StudyPracticeSession;
 use App\Models\Task;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class StudyPracticeOrchestrator
@@ -16,6 +17,8 @@ class StudyPracticeOrchestrator
         private readonly StudyPracticeProviderRouter $providerRouter,
         private readonly PracticeQuestionDemandRecorder $demandRecorder,
         private readonly PracticeQuestionCandidateRecorder $candidateRecorder,
+        private readonly StudyPracticeAssessmentCommitFence $assessmentCommitFence,
+        private readonly StudyPracticeGenerationCommitFence $generationFence,
     ) {}
 
     /**
@@ -94,6 +97,23 @@ class StudyPracticeOrchestrator
                 throw new RuntimeException('この演習準備リクエストは別の対象で使用済みです。');
             }
 
+            if (in_array((string) $existing->question_provider, ['native_ai', 'hybrid_ai'], true)) {
+                if ($userId === null || $userId <= 0) {
+                    throw new \App\Exceptions\NativeAiExecutionException(
+                        'Native AIの演習準備にはログインが必要です。',
+                        'native_ai_actor_unverified',
+                    );
+                }
+
+                $this->generationFence->assertReplayReadable(
+                    $existing, $plan, $task, $userId,
+                );
+
+                // Do not backfill/recount AI-generated candidates, regenerate
+                // demand, or reset human answers on a duplicate request.
+                return $existing;
+            }
+
             $storedStrategy = is_array(data_get($existing->selection_context, 'strategy'))
                 ? data_get($existing->selection_context, 'strategy')
                 : $this->strategyService->build(
@@ -144,13 +164,37 @@ class StudyPracticeOrchestrator
         $provider = $providerKey !== null
             ? $this->providerRouter->questionProviderByKey($providerKey)
             : $this->providerRouter->questionProvider($plan, $task, $strategy);
+        $generationSource = $userId !== null && in_array($provider->key(), ['native_ai', 'hybrid_ai'], true)
+            ? $this->generationFence->capture($plan, $task, $userId)
+            : null;
+
         $prepared = $provider->prepare($plan, $task, $recentAttempts, $strategy, $userId);
 
         $isDirect = (string) ($prepared['mode'] ?? 'handoff') === 'direct'
             && is_array($prepared['questions'] ?? null)
             && ($prepared['questions'] ?? []) !== [];
 
-        $session = StudyPracticeSession::query()->createOrFirst(
+        // Candidate / Demand rows and the generated Session are an atomic
+        // derivative of one authorized, unchanged pre-provider source.
+        return DB::transaction(function () use (
+            $plan, $task, $userId, $actorToken, $prepareRequestId,
+            $providerKey, $strategy, $recentAttempts, $prepared, $isDirect,
+            $generationSource,
+        ): StudyPracticeSession {
+            $runId = (int) data_get($prepared, 'payload.native_ai.run_id', 0);
+            if ($runId > 0) {
+                if ($generationSource === null || $userId === null) {
+                    throw new \App\Exceptions\NativeAiExecutionException(
+                        'Native AIの問題生成元を確認できません。',
+                        'native_ai_actor_unverified', $runId,
+                    );
+                }
+                $this->generationFence->assertCanCommit(
+                    $plan, $task, $userId, $generationSource, $runId,
+                );
+            }
+
+            $session = StudyPracticeSession::query()->createOrFirst(
             ['prepare_request_id' => $prepareRequestId],
             [
                 'plan_id' => $plan->id,
@@ -175,6 +219,11 @@ class StudyPracticeOrchestrator
                 'selection_context' => [
                     'strategy' => $strategy,
                     'recent_attempt_ids' => $recentAttempts->pluck('id')->map(fn ($id) => (int) $id)->all(),
+                    // Only newly accepted Native/Hybrid generation has
+                    // comparable, persisted pre-provider source provenance.
+                    ...($generationSource !== null ? [
+                        'native_generation_source_fingerprint' => $generationSource,
+                    ] : []),
                 ],
                 'provider_payload' => is_array($prepared['payload'] ?? null) ? $prepared['payload'] : [],
                 'selected_questions' => is_array($prepared['selected_questions'] ?? null)
@@ -215,7 +264,8 @@ class StudyPracticeOrchestrator
             $prepared,
         );
 
-        return $session;
+            return $session;
+        }, 3);
     }
 
     /**
@@ -234,20 +284,42 @@ class StudyPracticeOrchestrator
         $provider = $providerKey !== null
             ? $this->providerRouter->assessmentProviderByKey($providerKey)
             : $this->providerRouter->assessmentProvider($plan, $task, $questions, $answers);
+        $native = $provider->key() === 'native_ai';
+        $actorUserId = $session->user_id ? (int) $session->user_id : null;
+        $sourceFingerprint = $native
+            ? $this->assessmentCommitFence->capture(
+                $session, $plan, $task, $questions, $actorUserId,
+            )
+            : null;
+
         $prepared = $provider->prepare(
             $plan,
             $task,
             $questions,
             $answers,
-            $session->user_id ? (int) $session->user_id : null,
+            $actorUserId,
             (int) $session->id,
         );
 
-        $session->update([
+        $changes = [
             'assessment_provider' => (string) ($prepared['provider'] ?? $provider->key()),
             'assessment_provider_mode' => (string) ($prepared['mode'] ?? $provider->mode()),
             'assessment_payload' => is_array($prepared['payload'] ?? null) ? $prepared['payload'] : [],
-        ]);
+        ];
+
+        if ($native) {
+            $runId = (int) data_get($prepared, 'payload.native_ai.run_id', 0);
+            $this->assessmentCommitFence->commit(
+                $session, $plan, $task, $questions, $actorUserId,
+                $sourceFingerprint, $runId,
+                fn (StudyPracticeSession $live) => $live->update($changes),
+            );
+            // Controller uses the same pre-provider fingerprint for its final
+            // Attempt/Evidence commit, not a freshly signed changed answer.
+            $prepared['g3_source_fingerprint'] = $sourceFingerprint;
+        } else {
+            $session->update($changes);
+        }
 
         return $prepared;
     }

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Plan;
+use App\Models\StudyPracticeAttempt;
 use App\Models\StudyPracticeSession;
 use App\Models\Task;
 use App\Models\User;
@@ -54,13 +55,16 @@ class StudyPracticeResumeFastPathV565Test extends TestCase
             ->followingRedirects()
             ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
             ->assertOk()
-            ->assertSee('CONTINUE PRACTICE')
+            ->assertSee('学習に集中')
             ->assertSee('DNS確認')
-            ->assertSee('保存済みの回答をそのまま復元しました')
-            ->assertSee('1/2問 回答済み')
-            ->assertSee('続きから回答')
+            ->assertDontSee('CONTINUE PRACTICE')
             ->assertSee('DNSは名前解決を行うため。')
-            ->assertSee('data-study-practice-resume-fast-path', false)
+            ->assertSee('data-study-focus-space', false)
+            ->assertSee('data-study-focus-personalization', false)
+            ->assertDontSee('PRACTICE RELIABILITY')
+            ->assertDontSee('PRACTICE STRATEGY')
+            ->assertDontSee('data-study-practice-history', false)
+            ->assertDontSee('data-study-practice-resume-fast-path', false)
             ->assertSee('data-study-practice-scroll-to="practice-questions"', false)
             ->assertDontSee('PRACTICE STRATEGY')
             ->assertDontSee('PRACTICE RELIABILITY')
@@ -102,9 +106,10 @@ class StudyPracticeResumeFastPathV565Test extends TestCase
             ])
             ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
             ->assertOk()
-            ->assertSee('PRACTICE STRATEGY')
-            ->assertSee('PRACTICE RELIABILITY')
-            ->assertSee('aria-label="AI演習の進行状況"', false)
+            ->assertSee('data-study-focus-space', false)
+            ->assertDontSee('PRACTICE STRATEGY')
+            ->assertDontSee('PRACTICE RELIABILITY')
+            ->assertDontSee('aria-label="AI演習の進行状況"', false)
             ->assertDontSee('CONTINUE PRACTICE')
             ->assertDontSee('data-study-practice-resume-fast-path', false);
     }
@@ -121,9 +126,9 @@ class StudyPracticeResumeFastPathV565Test extends TestCase
             ->followingRedirects()
             ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
             ->assertOk()
-            ->assertSee('CONTINUE PRACTICE')
-            ->assertSee('0/2問 回答済み')
-            ->assertSee('続きから回答');
+            ->assertSee('data-study-focus-space', false)
+            ->assertSee('学習に集中')
+            ->assertDontSee('CONTINUE PRACTICE');
     }
 
     public function test_answered_session_uses_existing_evaluation_recovery_not_answer_resume(): void
@@ -218,6 +223,101 @@ class StudyPracticeResumeFastPathV565Test extends TestCase
             ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
             ->assertOk()
             ->assertDontSee('CONTINUE PRACTICE');
+    }
+
+    public function test_compact_legacy_study_ui_keeps_optional_reasoning_closed_and_next_on_the_right(): void
+    {
+        [$user, $plan, $task] = $this->studyPlan();
+        $this->practiceSession($user, $plan, $task);
+
+        $response = $this->actingAs($user)->followingRedirects()
+            ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
+            ->assertOk()
+            ->assertSee('data-study-practice-optional-note', false)
+            ->assertSee('data-study-practice-actions', false)
+            ->assertSee('data-study-practice-next', false)
+            ->assertSee('data-study-practice-question-progress', false)
+            ->assertSee('lg:grid-cols-2', false)
+            ->assertSee('sticky bottom-0', false)
+            ->assertSee('次の問題 →');
+
+        $html = $response->getContent();
+        preg_match('/<details\b[^>]*data-study-practice-optional-note[^>]*>/', $html, $match);
+        $this->assertNotEmpty($match, 'Optional textarea must be inside a native details control');
+        $this->assertStringNotContainsString(' open', $match[0], 'Empty optional notes must start collapsed');
+        $this->assertMatchesRegularExpression(
+            '/data-study-practice-next[^>]*>次の問題 →<\/button>/', $html);
+        // The visible action remains inside the same form to preserve final grading.
+        $this->assertSame(0, \App\Models\StudyPracticeAttempt::count());
+    }
+
+    public function test_saved_optional_reasoning_opens_and_history_is_collapsed_without_deleting_evidence(): void
+    {
+        [$user, $plan, $task] = $this->studyPlan();
+        $this->practiceSession($user, $plan, $task, [
+            'status' => StudyPracticeSession::STATUS_IN_PROGRESS,
+            'draft_answers' => ['q1' => [
+                'answer' => 'A', 'reasoning' => '選択肢を比較した思考過程',
+            ]],
+            'draft_saved_at' => now(),
+        ]);
+        StudyPracticeAttempt::create([
+            'plan_id' => $plan->id, 'task_id' => $task->id,
+            'user_id' => $user->id, 'request_hash' => hash('sha256', (string) Str::uuid()),
+            'exercise_title' => '前回の練習', 'questions' => [],
+            'answers' => [], 'assessment' => [],
+            'score_percent' => 80, 'recommended_task_progress_percent' => 45,
+            'weaknesses' => ['前回の復習メモ'], 'next_action' => 'CNAMEを確認',
+        ]);
+
+        $response = $this->actingAs($user)->followingRedirects()
+            ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
+            ->assertOk()
+            ->assertSee('選択肢を比較した思考過程')
+            ->assertDontSee('data-study-practice-history', false)
+            ->assertDontSee('学習履歴を振り返る')
+            ->assertDontSee('前回の復習メモ');
+        $html = $response->getContent();
+        preg_match('/<details\b[^>]*data-study-practice-optional-note[^>]*>/', $html, $reasoning);
+        $this->assertNotEmpty($reasoning);
+        $this->assertStringContainsString(' open', $reasoning[0], 'Nonempty saved draft stays expanded');
+        // Attempt history remains persisted but is hidden during the Focus state.
+        $this->assertDatabaseCount('study_practice_attempts', 1);
+    }
+
+    public function test_continue_after_result_keeps_recorded_attempt_and_task_unchanged_with_compact_setup(): void
+    {
+        [$user, $plan, $task] = $this->studyPlan();
+        $practiceSession = $this->practiceSession($user, $plan, $task, [
+            'status' => StudyPracticeSession::STATUS_ASSESSED,
+        ]);
+        StudyPracticeAttempt::create([
+            'plan_id' => $plan->id, 'task_id' => $task->id,
+            'study_practice_session_id' => $practiceSession->id,
+            'user_id' => $user->id,
+            'request_hash' => hash('sha256', (string) Str::uuid()),
+            'exercise_title' => '前回の演習',
+            'questions' => [], 'answers' => [], 'assessment' => [],
+            'score_percent' => 70, 'recommended_task_progress_percent' => 80,
+        ]);
+        $taskBefore = $task->fresh()->progress_percent;
+        $this->actingAs($user)->withSession([
+            "study_practice.{$plan->id}.{$task->id}" => [
+                'title' => '前回の演習',
+                'questions' => $this->questions(),
+                'assessment' => ['score_percent' => 70],
+                'practice_session_id' => $practiceSession->id,
+            ],
+        ])->post(route('plans.tasks.study_practice.reset', [$plan, $task]), ['continue' => '1'])
+            ->assertRedirect(route('plans.tasks.study_practice.show', [$plan, $task]))
+            ->assertSessionHas('study_practice_continuing', true);
+        $this->actingAs($user)->get(route('plans.tasks.study_practice.show', [$plan, $task]))
+            ->assertOk()
+            ->assertSee('data-study-focus-space', false)
+            ->assertSee('前回の結果を記録しています')
+            ->assertDontSee('PRACTICE RELIABILITY');
+        $this->assertSame($taskBefore, $task->fresh()->progress_percent);
+        $this->assertDatabaseCount('study_practice_attempts', 1);
     }
 
     private function practiceSession(

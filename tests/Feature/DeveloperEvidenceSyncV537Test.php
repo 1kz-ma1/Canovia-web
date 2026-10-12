@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\UserProductGrant;
 use App\Services\FeatureAccessService;
 use App\Services\GitHubDevelopmentEvidenceService;
+use App\Services\GitHubTaskEvidenceCommitGuard;
 use App\Services\GitHubReturnEvidenceService;
 use App\Services\GitHubWorkflowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -338,6 +339,89 @@ class DeveloperEvidenceSyncV537Test extends TestCase
         ]);
     }
 
+    public function test_disconnection_during_github_fetch_prevents_new_task_evidence(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $root = PlanArtifact::query()
+            ->where('plan_id', $plan->id)
+            ->where('artifact_type', 'repository')->firstOrFail();
+        $artifact = $this->artifact(
+            $plan, $user, 'https://github.com/1kz-ma1/HINANEX/issues/12', '12',
+        );
+        $artifact->tasks()->sync([$task->id]);
+
+        Http::fake(function (HttpRequest $request) use ($root) {
+            $auth = $this->commonGitHubAuth($request, ['issues' => 'read']);
+            if ($auth !== null) {
+                return $auth;
+            }
+
+            if ($request->method() === 'GET'
+                && $request->url() === 'https://api.github.com/repos/1kz-ma1/HINANEX/issues/12') {
+                $live = $root->fresh();
+                $metadata = (array) $live->metadata;
+                $metadata['github_app_connection']['status'] = 'revoked';
+                $live->update(['metadata' => $metadata]);
+
+                return Http::response([
+                    'number' => 12,
+                    'state' => 'closed',
+                    'updated_at' => '2026-10-08T01:00:00Z',
+                    'html_url' => 'https://github.com/1kz-ma1/HINANEX/issues/12',
+                ], 200);
+            }
+
+            return Http::response(['message' => 'Unexpected request'], 500);
+        });
+
+        $counts = app(GitHubDevelopmentEvidenceService::class)->syncDelivery(
+            $this->delivery('issues', [['kind' => 'issue', 'number' => 12]]),
+        );
+
+        $this->assertSame(0, $counts['synced_tasks']);
+        $this->assertSame([], $counts['plan_ids']);
+        $this->assertDatabaseCount('task_evidences', 0);
+    }
+
+    public function test_changed_installation_and_plan_owner_cannot_commit_queued_task_evidence(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $linked = $this->artifact(
+            $plan, $user, 'https://github.com/1kz-ma1/HINANEX/issues/12', '12',
+        );
+        $linked->tasks()->sync([$task->id]);
+
+        $guard = app(GitHubTaskEvidenceCommitGuard::class);
+        $called = false;
+        $write = function () use (&$called) {
+            $called = true;
+            return true;
+        };
+
+        $root = PlanArtifact::query()->where('plan_id', $plan->id)
+            ->where('artifact_type', 'repository')->firstOrFail();
+        $metadata = (array) $root->metadata;
+        $metadata['github_app_connection']['installation_id'] = 888;
+        $root->update(['metadata' => $metadata]);
+
+        $this->assertNull($guard->execute(
+            $task, [$linked->id], '1kz-ma1/HINANEX', 777,
+            (int) $user->id, $write,
+        ));
+        $this->assertFalse($called);
+
+        $metadata['github_app_connection']['installation_id'] = 777;
+        $root->update(['metadata' => $metadata]);
+        $plan->update(['user_id' => User::factory()->create()->id]);
+
+        $this->assertNull($guard->execute(
+            $task, [$linked->id], '1kz-ma1/HINANEX', 777,
+            (int) $user->id, $write,
+        ));
+        $this->assertFalse($called);
+        $this->assertDatabaseCount('task_evidences', 0);
+    }
+
     private function scenario(bool $grantAccess = true): array
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);
@@ -390,6 +474,7 @@ class DeveloperEvidenceSyncV537Test extends TestCase
                 'github_app_connection' => [
                     'status' => 'connected',
                     'installation_id' => 777,
+                    'source_epoch' => '18edfd47-0fa5-4020-aa2d-d273c603ec90',
                 ],
             ],
         ]);

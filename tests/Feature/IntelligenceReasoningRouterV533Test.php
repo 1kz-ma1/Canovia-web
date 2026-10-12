@@ -18,6 +18,9 @@ use App\Models\UserProductGrant;
 use DateTimeImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Event;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use App\Models\IntelligenceDecisionTrace;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -142,6 +145,9 @@ class IntelligenceReasoningRouterV533Test extends TestCase
     public function test_openai_provider_selects_from_the_canovia_candidate_contract_directly(): void
     {
         [$user, $plan] = $this->context();
+        // Direct provider invocation must carry the same Native AI purpose
+        // entitlement as any other gateway entry point.
+        $this->grantPremium($user);
 
         Http::fake([
             'https://api.openai.com/v1/responses' => Http::response(
@@ -268,6 +274,179 @@ class IntelligenceReasoningRouterV533Test extends TestCase
         $this->assertDatabaseCount('native_ai_runs', 1);
         $this->assertDatabaseCount('intelligence_reasoning_runs', 1);
         $this->assertDatabaseCount('intelligence_decision_traces', 1);
+    }
+
+    public function test_revoked_ai_entitlement_blocks_reuse_of_previously_successful_cached_selection(): void
+    {
+        [$user, $plan] = $this->context();
+        $grant = $this->grantPremium($user);
+        Http::fake([
+            'https://api.openai.com/v1/responses' => Http::response(
+                $this->responseBody([
+                    'selected_type' => 'verify_retention',
+                    'confidence' => 0.88,
+                    'reason_codes' => ['retention_unverified'],
+                ]), 200,
+            ),
+        ]);
+
+        $state = $this->uncertainStudyState($plan->id);
+        $first = $this->evaluate($state, $user, $plan, ['mode' => 'openai']);
+        $this->assertSame('openai', $first->reasoningRun->route_selected);
+        $this->assertSame('verify_retention', $first->decision->type);
+
+        $grant->update(['expires_at' => now()->subMinute()]);
+
+        $second = $this->evaluate($state, $user, $plan, ['mode' => 'openai']);
+        $this->assertNotSame($first->reasoningRun->id, $second->reasoningRun->id);
+        $this->assertSame($second->baselineDecision->type, $second->decision->type);
+        $this->assertTrue($second->reasoningRun->used_fallback);
+        $this->assertSame('feature_not_entitled', $second->reasoningRun->fallback_reason);
+        $this->assertSame('deterministic', $second->reasoningRun->route_selected);
+        $this->assertDatabaseHas('intelligence_reasoning_runs', [
+            'id' => $first->reasoningRun->id,
+            'route_selected' => 'openai',
+        ]);
+        Http::assertSentCount(1);
+    }
+
+    public function test_ai_permission_revocation_while_model_response_is_pending_falls_back_before_decision_commit(): void
+    {
+        [$user, $plan] = $this->context();
+        $grant = $this->grantPremium($user);
+
+        Http::fake(function ($request) use ($grant) {
+            $grant->update(['expires_at' => now()->subMinute()]);
+
+            return Http::response($this->responseBody([
+                'selected_type' => 'verify_retention',
+                'confidence' => 0.90,
+                'reason_codes' => ['retention_unverified'],
+            ]), 200);
+        });
+
+        $result = $this->evaluate(
+            $this->uncertainStudyState($plan->id),
+            $user, $plan, ['mode' => 'openai'],
+        );
+
+        $this->assertSame($result->baselineDecision->type, $result->decision->type);
+        $this->assertTrue($result->reasoningRun->used_fallback);
+        $this->assertSame(
+            'authorization_changed_during_reasoning',
+            $result->reasoningRun->fallback_reason,
+        );
+        $this->assertSame('deterministic', $result->reasoningRun->route_selected);
+        $this->assertSame($result->baselineDecision->type, $result->trace->decision_type);
+        $this->assertDatabaseCount('native_ai_runs', 1);
+        Http::assertSentCount(1);
+    }
+
+    public function test_plan_transfer_during_ai_response_blocks_old_actor_reasoning_commit(): void
+    {
+        [$user, $plan] = $this->context();
+        $this->grantPremium($user);
+        $newOwner = User::factory()->create();
+
+        Http::fake(function ($request) use ($plan, $newOwner) {
+            $plan->update(['user_id' => $newOwner->id]);
+
+            return Http::response($this->responseBody([
+                'selected_type' => 'verify_retention',
+                'confidence' => 0.95,
+                'reason_codes' => ['retention_unverified'],
+            ]), 200);
+        });
+
+        $result = $this->evaluate(
+            $this->uncertainStudyState($plan->id),
+            $user, $plan, ['mode' => 'openai'],
+        );
+        $this->assertSame($result->baselineDecision->type, $result->decision->type);
+        $this->assertSame(
+            'authorization_changed_during_reasoning',
+            $result->reasoningRun->fallback_reason,
+        );
+        $this->assertSame('deterministic', $result->reasoningRun->route_selected);
+        $this->assertDatabaseCount('intelligence_reasoning_runs', 1);
+        Http::assertSentCount(1);
+    }
+
+    public function test_ai_grant_revoked_after_router_success_is_denied_before_trace_commit(): void
+    {
+        [$user, $plan] = $this->context();
+        $grant = $this->grantPremium($user);
+        Http::fake(['https://api.openai.com/v1/responses' =>
+            Http::response($this->responseBody([
+                'selected_type' => 'verify_retention',
+                'confidence' => 0.90,
+                'reason_codes' => ['retention_unverified'],
+            ]), 200),
+        ]);
+
+        $eventName = 'eloquent.created: '.IntelligenceReasoningRun::class;
+        Event::listen($eventName, function (IntelligenceReasoningRun $run) use ($grant) {
+            if ($run->route_selected === 'openai') {
+                // After the router's post-provider check, before its return.
+                $grant->update(['expires_at' => now()->subMinute()]);
+            }
+        });
+
+        try {
+            $this->evaluate(
+                $this->uncertainStudyState($plan->id), $user, $plan,
+                ['mode' => 'openai'],
+            );
+            $this->fail('A revoked cached/native AI decision must not be persisted.');
+        } catch (HttpException $error) {
+            $this->assertSame(409, $error->getStatusCode());
+        } finally {
+            Event::forget($eventName);
+        }
+
+        $this->assertDatabaseCount('intelligence_decision_traces', 0);
+        $this->assertDatabaseCount('intelligence_state_snapshots', 0);
+        $this->assertNull(IntelligenceReasoningRun::firstOrFail()
+            ->intelligence_decision_trace_id);
+        Http::assertSentCount(1);
+    }
+
+    public function test_plan_owner_transfer_after_router_success_is_denied_before_trace_commit(): void
+    {
+        [$user, $plan] = $this->context();
+        $this->grantPremium($user);
+        $newOwner = User::factory()->create();
+        Http::fake(['https://api.openai.com/v1/responses' =>
+            Http::response($this->responseBody([
+                'selected_type' => 'verify_retention',
+                'confidence' => 0.90,
+                'reason_codes' => ['retention_unverified'],
+            ]), 200),
+        ]);
+
+        $eventName = 'eloquent.created: '.IntelligenceReasoningRun::class;
+        Event::listen($eventName, function (IntelligenceReasoningRun $run) use ($plan, $newOwner) {
+            if ($run->route_selected === 'openai') {
+                $plan->update(['user_id' => $newOwner->id]);
+            }
+        });
+
+        try {
+            $this->evaluate(
+                $this->uncertainStudyState($plan->id), $user, $plan,
+                ['mode' => 'openai'],
+            );
+            $this->fail('A transferred Plan must not receive the old actor AI trace.');
+        } catch (HttpException $error) {
+            $this->assertSame(409, $error->getStatusCode());
+        } finally {
+            Event::forget($eventName);
+        }
+
+        $this->assertDatabaseCount('intelligence_decision_traces', 0);
+        $this->assertDatabaseCount('intelligence_state_snapshots', 0);
+        $this->assertNull(IntelligenceReasoningRun::firstOrFail()
+            ->intelligence_decision_trace_id);
     }
 
     public function test_openai_failure_falls_back_to_deterministic_and_does_not_cache_failure(): void

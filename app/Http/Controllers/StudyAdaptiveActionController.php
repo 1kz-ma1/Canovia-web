@@ -64,7 +64,7 @@ class StudyAdaptiveActionController extends Controller
             );
         }
 
-        $projection = $projector->project($plan, $result);
+        $projection = $projector->project($plan, $result, $request);
         $task = $projection['task'];
 
         if ($projection['created']) {

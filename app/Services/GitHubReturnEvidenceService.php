@@ -8,7 +8,6 @@ use App\Models\PlanArtifact;
 use App\Models\Task;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 final class GitHubReturnEvidenceService
@@ -19,6 +18,8 @@ final class GitHubReturnEvidenceService
         private readonly GitHubRepositoryWriter $github,
         private readonly GitHubWorkflowService $workflow,
         private readonly TaskEvidenceService $evidence,
+        private readonly GitHubTaskEvidenceCommitGuard $commitGuard,
+        private readonly GitHubSourceEpochService $epochs,
     ) {}
 
     /**
@@ -65,26 +66,59 @@ final class GitHubReturnEvidenceService
             ]);
         }
 
+        $source = PlanArtifact::query()
+            ->where('plan_id', $plan->id)
+            ->where('provider', 'github')
+            ->where('artifact_type', 'repository')
+            ->get()
+            ->first(function (PlanArtifact $root) use ($parsed): bool {
+                $identity = $this->workflow->parseUrl((string) $root->url);
+
+                return ($identity['kind'] ?? null) === 'repository'
+                    && strcasecmp(
+                        (string) ($identity['repo_full_name'] ?? ''),
+                        (string) $parsed['repo_full_name'],
+                    ) === 0
+                    && data_get($root->metadata, 'github_app_connection.status') === 'connected';
+            });
+
+        if ($source === null || $plan->user_id === null) {
+            return ['snapshot' => [], 'evidence_ids' => [], 'evidence_count' => 0, 'skipped' => true];
+        }
+        $installationId = (int) data_get(
+            $source->metadata, 'github_app_connection.installation_id', 0,
+        );
+        $sourceEpoch = $this->epochs->current((array) $source->metadata);
+        $sourceOwnerId = (int) $plan->user_id;
+
         $snapshot = $this->github->inspectPullRequestReturn(
             (string) $parsed['repo_full_name'],
             (int) $parsed['number'],
         );
 
-        return DB::transaction(function () use ($task, $pullRequestArtifact, $snapshot) {
-            $this->storeSnapshot($pullRequestArtifact, $snapshot);
+        $recorded = $this->commitGuard->execute(
+            $task,
+            [(int) $pullRequestArtifact->id],
+            (string) $parsed['repo_full_name'],
+            $installationId,
+            $sourceOwnerId,
+            function (Task $liveTask) use ($pullRequestArtifact, $snapshot): array {
+                $liveArtifact = PlanArtifact::query()->findOrFail($pullRequestArtifact->id);
+                $this->storeSnapshot($liveArtifact, $snapshot);
+                $records = $this->recordEvidence($liveTask, $liveArtifact, $snapshot);
 
-            $recorded = $this->recordEvidence(
-                $task,
-                $pullRequestArtifact,
-                $snapshot,
-            );
+                return [
+                    'snapshot' => $snapshot,
+                    'evidence_ids' => $records->pluck('id')->map(fn ($id) => (int) $id)->values()->all(),
+                    'evidence_count' => $records->count(),
+                ];
+            },
+            $sourceEpoch,
+        );
 
-            return [
-                'snapshot' => $snapshot,
-                'evidence_ids' => $recorded->pluck('id')->map(fn ($id) => (int) $id)->values()->all(),
-                'evidence_count' => $recorded->count(),
-            ];
-        });
+        return $recorded ?? [
+            'snapshot' => [], 'evidence_ids' => [], 'evidence_count' => 0, 'skipped' => true,
+        ];
     }
 
     /**

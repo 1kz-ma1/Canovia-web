@@ -20,6 +20,7 @@ final class ExecutionGitHubHandoffService
         private readonly ExecutionOrchestrationContextService $contexts,
         private readonly GitHubRepositoryWriter $writer,
         private readonly GitHubWorkflowService $githubWorkflow,
+        private readonly ExecutionPacketCommitFence $nativeFence,
     ) {}
 
     /**
@@ -119,6 +120,13 @@ final class ExecutionGitHubHandoffService
         ) {
             throw ValidationException::withMessages([
                 'github_change' => 'Execution Packet生成後にPlan / TaskのContextが変わっています。Packetを再生成してください。',
+            ]);
+        }
+
+        if ((int) ($orchestrationState['native_run_id'] ?? 0) > 0
+            && ! $this->nativeFence->isFresh($request, $plan, $task, $context)) {
+            throw ValidationException::withMessages([
+                'github_change' => 'Native AIの利用権限または元のContextを再確認できません。Packetを再生成してください。',
             ]);
         }
 

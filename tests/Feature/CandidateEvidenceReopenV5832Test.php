@@ -9,6 +9,9 @@ use App\Models\Plan;
 use App\Models\PlanArtifact;
 use App\Models\User;
 use App\Models\UserPersonalizationContext;
+use App\Services\DevelopmentPersonalizationSignalService;
+use App\Services\PersonalizationContextService;
+use Illuminate\Http\Request;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -253,6 +256,7 @@ class CandidateEvidenceReopenV5832Test extends TestCase
                 'plan_id' => $plan->id,
                 'repository_artifact_id' => $repository->id,
                 'provider' => 'github',
+                'source_epoch' => data_get($repository->metadata, 'github_app_connection.source_epoch'),
                 'kind' => 'issue',
                 'external_key' => 'github:sustained:'.$daysAgo,
                 'last_observed_at' => now()->subDays($daysAgo),
@@ -578,6 +582,144 @@ class CandidateEvidenceReopenV5832Test extends TestCase
     /**
      * @return array{0:User,1:Plan,2:PlanArtifact}
      */
+    public function test_disconnected_repository_observations_are_not_fresh_personalization_evidence(): void
+    {
+        [$user, $plan, $first] = $this->scenario();
+        $second = $this->repository(
+            $plan, $user, 'https://github.com/example/second-repo',
+        );
+
+        $this->observation($plan, $first, 'pull_request', 'github:first:1');
+        $this->observation($plan, $first, 'commit', 'github:first:2');
+        $this->observation($plan, $second, 'commit', 'github:second:3');
+
+        $service = app(DevelopmentPersonalizationSignalService::class);
+        $before = $service->advancedSupport($user);
+        $this->assertSame(3, $before['recent_activity_count']);
+        $this->assertSame(2, $before['connected_repository_count']);
+
+        $metadata = (array) $first->metadata;
+        $metadata['github_app_connection']['status'] = 'revoked';
+        $first->update(['metadata' => $metadata]);
+
+        $after = $service->advancedSupport($user);
+        $this->assertSame(1, $after['recent_activity_count']);
+        $this->assertSame(1, $after['recent_pr_or_commit_count']);
+        $this->assertSame(1, $after['connected_repository_count']);
+        $this->assertDatabaseCount('development_activity_observations', 3);
+    }
+
+    public function test_revoked_github_source_masks_persisted_developer_recommendations_without_deleting_user_decision(): void
+    {
+        [$user, $plan, $root] = $this->scenario();
+        $this->actingAs($user)->post(route('personalization.updates.refresh'))
+            ->assertRedirect(route('personalization.updates.index'));
+
+        $request = Request::create('/', 'GET');
+        $request->setLaravelSession(app('session')->driver());
+        $request->setUserResolver(fn () => $user);
+        $contexts = app(PersonalizationContextService::class);
+
+        $before = $contexts->current($request);
+        $this->assertNotNull(data_get($before,
+            'context_sources.inferred.update_candidates.development_advanced_support'));
+        $this->assertMatchesRegularExpression(
+            '/^[a-f0-9]{64}$/',
+            (string) data_get($before,
+                'context_sources.observed.development_behavior.source_signature'),
+        );
+
+        $stored = $this->context($user);
+        $metadata = (array) $root->metadata;
+        $metadata['github_app_connection']['status'] = 'revoked';
+        $root->update(['metadata' => $metadata]);
+
+        $after = $contexts->current($request);
+        $this->assertNull(data_get($after,
+            'context_sources.inferred.update_candidates.development_advanced_support'));
+        $this->assertNull(data_get($after,
+            'context_sources.observed.development_behavior'));
+        $this->assertNull(data_get($after,
+            'context_sources.observed.github_integration'));
+        $this->assertSame(
+            data_get($before, 'domain_context.development.experience'),
+            data_get($after, 'domain_context.development.experience'),
+        );
+        $this->assertNotNull(data_get($stored->fresh()->inferred_context,
+            'update_candidates.development_advanced_support'));
+    }
+
+    public function test_unsigned_legacy_development_derivation_cannot_be_shown_as_current(): void
+    {
+        [$user] = $this->scenario();
+        $stored = $this->context($user);
+        $stored->forceFill([
+            'observed_context' => [
+                ...(array) $stored->observed_context,
+                'development_behavior' => ['recent_activity_count' => 5],
+            ],
+            'inferred_context' => [
+                ...(array) $stored->inferred_context,
+                'update_candidates' => [
+                    'development_advanced_support' => [
+                        'status' => 'pending', 'risk' => 'high',
+                    ],
+                ],
+            ],
+        ])->save();
+
+        $request = Request::create('/', 'GET');
+        $request->setLaravelSession(app('session')->driver());
+        $request->setUserResolver(fn () => $user);
+
+        $current = app(PersonalizationContextService::class)->current($request);
+        $this->assertNull(data_get($current,
+            'context_sources.inferred.update_candidates.development_advanced_support'));
+        $this->assertNull(data_get($current,
+            'context_sources.observed.development_behavior'));
+    }
+
+    public function test_refresh_while_disconnected_keeps_confirmed_choice_in_history_but_mutes_active_claim(): void
+    {
+        [$user, $plan, $root] = $this->scenario();
+        $this->actingAs($user)->post(route('personalization.updates.refresh'))
+            ->assertRedirect(route('personalization.updates.index'));
+        $this->actingAs($user)->post(route('personalization.updates.confirm', [
+            'candidateKey' => 'development_advanced_support',
+        ]))->assertRedirect(route('personalization.updates.index'));
+
+        $this->assertSame('confirmed', data_get(
+            $this->context($user)->inferred_context,
+            'update_candidates.development_advanced_support.status',
+        ));
+
+        $metadata = (array) $root->metadata;
+        $metadata['github_app_connection']['status'] = 'revoked';
+        $root->update(['metadata' => $metadata]);
+
+        $this->actingAs($user)->post(route('personalization.updates.refresh'))
+            ->assertRedirect(route('personalization.updates.index'));
+
+        $stored = $this->context($user)->fresh();
+        $this->assertSame('confirmed', data_get(
+            $stored->inferred_context,
+            'update_candidates.development_advanced_support.status',
+        ));
+        $this->assertSame('context_confirmation', data_get(
+            $stored->feature_readiness,
+            'development.advanced_support.source',
+        ));
+
+        $request = Request::create('/', 'GET');
+        $request->setLaravelSession(app('session')->driver());
+        $request->setUserResolver(fn () => $user);
+        $current = app(PersonalizationContextService::class)->current($request);
+        $this->assertNull(data_get($current,
+            'context_sources.inferred.update_candidates.development_advanced_support'));
+        $this->assertNull(data_get($current,
+            'feature_readiness.development.advanced_support'));
+    }
+
     private function scenario(): array
     {
         $user = User::factory()->create([
@@ -646,6 +788,7 @@ class CandidateEvidenceReopenV5832Test extends TestCase
                 'github_app_connection' => [
                     'status' => 'connected',
                     'installation_id' => 777,
+                    'source_epoch' => 'c6e3b784-4679-4fac-a2d5-e58c3dbadf11',
                     'read_ready' => true,
                     'write_ready' => false,
                 ],
@@ -663,6 +806,7 @@ class CandidateEvidenceReopenV5832Test extends TestCase
             'plan_id' => $plan->id,
             'repository_artifact_id' => $repository->id,
             'provider' => 'github',
+            'source_epoch' => data_get($repository->metadata, 'github_app_connection.source_epoch'),
             'kind' => $kind,
             'external_key' => $externalKey,
             'last_observed_at' => now(),

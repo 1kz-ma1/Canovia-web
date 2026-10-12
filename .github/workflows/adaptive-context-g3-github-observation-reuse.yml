@@ -1,0 +1,50 @@
+name: Adaptive Context G3 GitHub Observation Reuse Fence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/DevelopmentObservationReuseGuard.php'
+      - 'app/Services/DevelopmentHomeService.php'
+      - 'app/Services/DevelopmentTaskMatchService.php'
+      - 'app/Services/DevelopmentTaskAssociationService.php'
+      - 'resources/views/workspace/development/surfaces/partials/github-activity.blade.php'
+      - 'tests/Feature/DeveloperTaskAssociationV572Test.php'
+      - 'tests/Feature/DeveloperHomeV573Test.php'
+      - '.github/workflows/adaptive-context-g3-github-observation-reuse.yml'
+
+jobs:
+  github-observation-historical-read:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/DevelopmentObservationReuseGuard.php
+          php -l app/Services/DevelopmentHomeService.php
+          php -l app/Services/DevelopmentTaskMatchService.php
+          php -l app/Services/DevelopmentTaskAssociationService.php
+          php -l tests/Feature/DeveloperTaskAssociationV572Test.php
+      - name: Current-use refusal and historical presentation
+        run: |
+          php artisan test \
+            tests/Feature/DeveloperTaskAssociationV572Test.php \
+            tests/Feature/DeveloperHomeV573Test.php \
+            tests/Feature/DeveloperActivityObservationV571Test.php
+      - name: Existing Development freshness and evidence regression
+        run: |
+          php artisan test \
+            tests/Feature/DeveloperEvidenceSyncV537Test.php \
+            tests/Feature/LivingProfileV5827Test.php \
+            tests/Feature/CandidateEvidenceReopenV5832Test.php

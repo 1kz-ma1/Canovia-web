@@ -119,6 +119,55 @@ class GitHubAppConnectionV465Test extends TestCase
         );
     }
 
+    public function test_same_installation_recheck_keeps_epoch_but_disconnect_and_reconnect_rotates_it(): void
+    {
+        $user = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($user);
+        $repo = $this->repository($plan, $user);
+        $this->grantAllAccess($user);
+        $url = route('github_workflow.app.check', $repo);
+
+        $connected = [
+            'id' => 777,
+            'account' => ['login' => '1kz-ma1', 'type' => 'User'],
+            'target_type' => 'User',
+            'repository_selection' => 'selected',
+            'permissions' => ['contents' => 'read', 'pull_requests' => 'read'],
+        ];
+        Http::fake([
+            'https://api.github.com/repos/1kz-ma1/HINANEX/installation' =>
+                Http::sequence()
+                    ->push($connected, 200)
+                    ->push($connected, 200)
+                    ->push(['message' => 'Not Found'], 404)
+                    ->push($connected, 200),
+        ]);
+
+        $this->actingAs($user)->post($url)->assertSessionHas('success');
+        $first = data_get($repo->fresh()->metadata, 'github_app_connection.source_epoch');
+        $this->assertMatchesRegularExpression(
+            '/^[a-f0-9-]{36}$/', (string) $first,
+        );
+
+        $this->actingAs($user)->post($url)->assertSessionHas('success');
+        $this->assertSame($first, data_get(
+            $repo->fresh()->metadata, 'github_app_connection.source_epoch',
+        ));
+
+        $this->actingAs($user)->post($url)->assertSessionHas('status');
+        $this->assertSame('revoked', data_get(
+            $repo->fresh()->metadata, 'github_app_connection.status',
+        ));
+        $this->assertNull(data_get(
+            $repo->fresh()->metadata, 'github_app_connection.source_epoch',
+        ));
+
+        $this->actingAs($user)->post($url)->assertSessionHas('success');
+        $second = data_get($repo->fresh()->metadata, 'github_app_connection.source_epoch');
+        $this->assertNotSame($first, $second);
+        $this->assertMatchesRegularExpression('/^[a-f0-9-]{36}$/', (string) $second);
+    }
+
     public function test_spoofed_callback_installation_id_is_not_trusted(): void
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);

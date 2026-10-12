@@ -6,6 +6,7 @@ use App\Intelligence\Adapters\TaskEvidenceAdapter;
 use App\Intelligence\Data\EvidenceObservation;
 use App\Models\Plan;
 use App\Models\TaskEvidence;
+use App\Services\GitHubTaskEvidenceReuseGuard;
 
 final class DevelopmentEvidenceCollector
 {
@@ -23,6 +24,7 @@ final class DevelopmentEvidenceCollector
 
     public function __construct(
         private readonly TaskEvidenceAdapter $adapter,
+        private readonly GitHubTaskEvidenceReuseGuard $reuseGuard,
     ) {}
 
     /**
@@ -36,6 +38,7 @@ final class DevelopmentEvidenceCollector
             ->orderBy('occurred_at')
             ->orderBy('id')
             ->get()
+            ->filter(fn (TaskEvidence $evidence) => $this->reuseGuard->eligible($plan, $evidence))
             ->map(fn (TaskEvidence $evidence) => $this->adapter->adapt($evidence))
             ->values()
             ->all();

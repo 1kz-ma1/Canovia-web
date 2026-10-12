@@ -1,0 +1,40 @@
+name: Adaptive Context G3 V53 AI Authorization Freshness
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Intelligence/Services/ReasoningRouter.php'
+      - 'tests/Feature/IntelligenceReasoningRouterV533Test.php'
+      - '.github/workflows/adaptive-context-g3-v53-ai-authorization.yml'
+
+jobs:
+  v53-reasoning-grant-freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: PHP lint
+        run: |
+          php -l app/Intelligence/Services/ReasoningRouter.php
+          php -l tests/Feature/IntelligenceReasoningRouterV533Test.php
+      - name: G3 V53 AI entitlement, cache and in-flight revocation
+        run: php artisan test tests/Feature/IntelligenceReasoningRouterV533Test.php
+      - name: MCP explicit grant, revoke and actor/scope isolation
+        run: php artisan test tests/Feature/McpReadOnlyResourceTest.php tests/Feature/McpSyntheticOAuthConsentReadLifecycleTest.php tests/Feature/McpDelegatedRevocationTest.php
+      - name: V53 derived read and TaskEvidence source regression
+        run: php artisan test tests/Feature/IntelligenceStateEvidenceV531Test.php tests/Feature/StateChangeFeedbackV546Test.php
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Build Vite assets required by feature-route views
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+      - name: Native AI provider and user entitlement regression
+        run: php artisan test tests/Feature/NativeAiPracticeV418Test.php tests/Feature/FeatureAccessV406Test.php

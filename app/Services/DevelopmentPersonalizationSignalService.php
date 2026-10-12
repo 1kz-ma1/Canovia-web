@@ -10,12 +10,14 @@ final class DevelopmentPersonalizationSignalService
 {
     public function __construct(
         private readonly PlanCategoryProfileService $profiles,
+        private readonly GitHubSourceEpochService $epochs,
     ) {}
 
     /**
      * @return array{
      *   signal_strength:int,
      *   evidence_fingerprint:string,
+     *   source_signature:string,
      *   evidence:array<int,string>,
      *   connected_repository_count:int,
      *   recent_activity_count:int,
@@ -50,6 +52,12 @@ final class DevelopmentPersonalizationSignalService
             })
             ->values();
 
+        $currentEpochs = $repositories->mapWithKeys(function (PlanArtifact $root): array {
+            $epoch = $this->epochs->current((array) $root->metadata);
+
+            return [(int) $root->id => $epoch];
+        })->filter(fn ($epoch) => $epoch !== null);
+
         $developmentPlanIds = $repositories
             ->pluck('plan_id')
             ->map(fn ($id) => (int) $id)
@@ -69,14 +77,23 @@ final class DevelopmentPersonalizationSignalService
             ? collect()
             : DevelopmentActivityObservation::query()
                 ->whereIn('plan_id', $developmentPlanIds)
+                // Revoked repository observations are historical facts, not
+                // eligible evidence for *current* advanced-support inference.
+                ->whereIn('repository_artifact_id', $repositories->pluck('id')->all())
                 ->where('last_observed_at', '>=', now()->subDays(90))
                 ->get([
+                    'id',
                     'kind',
                     'repository_artifact_id',
+                    'source_epoch',
                     'external_key',
                     'occurred_at',
                     'last_observed_at',
-                ]);
+                ])
+                ->filter(fn (DevelopmentActivityObservation $item) =>
+                    $item->source_epoch !== null
+                    && $currentEpochs->get((int) $item->repository_artifact_id) === $item->source_epoch
+                )->values();
 
         $observations = $longWindowObservations
             ->filter(
@@ -235,7 +252,32 @@ final class DevelopmentPersonalizationSignalService
             },
         ];
 
+        // Live lineage, not just coarse recommendation buckets. A source
+        // disconnect/reconnect, Plan transfer or observation revision must
+        // invalidate the previously materialized developer recommendation.
+        $lineage = [
+            'version' => 1,
+            'actor_id' => (int) $user->id,
+            'repositories' => $repositories->map(fn (PlanArtifact $repo) => [
+                (int) $repo->id,
+                (int) $repo->plan_id,
+                (string) $repo->url,
+                (int) data_get($repo->metadata, 'github_app_connection.installation_id', 0),
+                $this->epochs->current((array) $repo->metadata),
+            ])->sortBy(fn (array $row) => $row[0])->values()->all(),
+            'observations' => $longWindowObservations->map(
+                fn (DevelopmentActivityObservation $item) => [
+                    (int) $item->id,
+                    (int) $item->repository_artifact_id,
+                    (string) $item->source_epoch,
+                    (string) $item->external_key,
+                    $item->last_observed_at?->toIso8601String(),
+                ],
+            )->sortBy(fn (array $row) => $row[0])->values()->all(),
+        ];
+
         return [
+            'source_signature' => hash('sha256', json_encode($lineage, JSON_THROW_ON_ERROR)),
             'signal_strength' => $signalStrength,
             'evidence_fingerprint' => hash(
                 'sha256',

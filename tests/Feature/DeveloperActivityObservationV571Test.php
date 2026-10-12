@@ -107,6 +107,175 @@ class DeveloperActivityObservationV571Test extends TestCase
         );
     }
 
+    public function test_newer_issue_revision_survives_out_of_order_webhooks_and_same_version_conflicts(): void
+    {
+        $this->scenario();
+        $this->fakeIssueSnapshots([
+            ['state' => 'closed', 'updated_at' => '2026-10-08T02:00:00Z'],
+            ['state' => 'open', 'updated_at' => '2026-10-07T01:00:00Z'],
+            ['state' => 'open', 'updated_at' => '2026-10-08T02:00:00Z'],
+        ]);
+
+        $service = app(GitHubDevelopmentObservationService::class);
+        $new = $service->observeDelivery($this->delivery(
+            'issues', [['kind' => 'issue', 'number' => 12]],
+        ));
+        $original = DevelopmentActivityObservation::firstOrFail();
+
+        $old = $service->observeDelivery($this->delivery(
+            'issues', [['kind' => 'issue', 'number' => 12]],
+        ));
+        $equal = $service->observeDelivery($this->delivery(
+            'issues', [['kind' => 'issue', 'number' => 12]],
+        ));
+
+        $this->assertSame(1, $new['observed']);
+        $this->assertSame(0, $old['observed']);
+        $this->assertSame(0, $equal['observed']);
+        $this->assertDatabaseCount('development_activity_observations', 1);
+        $current = $original->fresh();
+        $this->assertSame((int) $original->id, (int) $current->id);
+        $this->assertSame('closed', $current->state);
+        $this->assertSame('2026-10-08 02:00:00', $current->source_updated_at?->utc()->format('Y-m-d H:i:s'));
+        $this->assertDatabaseCount('task_evidences', 0);
+    }
+
+    public function test_stale_bootstrap_cannot_revert_latest_pr_or_resolution(): void
+    {
+        [, , $root] = $this->scenario();
+        $recent = [
+            'kind' => 'pull_request',
+            'identity' => '258',
+            'provider_number' => 258,
+            'state' => 'merged',
+            'sha' => str_repeat('b', 40),
+            'occurred_at' => '2026-10-08T03:00:00Z',
+            'source_updated_at' => '2026-10-08T04:00:00Z',
+        ];
+        $staleBootstrap = [
+            'kind' => 'pull_request',
+            'identity' => '258',
+            'provider_number' => 258,
+            'state' => 'open',
+            'sha' => str_repeat('a', 40),
+            'occurred_at' => '2026-10-07T03:00:00Z',
+            'source_updated_at' => '2026-10-07T03:00:00Z',
+        ];
+        $current = $this->persistFact($root, $recent);
+        $originalOccurredAt = $current->occurred_at?->toIso8601String();
+        $current->update(['resolution_status' => 'ignored']);
+
+        $stale = $this->persistFact($root, $staleBootstrap);
+        $this->assertSame($current->id, $stale->id);
+        $this->assertSame('merged', $stale->state);
+        $this->assertSame(str_repeat('b', 40), $stale->sha);
+        $this->assertSame('ignored', $stale->resolution_status);
+        $this->assertSame($originalOccurredAt, $stale->occurred_at?->toIso8601String());
+
+        // A newer edit is allowed, but it cannot undo a human resolution.
+        $fresh = $this->persistFact($root, [
+            ...$recent,
+            'state' => 'open',
+            'source_updated_at' => '2026-10-09T04:00:00Z',
+        ]);
+        $this->assertSame('open', $fresh->state);
+        $this->assertSame('ignored', $fresh->resolution_status);
+        $this->assertDatabaseCount('development_activity_observations', 1);
+    }
+
+    public function test_deployment_status_same_second_uses_github_status_id(): void
+    {
+        [, , $root] = $this->scenario();
+        $base = [
+            'kind' => 'deployment',
+            'identity' => '777',
+            'provider_number' => 777,
+            'source_updated_at' => '2026-10-08T03:00:00Z',
+            'occurred_at' => '2026-10-08T03:00:00Z',
+            'sha' => str_repeat('a', 40),
+        ];
+
+        $fresh = $this->persistFact($root, [
+            ...$base, 'state' => 'success', 'source_revision_id' => 40,
+        ]);
+        $older = $this->persistFact($root, [
+            ...$base, 'state' => 'pending', 'source_revision_id' => 39,
+        ]);
+        $this->assertSame('success', $older->state);
+
+        $newer = $this->persistFact($root, [
+            ...$base, 'state' => 'failure', 'source_revision_id' => 41,
+        ]);
+        $this->assertSame($fresh->id, $newer->id);
+        $this->assertSame('failure', $newer->state);
+        $this->assertSame(41, $newer->source_revision_id);
+    }
+
+    public function test_branch_uses_fetch_watermark_and_commit_sha_is_immutable(): void
+    {
+        [, , $root] = $this->scenario();
+        $oldSha = str_repeat('a', 40);
+        $newSha = str_repeat('b', 40);
+        $current = $this->persistFact($root, [
+            'kind' => 'branch', 'identity' => 'main', 'state' => 'active',
+            'sha' => $newSha, 'source_updated_at' => '2026-10-08T06:00:00Z',
+            'occurred_at' => '2026-10-08T06:00:00Z',
+        ]);
+        $stale = $this->persistFact($root, [
+            'kind' => 'branch', 'identity' => 'main', 'state' => 'protected',
+            'sha' => $oldSha, 'source_updated_at' => '2026-10-08T05:00:00Z',
+            'occurred_at' => '2026-10-08T05:00:00Z',
+        ]);
+        $this->assertSame($current->id, $stale->id);
+        $this->assertSame($newSha, $stale->sha);
+        $this->assertSame('active', $stale->state);
+
+        $commit = $this->persistFact($root, [
+            'kind' => 'commit', 'identity' => $oldSha, 'state' => 'observed',
+            'sha' => $oldSha, 'ref' => 'main',
+        ]);
+        $replay = $this->persistFact($root, [
+            'kind' => 'commit', 'identity' => $oldSha, 'state' => 'altered',
+            'sha' => $oldSha, 'ref' => 'other-branch',
+        ]);
+        $this->assertSame($commit->id, $replay->id);
+        $this->assertSame('observed', $replay->state);
+        $this->assertSame('main', $replay->ref);
+        $this->assertDatabaseCount('development_activity_observations', 2);
+    }
+
+    public function test_failed_authoritative_fetch_preserves_existing_and_retry_accepts_new_version(): void
+    {
+        $this->scenario();
+        $this->fakeIssueSnapshots([
+            ['state' => 'open', 'updated_at' => '2026-10-07T01:00:00Z'],
+            ['error' => true],
+            ['state' => 'closed', 'updated_at' => '2026-10-08T01:00:00Z'],
+        ]);
+        $service = app(GitHubDevelopmentObservationService::class);
+        $service->observeDelivery($this->delivery(
+            'issues', [['kind' => 'issue', 'number' => 12]],
+        ));
+        $original = DevelopmentActivityObservation::firstOrFail();
+
+        try {
+            $service->observeDelivery($this->delivery(
+                'issues', [['kind' => 'issue', 'number' => 12]],
+            ));
+            $this->fail('An unsuccessful authoritative fetch must fail without updating the DB.');
+        } catch (\RuntimeException) {
+            $this->assertSame('open', $original->fresh()->state);
+            $this->assertDatabaseCount('development_activity_observations', 1);
+        }
+
+        $service->observeDelivery($this->delivery(
+            'issues', [['kind' => 'issue', 'number' => 12]],
+        ));
+        $this->assertSame($original->id, DevelopmentActivityObservation::firstOrFail()->id);
+        $this->assertSame('closed', $original->fresh()->state);
+        $this->assertDatabaseCount('task_evidences', 0);
+    }
+
     public function test_connection_bootstrap_captures_bounded_existing_activity(): void
     {
         [, , $root] = $this->scenario();
@@ -145,6 +314,233 @@ class DeveloperActivityObservationV571Test extends TestCase
         $this->assertStringNotContainsString('PRIVATE ISSUE BODY', $serialized);
         $this->assertStringNotContainsString('PRIVATE COMMIT MESSAGE', $serialized);
         $this->assertStringNotContainsString('private/source.php', $serialized);
+    }
+
+    /**
+     * Supply differing GitHub REST versions for the same provider entity.
+     *
+     * @param array<int,array<string,mixed>> $versions
+     */
+    private function fakeIssueSnapshots(array $versions): void
+    {
+        $next = 0;
+        Http::fake(function (HttpRequest $request) use ($versions, &$next) {
+            $auth = $this->authResponse($request, ['issues' => 'read']);
+            if ($auth !== null) {
+                return $auth;
+            }
+
+            if ($request->method() === 'GET'
+                && $request->url() === 'https://api.github.com/repos/1kz-ma1/HINANEX/issues/12'
+            ) {
+                $version = $versions[$next++] ?? ['error' => true];
+                if ($version['error'] ?? false) {
+                    return Http::response(['message' => 'Transient upstream failure'], 503);
+                }
+
+                return Http::response([
+                    'number' => 12,
+                    'title' => 'PRIVATE ISSUE TITLE',
+                    'body' => 'PRIVATE ISSUE BODY',
+                    'state' => $version['state'],
+                    'updated_at' => $version['updated_at'],
+                    'closed_at' => $version['state'] === 'closed'
+                        ? $version['updated_at'] : null,
+                    'html_url' => 'https://github.com/1kz-ma1/HINANEX/issues/12',
+                ], 200);
+            }
+
+            return Http::response(['message' => 'Unexpected GitHub request'], 500);
+        });
+    }
+
+    private function persistFact(PlanArtifact $root, array $fact): DevelopmentActivityObservation
+    {
+        $method = new \ReflectionMethod(GitHubDevelopmentObservationService::class, 'persist');
+
+        return $method->invoke(
+            app(GitHubDevelopmentObservationService::class),
+            $root,
+            '1kz-ma1/HINANEX',
+            $fact,
+        );
+    }
+
+    public function test_connection_revoked_between_github_fetch_and_observation_commit_is_skipped(): void
+    {
+        [, , $root] = $this->scenario();
+        Http::fake(function (HttpRequest $request) use ($root) {
+            $auth = $this->authResponse($request, ['issues' => 'read']);
+            if ($auth !== null) {
+                return $auth;
+            }
+
+            if ($request->method() === 'GET'
+                && $request->url() === 'https://api.github.com/repos/1kz-ma1/HINANEX/issues/12') {
+                // The service has already selected the connected root.
+                $metadata = (array) $root->fresh()->metadata;
+                $metadata['github_app_connection']['status'] = 'revoked';
+                $root->fresh()->update(['metadata' => $metadata]);
+
+                return Http::response([
+                    'number' => 12,
+                    'title' => 'Old data after disconnect',
+                    'state' => 'closed',
+                    'updated_at' => '2026-10-08T01:00:00Z',
+                    'html_url' => 'https://github.com/1kz-ma1/HINANEX/issues/12',
+                ], 200);
+            }
+
+            return Http::response(['message' => 'Unexpected GitHub request'], 500);
+        });
+
+        $result = app(GitHubDevelopmentObservationService::class)
+            ->observeDelivery($this->delivery(
+                'issues', [['kind' => 'issue', 'number' => 12]],
+            ));
+
+        $this->assertSame(0, $result['observed']);
+        $this->assertSame([], $result['plan_ids']);
+        $this->assertDatabaseCount('development_activity_observations', 0);
+        $this->assertDatabaseCount('task_evidences', 0);
+    }
+
+    public function test_replaced_github_installation_does_not_accept_queued_old_event(): void
+    {
+        [, , $root] = $this->scenario();
+        $stale = $root->fresh();
+        $metadata = (array) $root->metadata;
+        $metadata['github_app_connection']['installation_id'] = 888;
+        $root->update(['metadata' => $metadata]);
+
+        $method = new \ReflectionMethod(GitHubDevelopmentObservationService::class, 'persist');
+        $result = $method->invoke(
+            app(GitHubDevelopmentObservationService::class),
+            $stale,
+            '1kz-ma1/HINANEX',
+            [
+                'kind' => 'issue',
+                'identity' => '12',
+                'provider_number' => 12,
+                'source_updated_at' => '2026-10-08T01:00:00Z',
+                'state' => 'open',
+            ],
+            777,
+        );
+
+        $this->assertNull($result);
+        $this->assertDatabaseCount('development_activity_observations', 0);
+    }
+
+    public function test_github_source_owner_transfer_blocks_inflight_observation_commit(): void
+    {
+        [$plan, , $root] = $this->scenario();
+        $root->load('plan.user');
+        $newOwner = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan->update(['user_id' => $newOwner->id]);
+
+        $method = new \ReflectionMethod(GitHubDevelopmentObservationService::class, 'persist');
+        $result = $method->invoke(
+            app(GitHubDevelopmentObservationService::class),
+            $root,
+            '1kz-ma1/HINANEX',
+            [
+                'kind' => 'issue',
+                'identity' => '12',
+                'state' => 'open',
+                'source_updated_at' => '2026-10-08T01:00:00Z',
+            ],
+            777,
+        );
+
+        $this->assertNull($result);
+        $this->assertDatabaseCount('development_activity_observations', 0);
+    }
+
+    public function test_github_source_epoch_rotates_without_accepting_stale_inflight_or_silently_backfilling_legacy(): void
+    {
+        [$plan, , $root] = $this->scenario();
+        $firstEpoch = (string) Str::uuid();
+        $secondEpoch = (string) Str::uuid();
+        $metadata = (array) $root->metadata;
+        $metadata['github_app_connection']['source_epoch'] = $firstEpoch;
+        $root->update(['metadata' => $metadata]);
+        $root->load('plan.user');
+
+        $sourceRevision = now()->subMinutes(2)->toIso8601String();
+        $fact = [
+            'kind' => 'issue',
+            'identity' => '109',
+            'provider_number' => 109,
+            'state' => 'open',
+            'url' => 'https://github.com/1kz-ma1/HINANEX/issues/109',
+            'occurred_at' => now()->subMinutes(3)->toIso8601String(),
+            'source_updated_at' => $sourceRevision,
+        ];
+        $stored = $this->persistFact($root, $fact);
+        $this->assertSame($firstEpoch, $stored->source_epoch);
+
+        $staleRoot = $root->fresh()->load('plan.user');
+        $metadata['github_app_connection']['source_epoch'] = $secondEpoch;
+        $root->update(['metadata' => $metadata]);
+
+        $method = new \ReflectionMethod(GitHubDevelopmentObservationService::class, 'persist');
+        $stale = $method->invoke(
+            app(GitHubDevelopmentObservationService::class),
+            $staleRoot, '1kz-ma1/HINANEX', $fact, 777,
+        );
+        $this->assertNull($stale);
+        $this->assertSame($firstEpoch, $stored->fresh()->source_epoch);
+
+        // A new REST verification of the SAME GitHub revision may advance
+        // only source provenance, without overriding human Task resolution.
+        $stored->update(['resolution_status' => 'ignored']);
+        $fresh = $method->invoke(
+            app(GitHubDevelopmentObservationService::class),
+            $root->fresh()->load('plan.user'), '1kz-ma1/HINANEX', $fact, 777,
+        );
+        $this->assertSame($stored->id, $fresh->id);
+        $this->assertSame($secondEpoch, $fresh->source_epoch);
+        $this->assertSame('ignored', $fresh->resolution_status);
+        $this->assertDatabaseCount('development_activity_observations', 1);
+    }
+
+    public function test_legacy_connected_root_bootstraps_epoch_on_first_verified_fact_only(): void
+    {
+        [$plan, , $root] = $this->scenario();
+        $root->load('plan.user');
+        $this->assertNull(data_get($root->metadata, 'github_app_connection.source_epoch'));
+
+        $historical = DevelopmentActivityObservation::query()->create([
+            'plan_id' => $plan->id,
+            'repository_artifact_id' => $root->id,
+            'provider' => 'github',
+            'kind' => 'issue',
+            'external_key' => 'github:1kz-ma1/hinanex:issue:legacy',
+            'last_observed_at' => now()->subDays(10),
+            'resolution_status' => 'ignored',
+        ]);
+        $this->assertNull($historical->source_epoch);
+
+        $makeFact = fn (int $n) => [
+            'kind' => 'issue',
+            'identity' => (string) $n,
+            'provider_number' => $n,
+            'state' => 'open',
+            'source_updated_at' => now()->toIso8601String(),
+        ];
+        $first = $this->persistFact($root, $makeFact(110));
+        $firstEpoch = $first->source_epoch;
+        $this->assertNotNull($firstEpoch);
+        $this->assertSame($firstEpoch, data_get(
+            $root->fresh()->metadata, 'github_app_connection.source_epoch',
+        ));
+
+        $second = $this->persistFact($root, $makeFact(111));
+        $this->assertSame($firstEpoch, $second->source_epoch);
+        $this->assertSame('ignored', $historical->fresh()->resolution_status);
+        $this->assertNull($historical->fresh()->source_epoch);
+        $this->assertDatabaseCount('development_activity_observations', 3);
     }
 
     private function scenario(): array

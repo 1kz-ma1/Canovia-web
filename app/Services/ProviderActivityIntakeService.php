@@ -3,12 +3,16 @@
 namespace App\Services;
 
 use App\Data\ProviderExecutionContextData;
+use App\Exceptions\ProviderConnectionRevokedException;
+use App\Models\Plan;
+use App\Models\Task;
 use App\Execution\ExecutionCapability;
 use App\Intelligence\Study\StudyAdaptiveActionService;
 use App\Models\ExecutionActivity;
 use App\Models\ProviderConnection;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Throwable;
 
@@ -104,28 +108,75 @@ final class ProviderActivityIntakeService
                 : [],
         );
 
-        $activity = $this->activities->record(
-            providerKey: (string) $connection->provider_key,
-            capability: $context->capability,
-            type: $type,
-            title: $title,
-            status: $status,
-            metrics: $metrics,
-            metadata: [
-                'intake_schema_version' => '1.0',
-                'provider_connection_id' => (int) $connection->id,
-            ],
-            externalKey: $externalKey,
-            userId: (int) $connection->user_id,
-            startedAt: $startedAt,
-            completedAt: $completedAt,
-            durationSeconds: $durationSeconds,
-        );
+        $linked = DB::transaction(function () use (
+            $connection,
+            $context,
+            $type,
+            $title,
+            $status,
+            $metrics,
+            $externalKey,
+            $startedAt,
+            $completedAt,
+            $durationSeconds,
+        ): ExecutionActivity {
+            // The signature and execution context were verified BEFORE this
+            // transaction. A revoke/ownership change may have committed in
+            // that interval: take fresh row locks and deny before any write.
+            $liveConnection = ProviderConnection::query()
+                ->whereKey($connection->id)
+                ->lockForUpdate()
+                ->first();
 
-        $linked = $this->activities->linkToTask(
-            $activity,
-            $context->task,
-        );
+            if (! $liveConnection
+                || ! $liveConnection->isActive()
+                || (int) $liveConnection->user_id !== (int) $connection->user_id
+                || (string) $liveConnection->public_id !== (string) $connection->public_id
+                || (string) $liveConnection->provider_key !== (string) $connection->provider_key
+                || $context->expiresAt->isPast()) {
+                throw new ProviderConnectionRevokedException(
+                    'Provider execution authorization is no longer valid.',
+                );
+            }
+
+            $livePlan = Plan::query()
+                ->whereKey($context->plan->id)
+                ->lockForUpdate()
+                ->first();
+            $liveTask = Task::query()
+                ->whereKey($context->task->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $livePlan
+                || ! $liveTask
+                || (int) $livePlan->user_id !== (int) $liveConnection->user_id
+                || (int) $liveTask->plan_id !== (int) $livePlan->id) {
+                throw new ProviderConnectionRevokedException(
+                    'Provider execution target is no longer authorized.',
+                );
+            }
+
+            $activity = $this->activities->record(
+                providerKey: (string) $liveConnection->provider_key,
+                capability: $context->capability,
+                type: $type,
+                title: $title,
+                status: $status,
+                metrics: $metrics,
+                metadata: [
+                    'intake_schema_version' => '1.0',
+                    'provider_connection_id' => (int) $liveConnection->id,
+                ],
+                externalKey: $externalKey,
+                userId: (int) $liveConnection->user_id,
+                startedAt: $startedAt,
+                completedAt: $completedAt,
+                durationSeconds: $durationSeconds,
+            );
+
+            return $this->activities->linkToTask($activity, $liveTask);
+        }, 3);
 
         if (
             $context->capability === ExecutionCapability::STUDY_PRACTICE

@@ -27,6 +27,11 @@ return [
     'allowed_origins' => env('CANOVIA_MCP_ALLOWED_ORIGINS', ''),
 
 
+    // Explicit mutually exclusive token verifier: legacy introspection or
+    // approved Auth0 JWT. Unknown values and simultaneous flags fail closed.
+    // Mode alone does NOT turn on any MCP/OAuth/Plan endpoints.
+    'token_verification_driver' => env('CANOVIA_MCP_TOKEN_VERIFICATION_DRIVER', 'introspection'),
+
     // RFC 7662 introspection is a separate disabled component. The real IdP
     // MUST support introspection and return strict iss/aud/sub/client_id/exp
     // claims. Enabling it does not enable the MCP endpoint or grant consent.
@@ -34,6 +39,12 @@ return [
     'introspection_url' => env('CANOVIA_MCP_INTROSPECTION_URL', ''),
     'introspection_client_id' => env('CANOVIA_MCP_INTROSPECTION_CLIENT_ID', ''),
     'introspection_client_secret' => env('CANOVIA_MCP_INTROSPECTION_CLIENT_SECRET', ''),
+
+    // Auth0 signed JWT verifier is an independent OFF-by-default candidate.
+    // This does not switch existing RFC7662 MCP authorization or account linking.
+    // Real ChatGPT registration, actual RS256 token inspection and Plan consent
+    // must be accepted before any staging routing change.
+    'auth0_jwt_verification_enabled' => env('CANOVIA_MCP_AUTH0_JWT_VERIFICATION_ENABLED', false),
 
     // Exact OAuth client identifier approved at the IdP for this connection,
     // including CIMD URL when used. Never infer identity from email.

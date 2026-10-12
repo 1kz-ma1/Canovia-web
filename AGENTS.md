@@ -8,6 +8,10 @@
 - This routing confirmation is **not** approval to provision resources, modify environment variables, deploy, enable OAuth/MCP, change billing, or touch production. Keep staging and production separation and the normal authorization/verification gates.
 - See `docs/development/MCP_IDP_SELECTION_AND_STAGING_POSTGRES_2026_10_09.md` for staging resource and security context.
 
+## Production deployment boundary (owner decision 2026-10-13)
+
+`main` is development integration; `production` is the planned only Render Auto Deploy target. The production branch begins at the last confirmed Live SHA `15abdc9`. Keep Render Auto Deploy **OFF** until the first separately accepted manual deploy and physical iPhone/Web smoke are complete. The 2026-10-08 agent authorization to squash-merge CI-green development PRs applies **only to PRs targeting main**; it is not authorization to merge/promote into `production`, deploy to Render, change Render settings, run Aiven DDL, create backup forks or buy plans. Pin a `release/*` branch at a reviewed `main` SHA **before** the operator Aiven audit. Promotion of that exact release candidate to `production` requires distinct owner approval and complete release verification, using a **merge commit** to retain ancestry. Never promote moving `main` after auditing an earlier SHA. GitHub owner must configure `production` branch rules and required checks before enabling auto deploy. Refer to `docs/CANOVIA_DEVELOPMENT_WORKFLOW.md` and Issue #488.
+
 ## Repository workflow
 
 - Treat the latest `main` of `1kz-ma1/Canovia-web` as the implementation source of truth.

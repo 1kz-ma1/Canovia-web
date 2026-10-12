@@ -30,7 +30,7 @@ See `docs/future/README.md` for the full boundary.
 
 ## Merge policy
 
-**Never push implementation work directly to `main`.** Render can automatically deploy from `main`, so even a low-impact merge is a production-capable action.
+**Never push implementation work directly to `main`.** Develop on `main`; publish to the separately controlled `production` branch. Do not configure Render Auto Deploy against `main`.
 
 Normal workflow:
 
@@ -75,7 +75,7 @@ If verification is insufficient, a conflict remains, required checks are pending
 
 ### Production and emergency exceptions
 
-An agent merge is **not** direct authorization to deploy, roll back, alter a production database, or change production settings. Render may automatically deploy after merging to `main`; monitor/verify deploys separately when possible, and label them unverified otherwise.
+An agent merge into **`main` is not authorization to deploy**, roll back, alter a production database, or change production settings. Production promotion is a separate release and requires an explicit product-owner go/no-go.
 
 Direct updates to `main` remain exceptions only when the user expressly authorizes that specific operation. Emergency changes should still prefer a reviewed PR with an explicit risk summary.
 
@@ -95,11 +95,57 @@ A PR should include:
 
 ## Deploy behavior
 
-Render production deploys from `main`.
+### Controlled production promotion and iOS Web delivery (approved 2026-10-13)
 
-Creating or updating a feature branch must not be treated as production deployment.
+`main` is the fast-moving integration branch. The separate `production` branch
+starts at last verified Render Live SHA `15abdc9de6f24b5250fb255c579d1aa55facaf1a`.
+**Neither a green development PR nor autonomous squash merge into main authorizes production.**
+No direct or force pushes to production.
 
-After the user or agent merges a PR, Render auto-deploy may be monitored separately when requested or when production verification is part of the task.
+Release routine:
+1. Pin exact main SHA and cut a release candidate branch `release/YYYY-MM-DD-<shortsha>` **before any live DB audit**. Freeze release scope and review *all* unshipped paths, migrations, Composer/deployment/startup changes, data/privacy/feature flags, and required CI.
+2. For MySQL migrations, rehearse all pending operations on disposable MySQL 8.0/8.4
+   (including legacy-row retention and repeatability); run the reviewed Mac
+   metadata-only Aiven audit against the **exact chosen source SHA**.
+   Both the restricted Aiven ledger and physical schema must match all migration
+   files; no UNKNOWN, partial-DDL or unexpected pending states.
+3. Independently confirm current Aiven backup, realistic recovery route, and
+   the owner's acceptance of **untested restore risk** on the Free service,
+   plus current effective Render security/session/DB/worker configuration.
+   Snapshot existence is not a successful fork/restore test.
+4. Never audit moving `main` and then promote a different commit. Open a **release/* -> production** PR from the pinned candidate; the workflow rejects a release head that is not an ancestor of current `main`. The PR requires owner
+   production go/no-go, a reviewed diff, and passing **Production Promotion Policy
+   Gate**, **P0 Disposable MySQL Migration Integrity**, **V56.12 Workspace Resume
+   Validation**, and **Production Migration Recovery Validation** where applicable.
+   Promote using a **merge commit**, never squash: retain release/main ancestry so future
+   promotion PRs do not repeatedly reintroduce prior changes.
+5. **First release only:** Render Auto Deploy must remain OFF. Owner changes the
+   watched branch to production via Render dashboard (the connector cannot modify
+   service branch). Confirm Live still points to old SHA, then owner explicitly
+   authorizes one manual deploy to pinned, promoted production SHA. Verify actual
+   Live SHA, successful migrations and health, login/session, Learning, developer
+   event ordering, iOS WKWebView/PWA and desktop smoke.
+6. **After that first release is accepted**, owner enables Render Auto Deploy =
+   commit with `production` as the watched branch. For future updates, the
+   approved pinned release-candidate PR merge is the deliberate deployment trigger. Monitor Live
+   SHA, errors and smoke after every promotion; pause auto deploy during incidents.
+
+**Branch protection requires owner action:** configure GitHub Settings -> Rules ->
+Rulesets (or Branch protection) for `production`: require PR, required CI
+including the production promotion contract and MySQL/Workspace/Recovery checks,
+reviewer approval or equivalent explicit owner release decision, and disallow
+direct/force pushes. This assistant cannot change GitHub administration settings.
+Until protection is verified, **do not enable production Auto Deploy**.
+
+SwiftUI WKWebView loads live hosted Web content, so a Web deploy changes iOS
+experience without an App Store binary update. Include iPhone smoke and
+controlled rollout with every production release. Native Swift code itself
+does **not** change through a Web deploy and requires separate binary distribution.
+A Web image rollback cannot remove additive MySQL columns; never run blind
+migration down, migrate:fresh, or restore over live writes.
+
+Current hold and operator evidence: [Issue #488](https://github.com/1kz-ma1/Canovia-web/issues/488).
+Creating/updating `main` or a feature branch is *not* a production deploy.
 
 ## Why this policy exists
 

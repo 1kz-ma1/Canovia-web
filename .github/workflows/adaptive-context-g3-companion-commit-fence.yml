@@ -1,0 +1,36 @@
+name: Adaptive Context G3 Companion Commit Fence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/CompanionConversationService.php'
+      - 'app/Services/NativeAiPurposeAuthorizationGuard.php'
+      - 'tests/Feature/CompanionAiCommitFenceV05Test.php'
+      - 'tests/Feature/CanoviaCompanionV4115Test.php'
+      - '.github/workflows/adaptive-context-g3-companion-commit-fence.yml'
+
+jobs:
+  companion-post-provider-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/CompanionConversationService.php
+          php -l tests/Feature/CompanionAiCommitFenceV05Test.php
+      - name: G3 revoke or change scope between provider and Companion commit
+        run: php artisan test tests/Feature/CompanionAiCommitFenceV05Test.php
+      - name: Companion interaction, candidate review and current authorization
+        run: php artisan test tests/Feature/CanoviaCompanionV4115Test.php tests/Feature/NativeAiPurposeGrantFenceV05Test.php

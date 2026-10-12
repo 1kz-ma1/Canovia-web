@@ -140,7 +140,10 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
                         continue;
                     }
 
-                    $returns->sync($plan, $task, $artifact);
+                    $returnSync = $returns->sync($plan, $task, $artifact);
+                    if ((int) ($returnSync['evidence_count'] ?? 0) <= 0) {
+                        continue; // Connection or link revoked during GitHub fetch.
+                    }
                     $syncedTasks++;
                     $syncedPlanIds[(int) $plan->id] = true;
                 }

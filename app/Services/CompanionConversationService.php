@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\FeatureKey;
+use App\Exceptions\NativeAiExecutionException;
 use App\Models\CompanionMessage;
 use App\Models\CompanionMutationCandidate;
 use App\Models\CompanionThread;
@@ -18,6 +19,7 @@ class CompanionConversationService
 {
     public function __construct(
         private readonly NativeAiGateway $nativeAi,
+        private readonly NativeAiPurposeAuthorizationGuard $purposeGuard,
         private readonly CompanionContextService $context,
         private readonly CompanionContinuityService $continuity,
         private readonly AiCapacityService $capacity,
@@ -123,6 +125,51 @@ class CompanionConversationService
         );
 
         return DB::transaction(function () use ($thread, $user, $userMessage, $result, $plan, $task, $contextSnapshot) {
+            // The provider returned a valid result, but its entitlement and
+            // selected Context may have changed after the gateway's final check.
+            // Lock the durable targets and fail closed before writing AI-derived
+            // assistant text, mutation proposals or Future Memories.
+            $liveThread = CompanionThread::query()
+                ->whereKey($thread->id)
+                ->lockForUpdate()
+                ->first();
+
+            $targetChanged = ! $liveThread
+                || (int) $liveThread->user_id !== (int) $user->id
+                || (int) $liveThread->plan_id !== (int) ($plan?->id ?? 0)
+                || (int) $liveThread->task_id !== (int) ($task?->id ?? 0)
+                || $liveThread->status !== CompanionThread::STATUS_ACTIVE;
+
+            if ($targetChanged) {
+                throw new NativeAiExecutionException(
+                    'AIの応答中に会話の対象が変更されました。再度確認してください。',
+                    'native_ai_target_changed',
+                    (int) $result['run_id'],
+                );
+            }
+
+            if ($plan) {
+                Plan::query()->whereKey($plan->id)->lockForUpdate()->first();
+            }
+            if ($task) {
+                Task::query()->whereKey($task->id)->lockForUpdate()->first();
+            }
+
+            $denied = $this->purposeGuard->failure(
+                (int) $user->id,
+                $plan?->id,
+                $task?->id,
+                FeatureKey::CanoviaCompanion,
+            );
+
+            if ($denied !== null) {
+                throw new NativeAiExecutionException(
+                    'AIの応答を保存する現在の権限を確認できませんでした。再度確認してください。',
+                    $denied,
+                    (int) $result['run_id'],
+                );
+            }
+
             $existingAssistant = CompanionMessage::query()
                 ->where('companion_thread_id', $thread->id)
                 ->where('role', 'assistant')

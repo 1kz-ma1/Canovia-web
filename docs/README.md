@@ -1,5 +1,11 @@
 # Canovia documentation index (2026-10-08)
 
+## Adaptive Context Pipeline v0.5 — architecture review (2026-10-12)
+
+- [v0.5 architecture review candidate](development/ADAPTIVE_CONTEXT_PIPELINE_V05_ARCHITECTURE_REVIEW_2026_10_12.md): Shared Core + Domain Pipelines, Facts / Context / Capability contracts, policy and decisions. **Review proposal; not a runtime or billing change.**
+- [v0.5 non-destructive migration and acceptance plan](development/ADAPTIVE_CONTEXT_PIPELINE_V05_MIGRATION_ACCEPTANCE_2026_10_12.md): existing V53/V55/V58 reuse, phased gates, risk and security tests. **Not an active implementation backlog.**
+- [v0.5 G3 exit audit and current P0 evidence](development/ADAPTIVE_CONTEXT_PIPELINE_V05_G3_EXIT_AUDIT_2026_10_12.md): G3 source-to-derivative routes, merged guards, remaining high-risk commit/source revocation gaps and **conditional, not-closed exit status**.\n- [v0.5 Phase 0 static baseline audit](development/ADAPTIVE_CONTEXT_PIPELINE_V05_PHASE0_STATIC_AUDIT_2026_10_12.md): verified code paths, G1–G8 risk distinctions and prioritized A20/A01/A06/A04 regression gates. **Static only; runtime and CI results are not certified.**
+
 ## Parallel execution lanes (2026-10-09)
 
 - [Parallel development operating model](development/PARALLEL_DEVELOPMENT_OPERATING_MODEL.md): lane ownership, concurrency limits, branch/worktree isolation, shared contracts, PR integration and verification vocabulary.
@@ -8,6 +14,7 @@
 
 ## MCP staging and public-release readiness (2026-10-09)
 
+- [ChatGPT MCP Phase 1 Development-only read acceptance](development/MCP_CHATGPT_PHASE1_DEVELOPMENT_READ_2026_10_11.md): approved implementation scope, OAuth Tool declaration, Auth0/JWT gating, and real ChatGPT E2E proof still required.
 - [Closed staging synthetic Plan/Task read fixture](development/MCP_STAGING_SYNTHETIC_READ_FIXTURE_2026_10_09.md): operator-only fixed sample Plan; no live OAuth/ChatGPT access yet.
 - [Final pre-publication environment and billing checklist](development/RELEASE_ENVIRONMENT_BILLING_READINESS_2026_10_09.md): owner defers paid upgrades until needed and reviews pricing, backup, mail and session safety before public launch.
 

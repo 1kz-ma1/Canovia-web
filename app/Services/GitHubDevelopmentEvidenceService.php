@@ -18,6 +18,8 @@ final class GitHubDevelopmentEvidenceService
         private readonly GitHubWorkflowService $workflow,
         private readonly TaskEvidenceService $evidence,
         private readonly FeatureAccessService $access,
+        private readonly GitHubTaskEvidenceCommitGuard $commitGuard,
+        private readonly GitHubSourceEpochService $epochs,
     ) {}
 
     /**
@@ -78,11 +80,19 @@ final class GitHubDevelopmentEvidenceService
 
         $snapshot = $this->authoritativeSnapshot($repoFullName, $target);
 
-        return $this->recordTargetEvidence(
+        $repository?->loadMissing('plan');
+
+        return $this->commitGuard->execute(
             $task,
             [(int) $artifact->id],
-            $target,
-            $snapshot,
+            $repoFullName,
+            (int) data_get($repository?->metadata, 'github_app_connection.installation_id', 0),
+            $repository?->plan?->user_id === null
+                ? null : (int) $repository->plan->user_id,
+            fn (Task $liveTask, array $validIds, PlanArtifact $lockedRoot) => $this->recordTargetEvidence(
+                $liveTask, $validIds, $target, $snapshot, $lockedRoot,
+            ),
+            $this->epochs->current((array) $repository?->metadata),
         );
     }
 
@@ -153,6 +163,19 @@ final class GitHubDevelopmentEvidenceService
 
         if ($connectedPlanIds->isEmpty()) {
             return $this->emptyCounts();
+        }
+
+        $epochByPlan = [];
+        foreach ($artifacts as $candidate) {
+            $parsed = $this->workflow->parseUrl((string) $candidate->url);
+            if (($parsed['kind'] ?? null) === 'repository'
+                && (int) data_get($candidate->metadata, 'github_app_connection.installation_id', 0)
+                    === $installationId
+                && data_get($candidate->metadata, 'github_app_connection.status') === 'connected') {
+                $epochByPlan[(int) $candidate->plan_id] = $this->epochs->current(
+                    (array) $candidate->metadata,
+                );
+            }
         }
 
         $counts = $this->emptyCounts();
@@ -232,11 +255,18 @@ final class GitHubDevelopmentEvidenceService
                 $task = $link['task'];
                 $artifactIds = $link['artifact_ids'];
 
-                $evidence = $this->recordTargetEvidence(
+                $sourcePlan = $matched->firstWhere('plan_id', $task->plan_id)?->plan;
+                $evidence = $this->commitGuard->execute(
                     $task,
                     $artifactIds,
-                    $target,
-                    $snapshot,
+                    $repoFullName,
+                    $installationId,
+                    $sourcePlan?->user_id === null
+                        ? null : (int) $sourcePlan->user_id,
+                    fn (Task $liveTask, array $validIds, PlanArtifact $lockedRoot) => $this->recordTargetEvidence(
+                        $liveTask, $validIds, $target, $snapshot, $lockedRoot,
+                    ),
+                    $epochByPlan[(int) $task->plan_id] ?? null,
                 );
 
                 if (! $evidence) {
@@ -478,6 +508,7 @@ final class GitHubDevelopmentEvidenceService
         array $artifactIds,
         array $target,
         array $snapshot,
+        ?PlanArtifact $lockedRoot = null,
     ): ?\App\Models\TaskEvidence {
         $kind = (string) ($target['kind'] ?? '');
 
@@ -497,6 +528,7 @@ final class GitHubDevelopmentEvidenceService
                 $artifactIds,
                 $target,
                 $snapshot,
+                $lockedRoot,
             ),
             'commit' => $this->recordCommit(
                 $task,
@@ -598,14 +630,21 @@ final class GitHubDevelopmentEvidenceService
         array $artifactIds,
         array $target,
         array $snapshot,
+        ?PlanArtifact $lockedRoot = null,
     ): ?\App\Models\TaskEvidence {
         $branchSnapshot = (array) ($snapshot['branch_snapshot'] ?? []);
         if (is_array($branchSnapshot['branch'] ?? null)) {
-            $this->recordBranch(
-                $task,
-                $artifactIds,
-                $branchSnapshot,
-            );
+            $branch = $this->recordBranch($task, $artifactIds, $branchSnapshot);
+            if ($branch !== null && $lockedRoot !== null) {
+                $epoch = $this->epochs->current((array) $lockedRoot->metadata);
+                if ($epoch !== null) {
+                    $branch->update(['metadata' => [
+                        ...(array) $branch->metadata,
+                        'github_source_epoch' => $epoch,
+                        'github_repository_artifact_id' => (int) $lockedRoot->id,
+                    ]]);
+                }
+            }
         }
 
         $commitSnapshot = (array) ($snapshot['commit_snapshot'] ?? []);

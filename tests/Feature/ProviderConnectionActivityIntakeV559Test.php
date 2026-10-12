@@ -3,6 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\EvidenceSource;
+use App\Exceptions\ProviderConnectionRevokedException;
+use App\Services\ProviderActivityIntakeService;
+use App\Services\ProviderExecutionContextService;
+use App\Services\ProviderConnectionService;
 use App\Execution\ExecutionCapability;
 use App\Intelligence\Study\StudyPlanIntelligenceService;
 use App\Models\ExecutionActivity;
@@ -207,6 +211,204 @@ class ProviderConnectionActivityIntakeV559Test extends TestCase
         );
     }
 
+    public function test_different_actors_can_ingest_same_provider_local_key_without_overwriting(): void
+    {
+        [$firstUser, $firstPlan, $firstTask] = $this->studyContext();
+        [$secondUser, $secondPlan, $secondTask] = $this->studyContext();
+        [$firstConnection, $firstSecret] = $this->createConnection($firstUser);
+        [$secondConnection, $secondSecret] = $this->createConnection($secondUser);
+
+        $firstContext = $this->issueContext(
+            $firstUser, $firstPlan, $firstTask, $firstConnection,
+        );
+        $secondContext = $this->issueContext(
+            $secondUser, $secondPlan, $secondTask, $secondConnection,
+        );
+        $sharedKey = 'provider-session-shared-across-users';
+
+        $firstResponse = $this->signedActivityRequest(
+            $firstConnection,
+            $firstSecret,
+            $this->practicePayload($firstContext, $sharedKey, 72),
+        )->assertStatus(202);
+        $firstId = (int) $firstResponse->json('activity_id');
+
+        $secondResponse = $this->signedActivityRequest(
+            $secondConnection,
+            $secondSecret,
+            $this->practicePayload($secondContext, $sharedKey, 91),
+        )->assertStatus(202);
+        $secondId = (int) $secondResponse->json('activity_id');
+
+        $this->assertNotSame($firstId, $secondId);
+        $this->assertDatabaseCount('execution_activities', 2);
+        $this->assertDatabaseCount('task_evidences', 2);
+
+        $first = ExecutionActivity::query()->findOrFail($firstId);
+        $second = ExecutionActivity::query()->findOrFail($secondId);
+        $this->assertSame((int) $firstUser->id, (int) $first->user_id);
+        $this->assertSame((int) $firstPlan->id, (int) $first->plan_id);
+        $this->assertSame((int) $firstTask->id, (int) $first->task_id);
+        $this->assertSame(72, data_get($first->metrics, 'score_percent'));
+        $this->assertSame((int) $secondUser->id, (int) $second->user_id);
+        $this->assertSame((int) $secondPlan->id, (int) $second->plan_id);
+        $this->assertSame((int) $secondTask->id, (int) $second->task_id);
+        $this->assertSame(91, data_get($second->metrics, 'score_percent'));
+        $this->assertNotSame($first->external_key, $second->external_key);
+
+        // Replaying the first actor's provider-local key is still idempotent.
+        $replay = $this->signedActivityRequest(
+            $firstConnection,
+            $firstSecret,
+            $this->practicePayload($firstContext, $sharedKey, 74),
+        )->assertStatus(202);
+        $this->assertSame($firstId, (int) $replay->json('activity_id'));
+        $this->assertDatabaseCount('execution_activities', 2);
+        $this->assertDatabaseCount('task_evidences', 2);
+        $this->assertSame(
+            74,
+            data_get(ExecutionActivity::query()->findOrFail($firstId)->metrics, 'score_percent'),
+        );
+        $this->assertSame(
+            91,
+            data_get(ExecutionActivity::query()->findOrFail($secondId)->metrics, 'score_percent'),
+        );
+    }
+
+    public function test_same_actor_different_connections_have_separate_event_identities(): void
+    {
+        [$user, $plan, $task] = $this->studyContext();
+        [$firstConnection, $firstSecret] = $this->createConnection($user, 'Primary');
+        [$secondConnection, $secondSecret] = $this->createConnection($user, 'Secondary');
+        $firstContext = $this->issueContext($user, $plan, $task, $firstConnection);
+        $secondContext = $this->issueContext($user, $plan, $task, $secondConnection);
+
+        $first = $this->signedActivityRequest(
+            $firstConnection,
+            $firstSecret,
+            $this->practicePayload($firstContext, 'same-local-session', 60),
+        )->assertStatus(202);
+        $second = $this->signedActivityRequest(
+            $secondConnection,
+            $secondSecret,
+            $this->practicePayload($secondContext, 'same-local-session', 80),
+        )->assertStatus(202);
+
+        $this->assertNotSame(
+            (int) $first->json('activity_id'),
+            (int) $second->json('activity_id'),
+        );
+        $this->assertDatabaseCount('execution_activities', 2);
+        $this->assertDatabaseCount('task_evidences', 2);
+    }
+
+    public function test_matching_legacy_activity_rekeys_without_losing_id_or_evidence(): void
+    {
+        [$firstUser, $firstPlan, $firstTask] = $this->studyContext();
+        [$secondUser, $secondPlan, $secondTask] = $this->studyContext();
+        [$firstConnectionId, $firstSecret] = $this->createConnection($firstUser);
+        [$secondConnectionId, $secondSecret] = $this->createConnection($secondUser);
+        $firstConnection = ProviderConnection::query()
+            ->where('public_id', $firstConnectionId)
+            ->firstOrFail();
+
+        $original = ExecutionActivity::query()->create([
+            'provider_key' => ExecutionLaunchResolver::VALIDATION_STUDY_PRACTICE_PROVIDER,
+            'external_key' => 'legacy-shared-activity-key',
+            'user_id' => (int) $firstUser->id,
+            'capability' => ExecutionCapability::STUDY_PRACTICE,
+            'type' => 'study_practice_completed',
+            'title' => 'Historical external practice',
+            'status' => 'completed',
+            'metrics' => ['score_percent' => 65],
+            'metadata' => [
+                'intake_schema_version' => '1.0',
+                'provider_connection_id' => (int) $firstConnection->id,
+            ],
+        ]);
+        $original = app(\App\Services\ExecutionActivityService::class)
+            ->linkToTask($original, $firstTask);
+        $originalEvidenceId = (int) $original->task_evidence_id;
+
+        $secondContext = $this->issueContext(
+            $secondUser, $secondPlan, $secondTask, $secondConnectionId,
+        );
+        $secondResponse = $this->signedActivityRequest(
+            $secondConnectionId,
+            $secondSecret,
+            $this->practicePayload($secondContext, 'legacy-shared-activity-key', 88),
+        )->assertStatus(202);
+
+        // A colliding second actor cannot take over the historical row.
+        $this->assertNotSame((int) $original->id, (int) $secondResponse->json('activity_id'));
+        $this->assertSame(
+            (int) $firstUser->id,
+            (int) ExecutionActivity::query()->findOrFail($original->id)->user_id,
+        );
+        $this->assertSame(
+            'legacy-shared-activity-key',
+            ExecutionActivity::query()->findOrFail($original->id)->external_key,
+        );
+
+        $firstContext = $this->issueContext(
+            $firstUser, $firstPlan, $firstTask, $firstConnectionId,
+        );
+        $firstResponse = $this->signedActivityRequest(
+            $firstConnectionId,
+            $firstSecret,
+            $this->practicePayload($firstContext, 'legacy-shared-activity-key', 90),
+        )->assertStatus(202);
+        $this->assertSame((int) $original->id, (int) $firstResponse->json('activity_id'));
+        $updated = ExecutionActivity::query()->findOrFail($original->id);
+        $this->assertSame($originalEvidenceId, (int) $updated->task_evidence_id);
+        $this->assertStringStartsWith('actor:v2:', (string) $updated->external_key);
+        $this->assertSame(90, data_get($updated->metrics, 'score_percent'));
+        $this->assertDatabaseCount('execution_activities', 2);
+        $this->assertDatabaseCount('task_evidences', 2);
+    }
+
+    public function test_rejected_task_reassociation_rolls_back_activity_update(): void
+    {
+        [$user, $plan, $task] = $this->studyContext();
+        [$connectionId, $secret] = $this->createConnection($user);
+        $originalContext = $this->issueContext($user, $plan, $task, $connectionId);
+
+        $first = $this->signedActivityRequest(
+            $connectionId,
+            $secret,
+            $this->practicePayload($originalContext, 'reassociation-rejected-key', 65),
+        )->assertStatus(202);
+        $firstId = (int) $first->json('activity_id');
+        $firstEvidenceId = (int) $first->json('evidence_id');
+
+        // Preserve the original practice classification so Provider selection
+        // is valid; only the Task identity differs for this guard test.
+        $differentTask = $task->replicate();
+        $differentTask->save();
+        $differentContext = $this->issueContext(
+            $user, $plan, $differentTask, $connectionId,
+        );
+
+        $this->signedActivityRequest(
+            $connectionId,
+            $secret,
+            $this->practicePayload($differentContext, 'reassociation-rejected-key', 99),
+        )
+            ->assertStatus(422)
+            ->assertJson(['status' => 'invalid_activity']);
+
+        $activity = ExecutionActivity::query()->findOrFail($firstId);
+        $this->assertSame((int) $task->id, (int) $activity->task_id);
+        $this->assertSame($firstEvidenceId, (int) $activity->task_evidence_id);
+        $this->assertSame(65, data_get($activity->metrics, 'score_percent'));
+        $this->assertSame(
+            65,
+            data_get(TaskEvidence::query()->findOrFail($firstEvidenceId)->metadata, 'score_percent'),
+        );
+        $this->assertDatabaseCount('execution_activities', 1);
+        $this->assertDatabaseCount('task_evidences', 1);
+    }
+
     public function test_invalid_signature_and_stale_timestamp_are_rejected_before_activity_persistence(): void
     {
         [$user, $plan, $task] = $this->studyContext();
@@ -388,6 +590,52 @@ class ProviderConnectionActivityIntakeV559Test extends TestCase
             ->assertStatus(409);
 
         $this->assertDatabaseCount('execution_activities', 0);
+    }
+
+    public function test_revoked_connection_cannot_commit_using_previously_valid_context(): void
+    {
+        [$user, $plan, $task] = $this->studyContext();
+        [$publicId] = $this->createConnection($user);
+        $issued = $this->issueContext($user, $plan, $task, $publicId);
+        $connection = ProviderConnection::where('public_id', $publicId)->firstOrFail();
+        $resolved = app(ProviderExecutionContextService::class)->resolve($issued, $connection);
+
+        app(ProviderConnectionService::class)->revoke($connection);
+        $this->assertTrue($connection->isActive());
+
+        try {
+            app(ProviderActivityIntakeService::class)->accept(
+                $connection, $resolved,
+                $this->practicePayload($issued, 'revoked-preflight', 75)['activity'],
+            );
+            $this->fail('Revoked connection accepted a stale context.');
+        } catch (ProviderConnectionRevokedException) {
+            $this->assertDatabaseCount('execution_activities', 0);
+            $this->assertDatabaseCount('task_evidences', 0);
+        }
+    }
+
+    public function test_plan_transfer_before_provider_commit_denies_stale_context(): void
+    {
+        [$user, $plan, $task] = $this->studyContext();
+        [$publicId] = $this->createConnection($user);
+        $issued = $this->issueContext($user, $plan, $task, $publicId);
+        $connection = ProviderConnection::where('public_id', $publicId)->firstOrFail();
+        $resolved = app(ProviderExecutionContextService::class)->resolve($issued, $connection);
+
+        $newOwner = User::factory()->create();
+        $plan->update(['user_id' => $newOwner->id]);
+
+        try {
+            app(ProviderActivityIntakeService::class)->accept(
+                $connection, $resolved,
+                $this->practicePayload($issued, 'transferred-preflight', 81)['activity'],
+            );
+            $this->fail('Transferred Plan accepted a stale context.');
+        } catch (ProviderConnectionRevokedException) {
+            $this->assertDatabaseCount('execution_activities', 0);
+            $this->assertDatabaseCount('task_evidences', 0);
+        }
     }
 
     private function createConnection(

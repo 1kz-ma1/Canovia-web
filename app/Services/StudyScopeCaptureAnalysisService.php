@@ -8,6 +8,7 @@ use App\Models\InboxItem;
 use App\Models\Plan;
 use App\Models\StudyScopeCapture;
 use DateTimeImmutable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
@@ -15,6 +16,7 @@ final class StudyScopeCaptureAnalysisService
 {
     public function __construct(
         private readonly NativeAiGateway $nativeAi,
+        private readonly StudyScopeCaptureCommitFence $commitFence,
     ) {}
 
     /**
@@ -34,10 +36,7 @@ final class StudyScopeCaptureAnalysisService
             throw new RuntimeException('学習範囲の元ファイルが見つかりません。');
         }
 
-        $capture->update([
-            'status' => 'captured',
-            'failure_code' => null,
-        ]);
+        $sourceSignature = $this->commitFence->prepare($capture, $plan, $userId);
 
         $prompt = implode("\n", [
             'あなたはCanoviaのStudy Scope Capture抽出器です。',
@@ -85,12 +84,9 @@ final class StudyScopeCaptureAnalysisService
                 featureKey: FeatureKey::StudyScopeCapture,
             );
         } catch (NativeAiExecutionException $exception) {
-            $capture->update([
-                'status' => 'failed',
-                'native_ai_run_id' => $exception->runId,
-                'failure_code' => mb_substr($exception->errorCode, 0, 80),
-                'analyzed_at' => now(),
-            ]);
+            $this->commitFence->recordFailureIfCurrent(
+                $capture, $plan, $userId, $sourceSignature, $exception,
+            );
 
             throw $exception;
         }
@@ -118,21 +114,30 @@ final class StudyScopeCaptureAnalysisService
         $examDate = $this->normalizedDate($data['exam_date'] ?? null);
         $overallConfidence = max(0, min(100, (int) ($data['overall_confidence'] ?? 0)));
 
-        $capture->update([
-            'status' => 'review',
-            'native_ai_run_id' => (int) $result['run_id'],
-            'exam_title' => $examTitle,
-            'exam_date_text' => $examDateText,
-            'exam_date' => $examDate,
-            'draft_data' => [
-                'items' => $items,
-                'ambiguities' => $ambiguities,
-            ],
-            'confidence' => round($overallConfidence / 100, 4),
-            'extraction_version' => 'study_scope_v1',
-            'failure_code' => null,
-            'analyzed_at' => now(),
-        ]);
+        DB::transaction(function () use (
+            $capture, $plan, $userId, $sourceSignature, $result,
+            $examTitle, $examDateText, $examDate, $items, $ambiguities, $overallConfidence,
+        ): void {
+            $liveCapture = $this->commitFence->assertCanCommit(
+                $capture, $plan, $userId, $sourceSignature, (int) $result['run_id'],
+            );
+
+            $liveCapture->update([
+                'status' => 'review',
+                'native_ai_run_id' => (int) $result['run_id'],
+                'exam_title' => $examTitle,
+                'exam_date_text' => $examDateText,
+                'exam_date' => $examDate,
+                'draft_data' => [
+                    'items' => $items,
+                    'ambiguities' => $ambiguities,
+                ],
+                'confidence' => round($overallConfidence / 100, 4),
+                'extraction_version' => 'study_scope_v1',
+                'failure_code' => null,
+                'analyzed_at' => now(),
+            ]);
+        }, 3);
 
         return [
             'run_id' => (int) $result['run_id'],

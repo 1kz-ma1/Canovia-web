@@ -71,6 +71,32 @@ while true; do
     sleep "$migration_retry_delay"
 done
 
+# Opt-in offline, secretless Auth0 wiring report. Never opens any route,
+# contacts Auth0 or returns configured client IDs, secrets, URLs or keys.
+if [ "$isolated_staging" = "true" ] \
+    && [ "${CANOVIA_STAGING_VERIFY_AUTH0_WIRING_ON_START:-false}" = "true" ]; then
+    # Do not echo provider credentials, errors, or raw Laravel output.
+    # The CLI prints only a static allowlist of check identifiers.
+    if failed_codes="$(php artisan canovia:mcp-auth0-sealed-wiring-check --blocked-codes 2>/dev/null)"; then
+        echo "MCP isolated staging Auth0 wiring: configuration ready (not OAuth proof)"
+    else
+        case "$failed_codes" in
+            ""|*[!a-z_,]*)
+                echo "MCP isolated staging Auth0 wiring: blocked (details suppressed)" >&2
+                ;;
+            *)
+                # Bounded, characters-only codes from the fixed PHP allowlist.
+                if [ "${#failed_codes}" -le 512 ]; then
+                    echo "MCP isolated staging Auth0 wiring: blocked checks=$failed_codes" >&2
+                else
+                    echo "MCP isolated staging Auth0 wiring: blocked (details suppressed)" >&2
+                fi
+                ;;
+        esac
+        exit 1
+    fi
+fi
+
 # On-demand, staging-only synthetic account creation occurs strictly
 # after migrations and before HTTP startup. Both approval switches and
 # the private password are checked by the staging entrypoint and Artisan.

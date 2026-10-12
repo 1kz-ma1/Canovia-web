@@ -308,7 +308,13 @@
         </section>
     @endif
 
-    @if ($plan->tasks->isNotEmpty())
+    @if ($plan->tasks->isNotEmpty() && ($planCategoryProfile->key ?? null) === 'study')
+        <section class="mb-8 page-card p-4 sm:p-5" data-study-plan-workspace-route>
+            <h2 class="text-base font-semibold text-slate-100">学習の現在地</h2>
+            <p class="mt-2 text-sm leading-6 text-slate-300">演習の継続・学習履歴・次の行動は、学習Workspaceにまとめています。</p>
+            <a href="{{ route('workspace.study.index') }}" class="btn-primary mt-3 inline-flex min-h-11 items-center">学習Workspaceを開く →</a>
+        </section>
+    @elseif ($plan->tasks->isNotEmpty())
     <section class="mb-8 page-card roadmap-shell p-4 sm:p-6">
         <div class="mb-5 flex flex-wrap items-start justify-between gap-4">
             <div>

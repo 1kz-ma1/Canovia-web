@@ -1,0 +1,41 @@
+name: MCP JWT Staging OAuth Preflight
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/McpStagingProviderPreflightService.php'
+      - 'tests/Feature/McpStagingProviderPreflightTest.php'
+      - '.github/workflows/mcp-jwt-staging-preflight.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  mcp-jwt-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+      - name: Install pinned PHP dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+      - name: Lint staging preflight and regression
+        run: |
+          php -l app/Services/McpStagingProviderPreflightService.php
+          php -l tests/Feature/McpStagingProviderPreflightTest.php
+      - name: Test legacy introspection and Auth0 JWT preflight
+        env:
+          APP_ENV: testing
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          SESSION_DRIVER: array
+          CACHE_STORE: array
+        run: |
+          php artisan test tests/Feature/McpStagingProviderPreflightTest.php tests/Feature/McpAuth0JwtProviderRoutingTest.php --colors=never

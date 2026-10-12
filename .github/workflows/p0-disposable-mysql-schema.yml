@@ -2,10 +2,11 @@ name: P0 Disposable MySQL Migration Integrity
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, production]
     paths:
       - 'database/migrations/**'
       - 'tests/Feature/ProductionMysqlSchemaP0Test.php'
+      - 'tests/Feature/NextReleaseMysqlSourceRevisionMigrationTest.php'
       - 'scripts/sql/p0_mysql_readonly_schema_inventory.sql'
       - 'scripts/ci/p0_mysql_readonly_schema_inventory_check.php'
       - 'scripts/ci/p0_mysql_inventory_offline_triage.py'
@@ -17,6 +18,7 @@ on:
       - 'scripts/ci/p0_mysql_disposable_restore_smoke.sh'
       - 'scripts/ops/p0_mysql_readonly_preflight.php'
       - 'scripts/ops/p0_mysql_operator_select_only_collect.sh'
+      - 'docs/development/LEARNING_RELEASE_488_PREDEPLOY_REVIEW_2026_10_12.md'
       - 'scripts/ci/p0_mysql_metadata_grants_guard.py'
       - 'tests/ci/test_p0_mysql_metadata_grants_guard.py'
       - 'scripts/ci/p0_mysql_metadata_visibility_smoke.sh'
@@ -27,6 +29,10 @@ on:
       - 'tests/ci/test_p0_mysql_select_only_data_preflight_import.py'
       - 'scripts/sql/p0_mysql_disposable_full_schema_fingerprint.sql'
       - 'tests/ci/test_p0_mysql_full_ledger_offline_check.py'
+      - 'tests/ci/test_release_488_mysql_ledger_gate.py'
+      - 'scripts/ci/release_488_mysql_ledger_gate.py'
+      - 'scripts/sql/release_488_mysql_schema_snapshot.sql'
+      - 'scripts/ops/p0_mysql_operator_select_only_collect.sh'
       - '.github/workflows/p0-disposable-mysql-schema.yml'
   workflow_dispatch:
 
@@ -102,12 +108,19 @@ jobs:
           php -l database/migrations/2026_10_08_230000_create_learning_answer_evaluation_adjustments.php
           php -l database/migrations/2026_10_09_235959_reconcile_p0_mysql_applied_constraints.php
           php -l tests/Feature/ProductionMysqlSchemaP0Test.php
+          php -l database/migrations/2026_10_12_010000_add_source_revision_to_development_activity_observations.php
+          php -l database/migrations/2026_10_13_021000_add_source_epoch_to_development_activity_observations.php
+          php -l tests/Feature/NextReleaseMysqlSourceRevisionMigrationTest.php
       - name: Verify offline schema and migration-ledger decision matrix
         run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_inventory_offline_triage.py' -v
       - name: Verify operator-local MySQL TSV import boundary and error redaction
         run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_inventory_tsv_import.py' -v
       - name: Verify full Laravel migration ledger offline safety and redaction
         run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_full_ledger_offline_check.py' -v
+      - name: Verify exact #488 pending ledger, schema coherence, and no-secret output
+        run: |
+          python3 -m unittest discover -s tests/ci -p 'test_release_488_mysql_ledger_gate.py' -v
+          bash -n scripts/ops/p0_mysql_operator_select_only_collect.sh
       - name: Validate the operator-only read-only collector without any connection
         run: |
           set -euo pipefail
@@ -136,6 +149,31 @@ jobs:
         run: php artisan test tests/Feature/ProductionMysqlSchemaP0Test.php --fail-on-skipped
       - name: Final MySQL migration rerun after interrupted-DDL recovery
         run: php artisan migrate --force --no-interaction
+      - name: Rehearse both source observation migrations preserving legacy rows (disposable MySQL only)
+        run: php artisan test tests/Feature/NextReleaseMysqlSourceRevisionMigrationTest.php --fail-on-skipped
+      - name: Confirm Laravel ledger remains idempotent after additive schema upgrade
+        run: php artisan migrate --force --no-interaction
+      - name: Check #488 metadata-only SQL against disposable migrated MySQL
+        env:
+          MYSQL_PWD: ci-only-ephemeral-password
+        run: |
+          set -euo pipefail
+          scratch="$(mktemp -d)"
+          trap 'rm -rf -- "$scratch"' EXIT
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=canovia_ci --database=canovia_p0_ci \
+            --batch --raw --skip-column-names \
+            < scripts/sql/p0_mysql_readonly_full_migration_ledger.sql \
+            > "$scratch/ledger.tsv"
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=canovia_ci --database=canovia_p0_ci \
+            --batch --raw --skip-column-names \
+            < scripts/sql/release_488_mysql_schema_snapshot.sql \
+            > "$scratch/schema.tsv"
+          python3 scripts/ci/release_488_mysql_ledger_gate.py \
+            --ledger "$scratch/ledger.tsv" --schema "$scratch/schema.tsv" \
+            | python3 -c 'import json,sys; x=json.load(sys.stdin); assert x["result"]=="REVIEW_REQUIRED" and x["code"]=="BOTH_SOURCE_OBSERVATION_MIGRATIONS_ALREADY_APPLIED" and x["release_authorized"] is False'
+
       - name: Verify narrow metadata visibility, denied user data reads and grant fail-closed
         env:
           CANOVIA_P0_DISPOSABLE_ROOT_PASSWORD: ci-only-root-password

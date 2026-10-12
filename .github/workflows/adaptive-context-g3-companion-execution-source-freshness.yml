@@ -1,0 +1,41 @@
+name: Adaptive Context G3 Companion Execution Source Freshness
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/CompanionContextService.php'
+      - 'app/Services/ExecutionOrchestrationContextService.php'
+      - 'tests/Feature/GitHubDerivedContextSourceEpochG3Test.php'
+      - '.github/workflows/adaptive-context-g3-companion-execution-source-freshness.yml'
+
+jobs:
+  companion-execution-source-freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/CompanionContextService.php
+          php -l app/Services/ExecutionOrchestrationContextService.php
+          php -l tests/Feature/GitHubDerivedContextSourceEpochG3Test.php
+      - name: GitHub source epoch Companion and Execution derivatives
+        run: php artisan test tests/Feature/GitHubDerivedContextSourceEpochG3Test.php
+      - name: Existing Companion and execution continuity/regression
+        run: |
+          php artisan test \
+            tests/Feature/ExecutionOrchestrationV470Test.php \
+            tests/Feature/CanoviaCompanionContextualEntryV4115Test.php \
+            tests/Feature/CanoviaCompanionContinuityV4115Test.php \
+            tests/Feature/DeveloperExecutionContextV574Test.php

@@ -3,23 +3,33 @@
 namespace App\Intelligence\Presentation;
 
 use App\Intelligence\Enums\IntelligenceDomain;
+use App\Intelligence\Services\IntelligenceEvidenceFreshnessGuard;
 use App\Intelligence\Enums\ReadinessLevel;
 use App\Models\IntelligenceActionProjection;
 use App\Models\IntelligenceDecisionTrace;
 use App\Models\Plan;
+use App\Services\PlanOwnershipService;
+use Illuminate\Http\Request;
 use App\Models\TaskEvidence;
 
 final class IntelligenceStateChangeFeedbackService
 {
     private const SCORE_CHANGE_THRESHOLD = 5;
 
+    public function __construct(
+        private readonly PlanOwnershipService $ownership,
+    ) {}
+
     /**
      * @return array<string,mixed>|null
      */
     public function latestForPlan(
+        Request $request,
         Plan $plan,
         IntelligenceDomain $domain,
     ): ?array {
+        $this->ownership->authorizeView($request, $plan);
+
         $traces = IntelligenceDecisionTrace::query()
             ->with('stateSnapshot')
             ->where('plan_id', $plan->id)
@@ -37,6 +47,53 @@ final class IntelligenceStateChangeFeedbackService
         $current = $traces->get(0);
         /** @var IntelligenceDecisionTrace $previous */
         $previous = $traces->get(1);
+
+        $freshness = app(IntelligenceEvidenceFreshnessGuard::class);
+        if (! $freshness->isCurrent($current->stateSnapshot)) {
+            return null;
+        }
+
+        if (! $freshness->isCurrent($previous->stateSnapshot)) {
+            // Career direct source records can be corrected/deleted between
+            // two legitimate refreshes. The OLD insight is no longer safe
+            // to compare or disclose. Keep the workspace's generic update
+            // affordance using only the CURRENT verified action.
+            if ($domain !== IntelligenceDomain::Career
+                || $current->user_id === null
+                || (int) $previous->user_id !== (int) $current->user_id
+                || (int) $current->user_id !== (int) $plan->user_id) {
+                return null;
+            }
+
+            $safeAction = $this->actionForTrace($current);
+
+            return [
+                'domain' => $domain->value,
+                'plan' => $plan,
+                'occurred_at' => $current->created_at,
+                'kind' => 'source_updated',
+                'title' => 'Career情報を更新しました',
+                'summary' => '情報の変更を確認し、Current Actionを更新。古い比較結果は表示しません。',
+                'readiness_before' => null,
+                'readiness_after' => null,
+                'readiness_delta' => null,
+                'level_before' => null,
+                'level_after' => null,
+                'level_before_label' => '',
+                'level_after_label' => '',
+                'level_changed' => false,
+                'decision_before' => '',
+                'decision_after' => '',
+                'decision_changed' => false,
+                'reason_before' => '',
+                'reason_after' => '',
+                'action_before' => null,
+                'action_after' => $safeAction?->title,
+                'action_changed' => $safeAction !== null,
+                'added_evidence_count' => 0,
+                'added_evidence_labels' => [],
+            ];
+        }
 
         $currentAction = $this->actionForTrace($current);
         $previousAction = $this->actionForTrace($previous);

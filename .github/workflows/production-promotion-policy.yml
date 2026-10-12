@@ -1,0 +1,48 @@
+name: Production Promotion Policy Gate
+
+on:
+  pull_request:
+    branches: [production]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  promotion-contract:
+    name: Production promotion contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check exact release candidate comes from main and the same repository
+        if: github.event_name == 'pull_request'
+        env:
+          SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
+          SOURCE_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
+          TARGET_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          case "$SOURCE_BRANCH" in
+            release/*) ;;
+            *) echo 'production_release_branch_required' >&2; exit 1 ;;
+          esac
+          test "$SOURCE_REPO" = "$TARGET_REPO"
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          git merge-base --is-ancestor "$RELEASE_SHA" refs/remotes/origin/main
+          echo "production_release_candidate_pinned_to_main: pass"
+      - name: Validate metadata-only Aiven audit remains fail-closed
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/ci -p 'test_release_488_mysql_ledger_gate.py' -v
+          python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_metadata_grants_guard.py' -v
+          bash -n scripts/ops/p0_mysql_operator_select_only_collect.sh
+          echo "metadata_only_release_gate: pass"
+      - name: Confirm production schema writes on startup remain explicit
+        run: |
+          set -euo pipefail
+          grep -Fq 'php artisan migrate --force' docker/render-start.sh
+          echo "production_startup_migration_review_required: pass"

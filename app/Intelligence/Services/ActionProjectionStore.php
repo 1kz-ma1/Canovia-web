@@ -165,11 +165,21 @@ final class ActionProjectionStore
 
     public function latestActiveForPlan(int $planId): ?IntelligenceActionProjection
     {
-        return IntelligenceActionProjection::query()
+        $latest = IntelligenceActionProjection::query()
             ->where('plan_id', $planId)
             ->where('status', IntelligenceActionProjection::STATUS_ACTIVE)
             ->latest('updated_at')
             ->latest('id')
             ->first();
+
+        if ($latest === null) {
+            return null;
+        }
+
+        // An invalid active projection is not replaced with an old superseded
+        // proposal. It becomes unavailable until a verified recomputation.
+        return app(IntelligenceEvidenceFreshnessGuard::class)
+            ->isCurrent($latest->decisionTrace?->stateSnapshot)
+                ? $latest : null;
     }
 }

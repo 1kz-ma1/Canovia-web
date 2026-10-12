@@ -249,26 +249,7 @@ class InboxController extends Controller
                 && $featureAccess->canUse($request->user(), FeatureKey::AutomaticAiExecution)
             ) {
                 try {
-                    $suggestion = $intelligence->suggest($item, $request->user()?->id);
-                    if (
-                        ($suggestion['destination'] ?? null) === 'career_capture'
-                        && ! $releaseLevels->allowsWorkspace(
-                            WorkspaceMode::Career,
-                            $request->user(),
-                            $request,
-                        )
-                    ) {
-                        $suggestion['destination'] = 'keep_inbox';
-                        $suggestion['reason'] = 'Careerは現在Beta準備中のため、Inboxに保持します。';
-                    }
-
-                    $metadata = is_array($item->metadata) ? $item->metadata : [];
-                    $metadata['routing_suggestion'] = $suggestion;
-
-                    $item->update([
-                        'status' => 'review',
-                        'metadata' => $metadata,
-                    ]);
+                    $intelligence->suggestAndPersist($item, $request, $releaseLevels);
                     $interpreted = true;
                 } catch (NativeAiExecutionException) {
                     // Capture must remain available even when interpretation is temporarily unavailable.
@@ -303,30 +284,11 @@ class InboxController extends Controller
         $featureAccess->authorizeUse($request->user(), FeatureKey::AutomaticAiExecution);
 
         try {
-            $suggestion = $intelligence->suggest($inboxItem, $request->user()?->id);
-            if (
-                ($suggestion['destination'] ?? null) === 'career_capture'
-                && ! $releaseLevels->allowsWorkspace(
-                    WorkspaceMode::Career,
-                    $request->user(),
-                    $request,
-                )
-            ) {
-                $suggestion['destination'] = 'keep_inbox';
-                $suggestion['reason'] = 'Careerは現在Beta準備中のため、Inboxに保持します。';
-            }
+            $intelligence->suggestAndPersist($inboxItem, $request, $releaseLevels);
         } catch (NativeAiExecutionException $exception) {
             return $this->redirectAfterAction($request)
                 ->with('status', $exception->getMessage());
         }
-
-        $metadata = is_array($inboxItem->metadata) ? $inboxItem->metadata : [];
-        $metadata['routing_suggestion'] = $suggestion;
-
-        $inboxItem->update([
-            'status' => 'review',
-            'metadata' => $metadata,
-        ]);
 
         return $this->redirectAfterAction($request)
             ->with('success', '行き先候補を作りました。確認してから確定してください。');

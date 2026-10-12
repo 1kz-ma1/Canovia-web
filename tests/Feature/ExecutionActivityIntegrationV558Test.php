@@ -220,6 +220,41 @@ class ExecutionActivityIntegrationV558Test extends TestCase
         );
     }
 
+    public function test_browser_validation_activity_idempotency_is_scoped_by_user(): void
+    {
+        [$firstUser, $firstPlan, $firstTask] = $this->studyPracticeContext();
+        [$secondUser, $secondPlan, $secondTask] = $this->studyPracticeContext();
+
+        $sharedProviderKey = (string) Str::uuid();
+
+        $this->actingAs($firstUser)->post(
+            route('execution.validation.study_practice.result', [$firstPlan, $firstTask]),
+            ['activity_key' => $sharedProviderKey, 'score_percent' => 66],
+        )->assertRedirect();
+
+        $original = ExecutionActivity::query()
+            ->where('user_id', $firstUser->id)
+            ->firstOrFail();
+
+        $this->actingAs($secondUser)->post(
+            route('execution.validation.study_practice.result', [$secondPlan, $secondTask]),
+            ['activity_key' => $sharedProviderKey, 'score_percent' => 99],
+        )->assertRedirect();
+
+        $this->assertDatabaseCount('execution_activities', 2);
+        $this->assertDatabaseCount('task_evidences', 2);
+        $this->assertSame((int) $firstUser->id, (int) $original->fresh()->user_id);
+        $this->assertSame((int) $firstPlan->id, (int) $original->fresh()->plan_id);
+        $this->assertSame(66, data_get($original->fresh()->metrics, 'score_percent'));
+
+        $second = ExecutionActivity::query()
+            ->where('user_id', $secondUser->id)
+            ->firstOrFail();
+        $this->assertSame((int) $secondPlan->id, (int) $second->plan_id);
+        $this->assertSame(99, data_get($second->metrics, 'score_percent'));
+        $this->assertNotSame($original->external_key, $second->external_key);
+    }
+
     public function test_non_completed_or_non_assessment_activity_remains_generic_evidence(): void
     {
         [$user, $plan, $task] = $this->studyPracticeContext();

@@ -3,14 +3,17 @@
 namespace Tests\Feature;
 
 use App\Enums\EvidenceSource;
+use App\Enums\ProductKey;
 use App\Enums\WorkspaceMode;
 use App\Models\InboxItem;
 use App\Models\Plan;
+use App\Models\PlanArtifact;
 use App\Models\StudyScopeCapture;
 use App\Models\StudyScopeItem;
 use App\Models\Task;
 use App\Models\TaskEvidence;
 use App\Models\User;
+use App\Models\UserProductGrant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -310,6 +313,27 @@ class OverviewWorkspaceV545Test extends TestCase
 
     private function commitEvidence(Task $task): TaskEvidence
     {
+        $user = $task->plan->user;
+        UserProductGrant::query()->firstOrCreate(
+            ['user_id' => $user->id, 'product_key' => ProductKey::AllAccess],
+            ['source' => 'manual', 'starts_at' => now()->subMinute()],
+        );
+        $root = PlanArtifact::query()->create([
+            'plan_id' => $task->plan_id,
+            'created_by_user_id' => $user->id,
+            'provider' => 'github',
+            'artifact_type' => 'repository',
+            'title' => 'Canovia-web',
+            'url' => 'https://github.com/1kz-ma1/Canovia-web',
+            'metadata' => [
+                'github_app_connection' => [
+                    'status' => 'connected',
+                    'installation_id' => 777,
+                    'source_epoch' => '18edfd47-0fa5-4020-aa2d-d273c603ec90',
+                ],
+            ],
+        ]);
+
         return TaskEvidence::query()->create([
             'plan_id' => $task->plan_id,
             'task_id' => $task->id,
@@ -321,6 +345,8 @@ class OverviewWorkspaceV545Test extends TestCase
             'occurred_at' => now(),
             'metadata' => [
                 'repo_full_name' => '1kz-ma1/Canovia-web',
+                'github_repository_artifact_id' => (int) $root->id,
+                'github_source_epoch' => data_get($root->metadata, 'github_app_connection.source_epoch'),
                 'commit_sha' => str_repeat('a', 40),
                 'branch' => 'feature/v54-5-overview-workspace',
             ],
