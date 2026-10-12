@@ -432,6 +432,31 @@ class DeveloperActivityObservationV571Test extends TestCase
         $this->assertDatabaseCount('development_activity_observations', 0);
     }
 
+    public function test_github_source_owner_transfer_blocks_inflight_observation_commit(): void
+    {
+        [$plan, , $root] = $this->scenario();
+        $root->load('plan.user');
+        $newOwner = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan->update(['user_id' => $newOwner->id]);
+
+        $method = new \ReflectionMethod(GitHubDevelopmentObservationService::class, 'persist');
+        $result = $method->invoke(
+            app(GitHubDevelopmentObservationService::class),
+            $root,
+            '1kz-ma1/HINANEX',
+            [
+                'kind' => 'issue',
+                'identity' => '12',
+                'state' => 'open',
+                'source_updated_at' => '2026-10-08T01:00:00Z',
+            ],
+            777,
+        );
+
+        $this->assertNull($result);
+        $this->assertDatabaseCount('development_activity_observations', 0);
+    }
+
     private function scenario(): array
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);
