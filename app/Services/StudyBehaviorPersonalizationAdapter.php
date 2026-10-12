@@ -17,6 +17,7 @@ final class StudyBehaviorPersonalizationAdapter
         private readonly BehaviorIdentityService $identity,
         private readonly BehaviorEventLogger $events,
         private readonly StudyReviewCyclePersonalizationAdapter $reviewCycle,
+        private readonly StudyDerivedContextFreshnessGuard $freshness,
     ) {}
 
     /**
@@ -57,6 +58,15 @@ final class StudyBehaviorPersonalizationAdapter
             return;
         }
 
+        $sourceSignature = $this->freshness->signature(
+            (int) $user->id,
+            (int) $plan->id,
+        );
+        if ($sourceSignature === null) {
+            // Never publish derivations with unverifiable source lineage.
+            return;
+        }
+
         $scores = $attempts
             ->pluck('score_percent')
             ->filter(fn ($value) => is_numeric($value))
@@ -67,6 +77,7 @@ final class StudyBehaviorPersonalizationAdapter
             'study_behavior' => [
                 'stage' => 'practice_focused',
                 'plan_id' => (int) $plan->id,
+                'source_signature' => $sourceSignature,
                 'assessed_attempt_count' => $attemptCount,
                 'recent_average_score_percent' => $scores->isNotEmpty()
                     ? (int) round($scores->average())
