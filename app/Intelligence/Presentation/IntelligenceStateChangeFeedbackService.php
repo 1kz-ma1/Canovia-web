@@ -3,6 +3,7 @@
 namespace App\Intelligence\Presentation;
 
 use App\Intelligence\Enums\IntelligenceDomain;
+use App\Intelligence\Services\IntelligenceEvidenceFreshnessGuard;
 use App\Intelligence\Enums\ReadinessLevel;
 use App\Models\IntelligenceActionProjection;
 use App\Models\IntelligenceDecisionTrace;
@@ -46,6 +47,12 @@ final class IntelligenceStateChangeFeedbackService
         $current = $traces->get(0);
         /** @var IntelligenceDecisionTrace $previous */
         $previous = $traces->get(1);
+
+        $freshness = app(IntelligenceEvidenceFreshnessGuard::class);
+        if (! $freshness->isCurrent($current->stateSnapshot)
+            || ! $freshness->isCurrent($previous->stateSnapshot)) {
+            return null;
+        }
 
         $currentAction = $this->actionForTrace($current);
         $previousAction = $this->actionForTrace($previous);
