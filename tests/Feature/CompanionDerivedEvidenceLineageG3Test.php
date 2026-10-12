@@ -81,7 +81,10 @@ final class CompanionDerivedEvidenceLineageG3Test extends TestCase
             ->get(route('companion.show', $thread))
             ->assertOk()
             ->assertSee('data-companion-source-stale', false)
-            ->assertDontSee('この内容を反映する');
+            ->assertDontSee(
+                'action="'.route('companion.candidates.apply', [$thread, $candidate]).'"',
+                false,
+            );
 
         $this->assertApplyDenied($user, $candidate);
         $this->assertSame('pending', $candidate->fresh()->status);
