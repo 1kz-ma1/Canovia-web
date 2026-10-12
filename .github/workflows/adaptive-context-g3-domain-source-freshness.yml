@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'app/Intelligence/Services/IntelligenceDomainSourceFreshnessGuard.php'
+      - 'app/Intelligence/Presentation/IntelligenceStateChangeFeedbackService.php'
       - 'app/Intelligence/Services/IntelligenceEvidenceFreshnessGuard.php'
       - 'tests/Feature/IntelligenceDomainSourceFreshnessG3Test.php'
       - '.github/workflows/adaptive-context-g3-domain-source-freshness.yml'
@@ -28,12 +29,13 @@ jobs:
       - name: PHP syntax
         run: |
           php -l app/Intelligence/Services/IntelligenceDomainSourceFreshnessGuard.php
+          php -l app/Intelligence/Presentation/IntelligenceStateChangeFeedbackService.php
           php -l app/Intelligence/Services/IntelligenceEvidenceFreshnessGuard.php
           php -l tests/Feature/IntelligenceDomainSourceFreshnessG3Test.php
       - name: G3 non-TaskEvidence Career and Development source mutations
         run: php artisan test tests/Feature/IntelligenceDomainSourceFreshnessG3Test.php
       - name: Career V55 and source correction regression
-        run: php artisan test tests/Feature/CareerIntelligenceV550Test.php tests/Feature/StateChangeFeedbackV546Test.php
+        run: php artisan test tests/Feature/CareerIntelligenceV550Test.php tests/Feature/StateChangeFeedbackV546Test.php tests/Feature/CareerWorkspaceModeV551Test.php
       - name: Actor-scoped V53 snapshot and historical observation
         run: php artisan test tests/Feature/StateSnapshotActorIsolationG1Test.php tests/Feature/IntelligenceStateEvidenceV531Test.php
       - name: Team Development and Learning safety regression
