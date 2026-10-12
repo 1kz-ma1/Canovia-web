@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\UserProductGrant;
 use App\Services\FeatureAccessService;
 use App\Services\GitHubDevelopmentEvidenceService;
+use App\Services\GitHubTaskEvidenceCommitGuard;
 use App\Services\GitHubReturnEvidenceService;
 use App\Services\GitHubWorkflowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -379,6 +380,45 @@ class DeveloperEvidenceSyncV537Test extends TestCase
 
         $this->assertSame(0, $counts['synced_tasks']);
         $this->assertSame([], $counts['plan_ids']);
+        $this->assertDatabaseCount('task_evidences', 0);
+    }
+
+    public function test_changed_installation_and_plan_owner_cannot_commit_queued_task_evidence(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $linked = $this->artifact(
+            $plan, $user, 'https://github.com/1kz-ma1/HINANEX/issues/12', '12',
+        );
+        $linked->tasks()->sync([$task->id]);
+
+        $guard = app(GitHubTaskEvidenceCommitGuard::class);
+        $called = false;
+        $write = function () use (&$called) {
+            $called = true;
+            return true;
+        };
+
+        $root = PlanArtifact::query()->where('plan_id', $plan->id)
+            ->where('artifact_type', 'repository')->firstOrFail();
+        $metadata = (array) $root->metadata;
+        $metadata['github_app_connection']['installation_id'] = 888;
+        $root->update(['metadata' => $metadata]);
+
+        $this->assertNull($guard->execute(
+            $task, [$linked->id], '1kz-ma1/HINANEX', 777,
+            (int) $user->id, $write,
+        ));
+        $this->assertFalse($called);
+
+        $metadata['github_app_connection']['installation_id'] = 777;
+        $root->update(['metadata' => $metadata]);
+        $plan->update(['user_id' => User::factory()->create()->id]);
+
+        $this->assertNull($guard->execute(
+            $task, [$linked->id], '1kz-ma1/HINANEX', 777,
+            (int) $user->id, $write,
+        ));
+        $this->assertFalse($called);
         $this->assertDatabaseCount('task_evidences', 0);
     }
 
