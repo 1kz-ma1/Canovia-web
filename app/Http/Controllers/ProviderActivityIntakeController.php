@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\ProviderConnectionRevokedException;
 use App\Services\ProviderActivityIntakeService;
 use App\Services\ProviderConnectionService;
 use App\Services\ProviderExecutionContextService;
@@ -83,6 +84,12 @@ final class ProviderActivityIntakeController extends Controller
                 $context,
                 $activityPayload,
             );
+        } catch (ProviderConnectionRevokedException) {
+            // An expired/revoked grant must not masquerade as successful
+            // ingestion after a previously valid signature was accepted.
+            return response()->json([
+                'status' => 'invalid_execution_context',
+            ], 403);
         } catch (InvalidArgumentException $exception) {
             return response()->json([
                 'status' => 'invalid_activity',
