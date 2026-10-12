@@ -405,6 +405,33 @@ class DeveloperActivityObservationV571Test extends TestCase
         $this->assertDatabaseCount('task_evidences', 0);
     }
 
+    public function test_replaced_github_installation_does_not_accept_queued_old_event(): void
+    {
+        [, , $root] = $this->scenario();
+        $stale = $root->fresh();
+        $metadata = (array) $root->metadata;
+        $metadata['github_app_connection']['installation_id'] = 888;
+        $root->update(['metadata' => $metadata]);
+
+        $method = new \ReflectionMethod(GitHubDevelopmentObservationService::class, 'persist');
+        $result = $method->invoke(
+            app(GitHubDevelopmentObservationService::class),
+            $stale,
+            '1kz-ma1/HINANEX',
+            [
+                'kind' => 'issue',
+                'identity' => '12',
+                'provider_number' => 12,
+                'source_updated_at' => '2026-10-08T01:00:00Z',
+                'state' => 'open',
+            ],
+            777,
+        );
+
+        $this->assertNull($result);
+        $this->assertDatabaseCount('development_activity_observations', 0);
+    }
+
     private function scenario(): array
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);
