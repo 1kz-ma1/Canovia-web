@@ -8,6 +8,39 @@
         data-study-practice-root
         data-study-practice-scroll-to="{{ $studyPracticeScrollTo ?? session('study_practice_scroll_to') }}"
     >
+        @php
+            $studyFocusActive = in_array(($practiceStage ?? 'setup'), ['answering', 'evaluation', 'result'], true);
+            $studyFocusSetup = ($practiceStage ?? 'setup') === 'setup' && (bool) ($compactContinueSetup ?? false);
+            $studyFocusTopics = collect(($practiceStrategy['key'] ?? '') === 'weakness_reinforcement'
+                ? data_get($practiceStrategy, 'weakness_priority.primary_topics', [])
+                : data_get($practiceStrategy, 'focus_topics', []))
+                ->filter(fn ($topic) => is_string($topic) && trim($topic) !== '')
+                ->take(2);
+        @endphp
+        @if ($studyFocusActive || $studyFocusSetup)
+            <section class="page-card px-4 py-3 sm:px-5" data-study-focus-space>
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <p class="text-[11px] font-bold text-cyan-300">学習に集中</p>
+                        <h1 class="mt-1 truncate text-lg font-bold text-slate-100">{{ $exerciseTitle ?: $task->title }}</h1>
+                    </div>
+                    <a href="{{ route('workspace.study.index') }}" class="inline-flex min-h-11 items-center text-xs font-semibold text-sky-300">学習を終了する</a>
+                </div>
+                <p class="mt-2 text-xs leading-5 text-slate-300" data-study-focus-personalization>
+                    {{ data_get($practiceStrategy, 'learning_phase.label', '問題演習') }}
+                    @if ($studyFocusTopics->isNotEmpty())
+                        · 今回の重点：{{ $studyFocusTopics->implode(' / ') }}
+                    @else
+                        · 現在の問題セットに沿って進めます
+                    @endif
+                </p>
+                @if ($studyFocusSetup)
+                    <p class="mt-1 text-xs text-slate-400">前回の結果を記録しています。続きの問題セットを準備しましょう。</p>
+                @elseif (($practiceStage ?? '') === 'result')
+                    <p class="mt-1 text-xs text-slate-400">採点結果を確認しました。学習を続けることとTask進捗の更新は別の操作です。</p>
+                @endif
+            </section>
+        @else
         @if ($resumeFastPath ?? false)
             @php
                 $resumeProviderLabel = match ($currentPracticeSession?->question_provider) {
@@ -331,6 +364,7 @@
             </div>
         </section>
         @endif
+        @endif
 
         @if (session('success'))
             <div class="rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.06] px-4 py-3 text-sm text-emerald-100">{{ session('success') }}</div>
@@ -354,7 +388,7 @@
             ];
         @endphp
 
-        @unless ($resumeFastPath ?? false)
+        @unless (($resumeFastPath ?? false) || $studyFocusActive || $studyFocusSetup)
         <section class="page-card px-4 py-3 sm:px-5" aria-label="AI演習の進行状況">
             <div class="grid grid-cols-4 gap-2">
                 @foreach ($practiceSteps as $index => $step)
@@ -571,7 +605,27 @@
         @endif
 
         @if ($assessment)
-            <section id="practice-assessment" class="page-card scroll-mt-24 border-emerald-300/20 p-5 sm:p-6">
+            <section id="practice-assessment" class="page-card scroll-mt-24 border-emerald-300/20 p-4 sm:p-6" data-study-focus-result>
+                <p class="text-xs font-bold text-emerald-300">今回の学習結果</p>
+                <div class="mt-3 flex flex-wrap items-end gap-3">
+                    <strong class="text-3xl font-bold text-slate-50">{{ $assessment['score_percent'] }}%</strong>
+                    <p class="max-w-lg text-sm leading-6 text-slate-300">
+                        @if(collect($assessment['weaknesses'] ?? [])->isNotEmpty())
+                            次に確認する点：{{ collect($assessment['weaknesses'])->take(2)->implode(' / ') }}
+                        @else
+                            今回の結果は履歴に記録されています。次の問題で理解を確認しましょう。
+                        @endif
+                    </p>
+                </div>
+                <form method="POST" action="{{ route('plans.tasks.study_practice.reset', [$plan, $task]) }}" class="mt-4" data-study-focus-continue>
+                    @csrf
+                    <input type="hidden" name="continue" value="1">
+                    <button type="submit" class="btn-primary ml-auto flex min-h-11 w-full items-center justify-center sm:w-auto">学習を続ける →</button>
+                </form>
+                <p class="mt-2 text-xs text-slate-400">続行だけではTaskの進捗は更新しません。結果を計画に反映する操作は下から選べます。</p>
+                <details class="mt-4 rounded-xl border border-slate-700/70 p-3" data-study-focus-result-details>
+                    <summary class="cursor-pointer text-sm font-semibold text-sky-300">詳しい評価と計画への反映</summary>
+            <section class="mt-4 rounded-xl border border-slate-700/60 p-3">
                 <p class="text-xs font-bold uppercase tracking-[0.16em] text-emerald-300">ASSESSMENT / NEXT STEP</p>
 
                 @if ($nextStep)
@@ -737,6 +791,8 @@
                         <p class="mt-1 text-xs text-slate-400">進捗 {{ $currentAttempt->progress_before_percent ?? '—' }}% → {{ $currentAttempt->progress_after_percent ?? '—' }}%。AI演習だけを理由に、既存の進捗を下げることはありません。</p>
                     </div>
                 @endif
+            </section>
+                </details>
             </section>
         @endif
 
@@ -961,7 +1017,7 @@
             </details>
         @endif
 
-        @if (($recentAttempts ?? collect())->isNotEmpty())
+        @if (($recentAttempts ?? collect())->isNotEmpty() && ! $studyFocusActive && ! $studyFocusSetup)
             <details class="page-card p-4 sm:p-5" data-study-practice-history>
                 <summary class="cursor-pointer text-sm font-semibold text-slate-200">学習履歴を振り返る <span class="ml-1 text-xs font-normal text-slate-400">（{{ $recentAttempts->count() }}件）</span></summary>
                 <p class="mt-3 text-xs text-slate-400">ここで見つかった弱点は、次回の問題生成Promptへ自動で引き継がれます。</p>
