@@ -59,6 +59,7 @@ final class IntelligenceStateChangeFeedbackService
             // to compare or disclose. Keep the workspace's generic update
             // affordance using only the CURRENT verified action.
             if ($domain !== IntelligenceDomain::Career
+                || $current->user_id === null
                 || (int) $previous->user_id !== (int) $current->user_id
                 || (int) $current->user_id !== (int) $plan->user_id) {
                 return null;
