@@ -42,7 +42,7 @@ final class NativeAiPurposeGrantFenceV05Test extends TestCase
         Http::fake();
 
         $this->expectDeny('native_ai_purpose_not_entitled', fn () =>
-            $this->run($actor, $plan, $task, FeatureKey::CanoviaCompanion),
+            $this->runNative($actor, $plan, $task, FeatureKey::CanoviaCompanion),
         );
 
         Http::assertNothingSent();
@@ -59,7 +59,7 @@ final class NativeAiPurposeGrantFenceV05Test extends TestCase
         });
 
         $this->expectDeny('native_ai_purpose_not_entitled', fn () =>
-            $this->run($actor, $plan, $task, FeatureKey::CanoviaCompanion),
+            $this->runNative($actor, $plan, $task, FeatureKey::CanoviaCompanion),
         );
 
         $run = NativeAiRun::query()->firstOrFail();
@@ -80,7 +80,7 @@ final class NativeAiPurposeGrantFenceV05Test extends TestCase
         });
 
         $this->expectDeny('native_ai_target_changed', fn () =>
-            $this->run($actor, $plan, $task, FeatureKey::CanoviaCompanion),
+            $this->runNative($actor, $plan, $task, FeatureKey::CanoviaCompanion),
         );
 
         $this->assertDatabaseHas('native_ai_runs', [
@@ -101,7 +101,7 @@ final class NativeAiPurposeGrantFenceV05Test extends TestCase
         });
 
         $this->expectDeny('native_ai_target_changed', fn () =>
-            $this->run($actor, $plan, $task, FeatureKey::CanoviaCompanion),
+            $this->runNative($actor, $plan, $task, FeatureKey::CanoviaCompanion),
         );
 
         $this->assertDatabaseHas('native_ai_runs', [
@@ -127,7 +127,7 @@ final class NativeAiPurposeGrantFenceV05Test extends TestCase
         Http::fake(['https://api.openai.com/v1/responses' => Http::response(
             $this->responseBody(), 200,
         )]);
-        $allowed = $this->run($member, $plan, $task, FeatureKey::CanoviaCompanion);
+        $allowed = $this->runNative($member, $plan, $task, FeatureKey::CanoviaCompanion);
         $this->assertSame('safe', $allowed['data']['reply']);
 
         Http::fake(function () use ($membership) {
@@ -136,12 +136,12 @@ final class NativeAiPurposeGrantFenceV05Test extends TestCase
         });
 
         $this->expectDeny('native_ai_target_changed', fn () =>
-            $this->run($member, $plan, $task, FeatureKey::CanoviaCompanion),
+            $this->runNative($member, $plan, $task, FeatureKey::CanoviaCompanion),
         );
         $this->assertSame(1, NativeAiRun::query()->where('status', 'succeeded')->count());
     }
 
-    private function run(User $user, Plan $plan, Task $task, FeatureKey $feature): array
+    private function runNative(User $user, Plan $plan, Task $task, FeatureKey $feature): array
     {
         return app(NativeAiGateway::class)->generateStructured(
             purpose: 'purpose_fence_test',
