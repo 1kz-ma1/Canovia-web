@@ -184,7 +184,8 @@ final class ReflectionNavigationGraphService
                 id: $itemId,
                 type: $type,
                 entityId: $entityId,
-                eyebrow: $this->itemEyebrow($kind),
+                eyebrow: ($item['source_status'] ?? null) === 'historical_unverified'
+                    ? 'PAST · UNVERIFIED' : $this->itemEyebrow($kind),
                 label: (string) ($item['label'] ?? '記録'),
                 subtitle: (string) ($item['subtitle'] ?? ''),
                 action: $url,
@@ -202,6 +203,8 @@ final class ReflectionNavigationGraphService
                         (string) ($item['plan_title'] ?? ''),
                         (string) ($item['occurred_at'] ?? ''),
                         $this->kindLabel($kind),
+                        ($item['source_status'] ?? null) === 'historical_unverified'
+                            ? '現在は未検証' : null,
                     ])),
                 ),
             ));
