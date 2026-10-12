@@ -227,3 +227,18 @@ Dedicated positive/negative tests cover legitimate native generation, alternativ
 - Run positive and negative CI regression against linked GitHub Return/Evidence, Workspaces, V53 read models and V58.73 typed drafts. No schema change, deletion, billing, MCP scope, auto progress or production release.
 
 **Still OPEN:** GitHub REST state correction after same-epoch source changes, previously persisted generic Execution/Companion/Reflection memory text, cross-domain inference source families, history hide/delete UI and two-worker PostgreSQL transaction ordering are separate G3 gates. This stage certifies only its named consumers, not global provenance or remote revocation.
+
+
+## 19. G3-R2 follow-on — Companion + Execution derived current-context source fence (2026-10-13)
+
+**Gap after #507:** The V53 Developer Evidence Collector, Developer Execution Context and V58 typed Draft flows already reject historical GitHub TaskEvidence. Two other *current AI-facing* projections still selected raw `TaskEvidence` without that gate: `CompanionContextService::snapshot()` and `ExecutionOrchestrationContextService::snapshot()`. A disconnected / reconnected GitHub source could consequently be surfaced as `recent_evidence`, or `guided_execution.latest_evidence`, and copied into current Companion prompts / Execution Packet contexts. The old Packet context fingerprint did not include the GitHub connection revision when no Evidence was selected, leaving a source-epoch-only reconnect unobservable.
+
+**Bounded implementation:**
+
+- Reuse existing `GitHubTaskEvidenceReuseGuard::eligible(plan,evidence)` in both AI-facing projections. Fetch a small bounded surplus of recent historical rows, then filter and keep only the original 6 (Companion) or 12 (Execution) current records. This avoids newer revoked facts starving valid historical **native** reflections and current signed GitHub facts.
+- `CompanionContextService` derives `guided_execution.latest_evidence` from the already filtered list. User-authored/explicit FutureMemo records are never deleted, modified or auto-disqualified by GitHub disconnection: an explicitly saved user preference is **not** the same as an automatically inferred GitHub fact. Historic Assistant prose remains conversation history, not a newly verified provider observation.
+- `ExecutionOrchestrationContextService` adds a deterministic **non-secret connection-lineage hash** to its canonical read-only snapshot, based only on ordered Repository Artifact IDs, URLs, connection status, installation ID and `source_epoch`. The existing `context_fingerprint` and `ExecutionPacketCommitFence` therefore become sensitive to revocation/reconnect even if the 12 Evidence entries remain empty. FreshSnapshot re-fetches via a cloned Request to bypass stale CoreContextService request cache; no cached/derived Packet remains authorized under a changed lineage.
+- No old TaskEvidence or FutureMemo row is deleted, no Plan/Task mutation, no DB migration, no additional GitHub reads merely for AI prompt, no billing/entitlement or OAuth/MCP changes.
+- Verification includes current signed, unsigned legacy, revoked, same-installation/new-epoch, re-fetched, native Evidence, explicit user memory, Packet fingerprint, plus existing Companion and Orchestration regressions.
+
+**Residual G3 OPEN:** This does not retroactively remove quoted GitHub facts from historical assistant messages, manually captured FutureMemo, external handoff text already copied elsewhere, broad Reflection Timeline, other domain derivative families, independent PostgreSQL multi-worker serializability, or production/device evidence. Future integration must track source-tagged derivatives rather than pattern-match user-authored prose.
