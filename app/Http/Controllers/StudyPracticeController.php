@@ -20,6 +20,7 @@ use App\Services\PlanCategoryProfileService;
 use App\Intelligence\Study\StudyAdaptiveActionService;
 use App\Services\PracticeQuestionDemandRecorder;
 use App\Services\StudyPracticeOrchestrator;
+use App\Services\StudyPracticeNativeCommitFence;
 use App\Services\StudyPracticePromptService;
 use App\Services\StudyPracticeReliabilityService;
 use App\Services\StudyPracticeStrategyService;
@@ -814,6 +815,7 @@ class StudyPracticeController extends Controller
         TaskEvidenceService $evidenceService,
         FeatureAccessService $featureAccess,
         NativeAiGateway $nativeAi,
+        StudyPracticeNativeCommitFence $nativeFence,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
         $this->authorizeStudyPlan($plan);
@@ -959,6 +961,10 @@ class StudyPracticeController extends Controller
                 }
             }
 
+            $nativeAssessmentSnapshot = $assessmentProviderKey === 'native_ai' && $request->user()
+                ? $nativeFence->capture($plan, $task, (int) $request->user()->id, $practiceSession)
+                : null;
+
             try {
                 $assessmentHandoff = $orchestrator->prepareAssessment(
                     $practiceSession,
@@ -969,6 +975,20 @@ class StudyPracticeController extends Controller
                     $assessmentProviderKey,
                 );
             } catch (NativeAiExecutionException $exception) {
+                if (in_array($exception->errorCode, [
+                    'native_ai_target_changed',
+                    'native_ai_source_changed',
+                    'native_ai_purpose_not_entitled',
+                    'native_ai_actor_unverified',
+                    'native_ai_authorization_unavailable',
+                ], true)) {
+                    // A stale/revoked grading input must not fall through into
+                    // an old-answer external prompt or durable progress.
+                    return redirect()
+                        ->route('plans.tasks.study_practice.show', [$plan, $task])
+                        ->with('status', $exception->getMessage());
+                }
+
                 $assessmentHandoff = $orchestrator->prepareAssessment(
                     $practiceSession,
                     $plan,
@@ -1035,16 +1055,44 @@ class StudyPracticeController extends Controller
 
                 $state['evaluation_prompt'] = null;
                 $state['assessment'] = $assessment;
-                $attempt = $this->persistAssessment(
-                    $request,
-                    $plan,
-                    $task,
-                    $state,
-                    $assessment,
-                    $actorToken,
-                );
+                try {
+                    // Assessment, source recheck, attempt, evidence and
+                    // assessed state share one atomic database commit.
+                    $attempt = DB::transaction(function () use (
+                        $request, $plan, $task, $nativeFence,
+                        $nativeAssessmentSnapshot, $assessmentHandoff,
+                        &$state, $assessment, $actorToken,
+                        $evidenceService, $practiceSession,
+                    ): StudyPracticeAttempt {
+                        if ((string) ($assessmentHandoff['provider'] ?? '') === 'native_ai') {
+                            if ($nativeAssessmentSnapshot === null || ! $request->user()) {
+                                throw new NativeAiExecutionException(
+                                    '採点元のユーザーを確認できません。',
+                                    'native_ai_actor_unverified',
+                                );
+                            }
+                            $nativeFence->assertCanCommit(
+                                $plan, $task, (int) $request->user()->id,
+                                $nativeAssessmentSnapshot,
+                                (int) data_get($assessmentHandoff, 'payload.native_ai.run_id', 0),
+                            );
+                        }
+
+                        $attempt = $this->persistAssessment(
+                            $request, $plan, $task, $state, $assessment, $actorToken,
+                        );
+                        $evidenceService->recordStudyPracticeAssessment($attempt);
+                        $practiceSession->update(['status' => StudyPracticeSession::STATUS_ASSESSED]);
+
+                        return $attempt;
+                    }, 3);
+                } catch (NativeAiExecutionException $exception) {
+                    return redirect()
+                        ->route('plans.tasks.study_practice.show', [$plan, $task])
+                        ->with('status', $exception->getMessage());
+                }
+
                 $state['attempt_id'] = $attempt->id;
-                $evidenceService->recordStudyPracticeAssessment($attempt);
                 $this->studyActions->tryRefresh(
                     $plan,
                     $attempt->created_at ?? now(),
@@ -1055,7 +1103,6 @@ class StudyPracticeController extends Controller
                         $plan,
                     );
                 }
-                $practiceSession->update(['status' => StudyPracticeSession::STATUS_ASSESSED]);
                 $request->session()->put($key, $state);
 
                 $successMessage = (string) ($assessmentHandoff['provider'] ?? '') === 'native_ai'
