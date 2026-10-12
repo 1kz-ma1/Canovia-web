@@ -43,7 +43,11 @@ class AuthController extends Controller
 
         // Installed PWAs should survive browser restarts and deploys. The web form
         // sends an explicit value, while older/alternate clients default to remember.
-        $remember = $request->has('remember') ? $request->boolean('remember') : true;
+        $pilot = config('app.env') === 'staging'
+            && config('canovia_staging.login_pilot_enabled') === true;
+        // The short-lived staging login must not create a persistent remember-me cookie.
+        $remember = $pilot ? false
+            : ($request->has('remember') ? $request->boolean('remember') : true);
 
         if (! Auth::attempt($credentials, $remember)) {
             throw ValidationException::withMessages([
@@ -65,9 +69,10 @@ class AuthController extends Controller
         if ($claimed > 0) $claimMessages[] = "{$claimed}件のGuest計画";
         if ($claimedMemos > 0) $claimMessages[] = "{$claimedMemos}件の保存情報";
 
-        $defaultHome = route('home');
+        // Avoid landing on the deliberately blocked Canovia home screen.
+        $defaultHome = $pilot ? route('auth.account') : route('home');
 
-        return redirect()->intended($defaultHome)->with(
+        return ($pilot ? redirect()->route('auth.account') : redirect()->intended($defaultHome))->with(
             'status',
             $claimMessages !== []
                 ? 'ログインしました。' . implode('と', $claimMessages) . 'もこのアカウントに引き継ぎました。'

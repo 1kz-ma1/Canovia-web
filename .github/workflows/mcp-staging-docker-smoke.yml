@@ -12,7 +12,11 @@ on:
       - 'bootstrap/app.php'
       - 'config/canovia_staging.php'
       - 'app/Http/Middleware/CloseUnopenedMcpStaging.php'
+      - 'app/Http/Middleware/EnsureMcpStagingSyntheticPilotActor.php'
+      - 'app/Services/McpStagingLoginPilotPolicy.php'
+      - 'docker/nginx-mcp-staging-login-pilot.conf'
       - 'tests/Feature/McpIsolatedStagingBootstrapTest.php'
+      - 'tests/Feature/McpStagingLoginPilotPolicyTest.php'
       - '.github/workflows/mcp-staging-docker-smoke.yml'
       - 'deploy/render-mcp-staging.yaml'
       - 'deploy/render-mcp-staging-existing-postgres-cutover.yaml'
@@ -32,6 +36,14 @@ jobs:
         run: |
           docker build --progress=plain --pull -f Dockerfile.mcp-staging \
             -t canovia-mcp-staging:smoke .
+
+      - name: Validate dedicated stage-only login pilot Nginx config
+        run: |
+          docker run --rm --entrypoint sh canovia-mcp-staging:smoke -c \
+            'cp docker/nginx-mcp-staging-login-pilot.conf /etc/nginx/nginx.conf && nginx -t'
+          # The access-log format must never emit OAuth callback code or state.
+          grep -F 'log_format stage_pilot_safe' docker/nginx-mcp-staging-login-pilot.conf \
+            | grep -Ev '\$request_uri|\$query_string|\$args|\$request_body'
 
       - name: Verify PHP SQLite runtime extensions
         run: |

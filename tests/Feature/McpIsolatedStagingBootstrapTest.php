@@ -312,6 +312,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
         $webAccess = [
             'CANOVIA_STAGING_WEB_ACCESS_ENABLED' => 'true',
             'CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED' => 'true',
+            'CANOVIA_STAGING_LOGIN_PILOT_ENABLED' => 'true',
         ];
         $this->assertTrue($this->guard([...[
             'CANOVIA_STAGING_DB_MODE' => 'render_postgres',
@@ -464,6 +465,75 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
         $this->assertStringContainsString('pdo_pgsql', $docker);
         $this->assertStringContainsString('mcp-staging-start.sh', $docker);
         $this->assertStringContainsString('CMD ["./docker/render-start.sh"]', $prod);
+    }
+
+
+    public function test_stage_login_pilot_has_independent_no_full_site_gate(): void
+    {
+        $pin = [
+            'CANOVIA_STAGING_DB_MODE' => 'render_postgres',
+            'CANOVIA_STAGING_POSTGRES_ID' => 'dpg-db43rbbncjis73bmigi0-a',
+            'CANOVIA_STAGING_POSTGRES_USER' => 'canovia_mcp_staging_db_user',
+            'DB_CONNECTION' => 'pgsql',
+            'DB_DATABASE' => 'canovia_mcp_staging_db',
+            'DB_URL' => 'postgresql://canovia_mcp_staging_db_user:synthetic-ci-only'
+                .'@dpg-db43rbbncjis73bmigi0-a:5432/canovia_mcp_staging_db',
+            'CANOVIA_STAGING_WEB_ACCESS_ENABLED' => 'true',
+            'CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED' => 'true',
+            'CANOVIA_STAGING_LOGIN_PILOT_ENABLED' => 'true',
+        ];
+        $this->assertTrue($this->guard($pin)->isSuccessful());
+
+        foreach ([
+            ['CANOVIA_STAGING_LOGIN_PILOT_ENABLED' => 'false'],
+            ['CANOVIA_STAGING_LOGIN_PILOT_ENABLED' => 'invalid'],
+            ['CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED' => 'true'],
+            ['CANOVIA_MCP_TOOLS_ENABLED' => 'true'],
+            ['CANOVIA_MCP_PLAN_CONSENT_ENABLED' => 'true'],
+            ['CANOVIA_MCP_DELEGATED_POLICY_ENABLED' => 'true'],
+            ['CANOVIA_MCP_ACCOUNT_LINK_ENABLED' => 'true'],
+            ['CANOVIA_MCP_AUTH0_JWT_VERIFICATION_ENABLED' => 'true'],
+            ['CANOVIA_MCP_DISCOVERY_ENABLED' => 'true'],
+            ['CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED' => 'false'],
+            ['CANOVIA_STAGING_ROTATE_SYNTHETIC_PASSWORD_ON_START' => 'true'],
+        ] as $bad) {
+            $out = $this->guard([...$pin, ...$bad]);
+            $this->assertSame(42, $out->getExitCode(), implode(',', array_keys($bad)));
+            $this->assertStringContainsString('BLOCKED', $out->getErrorOutput());
+        }
+
+        // Logout of the pilot must not accidentally leave both approvals armed.
+        $this->assertSame(42, $this->guard([
+            'CANOVIA_STAGING_LOGIN_PILOT_ENABLED' => 'true',
+        ])->getExitCode());
+    }
+
+    public function test_stage_login_pilot_nginx_logs_no_oauth_query_and_blocks_general_routes(): void
+    {
+        $nginx = file_get_contents(base_path('docker/nginx-mcp-staging-login-pilot.conf'));
+        $boot = file_get_contents(base_path('docker/mcp-staging-start.sh'));
+        $this->assertIsString($nginx);
+        $this->assertIsString($boot);
+        $this->assertStringContainsString("log_format stage_pilot_safe '\$remote_addr", $nginx);
+        foreach (['$request_uri', '$args', '$query_string', '$request_body'] as $secretBearing) {
+            // Inspect the actual log format, not the nearby documentation comment.
+            $logLine = collect(explode("\n", $nginx))->first(
+                fn (string $line) => str_contains($line, 'log_format stage_pilot_safe'),
+            );
+            $this->assertStringNotContainsString($secretBearing, $logLine);
+        }
+        $this->assertStringContainsString('location = /login {', $nginx);
+        $this->assertStringContainsString('location = /account {', $nginx);
+        $this->assertStringContainsString('location = /logout {', $nginx);
+        $this->assertStringContainsString('location = /index.php {', $nginx);
+        $this->assertStringContainsString('internal;', $nginx);
+        $this->assertStringContainsString('location / {', $nginx);
+        $this->assertStringContainsString('return 503 "Staging service unavailable.";', $nginx);
+        $this->assertStringNotContainsString('location = /health {', $nginx);
+        $this->assertStringContainsString(
+            'cp docker/nginx-mcp-staging-login-pilot.conf /etc/nginx/nginx.conf',
+            $boot,
+        );
     }
 
     private function guard(array $changes = []): Process

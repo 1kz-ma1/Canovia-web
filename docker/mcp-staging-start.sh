@@ -137,6 +137,48 @@ if [ "${CANOVIA_STAGING_WEB_ACCESS_ENABLED:-false}" = "true" ]; then
     [ "${CANOVIA_STAGING_DB_MODE:-sqlite}" = "render_postgres" ] \
         || deny "staging public web requires pinned PostgreSQL"
 fi
+# Restricted synthetic-only Web/IdP pilot has its own explicit approvals.
+case "${CANOVIA_STAGING_LOGIN_PILOT_ENABLED:-false}" in
+    false|true) ;;
+    *) deny "invalid stage login pilot flag" ;;
+esac
+case "${CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED:-false}" in
+    false|true) ;;
+    *) deny "invalid stage account-link pilot flag" ;;
+esac
+if [ "${CANOVIA_STAGING_WEB_ACCESS_ENABLED:-false}" = "true" ]; then
+    [ "${CANOVIA_STAGING_LOGIN_PILOT_ENABLED:-false}" = "true" ] \
+        || deny "Web access requires stage login pilot approval"
+    [ "${CANOVIA_MCP_TOOLS_ENABLED:-false}" = "false" ] \
+        || deny "stage login pilot forbids MCP tools"
+    [ "${CANOVIA_MCP_PLAN_CONSENT_ENABLED:-false}" = "false" ] \
+        || deny "stage login pilot forbids Plan grants"
+    [ "${CANOVIA_MCP_DELEGATED_POLICY_ENABLED:-false}" = "false" ] \
+        || deny "stage login pilot forbids delegated reads"
+    [ "${CANOVIA_MCP_TOKEN_INTROSPECTION_ENABLED:-false}" = "false" ] \
+        || deny "stage login pilot forbids introspection"
+    if [ "${CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED:-false}" = "true" ]; then
+        [ "${CANOVIA_MCP_DISCOVERY_ENABLED:-false}" = "true" ] \
+            || deny "link pilot requires discovery"
+        [ "${CANOVIA_MCP_ACCOUNT_LINK_ENABLED:-false}" = "true" ] \
+            || deny "link pilot requires link approval"
+        [ "${CANOVIA_MCP_AUTH0_JWT_VERIFICATION_ENABLED:-false}" = "true" ] \
+            || deny "link pilot requires Auth0 JWT verification"
+        [ "${CANOVIA_MCP_TOKEN_VERIFICATION_DRIVER:-introspection}" = "auth0_jwt" ] \
+            || deny "link pilot requires approved JWT verifier"
+    else
+        for name in CANOVIA_MCP_DISCOVERY_ENABLED CANOVIA_MCP_ACCOUNT_LINK_ENABLED \
+            CANOVIA_MCP_AUTH0_JWT_VERIFICATION_ENABLED; do
+            [ "$(printenv "$name" 2>/dev/null || true)" != "true" ] \
+                || deny "login-only pilot must keep OAuth off"
+        done
+    fi
+else
+    [ "${CANOVIA_STAGING_LOGIN_PILOT_ENABLED:-false}" = "false" ] \
+        || deny "closed Web must not arm login pilot"
+    [ "${CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED:-false}" = "false" ] \
+        || deny "closed Web must not arm link pilot"
+fi
 
 # Opt-in NO-NETWORK Auth0 config inventory; never activates public OAuth/MCP.
 case "${CANOVIA_STAGING_VERIFY_AUTH0_WIRING_ON_START:-false}" in
@@ -276,6 +318,9 @@ printf '%s\n' "MCP isolated staging startup: configured database mode=${CANOVIA_
 if [ "${CANOVIA_STAGING_WEB_ACCESS_ENABLED:-false}" = "false" ]; then
     cp docker/nginx-mcp-staging-closed.conf /etc/nginx/nginx.conf
     nginx -t >/dev/null 2>&1 || deny "closed staging Nginx configuration invalid"
+else
+    cp docker/nginx-mcp-staging-login-pilot.conf /etc/nginx/nginx.conf
+    nginx -t >/dev/null 2>&1 || deny "pilot staging Nginx configuration invalid"
 fi
 
 if [ "${CANOVIA_STAGING_DB_MODE:-sqlite}" = "sqlite" ]; then
