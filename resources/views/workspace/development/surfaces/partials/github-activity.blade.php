@@ -69,6 +69,7 @@
                 <div class="mt-4 grid gap-3 xl:grid-cols-2">
                     @foreach ($recentActivity as $observation)
                         @php
+                            $historicalOnly = ! (bool) $observation->getAttribute('current_source_eligible');
                             $suggestedTask = $observation->suggestedTask;
                             $resolvedArtifact = $observation->resolvedArtifact;
                             $linkedTask = $resolvedArtifact ? $resolvedArtifact->tasks->first() : null;
@@ -96,6 +97,9 @@
                                 @if ($observation->state)
                                     <span class="text-[10px] font-bold text-slate-500">{{ $observation->state }}</span>
                                 @endif
+                                @if ($historicalOnly)
+                                    <span class="text-[10px] font-black text-amber-200" data-development-historical-source>過去の観測・現在は未検証</span>
+                                @endif
                                 @if ($linkedTask)
                                     <span class="text-[10px] font-black text-emerald-300">Task連携済み</span>
                                 @elseif ($canAssociateObservation)
@@ -109,6 +113,11 @@
                             </div>
 
                             <div class="mt-2 min-w-0">
+                                @if ($historicalOnly)
+                                    <p class="mb-2 text-[11px] text-amber-200/80" data-development-historical-note>
+                                        GitHubの接続・権限または取得元を確認できません。履歴として表示していますが、現在のTask候補や最新Evidenceには使いません。
+                                    </p>
+                                @endif
                                 @if ($observation->url)
                                     <a href="{{ $observation->url }}" target="_blank" rel="noopener noreferrer" class="break-words text-sm font-black text-slate-100 hover:text-cyan-200">
                                         {{ $displayTitle }}

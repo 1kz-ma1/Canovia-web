@@ -11,6 +11,7 @@ final class DevelopmentHomeService
 {
     public function __construct(
         private readonly DevelopmentTaskMatchService $taskMatches,
+        private readonly DevelopmentObservationReuseGuard $reuseGuard,
     ) {}
 
     /**
@@ -59,9 +60,19 @@ final class DevelopmentHomeService
             ->limit(12)
             ->get();
 
+        // Retain visible history, but mark a disconnected or unverifiable
+        // source as historical rather than actionable/current evidence.
+        $recentActivity->each(function (DevelopmentActivityObservation $observation) use ($plan): void {
+            $observation->setAttribute(
+                'current_source_eligible',
+                $this->reuseGuard->eligible($plan, $observation),
+            );
+        });
+
         $unresolved = $recentActivity
             ->filter(fn (DevelopmentActivityObservation $observation) =>
-                in_array(
+                (bool) $observation->getAttribute('current_source_eligible')
+                && in_array(
                     $observation->resolution_status,
                     ['unlinked', 'suggested'],
                     true,
