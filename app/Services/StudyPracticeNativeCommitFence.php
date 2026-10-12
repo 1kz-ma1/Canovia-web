@@ -163,7 +163,21 @@ final class StudyPracticeNativeCommitFence
         return hash('sha256', json_encode([
             'plan' => $plan->getAttributes(),
             'task' => $task->getAttributes(),
-            'session' => $session?->getAttributes(),
+            'session' => $session ? [
+                'id' => $session->id,
+                'plan_id' => $session->plan_id,
+                'task_id' => $session->task_id,
+                'user_id' => $session->user_id,
+                'actor_token' => $session->actor_token,
+                'prepare_request_id' => $session->prepare_request_id,
+                'session_token' => $session->session_token,
+                'status' => $session->status,
+                'question_provider' => $session->question_provider,
+                'questions_snapshot' => $session->questions_snapshot,
+                'selected_questions' => $session->selected_questions,
+                'draft_answers' => $session->draft_answers,
+                'draft_saved_at' => $session->draft_saved_at?->toIso8601String(),
+            ] : null,
             'attempt_count' => (int) ($attemptVersion?->total_attempts ?? 0),
             'attempt_latest_id' => (int) ($attemptVersion?->last_attempt_id ?? 0),
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
