@@ -16,7 +16,7 @@ Before touching Render environment, merge this code only after dedicated PHP, mi
 
 - GET/HEAD `/login`, GET/HEAD `/account`, POST `/logout`
 - POST `/login` with the **fixed synthetic** email `mcp-synthetic-owner@canovia.invalid` only; remember-me is disabled
-- The built Vite `/build/` assets needed to render these two pages, and health `/up`
+- Health `/up` only. Stage login and account are self-contained, no `/build/`, external fonts, scripts or product header. `/build/` is denied with other normal-app routes.
 
 A fourth, **independently approved** `CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED` extends Laravel to `/account/mcp/link/start`, `/account/mcp/link/callback`, `/account/mcp/link/confirm` and `/account/mcp/link/cancel`, and only while discovery, signed Auth0 JWT verifier and link gates are on, with introspection, delegated policy, Plan consent and MCP tools **still off**. This link phase is *not* automatically enabled by the first phase.
 
@@ -37,3 +37,9 @@ Only after step 4 and fresh review of Auth0 callback, issuer, strict audience, s
 Rollback stage immediately by setting `CANOVIA_STAGING_WEB_ACCESS_ENABLED=false`, `CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED=false`, `CANOVIA_STAGING_LOGIN_PILOT_ENABLED=false`, `CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED=false` while other OAuth/MCP switches stay OFF. The production service and DB remain unchanged.
 
 Related: [Phase-1 read acceptance](MCP_CHATGPT_PHASE1_DEVELOPMENT_READ_2026_10_11.md), [Auth0 wiring operator guide](MCP_AUTH0_STAGING_WIRING_OPERATOR_2026_10_12.md), [callback/scope acceptance](MCP_CHATGPT_AUTH0_CALLBACK_SCOPE_ACCEPTANCE_2026_10_13.md), issue #462.
+
+## 2026-10-13 pilot UI verification after successful synthetic login
+
+The owner manually signed in and confirmed login succeeded in the isolated stage. The first screenshot showed the regular application layout without CSS, and staging access logs showed multiple denied GETs alongside successful login GET 200. The original full layout depended on normal application assets and background route surfaces intentionally blocked by the synthetic-only Nginx allowlist. The fix serves two standalone staging-only views with embedded CSS: `auth.staging-pilot-login` and `auth.staging-pilot-account`; neither uses `@vite`, the production shell, service worker, PWA or external links. The stage account view is deliberately limited to the fixed synthetic user's identifier, link/confirmation status and logout; ordinary Canovia Plan or account deletion content is never rendered. Log out returns to `/login`, never the blocked `/`. Stage Nginx denies `/build/` entirely after this change. No production UI code or production config is changed.
+
+Keep signed Auth0/JWT/link/discovery OFF until the next, independent staged link test is approved; staged UI work **does not** authenticate an Auth0 identity. Deploy only to staging in first sealed mode, then re-enable only the existing pilot flags as reviewed. The owner may need to sign in again after stage redeploy because isolated file sessions may restart. Never record the rotated password or Auth0 authorization response code in chat or GitHub.
