@@ -1,0 +1,41 @@
+name: Adaptive Context G3 Study Scope AI Commit Fence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/StudyScopeCaptureCommitFence.php'
+      - 'app/Services/StudyScopeCaptureAnalysisService.php'
+      - 'app/Services/NativeAiPurposeAuthorizationGuard.php'
+      - 'tests/Feature/StudyScopeAiCommitFenceG3Test.php'
+      - '.github/workflows/adaptive-context-g3-study-scope-commit-fence.yml'
+
+jobs:
+  study-scope-post-provider-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/StudyScopeCaptureCommitFence.php
+          php -l app/Services/StudyScopeCaptureAnalysisService.php
+          php -l tests/Feature/StudyScopeAiCommitFenceG3Test.php
+      - name: Post-provider revoked actor, source, and confirmed state
+        run: php artisan test tests/Feature/StudyScopeAiCommitFenceG3Test.php
+      - name: Existing Study Scope, V53 and Native AI purpose regressions
+        run: |
+          php artisan test \
+            tests/Feature/StudyScopeCaptureV534Test.php \
+            tests/Feature/NativeAiPurposeGrantFenceV05Test.php \
+            tests/Feature/StudyIntelligenceV535Test.php
