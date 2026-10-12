@@ -21,6 +21,7 @@ final class ExecutionGitHubHandoffService
         private readonly GitHubRepositoryWriter $writer,
         private readonly GitHubWorkflowService $githubWorkflow,
         private readonly ExecutionPacketCommitFence $nativeFence,
+        private readonly ExecutionRequestHandoffService $handoffSources,
     ) {}
 
     /**
@@ -103,6 +104,15 @@ final class ExecutionGitHubHandoffService
             ExecutionRequestHandoffService::sessionKey($plan, $task),
             [],
         );
+        if (! $this->handoffSources->sourceIsCurrent(
+            is_array($orchestrationState['execution_request'] ?? null)
+                ? $orchestrationState['execution_request'] : null,
+            $plan, $task,
+        )) {
+            throw ValidationException::withMessages([
+                'github_change' => '元のCompanion実行候補が現在未検証です。新しい根拠でPacketを作成してください。',
+            ]);
+        }
         $packet = is_array($orchestrationState['packet'] ?? null)
             ? $orchestrationState['packet']
             : null;
