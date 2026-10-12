@@ -182,12 +182,24 @@ final class ReasoningRouter
                 usedFallback: false,
             );
         } catch (NativeAiExecutionException $exception) {
+            // The central Native AI fence can observe the same mid-request
+            // revoke earlier than this Router's post-response check. Preserve
+            // V53's stable authorization-change fallback contract.
+            $changedPermission = in_array($exception->errorCode, [
+                'native_ai_actor_unverified',
+                'native_ai_target_changed',
+                'native_ai_purpose_not_entitled',
+                'native_ai_authorization_unavailable',
+            ], true);
+
             return $this->recordFallback(
                 request: $request,
                 requestFingerprint: $requestFingerprint,
                 mode: $mode,
                 started: $started,
-                reason: $exception->errorCode,
+                reason: $changedPermission
+                    ? 'authorization_changed_during_reasoning'
+                    : $exception->errorCode,
                 routerVersion: $routerVersion,
             );
         } catch (Throwable) {

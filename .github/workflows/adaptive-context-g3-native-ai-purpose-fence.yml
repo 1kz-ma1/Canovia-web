@@ -1,0 +1,45 @@
+name: Adaptive Context G3 Native AI Purpose Fence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/NativeAiGateway.php'
+      - 'app/Intelligence/Services/ReasoningRouter.php'
+      - 'app/Services/NativeAiPurposeAuthorizationGuard.php'
+      - 'tests/Feature/NativeAiPurposeGrantFenceV05Test.php'
+      - 'tests/Feature/IntelligenceReasoningRouterV533Test.php'
+      - '.github/workflows/adaptive-context-g3-native-ai-purpose-fence.yml'
+
+jobs:
+  purpose-policy-and-native-ai:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/NativeAiGateway.php
+          php -l app/Intelligence/Services/ReasoningRouter.php
+          php -l app/Services/NativeAiPurposeAuthorizationGuard.php
+          php -l tests/Feature/NativeAiPurposeGrantFenceV05Test.php
+      - name: G3 actor, feature, Plan and Task revocation during Native AI roundtrip
+        run: php artisan test tests/Feature/NativeAiPurposeGrantFenceV05Test.php
+      - name: Native AI Study Practice and Companion route regressions
+        run: php artisan test tests/Feature/NativeAiPracticeV418Test.php tests/Feature/CanoviaCompanionV4115Test.php
+      - name: V53 reasoning and feature boundaries
+        run: php artisan test tests/Feature/IntelligenceReasoningRouterV533Test.php tests/Feature/FeatureAccessV406Test.php
+      - name: Onboarding, extraction, scope capture and AI context regressions
+        run: php artisan test tests/Feature/ConversationalOnboardingV4116Test.php tests/Feature/StudyScopeCaptureV534Test.php tests/Feature/StudyRecallCandidateV4112Test.php tests/Feature/InboxIntelligenceGuideV4113Test.php
+      - name: MCP consent/revoke isolation stays distinct
+        run: php artisan test tests/Feature/McpReadOnlyResourceTest.php tests/Feature/McpSyntheticOAuthConsentReadLifecycleTest.php

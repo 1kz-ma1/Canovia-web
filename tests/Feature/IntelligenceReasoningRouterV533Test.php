@@ -142,6 +142,9 @@ class IntelligenceReasoningRouterV533Test extends TestCase
     public function test_openai_provider_selects_from_the_canovia_candidate_contract_directly(): void
     {
         [$user, $plan] = $this->context();
+        // Direct provider invocation must carry the same Native AI purpose
+        // entitlement as any other gateway entry point.
+        $this->grantPremium($user);
 
         Http::fake([
             'https://api.openai.com/v1/responses' => Http::response(
