@@ -19,6 +19,11 @@ block() {
 [[ -z "${DB_PASSWORD:-}" ]] || block 'APP_CREDENTIALS_FORBIDDEN'
 [[ -z "${MYSQL_TEST_LOGIN_FILE:-}" ]] || block 'UNEXPECTED_LOGIN_PATH_FILE_OVERRIDE'
 
+# Operator-opt-in: new release-488 inventory is never assumed by old P0 runs.
+# Reject typos rather than silently reverting to a weaker summary.
+release_488_mode="${CANOVIA_RELEASE_488_CHECK:-NO}"
+[[ "$release_488_mode" == "NO" || "$release_488_mode" == "YES" ]] || block 'RELEASE_CHECK_MODE_INVALID'
+
 login="${CANOVIA_P0_LOGIN_PATH:-}"
 database="${CANOVIA_P0_DATABASE:-}"
 ca="${CANOVIA_P0_CA_FILE:-}"
@@ -39,6 +44,11 @@ for f in \
   scripts/ci/p0_mysql_full_ledger_offline_check.py; do
   [[ -r "$repo/$f" ]] || block 'PINNED_SOURCE_REQUIRED'
 done
+if [[ "$release_488_mode" == "YES" ]]; then
+  for f in scripts/sql/release_488_mysql_schema_snapshot.sql scripts/ci/release_488_mysql_ledger_gate.py; do
+    [[ -r "$repo/$f" ]] || block 'PINNED_RELEASE_SOURCE_REQUIRED'
+  done
+fi
 
 # The profile and target must be independently verified against Aiven Console.
 # --no-defaults prevents an unrelated ordinary MySQL options file from silently
@@ -89,14 +99,37 @@ if ! python3 "$repo/scripts/ci/p0_mysql_inventory_offline_triage.py" \
   exit 2
 fi
 
+# Keep raw ledger names private only inside the 0700 temp dir. Both the P0
+# classifier and release-specific verifier read it independently; never print it.
 if ! mysql "${mysql_args[@]}" \
-    < "$repo/scripts/sql/p0_mysql_readonly_full_migration_ledger.sql" 2>/dev/null \
-    | python3 "$repo/scripts/ci/p0_mysql_full_ledger_offline_check.py" --input - \
-       > "$scratch/ledger.json"; then
+    < "$repo/scripts/sql/p0_mysql_readonly_full_migration_ledger.sql" \
+    > "$scratch/raw-ledger.tsv" 2>/dev/null; then
+  block 'LEDGER_QUERY_FAILED'
+fi
+if ! python3 "$repo/scripts/ci/p0_mysql_full_ledger_offline_check.py" \
+    --input "$scratch/raw-ledger.tsv" > "$scratch/ledger.json"; then
   printf 'P0_READONLY_COLLECT: LEDGER_BLOCK\n'
   cat "$scratch/triage.json"
   cat "$scratch/ledger.json"
   exit 2
+fi
+
+if [[ "$release_488_mode" == "YES" ]]; then
+  # Metadata-only SELECT. This does NOT read Plan, users, Answer Events or
+  # GitHub observation rows, and cannot initiate migrations or a deploy.
+  if ! mysql "${mysql_args[@]}" \
+      < "$repo/scripts/sql/release_488_mysql_schema_snapshot.sql" \
+      > "$scratch/release-488-schema.tsv" 2>/dev/null; then
+    block 'RELEASE_488_SCHEMA_QUERY_FAILED'
+  fi
+  if ! python3 "$repo/scripts/ci/release_488_mysql_ledger_gate.py" \
+      --ledger "$scratch/raw-ledger.tsv" \
+      --schema "$scratch/release-488-schema.tsv" \
+      > "$scratch/release-488.json"; then
+    printf 'P0_READONLY_COLLECT: RELEASE_488_BLOCK\n'
+    cat "$scratch/release-488.json"
+    exit 2
+  fi
 fi
 
 # Human-verified service identity, production backups, and restoration remain
@@ -104,5 +137,9 @@ fi
 printf 'P0_READONLY_COLLECT: REVIEW_REQUIRED_NOT_RELEASE\n'
 cat "$scratch/triage.json"
 cat "$scratch/ledger.json"
+if [[ "$release_488_mode" == "YES" ]]; then
+  printf 'P0_READONLY_COLLECT: RELEASE_488_REVIEW_REQUIRED\n'
+  cat "$scratch/release-488.json"
+fi
 printf 'AIVEN_REAL_RESTORE_VERIFIED: false\n'
 printf 'PRODUCTION_RELEASE_AUTHORIZED: false\n'
