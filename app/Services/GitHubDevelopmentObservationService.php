@@ -19,6 +19,7 @@ final class GitHubDevelopmentObservationService
         private readonly GitHubWorkflowService $workflow,
         private readonly FeatureAccessService $access,
         private readonly PlanCategoryProfileService $profiles,
+        private readonly GitHubSourceEpochService $epochs,
     ) {}
 
     /** @return array{observed:int,plan_ids:array<int,int>} */
@@ -340,13 +341,16 @@ final class GitHubDevelopmentObservationService
         // authorize a fact fetched using a former owner's connection.
         $sourceOwnerId = $root->plan?->user_id === null
             ? null : (int) $root->plan->user_id;
+        // Capture the connection generation before network work; a
+        // disconnected/reconnected repository cannot authorize old results.
+        $sourceEpoch = $this->epochs->current((array) $root->metadata);
 
         // The REST read happened before this transaction. Serialize competing
         // writers under a row lock and compare GitHub's entity revision, not
         // webhook arrival order or the local processing timestamp.
         return DB::transaction(function () use (
             $identity, $values, $revision, $revisionId, $kind,
-            $root, $repo, $installationId, $sourceOwnerId,
+            $root, $repo, $installationId, $sourceOwnerId, $sourceEpoch,
         ): ?DevelopmentActivityObservation {
             // Upstream REST calls happened outside this transaction. The root
             // can be disconnected, deleted or moved between fetch and commit.
@@ -378,10 +382,12 @@ final class GitHubDevelopmentObservationService
                     || (int) data_get($liveRoot->metadata, 'github_app_connection.installation_id', 0) !== $installationId
                 ))
                 || ! $this->eligible($liveRoot)
+                || $this->epochs->current((array) $liveRoot->metadata) !== $sourceEpoch
                 || (int) $liveRoot->plan_id !== (int) $identity['plan_id']) {
                 return null;
             }
 
+            $values['source_epoch'] = $sourceEpoch;
             $observation = DevelopmentActivityObservation::query()
                 ->createOrFirst($identity, $values);
 
@@ -397,6 +403,19 @@ final class GitHubDevelopmentObservationService
             // A commit SHA is immutable. Replayed push deliveries must not
             // reassign its originally observed ref or its Task resolution.
             if ($kind === 'commit' || $revision === null) {
+                // Immutable commit refetched through the current connection
+                // is independently proven in the new epoch. Preserve its
+                // human-chosen Task association and immutable payload.
+                if ($sourceEpoch !== null && $locked->source_epoch !== $sourceEpoch) {
+                    if ($kind === 'commit' && (string) $locked->sha !== (string) $values['sha']) {
+                        return $locked;
+                    }
+                    $locked->update([
+                        'source_epoch' => $sourceEpoch,
+                        'last_observed_at' => now(),
+                    ]);
+                }
+
                 return $locked;
             }
 
@@ -422,7 +441,20 @@ final class GitHubDevelopmentObservationService
                 if ($comparison === 0) {
                     $previousId = (int) ($locked->source_revision_id ?? 0);
                     if ($kind !== 'deployment' || $revisionId <= $previousId) {
-                        // Same source revision must not alternate its payload.
+                        // Do not change same-version fields, but an exact
+                        // re-fetch of unchanged state can re-establish source
+                        // provenance for a new connection generation.
+                        if ($sourceEpoch !== null
+                            && $locked->source_epoch !== $sourceEpoch
+                            && (string) $locked->state === (string) $values['state']
+                            && (string) $locked->sha === (string) $values['sha']
+                            && (string) $locked->ref === (string) $values['ref']) {
+                            $locked->update([
+                                'source_epoch' => $sourceEpoch,
+                                'last_observed_at' => now(),
+                            ]);
+                        }
+
                         return $locked;
                     }
                 }
