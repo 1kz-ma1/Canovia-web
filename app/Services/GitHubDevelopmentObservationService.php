@@ -352,24 +352,27 @@ final class GitHubDevelopmentObservationService
             $identity, $values, $revision, $revisionId, $kind,
             $root, $repo, $installationId, $sourceOwnerId, $sourceEpoch,
         ): ?DevelopmentActivityObservation {
-            // Upstream REST calls happened outside this transaction. The root
-            // can be disconnected, deleted or moved between fetch and commit.
-            // Lock it again and check the SAME installation (not merely a
-            // newly connected installation for the same repository).
-            $liveRoot = PlanArtifact::query()
-                ->whereKey($root->id)
-                ->lockForUpdate()
-                ->first();
-            if (! $liveRoot) {
-                return null;
-            }
+            // All commit paths that can also touch a GitHub repository
+            // (TaskEvidence, Companion and Task association) acquire the
+            // Plan lock before the repository lock. Using root -> Plan here
+            // creates a PostgreSQL deadlock cycle under concurrent writes.
+            //
+            // The originally selected Plan is only a locator, NOT authority:
+            // recheck the locked root's Plan, owner, installation and epoch.
             $livePlan = Plan::query()
-                ->whereKey($liveRoot->plan_id)
+                ->whereKey((int) $root->plan_id)
                 ->lockForUpdate()
                 ->first();
             if (! $livePlan
                 || ($livePlan->user_id === null ? null : (int) $livePlan->user_id)
                     !== $sourceOwnerId) {
+                return null;
+            }
+            $liveRoot = PlanArtifact::query()
+                ->whereKey($root->id)
+                ->lockForUpdate()
+                ->first();
+            if (! $liveRoot || (int) $liveRoot->plan_id !== (int) $livePlan->id) {
                 return null;
             }
             $livePlan->load('user');
