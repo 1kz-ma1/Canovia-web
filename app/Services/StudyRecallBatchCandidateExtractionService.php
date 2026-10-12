@@ -8,6 +8,7 @@ use App\Models\StudyRecallCandidate;
 use App\Models\StudyRecallSource;
 use App\Models\Task;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
@@ -18,6 +19,7 @@ final class StudyRecallBatchCandidateExtractionService
 
     public function __construct(
         private readonly NativeAiGateway $nativeAi,
+        private readonly StudyRecallExtractionCommitFence $commitFence,
     ) {}
 
     /**
@@ -68,6 +70,12 @@ final class StudyRecallBatchCandidateExtractionService
                 );
             }
         }
+
+        $sourceSignatures = $sources->mapWithKeys(
+            fn (StudyRecallSource $source) => [
+                (int) $source->id => $this->commitFence->snapshot($source),
+            ],
+        )->all();
 
         $manifest = $sources
             ->map(fn (StudyRecallSource $source, int $index) =>
@@ -124,13 +132,7 @@ final class StudyRecallBatchCandidateExtractionService
                 inputParts: $this->inputParts($sources),
             );
         } catch (NativeAiExecutionException $exception) {
-            StudyRecallSource::query()
-                ->whereIn('id', $sources->pluck('id'))
-                ->update([
-                    'status' => 'failed',
-                    'native_ai_run_id' => $exception->runId,
-                    'updated_at' => now(),
-                ]);
+            $this->markFailedSources($sources, $plan, $task, $userId, $exception);
 
             throw $exception;
         }
@@ -139,10 +141,22 @@ final class StudyRecallBatchCandidateExtractionService
             ->filter(fn ($candidate) => is_array($candidate))
             ->take(50);
 
-        $created = 0;
-        $createdPerSource = array_fill(0, $sources->count(), 0);
+        try {
+            [$created, $createdPerSource] = DB::transaction(function () use (
+                $sources, $plan, $task, $userId, $sourceSignatures, $result, $cards,
+            ): array {
+                $this->commitFence->assertCanCommit(
+                    $plan,
+                    $task,
+                    $userId,
+                    $sourceSignatures,
+                    (int) $result['run_id'],
+                );
 
-        foreach ($cards as $candidate) {
+                $created = 0;
+                $createdPerSource = array_fill(0, $sources->count(), 0);
+
+                foreach ($cards as $candidate) {
             $sourceIndex = (int) ($candidate['source_index'] ?? -1);
             $source = $sources->get($sourceIndex);
 
@@ -223,12 +237,20 @@ final class StudyRecallBatchCandidateExtractionService
             }
         }
 
-        foreach ($sources as $index => $source) {
-            $source->update([
-                'status' => 'ready',
-                'native_ai_run_id' => (int) $result['run_id'],
-                'candidate_count' => $createdPerSource[$index],
-            ]);
+                foreach ($sources as $index => $source) {
+                    $source->update([
+                        'status' => 'ready',
+                        'native_ai_run_id' => (int) $result['run_id'],
+                        'candidate_count' => $createdPerSource[$index],
+                    ]);
+                }
+
+                return [$created, $createdPerSource];
+            }, 3);
+        } catch (NativeAiExecutionException $exception) {
+            $this->markFailedSources($sources, $plan, $task, $userId, $exception);
+
+            throw $exception;
         }
 
         return [
@@ -237,6 +259,31 @@ final class StudyRecallBatchCandidateExtractionService
             'total' => $cards->count(),
             'source_count' => $sources->count(),
         ];
+    }
+
+    /** @param Collection<int,StudyRecallSource> $sources */
+    private function markFailedSources(
+        Collection $sources,
+        Plan $plan,
+        Task $task,
+        ?int $userId,
+        NativeAiExecutionException $exception,
+    ): void {
+        if ($userId === null) {
+            return;
+        }
+
+        StudyRecallSource::query()
+            ->whereIn('id', $sources->pluck('id'))
+            ->where('plan_id', $plan->id)
+            ->where('task_id', $task->id)
+            ->where('user_id', $userId)
+            ->whereIn('status', ['pending', 'failed'])
+            ->update([
+                'status' => 'failed',
+                'native_ai_run_id' => $exception->runId,
+                'updated_at' => now(),
+            ]);
     }
 
     /**
