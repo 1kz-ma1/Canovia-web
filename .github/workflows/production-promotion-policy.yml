@@ -14,18 +14,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check source is main from the same repository
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check exact release candidate comes from main and the same repository
         if: github.event_name == 'pull_request'
         env:
           SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
           SOURCE_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
           TARGET_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          test "$SOURCE_BRANCH" = main
+          case "$SOURCE_BRANCH" in
+            release/*) ;;
+            *) echo 'production_release_branch_required' >&2; exit 1 ;;
+          esac
           test "$SOURCE_REPO" = "$TARGET_REPO"
-          echo "production_promotion_source: pass"
-      - uses: actions/checkout@v4
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          git merge-base --is-ancestor "$RELEASE_SHA" refs/remotes/origin/main
+          echo "production_release_candidate_pinned_to_main: pass"
       - name: Validate metadata-only Aiven audit remains fail-closed
         run: |
           set -euo pipefail
