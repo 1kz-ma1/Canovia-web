@@ -11,6 +11,7 @@ use App\Services\PlanActionDraftEvidenceService;
 use App\Services\PlanActionDraftTypedEvidenceService;
 use App\Services\PlanActionDraftStepService;
 use App\Services\PlanActionDraftQualityService;
+use App\Services\PlanActionDraftApprovalSourceGuard;
 use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -116,6 +117,7 @@ final class PlanActionDraftController extends Controller
         PlanOwnershipService $ownership,
         PlanActivityService $activity,
         PlanActionDraftStepService $stepService,
+        PlanActionDraftApprovalSourceGuard $sourceGuard,
     ) {
         $ownership->authorizePlan($request, $plan);
         $this->withinPlan($plan, $draft);
@@ -129,8 +131,16 @@ final class PlanActionDraftController extends Controller
             'expected_candidate_fingerprint' => ['sometimes', 'string', 'size:64'],
         ]);
 
-        DB::transaction(function () use ($plan, $draft, $request, $activity, $stepService, $validated) {
-            $locked = PlanActionDraft::where('plan_id', $plan->id)
+        DB::transaction(function () use (
+            $plan, $draft, $request, $ownership, $activity,
+            $stepService, $sourceGuard, $validated,
+        ) {
+            // The route-resolved Plan may have been transferred since the
+            // initial authorization. Serialize owner changes with acceptance.
+            $currentPlan = Plan::query()->whereKey($plan->id)
+                ->lockForUpdate()->firstOrFail();
+            $ownership->authorizePlan($request, $currentPlan);
+            $locked = PlanActionDraft::where('plan_id', $currentPlan->id)
                 ->whereKey($draft->id)->lockForUpdate()->firstOrFail();
             if ($locked->status === PlanActionDraft::ACCEPTED) return;
             abort_unless($locked->status === PlanActionDraft::PROPOSED, 409);
@@ -142,13 +152,18 @@ final class PlanActionDraftController extends Controller
                     $validated['expected_candidate_fingerprint']), 409);
             }
 
+            // Bind the owner's explicit approval to the source revisions
+            // presented in the draft, not merely to its candidate text.
+            // All checks and subsequent Task inserts share this transaction.
+            $sourceGuard->assertCurrent($currentPlan, $locked);
+
             $steps = $locked->steps()->get();
             $isBundle = $steps->isNotEmpty();
             $mode = $validated['accept_mode'] ?? 'single';
             abort_unless($mode === ($isBundle ? 'bundle' : 'single'), 409);
 
             if ($isBundle) {
-                abort_unless($stepService->isCurrent($plan, $locked, $steps), 409);
+                abort_unless($stepService->isCurrent($currentPlan, $locked, $steps), 409);
                 abort_unless(isset($validated['steps_fingerprint'])
                     && hash_equals($stepService->fingerprint($steps), $validated['steps_fingerprint']), 409);
             }
@@ -158,10 +173,10 @@ final class PlanActionDraftController extends Controller
                 : [$locked->suggested_next_action];
             $previousTask = null;
             $firstTask = null;
-            $baseOrder = (int) $plan->tasks()->max('sort_order');
+            $baseOrder = (int) $currentPlan->tasks()->max('sort_order');
 
             foreach ($proposedTitles as $position => $title) {
-                $task = $plan->tasks()->create([
+                $task = $currentPlan->tasks()->create([
                     'title' => $title,
                     'description' => '本人が行動記録を確認し、計画案として承認した新しいTaskです。',
                     'estimated_minutes' => 0, 'remaining_minutes' => 0,
@@ -179,7 +194,7 @@ final class PlanActionDraftController extends Controller
                     $steps[$position]->update(['accepted_task_id' => $task->id]);
                 }
 
-                $activity->record($plan, $request->user(), 'task_created',
+                $activity->record($currentPlan, $request->user(), 'task_created',
                     'task', (int) $task->id, ['task_title' => $task->title, 'action_draft_id' => $locked->id]);
 
                 $firstTask ??= $task;
