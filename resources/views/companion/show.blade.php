@@ -242,7 +242,7 @@
                                     @if ($candidate->status === 'pending')
                                         @if (! empty($preview['source_stale']))
                                             <p class="mt-3 text-xs text-amber-200" data-companion-source-stale>
-                                                この変更候補のGitHub根拠は現在確認できません。履歴として残しますが、新しい情報で再提案が必要です。
+                                                このAI変更候補の根拠または出典は現在検証できません。履歴として残しますが、反映には新しい提案が必要です。
                                             </p>
                                         @endif
                                         <div class="mt-3 flex flex-wrap gap-2">
