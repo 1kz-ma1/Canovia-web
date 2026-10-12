@@ -64,6 +64,7 @@ final class McpStagingProviderPreflightService
             'pkce_and_callback_issuer' => 'not_probed',
             'canovia_confidential_client' => 'not_probed',
             'resource_scope' => 'not_probed',
+            'third_party_oidc_scopes' => 'not_probed',
             'introspection_endpoint' => 'not_probed',
             'chatgpt_client_registration' => 'not_probed',
         ];
@@ -95,6 +96,9 @@ final class McpStagingProviderPreflightService
                 'provision_isolated_canovia_staging_service_and_database',
                 'register_canovia_confidential_oauth_client_and_exact_callback',
                 'register_chatgpt_oauth_client_and_confirm_issued_client_id',
+                ...($mode === 'auth0_jwt'
+                    ? ['check_chatgpt_default_oidc_scopes_against_auth0_third_party_restrictions']
+                    : []),
                 $mode === 'auth0_jwt'
                     ? 'test_actual_signed_auth0_jwt_audience_client_scope_and_revocation'
                     : 'test_actual_chatgpt_resource_bound_tokens_and_introspection_claims',
@@ -160,6 +164,18 @@ final class McpStagingProviderPreflightService
 
         $jwtMode = $this->verifier->mode() === 'auth0_jwt';
         $scopes = $meta['scopes_supported'] ?? null;
+
+        // OpenAI clients may request advertised OIDC scopes by default.
+        // Auth0's enhanced third-party clients currently reject those
+        // OIDC scopes. This is a warning, NOT a claim that login fails:
+        // actual requested scopes and the app's security mode must be tested.
+        // Even metadata with no OIDC scope is NOT proof of token issuance.
+        $oidcScopes = ['openid', 'profile', 'email'];
+        $checks['third_party_oidc_scopes'] = ! $jwtMode ? 'not_applicable'
+            : (! is_array($scopes) || ! array_is_list($scopes) ? 'unknown_metadata'
+                : (array_intersect($oidcScopes, $scopes) !== []
+                    ? 'requires_live_flow_validation' : 'not_advertised'));
+
         $checks['resource_scope'] = $jwtMode ? 'requires_signed_token'
             : (is_array($scopes) && array_is_list($scopes)
                 && in_array(McpProtectedResourceConfiguration::READ_SCOPE, $scopes, true)
