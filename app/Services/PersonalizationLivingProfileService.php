@@ -180,10 +180,10 @@ final class PersonalizationLivingProfileService
             }
         }
 
-        $githubConnected = data_get(
-            $context,
-            'context_sources.observed.github_integration.status',
-        ) === 'connected';
+        // Derive connection eligibility from live sources, not a previously
+        // persisted 'connected' observation that may already be revoked.
+        $signal = $this->developmentSignals->advancedSupport($request->user());
+        $githubConnected = (int) ($signal['connected_repository_count'] ?? 0) > 0;
         $selfReportedExperience = (string) data_get(
             $context,
             'domain_context.development.experience',
@@ -203,14 +203,13 @@ final class PersonalizationLivingProfileService
                 ? $candidates[$candidateKey]
                 : [];
             $status = (string) ($existing['status'] ?? '');
-            $signal = $this->developmentSignals
-                ->advancedSupport($request->user());
             $signalStrength = max(
                 1,
                 (int) ($signal['signal_strength'] ?? 1),
             );
 
             $developmentBehavior = [
+                'source_signature' => (string) ($signal['source_signature'] ?? ''),
                 'connected_repository_count' => (int) (
                     $signal['connected_repository_count']
                     ?? 0
