@@ -8,6 +8,11 @@ return [
     // Independent manual approval prevents accidental exposure from a
     // single web-access toggle. Neither switch is enabled by default.
     'web_access_explicitly_approved' => env('CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED', false),
+    // Separate stage-only route allowlists. Never open the full Canovia app.
+    // Login pilot exposes only login/account/logout; later IdP linking needs
+    // an independent switch and verified signed-JWT provider configuration.
+    'login_pilot_enabled' => env('CANOVIA_STAGING_LOGIN_PILOT_ENABLED', false),
+    'account_link_pilot_enabled' => env('CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED', false),
     // One-shot synthetic user bootstrap: leave disabled unless an operator
     // explicitly provisions a STAGING-only password out-of-band.
     // Keep SQLite by default. PostgreSQL requires an operator-pinned
