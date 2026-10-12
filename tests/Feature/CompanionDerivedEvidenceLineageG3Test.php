@@ -185,7 +185,7 @@ final class CompanionDerivedEvidenceLineageG3Test extends TestCase
             );
             $this->fail('Companion must reject an AI reply after source revocation');
         } catch (NativeAiExecutionException $exception) {
-            $this->assertSame('native_ai_source_changed', $exception->errorCode());
+            $this->assertSame('native_ai_source_changed', $exception->errorCode);
         }
 
         $this->assertSame(0, CompanionMessage::query()->where('role', 'assistant')->count());
