@@ -139,6 +139,47 @@ final class PlanActionDraftV5873Test extends TestCase
         $this->assertDatabaseCount('task_dependencies', 0);
     }
 
+    public function test_work_log_outcome_correction_blocks_single_acceptance_but_valid_source_is_accepted(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner, '資格学習');
+        $task = $this->task($plan);
+        $log = $this->workLog($plan, $task);
+
+        $this->actingAs($owner)->post(route('plans.action_drafts.store', $plan), [
+            'request_id' => (string) Str::uuid(), 'source_work_log_id' => $log->id,
+        ])->assertRedirect();
+        $draft = PlanActionDraft::sole();
+
+        // Historical single-WorkLog rows do not carry a source digest:
+        // keep the original human-authorized action/outcome comparison.
+        $log->update(['outcome' => '修正された学習結果']);
+        $this->actingAs($owner)->post(route('plans.action_drafts.accept', [$plan, $draft]))
+            ->assertStatus(409);
+        $this->assertDatabaseCount('tasks', 1);
+        $this->assertSame('proposed', $draft->fresh()->status);
+
+        $log->update(['outcome' => '本人が復習の必要性を記録']);
+        $this->actingAs($owner)->post(route('plans.action_drafts.accept', [$plan, $draft]))
+            ->assertRedirect();
+        $this->assertDatabaseCount('tasks', 2);
+        $this->assertSame('accepted', $draft->fresh()->status);
+    }
+
+    public function test_work_log_task_move_and_owner_transfer_deny_acceptance(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner, '資格学習');
+        $other = $this->plan($owner, '資格学習');
+        $task = $this->task($plan);
+        $log = $this->workLog($plan, $task);
+
+        $this->actingAs($owner)->post(route('plans.action_drafts.compose', $plan), [
+            'request_id' => (string) Str::uuid(),
+            'work_log_ids' => [$log->id],
+        ])->assertStatus(302);
+    }
+
     public function test_study_evidence_creates_specific_unapplied_suggestion_and_accepts_once(): void
     {
         $owner = User::factory()->create();
