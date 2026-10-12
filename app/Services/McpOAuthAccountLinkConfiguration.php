@@ -20,8 +20,16 @@ final class McpOAuthAccountLinkConfiguration
      */
     public function settings(): ?array
     {
+        // Keep account linking behind the same explicit, mutually exclusive
+        // verifier choice as the MCP resource. Never allow mixed IdP modes.
+        $mode = config('canovia_mcp.token_verification_driver', 'introspection');
+        $introspection = config('canovia_mcp.token_introspection_enabled') === true;
+        $jwt = config('canovia_mcp.auth0_jwt_verification_enabled') === true;
+        $verificationReady = ($mode === 'introspection' && $introspection && ! $jwt)
+            || ($mode === 'auth0_jwt' && $jwt && ! $introspection);
+
         if (config('canovia_mcp.account_link_enabled') !== true
-            || config('canovia_mcp.token_introspection_enabled') !== true
+            || ! $verificationReady
             || ! $this->resource->isReady()) {
             return null;
         }
