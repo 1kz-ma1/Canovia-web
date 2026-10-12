@@ -54,6 +54,33 @@ final class StudyPracticeNativeCommitFenceG3Test extends TestCase
         Http::assertSentCount(2);
     }
 
+    public function test_study_workspace_domain_override_is_not_rejected_as_non_study_category(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $plan->update([
+            'category' => 'その他',
+            'workspace_domain_override' => 'study',
+        ]);
+        $this->fakeNative($plan, $task);
+
+        $this->generate($user, $plan, $task)->assertSessionHasNoErrors();
+
+        $session = StudyPracticeSession::query()->firstOrFail();
+        $this->assertSame(StudyPracticeSession::STATUS_READY, $session->status);
+        $this->assertSame('q1', data_get($session->questions_snapshot, '0.id'));
+    }
+
+    public function test_other_study_categories_are_accepted_by_current_domain_policy(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $plan->update(['category' => '試験勉強']);
+        $this->fakeNative($plan, $task);
+
+        $this->generate($user, $plan, $task)->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('study_practice_sessions', 1);
+    }
+
     public function test_task_edit_after_generation_provider_withholds_all_generated_session_and_candidate_rows(): void
     {
         [$user, $plan, $task] = $this->scenario();
