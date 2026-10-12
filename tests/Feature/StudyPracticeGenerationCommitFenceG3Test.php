@@ -154,6 +154,170 @@ final class StudyPracticeGenerationCommitFenceG3Test extends TestCase
         $this->assertDatabaseCount('study_practice_sessions', 0);
     }
 
+    public function test_duplicate_native_prepare_does_not_rewrite_candidate_or_demand(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $this->fakeNative($plan, $task);
+        $id = (string) Str::uuid();
+        $url = route('plans.tasks.study_practice.native.prepare', [$plan, $task]);
+
+        $this->actingAs($user)->post($url, [
+            'prepare_request_id' => $id,
+        ])->assertSessionHasNoErrors();
+
+        $session = StudyPracticeSession::query()->firstOrFail();
+        $fingerprint = data_get($session->selection_context, 'native_generation_source_fingerprint');
+        $this->assertIsString($fingerprint);
+        $this->assertSame(64, strlen($fingerprint));
+        $this->assertDatabaseCount('practice_question_demands', 1);
+        $this->assertDatabaseCount('practice_question_candidates', 1);
+        $candidate = \App\Models\PracticeQuestionCandidate::query()->firstOrFail();
+        $firstSeen = $candidate->last_seen_at;
+        $this->assertSame(1, (int) $candidate->generation_count);
+
+        $this->actingAs($user)->post($url, [
+            'prepare_request_id' => $id,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('study_practice_sessions', 1);
+        $this->assertDatabaseCount('practice_question_demands', 1);
+        $this->assertDatabaseCount('practice_question_candidates', 1);
+        $this->assertSame(1, (int) $candidate->fresh()->generation_count);
+        $this->assertEquals($firstSeen, $candidate->fresh()->last_seen_at);
+        Http::assertSentCount(1);
+    }
+
+    public function test_duplicate_native_prepare_does_not_reset_in_progress_answer_draft(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $this->fakeNative($plan, $task);
+        $id = (string) Str::uuid();
+        $url = route('plans.tasks.study_practice.native.prepare', [$plan, $task]);
+
+        $this->actingAs($user)->post($url, [
+            'prepare_request_id' => $id,
+        ])->assertSessionHasNoErrors();
+        $session = StudyPracticeSession::query()->firstOrFail();
+        $existingBrowserState = session("study_practice.{$plan->id}.{$task->id}");
+
+        $session->update([
+            'status' => StudyPracticeSession::STATUS_IN_PROGRESS,
+            'draft_answers' => ['q1' => ['answer' => 'B']],
+            'draft_saved_at' => now(),
+        ]);
+
+        $this->actingAs($user)->post($url, [
+            'prepare_request_id' => $id,
+        ])->assertRedirect();
+
+        $this->assertSame(StudyPracticeSession::STATUS_IN_PROGRESS, $session->fresh()->status);
+        $this->assertSame(['q1' => ['answer' => 'B']], $session->fresh()->draft_answers);
+        $this->assertSame($existingBrowserState, session("study_practice.{$plan->id}.{$task->id}"));
+        $this->assertDatabaseCount('practice_question_candidates', 1);
+        Http::assertSentCount(1);
+    }
+
+    public function test_duplicate_prepare_refuses_changed_task_instead_of_backfilling_candidates(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $this->fakeNative($plan, $task);
+        $id = (string) Str::uuid();
+        $url = route('plans.tasks.study_practice.native.prepare', [$plan, $task]);
+
+        $this->actingAs($user)->post($url, [
+            'prepare_request_id' => $id,
+        ])->assertSessionHasNoErrors();
+
+        $task->update(['description' => '範囲を更新した']);
+        $this->actingAs($user)->post($url, [
+            'prepare_request_id' => $id,
+        ])->assertRedirect();
+
+        $this->assertSame('範囲を更新した', $task->fresh()->description);
+        $this->assertDatabaseCount('practice_question_demands', 1);
+        $this->assertDatabaseCount('practice_question_candidates', 1);
+        $this->assertSame(1, (int) \App\Models\PracticeQuestionCandidate::query()->firstOrFail()->generation_count);
+        Http::assertSentCount(1);
+    }
+
+    public function test_historical_unsigned_native_session_is_not_silently_resigned_on_replay(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $this->fakeNative($plan, $task);
+        $id = (string) Str::uuid();
+        $url = route('plans.tasks.study_practice.native.prepare', [$plan, $task]);
+
+        $this->actingAs($user)->post($url, [
+            'prepare_request_id' => $id,
+        ])->assertSessionHasNoErrors();
+
+        $session = StudyPracticeSession::query()->firstOrFail();
+        $context = $session->selection_context;
+        unset($context['native_generation_source_fingerprint']);
+        $session->update(['selection_context' => $context]);
+        $this->actingAs($user)->post($url, [
+            'prepare_request_id' => $id,
+        ])->assertRedirect();
+
+        $this->assertNull(data_get($session->fresh()->selection_context, 'native_generation_source_fingerprint'));
+        $this->assertDatabaseCount('practice_question_demands', 1);
+        $this->assertDatabaseCount('practice_question_candidates', 1);
+        Http::assertSentCount(1);
+    }
+
+    public function test_controller_finalization_rejects_task_change_after_orchestrator_commit(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $this->fakeNative($plan, $task);
+        $this->afterOrchestrator(fn () => $task->update(['description' => '最新の出題範囲']));
+
+        $this->generate($user, $plan, $task)->assertSessionHas('status');
+
+        $study = StudyPracticeSession::query()->firstOrFail();
+        $this->assertSame(StudyPracticeSession::STATUS_READY, $study->status);
+        $this->assertSame('最新の出題範囲', $task->fresh()->description);
+        $this->assertNull(session("study_practice.{$plan->id}.{$task->id}"));
+        $this->assertNull(NativeAiRun::query()->firstOrFail()->study_practice_session_id);
+        $this->assertDatabaseCount('practice_question_demands', 1);
+        Http::assertSentCount(1);
+    }
+
+    public function test_controller_finalization_does_not_reset_concurrent_human_answer(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $this->fakeNative($plan, $task);
+        $this->afterOrchestrator(function (): void {
+            StudyPracticeSession::query()->firstOrFail()->update([
+                'status' => StudyPracticeSession::STATUS_IN_PROGRESS,
+                'draft_answers' => ['q1' => ['answer' => 'B']],
+                'draft_saved_at' => now(),
+            ]);
+        });
+
+        $this->generate($user, $plan, $task)->assertSessionHas('status');
+
+        $study = StudyPracticeSession::query()->firstOrFail();
+        $this->assertSame(StudyPracticeSession::STATUS_IN_PROGRESS, $study->status);
+        $this->assertSame(['q1' => ['answer' => 'B']], $study->draft_answers);
+        $this->assertNull(session("study_practice.{$plan->id}.{$task->id}"));
+        $this->assertNull(NativeAiRun::query()->firstOrFail()->study_practice_session_id);
+        Http::assertSentCount(1);
+    }
+
+    private function afterOrchestrator(callable $callback): void
+    {
+        $real = app(\App\Services\StudyPracticeOrchestrator::class);
+        $mock = Mockery::mock(\App\Services\StudyPracticeOrchestrator::class)->makePartial();
+        $mock->shouldReceive('prepare')->once()
+            ->andReturnUsing(function (...$args) use ($real, $callback) {
+                $result = $real->prepare(...$args);
+                $callback();
+
+                return $result;
+            });
+        app()->instance(\App\Services\StudyPracticeOrchestrator::class, $mock);
+    }
+
     private function scenario(): array
     {
         $user = User::factory()->create();
