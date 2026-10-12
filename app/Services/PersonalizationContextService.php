@@ -10,6 +10,10 @@ final class PersonalizationContextService
     public const SESSION_KEY = 'canovia.personalization.context';
     public const VERSION = 1;
 
+    public function __construct(
+        private readonly StudyDerivedContextFreshnessGuard $freshness,
+    ) {}
+
     /**
      * Phase 1 resolves the live Context from self-reported input only.
      * Observed / inferred sources are persisted separately for future
@@ -37,7 +41,7 @@ final class PersonalizationContextService
             ? $stored->self_reported_context
             : [];
 
-        return $this->normalize([
+        $current = $this->normalize([
             'domains' => (array) data_get(
                 $selfReported,
                 'domains',
@@ -71,6 +75,10 @@ final class PersonalizationContextService
             'completed_at' => $stored->completed_at?->toIso8601String(),
             'skipped_at' => $stored->skipped_at?->toIso8601String(),
         ]);
+
+        // Gate derived Study signals on live source identity before they reach
+        // a workspace, recommendation, or another AI-facing context adapter.
+        return $this->freshness->filter($current, (int) $user->id);
     }
 
     /**

@@ -10,6 +10,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Models\UserPersonalizationContext;
 use App\Services\StudyBehaviorPersonalizationAdapter;
+use App\Services\PersonalizationContextService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -249,6 +250,71 @@ class StudyBehaviorPersonalizationV5828Test extends TestCase
             $context->inferred_context,
             'update_candidates.study_practice_focused',
         ));
+    }
+
+    public function test_correction_or_deletion_masks_materialized_study_derivations_before_refresh(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $first = $this->attempt($user, $plan, $task, 60);
+        $second = $this->attempt($user, $plan, $task, 70);
+        $this->attempt($user, $plan, $task, 80);
+
+        $request = $this->requestFor($user);
+        app(StudyBehaviorPersonalizationAdapter::class)->observeAssessedPractice($request, $plan);
+
+        $contexts = app(PersonalizationContextService::class);
+        $baseline = $contexts->current($request);
+        $this->assertSame(3, data_get($baseline, 'context_sources.observed.study_behavior.assessed_attempt_count'));
+        $this->assertTrue((bool) data_get($baseline, 'feature_readiness.study.practice_focused.enabled'));
+        $this->assertSame('auto_applied', data_get($baseline, 'context_sources.inferred.update_candidates.study_practice_focused.status'));
+
+        // A corrected score must invalidate before an async profile recompute.
+        $first->update(['score_percent' => 15]);
+        $corrected = $contexts->current($request);
+        $this->assertNull(data_get($corrected, 'context_sources.observed.study_behavior'));
+        $this->assertNull(data_get($corrected, 'feature_readiness.study.practice_focused.enabled'));
+        $this->assertNull(data_get($corrected, 'context_sources.inferred.update_candidates.study_practice_focused'));
+        $this->assertSame('started', data_get($corrected, 'domain_context.study.stage'));
+        $this->assertSame('standard', data_get($corrected, 'guidance_level'));
+
+        // Source restored by the user; the old materialization is still not
+        // blindly accepted until a fresh observation is explicitly written.
+        $first->update(['score_percent' => 60]);
+        $second->delete();
+        $deleted = $contexts->current($request);
+        $this->assertNull(data_get($deleted, 'context_sources.observed.study_behavior'));
+        $this->assertNull(data_get($deleted, 'feature_readiness.study.practice_focused.enabled'));
+
+        // Durable historical data is not destructively deleted by read fencing.
+        $persisted = UserPersonalizationContext::query()->where('user_id', $user->id)->firstOrFail();
+        $this->assertSame(3, data_get($persisted->observed_context, 'study_behavior.assessed_attempt_count'));
+    }
+
+    public function test_plan_access_revocation_or_unverifiable_legacy_source_fails_closed(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        foreach ([60, 70, 80] as $score) {
+            $this->attempt($user, $plan, $task, $score);
+        }
+        $request = $this->requestFor($user);
+        app(StudyBehaviorPersonalizationAdapter::class)->observeAssessedPractice($request, $plan);
+        $contexts = app(PersonalizationContextService::class);
+        $this->assertNotNull(data_get($contexts->current($request), 'context_sources.observed.study_behavior'));
+
+        // Simulate an ownership transfer: prior owner's attempts cannot keep
+        // authorizing a derived profile tied to the transferred Plan.
+        $another = User::factory()->create();
+        $plan->update(['user_id' => $another->id]);
+        $this->assertNull(data_get($contexts->current($request), 'context_sources.observed.study_behavior'));
+        $this->assertNull(data_get($contexts->current($request), 'feature_readiness.study.practice_focused'));
+
+        $plan->update(['user_id' => $user->id]);
+        $persisted = UserPersonalizationContext::query()->where('user_id', $user->id)->firstOrFail();
+        $observed = $persisted->observed_context;
+        unset($observed['study_behavior']['source_signature']);
+        $persisted->update(['observed_context' => $observed]);
+        $this->assertNull(data_get($contexts->current($request), 'context_sources.observed.study_behavior'));
+        $this->assertSame('started', data_get($contexts->current($request), 'domain_context.study.stage'));
     }
 
     private function candidateEventCount(): int

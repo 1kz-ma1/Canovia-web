@@ -1,0 +1,38 @@
+name: Adaptive Context G3 Study Derived Freshness
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/StudyDerivedContextFreshnessGuard.php'
+      - 'app/Services/PersonalizationContextService.php'
+      - 'app/Services/StudyBehaviorPersonalizationAdapter.php'
+      - 'tests/Feature/StudyBehaviorPersonalizationV5828Test.php'
+      - '.github/workflows/adaptive-context-g3-study-freshness.yml'
+
+jobs:
+  study-derived-read-fence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: PHP lint
+        run: |
+          php -l app/Services/StudyDerivedContextFreshnessGuard.php
+          php -l app/Services/PersonalizationContextService.php
+          php -l app/Services/StudyBehaviorPersonalizationAdapter.php
+          php -l tests/Feature/StudyBehaviorPersonalizationV5828Test.php
+      - name: G3 practice source correction deletion and access regression
+        run: php artisan test tests/Feature/StudyBehaviorPersonalizationV5828Test.php
+      - name: Study review cycle personalization regression
+        run: php artisan test tests/Feature/StudyReviewCyclePersonalizationV5833Test.php
+      - name: Personalization bootstrap and Living Profile regression
+        run: php artisan test tests/Feature/PersonalizationBootstrapV5825Test.php tests/Feature/LivingProfileV5827Test.php
+      - name: Candidate evidence and plan lifecycle regression
+        run: php artisan test tests/Feature/CandidateEvidenceReopenV5832Test.php tests/Feature/PlanLifecyclePersonalizationV5829Test.php
+      - name: MCP revocation and read policy regression
+        run: php artisan test tests/Feature/McpDelegatedRevocationTest.php tests/Feature/McpReadOnlyResourceTest.php
