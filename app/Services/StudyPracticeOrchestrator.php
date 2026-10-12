@@ -7,6 +7,7 @@ use App\Models\StudyPracticeSession;
 use App\Models\Task;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class StudyPracticeOrchestrator
@@ -16,6 +17,7 @@ class StudyPracticeOrchestrator
         private readonly StudyPracticeProviderRouter $providerRouter,
         private readonly PracticeQuestionDemandRecorder $demandRecorder,
         private readonly PracticeQuestionCandidateRecorder $candidateRecorder,
+        private readonly StudyPracticeNativeCommitFence $nativeFence,
     ) {}
 
     /**
@@ -144,13 +146,36 @@ class StudyPracticeOrchestrator
         $provider = $providerKey !== null
             ? $this->providerRouter->questionProviderByKey($providerKey)
             : $this->providerRouter->questionProvider($plan, $task, $strategy);
+        $commitSnapshot = $userId !== null && in_array($provider->key(), ['native_ai', 'hybrid_ai'], true)
+            ? $this->nativeFence->capture($plan, $task, $userId)
+            : null;
         $prepared = $provider->prepare($plan, $task, $recentAttempts, $strategy, $userId);
 
         $isDirect = (string) ($prepared['mode'] ?? 'handoff') === 'direct'
             && is_array($prepared['questions'] ?? null)
             && ($prepared['questions'] ?? []) !== [];
 
-        $session = StudyPracticeSession::query()->createOrFirst(
+        return DB::transaction(function () use (
+            $plan, $task, $userId, $actorToken, $prepareRequestId,
+            $providerKey, $strategy, $recentAttempts, $prepared, $isDirect,
+            $commitSnapshot,
+        ): StudyPracticeSession {
+            $runId = (int) data_get($prepared, 'payload.native_ai.run_id', 0);
+            if ($runId > 0) {
+                if ($commitSnapshot === null || $userId === null) {
+                    throw new \App\Exceptions\NativeAiExecutionException(
+                        'Native AIの保存元を検証できませんでした。',
+                        'native_ai_actor_unverified',
+                        $runId,
+                    );
+                }
+
+                $this->nativeFence->assertCanCommit(
+                    $plan, $task, $userId, $commitSnapshot, $runId,
+                );
+            }
+
+            $session = StudyPracticeSession::query()->createOrFirst(
             ['prepare_request_id' => $prepareRequestId],
             [
                 'plan_id' => $plan->id,
@@ -215,7 +240,8 @@ class StudyPracticeOrchestrator
             $prepared,
         );
 
-        return $session;
+            return $session;
+        }, 3);
     }
 
     /**
@@ -234,6 +260,10 @@ class StudyPracticeOrchestrator
         $provider = $providerKey !== null
             ? $this->providerRouter->assessmentProviderByKey($providerKey)
             : $this->providerRouter->assessmentProvider($plan, $task, $questions, $answers);
+        $assessmentActorId = $session->user_id !== null ? (int) $session->user_id : null;
+        $commitSnapshot = $provider->key() === 'native_ai' && $assessmentActorId !== null
+            ? $this->nativeFence->capture($plan, $task, $assessmentActorId, $session)
+            : null;
         $prepared = $provider->prepare(
             $plan,
             $task,
@@ -243,11 +273,31 @@ class StudyPracticeOrchestrator
             (int) $session->id,
         );
 
-        $session->update([
-            'assessment_provider' => (string) ($prepared['provider'] ?? $provider->key()),
-            'assessment_provider_mode' => (string) ($prepared['mode'] ?? $provider->mode()),
-            'assessment_payload' => is_array($prepared['payload'] ?? null) ? $prepared['payload'] : [],
-        ]);
+        DB::transaction(function () use (
+            $session, $plan, $task, $assessmentActorId,
+            $commitSnapshot, $prepared, $provider,
+        ): void {
+            $runId = (int) data_get($prepared, 'payload.native_ai.run_id', 0);
+            if ($runId > 0) {
+                if ($commitSnapshot === null || $assessmentActorId === null) {
+                    throw new \App\Exceptions\NativeAiExecutionException(
+                        'Native AIの採点対象を検証できませんでした。',
+                        'native_ai_actor_unverified',
+                        $runId,
+                    );
+                }
+
+                $this->nativeFence->assertCanCommit(
+                    $plan, $task, $assessmentActorId, $commitSnapshot, $runId,
+                );
+            }
+
+            $session->update([
+                'assessment_provider' => (string) ($prepared['provider'] ?? $provider->key()),
+                'assessment_provider_mode' => (string) ($prepared['mode'] ?? $provider->mode()),
+                'assessment_payload' => is_array($prepared['payload'] ?? null) ? $prepared['payload'] : [],
+            ]);
+        }, 3);
 
         return $prepared;
     }
