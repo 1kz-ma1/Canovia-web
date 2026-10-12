@@ -27,6 +27,13 @@ class AuthController extends Controller
 {
     public function showLogin()
     {
+        if (config('app.env') === 'staging'
+            && config('canovia_staging.login_pilot_enabled') === true) {
+            // Never render the production shell: its navigation, scripts,
+            // icons and extra asset routes are blocked by the pilot gateway.
+            return view('auth.mcp_staging_pilot_login');
+        }
+
         return view('auth.login');
     }
 
@@ -193,6 +200,14 @@ class AuthController extends Controller
         }
 
         $user = $request->user();
+        if (config('app.env') === 'staging'
+            && config('canovia_staging.login_pilot_enabled') === true) {
+            return view('auth.mcp_staging_pilot_account', [
+                'linkPilotReady' => config('canovia_staging.account_link_pilot_enabled') === true
+                    && app(\App\Services\McpOAuthAccountLinkConfiguration::class)->settings() !== null,
+            ]);
+        }
+
         $user->loadMissing('personalizationContext');
 
         return view('auth.account', [
