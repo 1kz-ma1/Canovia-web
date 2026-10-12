@@ -85,7 +85,12 @@ function classify488(): array
         if ($urlActive) {
             // Laravel's ConnectionUrlParser overrides the individual DB_* keys.
             // parse_url is used only in memory, with no output of host, user or URL.
-            $parts = parse_url((string) $dbUrl);
+            try {
+                $parts = @parse_url((string) $dbUrl);
+            } catch (Throwable) {
+                // Invalid URL contents must never enter a warning or traceback.
+                $parts = false;
+            }
             if (! is_array($parts)
                 || ! in_array(strtolower((string) ($parts['scheme'] ?? '')), ['mysql', 'mariadb'], true)
                 || ! str_ends_with(strtolower((string) ($parts['host'] ?? '')), '.aivencloud.com')
@@ -201,7 +206,19 @@ function classify488(): array
 }
 
 if (basename((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === basename(__FILE__)) {
-    $result = classify488();
+    try {
+        $result = classify488();
+    } catch (Throwable) {
+        // Fail closed without printing a Throwable message or stack trace.
+        $result = [
+            'result' => 'BLOCK',
+            'codes' => ['INTERNAL_AUDIT_ERROR'],
+            'release_authorized' => false,
+            'production_database_modified' => false,
+            'production_identity_verified' => false,
+            'backup_restore_verified' => false,
+        ];
+    }
     // Only fixed, code-owned strings can be emitted, NEVER environment contents.
     echo json_encode($result, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)."\n";
     exit($result['result'] === 'BLOCK' ? 2 : 0);
