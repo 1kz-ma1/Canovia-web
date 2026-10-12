@@ -224,7 +224,10 @@ class StateChangeFeedbackV546Test extends TestCase
         );
 
         $this->actingAs($user)
-            ->get(route('workspace.development.index', ['plan_id' => $plan->id]))
+            ->get(route('workspace.development.index', [
+                'plan_id' => $plan->id,
+                'surface' => 'repository',
+            ]))
             ->assertOk()
             ->assertSee('data-intelligence-state-change', false)
             ->assertSee('次にやることが変わりました')
