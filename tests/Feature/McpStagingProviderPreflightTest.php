@@ -224,7 +224,10 @@ final class McpStagingProviderPreflightTest extends TestCase
             'registration_endpoint' => 'https://canovia-mcp-dev.jp.auth0.com/oidc/register',
         ];
         $uri = 'https://canovia-mcp-dev.jp.auth0.com/.well-known/openid-configuration';
-        Http::fake([$uri => Http::response($meta, 200, ['Content-Type' => 'application/json'])]);
+        $cimdMeta = array_replace($meta, ['client_id_metadata_document_supported' => true]);
+        Http::fake([$uri => Http::sequence()
+            ->push($meta, 200, ['Content-Type' => 'application/json'])
+            ->push($cimdMeta, 200, ['Content-Type' => 'application/json'])]);
 
         $report = app(McpStagingProviderPreflightService::class)->check(true);
         $this->assertSame('pass', $report['local_checks']['token_verification_mode']);
@@ -245,8 +248,7 @@ final class McpStagingProviderPreflightTest extends TestCase
 
         // Even forged provider metadata advertising CIMD cannot upgrade
         // static metadata from "candidate" to real registration evidence.
-        $meta['client_id_metadata_document_supported'] = true;
-        Http::fake([$uri => Http::response($meta, 200, ['Content-Type' => 'application/json'])]);
+        // The second fixture advertises CIMD but registration is unverified.
         $report = app(McpStagingProviderPreflightService::class)->check(true);
         $this->assertContains('cimd', $report['supported_client_modes']);
         $this->assertSame('requires_issued_client', $report['provider_checks']['chatgpt_client_registration']);
