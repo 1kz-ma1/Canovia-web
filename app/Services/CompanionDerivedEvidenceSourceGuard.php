@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\EvidenceSource;
 use App\Models\Plan;
+use App\Models\PlanArtifact;
 use App\Models\TaskEvidence;
 
 /**
@@ -43,9 +44,16 @@ final class CompanionDerivedEvidenceSourceGuard
     public function isCurrent(?Plan $plan, mixed $provenance): bool
     {
         if ($provenance === null) {
-            // No reliable original source association exists on older text.
-            // These historical records are separately tracked as unresolved.
-            return true;
+            // A pre-G3 AI derivative has no verifiable source lineage. It
+            // cannot be promoted as *current* within a GitHub-linked Plan;
+            // preserve the history, but require a newly signed proposal.
+            // Other Plans keep their established legacy behavior because
+            // this bounded GitHub gate cannot infer unrelated sources.
+            return $plan === null || ! PlanArtifact::query()
+                ->where('plan_id', $plan->id)
+                ->where('provider', 'github')
+                ->where('artifact_type', 'repository')
+                ->exists();
         }
 
         if (! is_array($provenance)
