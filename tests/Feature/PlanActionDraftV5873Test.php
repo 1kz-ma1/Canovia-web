@@ -301,7 +301,9 @@ final class PlanActionDraftV5873Test extends TestCase
         $root->update(['metadata' => $metadata]);
 
         $this->actingAs($owner)->get(route('plans.action_drafts.index', $plan))
-            ->assertOk()->assertDontSee('GitHubマージ');
+            ->assertOk()->assertDontSee(
+                'name="task_evidence_ids[]" value="'.$evidence->id.'"', false,
+            );
 
         $this->actingAs($owner)
             ->post(route('plans.action_drafts.accept', [$plan, $draft]))
