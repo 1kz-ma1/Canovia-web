@@ -103,10 +103,9 @@ final class StudyPracticeNativeCommitFenceG3Test extends TestCase
     public function test_answer_revision_after_assessment_provider_prevents_old_score_and_evidence(): void
     {
         [$user, $plan, $task] = $this->scenario();
-        $this->fakeNative($plan, $task);
+        $this->fakeNative($plan, $task, true);
         $this->generate($user, $plan, $task);
 
-        $this->fakeNative($plan, $task, false, true);
         $this->afterGateway(fn () => StudyPracticeSession::query()->firstOrFail()->update([
             'draft_answers' => ['q1' => ['answer' => 'C']],
         ]));
@@ -124,10 +123,9 @@ final class StudyPracticeNativeCommitFenceG3Test extends TestCase
     public function test_session_abandoned_after_assessment_provider_is_not_resurrected_by_ai(): void
     {
         [$user, $plan, $task] = $this->scenario();
-        $this->fakeNative($plan, $task);
+        $this->fakeNative($plan, $task, true);
         $this->generate($user, $plan, $task);
 
-        $this->fakeNative($plan, $task, false, true);
         $this->afterGateway(fn () => StudyPracticeSession::query()->firstOrFail()->update([
             'status' => StudyPracticeSession::STATUS_ABANDONED,
         ]));
@@ -142,10 +140,9 @@ final class StudyPracticeNativeCommitFenceG3Test extends TestCase
     public function test_entitlement_expiry_after_assessment_provider_does_not_score_answers(): void
     {
         [$user, $plan, $task] = $this->scenario();
-        $this->fakeNative($plan, $task);
+        $this->fakeNative($plan, $task, true);
         $this->generate($user, $plan, $task);
 
-        $this->fakeNative($plan, $task, false, true);
         $this->afterGateway(fn () => UserProductGrant::query()
             ->where('user_id', $user->id)
             ->update(['expires_at' => now()->subMinute()]));
