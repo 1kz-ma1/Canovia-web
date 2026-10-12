@@ -6,6 +6,8 @@ use App\Enums\EvidenceSource;
 use App\Models\Plan;
 use App\Models\PlanArtifact;
 use App\Models\TaskEvidence;
+use Illuminate\Support\Facades\DB;
+use LogicException;
 
 /**
  * G3-R2: new Companion derivatives retain exact GitHub evidence lineage.
@@ -93,6 +95,65 @@ final class CompanionDerivedEvidenceSourceGuard
         }
 
         return true;
+    }
+
+    /**
+     * Transaction-scoped authority check for a persisted AI derivative.
+     *
+     * Source checks performed before an AI call or in a read-only preview
+     * cannot protect a later database commit. Serialize with GitHub root
+     * status/epoch writes and source Evidence updates until this caller's
+     * transaction commits. Call after locking the Plan and Task, in that
+     * order, and before creating any derived Memory, Candidate or mutation.
+     *
+     * @param mixed $provenance
+     */
+    public function isCurrentForCommit(?Plan $plan, mixed $provenance): bool
+    {
+        if (DB::transactionLevel() < 1) {
+            throw new LogicException('Companion source commit validation requires an open transaction.');
+        }
+
+        if ($plan === null) {
+            return $this->isCurrent(null, $provenance);
+        }
+
+        // All GitHub connection-status writers update/lock the repository
+        // artifact. A regular SELECT at READ COMMITTED leaves a gap between
+        // validation and commit; FOR UPDATE closes that gap.
+        PlanArtifact::query()
+            ->where('plan_id', $plan->id)
+            ->where('provider', 'github')
+            ->where('artifact_type', 'repository')
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get();
+
+        $refs = is_array($provenance) ? ($provenance['github_evidence'] ?? null) : null;
+        if (is_array($refs) && $refs !== []) {
+            // Row-level locks also serialize same-epoch content revision
+            // updates that do not modify the repository root metadata.
+            // Invalid ref shapes are rejected by isCurrent() afterwards.
+            $ids = collect($refs)
+                ->filter(fn ($ref) => is_array($ref) && is_int($ref['id'] ?? null) && $ref['id'] > 0)
+                ->pluck('id')
+                ->unique()
+                ->sort()
+                ->values()
+                ->all();
+
+            if ($ids !== []) {
+                TaskEvidence::query()
+                    ->whereIn('id', $ids)
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get();
+            }
+        }
+
+        // Re-read both tables while the row locks are held. Never validate
+        // cached Eloquent metadata from the original AI context snapshot.
+        return $this->isCurrent($plan, $provenance);
     }
 
     public function revision(TaskEvidence $row): string
