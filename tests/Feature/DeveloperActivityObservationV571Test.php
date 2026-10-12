@@ -457,6 +457,54 @@ class DeveloperActivityObservationV571Test extends TestCase
         $this->assertDatabaseCount('development_activity_observations', 0);
     }
 
+    public function test_github_source_epoch_rotates_without_accepting_stale_inflight_or_silently_backfilling_legacy(): void
+    {
+        [$plan, , $root] = $this->scenario();
+        $firstEpoch = (string) Str::uuid();
+        $secondEpoch = (string) Str::uuid();
+        $metadata = (array) $root->metadata;
+        $metadata['github_app_connection']['source_epoch'] = $firstEpoch;
+        $root->update(['metadata' => $metadata]);
+        $root->load('plan.user');
+
+        $sourceRevision = now()->subMinutes(2)->toIso8601String();
+        $fact = [
+            'kind' => 'issue',
+            'identity' => '109',
+            'provider_number' => 109,
+            'state' => 'open',
+            'url' => 'https://github.com/1kz-ma1/HINANEX/issues/109',
+            'occurred_at' => now()->subMinutes(3)->toIso8601String(),
+            'source_updated_at' => $sourceRevision,
+        ];
+        $stored = $this->persistFact($root, $fact);
+        $this->assertSame($firstEpoch, $stored->source_epoch);
+
+        $staleRoot = $root->fresh()->load('plan.user');
+        $metadata['github_app_connection']['source_epoch'] = $secondEpoch;
+        $root->update(['metadata' => $metadata]);
+
+        $method = new \ReflectionMethod(GitHubDevelopmentObservationService::class, 'persist');
+        $stale = $method->invoke(
+            app(GitHubDevelopmentObservationService::class),
+            $staleRoot, '1kz-ma1/HINANEX', $fact, 777,
+        );
+        $this->assertNull($stale);
+        $this->assertSame($firstEpoch, $stored->fresh()->source_epoch);
+
+        // A new REST verification of the SAME GitHub revision may advance
+        // only source provenance, without overriding human Task resolution.
+        $stored->update(['resolution_status' => 'ignored']);
+        $fresh = $method->invoke(
+            app(GitHubDevelopmentObservationService::class),
+            $root->fresh()->load('plan.user'), '1kz-ma1/HINANEX', $fact, 777,
+        );
+        $this->assertSame($stored->id, $fresh->id);
+        $this->assertSame($secondEpoch, $fresh->source_epoch);
+        $this->assertSame('ignored', $fresh->resolution_status);
+        $this->assertDatabaseCount('development_activity_observations', 1);
+    }
+
     private function scenario(): array
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);
