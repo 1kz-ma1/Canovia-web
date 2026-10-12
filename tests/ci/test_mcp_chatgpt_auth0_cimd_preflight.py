@@ -49,6 +49,11 @@ class CIMDFreeCompatibilityTest(unittest.TestCase):
         result = mod.assess(chatgpt(), jwks(), auth0())
         self.assertTrue(result["public_metadata_compatible_with_free_candidate"])
         self.assertFalse(result["auth0_cimd_registration_proven"])
+        self.assertFalse(result["current_connection_callback_verified"])
+        self.assertFalse(result["current_connection_cimd_verified"])
+        self.assertFalse(result["oidc_scope_interoperability_verified"])
+        self.assertEqual("requires_exact_ui_match", result["checks"]["current_connection_callback"])
+        self.assertEqual("requires_connection_configuration", result["checks"]["chatgpt_oidc_scope_policy"])
         self.assertFalse(result["actual_chatgpt_login_proven"])
         self.assertFalse(result["staging_activation_authorized"])
         self.assertFalse(result["production_authorized"])
@@ -102,7 +107,25 @@ class CIMDFreeCompatibilityTest(unittest.TestCase):
         self.assertEqual("pass", out["checks"]["auth0_cimd_discovery"])
         self.assertTrue(out["public_metadata_compatible_with_free_candidate"])
         self.assertFalse(out["auth0_cimd_registration_proven"])
-        self.assertEqual("preview_exact_client_in_auth0_dashboard", out["next_step"])
+        self.assertEqual("verify_exact_connection_callback_cimd_and_oidc_policy", out["next_step"])
+        self.assertFalse(out["current_connection_callback_verified"])
+
+    def test_legacy_callback_must_not_count_as_current_connection_proof(self):
+        # The global metadata still contains an old stable redirect and is
+        # structurally compatible, but the actual newly-created connection
+        # needs its own callback and CIMD identity from the management UI.
+        c = chatgpt()
+        self.assertEqual([mod.CHATGPT_CALLBACK], c["redirect_uris"])
+        r = mod.assess(c, jwks(), auth0())
+        self.assertTrue(r["public_metadata_compatible_with_free_candidate"])
+        self.assertFalse(r["current_connection_callback_verified"])
+        self.assertFalse(r["current_connection_cimd_verified"])
+        self.assertFalse(r["oidc_scope_interoperability_verified"])
+        self.assertNotIn("pass", (
+            r["checks"]["current_connection_callback"],
+            r["checks"]["current_connection_cimd"],
+            r["checks"]["chatgpt_oidc_scope_policy"],
+        ))
 
     def test_cli_synthetic_data_no_secret_leak(self):
         with tempfile.TemporaryDirectory() as d:
