@@ -339,6 +339,7 @@ class DeveloperHomeV573Test extends TestCase
                 'github_app_connection' => [
                     'status' => 'connected',
                     'installation_id' => 777,
+                    'source_epoch' => 'c6e3b784-4679-4fac-a2d5-e58c3dbadf11',
                 ],
             ],
         ]);
@@ -355,6 +356,7 @@ class DeveloperHomeV573Test extends TestCase
             'plan_id' => $plan->id,
             'repository_artifact_id' => $root->id,
             'provider' => 'github',
+            'source_epoch' => data_get($root->metadata, 'github_app_connection.source_epoch'),
             'kind' => $overrides['kind'] ?? 'issue',
             'external_key' => 'github:1kz-ma1/canovia-web:'
                 .($overrides['kind'] ?? 'issue').':'
