@@ -174,10 +174,23 @@ final class PlanActionDraftV5873Test extends TestCase
         $task = $this->task($plan);
         $log = $this->workLog($plan, $task);
 
-        $this->actingAs($owner)->post(route('plans.action_drafts.compose', $plan), [
+        $this->actingAs($owner)->post(route('plans.action_drafts.store', $plan), [
             'request_id' => (string) Str::uuid(),
-            'work_log_ids' => [$log->id],
-        ])->assertStatus(302);
+            'source_work_log_id' => $log->id,
+        ])->assertRedirect();
+        $draft = PlanActionDraft::sole();
+        $task->update(['plan_id' => $other->id]);
+
+        $this->actingAs($owner)->post(route('plans.action_drafts.accept', [$plan, $draft]))
+            ->assertStatus(409);
+        $this->assertDatabaseCount('tasks', 1);
+        $task->update(['plan_id' => $plan->id]);
+
+        $plan->update(['user_id' => User::factory()->create()->id]);
+        $this->actingAs($owner)->post(route('plans.action_drafts.accept', [$plan, $draft]))
+            ->assertForbidden();
+        $this->assertSame('proposed', $draft->fresh()->status);
+        $this->assertDatabaseCount('tasks', 1);
     }
 
     public function test_study_evidence_creates_specific_unapplied_suggestion_and_accepts_once(): void
