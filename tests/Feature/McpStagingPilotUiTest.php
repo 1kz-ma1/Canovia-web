@@ -73,7 +73,7 @@ final class McpStagingPilotUiTest extends TestCase
             ->assertDontSee('resources/js/app.js')
             ->assertDontSee('name="duration_days"', false)
             ->assertDontSee('Auth0で本人確認を開始');
-        $this->post('/logout')->assertRedirect();
+        $this->post('/logout')->assertRedirect('/login');
     }
 
     public function test_production_login_view_is_unchanged(): void
