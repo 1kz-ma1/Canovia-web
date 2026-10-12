@@ -126,7 +126,7 @@ final class GitHubTaskEvidenceCommitGuard
                 return null;
             }
 
-            $result = $write($liveTask, $targets);
+            $result = $write($liveTask, $targets, $sourceRoot);
             if ($expectedSourceEpoch !== null) {
                 $ids = $result instanceof TaskEvidence
                     ? [(int) $result->id]
