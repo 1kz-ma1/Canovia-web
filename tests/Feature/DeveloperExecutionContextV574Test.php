@@ -260,6 +260,66 @@ class DeveloperExecutionContextV574Test extends TestCase
         );
     }
 
+    public function test_revoked_and_reconnected_git_hub_evidence_is_history_only_until_refetched(): void
+    {
+        [, $plan, $task] = $this->scenario();
+        $evidence = $this->evidence($task, 'pull_request_ci_observed', [
+            'repo_full_name' => '1kz-ma1/Canovia-web',
+            'pull_request_number' => 262,
+            'ci_state' => 'failure',
+        ], now()->subMinute());
+        $root = PlanArtifact::query()->where('plan_id', $plan->id)
+            ->where('artifact_type', 'repository')->firstOrFail();
+
+        $current = app(DevelopmentExecutionContextService::class)
+            ->build($plan, $task->id, null);
+        $this->assertTrue($current['has_github_evidence']);
+        $this->assertSame('failure', data_get($current, 'ci.state'));
+
+        $meta = $root->metadata;
+        $meta['github_app_connection']['status'] = 'revoked';
+        $root->update(['metadata' => $meta]);
+        $revoked = app(DevelopmentExecutionContextService::class)
+            ->build($plan, $task->id, null);
+        $this->assertFalse($revoked['has_github_evidence']);
+        $this->assertNull(data_get($revoked, 'ci.state'));
+
+        $meta['github_app_connection']['status'] = 'connected';
+        $meta['github_app_connection']['source_epoch'] = (string) Str::uuid();
+        $root->update(['metadata' => $meta]);
+        $reconnected = app(DevelopmentExecutionContextService::class)
+            ->build($plan, $task->id, null);
+        $this->assertFalse($reconnected['has_github_evidence']);
+        $this->assertSame(1, TaskEvidence::query()->whereKey($evidence->id)->count());
+
+        $source = $evidence->metadata;
+        $source['github_source_epoch'] = $meta['github_app_connection']['source_epoch'];
+        $evidence->update(['metadata' => $source]); // Model a fresh authoritative re-fetch.
+        $fresh = app(DevelopmentExecutionContextService::class)
+            ->build($plan, $task->id, null);
+        $this->assertTrue($fresh['has_github_evidence']);
+        $this->assertSame('failure', data_get($fresh, 'ci.state'));
+    }
+
+    public function test_unsigned_legacy_evidence_never_becomes_current_on_existing_connection(): void
+    {
+        [, $plan, $task] = $this->scenario();
+        $old = $this->evidence($task, 'github_issue_observed', [
+            'repo_full_name' => '1kz-ma1/Canovia-web',
+            'issue_number' => 10,
+            'issue_state' => 'closed',
+        ], now());
+        $meta = (array) $old->metadata;
+        unset($meta['github_source_epoch']);
+        $old->update(['metadata' => $meta]);
+
+        $context = app(DevelopmentExecutionContextService::class)
+            ->build($plan, $task->id, null);
+        $this->assertFalse($context['has_github_evidence']);
+        $this->assertNull($context['issue']);
+        $this->assertDatabaseCount('task_evidences', 1);
+    }
+
     private function scenario(): array
     {
         $user = User::factory()->create([
