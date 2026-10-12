@@ -16,11 +16,15 @@ class LegacyPracticeImmersionV5889Test extends TestCase
         $this->assertStringContainsString('@if (! $learningImmersion)', $layout);
     }
 
-    public function test_legacy_answer_and_reasoning_textarea_remains_editable_and_larger_on_mobile(): void
+    public function test_legacy_answer_and_reasoning_textarea_remains_editable_with_compact_disclosure(): void
     {
         $practice = file_get_contents(resource_path('views/study_practice/show.blade.php'));
         $this->assertStringContainsString('name="{{ $fieldName }}"', $practice);
-        $this->assertStringContainsString('min-h-[168px] w-full resize-y sm:min-h-[192px]" rows="6"', $practice);
+        $this->assertStringContainsString('min-h-[112px] w-full resize-y text-base sm:min-h-[128px]" rows="4"', $practice);
+        $this->assertStringContainsString('min-h-[96px] w-full resize-y text-base" rows="3"', $practice);
+        $this->assertStringContainsString('data-study-practice-optional-note', $practice);
+        $this->assertStringContainsString('data-study-practice-actions', $practice);
+        $this->assertStringContainsString('data-study-practice-history', $practice);
         $this->assertStringNotContainsString('readonly name="{{ $fieldName }}"', $practice);
         $this->assertStringContainsString('data-study-practice-one-question', $practice);
         $this->assertStringContainsString('data-study-practice-pager hidden', $practice);
