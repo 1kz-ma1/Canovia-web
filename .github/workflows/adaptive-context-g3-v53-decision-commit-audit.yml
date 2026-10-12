@@ -1,0 +1,42 @@
+name: Adaptive Context G3 Exit Audit V53 Decision Commit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Intelligence/Services/ReasonedDecisionOrchestrator.php'
+      - 'app/Intelligence/Services/ReasoningRouter.php'
+      - 'tests/Feature/IntelligenceReasoningRouterV533Test.php'
+      - '.github/workflows/adaptive-context-g3-v53-decision-commit-audit.yml'
+
+jobs:
+  v53-post-router-trace-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP syntax
+        run: |
+          php -l app/Intelligence/Services/ReasonedDecisionOrchestrator.php
+          php -l app/Intelligence/Services/ReasoningRouter.php
+          php -l tests/Feature/IntelligenceReasoningRouterV533Test.php
+      - name: V53 AI Router success-to-trace grant and Plan revoke
+        run: php artisan test tests/Feature/IntelligenceReasoningRouterV533Test.php
+      - name: Native AI purpose grant and Plan/Task revocation
+        run: php artisan test tests/Feature/NativeAiPurposeGrantFenceV05Test.php
+      - name: Study task projection and owner draft approval
+        run: php artisan test tests/Feature/StudyActionCommitFenceG3Test.php tests/Feature/PlanActionDraftV5873Test.php
+      - name: Career/Development historical source visibility
+        run: php artisan test tests/Feature/IntelligenceDomainSourceFreshnessG3Test.php tests/Feature/StateSnapshotActorIsolationG1Test.php
+      - name: MCP consent and Auth0 read permission isolation
+        run: php artisan test tests/Feature/McpReadOnlyResourceTest.php tests/Feature/McpSyntheticOAuthConsentReadLifecycleTest.php
