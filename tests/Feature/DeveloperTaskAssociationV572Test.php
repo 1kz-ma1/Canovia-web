@@ -198,6 +198,7 @@ class DeveloperTaskAssociationV572Test extends TestCase
         $this->actingAs($user)
             ->get(route('workspace.development.index', [
                 'plan_id' => $plan->id,
+                'surface' => 'repository',
             ]))
             ->assertOk()
             ->assertSee('最近GitHubで何が起きたか')
@@ -236,7 +237,7 @@ class DeveloperTaskAssociationV572Test extends TestCase
         $this->assertNull($observation->fresh()->suggested_task_id);
 
         $this->actingAs($user)
-            ->get(route('workspace.development.index', ['plan_id' => $plan->id]))
+            ->get(route('workspace.development.index', ['plan_id' => $plan->id, 'surface' => 'repository']))
             ->assertOk()
             ->assertSee('Fix GitHub webhook routing')
             ->assertSee('過去の観測・現在は未検証')
@@ -332,7 +333,7 @@ class DeveloperTaskAssociationV572Test extends TestCase
         ]]);
 
         $this->actingAs($user)
-            ->get(route('workspace.development.index', ['plan_id' => $plan->id]))
+            ->get(route('workspace.development.index', ['plan_id' => $plan->id, 'surface' => 'repository']))
             ->assertOk()
             ->assertSee('Historical issue 92')
             ->assertSee('過去の観測・現在は未検証')
@@ -357,7 +358,7 @@ class DeveloperTaskAssociationV572Test extends TestCase
         $observation->update(['external_key' => 'github:another/repo:issue:93']);
 
         $this->actingAs($user)
-            ->get(route('workspace.development.index', ['plan_id' => $plan->id]))
+            ->get(route('workspace.development.index', ['plan_id' => $plan->id, 'surface' => 'repository']))
             ->assertOk()
             ->assertSee('Historical issue 93')
             ->assertSee('過去の観測・現在は未検証');
