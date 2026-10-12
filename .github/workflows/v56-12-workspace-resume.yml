@@ -387,5 +387,8 @@ jobs:
         run: php artisan test tests/Feature/PlanActionDraftV5871Test.php tests/Feature/PlanActionFirstCreationV5866Test.php
       - name: V58.70 Plan Specialization Domain and Ownership
         run: php artisan test tests/Feature/PlanSpecializationOverrideV5870Test.php tests/Feature/PlanDomainOverrideV5868Test.php tests/Feature/PlanIntentClassificationV5867Test.php
+      - name: Release #488 undeployed MCP/Auth0 + Native AI purpose + GitHub observation regression
+        run: php artisan test tests/Feature/McpAuth0JwtTokenVerifierTest.php tests/Feature/McpAuth0JwtProviderRoutingTest.php tests/Feature/NativeAiPurposeGrantFenceV05Test.php tests/Feature/DeveloperActivityObservationV571Test.php
+
       - name: V58.66 Action-first Plan Creation
         run: php artisan test tests/Feature/PlanDomainOverrideV5868Test.php tests/Feature/PlanIntentClassificationV5867Test.php tests/Feature/PlanActionFirstCreationV5866Test.php tests/Feature/MutationIdempotencyV390Test.php tests/Feature/PlanVisualPreferencesTest.php tests/Feature/GoalContextFoundationV4114Test.php tests/Feature/WorkspaceModeOnboardingV547Test.php tests/Feature/PublicBetaPolishV16Test.php tests/Feature/AdaptiveGoalDiscoveryV4114Test.php
