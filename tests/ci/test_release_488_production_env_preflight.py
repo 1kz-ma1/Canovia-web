@@ -121,6 +121,27 @@ class ProductionEnvPreflightTests(unittest.TestCase):
         self.assertIn("DATABASE_URL_TARGET_UNVERIFIED", result["codes"])
         self.assertNotIn(SECRET, run.stdout + run.stderr)
 
+        # URL query options must not silently override the audited schema.
+        run, result = audit({
+            "DB_URL": url + "?database=defaultdb&password=" + SECRET,
+        })
+        self.assertEqual(2, run.returncode)
+        self.assertIn("DATABASE_URL_TARGET_UNVERIFIED", result["codes"])
+        self.assertNotIn(SECRET, run.stdout + run.stderr)
+
+    def test_malformed_canonical_url_refused_without_credential_echo(self):
+        for app_url in [
+            "https://user:" + SECRET + "@app.canovia.com",
+            "https://app.canovia.com?session=" + SECRET,
+            "https://app.canovia.com/private",
+            "http://app.canovia.com",
+        ]:
+            with self.subTest(url_type=app_url.startswith("http://")):
+                run, result = audit({"APP_URL": app_url})
+                self.assertEqual(2, run.returncode)
+                self.assertIn("PUBLIC_APP_URL_UNEXPECTED", result["codes"])
+                self.assertNotIn(SECRET, run.stdout + run.stderr)
+
     def test_staging_only_keys_warn_but_do_not_reveal(self):
         run, result = audit({
             "CANOVIA_STAGING_DB_MODE": "render_postgres",
