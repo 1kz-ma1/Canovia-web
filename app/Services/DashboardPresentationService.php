@@ -6,6 +6,7 @@ use App\Data\UserBehaviorBaselineData;
 use App\Data\UserStateData;
 use App\Enums\BehaviorEventType;
 use App\Enums\UserBehaviorState;
+use App\Models\TaskEvidence;
 use App\Models\User;
 use App\Models\UserStateSnapshot;
 use App\Models\WorkSession;
@@ -23,6 +24,7 @@ class DashboardPresentationService
         private readonly ExecutionActionPolicyService $executionActions,
         private readonly PlanCategoryProfileService $categoryProfiles,
         private readonly PlanSituationResolver $situationResolver,
+        private readonly GitHubTaskEvidenceReuseGuard $githubEvidenceReuse,
         private readonly PlanSurfaceEngine $surfaceEngine,
         private readonly RequestBehaviorHistory $history,
     ) {}
@@ -87,7 +89,9 @@ class DashboardPresentationService
         $currentTasks = $currentTasksByPlan->filter()->values();
         if ($currentTasks->isNotEmpty()) {
             (new EloquentCollection($currentTasks->all()))
-                ->load(['evidences' => fn ($query) => $query->limit(8)]);
+                // A bounded surplus prevents recent revoked GitHub rows from
+                // crowding out older, still-valid user/native evidence.
+                ->load(['evidences' => fn ($query) => $query->limit(24)]);
         }
 
         $planTabs = $plans->map(function ($plan) use (
@@ -146,9 +150,23 @@ class DashboardPresentationService
                 : collect();
             $primaryExecutionTool = $this->executionActions->primary($executionTools);
 
-            $recentEvidenceModels = $currentTask
-                ? $currentTask->getRelation('evidences')
-                : collect();
+            // Dashboard/Situation are current projections, not an archive.
+            // Keep revoked and pre-lineage GitHub rows in durable history,
+            // but do not present them as currently verified observations.
+            $recentEvidenceModels = collect();
+            if ($currentTask) {
+                foreach ($currentTask->getRelation('evidences') as $evidence) {
+                    if (! $evidence instanceof TaskEvidence
+                        || ! $this->githubEvidenceReuse->eligible($plan, $evidence)) {
+                        continue;
+                    }
+
+                    $recentEvidenceModels->push($evidence);
+                    if ($recentEvidenceModels->count() >= 3) {
+                        break;
+                    }
+                }
+            }
 
             $recentEvidence = $recentEvidenceModels
                 ->take(3)
