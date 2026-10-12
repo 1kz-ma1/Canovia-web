@@ -256,6 +256,7 @@ class CandidateEvidenceReopenV5832Test extends TestCase
                 'plan_id' => $plan->id,
                 'repository_artifact_id' => $repository->id,
                 'provider' => 'github',
+                'source_epoch' => data_get($repository->metadata, 'github_app_connection.source_epoch'),
                 'kind' => 'issue',
                 'external_key' => 'github:sustained:'.$daysAgo,
                 'last_observed_at' => now()->subDays($daysAgo),
