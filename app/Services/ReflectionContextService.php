@@ -18,6 +18,7 @@ final class ReflectionContextService
 
     public function __construct(
         private readonly PlanOwnershipService $ownership,
+        private readonly GitHubTaskEvidenceReuseGuard $githubEvidenceReuse,
     ) {}
 
     /**
@@ -86,7 +87,7 @@ final class ReflectionContextService
                 key: 'evidence',
                 label: 'Evidence',
                 eyebrow: 'EVIDENCE',
-                summary: 'Canoviaが確認できたTask Evidenceを、種類やPlanをまたいで振り返ります。',
+                summary: '保存済みのTask Evidenceを振り返ります。外部接続の失効後も履歴は残り、現在未検証の記録は区別します。',
                 count: $evidences->count(),
                 items: $evidences->take(24)->values(),
             ),
@@ -187,11 +188,17 @@ final class ReflectionContextService
             ?? $evidence->created_at?->format('Y-m-d H:i')
             ?? '日付不明';
 
+        // A historical view retains canonical facts regardless of freshness;
+        // never imply that an unsigned/revoked GitHub source is current.
+        $sourceCurrent = $this->githubEvidenceReuse->eligible($plan, $evidence);
+
         return [
             'id' => ($reflection ? 'reflection:' : 'evidence:').$evidence->id,
             'kind' => $reflection ? 'reflection' : 'evidence',
             'label' => $taskTitle !== '' ? $taskTitle : $evidence->typeLabel(),
-            'subtitle' => $plan->title.' · '.$evidence->typeLabel().' · '.$date,
+            'subtitle' => $plan->title.' · '.$evidence->typeLabel().' · '.$date
+                .($sourceCurrent ? '' : ' · 過去の記録・現在は未検証'),
+            'source_status' => $sourceCurrent ? 'current' : 'historical_unverified',
             'summary' => $evidence->summary(),
             'plan_id' => (int) $plan->id,
             'task_id' => $evidence->task_id ? (int) $evidence->task_id : null,
