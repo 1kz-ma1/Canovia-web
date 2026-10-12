@@ -172,7 +172,9 @@ final class McpStagingProviderPreflightService
         // Even metadata with no OIDC scope is NOT proof of token issuance.
         $oidcScopes = ['openid', 'profile', 'email'];
         $checks['third_party_oidc_scopes'] = ! $jwtMode ? 'not_applicable'
-            : (! is_array($scopes) || ! array_is_list($scopes) ? 'unknown_metadata'
+            : (! is_array($scopes) || ! array_is_list($scopes)
+                || count(array_filter($scopes, 'is_string')) !== count($scopes)
+                    ? 'unknown_metadata'
                 : (array_intersect($oidcScopes, $scopes) !== []
                     ? 'requires_live_flow_validation' : 'not_advertised'));
 
