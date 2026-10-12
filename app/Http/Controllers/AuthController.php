@@ -27,6 +27,11 @@ class AuthController extends Controller
 {
     public function showLogin()
     {
+        if (config('app.env') === 'staging'
+            && config('canovia_staging.login_pilot_enabled') === true) {
+            return view('auth.staging-pilot-login');
+        }
+
         return view('auth.login');
     }
 
@@ -193,6 +198,13 @@ class AuthController extends Controller
         }
 
         $user = $request->user();
+        if (config('app.env') === 'staging'
+            && config('canovia_staging.login_pilot_enabled') === true) {
+            // The stage-only identity pilot needs no product navigation, PWA,
+            // profile/Plan expansion or asset references from the normal shell.
+            return view('auth.staging-pilot-account', ['user' => $user]);
+        }
+
         $user->loadMissing('personalizationContext');
 
         return view('auth.account', [
