@@ -13,6 +13,7 @@ use App\Intelligence\Data\RoutedDecisionResult;
 use App\Intelligence\Providers\OpenAiDecisionReasoningProvider;
 use App\Intelligence\Support\CanonicalJson;
 use App\Models\IntelligenceReasoningRun;
+use App\Models\Plan;
 use App\Models\User;
 use App\Services\FeatureAccessService;
 use Throwable;
@@ -43,6 +44,23 @@ final class ReasoningRouter
 
         $cached = $this->runStore->cachedSuccess($requestFingerprint);
         if ($cached) {
+            // A cached OpenAI selection is still derived from an access-
+            // controlled source. Do not bypass CURRENT actor/Plan/entitlement
+            // just because this exact request succeeded in the past.
+            if ($cached->route_selected === 'openai') {
+                $denyReason = $this->aiAuthorizationFailure($request);
+                if ($denyReason !== null) {
+                    return $this->recordFallback(
+                        request: $request,
+                        requestFingerprint: $requestFingerprint,
+                        mode: $mode,
+                        started: hrtime(true),
+                        reason: $denyReason,
+                        routerVersion: $routerVersion,
+                    );
+                }
+            }
+
             $decision = $this->decisionFromCachedRun($request, $cached);
 
             return new RoutedDecisionResult(
@@ -78,20 +96,14 @@ final class ReasoningRouter
             );
         }
 
-        $actor = $request->userId
-            ? User::query()->find($request->userId)
-            : null;
-
-        if (! $this->featureAccess->canUse(
-            $actor,
-            FeatureKey::AutomaticAiExecution,
-        )) {
+        $denyReason = $this->aiAuthorizationFailure($request);
+        if ($denyReason !== null) {
             return $this->recordFallback(
                 request: $request,
                 requestFingerprint: $requestFingerprint,
                 mode: $mode,
                 started: $started,
-                reason: 'feature_not_entitled',
+                reason: $denyReason,
                 routerVersion: $routerVersion,
             );
         }
@@ -109,6 +121,23 @@ final class ReasoningRouter
 
         try {
             $selection = $this->openAi->select($request);
+
+            // A remote response may arrive AFTER an admin revokes a product
+            // grant or the Plan is transferred. Never materialize that old AI
+            // selection as a current V53 Decision. The remote request itself
+            // is already completed and cannot be retroactively unsent.
+            $denyReason = $this->aiAuthorizationFailure($request);
+            if ($denyReason !== null) {
+                return $this->recordFallback(
+                    request: $request,
+                    requestFingerprint: $requestFingerprint,
+                    mode: $mode,
+                    started: $started,
+                    reason: 'authorization_changed_during_reasoning',
+                    routerVersion: $routerVersion,
+                );
+            }
+
             $candidate = $this->candidateByType(
                 $request->candidates,
                 $selection->selectedType,
@@ -297,6 +326,44 @@ final class ReasoningRouter
                 'policy_version' => 'reasoning_router_v1',
             ],
         );
+    }
+
+    /**
+     * Re-read actor, Plan scope and native AI entitlement at each point where
+     * an AI decision could become current (including cached success).
+     * A queued evaluation has no authorization to use a former owner's Plan.
+     *
+     * This is not ChatGPT OAuth consent: MCP external disclosure is governed
+     * separately by McpDelegatedPlanAccessPolicy and its locked read path.
+     */
+    private function aiAuthorizationFailure(ReasoningRequest $request): ?string
+    {
+        try {
+            $actor = $request->userId !== null && $request->userId > 0
+                ? User::query()->find($request->userId)
+                : null;
+
+            if ($actor === null) {
+                return 'feature_not_entitled';
+            }
+
+            if ($request->planId !== null) {
+                $plan = Plan::query()->find($request->planId);
+                if ($plan === null
+                    || (int) $plan->user_id !== (int) $actor->id
+                    || (bool) $plan->is_collaborative) {
+                    return 'plan_access_changed';
+                }
+            }
+
+            return $this->featureAccess->canUse(
+                $actor,
+                FeatureKey::AutomaticAiExecution,
+            ) ? null : 'feature_not_entitled';
+        } catch (Throwable) {
+            // A failed policy read cannot release a cached private AI choice.
+            return 'reasoning_authorization_unavailable';
+        }
     }
 
     private function shouldEscalate(ReasoningRequest $request): bool
