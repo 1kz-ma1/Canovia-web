@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Plan;
 use App\Models\StudyPracticeAttempt;
-use Illuminate\Support\Arr;
 use Throwable;
 
 /**
