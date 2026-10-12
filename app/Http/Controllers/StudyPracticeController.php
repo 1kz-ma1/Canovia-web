@@ -21,6 +21,7 @@ use App\Intelligence\Study\StudyAdaptiveActionService;
 use App\Services\PracticeQuestionDemandRecorder;
 use App\Services\StudyPracticeOrchestrator;
 use App\Services\StudyPracticeAssessmentCommitFence;
+use App\Services\StudyPracticeGenerationCommitFence;
 use App\Services\StudyPracticePromptService;
 use App\Services\StudyPracticeReliabilityService;
 use App\Services\StudyPracticeStrategyService;
@@ -526,6 +527,7 @@ class StudyPracticeController extends Controller
         BehaviorIdentityService $identity,
         FeatureAccessService $featureAccess,
         NativeAiGateway $nativeAi,
+        StudyPracticeGenerationCommitFence $generationFence,
         ApSubjectAPlanWideWeaknessHandoffService $planWideHandoffService,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
@@ -578,7 +580,16 @@ class StudyPracticeController extends Controller
         try {
             $questions = $this->normalizeQuestions($practiceSession->questions_snapshot);
         } catch (ValidationException $exception) {
-            $practiceSession->update(['status' => StudyPracticeSession::STATUS_ABANDONED]);
+            try {
+                $generationFence->abandonInvalid(
+                    $practiceSession, $plan, $task, (int) $request->user()?->id, $runId,
+                );
+            } catch (NativeAiExecutionException $changed) {
+                return redirect()
+                    ->route('plans.tasks.study_practice.show', [$plan, $task])
+                    ->with('status', $changed->getMessage());
+            }
+
             if ($runId > 0) {
                 $nativeAi->markRunFailed(
                     $runId,
@@ -596,14 +607,22 @@ class StudyPracticeController extends Controller
         $title = trim((string) data_get($practiceSession->provider_payload, 'title', 'Canovia Hybrid演習'));
         $exerciseTitle = $title !== '' ? mb_substr($title, 0, 120) : 'Canovia Hybrid演習';
 
-        $practiceSession->update([
-            'status' => StudyPracticeSession::STATUS_READY,
-            'exercise_title' => $exerciseTitle,
-            'questions_snapshot' => $questions,
-        ]);
-
-        if ($runId > 0) {
-            $nativeAi->attachRun($runId, $request->user()?->id, $practiceSession);
+        try {
+            $practiceSession = $generationFence->finalize(
+                $practiceSession,
+                $plan,
+                $task,
+                (int) $request->user()?->id,
+                $questions,
+                $exerciseTitle,
+                $runId,
+            );
+        } catch (NativeAiExecutionException $exception) {
+            // A duplicate prepare must not reset an in-progress, assessed,
+            // or concurrently edited Study exercise and its answer draft.
+            return redirect()
+                ->route('plans.tasks.study_practice.show', [$plan, $task])
+                ->with('status', $exception->getMessage());
         }
 
         $request->session()->put($this->sessionKey($plan, $task), [
