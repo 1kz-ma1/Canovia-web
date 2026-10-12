@@ -348,7 +348,7 @@ final class GitHubDevelopmentObservationService
         // The REST read happened before this transaction. Serialize competing
         // writers under a row lock and compare GitHub's entity revision, not
         // webhook arrival order or the local processing timestamp.
-        return DB::transaction(function () use (
+        $stored = DB::transaction(function () use (
             $identity, $values, $revision, $revisionId, $kind,
             $root, $repo, $installationId, $sourceOwnerId, $sourceEpoch,
         ): ?DevelopmentActivityObservation {
@@ -496,6 +496,15 @@ final class GitHubDevelopmentObservationService
 
             return $locked;
         }, 3);
+
+        if ($stored !== null && $sourceEpoch === null && $stored->source_epoch !== null) {
+            // Bootstrap/Webhook may fetch several facts using one selected
+            // legacy root. Carry the newly minted epoch into subsequent
+            // independently fetched facts, without approving old rows.
+            $root->refresh();
+        }
+
+        return $stored;
     }
 
     private function text(mixed $value, int $max): ?string
