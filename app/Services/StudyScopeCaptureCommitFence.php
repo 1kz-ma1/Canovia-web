@@ -126,8 +126,8 @@ final class StudyScopeCaptureCommitFence
             || (int) $capture->plan_id !== $expectedPlanId
             || (int) $source->id !== (int) $capture->inbox_item_id
             || (int) $source->plan_id !== $expectedPlanId
-            || (int) $source->user_id !== $userId
-            || (int) $capture->user_id !== $userId
+            || $source->user_id === null
+            || (int) $source->user_id !== (int) $capture->user_id
             || $this->categories->forPlan($plan)->key !== 'study'
         ) {
             $this->deny('native_ai_target_changed', $runId);
