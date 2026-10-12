@@ -294,7 +294,11 @@ final class GitHubDevelopmentObservationService
             'external_key' => $key,
         ];
 
-        $revision = $this->date($fact['source_updated_at'] ?? null);
+        // Database timestamp columns carry no timezone. Normalize the
+        // *source revision* to the application's storage timezone before
+        // Eloquent serializes it; GitHub's occurred_at keeps V57.1 behavior.
+        $revision = $this->date($fact['source_updated_at'] ?? null)
+            ?->setTimezone(config('app.timezone', 'UTC'));
         $revisionId = $kind === 'deployment'
             ? max(0, (int) ($fact['source_revision_id'] ?? 0))
             : 0;
@@ -338,7 +342,16 @@ final class GitHubDevelopmentObservationService
 
             // For legacy pre-G2 observations use the original event time as
             // a conservative lower bound, without bulk rewriting history.
-            $previous = $locked->source_updated_at ?? $locked->occurred_at;
+            $previous = $locked->source_updated_at;
+            if ($previous === null && filled($locked->getRawOriginal('occurred_at'))) {
+                // Legacy V57.1 wrote GitHub ISO-8601 UTC values into a naive
+                // timestamp. Reinterpret that raw historical value as UTC;
+                // casting it in the local app timezone shifts the watermark.
+                $previous = CarbonImmutable::parse(
+                    (string) $locked->getRawOriginal('occurred_at'),
+                    'UTC',
+                );
+            }
             if ($previous !== null) {
                 $comparison = $revision->getTimestamp() <=> $previous->getTimestamp();
 
