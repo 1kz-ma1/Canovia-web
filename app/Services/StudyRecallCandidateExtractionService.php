@@ -7,6 +7,7 @@ use App\Models\Plan;
 use App\Models\StudyRecallCandidate;
 use App\Models\StudyRecallSource;
 use App\Models\Task;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
@@ -14,6 +15,7 @@ class StudyRecallCandidateExtractionService
 {
     public function __construct(
         private readonly NativeAiGateway $nativeAi,
+        private readonly StudyRecallExtractionCommitFence $commitFence,
     ) {}
 
     /**
@@ -25,6 +27,7 @@ class StudyRecallCandidateExtractionService
         Task $task,
         ?int $userId = null,
     ): array {
+        $sourceSignature = $this->commitFence->snapshot($source);
         $inputParts = $this->inputParts($source);
         $sourceContext = $source->source_type === 'text'
             ? mb_substr((string) $source->source_text, 0, 50000)
@@ -72,10 +75,7 @@ class StudyRecallCandidateExtractionService
                 inputParts: $inputParts,
             );
         } catch (NativeAiExecutionException $exception) {
-            $source->update([
-                'status' => 'failed',
-                'native_ai_run_id' => $exception->runId,
-            ]);
+            $this->markFailedSource($source, $plan, $task, $userId, $exception);
             throw $exception;
         }
 
@@ -83,8 +83,20 @@ class StudyRecallCandidateExtractionService
             ->filter(fn ($candidate) => is_array($candidate))
             ->take(30);
 
-        $created = 0;
-        foreach ($cards as $candidate) {
+        try {
+            $created = DB::transaction(function () use (
+                $plan, $task, $source, $userId, $sourceSignature, $result, $cards,
+            ): int {
+                $this->commitFence->assertCanCommit(
+                    $plan,
+                    $task,
+                    $userId,
+                    [(int) $source->id => $sourceSignature],
+                    (int) $result['run_id'],
+                );
+
+                $created = 0;
+                foreach ($cards as $candidate) {
             $promptText = trim((string) ($candidate['prompt'] ?? ''));
             $answer = trim((string) ($candidate['answer'] ?? ''));
 
@@ -127,17 +139,50 @@ class StudyRecallCandidateExtractionService
             }
         }
 
-        $source->update([
-            'status' => 'ready',
-            'native_ai_run_id' => (int) $result['run_id'],
-            'candidate_count' => $created,
-        ]);
+                $source->update([
+                    'status' => 'ready',
+                    'native_ai_run_id' => (int) $result['run_id'],
+                    'candidate_count' => $created,
+                ]);
+
+                return $created;
+            }, 3);
+        } catch (NativeAiExecutionException $exception) {
+            $this->markFailedSource($source, $plan, $task, $userId, $exception);
+
+            throw $exception;
+        }
 
         return [
             'created' => $created,
             'run_id' => (int) $result['run_id'],
             'total' => $cards->count(),
         ];
+    }
+
+    private function markFailedSource(
+        StudyRecallSource $source,
+        Plan $plan,
+        Task $task,
+        ?int $userId,
+        NativeAiExecutionException $exception,
+    ): void {
+        if ($userId === null) {
+            return;
+        }
+
+        // Retain a retryable source only while it still belongs to this actor.
+        // Never overwrite a moved/deleted Source or a concurrent ready result.
+        StudyRecallSource::query()
+            ->whereKey($source->id)
+            ->where('plan_id', $plan->id)
+            ->where('task_id', $task->id)
+            ->where('user_id', $userId)
+            ->whereIn('status', ['pending', 'failed'])
+            ->update([
+                'status' => 'failed',
+                'native_ai_run_id' => $exception->runId,
+            ]);
     }
 
     /**
