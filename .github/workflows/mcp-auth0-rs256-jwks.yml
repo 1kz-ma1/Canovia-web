@@ -1,0 +1,39 @@
+name: MCP Auth0 RS256 JWT Signature Verification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'composer.json'
+      - 'composer.lock'
+      - 'app/Services/McpAuth0JwtTokenVerifier.php'
+      - 'app/Services/McpJwtClaimConstraints.php'
+      - 'config/canovia_mcp.php'
+      - 'tests/Feature/McpAuth0JwtTokenVerifierTest.php'
+      - '.github/workflows/mcp-auth0-rs256-jwks.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  auth0-rs256-verifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl
+          tools: composer:v2
+          coverage: none
+      - name: Install reviewed locked JWT dependencies
+        run: |
+          composer validate --strict --no-interaction
+          composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+      - name: PHP syntax and signed token regression
+        run: |
+          php -l app/Services/McpAuth0JwtTokenVerifier.php
+          php -l config/canovia_mcp.php
+          php -l tests/Feature/McpAuth0JwtTokenVerifierTest.php
+          php artisan test tests/Feature/McpAuth0JwtTokenVerifierTest.php --colors=never
