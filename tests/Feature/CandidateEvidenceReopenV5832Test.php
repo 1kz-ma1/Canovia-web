@@ -678,6 +678,47 @@ class CandidateEvidenceReopenV5832Test extends TestCase
             'context_sources.observed.development_behavior'));
     }
 
+    public function test_refresh_while_disconnected_keeps_confirmed_choice_in_history_but_mutes_active_claim(): void
+    {
+        [$user, $plan, $root] = $this->scenario();
+        $this->actingAs($user)->post(route('personalization.updates.refresh'))
+            ->assertRedirect(route('personalization.updates.index'));
+        $this->actingAs($user)->post(route('personalization.updates.confirm', [
+            'candidateKey' => 'development_advanced_support',
+        ]))->assertRedirect(route('personalization.updates.index'));
+
+        $this->assertSame('confirmed', data_get(
+            $this->context($user)->inferred_context,
+            'update_candidates.development_advanced_support.status',
+        ));
+
+        $metadata = (array) $root->metadata;
+        $metadata['github_app_connection']['status'] = 'revoked';
+        $root->update(['metadata' => $metadata]);
+
+        $this->actingAs($user)->post(route('personalization.updates.refresh'))
+            ->assertRedirect(route('personalization.updates.index'));
+
+        $stored = $this->context($user)->fresh();
+        $this->assertSame('confirmed', data_get(
+            $stored->inferred_context,
+            'update_candidates.development_advanced_support.status',
+        ));
+        $this->assertSame('context_confirmation', data_get(
+            $stored->feature_readiness,
+            'development.advanced_support.source',
+        ));
+
+        $request = Request::create('/', 'GET');
+        $request->setLaravelSession(app('session')->driver());
+        $request->setUserResolver(fn () => $user);
+        $current = app(PersonalizationContextService::class)->current($request);
+        $this->assertNull(data_get($current,
+            'context_sources.inferred.update_candidates.development_advanced_support'));
+        $this->assertNull(data_get($current,
+            'feature_readiness.development.advanced_support'));
+    }
+
     private function scenario(): array
     {
         $user = User::factory()->create([
