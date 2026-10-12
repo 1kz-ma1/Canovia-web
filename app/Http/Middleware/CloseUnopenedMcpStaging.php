@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use App\Services\McpStagingLoginPilotPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -42,6 +43,12 @@ final class CloseUnopenedMcpStaging
                 || config('canovia_staging.web_access_explicitly_approved') !== true
                 || config('canovia_staging.database_mode') !== 'render_postgres'
                 || ! $this->databaseReady()) {
+                return $this->unavailable();
+            }
+
+            // Public-Web approvals cannot open unrelated Canovia routes.
+            // The route/method/actor allowlist is separate and OFF by default.
+            if (! app(McpStagingLoginPilotPolicy::class)->allows($request)) {
                 return $this->unavailable();
             }
         }
