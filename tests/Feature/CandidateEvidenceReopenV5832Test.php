@@ -9,6 +9,7 @@ use App\Models\Plan;
 use App\Models\PlanArtifact;
 use App\Models\User;
 use App\Models\UserPersonalizationContext;
+use App\Services\DevelopmentPersonalizationSignalService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -578,6 +579,33 @@ class CandidateEvidenceReopenV5832Test extends TestCase
     /**
      * @return array{0:User,1:Plan,2:PlanArtifact}
      */
+    public function test_disconnected_repository_observations_are_not_fresh_personalization_evidence(): void
+    {
+        [$user, $plan, $first] = $this->scenario();
+        $second = $this->repository(
+            $plan, $user, 'https://github.com/example/second-repo',
+        );
+
+        $this->observation($plan, $first, 'pull_request', 'github:first:1');
+        $this->observation($plan, $first, 'commit', 'github:first:2');
+        $this->observation($plan, $second, 'commit', 'github:second:3');
+
+        $service = app(DevelopmentPersonalizationSignalService::class);
+        $before = $service->advancedSupport($user);
+        $this->assertSame(3, $before['recent_activity_count']);
+        $this->assertSame(2, $before['connected_repository_count']);
+
+        $metadata = (array) $first->metadata;
+        $metadata['github_app_connection']['status'] = 'revoked';
+        $first->update(['metadata' => $metadata]);
+
+        $after = $service->advancedSupport($user);
+        $this->assertSame(1, $after['recent_activity_count']);
+        $this->assertSame(1, $after['recent_pr_or_commit_count']);
+        $this->assertSame(1, $after['connected_repository_count']);
+        $this->assertDatabaseCount('development_activity_observations', 3);
+    }
+
     private function scenario(): array
     {
         $user = User::factory()->create([

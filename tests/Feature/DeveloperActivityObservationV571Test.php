@@ -366,6 +366,97 @@ class DeveloperActivityObservationV571Test extends TestCase
         );
     }
 
+    public function test_connection_revoked_between_github_fetch_and_observation_commit_is_skipped(): void
+    {
+        [, , $root] = $this->scenario();
+        Http::fake(function (HttpRequest $request) use ($root) {
+            $auth = $this->authResponse($request, ['issues' => 'read']);
+            if ($auth !== null) {
+                return $auth;
+            }
+
+            if ($request->method() === 'GET'
+                && $request->url() === 'https://api.github.com/repos/1kz-ma1/HINANEX/issues/12') {
+                // The service has already selected the connected root.
+                $metadata = (array) $root->fresh()->metadata;
+                $metadata['github_app_connection']['status'] = 'revoked';
+                $root->fresh()->update(['metadata' => $metadata]);
+
+                return Http::response([
+                    'number' => 12,
+                    'title' => 'Old data after disconnect',
+                    'state' => 'closed',
+                    'updated_at' => '2026-10-08T01:00:00Z',
+                    'html_url' => 'https://github.com/1kz-ma1/HINANEX/issues/12',
+                ], 200);
+            }
+
+            return Http::response(['message' => 'Unexpected GitHub request'], 500);
+        });
+
+        $result = app(GitHubDevelopmentObservationService::class)
+            ->observeDelivery($this->delivery(
+                'issues', [['kind' => 'issue', 'number' => 12]],
+            ));
+
+        $this->assertSame(0, $result['observed']);
+        $this->assertSame([], $result['plan_ids']);
+        $this->assertDatabaseCount('development_activity_observations', 0);
+        $this->assertDatabaseCount('task_evidences', 0);
+    }
+
+    public function test_replaced_github_installation_does_not_accept_queued_old_event(): void
+    {
+        [, , $root] = $this->scenario();
+        $stale = $root->fresh();
+        $metadata = (array) $root->metadata;
+        $metadata['github_app_connection']['installation_id'] = 888;
+        $root->update(['metadata' => $metadata]);
+
+        $method = new \ReflectionMethod(GitHubDevelopmentObservationService::class, 'persist');
+        $result = $method->invoke(
+            app(GitHubDevelopmentObservationService::class),
+            $stale,
+            '1kz-ma1/HINANEX',
+            [
+                'kind' => 'issue',
+                'identity' => '12',
+                'provider_number' => 12,
+                'source_updated_at' => '2026-10-08T01:00:00Z',
+                'state' => 'open',
+            ],
+            777,
+        );
+
+        $this->assertNull($result);
+        $this->assertDatabaseCount('development_activity_observations', 0);
+    }
+
+    public function test_github_source_owner_transfer_blocks_inflight_observation_commit(): void
+    {
+        [$plan, , $root] = $this->scenario();
+        $root->load('plan.user');
+        $newOwner = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan->update(['user_id' => $newOwner->id]);
+
+        $method = new \ReflectionMethod(GitHubDevelopmentObservationService::class, 'persist');
+        $result = $method->invoke(
+            app(GitHubDevelopmentObservationService::class),
+            $root,
+            '1kz-ma1/HINANEX',
+            [
+                'kind' => 'issue',
+                'identity' => '12',
+                'state' => 'open',
+                'source_updated_at' => '2026-10-08T01:00:00Z',
+            ],
+            777,
+        );
+
+        $this->assertNull($result);
+        $this->assertDatabaseCount('development_activity_observations', 0);
+    }
+
     private function scenario(): array
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);
