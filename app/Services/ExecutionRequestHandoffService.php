@@ -6,6 +6,8 @@ use App\Models\CompanionMutationCandidate;
 use App\Models\InboxItem;
 use App\Models\Plan;
 use App\Models\Task;
+use Illuminate\Support\Facades\DB;
+use LogicException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -89,6 +91,7 @@ final class ExecutionRequestHandoffService
             instruction: $instruction,
             actorType: $actorType,
             availableMinutes: $availableMinutes,
+            publishAfterCommit: true,
         );
     }
 
@@ -159,6 +162,7 @@ final class ExecutionRequestHandoffService
         string $instruction,
         string $actorType,
         ?int $availableMinutes,
+        bool $publishAfterCommit = false,
     ): array {
         if ((int) $task->plan_id !== (int) $plan->id) {
             throw ValidationException::withMessages([
@@ -203,15 +207,39 @@ final class ExecutionRequestHandoffService
         ];
 
         $context = $this->contexts->snapshot($request, $plan, $task);
-
-        $request->session()->put(self::sessionKey($plan, $task), [
+        $sessionKey = self::sessionKey($plan, $task);
+        $sessionValue = [
             'context_fingerprint' => (string) $context['context_fingerprint'],
             'actor_type' => $actorType,
             'available_minutes' => $availableMinutes,
             'execution_request' => $executionRequest,
             'packet' => null,
             'handoff_prompt' => null,
-        ]);
+        ];
+
+        // A confirmed Companion candidate is still pending in the database
+        // until the enclosing approval transaction commits. Publishing its
+        // session-scoped Execution Request here can leak an uncommitted
+        // approval through deadlock retries or a later exception.
+        $publish = static function () use ($request, $sessionKey, $sessionValue): void {
+            $request->session()->put($sessionKey, $sessionValue);
+        };
+
+        if ($publishAfterCommit) {
+            if (DB::transactionLevel() === 0) {
+                throw new LogicException('Companion Execution handoff requires a database transaction.');
+            }
+
+            // Laravel discards this callback when any enclosing transaction
+            // rolls back, including a retried deadlock attempt. Only the
+            // successful committed attempt may publish to the session.
+            DB::afterCommit($publish);
+        } else {
+            // Human-authored Inbox and Development Brief handoffs have no
+            // Companion Candidate approval transaction and keep their
+            // existing synchronous session behavior.
+            $publish();
+        }
 
         return $executionRequest;
     }
