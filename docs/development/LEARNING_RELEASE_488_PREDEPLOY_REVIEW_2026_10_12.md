@@ -98,3 +98,42 @@ The operator may share only the fixed \`release_488\` verdict code (not the raw
 ledger or SQL), separately confirm fresh backup/restore evidence, and then
 request a pinned-SHA manual deployment decision. Do **not** re-enable Auto
 Deploy, run destructive DDL, or restore over live writes.
+
+## 2026-10-13 update — dual migration gate, backups and isolated production
+
+The original snapshot and prior pinned Aiven read-only inspection showed
+**94/95 migrations** with exactly the source-revision migration pending.
+That result applied to pinned SHA `3669c685` only and is **superseded for releases
+containing later main commits**. New migration
+`2026_10_13_021000_add_source_epoch_to_development_activity_observations`
+adds nullable MySQL `CHAR(36) source_epoch` and a nonunique index. The
+release gate now requires **both known pending migrations** and absent
+columns/index, or both fully applied with valid metadata. Intermediate
+partially applied, unknown pending, or mismatched column/index states BLOCK.
+Expected restricted-Mac operator verdicts (still REVIEW_REQUIRED):
+- `EXACT_TWO_SOURCE_OBSERVATION_MIGRATIONS_PENDING`
+- `BOTH_SOURCE_OBSERVATION_MIGRATIONS_ALREADY_APPLIED`
+
+The previously documented one-migration operator results **cannot** be reused
+for this release. Re-pin the exact candidate SHA, use the previously reviewed
+`canovia_p0_audit` login profile and verified Aiven CA to rerun
+`CANOVIA_RELEASE_488_CHECK=YES` against the current pending set, and share
+only sanitized verdict codes.
+
+Owner screenshot from Aiven Free Backups confirms full snapshots from
+2026-10-10, 11 and 12 UTC, latest 376.1 MiB, with PITR description.
+**Restore testing remains unverified**: Free Fork & restore is disabled.
+Do not upgrade/provision a new service without separate owner consent; decide
+and document a practical recovery procedure and explicit residual-risk
+acceptance before live schema writes.
+
+A separate `production` branch has been initialized from the confirmed
+Render live SHA `15abdc9`. Current Render remains on main with Auto Deploy OFF.
+The intended long-lived policy is protected production promotions (preserving
+ancestry via merge commits), one owner-approved manual initial deploy, then
+auto deploy of owner-approved production commits **only**. See
+`docs/CANOVIA_DEVELOPMENT_WORKFLOW.md`. GitHub admin branch protection and
+Render watched-branch edits remain operator tasks. Both MySQL variants must
+pass independent disposable tests for the two migrations before manual
+release. iOS WKWebView receives live Web releases, so device verification
+is mandatory.
