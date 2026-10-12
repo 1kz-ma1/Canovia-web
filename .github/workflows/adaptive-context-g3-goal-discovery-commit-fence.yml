@@ -1,0 +1,42 @@
+name: Adaptive Context G3 Goal Discovery AI Commit Fence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/GoalDiscoveryConversationService.php'
+      - 'app/Services/GoalDiscoveryAiCommitFence.php'
+      - 'app/Services/NativeAiPurposeAuthorizationGuard.php'
+      - 'tests/Feature/GoalDiscoveryAiCommitFenceG3Test.php'
+      - '.github/workflows/adaptive-context-g3-goal-discovery-commit-fence.yml'
+
+jobs:
+  goal-discovery-post-provider-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/GoalDiscoveryAiCommitFence.php
+          php -l app/Services/GoalDiscoveryConversationService.php
+          php -l tests/Feature/GoalDiscoveryAiCommitFenceG3Test.php
+      - name: G3 revoked or stale Goal Context after AI provider returns
+        run: php artisan test tests/Feature/GoalDiscoveryAiCommitFenceG3Test.php
+      - name: Existing onboarding and Goal Context behavior
+        run: |
+          php artisan test \
+            tests/Feature/ConversationalOnboardingV4116Test.php \
+            tests/Feature/AdaptiveGoalDiscoveryV4114Test.php \
+            tests/Feature/GoalContextFoundationV4114Test.php \
+            tests/Feature/NativeAiPurposeGrantFenceV05Test.php
