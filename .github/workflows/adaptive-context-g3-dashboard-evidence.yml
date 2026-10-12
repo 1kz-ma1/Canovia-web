@@ -1,0 +1,37 @@
+name: Adaptive Context G3 Dashboard Evidence Freshness
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/DashboardPresentationService.php'
+      - 'tests/Feature/DashboardGitHubEvidenceFreshnessG3Test.php'
+      - '.github/workflows/adaptive-context-g3-dashboard-evidence.yml'
+
+jobs:
+  dashboard-current-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/DashboardPresentationService.php
+          php -l tests/Feature/DashboardGitHubEvidenceFreshnessG3Test.php
+      - name: Dashboard current evidence freshness
+        run: php artisan test tests/Feature/DashboardGitHubEvidenceFreshnessG3Test.php
+      - name: Existing GitHub and native evidence regressions
+        run: |
+          php artisan test \
+            tests/Feature/GitHubDerivedContextSourceEpochG3Test.php \
+            tests/Feature/NativeEvidenceSignalsV411Test.php
