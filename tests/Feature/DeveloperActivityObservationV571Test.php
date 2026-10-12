@@ -457,6 +457,92 @@ class DeveloperActivityObservationV571Test extends TestCase
         $this->assertDatabaseCount('development_activity_observations', 0);
     }
 
+    public function test_github_source_epoch_rotates_without_accepting_stale_inflight_or_silently_backfilling_legacy(): void
+    {
+        [$plan, , $root] = $this->scenario();
+        $firstEpoch = (string) Str::uuid();
+        $secondEpoch = (string) Str::uuid();
+        $metadata = (array) $root->metadata;
+        $metadata['github_app_connection']['source_epoch'] = $firstEpoch;
+        $root->update(['metadata' => $metadata]);
+        $root->load('plan.user');
+
+        $sourceRevision = now()->subMinutes(2)->toIso8601String();
+        $fact = [
+            'kind' => 'issue',
+            'identity' => '109',
+            'provider_number' => 109,
+            'state' => 'open',
+            'url' => 'https://github.com/1kz-ma1/HINANEX/issues/109',
+            'occurred_at' => now()->subMinutes(3)->toIso8601String(),
+            'source_updated_at' => $sourceRevision,
+        ];
+        $stored = $this->persistFact($root, $fact);
+        $this->assertSame($firstEpoch, $stored->source_epoch);
+
+        $staleRoot = $root->fresh()->load('plan.user');
+        $metadata['github_app_connection']['source_epoch'] = $secondEpoch;
+        $root->update(['metadata' => $metadata]);
+
+        $method = new \ReflectionMethod(GitHubDevelopmentObservationService::class, 'persist');
+        $stale = $method->invoke(
+            app(GitHubDevelopmentObservationService::class),
+            $staleRoot, '1kz-ma1/HINANEX', $fact, 777,
+        );
+        $this->assertNull($stale);
+        $this->assertSame($firstEpoch, $stored->fresh()->source_epoch);
+
+        // A new REST verification of the SAME GitHub revision may advance
+        // only source provenance, without overriding human Task resolution.
+        $stored->update(['resolution_status' => 'ignored']);
+        $fresh = $method->invoke(
+            app(GitHubDevelopmentObservationService::class),
+            $root->fresh()->load('plan.user'), '1kz-ma1/HINANEX', $fact, 777,
+        );
+        $this->assertSame($stored->id, $fresh->id);
+        $this->assertSame($secondEpoch, $fresh->source_epoch);
+        $this->assertSame('ignored', $fresh->resolution_status);
+        $this->assertDatabaseCount('development_activity_observations', 1);
+    }
+
+    public function test_legacy_connected_root_bootstraps_epoch_on_first_verified_fact_only(): void
+    {
+        [$plan, , $root] = $this->scenario();
+        $root->load('plan.user');
+        $this->assertNull(data_get($root->metadata, 'github_app_connection.source_epoch'));
+
+        $historical = DevelopmentActivityObservation::query()->create([
+            'plan_id' => $plan->id,
+            'repository_artifact_id' => $root->id,
+            'provider' => 'github',
+            'kind' => 'issue',
+            'external_key' => 'github:1kz-ma1/hinanex:issue:legacy',
+            'last_observed_at' => now()->subDays(10),
+            'resolution_status' => 'ignored',
+        ]);
+        $this->assertNull($historical->source_epoch);
+
+        $makeFact = fn (int $n) => [
+            'kind' => 'issue',
+            'identity' => (string) $n,
+            'provider_number' => $n,
+            'state' => 'open',
+            'source_updated_at' => now()->toIso8601String(),
+        ];
+        $first = $this->persistFact($root, $makeFact(110));
+        $firstEpoch = $first->source_epoch;
+        $this->assertNotNull($firstEpoch);
+        $this->assertSame($firstEpoch, data_get(
+            $root->fresh()->metadata, 'github_app_connection.source_epoch',
+        ));
+
+        $second = $this->persistFact($root, $makeFact(111));
+        $this->assertSame($firstEpoch, $second->source_epoch);
+        $this->assertSame('ignored', $historical->fresh()->resolution_status);
+        $this->assertNull($historical->fresh()->source_epoch);
+        $this->assertDatabaseCount('development_activity_observations', 3);
+    }
+
     private function scenario(): array
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);

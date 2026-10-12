@@ -1,0 +1,58 @@
+name: Adaptive Context G3 GitHub Source Epoch
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/GitHubSourceEpochService.php'
+      - 'app/Services/GitHubDevelopmentObservationService.php'
+      - 'app/Services/DevelopmentObservationReuseGuard.php'
+      - 'app/Services/DevelopmentPersonalizationSignalService.php'
+      - 'app/Http/Controllers/GitHubWorkflowController.php'
+      - 'app/Models/DevelopmentActivityObservation.php'
+      - 'database/migrations/2026_10_13_021000_add_source_epoch_to_development_activity_observations.php'
+      - 'tests/Feature/GitHubAppConnectionV465Test.php'
+      - 'tests/Feature/DeveloperActivityObservationV571Test.php'
+      - 'tests/Feature/DeveloperTaskAssociationV572Test.php'
+      - 'tests/Feature/DeveloperHomeV573Test.php'
+      - '.github/workflows/adaptive-context-g3-github-source-epoch.yml'
+
+jobs:
+  github-source-epoch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/GitHubSourceEpochService.php
+          php -l app/Services/GitHubDevelopmentObservationService.php
+          php -l app/Services/DevelopmentObservationReuseGuard.php
+          php -l app/Services/DevelopmentPersonalizationSignalService.php
+          php -l app/Http/Controllers/GitHubWorkflowController.php
+          php -l app/Models/DevelopmentActivityObservation.php
+          php -l database/migrations/2026_10_13_021000_add_source_epoch_to_development_activity_observations.php
+      - name: Connection/reconnect, observation versions and Developer history
+        run: |
+          php artisan test \
+            tests/Feature/GitHubAppConnectionV465Test.php \
+            tests/Feature/DeveloperActivityObservationV571Test.php \
+            tests/Feature/DeveloperTaskAssociationV572Test.php \
+            tests/Feature/DeveloperHomeV573Test.php
+      - name: Development Living Profile and source use regressions
+        run: |
+          php artisan test \
+            tests/Feature/LivingProfileV5827Test.php \
+            tests/Feature/CandidateEvidenceReopenV5832Test.php \
+            tests/Feature/DeveloperEvidenceSyncV537Test.php \
+            tests/Feature/GitHubWebhookReturnSyncV4610Test.php

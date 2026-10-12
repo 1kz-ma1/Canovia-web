@@ -16,6 +16,7 @@ use App\Services\GitHubIntegrationReadinessService;
 use App\Services\GitHubRepositoryInspector;
 use App\Services\GitHubRepositoryWriter;
 use App\Services\GitHubWorkflowService;
+use App\Services\GitHubSourceEpochService;
 use App\Services\PlanActivityService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
@@ -390,16 +391,12 @@ final class GitHubWorkflowController extends Controller
             'expires_at' => now()->addMinutes(15)->timestamp,
         ]);
 
-        $metadata = is_array($artifact->metadata) ? $artifact->metadata : [];
-        $metadata['github_app_connection'] = [
+        $this->storeRepositoryConnection($artifact, [
             'status' => 'connecting',
             'requested_by_user_id' => $request->user()?->id,
             'requested_at' => now()->toIso8601String(),
             'last_checked_at' => null,
-        ];
-        unset($metadata['github_workflow_state']);
-
-        $artifact->update(['metadata' => $metadata]);
+        ]);
 
         $activity->record(
             $plan,
@@ -917,11 +914,17 @@ final class GitHubWorkflowController extends Controller
         PlanArtifact $artifact,
         array $connection,
     ): void {
-        $metadata = is_array($artifact->metadata) ? $artifact->metadata : [];
-        $metadata['github_app_connection'] = $connection;
-        unset($metadata['github_workflow_state']);
-
-        $artifact->update(['metadata' => $metadata]);
+        // Serialize callbacks/manual checks; a repeated confirmation of the
+        // same continuous connection keeps its epoch, while reconnect or
+        // installation replacement creates a fresh one.
+        \Illuminate\Support\Facades\DB::transaction(function () use ($artifact, $connection): void {
+            $live = PlanArtifact::query()->whereKey($artifact->id)->lockForUpdate()->firstOrFail();
+            $metadata = is_array($live->metadata) ? $live->metadata : [];
+            $metadata['github_app_connection'] = app(GitHubSourceEpochService::class)
+                ->verified($metadata, $connection);
+            unset($metadata['github_workflow_state']);
+            $live->update(['metadata' => $metadata]);
+        }, 3);
     }
 
     private function safeReturnUrl(Request $request, int $planId): string
