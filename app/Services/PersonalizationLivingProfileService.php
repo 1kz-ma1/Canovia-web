@@ -198,6 +198,29 @@ final class PersonalizationLivingProfileService
         $signal = $this->developmentSignals->advancedSupport($request->user());
         $githubConnected = (int) ($signal['connected_repository_count'] ?? 0) > 0;
 
+        if (! $githubConnected) {
+            // Refreshing another domain while GitHub is disconnected must
+            // not erase recorded human decisions. The current() read fence
+            // still masks these stale candidate claims from presentation.
+            foreach ([
+                'development_advanced_support',
+                'development_guidance_level',
+                'development_plan_direction_review',
+            ] as $key) {
+                if (! isset($candidates[$key])
+                    && is_array($priorCandidates[$key] ?? null)) {
+                    $candidates[$key] = $priorCandidates[$key];
+                }
+            }
+            $savedReadiness = data_get(
+                $stored?->feature_readiness, 'development.advanced_support',
+            );
+            if (is_array($savedReadiness)
+                && ($savedReadiness['source'] ?? null) === 'context_confirmation') {
+                data_set($featureReadiness, 'development.advanced_support', $savedReadiness);
+            }
+        }
+
         // A source change invalidates its proposed conclusion, not a human's
         // explicit previous dismissal or confirmation. Restore the candidate
         // lifecycle only *within* a live-source refresh, and then recalculate
