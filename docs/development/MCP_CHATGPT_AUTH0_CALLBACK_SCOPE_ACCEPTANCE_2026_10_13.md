@@ -1,17 +1,23 @@
-# Canovia MCP — exact ChatGPT OAuth callback and scope acceptance (2026-10-13)
+# Canovia MCP — RFC 9207 conditional ChatGPT callback and OAuth scope acceptance (2026-10-13)
 
-Status: documented test candidate only. This does not register or reconfigure a client, enable OAuth/MCP, reveal secrets or deploy code.
+Status: documented candidate only. No Auth0 registration change, runtime login, token verification or MCP opening.
 
-## Important distinction — old global CIMD vs current connection
+## Correct callback selection — issuer identification controls the mode
 
-The public legacy global ChatGPT CIMD document `https://chatgpt.com/oauth/client.json` still advertises the old `https://chatgpt.com/connector_platform_oauth_redirect` callback. That document proves only its own public legacy shape. **The actual connector being created may use a different, connection-specific CIMD metadata URL and its callback**. Current official OpenAI authentication guidance states that a newly configured ChatGPT plugin callback is shown in the plugin management page and follows `https://chatgpt.com/connector/oauth/{callback_id}` (the literal placeholder is not a usable redirect URL). The old legacy redirect continues working for already-published connections. Never assume they are interchangeable.
+**Correction to PR #498:** OpenAI's official OAuth guidance selects the **stable** ChatGPT callback `https://chatgpt.com/connector_platform_oauth_redirect` for ChatGPT/Codex connections when the authorization server advertises `authorization_response_iss_parameter_supported=true`, and returns the exact same `iss` parameter in **every** successful and error authorization response. This applies to **new connections too**; the stable callback is not exclusively a legacy-connector artifact.
 
-**Owner review (Auth0 test tenant only)**
+If the authorization server **does not** meet this RFC 9207 contract, ChatGPT uses the **connection-specific** `https://chatgpt.com/connector/oauth/{callback_id}` callback. OpenAI likewise selects the stable CIMD document `https://chatgpt.com/oauth/client.json` for RFC 9207-capable servers; otherwise a callback-specific `https://chatgpt.com/oauth/{callback_id}/client.json` is used. Neither mode may be guessed solely from the connection's creation date.
 
-1. Before creating the ChatGPT MCP connection, check that its actual configuration/management UI displays the exact client identification method and, when provisioned, a real callback URI. Until that value exists, keep authorization closed. Do not invent a callback ID.
-2. In the already-imported ChatGPT Auth0 third-party application, compare its Allowed Callback URL against **the exact callback shown for that same ChatGPT plugin**. The global `/oauth/client.json` import may have authorized only the old legacy redirect. If so, do not assume it authorizes a new `/connector/oauth/{callback_id}` callback. A correctly imported and authorized connection-specific CIMD registration may be required. Do not open anonymous DCR or duplicate applications blindly.
-3. Verify actual client type and token endpoint method: third-party Auth0 Client ID of the form `tpc_...` (issued internal identity, not CIMD URL), `none` + PKCE S256 where Free permits, and the specific API's `canovia.development.read` **User-Delegated** client grant. `tpc_` prefix alone does **not** prove the external-client mapping, callback, token claims or entitlement.
-4. Also review the **existing first-party Canovia MCP Staging Link** client's separate API grant, Authorization Code setting and `https://canovia-mcp-staging.onrender.com/account/mcp/link/callback`. Do not reuse the ChatGPT client for local Canovia account linking. Keep all secrets inside the Auth0/Render private dashboards.
+Source: https://developers.openai.com/plugins/build/auth (Redirect URL and OAuth flow).
+
+**Actual Auth0 UI evidence as reported by the owner:** the already-imported ChatGPT third-party client has an Auth0-assigned `tpc_` Client ID and Allowed Callback URL **exactly** `https://chatgpt.com/connector_platform_oauth_redirect`. These are consistent with the RFC 9207-stable path. Auth0 issuer metadata was publicly characterized as advertising RFC 9207 in CI, but **the actual callback's `iss`, client identity mapping, PKCE code exchange, and JWT claims remain unverified**.
+
+### Remaining test-tenant operator review (do NOT duplicate existing app)
+
+1. Confirm `https://canovia-mcp-dev.jp.auth0.com/.well-known/openid-configuration` continues to advertise `authorization_response_iss_parameter_supported=true`, pinned issuer and S256. The real authorization response must **actually** include the exact `iss` on both success and errors. Metadata alone cannot prove it.
+2. Check ChatGPT's intended MCP connector management page: its displayed CIMD URI / callback must correspond to the **RFC 9207 stable mode**. If ChatGPT itself displays `/connector/oauth/{callback_id}` instead, use its exact displayed URI as the source of truth and investigate before OAuth activation. Do not invent `callback_id` or create another Auth0 client automatically.
+3. Confirm the Auth0 imported third-party Client ID begins `tpc_`, has a usable `none`/PKCE S256 flow for the tenant's Free plan, and was granted only `canovia.development.read` User-Delegated Access to **Canovia MCP Staging Read**. A matching `tpc_` format does not prove a real JWT `azp`/`client_id`.
+4. Independently confirm **Canovia MCP Staging Link**'s exact callback `https://canovia-mcp-staging.onrender.com/account/mcp/link/callback`, distinct first-party confidential credentials, and its own delegated API grant when required. Do not reuse ChatGPT's third-party client for local subject linking or share secrets in chat.
 
 ## OpenAI plugin-side OIDC mitigation candidate (NOT a deployed plugin)
 
@@ -51,7 +57,7 @@ The active Render stage is currently sealed, returning `/up=200` and OAuth/MCP/l
 - Auth0's sanitized OAuth error code and client/API permission state.
 - Only after private signed JWT verification: `iss`, exact single `aud`, read `scope`, verified `azp` or `client_id` and clock claims. Never copy access tokens to chat/GitHub.
 
-The existing public-only script `scripts/ci/mcp_chatgpt_auth0_cimd_preflight.py --live` still characterizes **only the fixed global legacy CIMD URL**; it now reports `current_connection_callback_verified=false`, `current_connection_cimd_verified=false` and `oidc_scope_interoperability_verified=false` irrespective of public compatibility.
+The existing public-only script `scripts/ci/mcp_chatgpt_auth0_cimd_preflight.py --live` still characterizes **only the stable global CIMD document**; it now reports `current_connection_callback_verified=false`, `current_connection_cimd_verified=false` and `oidc_scope_interoperability_verified=false` irrespective of public compatibility.
 
 References:
 - https://developers.openai.com/plugins/build/auth
