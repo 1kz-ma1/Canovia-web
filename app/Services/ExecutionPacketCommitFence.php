@@ -74,7 +74,7 @@ final class ExecutionPacketCommitFence
             }
 
             try {
-                $liveContext = $this->contexts->snapshot($request, $currentPlan, $currentTask);
+                $liveContext = $this->contexts->freshSnapshot($request, $currentPlan, $currentTask);
             } catch (Throwable) {
                 $this->deny('native_ai_target_changed', $runId);
             }
