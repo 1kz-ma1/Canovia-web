@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\EvidenceSource;
+use App\Enums\ProductKey;
 use App\Intelligence\Data\ActionProposal;
 use App\Intelligence\Data\Confidence;
 use App\Models\Plan;
@@ -10,6 +11,7 @@ use App\Models\PlanArtifact;
 use App\Models\Task;
 use App\Models\TaskEvidence;
 use App\Models\User;
+use App\Models\UserProductGrant;
 use App\Services\DevelopmentExecutionContextService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -278,6 +280,28 @@ class DeveloperExecutionContextV574Test extends TestCase
             'is_public' => false,
         ]);
 
+        UserProductGrant::query()->create([
+            'user_id' => $user->id,
+            'product_key' => ProductKey::AllAccess,
+            'source' => 'manual',
+            'starts_at' => now()->subMinute(),
+        ]);
+        PlanArtifact::query()->create([
+            'plan_id' => $plan->id,
+            'created_by_user_id' => $user->id,
+            'provider' => 'github',
+            'artifact_type' => 'repository',
+            'title' => 'Canovia-web',
+            'url' => 'https://github.com/1kz-ma1/Canovia-web',
+            'metadata' => [
+                'github_app_connection' => [
+                    'status' => 'connected',
+                    'installation_id' => 777,
+                    'source_epoch' => '18edfd47-0fa5-4020-aa2d-d273c603ec90',
+                ],
+            ],
+        ]);
+
         $task = $this->task(
             $plan,
             'V57.4 Developer Execution Context',
@@ -349,7 +373,20 @@ class DeveloperExecutionContextV574Test extends TestCase
             'external_key' => $type.':'.Str::uuid(),
             'confidence' => 1,
             'occurred_at' => $occurredAt,
-            'metadata' => $metadata,
+            'metadata' => [
+                ...$metadata,
+                'github_source_epoch' => data_get(
+                    PlanArtifact::query()
+                        ->where('plan_id', $task->plan_id)
+                        ->where('artifact_type', 'repository')
+                        ->first()?->metadata,
+                    'github_app_connection.source_epoch',
+                ),
+                'github_repository_artifact_id' => PlanArtifact::query()
+                    ->where('plan_id', $task->plan_id)
+                    ->where('artifact_type', 'repository')
+                    ->value('id'),
+            ],
         ]);
     }
 }
