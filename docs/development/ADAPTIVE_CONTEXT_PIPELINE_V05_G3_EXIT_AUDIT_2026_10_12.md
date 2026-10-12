@@ -84,3 +84,11 @@ Current **user-driven** Study execution and V58 owner Action Draft acceptance ha
 6. Only then change **G3** from OPEN to PASS; P1 architecture / Premium 2 remain separate.
 
 No schema migrations, production operations, Auth0 staging activation, MCP sharing permissions, billing changes, or private user data are needed for this audit itself.
+
+## 7. Follow-on slice — Companion after-provider response commit fence (2026-10-12)
+
+This independent G3-R1 follow-on PR guards `CompanionConversationService::send` after `NativeAiGateway::generateStructured` has already returned but **before** writing the AI assistant message, suggested mutation candidates, or user-quoted Future Memories. The service locks the current Companion thread, Plan and Task, verifies the original user and thread target, and reuses `NativeAiPurposeAuthorizationGuard::failure` with `FeatureKey::CanoviaCompanion` at the durable write boundary. Changed thread/Plan/Task context or expired entitlement rejects the AI-derived transaction. The user's original message and the already completed `NativeAiRun` remain as separate auditable facts.
+
+A dedicated workflow exercises a simulated revocation, Plan transfer, Task move and thread scope change **after a successful, authorized provider response**, along with a positive unchanged-context control and existing Companion regressions. These are isolated database feature regressions, **not** proof of simultaneous multi-worker PostgreSQL authorization or production deployment. The per-user product-grant write and grant-check are not serialized together; later policy retraction/read-surface rechecks are out of this slice. Historical previously saved assistant text is not retroactively erased. The feature entitlement remains independent of MCP OAuth / per-Plan external sharing consent.
+
+**Exit remains CONDITIONAL / OPEN**. This slice does not establish all Native AI caller return/commit gates, all previously derived cache/record invalidations, connector history deletion semantics, or universal G3 acceptance. Refer to actual PR/CI and merge evidence rather than treating this document as proof of execution.
