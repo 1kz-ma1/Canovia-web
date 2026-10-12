@@ -69,7 +69,7 @@ final class ExecutionDistributionService
                 ? max(5, min(1440, (int) $config['available_minutes']))
                 : null;
 
-            $context = $this->contexts->snapshot($request, $plan, $task);
+            $context = $this->contexts->freshSnapshot($request, $plan, $task);
             $taskState = $request->session()->get(
                 ExecutionRequestHandoffService::sessionKey($plan, $task),
                 [],
@@ -219,7 +219,7 @@ final class ExecutionDistributionService
                     return $target;
                 }
 
-                $context = $this->contexts->snapshot($request, $plan, $task);
+                $context = $this->contexts->freshSnapshot($request, $plan, $task);
                 $expected = (string) ($target['context_fingerprint'] ?? '');
                 $current = (string) ($context['context_fingerprint'] ?? '');
 
