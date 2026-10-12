@@ -1,0 +1,40 @@
+name: Adaptive Context G3 Study Action Commit Fence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Intelligence/Study/StudyActionTaskProjector.php'
+      - 'app/Http/Controllers/StudyAdaptiveActionController.php'
+      - 'tests/Feature/StudyActionCommitFenceG3Test.php'
+      - '.github/workflows/adaptive-context-g3-study-action-commit.yml'
+
+jobs:
+  study-action-commit-fence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP syntax
+        run: |
+          php -l app/Intelligence/Study/StudyActionTaskProjector.php
+          php -l app/Http/Controllers/StudyAdaptiveActionController.php
+          php -l tests/Feature/StudyActionCommitFenceG3Test.php
+      - name: G3 Study scope, evidence and actor revocation at Task commit
+        run: php artisan test tests/Feature/StudyActionCommitFenceG3Test.php
+      - name: V53 Study current Action and idempotent controller flow
+        run: php artisan test tests/Feature/StudyAdaptiveActionV536Test.php tests/Feature/StudyIntelligenceV535Test.php tests/Feature/StudyScopeCaptureV534Test.php
+      - name: G3 previously implemented source and proposal revalidation
+        run: php artisan test tests/Feature/IntelligenceDomainSourceFreshnessG3Test.php tests/Feature/PlanActionDraftV5873Test.php tests/Feature/StateSnapshotActorIsolationG1Test.php
+      - name: Collaboration and workspace protections
+        run: php artisan test tests/Feature/PlanCollaborationV481Test.php tests/Feature/StudyWorkspaceV543Test.php
