@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\FeatureKey;
 use App\Models\DevelopmentActivityObservation;
 use App\Models\GitHubWebhookDelivery;
+use App\Models\Plan;
 use App\Models\PlanArtifact;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -335,12 +336,17 @@ final class GitHubDevelopmentObservationService
             'source_revision_id' => $revisionId > 0 ? $revisionId : null,
         ];
 
+        // Capture the actor at selection time. A Plan transfer cannot
+        // authorize a fact fetched using a former owner's connection.
+        $sourceOwnerId = $root->plan?->user_id === null
+            ? null : (int) $root->plan->user_id;
+
         // The REST read happened before this transaction. Serialize competing
         // writers under a row lock and compare GitHub's entity revision, not
         // webhook arrival order or the local processing timestamp.
         return DB::transaction(function () use (
             $identity, $values, $revision, $revisionId, $kind,
-            $root, $repo, $installationId,
+            $root, $repo, $installationId, $sourceOwnerId,
         ): ?DevelopmentActivityObservation {
             // Upstream REST calls happened outside this transaction. The root
             // can be disconnected, deleted or moved between fetch and commit.
@@ -353,7 +359,17 @@ final class GitHubDevelopmentObservationService
             if (! $liveRoot) {
                 return null;
             }
-            $liveRoot->load('plan.user');
+            $livePlan = Plan::query()
+                ->whereKey($liveRoot->plan_id)
+                ->lockForUpdate()
+                ->first();
+            if (! $livePlan
+                || ($livePlan->user_id === null ? null : (int) $livePlan->user_id)
+                    !== $sourceOwnerId) {
+                return null;
+            }
+            $livePlan->load('user');
+            $liveRoot->setRelation('plan', $livePlan);
             $parsed = $this->workflow->parseUrl((string) $liveRoot->url);
             if (($parsed['kind'] ?? null) !== 'repository'
                 || strcasecmp((string) ($parsed['repo_full_name'] ?? ''), $repo) !== 0
