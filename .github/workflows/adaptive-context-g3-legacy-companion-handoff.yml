@@ -1,0 +1,53 @@
+name: Adaptive Context G3 Legacy Companion Handoff Fence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/CompanionDerivedEvidenceSourceGuard.php'
+      - 'app/Services/ExecutionRequestHandoffService.php'
+      - 'app/Http/Controllers/ExecutionOrchestrationController.php'
+      - 'app/Services/ExecutionDistributionService.php'
+      - 'app/Services/ExecutionGitHubHandoffService.php'
+      - 'app/Services/CompanionMutationApplyService.php'
+      - 'resources/views/companion/show.blade.php'
+      - 'resources/views/execution_orchestration/show.blade.php'
+      - 'tests/Feature/CompanionLegacyExecutionHandoffG3Test.php'
+      - '.github/workflows/adaptive-context-g3-legacy-companion-handoff.yml'
+
+jobs:
+  legacy-companion-handoff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/CompanionDerivedEvidenceSourceGuard.php
+          php -l app/Services/ExecutionRequestHandoffService.php
+          php -l app/Http/Controllers/ExecutionOrchestrationController.php
+          php -l app/Services/ExecutionDistributionService.php
+          php -l app/Services/ExecutionGitHubHandoffService.php
+          php -l app/Services/CompanionMutationApplyService.php
+          php -l tests/Feature/CompanionLegacyExecutionHandoffG3Test.php
+      - name: Legacy Companion and Execution request source fence
+        run: php artisan test tests/Feature/CompanionLegacyExecutionHandoffG3Test.php
+      - name: Companion and execution handoff continuity
+        run: |
+          php artisan test \
+            tests/Feature/ExecutionRequestHandoffV471Test.php \
+            tests/Feature/CanoviaCompanionMutationApplyV4115Test.php \
+            tests/Feature/CanoviaCompanionContinuityV4115Test.php \
+            tests/Feature/CompanionDerivedEvidenceLineageG3Test.php \
+            tests/Feature/ExecutionOrchestrationV470Test.php \
+            tests/Feature/DeveloperCodingAgentHandoffV578Test.php
