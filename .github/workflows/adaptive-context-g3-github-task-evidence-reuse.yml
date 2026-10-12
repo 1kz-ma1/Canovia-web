@@ -1,0 +1,58 @@
+name: Adaptive Context G3 GitHub Task Evidence Reuse Fence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/GitHubTaskEvidenceCommitGuard.php'
+      - 'app/Services/GitHubTaskEvidenceReuseGuard.php'
+      - 'app/Services/GitHubReturnEvidenceService.php'
+      - 'app/Services/GitHubDevelopmentEvidenceService.php'
+      - 'app/Services/DevelopmentExecutionContextService.php'
+      - 'app/Intelligence/Development/DevelopmentEvidenceCollector.php'
+      - 'app/Services/PlanActionDraftTypedEvidenceService.php'
+      - 'app/Services/PlanActionDraftApprovalSourceGuard.php'
+      - 'tests/Feature/DeveloperEvidenceSyncV537Test.php'
+      - 'tests/Feature/DeveloperExecutionContextV574Test.php'
+      - 'tests/Feature/PlanActionDraftV5873Test.php'
+      - '.github/workflows/adaptive-context-g3-github-task-evidence-reuse.yml'
+
+jobs:
+  github-task-evidence-reuse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/GitHubTaskEvidenceCommitGuard.php
+          php -l app/Services/GitHubTaskEvidenceReuseGuard.php
+          php -l app/Services/GitHubReturnEvidenceService.php
+          php -l app/Services/GitHubDevelopmentEvidenceService.php
+          php -l app/Services/DevelopmentExecutionContextService.php
+          php -l app/Intelligence/Development/DevelopmentEvidenceCollector.php
+          php -l app/Services/PlanActionDraftTypedEvidenceService.php
+          php -l app/Services/PlanActionDraftApprovalSourceGuard.php
+      - name: G3 current-vs-historical evidence and draft regressions
+        run: |
+          php artisan test \
+            tests/Feature/DeveloperEvidenceSyncV537Test.php \
+            tests/Feature/DeveloperExecutionContextV574Test.php \
+            tests/Feature/PlanActionDraftV5873Test.php
+      - name: GitHub return/owner guard and V53 inference regression
+        run: |
+          php artisan test \
+            tests/Feature/GitHubReturnEvidenceV467Test.php \
+            tests/Feature/GitHubWebhookReturnSyncV4610Test.php \
+            tests/Feature/DeveloperTaskAssociationV572Test.php \
+            tests/Feature/DeveloperReadinessV538Test.php

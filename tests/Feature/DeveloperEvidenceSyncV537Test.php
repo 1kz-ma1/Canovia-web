@@ -474,6 +474,7 @@ class DeveloperEvidenceSyncV537Test extends TestCase
                 'github_app_connection' => [
                     'status' => 'connected',
                     'installation_id' => 777,
+                    'source_epoch' => '18edfd47-0fa5-4020-aa2d-d273c603ec90',
                 ],
             ],
         ]);

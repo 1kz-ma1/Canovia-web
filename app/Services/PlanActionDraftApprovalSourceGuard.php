@@ -21,6 +21,7 @@ final class PlanActionDraftApprovalSourceGuard
     public function __construct(
         private readonly PlanActionDraftEvidenceService $workLogs,
         private readonly PlanActionDraftTypedEvidenceService $typed,
+        private readonly GitHubTaskEvidenceReuseGuard $reuseGuard,
     ) {}
 
     public function assertCurrent(Plan $plan, PlanActionDraft $draft): void
@@ -79,6 +80,15 @@ final class PlanActionDraftApprovalSourceGuard
         if ($logs->count() !== count($logIds)
             || $records->count() !== count($evidenceIds)) {
             abort(409, '根拠の記録が削除または移動されました。');
+        }
+
+        // Approval happens after composition, potentially following an App
+        // disconnect/reconnect. An unchanged historical Evidence digest is
+        // not renewed authorization to create Tasks from the old observation.
+        if ($records->contains(fn (TaskEvidence $row) =>
+            ! $this->reuseGuard->eligible($plan, $row)
+        )) {
+            abort(409, 'GitHub由来の根拠を現在確認できません。再同期後に新しい案を作成してください。');
         }
 
         $taskIds = $logs->pluck('task_id')

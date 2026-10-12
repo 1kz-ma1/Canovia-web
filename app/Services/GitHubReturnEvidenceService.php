@@ -19,6 +19,7 @@ final class GitHubReturnEvidenceService
         private readonly GitHubWorkflowService $workflow,
         private readonly TaskEvidenceService $evidence,
         private readonly GitHubTaskEvidenceCommitGuard $commitGuard,
+        private readonly GitHubSourceEpochService $epochs,
     ) {}
 
     /**
@@ -87,6 +88,7 @@ final class GitHubReturnEvidenceService
         $installationId = (int) data_get(
             $source->metadata, 'github_app_connection.installation_id', 0,
         );
+        $sourceEpoch = $this->epochs->current((array) $source->metadata);
         $sourceOwnerId = (int) $plan->user_id;
 
         $snapshot = $this->github->inspectPullRequestReturn(
@@ -111,6 +113,7 @@ final class GitHubReturnEvidenceService
                     'evidence_count' => $records->count(),
                 ];
             },
+            $sourceEpoch,
         );
 
         return $recorded ?? [

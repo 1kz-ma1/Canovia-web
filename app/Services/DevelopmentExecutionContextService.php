@@ -11,6 +11,10 @@ use Illuminate\Support\Collection;
 
 final class DevelopmentExecutionContextService
 {
+    public function __construct(
+        private readonly GitHubTaskEvidenceReuseGuard $reuseGuard,
+    ) {}
+
     private const GITHUB_TYPES = [
         'pull_request_observed',
         'pull_request_review_submitted',
@@ -46,8 +50,11 @@ final class DevelopmentExecutionContextService
             ->whereIn('type', self::GITHUB_TYPES)
             ->latest('occurred_at')
             ->latest('id')
-            ->limit(40)
-            ->get();
+            ->limit(80)
+            ->get()
+            ->filter(fn (TaskEvidence $item) => $this->reuseGuard->eligible($plan, $item))
+            ->take(40)
+            ->values();
 
         $latest = $evidence
             ->unique('type')

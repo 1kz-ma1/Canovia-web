@@ -8,6 +8,7 @@ use App\Intelligence\Development\DevelopmentAdaptiveActionService;
 use App\Intelligence\Development\DevelopmentPlanIntelligenceService;
 use App\Models\IntelligenceActionProjection;
 use App\Models\Plan;
+use App\Models\PlanArtifact;
 use App\Models\Task;
 use App\Models\TaskEvidence;
 use App\Models\User;
@@ -704,6 +705,30 @@ class DeveloperReadinessV538Test extends TestCase
         array $metadata,
         string $occurredAt,
     ): TaskEvidence {
+        $root = PlanArtifact::query()->firstOrCreate(
+            [
+                'plan_id' => $task->plan_id,
+                'provider' => 'github',
+                'artifact_type' => 'repository',
+            ],
+            [
+                'created_by_user_id' => $user->id,
+                'title' => 'HINANEX',
+                'url' => 'https://github.com/1kz-ma1/HINANEX',
+                'metadata' => ['github_app_connection' => [
+                    'status' => 'connected',
+                    'installation_id' => 777,
+                    'source_epoch' => '18edfd47-0fa5-4020-aa2d-d273c603ec90',
+                ]],
+            ],
+        );
+        $metadata = [
+            ...$metadata,
+            'repo_full_name' => '1kz-ma1/HINANEX',
+            'github_repository_artifact_id' => (int) $root->id,
+            'github_source_epoch' => data_get($root->metadata, 'github_app_connection.source_epoch'),
+        ];
+
         return app(TaskEvidenceService::class)->record(
             $task,
             EvidenceSource::GitHub,
