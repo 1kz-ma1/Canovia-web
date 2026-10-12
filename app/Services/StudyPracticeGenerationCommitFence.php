@@ -4,10 +4,13 @@ namespace App\Services;
 
 use App\Enums\FeatureKey;
 use App\Exceptions\NativeAiExecutionException;
+use App\Models\NativeAiRun;
 use App\Models\Plan;
 use App\Models\PlanMember;
 use App\Models\StudyPracticeAttempt;
+use App\Models\StudyPracticeSession;
 use App\Models\Task;
+use Illuminate\Support\Facades\DB;
 
 /**
  * G3-R1 Native/Hybrid AI question-generation commit fence.
@@ -74,6 +77,100 @@ final class StudyPracticeGenerationCommitFence
             || ! hash_equals($expected, $this->fingerprint($currentPlan, $currentTask, $userId))) {
             $this->deny('native_ai_source_changed', $runId);
         }
+    }
+
+    /**
+     * A duplicate prepare_request_id is a read-only replay, never permission to
+     * recreate Candidate/Demand records from a possibly stale session.
+     * Historical rows without an original source signature remain usable via
+     * the normal Study resume/history UI; they cannot be silently re-signed.
+     */
+    public function assertReplayReadable(
+        StudyPracticeSession $session,
+        Plan $plan,
+        Task $task,
+        int $userId,
+    ): void {
+        DB::transaction(function () use ($session, $plan, $task, $userId): void {
+            $live = StudyPracticeSession::query()
+                ->whereKey($session->id)->lockForUpdate()->first();
+            if ($live === null
+                || (int) $live->plan_id !== (int) $plan->id
+                || (int) $live->task_id !== (int) $task->id
+                || (int) $live->user_id !== $userId
+                || ! in_array((string) $live->question_provider, ['native_ai', 'hybrid_ai'], true)) {
+                $this->deny('native_ai_target_changed', null);
+            }
+
+            $expected = data_get($live->selection_context, 'native_generation_source_fingerprint');
+            if (! is_string($expected) || $expected === '') {
+                $this->deny('native_ai_source_unverifiable', null);
+            }
+
+            $this->assertCanCommit($plan, $task, $userId, $expected);
+        }, 3);
+    }
+
+    /**
+     * The Orchestrator's atomic first commit is not the last write. Bind the
+     * controller's normalization and Native run attachment to that SAME
+     * pre-provider signature, and never reset an already started exercise.
+     *
+     * @param array<int,array<string,mixed>> $questions
+     */
+    public function finalize(
+        StudyPracticeSession $session,
+        Plan $plan,
+        Task $task,
+        int $userId,
+        array $questions,
+        string $title,
+        int $runId,
+    ): StudyPracticeSession {
+        return DB::transaction(function () use (
+            $session, $plan, $task, $userId, $questions, $title, $runId,
+        ): StudyPracticeSession {
+            $live = StudyPracticeSession::query()
+                ->whereKey($session->id)->lockForUpdate()->first();
+            if ($live === null
+                || (int) $live->plan_id !== (int) $plan->id
+                || (int) $live->task_id !== (int) $task->id
+                || (int) $live->user_id !== $userId
+                || ! in_array((string) $live->question_provider, ['native_ai', 'hybrid_ai'], true)) {
+                $this->deny('native_ai_target_changed', $runId);
+            }
+
+            $expected = data_get($live->selection_context, 'native_generation_source_fingerprint');
+            if (! is_string($expected) || $expected === '') {
+                $this->deny('native_ai_source_unverifiable', $runId);
+            }
+
+            $this->assertCanCommit($plan, $task, $userId, $expected, $runId);
+
+            // Reject concurrent autosave, completion, or different question
+            // material rather than rolling back a human's ongoing exercise.
+            if ($live->status !== StudyPracticeSession::STATUS_READY
+                || $live->draft_answers !== null
+                || $live->questions_snapshot !== $session->questions_snapshot) {
+                $this->deny('native_ai_session_changed', $runId);
+            }
+
+            $live->update([
+                'exercise_title' => $title,
+                'questions_snapshot' => $questions,
+            ]);
+
+            if ($runId > 0) {
+                NativeAiRun::query()
+                    ->whereKey($runId)
+                    ->where('user_id', $userId)
+                    ->where('plan_id', $plan->id)
+                    ->where('task_id', $task->id)
+                    ->update(['study_practice_session_id' => $live->id]);
+            }
+
+            return $live;
+        }, 3);
     }
 
     private function fingerprint(Plan $plan, Task $task, int $userId): string
