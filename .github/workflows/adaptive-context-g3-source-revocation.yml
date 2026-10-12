@@ -1,0 +1,48 @@
+name: Adaptive Context G3 Source Revocation Commit Gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Exceptions/ProviderConnectionRevokedException.php'
+      - 'app/Http/Controllers/ProviderActivityIntakeController.php'
+      - 'app/Services/ProviderActivityIntakeService.php'
+      - 'app/Services/ProviderConnectionService.php'
+      - 'app/Services/GitHubDevelopmentObservationService.php'
+      - 'app/Services/DevelopmentPersonalizationSignalService.php'
+      - 'tests/Feature/ProviderConnectionActivityIntakeV559Test.php'
+      - 'tests/Feature/DeveloperActivityObservationV571Test.php'
+      - 'tests/Feature/CandidateEvidenceReopenV5832Test.php'
+      - '.github/workflows/adaptive-context-g3-source-revocation.yml'
+
+jobs:
+  source-revocation-commit-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: PHP lint
+        run: |
+          php -l app/Exceptions/ProviderConnectionRevokedException.php
+          php -l app/Http/Controllers/ProviderActivityIntakeController.php
+          php -l app/Services/ProviderActivityIntakeService.php
+          php -l app/Services/ProviderConnectionService.php
+          php -l app/Services/GitHubDevelopmentObservationService.php
+          php -l app/Services/DevelopmentPersonalizationSignalService.php
+          php -l tests/Feature/ProviderConnectionActivityIntakeV559Test.php
+          php -l tests/Feature/DeveloperActivityObservationV571Test.php
+          php -l tests/Feature/CandidateEvidenceReopenV5832Test.php
+      - name: Provider signed intake and in-flight revocation regression
+        run: php artisan test tests/Feature/ProviderConnectionActivityIntakeV559Test.php
+      - name: GitHub revision and mid-fetch revocation regression
+        run: php artisan test tests/Feature/DeveloperActivityObservationV571Test.php
+      - name: Development source selection and dismissed profile regression
+        run: php artisan test tests/Feature/CandidateEvidenceReopenV5832Test.php
+      - name: GitHub Return and connection regressions
+        run: php artisan test tests/Feature/GitHubWebhookReturnSyncV4610Test.php tests/Feature/GitHubAppConnectionV465Test.php
+      - name: Explicit delegated grant revoke and active MCP read policy
+        run: php artisan test tests/Feature/McpDelegatedRevocationTest.php tests/Feature/McpReadOnlyResourceTest.php tests/Feature/McpSyntheticOAuthConsentReadLifecycleTest.php
