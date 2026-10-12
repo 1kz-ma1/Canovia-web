@@ -38,6 +38,10 @@ jobs:
           git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
           git merge-base --is-ancestor "$RELEASE_SHA" refs/remotes/origin/main
           echo "production_release_candidate_pinned_to_main: pass"
+      - name: Check secretless production env classification with synthetic inputs only
+        run: |
+          php -l scripts/ops/release_488_production_env_preflight.php
+          python3 -m unittest discover -s tests/ci -p 'test_release_488_production_env_preflight.py' -v
       - name: Validate metadata-only Aiven audit remains fail-closed
         run: |
           set -euo pipefail

@@ -14,6 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check secretless production env classification with synthetic inputs only
+        run: |
+          php -l scripts/ops/release_488_production_env_preflight.php
+          python3 -m unittest discover -s tests/ci -p 'test_release_488_production_env_preflight.py' -v
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
