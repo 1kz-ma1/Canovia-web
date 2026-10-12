@@ -75,6 +75,36 @@ final class McpAuth0SealedStagingWiringTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_safe_failure_labels_do_not_expose_client_id_or_secret(): void
+    {
+        // Success is only configuration readiness, never OAuth approval.
+        $success = Artisan::call('canovia:mcp-auth0-sealed-wiring-check', [
+            '--blocked-codes' => true,
+        ]);
+        $this->assertSame(0, $success);
+        $this->assertSame('none', trim(Artisan::output()));
+
+        config([
+            'canovia_mcp.allowed_client_id' => 'a-client-id-that-must-never-appear',
+            'canovia_mcp.account_link_client_secret' => 'sensitive',
+            'canovia_mcp.identity_fingerprint_key' => 'weak',
+        ]);
+        $exit = Artisan::call('canovia:mcp-auth0-sealed-wiring-check', [
+            '--blocked-codes' => true,
+        ]);
+        $output = trim(Artisan::output());
+        $this->assertSame(1, $exit);
+        $this->assertSame(
+            'issued_chatgpt_third_party_client,separate_confidential_link_client,fingerprint_key_configured',
+            $output,
+        );
+        $this->assertMatchesRegularExpression('/\\A[a-z_,]+\\z/D', $output);
+        $this->assertStringNotContainsString('a-client-id-that-must-never-appear', $output);
+        $this->assertStringNotContainsString('sensitive', $output);
+        $this->assertFalse(app(McpAuth0SealedStagingWiringReadiness::class)->check()['production_authorized']);
+        Http::assertNothingSent();
+    }
+
     public function test_production_foreign_clients_bad_oauth_endpoints_or_open_gates_are_blocked(): void
     {
         $cases = [
