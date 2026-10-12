@@ -1357,6 +1357,9 @@ final class GitHubRepositoryWriter
                 'latest_status_at' => is_array($latest)
                     ? ($latest['updated_at'] ?? $latest['created_at'] ?? null)
                     : null,
+                'latest_status_id' => is_array($latest)
+                    ? (int) ($latest['id'] ?? 0)
+                    : null,
             ],
         ];
     }
@@ -2177,6 +2180,9 @@ final class GitHubRepositoryWriter
                             'occurred_at' => $this->dateValue(
                                 $pull['updated_at'] ?? null,
                             ),
+                            'source_updated_at' => $this->dateValue(
+                                $pull['updated_at'] ?? null,
+                            ),
                         ]);
                     });
             }
@@ -2225,6 +2231,9 @@ final class GitHubRepositoryWriter
                                 $issue['html_url'] ?? null,
                             ),
                             'occurred_at' => $this->dateValue(
+                                $issue['updated_at'] ?? null,
+                            ),
+                            'source_updated_at' => $this->dateValue(
                                 $issue['updated_at'] ?? null,
                             ),
                         ]);
