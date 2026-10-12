@@ -34,10 +34,14 @@ jobs:
           php -l tests/Feature/InboxAiSuggestionCommitFenceG3Test.php
       - name: G3 post-provider stale and unauthorized Inbox suggestions
         run: php artisan test tests/Feature/InboxAiSuggestionCommitFenceG3Test.php
-      - name: Inbox and Space Station existing regressions
+      - name: Existing Inbox and Native AI purpose regressions
         run: |
           php artisan test \
             tests/Feature/InboxIntelligenceGuideV4113Test.php \
-            tests/Feature/SpaceStationV442Test.php \
-            tests/Feature/SpaceStationIntakeHubV483Test.php \
             tests/Feature/NativeAiPurposeGrantFenceV05Test.php
+      - name: Space Station candidate-only and chat auto-interpret regressions
+        run: |
+          php artisan test tests/Feature/SpaceStationV442Test.php \
+            --filter test_ai_routing_candidate_is_shown_as_l0_connection_but_stops_before_mutation
+          php artisan test tests/Feature/SpaceStationIntakeHubV483Test.php \
+            --filter test_space_station_capture_auto_interprets_when_ai_is_available_but_does_not_mutate_canonical_targets
