@@ -21,6 +21,7 @@ final class DevelopmentObservationReuseGuard
         private readonly GitHubWorkflowService $workflow,
         private readonly PlanCategoryProfileService $profiles,
         private readonly FeatureAccessService $access,
+        private readonly GitHubSourceEpochService $epochs,
     ) {}
 
     /**
@@ -64,6 +65,11 @@ final class DevelopmentObservationReuseGuard
             || data_get($root->metadata, 'github_app_connection.status') !== 'connected'
             || (int) data_get($root->metadata, 'github_app_connection.installation_id', 0) <= 0
             || $plan->user_id === null) {
+            return false;
+        }
+
+        $epoch = $this->epochs->current((array) $root->metadata);
+        if ($epoch === null || (string) $observation->source_epoch !== $epoch) {
             return false;
         }
 
