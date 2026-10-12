@@ -161,3 +161,24 @@ The human-visible Free tenant settings are now in place. For future registered-c
 - The issuer is configured but has not been set on Render; no Management API credentials, staging environment values, secrets, stage deploy, production deploy, paid service, live token, or real user records were used. The user-reported Auth0 test API/resource profile settings and custom scope remain separate external facts.
 
 **Next gates:** Actual Auth0 client-registration mapping (CIMD or explicitly restricted registration), Auth0 verified real token format (`azp` or RFC9068 `client_id`, single exact `aud`, exact scope), independent Canovia confidential account-link client with PKCE and explicit per-Plan consent, review of wiring this **existing verified-signature service** into the separate closed MCP middleware/account-link paths, staging deployment approval and a real ChatGPT Plan read/revocation test. Before then, tools remain OFF and E2E acceptance remains NOT MET.
+
+
+## 2026-10-12 Explicit JWT / RFC7662 runtime routing (PR #pending)
+
+**Scope:** A strictly mutually exclusive token verifier for existing MCP resource and the separate Canovia owner-login OAuth account-link + Plan consent. Code-only, **NOT a live Auth0 or ChatGPT connection**.
+
+- Default `CANOVIA_MCP_TOKEN_VERIFICATION_DRIVER=introspection` retains the preexisting RFC7662 behavior. Alternative `auth0_jwt` requires `CANOVIA_MCP_AUTH0_JWT_VERIFICATION_ENABLED=true` with `CANOVIA_MCP_TOKEN_INTROSPECTION_ENABLED=false`. Both ON, both OFF, mismatched mode, or unknown mode **fail closed**. No fallback or inference from token format.
+- MCP resource uses an RS256-verified subject with exact client, issuer, canonical audience, scope and expiration. Canovia account-link OAuth code exchange requires a **different** confidential app client ID verified by the same exact RS256/JWKS signature policy.
+- Account linking keeps explicit session-bound PKCE S256, state, RFC9207 callback issuer, safe OAuth HTTPS URLs, owner confirmation and subsequent separate Plan grant confirmation. Neither cryptographically verified JWT nor a linked identity alone authorizes private Plans.
+- General Auth0 OIDC discovery omits custom API scopes. JWT mode no longer requires that custom read permission be listed *in general provider metadata*, but actual signed access-token `scope=canovia.development.read` remains an exact mandatory authorization check. Legacy RFC7662 metadata requirement is unchanged.
+- No source file, merged PR, or synthetic test automatically enables production, stage OAuth, JWT verification, MCP, Plan consent or public network reachability.
+
+### Remaining external acceptance and operator setup
+
+1. Register a **separate Auth0 Regular Web Application** for Canovia owner-account linking, with callback `https://canovia-mcp-staging.onrender.com/account/mcp/link/callback` and confidential client-secret Basic / PKCE authorization code. Store secrets only in the isolated stage Render environment after explicit staging approval; never in chat/GitHub.
+2. Choose a controlled ChatGPT OAuth client registration. Auth0 public discovery did not advertise CIMD. Its restricted Management API method `POST /api/v2/clients/cimd/register` requires scoped management credentials and reports the actual registered **internal client_id**. It is not consent to activate open DCR. The exact ChatGPT CIMD document and callback must come from the actual connector management UI, not guesses.
+3. Verify real signed Auth0 tokens from each distinct client for exact `iss`, `sub`, `azp` or `client_id`, `scope=canovia.development.read`, allowed lifetime and single precise `aud=https://canovia-mcp-staging.onrender.com/api/mcp`. Tokens bearing a second `/userinfo` audience remain rejected until a separate reviewed resource-binding security decision.
+4. The legacy `McpStagingProviderPreflightService` remains RFC7662/introspection-oriented. Its failure in JWT mode does not imply the new verifier lacks signature checks; a mode-aware read-only preflight and independent operator review are needed before stage activation.
+5. Require separate staging deploy/security decision, synthetic Canovia owner and one Development Plan consent, and observed ChatGPT initialize, tools/list, tools/call, negative grants and revocation. The existing stage HTTP/OAuth/MCP flags remain OFF.
+
+Official references: https://developers.openai.com/plugins/build/auth ; https://auth0.com/docs/api/management/v2/clients/post-clients-cimd-register
