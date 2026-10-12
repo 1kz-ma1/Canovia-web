@@ -92,22 +92,23 @@ final class StudyPracticeGenerationCommitFence
         int $userId,
     ): void {
         DB::transaction(function () use ($session, $plan, $task, $userId): void {
+            $expected = data_get($session->selection_context, 'native_generation_source_fingerprint');
+            if (! is_string($expected) || $expected === '') {
+                $this->deny('native_ai_source_unverifiable', null);
+            }
+
+            // Always lock Plan -> Task -> Session (same order as first commit).
+            $this->assertCanCommit($plan, $task, $userId, $expected);
             $live = StudyPracticeSession::query()
                 ->whereKey($session->id)->lockForUpdate()->first();
             if ($live === null
                 || (int) $live->plan_id !== (int) $plan->id
                 || (int) $live->task_id !== (int) $task->id
                 || (int) $live->user_id !== $userId
-                || ! in_array((string) $live->question_provider, ['native_ai', 'hybrid_ai'], true)) {
+                || ! in_array((string) $live->question_provider, ['native_ai', 'hybrid_ai'], true)
+                || data_get($live->selection_context, 'native_generation_source_fingerprint') !== $expected) {
                 $this->deny('native_ai_target_changed', null);
             }
-
-            $expected = data_get($live->selection_context, 'native_generation_source_fingerprint');
-            if (! is_string($expected) || $expected === '') {
-                $this->deny('native_ai_source_unverifiable', null);
-            }
-
-            $this->assertCanCommit($plan, $task, $userId, $expected);
         }, 3);
     }
 
@@ -130,22 +131,23 @@ final class StudyPracticeGenerationCommitFence
         return DB::transaction(function () use (
             $session, $plan, $task, $userId, $questions, $title, $runId,
         ): StudyPracticeSession {
+            $expected = data_get($session->selection_context, 'native_generation_source_fingerprint');
+            if (! is_string($expected) || $expected === '') {
+                $this->deny('native_ai_source_unverifiable', $runId);
+            }
+
+            // Do not re-sign a changed Session or invert the lock order.
+            $this->assertCanCommit($plan, $task, $userId, $expected, $runId);
             $live = StudyPracticeSession::query()
                 ->whereKey($session->id)->lockForUpdate()->first();
             if ($live === null
                 || (int) $live->plan_id !== (int) $plan->id
                 || (int) $live->task_id !== (int) $task->id
                 || (int) $live->user_id !== $userId
-                || ! in_array((string) $live->question_provider, ['native_ai', 'hybrid_ai'], true)) {
+                || ! in_array((string) $live->question_provider, ['native_ai', 'hybrid_ai'], true)
+                || data_get($live->selection_context, 'native_generation_source_fingerprint') !== $expected) {
                 $this->deny('native_ai_target_changed', $runId);
             }
-
-            $expected = data_get($live->selection_context, 'native_generation_source_fingerprint');
-            if (! is_string($expected) || $expected === '') {
-                $this->deny('native_ai_source_unverifiable', $runId);
-            }
-
-            $this->assertCanCommit($plan, $task, $userId, $expected, $runId);
 
             // Reject concurrent autosave, completion, or different question
             // material rather than rolling back a human's ongoing exercise.
@@ -170,6 +172,38 @@ final class StudyPracticeGenerationCommitFence
             }
 
             return $live;
+        }, 3);
+    }
+
+    /**
+     * Malformed Native output may abandon only the still-unstarted signed
+     * Session. Do not overwrite a concurrently completed learner exercise.
+     */
+    public function abandonInvalid(
+        StudyPracticeSession $session,
+        Plan $plan,
+        Task $task,
+        int $userId,
+        int $runId,
+    ): void {
+        DB::transaction(function () use ($session, $plan, $task, $userId, $runId): void {
+            $expected = data_get($session->selection_context, 'native_generation_source_fingerprint');
+            if (! is_string($expected) || $expected === '') {
+                $this->deny('native_ai_source_unverifiable', $runId);
+            }
+            $this->assertCanCommit($plan, $task, $userId, $expected, $runId);
+            $live = StudyPracticeSession::query()
+                ->whereKey($session->id)->lockForUpdate()->first();
+            if ($live === null
+                || (int) $live->user_id !== $userId
+                || data_get($live->selection_context, 'native_generation_source_fingerprint') !== $expected
+                || $live->status !== StudyPracticeSession::STATUS_READY
+                || $live->draft_answers !== null
+                || $live->questions_snapshot !== $session->questions_snapshot) {
+                $this->deny('native_ai_session_changed', $runId);
+            }
+
+            $live->update(['status' => StudyPracticeSession::STATUS_ABANDONED]);
         }, 3);
     }
 
