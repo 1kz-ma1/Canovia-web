@@ -9,6 +9,10 @@ use Carbon\Carbon;
 
 class CompanionContinuityService
 {
+    public function __construct(
+        private readonly CompanionDerivedEvidenceSourceGuard $derivedSources,
+    ) {}
+
     public const KIND_PENDING_CANDIDATE = 'pending_candidate';
     public const KIND_NEW_EVIDENCE = 'new_evidence';
     public const KIND_KNOWN_UNKNOWN = 'known_unknown';
@@ -29,7 +33,12 @@ class CompanionContinuityService
             ->where('companion_thread_id', $thread->id)
             ->where('status', CompanionMutationCandidate::STATUS_PENDING)
             ->latest('id')
-            ->get();
+            ->get()
+            ->filter(fn (CompanionMutationCandidate $candidate) =>
+                $this->derivedSources->isCurrent(
+                    $candidate->plan, data_get($candidate->metadata, 'source_provenance'),
+                )
+            )->values();
 
         if ($pendingCandidates->isNotEmpty()) {
             $candidate = $pendingCandidates->first();
