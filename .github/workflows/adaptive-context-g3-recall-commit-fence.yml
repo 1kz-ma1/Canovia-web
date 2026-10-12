@@ -1,0 +1,43 @@
+name: Adaptive Context G3 Recall Extraction Commit Fence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/StudyRecallExtractionCommitFence.php'
+      - 'app/Services/StudyRecallCandidateExtractionService.php'
+      - 'app/Services/StudyRecallBatchCandidateExtractionService.php'
+      - 'app/Services/NativeAiPurposeAuthorizationGuard.php'
+      - 'tests/Feature/RecallAiCommitFenceV05Test.php'
+      - '.github/workflows/adaptive-context-g3-recall-commit-fence.yml'
+
+jobs:
+  recall-ai-post-provider-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/StudyRecallExtractionCommitFence.php
+          php -l app/Services/StudyRecallCandidateExtractionService.php
+          php -l app/Services/StudyRecallBatchCandidateExtractionService.php
+          php -l tests/Feature/RecallAiCommitFenceV05Test.php
+      - name: G3 Recall after-provider revoke, source change and atomic commit
+        run: php artisan test tests/Feature/RecallAiCommitFenceV05Test.php
+      - name: Existing Recall single, batch, retry and resource handoff
+        run: |
+          php artisan test \
+            tests/Feature/StudyRecallCandidateV4112Test.php \
+            tests/Feature/StudyRecallBatchIngestV588Test.php \
+            tests/Feature/NativeAiPurposeGrantFenceV05Test.php
