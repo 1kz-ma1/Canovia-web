@@ -505,6 +505,44 @@ class DeveloperActivityObservationV571Test extends TestCase
         $this->assertDatabaseCount('development_activity_observations', 1);
     }
 
+    public function test_legacy_connected_root_bootstraps_epoch_on_first_verified_fact_only(): void
+    {
+        [$plan, , $root] = $this->scenario();
+        $root->load('plan.user');
+        $this->assertNull(data_get($root->metadata, 'github_app_connection.source_epoch'));
+
+        $historical = DevelopmentActivityObservation::query()->create([
+            'plan_id' => $plan->id,
+            'repository_artifact_id' => $root->id,
+            'provider' => 'github',
+            'kind' => 'issue',
+            'external_key' => 'github:1kz-ma1/hinanex:issue:legacy',
+            'last_observed_at' => now()->subDays(10),
+            'resolution_status' => 'ignored',
+        ]);
+        $this->assertNull($historical->source_epoch);
+
+        $makeFact = fn (int $n) => [
+            'kind' => 'issue',
+            'identity' => (string) $n,
+            'provider_number' => $n,
+            'state' => 'open',
+            'source_updated_at' => now()->toIso8601String(),
+        ];
+        $first = $this->persistFact($root, $makeFact(110));
+        $firstEpoch = $first->source_epoch;
+        $this->assertNotNull($firstEpoch);
+        $this->assertSame($firstEpoch, data_get(
+            $root->fresh()->metadata, 'github_app_connection.source_epoch',
+        ));
+
+        $second = $this->persistFact($root, $makeFact(111));
+        $this->assertSame($firstEpoch, $second->source_epoch);
+        $this->assertSame('ignored', $historical->fresh()->resolution_status);
+        $this->assertNull($historical->fresh()->source_epoch);
+        $this->assertDatabaseCount('development_activity_observations', 3);
+    }
+
     private function scenario(): array
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);
