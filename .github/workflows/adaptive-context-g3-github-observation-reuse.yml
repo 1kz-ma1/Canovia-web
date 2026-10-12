@@ -10,6 +10,7 @@ on:
       - 'app/Services/DevelopmentTaskAssociationService.php'
       - 'resources/views/workspace/development/surfaces/partials/github-activity.blade.php'
       - 'tests/Feature/DeveloperTaskAssociationV572Test.php'
+      - 'tests/Feature/DeveloperHomeV573Test.php'
       - '.github/workflows/adaptive-context-g3-github-observation-reuse.yml'
 
 jobs:
