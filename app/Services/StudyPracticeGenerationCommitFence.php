@@ -47,8 +47,7 @@ final class StudyPracticeGenerationCommitFence
             || $userId <= 0
             || (int) $currentTask->plan_id !== (int) $plan->id
             || $this->categoryProfiles->forPlan($currentPlan)->key !== 'study'
-            || in_array((string) $currentTask->status, ['done', 'cancelled'], true)
-            || (int) $currentTask->progress_percent >= 100
+            || (string) $currentTask->status === 'cancelled'
         ) {
             $this->deny('native_ai_target_changed', $runId);
         }
