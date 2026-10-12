@@ -44,5 +44,6 @@ jobs:
           php artisan test \
             tests/Feature/CanoviaCompanionContinuityV4115Test.php \
             tests/Feature/CanoviaCompanionContextualEntryV4115Test.php \
-            tests/Feature/CanoviaCompanionMutationV4114Test.php \
+            tests/Feature/CanoviaCompanionMutationApplyV4115Test.php \
+            tests/Feature/CompanionAiCommitFenceV05Test.php \
             tests/Feature/GitHubDerivedContextSourceEpochG3Test.php
