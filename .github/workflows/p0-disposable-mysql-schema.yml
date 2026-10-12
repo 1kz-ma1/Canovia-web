@@ -2,7 +2,7 @@ name: P0 Disposable MySQL Migration Integrity
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, production]
     paths:
       - 'database/migrations/**'
       - 'tests/Feature/ProductionMysqlSchemaP0Test.php'
@@ -109,6 +109,7 @@ jobs:
           php -l database/migrations/2026_10_09_235959_reconcile_p0_mysql_applied_constraints.php
           php -l tests/Feature/ProductionMysqlSchemaP0Test.php
           php -l database/migrations/2026_10_12_010000_add_source_revision_to_development_activity_observations.php
+          php -l database/migrations/2026_10_13_021000_add_source_epoch_to_development_activity_observations.php
           php -l tests/Feature/NextReleaseMysqlSourceRevisionMigrationTest.php
       - name: Verify offline schema and migration-ledger decision matrix
         run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_inventory_offline_triage.py' -v
@@ -148,7 +149,7 @@ jobs:
         run: php artisan test tests/Feature/ProductionMysqlSchemaP0Test.php --fail-on-skipped
       - name: Final MySQL migration rerun after interrupted-DDL recovery
         run: php artisan migrate --force --no-interaction
-      - name: Rehearse new source-revision columns on legacy observation records (disposable MySQL only)
+      - name: Rehearse both source observation migrations preserving legacy rows (disposable MySQL only)
         run: php artisan test tests/Feature/NextReleaseMysqlSourceRevisionMigrationTest.php --fail-on-skipped
       - name: Confirm Laravel ledger remains idempotent after additive schema upgrade
         run: php artisan migrate --force --no-interaction
@@ -171,7 +172,7 @@ jobs:
             > "$scratch/schema.tsv"
           python3 scripts/ci/release_488_mysql_ledger_gate.py \
             --ledger "$scratch/ledger.tsv" --schema "$scratch/schema.tsv" \
-            | python3 -c 'import json,sys; x=json.load(sys.stdin); assert x["result"]=="REVIEW_REQUIRED" and x["code"]=="SOURCE_REVISION_MIGRATION_ALREADY_APPLIED" and x["release_authorized"] is False'
+            | python3 -c 'import json,sys; x=json.load(sys.stdin); assert x["result"]=="REVIEW_REQUIRED" and x["code"]=="BOTH_SOURCE_OBSERVATION_MIGRATIONS_ALREADY_APPLIED" and x["release_authorized"] is False'
 
       - name: Verify narrow metadata visibility, denied user data reads and grant fail-closed
         env:
