@@ -10,6 +10,8 @@ use App\Models\PlanArtifact;
 use App\Models\User;
 use App\Models\UserPersonalizationContext;
 use App\Services\DevelopmentPersonalizationSignalService;
+use App\Services\PersonalizationContextService;
+use Illuminate\Http\Request;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -604,6 +606,76 @@ class CandidateEvidenceReopenV5832Test extends TestCase
         $this->assertSame(1, $after['recent_pr_or_commit_count']);
         $this->assertSame(1, $after['connected_repository_count']);
         $this->assertDatabaseCount('development_activity_observations', 3);
+    }
+
+    public function test_revoked_github_source_masks_persisted_developer_recommendations_without_deleting_user_decision(): void
+    {
+        [$user, $plan, $root] = $this->scenario();
+        $this->actingAs($user)->post(route('personalization.updates.refresh'))
+            ->assertRedirect(route('personalization.updates.index'));
+
+        $request = Request::create('/', 'GET');
+        $request->setLaravelSession(app('session')->driver());
+        $request->setUserResolver(fn () => $user);
+        $contexts = app(PersonalizationContextService::class);
+
+        $before = $contexts->current($request);
+        $this->assertNotNull(data_get($before,
+            'context_sources.inferred.update_candidates.development_advanced_support'));
+        $this->assertMatchesRegularExpression(
+            '/^[a-f0-9]{64}$/',
+            (string) data_get($before,
+                'context_sources.observed.development_behavior.source_signature'),
+        );
+
+        $stored = $this->context($user);
+        $metadata = (array) $root->metadata;
+        $metadata['github_app_connection']['status'] = 'revoked';
+        $root->update(['metadata' => $metadata]);
+
+        $after = $contexts->current($request);
+        $this->assertNull(data_get($after,
+            'context_sources.inferred.update_candidates.development_advanced_support'));
+        $this->assertNull(data_get($after,
+            'context_sources.observed.development_behavior'));
+        $this->assertNull(data_get($after,
+            'context_sources.observed.github_integration'));
+        $this->assertSame(
+            data_get($before, 'domain_context.development.experience'),
+            data_get($after, 'domain_context.development.experience'),
+        );
+        $this->assertNotNull(data_get($stored->fresh()->inferred_context,
+            'update_candidates.development_advanced_support'));
+    }
+
+    public function test_unsigned_legacy_development_derivation_cannot_be_shown_as_current(): void
+    {
+        [$user] = $this->scenario();
+        $stored = $this->context($user);
+        $stored->forceFill([
+            'observed_context' => [
+                ...(array) $stored->observed_context,
+                'development_behavior' => ['recent_activity_count' => 5],
+            ],
+            'inferred_context' => [
+                ...(array) $stored->inferred_context,
+                'update_candidates' => [
+                    'development_advanced_support' => [
+                        'status' => 'pending', 'risk' => 'high',
+                    ],
+                ],
+            ],
+        ])->save();
+
+        $request = Request::create('/', 'GET');
+        $request->setLaravelSession(app('session')->driver());
+        $request->setUserResolver(fn () => $user);
+
+        $current = app(PersonalizationContextService::class)->current($request);
+        $this->assertNull(data_get($current,
+            'context_sources.inferred.update_candidates.development_advanced_support'));
+        $this->assertNull(data_get($current,
+            'context_sources.observed.development_behavior'));
     }
 
     private function scenario(): array
