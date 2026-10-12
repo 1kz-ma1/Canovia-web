@@ -6,6 +6,7 @@ on:
     paths:
       - 'app/Services/ExecutionPacketCommitFence.php'
       - 'app/Services/ExecutionPacketService.php'
+      - 'app/Services/ExecutionOrchestrationContextService.php'
       - 'app/Services/ExecutionDistributionService.php'
       - 'app/Services/ExecutionGitHubHandoffService.php'
       - 'app/Http/Controllers/ExecutionOrchestrationController.php'
@@ -33,6 +34,7 @@ jobs:
         run: |
           php -l app/Services/ExecutionPacketCommitFence.php
           php -l app/Services/ExecutionPacketService.php
+          php -l app/Services/ExecutionOrchestrationContextService.php
           php -l app/Services/ExecutionDistributionService.php
           php -l app/Services/ExecutionGitHubHandoffService.php
           php -l app/Http/Controllers/ExecutionOrchestrationController.php
