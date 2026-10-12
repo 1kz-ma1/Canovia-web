@@ -7,6 +7,7 @@ use App\Models\StudyPracticeSession;
 use App\Models\Task;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class StudyPracticeOrchestrator
@@ -17,6 +18,7 @@ class StudyPracticeOrchestrator
         private readonly PracticeQuestionDemandRecorder $demandRecorder,
         private readonly PracticeQuestionCandidateRecorder $candidateRecorder,
         private readonly StudyPracticeAssessmentCommitFence $assessmentCommitFence,
+        private readonly StudyPracticeGenerationCommitFence $generationFence,
     ) {}
 
     /**
@@ -145,13 +147,37 @@ class StudyPracticeOrchestrator
         $provider = $providerKey !== null
             ? $this->providerRouter->questionProviderByKey($providerKey)
             : $this->providerRouter->questionProvider($plan, $task, $strategy);
+        $generationSource = $userId !== null && in_array($provider->key(), ['native_ai', 'hybrid_ai'], true)
+            ? $this->generationFence->capture($plan, $task, $userId)
+            : null;
+
         $prepared = $provider->prepare($plan, $task, $recentAttempts, $strategy, $userId);
 
         $isDirect = (string) ($prepared['mode'] ?? 'handoff') === 'direct'
             && is_array($prepared['questions'] ?? null)
             && ($prepared['questions'] ?? []) !== [];
 
-        $session = StudyPracticeSession::query()->createOrFirst(
+        // Candidate / Demand rows and the generated Session are an atomic
+        // derivative of one authorized, unchanged pre-provider source.
+        return DB::transaction(function () use (
+            $plan, $task, $userId, $actorToken, $prepareRequestId,
+            $providerKey, $strategy, $recentAttempts, $prepared, $isDirect,
+            $generationSource,
+        ): StudyPracticeSession {
+            $runId = (int) data_get($prepared, 'payload.native_ai.run_id', 0);
+            if ($runId > 0) {
+                if ($generationSource === null || $userId === null) {
+                    throw new \App\Exceptions\NativeAiExecutionException(
+                        'Native AIの問題生成元を確認できません。',
+                        'native_ai_actor_unverified', $runId,
+                    );
+                }
+                $this->generationFence->assertCanCommit(
+                    $plan, $task, $userId, $generationSource, $runId,
+                );
+            }
+
+            $session = StudyPracticeSession::query()->createOrFirst(
             ['prepare_request_id' => $prepareRequestId],
             [
                 'plan_id' => $plan->id,
@@ -216,7 +242,8 @@ class StudyPracticeOrchestrator
             $prepared,
         );
 
-        return $session;
+            return $session;
+        }, 3);
     }
 
     /**
