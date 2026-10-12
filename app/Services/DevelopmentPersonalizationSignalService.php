@@ -16,6 +16,7 @@ final class DevelopmentPersonalizationSignalService
      * @return array{
      *   signal_strength:int,
      *   evidence_fingerprint:string,
+     *   source_signature:string,
      *   evidence:array<int,string>,
      *   connected_repository_count:int,
      *   recent_activity_count:int,
@@ -74,6 +75,7 @@ final class DevelopmentPersonalizationSignalService
                 ->whereIn('repository_artifact_id', $repositories->pluck('id')->all())
                 ->where('last_observed_at', '>=', now()->subDays(90))
                 ->get([
+                    'id',
                     'kind',
                     'repository_artifact_id',
                     'external_key',
@@ -238,7 +240,30 @@ final class DevelopmentPersonalizationSignalService
             },
         ];
 
+        // Live lineage, not just coarse recommendation buckets. A source
+        // disconnect/reconnect, Plan transfer or observation revision must
+        // invalidate the previously materialized developer recommendation.
+        $lineage = [
+            'version' => 1,
+            'actor_id' => (int) $user->id,
+            'repositories' => $repositories->map(fn (PlanArtifact $repo) => [
+                (int) $repo->id,
+                (int) $repo->plan_id,
+                (string) $repo->url,
+                (int) data_get($repo->metadata, 'github_app_connection.installation_id', 0),
+            ])->sortBy(fn (array $row) => $row[0])->values()->all(),
+            'observations' => $longWindowObservations->map(
+                fn (DevelopmentActivityObservation $item) => [
+                    (int) $item->id,
+                    (int) $item->repository_artifact_id,
+                    (string) $item->external_key,
+                    $item->last_observed_at?->toIso8601String(),
+                ],
+            )->sortBy(fn (array $row) => $row[0])->values()->all(),
+        ];
+
         return [
+            'source_signature' => hash('sha256', json_encode($lineage, JSON_THROW_ON_ERROR)),
             'signal_strength' => $signalStrength,
             'evidence_fingerprint' => hash(
                 'sha256',
