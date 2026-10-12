@@ -769,7 +769,7 @@
                     </div>
                 </details>
             @else
-                <details id="practice-questions" class="page-card scroll-mt-24 p-5 sm:p-6" @if (($practiceStage ?? 'answering') === 'answering') open @endif>
+                <details id="practice-questions" class="page-card scroll-mt-24 p-3 sm:p-5" @if (($practiceStage ?? 'answering') === 'answering') open @endif>
                     <summary class="cursor-pointer list-none {{ ($practiceStage ?? 'answering') === 'answering' ? 'hidden' : '' }}">
                         <span class="text-sm font-black text-slate-200">回答済み {{ count($questions) }}問 · 回答を見直す</span>
                     </summary>
@@ -792,7 +792,7 @@
                 <form
                     method="POST"
                     action="{{ route('plans.tasks.study_practice.answers', [$plan, $task]) }}"
-                    class="mt-5 space-y-4"
+                    class="mt-3 space-y-3"
                     @if ($currentPracticeSession && in_array($currentPracticeSession->status, ['ready', 'in_progress'], true))
                         data-study-practice-draft-form
                         data-draft-url="{{ route('plans.tasks.study_practice.draft', [$plan, $task]) }}"
@@ -803,19 +803,19 @@
                     @endif
                 >
                     @csrf
-                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.035] p-3" data-study-practice-pager hidden style="display: none">
+                    <div class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.035] px-3 py-2" data-study-practice-pager hidden style="display: none">
                         <p class="text-sm font-bold text-cyan-200" aria-live="polite" data-study-practice-question-progress></p>
-                        <p class="text-xs text-slate-400">1問ずつ表示します。回答はこれまでどおり自動保存し、採点は最後にまとめて行います。</p>
+                        <p class="hidden text-xs text-slate-400 sm:block">入力は自動保存。採点は最後にまとめて行います。</p>
                     </div>
                     @foreach ($questions as $index => $question)
-                        <fieldset class="rounded-2xl border border-white/8 bg-white/[0.025] p-4 scroll-mt-28" tabindex="-1" data-study-practice-question>
+                        <fieldset class="min-w-0 rounded-2xl border border-white/8 bg-white/[0.025] p-3 scroll-mt-28 sm:p-4" tabindex="-1" data-study-practice-question>
                             <legend class="px-1 text-sm font-black text-slate-100">Q{{ $index + 1 }}</legend>
-                            <p class="canovia-study-question mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-200">{{ $question['prompt'] }}</p>
+                            <p class="canovia-study-question mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-slate-200 sm:leading-7">{{ $question['prompt'] }}</p>
                             @if (! empty($question['source_reference']))
                                 <p class="mt-2 text-[10px] leading-4 text-slate-600">出典：{{ $question['source_reference'] }}</p>
                             @endif
 
-                            <div class="mt-4 space-y-4">
+                            <div class="mt-3 space-y-3">
                                 @foreach (($question['response_fields'] ?? []) as $field)
                                     @php
                                         $fieldName = 'answers['.$question['id'].']['.$field['id'].']';
@@ -828,7 +828,16 @@
                                             ? array_map('strval', $fieldValue)
                                             : [];
                                     @endphp
-                                    <div class="rounded-xl border border-slate-800/80 bg-slate-950/30 p-3" data-practice-required-field="{{ ($field['required'] ?? true) ? 'true' : 'false' }}">
+                                    @if ($field['type'] === 'textarea' && ! ($field['required'] ?? true))
+                                        <details class="rounded-xl border border-slate-800/80 bg-slate-950/30 p-3" data-practice-required-field="false" data-study-practice-optional-note @if(filled($fieldValue) || $errors->has($fieldError)) open @endif>
+                                            <summary class="cursor-pointer text-sm font-semibold text-slate-300">
+                                                {{ $field['label'] }} <span class="ml-1 text-xs font-normal text-slate-500">任意 · 開いて入力</span>
+                                            </summary>
+                                            <textarea name="{{ $fieldName }}" aria-label="{{ $field['label'] }}" class="form-control mt-3 min-h-[96px] w-full resize-y text-base" rows="3" placeholder="{{ ($field['placeholder'] ?? '') ?: '必要なら考え方を入力' }}">{{ $fieldValue }}</textarea>
+                                            @error($fieldError)<p class="mt-2 text-sm font-semibold text-rose-300" data-practice-answer-error>{{ $message }}</p>@enderror
+                                        </details>
+                                    @else
+                                    <div class="rounded-xl border border-slate-800/80 bg-slate-950/30 p-2.5 sm:p-3" data-practice-required-field="{{ ($field['required'] ?? true) ? 'true' : 'false' }}">
                                         <label class="text-xs font-bold text-slate-300">
                                             {{ $field['label'] }}
                                             <span class="ml-1 text-[10px] {{ ($field['required'] ?? true) ? 'text-cyan-300' : 'text-slate-600' }}">
@@ -837,20 +846,20 @@
                                         </label>
 
                                         @if ($field['type'] === 'single_choice')
-                                            <div class="mt-2 grid gap-2">
+                                            <div class="mt-2 grid gap-1.5 lg:grid-cols-2">
                                                 @foreach ($field['choices'] as $choice)
-                                                    <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-sm text-slate-300">
-                                                        <input type="radio" name="{{ $fieldName }}" value="{{ $choice['id'] }}" class="mt-1" @checked((string) $fieldValue === (string) $choice['id'])>
-                                                        <span><strong class="text-slate-100">{{ $choice['id'] }}</strong> {{ $choice['label'] }}</span>
+                                                    <label class="flex min-h-11 min-w-0 cursor-pointer items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2 text-sm text-slate-300">
+                                                        <input type="radio" name="{{ $fieldName }}" value="{{ $choice['id'] }}" class="shrink-0" @checked((string) $fieldValue === (string) $choice['id'])>
+                                                        <span class="min-w-0 break-words"><strong class="text-slate-100">{{ $choice['id'] }}</strong> {{ $choice['label'] }}</span>
                                                     </label>
                                                 @endforeach
                                             </div>
                                         @elseif ($field['type'] === 'multiple_choice')
-                                            <div class="mt-2 grid gap-2">
+                                            <div class="mt-2 grid gap-1.5 lg:grid-cols-2">
                                                 @foreach ($field['choices'] as $choice)
-                                                    <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-sm text-slate-300">
-                                                        <input type="checkbox" name="{{ $fieldName }}[]" value="{{ $choice['id'] }}" class="mt-1" @checked(in_array((string) $choice['id'], $fieldValues, true))>
-                                                        <span><strong class="text-slate-100">{{ $choice['id'] }}</strong> {{ $choice['label'] }}</span>
+                                                    <label class="flex min-h-11 min-w-0 cursor-pointer items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2 text-sm text-slate-300">
+                                                        <input type="checkbox" name="{{ $fieldName }}[]" value="{{ $choice['id'] }}" class="shrink-0" @checked(in_array((string) $choice['id'], $fieldValues, true))>
+                                                        <span class="min-w-0 break-words"><strong class="text-slate-100">{{ $choice['id'] }}</strong> {{ $choice['label'] }}</span>
                                                     </label>
                                                 @endforeach
                                             </div>
@@ -859,20 +868,23 @@
                                         @elseif ($field['type'] === 'short_text')
                                             <input type="text" name="{{ $fieldName }}" value="{{ $fieldValue }}" class="form-control mt-2" placeholder="{{ ($field['placeholder'] ?? '') ?: '短く回答' }}">
                                         @else
-                                            <textarea name="{{ $fieldName }}" class="form-control mt-2 min-h-[168px] w-full resize-y sm:min-h-[192px]" rows="6" placeholder="{{ ($field['placeholder'] ?? '') ?: '回答・考え方を入力' }}">{{ $fieldValue }}</textarea>
+                                            <textarea name="{{ $fieldName }}" class="form-control mt-2 min-h-[112px] w-full resize-y text-base sm:min-h-[128px]" rows="4" placeholder="{{ ($field['placeholder'] ?? '') ?: '回答・考え方を入力' }}">{{ $fieldValue }}</textarea>
                                         @endif
 
                                         @error($fieldError)<p class="mt-2 text-sm font-semibold text-rose-300" data-practice-answer-error>{{ $message }}</p>@enderror
                                     </div>
+                                    @endif
                                 @endforeach
                             </div>
                         </fieldset>
                     @endforeach
-                    <div class="flex flex-wrap gap-3" data-study-practice-pager hidden style="display: none">
-                        <button type="button" class="btn-secondary min-h-11" data-study-practice-previous>← 前の問題</button>
-                        <button type="button" class="btn-primary min-h-11" data-study-practice-next>次の問題 →</button>
+                    <div class="sticky bottom-0 z-20 flex flex-wrap items-center justify-end gap-2 rounded-xl border border-slate-700/80 bg-slate-950/95 p-2 shadow-lg" data-study-practice-actions>
+                        <div class="flex min-w-0 flex-1 items-center justify-between gap-2" data-study-practice-pager hidden style="display: none">
+                            <button type="button" class="btn-secondary min-h-11" data-study-practice-previous>← 前の問題</button>
+                            <button type="button" class="btn-primary ml-auto min-h-11" data-study-practice-next>次の問題 →</button>
+                        </div>
+                        <button type="submit" class="btn-primary ml-auto min-h-11" data-study-practice-final-submit>回答をまとめて評価へ進む</button>
                     </div>
-                    <button type="submit" class="btn-primary" data-study-practice-final-submit>回答をまとめて評価へ進む</button>
                 </form>
                     </div>
                 </details>
@@ -950,13 +962,10 @@
         @endif
 
         @if (($recentAttempts ?? collect())->isNotEmpty())
-            <section class="page-card p-5 sm:p-6">
-                <div>
-                    <p class="text-xs font-bold uppercase tracking-[0.16em] text-violet-300">LEARNING HISTORY</p>
-                    <h2 class="mt-1 text-lg font-black text-slate-100">このTaskのAI演習履歴</h2>
-                    <p class="mt-1 text-xs text-slate-500">ここで見つかった弱点は、次回の問題生成Promptへ自動で引き継がれます。</p>
-                </div>
-                <div class="mt-4 space-y-3">
+            <details class="page-card p-4 sm:p-5" data-study-practice-history>
+                <summary class="cursor-pointer text-sm font-semibold text-slate-200">学習履歴を振り返る <span class="ml-1 text-xs font-normal text-slate-400">（{{ $recentAttempts->count() }}件）</span></summary>
+                <p class="mt-3 text-xs text-slate-400">ここで見つかった弱点は、次回の問題生成Promptへ自動で引き継がれます。</p>
+                <div class="mt-3 space-y-3">
                     @foreach ($recentAttempts as $attempt)
                         <article class="rounded-2xl border border-white/8 bg-white/[0.025] p-4">
                             <div class="flex flex-wrap items-start justify-between gap-3">
@@ -978,7 +987,7 @@
                         </article>
                     @endforeach
                 </div>
-            </section>
+            </details>
         @endif
     </div>
 @endsection

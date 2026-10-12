@@ -9,6 +9,13 @@ export function mountLegacyStudyQuestionPager(root = document) {
     const form = root.querySelector('[data-study-practice-draft-form][data-study-practice-one-question]');
     if (!form || form.dataset.questionPagerMounted === '1') return;
 
+    // The general draft-restoration handler runs before this rAF mount.
+    // Unhide restored optional notes so saved reasoning does not appear lost.
+    [...form.querySelectorAll('[data-study-practice-optional-note]')].forEach((details) => {
+        const textarea = details.querySelector('textarea');
+        if (textarea && String(textarea.value ?? '').trim() !== '') details.open = true;
+    });
+
     const questions = [...form.querySelectorAll('[data-study-practice-question]')];
     const pagers = [...form.querySelectorAll('[data-study-practice-pager]')];
     const previous = form.querySelector('[data-study-practice-previous]');

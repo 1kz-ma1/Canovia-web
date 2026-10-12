@@ -44,7 +44,7 @@ function question(requiredAnswer, optionalReasoning = '', error = false) {
     };
 }
 
-function setup(questions) {
+function setup(questions, optionalNotes = []) {
     const pagers = [{ hidden: true, style: { display: 'none' } }, { hidden: true, style: { display: 'none' } }];
     const previous = control();
     const next = control();
@@ -61,6 +61,7 @@ function setup(questions) {
         dataset: {},
         querySelectorAll(selector) {
             if (selector === '[data-study-practice-question]') return questions;
+            if (selector === '[data-study-practice-optional-note]') return optionalNotes;
             if (selector === '[data-study-practice-pager]') return pagers;
             throw new Error('unexpected selector: ' + selector);
         },
@@ -114,4 +115,30 @@ test('server-side field errors take priority over previously saved answers', () 
     const page = setup([question(true, '', true), question(false), question(false)]);
     assert.equal(page.progress.textContent, '問題 1 / 3');
     assert.equal(page.previous.style.display, 'none');
+});
+
+
+test('locally restored optional reasoning reopens even for a single-question session', () => {
+    const note = {
+        open: false,
+        querySelector(selector) {
+            assert.equal(selector, 'textarea');
+            return { value: '復元した思考過程' };
+        },
+    };
+    const page = setup([question(false)], [note]);
+    assert.equal(note.open, true);
+    // A one-question session still uses the original final form submission.
+    assert.equal(page.submit.style.display, '');
+    assert.deepEqual(page.pagers.map(p => p.style.display), ['none', 'none']);
+});
+
+test('empty optional reasoning stays collapsed after pager initialization', () => {
+    const note = {
+        open: false,
+        querySelector() { return { value: '  ' }; },
+    };
+    const page = setup([question(false), question(false)], [note]);
+    assert.equal(note.open, false);
+    assert.equal(page.next.style.display, 'inline-flex');
 });
