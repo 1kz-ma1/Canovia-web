@@ -17,6 +17,7 @@ final class DevelopmentActivityObservation extends Model
         'plan_id',
         'repository_artifact_id',
         'provider',
+        'source_epoch',
         'kind',
         'external_key',
         'provider_number',
