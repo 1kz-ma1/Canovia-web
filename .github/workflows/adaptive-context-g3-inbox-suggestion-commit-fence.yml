@@ -1,0 +1,43 @@
+name: Adaptive Context G3 Inbox AI Suggestion Commit Fence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/InboxAiSuggestionCommitFence.php'
+      - 'app/Services/InboxIntelligenceService.php'
+      - 'app/Http/Controllers/InboxController.php'
+      - 'tests/Feature/InboxAiSuggestionCommitFenceG3Test.php'
+      - '.github/workflows/adaptive-context-g3-inbox-suggestion-commit-fence.yml'
+
+jobs:
+  inbox-ai-post-provider-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/InboxAiSuggestionCommitFence.php
+          php -l app/Services/InboxIntelligenceService.php
+          php -l app/Http/Controllers/InboxController.php
+          php -l tests/Feature/InboxAiSuggestionCommitFenceG3Test.php
+      - name: G3 post-provider stale and unauthorized Inbox suggestions
+        run: php artisan test tests/Feature/InboxAiSuggestionCommitFenceG3Test.php
+      - name: Inbox and Space Station existing regressions
+        run: |
+          php artisan test \
+            tests/Feature/InboxIntelligenceGuideV4113Test.php \
+            tests/Feature/SpaceStationV442Test.php \
+            tests/Feature/SpaceStationIntakeHubV483Test.php \
+            tests/Feature/NativeAiPurposeGrantFenceV05Test.php
