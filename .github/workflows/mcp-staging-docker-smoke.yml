@@ -43,7 +43,7 @@ jobs:
             'cp docker/nginx-mcp-staging-login-pilot.conf /etc/nginx/nginx.conf && nginx -t'
           # The access-log format must never emit OAuth callback code or state.
           grep -F 'log_format stage_pilot_safe' docker/nginx-mcp-staging-login-pilot.conf \
-            | grep -Ev '\\$request_uri|\\$query_string|\\$args|\\$request_body'
+            | grep -Ev '\$request_uri|\$query_string|\$args|\$request_body'
 
       - name: Verify PHP SQLite runtime extensions
         run: |
