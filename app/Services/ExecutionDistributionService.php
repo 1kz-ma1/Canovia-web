@@ -8,6 +8,7 @@ use App\Models\Plan;
 use App\Models\Task;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 final class ExecutionDistributionService
 {
@@ -17,6 +18,7 @@ final class ExecutionDistributionService
         private readonly ExecutionOrchestrationContextService $contexts,
         private readonly ExecutionPacketService $packets,
         private readonly FeatureAccessService $access,
+        private readonly ExecutionRequestHandoffService $handoffSources,
     ) {}
 
     /**
@@ -77,6 +79,12 @@ final class ExecutionDistributionService
             $executionRequest = is_array($taskState['execution_request'] ?? null)
                 ? $taskState['execution_request']
                 : null;
+
+            if (! $this->handoffSources->sourceIsCurrent($executionRequest, $plan, $task)) {
+                throw ValidationException::withMessages([
+                    'candidate' => '以前のCompanion実行候補の根拠が失効しています。新しい候補を確認してから一括Executionを再生成してください。',
+                ]);
+            }
 
             $target = [
                 'task_id' => (int) $task->id,
