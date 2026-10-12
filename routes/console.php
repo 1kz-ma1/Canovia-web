@@ -147,3 +147,27 @@ Artisan::command(
         return $result === 'blocked' ? 1 : 0;
     },
 )->purpose('Replace the fixed synthetic MCP owner password only in an isolated closed stage');
+
+
+/**
+ * Inspect only pinned configuration shape while external OAuth/MCP remain
+ * disabled. No credentials, real tokens, network or database access.
+ */
+Artisan::command(
+    'canovia:mcp-auth0-sealed-wiring-check
+        {--json : Emit only named boolean status codes}',
+    function (\App\Services\McpAuth0SealedStagingWiringReadiness $readiness): int {
+        $report = $readiness->check();
+        if ($this->option('json')) {
+            $this->line((string) json_encode($report, JSON_THROW_ON_ERROR));
+        } else {
+            $this->info('Auth0 sealed-stage configuration inventory (no OAuth proof)');
+            foreach ($report['checks'] as $key => $value) {
+                $this->line('  '.$key.': '.$value);
+            }
+            $this->warn('Live issued tokens, API grants, user consent and stage activation remain unverified.');
+        }
+
+        return $report['configuration_ready'] ? 0 : 1;
+    },
+)->purpose('Check stage-only Auth0 wiring without revealing credentials or enabling external access');
