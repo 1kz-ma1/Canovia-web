@@ -9,6 +9,10 @@ use Illuminate\Validation\ValidationException;
 
 final class PlanActionDraftEvidenceService
 {
+    public function __construct(
+        private readonly PlanActionDraftSourceFingerprint $sourceFingerprint,
+    ) {}
+
     public const MAX_SOURCES = 5;
 
     /**
@@ -50,6 +54,7 @@ final class PlanActionDraftEvidenceService
             return [
                 'kind' => 'work_log',
                 'work_log_id' => (int) $log->id,
+                'source_signature' => $this->sourceFingerprint->workLog($log),
                 'action' => mb_substr($action, 0, 255),
                 'outcome' => mb_substr($outcome, 0, 2000),
                 'worked_on' => $log->worked_on?->toDateString(),
