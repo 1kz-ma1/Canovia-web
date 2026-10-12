@@ -1,0 +1,36 @@
+name: Adaptive Context G2 GitHub Ordering
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/GitHubDevelopmentObservationService.php'
+      - 'app/Services/GitHubRepositoryWriter.php'
+      - 'app/Models/DevelopmentActivityObservation.php'
+      - 'database/migrations/2026_10_12_010000_add_source_revision_to_development_activity_observations.php'
+      - 'tests/Feature/DeveloperActivityObservationV571Test.php'
+      - '.github/workflows/adaptive-context-g2-github-ordering.yml'
+
+jobs:
+  observation-revision-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: PHP lint
+        run: |
+          php -l app/Services/GitHubDevelopmentObservationService.php
+          php -l app/Services/GitHubRepositoryWriter.php
+          php -l app/Models/DevelopmentActivityObservation.php
+          php -l database/migrations/2026_10_12_010000_add_source_revision_to_development_activity_observations.php
+          php -l tests/Feature/DeveloperActivityObservationV571Test.php
+      - name: G2 GitHub version and retry regression
+        run: php artisan test tests/Feature/DeveloperActivityObservationV571Test.php
+      - name: Development Home observation regression
+        run: php artisan test tests/Feature/DeveloperHomeV573Test.php
+      - name: GitHub Evidence safety regression
+        run: php artisan test tests/Feature/DeveloperEvidenceSyncV537Test.php

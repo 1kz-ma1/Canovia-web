@@ -8,6 +8,7 @@ use App\Models\GitHubWebhookDelivery;
 use App\Models\PlanArtifact;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 final class GitHubDevelopmentObservationService
@@ -200,6 +201,7 @@ final class GitHubDevelopmentObservationService
             'sha' => $pull['head_sha'] ?? null,
             'url' => $pull['url'] ?? null,
             'occurred_at' => $pull['merged_at'] ?? $pull['closed_at'] ?? $pull['updated_at'] ?? $snapshot['fetched_at'] ?? null,
+            'source_updated_at' => $pull['updated_at'] ?? null,
         ];
     }
 
@@ -215,6 +217,7 @@ final class GitHubDevelopmentObservationService
             'state' => $issue['state'] ?? null,
             'url' => $issue['url'] ?? null,
             'occurred_at' => $issue['closed_at'] ?? $issue['updated_at'] ?? $snapshot['fetched_at'] ?? null,
+            'source_updated_at' => $issue['updated_at'] ?? null,
         ];
     }
 
@@ -230,6 +233,9 @@ final class GitHubDevelopmentObservationService
             'ref' => $name,
             'sha' => $branch['head_sha'] ?? null,
             'occurred_at' => $snapshot['fetched_at'] ?? null,
+            // Branch REST has no entity updated_at. The fetch time is only
+            // an observation watermark, not a Git ancestry/revision proof.
+            'source_updated_at' => $snapshot['fetched_at'] ?? null,
         ];
     }
 
@@ -262,6 +268,8 @@ final class GitHubDevelopmentObservationService
             'ref' => $deployment['ref'] ?? null,
             'sha' => $deployment['sha'] ?? null,
             'occurred_at' => $deployment['latest_status_at'] ?? $deployment['updated_at'] ?? $deployment['created_at'] ?? $snapshot['fetched_at'] ?? null,
+            'source_updated_at' => $deployment['latest_status_at'] ?? $deployment['updated_at'] ?? $deployment['created_at'] ?? null,
+            'source_revision_id' => $deployment['latest_status_id'] ?? null,
         ];
     }
 
@@ -280,25 +288,93 @@ final class GitHubDevelopmentObservationService
             $key = 'github:sha256:'.hash('sha256', $key);
         }
 
-        return DevelopmentActivityObservation::query()->updateOrCreate(
-            [
-                'plan_id' => (int) $root->plan_id,
-                'provider' => 'github',
-                'external_key' => $key,
-            ],
-            [
-                'repository_artifact_id' => (int) $root->id,
-                'kind' => $kind,
-                'provider_number' => isset($fact['provider_number']) ? (int) $fact['provider_number'] : null,
-                'url' => $this->url($fact['url'] ?? null),
-                'title' => $this->text($fact['title'] ?? null, 255),
-                'state' => $this->text($fact['state'] ?? null, 64),
-                'ref' => $this->text($fact['ref'] ?? null, 255),
-                'sha' => $this->sha($fact['sha'] ?? null),
-                'occurred_at' => $this->date($fact['occurred_at'] ?? null),
-                'last_observed_at' => now(),
-            ],
-        );
+        $identity = [
+            'plan_id' => (int) $root->plan_id,
+            'provider' => 'github',
+            'external_key' => $key,
+        ];
+
+        // Database timestamp columns carry no timezone. Normalize the
+        // *source revision* to the application's storage timezone before
+        // Eloquent serializes it; GitHub's occurred_at keeps V57.1 behavior.
+        $revision = $this->date($fact['source_updated_at'] ?? null)
+            ?->setTimezone(config('app.timezone', 'UTC'));
+        $revisionId = $kind === 'deployment'
+            ? max(0, (int) ($fact['source_revision_id'] ?? 0))
+            : 0;
+
+        $values = [
+            'repository_artifact_id' => (int) $root->id,
+            'kind' => $kind,
+            'provider_number' => isset($fact['provider_number']) ? (int) $fact['provider_number'] : null,
+            'url' => $this->url($fact['url'] ?? null),
+            'title' => $this->text($fact['title'] ?? null, 255),
+            'state' => $this->text($fact['state'] ?? null, 64),
+            'ref' => $this->text($fact['ref'] ?? null, 255),
+            'sha' => $this->sha($fact['sha'] ?? null),
+            'occurred_at' => $this->date($fact['occurred_at'] ?? null),
+            'last_observed_at' => now(),
+            'source_updated_at' => $revision,
+            'source_revision_id' => $revisionId > 0 ? $revisionId : null,
+        ];
+
+        // The REST read happened before this transaction. Serialize competing
+        // writers under a row lock and compare GitHub's entity revision, not
+        // webhook arrival order or the local processing timestamp.
+        return DB::transaction(function () use ($identity, $values, $revision, $revisionId, $kind) {
+            $observation = DevelopmentActivityObservation::query()
+                ->createOrFirst($identity, $values);
+
+            if ($observation->wasRecentlyCreated) {
+                return $observation;
+            }
+
+            $locked = DevelopmentActivityObservation::query()
+                ->where($identity)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // A commit SHA is immutable. Replayed push deliveries must not
+            // reassign its originally observed ref or its Task resolution.
+            if ($kind === 'commit' || $revision === null) {
+                return $locked;
+            }
+
+            // For legacy pre-G2 observations use the original event time as
+            // a conservative lower bound, without bulk rewriting history.
+            $previous = $locked->source_updated_at;
+            if ($previous === null && filled($locked->getRawOriginal('occurred_at'))) {
+                // Legacy V57.1 wrote GitHub ISO-8601 UTC values into a naive
+                // timestamp. Reinterpret that raw historical value as UTC;
+                // casting it in the local app timezone shifts the watermark.
+                $previous = CarbonImmutable::parse(
+                    (string) $locked->getRawOriginal('occurred_at'),
+                    'UTC',
+                );
+            }
+            if ($previous !== null) {
+                $comparison = $revision->getTimestamp() <=> $previous->getTimestamp();
+
+                if ($comparison < 0) {
+                    return $locked;
+                }
+
+                if ($comparison === 0) {
+                    $previousId = (int) ($locked->source_revision_id ?? 0);
+                    if ($kind !== 'deployment' || $revisionId <= $previousId) {
+                        // Same source revision must not alternate its payload.
+                        return $locked;
+                    }
+                }
+            }
+
+            // A new version updates provider observations, never confirmed
+            // resolution fields, suggested Task links, or TaskEvidence.
+            $locked->fill($values);
+            $locked->save();
+
+            return $locked;
+        }, 3);
     }
 
     private function text(mixed $value, int $max): ?string
