@@ -59,7 +59,7 @@ final class GitHubDerivedContextSourceEpochG3Test extends TestCase
 
         FutureMemo::query()->create([
             'user_id' => $user->id,
-            'kind' => 'note',
+            'kind' => 'value',
             'category' => 'other',
             'content' => '本人が明示したメモ',
             'source' => 'manual',
@@ -142,8 +142,7 @@ final class GitHubDerivedContextSourceEpochG3Test extends TestCase
         $verified = $this->executionSnapshot($service, $user, $plan, $task);
         $this->assertCount(1, $verified['recent_evidence']);
         $this->assertNotSame($reconnected['context_fingerprint'], $verified['context_fingerprint']);
-        $this->assertSame('failure', $verified['recent_evidence'][0]['type'] === 'pull_request_ci_observed'
-            ? 'failure' : 'unexpected');
+        $this->assertSame('pull_request_ci_observed', $verified['recent_evidence'][0]['type']);
     }
 
     public function test_no_github_repository_keeps_non_github_context_intact(): void
