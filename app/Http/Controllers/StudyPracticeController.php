@@ -20,6 +20,7 @@ use App\Services\PlanCategoryProfileService;
 use App\Intelligence\Study\StudyAdaptiveActionService;
 use App\Services\PracticeQuestionDemandRecorder;
 use App\Services\StudyPracticeOrchestrator;
+use App\Services\StudyPracticeAssessmentCommitFence;
 use App\Services\StudyPracticePromptService;
 use App\Services\StudyPracticeReliabilityService;
 use App\Services\StudyPracticeStrategyService;
@@ -814,6 +815,7 @@ class StudyPracticeController extends Controller
         TaskEvidenceService $evidenceService,
         FeatureAccessService $featureAccess,
         NativeAiGateway $nativeAi,
+        StudyPracticeAssessmentCommitFence $assessmentFence,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
         $this->authorizeStudyPlan($plan);
@@ -969,6 +971,18 @@ class StudyPracticeController extends Controller
                     $assessmentProviderKey,
                 );
             } catch (NativeAiExecutionException $exception) {
+                if (in_array($exception->errorCode, [
+                    'native_ai_target_changed', 'native_ai_source_changed',
+                    'native_ai_purpose_not_entitled', 'native_ai_actor_unverified',
+                    'native_ai_authorization_unavailable',
+                ], true)) {
+                    // Keep the latest answer draft. A revoked or changed
+                    // source must not create a stale external grading prompt.
+                    return redirect()
+                        ->route('plans.tasks.study_practice.show', [$plan, $task])
+                        ->with('status', $exception->getMessage());
+                }
+
                 $assessmentHandoff = $orchestrator->prepareAssessment(
                     $practiceSession,
                     $plan,
@@ -1035,16 +1049,40 @@ class StudyPracticeController extends Controller
 
                 $state['evaluation_prompt'] = null;
                 $state['assessment'] = $assessment;
-                $attempt = $this->persistAssessment(
-                    $request,
-                    $plan,
-                    $task,
-                    $state,
-                    $assessment,
-                    $actorToken,
-                );
+
+                $persist = function () use (
+                    $request, $plan, $task, &$state, $assessment, $actorToken,
+                    $evidenceService, $practiceSession,
+                ): StudyPracticeAttempt {
+                    $attempt = $this->persistAssessment(
+                        $request, $plan, $task, $state, $assessment, $actorToken,
+                    );
+                    $evidenceService->recordStudyPracticeAssessment($attempt);
+                    $practiceSession->update(['status' => StudyPracticeSession::STATUS_ASSESSED]);
+
+                    return $attempt;
+                };
+
+                if ((string) ($assessmentHandoff['provider'] ?? '') === 'native_ai') {
+                    $runId = (int) data_get($assessmentHandoff, 'payload.native_ai.run_id', 0);
+                    $sourceFingerprint = (string) ($assessmentHandoff['g3_source_fingerprint'] ?? '');
+
+                    try {
+                        $attempt = $assessmentFence->commit(
+                            $practiceSession, $plan, $task, $questions,
+                            $request->user()?->id, $sourceFingerprint, $runId,
+                            fn () => $persist(),
+                        );
+                    } catch (NativeAiExecutionException $exception) {
+                        return redirect()
+                            ->route('plans.tasks.study_practice.show', [$plan, $task])
+                            ->with('status', $exception->getMessage());
+                    }
+                } else {
+                    $attempt = DB::transaction(fn () => $persist(), 3);
+                }
+
                 $state['attempt_id'] = $attempt->id;
-                $evidenceService->recordStudyPracticeAssessment($attempt);
                 $this->studyActions->tryRefresh(
                     $plan,
                     $attempt->created_at ?? now(),
@@ -1055,7 +1093,6 @@ class StudyPracticeController extends Controller
                         $plan,
                     );
                 }
-                $practiceSession->update(['status' => StudyPracticeSession::STATUS_ASSESSED]);
                 $request->session()->put($key, $state);
 
                 $successMessage = (string) ($assessmentHandoff['provider'] ?? '') === 'native_ai'

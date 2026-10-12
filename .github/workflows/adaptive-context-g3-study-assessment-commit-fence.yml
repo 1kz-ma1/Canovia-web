@@ -1,0 +1,42 @@
+name: Adaptive Context G3 Study Assessment AI Commit Fence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/StudyPracticeAssessmentCommitFence.php'
+      - 'app/Services/StudyPracticeOrchestrator.php'
+      - 'app/Http/Controllers/StudyPracticeController.php'
+      - 'tests/Feature/StudyAssessmentAiCommitFenceG3Test.php'
+      - '.github/workflows/adaptive-context-g3-study-assessment-commit-fence.yml'
+
+jobs:
+  native-study-assessment-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/StudyPracticeAssessmentCommitFence.php
+          php -l app/Services/StudyPracticeOrchestrator.php
+          php -l app/Http/Controllers/StudyPracticeController.php
+          php -l tests/Feature/StudyAssessmentAiCommitFenceG3Test.php
+      - name: G3 stale/revoked assessment payload, attempt and evidence
+        run: php artisan test tests/Feature/StudyAssessmentAiCommitFenceG3Test.php
+      - name: Existing Native and Hybrid Study regression
+        run: |
+          php artisan test \
+            tests/Feature/NativeAiPracticeV418Test.php \
+            tests/Feature/HybridQuestionAssemblyV4182Test.php \
+            tests/Feature/NativeAiPurposeGrantFenceV05Test.php

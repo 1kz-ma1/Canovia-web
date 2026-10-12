@@ -16,6 +16,7 @@ class StudyPracticeOrchestrator
         private readonly StudyPracticeProviderRouter $providerRouter,
         private readonly PracticeQuestionDemandRecorder $demandRecorder,
         private readonly PracticeQuestionCandidateRecorder $candidateRecorder,
+        private readonly StudyPracticeAssessmentCommitFence $assessmentCommitFence,
     ) {}
 
     /**
@@ -234,20 +235,42 @@ class StudyPracticeOrchestrator
         $provider = $providerKey !== null
             ? $this->providerRouter->assessmentProviderByKey($providerKey)
             : $this->providerRouter->assessmentProvider($plan, $task, $questions, $answers);
+        $native = $provider->key() === 'native_ai';
+        $actorUserId = $session->user_id ? (int) $session->user_id : null;
+        $sourceFingerprint = $native
+            ? $this->assessmentCommitFence->capture(
+                $session, $plan, $task, $questions, $actorUserId,
+            )
+            : null;
+
         $prepared = $provider->prepare(
             $plan,
             $task,
             $questions,
             $answers,
-            $session->user_id ? (int) $session->user_id : null,
+            $actorUserId,
             (int) $session->id,
         );
 
-        $session->update([
+        $changes = [
             'assessment_provider' => (string) ($prepared['provider'] ?? $provider->key()),
             'assessment_provider_mode' => (string) ($prepared['mode'] ?? $provider->mode()),
             'assessment_payload' => is_array($prepared['payload'] ?? null) ? $prepared['payload'] : [],
-        ]);
+        ];
+
+        if ($native) {
+            $runId = (int) data_get($prepared, 'payload.native_ai.run_id', 0);
+            $this->assessmentCommitFence->commit(
+                $session, $plan, $task, $questions, $actorUserId,
+                $sourceFingerprint, $runId,
+                fn (StudyPracticeSession $live) => $live->update($changes),
+            );
+            // Controller uses the same pre-provider fingerprint for its final
+            // Attempt/Evidence commit, not a freshly signed changed answer.
+            $prepared['g3_source_fingerprint'] = $sourceFingerprint;
+        } else {
+            $session->update($changes);
+        }
 
         return $prepared;
     }
