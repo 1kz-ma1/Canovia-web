@@ -120,7 +120,7 @@ final class PlanActionDraftV5873Test extends TestCase
         $this->actingAs($owner)->post(route('plans.action_drafts.steps.prepare', [$plan, $draft]))
             ->assertRedirect();
         $steps = $draft->fresh()->steps;
-        $fingerprint = app(\\App\\Services\\PlanActionDraftStepService::class)
+        $fingerprint = app(\App\Services\PlanActionDraftStepService::class)
             ->fingerprint($steps);
 
         $evidence->update(['plan_id' => $other->id]);
