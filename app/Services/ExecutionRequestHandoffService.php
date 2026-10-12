@@ -16,6 +16,7 @@ final class ExecutionRequestHandoffService
 
     public function __construct(
         private readonly ExecutionOrchestrationContextService $contexts,
+        private readonly CompanionDerivedEvidenceSourceGuard $derivedSources,
     ) {}
 
     /**
@@ -65,6 +66,16 @@ final class ExecutionRequestHandoffService
         string $actorType = 'human_ai',
         ?int $availableMinutes = null,
     ): array {
+        if ((int) $candidate->plan_id !== (int) $plan->id
+            || (int) $candidate->task_id !== (int) $task->id
+            || ! $this->derivedSources->isCurrent(
+                $plan, data_get($candidate->metadata, 'source_provenance'),
+            )) {
+            throw ValidationException::withMessages([
+                'candidate' => 'Companionの元のAI根拠が未検証です。現在の情報で新しい実行候補を作成してください。',
+            ]);
+        }
+
         return $this->confirm(
             request: $request,
             plan: $plan,
@@ -203,6 +214,46 @@ final class ExecutionRequestHandoffService
         ]);
 
         return $executionRequest;
+    }
+
+    /**
+     * A prior human approval is not an ongoing authorization to reuse a
+     * Companion-generated instruction whose underlying GitHub Evidence
+     * disappeared or changed. Inbox and explicitly authored Development
+     * briefs are outside this AI-derivative lineage gate.
+     *
+     * @param array<string,mixed>|null $executionRequest
+     */
+    public function sourceIsCurrent(?array $executionRequest, Plan $plan, Task $task): bool
+    {
+        if (! is_array($executionRequest)
+            || data_get($executionRequest, 'source.type') !== 'companion_candidate') {
+            return true;
+        }
+
+        $candidateId = (int) data_get($executionRequest, 'source.id', 0);
+        if ($candidateId <= 0 || (int) $task->plan_id !== (int) $plan->id
+            || (int) data_get($executionRequest, 'target_plan.id') !== (int) $plan->id
+            || (int) data_get($executionRequest, 'target_task.id') !== (int) $task->id) {
+            return false;
+        }
+
+        $candidate = CompanionMutationCandidate::query()->find($candidateId);
+        if (! $candidate || $candidate->type !== 'prepare_execution_request'
+            || $candidate->status !== CompanionMutationCandidate::STATUS_APPLIED
+            || (int) $candidate->user_id !== (int) $plan->user_id
+            || (int) $candidate->plan_id !== (int) $plan->id
+            || (int) $candidate->task_id !== (int) $task->id
+            || (int) data_get($executionRequest, 'source.thread_id')
+                !== (int) $candidate->companion_thread_id
+            || trim((string) data_get($executionRequest, 'instruction'))
+                !== trim((string) data_get($candidate->payload, 'instruction'))) {
+            return false;
+        }
+
+        return $this->derivedSources->isCurrent(
+            $plan, data_get($candidate->metadata, 'source_provenance'),
+        );
     }
 
     public static function sessionKey(Plan $plan, Task $task): string
