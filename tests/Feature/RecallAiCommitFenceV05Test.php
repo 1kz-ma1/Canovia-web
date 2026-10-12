@@ -135,7 +135,7 @@ final class RecallAiCommitFenceV05Test extends TestCase
         $this->assertNoCandidates();
     }
 
-    public function test_unchanged_single_and_batch_still_create_reviewable_candidates(): void
+    public function test_unchanged_single_still_creates_reviewable_candidate(): void
     {
         [$user, $plan, $task] = $this->scenario();
         $single = $this->source($user, $plan, $task);
@@ -147,7 +147,12 @@ final class RecallAiCommitFenceV05Test extends TestCase
         $this->assertSame(1, $result['created']);
         $this->assertSame('ready', $single->fresh()->status);
         $this->assertSame('pending', StudyRecallCandidate::firstOrFail()->status);
+        $this->assertDatabaseCount('study_recall_items', 0);
+    }
 
+    public function test_unchanged_batch_still_creates_reviewable_candidates(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
         $first = $this->source($user, $plan, $task, 'page1.png');
         $second = $this->source($user, $plan, $task, 'page2.png');
         $this->fakeResponse(true);
@@ -158,7 +163,8 @@ final class RecallAiCommitFenceV05Test extends TestCase
         $this->assertSame(2, $batch['created']);
         $this->assertSame('ready', $first->fresh()->status);
         $this->assertSame('ready', $second->fresh()->status);
-        $this->assertDatabaseCount('study_recall_candidates', 3);
+        $this->assertDatabaseCount('study_recall_candidates', 2);
+        $this->assertSame(2, StudyRecallCandidate::query()->where('status', 'pending')->count());
         $this->assertDatabaseCount('study_recall_items', 0);
     }
 
