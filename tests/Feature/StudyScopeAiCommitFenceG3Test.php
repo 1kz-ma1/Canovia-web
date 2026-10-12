@@ -36,32 +36,7 @@ final class StudyScopeAiCommitFenceG3Test extends TestCase
             'native_ai.providers.openai.api_key' => 'test-key',
             'native_ai.providers.openai.model' => 'test-model',
         ]);
-        Http::fake(['https://api.openai.com/v1/responses' => Http::response([
-            'id' => 'resp-study-scope-g3',
-            'status' => 'completed',
-            'output' => [[
-                'type' => 'message',
-                'content' => [[
-                    'type' => 'output_text',
-                    'text' => json_encode([
-                        'exam_title' => '中間試験',
-                        'exam_date_text' => null,
-                        'exam_date' => null,
-                        'overall_confidence' => 85,
-                        'items' => [[
-                            'subject' => '数学',
-                            'unit' => '二次関数',
-                            'range_text' => 'p.1-30',
-                            'page_start' => 1,
-                            'page_end' => 30,
-                            'source_excerpt' => '数学 p.1-30',
-                            'confidence' => 85,
-                        ]],
-                        'ambiguities' => [],
-                    ], JSON_UNESCAPED_UNICODE),
-                ]],
-            ]],
-        ], 200)]);
+
     }
 
     public function test_plan_transfer_after_valid_ai_return_does_not_save_draft(): void
@@ -153,7 +128,7 @@ final class StudyScopeAiCommitFenceG3Test extends TestCase
 
     public function test_gateway_failure_retains_original_file_and_retryable_failed_capture(): void
     {
-        [$actor, $plan, $source, $capture] = $this->scenario();
+        [$actor, $plan, $source, $capture] = $this->scenario(false);
         Http::fake(['https://api.openai.com/v1/responses' => Http::response([
             'error' => ['code' => 'rate_limit_exceeded'],
         ], 429)]);
@@ -167,8 +142,41 @@ final class StudyScopeAiCommitFenceG3Test extends TestCase
         Storage::assertExists($source->storage_path);
     }
 
-    private function scenario(): array
+    private function fakeSuccessResponse(): void
     {
+        Http::fake(['https://api.openai.com/v1/responses' => Http::response([
+            'id' => 'resp-study-scope-g3',
+            'status' => 'completed',
+            'output' => [[
+                'type' => 'message',
+                'content' => [[
+                    'type' => 'output_text',
+                    'text' => json_encode([
+                        'exam_title' => '中間試験',
+                        'exam_date_text' => null,
+                        'exam_date' => null,
+                        'overall_confidence' => 85,
+                        'items' => [[
+                            'subject' => '数学',
+                            'unit' => '二次関数',
+                            'range_text' => 'p.1-30',
+                            'page_start' => 1,
+                            'page_end' => 30,
+                            'source_excerpt' => '数学 p.1-30',
+                            'confidence' => 85,
+                        ]],
+                        'ambiguities' => [],
+                    ], JSON_UNESCAPED_UNICODE),
+                ]],
+            ]],
+        ], 200)]);
+    }
+
+    private function scenario(bool $fakeSuccess = true): array
+    {
+        if ($fakeSuccess) {
+            $this->fakeSuccessResponse();
+        }
         $actor = User::factory()->create();
         $plan = Plan::query()->create([
             'user_id' => $actor->id,
