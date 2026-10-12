@@ -43,6 +43,9 @@ final class ExecutionDistributionController extends Controller
         $bundle = $request->session()->get(ExecutionDistributionService::sessionKey($plan));
         if (is_array($bundle)) {
             $bundle = $distribution->refreshStaleness($request, $plan, $bundle);
+            // The session, not only this rendered page, must stop carrying
+            // a revoked or stale Native AI Packet.
+            $request->session()->put(ExecutionDistributionService::sessionKey($plan), $bundle);
         } else {
             $bundle = null;
         }

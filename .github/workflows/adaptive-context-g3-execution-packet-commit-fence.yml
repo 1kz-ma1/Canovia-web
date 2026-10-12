@@ -1,0 +1,51 @@
+name: Adaptive Context G3 Execution Packet Commit Fence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/ExecutionPacketCommitFence.php'
+      - 'app/Services/ExecutionPacketService.php'
+      - 'app/Services/ExecutionOrchestrationContextService.php'
+      - 'app/Services/ExecutionDistributionService.php'
+      - 'app/Services/ExecutionGitHubHandoffService.php'
+      - 'app/Http/Controllers/ExecutionOrchestrationController.php'
+      - 'app/Http/Controllers/ExecutionDistributionController.php'
+      - 'tests/Feature/ExecutionPacketAiCommitFenceG3Test.php'
+      - '.github/workflows/adaptive-context-g3-execution-packet-commit-fence.yml'
+
+jobs:
+  execution-packet-source-purpose-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/ExecutionPacketCommitFence.php
+          php -l app/Services/ExecutionPacketService.php
+          php -l app/Services/ExecutionOrchestrationContextService.php
+          php -l app/Services/ExecutionDistributionService.php
+          php -l app/Services/ExecutionGitHubHandoffService.php
+          php -l app/Http/Controllers/ExecutionOrchestrationController.php
+          php -l app/Http/Controllers/ExecutionDistributionController.php
+          php -l tests/Feature/ExecutionPacketAiCommitFenceG3Test.php
+      - name: G3 provider success followed by stale context or revoked grant
+        run: php artisan test tests/Feature/ExecutionPacketAiCommitFenceG3Test.php
+      - name: Existing Execution and GitHub safety regressions
+        run: |
+          php artisan test \
+            tests/Feature/ExecutionOrchestrationV470Test.php \
+            tests/Feature/ExecutionCoordinationV469Test.php \
+            tests/Feature/ExecutionGitHubHandoffV466Test.php \
+            tests/Feature/NativeAiPurposeGrantFenceV05Test.php

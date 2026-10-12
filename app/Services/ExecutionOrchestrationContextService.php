@@ -159,6 +159,18 @@ final class ExecutionOrchestrationContextService
         return $snapshot;
     }
 
+    /**
+     * Use a different Request identity to bypass CoreContextService's
+     * request-scoped loaded Plan/Task graph. G3 commit/read revalidation must
+     * not compare a provider's old context against that same cached snapshot.
+     *
+     * @return array<string,mixed>
+     */
+    public function freshSnapshot(Request $request, Plan $plan, Task $task): array
+    {
+        return $this->snapshot(clone $request, $plan, $task);
+    }
+
     /** @return array<string,mixed> */
     private function taskSnapshot(Task $task): array
     {

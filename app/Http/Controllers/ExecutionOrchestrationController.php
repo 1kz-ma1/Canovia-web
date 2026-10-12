@@ -49,6 +49,19 @@ final class ExecutionOrchestrationController extends Controller
                 (string) $state['context_fingerprint'],
             );
 
+        // Session is not a durable authorization grant. Revoked/stale Native
+        // packets must not remain available to view or GitHub handoff.
+        if (is_array($state['packet'] ?? null)
+            && (int) ($state['native_run_id'] ?? 0) > 0
+            && (
+                $stale
+                || ! $packets->nativePacketCurrent($request, $plan, $task, $context)
+            )) {
+            $state['packet'] = null;
+            unset($state['native_run_id']);
+            $request->session()->put($this->sessionKey($plan, $task), $state);
+        }
+
         $nativeDecision = $access->resolveAccess(
             $request->user(),
             FeatureKey::AutomaticAiExecution,
@@ -211,6 +224,7 @@ final class ExecutionOrchestrationController extends Controller
 
         try {
             $generated = $packets->generateNative(
+                $request,
                 $context,
                 $plan,
                 $task,
@@ -219,9 +233,32 @@ final class ExecutionOrchestrationController extends Controller
                 $availableMinutes,
                 $executionRequest,
             );
+            // Recheck as close to the session write as possible.
+            if (! $packets->nativePacketCurrent($request, $plan, $task, $context)) {
+                throw new NativeAiExecutionException(
+                    'Execution Packet保存前にPlan / Taskの状態が変わりました。',
+                    'native_ai_source_changed',
+                    (int) $generated['run_id'],
+                );
+            }
+
             $state['packet'] = $generated['packet'];
             $state['native_run_id'] = $generated['run_id'];
         } catch (NativeAiExecutionException $exception) {
+            if (in_array($exception->errorCode, [
+                'native_ai_target_changed', 'native_ai_source_changed',
+                'native_ai_purpose_not_entitled', 'native_ai_actor_unverified',
+                'native_ai_authorization_unavailable',
+            ], true)) {
+                // Do not replace withheld model output with an old-context
+                // handoff prompt after an authorization/source change.
+                $request->session()->put($this->sessionKey($plan, $task), $state);
+
+                return redirect()
+                    ->route('plans.tasks.execution_orchestration.show', [$plan, $task])
+                    ->with('status', $exception->getMessage());
+            }
+
             $state['handoff_prompt'] = $packets->prompt($context, $actorType, $availableMinutes, $executionRequest);
             $request->session()->put($this->sessionKey($plan, $task), $state);
 
@@ -279,6 +316,8 @@ final class ExecutionOrchestrationController extends Controller
 
         $state['context_fingerprint'] = (string) $context['context_fingerprint'];
         $state['packet'] = $packets->importExternal((string) $validated['packet_json'], $context);
+        // Imported human-selected external content is not a Native AI run.
+        unset($state['native_run_id']);
 
         $request->session()->put($key, $state);
 
