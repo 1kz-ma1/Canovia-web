@@ -615,6 +615,29 @@ class ProviderConnectionActivityIntakeV559Test extends TestCase
         }
     }
 
+    public function test_plan_transfer_before_provider_commit_denies_stale_context(): void
+    {
+        [$user, $plan, $task] = $this->studyContext();
+        [$publicId] = $this->createConnection($user);
+        $issued = $this->issueContext($user, $plan, $task, $publicId);
+        $connection = ProviderConnection::where('public_id', $publicId)->firstOrFail();
+        $resolved = app(ProviderExecutionContextService::class)->resolve($issued, $connection);
+
+        $newOwner = User::factory()->create();
+        $plan->update(['user_id' => $newOwner->id]);
+
+        try {
+            app(ProviderActivityIntakeService::class)->accept(
+                $connection, $resolved,
+                $this->practicePayload($issued, 'transferred-preflight', 81)['activity'],
+            );
+            $this->fail('Transferred Plan accepted a stale context.');
+        } catch (ProviderConnectionRevokedException) {
+            $this->assertDatabaseCount('execution_activities', 0);
+            $this->assertDatabaseCount('task_evidences', 0);
+        }
+    }
+
     private function createConnection(
         User $user,
         string $label = 'Validation connection',
