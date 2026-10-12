@@ -16,9 +16,11 @@ AUTH0_DOMAIN = "canovia-mcp-dev.jp.auth0.com"
 AUTH0_ISSUER = f"https://{AUTH0_DOMAIN}/"
 AUTH0_METADATA = AUTH0_ISSUER + ".well-known/openid-configuration"
 CHATGPT_CIMD = "https://chatgpt.com/oauth/client.json"
-CHATGPT_CALLBACK = "https://chatgpt.com/connector_platform_oauth_redirect"  # legacy global CIMD only
-# New unpublished connections may use a unique /connector/oauth/{callback_id}.
-# Never guess a specific callback_id or treat the legacy URL as equivalent.
+CHATGPT_CALLBACK = "https://chatgpt.com/connector_platform_oauth_redirect"
+# OpenAI selects this STABLE callback when the AS publishes RFC 9207 issuer
+# identification and returns exact iss in actual authorization responses.
+# A callback-specific /connector/oauth/{callback_id} is used when RFC 9207
+# issuer identification is unavailable; never invent callback_id.
 CHATGPT_JWKS = "https://chatgpt.com/oauth/jwks.json"
 
 
@@ -47,8 +49,9 @@ def assess(client, jwks, issuer):
     checks = {
         "chatgpt_client_json": "blocked",
         "client_id_exact": "blocked",
-        "stable_callback": "blocked",  # proves only legacy global metadata shape
+        "stable_callback": "blocked",  # verifies published global CIMD redirect URI
         "current_connection_callback": "requires_exact_ui_match",
+        "rfc9207_stable_callback_candidate": "blocked",
         "current_connection_cimd": "requires_exact_ui_match",
         "chatgpt_oidc_scope_policy": "requires_connection_configuration",
         "pkce_authorization_code": "blocked",
@@ -114,6 +117,12 @@ def assess(client, jwks, issuer):
         if issuer.get("client_id_metadata_document_supported") is True:
             checks["auth0_cimd_discovery"] = "pass"
 
+    # Selection is conditional on AS discovery, not on when a ChatGPT
+    # connection was created. Public metadata only proves a candidate;
+    # exact login response iss and callback still need live acceptance.
+    if checks["auth0_rfc9207"] == "pass" and checks["stable_callback"] == "pass":
+        checks["rfc9207_stable_callback_candidate"] = "pass"
+
     public_compatible = all(checks[k] == "pass" for k in (
         "chatgpt_client_json", "client_id_exact", "stable_callback",
         "pkce_authorization_code", "free_tier_public_none_method",
@@ -124,6 +133,8 @@ def assess(client, jwks, issuer):
         "schema": "canovia.mcp.chatgpt_auth0_public_cimd_preflight.v1",
         "checks": checks,
         "public_metadata_compatible_with_free_candidate": public_compatible,
+        "callback_mode_from_discovery": ("stable_rfc9207"
+            if checks["auth0_rfc9207"] == "pass" else "callback_specific_or_unknown"),
         "auth0_cimd_registration_proven": False,
         "current_connection_callback_verified": False,
         "current_connection_cimd_verified": False,

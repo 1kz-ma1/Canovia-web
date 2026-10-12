@@ -50,6 +50,8 @@ class CIMDFreeCompatibilityTest(unittest.TestCase):
         self.assertTrue(result["public_metadata_compatible_with_free_candidate"])
         self.assertFalse(result["auth0_cimd_registration_proven"])
         self.assertFalse(result["current_connection_callback_verified"])
+        self.assertEqual("pass", result["checks"]["rfc9207_stable_callback_candidate"])
+        self.assertEqual("stable_rfc9207", result["callback_mode_from_discovery"])
         self.assertFalse(result["current_connection_cimd_verified"])
         self.assertFalse(result["oidc_scope_interoperability_verified"])
         self.assertEqual("requires_exact_ui_match", result["checks"]["current_connection_callback"])
@@ -110,14 +112,16 @@ class CIMDFreeCompatibilityTest(unittest.TestCase):
         self.assertEqual("verify_exact_connection_callback_cimd_and_oidc_policy", out["next_step"])
         self.assertFalse(out["current_connection_callback_verified"])
 
-    def test_legacy_callback_must_not_count_as_current_connection_proof(self):
-        # The global metadata still contains an old stable redirect and is
-        # structurally compatible, but the actual newly-created connection
-        # needs its own callback and CIMD identity from the management UI.
+    def test_rfc9207_stable_callback_candidate_is_not_live_login_proof(self):
+        # The published global CIMD has the stable redirect, and OpenAI
+        # selects it for a new connection when RFC9207 is supported. The
+        # callback in this exact connection still needs UI/runtime proof.
         c = chatgpt()
         self.assertEqual([mod.CHATGPT_CALLBACK], c["redirect_uris"])
         r = mod.assess(c, jwks(), auth0())
         self.assertTrue(r["public_metadata_compatible_with_free_candidate"])
+        self.assertEqual("stable_rfc9207", r["callback_mode_from_discovery"])
+        self.assertEqual("pass", r["checks"]["rfc9207_stable_callback_candidate"])
         self.assertFalse(r["current_connection_callback_verified"])
         self.assertFalse(r["current_connection_cimd_verified"])
         self.assertFalse(r["oidc_scope_interoperability_verified"])
@@ -126,6 +130,15 @@ class CIMDFreeCompatibilityTest(unittest.TestCase):
             r["checks"]["current_connection_cimd"],
             r["checks"]["chatgpt_oidc_scope_policy"],
         ))
+
+    def test_rfc9207_missing_requires_callback_specific_url_not_global_stable(self):
+        issuer = auth0()
+        issuer["authorization_response_iss_parameter_supported"] = False
+        r = mod.assess(chatgpt(), jwks(), issuer)
+        self.assertEqual("callback_specific_or_unknown", r["callback_mode_from_discovery"])
+        self.assertEqual("blocked", r["checks"]["rfc9207_stable_callback_candidate"])
+        self.assertFalse(r["public_metadata_compatible_with_free_candidate"])
+        self.assertFalse(r["current_connection_callback_verified"])
 
     def test_cli_synthetic_data_no_secret_leak(self):
         with tempfile.TemporaryDirectory() as d:
