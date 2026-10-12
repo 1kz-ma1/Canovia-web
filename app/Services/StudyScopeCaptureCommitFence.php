@@ -183,8 +183,11 @@ final class StudyScopeCaptureCommitFence
                 'status' => (string) $source->status,
                 'type' => (string) $source->source_type,
                 'content' => (string) $source->content,
+                'title' => (string) $source->title,
+                'metadata' => $source->metadata ?? [],
                 'name' => (string) $source->original_name,
                 'mime' => (string) $source->mime_type,
+                'size' => $source->byte_size,
                 'path' => $source->storage_path,
                 'bytes' => $bytesHash,
             ], JSON_THROW_ON_ERROR));
