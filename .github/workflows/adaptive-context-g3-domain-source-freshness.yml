@@ -1,0 +1,40 @@
+name: Adaptive Context G3 Domain Source Freshness
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Intelligence/Services/IntelligenceDomainSourceFreshnessGuard.php'
+      - 'app/Intelligence/Services/IntelligenceEvidenceFreshnessGuard.php'
+      - 'tests/Feature/IntelligenceDomainSourceFreshnessG3Test.php'
+      - '.github/workflows/adaptive-context-g3-domain-source-freshness.yml'
+
+jobs:
+  career-development-read-freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP syntax
+        run: |
+          php -l app/Intelligence/Services/IntelligenceDomainSourceFreshnessGuard.php
+          php -l app/Intelligence/Services/IntelligenceEvidenceFreshnessGuard.php
+          php -l tests/Feature/IntelligenceDomainSourceFreshnessG3Test.php
+      - name: G3 non-TaskEvidence Career and Development source mutations
+        run: php artisan test tests/Feature/IntelligenceDomainSourceFreshnessG3Test.php
+      - name: Career V55 and source correction regression
+        run: php artisan test tests/Feature/CareerIntelligenceV550Test.php tests/Feature/StateChangeFeedbackV546Test.php
+      - name: Actor-scoped V53 snapshot and historical observation
+        run: php artisan test tests/Feature/StateSnapshotActorIsolationG1Test.php tests/Feature/IntelligenceStateEvidenceV531Test.php
+      - name: Team Development and Learning safety regression
+        run: php artisan test tests/Feature/DevelopmentTeamTaskDependencyV5869Test.php tests/Feature/StudyScopeCaptureV534Test.php
