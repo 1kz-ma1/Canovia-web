@@ -124,6 +124,22 @@ final class StudyPracticeGenerationCommitFenceG3Test extends TestCase
         $this->assertSame('succeeded', NativeAiRun::query()->firstOrFail()->status);
     }
 
+    public function test_study_review_can_generate_new_questions_for_task_already_completed_before_request(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $task->update([
+            'status' => 'done',
+            'progress_percent' => 100,
+            'remaining_minutes' => 0,
+        ]);
+        $this->fakeNative($plan, $task);
+
+        $this->generate($user, $plan, $task)->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('study_practice_sessions', 1);
+        $this->assertSame('done', $task->fresh()->status);
+    }
+
     public function test_user_finishes_task_while_native_generation_runs_and_no_new_session_is_saved(): void
     {
         [$user, $plan, $task] = $this->scenario();
