@@ -20,6 +20,7 @@ final class McpStagingProviderPreflightService
         private readonly McpProtectedResourceConfiguration $resource,
         private readonly McpOAuthAccountLinkConfiguration $linkConfig,
         private readonly McpAccessTokenIntrospector $introspector,
+        private readonly McpExternalTokenVerifier $verifier,
     ) {}
 
     /**
@@ -37,12 +38,16 @@ final class McpStagingProviderPreflightService
     {
         // Preserve only named pass/fail codes, never configuration contents.
         // Do not return issuer host, identities, fingerprints or secrets.
+        $mode = $this->verifier->mode();
         $local = [
             'resource_discovery' => $this->resource->isReady() ? 'pass' : 'blocked',
-            'introspection_enabled' => config('canovia_mcp.token_introspection_enabled') === true
-                ? 'pass' : 'blocked',
-            'introspection_configuration' => $this->introspector->isConfigured()
-                ? 'pass' : 'blocked',
+            'token_verification_mode' => $mode !== null ? 'pass' : 'blocked',
+            'introspection_enabled' => $mode === 'auth0_jwt' ? 'not_applicable'
+                : (config('canovia_mcp.token_introspection_enabled') === true ? 'pass' : 'blocked'),
+            'introspection_configuration' => $mode === 'auth0_jwt' ? 'not_applicable'
+                : ($this->introspector->isConfigured() ? 'pass' : 'blocked'),
+            'auth0_jwt_configuration' => $mode === 'introspection' ? 'not_applicable'
+                : ($mode === 'auth0_jwt' && $this->verifier->isConfigured() ? 'pass' : 'blocked'),
             'account_link_configuration' => $this->linkConfig->settings() !== null
                 ? 'pass' : 'blocked',
             'plan_consent_enabled' => config('canovia_mcp.plan_consent_enabled') === true
@@ -72,8 +77,10 @@ final class McpStagingProviderPreflightService
         }
 
         $allLocal = ! in_array('blocked', $local, true);
-        $allRemote = ! in_array('not_probed', $provider, true)
-            && ! in_array('blocked', $provider, true);
+        // Metadata never proves issuance or consent. JWT mode deliberately
+        // retains two human/real-token acceptance gates even when the public
+        // OAuth metadata is otherwise compatible.
+        $allRemote = ! array_diff(array_values($provider), ['pass', 'not_applicable']);
 
         return [
             'schema' => 'canovia.mcp.staging_provider_preflight.v1',
@@ -88,7 +95,9 @@ final class McpStagingProviderPreflightService
                 'provision_isolated_canovia_staging_service_and_database',
                 'register_canovia_confidential_oauth_client_and_exact_callback',
                 'register_chatgpt_oauth_client_and_confirm_issued_client_id',
-                'test_actual_chatgpt_resource_bound_tokens_and_introspection_claims',
+                $mode === 'auth0_jwt'
+                    ? 'test_actual_signed_auth0_jwt_audience_client_scope_and_revocation'
+                    : 'test_actual_chatgpt_resource_bound_tokens_and_introspection_claims',
                 'test_explicit_plan_consent_revocation_and_read_only_mcp_end_to_end',
                 'review_oauth_security_origin_concurrency_cost_and_rollback',
             ],
@@ -149,19 +158,21 @@ final class McpStagingProviderPreflightService
             in_array('client_secret_basic', $methods, true)
                 ? 'pass' : 'blocked';
 
+        $jwtMode = $this->verifier->mode() === 'auth0_jwt';
         $scopes = $meta['scopes_supported'] ?? null;
-        $checks['resource_scope'] =
-            is_array($scopes) && array_is_list($scopes)
-            && in_array(McpProtectedResourceConfiguration::READ_SCOPE, $scopes, true)
-                ? 'pass' : 'blocked';
+        $checks['resource_scope'] = $jwtMode ? 'requires_signed_token'
+            : (is_array($scopes) && array_is_list($scopes)
+                && in_array(McpProtectedResourceConfiguration::READ_SCOPE, $scopes, true)
+                    ? 'pass' : 'blocked');
 
         // Discovery advertises RFC7662 support but it does not prove real
         // token claims, subject mapping, audience or token revocation.
         $introspection = $meta['introspection_endpoint'] ?? null;
         $configured = config('canovia_mcp.introspection_url');
-        $checks['introspection_endpoint'] = is_string($introspection)
-            && is_string($configured) && $introspection === $configured
-                ? 'pass' : 'blocked';
+        $checks['introspection_endpoint'] = $jwtMode ? 'not_applicable'
+            : (is_string($introspection)
+                && is_string($configured) && $introspection === $configured
+                    ? 'pass' : 'blocked');
 
         // ChatGPT uses CIMD public "none" or signed private_key_jwt.
         // DCR is a separate compatible path. Neither this nor registered
@@ -180,8 +191,13 @@ final class McpStagingProviderPreflightService
             $modes[] = 'dcr';
         }
 
-        $checks['chatgpt_client_registration'] = $modes !== []
-            ? 'pass' : 'blocked';
+        // Auth0 may advertise RFC8414 DCR even when client registration
+        // is tenant-restricted. Its public registration_endpoint is never
+        // proof that a ChatGPT client exists or can be enrolled. CIMD support
+        // was not advertised by the owner's Free tenant (2026-10-12).
+        $checks['chatgpt_client_registration'] = $jwtMode
+            ? 'requires_issued_client'
+            : ($modes !== [] ? 'pass' : 'blocked');
     }
 
     private function trustedRegistrationEndpoint(string $url, string $issuer): bool
