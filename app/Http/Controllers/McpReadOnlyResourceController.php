@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\McpAccessTokenIntrospector;
+use App\Services\McpExternalTokenVerifier;
 use App\Services\McpExplicitPlanConsentService;
 use App\Services\McpProtectedResourceConfiguration;
 use App\Services\McpReadOnlyContextTool;
@@ -26,7 +26,7 @@ final class McpReadOnlyResourceController extends Controller
         Request $request,
         McpProtectedResourceConfiguration $resource,
         McpExplicitPlanConsentService $consent,
-        McpAccessTokenIntrospector $introspector,
+        McpExternalTokenVerifier $verifier,
         McpReadOnlyContextTool $tool,
         McpAuthorizationProbeController $probe,
     ): JsonResponse|Response {
@@ -39,7 +39,7 @@ final class McpReadOnlyResourceController extends Controller
         abort_unless($resource->isReady()
             && $consent->isEnabled()
             && config('canovia_mcp.delegated_policy_enabled') === true
-            && config('canovia_mcp.token_introspection_enabled') === true, 404);
+            && $verifier->isConfigured(), 404);
 
         if (! $this->allowedOrigin($request)) {
             return $this->json(['error' => 'origin_not_allowed'], 403);
@@ -59,9 +59,10 @@ final class McpReadOnlyResourceController extends Controller
             return $this->unauthorized($resource, $authorization !== null);
         }
 
-        // Every request independently introspects the actual ChatGPT access
-        // token. Never infer principal from request JSON or a Canovia cookie.
-        $principal = $introspector->verify($bearer);
+        // Every call cryptographically verifies or introspects the token
+        // using the ONE explicitly selected trust mode. No fallback.
+        // Never trust bearer format, request JSON or browser cookies.
+        $principal = $verifier->verify($bearer);
         if ($principal === null) {
             return $this->unauthorized($resource, true);
         }

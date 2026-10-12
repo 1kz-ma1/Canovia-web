@@ -39,8 +39,41 @@ final class McpAuth0JwtTokenVerifier
 
     public function verify(string $accessToken): ?McpVerifiedTokenPrincipal
     {
+        return $this->verifyForExpectedClient(
+            $accessToken,
+            (string) config('canovia_mcp.allowed_client_id', ''),
+        );
+    }
+
+    /**
+     * Only the separately configured confidential Canovia account-link
+     * OAuth client may establish a verified external subject. A ChatGPT
+     * token can never be substituted to link a local Canovia session.
+     */
+    public function verifyAccountLink(string $accessToken): ?McpVerifiedTokenPrincipal
+    {
+        if (config('canovia_mcp.account_link_enabled') !== true
+            || config('canovia_mcp.account_link_client_id') === config('canovia_mcp.allowed_client_id')) {
+            return null;
+        }
+
+        return $this->verifyForExpectedClient(
+            $accessToken,
+            (string) config('canovia_mcp.account_link_client_id', ''),
+        );
+    }
+
+    private function verifyForExpectedClient(
+        string $accessToken,
+        string $expectedClientId,
+    ): ?McpVerifiedTokenPrincipal {
         $settings = $this->settings();
-        if ($settings === null || strlen($accessToken) < 32
+        if ($settings === null
+            || $expectedClientId === ''
+            || strlen($expectedClientId) > 255
+            || trim($expectedClientId) !== $expectedClientId
+            || preg_match('/[\x00-\x20\x7f]/', $expectedClientId) === 1
+            || strlen($accessToken) < 32
             || strlen($accessToken) > self::MAX_TOKEN_BYTES
             || preg_match('/\A[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\z/D', $accessToken) !== 1) {
             return null;
@@ -108,7 +141,7 @@ final class McpAuth0JwtTokenVerifier
                 $trustedClaims,
                 $settings['issuer'],
                 $settings['resource'],
-                $settings['client'],
+                $expectedClientId,
                 $now,
             )) {
                 return null;
@@ -117,7 +150,7 @@ final class McpAuth0JwtTokenVerifier
             return new McpVerifiedTokenPrincipal(
                 issuer: $settings['issuer'],
                 subject: $trustedClaims['sub'],
-                clientId: $settings['client'],
+                clientId: $expectedClientId,
                 audience: $settings['resource'],
                 scopes: array_values(array_unique(explode(' ', $trustedClaims['scope']))),
                 expiresAt: $trustedClaims['exp'],

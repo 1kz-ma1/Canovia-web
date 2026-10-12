@@ -27,6 +27,11 @@ return [
     'allowed_origins' => env('CANOVIA_MCP_ALLOWED_ORIGINS', ''),
 
 
+    // Explicit mutually exclusive token verifier: legacy introspection or
+    // approved Auth0 JWT. Unknown values and simultaneous flags fail closed.
+    // Mode alone does NOT turn on any MCP/OAuth/Plan endpoints.
+    'token_verification_driver' => env('CANOVIA_MCP_TOKEN_VERIFICATION_DRIVER', 'introspection'),
+
     // RFC 7662 introspection is a separate disabled component. The real IdP
     // MUST support introspection and return strict iss/aud/sub/client_id/exp
     // claims. Enabling it does not enable the MCP endpoint or grant consent.
