@@ -136,9 +136,29 @@ class CompanionMutationApplyService
                 ]);
             }
 
+            // Keep the source-lock order compatible with Evidence ingestion:
+            // Plan -> Task -> repository roots -> Evidence rows. The Candidate
+            // is already locked to preserve idempotent human approval.
+            if ($locked->plan_id !== null) {
+                $livePlan = Plan::query()->whereKey($locked->plan_id)
+                    ->lockForUpdate()->first();
+                if (! $livePlan) {
+                    throw ValidationException::withMessages(['candidate' => '対象Planを現在確認できません。']);
+                }
+                $locked->setRelation('plan', $livePlan);
+            }
+            if ($locked->task_id !== null) {
+                $liveTask = Task::query()->whereKey($locked->task_id)
+                    ->lockForUpdate()->first();
+                if (! $liveTask || (int) $liveTask->plan_id !== (int) $locked->plan_id) {
+                    throw ValidationException::withMessages(['candidate' => '対象Taskを現在確認できません。']);
+                }
+                $locked->setRelation('task', $liveTask);
+            }
+
             // Human confirmation does not renew the authority of a
             // previously generated AI claim when its GitHub source changed.
-            if (! $this->derivedSources->isCurrent(
+            if (! $this->derivedSources->isCurrentForCommit(
                 $locked->plan, data_get($locked->metadata, 'source_provenance'),
             )) {
                 throw ValidationException::withMessages([
