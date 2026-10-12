@@ -9,6 +9,10 @@ permissions:
   contents: read
 
 jobs:
+  # Always run MySQL 8.0/8.4 migration integrity for *every* production
+  # promotion, even when no migration files changed. Main PRs remain path-scoped.
+  production-mysql-integrity:
+    uses: ./.github/workflows/p0-disposable-mysql-schema.yml
   promotion-contract:
     name: Production promotion contract
     runs-on: ubuntu-latest

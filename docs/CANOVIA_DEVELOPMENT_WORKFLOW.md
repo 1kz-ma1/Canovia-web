@@ -115,8 +115,11 @@ Release routine:
    Snapshot existence is not a successful fork/restore test.
 4. Never audit moving `main` and then promote a different commit. Open a **release/* -> production** PR from the pinned candidate; the workflow rejects a release head that is not an ancestor of current `main`. The PR requires owner
    production go/no-go, a reviewed diff, and passing **Production Promotion Policy
-   Gate**, **P0 Disposable MySQL Migration Integrity**, **V56.12 Workspace Resume
-   Validation**, and **Production Migration Recovery Validation** where applicable.
+   Gate**, the unconditional **production-mysql-integrity** reusable MySQL 8.0/8.4
+   matrix, **V56.12 Workspace Resume
+   Validation**, and **Production Migration Recovery Validation**. The development
+   main branch keeps its changed-path-only MySQL CI to avoid slowing every
+   ordinary PR, while production promotions always run both MySQL engines.
    Promote using a **merge commit**, never squash: retain release/main ancestry so future
    promotion PRs do not repeatedly reintroduce prior changes.
 5. **First release only:** Render Auto Deploy must remain OFF. Owner changes the
