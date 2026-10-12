@@ -56,7 +56,9 @@ final class McpAuth0JwtProviderRoutingTest extends TestCase
 
         $key = openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_RSA, 'private_key_bits' => 2048]);
         $this->assertNotFalse($key);
-        openssl_pkey_export($key, $this->privateKey);
+        $pem = '';
+        $this->assertTrue(openssl_pkey_export($key, $pem));
+        $this->privateKey = $pem;
         $rsa = openssl_pkey_get_details($key)['rsa'];
         $this->jwk = [
             'kid' => 'synthetic-provider-key',
