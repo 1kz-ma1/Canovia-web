@@ -233,3 +233,7 @@ Current supported acceptance order: (1) manual review of exact Auth0 registered-
 ## 2026-10-12 Sealed staging Auth0 client wiring verification
 
 The offline, fail-closed ChatGPT/Auth0 dual-client configuration check, operator settings, private secret handling, and one-shot sealed Render startup procedure are specified in [the stage wiring operator runbook](MCP_AUTH0_STAGING_WIRING_OPERATOR_2026_10_12.md). No live OAuth token, stage exposure, env edit, new deployment or production change is part of this source-only implementation.
+
+## 2026-10-13 Exact ChatGPT connector callback and OIDC scope override follow-up
+
+The **global legacy** ChatGPT CIMD URL is not proof of the **current plugin connection** callback or its registration mapping. OpenAI now documents connection-specific `https://chatgpt.com/connector/oauth/{callback_id}` callback URIs for new plugins. Record the exact URI from ChatGPT's plugin management UI before evaluating the previously imported Auth0 application. Also evaluate supported plugin-side `defaultScopes: []`, exact `baseScopes`, and `oidcEnabled: false` as an **unverified** OAuth-only candidate against Auth0 strict third-party OIDC restrictions. Never edit provider-wide OIDC metadata or weaken security constraints. The complete runbook and candidate manifest are [here](MCP_CHATGPT_AUTH0_CALLBACK_SCOPE_ACCEPTANCE_2026_10_13.md).

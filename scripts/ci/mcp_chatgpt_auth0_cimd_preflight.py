@@ -16,7 +16,9 @@ AUTH0_DOMAIN = "canovia-mcp-dev.jp.auth0.com"
 AUTH0_ISSUER = f"https://{AUTH0_DOMAIN}/"
 AUTH0_METADATA = AUTH0_ISSUER + ".well-known/openid-configuration"
 CHATGPT_CIMD = "https://chatgpt.com/oauth/client.json"
-CHATGPT_CALLBACK = "https://chatgpt.com/connector_platform_oauth_redirect"
+CHATGPT_CALLBACK = "https://chatgpt.com/connector_platform_oauth_redirect"  # legacy global CIMD only
+# New unpublished connections may use a unique /connector/oauth/{callback_id}.
+# Never guess a specific callback_id or treat the legacy URL as equivalent.
 CHATGPT_JWKS = "https://chatgpt.com/oauth/jwks.json"
 
 
@@ -45,7 +47,10 @@ def assess(client, jwks, issuer):
     checks = {
         "chatgpt_client_json": "blocked",
         "client_id_exact": "blocked",
-        "stable_callback": "blocked",
+        "stable_callback": "blocked",  # proves only legacy global metadata shape
+        "current_connection_callback": "requires_exact_ui_match",
+        "current_connection_cimd": "requires_exact_ui_match",
+        "chatgpt_oidc_scope_policy": "requires_connection_configuration",
         "pkce_authorization_code": "blocked",
         "free_tier_public_none_method": "not_advertised",
         "private_key_jwt_method": "not_advertised",
@@ -120,12 +125,15 @@ def assess(client, jwks, issuer):
         "checks": checks,
         "public_metadata_compatible_with_free_candidate": public_compatible,
         "auth0_cimd_registration_proven": False,
+        "current_connection_callback_verified": False,
+        "current_connection_cimd_verified": False,
+        "oidc_scope_interoperability_verified": False,
         "actual_chatgpt_login_proven": False,
         "staging_activation_authorized": False,
         "production_authorized": False,
         "next_step": ("enable_tenant_cimd_toggle_and_preview_import"
                       if checks["auth0_cimd_discovery"] != "pass"
-                      else "preview_exact_client_in_auth0_dashboard"),
+                      else "verify_exact_connection_callback_cimd_and_oidc_policy"),
     }
 
 

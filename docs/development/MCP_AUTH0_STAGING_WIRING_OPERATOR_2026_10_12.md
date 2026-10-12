@@ -45,3 +45,9 @@ References:
 - https://developers.openai.com/plugins/build/auth
 - https://auth0.com/docs/get-started/applications/third-party-applications/security-controls
 - https://auth0.com/docs/get-started/applications/third-party-applications/configure-third-party-applications
+
+## 2026-10-13 Correction — connector-specific ChatGPT callback and OIDC scopes
+
+**Do not use the global legacy ChatGPT CIMD callback as evidence that a newly created ChatGPT plugin has the same callback.** Use the exact redirect URL and CIMD document displayed for the intended connector. OpenAI now documents new connector callbacks as `https://chatgpt.com/connector/oauth/{callback_id}`; the previously imported global `https://chatgpt.com/oauth/client.json` document still lists a legacy callback. The Auth0 third-party client grant and `tpc_` Client ID must match the registered **actual connection**, not just the global import.
+
+A candidate workaround for ChatGPT OIDC defaults versus Auth0 strict third-party OAuth-only scope restrictions exists via plugin `defaultScopes: []`, `baseScopes: ["canovia.development.read"]`, and `oidcEnabled: false` where the supported plugin configuration allows. This is untested, not a reason to loosen Auth0 or Canovia authorization. Detailed diagnostic and example: [callback and scope acceptance](MCP_CHATGPT_AUTH0_CALLBACK_SCOPE_ACCEPTANCE_2026_10_13.md).
