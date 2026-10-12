@@ -1,0 +1,42 @@
+name: Adaptive Context G3 Native Study Question Generation Fence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/StudyPracticeGenerationCommitFence.php'
+      - 'app/Services/StudyPracticeOrchestrator.php'
+      - 'tests/Feature/StudyPracticeGenerationCommitFenceG3Test.php'
+      - '.github/workflows/adaptive-context-g3-study-question-generation-fence.yml'
+
+jobs:
+  native-study-questions-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/StudyPracticeGenerationCommitFence.php
+          php -l app/Services/StudyPracticeOrchestrator.php
+          php -l tests/Feature/StudyPracticeGenerationCommitFenceG3Test.php
+      - name: Study generation provider-success then source/entitlement change
+        run: php artisan test tests/Feature/StudyPracticeGenerationCommitFenceG3Test.php
+      - name: Existing Native assessment and study regressions
+        run: |
+          php artisan test \
+            tests/Feature/StudyAssessmentAiCommitFenceG3Test.php \
+            tests/Feature/NativeAiPracticeV418Test.php \
+            tests/Feature/HybridQuestionAssemblyV4182Test.php \
+            tests/Feature/StudyPracticeOrchestrationV401Test.php \
+            tests/Feature/NativeAiPurposeGrantFenceV05Test.php
