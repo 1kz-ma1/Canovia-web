@@ -103,8 +103,7 @@ starts at last verified Render Live SHA `15abdc9de6f24b5250fb255c579d1aa55facaf1
 No direct or force pushes to production.
 
 Release routine:
-1. Pin exact main SHA, freeze release scope, review *all* unshipped paths, migrations,
-   Composer/deployment/startup changes, data/privacy/feature flags, and required CI.
+1. Pin exact main SHA and cut a release candidate branch `release/YYYY-MM-DD-<shortsha>` **before any live DB audit**. Freeze release scope and review *all* unshipped paths, migrations, Composer/deployment/startup changes, data/privacy/feature flags, and required CI.
 2. For MySQL migrations, rehearse all pending operations on disposable MySQL 8.0/8.4
    (including legacy-row retention and repeatability); run the reviewed Mac
    metadata-only Aiven audit against the **exact chosen source SHA**.
@@ -114,11 +113,11 @@ Release routine:
    the owner's acceptance of **untested restore risk** on the Free service,
    plus current effective Render security/session/DB/worker configuration.
    Snapshot existence is not a successful fork/restore test.
-4. Open **main -> production** release promotion PR. The PR requires owner
+4. Never audit moving `main` and then promote a different commit. Open a **release/* -> production** PR from the pinned candidate; the workflow rejects a release head that is not an ancestor of current `main`. The PR requires owner
    production go/no-go, a reviewed diff, and passing **Production Promotion Policy
    Gate**, **P0 Disposable MySQL Migration Integrity**, **V56.12 Workspace Resume
    Validation**, and **Production Migration Recovery Validation** where applicable.
-   Promote using a **merge commit**, never squash: retain main's ancestry so future
+   Promote using a **merge commit**, never squash: retain release/main ancestry so future
    promotion PRs do not repeatedly reintroduce prior changes.
 5. **First release only:** Render Auto Deploy must remain OFF. Owner changes the
    watched branch to production via Render dashboard (the connector cannot modify
@@ -128,7 +127,7 @@ Release routine:
    event ordering, iOS WKWebView/PWA and desktop smoke.
 6. **After that first release is accepted**, owner enables Render Auto Deploy =
    commit with `production` as the watched branch. For future updates, the
-   approved release PR merge is the deliberate deployment trigger. Monitor Live
+   approved pinned release-candidate PR merge is the deliberate deployment trigger. Monitor Live
    SHA, errors and smoke after every promotion; pause auto deploy during incidents.
 
 **Branch protection requires owner action:** configure GitHub Settings -> Rules ->
