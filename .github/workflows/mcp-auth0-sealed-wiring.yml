@@ -1,0 +1,47 @@
+name: MCP Auth0 Sealed Stage Wiring Preflight
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/McpAuth0SealedStagingWiringReadiness.php'
+      - 'tests/Feature/McpAuth0SealedStagingWiringTest.php'
+      - 'routes/console.php'
+      - 'docker/mcp-staging-start.sh'
+      - 'docker/render-start.sh'
+      - '.github/workflows/mcp-auth0-sealed-wiring.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  auth0-sealed-config:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+      - name: Lint offline wiring paths
+        run: |
+          php -l app/Services/McpAuth0SealedStagingWiringReadiness.php
+          php -l tests/Feature/McpAuth0SealedStagingWiringTest.php
+          php -l routes/console.php
+          sh -n docker/mcp-staging-start.sh
+          sh -n docker/render-start.sh
+      - name: Assert no stage access, tokens, network or credentials
+        env:
+          APP_ENV: testing
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          SESSION_DRIVER: array
+          CACHE_STORE: array
+        run: |
+          php artisan test tests/Feature/McpAuth0SealedStagingWiringTest.php tests/Feature/McpStagingProviderPreflightTest.php --colors=never

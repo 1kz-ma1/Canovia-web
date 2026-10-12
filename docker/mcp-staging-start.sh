@@ -138,6 +138,30 @@ if [ "${CANOVIA_STAGING_WEB_ACCESS_ENABLED:-false}" = "true" ]; then
         || deny "staging public web requires pinned PostgreSQL"
 fi
 
+# Opt-in NO-NETWORK Auth0 config inventory; never activates public OAuth/MCP.
+case "${CANOVIA_STAGING_VERIFY_AUTH0_WIRING_ON_START:-false}" in
+    false|true) ;;
+    *) deny "invalid Auth0 wiring verification switch" ;;
+esac
+if [ "${CANOVIA_STAGING_VERIFY_AUTH0_WIRING_ON_START:-false}" = "true" ]; then
+    [ "${CANOVIA_STAGING_DB_MODE:-sqlite}" = "render_postgres" ] \
+        || deny "Auth0 wiring check requires pinned PostgreSQL"
+    [ "${CANOVIA_STAGING_WEB_ACCESS_ENABLED:-false}" = "false" ] \
+        || deny "Auth0 wiring check requires closed Web"
+    [ "${CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED:-false}" = "false" ] \
+        || deny "Auth0 wiring check requires no public approval"
+    for name in CANOVIA_MCP_DISCOVERY_ENABLED \
+        CANOVIA_MCP_TOKEN_INTROSPECTION_ENABLED \
+        CANOVIA_MCP_AUTH0_JWT_VERIFICATION_ENABLED \
+        CANOVIA_MCP_ACCOUNT_LINK_ENABLED \
+        CANOVIA_MCP_PLAN_CONSENT_ENABLED \
+        CANOVIA_MCP_DELEGATED_POLICY_ENABLED \
+        CANOVIA_MCP_TOOLS_ENABLED; do
+        [ "$(printenv "$name" 2>/dev/null || true)" != "true" ] \
+            || deny "Auth0 wiring preflight requires OAuth/MCP closed"
+    done
+fi
+
 # A synthetic actor can be provisioned during one deliberately armed
 # staging restart. This is NOT a Web endpoint or a production seed.
 case "${CANOVIA_STAGING_SYNTHETIC_OWNER_BOOTSTRAP_ON_START:-false}" in
