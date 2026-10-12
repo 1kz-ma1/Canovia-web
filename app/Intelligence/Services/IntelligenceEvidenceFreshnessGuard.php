@@ -16,6 +16,7 @@ final class IntelligenceEvidenceFreshnessGuard
 {
     public function __construct(
         private readonly TaskEvidenceAdapter $adapter,
+        private readonly IntelligenceDomainSourceFreshnessGuard $domainSources,
     ) {}
 
     /**
@@ -62,7 +63,9 @@ final class IntelligenceEvidenceFreshnessGuard
             $planId = (int) ($snapshot->plan_id ?? 0);
             $ids = $this->ids($refs);
             if ($ids === []) {
-                return true;
+                // Career may derive state directly from applications/reviews,
+                // even when there is no linked TaskEvidence to verify.
+                return $this->domainSources->isCurrent($snapshot);
             }
 
             if ($planId <= 0) {
@@ -112,7 +115,9 @@ final class IntelligenceEvidenceFreshnessGuard
                 }
             }
 
-            return true;
+            // Source families outside TaskEvidence (notably Career
+            // applications/reviews) must also match the current V53 projection.
+            return $this->domainSources->isCurrent($snapshot);
         } catch (Throwable) {
             return false;
         }
