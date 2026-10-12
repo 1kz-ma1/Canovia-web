@@ -3,13 +3,16 @@
 namespace Tests\Feature;
 
 use App\Enums\EvidenceSource;
+use App\Enums\ProductKey;
 use App\Models\Plan;
+use App\Models\PlanArtifact;
 use App\Models\PlanActionDraft;
 use App\Models\PlanActionDraftRevision;
 use App\Models\PlanMember;
 use App\Models\Task;
 use App\Models\TaskEvidence;
 use App\Models\User;
+use App\Models\UserProductGrant;
 use App\Models\WorkLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -49,6 +52,32 @@ final class PlanActionDraftV5873Test extends TestCase
 
     private function observed(Plan $plan, Task $task, string $type, string $source = 'native', array $metadata = []): TaskEvidence
     {
+        if ($source === 'github') {
+            $root = PlanArtifact::query()->firstOrCreate(
+                ['plan_id' => $plan->id, 'provider' => 'github', 'artifact_type' => 'repository'],
+                [
+                    'created_by_user_id' => $plan->user_id,
+                    'title' => 'Canovia-web',
+                    'url' => 'https://github.com/1kz-ma1/Canovia-web',
+                    'metadata' => ['github_app_connection' => [
+                        'status' => 'connected',
+                        'installation_id' => 777,
+                        'source_epoch' => '18edfd47-0fa5-4020-aa2d-d273c603ec90',
+                    ]],
+                ],
+            );
+            UserProductGrant::query()->firstOrCreate([
+                'user_id' => $plan->user_id,
+                'product_key' => ProductKey::AllAccess,
+            ], ['source' => 'manual', 'starts_at' => now()->subMinute()]);
+            $metadata = [
+                ...$metadata,
+                'repo_full_name' => '1kz-ma1/Canovia-web',
+                'github_repository_artifact_id' => (int) $root->id,
+                'github_source_epoch' => data_get($root->metadata, 'github_app_connection.source_epoch'),
+            ];
+        }
+
         return TaskEvidence::create([
             'plan_id' => $plan->id, 'task_id' => $task->id,
             'source' => $source, 'type' => $type,
