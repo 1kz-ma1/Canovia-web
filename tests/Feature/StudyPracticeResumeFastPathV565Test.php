@@ -55,18 +55,16 @@ class StudyPracticeResumeFastPathV565Test extends TestCase
             ->followingRedirects()
             ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
             ->assertOk()
-            ->assertSee('CONTINUE PRACTICE')
+            ->assertSee('学習に集中')
             ->assertSee('DNS確認')
-            ->assertSee('保存済みの回答をそのまま復元しました')
-            ->assertSee('1/2問 回答済み')
-            ->assertSee('続きから回答')
+            ->assertDontSee('CONTINUE PRACTICE')
             ->assertSee('DNSは名前解決を行うため。')
             ->assertSee('data-study-focus-space', false)
             ->assertSee('data-study-focus-personalization', false)
             ->assertDontSee('PRACTICE RELIABILITY')
             ->assertDontSee('PRACTICE STRATEGY')
             ->assertDontSee('data-study-practice-history', false)
-            ->assertSee('data-study-practice-resume-fast-path', false)
+            ->assertDontSee('data-study-practice-resume-fast-path', false)
             ->assertSee('data-study-practice-scroll-to="practice-questions"', false)
             ->assertDontSee('PRACTICE STRATEGY')
             ->assertDontSee('PRACTICE RELIABILITY')
@@ -128,9 +126,9 @@ class StudyPracticeResumeFastPathV565Test extends TestCase
             ->followingRedirects()
             ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
             ->assertOk()
-            ->assertSee('CONTINUE PRACTICE')
-            ->assertSee('0/2問 回答済み')
-            ->assertSee('続きから回答');
+            ->assertSee('data-study-focus-space', false)
+            ->assertSee('学習に集中')
+            ->assertDontSee('CONTINUE PRACTICE');
     }
 
     public function test_answered_session_uses_existing_evaluation_recovery_not_answer_resume(): void
