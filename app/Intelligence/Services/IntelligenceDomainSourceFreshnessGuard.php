@@ -4,6 +4,7 @@ namespace App\Intelligence\Services;
 
 use App\Intelligence\Career\CareerPlanIntelligenceService;
 use App\Intelligence\Development\DevelopmentPlanIntelligenceService;
+use App\Intelligence\Development\DevelopmentStateBuilder;
 use App\Intelligence\Enums\IntelligenceDomain;
 use App\Intelligence\Support\IntelligenceFingerprint;
 use App\Models\IntelligenceStateSnapshot;
@@ -28,9 +29,18 @@ final class IntelligenceDomainSourceFreshnessGuard
     {
         $domain = $snapshot->domain;
         $scope = $snapshot->scope_type;
+        // V53's generic State/Decision history can also use development_plan
+        // scopes with manually supplied metrics. Only the actual domain
+        // builder has a replayable source projection. Generic states keep
+        // their original TaskEvidence signatures and actor/scope policy.
+        $verifiedDevelopmentBuilder =
+            data_get($snapshot->metadata, 'builder')
+                === DevelopmentStateBuilder::class;
+
         if (! (
             ($domain === IntelligenceDomain::Career && $scope === 'career_plan')
-            || ($domain === IntelligenceDomain::Development && $scope === 'development_plan')
+            || ($domain === IntelligenceDomain::Development
+                && $scope === 'development_plan' && $verifiedDevelopmentBuilder)
         )) {
             // Other source families require their own bounded adapters.
             return true;
