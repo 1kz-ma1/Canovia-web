@@ -20,6 +20,7 @@ final class StudyPracticeNativeCommitFence
 {
     public function __construct(
         private readonly NativeAiPurposeAuthorizationGuard $purposeGuard,
+        private readonly PlanCategoryProfileService $categoryProfiles,
     ) {}
 
     /**
@@ -73,7 +74,7 @@ final class StudyPracticeNativeCommitFence
             !$livePlan || !$liveTask
             || ($sessionId !== null && !$liveSession)
             || (int) $liveTask->plan_id !== (int) $livePlan->id
-            || (string) $livePlan->category !== '資格学習'
+            || $this->categoryProfiles->forPlan($livePlan)->key !== 'study'
             || in_array((string) $liveTask->status, ['done', 'cancelled'], true)
             || (int) $liveTask->progress_percent >= 100
         ) {
