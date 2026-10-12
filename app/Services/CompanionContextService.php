@@ -15,6 +15,7 @@ class CompanionContextService
         private readonly GoalContextService $goalContexts,
         private readonly FutureMemoService $memories,
         private readonly GitHubTaskEvidenceReuseGuard $evidenceGuard,
+        private readonly CompanionDerivedEvidenceSourceGuard $derivedSources,
     ) {}
 
     /**
@@ -144,6 +145,10 @@ class CompanionContextService
             ->filter(fn (TaskEvidence $evidence) => $this->evidenceGuard->eligible($plan, $evidence))
             ->take(6)
             ->map(fn (TaskEvidence $evidence) => [
+                'id' => (int) $evidence->id,
+                'source' => $evidence->source->value,
+                'source_revision' => $evidence->source->value === 'github'
+                    ? $this->derivedSources->revision($evidence) : null,
                 'task_id' => (int) $evidence->task_id,
                 'type' => $evidence->type,
                 'label' => $evidence->typeLabel(),
