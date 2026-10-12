@@ -387,7 +387,36 @@ final class GitHubDevelopmentObservationService
                 return null;
             }
 
-            $values['source_epoch'] = $sourceEpoch;
+            $effectiveEpoch = $sourceEpoch;
+            if ($effectiveEpoch === null) {
+                // Upgrade path for already-connected pre-epoch repositories:
+                // issue the first epoch only AFTER a successful authoritative
+                // REST fetch, with exact same installation/owner under lock.
+                // This signs only this fetched fact; old rows stay NULL.
+                $selectedInstallation = (int) data_get(
+                    $root->metadata, 'github_app_connection.installation_id', 0,
+                );
+                $currentInstallation = (int) data_get(
+                    $liveRoot->metadata, 'github_app_connection.installation_id', 0,
+                );
+                if (data_get($root->metadata, 'github_app_connection.status') !== 'connected'
+                    || $selectedInstallation <= 0
+                    || $selectedInstallation !== $currentInstallation) {
+                    return null;
+                }
+
+                $metadata = (array) $liveRoot->metadata;
+                $metadata['github_app_connection'] = $this->epochs->verified(
+                    $metadata, (array) data_get($metadata, 'github_app_connection', []),
+                );
+                $liveRoot->update(['metadata' => $metadata]);
+                $effectiveEpoch = $this->epochs->current($metadata);
+                if ($effectiveEpoch === null) {
+                    return null;
+                }
+            }
+
+            $values['source_epoch'] = $effectiveEpoch;
             $observation = DevelopmentActivityObservation::query()
                 ->createOrFirst($identity, $values);
 
@@ -406,12 +435,12 @@ final class GitHubDevelopmentObservationService
                 // Immutable commit refetched through the current connection
                 // is independently proven in the new epoch. Preserve its
                 // human-chosen Task association and immutable payload.
-                if ($sourceEpoch !== null && $locked->source_epoch !== $sourceEpoch) {
+                if ($effectiveEpoch !== null && $locked->source_epoch !== $effectiveEpoch) {
                     if ($kind === 'commit' && (string) $locked->sha !== (string) $values['sha']) {
                         return $locked;
                     }
                     $locked->update([
-                        'source_epoch' => $sourceEpoch,
+                        'source_epoch' => $effectiveEpoch,
                         'last_observed_at' => now(),
                     ]);
                 }
@@ -450,7 +479,7 @@ final class GitHubDevelopmentObservationService
                             && (string) $locked->sha === (string) $values['sha']
                             && (string) $locked->ref === (string) $values['ref']) {
                             $locked->update([
-                                'source_epoch' => $sourceEpoch,
+                                'source_epoch' => $effectiveEpoch,
                                 'last_observed_at' => now(),
                             ]);
                         }
