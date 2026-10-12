@@ -10,6 +10,7 @@ final class DevelopmentPersonalizationSignalService
 {
     public function __construct(
         private readonly PlanCategoryProfileService $profiles,
+        private readonly GitHubSourceEpochService $epochs,
     ) {}
 
     /**
@@ -51,6 +52,12 @@ final class DevelopmentPersonalizationSignalService
             })
             ->values();
 
+        $currentEpochs = $repositories->mapWithKeys(function (PlanArtifact $root): array {
+            $epoch = $this->epochs->current((array) $root->metadata);
+
+            return [(int) $root->id => $epoch];
+        })->filter(fn ($epoch) => $epoch !== null);
+
         $developmentPlanIds = $repositories
             ->pluck('plan_id')
             ->map(fn ($id) => (int) $id)
@@ -78,10 +85,15 @@ final class DevelopmentPersonalizationSignalService
                     'id',
                     'kind',
                     'repository_artifact_id',
+                    'source_epoch',
                     'external_key',
                     'occurred_at',
                     'last_observed_at',
-                ]);
+                ])
+                ->filter(fn (DevelopmentActivityObservation $item) =>
+                    $item->source_epoch !== null
+                    && $currentEpochs->get((int) $item->repository_artifact_id) === $item->source_epoch
+                )->values();
 
         $observations = $longWindowObservations
             ->filter(
@@ -251,11 +263,13 @@ final class DevelopmentPersonalizationSignalService
                 (int) $repo->plan_id,
                 (string) $repo->url,
                 (int) data_get($repo->metadata, 'github_app_connection.installation_id', 0),
+                $this->epochs->current((array) $repo->metadata),
             ])->sortBy(fn (array $row) => $row[0])->values()->all(),
             'observations' => $longWindowObservations->map(
                 fn (DevelopmentActivityObservation $item) => [
                     (int) $item->id,
                     (int) $item->repository_artifact_id,
+                    (string) $item->source_epoch,
                     (string) $item->external_key,
                     $item->last_observed_at?->toIso8601String(),
                 ],
