@@ -19,6 +19,7 @@ final class GitHubDevelopmentEvidenceService
         private readonly TaskEvidenceService $evidence,
         private readonly FeatureAccessService $access,
         private readonly GitHubTaskEvidenceCommitGuard $commitGuard,
+        private readonly GitHubSourceEpochService $epochs,
     ) {}
 
     /**
@@ -91,6 +92,7 @@ final class GitHubDevelopmentEvidenceService
             fn (Task $liveTask, array $validIds) => $this->recordTargetEvidence(
                 $liveTask, $validIds, $target, $snapshot,
             ),
+            $this->epochs->current((array) $repository?->metadata),
         );
     }
 
@@ -161,6 +163,19 @@ final class GitHubDevelopmentEvidenceService
 
         if ($connectedPlanIds->isEmpty()) {
             return $this->emptyCounts();
+        }
+
+        $epochByPlan = [];
+        foreach ($artifacts as $candidate) {
+            $parsed = $this->workflow->parseUrl((string) $candidate->url);
+            if (($parsed['kind'] ?? null) === 'repository'
+                && (int) data_get($candidate->metadata, 'github_app_connection.installation_id', 0)
+                    === $installationId
+                && data_get($candidate->metadata, 'github_app_connection.status') === 'connected') {
+                $epochByPlan[(int) $candidate->plan_id] = $this->epochs->current(
+                    (array) $candidate->metadata,
+                );
+            }
         }
 
         $counts = $this->emptyCounts();
@@ -251,6 +266,7 @@ final class GitHubDevelopmentEvidenceService
                     fn (Task $liveTask, array $validIds) => $this->recordTargetEvidence(
                         $liveTask, $validIds, $target, $snapshot,
                     ),
+                    $epochByPlan[(int) $task->plan_id] ?? null,
                 );
 
                 if (! $evidence) {
