@@ -18,6 +18,7 @@ final class GitHubDevelopmentEvidenceService
         private readonly GitHubWorkflowService $workflow,
         private readonly TaskEvidenceService $evidence,
         private readonly FeatureAccessService $access,
+        private readonly GitHubTaskEvidenceCommitGuard $commitGuard,
     ) {}
 
     /**
@@ -78,11 +79,18 @@ final class GitHubDevelopmentEvidenceService
 
         $snapshot = $this->authoritativeSnapshot($repoFullName, $target);
 
-        return $this->recordTargetEvidence(
+        $repository?->loadMissing('plan');
+
+        return $this->commitGuard->execute(
             $task,
             [(int) $artifact->id],
-            $target,
-            $snapshot,
+            $repoFullName,
+            (int) data_get($repository?->metadata, 'github_app_connection.installation_id', 0),
+            $repository?->plan?->user_id === null
+                ? null : (int) $repository->plan->user_id,
+            fn (Task $liveTask, array $validIds) => $this->recordTargetEvidence(
+                $liveTask, $validIds, $target, $snapshot,
+            ),
         );
     }
 
@@ -232,11 +240,17 @@ final class GitHubDevelopmentEvidenceService
                 $task = $link['task'];
                 $artifactIds = $link['artifact_ids'];
 
-                $evidence = $this->recordTargetEvidence(
+                $sourcePlan = $matched->firstWhere('plan_id', $task->plan_id)?->plan;
+                $evidence = $this->commitGuard->execute(
                     $task,
                     $artifactIds,
-                    $target,
-                    $snapshot,
+                    $repoFullName,
+                    $installationId,
+                    $sourcePlan?->user_id === null
+                        ? null : (int) $sourcePlan->user_id,
+                    fn (Task $liveTask, array $validIds) => $this->recordTargetEvidence(
+                        $liveTask, $validIds, $target, $snapshot,
+                    ),
                 );
 
                 if (! $evidence) {
