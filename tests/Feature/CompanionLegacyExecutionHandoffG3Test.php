@@ -134,12 +134,17 @@ final class CompanionLegacyExecutionHandoffG3Test extends TestCase
             ->assertSessionHasErrors('candidate');
         $this->assertNull(data_get(session($key), 'handoff_prompt'));
 
+        session()->put(ExecutionGitHubHandoffService::sessionKey($plan, $task), [
+            'change' => ['content_encrypted' => Crypt::encryptString('old source code')],
+        ]);
+
         $this->actingAs($user)
             ->get(route('plans.tasks.execution_orchestration.show', [$plan, $task]))
             ->assertOk()
             ->assertSee('data-execution-handoff-source-stale', false)
             ->assertDontSee('CONFIRMED EXECUTION REQUEST');
         $this->assertNull(data_get(session($key), 'execution_request'));
+        $this->assertNull(session(ExecutionGitHubHandoffService::sessionKey($plan, $task)));
 
         $meta['github_app_connection']['status'] = 'connected';
         $meta['github_app_connection']['source_epoch'] = (string) Str::uuid();
