@@ -293,7 +293,10 @@ class CompanionConversationService
             ->where('type', $type)
             ->get()
             ->first(fn (CompanionMutationCandidate $existing) => (
-                $this->canonicalizePayload(is_array($existing->payload) ? $existing->payload : [])
+                $this->derivedSources->isCurrent(
+                    $plan, data_get($existing->metadata, 'source_provenance'),
+                )
+                && $this->canonicalizePayload(is_array($existing->payload) ? $existing->payload : [])
                 === $normalizedPayload
             ));
 
