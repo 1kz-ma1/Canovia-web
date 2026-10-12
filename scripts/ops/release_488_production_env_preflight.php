@@ -96,7 +96,10 @@ function classify488(): array
                 || ! str_ends_with(strtolower((string) ($parts['host'] ?? '')), '.aivencloud.com')
                 || rawurldecode((string) ($parts['path'] ?? '')) !== '/pacekeeper'
                 || ! isset($parts['user'], $parts['pass'])
-                || (string) $parts['pass'] === '') {
+                || (string) $parts['pass'] === ''
+                // Laravel URL query parameters can override the path/database.
+                // For this release refuse URL options until separately reviewed.
+                || isset($parts['query']) || isset($parts['fragment'])) {
                 $addBlock('DATABASE_URL_TARGET_UNVERIFIED');
             }
             $addReview('DATABASE_URL_OVERRIDES_INDIVIDUAL_SETTINGS');
@@ -118,9 +121,24 @@ function classify488(): array
         }
         if (! present488(env488('APP_URL'))) {
             $addReview('PUBLIC_APP_URL_NOT_EXPLICIT');
-        } elseif (! str_starts_with((string) env488('APP_URL'), 'https://')
-            || str_contains(strtolower((string) env488('APP_URL')), 'staging')) {
-            $addBlock('PUBLIC_APP_URL_UNEXPECTED');
+        } else {
+            $appUrl = (string) env488('APP_URL');
+            try {
+                $origin = @parse_url($appUrl);
+            } catch (Throwable) {
+                $origin = false;
+            }
+            if (! is_array($origin)
+                || ($origin['scheme'] ?? null) !== 'https'
+                || ! isset($origin['host'])
+                || isset($origin['user']) || isset($origin['pass'])
+                || isset($origin['query']) || isset($origin['fragment'])
+                || isset($origin['port'])
+                || ! in_array((string) ($origin['path'] ?? ''), ['', '/'], true)
+                || str_contains(strtolower((string) $origin['host']), 'staging')
+                || str_contains((string) $origin['host'], '_')) {
+                $addBlock('PUBLIC_APP_URL_UNEXPECTED');
+            }
         }
 
         $sessionDriver = env488('SESSION_DRIVER') ?? 'database';
