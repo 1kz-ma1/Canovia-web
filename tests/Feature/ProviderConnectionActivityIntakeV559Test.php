@@ -3,6 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\EvidenceSource;
+use App\Exceptions\ProviderConnectionRevokedException;
+use App\Services\ProviderActivityIntakeService;
+use App\Services\ProviderExecutionContextService;
+use App\Services\ProviderConnectionService;
 use App\Execution\ExecutionCapability;
 use App\Intelligence\Study\StudyPlanIntelligenceService;
 use App\Models\ExecutionActivity;
