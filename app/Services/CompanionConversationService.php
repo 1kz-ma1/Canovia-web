@@ -24,6 +24,7 @@ class CompanionConversationService
         private readonly CompanionContinuityService $continuity,
         private readonly AiCapacityService $capacity,
         private readonly FutureMemoService $memories,
+        private readonly CompanionDerivedEvidenceSourceGuard $derivedSources,
     ) {}
 
     /**
@@ -87,6 +88,8 @@ class CompanionConversationService
             ? $sourcePath
             : data_get($thread->context_scope, 'source_path');
 
+        $sourceProvenance = $this->derivedSources->capture($contextSnapshot);
+
         $continuitySignals = $this->continuity->signals($thread, $contextSnapshot);
         $contextSnapshot['continuity'] = $this->continuity->promptContext($continuitySignals);
 
@@ -99,7 +102,15 @@ class CompanionConversationService
             ->values()
             ->map(fn (CompanionMessage $message) => [
                 'role' => $message->role,
-                'content' => $message->content,
+                // A historical Assistant reply is visible in the thread,
+                // but never reintroduced into a new prompt as current
+                // evidence when its signed source has since been revoked.
+                'content' => $message->role === 'assistant'
+                    && ! $this->derivedSources->isCurrent(
+                        $plan, data_get($message->metadata, 'source_provenance'),
+                    )
+                        ? '（以前のGitHub根拠が現在未検証のため、過去の返答内容は参照しません）'
+                        : $message->content,
             ])
             ->all();
 
@@ -124,7 +135,7 @@ class CompanionConversationService
             featureKey: FeatureKey::CanoviaCompanion,
         );
 
-        return DB::transaction(function () use ($thread, $user, $userMessage, $result, $plan, $task, $contextSnapshot) {
+        return DB::transaction(function () use ($thread, $user, $userMessage, $result, $plan, $task, $contextSnapshot, $sourceProvenance) {
             // The provider returned a valid result, but its entitlement and
             // selected Context may have changed after the gateway's final check.
             // Lock the durable targets and fail closed before writing AI-derived
@@ -184,6 +195,14 @@ class CompanionConversationService
                 ];
             }
 
+            if (! $this->derivedSources->isCurrent($plan, $sourceProvenance)) {
+                throw new NativeAiExecutionException(
+                    'Companion生成中にGitHubの根拠が変更されました。現在の情報で再生成してください。',
+                    'native_ai_source_changed',
+                    (int) $result['run_id'],
+                );
+            }
+
             $data = $result['data'];
             $memoryCount = $this->captureMemories(
                 $user,
@@ -202,6 +221,7 @@ class CompanionConversationService
                     'candidate_count' => count($data['candidates'] ?? []),
                     'continuity_signal_count' => count($contextSnapshot['continuity'] ?? []),
                     'memory_capture_count' => $memoryCount,
+                    'source_provenance' => $sourceProvenance,
                 ],
             ]);
 
@@ -297,6 +317,7 @@ class CompanionConversationService
                 'source' => 'canovia_companion',
                 'native_ai_run_id' => $assistant->native_ai_run_id,
                 'target_source' => 'selected_context',
+                'source_provenance' => data_get($assistant->metadata, 'source_provenance'),
             ],
         ]);
     }
