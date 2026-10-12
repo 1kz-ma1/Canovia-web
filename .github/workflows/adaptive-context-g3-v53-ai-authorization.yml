@@ -28,5 +28,13 @@ jobs:
         run: php artisan test tests/Feature/McpReadOnlyResourceTest.php tests/Feature/McpSyntheticOAuthConsentReadLifecycleTest.php tests/Feature/McpDelegatedRevocationTest.php
       - name: V53 derived read and TaskEvidence source regression
         run: php artisan test tests/Feature/IntelligenceStateEvidenceV531Test.php tests/Feature/StateChangeFeedbackV546Test.php
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Build Vite assets required by feature-route views
+        run: |
+          npm ci --ignore-scripts
+          npm run build
       - name: Native AI provider and user entitlement regression
         run: php artisan test tests/Feature/NativeAiPracticeV418Test.php tests/Feature/FeatureAccessV406Test.php
