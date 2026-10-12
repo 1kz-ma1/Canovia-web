@@ -1,0 +1,43 @@
+name: Adaptive Context G3 Reflection Source Freshness
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/ReflectionContextService.php'
+      - 'app/Services/ReflectionNavigationGraphService.php'
+      - 'app/Services/RecentReflectionShortcutCandidateService.php'
+      - 'tests/Feature/ReflectionGitHubSourceFreshnessG3Test.php'
+      - 'tests/Feature/ReflectionMapV474Test.php'
+      - '.github/workflows/adaptive-context-g3-reflection-source-freshness.yml'
+
+jobs:
+  reflection-source-freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/ReflectionContextService.php
+          php -l app/Services/ReflectionNavigationGraphService.php
+          php -l app/Services/RecentReflectionShortcutCandidateService.php
+          php -l tests/Feature/ReflectionGitHubSourceFreshnessG3Test.php
+      - name: Reflection source freshness and historical labels
+        run: php artisan test tests/Feature/ReflectionGitHubSourceFreshnessG3Test.php
+      - name: Existing Reflection Map and personalized candidate regressions
+        run: |
+          php artisan test \
+            tests/Feature/ReflectionMapV474Test.php \
+            tests/Feature/MapPersonalizedCandidateExpansionV488Test.php \
+            tests/Feature/GitHubDerivedContextSourceEpochG3Test.php

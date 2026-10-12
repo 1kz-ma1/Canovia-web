@@ -18,6 +18,7 @@ final class ReflectionContextService
 
     public function __construct(
         private readonly PlanOwnershipService $ownership,
+        private readonly GitHubTaskEvidenceReuseGuard $githubEvidenceReuse,
     ) {}
 
     /**
@@ -46,11 +47,22 @@ final class ReflectionContextService
             ->sortByDesc('sort_key')
             ->values();
 
-        $evidences = $plans
+        // Keep canonical history/counts intact, but only validate source
+        // eligibility for the records actually projected into a visible lens.
+        // A full archived history can contain thousands of GitHub events.
+        $evidenceRows = $plans
             ->flatMap(fn (Plan $plan) => $plan->taskEvidences->map(
-                fn (TaskEvidence $evidence) => $this->evidenceItem($plan, $evidence)
+                fn (TaskEvidence $evidence) => ['plan' => $plan, 'evidence' => $evidence]
             ))
-            ->sortByDesc('sort_key')
+            ->sortByDesc(fn (array $row) => $row['evidence']->occurred_at?->timestamp
+                ?? $row['evidence']->created_at?->timestamp ?? 0)
+            ->values();
+
+        // 24 visible Evidence rows cover the most recent 16 used by the
+        // combined WorkLog/Evidence lens, without any extra source lookups.
+        $evidences = $evidenceRows
+            ->take(24)
+            ->map(fn (array $row) => $this->evidenceItem($row['plan'], $row['evidence']))
             ->values();
 
         $completedTasks = $plans
@@ -60,11 +72,12 @@ final class ReflectionContextService
             ->sortByDesc('sort_key')
             ->values();
 
-        $reflectionEvidence = $plans
-            ->flatMap(fn (Plan $plan) => $plan->taskEvidences
-                ->filter(fn (TaskEvidence $evidence) => in_array($evidence->type, self::REFLECTION_EVIDENCE_TYPES, true))
-                ->map(fn (TaskEvidence $evidence) => $this->evidenceItem($plan, $evidence, reflection: true)))
-            ->sortByDesc('sort_key')
+        $reflectionRows = $evidenceRows
+            ->filter(fn (array $row) => in_array($row['evidence']->type, self::REFLECTION_EVIDENCE_TYPES, true))
+            ->values();
+        $reflectionEvidence = $reflectionRows
+            ->take(24)
+            ->map(fn (array $row) => $this->evidenceItem($row['plan'], $row['evidence'], reflection: true))
             ->values();
 
         $recent = $workLogs
@@ -79,15 +92,15 @@ final class ReflectionContextService
                 label: '最近の実績',
                 eyebrow: 'RECENT',
                 summary: 'WorkLogとEvidenceを時系列でまとめ、直近に何を積み上げたかを確認します。',
-                count: $workLogs->count() + $evidences->count(),
+                count: $workLogs->count() + $evidenceRows->count(),
                 items: $recent,
             ),
             $this->context(
                 key: 'evidence',
                 label: 'Evidence',
                 eyebrow: 'EVIDENCE',
-                summary: 'Canoviaが確認できたTask Evidenceを、種類やPlanをまたいで振り返ります。',
-                count: $evidences->count(),
+                summary: '保存済みのTask Evidenceを振り返ります。外部接続の失効後も履歴は残り、現在未検証の記録は区別します。',
+                count: $evidenceRows->count(),
                 items: $evidences->take(24)->values(),
             ),
             $this->context(
@@ -103,7 +116,7 @@ final class ReflectionContextService
                 label: '振り返り記録',
                 eyebrow: 'REFLECTIONS',
                 summary: 'Guided Executionや面接後に明示的に残した振り返りEvidenceを確認します。',
-                count: $reflectionEvidence->count(),
+                count: $reflectionRows->count(),
                 items: $reflectionEvidence->take(24)->values(),
             ),
         ]);
@@ -187,11 +200,17 @@ final class ReflectionContextService
             ?? $evidence->created_at?->format('Y-m-d H:i')
             ?? '日付不明';
 
+        // A historical view retains canonical facts regardless of freshness;
+        // never imply that an unsigned/revoked GitHub source is current.
+        $sourceCurrent = $this->githubEvidenceReuse->eligible($plan, $evidence);
+
         return [
             'id' => ($reflection ? 'reflection:' : 'evidence:').$evidence->id,
             'kind' => $reflection ? 'reflection' : 'evidence',
             'label' => $taskTitle !== '' ? $taskTitle : $evidence->typeLabel(),
-            'subtitle' => $plan->title.' · '.$evidence->typeLabel().' · '.$date,
+            'subtitle' => $plan->title.' · '.$evidence->typeLabel().' · '.$date
+                .($sourceCurrent ? '' : ' · 過去の記録・現在は未検証'),
+            'source_status' => $sourceCurrent ? 'current' : 'historical_unverified',
             'summary' => $evidence->summary(),
             'plan_id' => (int) $plan->id,
             'task_id' => $evidence->task_id ? (int) $evidence->task_id : null,

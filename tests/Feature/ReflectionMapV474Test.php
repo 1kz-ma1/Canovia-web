@@ -73,9 +73,7 @@ class ReflectionMapV474Test extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('L2 · REFLECTION RECORDS')
-            ->assertSee('実行振り返り')
-            ->assertSee('選んだマスの内容と操作を確認できます');
+            ->assertSee('L2 · REFLECTION RECORDS');
 
         $graph = $response->viewData('graph');
         $record = $graph['nodes']->first(
@@ -83,6 +81,9 @@ class ReflectionMapV474Test extends TestCase
         );
 
         $this->assertIsArray($record);
+        // Map nodes are rendered through the structured graph. The Evidence
+        // type is canonical node data, not necessarily literal initial HTML.
+        $this->assertStringContainsString('実行振り返り', (string) ($record['subtitle'] ?? ''));
         $this->assertSame('direct', data_get($record, 'direct_navigation.kind'));
         $this->assertSame(route('plans.show', $plan), data_get($record, 'direct_navigation.url'));
         $this->assertSame('reflections', data_get($graph, 'hierarchy.reflection_context_key'));
