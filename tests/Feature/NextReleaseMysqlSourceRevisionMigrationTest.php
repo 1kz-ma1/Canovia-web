@@ -34,16 +34,20 @@ final class NextReleaseMysqlSourceRevisionMigrationTest extends TestCase
         }
     }
 
-    public function test_nullable_source_revision_upgrade_preserves_legacy_observation_and_identity(): void
+    public function test_two_nullable_source_observation_upgrades_preserve_legacy_identity(): void
     {
         $migrationName = '2026_10_12_010000_add_source_revision_to_development_activity_observations';
         $this->assertDatabaseHas('migrations', ['migration' => $migrationName]);
         $this->assertTrue(Schema::hasColumn('development_activity_observations', 'source_updated_at'));
         $this->assertTrue(Schema::hasColumn('development_activity_observations', 'source_revision_id'));
+        $this->assertDatabaseHas('migrations', ['migration' => '2026_10_13_021000_add_source_epoch_to_development_activity_observations']);
+        $this->assertTrue(Schema::hasColumn('development_activity_observations', 'source_epoch'));
 
         // Recreate the pre-release column shape ONLY in the CI database;
         // the existing live database is never queried or modified.
         Schema::table('development_activity_observations', function (Blueprint $table): void {
+            $table->dropIndex(['source_epoch']);
+            $table->dropColumn('source_epoch');
             $table->dropColumn(['source_updated_at', 'source_revision_id']);
         });
 
@@ -74,6 +78,8 @@ final class NextReleaseMysqlSourceRevisionMigrationTest extends TestCase
         // the synthetic, pre-release table. Never run down() on user data.
         $migration = require database_path('migrations/'.$migrationName.'.php');
         $migration->up();
+        $epochMigration = require database_path('migrations/2026_10_13_021000_add_source_epoch_to_development_activity_observations.php');
+        $epochMigration->up();
 
         $after = DB::table('development_activity_observations')->find($id);
         $this->assertNotNull($after);
@@ -84,6 +90,7 @@ final class NextReleaseMysqlSourceRevisionMigrationTest extends TestCase
         }
         $this->assertNull($after->source_updated_at);
         $this->assertNull($after->source_revision_id);
+        $this->assertNull($after->source_epoch);
         $this->assertSame(1, DB::table('development_activity_observations')
             ->where('plan_id', $plan->id)->where('provider', 'github')
             ->where('external_key', $key)->count());
@@ -104,6 +111,29 @@ final class NextReleaseMysqlSourceRevisionMigrationTest extends TestCase
         $this->assertSame('bigint', $columns['source_revision_id']->DATA_TYPE);
         $this->assertSame('timestamp', $columns['source_updated_at']->DATA_TYPE);
 
+        $epochColumns = DB::select(<<<'SQL'
+            SELECT DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE, COLUMN_DEFAULT
+              FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = 'development_activity_observations'
+               AND COLUMN_NAME = 'source_epoch'
+        SQL);
+        $this->assertCount(1, $epochColumns);
+        $this->assertSame('char', $epochColumns[0]->DATA_TYPE);
+        $this->assertSame(36, (int) $epochColumns[0]->CHARACTER_MAXIMUM_LENGTH);
+        $this->assertSame('YES', $epochColumns[0]->IS_NULLABLE);
+        $this->assertNull($epochColumns[0]->COLUMN_DEFAULT);
+        $epochIndex = DB::select(<<<'SQL'
+            SELECT INDEX_NAME, NON_UNIQUE, COLUMN_NAME
+              FROM information_schema.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = 'development_activity_observations'
+               AND INDEX_NAME = 'development_activity_observations_source_epoch_index'
+        SQL);
+        $this->assertCount(1, $epochIndex);
+        $this->assertSame('source_epoch', $epochIndex[0]->COLUMN_NAME);
+        $this->assertSame(1, (int) $epochIndex[0]->NON_UNIQUE);
+
         // Freshly observed versions can be persisted without rewriting the
         // historical immutable identity or altering unrelated Task progress.
         DB::table('development_activity_observations')->where('id', $id)->update([
@@ -111,6 +141,11 @@ final class NextReleaseMysqlSourceRevisionMigrationTest extends TestCase
         ]);
         $this->assertSame(41, (int) DB::table('development_activity_observations')->where('id', $id)
             ->value('source_revision_id'));
+        $epochValue = (string) Str::uuid();
+        DB::table('development_activity_observations')->where('id', $id)
+            ->update(['source_epoch' => $epochValue]);
+        $this->assertSame($epochValue, DB::table('development_activity_observations')
+            ->where('id', $id)->value('source_epoch'));
         $this->assertDatabaseHas('migrations', ['migration' => $migrationName]);
     }
 }
