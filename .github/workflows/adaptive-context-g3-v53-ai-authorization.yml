@@ -29,4 +29,4 @@ jobs:
       - name: V53 derived read and TaskEvidence source regression
         run: php artisan test tests/Feature/IntelligenceStateEvidenceV531Test.php tests/Feature/StateChangeFeedbackV546Test.php
       - name: Native AI provider and user entitlement regression
-        run: php artisan test tests/Feature/NativeAiGatewayV546Test.php tests/Feature/FeatureAccessServiceTest.php
+        run: php artisan test tests/Feature/NativeAiPracticeV418Test.php tests/Feature/FeatureAccessV406Test.php
