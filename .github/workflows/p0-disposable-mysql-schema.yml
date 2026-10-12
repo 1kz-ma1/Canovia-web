@@ -2,7 +2,7 @@ name: P0 Disposable MySQL Migration Integrity
 
 on:
   pull_request:
-    branches: [main, production]
+    branches: [main]
     paths:
       - 'database/migrations/**'
       - 'tests/Feature/ProductionMysqlSchemaP0Test.php'
@@ -35,6 +35,7 @@ on:
       - 'scripts/ops/p0_mysql_operator_select_only_collect.sh'
       - '.github/workflows/p0-disposable-mysql-schema.yml'
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
