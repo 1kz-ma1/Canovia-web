@@ -20,11 +20,14 @@ from scripts.ci.p0_mysql_full_ledger_offline_check import (
 )
 
 RELEASE_MIGRATION = "2026_10_12_010000_add_source_revision_to_development_activity_observations"
+EPOCH_MIGRATION = "2026_10_13_021000_add_source_epoch_to_development_activity_observations"
 REPAIR_MIGRATION = "2026_10_09_235959_reconcile_p0_mysql_applied_constraints"
 SCHEMA_ROWS = {
     "base_table": {"PRESENT", "MISSING"},
     "source_updated_at": {"ABSENT", "VALID", "MISMATCH"},
     "source_revision_id": {"ABSENT", "VALID", "MISMATCH"},
+    "source_epoch": {"ABSENT", "VALID", "MISMATCH"},
+    "source_epoch_index": {"ABSENT", "VALID", "MISMATCH"},
 }
 MAX_SCHEMA_BYTES = 1024
 MAX_LEDGER_BYTES = 131072
@@ -68,8 +71,8 @@ def compare_release(
 ) -> dict:
     # All expected migration files are read directly from a pinned checkout.
     # Validate exact sets; a count alone can hide one unknown ledger entry.
-    if (not expected or RELEASE_MIGRATION not in expected
-        or REPAIR_MIGRATION not in expected or REPAIR_MIGRATION not in applied):
+    if (not expected or not {RELEASE_MIGRATION, EPOCH_MIGRATION, REPAIR_MIGRATION} <= expected
+        or REPAIR_MIGRATION not in applied):
         return verdict("BASELINE_UNVERIFIED")
     if not applied or any(
         not isinstance(v, int) or isinstance(v, bool) or v <= 0 or v >= 10**9
@@ -81,12 +84,15 @@ def compare_release(
     if schema.get("base_table") != "PRESENT":
         return verdict("OBSERVATION_TABLE_NOT_VERIFIED")
     pending = expected - set(applied)
-    columns = (schema.get("source_updated_at"), schema.get("source_revision_id"))
-    if pending == {RELEASE_MIGRATION} and columns == ("ABSENT", "ABSENT"):
-        return verdict("EXACT_ONE_SOURCE_REVISION_MIGRATION_PENDING", "REVIEW_REQUIRED")
-    if not pending and columns == ("VALID", "VALID"):
-        return verdict("SOURCE_REVISION_MIGRATION_ALREADY_APPLIED", "REVIEW_REQUIRED")
-    if pending not in ({RELEASE_MIGRATION}, set()):
+    columns = tuple(schema.get(k) for k in (
+        "source_updated_at", "source_revision_id", "source_epoch", "source_epoch_index"
+    ))
+    # MySQL DDL is nontransactional; intermediate or partial states are BLOCK.
+    if pending == {RELEASE_MIGRATION, EPOCH_MIGRATION} and columns == ("ABSENT",) * 4:
+        return verdict("EXACT_TWO_SOURCE_OBSERVATION_MIGRATIONS_PENDING", "REVIEW_REQUIRED")
+    if not pending and columns == ("VALID",) * 4:
+        return verdict("BOTH_SOURCE_OBSERVATION_MIGRATIONS_ALREADY_APPLIED", "REVIEW_REQUIRED")
+    if pending not in ({RELEASE_MIGRATION, EPOCH_MIGRATION}, set()):
         return verdict("UNEXPECTED_MIGRATION_STATE")
     return verdict("MIGRATION_SCHEMA_LEDGER_CONFLICT")
 
