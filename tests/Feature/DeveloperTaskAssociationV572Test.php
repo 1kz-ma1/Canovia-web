@@ -373,6 +373,93 @@ class DeveloperTaskAssociationV572Test extends TestCase
         $this->assertDatabaseCount('task_evidences', 0);
     }
 
+    public function test_reconnect_same_installation_does_not_reuse_old_epoch_until_fresh_source_observation(): void
+    {
+        [$user, $plan, $task, $root] = $this->scenario(
+            taskTitle: 'Fix GitHub webhook routing',
+        );
+        $observation = $this->observation($plan, $root, [
+            'kind' => 'issue',
+            'provider_number' => 97,
+            'title' => 'Fix GitHub webhook routing',
+            'state' => 'open',
+            'url' => 'https://github.com/1kz-ma1/HINANEX/issues/97',
+        ]);
+        app(DevelopmentTaskMatchService::class)->refreshPlan($plan);
+        $this->assertSame('suggested', $observation->fresh()->resolution_status);
+
+        $oldEpoch = (string) $observation->source_epoch;
+        $newEpoch = (string) Str::uuid();
+        $root->update(['metadata' => [
+            'github_app_connection' => [
+                'status' => 'connected',
+                'installation_id' => 777,
+                'source_epoch' => $newEpoch,
+            ],
+        ]]);
+
+        app(DevelopmentTaskMatchService::class)->refreshPlan($plan);
+        $this->assertSame('unlinked', $observation->fresh()->resolution_status);
+        $this->assertSame($oldEpoch, $observation->fresh()->source_epoch);
+
+        $this->actingAs($user)
+            ->post(route('plans.development_observations.link', [$plan, $observation]), [
+                'task_id' => $task->id,
+            ])->assertSessionHasErrors('observation');
+        $this->assertDatabaseCount('plan_artifact_task', 0);
+        $this->assertDatabaseCount('task_evidences', 0);
+
+        // Equivalent to a freshly fetched authoritative GitHub issue after
+        // reconnect: a new observation write, not an epoch-only bulk backfill.
+        $root->refresh()->load('plan.user');
+        $method = new \ReflectionMethod(
+            \App\Services\GitHubDevelopmentObservationService::class, 'persist',
+        );
+        $fetched = $method->invoke(
+            app(\App\Services\GitHubDevelopmentObservationService::class),
+            $root,
+            '1kz-ma1/HINANEX',
+            [
+                'kind' => 'issue',
+                'identity' => '97',
+                'provider_number' => 97,
+                'title' => 'Fix GitHub webhook routing',
+                'state' => 'open',
+                'url' => 'https://github.com/1kz-ma1/HINANEX/issues/97',
+                'source_updated_at' => now()->toIso8601String(),
+            ],
+            777,
+        );
+        // Direct fixture external_key and real persist identity differ; the
+        // proof applies to the independently fetched, canonical observation.
+        $this->assertSame($newEpoch, $fetched?->source_epoch);
+        $this->assertSame($oldEpoch, $observation->fresh()->source_epoch);
+        $this->assertTrue(app(\App\Services\DevelopmentObservationReuseGuard::class)
+            ->eligible($plan, $fetched));
+    }
+
+    public function test_legacy_unsigned_github_observation_is_historical_even_when_repo_connected(): void
+    {
+        [$user, $plan, $task, $root] = $this->scenario();
+        $observation = $this->observation($plan, $root, [
+            'kind' => 'issue',
+            'provider_number' => 98,
+            'title' => 'Fix GitHub webhook routing',
+        ]);
+        $observation->update(['source_epoch' => null]);
+
+        app(DevelopmentTaskMatchService::class)->refreshPlan($plan);
+        $this->assertNull($observation->fresh()->suggested_task_id);
+
+        $this->actingAs($user)
+            ->post(route('plans.development_observations.link', [$plan, $observation]), [
+                'task_id' => $task->id,
+            ])->assertSessionHasErrors('observation');
+
+        $this->assertDatabaseCount('development_activity_observations', 1);
+        $this->assertDatabaseCount('plan_artifact_task', 0);
+    }
+
     private function scenario(
         string $taskTitle = 'Developer V1を実装',
     ): array {
