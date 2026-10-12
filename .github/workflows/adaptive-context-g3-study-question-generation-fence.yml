@@ -6,6 +6,7 @@ on:
     paths:
       - 'app/Services/StudyPracticeGenerationCommitFence.php'
       - 'app/Services/StudyPracticeOrchestrator.php'
+      - 'app/Http/Controllers/StudyPracticeController.php'
       - 'tests/Feature/StudyPracticeGenerationCommitFenceG3Test.php'
       - '.github/workflows/adaptive-context-g3-study-question-generation-fence.yml'
 
@@ -29,6 +30,7 @@ jobs:
         run: |
           php -l app/Services/StudyPracticeGenerationCommitFence.php
           php -l app/Services/StudyPracticeOrchestrator.php
+          php -l app/Http/Controllers/StudyPracticeController.php
           php -l tests/Feature/StudyPracticeGenerationCommitFenceG3Test.php
       - name: Study generation provider-success then source/entitlement change
         run: php artisan test tests/Feature/StudyPracticeGenerationCommitFenceG3Test.php
