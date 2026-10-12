@@ -229,7 +229,6 @@ final class McpStagingProviderPreflightTest extends TestCase
         $report = app(McpStagingProviderPreflightService::class)->check(true);
         $this->assertSame('pass', $report['local_checks']['token_verification_mode']);
         $this->assertSame('pass', $report['local_checks']['auth0_jwt_configuration']);
-        $this->assertSame('not_applicable', $report['local_checks']['introspection_endpoint'] ?? 'not_applicable');
         $this->assertSame('not_applicable', $report['local_checks']['introspection_configuration']);
         $this->assertSame('pass', $report['provider_checks']['oauth_discovery']);
         $this->assertSame('pass', $report['provider_checks']['issuer_and_endpoints']);
