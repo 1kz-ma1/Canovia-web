@@ -280,6 +280,65 @@ final class PlanActionDraftV5873Test extends TestCase
         $this->assertDatabaseCount('tasks', 2);
     }
 
+    public function test_github_disconnect_after_draft_composition_refuses_final_task_approval(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner, '個人開発');
+        $task = $this->task($plan);
+        $evidence = $this->observed($plan, $task, 'pull_request_merged', 'github', [
+            'pull_request_number' => 41,
+        ]);
+        $this->actingAs($owner)->post(route('plans.action_drafts.compose_observed', $plan), [
+            'request_id' => (string) Str::uuid(),
+            'task_evidence_ids' => [$evidence->id],
+        ])->assertRedirect();
+        $draft = PlanActionDraft::sole();
+
+        $root = PlanArtifact::query()->where('plan_id', $plan->id)
+            ->where('artifact_type', 'repository')->firstOrFail();
+        $metadata = $root->metadata;
+        $metadata['github_app_connection']['status'] = 'revoked';
+        $root->update(['metadata' => $metadata]);
+
+        $this->actingAs($owner)->get(route('plans.action_drafts.index', $plan))
+            ->assertOk()->assertDontSee('GitHubマージ');
+
+        $this->actingAs($owner)
+            ->post(route('plans.action_drafts.accept', [$plan, $draft]))
+            ->assertStatus(409);
+        $this->assertSame('proposed', $draft->fresh()->status);
+        $this->assertDatabaseCount('tasks', 1);
+        $this->assertDatabaseCount('task_evidences', 1);
+
+        $metadata['github_app_connection']['status'] = 'connected';
+        $metadata['github_app_connection']['source_epoch'] = (string) Str::uuid();
+        $root->update(['metadata' => $metadata]);
+        $this->actingAs($owner)
+            ->post(route('plans.action_drafts.accept', [$plan, $draft]))
+            ->assertStatus(409);
+        $this->assertDatabaseCount('tasks', 1);
+    }
+
+    public function test_unsigned_legacy_github_evidence_cannot_compose_new_action_draft(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner, '個人開発');
+        $task = $this->task($plan);
+        $evidence = $this->observed($plan, $task, 'pull_request_merged', 'github', [
+            'pull_request_number' => 41,
+        ]);
+        $metadata = (array) $evidence->metadata;
+        unset($metadata['github_source_epoch']);
+        $evidence->update(['metadata' => $metadata]);
+
+        $this->actingAs($owner)->post(route('plans.action_drafts.compose_observed', $plan), [
+            'request_id' => (string) Str::uuid(),
+            'task_evidence_ids' => [$evidence->id],
+        ])->assertNotFound();
+        $this->assertDatabaseCount('plan_action_drafts', 0);
+        $this->assertDatabaseCount('task_evidences', 1);
+    }
+
     public function test_mixed_evidence_and_worklog_keep_provenance_and_never_mutate_tasks(): void
     {
         $owner = User::factory()->create();
