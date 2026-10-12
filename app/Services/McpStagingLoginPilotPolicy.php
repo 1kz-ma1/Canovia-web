@@ -53,7 +53,12 @@ final class McpStagingLoginPilotPolicy
         ], true);
     }
 
-    private function accountLinkReady(): bool
+    /**
+     * Shared route/UI authority for the independently approved link phase.
+     * The account page must never advertise actions that the stage route
+     * allowlist will reject.
+     */
+    public function accountLinkReady(): bool
     {
         return config('canovia_staging.account_link_pilot_enabled') === true
             && config('canovia_mcp.discovery_enabled') === true

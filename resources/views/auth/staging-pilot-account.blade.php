@@ -3,8 +3,12 @@
 @section('content')
 @php
     $linkSettings = app(\App\Services\McpOAuthAccountLinkConfiguration::class)->settings();
+    // The stage allowlist, not credentials alone, decides whether the link
+    // form and a pending confirmation may be offered to a synthetic user.
+    $linkReady = app(\App\Services\McpStagingLoginPilotPolicy::class)->accountLinkReady()
+        && $linkSettings !== null;
     $verified = session('mcp.account_link.verified');
-    $canConfirm = $linkSettings !== null
+    $canConfirm = $linkReady
         && is_array($verified)
         && ($verified['actor_id'] ?? null) === (int) $user->id
         && is_int($verified['verified_at'] ?? null)
@@ -37,7 +41,7 @@
             </div>
         @elseif ($linked)
             <p class="note" role="status">本人IDの紐付け記録が存在します。Planの共有許可はまだ付与されていません。</p>
-        @elseif ($linkSettings !== null)
+        @elseif ($linkReady)
             <form method="POST" action="{{ route('auth.account.mcp_link.start') }}">
                 @csrf
                 <button type="submit">Auth0で本人確認を開始</button>
