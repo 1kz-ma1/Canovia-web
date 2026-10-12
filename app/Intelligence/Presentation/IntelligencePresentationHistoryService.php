@@ -3,6 +3,7 @@
 namespace App\Intelligence\Presentation;
 
 use App\Intelligence\Enums\IntelligenceDomain;
+use App\Intelligence\Services\IntelligenceEvidenceFreshnessGuard;
 use App\Models\IntelligenceActionProjection;
 use App\Models\IntelligenceDecisionTrace;
 use App\Models\IntelligenceStateSnapshot;
@@ -32,6 +33,7 @@ final class IntelligencePresentationHistoryService
         $this->ownership->authorizeView($request, $plan);
 
         $limit = max(1, min(12, $limit));
+        $freshness = app(IntelligenceEvidenceFreshnessGuard::class);
 
         return [
             'actions' => IntelligenceActionProjection::query()
@@ -40,21 +42,30 @@ final class IntelligencePresentationHistoryService
                 ->latest('updated_at')
                 ->latest('id')
                 ->take($limit)
-                ->get(),
+                ->get()
+                ->filter(fn (IntelligenceActionProjection $action) =>
+                    $freshness->isCurrent($action->decisionTrace?->stateSnapshot))
+                ->values(),
             'decisions' => IntelligenceDecisionTrace::query()
                 ->where('plan_id', $plan->id)
                 ->where('domain', $domain->value)
                 ->latest('created_at')
                 ->latest('id')
                 ->take($limit)
-                ->get(),
+                ->get()
+                ->filter(fn (IntelligenceDecisionTrace $trace) =>
+                    $freshness->isCurrent($trace->stateSnapshot))
+                ->values(),
             'states' => IntelligenceStateSnapshot::query()
                 ->where('plan_id', $plan->id)
                 ->where('domain', $domain->value)
                 ->latest('captured_at')
                 ->latest('id')
                 ->take(min(4, $limit))
-                ->get(),
+                ->get()
+                ->filter(fn (IntelligenceStateSnapshot $state) =>
+                    $freshness->isCurrent($state))
+                ->values(),
         ];
     }
 }
