@@ -97,6 +97,23 @@ class StudyPracticeOrchestrator
                 throw new RuntimeException('この演習準備リクエストは別の対象で使用済みです。');
             }
 
+            if (in_array((string) $existing->question_provider, ['native_ai', 'hybrid_ai'], true)) {
+                if ($userId === null || $userId <= 0) {
+                    throw new \App\Exceptions\NativeAiExecutionException(
+                        'Native AIの演習準備にはログインが必要です。',
+                        'native_ai_actor_unverified',
+                    );
+                }
+
+                $this->generationFence->assertReplayReadable(
+                    $existing, $plan, $task, $userId,
+                );
+
+                // Do not backfill/recount AI-generated candidates, regenerate
+                // demand, or reset human answers on a duplicate request.
+                return $existing;
+            }
+
             $storedStrategy = is_array(data_get($existing->selection_context, 'strategy'))
                 ? data_get($existing->selection_context, 'strategy')
                 : $this->strategyService->build(
@@ -202,6 +219,11 @@ class StudyPracticeOrchestrator
                 'selection_context' => [
                     'strategy' => $strategy,
                     'recent_attempt_ids' => $recentAttempts->pluck('id')->map(fn ($id) => (int) $id)->all(),
+                    // Only newly accepted Native/Hybrid generation has
+                    // comparable, persisted pre-provider source provenance.
+                    ...($generationSource !== null ? [
+                        'native_generation_source_fingerprint' => $generationSource,
+                    ] : []),
                 ],
                 'provider_payload' => is_array($prepared['payload'] ?? null) ? $prepared['payload'] : [],
                 'selected_questions' => is_array($prepared['selected_questions'] ?? null)
