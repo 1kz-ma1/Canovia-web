@@ -71,6 +71,12 @@
             </div>
         @endif
 
+        @if ($handoffSourceStale ?? false)
+            <div class="assistant-notice assistant-notice-info" data-execution-handoff-source-stale>
+                前回確認したCompanion実行候補のAI根拠を現在確認できません。過去の依頼は履歴として残りますが、新しい候補の確認後にExecutionを準備してください。
+            </div>
+        @endif
+
         @if ($packetStale)
             <div class="assistant-notice assistant-notice-info">
                 このPacket生成後にTask / Dependency / Evidenceなどの状態が変わっています。下のPacketは履歴として読めますが、実行前に再生成してください。
