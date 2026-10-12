@@ -193,6 +193,90 @@ final class McpStagingProviderPreflightTest extends TestCase
         $this->assertStringNotContainsString('client secret', json_encode($report));
     }
 
+
+    public function test_auth0_jwt_metadata_is_compatible_but_not_fake_registration_or_signed_token_proof(): void
+    {
+        // The Auth0 OIDC/RFC8414 public metadata can omit custom API scopes
+        // and introspection entirely. Neither fact proves issued claims.
+        config([
+            'canovia_mcp.oauth_issuer' => 'https://canovia-mcp-dev.jp.auth0.com/',
+            'canovia_mcp.account_link_metadata_url' =>
+                'https://canovia-mcp-dev.jp.auth0.com/.well-known/openid-configuration',
+            'canovia_mcp.account_link_authorization_endpoint' =>
+                'https://canovia-mcp-dev.jp.auth0.com/authorize',
+            'canovia_mcp.account_link_token_endpoint' =>
+                'https://canovia-mcp-dev.jp.auth0.com/oauth/token',
+            'canovia_mcp.token_verification_driver' => 'auth0_jwt',
+            'canovia_mcp.token_introspection_enabled' => false,
+            'canovia_mcp.auth0_jwt_verification_enabled' => true,
+            'canovia_mcp.allowed_client_id' => 'synthetic-auth0-internal-chatgpt-client',
+        ]);
+
+        $meta = [
+            'issuer' => 'https://canovia-mcp-dev.jp.auth0.com/',
+            'authorization_endpoint' => 'https://canovia-mcp-dev.jp.auth0.com/authorize',
+            'token_endpoint' => 'https://canovia-mcp-dev.jp.auth0.com/oauth/token',
+            'authorization_response_iss_parameter_supported' => true,
+            'code_challenge_methods_supported' => ['S256'],
+            'token_endpoint_auth_methods_supported' => ['none', 'private_key_jwt', 'client_secret_basic'],
+            'scopes_supported' => ['openid', 'profile', 'email'],
+            // Availability of DCR endpoint is not evidence of registration.
+            'registration_endpoint' => 'https://canovia-mcp-dev.jp.auth0.com/oidc/register',
+        ];
+        $uri = 'https://canovia-mcp-dev.jp.auth0.com/.well-known/openid-configuration';
+        Http::fake([$uri => Http::response($meta, 200, ['Content-Type' => 'application/json'])]);
+
+        $report = app(McpStagingProviderPreflightService::class)->check(true);
+        $this->assertSame('pass', $report['local_checks']['token_verification_mode']);
+        $this->assertSame('pass', $report['local_checks']['auth0_jwt_configuration']);
+        $this->assertSame('not_applicable', $report['local_checks']['introspection_endpoint'] ?? 'not_applicable');
+        $this->assertSame('not_applicable', $report['local_checks']['introspection_configuration']);
+        $this->assertSame('pass', $report['provider_checks']['oauth_discovery']);
+        $this->assertSame('pass', $report['provider_checks']['issuer_and_endpoints']);
+        $this->assertSame('pass', $report['provider_checks']['pkce_and_callback_issuer']);
+        $this->assertSame('pass', $report['provider_checks']['canovia_confidential_client']);
+        $this->assertSame('requires_signed_token', $report['provider_checks']['resource_scope']);
+        $this->assertSame('not_applicable', $report['provider_checks']['introspection_endpoint']);
+        $this->assertSame('requires_issued_client', $report['provider_checks']['chatgpt_client_registration']);
+        $this->assertFalse($report['preflight_passed']);
+        $this->assertFalse($report['production_authorized']);
+        $this->assertContains('test_actual_signed_auth0_jwt_audience_client_scope_and_revocation',
+            $report['remaining_external_checks']);
+        Http::assertSentCount(1);
+
+        // Even forged provider metadata advertising CIMD cannot upgrade
+        // static metadata from "candidate" to real registration evidence.
+        $meta['client_id_metadata_document_supported'] = true;
+        Http::fake([$uri => Http::response($meta, 200, ['Content-Type' => 'application/json'])]);
+        $report = app(McpStagingProviderPreflightService::class)->check(true);
+        $this->assertContains('cimd', $report['supported_client_modes']);
+        $this->assertSame('requires_issued_client', $report['provider_checks']['chatgpt_client_registration']);
+        $this->assertFalse($report['preflight_passed']);
+    }
+
+    public function test_auth0_jwt_mixed_modes_and_invalid_issuer_are_blocked_without_http(): void
+    {
+        config([
+            'canovia_mcp.token_verification_driver' => 'auth0_jwt',
+            'canovia_mcp.auth0_jwt_verification_enabled' => true,
+        ]);
+
+        // Accidentally leaving introspection enabled must fail before GET.
+        $mixed = app(McpStagingProviderPreflightService::class)->check(true);
+        $this->assertSame('blocked', $mixed['local_checks']['token_verification_mode']);
+        $this->assertSame('not_probed', $mixed['provider_checks']['oauth_discovery']);
+
+        config([
+            'canovia_mcp.token_introspection_enabled' => false,
+            'canovia_mcp.oauth_issuer' => 'https://evil.example.test/',
+        ]);
+        $untrusted = app(McpStagingProviderPreflightService::class)->check(true);
+        $this->assertSame('blocked', $untrusted['local_checks']['auth0_jwt_configuration']);
+        $this->assertSame('not_probed', $untrusted['provider_checks']['oauth_discovery']);
+        $this->assertFalse($untrusted['preflight_passed']);
+        Http::assertNothingSent();
+    }
+
     /** @return array<string,mixed> */
     private function metadata(): array
     {
