@@ -8,6 +8,7 @@ on:
       - 'app/Services/ReflectionNavigationGraphService.php'
       - 'app/Services/RecentReflectionShortcutCandidateService.php'
       - 'tests/Feature/ReflectionGitHubSourceFreshnessG3Test.php'
+      - 'tests/Feature/ReflectionMapV474Test.php'
       - '.github/workflows/adaptive-context-g3-reflection-source-freshness.yml'
 
 jobs:
