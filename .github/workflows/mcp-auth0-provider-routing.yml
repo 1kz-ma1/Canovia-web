@@ -1,0 +1,50 @@
+name: MCP Auth0 JWT Provider Routing
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/McpExternalTokenVerifier.php'
+      - 'app/Services/McpAuth0JwtTokenVerifier.php'
+      - 'app/Services/McpOAuthAccountLinkConfiguration.php'
+      - 'app/Services/McpOAuthAccountLinkProvider.php'
+      - 'app/Http/Controllers/McpReadOnlyResourceController.php'
+      - 'config/canovia_mcp.php'
+      - 'tests/Feature/McpAuth0JwtProviderRoutingTest.php'
+      - '.github/workflows/mcp-auth0-provider-routing.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  provider-routing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+      - name: Install reviewed locked dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+      - name: Validate routing and PHP syntax
+        run: |
+          php -l app/Services/McpExternalTokenVerifier.php
+          php -l app/Services/McpAuth0JwtTokenVerifier.php
+          php -l app/Services/McpOAuthAccountLinkConfiguration.php
+          php -l app/Services/McpOAuthAccountLinkProvider.php
+          php -l app/Http/Controllers/McpReadOnlyResourceController.php
+          php -l tests/Feature/McpAuth0JwtProviderRoutingTest.php
+      - name: Verify JWT and legacy OAuth read-only regression
+        env:
+          APP_ENV: testing
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ":memory:"
+          SESSION_DRIVER: array
+          CACHE_STORE: array
+        run: |
+          php artisan test tests/Feature/McpAuth0JwtProviderRoutingTest.php tests/Feature/McpAuth0JwtTokenVerifierTest.php tests/Feature/McpReadOnlyResourceTest.php tests/Feature/McpOAuthAccountLinkTest.php --colors=never
