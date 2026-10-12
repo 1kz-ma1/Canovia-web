@@ -50,8 +50,8 @@ class GoalDiscoveryConversationService
     {
         $context = $this->goalContexts->recalculate($context->fresh(['facts']));
         $question = $this->policy->nextQuestion($context);
-        $prompt = $this->prompt($context, $question, $latestUserText);
         $sourceFingerprint = $this->commitFence->fingerprint($context);
+        $prompt = $this->prompt($context, $question, $latestUserText);
 
         if (! $this->canUseNative($request)) {
             $this->storeFallbackIfCurrent(
