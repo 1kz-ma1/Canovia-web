@@ -36,7 +36,7 @@ final class RecentReflectionShortcutCandidateService
         }
 
         $cutoff = now()->copy()->subDays(self::WINDOW_DAYS)->startOfDay()->timestamp;
-        $records = $this->records($plans)
+        $records = $this->records($plans, $cutoff)
             ->filter(fn (array $record) => (int) ($record['timestamp'] ?? 0) >= $cutoff)
             ->sortByDesc('timestamp')
             ->values();
@@ -130,9 +130,9 @@ final class RecentReflectionShortcutCandidateService
      * @param Collection<int,Plan> $plans
      * @return Collection<int,array{plan_id:int,timestamp:int}>
      */
-    private function records(Collection $plans): Collection
+    private function records(Collection $plans, int $cutoff): Collection
     {
-        return $plans->flatMap(function (Plan $plan) {
+        return $plans->flatMap(function (Plan $plan) use ($cutoff) {
             $workLogs = collect($plan->workLogs ?? [])
                 ->map(function (WorkLog $log) use ($plan) {
                     $time = $log->created_at
@@ -144,9 +144,12 @@ final class RecentReflectionShortcutCandidateService
                     ];
                 });
 
-            // A persisted GitHub event remains history after disconnect, but
-            // must not earn current personalization/shortcut signals.
+            // Skip out-of-window history before expensive current GitHub
+            // authorization checks. The signal policy already limits to 14d.
             $evidences = collect($plan->taskEvidences ?? [])
+                ->filter(fn (TaskEvidence $evidence) => (
+                    $evidence->occurred_at ?? $evidence->created_at
+                )?->timestamp >= $cutoff)
                 ->filter(fn (TaskEvidence $evidence) => $this->githubEvidenceReuse->eligible($plan, $evidence))
                 ->map(function (TaskEvidence $evidence) use ($plan) {
                     $time = $evidence->occurred_at ?? $evidence->created_at;
