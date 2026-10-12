@@ -69,6 +69,9 @@ final class DevelopmentPersonalizationSignalService
             ? collect()
             : DevelopmentActivityObservation::query()
                 ->whereIn('plan_id', $developmentPlanIds)
+                // Revoked repository observations are historical facts, not
+                // eligible evidence for *current* advanced-support inference.
+                ->whereIn('repository_artifact_id', $repositories->pluck('id')->all())
                 ->where('last_observed_at', '>=', now()->subDays(90))
                 ->get([
                     'kind',
