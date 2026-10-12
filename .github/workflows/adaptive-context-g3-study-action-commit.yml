@@ -37,4 +37,4 @@ jobs:
       - name: G3 previously implemented source and proposal revalidation
         run: php artisan test tests/Feature/IntelligenceDomainSourceFreshnessG3Test.php tests/Feature/PlanActionDraftV5873Test.php tests/Feature/StateSnapshotActorIsolationG1Test.php
       - name: Collaboration and workspace protections
-        run: php artisan test tests/Feature/PlanCollaborationV481Test.php tests/Feature/StudyWorkspaceV543Test.php
+        run: php artisan test tests/Feature/PlanActionDraftV5874Test.php tests/Feature/StudyWorkspaceV543Test.php
