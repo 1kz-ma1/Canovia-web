@@ -18,6 +18,7 @@ final class RecentReflectionShortcutCandidateService
 
     public function __construct(
         private readonly PlanPriorityService $priorities,
+        private readonly GitHubTaskEvidenceReuseGuard $githubEvidenceReuse,
     ) {}
 
     /**
@@ -143,7 +144,10 @@ final class RecentReflectionShortcutCandidateService
                     ];
                 });
 
+            // A persisted GitHub event remains history after disconnect, but
+            // must not earn current personalization/shortcut signals.
             $evidences = collect($plan->taskEvidences ?? [])
+                ->filter(fn (TaskEvidence $evidence) => $this->githubEvidenceReuse->eligible($plan, $evidence))
                 ->map(function (TaskEvidence $evidence) use ($plan) {
                     $time = $evidence->occurred_at ?? $evidence->created_at;
 
