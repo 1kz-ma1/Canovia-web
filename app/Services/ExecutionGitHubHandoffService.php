@@ -212,6 +212,21 @@ final class ExecutionGitHubHandoffService
             return null;
         }
 
+        $origin = $request->session()->get(
+            ExecutionRequestHandoffService::sessionKey($plan, $task), [],
+        );
+        if (! $this->handoffSources->sourceIsCurrent(
+            is_array($origin['execution_request'] ?? null)
+                ? $origin['execution_request'] : null,
+            $plan, $task,
+        )) {
+            // A historical prepared code change is not independent approval
+            // to execute an AI-suggested request after its source revocation.
+            $this->clear($request, $plan, $task);
+
+            return null;
+        }
+
         try {
             return $this->hydrateCandidate($candidate);
         } catch (DecryptException) {
