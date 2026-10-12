@@ -30,6 +30,7 @@ final class PlanActionDraftTypedEvidenceService
     public function __construct(
         private readonly PlanCategoryProfileService $profiles,
         private readonly PlanActionDraftSourceFingerprint $sourceFingerprint,
+        private readonly GitHubTaskEvidenceReuseGuard $reuseGuard,
     ) {}
 
     public function domain(Plan $plan): string
@@ -55,8 +56,11 @@ final class PlanActionDraftTypedEvidenceService
             ->whereIn('type', $types)
             ->orderByDesc('occurred_at')
             ->orderByDesc('id')
-            ->limit(20)
-            ->get();
+            ->limit(60)
+            ->get()
+            ->filter(fn (TaskEvidence $row) => $this->reuseGuard->eligible($plan, $row))
+            ->take(20)
+            ->values();
     }
 
     /**
@@ -77,7 +81,10 @@ final class PlanActionDraftTypedEvidenceService
             ->whereIn('id', $ids)->get();
 
         // Cross-Plan and wrong-Domain records share the same non-disclosure result.
-        if ($rows->count() !== count($ids)) {
+        if ($rows->count() !== count($ids)
+            || $rows->contains(fn (TaskEvidence $row) =>
+                ! $this->reuseGuard->eligible($plan, $row)
+            )) {
             abort(404);
         }
 
