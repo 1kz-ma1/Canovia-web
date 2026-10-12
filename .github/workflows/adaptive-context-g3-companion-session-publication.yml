@@ -1,0 +1,53 @@
+name: Adaptive Context G3 Companion Session Commit Publication
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/ExecutionRequestHandoffService.php'
+      - 'tests/Feature/CompanionSessionCommitPublicationG3Test.php'
+      - '.github/workflows/adaptive-context-g3-companion-session-publication.yml'
+
+jobs:
+  companion-session-commit:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: canovia_g3_session
+          POSTGRES_USER: canovia_ci
+          POSTGRES_PASSWORD: local_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U canovia_ci -d canovia_g3_session"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: canovia_g3_session
+      DB_USERNAME: canovia_ci
+      DB_PASSWORD: local_ci_only
+      SESSION_DRIVER: array
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql,pgsql
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: PHP lint
+        run: |
+          php -l app/Services/ExecutionRequestHandoffService.php
+          php -l tests/Feature/CompanionSessionCommitPublicationG3Test.php
+      - name: Real PostgreSQL commit, rollback and nested savepoint session publication
+        run: php artisan test tests/Feature/CompanionSessionCommitPublicationG3Test.php --stop-on-failure
