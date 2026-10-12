@@ -27,7 +27,10 @@ final class PlanActionDraftTypedEvidenceService
         'career' => ['interview_review_completed', 'interview_result_recorded'],
     ];
 
-    public function __construct(private readonly PlanCategoryProfileService $profiles) {}
+    public function __construct(
+        private readonly PlanCategoryProfileService $profiles,
+        private readonly PlanActionDraftSourceFingerprint $sourceFingerprint,
+    ) {}
 
     public function domain(Plan $plan): string
     {
@@ -85,6 +88,7 @@ final class PlanActionDraftTypedEvidenceService
             return [
                 'kind' => 'task_evidence',
                 'task_evidence_id' => (int) $row->id,
+                'source_signature' => $this->sourceFingerprint->taskEvidence($row),
                 'evidence_type' => $row->type,
                 'evidence_source' => $row->source->value,
                 'source_label' => $row->sourceLabel(),
