@@ -43,3 +43,58 @@ Status: **PREDEPLOY / NOT AUTHORIZED**. Review only; no production data read/wri
 - [ ] Keep rollback/backout strategy explicit. Application-image rollback does **not** rollback additive DB columns. If migration fails, avoid blind rollback/restore; halt, inspect affected data/state and choose an operator-reviewed forward repair.
 
 **Security exclusions:** no user data, connection strings, secrets, sample production records, raw JWTs, backup file contents, workspace billing or production config edits are collected in this document. Issue #488 is source-of-truth for release gate and owner acceptance.
+
+
+## Operator-only exact pending migration check (2026-10-12 follow-up)
+
+The earlier P0 full-ledger classifier intentionally classifies *any known pending migration* as
+\`REVIEW_REQUIRED\`; pending count 1 **does not prove that the one pending migration is
+the expected release migration**. Release #488 therefore introduces an independent,
+**opt-in** source-checked gate. It checks that **all** applied Laravel migration
+IDs match tracked PHP files, the repaired P0 migration is present, and the *only*
+pending file is \`2026_10_12_010000_add_source_revision_to_development_activity_observations\`.
+It also reads **metadata only** for the old observation table and its two columns.
+Any extra/unrecognized pending migration, unknown applied migration, partial
+DDL, incompatible column types, missing table or invalid input blocks.
+
+- The operator first verifies the **Aiven service + \`pacekeeper\` database name**
+  and authenticates using the already reviewed, narrow metadata-only MySQL login path
+  (schema \`REFERENCES\` and \`migrations\` table \`SELECT\`, no other data grants).
+  Confirm the Aiven CA file and TLS \`VERIFY_IDENTITY\` behavior. If that read-only
+  account is unavailable, **stop and request an operator path**, not a privileged
+  fallback or Laravel production login.
+- From a **pinned clean checkout** of the exact release SHA, run on the operator Mac
+  (not GitHub Actions, Render shell, production app command or Aiven SQL web editor):
+
+  \`\`\`bash
+  CANOVIA_P0_OPERATOR_APPROVED=YES \
+  CANOVIA_P0_TARGET_VERIFIED=YES \
+  CANOVIA_P0_GRANTS_REVIEWED=YES \
+  CANOVIA_RELEASE_488_CHECK=YES \
+  CANOVIA_P0_LOGIN_PATH='replace-with-your-verified-local-profile' \
+  CANOVIA_P0_DATABASE=pacekeeper \
+  CANOVIA_P0_CA_FILE='/private/path/to/verified-Aiven-CA.pem' \
+  bash scripts/ops/p0_mysql_operator_select_only_collect.sh
+  \`\`\`
+
+  Example profile/CA values are placeholders and must be replaced privately, never
+  sent to a chat or issue. Never set \`MYSQL_PWD\`, \`DB_URL\`, app \`DB_PASSWORD\`,
+  or run \`artisan migrate\` as part of this audit. Only safe fixed verdict codes
+  and aggregates are emitted. Raw migration IDs live briefly in a private
+  \`mktemp\` directory and are deleted on exit.
+- Expected classification **before** the one additive migration:
+  \`REVIEW_REQUIRED / EXACT_ONE_SOURCE_REVISION_MIGRATION_PENDING\`.
+  If already applied with both correct nullable columns:
+  \`REVIEW_REQUIRED / SOURCE_REVISION_MIGRATION_ALREADY_APPLIED\`.
+  Either verdict is **not permission to deploy**. Any \`BLOCK\` or unexpected
+  code means halt and reconcile live DB vs. exact checked-in migration set.
+- A success result verifies neither the date/restoreability of an Aiven backup
+  nor operator permissions, production MCP/Auth0 effective flags, worker state,
+  app compatibility under load, client device behavior or release timing.
+  Independently verify backup/restore and production flags without pasting
+  credentials, connection details or raw app data.
+
+The operator may share only the fixed \`release_488\` verdict code (not the raw
+ledger or SQL), separately confirm fresh backup/restore evidence, and then
+request a pinned-SHA manual deployment decision. Do **not** re-enable Auto
+Deploy, run destructive DDL, or restore over live writes.
