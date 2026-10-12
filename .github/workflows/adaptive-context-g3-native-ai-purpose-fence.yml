@@ -5,8 +5,10 @@ on:
     branches: [main]
     paths:
       - 'app/Services/NativeAiGateway.php'
+      - 'app/Intelligence/Services/ReasoningRouter.php'
       - 'app/Services/NativeAiPurposeAuthorizationGuard.php'
       - 'tests/Feature/NativeAiPurposeGrantFenceV05Test.php'
+      - 'tests/Feature/IntelligenceReasoningRouterV533Test.php'
       - '.github/workflows/adaptive-context-g3-native-ai-purpose-fence.yml'
 
 jobs:
@@ -28,6 +30,7 @@ jobs:
       - name: PHP lint
         run: |
           php -l app/Services/NativeAiGateway.php
+          php -l app/Intelligence/Services/ReasoningRouter.php
           php -l app/Services/NativeAiPurposeAuthorizationGuard.php
           php -l tests/Feature/NativeAiPurposeGrantFenceV05Test.php
       - name: G3 actor, feature, Plan and Task revocation during Native AI roundtrip
