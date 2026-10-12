@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\BehaviorEventType;
 use App\Models\Plan;
+use App\Models\UserPersonalizationContext;
 use Illuminate\Http\Request;
 
 final class PersonalizationLivingProfileService
@@ -33,6 +34,18 @@ final class PersonalizationLivingProfileService
         if (! $request->user()) {
             return $this->summary($request);
         }
+
+        // Current() intentionally hides stale derived claims. Keep the
+        // persistent *human decision* separately so a fresh recalculation can
+        // preserve dismissal/confirmation and its evidence revision.
+        $stored = UserPersonalizationContext::query()
+            ->where('user_id', $request->user()->id)
+            ->first();
+        $priorCandidates = (array) data_get(
+            $stored?->inferred_context,
+            self::CANDIDATES_KEY,
+            [],
+        );
 
         $context = $this->contexts->current($request);
         $hasContext =
@@ -184,6 +197,16 @@ final class PersonalizationLivingProfileService
         // persisted 'connected' observation that may already be revoked.
         $signal = $this->developmentSignals->advancedSupport($request->user());
         $githubConnected = (int) ($signal['connected_repository_count'] ?? 0) > 0;
+
+        // A source change invalidates its proposed conclusion, not a human's
+        // explicit previous dismissal or confirmation. Restore the candidate
+        // lifecycle only *within* a live-source refresh, and then recalculate
+        // evidence strength/fingerprint before publishing the fresh state.
+        if ($githubConnected && ! isset($candidates['development_advanced_support'])
+            && is_array($priorCandidates['development_advanced_support'] ?? null)) {
+            $candidates['development_advanced_support'] =
+                $priorCandidates['development_advanced_support'];
+        }
         $selfReportedExperience = (string) data_get(
             $context,
             'domain_context.development.experience',
@@ -456,6 +479,19 @@ final class PersonalizationLivingProfileService
                     evidenceFingerprint: $fingerprint,
                 );
             }
+        }
+
+        // Revalidate the user-confirmed choice after a source refresh rather
+        // than reactivating stale readiness during an ordinary current() read.
+        if ($githubConnected
+            && ($candidates['development_advanced_support']['status'] ?? null) === 'confirmed'
+            && data_get($stored?->feature_readiness, 'development.advanced_support.source')
+                === 'context_confirmation') {
+            data_set(
+                $featureReadiness,
+                'development.advanced_support',
+                data_get($stored->feature_readiness, 'development.advanced_support'),
+            );
         }
 
         // Recommendation adapter: explicit preferences and confirmed choices
