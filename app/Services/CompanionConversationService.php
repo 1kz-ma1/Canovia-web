@@ -323,8 +323,21 @@ class CompanionConversationService
                 $this->derivedSources->isCurrent(
                     $plan, data_get($existing->metadata, 'source_provenance'),
                 )
-                && data_get($existing->metadata, 'membership_provenance')
-                    === data_get($assistant->metadata, 'membership_provenance')
+                && (
+                    data_get($existing->metadata, 'membership_provenance')
+                        === data_get($assistant->metadata, 'membership_provenance')
+                    // Historic Owner/Global proposals without this new field
+                    // can still dedupe safely. Shared member incarnations
+                    // must never be treated as the same proposal generation.
+                    || (
+                        data_get($existing->metadata, 'membership_provenance') === null
+                        && in_array(
+                            data_get($assistant->metadata, 'membership_provenance.scope'),
+                            ['owner', 'global'],
+                            true,
+                        )
+                    )
+                )
                 && $this->canonicalizePayload(is_array($existing->payload) ? $existing->payload : [])
                 === $normalizedPayload
             ));
