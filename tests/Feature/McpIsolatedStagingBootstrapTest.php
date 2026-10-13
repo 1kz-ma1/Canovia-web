@@ -573,6 +573,17 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             'CANOVIA_MCP_DELEGATED_POLICY_ENABLED' => 'true',
         ];
         $this->assertTrue($this->guard($read)->isSuccessful());
+        foreach ([
+            'CANOVIA_STAGING_MCP_EXPLICITLY_APPROVED',
+            'CANOVIA_MCP_TOOLS_ENABLED',
+            'CANOVIA_MCP_DELEGATED_POLICY_ENABLED',
+            'CANOVIA_STAGING_PLAN_CONSENT_PILOT_ENABLED',
+            'CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED',
+        ] as $required) {
+            $this->assertSame(42,
+                $this->guard([...$read, $required => 'false'])->getExitCode(),
+                $required);
+        }
 
         foreach ([
             ['CANOVIA_STAGING_PLAN_CONSENT_PILOT_ENABLED' => 'false'],
