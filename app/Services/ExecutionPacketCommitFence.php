@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Enums\FeatureKey;
 use App\Exceptions\NativeAiExecutionException;
 use App\Models\Plan;
-use App\Models\PlanMember;
 use App\Models\Task;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +19,7 @@ final class ExecutionPacketCommitFence
     public function __construct(
         private readonly NativeAiPurposeAuthorizationGuard $purposeGuard,
         private readonly ExecutionOrchestrationContextService $contexts,
+        private readonly CompanionMembershipCommitGuard $membershipCommit,
     ) {}
 
     /** @param array<string,mixed> $expectedContext */
@@ -47,14 +47,13 @@ final class ExecutionPacketCommitFence
                 $this->deny('native_ai_target_changed', $runId);
             }
 
-            $canEdit = (int) $currentPlan->user_id === (int) $userId
-                || ($currentPlan->is_collaborative && PlanMember::query()
-                    ->where('plan_id', $planId)
-                    ->where('user_id', $userId)
-                    ->where('role', PlanMember::ROLE_EDITOR)
-                    ->exists());
-
-            if (! $canEdit
+            // The Plan and Task rows are locked. Serialize the actor's
+            // membership row with concurrent role changes before rebuilding
+            // the epoch-bound context fingerprint. A current Editor role
+            // alone would accept revoked-then-restored AI output.
+            if (! $this->membershipCommit->canAccess(
+                $request->user(), $currentPlan, true,
+            )
                 || in_array($currentTask->status, ['done', 'cancelled'], true)
                 || (int) $currentTask->progress_percent >= 100
             ) {
