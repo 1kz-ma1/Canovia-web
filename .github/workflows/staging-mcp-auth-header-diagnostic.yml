@@ -6,6 +6,8 @@ on:
       - staging/mcp-auth0-oidc-audience-20261013
     paths:
       - 'docker/nginx-mcp-staging-synthetic-read-pilot.conf'
+      - 'app/Http/Controllers/McpReadOnlyResourceController.php'
+      - 'tests/Feature/McpReadOnlyResourceTest.php'
       - '.github/workflows/staging-mcp-auth-header-diagnostic.yml'
 
 permissions:
@@ -17,6 +19,19 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl
+          tools: composer:v2
+          coverage: none
+      - name: Verify Laravel header-challenge handling
+        run: |
+          composer validate --strict --no-interaction
+          composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+          php -l app/Http/Controllers/McpReadOnlyResourceController.php
+          php -l tests/Feature/McpReadOnlyResourceTest.php
+          php artisan test tests/Feature/McpReadOnlyResourceTest.php --colors=never
       - name: Verify exact staging Nginx syntax on Debian Nginx
         run: |
           docker run --rm --entrypoint nginx \
