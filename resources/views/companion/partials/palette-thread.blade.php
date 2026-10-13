@@ -182,8 +182,13 @@
                                 @endif
 
                                 @if ($candidate->status === 'pending')
+                                    @if (! empty($preview['membership_revalidation_required']))
+                                        <p class="text-xs" data-companion-membership-revalidation-required>
+                                            この共同Planの旧候補は生成時の参加権限を確認できません。履歴を残し、Companionに新しい候補を依頼してください。
+                                        </p>
+                                    @endif
                                     <div class="canovia-companion-palette-candidate-actions">
-                                        @if ($canApplyCompanionCandidates && ! empty($previewChanges))
+                                        @if ($canApplyCompanionCandidates && ! empty($previewChanges) && empty($preview['source_stale']) && empty($preview['membership_revalidation_required']))
                                             <form
                                                 method="POST"
                                                 action="{{ route('companion.candidates.apply', [$thread, $candidate]) }}"
@@ -209,7 +214,8 @@
                                 @elseif ($candidate->status === 'applied'
                                     && $candidate->type === 'prepare_execution_request'
                                     && $canApplyCompanionCandidates && filled($candidate->apply_request_id)
-                                    && empty($preview['source_stale']))
+                                    && empty($preview['source_stale'])
+                                    && empty($preview['membership_revalidation_required']))
                                     <div class="canovia-companion-palette-candidate-actions">
                                         <form method="POST" action="{{ route('companion.candidates.apply', [$thread, $candidate]) }}" data-companion-palette-async-form>
                                             @csrf

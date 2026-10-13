@@ -240,13 +240,18 @@
                                     @endif
 
                                     @if ($candidate->status === 'pending')
+                                        @if (! empty($preview['membership_revalidation_required']))
+                                            <p class="mt-3 text-xs text-amber-200" data-companion-membership-revalidation-required>
+                                                この共同Planの旧候補は生成時の参加権限を確認できません。履歴として残します。反映するには、現在の文脈でCompanionに新しい候補を依頼してください。
+                                            </p>
+                                        @endif
                                         @if (! empty($preview['source_stale']))
                                             <p class="mt-3 text-xs text-amber-200" data-companion-source-stale>
                                                 このAI変更候補の根拠または出典は現在検証できません。履歴として残しますが、反映には新しい提案が必要です。
                                             </p>
                                         @endif
                                         <div class="mt-3 flex flex-wrap gap-2">
-                                            @if ($canApplyCompanionCandidates && ! empty($previewChanges) && empty($preview['source_stale']))
+                                            @if ($canApplyCompanionCandidates && ! empty($previewChanges) && empty($preview['source_stale']) && empty($preview['membership_revalidation_required']))
                                                 <form method="POST" action="{{ route('companion.candidates.apply', [$thread, $candidate]) }}" data-mutation-once>
                                                     @csrf
                                                     <input type="hidden" name="apply_request_id" value="{{ $candidateApplyRequestIds[$candidate->id] ?? '' }}">
@@ -274,7 +279,8 @@
                                         </p>
                                         @if ($candidate->type === 'prepare_execution_request'
                                             && $canApplyCompanionCandidates && filled($candidate->apply_request_id)
-                                            && empty($preview['source_stale']))
+                                            && empty($preview['source_stale'])
+                                            && empty($preview['membership_revalidation_required']))
                                             <form method="POST" action="{{ route('companion.candidates.apply', [$thread, $candidate]) }}" class="mt-3" data-mutation-once>
                                                 @csrf
                                                 <input type="hidden" name="apply_request_id" value="{{ $candidate->apply_request_id }}">

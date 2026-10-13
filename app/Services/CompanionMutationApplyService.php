@@ -90,6 +90,13 @@ class CompanionMutationApplyService
             'source_stale' => ! $this->derivedSources->isCurrent(
                 $candidate->plan, data_get($candidate->metadata, 'source_provenance'),
             ),
+            // An old shared-Plan candidate has no proof of the membership
+            // under which its AI instruction was generated. Show it as
+            // history, but require a new AI proposal before human approval.
+            'membership_revalidation_required' => $this->requiresFreshCollaborativeProposal(
+                $candidate->plan,
+                data_get($candidate->metadata, 'membership_provenance'),
+            ),
             'target_label' => match ($candidate->type) {
                 'create_task' => $candidate->plan?->title ? 'Plan: '.$candidate->plan->title : 'Plan未選択',
                 'update_task' => $candidate->task?->title ? 'Task: '.$candidate->task->title : 'Task未選択',
@@ -100,6 +107,18 @@ class CompanionMutationApplyService
                 default => 'Canovia',
             },
         ];
+    }
+
+    /**
+     * An unproven legacy candidate cannot safely cross a collaborative Plan
+     * membership boundary. No historic membership can be reconstructed from
+     * current role, idempotency UUID, source data, or mutable UI state.
+     */
+    private function requiresFreshCollaborativeProposal(?Plan $plan, mixed $membershipIdentity): bool
+    {
+        return $plan !== null
+            && (bool) $plan->is_collaborative
+            && ! is_array($membershipIdentity);
     }
 
     /**
@@ -147,6 +166,19 @@ class CompanionMutationApplyService
             // personal Future Memo still only needs Plan viewing authority.
             $requiresEdit = $locked->type !== 'create_future_memo';
             $membershipIdentity = data_get($locked->metadata, 'membership_provenance');
+            // Do not re-authorize old collaborative AI proposals when the
+            // generation-time actor/membership identity was never recorded.
+            // Original approved historical mutations remain audit history;
+            // only fresh application or session recovery is fenced here.
+            $mayWriteOrRecover = $locked->status === CompanionMutationCandidate::STATUS_PENDING
+                || ($locked->status === CompanionMutationCandidate::STATUS_APPLIED
+                    && $locked->type === 'prepare_execution_request'
+                    && (string) $locked->apply_request_id === $requestId);
+            if ($mayWriteOrRecover && $this->requiresFreshCollaborativeProposal($livePlan, $membershipIdentity)) {
+                throw ValidationException::withMessages([
+                    'candidate' => 'この共同Planの旧AI候補は生成時の参加権限を確認できません。現在の文脈でCompanionに新しい候補を作成してください。',
+                ]);
+            }
             // New candidates carry the generation-time member identity.
             // Legacy candidates continue to use the current-role policy;
             // removal/rejoin safety for legacy history is not certified.
