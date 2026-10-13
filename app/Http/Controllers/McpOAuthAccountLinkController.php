@@ -9,6 +9,7 @@ use App\Services\McpOAuthAccountLinkCommitter;
 use App\Services\McpOAuthAccountLinkConfiguration;
 use App\Services\McpOAuthAccountLinkProvider;
 use App\Services\McpStagingLoginPilotPolicy;
+use App\Services\McpStagingOAuthFailureDiagnostic;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -40,7 +41,7 @@ final class McpOAuthAccountLinkController extends Controller
         ]);
 
         if (! $provider->isProviderVerified()) {
-            return $this->failure();
+            return $this->failure('link_start_provider_preflight');
         }
 
         $state = $this->base64Url(random_bytes(32));
@@ -49,7 +50,7 @@ final class McpOAuthAccountLinkController extends Controller
         $url = $provider->authorizationUrl($state, $challenge);
 
         if ($url === null) {
-            return $this->failure();
+            return $this->failure('link_start_authorization_url');
         }
 
         $request->session()->put(self::PENDING_SESSION, [
@@ -84,21 +85,32 @@ final class McpOAuthAccountLinkController extends Controller
         $issuer = $request->query('iss');
         $settings = $configuration->settings();
 
-        if ($settings === null || ! is_array($pending)
+        // Reject with a *fixed category only*, never the OAuth code, state,
+        // returned issuer, subject or IdP error description.
+        if ($settings === null) {
+            return $this->failure('link_callback_configuration');
+        }
+        if (! is_array($pending)
             || (int) ($pending['actor_id'] ?? 0) !== (int) $user->id
             || ! is_int($pending['issued_at'] ?? null)
             || $pending['issued_at'] > now()->timestamp
-            || now()->timestamp - $pending['issued_at'] > self::MAX_AGE_SECONDS
-            || ! is_string($state)
+            || now()->timestamp - $pending['issued_at'] > self::MAX_AGE_SECONDS) {
+            return $this->failure('link_callback_session');
+        }
+        if (! is_string($state)
             || strlen($state) > 128
             || ! is_string($pending['state_hash'] ?? null)
-            || ! hash_equals($pending['state_hash'], hash('sha256', $state))
-            || ! is_string($issuer)
-            || ! hash_equals($settings['issuer'], $issuer)
-            || $request->has('error')
-            || ! is_string($code)
-            || ! is_string($pending['verifier'] ?? null)) {
-            return $this->failure();
+            || ! hash_equals($pending['state_hash'], hash('sha256', $state))) {
+            return $this->failure('link_callback_state');
+        }
+        if ($request->has('error')) {
+            return $this->failure('link_callback_idp_error');
+        }
+        if (! is_string($issuer) || ! hash_equals($settings['issuer'], $issuer)) {
+            return $this->failure('link_callback_issuer');
+        }
+        if (! is_string($code) || ! is_string($pending['verifier'] ?? null)) {
+            return $this->failure('link_callback_code');
         }
 
         $principal = $provider->exchangeAndVerify($code, $pending['verifier']);
@@ -107,12 +119,12 @@ final class McpOAuthAccountLinkController extends Controller
             || $principal->issuer !== $settings['issuer']
             || $principal->clientId !== $settings['client_id']
             || $principal->audience !== $settings['resource']) {
-            return $this->failure();
+            return $this->failure('link_callback_token');
         }
 
         $fingerprint = $fingerprints->subject($principal->issuer, $principal->subject);
         if ($fingerprint === null) {
-            return $this->failure();
+            return $this->failure('link_callback_subject');
         }
 
         // A Plan consent needs its OWN verified outcome. Never turn a grant
@@ -129,7 +141,7 @@ final class McpOAuthAccountLinkController extends Controller
                 $stage = app(McpStagingLoginPilotPolicy::class);
                 if ($plan === null || ! $stage->planConsentReady()
                     || ! $stage->isApprovedSyntheticPlan($user, $plan)) {
-                    return $this->failure();
+                    return $this->failure('link_callback_plan_scope');
                 }
             }
 
@@ -139,7 +151,7 @@ final class McpOAuthAccountLinkController extends Controller
                 || $plan === null
                 || ! $consent->isPersonalDevelopmentOwner($user, $plan)
                 || ! $consent->matchesLinkedIdentity($user, $fingerprint)) {
-                return $this->failure();
+                return $this->failure('link_callback_plan_scope');
             }
 
             $request->session()->put(McpOAuthPlanConsentController::VERIFIED_SESSION, [
@@ -157,7 +169,7 @@ final class McpOAuthAccountLinkController extends Controller
         }
         if (isset($pending['purpose'])) {
             // Unknown purpose must fail; a crafted flow is not link consent.
-            return $this->failure();
+            return $this->failure('link_callback_unexpected_purpose');
         }
 
         // Store only an HMAC fingerprint, not raw sub, token, verifier or code.
@@ -192,7 +204,7 @@ final class McpOAuthAccountLinkController extends Controller
             || now()->timestamp - $verified['verified_at'] > self::MAX_AGE_SECONDS
             || ! is_string($verified['identity_fingerprint'] ?? null)
             || ! $committer->confirm($user, $verified['identity_fingerprint'])) {
-            return $this->failure();
+            return $this->failure('link_confirm_rejected');
         }
 
         return redirect()->route('auth.account')->with(
@@ -214,9 +226,10 @@ final class McpOAuthAccountLinkController extends Controller
         );
     }
 
-    private function failure(): RedirectResponse
+    private function failure(string $stageCode): RedirectResponse
     {
-        // Avoid leaking OAuth errors, identities and provider token responses.
+        // Identical user-facing error remains privacy-preserving in all envs.
+        app(McpStagingOAuthFailureDiagnostic::class)->record($stageCode);
         return redirect()->route('auth.account')->with(
             'status',
             '外部IDの本人確認を完了できませんでした。設定と認証状態をご確認のうえ、最初からやり直してください。',
