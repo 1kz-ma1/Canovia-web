@@ -1,5 +1,9 @@
 # Canovia documentation index (2026-10-08)
 
+## Pre-Launch public IA and staged participation (2026-10-13)
+
+- [Pre-Launch Public Site / App / Future IA specification](development/PRELAUNCH_PUBLIC_APP_FUTURE_IA_SPEC_2026_10_13.md): **product design, not a release authorization**. Guest diagnosis/Plan Seed preview, marketing site vs My Workspace vs Canovia Future responsibilities, curated public roadmap, existing free Support reuse, no pay-for-priority, release gates and small implementation slices.
+
 ## Adaptive Context Pipeline v0.5 — architecture review (2026-10-12)
 
 - [v0.5 architecture review candidate](development/ADAPTIVE_CONTEXT_PIPELINE_V05_ARCHITECTURE_REVIEW_2026_10_12.md): Shared Core + Domain Pipelines, Facts / Context / Capability contracts, policy and decisions. **Review proposal; not a runtime or billing change.**
