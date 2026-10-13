@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'app/Services/McpExternalTokenVerifier.php'
+      - 'app/Services/McpDelegatedPlanAccessPolicy.php'
+      - 'tests/Feature/McpDelegatedPlanAccessPolicyTest.php'
       - 'app/Services/McpAuth0JwtTokenVerifier.php'
       - 'app/Services/McpOAuthAccountLinkConfiguration.php'
       - 'app/Services/McpOAuthAccountLinkProvider.php'
@@ -33,6 +35,8 @@ jobs:
       - name: Validate routing and PHP syntax
         run: |
           php -l app/Services/McpExternalTokenVerifier.php
+          php -l app/Services/McpDelegatedPlanAccessPolicy.php
+          php -l tests/Feature/McpDelegatedPlanAccessPolicyTest.php
           php -l app/Services/McpAuth0JwtTokenVerifier.php
           php -l app/Services/McpOAuthAccountLinkConfiguration.php
           php -l app/Services/McpOAuthAccountLinkProvider.php
@@ -47,4 +51,4 @@ jobs:
           SESSION_DRIVER: array
           CACHE_STORE: array
         run: |
-          php artisan test tests/Feature/McpAuth0JwtProviderRoutingTest.php tests/Feature/McpAuth0JwtTokenVerifierTest.php tests/Feature/McpReadOnlyResourceTest.php tests/Feature/McpOAuthAccountLinkTest.php --colors=never
+          php artisan test tests/Feature/McpAuth0JwtProviderRoutingTest.php tests/Feature/McpAuth0JwtTokenVerifierTest.php tests/Feature/McpReadOnlyResourceTest.php tests/Feature/McpOAuthAccountLinkTest.php tests/Feature/McpDelegatedPlanAccessPolicyTest.php --colors=never

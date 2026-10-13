@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\McpDelegatedGrant;
 use App\Models\McpLinkedSubject;
 use App\Models\Plan;
+use App\Models\User;
 
 /**
  * Read-only eligibility evaluation for a FUTURE OAuth-linked MCP request.
@@ -18,6 +19,7 @@ final class McpDelegatedPlanAccessPolicy
 {
     public function __construct(
         private readonly McpProtectedResourceConfiguration $resource,
+        private readonly McpExternalTokenVerifier $verifier,
         private readonly McpDelegatedIdentityFingerprintService $fingerprints,
         private readonly PlanCategoryProfileService $profiles,
     ) {}
@@ -43,8 +45,12 @@ final class McpDelegatedPlanAccessPolicy
         string $requestedScope = 'overview',
         bool $lockForRead = false,
     ): ?McpDelegatedGrant {
+        // The calling MCP controller has ALREADY authenticated the token.
+        // Require exactly one valid verifier mode; Auth0 signed JWT is not
+        // RFC7662 introspection and must not be rejected for disabling it.
+        // Never accept both modes, neither mode, or an unknown driver.
         if (config('canovia_mcp.delegated_policy_enabled') !== true
-            || config('canovia_mcp.token_introspection_enabled') !== true
+            || $this->verifier->mode() === null
             || ! $this->resource->isReady()
             || ! in_array($requestedScope, ['overview', 'tasks'], true)) {
             return null;
@@ -87,6 +93,23 @@ final class McpDelegatedPlanAccessPolicy
             || (bool) $plan->is_collaborative
             || $this->profiles->forPlan($plan)->key !== 'development') {
             return null;
+        }
+
+        // A staging read, once independently activated, must NEVER expose
+        // another actor's Plan or a Plan injected into the isolated database.
+        // Only the one immutable synthetic fixture may cross this boundary.
+        if (config('app.env') === 'staging') {
+            if (config('canovia_staging.isolated') !== true) {
+                return null;
+            }
+            $owner = User::query()->whereKey($link->user_id)
+                ->when($lockForRead, fn ($query) => $query->lockForUpdate())
+                ->first();
+            if ($owner === null
+                || ! app(McpStagingLoginPilotPolicy::class)
+                    ->isApprovedSyntheticPlan($owner, $plan)) {
+                return null;
+            }
         }
 
         $grant = McpDelegatedGrant::query()

@@ -176,6 +176,68 @@ final class McpDelegatedPlanAccessPolicyTest extends TestCase
         $this->assertFalse($this->policy()->allows($principal, $plan, 'overview'));
     }
 
+    public function test_signed_auth0_mode_allows_only_explicit_grants_without_introspection(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner);
+        $principal = $this->principal();
+        $this->linkAndGrant($owner, $plan, $principal, 'tasks');
+
+        config([
+            'canovia_mcp.delegated_policy_enabled' => true,
+            'canovia_mcp.token_verification_driver' => 'auth0_jwt',
+            'canovia_mcp.token_introspection_enabled' => false,
+            'canovia_mcp.auth0_jwt_verification_enabled' => true,
+        ]);
+        $this->assertTrue($this->policy()->allows($principal, $plan, 'overview'));
+        $this->assertTrue($this->policy()->allows($principal, $plan, 'tasks'));
+
+        // A principal alone is not sufficient if the trust switches overlap.
+        config(['canovia_mcp.token_introspection_enabled' => true]);
+        $this->assertFalse($this->policy()->allows($principal, $plan));
+        config(['canovia_mcp.token_introspection_enabled' => false,
+            'canovia_mcp.token_verification_driver' => 'introspection']);
+        $this->assertFalse($this->policy()->allows($principal, $plan));
+        config(['canovia_mcp.token_verification_driver' => 'auth0_jwt',
+            'canovia_mcp.auth0_jwt_verification_enabled' => false]);
+        $this->assertFalse($this->policy()->allows($principal, $plan));
+    }
+
+    public function test_staging_signed_jwt_can_only_read_approved_synthetic_fixture(): void
+    {
+        $owner = User::factory()->create([
+            'email' => \App\Services\McpStagingSyntheticActorBootstrap::EMAIL,
+        ]);
+        $plan = $this->plan($owner);
+        $plan->update([
+            'creation_request_id' => \App\Services\McpStagingSyntheticPlanFixtureBootstrap::REQUEST_ID,
+            'title' => \App\Services\McpStagingSyntheticPlanFixtureBootstrap::TITLE,
+        ]);
+        $principal = $this->principal();
+        $this->linkAndGrant($owner, $plan, $principal, 'tasks');
+
+        config([
+            'app.env' => 'staging',
+            'canovia_staging.isolated' => true,
+            'canovia_mcp.delegated_policy_enabled' => true,
+            'canovia_mcp.token_verification_driver' => 'auth0_jwt',
+            'canovia_mcp.token_introspection_enabled' => false,
+            'canovia_mcp.auth0_jwt_verification_enabled' => true,
+        ]);
+        $this->assertTrue($this->policy()->allows($principal, $plan, 'overview'));
+
+        $plan->update(['title' => 'unapproved Plan']);
+        $this->assertFalse($this->policy()->allows($principal, $plan));
+        $plan->update(['title' => \App\Services\McpStagingSyntheticPlanFixtureBootstrap::TITLE]);
+
+        config(['canovia_staging.isolated' => false]);
+        $this->assertFalse($this->policy()->allows($principal, $plan));
+        config(['canovia_staging.isolated' => true]);
+        $this->assertTrue($this->policy()->allows($principal, $plan));
+        $owner->update(['email' => 'different@example.test']);
+        $this->assertFalse($this->policy()->allows($principal, $plan));
+    }
+
     public function test_raw_identity_never_stored_and_account_link_is_unique_across_users(): void
     {
         $owner = User::factory()->create();
