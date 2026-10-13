@@ -110,6 +110,60 @@ final class StudyPracticeGenerationCommitFenceG3Test extends TestCase
         $this->assertSame($other->id, $plan->fresh()->user_id);
     }
 
+    public function test_role_downgrade_and_repromotion_during_native_generation_withholds_questions(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $plan->update(['user_id' => User::factory()->create()->id, 'is_collaborative' => true]);
+        $membership = \App\Models\PlanMember::query()->create([
+            'plan_id' => $plan->id,
+            'user_id' => $user->id,
+            'role' => \App\Models\PlanMember::ROLE_EDITOR,
+            'joined_at' => now(),
+        ]);
+        $this->fakeNative($plan, $task);
+        $this->afterGateway(function () use ($membership): void {
+            $membership->update(['role' => \App\Models\PlanMember::ROLE_VIEWER]);
+            $membership->update(['role' => \App\Models\PlanMember::ROLE_EDITOR]);
+        });
+
+        $this->generate($user, $plan, $task);
+        $this->assertDatabaseCount('study_practice_sessions', 0);
+        $this->assertDatabaseCount('practice_question_demands', 0);
+        $this->assertDatabaseCount('practice_question_candidates', 0);
+        $this->assertSame(3, (int) $membership->fresh()->authorization_epoch);
+    }
+
+    public function test_member_rejoin_with_same_role_during_native_generation_withholds_questions(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $plan->update(['user_id' => User::factory()->create()->id, 'is_collaborative' => true]);
+        $membership = \App\Models\PlanMember::query()->create([
+            'plan_id' => $plan->id,
+            'user_id' => $user->id,
+            'role' => \App\Models\PlanMember::ROLE_EDITOR,
+            'joined_at' => now(),
+        ]);
+        $this->fakeNative($plan, $task);
+        $this->afterGateway(function () use ($membership): void {
+            $planId = $membership->plan_id;
+            $userId = $membership->user_id;
+            $membership->delete();
+            \App\Models\PlanMember::query()->create([
+                'plan_id' => $planId,
+                'user_id' => $userId,
+                'role' => \App\Models\PlanMember::ROLE_EDITOR,
+                'joined_at' => now(),
+            ]);
+        });
+
+        $this->generate($user, $plan, $task);
+        $this->assertDatabaseCount('study_practice_sessions', 0);
+        $this->assertDatabaseCount('practice_question_demands', 0);
+        $this->assertDatabaseCount('practice_question_candidates', 0);
+        $this->assertNotSame((int) $membership->id, (int) \App\Models\PlanMember::query()
+            ->where('plan_id', $plan->id)->where('user_id', $user->id)->firstOrFail()->id);
+    }
+
     public function test_entitlement_expiry_after_generation_provider_withholds_native_questions(): void
     {
         [$user, $plan, $task] = $this->scenario();
