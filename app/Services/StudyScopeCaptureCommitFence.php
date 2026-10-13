@@ -8,6 +8,7 @@ use App\Models\InboxItem;
 use App\Models\Plan;
 use App\Models\PlanMember;
 use App\Models\StudyScopeCapture;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
@@ -21,6 +22,7 @@ final class StudyScopeCaptureCommitFence
     public function __construct(
         private readonly NativeAiPurposeAuthorizationGuard $purposeGuard,
         private readonly PlanCategoryProfileService $categories,
+        private readonly CompanionMembershipCommitGuard $membershipCommit,
     ) {}
 
     /**
@@ -35,13 +37,13 @@ final class StudyScopeCaptureCommitFence
             $source = $liveCapture === null ? null
                 : InboxItem::query()->whereKey($liveCapture->inbox_item_id)->lockForUpdate()->first();
 
-            $this->assertCurrent($livePlan, $liveCapture, $source, $plan->id, $capture->id, $userId, null, null);
+            $authorization = $this->assertCurrent($livePlan, $liveCapture, $source, $plan->id, $capture->id, $userId, null, null);
 
             if ($liveCapture->status === 'confirmed') {
                 $this->deny('native_ai_target_changed', null);
             }
 
-            $signature = $this->signature($livePlan, $source);
+            $signature = $this->signature($livePlan, $source, $authorization);
             if ($signature === null) {
                 $this->deny('native_ai_source_changed', null);
             }
@@ -108,6 +110,7 @@ final class StudyScopeCaptureCommitFence
         }
     }
 
+    /** @return array<string,mixed> Original or current locked authorization proof. */
     private function assertCurrent(
         ?Plan $plan,
         ?StudyScopeCapture $capture,
@@ -117,7 +120,7 @@ final class StudyScopeCaptureCommitFence
         ?int $userId,
         ?string $expectedSignature,
         ?int $runId,
-    ): void {
+    ): array {
         if (
             $userId === null || $userId <= 0
             || $plan === null || $capture === null || $source === null
@@ -133,14 +136,19 @@ final class StudyScopeCaptureCommitFence
             $this->deny('native_ai_target_changed', $runId);
         }
 
-        $editor = (int) $plan->user_id === $userId
-            || ($plan->is_collaborative && PlanMember::query()
-                ->where('plan_id', $plan->id)
-                ->where('user_id', $userId)
-                ->where('role', PlanMember::ROLE_EDITOR)
-                ->exists());
+        // This method runs after Plan -> Capture -> Inbox row locks.
+        // Lock the membership before capturing or comparing the original
+        // owner/member epoch. Current Editor access alone cannot detect ABA.
+        $actor = User::query()->find($userId);
+        if ($actor === null
+            || ! $this->membershipCommit->canAccess($actor, $plan, true)) {
+            $this->deny('native_ai_target_changed', $runId);
+        }
 
-        if (! $editor) {
+        $authorization = $this->membershipCommit->capture($actor, $plan);
+        if (! in_array($authorization['scope'] ?? null, ['owner', 'member'], true)
+            || (($authorization['scope'] ?? null) === 'member'
+                && ($authorization['role'] ?? null) !== PlanMember::ROLE_EDITOR)) {
             $this->deny('native_ai_target_changed', $runId);
         }
 
@@ -152,14 +160,17 @@ final class StudyScopeCaptureCommitFence
         }
 
         if ($expectedSignature !== null) {
-            $actual = $this->signature($plan, $source);
+            $actual = $this->signature($plan, $source, $authorization);
             if ($actual === null || ! hash_equals($expectedSignature, $actual)) {
                 $this->deny('native_ai_source_changed', $runId);
             }
         }
+
+        return $authorization;
     }
 
-    private function signature(Plan $plan, InboxItem $source): ?string
+    /** @param array<string,mixed> $authorization */
+    private function signature(Plan $plan, InboxItem $source, array $authorization): ?string
     {
         try {
             if (! in_array($source->source_type, ['image', 'pdf'], true)
@@ -174,6 +185,7 @@ final class StudyScopeCaptureCommitFence
 
             return hash('sha256', json_encode([
                 'plan_id' => (int) $plan->id,
+                'authorization' => $authorization,
                 'category' => (string) $plan->category,
                 'domain' => (string) ($plan->workspace_domain_override ?? ''),
                 'deadline' => $plan->deadline?->format('Y-m-d'),
