@@ -133,6 +133,44 @@ final class McpAuth0JwtProviderRoutingTest extends TestCase
         Http::assertSentCount(1);
     }
 
+    public function test_staging_only_attested_cimd_resolves_to_existing_internal_client_for_tools_list(): void
+    {
+        $internal = 'tpc_approvedSyntheticThirdPartyClient';
+        $external = 'https://chatgpt.com/oauth/client.json';
+        config([
+            'app.env' => 'staging',
+            'canovia_staging.isolated' => true,
+            'canovia_staging.synthetic_read_pilot_enabled' => true,
+            'canovia_staging.mcp_explicitly_approved' => true,
+            'canovia_staging.mcp_cimd_mapping_verified' => true,
+            'canovia_staging.mcp_cimd_external_client_id' => $external,
+            'canovia_mcp.allowed_client_id' => $internal,
+        ]);
+
+        $this->stubJwks();
+        $externalToken = $this->token($external);
+        $this->listTools($externalToken)->assertOk()
+            ->assertJsonPath('result.tools.0.name', 'canovia_get_development_plan_context');
+
+        // Canonical principal remains the internal tpc_ identity already
+        // used by delegated grants and scope-bound HMAC fingerprints.
+        $principal = app(McpExternalTokenVerifier::class)->verify($externalToken);
+        $this->assertNotNull($principal);
+        $this->assertSame($internal, $principal->clientId);
+        $this->assertSame(
+            app(McpDelegatedIdentityFingerprintService::class)->clientResource($internal, self::RESOURCE),
+            app(McpDelegatedIdentityFingerprintService::class)->clientResource($principal->clientId, $principal->audience),
+        );
+
+        // The third-party ChatGPT token never authenticates the separate
+        // confidential Canovia account linking client.
+        $this->assertNull(app(McpExternalTokenVerifier::class)->verifyAccountLink($externalToken));
+        $this->listTools($this->token(self::LINK_CLIENT))->assertUnauthorized();
+
+        config(['canovia_staging.mcp_cimd_mapping_verified' => false]);
+        $this->listTools($externalToken)->assertUnauthorized();
+    }
+
     public function test_verified_signed_auth0_jwt_requires_approved_plan_and_revocation_takes_effect(): void
     {
         $this->stubJwks();
