@@ -188,13 +188,16 @@ final class McpAuth0JwtTokenVerifierTest extends TestCase
         $this->assertNull($this->verifier()->verify(str_repeat('a', 9000)));
     }
 
-    public function test_exact_signed_claims_require_issuer_single_audience_client_scope_and_expiry(): void
+    public function test_exact_signed_claims_require_issuer_approved_audiences_client_scope_and_expiry(): void
     {
         $this->fakeJwks(['keys' => [$this->jwk]]);
         foreach ([
             ['iss' => 'https://other.jp.auth0.com/'],
             ['aud' => 'https://unrelated.example/api'],
-            ['aud' => [self::RESOURCE, self::ISSUER.'userinfo']],
+            ['aud' => [self::ISSUER.'userinfo']],
+            ['aud' => [self::RESOURCE, self::ISSUER.'userinfo', 'https://evil.example/api']],
+            ['aud' => [self::RESOURCE, 'https://evil.example/userinfo']],
+            ['aud' => [self::RESOURCE, self::RESOURCE]],
             ['azp' => 'unrecognized-client'],
             ['scope' => 'openid'],
             ['scope' => 'canovia.development.read:write'],
@@ -207,6 +210,17 @@ final class McpAuth0JwtTokenVerifierTest extends TestCase
             $this->assertNull($this->verifier()->verify($this->token($diff)),
                 'Incorrect claim must never authorize: '.implode(',', array_keys($diff)));
         }
+        $this->assertNotNull($this->verifier()->verify($this->token([
+            'aud' => [self::RESOURCE, self::ISSUER.'userinfo'],
+        ])));
+        $this->assertNotNull($this->verifier()->verify($this->token([
+            'aud' => [self::ISSUER.'userinfo', self::RESOURCE],
+        ])));
+        $this->assertNull($this->verifier()->verify($this->token([
+            'aud' => [self::RESOURCE, self::ISSUER.'userinfo'],
+            'scope' => 'canovia.development.read',
+        ])));
+
         $rfc9068 = $this->validClaims();
         unset($rfc9068['azp']);
         $rfc9068['client_id'] = self::CHATGPT_INTERNAL_CLIENT;
