@@ -149,8 +149,42 @@ class CompanionMutationApplyService
             }
 
             if ($locked->status === CompanionMutationCandidate::STATUS_APPLIED) {
+                $message = 'この変更候補はすでに反映済みです。';
+
+                // Only the original apply request may repair a lost session.
+                // Never re-execute the mutation or treat a fresh UUID as a
+                // second human approval. Keep the Plan/Task/Candidate locks
+                // and reacquire current GitHub source locks before delivery.
+                if ($locked->type === 'prepare_execution_request'
+                    && (string) $locked->apply_request_id === $requestId) {
+                    if (! $livePlan || ! $liveTask
+                        || (int) $liveTask->plan_id !== (int) $livePlan->id) {
+                        throw ValidationException::withMessages([
+                            'candidate' => '実行候補の対象PlanまたはTaskを確認できません。',
+                        ]);
+                    }
+                    $locked->setRelation('plan', $livePlan);
+                    $locked->setRelation('task', $liveTask);
+                    $this->ownership->authorizeTask($request, $liveTask);
+
+                    if (! $this->derivedSources->isCurrentForCommit(
+                        $livePlan, data_get($locked->metadata, 'source_provenance'),
+                    )) {
+                        throw ValidationException::withMessages([
+                            'candidate' => '元のGitHub根拠が現在未検証です。新しい候補を作成してください。',
+                        ]);
+                    }
+
+                    $recovered = $this->executionRequests->recoverCommittedCompanion(
+                        $request, $locked, $livePlan, $liveTask, $requestId,
+                    );
+                    $message = $recovered
+                        ? '承認済みの実行リクエストを復旧しました。'
+                        : '承認済みです。既存のExecution作業内容は変更していません。';
+                }
+
                 return [
-                    'message' => 'この変更候補はすでに反映済みです。',
+                    'message' => $message,
                     'target_type' => (string) ($locked->applied_target_type ?: 'unknown'),
                     'target_id' => (int) ($locked->applied_target_id ?: 0),
                     'already_applied' => true,

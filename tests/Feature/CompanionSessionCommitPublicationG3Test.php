@@ -2,18 +2,24 @@
 
 namespace Tests\Feature;
 
+use App\Enums\EvidenceSource;
 use App\Enums\ProductKey;
 use App\Models\CompanionMutationCandidate;
 use App\Models\CompanionThread;
 use App\Models\Plan;
+use App\Models\PlanArtifact;
 use App\Models\Task;
+use App\Models\TaskEvidence;
 use App\Models\User;
 use App\Models\UserProductGrant;
+use App\Services\CompanionDerivedEvidenceSourceGuard;
+use App\Services\CompanionMutationApplyService;
 use App\Services\ExecutionRequestHandoffService;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use LogicException;
 use RuntimeException;
 use Tests\TestCase;
@@ -134,6 +140,153 @@ final class CompanionSessionCommitPublicationG3Test extends TestCase
         app(ExecutionRequestHandoffService::class)->confirmFromCompanion(
             $request, $candidate, $plan, $task, 'No standalone Companion grant',
         );
+    }
+
+
+    public function test_identical_replay_recovers_lost_session_without_reapplying_approved_candidate(): void
+    {
+        [$request, $plan, $task, $candidate] = $this->scenario();
+        $service = app(CompanionMutationApplyService::class);
+        $key = ExecutionRequestHandoffService::sessionKey($plan, $task);
+        $requestId = (string) Str::uuid();
+
+        $first = $service->apply($request, $candidate, $requestId);
+        $this->assertFalse($first['already_applied']);
+        $original = $candidate->fresh();
+        $this->assertSame('applied', $original->status);
+        $this->assertSame('companion_candidate', data_get(session($key), 'execution_request.source.type'));
+
+        // Simulate a lost session after a committed DB approval.
+        session()->forget($key);
+        $this->assertNull(session($key));
+
+        $replayed = $service->apply($request, $candidate->fresh(), $requestId);
+        $this->assertTrue($replayed['already_applied']);
+        $this->assertSame('承認済みの実行リクエストを復旧しました。', $replayed['message']);
+        $this->assertSame('Execute after human approval', data_get(session($key), 'execution_request.instruction'));
+        $this->assertSame((int) $candidate->id, data_get(session($key), 'execution_request.source.id'));
+        $this->assertSame($requestId, $candidate->fresh()->apply_request_id);
+        $this->assertSame($original->updated_at?->toIso8601String(), $candidate->fresh()->updated_at?->toIso8601String());
+        $this->assertSame($original->metadata, $candidate->fresh()->metadata);
+        $this->assertSame('doing', $task->fresh()->status);
+        $this->assertDatabaseCount('companion_mutation_candidates', 1);
+    }
+
+    public function test_replay_never_replaces_newer_execution_session_or_reuses_new_uuid(): void
+    {
+        [$request, $plan, $task, $candidate] = $this->scenario();
+        $service = app(CompanionMutationApplyService::class);
+        $key = ExecutionRequestHandoffService::sessionKey($plan, $task);
+        $requestId = (string) Str::uuid();
+        $service->apply($request, $candidate, $requestId);
+
+        $newer = [
+            'execution_request' => ['source' => ['type' => 'inbox_item', 'id' => 123]],
+            'packet' => ['fingerprint' => 'newer-packet'],
+            'handoff_prompt' => 'newer user-authored execution',
+        ];
+        session()->put($key, $newer);
+        $replay = $service->apply($request, $candidate->fresh(), $requestId);
+        $this->assertTrue($replay['already_applied']);
+        $this->assertSame($newer, session($key));
+
+        session()->forget($key);
+        $different = $service->apply($request, $candidate->fresh(), (string) Str::uuid());
+        $this->assertTrue($different['already_applied']);
+        $this->assertNull(session($key), 'A different apply UUID must not invent a new grant.');
+    }
+
+    public function test_modified_or_missing_commit_audit_blocks_recovery_without_mutation(): void
+    {
+        [$request, $plan, $task, $candidate] = $this->scenario();
+        $service = app(CompanionMutationApplyService::class);
+        $key = ExecutionRequestHandoffService::sessionKey($plan, $task);
+        $requestId = (string) Str::uuid();
+        $service->apply($request, $candidate, $requestId);
+        session()->forget($key);
+
+        $originalPayload = $candidate->fresh()->payload;
+        $candidate->update(['payload' => [...$originalPayload, 'instruction' => 'UNAPPROVED replacement']]);
+        $this->expectRecoveryDenied($request, $candidate->fresh(), $requestId);
+        $this->assertNull(session($key));
+
+        $candidate->update(['payload' => $originalPayload]);
+        $metadata = (array) $candidate->fresh()->metadata;
+        unset($metadata['apply_audit']);
+        // The original test fixture predates the service's committed audit;
+        // reload first so Eloquent sees the removal as a dirty attribute.
+        $candidate->fresh()->update(['metadata' => $metadata]);
+        $this->assertArrayNotHasKey('apply_audit', (array) $candidate->fresh()->metadata);
+        $this->expectRecoveryDenied($request, $candidate->fresh(), $requestId);
+        $this->assertNull(session($key));
+        $this->assertSame('applied', $candidate->fresh()->status);
+        $this->assertSame('doing', $task->fresh()->status);
+    }
+
+    public function test_revoked_and_reconnected_github_source_cannot_regain_recovery_authority(): void
+    {
+        [$request, $plan, $task, $candidate] = $this->scenario();
+        $root = PlanArtifact::query()->create([
+            'plan_id' => $plan->id,
+            'created_by_user_id' => $plan->user_id,
+            'provider' => 'github', 'artifact_type' => 'repository',
+            'title' => 'Canovia-web', 'url' => 'https://github.com/1kz-ma1/Canovia-web',
+            'metadata' => ['github_app_connection' => [
+                'status' => 'connected', 'installation_id' => 777,
+                'source_epoch' => 'd53544a9-a5fc-4ba2-bfae-8521f4703d0d',
+            ]],
+        ]);
+        $evidence = TaskEvidence::query()->create([
+            'plan_id' => $plan->id, 'task_id' => $task->id,
+            'user_id' => $plan->user_id, 'source' => EvidenceSource::GitHub->value,
+            'type' => 'github_issue_observed', 'external_key' => 'github:g3:replay:77',
+            'occurred_at' => now(),
+            'metadata' => [
+                'repo_full_name' => '1kz-ma1/Canovia-web',
+                'github_source_epoch' => 'd53544a9-a5fc-4ba2-bfae-8521f4703d0d',
+                'github_repository_artifact_id' => $root->id,
+                'issue_state' => 'closed',
+            ],
+        ]);
+        $provenance = [
+            'version' => 1, 'github_evidence' => [[
+                'id' => $evidence->id,
+                'revision' => app(CompanionDerivedEvidenceSourceGuard::class)->revision($evidence),
+            ]],
+        ];
+        $candidate->update(['metadata' => [
+            'source' => 'canovia_companion', 'source_provenance' => $provenance,
+        ]]);
+        $requestId = (string) Str::uuid();
+        $service = app(CompanionMutationApplyService::class);
+        $service->apply($request, $candidate->fresh(), $requestId);
+        $key = ExecutionRequestHandoffService::sessionKey($plan, $task);
+        session()->forget($key);
+
+        $metadata = (array) $root->metadata;
+        $metadata['github_app_connection']['status'] = 'revoked';
+        $root->update(['metadata' => $metadata]);
+        $this->expectRecoveryDenied($request, $candidate->fresh(), $requestId);
+        $this->assertNull(session($key));
+
+        $metadata['github_app_connection']['status'] = 'connected';
+        $metadata['github_app_connection']['source_epoch'] = (string) Str::uuid();
+        $root->update(['metadata' => $metadata]);
+        $this->expectRecoveryDenied($request, $candidate->fresh(), $requestId);
+        $this->assertNull(session($key));
+        $this->assertSame('applied', $candidate->fresh()->status);
+        $this->assertSame('doing', $task->fresh()->status);
+    }
+
+    private function expectRecoveryDenied(
+        Request $request, CompanionMutationCandidate $candidate, string $requestId,
+    ): void {
+        try {
+            app(CompanionMutationApplyService::class)->apply($request, $candidate, $requestId);
+            $this->fail('Stale or tampered approvals may not recreate a session.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('candidate', $exception->errors());
+        }
     }
 
     private function scenario(): array

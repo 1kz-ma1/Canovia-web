@@ -96,6 +96,81 @@ final class ExecutionRequestHandoffService
     }
 
     /**
+     * Re-deliver a previously committed human-approved Companion request.
+     * This NEVER re-applies its Candidate; the saved audit is the approved
+     * payload and the same-row lock/lineage fence is held by the caller.
+     * A newer Execution session must never be overwritten by an old retry.
+     */
+    public function recoverCommittedCompanion(
+        Request $request,
+        CompanionMutationCandidate $candidate,
+        Plan $plan,
+        Task $task,
+        string $requestId,
+    ): bool {
+        if (DB::transactionLevel() < 1) {
+            throw new LogicException('Companion handoff recovery requires a database transaction.');
+        }
+
+        $audit = data_get($candidate->metadata, 'apply_audit');
+        $approved = data_get($audit, 'after');
+        $normalized = data_get($audit, 'normalized_payload');
+        $payload = is_array($candidate->payload) ? $candidate->payload : [];
+        $instruction = trim((string) data_get($approved, 'instruction'));
+        $deny = ! is_array($audit) || ! is_array($approved) || ! is_array($normalized)
+            || $candidate->type !== 'prepare_execution_request'
+            || $candidate->status !== CompanionMutationCandidate::STATUS_APPLIED
+            || (string) $candidate->apply_request_id !== $requestId
+            || (string) data_get($audit, 'apply_request_id') !== $requestId
+            || (int) data_get($audit, 'applied_by_user_id') !== (int) $candidate->user_id
+            || $candidate->applied_target_type !== 'execution_request'
+            || (int) $candidate->applied_target_id !== (int) $task->id
+            || (int) $candidate->plan_id !== (int) $plan->id
+            || (int) $candidate->task_id !== (int) $task->id
+            || (int) $candidate->user_id !== (int) $plan->user_id
+            || data_get($approved, 'source.type') !== 'companion_candidate'
+            || (int) data_get($approved, 'source.id') !== (int) $candidate->id
+            || (int) data_get($approved, 'source.thread_id') !== (int) $candidate->companion_thread_id
+            || (int) data_get($approved, 'target_plan.id') !== (int) $plan->id
+            || (int) data_get($approved, 'target_task.id') !== (int) $task->id
+            || $instruction === ''
+            || $instruction !== trim((string) ($normalized['instruction'] ?? ''))
+            || $instruction !== trim((string) ($payload['instruction'] ?? ''))
+            || (string) data_get($approved, 'actor_type') !== (string) ($normalized['actor_type'] ?? 'human_ai')
+            || (string) data_get($approved, 'actor_type') !== (string) ($payload['actor_type'] ?? 'human_ai')
+            || data_get($approved, 'available_minutes') !== ($normalized['available_minutes'] ?? null)
+            || data_get($approved, 'available_minutes') !== ($payload['available_minutes'] ?? null)
+            || ! $this->sourceIsCurrent($approved, $plan, $task);
+
+        if ($deny) {
+            throw ValidationException::withMessages([
+                'candidate' => '承認済みの実行内容または根拠を検証できません。新しい候補を作成してください。',
+            ]);
+        }
+
+        $key = self::sessionKey($plan, $task);
+        if ($request->session()->has($key)) {
+            // Existing handoff may be from Inbox or a newer Companion.
+            // Never reset its Packet, prompt or source on an old retry.
+            return false;
+        }
+
+        $this->confirm(
+            request: $request,
+            plan: $plan,
+            task: $task,
+            source: $approved['source'],
+            instruction: $instruction,
+            actorType: (string) data_get($approved, 'actor_type'),
+            availableMinutes: data_get($approved, 'available_minutes'),
+            publishAfterCommit: true,
+            onlyIfSessionMissing: true,
+        );
+
+        return true;
+    }
+
+    /**
      * Convert a human-confirmed Development Implementation Brief into the
      * canonical session-scoped Execution Request.
      *
@@ -163,6 +238,7 @@ final class ExecutionRequestHandoffService
         string $actorType,
         ?int $availableMinutes,
         bool $publishAfterCommit = false,
+        bool $onlyIfSessionMissing = false,
     ): array {
         if ((int) $task->plan_id !== (int) $plan->id) {
             throw ValidationException::withMessages([
@@ -221,8 +297,12 @@ final class ExecutionRequestHandoffService
         // until the enclosing approval transaction commits. Publishing its
         // session-scoped Execution Request here can leak an uncommitted
         // approval through deadlock retries or a later exception.
-        $publish = static function () use ($request, $sessionKey, $sessionValue): void {
-            $request->session()->put($sessionKey, $sessionValue);
+        $publish = static function () use (
+            $request, $sessionKey, $sessionValue, $onlyIfSessionMissing,
+        ): void {
+            if (! $onlyIfSessionMissing || ! $request->session()->has($sessionKey)) {
+                $request->session()->put($sessionKey, $sessionValue);
+            }
         };
 
         if ($publishAfterCommit) {

@@ -206,6 +206,17 @@
                                             <button type="submit" class="is-secondary">見送る</button>
                                         </form>
                                     </div>
+                                @elseif ($candidate->status === 'applied'
+                                    && $candidate->type === 'prepare_execution_request'
+                                    && $canApplyCompanionCandidates && filled($candidate->apply_request_id)
+                                    && empty($preview['source_stale']))
+                                    <div class="canovia-companion-palette-candidate-actions">
+                                        <form method="POST" action="{{ route('companion.candidates.apply', [$thread, $candidate]) }}" data-companion-palette-async-form>
+                                            @csrf
+                                            <input type="hidden" name="apply_request_id" value="{{ $candidate->apply_request_id }}">
+                                            <button type="submit" class="is-secondary">実行リクエストを再開・復旧</button>
+                                        </form>
+                                    </div>
                                 @endif
                             </div>
                         @endforeach
