@@ -22,6 +22,7 @@ class StudyRecallCandidate extends Model
         'confidence',
         'status',
         'fingerprint',
+        'review_provenance',
         'reviewed_at',
     ];
 
@@ -29,6 +30,7 @@ class StudyRecallCandidate extends Model
     {
         return [
             'tags' => 'array',
+            'review_provenance' => 'array',
             'confidence' => 'integer',
             'reviewed_at' => 'datetime',
         ];
