@@ -24,8 +24,8 @@ BEGIN
         NEW.authorization_epoch := OLD.authorization_epoch;
     END IF;
     RETURN NEW;
-END
-$$ LANGUAGE plpgsql
+END;
+$ LANGUAGE plpgsql;
 SQL);
                 DB::unprepared('CREATE TRIGGER canovia_plan_authorization_epoch BEFORE UPDATE ON plans FOR EACH ROW EXECUTE FUNCTION canovia_plan_authorization_epoch_update()');
 
@@ -38,8 +38,8 @@ BEGIN
         NEW.authorization_epoch := OLD.authorization_epoch;
     END IF;
     RETURN NEW;
-END
-$$ LANGUAGE plpgsql
+END;
+$ LANGUAGE plpgsql;
 SQL);
                 DB::unprepared('CREATE TRIGGER canovia_member_authorization_epoch BEFORE UPDATE ON plan_members FOR EACH ROW EXECUTE FUNCTION canovia_member_authorization_epoch_update()');
                 break;
