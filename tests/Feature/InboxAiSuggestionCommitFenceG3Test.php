@@ -7,6 +7,7 @@ use App\Enums\ProductKey;
 use App\Models\InboxItem;
 use App\Models\NativeAiRun;
 use App\Models\Plan;
+use App\Models\PlanMember;
 use App\Models\User;
 use App\Models\UserProductGrant;
 use App\Services\NativeAiGateway;
@@ -170,6 +171,97 @@ final class InboxAiSuggestionCommitFenceG3Test extends TestCase
 
         $this->suggest($user, $item);
         $this->assertWithheld($item);
+    }
+
+    public function test_unchanged_shared_editor_inbox_persists_suggestion(): void
+    {
+        [$editor, $item] = $this->sharedEditorScenario();
+
+        $this->suggest($editor, $item)->assertSessionHasNoErrors();
+
+        $this->assertSame('review', $item->fresh()->status);
+        $this->assertSame('task_evidence', data_get($item->fresh()->metadata, 'routing_suggestion.destination'));
+        $this->assertDatabaseCount('task_evidences', 0);
+    }
+
+    public function test_owner_change_and_return_during_provider_withholds_stale_inbox_suggestion(): void
+    {
+        [$owner, $item] = $this->scenario();
+        $plan = $this->plan($owner);
+        $item->update(['plan_id' => $plan->id]);
+        $other = User::factory()->create();
+
+        $this->afterGateway(function () use ($plan, $owner, $other) {
+            $plan->update(['user_id' => $other->id]);
+            $plan->update(['user_id' => $owner->id]);
+        });
+
+        $this->suggest($owner, $item);
+        $this->assertWithheld($item);
+        $this->assertSame($owner->id, $plan->fresh()->user_id);
+    }
+
+    public function test_editor_downgrade_and_return_during_provider_withholds_stale_inbox_suggestion(): void
+    {
+        [$editor, $item, $plan, $membership] = $this->sharedEditorScenario();
+
+        $this->afterGateway(function () use ($membership) {
+            $membership->update(['role' => PlanMember::ROLE_VIEWER]);
+            $membership->update(['role' => PlanMember::ROLE_EDITOR]);
+        });
+
+        $this->suggest($editor, $item);
+        $this->assertWithheld($item);
+        $this->assertSame(PlanMember::ROLE_EDITOR, $membership->fresh()->role);
+        $this->assertTrue((bool) $plan->fresh()->is_collaborative);
+    }
+
+    public function test_editor_remove_and_same_role_rejoin_during_provider_withholds_stale_inbox_suggestion(): void
+    {
+        [$editor, $item, $plan, $membership] = $this->sharedEditorScenario();
+        $originalMemberId = $membership->id;
+
+        $this->afterGateway(function () use ($editor, $plan, $membership) {
+            $membership->delete();
+            PlanMember::query()->create([
+                'plan_id' => $plan->id,
+                'user_id' => $editor->id,
+                'role' => PlanMember::ROLE_EDITOR,
+                'joined_at' => now(),
+            ]);
+        });
+
+        $this->suggest($editor, $item);
+        $this->assertWithheld($item);
+        $this->assertNotEquals($originalMemberId, PlanMember::query()
+            ->where('plan_id', $plan->id)->where('user_id', $editor->id)->firstOrFail()->id);
+    }
+
+    public function test_unrelated_plan_title_update_does_not_invalidate_inbox_editor(): void
+    {
+        [$editor, $item, $plan] = $this->sharedEditorScenario();
+        $this->afterGateway(fn () => $plan->update(['title' => '新しいPlanタイトル']));
+
+        $this->suggest($editor, $item)->assertSessionHasNoErrors();
+        $this->assertSame('review', $item->fresh()->status);
+        $this->assertSame('新しいPlanタイトル', $plan->fresh()->title);
+    }
+
+    private function sharedEditorScenario(): array
+    {
+        [$editor, $item] = $this->scenario();
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner);
+        $plan->update(['is_collaborative' => true]);
+        $membership = PlanMember::query()->create([
+            'plan_id' => $plan->id,
+            'user_id' => $editor->id,
+            'role' => PlanMember::ROLE_EDITOR,
+            'joined_at' => now(),
+        ]);
+        $item->update(['plan_id' => $plan->id]);
+
+        return [$editor, $item, $plan, $membership];
     }
 
     private function scenario(string $type = 'text'): array

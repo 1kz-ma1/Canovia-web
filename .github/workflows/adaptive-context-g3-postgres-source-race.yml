@@ -10,6 +10,9 @@ on:
       - 'app/Services/CompanionMembershipCommitGuard.php'
       - 'app/Services/StudyPracticeGenerationCommitFence.php'
       - 'app/Services/StudyPracticeAssessmentCommitFence.php'
+      - 'app/Services/InboxAiSuggestionCommitFence.php'
+      - 'app/Services/InboxIntelligenceService.php'
+      - 'tests/Feature/InboxAiSuggestionCommitFenceG3Test.php'
       - 'tests/Feature/StudyPracticeGenerationCommitFenceG3Test.php'
       - 'tests/Feature/StudyAssessmentAiCommitFenceG3Test.php'
       - 'app/Models/Plan.php'
@@ -73,6 +76,9 @@ jobs:
           php -l app/Services/CompanionMembershipCommitGuard.php
           php -l app/Services/StudyPracticeGenerationCommitFence.php
           php -l app/Services/StudyPracticeAssessmentCommitFence.php
+          php -l app/Services/InboxAiSuggestionCommitFence.php
+          php -l app/Services/InboxIntelligenceService.php
+          php -l tests/Feature/InboxAiSuggestionCommitFenceG3Test.php
           php -l tests/Feature/StudyPracticeGenerationCommitFenceG3Test.php
           php -l tests/Feature/StudyAssessmentAiCommitFenceG3Test.php
           php -l app/Models/Plan.php
@@ -99,5 +105,7 @@ jobs:
           php artisan test tests/Feature/AuthorizationEpochDatabaseTriggerG3Test.php --stop-on-failure
       - name: Study Native generation and assessment authorization epoch regression on PostgreSQL 16
         run: php artisan test tests/Feature/StudyPracticeGenerationCommitFenceG3Test.php tests/Feature/StudyAssessmentAiCommitFenceG3Test.php --stop-on-failure
+      - name: Inbox AI membership epochs on PostgreSQL 16
+        run: php artisan test tests/Feature/InboxAiSuggestionCommitFenceG3Test.php --stop-on-failure
       - name: Independent PostgreSQL sessions invitation join and revoke race
         run: php artisan test tests/Feature/CollaborationInviteJoinPostgresG3Test.php --stop-on-failure
