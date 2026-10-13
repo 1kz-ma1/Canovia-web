@@ -131,6 +131,9 @@ final class StudyScopeCaptureAnalysisService
                 'draft_data' => [
                     'items' => $items,
                     'ambiguities' => $ambiguities,
+                    // Only the SHA-256 of the locked private source and
+                    // original Owner/Editor epoch is retained. No raw proof.
+                    'source_signature' => $sourceSignature,
                 ],
                 'confidence' => round($overallConfidence / 100, 4),
                 'extraction_version' => 'study_scope_v1',
