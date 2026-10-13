@@ -27,7 +27,9 @@
         label{display:block;font-weight:700;font-size:14px;margin:18px 0 8px}
         input{display:block;width:100%;min-height:48px;padding:11px 14px;color:#fff;
               background:#0a1324;border:1px solid #6b7e9c;border-radius:10px;font:inherit}
-        input:focus{outline:3px solid #75c7ff55;outline-offset:2px}
+        select{display:block;width:100%;min-height:48px;padding:11px 14px;
+               color:#fff;background:#0a1324;border:1px solid #6b7e9c;border-radius:10px;font:inherit}
+        input:focus,select:focus{outline:3px solid #75c7ff55;outline-offset:2px}
         button{appearance:none;cursor:pointer;min-height:46px;padding:10px 18px;border-radius:10px;
                font:inherit;font-weight:750;border:1px solid #7cb2e1;color:#061626;background:#a7ddff}
         button.secondary{color:#d4e7ff;background:#1a3351;border-color:#506d91}
