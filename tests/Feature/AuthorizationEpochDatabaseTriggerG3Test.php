@@ -6,7 +6,7 @@ use App\Models\Plan;
 use App\Models\PlanMember;
 use App\Models\User;
 use App\Services\CompanionMembershipCommitGuard;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -18,7 +18,7 @@ use Tests\TestCase;
  */
 final class AuthorizationEpochDatabaseTriggerG3Test extends TestCase
 {
-    use DatabaseMigrations;
+    use DatabaseTransactions;
 
     private function scenario(): array
     {
