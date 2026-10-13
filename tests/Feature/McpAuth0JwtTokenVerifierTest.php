@@ -147,6 +147,96 @@ final class McpAuth0JwtTokenVerifierTest extends TestCase
         );
     }
 
+    public function test_staging_verified_cimd_mapping_requires_all_gates_and_keeps_canonical_client(): void
+    {
+        $this->fakeJwks(['keys' => [$this->jwk]]);
+        $internal = 'tpc_syntheticRegisteredClient1234';
+        $external = 'https://chatgpt.com/oauth/client.json';
+
+        config([
+            'app.env' => 'staging',
+            'canovia_staging.isolated' => true,
+            'canovia_staging.synthetic_read_pilot_enabled' => true,
+            'canovia_staging.mcp_explicitly_approved' => true,
+            'canovia_staging.mcp_cimd_mapping_verified' => false,
+            'canovia_staging.mcp_cimd_external_client_id' => $external,
+            'canovia_mcp.token_verification_driver' => 'auth0_jwt',
+            'canovia_mcp.allowed_client_id' => $internal,
+        ]);
+
+        $cimd = $this->token(['azp' => $external]);
+        // Even a correctly signed token never authorizes the alternate ID
+        // until operator verified the exact external->internal registration.
+        $this->assertNull($this->verifier()->verify($cimd));
+
+        config(['canovia_staging.mcp_cimd_mapping_verified' => true]);
+        $principal = $this->verifier()->verify($cimd);
+        $this->assertNotNull($principal);
+        $this->assertSame($internal, $principal->clientId);
+        $this->assertSame(self::RESOURCE, $principal->audience);
+
+        // Signed RFC9068-style client_id claim for same external ID works.
+        $rfcClaims = $this->validClaims();
+        unset($rfcClaims['azp']);
+        $rfcClaims['client_id'] = $external;
+        $this->assertSame($internal, $this->verifier()->verify(
+            JWT::encode($rfcClaims, $this->privateKey, 'RS256', self::TOKEN_KID),
+        )?->clientId);
+
+        // Internal Auth0 ID remains accepted in its existing strict path.
+        $this->assertSame($internal, $this->verifier()->verify(
+            $this->token(['azp' => $internal]),
+        )?->clientId);
+
+        // All individual stage/issuer/client mapping gates fail closed.
+        foreach ([
+            ['app.env' => 'production'],
+            ['canovia_staging.isolated' => false],
+            ['canovia_staging.synthetic_read_pilot_enabled' => false],
+            ['canovia_staging.mcp_explicitly_approved' => false],
+            ['canovia_staging.mcp_cimd_mapping_verified' => false],
+            ['canovia_staging.mcp_cimd_external_client_id' => 'https://chatgpt.com/oauth/other/client.json'],
+            ['canovia_mcp.allowed_client_id' => 'non-third-party-client'],
+            ['canovia_mcp.token_verification_driver' => 'introspection'],
+        ] as $change) {
+            $baseline = [];
+            foreach (array_keys($change) as $name) {
+                $baseline[$name] = config($name);
+            }
+            config($change);
+            $this->assertNull($this->verifier()->verify($cimd),
+                'Unapproved mapping scenario must reject: '.implode(',', array_keys($change)));
+            config($baseline);
+        }
+
+        // The external client has to match EXACTLY: no URL-form bypass.
+        $this->assertNull($this->verifier()->verify(
+            $this->token(['azp' => 'https://chatgpt.com/oauth/fake-callback/client.json']),
+        ));
+        $this->assertNull($this->verifier()->verify(
+            $this->token(['azp' => 'tpc_other-registered-client']),
+        ));
+        $this->assertNull($this->verifier()->verify(
+            $this->token(['azp' => $external, 'client_id' => $internal]),
+        ));
+        $this->assertNull($this->verifier()->verify(
+            $this->token(['azp' => $external, 'aud' => 'https://other.example/api']),
+        ));
+        $this->assertNull($this->verifier()->verify(
+            $this->token(['azp' => $external, 'scope' => 'openid']),
+        ));
+        $this->assertNull($this->verifier()->verify(
+            $this->token(['azp' => $external, 'exp' => time() - 1]),
+        ));
+
+        // Account-link verification must never use the ChatGPT mapping.
+        config([
+            'canovia_mcp.account_link_enabled' => true,
+            'canovia_mcp.account_link_client_id' => 'different-confidential-link-client',
+        ]);
+        $this->assertNull($this->verifier()->verifyAccountLink($cimd));
+    }
+
     public function test_modified_payload_or_signature_and_wrong_signing_key_fail(): void
     {
         $this->fakeJwks(['keys' => [$this->jwk]]);
