@@ -27,6 +27,7 @@ class StudyRecallCandidateExtractionService
         Task $task,
         ?int $userId = null,
     ): array {
+        $authorization = $this->commitFence->captureAuthorization($plan, $userId);
         $sourceSignature = $this->commitFence->snapshot($source);
         $inputParts = $this->inputParts($source);
         $sourceContext = $source->source_type === 'text'
@@ -85,13 +86,14 @@ class StudyRecallCandidateExtractionService
 
         try {
             $created = DB::transaction(function () use (
-                $plan, $task, $source, $userId, $sourceSignature, $result, $cards,
+                $plan, $task, $source, $userId, $sourceSignature, $authorization, $result, $cards,
             ): int {
                 $this->commitFence->assertCanCommit(
                     $plan,
                     $task,
                     $userId,
                     [(int) $source->id => $sourceSignature],
+                    $authorization,
                     (int) $result['run_id'],
                 );
 
