@@ -163,7 +163,10 @@ final class AuthorizationEpochDatabaseTriggerG3Test extends TestCase
             ['plan_id' => $otherPlan->id, 'role' => PlanMember::ROLE_VIEWER],
         ] as $rewrite) {
             try {
-                DB::table('plan_members')->where('id', $membership->id)->update($rewrite);
+                // A nested transaction restores PostgreSQL's transaction
+                // state after an expected trigger exception (SAVEPOINT).
+                DB::transaction(fn () => DB::table('plan_members')
+                    ->where('id', $membership->id)->update($rewrite));
                 $this->fail('Rebinding a membership row must be forbidden by the database.');
             } catch (QueryException $exception) {
                 $this->assertNotEmpty($exception->getMessage());
@@ -188,7 +191,9 @@ final class AuthorizationEpochDatabaseTriggerG3Test extends TestCase
         $old = $guard->capture($member, $plan);
 
         try {
-            $membership->forceFill(['user_id' => $otherUser->id])->save();
+            DB::transaction(function () use ($membership, $otherUser): void {
+                $membership->forceFill(['user_id' => $otherUser->id])->save();
+            });
             $this->fail('An Eloquent forceFill must not bypass the database binding contract.');
         } catch (QueryException $exception) {
             $this->assertNotEmpty($exception->getMessage());
