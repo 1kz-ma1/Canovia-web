@@ -8,6 +8,7 @@ use App\Models\Plan;
 use App\Models\PlanMember;
 use App\Models\StudyRecallSource;
 use App\Models\Task;
+use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
@@ -22,7 +23,35 @@ final class StudyRecallExtractionCommitFence
 {
     public function __construct(
         private readonly NativeAiPurposeAuthorizationGuard $purposeGuard,
+        private readonly CompanionMembershipCommitGuard $membershipCommit,
     ) {}
+
+    /**
+     * Capture the original Owner or Editor admission before the provider sees
+     * private material. Never persist this proof on a Source or AI run.
+     *
+     * @return array<string,mixed>
+     */
+    public function captureAuthorization(Plan $plan, ?int $userId): array
+    {
+        $actor = $userId !== null && $userId > 0
+            ? User::query()->find($userId)
+            : null;
+        if ($actor === null) {
+            $this->deny('native_ai_target_changed', 0);
+        }
+
+        $proof = $this->membershipCommit->capture($actor, $plan);
+        if (
+            ! in_array($proof['scope'] ?? null, ['owner', 'member'], true)
+            || (($proof['scope'] ?? null) === 'member'
+                && ($proof['role'] ?? null) !== PlanMember::ROLE_EDITOR)
+        ) {
+            $this->deny('native_ai_target_changed', 0);
+        }
+
+        return $proof;
+    }
 
     public function snapshot(StudyRecallSource $source): ?string
     {
@@ -60,12 +89,14 @@ final class StudyRecallExtractionCommitFence
 
     /**
      * @param array<int,string|null> $expectedSignatures keyed by Source ID
+     * @param array<string,mixed> $expectedAuthorization owner/member proof captured before AI
      */
     public function assertCanCommit(
         Plan $plan,
         Task $task,
         ?int $userId,
         array $expectedSignatures,
+        array $expectedAuthorization,
         int $runId,
     ): void {
         $livePlan = Plan::query()->whereKey($plan->id)->lockForUpdate()->first();
@@ -80,22 +111,17 @@ final class StudyRecallExtractionCommitFence
             $this->deny('native_ai_target_changed', $runId);
         }
 
-        // This path *writes* review candidates; collaborator viewers may only
-        // view the Plan, even if they can access another AI read purpose.
-        if (
-            $userId === null
-            || (
-                (int) $livePlan->user_id !== $userId
-                && ! (
-                    $livePlan->is_collaborative
-                    && PlanMember::query()
-                        ->where('plan_id', $livePlan->id)
-                        ->where('user_id', $userId)
-                        ->where('role', PlanMember::ROLE_EDITOR)
-                        ->exists()
-                )
-            )
-        ) {
+        // Plan -> Task are locked. Lock the same member row under the
+        // transaction before checking the original authorization epoch;
+        // Editor -> Viewer -> Editor or remove/rejoin must fail closed.
+        $actor = $userId !== null && $userId > 0
+            ? User::query()->find($userId)
+            : null;
+        if ($actor === null
+            || $expectedAuthorization === []
+            || ! $this->membershipCommit->canAccess(
+                $actor, $livePlan, true, $expectedAuthorization,
+            )) {
             $this->deny('native_ai_target_changed', $runId);
         }
 
