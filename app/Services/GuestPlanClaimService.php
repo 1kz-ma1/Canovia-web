@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class GuestPlanClaimService
 {
@@ -17,20 +18,33 @@ class GuestPlanClaimService
                 continue;
             }
 
-            $plan = Plan::find((int) $matches[1]);
-            if (! $plan || ! is_string($token) || $token === '' || ! hash_equals($plan->owner_token, $token)) {
+            if (! is_string($token) || $token === '') {
                 continue;
             }
 
-            if ($plan->user_id === null) {
-                $plan->forceFill(['user_id' => $user->id])->save();
+            // Plan-first lock: serialize a guest ownership claim with all
+            // Companion owner-epoch checks and any competing owner claim.
+            [$claimedNow, $belongsToActor] = DB::transaction(function () use ($matches, $token, $user): array {
+                $plan = Plan::query()->whereKey((int) $matches[1])->lockForUpdate()->first();
+                if (! $plan || ! is_string($plan->owner_token)
+                    || ! hash_equals($plan->owner_token, $token)) {
+                    return [false, false];
+                }
+
+                $claimedNow = false;
+                if ($plan->user_id === null) {
+                    $plan->forceFill(['user_id' => $user->id])->save();
+                    $claimedNow = true;
+                }
+
+                return [$claimedNow, (int) $plan->user_id === (int) $user->id];
+            }, 3);
+
+            if ($claimedNow) {
                 $claimed++;
             }
-
-            if ((int) $plan->user_id === (int) $user->id) {
-                // Once a plan is account-owned, the legacy Guest ownership
-                // cookie is no longer useful. Remove it so the browser does
-                // not keep stale ownership material indefinitely.
+            if ($belongsToActor) {
+                // An authenticated Plan no longer needs a legacy guest cookie.
                 cookie()->queue(cookie()->forget((string) $name));
             }
         }
