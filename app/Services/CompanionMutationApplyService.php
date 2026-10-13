@@ -146,7 +146,12 @@ class CompanionMutationApplyService
             // Writing a Plan-scoped mutation requires Editor/Owner, whereas
             // personal Future Memo still only needs Plan viewing authority.
             $requiresEdit = $locked->type !== 'create_future_memo';
-            if (! $this->membershipCommit->canAccess($user, $livePlan, $requiresEdit)) {
+            $membershipIdentity = data_get($locked->metadata, 'membership_provenance');
+            // New candidates carry the generation-time member identity.
+            // Legacy candidates continue to use the current-role policy;
+            // removal/rejoin safety for legacy history is not certified.
+            if (($membershipIdentity !== null && ! is_array($membershipIdentity))
+                || ! $this->membershipCommit->canAccess($user, $livePlan, $requiresEdit, $membershipIdentity)) {
                 throw ValidationException::withMessages([
                     'candidate' => '共同Planの参加または編集権限が変更されました。内容を再確認してください。',
                 ]);
