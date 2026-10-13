@@ -13,6 +13,8 @@ return [
     // an independent switch and verified signed-JWT provider configuration.
     'login_pilot_enabled' => env('CANOVIA_STAGING_LOGIN_PILOT_ENABLED', false),
     'account_link_pilot_enabled' => env('CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED', false),
+    // Third independent approval: one synthetic Development Plan; MCP read stays OFF.
+    'plan_consent_pilot_enabled' => env('CANOVIA_STAGING_PLAN_CONSENT_PILOT_ENABLED', false),
     // One-shot synthetic user bootstrap: leave disabled unless an operator
     // explicitly provisions a STAGING-only password out-of-band.
     // Keep SQLite by default. PostgreSQL requires an operator-pinned
