@@ -7,6 +7,7 @@ use App\Exceptions\NativeAiExecutionException;
 use App\Models\InboxItem;
 use App\Models\NativeAiRun;
 use App\Models\Plan;
+use App\Models\PlanMember;
 use App\Models\StudyScopeCapture;
 use App\Models\User;
 use App\Services\NativeAiGateway;
@@ -140,6 +141,129 @@ final class StudyScopeAiCommitFenceG3Test extends TestCase
         $this->assertSame('failed', $capture->fresh()->status);
         $this->assertSame('openai_rate_limit_exceeded', $capture->fresh()->failure_code);
         Storage::assertExists($source->storage_path);
+    }
+
+    public function test_uninterrupted_shared_editor_still_receives_reviewable_free_scope_draft(): void
+    {
+        [$editor, $plan, $source, $capture] = $this->sharedScenario();
+
+        $result = app(StudyScopeCaptureAnalysisService::class)
+            ->analyze($capture, $plan, $editor->id);
+
+        $this->assertSame(1, $result['item_count']);
+        $this->assertSame('review', $capture->fresh()->status);
+        $this->assertSame('数学', data_get($capture->fresh()->draft_data, 'items.0.subject'));
+        $this->assertDatabaseCount('study_scope_items', 0);
+    }
+
+    public function test_owner_transfer_and_return_after_provider_refuses_old_scope_draft(): void
+    {
+        [$owner, $plan, $source, $capture] = $this->scenario();
+        $other = User::factory()->create();
+        $this->afterGateway(function () use ($plan, $owner, $other) {
+            $plan->update(['user_id' => $other->id]);
+            $plan->update(['user_id' => $owner->id]);
+        });
+
+        $this->assertDenied('native_ai_source_changed', $capture, $plan, $owner);
+        $this->assertSame($owner->id, $plan->fresh()->user_id);
+        Storage::assertExists($source->storage_path);
+    }
+
+    public function test_editor_downgrade_and_return_after_provider_refuses_old_scope_draft(): void
+    {
+        [$editor, $plan, $source, $capture, $member] = $this->sharedScenario();
+        $this->afterGateway(function () use ($member) {
+            $member->update(['role' => PlanMember::ROLE_VIEWER]);
+            $member->update(['role' => PlanMember::ROLE_EDITOR]);
+        });
+
+        $this->assertDenied('native_ai_source_changed', $capture, $plan, $editor);
+        $this->assertSame(PlanMember::ROLE_EDITOR, $member->fresh()->role);
+        Storage::assertExists($source->storage_path);
+    }
+
+    public function test_same_role_rejoin_after_provider_refuses_old_scope_draft(): void
+    {
+        [$editor, $plan, $source, $capture, $member] = $this->sharedScenario();
+        $originalMemberId = $member->id;
+        $this->afterGateway(function () use ($member, $plan, $editor) {
+            $member->delete();
+            PlanMember::query()->create([
+                'plan_id' => $plan->id,
+                'user_id' => $editor->id,
+                'role' => PlanMember::ROLE_EDITOR,
+                'joined_at' => now(),
+            ]);
+        });
+
+        $this->assertDenied('native_ai_source_changed', $capture, $plan, $editor);
+        $this->assertNotEquals($originalMemberId, PlanMember::query()
+            ->where('plan_id', $plan->id)
+            ->where('user_id', $editor->id)->firstOrFail()->id);
+    }
+
+    public function test_collaboration_off_and_on_after_provider_invalidates_old_scope_draft(): void
+    {
+        [$editor, $plan, $source, $capture] = $this->sharedScenario();
+        $this->afterGateway(function () use ($plan) {
+            $plan->update(['is_collaborative' => false]);
+            $plan->update(['is_collaborative' => true]);
+        });
+
+        $this->assertDenied('native_ai_source_changed', $capture, $plan, $editor);
+        $this->assertTrue((bool) $plan->fresh()->is_collaborative);
+    }
+
+    public function test_unrelated_plan_title_change_does_not_invalidate_scope_draft(): void
+    {
+        [$editor, $plan, $source, $capture] = $this->sharedScenario();
+        $this->afterGateway(fn () => $plan->update(['title' => '範囲確認用の改訂名']));
+
+        $result = app(StudyScopeCaptureAnalysisService::class)
+            ->analyze($capture, $plan, $editor->id);
+
+        $this->assertSame(1, $result['item_count']);
+        $this->assertSame('review', $capture->fresh()->status);
+        $this->assertSame('範囲確認用の改訂名', $plan->fresh()->title);
+    }
+
+    public function test_provider_failure_after_editor_role_aba_cannot_mark_scope_failed(): void
+    {
+        [$editor, $plan, $source, $capture, $member] = $this->sharedScenario(false);
+
+        Http::fake(['https://api.openai.com/v1/responses' => function () use ($member) {
+            $member->update(['role' => PlanMember::ROLE_VIEWER]);
+            $member->update(['role' => PlanMember::ROLE_EDITOR]);
+
+            return Http::response(['error' => ['code' => 'rate_limit_exceeded']], 429);
+        }]);
+
+        $this->assertThrows(
+            fn () => app(StudyScopeCaptureAnalysisService::class)
+                ->analyze($capture, $plan, $editor->id),
+            NativeAiExecutionException::class,
+        );
+
+        $this->assertSame('captured', $capture->fresh()->status);
+        $this->assertNull($capture->fresh()->failure_code);
+        $this->assertNull($capture->fresh()->native_ai_run_id);
+        Storage::assertExists($source->storage_path);
+    }
+
+    private function sharedScenario(bool $fakeSuccess = true): array
+    {
+        [$editor, $plan, $source, $capture] = $this->scenario($fakeSuccess);
+        $owner = User::factory()->create();
+        $plan->update(['user_id' => $owner->id, 'is_collaborative' => true]);
+        $member = PlanMember::query()->create([
+            'plan_id' => $plan->id,
+            'user_id' => $editor->id,
+            'role' => PlanMember::ROLE_EDITOR,
+            'joined_at' => now(),
+        ]);
+
+        return [$editor, $plan, $source, $capture, $member, $owner];
     }
 
     private function fakeSuccessResponse(): void
