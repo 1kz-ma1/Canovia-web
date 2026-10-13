@@ -44,7 +44,7 @@ class InboxIntelligenceService
         Request $request,
         ReleaseLevelService $releaseLevels,
     ): array {
-        $signature = $this->commitFence->signature($item);
+        $signature = $this->commitFence->signature($item, $request->user()?->id);
         $suggestion = $this->suggest($item, $request->user()?->id);
 
         return $this->commitFence->commit(
