@@ -12,6 +12,8 @@ on:
       - 'app/Models/PlanMember.php'
       - 'app/Services/GuestPlanClaimService.php'
       - 'database/migrations/2026_10_13_110000_add_authorization_epochs_to_collaborative_plans.php'
+      - 'database/migrations/2026_10_13_120000_enforce_authorization_epochs_in_database.php'
+      - 'tests/Feature/AuthorizationEpochDatabaseTriggerG3Test.php'
       - 'app/Http/Controllers/PlanCollaborationController.php'
       - 'app/Services/CompanionConversationService.php'
       - 'tests/Feature/CompanionPostgresSourceRaceG3Test.php'
@@ -68,6 +70,8 @@ jobs:
           php -l app/Models/PlanMember.php
           php -l app/Services/GuestPlanClaimService.php
           php -l database/migrations/2026_10_13_110000_add_authorization_epochs_to_collaborative_plans.php
+          php -l database/migrations/2026_10_13_120000_enforce_authorization_epochs_in_database.php
+          php -l tests/Feature/AuthorizationEpochDatabaseTriggerG3Test.php
           php -l app/Http/Controllers/PlanCollaborationController.php
           php -l tests/Feature/CompanionPostgresSourceRaceG3Test.php
           php -l tests/Feature/CompanionGrantRevocationPostgresG3Test.php
@@ -79,5 +83,9 @@ jobs:
         run: php artisan test tests/Feature/CompanionGrantRevocationPostgresG3Test.php --stop-on-failure
       - name: Independent PostgreSQL sessions membership removal and role downgrade race
         run: php artisan test tests/Feature/CompanionMembershipRevocationPostgresG3Test.php --stop-on-failure
+      - name: Direct SQL authorization epoch trigger regression (PostgreSQL 16)
+        run: |
+          php artisan migrate --force --no-interaction
+          php artisan test tests/Feature/AuthorizationEpochDatabaseTriggerG3Test.php --stop-on-failure
       - name: Independent PostgreSQL sessions invitation join and revoke race
         run: php artisan test tests/Feature/CollaborationInviteJoinPostgresG3Test.php --stop-on-failure
