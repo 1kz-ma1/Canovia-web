@@ -32,15 +32,17 @@ final class McpOAuthAccountLinkProvider
             if (! $response->successful()
                 || ! str_contains(strtolower((string) $response->header('Content-Type')), 'application/json')
                 || strlen($response->body()) > 12288) {
+                app(McpStagingOAuthFailureDiagnostic::class)->record('link_provider_metadata_invalid');
                 return false;
             }
             $meta = $response->json();
         } catch (Throwable) {
-            // Exceptions can carry provider credentials or URLs. Never log.
+            // Never record exception text: it can carry request URLs or secrets.
+            app(McpStagingOAuthFailureDiagnostic::class)->record('link_provider_metadata_unreachable');
             return false;
         }
 
-        return is_array($meta)
+        $validMetadata = is_array($meta)
             && ! array_is_list($meta)
             && ($meta['issuer'] ?? null) === $settings['issuer']
             && ($meta['authorization_endpoint'] ?? null) === $settings['authorize']
@@ -57,6 +59,12 @@ final class McpOAuthAccountLinkProvider
             && ($this->verifier->mode() === 'auth0_jwt'
                 || (is_array($meta['scopes_supported'] ?? null)
                     && in_array(McpProtectedResourceConfiguration::READ_SCOPE, $meta['scopes_supported'], true)));
+
+        if (! $validMetadata) {
+            app(McpStagingOAuthFailureDiagnostic::class)->record('link_provider_metadata_invalid');
+        }
+
+        return $validMetadata;
     }
 
     public function authorizationUrl(string $state, string $challenge): ?string
@@ -86,6 +94,7 @@ final class McpOAuthAccountLinkProvider
         if ($settings === null || strlen($code) < 16 || strlen($code) > 2048
             || preg_match('/\A[\x21-\x7e]+\z/D', $code) !== 1
             || ! preg_match('/\A[A-Za-z0-9_-]{43,128}\z/D', $verifier)) {
+            app(McpStagingOAuthFailureDiagnostic::class)->record('link_provider_token_request_invalid');
             return null;
         }
 
@@ -102,13 +111,18 @@ final class McpOAuthAccountLinkProvider
                     'resource' => $settings['resource'],
                 ]);
 
-            if (! $response->successful()
-                || ! str_contains(strtolower((string) $response->header('Content-Type')), 'application/json')
+            if (! $response->successful()) {
+                app(McpStagingOAuthFailureDiagnostic::class)->record('link_provider_token_http_rejected');
+                return null;
+            }
+            if (! str_contains(strtolower((string) $response->header('Content-Type')), 'application/json')
                 || strlen($response->body()) > 12288) {
+                app(McpStagingOAuthFailureDiagnostic::class)->record('link_provider_token_payload_invalid');
                 return null;
             }
             $body = $response->json();
         } catch (Throwable) {
+            app(McpStagingOAuthFailureDiagnostic::class)->record('link_provider_token_unreachable');
             return null;
         }
 
@@ -118,12 +132,17 @@ final class McpOAuthAccountLinkProvider
             || $body['expires_in'] < 1 || $body['expires_in'] > 3600
             || ! is_string($body['access_token'] ?? null)
             || strlen($body['access_token']) > 8192) {
+            app(McpStagingOAuthFailureDiagnostic::class)->record('link_provider_token_payload_invalid');
             return null;
         }
 
         // The introspection endpoint independently checks active, issuer,
         // subject, exact resource audience, linking-client ID and read scope.
         // The token is never stored or returned to a browser.
-        return $this->verifier->verifyAccountLink($body['access_token']);
+        $principal = $this->verifier->verifyAccountLink($body['access_token']);
+        if ($principal === null) {
+            app(McpStagingOAuthFailureDiagnostic::class)->record('link_provider_jwt_rejected');
+        }
+        return $principal;
     }
 }
