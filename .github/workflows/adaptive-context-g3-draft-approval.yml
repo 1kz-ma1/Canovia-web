@@ -10,6 +10,7 @@ on:
       - 'app/Services/PlanActionDraftTypedEvidenceService.php'
       - 'app/Http/Controllers/PlanActionDraftController.php'
       - 'tests/Feature/PlanActionDraftV5873Test.php'
+      - 'tests/Feature/PlanActionDraftApprovalLockOrderPostgresG3Test.php'
       - '.github/workflows/adaptive-context-g3-draft-approval.yml'
 
 jobs:
@@ -36,6 +37,7 @@ jobs:
           php -l app/Services/PlanActionDraftTypedEvidenceService.php
           php -l app/Http/Controllers/PlanActionDraftController.php
           php -l tests/Feature/PlanActionDraftV5873Test.php
+          php -l tests/Feature/PlanActionDraftApprovalLockOrderPostgresG3Test.php
       - name: G3 corrected/moved/deleted source and owner approval
         run: php artisan test tests/Feature/PlanActionDraftV5873Test.php
       - name: Multi-log, refresh, sequential owner approval and legacy replay

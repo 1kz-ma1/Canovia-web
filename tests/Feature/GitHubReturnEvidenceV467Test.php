@@ -113,7 +113,10 @@ class GitHubReturnEvidenceV467Test extends TestCase
             ->assertSee('RETURN LAYER')
             ->assertSee('Merged')
             ->assertSee('承認確認 1人')
-            ->assertSee('このPacket生成後にTask / Dependency / Evidenceなどの状態が変わっています');
+            // This fixture has no GitHub source_epoch. The return remains
+            // historical Evidence, not active signed Execution Context:
+            // displaying a stale-Packet warning would misstate the lineage.
+            ->assertDontSee('このPacket生成後にTask / Dependency / Evidenceなどの状態が変わっています');
     }
 
     public function test_changes_requested_and_failed_actions_are_returned_as_evidence(): void
