@@ -6,6 +6,7 @@ use App\Enums\ProductKey;
 use App\Exceptions\NativeAiExecutionException;
 use App\Models\NativeAiRun;
 use App\Models\Plan;
+use App\Models\PlanMember;
 use App\Models\StudyRecallCandidate;
 use App\Models\StudyRecallSource;
 use App\Models\Task;
@@ -166,6 +167,205 @@ final class RecallAiCommitFenceV05Test extends TestCase
         $this->assertDatabaseCount('study_recall_candidates', 2);
         $this->assertSame(2, StudyRecallCandidate::query()->where('status', 'pending')->count());
         $this->assertDatabaseCount('study_recall_items', 0);
+    }
+
+    public function test_single_shared_editor_uninterrupted_extraction_still_persists_review_candidates(): void
+    {
+        [$editor, $plan, $task] = $this->collaborativeScenario();
+        $first = $this->source($editor, $plan, $task);
+        $this->fakeResponse(false);
+
+        $result = app(StudyRecallCandidateExtractionService::class)
+                ->extract($first, $plan, $task, $editor->id);
+
+        $this->assertSame(1, $result['created']);
+        $this->assertSame('ready', $first->fresh()->status);
+        $this->assertDatabaseCount('study_recall_candidates', 1);
+        $this->assertDatabaseCount('study_recall_items', 0);
+    }
+
+    public function test_single_owner_aba_rejects_stale_recall_candidates_without_overwriting_sources(): void
+    {
+        [$editor, $plan, $task, $member, $owner] = $this->collaborativeScenario(true);
+        $first = $this->source($editor, $plan, $task);
+        $newOwner = User::factory()->create();
+        $this->fakeResponse(false);
+        $this->afterGateway(function () use ($plan, $owner, $newOwner) {
+            $plan->update(['user_id' => $newOwner->id]);
+            $plan->update(['user_id' => $owner->id]);
+        });
+
+        $this->denied('native_ai_target_changed', fn () => app(StudyRecallCandidateExtractionService::class)
+                ->extract($first, $plan, $task, $editor->id));
+
+        $this->assertNoCandidates();
+        $this->assertSame('pending', $first->fresh()->status);
+    }
+
+    public function test_single_editor_role_aba_rejects_stale_recall_candidates_without_overwriting_sources(): void
+    {
+        [$editor, $plan, $task, $member] = $this->collaborativeScenario();
+        $first = $this->source($editor, $plan, $task);
+        $this->fakeResponse(false);
+        $this->afterGateway(function () use ($member) {
+            $member->update(['role' => PlanMember::ROLE_VIEWER]);
+            $member->update(['role' => PlanMember::ROLE_EDITOR]);
+        });
+
+        $this->denied('native_ai_target_changed', fn () => app(StudyRecallCandidateExtractionService::class)
+                ->extract($first, $plan, $task, $editor->id));
+
+        $this->assertNoCandidates();
+        $this->assertSame('pending', $first->fresh()->status);
+        $this->assertSame(PlanMember::ROLE_EDITOR, $member->fresh()->role);
+    }
+
+    public function test_single_same_role_rejoin_rejects_stale_recall_candidates_without_overwriting_sources(): void
+    {
+        [$editor, $plan, $task, $member] = $this->collaborativeScenario();
+        $first = $this->source($editor, $plan, $task);
+        $previousMembershipId = $member->id;
+        $this->fakeResponse(false);
+        $this->afterGateway(function () use ($member, $plan, $editor) {
+            $member->delete();
+            PlanMember::query()->create([
+                'plan_id' => $plan->id,
+                'user_id' => $editor->id,
+                'role' => PlanMember::ROLE_EDITOR,
+                'joined_at' => now(),
+            ]);
+        });
+
+        $this->denied('native_ai_target_changed', fn () => app(StudyRecallCandidateExtractionService::class)
+                ->extract($first, $plan, $task, $editor->id));
+
+        $this->assertNoCandidates();
+        $this->assertSame('pending', $first->fresh()->status);
+        $this->assertNotEquals($previousMembershipId, PlanMember::query()
+            ->where('plan_id', $plan->id)->where('user_id', $editor->id)
+            ->firstOrFail()->id);
+    }
+
+    public function test_batch_shared_editor_uninterrupted_extraction_still_persists_review_candidates(): void
+    {
+        [$editor, $plan, $task] = $this->collaborativeScenario();
+        $first = $this->source($editor, $plan, $task, 'editor-first.png');
+        $second = $this->source($editor, $plan, $task, 'editor-second.png');
+        $this->fakeResponse(true);
+
+        $result = app(StudyRecallBatchCandidateExtractionService::class)
+                ->extract(collect([$first, $second]), $plan, $task, $editor->id);
+
+        $this->assertSame(2, $result['created']);
+        $this->assertSame('ready', $first->fresh()->status);
+        $this->assertSame('ready', $second->fresh()->status);
+        $this->assertDatabaseCount('study_recall_candidates', 2);
+        $this->assertDatabaseCount('study_recall_items', 0);
+    }
+
+    public function test_batch_owner_aba_rejects_stale_recall_candidates_without_overwriting_sources(): void
+    {
+        [$editor, $plan, $task, $member, $owner] = $this->collaborativeScenario(true);
+        $first = $this->source($editor, $plan, $task, 'editor-first.png');
+        $second = $this->source($editor, $plan, $task, 'editor-second.png');
+        $newOwner = User::factory()->create();
+        $this->fakeResponse(true);
+        $this->afterGateway(function () use ($plan, $owner, $newOwner) {
+            $plan->update(['user_id' => $newOwner->id]);
+            $plan->update(['user_id' => $owner->id]);
+        });
+
+        $this->denied('native_ai_target_changed', fn () => app(StudyRecallBatchCandidateExtractionService::class)
+                ->extract(collect([$first, $second]), $plan, $task, $editor->id));
+
+        $this->assertNoCandidates();
+        $this->assertSame('pending', $first->fresh()->status);
+        $this->assertSame('pending', $second->fresh()->status);
+    }
+
+    public function test_batch_editor_role_aba_rejects_stale_recall_candidates_without_overwriting_sources(): void
+    {
+        [$editor, $plan, $task, $member] = $this->collaborativeScenario();
+        $first = $this->source($editor, $plan, $task, 'editor-first.png');
+        $second = $this->source($editor, $plan, $task, 'editor-second.png');
+        $this->fakeResponse(true);
+        $this->afterGateway(function () use ($member) {
+            $member->update(['role' => PlanMember::ROLE_VIEWER]);
+            $member->update(['role' => PlanMember::ROLE_EDITOR]);
+        });
+
+        $this->denied('native_ai_target_changed', fn () => app(StudyRecallBatchCandidateExtractionService::class)
+                ->extract(collect([$first, $second]), $plan, $task, $editor->id));
+
+        $this->assertNoCandidates();
+        $this->assertSame('pending', $first->fresh()->status);
+        $this->assertSame('pending', $second->fresh()->status);
+        $this->assertSame(PlanMember::ROLE_EDITOR, $member->fresh()->role);
+    }
+
+    public function test_batch_same_role_rejoin_rejects_stale_recall_candidates_without_overwriting_sources(): void
+    {
+        [$editor, $plan, $task, $member] = $this->collaborativeScenario();
+        $first = $this->source($editor, $plan, $task, 'editor-first.png');
+        $second = $this->source($editor, $plan, $task, 'editor-second.png');
+        $previousMembershipId = $member->id;
+        $this->fakeResponse(true);
+        $this->afterGateway(function () use ($member, $plan, $editor) {
+            $member->delete();
+            PlanMember::query()->create([
+                'plan_id' => $plan->id,
+                'user_id' => $editor->id,
+                'role' => PlanMember::ROLE_EDITOR,
+                'joined_at' => now(),
+            ]);
+        });
+
+        $this->denied('native_ai_target_changed', fn () => app(StudyRecallBatchCandidateExtractionService::class)
+                ->extract(collect([$first, $second]), $plan, $task, $editor->id));
+
+        $this->assertNoCandidates();
+        $this->assertSame('pending', $first->fresh()->status);
+        $this->assertSame('pending', $second->fresh()->status);
+        $this->assertNotEquals($previousMembershipId, PlanMember::query()
+            ->where('plan_id', $plan->id)->where('user_id', $editor->id)
+            ->firstOrFail()->id);
+    }
+
+    public function test_non_authorization_plan_update_does_not_revoke_single_recall_extraction(): void
+    {
+        [$editor, $plan, $task] = $this->collaborativeScenario();
+        $source = $this->source($editor, $plan, $task);
+        $this->fakeResponse(false);
+        $this->afterGateway(fn () => $plan->update(['title' => 'Renamed Study Plan']));
+
+        $result = app(StudyRecallCandidateExtractionService::class)
+            ->extract($source, $plan, $task, $editor->id);
+
+        $this->assertSame(1, $result['created']);
+        $this->assertSame('ready', $source->fresh()->status);
+    }
+
+    private function collaborativeScenario(bool $ownerIsEditor = false): array
+    {
+        [$editor, $plan, $task] = $this->scenario();
+        $owner = User::factory()->create();
+        if (! $ownerIsEditor) {
+            $plan->update(['user_id' => $owner->id, 'is_collaborative' => true]);
+        } else {
+            // The owner (original user) remains an Owner; an unrelated
+            // collaborator is not needed to prove owner-epoch ABA.
+            $owner = $editor;
+            $plan->update(['is_collaborative' => true]);
+        }
+
+        $member = $ownerIsEditor ? null : PlanMember::query()->create([
+            'plan_id' => $plan->id,
+            'user_id' => $editor->id,
+            'role' => PlanMember::ROLE_EDITOR,
+            'joined_at' => now(),
+        ]);
+
+        return [$editor, $plan, $task, $member, $owner];
     }
 
     private function scenario(): array
