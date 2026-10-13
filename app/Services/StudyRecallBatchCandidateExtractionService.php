@@ -20,6 +20,7 @@ final class StudyRecallBatchCandidateExtractionService
     public function __construct(
         private readonly NativeAiGateway $nativeAi,
         private readonly StudyRecallExtractionCommitFence $commitFence,
+        private readonly StudyRecallCandidateReviewFence $reviewFence,
     ) {}
 
     /**
@@ -157,6 +158,7 @@ final class StudyRecallBatchCandidateExtractionService
 
                 $created = 0;
                 $createdPerSource = array_fill(0, $sources->count(), 0);
+                $newIdsBySource = [];
 
                 foreach ($cards as $candidate) {
                     $sourceIndex = (int) ($candidate['source_index'] ?? -1);
@@ -234,6 +236,7 @@ final class StudyRecallBatchCandidateExtractionService
                     );
 
                     if ($model->wasRecentlyCreated) {
+                        $newIdsBySource[$sourceIndex][] = (int) $model->id;
                         $created++;
                         $createdPerSource[$sourceIndex]++;
                     }
@@ -245,6 +248,13 @@ final class StudyRecallBatchCandidateExtractionService
                         'native_ai_run_id' => (int) $result['run_id'],
                         'candidate_count' => $createdPerSource[$index],
                     ]);
+                    if (($newIdsBySource[$index] ?? []) !== []) {
+                        StudyRecallCandidate::query()->whereIn('id', $newIdsBySource[$index])
+                            ->update(['review_provenance' => json_encode(
+                                $this->reviewFence->provenance($source, $authorization),
+                                JSON_THROW_ON_ERROR,
+                            )]);
+                    }
                 }
 
                 return [$created, $createdPerSource];
