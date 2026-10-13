@@ -12,6 +12,7 @@ use App\Models\StudyScopeCapture;
 use App\Models\User;
 use App\Services\NativeAiGateway;
 use App\Services\StudyScopeCaptureAnalysisService;
+use App\Services\StudyScopeCaptureCommitFence;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -379,6 +380,104 @@ final class StudyScopeAiCommitFenceG3Test extends TestCase
         $this->assertSame($status, $capture->fresh()->status);
         $this->assertSame('new', $source->fresh()->status);
         $this->assertDatabaseCount('study_scope_items', 0);
+    }
+
+    public function test_provider_input_bytes_change_and_restore_cannot_pass_original_scope_signature(): void
+    {
+        [$actor, $plan, $source, $capture] = $this->scenario();
+        $guard = app(StudyScopeCaptureCommitFence::class);
+        $originalBytes = Storage::get($source->storage_path);
+        $originalSignature = $guard->prepare($capture, $plan, $actor->id);
+
+        // The file initially hashes to A, provider would have received B,
+        // and disk eventually hashes to A again. A final file-only recheck
+        // cannot detect that the AI input was B.
+        Storage::put($source->storage_path, 'changed between snapshot and provider input');
+        $providerInputHash = hash('sha256', Storage::get($source->storage_path));
+        Storage::put($source->storage_path, $originalBytes);
+
+        try {
+            $guard->assertInputMatches(
+                $capture, $plan, $actor->id, $originalSignature, $providerInputHash,
+            );
+            $this->fail('File bytes actually sent to AI differed from originally signed file.');
+        } catch (NativeAiExecutionException $exception) {
+            $this->assertSame('native_ai_source_changed', $exception->errorCode);
+        }
+
+        $this->assertSame('captured', $capture->fresh()->status);
+        $this->assertNull($capture->fresh()->draft_data);
+        $this->assertDatabaseCount('study_scope_items', 0);
+        $this->assertDatabaseCount('native_ai_runs', 0);
+    }
+
+    public function test_exact_original_file_bytes_pass_scope_pre_provider_fence(): void
+    {
+        [$actor, $plan, $source, $capture] = $this->scenario();
+        $guard = app(StudyScopeCaptureCommitFence::class);
+        $signature = $guard->prepare($capture, $plan, $actor->id);
+
+        $guard->assertInputMatches(
+            $capture, $plan, $actor->id, $signature,
+            hash('sha256', Storage::get($source->storage_path)),
+        );
+
+        $this->assertSame('captured', $capture->fresh()->status);
+        $this->assertDatabaseCount('native_ai_runs', 0);
+    }
+
+    public function test_human_discard_during_provider_call_cannot_publish_ai_draft(): void
+    {
+        [$actor, $plan, $source, $capture] = $this->scenario();
+        $this->afterGateway(function () use ($actor, $plan, $capture): void {
+            $this->actingAs($actor)
+                ->delete(route('plans.study_scope.destroy', [$plan, $capture]))
+                ->assertRedirect()
+                ->assertSessionHasNoErrors();
+        });
+
+        try {
+            app(StudyScopeCaptureAnalysisService::class)
+                ->analyze($capture, $plan, $actor->id);
+            $this->fail('Deleted source must not be resurrected as an AI draft.');
+        } catch (NativeAiExecutionException $exception) {
+            $this->assertSame('native_ai_target_changed', $exception->errorCode);
+        }
+
+        $this->assertDatabaseCount('study_scope_captures', 0);
+        $this->assertDatabaseCount('inbox_items', 0);
+        $this->assertDatabaseCount('study_scope_items', 0);
+        Storage::assertMissing($source->storage_path);
+    }
+
+    public function test_human_discard_rechecks_locked_live_capture_status(): void
+    {
+        [$actor, $plan, $source, $capture] = $this->scenario();
+        $capture->update(['status' => 'confirmed']);
+
+        $this->actingAs($actor)
+            ->delete(route('plans.study_scope.destroy', [$plan, $capture]))
+            ->assertRedirect()
+            ->assertSessionHasErrors('capture');
+
+        $this->assertDatabaseCount('study_scope_captures', 1);
+        $this->assertDatabaseCount('inbox_items', 1);
+        Storage::assertExists($source->storage_path);
+    }
+
+    public function test_discard_does_not_unlink_file_for_unowned_linked_inbox(): void
+    {
+        [$actor, $plan, $source, $capture] = $this->scenario();
+        $source->update(['metadata' => ['capture_surface' => 'regular_inbox']]);
+
+        $this->actingAs($actor)
+            ->delete(route('plans.study_scope.destroy', [$plan, $capture]))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('study_scope_captures', 0);
+        $this->assertDatabaseCount('inbox_items', 1);
+        Storage::assertExists($source->storage_path);
     }
 
     private function sharedScenario(bool $fakeSuccess = true): array
