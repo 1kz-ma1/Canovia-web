@@ -89,6 +89,54 @@ final class CompanionMembershipRevocationPostgresG3Test extends TestCase
         }));
     }
 
+    public function test_independent_sql_membership_rebind_cannot_overtake_guard_or_change_binding(): void
+    {
+        [, $member, $plan, , , $membership] = $this->scenario();
+        $unrelated = User::factory()->create(['first_run_completed_at' => now()]);
+        $captured = app(CompanionMembershipCommitGuard::class)->capture($member, $plan);
+        $rival = $this->rival();
+
+        DB::beginTransaction();
+        try {
+            $this->lockPlan($plan);
+            $this->assertTrue(app(CompanionMembershipCommitGuard::class)
+                ->canAccess($member, $plan, true, $captured));
+
+            $rival->beginTransaction();
+            try {
+                $rival->exec("SET LOCAL lock_timeout = '200ms'");
+                try {
+                    $rival->prepare('UPDATE plan_members SET user_id = :user WHERE id = :id')
+                        ->execute(['user' => $unrelated->id, 'id' => $membership->id]);
+                    $this->fail('Another connection cannot modify a locked membership row.');
+                } catch (PDOException $exception) {
+                    $this->assertSame('55P03', $exception->getCode());
+                }
+            } finally {
+                $rival->rollBack();
+            }
+            $this->assertSame($captured, app(CompanionMembershipCommitGuard::class)
+                ->capture($member, $plan));
+            DB::commit();
+        } finally {
+            if (DB::transactionLevel() > 0) DB::rollBack();
+        }
+
+        // The lock is released, but immutable-binding DDL permanently rejects
+        // this raw SQL, and cannot be bypassed by finding a quiet interval.
+        try {
+            $rival->prepare('UPDATE plan_members SET user_id = :user WHERE id = :id')
+                ->execute(['user' => $unrelated->id, 'id' => $membership->id]);
+            $this->fail('DB must reject a member identity change even after the lock releases.');
+        } catch (PDOException $exception) {
+            $this->assertSame('23514', $exception->getCode());
+        }
+        $this->assertSame((int) $member->id, (int) $membership->fresh()->user_id);
+        $this->assertSame((int) $plan->id, (int) $membership->fresh()->plan_id);
+        $this->assertSame($captured, app(CompanionMembershipCommitGuard::class)
+            ->capture($member, $plan));
+    }
+
     public function test_rival_removal_first_blocks_guard_until_delete_commits(): void
     {
         [, $member, $plan, , , $membership] = $this->scenario();
