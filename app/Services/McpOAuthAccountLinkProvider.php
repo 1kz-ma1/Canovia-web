@@ -76,7 +76,7 @@ final class McpOAuthAccountLinkProvider
             return null;
         }
 
-        return $settings['authorize'].'?'.http_build_query([
+        $params = [
             'response_type' => 'code',
             'client_id' => $settings['client_id'],
             'redirect_uri' => $settings['redirect'],
@@ -85,7 +85,18 @@ final class McpOAuthAccountLinkProvider
             'state' => $state,
             'code_challenge' => $challenge,
             'code_challenge_method' => 'S256',
-        ], '', '&', PHP_QUERY_RFC3986);
+        ];
+        // Auth0's default profile uses "audience" for custom API tokens.
+        // The RFC 8707 "resource" is retained for protocol compatibility;
+        // both values are always the SAME pinned MCP resource identifier.
+        // Do not change the legacy/non-Auth0 introspection request.
+        if ($this->verifier->mode() === 'auth0_jwt') {
+            $params['audience'] = $settings['resource'];
+        }
+
+        return $settings['authorize'].'?'.http_build_query(
+            $params, '', '&', PHP_QUERY_RFC3986,
+        );
     }
 
     public function exchangeAndVerify(string $code, string $verifier): ?McpVerifiedTokenPrincipal
