@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\CompanionMembershipCommitGuard;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Tests\TestCase;
@@ -138,6 +139,98 @@ final class AuthorizationEpochDatabaseTriggerG3Test extends TestCase
         $this->assertSame(1, (int) $plan->fresh()->authorization_epoch);
         $this->assertSame('editor', $membership->fresh()->role);
         $this->assertTrue((bool) $plan->fresh()->is_collaborative);
+    }
+
+    public function test_direct_sql_cannot_retarget_member_id_to_another_user_or_plan(): void
+    {
+        [$owner, $member, $otherUser, $plan, $membership] = $this->scenario();
+        $otherPlan = $plan->replicate(['public_slug', 'owner_token', 'authorization_epoch']);
+        $otherPlan->public_slug = (string) Str::uuid();
+        $otherPlan->owner_token = Str::random(64);
+        $otherPlan->title = 'Other target Plan';
+        $otherPlan->save();
+
+        $guard = app(CompanionMembershipCommitGuard::class);
+        $old = $guard->capture($member, $plan);
+        $this->assertSame(1, $old['membership_epoch']);
+
+        // Direct writes must not silently move a stable row identity into
+        // another actor or Plan and then back without an epoch change.
+        foreach ([
+            ['user_id' => $otherUser->id],
+            ['plan_id' => $otherPlan->id],
+            ['user_id' => $otherUser->id, 'role' => PlanMember::ROLE_VIEWER],
+            ['plan_id' => $otherPlan->id, 'role' => PlanMember::ROLE_VIEWER],
+        ] as $rewrite) {
+            try {
+                DB::table('plan_members')->where('id', $membership->id)->update($rewrite);
+                $this->fail('Rebinding a membership row must be forbidden by the database.');
+            } catch (QueryException $exception) {
+                $this->assertNotEmpty($exception->getMessage());
+            }
+
+            $actual = $membership->fresh();
+            $this->assertSame((int) $plan->id, (int) $actual->plan_id);
+            $this->assertSame((int) $member->id, (int) $actual->user_id);
+            $this->assertSame(PlanMember::ROLE_EDITOR, $actual->role);
+            $this->assertSame(1, (int) $actual->authorization_epoch);
+        }
+
+        $this->assertSame($old, $guard->capture($member, $plan));
+        $this->assertSame(0, PlanMember::query()
+            ->where('plan_id', $otherPlan->id)->count());
+    }
+
+    public function test_eloquent_rebinding_is_denied_but_remove_and_fresh_join_are_allowed(): void
+    {
+        [$owner, $member, $otherUser, $plan, $membership] = $this->scenario();
+        $guard = app(CompanionMembershipCommitGuard::class);
+        $old = $guard->capture($member, $plan);
+
+        try {
+            $membership->forceFill(['user_id' => $otherUser->id])->save();
+            $this->fail('An Eloquent forceFill must not bypass the database binding contract.');
+        } catch (QueryException $exception) {
+            $this->assertNotEmpty($exception->getMessage());
+        }
+        $this->assertSame((int) $member->id, (int) $membership->fresh()->user_id);
+
+        // A legitimate edit changes only the role, bumping the existing epoch.
+        $live = $membership->fresh();
+        $live->update(['role' => PlanMember::ROLE_VIEWER]);
+        $this->assertSame(2, (int) $membership->fresh()->authorization_epoch);
+        $this->assertSame(PlanMember::ROLE_VIEWER, $membership->fresh()->role);
+
+        $membership->fresh()->delete();
+        $replacement = PlanMember::query()->create([
+            'plan_id' => $plan->id, 'user_id' => $member->id,
+            'role' => PlanMember::ROLE_EDITOR, 'joined_at' => now(),
+        ]);
+
+        $this->assertNotSame((int) $membership->id, (int) $replacement->id);
+        $fresh = $guard->capture($member, $plan);
+        $this->assertSame(1, $fresh['membership_epoch']);
+        $this->assertNotSame($old['membership_id'], $fresh['membership_id']);
+        DB::transaction(function () use ($plan, $member, $guard, $old, $fresh): void {
+            Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
+            $this->assertFalse($guard->canAccess($member, $plan, true, $old));
+            $this->assertTrue($guard->canAccess($member, $plan, true, $fresh));
+        });
+    }
+
+    public function test_binding_noop_preserves_epoch_for_both_sql_and_eloquent(): void
+    {
+        [, $member, , $plan, $membership] = $this->scenario();
+        $before = app(CompanionMembershipCommitGuard::class)->capture($member, $plan);
+
+        DB::table('plan_members')->where('id', $membership->id)->update([
+            'plan_id' => $plan->id,
+            'user_id' => $member->id,
+        ]);
+        $membership->fresh()->update(['plan_id' => $plan->id, 'user_id' => $member->id]);
+
+        $this->assertSame(1, (int) $membership->fresh()->authorization_epoch);
+        $this->assertSame($before, app(CompanionMembershipCommitGuard::class)->capture($member, $plan));
     }
 
     public function test_mysql_and_postgres_ignore_attempted_manual_epoch_rewrite(): void
