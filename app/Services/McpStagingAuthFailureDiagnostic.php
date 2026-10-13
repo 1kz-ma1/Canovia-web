@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Temporary, isolated staging-only diagnostic for MCP authorization failures.
@@ -43,7 +44,11 @@ final class McpStagingAuthFailureDiagnostic
 
         // Bypass LOG_CHANNEL=single when Render receives stderr from FPM.
         // No attacker-controlled values are passed through.
-        Log::channel('stderr')->warning('mcp_stage_auth_failure', ['category' => $reason]);
+        try {
+            Log::channel('stderr')->warning('mcp_stage_auth_failure', ['category' => $reason]);
+        } catch (Throwable) {
+            // Diagnostic failure can never change auth rejection or response.
+        }
     }
 
     /**
