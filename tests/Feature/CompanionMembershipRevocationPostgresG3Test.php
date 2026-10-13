@@ -248,7 +248,7 @@ final class CompanionMembershipRevocationPostgresG3Test extends TestCase
         $this->assertSame('pending', $candidate->fresh()->status);
         $this->assertNull($candidate->fresh()->apply_request_id);
         $this->assertSame('Original note', $task->fresh()->next_action_note);
-        $this->assertSame(0, DB::table('companion_mutation_apply_audits')->count());
+        $this->assertNull(data_get($candidate->fresh()->metadata, 'apply_audit'));
     }
 
     public function test_old_shared_owner_candidate_cannot_bypass_missing_origin_proof(): void
