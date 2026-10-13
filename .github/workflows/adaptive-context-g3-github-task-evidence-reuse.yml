@@ -15,6 +15,7 @@ on:
       - 'tests/Feature/DeveloperEvidenceSyncV537Test.php'
       - 'tests/Feature/DeveloperExecutionContextV574Test.php'
       - 'tests/Feature/PlanActionDraftV5873Test.php'
+      - 'tests/Feature/GitHubReturnEvidenceV467Test.php'
       - '.github/workflows/adaptive-context-g3-github-task-evidence-reuse.yml'
 
 jobs:
@@ -43,6 +44,7 @@ jobs:
           php -l app/Intelligence/Development/DevelopmentEvidenceCollector.php
           php -l app/Services/PlanActionDraftTypedEvidenceService.php
           php -l app/Services/PlanActionDraftApprovalSourceGuard.php
+          php -l tests/Feature/GitHubReturnEvidenceV467Test.php
       - name: G3 current-vs-historical evidence and draft regressions
         run: |
           php artisan test \
