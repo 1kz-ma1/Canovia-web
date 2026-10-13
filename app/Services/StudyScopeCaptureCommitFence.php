@@ -90,6 +90,44 @@ final class StudyScopeCaptureCommitFence
     }
 
     /**
+     * The SHA captured at prepare() must bind to the actual immutable bytes
+     * sent to the provider, not a separate Storage::get() that could observe
+     * another version of the file. Lock the same Plan/Capture/Inbox/Member
+     * graph used by the durable commit and compare both source revisions.
+     */
+    public function assertInputMatches(
+        StudyScopeCapture $capture,
+        Plan $plan,
+        ?int $userId,
+        string $expectedSignature,
+        string $inputBytesHash,
+    ): void {
+        DB::transaction(function () use (
+            $capture, $plan, $userId, $expectedSignature, $inputBytesHash,
+        ): void {
+            $livePlan = Plan::query()->whereKey($plan->id)->lockForUpdate()->first();
+            $liveCapture = StudyScopeCapture::query()->whereKey($capture->id)
+                ->lockForUpdate()->first();
+            $source = $liveCapture === null ? null
+                : InboxItem::query()->whereKey($liveCapture->inbox_item_id)
+                    ->lockForUpdate()->first();
+
+            $authorization = $this->assertCurrent(
+                $livePlan, $liveCapture, $source, $plan->id, $capture->id,
+                $userId, $expectedSignature, null,
+            );
+            if ($liveCapture->status !== 'captured'
+                || ! preg_match('/^[a-f0-9]{64}$/', $inputBytesHash)
+                || ! hash_equals(
+                    $expectedSignature,
+                    $this->signature($livePlan, $source, $authorization, $inputBytesHash) ?? '',
+                )) {
+                $this->deny('native_ai_source_changed', null);
+            }
+        }, 3);
+    }
+
+    /**
      * Validate a human review inside the same transaction that promotes
      * StudyScopeItems. AI drafts carry their original private-source and
      * owner/member epoch fingerprint; historical unsigned AI drafts must
@@ -235,7 +273,12 @@ final class StudyScopeCaptureCommitFence
     }
 
     /** @param array<string,mixed> $authorization */
-    private function signature(Plan $plan, InboxItem $source, array $authorization): ?string
+    private function signature(
+        Plan $plan,
+        InboxItem $source,
+        array $authorization,
+        ?string $inputBytesHash = null,
+    ): ?string
     {
         try {
             if (! in_array($source->source_type, ['image', 'pdf'], true)
@@ -246,7 +289,8 @@ final class StudyScopeCaptureCommitFence
                 return null;
             }
 
-            $bytesHash = hash('sha256', Storage::get($source->storage_path));
+            $bytesHash = $inputBytesHash
+                ?? hash('sha256', Storage::get($source->storage_path));
 
             return hash('sha256', json_encode([
                 'plan_id' => (int) $plan->id,
