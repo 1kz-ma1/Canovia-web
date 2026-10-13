@@ -140,7 +140,7 @@ final class ExecutionRequestHandoffService
             || (string) data_get($approved, 'actor_type') !== (string) ($payload['actor_type'] ?? 'human_ai')
             || data_get($approved, 'available_minutes') !== ($normalized['available_minutes'] ?? null)
             || data_get($approved, 'available_minutes') !== ($payload['available_minutes'] ?? null)
-            || ! $this->sourceIsCurrent($approved, $plan, $task);
+            || ! $this->sourceIsCurrent($approved, $plan, $task, $request);
 
         if ($deny) {
             throw ValidationException::withMessages([
@@ -228,7 +228,7 @@ final class ExecutionRequestHandoffService
                     0,
                     500,
                 ),
-                'brief_hash' => hash('sha256', $copyText),
+                'brief_hash' => hash('sha256', mb_substr($copyText, 0, 6000)),
                 'context_fingerprint' => $sourceFingerprint,
             ],
             instruction: $copyText,
