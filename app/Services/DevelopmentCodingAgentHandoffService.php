@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Plan;
 use App\Models\Task;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 final class DevelopmentCodingAgentHandoffService
 {
@@ -79,6 +80,17 @@ final class DevelopmentCodingAgentHandoffService
             ),
             'prepared_at' => now()->toIso8601String(),
         ];
+
+        // Revalidate the source immediately before publishing a copy-ready
+        // handoff. A changed Task, disconnected GitHub source or membership
+        // generation invalidates the already-confirmed Brief, even if the
+        // original user still has Editor access now.
+        if (! $this->requests->sourceIsCurrent($executionRequest, $plan, $task, $request)) {
+            $request->session()->forget($key);
+            throw ValidationException::withMessages([
+                'development_handoff' => '引き継ぎ中にDevelopment Contextが変更されました。最新のBriefを確認してください。',
+            ]);
+        }
 
         $request->session()->put($key, $state);
 
