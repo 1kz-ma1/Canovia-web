@@ -413,6 +413,7 @@ class StudyRecallCandidateController extends Controller
         Plan $plan,
         Task $task,
         PlanOwnershipService $ownership,
+        \App\Services\StudyRecallCandidateReviewFence $reviewFence,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
 
@@ -423,6 +424,7 @@ class StudyRecallCandidateController extends Controller
             'candidates.*.prompt' => ['nullable', 'string', 'max:1000'],
             'candidates.*.answer' => ['nullable', 'string', 'max:8000'],
             'candidates.*.note' => ['nullable', 'string', 'max:4000'],
+            'acknowledge_legacy' => ['nullable', 'boolean'],
         ]);
 
         $selected = collect($validated['candidates'])
@@ -433,48 +435,56 @@ class StudyRecallCandidateController extends Controller
                 'candidates' => '確認する候補を1件以上選択してください。',
             ]);
         }
+        if ($request->user() === null) {
+            throw ValidationException::withMessages([
+                'candidates' => '候補の最終承認にはログインが必要です。',
+            ]);
+        }
 
-        $candidateIds = $selected->keys()->map(fn ($id) => (int) $id)->values();
-        $candidates = StudyRecallCandidate::query()
+        $candidateIds = $selected->keys()->map(fn ($id) => (int) $id)->unique()->values();
+        $prefetched = StudyRecallCandidate::query()
             ->where('plan_id', $plan->id)
             ->where('task_id', $task->id)
             ->where('status', 'pending')
             ->whereIn('id', $candidateIds)
-            ->get()
-            ->keyBy('id');
+            ->get();
 
-        if ($candidates->count() !== $candidateIds->count()) {
+        if ($prefetched->count() !== $candidateIds->count()) {
             throw ValidationException::withMessages([
                 'candidates' => '候補の状態が変わりました。画面を再読み込みしてください。',
             ]);
         }
 
-        if ($validated['decision'] === 'reject') {
-            StudyRecallCandidate::query()
-                ->whereIn('id', $candidateIds)
-                ->update([
-                    'status' => 'rejected',
-                    'reviewed_by_user_id' => $request->user()?->id,
-                    'reviewed_at' => now(),
-                    'updated_at' => now(),
-                ]);
-
-            return redirect()
-                ->route('plans.tasks.study_recall.show', [$plan, $task])
-                ->with('status', $candidateIds->count().'件の候補を見送りました。');
-        }
-
         $promoted = 0;
         $duplicates = 0;
+        $promote = $validated['decision'] === 'promote';
 
-        DB::transaction(function () use ($selected, $candidates, $plan, $task, $request, &$promoted, &$duplicates) {
+        // No approval-side writes occur until current role, locked source
+        // bytes and original AI generation epochs have been revalidated.
+        DB::transaction(function () use (
+            $selected, $prefetched, $plan, $task, $request, $reviewFence,
+            $promote, $validated, &$promoted, &$duplicates,
+        ): void {
+            $candidates = $reviewFence->lockReview(
+                $plan, $task, $request->user(), $prefetched, $promote,
+                (bool) ($validated['acknowledge_legacy'] ?? false),
+            );
+
             foreach ($selected as $id => $row) {
                 /** @var StudyRecallCandidate $candidate */
                 $candidate = $candidates->get((int) $id);
+                if (! $promote) {
+                    $candidate->update([
+                        'status' => 'rejected',
+                        'reviewed_by_user_id' => $request->user()->id,
+                        'reviewed_at' => now(),
+                    ]);
+                    continue;
+                }
+
                 $prompt = trim((string) ($row['prompt'] ?? $candidate->prompt));
                 $answer = trim((string) ($row['answer'] ?? $candidate->answer));
                 $note = trim((string) ($row['note'] ?? $candidate->note));
-
                 if ($prompt === '' || $answer === '') {
                     throw ValidationException::withMessages([
                         'candidates' => '表と裏は空にできません。',
@@ -483,10 +493,7 @@ class StudyRecallCandidateController extends Controller
 
                 $fingerprint = hash('sha256', $this->normalize($prompt).'|'.$this->normalize($answer));
                 $item = StudyRecallItem::query()->firstOrCreate(
-                    [
-                        'task_id' => (int) $task->id,
-                        'fingerprint' => $fingerprint,
-                    ],
+                    ['task_id' => (int) $task->id, 'fingerprint' => $fingerprint],
                     [
                         'plan_id' => (int) $plan->id,
                         'prompt' => $prompt,
@@ -501,20 +508,23 @@ class StudyRecallCandidateController extends Controller
                         'is_active' => true,
                     ],
                 );
-
                 $item->wasRecentlyCreated ? $promoted++ : $duplicates++;
-
                 $candidate->update([
                     'prompt' => $prompt,
                     'answer' => $answer,
                     'note' => $note !== '' ? $note : null,
                     'status' => 'promoted',
                     'promoted_item_id' => (int) $item->id,
-                    'reviewed_by_user_id' => $request->user()?->id,
+                    'reviewed_by_user_id' => $request->user()->id,
                     'reviewed_at' => now(),
                 ]);
             }
-        });
+        }, 3);
+
+        if (! $promote) {
+            return redirect()->route('plans.tasks.study_recall.show', [$plan, $task])
+                ->with('status', $candidateIds->count().'件の候補を見送りました。');
+        }
 
         $message = $promoted.'件をRecall Deckへ追加しました。';
         if ($duplicates > 0) {

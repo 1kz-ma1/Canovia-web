@@ -579,6 +579,15 @@
 
                 <form method="POST" action="{{ route('plans.tasks.study_recall.candidates.review', [$plan, $task]) }}" class="mt-4 space-y-3" data-mutation-once>
                     @csrf
+                    @if ($recallCandidates->contains(fn ($candidate) => $candidate->review_provenance === null))
+                        <div class="rounded-xl border border-amber-400/25 bg-amber-400/5 p-3 text-xs leading-5 text-amber-100">
+                            <p>以前に作成されたRecall候補には、生成時の教材・共有権限の履歴がありません。採用する場合は元教材と内容を自分で確認し、下の手動採用に同意してください。証明付きの新しい候補が失効した場合、この同意で回避することはできません。</p>
+                            <label class="mt-3 flex items-start gap-2">
+                                <input type="checkbox" name="acknowledge_legacy" value="1" {{ old('acknowledge_legacy') ? 'checked' : '' }}>
+                                <span>過去の未検証候補について、元教材を再確認し、自分の判断でDeckへ登録します</span>
+                            </label>
+                        </div>
+                    @endif
                     @foreach ($recallCandidates as $candidate)
                         <div class="rounded-2xl border border-white/8 bg-white/[0.025] p-4">
                             <div class="flex flex-wrap items-center justify-between gap-3">
@@ -587,6 +596,9 @@
                                     Candidate #{{ $candidate->id }}
                                 </label>
                                 <div class="flex flex-wrap gap-2">
+                                    @if ($candidate->review_provenance === null)
+                                        <span class="badge badge-amber">過去候補・生成時証明なし</span>
+                                    @endif
                                     <span class="badge badge-slate">根拠 {{ (int) $candidate->confidence }}/100</span>
                                     <span class="badge badge-slate">{{ $candidate->source?->sourceLabel() ?? '教材' }}</span>
                                 </div>
