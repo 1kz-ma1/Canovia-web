@@ -76,18 +76,22 @@ final class McpAuth0JwtTokenVerifier
             || strlen($accessToken) < 32
             || strlen($accessToken) > self::MAX_TOKEN_BYTES
             || preg_match('/\A[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\z/D', $accessToken) !== 1) {
+            McpStagingAuthFailureDiagnostic::record('jwt_not_compact');
             return null;
         }
 
+        $failurePhase = 'jwt_header_rejected';
         try {
             // Header is UNTRUSTED. Its only permitted influence is selecting
             // an exact kid from the preconfigured issuer's pinned JWKS.
             $segments = explode('.', $accessToken);
             if (strlen($segments[0]) > 1500) {
+                McpStagingAuthFailureDiagnostic::record('jwt_header_rejected');
                 return null;
             }
             $headerJson = base64_decode(strtr($segments[0], '-_', '+/'), true);
             if ($headerJson === false || strlen($headerJson) > self::MAX_HEADER_BYTES) {
+                McpStagingAuthFailureDiagnostic::record('jwt_header_rejected');
                 return null;
             }
             $header = json_decode($headerJson, true, 8, JSON_THROW_ON_ERROR);
@@ -97,6 +101,7 @@ final class McpAuth0JwtTokenVerifier
                 || (isset($header['typ']) && ! in_array($header['typ'], ['JWT', 'at+jwt'], true))
                 || ! is_string($header['kid'] ?? null)
                 || preg_match('/\A[A-Za-z0-9_.\-]{1,128}\z/D', $header['kid']) !== 1) {
+                McpStagingAuthFailureDiagnostic::record('jwt_header_rejected');
                 return null;
             }
 
@@ -106,6 +111,7 @@ final class McpAuth0JwtTokenVerifier
             if (! $wasCached) {
                 $jwks = $this->fetchJwks($settings['jwks']);
                 if ($jwks === null) {
+                    McpStagingAuthFailureDiagnostic::record('jwks_unavailable');
                     return null;
                 }
                 Cache::put($cacheKey, $jwks, self::CACHE_SECONDS);
@@ -116,21 +122,25 @@ final class McpAuth0JwtTokenVerifier
                 // A recently rotated kid gets at most one bounded refresh
                 // per issuer per minute; a spray of unknown kids is denied.
                 if (! Cache::add($cacheKey.':refresh', true, self::ROTATION_BACKOFF_SECONDS)) {
+                    McpStagingAuthFailureDiagnostic::record('jwks_refresh_deferred');
                     return null;
                 }
                 $next = $this->fetchJwks($settings['jwks']);
                 if ($next === null) {
+                    McpStagingAuthFailureDiagnostic::record('jwks_unavailable');
                     return null;
                 }
                 Cache::put($cacheKey, $next, self::CACHE_SECONDS);
                 $jwk = $this->findKey($next, $header['kid']);
             }
             if ($jwk === null) {
+                McpStagingAuthFailureDiagnostic::record('jwt_kid_rejected');
                 return null;
             }
 
             // Maintained library validates the RS256 signature and token
             // timestamps. Do not decode payload or use token claims before.
+            $failurePhase = 'jwt_signature_or_time_rejected';
             $trustedClaims = (array) JWT::decode(
                 $accessToken,
                 JWK::parseKeySet(['keys' => [$jwk]], 'RS256'),
@@ -144,6 +154,12 @@ final class McpAuth0JwtTokenVerifier
                 $expectedClientId,
                 $now,
             )) {
+                McpStagingAuthFailureDiagnostic::record(
+                    McpStagingAuthFailureDiagnostic::classifyVerifiedClaims(
+                        $trustedClaims, $settings['issuer'], $settings['resource'],
+                        $expectedClientId, $now,
+                    ),
+                );
                 return null;
             }
 
@@ -156,8 +172,8 @@ final class McpAuth0JwtTokenVerifier
                 expiresAt: $trustedClaims['exp'],
             );
         } catch (Throwable) {
-            // No logging of token content, header, claims, JWKS body or
-            // exception messages: such values may contain sensitive context.
+            // Record only a fixed failure phase, no exceptions or credentials.
+            McpStagingAuthFailureDiagnostic::record($failurePhase);
             return null;
         }
     }
