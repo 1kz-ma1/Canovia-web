@@ -8,6 +8,7 @@ use App\Models\Plan;
 use App\Models\PlanMember;
 use App\Models\StudyPracticeSession;
 use App\Models\Task;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -21,6 +22,7 @@ final class StudyPracticeAssessmentCommitFence
 {
     public function __construct(
         private readonly NativeAiPurposeAuthorizationGuard $purposeGuard,
+        private readonly CompanionMembershipCommitGuard $membershipCommit,
     ) {}
 
     public function fingerprint(
@@ -47,6 +49,9 @@ final class StudyPracticeAssessmentCommitFence
                 'progress_percent' => $task->progress_percent,
                 'remaining_minutes' => $task->remaining_minutes,
             ],
+            // Owner/member authorization epoch and stable admission ID
+            // are part of the original assessment context.
+            'membership_provenance' => $this->authorizationProvenance($plan, (int) $session->user_id),
             'session' => [
                 'id' => (int) $session->id,
                 'plan_id' => $session->plan_id,
@@ -106,6 +111,12 @@ final class StudyPracticeAssessmentCommitFence
         $liveSession = StudyPracticeSession::query()->whereKey($session->id)->lockForUpdate()->first();
 
         $this->assertScope($liveSession, $livePlan, $liveTask, $userId, $runId);
+        // Plan/Task/Session are already locked; serialize post-provider
+        // membership changes with grade and evidence publication.
+        $actor = $userId === null ? null : User::query()->find($userId);
+        if ($actor === null || ! $this->membershipCommit->canAccess($actor, $livePlan, true)) {
+            $this->deny('native_ai_target_changed', $runId);
+        }
         if ($liveSession->questions_snapshot !== $questions
             || ! hash_equals($expected, $this->fingerprint($liveSession, $livePlan, $liveTask))) {
             $this->deny('native_ai_source_changed', $runId);
@@ -179,6 +190,15 @@ final class StudyPracticeAssessmentCommitFence
         if ($failure !== null) {
             $this->deny($failure, $runId);
         }
+    }
+
+    private function authorizationProvenance(Plan $plan, int $userId): array
+    {
+        $actor = User::query()->find($userId);
+
+        return $actor === null
+            ? ['scope' => 'unavailable']
+            : $this->membershipCommit->capture($actor, $plan);
     }
 
     private function deny(string $reason, ?int $runId): never
