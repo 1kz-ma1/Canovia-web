@@ -110,7 +110,10 @@ final class McpStagingLoginPilotPolicy
             && config('canovia_mcp.auth0_jwt_verification_enabled') === true
             && config('canovia_mcp.token_verification_driver') === 'auth0_jwt'
             && config('canovia_mcp.token_introspection_enabled') === false
-            && config('canovia_mcp.tools_enabled') === false
-            && config('canovia_mcp.delegated_policy_enabled') === false;
+            && (
+                (config('canovia_mcp.tools_enabled') === false
+                    && config('canovia_mcp.delegated_policy_enabled') === false)
+                || app(McpStagingSyntheticReadPilotPolicy::class)->isReady()
+            );
     }
 }

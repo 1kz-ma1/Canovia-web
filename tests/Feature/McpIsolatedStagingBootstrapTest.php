@@ -448,7 +448,8 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
     {
         $check = $this->guard(['CANOVIA_MCP_TOOLS_ENABLED' => 'true',
             'CANOVIA_STAGING_MCP_EXPLICITLY_APPROVED' => 'true']);
-        $this->assertTrue($check->isSuccessful(), $check->getErrorOutput());
+        // The previously permissive combination is no longer sufficient.
+        $this->assertSame(42, $check->getExitCode());
     }
 
     public function test_blueprint_has_no_auto_deploy_or_live_database_binding(): void
@@ -559,6 +560,30 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
         ];
 
         $this->assertTrue($this->guard($pinned)->isSuccessful());
+
+        // Independent read authorization is REQUIRED on top of a Plan grant.
+        $this->assertSame(42, $this->guard([
+            ...$pinned, 'CANOVIA_STAGING_SYNTHETIC_READ_PILOT_ENABLED' => 'true',
+        ])->getExitCode());
+        $read = [
+            ...$pinned,
+            'CANOVIA_STAGING_SYNTHETIC_READ_PILOT_ENABLED' => 'true',
+            'CANOVIA_STAGING_MCP_EXPLICITLY_APPROVED' => 'true',
+            'CANOVIA_MCP_TOOLS_ENABLED' => 'true',
+            'CANOVIA_MCP_DELEGATED_POLICY_ENABLED' => 'true',
+        ];
+        $this->assertTrue($this->guard($read)->isSuccessful());
+        foreach ([
+            'CANOVIA_STAGING_MCP_EXPLICITLY_APPROVED',
+            'CANOVIA_MCP_TOOLS_ENABLED',
+            'CANOVIA_MCP_DELEGATED_POLICY_ENABLED',
+            'CANOVIA_STAGING_PLAN_CONSENT_PILOT_ENABLED',
+            'CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED',
+        ] as $required) {
+            $this->assertSame(42,
+                $this->guard([...$read, $required => 'false'])->getExitCode(),
+                $required);
+        }
 
         foreach ([
             ['CANOVIA_STAGING_PLAN_CONSENT_PILOT_ENABLED' => 'false'],

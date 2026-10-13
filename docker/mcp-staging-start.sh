@@ -150,11 +150,34 @@ case "${CANOVIA_STAGING_PLAN_CONSENT_PILOT_ENABLED:-false}" in
     false|true) ;;
     *) deny "invalid stage Plan-consent pilot flag" ;;
 esac
+case "${CANOVIA_STAGING_SYNTHETIC_READ_PILOT_ENABLED:-false}" in
+    false|true) ;;
+    *) deny "invalid stage synthetic read pilot flag" ;;
+esac
+case "${CANOVIA_STAGING_MCP_EXPLICITLY_APPROVED:-false}" in
+    false|true) ;;
+    *) deny "invalid stage MCP approval flag" ;;
+esac
 if [ "${CANOVIA_STAGING_WEB_ACCESS_ENABLED:-false}" = "true" ]; then
     [ "${CANOVIA_STAGING_LOGIN_PILOT_ENABLED:-false}" = "true" ] \
         || deny "Web access requires stage login pilot approval"
-    [ "${CANOVIA_MCP_TOOLS_ENABLED:-false}" = "false" ] \
-        || deny "stage login pilot forbids MCP tools"
+    if [ "${CANOVIA_STAGING_SYNTHETIC_READ_PILOT_ENABLED:-false}" = "true" ]; then
+        [ "${CANOVIA_STAGING_MCP_EXPLICITLY_APPROVED:-false}" = "true" ] \
+            || deny "synthetic read requires independent MCP approval"
+        [ "${CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED:-false}" = "true" ] \
+            || deny "synthetic read requires identity-link pilot"
+        [ "${CANOVIA_STAGING_PLAN_CONSENT_PILOT_ENABLED:-false}" = "true" ] \
+            || deny "synthetic read requires explicit Plan consent pilot"
+        [ "${CANOVIA_MCP_TOOLS_ENABLED:-false}" = "true" ] \
+            || deny "synthetic read requires MCP tools"
+        [ "${CANOVIA_MCP_DELEGATED_POLICY_ENABLED:-false}" = "true" ] \
+            || deny "synthetic read requires delegated authorization"
+    else
+        [ "${CANOVIA_MCP_TOOLS_ENABLED:-false}" = "false" ] \
+            || deny "stage login pilot forbids unapproved MCP tools"
+        [ "${CANOVIA_MCP_DELEGATED_POLICY_ENABLED:-false}" = "false" ] \
+            || deny "stage login pilot forbids unapproved delegated reads"
+    fi
     if [ "${CANOVIA_STAGING_PLAN_CONSENT_PILOT_ENABLED:-false}" = "true" ]; then
         [ "${CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED:-false}" = "true" ] \
             || deny "Plan-consent pilot requires link pilot"
@@ -164,8 +187,6 @@ if [ "${CANOVIA_STAGING_WEB_ACCESS_ENABLED:-false}" = "true" ]; then
         [ "${CANOVIA_MCP_PLAN_CONSENT_ENABLED:-false}" = "false" ] \
             || deny "stage login pilot forbids unapproved Plan grants"
     fi
-    [ "${CANOVIA_MCP_DELEGATED_POLICY_ENABLED:-false}" = "false" ] \
-        || deny "stage login pilot forbids delegated reads"
     [ "${CANOVIA_MCP_TOKEN_INTROSPECTION_ENABLED:-false}" = "false" ] \
         || deny "stage login pilot forbids introspection"
     if [ "${CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED:-false}" = "true" ]; then
@@ -191,6 +212,12 @@ else
         || deny "closed Web must not arm link pilot"
     [ "${CANOVIA_STAGING_PLAN_CONSENT_PILOT_ENABLED:-false}" = "false" ] \
         || deny "closed Web must not arm Plan consent pilot"
+    [ "${CANOVIA_STAGING_SYNTHETIC_READ_PILOT_ENABLED:-false}" = "false" ] \
+        || deny "closed Web must not arm synthetic MCP read"
+    [ "${CANOVIA_MCP_TOOLS_ENABLED:-false}" = "false" ] \
+        || deny "closed Web must not enable MCP tools"
+    [ "${CANOVIA_MCP_DELEGATED_POLICY_ENABLED:-false}" = "false" ] \
+        || deny "closed Web must not enable delegated reads"
 fi
 
 # Opt-in NO-NETWORK Auth0 config inventory; never activates public OAuth/MCP.
@@ -331,6 +358,9 @@ printf '%s\n' "MCP isolated staging startup: configured database mode=${CANOVIA_
 if [ "${CANOVIA_STAGING_WEB_ACCESS_ENABLED:-false}" = "false" ]; then
     cp docker/nginx-mcp-staging-closed.conf /etc/nginx/nginx.conf
     nginx -t >/dev/null 2>&1 || deny "closed staging Nginx configuration invalid"
+elif [ "${CANOVIA_STAGING_SYNTHETIC_READ_PILOT_ENABLED:-false}" = "true" ]; then
+    cp docker/nginx-mcp-staging-synthetic-read-pilot.conf /etc/nginx/nginx.conf
+    nginx -t >/dev/null 2>&1 || deny "synthetic read staging Nginx configuration invalid"
 else
     cp docker/nginx-mcp-staging-login-pilot.conf /etc/nginx/nginx.conf
     nginx -t >/dev/null 2>&1 || deny "pilot staging Nginx configuration invalid"

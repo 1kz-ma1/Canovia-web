@@ -6,6 +6,10 @@ on:
     paths:
       - 'app/Services/McpAuth0SealedStagingWiringReadiness.php'
       - 'app/Services/McpStagingLoginPilotPolicy.php'
+      - 'app/Services/McpStagingSyntheticReadPilotPolicy.php'
+      - 'config/canovia_staging.php'
+      - 'docker/nginx-mcp-staging-synthetic-read-pilot.conf'
+      - 'tests/Feature/McpStagingSyntheticReadPilotTest.php'
       - 'app/Services/McpStagingOAuthFailureDiagnostic.php'
       - 'app/Services/McpOAuthAccountLinkProvider.php'
       - 'app/Http/Controllers/McpOAuthAccountLinkController.php'
@@ -53,6 +57,8 @@ jobs:
           php -l tests/Feature/McpAuth0SealedStagingWiringTest.php
           php -l routes/console.php
           php -l app/Services/McpStagingLoginPilotPolicy.php
+          php -l app/Services/McpStagingSyntheticReadPilotPolicy.php
+          php -l tests/Feature/McpStagingSyntheticReadPilotTest.php
           php -l app/Services/McpStagingOAuthFailureDiagnostic.php
           php -l app/Services/McpOAuthAccountLinkProvider.php
           php -l app/Http/Controllers/McpOAuthAccountLinkController.php
@@ -77,4 +83,4 @@ jobs:
           SESSION_DRIVER: array
           CACHE_STORE: array
         run: |
-          php artisan test tests/Feature/McpAuth0SealedStagingWiringTest.php tests/Feature/McpStagingProviderPreflightTest.php tests/Feature/McpStagingLoginPilotPolicyTest.php tests/Feature/McpIsolatedStagingBootstrapTest.php tests/Feature/McpStagingPilotUiTest.php tests/Feature/McpStagingSyntheticPlanConsentPilotTest.php tests/Feature/McpExplicitPlanConsentTest.php tests/Feature/McpStagingOAuthFailureDiagnosticTest.php tests/Feature/McpOAuthAccountLinkTest.php --colors=never
+          php artisan test tests/Feature/McpAuth0SealedStagingWiringTest.php tests/Feature/McpStagingProviderPreflightTest.php tests/Feature/McpStagingLoginPilotPolicyTest.php tests/Feature/McpIsolatedStagingBootstrapTest.php tests/Feature/McpStagingPilotUiTest.php tests/Feature/McpStagingSyntheticPlanConsentPilotTest.php tests/Feature/McpStagingSyntheticReadPilotTest.php tests/Feature/McpExplicitPlanConsentTest.php tests/Feature/McpStagingOAuthFailureDiagnosticTest.php tests/Feature/McpOAuthAccountLinkTest.php --colors=never
