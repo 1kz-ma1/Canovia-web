@@ -15,6 +15,10 @@ return [
     'account_link_pilot_enabled' => env('CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED', false),
     // Third independent approval: one synthetic Development Plan; MCP read stays OFF.
     'plan_consent_pilot_enabled' => env('CANOVIA_STAGING_PLAN_CONSENT_PILOT_ENABLED', false),
+    // Independent approval for MCP POST + OAuth protected-resource metadata.
+    // Never conflate prior identity/Plan consent approval with read exposure.
+    'synthetic_read_pilot_enabled' => env('CANOVIA_STAGING_SYNTHETIC_READ_PILOT_ENABLED', false),
+    'mcp_explicitly_approved' => env('CANOVIA_STAGING_MCP_EXPLICITLY_APPROVED', false),
     // One-shot synthetic user bootstrap: leave disabled unless an operator
     // explicitly provisions a STAGING-only password out-of-band.
     // Keep SQLite by default. PostgreSQL requires an operator-pinned

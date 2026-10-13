@@ -15,6 +15,8 @@ on:
       - 'app/Http/Middleware/EnsureMcpStagingSyntheticPilotActor.php'
       - 'app/Services/McpStagingLoginPilotPolicy.php'
       - 'docker/nginx-mcp-staging-login-pilot.conf'
+      - 'docker/nginx-mcp-staging-synthetic-read-pilot.conf'
+      - 'app/Services/McpStagingSyntheticReadPilotPolicy.php'
       - 'tests/Feature/McpIsolatedStagingBootstrapTest.php'
       - 'tests/Feature/McpStagingLoginPilotPolicyTest.php'
       - 'tests/Feature/McpStagingPilotUiTest.php'
@@ -49,6 +51,13 @@ jobs:
           # The access-log format must never emit OAuth callback code or state.
           grep -F 'log_format stage_pilot_safe' docker/nginx-mcp-staging-login-pilot.conf \
             | grep -Ev '\$request_uri|\$query_string|\$args|\$request_body'
+
+      - name: Validate synthetic read pilot Nginx isolation and syntax
+        run: |
+          docker run --rm --entrypoint sh canovia-mcp-staging:smoke -c \
+            'cp docker/nginx-mcp-staging-synthetic-read-pilot.conf /etc/nginx/nginx.conf && nginx -t'
+          grep -F 'log_format stage_pilot_safe' docker/nginx-mcp-staging-synthetic-read-pilot.conf \
+            | grep -Ev '\$request_uri|\$query_string|\$args|\$request_body|\$http_authorization'
 
       - name: Verify PHP SQLite runtime extensions
         run: |

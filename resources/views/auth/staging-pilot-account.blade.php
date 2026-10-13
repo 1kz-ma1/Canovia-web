@@ -20,6 +20,7 @@
         ->whereNull('revoked_at')
         ->exists();
     $stagePolicy = app(\App\Services\McpStagingLoginPilotPolicy::class);
+    $syntheticReadReady = app(\App\Services\McpStagingSyntheticReadPilotPolicy::class)->isReady();
     $consentService = app(\App\Services\McpExplicitPlanConsentService::class);
     $consentReady = $linked && $stagePolicy->planConsentReady()
         && $consentService->isEnabled() && $linkSettings !== null;
@@ -54,10 +55,16 @@
             ->first()
         : null;
 @endphp
-    <p class="eyebrow">STAGING / IDENTITY LINK ONLY</p>
+    <p class="eyebrow">{{ $syntheticReadReady ? 'STAGING / SYNTHETIC MCP READ PILOT' : 'STAGING / IDENTITY LINK ONLY' }}</p>
     <h1>ログインできました</h1>
     <p class="muted">検証用アカウント：{{ $user->email }}</p>
-    <div class="note">Canoviaのログインは成功しています。ChatGPTへのPlan・Task共有やMCP読み取りは、まだ一切有効になっていません。</div>
+    <div class="note">
+        @if ($syntheticReadReady)
+            検証用合成Development Planに限定したMCP読み取りの検証モードです。実際の読み取りには、有効な本人ID連携・個別の共有承認・認証済みChatGPTアクセストークンが必要です。
+        @else
+            Canoviaのログインは成功しています。ChatGPTからのMCP読み取りは、まだ無効です。
+        @endif
+    </div>
 
     <section class="detail" data-mcp-account-link>
         <h2>Auth0の本人IDを確認</h2>
@@ -92,7 +99,10 @@
         <section class="detail" data-mcp-staging-plan-consent>
             <h2>検証用Development Planの共有承認</h2>
             <p class="muted">対象：{{ $fixture->title }}</p>
-            <p class="note warning">ここでの承認は隔離ステージングの合成データだけが対象です。ChatGPTからのMCP読み取りはまだ無効です。</p>
+            @if ($syntheticReadReady)
+                <p class="muted" data-mcp-synthetic-plan-id>検証用Plan ID：{{ $fixture->id }}</p>
+            @endif
+            <p class="note warning">ここでの承認は隔離ステージングの合成データだけが対象です。{{ $syntheticReadReady ? '有効な共有許可の範囲のみMCP読み取り可能です。' : 'ChatGPTからのMCP読み取りはまだ無効です。' }}</p>
             @if ($canConfirmConsent)
                 <div class="note" role="status" data-mcp-staging-consent-confirm>
                     Auth0で本人IDを再確認できました。対象：{{ $fixture->title }}。
@@ -115,7 +125,7 @@
                         検証用Planの共有承認があります。
                         共有範囲：{{ $activeGrant->scope === 'tasks' ? '概要＋Task' : '概要のみ' }}。
                         有効期限：{{ $activeGrant->expires_at->format('Y-m-d H:i') }}。
-                        MCPの読み取りは引き続き無効です。
+                        {{ $syntheticReadReady ? '有効な共有範囲でのみMCP読み取りが可能です。' : 'MCPの読み取りは引き続き無効です。' }}
                     </div>
                     <form method="POST" action="{{ route('auth.account.mcp_grant.revoke', ['grant' => $activeGrant->id]) }}">
                         @csrf
