@@ -47,10 +47,23 @@ class Plan extends Model
         'study_learning_type_confirmed_at',
     ];
 
+    protected static function booted(): void
+    {
+        static::updating(function (self $plan): void {
+            // Save-time writes for owner transfer and collaboration on/off
+            // invalidate proposals from an earlier authorization lifetime.
+            // Model UPDATE paths must lock the Plan row in their caller.
+            if ($plan->isDirty('user_id') || $plan->isDirty('is_collaborative')) {
+                $plan->authorization_epoch = max(1, (int) $plan->getOriginal('authorization_epoch')) + 1;
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [
             'priority' => 'integer',
+            'authorization_epoch' => 'integer',
             'start_date' => 'date',
             'deadline' => 'date',
             'is_public' => 'boolean',

@@ -116,9 +116,19 @@ class CompanionMutationApplyService
      */
     private function requiresFreshCollaborativeProposal(?Plan $plan, mixed $membershipIdentity): bool
     {
-        return $plan !== null
-            && (bool) $plan->is_collaborative
-            && ! is_array($membershipIdentity);
+        if (! $plan || ! $plan->is_collaborative) {
+            return false;
+        }
+
+        // Pre-epoch #533 candidates know their member row ID and role, but
+        // cannot prove whether either changed away and subsequently returned.
+        if (! is_array($membershipIdentity)
+            || ! isset($membershipIdentity['plan_epoch'])) {
+            return true;
+        }
+
+        return ($membershipIdentity['scope'] ?? null) === 'member'
+            && ! isset($membershipIdentity['membership_epoch']);
     }
 
     /**

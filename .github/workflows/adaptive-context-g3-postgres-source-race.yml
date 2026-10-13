@@ -8,6 +8,10 @@ on:
       - 'app/Services/CompanionEntitlementCommitGuard.php'
       - 'app/Services/CompanionMutationApplyService.php'
       - 'app/Services/CompanionMembershipCommitGuard.php'
+      - 'app/Models/Plan.php'
+      - 'app/Models/PlanMember.php'
+      - 'app/Services/GuestPlanClaimService.php'
+      - 'database/migrations/2026_10_13_110000_add_authorization_epochs_to_collaborative_plans.php'
       - 'app/Http/Controllers/PlanCollaborationController.php'
       - 'app/Services/CompanionConversationService.php'
       - 'tests/Feature/CompanionPostgresSourceRaceG3Test.php'
@@ -60,6 +64,10 @@ jobs:
           php -l app/Services/CompanionMutationApplyService.php
           php -l app/Services/CompanionConversationService.php
           php -l app/Services/CompanionMembershipCommitGuard.php
+          php -l app/Models/Plan.php
+          php -l app/Models/PlanMember.php
+          php -l app/Services/GuestPlanClaimService.php
+          php -l database/migrations/2026_10_13_110000_add_authorization_epochs_to_collaborative_plans.php
           php -l app/Http/Controllers/PlanCollaborationController.php
           php -l tests/Feature/CompanionPostgresSourceRaceG3Test.php
           php -l tests/Feature/CompanionGrantRevocationPostgresG3Test.php

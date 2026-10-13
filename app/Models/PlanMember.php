@@ -18,10 +18,22 @@ class PlanMember extends Model
         'joined_at',
     ];
 
+    protected static function booted(): void
+    {
+        static::updating(function (self $membership): void {
+            // A downgrade followed by a promotion must never restore
+            // an earlier Companion approval from the same row ID.
+            if ($membership->isDirty('role')) {
+                $membership->authorization_epoch = max(1, (int) $membership->getOriginal('authorization_epoch')) + 1;
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [
             'joined_at' => 'datetime',
+            'authorization_epoch' => 'integer',
         ];
     }
 
