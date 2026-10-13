@@ -263,7 +263,7 @@ final class CompanionMembershipRevocationPostgresG3Test extends TestCase
             ->get(route('companion.show', $thread))
             ->assertOk()
             ->assertSee('data-companion-membership-revalidation-required', false)
-            ->assertDontSee('この内容を反映する');
+            ->assertDontSee('action="'.route('companion.candidates.apply', [$thread, $candidate]).'"', false);
 
         $preview = app(\App\Services\CompanionThreadSurfaceService::class)
             ->build($thread->fresh(), $member)['candidatePreviews'][$candidate->id];
