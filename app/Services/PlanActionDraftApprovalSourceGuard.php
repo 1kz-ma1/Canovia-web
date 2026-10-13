@@ -2,19 +2,24 @@
 
 namespace App\Services;
 
+use App\Enums\EvidenceSource;
 use App\Intelligence\Support\CanonicalJson;
 use App\Models\Plan;
 use App\Models\PlanActionDraft;
+use App\Models\PlanArtifact;
 use App\Models\Task;
 use App\Models\TaskEvidence;
 use App\Models\WorkLog;
+use Illuminate\Support\Facades\DB;
+use LogicException;
 
 /**
  * G3/A10 last-mile guard for owner-approved Task creation from V58 Drafts.
  *
  * Called INSIDE the same transaction as the Task writes, after locking the
- * Plan and Draft. Source records (and their linked Tasks) are locked before
- * checking the exact evidence that was presented to the owner.
+ * Plan and Draft. Always lock Task and GitHub repository root BEFORE WorkLog
+ * and TaskEvidence, matching native/github producer order. Tentative reads
+ * only determine the lock set; revalidate their exact bindings under locks.
  */
 final class PlanActionDraftApprovalSourceGuard
 {
@@ -26,6 +31,10 @@ final class PlanActionDraftApprovalSourceGuard
 
     public function assertCurrent(Plan $plan, PlanActionDraft $draft): void
     {
+        if (DB::transactionLevel() < 1) {
+            throw new LogicException('Action Draft source approval requires a transaction.');
+        }
+
         $sources = $this->workLogs->existing($draft);
         if ($sources === [] || count($sources) > PlanActionDraftEvidenceService::MAX_SOURCES) {
             abort(409, '根拠の記録を再確認してから承認してください。');
@@ -64,6 +73,50 @@ final class PlanActionDraftApprovalSourceGuard
             abort(409, '根拠の識別情報を再確認してください。');
         }
 
+        // Initial reads are NOT authority. They only collect the Task/root
+        // locks needed in canonical Plan -> Draft -> Task -> PlanArtifact ->
+        // WorkLog -> TaskEvidence order, shared with GitHubTaskEvidenceCommitGuard.
+        // Every binding is checked again after all related rows are locked.
+        $preLogs = WorkLog::query()->where('plan_id', $plan->id)
+            ->whereIn('id', $logIds)->get();
+        $preRecords = TaskEvidence::query()->where('plan_id', $plan->id)
+            ->whereIn('id', $evidenceIds)->get();
+        if ($preLogs->count() !== count($logIds)
+            || $preRecords->count() !== count($evidenceIds)) {
+            abort(409, '根拠の記録が削除または移動されました。');
+        }
+
+        $taskIds = $preLogs->pluck('task_id')
+            ->concat($preRecords->pluck('task_id'))
+            ->filter(fn ($id) => $id !== null)
+            ->map(fn ($id) => (int) $id)->unique()->sort()->values()->all();
+
+        if ($taskIds !== []) {
+            $validTasks = Task::query()->where('plan_id', $plan->id)
+                ->whereIn('id', $taskIds)->orderBy('id')
+                ->lockForUpdate()->get()->count();
+            if ($validTasks !== count($taskIds)) {
+                abort(409, '根拠に関連するTaskの所属が変更されました。');
+            }
+        }
+
+        $rootIds = $preRecords
+            ->filter(fn (TaskEvidence $row) => $row->source === EvidenceSource::GitHub)
+            ->map(fn (TaskEvidence $row) => (int) data_get(
+                $row->metadata, 'github_repository_artifact_id', 0,
+            ))
+            ->filter(fn ($id) => $id > 0)
+            ->unique()->sort()->values()->all();
+
+        if ($rootIds !== []) {
+            $roots = PlanArtifact::query()->where('plan_id', $plan->id)
+                ->whereIn('id', $rootIds)->orderBy('id')
+                ->lockForUpdate()->get();
+            if ($roots->count() !== count($rootIds)) {
+                abort(409, 'GitHubの接続根拠が削除または移動されました。');
+            }
+        }
+
         $logs = WorkLog::query()
             ->where('plan_id', $plan->id)
             ->whereIn('id', $logIds)
@@ -82,27 +135,33 @@ final class PlanActionDraftApprovalSourceGuard
             abort(409, '根拠の記録が削除または移動されました。');
         }
 
+        // Source retargeting while acquiring parent locks must never result
+        // in confirming a new, unprotected Task or root.
+        $preLogBindings = $preLogs->keyBy('id');
+        $preEvidenceBindings = $preRecords->keyBy('id');
+        foreach ($logs as $row) {
+            $before = $preLogBindings->get($row->id);
+            if (! $before || $before->task_id !== $row->task_id) {
+                abort(409, '根拠に関連するTaskが変更されました。');
+            }
+        }
+        foreach ($records as $row) {
+            $before = $preEvidenceBindings->get($row->id);
+            if (! $before || $before->task_id !== $row->task_id
+                || $before->source !== $row->source
+                || (int) data_get($before->metadata, 'github_repository_artifact_id', 0)
+                    !== (int) data_get($row->metadata, 'github_repository_artifact_id', 0)) {
+                abort(409, '根拠の参照先が変更されました。新しい案を確認してください。');
+            }
+        }
+
         // Approval happens after composition, potentially following an App
-        // disconnect/reconnect. An unchanged historical Evidence digest is
-        // not renewed authorization to create Tasks from the old observation.
+        // disconnect/reconnect. Lock the root through the final Task insert;
+        // no other transaction can revoke/reconnect it after this check.
         if ($records->contains(fn (TaskEvidence $row) =>
             ! $this->reuseGuard->eligible($plan, $row)
         )) {
             abort(409, 'GitHub由来の根拠を現在確認できません。再同期後に新しい案を作成してください。');
-        }
-
-        $taskIds = $logs->pluck('task_id')
-            ->concat($records->pluck('task_id'))
-            ->filter(fn ($id) => $id !== null)
-            ->map(fn ($id) => (int) $id)->unique()->values()->all();
-
-        if ($taskIds !== []) {
-            $validTasks = Task::query()->where('plan_id', $plan->id)
-                ->whereIn('id', $taskIds)->orderBy('id')
-                ->lockForUpdate()->get()->count();
-            if ($validTasks !== count($taskIds)) {
-                abort(409, '根拠に関連するTaskの所属が変更されました。');
-            }
         }
 
         // The original stored observations are compared to fresh projections.
