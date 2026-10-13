@@ -251,6 +251,132 @@ final class StudyScopeAiCommitFenceG3Test extends TestCase
         Storage::assertExists($source->storage_path);
     }
 
+    public function test_human_can_confirm_unmodified_signed_ai_scope_and_edit_values(): void
+    {
+        [$actor, $plan, $source, $capture] = $this->scenario();
+        app(StudyScopeCaptureAnalysisService::class)->analyze($capture, $plan, $actor->id);
+
+        $signature = data_get($capture->fresh()->draft_data, 'source_signature');
+        $this->assertIsString($signature);
+        $this->assertSame(64, strlen($signature));
+
+        $this->confirmAiDraft($actor, $plan, $capture)->assertSessionHasNoErrors();
+        $this->assertSame('confirmed', $capture->fresh()->status);
+        $this->assertDatabaseHas('study_scope_items', [
+            'study_scope_capture_id' => $capture->id, 'subject' => '数学',
+            'unit' => '二次関数・復習',
+        ]);
+        $this->assertSame('processed', $source->fresh()->status);
+    }
+
+    public function test_owner_transfer_and_return_before_human_confirmation_rejects_old_ai_scope(): void
+    {
+        [$owner, $plan, $source, $capture] = $this->scenario();
+        app(StudyScopeCaptureAnalysisService::class)->analyze($capture, $plan, $owner->id);
+        $other = User::factory()->create();
+        $plan->update(['user_id' => $other->id]);
+        $plan->update(['user_id' => $owner->id]);
+
+        $this->assertConfirmationRejected($owner, $plan, $capture, $source);
+    }
+
+    public function test_editor_role_aba_before_human_confirmation_rejects_old_ai_scope(): void
+    {
+        [$editor, $plan, $source, $capture, $member] = $this->sharedScenario();
+        app(StudyScopeCaptureAnalysisService::class)->analyze($capture, $plan, $editor->id);
+        $member->update(['role' => PlanMember::ROLE_VIEWER]);
+        $member->update(['role' => PlanMember::ROLE_EDITOR]);
+
+        $this->assertConfirmationRejected($editor, $plan, $capture, $source);
+    }
+
+    public function test_same_editor_rejoin_before_human_confirmation_rejects_old_ai_scope(): void
+    {
+        [$editor, $plan, $source, $capture, $member] = $this->sharedScenario();
+        app(StudyScopeCaptureAnalysisService::class)->analyze($capture, $plan, $editor->id);
+        $member->delete();
+        PlanMember::query()->create([
+            'plan_id' => $plan->id,
+            'user_id' => $editor->id,
+            'role' => PlanMember::ROLE_EDITOR,
+            'joined_at' => now(),
+        ]);
+
+        $this->assertConfirmationRejected($editor, $plan, $capture, $source);
+    }
+
+    public function test_source_bytes_change_before_human_confirmation_rejects_old_ai_scope(): void
+    {
+        [$actor, $plan, $source, $capture] = $this->scenario();
+        app(StudyScopeCaptureAnalysisService::class)->analyze($capture, $plan, $actor->id);
+        Storage::put($source->storage_path, 'changed study scope image');
+
+        $this->assertConfirmationRejected($actor, $plan, $capture, $source);
+    }
+
+    public function test_unsigned_historical_ai_review_fails_closed_without_material_promotion(): void
+    {
+        [$actor, $plan, $source, $capture] = $this->scenario();
+        app(StudyScopeCaptureAnalysisService::class)->analyze($capture, $plan, $actor->id);
+        $draft = $capture->fresh()->draft_data;
+        unset($draft['source_signature']);
+        $capture->update(['draft_data' => $draft]);
+
+        $this->assertConfirmationRejected($actor, $plan, $capture, $source);
+    }
+
+    public function test_manually_entered_scope_is_still_confirmable_after_ai_failure(): void
+    {
+        [$actor, $plan, $source, $capture] = $this->scenario();
+        $capture->update(['status' => 'failed', 'native_ai_run_id' => null,
+            'failure_code' => 'test_rate_limit']);
+
+        $this->actingAs($actor)->post(
+            route('plans.study_scope.confirm', [$plan, $capture]),
+            ['exam_title' => '手動登録', 'items' => [
+                ['subject' => '国語', 'unit' => '現代文', 'range_text' => 'p.1-10'],
+            ]],
+        )->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame('confirmed', $capture->fresh()->status);
+        $this->assertDatabaseHas('study_scope_items', [
+            'study_scope_capture_id' => $capture->id, 'subject' => '国語',
+        ]);
+    }
+
+    public function test_stale_draft_index_cannot_be_promoted_while_reanalysis_in_progress(): void
+    {
+        [$actor, $plan, $source, $capture] = $this->scenario();
+        app(StudyScopeCaptureAnalysisService::class)->analyze($capture, $plan, $actor->id);
+        $capture->update(['status' => 'captured']);
+
+        $this->assertConfirmationRejected($actor, $plan, $capture, $source, 'captured');
+    }
+
+    private function confirmAiDraft(User $actor, Plan $plan, StudyScopeCapture $capture)
+    {
+        return $this->actingAs($actor)->post(
+            route('plans.study_scope.confirm', [$plan, $capture]),
+            ['exam_title' => '確認済み中間試験', 'items' => [
+                ['draft_index' => 0, 'subject' => '数学', 'unit' => '二次関数・復習',
+                    'range_text' => 'p.1-30'],
+            ]],
+        )->assertRedirect();
+    }
+
+    private function assertConfirmationRejected(
+        User $actor,
+        Plan $plan,
+        StudyScopeCapture $capture,
+        InboxItem $source,
+        string $status = 'review',
+    ): void {
+        $this->confirmAiDraft($actor, $plan, $capture)->assertSessionHasErrors('items');
+        $this->assertSame($status, $capture->fresh()->status);
+        $this->assertSame('new', $source->fresh()->status);
+        $this->assertDatabaseCount('study_scope_items', 0);
+    }
+
     private function sharedScenario(bool $fakeSuccess = true): array
     {
         [$editor, $plan, $source, $capture] = $this->scenario($fakeSuccess);
