@@ -41,6 +41,16 @@ class CompanionConversationService
         ?Task $task = null,
         ?string $sourcePath = null,
     ): array {
+        // Capture the current membership identity before using private
+        // Context or generating AI output. A remove/rejoin cannot reuse it.
+        $membershipIdentity = $this->membershipCommit->capture($user, $plan);
+        if ($membershipIdentity['scope'] === 'unavailable') {
+            throw new NativeAiExecutionException(
+                '共同Planの参加権限を確認できません。現在の情報で再度確認してください。',
+                'native_ai_target_changed',
+            );
+        }
+
         $existingUserMessage = CompanionMessage::query()
             ->where('request_id', $requestId)
             ->first();
@@ -137,7 +147,7 @@ class CompanionConversationService
             featureKey: FeatureKey::CanoviaCompanion,
         );
 
-        return DB::transaction(function () use ($thread, $user, $userMessage, $result, $plan, $task, $contextSnapshot, $sourceProvenance) {
+        return DB::transaction(function () use ($thread, $user, $userMessage, $result, $plan, $task, $contextSnapshot, $sourceProvenance, $membershipIdentity) {
             // The provider returned a valid result, but its entitlement and
             // selected Context may have changed after the gateway's final check.
             // Lock the durable targets and fail closed before writing AI-derived
@@ -171,7 +181,7 @@ class CompanionConversationService
             // The Plan and Task are locked. Serialize a concurrent member
             // removal/role downgrade and reject a stale AI context before
             // committing assistant text, proposals or Future Memories.
-            if (! $this->membershipCommit->canAccess($user, $plan)) {
+            if (! $this->membershipCommit->canAccess($user, $plan, false, $membershipIdentity)) {
                 throw new NativeAiExecutionException(
                     '共同Planの参加権限が変更されました。現在の情報で再度確認してください。',
                     'native_ai_target_changed',
@@ -238,6 +248,7 @@ class CompanionConversationService
                     'continuity_signal_count' => count($contextSnapshot['continuity'] ?? []),
                     'memory_capture_count' => $memoryCount,
                     'source_provenance' => $sourceProvenance,
+                    'membership_provenance' => $membershipIdentity,
                 ],
             ]);
 
@@ -312,6 +323,8 @@ class CompanionConversationService
                 $this->derivedSources->isCurrent(
                     $plan, data_get($existing->metadata, 'source_provenance'),
                 )
+                && data_get($existing->metadata, 'membership_provenance')
+                    === data_get($assistant->metadata, 'membership_provenance')
                 && $this->canonicalizePayload(is_array($existing->payload) ? $existing->payload : [])
                 === $normalizedPayload
             ));
@@ -337,6 +350,7 @@ class CompanionConversationService
                 'native_ai_run_id' => $assistant->native_ai_run_id,
                 'target_source' => 'selected_context',
                 'source_provenance' => data_get($assistant->metadata, 'source_provenance'),
+                'membership_provenance' => data_get($assistant->metadata, 'membership_provenance'),
             ],
         ]);
     }
