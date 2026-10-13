@@ -123,6 +123,7 @@ jobs:
           php -l database/migrations/2026_10_09_235959_reconcile_p0_mysql_applied_constraints.php
           php -l tests/Feature/ProductionMysqlSchemaP0Test.php
           php -l database/migrations/2026_10_13_120000_enforce_authorization_epochs_in_database.php
+          php -l database/migrations/2026_10_13_130000_immutable_plan_member_binding.php
           php -l tests/Feature/AuthorizationEpochDatabaseTriggerG3Test.php
           php -l database/migrations/2026_10_12_010000_add_source_revision_to_development_activity_observations.php
           php -l database/migrations/2026_10_13_021000_add_source_epoch_to_development_activity_observations.php
