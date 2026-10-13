@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\ProductKey;
 use App\Models\NativeAiRun;
 use App\Models\Plan;
+use App\Models\PlanMember;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\UserProductGrant;
@@ -178,6 +179,145 @@ final class ExecutionPacketAiCommitFenceG3Test extends TestCase
         $this->assertNull($first['packet']);
         $this->assertSame('人が途中で修正した内容', $task->fresh()->description);
         $this->assertDatabaseCount('native_ai_runs', 2);
+    }
+
+    public function test_shared_editor_native_packet_is_valid_with_uninterrupted_membership(): void
+    {
+        [$editor, $plan, $dependency, $task] = $this->sharedScenario();
+        $this->generate($editor, $plan, $task)->assertSessionHasNoErrors();
+
+        $state = session(ExecutionRequestHandoffService::sessionKey($plan, $task));
+        $this->assertSame('現在の契約を検証する', data_get($state, 'packet.summary'));
+        $this->assertSame('todo', $task->fresh()->status);
+        $this->assertDatabaseCount('native_ai_runs', 1);
+    }
+
+    public function test_owner_transfer_and_return_after_provider_refuses_old_native_packet(): void
+    {
+        [$owner, $plan, $dependency, $task] = $this->scenario();
+        $other = User::factory()->create();
+        $this->afterGateway(function () use ($plan, $owner, $other): void {
+            $plan->update(['user_id' => $other->id]);
+            $plan->update(['user_id' => $owner->id]);
+        });
+
+        $this->generate($owner, $plan, $task);
+        $this->assertWithheld($plan, $task);
+        $this->assertSame($owner->id, $plan->fresh()->user_id);
+    }
+
+    public function test_editor_downgrade_and_return_after_provider_refuses_old_native_packet(): void
+    {
+        [$editor, $plan, $dependency, $task, $member] = $this->sharedScenario();
+        $this->afterGateway(function () use ($member): void {
+            $member->update(['role' => PlanMember::ROLE_VIEWER]);
+            $member->update(['role' => PlanMember::ROLE_EDITOR]);
+        });
+
+        $this->generate($editor, $plan, $task);
+        $this->assertWithheld($plan, $task);
+        $this->assertSame(PlanMember::ROLE_EDITOR, $member->fresh()->role);
+    }
+
+    public function test_same_editor_rejoin_after_provider_refuses_old_native_packet(): void
+    {
+        [$editor, $plan, $dependency, $task, $member] = $this->sharedScenario();
+        $originalMembership = $member->id;
+        $this->afterGateway(function () use ($member, $plan, $editor): void {
+            $member->delete();
+            PlanMember::query()->create([
+                'plan_id' => $plan->id,
+                'user_id' => $editor->id,
+                'role' => PlanMember::ROLE_EDITOR,
+                'joined_at' => now(),
+            ]);
+        });
+
+        $this->generate($editor, $plan, $task);
+        $this->assertWithheld($plan, $task);
+        $this->assertNotEquals(
+            $originalMembership,
+            PlanMember::query()->where('plan_id', $plan->id)
+                ->where('user_id', $editor->id)->firstOrFail()->id,
+        );
+    }
+
+    public function test_collaboration_off_and_on_after_provider_refuses_old_native_packet(): void
+    {
+        [$editor, $plan, $dependency, $task] = $this->sharedScenario();
+        $this->afterGateway(function () use ($plan): void {
+            $plan->update(['is_collaborative' => false]);
+            $plan->update(['is_collaborative' => true]);
+        });
+
+        $this->generate($editor, $plan, $task);
+        $this->assertWithheld($plan, $task);
+    }
+
+    public function test_role_aba_after_packet_was_saved_clears_session_on_next_read(): void
+    {
+        [$editor, $plan, $dependency, $task, $member] = $this->sharedScenario();
+        $this->generate($editor, $plan, $task);
+        $this->assertNotNull(data_get(
+            session(ExecutionRequestHandoffService::sessionKey($plan, $task)), 'packet',
+        ));
+
+        $member->update(['role' => PlanMember::ROLE_VIEWER]);
+        $member->update(['role' => PlanMember::ROLE_EDITOR]);
+
+        $this->actingAs($editor)->get(
+            route('plans.tasks.execution_orchestration.show', [$plan, $task]),
+        )->assertOk()->assertDontSee('現在の契約を検証する');
+
+        $state = session(ExecutionRequestHandoffService::sessionKey($plan, $task));
+        $this->assertNull(data_get($state, 'packet'));
+        $this->assertNull(data_get($state, 'native_run_id'));
+    }
+
+    public function test_multi_target_distribution_redacts_old_packets_after_membership_aba(): void
+    {
+        [$editor, $plan, $dependency, $task, $member] = $this->sharedScenario();
+        $second = $this->task($plan, 'Second target');
+        $calls = 0;
+        $this->afterGateway(function () use (&$calls, $member): void {
+            $calls++;
+            if ($calls === 2) {
+                $member->update(['role' => PlanMember::ROLE_VIEWER]);
+                $member->update(['role' => PlanMember::ROLE_EDITOR]);
+            }
+        }, 2);
+
+        $this->actingAs($editor)
+            ->post(route('plans.execution_distribution.prepare', $plan), [
+                'generation_mode' => 'native',
+                'selected_task_ids' => [$task->id, $second->id],
+                'actor_type' => [$task->id => 'human_ai', $second->id => 'human_ai'],
+            ])->assertRedirect();
+
+        $bundle = session(ExecutionDistributionService::sessionKey($plan));
+        $this->assertCount(2, $bundle['targets']);
+        foreach ($bundle['targets'] as $target) {
+            $this->assertTrue($target['stale']);
+            $this->assertNull($target['packet']);
+            $this->assertNull($target['native_run_id'] ?? null);
+        }
+        $this->assertDatabaseCount('native_ai_runs', 2);
+        Http::assertSentCount(2);
+    }
+
+    private function sharedScenario(): array
+    {
+        [$editor, $plan, $dependency, $task] = $this->scenario();
+        $owner = User::factory()->create();
+        $plan->update(['user_id' => $owner->id, 'is_collaborative' => true]);
+        $membership = PlanMember::query()->create([
+            'plan_id' => $plan->id,
+            'user_id' => $editor->id,
+            'role' => PlanMember::ROLE_EDITOR,
+            'joined_at' => now(),
+        ]);
+
+        return [$editor, $plan, $dependency, $task, $membership, $owner];
     }
 
     private function scenario(): array

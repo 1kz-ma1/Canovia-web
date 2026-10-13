@@ -78,6 +78,9 @@ final class ExecutionOrchestrationController extends Controller
             $state['packet'] = null;
             unset($state['native_run_id']);
             $request->session()->put($this->sessionKey($plan, $task), $state);
+            // A GitHub file-change preview was derived from this Packet.
+            // Revoke its executable-looking session projection as well.
+            $githubHandoff->clear($request, $plan, $task);
         }
 
         $nativeDecision = $access->resolveAccess(
