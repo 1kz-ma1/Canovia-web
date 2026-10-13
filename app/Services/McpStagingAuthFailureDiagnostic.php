@@ -29,6 +29,10 @@ final class McpStagingAuthFailureDiagnostic
         'jwt_client_missing',
         'jwt_client_both_present_wrong',
         'jwt_client_azp_mismatch',
+        'jwt_azp_matches_account_link_client',
+        'jwt_azp_chatgpt_cimd_form',
+        'jwt_azp_auth0_third_party_form',
+        'jwt_azp_other_form',
         'jwt_client_client_id_mismatch',
         'jwt_claims_scope',
         'jwt_claims_time',
@@ -94,7 +98,28 @@ final class McpStagingAuthFailureDiagnostic
             return 'jwt_client_both_present_wrong';
         }
         if ($hasAzp && $claims['azp'] !== $clientId) {
-            return 'jwt_client_azp_mismatch';
+            // Diagnosis only, after signature and issuer validation and after
+            // the actual claim policy has rejected this JWT. A format/pattern
+            // match here NEVER allows a token to be used.
+            $azp = $claims['azp'];
+            if (is_string($azp)) {
+                $accountLinkClient = config('canovia_mcp.account_link_client_id');
+                if (is_string($accountLinkClient) && $accountLinkClient !== ''
+                    && $azp === $accountLinkClient) {
+                    return 'jwt_azp_matches_account_link_client';
+                }
+                // ChatGPT can identify its OAuth client using a metadata URL.
+                // Classify only the form, not the URL or callback identifier.
+                if (preg_match('#\\Ahttps://chatgpt\\.com/oauth/(?:[A-Za-z0-9_-]{1,128}/)?client\\.json\\z#D', $azp) === 1) {
+                    return 'jwt_azp_chatgpt_cimd_form';
+                }
+                // Auth0 third-party clients commonly have tpc_-prefixed IDs.
+                // Do not print even a prefix of the signed claim itself.
+                if (preg_match('/\\Atpc_[A-Za-z0-9_-]{4,251}\\z/D', $azp) === 1) {
+                    return 'jwt_azp_auth0_third_party_form';
+                }
+            }
+            return 'jwt_azp_other_form';
         }
         if ($hasClientId && $claims['client_id'] !== $clientId) {
             return 'jwt_client_client_id_mismatch';
