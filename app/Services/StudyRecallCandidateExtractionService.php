@@ -16,6 +16,7 @@ class StudyRecallCandidateExtractionService
     public function __construct(
         private readonly NativeAiGateway $nativeAi,
         private readonly StudyRecallExtractionCommitFence $commitFence,
+        private readonly StudyRecallCandidateReviewFence $reviewFence,
     ) {}
 
     /**
@@ -98,6 +99,7 @@ class StudyRecallCandidateExtractionService
                 );
 
                 $created = 0;
+                $newCandidateIds = [];
                 foreach ($cards as $candidate) {
                     $promptText = trim((string) ($candidate['prompt'] ?? ''));
                     $answer = trim((string) ($candidate['answer'] ?? ''));
@@ -137,6 +139,7 @@ class StudyRecallCandidateExtractionService
                     );
 
                     if ($model->wasRecentlyCreated) {
+                        $newCandidateIds[] = (int) $model->id;
                         $created++;
                     }
                 }
@@ -146,6 +149,15 @@ class StudyRecallCandidateExtractionService
                     'native_ai_run_id' => (int) $result['run_id'],
                     'candidate_count' => $created,
                 ]);
+
+                // Only stamp genuinely new candidates. A task/fingerprint
+                // collision must never retrospectively sign an old row.
+                if ($newCandidateIds !== []) {
+                    StudyRecallCandidate::query()->whereIn('id', $newCandidateIds)
+                        ->update(['review_provenance' => $this->reviewFence->provenance(
+                            $source, $authorization,
+                        )]);
+                }
 
                 return $created;
             }, 3);
