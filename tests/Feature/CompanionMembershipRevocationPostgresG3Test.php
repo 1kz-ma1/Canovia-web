@@ -511,6 +511,139 @@ final class CompanionMembershipRevocationPostgresG3Test extends TestCase
         return (int) $stmt->fetchColumn();
     }
 
+    public function test_role_downgrade_then_restore_advances_epoch_and_invalidates_old_candidate(): void
+    {
+        [, $member, $plan, $task, $candidate, $membership] = $this->scenario();
+        $guard = app(CompanionMembershipCommitGuard::class);
+        $original = $guard->capture($member, $plan);
+        $this->assertSame(1, $original['membership_epoch']);
+        $this->assertSame(1, $original['plan_epoch']);
+
+        $membership->update(['role' => PlanMember::ROLE_VIEWER]);
+        $this->assertSame(2, $membership->fresh()->authorization_epoch);
+        $membership->update(['role' => PlanMember::ROLE_EDITOR]);
+        $this->assertSame(3, $membership->fresh()->authorization_epoch);
+
+        $current = $guard->capture($member, $plan);
+        $this->assertSame($original['membership_id'], $current['membership_id']);
+        $this->assertSame($original['role'], $current['role']);
+        $this->assertNotSame($original['membership_epoch'], $current['membership_epoch']);
+
+        DB::transaction(function () use ($guard, $member, $plan, $original, $current): void {
+            $this->lockPlan($plan);
+            $this->assertFalse($guard->canAccess($member, $plan, true, $original));
+            $this->assertTrue($guard->canAccess($member, $plan, true, $current));
+        });
+
+        $this->expectApplyDenied($this->requestFor($member), $candidate->fresh());
+        $this->assertSame('Original note', $task->fresh()->next_action_note);
+        $this->assertSame('pending', $candidate->fresh()->status);
+    }
+
+    public function test_owner_transfer_then_restore_advances_plan_epoch_even_with_same_owner(): void
+    {
+        [$owner, $member, $plan, $task, $candidate] = $this->scenario();
+        $guard = app(CompanionMembershipCommitGuard::class);
+        $old = $guard->capture($owner, $plan);
+        $this->assertSame('owner', $old['scope']);
+
+        $candidate->update([
+            'user_id' => $owner->id,
+            'metadata' => [
+                'source' => 'canovia_companion',
+                'source_provenance' => ['version' => 1, 'github_evidence' => []],
+                'membership_provenance' => $old,
+            ],
+        ]);
+
+        $plan->update(['user_id' => $member->id]);
+        $this->assertSame($old['plan_epoch'] + 1, $plan->fresh()->authorization_epoch);
+        $plan->update(['user_id' => $owner->id]);
+        $this->assertSame($old['plan_epoch'] + 2, $plan->fresh()->authorization_epoch);
+
+        $new = $guard->capture($owner, $plan);
+        $this->assertSame($old['scope'], $new['scope']);
+        $this->assertSame($old['owner_user_id'], $new['owner_user_id']);
+        $this->assertNotSame($old['plan_epoch'], $new['plan_epoch']);
+
+        DB::transaction(function () use ($owner, $plan, $guard, $old, $new): void {
+            $this->lockPlan($plan);
+            $this->assertFalse($guard->canAccess($owner, $plan, true, $old));
+            $this->assertTrue($guard->canAccess($owner, $plan, true, $new));
+        });
+
+        $this->expectApplyDenied($this->requestFor($owner), $candidate->fresh());
+        $this->assertSame('pending', $candidate->fresh()->status);
+        $this->assertSame('Original note', $task->fresh()->next_action_note);
+    }
+
+    public function test_collaboration_disable_and_reenable_invalidates_old_member_identity(): void
+    {
+        [, $member, $plan, , $candidate] = $this->scenario();
+        $guard = app(CompanionMembershipCommitGuard::class);
+        $before = $guard->capture($member, $plan);
+
+        app(\App\Services\PlanCollaborationService::class)->disable($plan);
+        $this->assertSame($before['plan_epoch'] + 1, $plan->fresh()->authorization_epoch);
+        app(\App\Services\PlanCollaborationService::class)->enable($plan);
+        $this->assertSame($before['plan_epoch'] + 2, $plan->fresh()->authorization_epoch);
+
+        $after = $guard->capture($member, $plan);
+        $this->assertSame($before['membership_id'], $after['membership_id']);
+        $this->assertSame($before['membership_epoch'], $after['membership_epoch']);
+        $this->assertNotSame($before['plan_epoch'], $after['plan_epoch']);
+        $this->expectApplyDenied($this->requestFor($member), $candidate->fresh());
+    }
+
+    public function test_cosmetic_and_redundant_role_writes_do_not_revoke_live_epoch(): void
+    {
+        [, $member, $plan, , , $membership] = $this->scenario();
+        $before = app(CompanionMembershipCommitGuard::class)->capture($member, $plan);
+
+        $membership->update(['role' => PlanMember::ROLE_EDITOR]);
+        $plan->update(['title' => 'Cosmetic rename']);
+        $this->assertSame($before, app(CompanionMembershipCommitGuard::class)->capture($member, $plan));
+        DB::transaction(function () use ($member, $plan, $before): void {
+            $this->lockPlan($plan);
+            $this->assertTrue(app(CompanionMembershipCommitGuard::class)
+                ->canAccess($member, $plan, true, $before));
+        });
+    }
+
+    public function test_old_pre_epoch_membership_proof_requires_new_collaborative_proposal(): void
+    {
+        [, $member, $plan, $task, $candidate, $membership] = $this->scenario();
+        $oldProof = [
+            'scope' => 'member',
+            'membership_id' => (int) $membership->id,
+            'role' => PlanMember::ROLE_EDITOR,
+        ];
+        $metadata = $candidate->metadata;
+        $metadata['membership_provenance'] = $oldProof;
+        $candidate->update(['metadata' => $metadata]);
+
+        $preview = app(CompanionMutationApplyService::class)->reviewPreview($candidate->fresh());
+        $this->assertTrue($preview['membership_revalidation_required']);
+        $this->expectApplyDenied($this->requestFor($member), $candidate->fresh());
+        $this->assertSame('Original note', $task->fresh()->next_action_note);
+    }
+
+    public function test_guest_owner_claim_advances_plan_epoch_under_plan_lock(): void
+    {
+        [$owner, , $plan] = $this->scenario();
+        $plan->update(['user_id' => null]);
+        $before = (int) $plan->fresh()->authorization_epoch;
+        $newOwner = User::factory()->create(['first_run_completed_at' => now()]);
+        $request = $this->requestFor($newOwner);
+        $request->cookies->set('pace_keeper_owner_token_'.$plan->id, $plan->owner_token);
+
+        $claimed = app(\App\Services\GuestPlanClaimService::class)->claim($request, $newOwner);
+        $this->assertSame(1, $claimed);
+        $this->assertSame((int) $newOwner->id, (int) $plan->fresh()->user_id);
+        $this->assertSame($before + 1, (int) $plan->fresh()->authorization_epoch);
+        $this->assertSame(0, app(\App\Services\GuestPlanClaimService::class)->claim($request, $newOwner));
+    }
+
     public function test_plan_collaboration_disable_and_owner_or_global_scopes(): void
     {
         [$owner, $member, $plan, , , $membership] = $this->scenario();
@@ -615,11 +748,8 @@ final class CompanionMembershipRevocationPostgresG3Test extends TestCase
             'metadata' => [
                 'source' => 'canovia_companion',
                 'source_provenance' => ['version' => 1, 'github_evidence' => []],
-                'membership_provenance' => [
-                    'scope' => 'member',
-                    'membership_id' => (int) $membership->id,
-                    'role' => PlanMember::ROLE_EDITOR,
-                ],
+                'membership_provenance' => app(CompanionMembershipCommitGuard::class)
+                    ->capture($member, $plan),
             ],
         ]);
 
