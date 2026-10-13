@@ -56,6 +56,10 @@ final class McpReadOnlyResourceController extends Controller
                 : null;
 
         if ($bearer === null) {
+            if (is_string($authorization) && $authorization !== '') {
+                // Only the fixed reason is logged, never Authorization data.
+                \App\Services\McpStagingAuthFailureDiagnostic::record('bearer_syntax');
+            }
             // Nginx/PHP-FPM may forward an empty Authorization header even
             // when the client sent no credentials. An empty header must not
             // advertise invalid_token in the initial OAuth challenge.
