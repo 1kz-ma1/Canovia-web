@@ -238,8 +238,6 @@ jobs:
           bash -n scripts/ci/p0_mysql_disposable_restore_smoke.sh
           bash scripts/ci/p0_mysql_disposable_restore_smoke.sh
 
-      - name: Enforce authorization epoch triggers for direct SQL on disposable MySQL
-        run: php artisan test tests/Feature/AuthorizationEpochDatabaseTriggerG3Test.php --stop-on-failure
       - name: Verify operator read-only preflight guard and sanitized verdict
         env:
           CANOVIA_P0_READONLY_PREFLIGHT: '1'
@@ -295,3 +293,5 @@ jobs:
           printf '%s\n' "$denied" \
             | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["result"]=="BLOCK" and "ORPHANED_REFERENCES_PRESENT" in r["codes"] and "DUPLICATE_UNIQUE_VALUES_PRESENT" in r["codes"] and r["release_authorized"] is False'
           echo "p0_select_only_data_preflight_and_corruption_negative: pass"
+      - name: Enforce authorization epoch triggers for direct SQL on disposable MySQL
+        run: php artisan test tests/Feature/AuthorizationEpochDatabaseTriggerG3Test.php --stop-on-failure
