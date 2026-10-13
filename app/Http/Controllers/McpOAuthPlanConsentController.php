@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Plan;
 use App\Services\McpExplicitPlanConsentService;
 use App\Services\McpOAuthAccountLinkProvider;
+use App\Services\McpStagingLoginPilotPolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -26,6 +27,13 @@ final class McpOAuthPlanConsentController extends Controller
     ): RedirectResponse {
         $actor = $request->user();
         abort_unless($actor && $consent->isPersonalDevelopmentOwner($actor, $plan), 404);
+        // Stage grants may target only the pre-existing, immutable synthetic
+        // fixture; a caller-supplied Plan ID is never a stage authorization.
+        if (config('app.env') === 'staging') {
+            $policy = app(McpStagingLoginPilotPolicy::class);
+            abort_unless($policy->planConsentReady()
+                && $policy->isApprovedSyntheticPlan($actor, $plan), 404);
+        }
 
         $validated = $request->validate([
             'scope' => ['required', 'in:overview,tasks'],
@@ -86,6 +94,16 @@ final class McpOAuthPlanConsentController extends Controller
         // Verification evidence is one-time, even if Plan permissions have
         // since been revoked or the final database update fails.
         $verified = $request->session()->pull(self::VERIFIED_SESSION);
+
+        if (config('app.env') === 'staging') {
+            $plan = is_array($verified) && is_int($verified['plan_id'] ?? null)
+                ? Plan::query()->find($verified['plan_id']) : null;
+            $policy = app(McpStagingLoginPilotPolicy::class);
+            if ($plan === null || ! $policy->planConsentReady()
+                || ! $policy->isApprovedSyntheticPlan($actor, $plan)) {
+                return $this->failure();
+            }
+        }
 
         if (! $consent->isEnabled()
             || ! is_array($verified)

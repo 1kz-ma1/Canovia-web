@@ -146,13 +146,24 @@ case "${CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED:-false}" in
     false|true) ;;
     *) deny "invalid stage account-link pilot flag" ;;
 esac
+case "${CANOVIA_STAGING_PLAN_CONSENT_PILOT_ENABLED:-false}" in
+    false|true) ;;
+    *) deny "invalid stage Plan-consent pilot flag" ;;
+esac
 if [ "${CANOVIA_STAGING_WEB_ACCESS_ENABLED:-false}" = "true" ]; then
     [ "${CANOVIA_STAGING_LOGIN_PILOT_ENABLED:-false}" = "true" ] \
         || deny "Web access requires stage login pilot approval"
     [ "${CANOVIA_MCP_TOOLS_ENABLED:-false}" = "false" ] \
         || deny "stage login pilot forbids MCP tools"
-    [ "${CANOVIA_MCP_PLAN_CONSENT_ENABLED:-false}" = "false" ] \
-        || deny "stage login pilot forbids Plan grants"
+    if [ "${CANOVIA_STAGING_PLAN_CONSENT_PILOT_ENABLED:-false}" = "true" ]; then
+        [ "${CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED:-false}" = "true" ] \
+            || deny "Plan-consent pilot requires link pilot"
+        [ "${CANOVIA_MCP_PLAN_CONSENT_ENABLED:-false}" = "true" ] \
+            || deny "Plan-consent pilot requires explicit Plan consent"
+    else
+        [ "${CANOVIA_MCP_PLAN_CONSENT_ENABLED:-false}" = "false" ] \
+            || deny "stage login pilot forbids unapproved Plan grants"
+    fi
     [ "${CANOVIA_MCP_DELEGATED_POLICY_ENABLED:-false}" = "false" ] \
         || deny "stage login pilot forbids delegated reads"
     [ "${CANOVIA_MCP_TOKEN_INTROSPECTION_ENABLED:-false}" = "false" ] \
@@ -178,6 +189,8 @@ else
         || deny "closed Web must not arm login pilot"
     [ "${CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED:-false}" = "false" ] \
         || deny "closed Web must not arm link pilot"
+    [ "${CANOVIA_STAGING_PLAN_CONSENT_PILOT_ENABLED:-false}" = "false" ] \
+        || deny "closed Web must not arm Plan consent pilot"
 fi
 
 # Opt-in NO-NETWORK Auth0 config inventory; never activates public OAuth/MCP.

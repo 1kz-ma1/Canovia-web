@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\McpDelegatedGrant;
 use App\Services\McpDelegatedRevocationService;
+use App\Services\McpStagingLoginPilotPolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -17,6 +19,17 @@ final class McpDelegatedRevocationController extends Controller
         int $grant,
         McpDelegatedRevocationService $revocations,
     ): RedirectResponse {
+        if (config('app.env') === 'staging') {
+            $actor = $request->user();
+            $existing = $actor
+                ? McpDelegatedGrant::query()->where('user_id', $actor->id)
+                    ->with('plan')->find($grant)
+                : null;
+            $policy = app(McpStagingLoginPilotPolicy::class);
+            abort_unless($actor && $existing && $existing->plan
+                && $policy->planConsentReady()
+                && $policy->isApprovedSyntheticPlan($actor, $existing->plan), 404);
+        }
         abort_unless(
             $request->user()
                 && $revocations->revokeGrant($request->user(), $grant),

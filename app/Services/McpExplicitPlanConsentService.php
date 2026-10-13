@@ -26,6 +26,12 @@ final class McpExplicitPlanConsentService
 
     public function isEnabled(): bool
     {
+        // The generic feature flag alone cannot authorize staging grants.
+        if (config('app.env') === 'staging'
+            && ! app(McpStagingLoginPilotPolicy::class)->planConsentReady()) {
+            return false;
+        }
+
         $client = config('canovia_mcp.allowed_client_id');
         $resource = config('canovia_mcp.resource_url');
 
@@ -98,6 +104,13 @@ final class McpExplicitPlanConsentService
             $plan = Plan::query()->whereKey($planId)->lockForUpdate()->first();
             if ($owner === null || $plan === null
                 || ! $this->isPersonalDevelopmentOwner($owner, $plan)) {
+                return false;
+            }
+            // Recheck the immutable synthetic fixture UNDER the database
+            // locks: a swapped Plan between OAuth and consent cannot pass.
+            if (config('app.env') === 'staging'
+                && ! app(McpStagingLoginPilotPolicy::class)
+                    ->isApprovedSyntheticPlan($owner, $plan)) {
                 return false;
             }
 
