@@ -19,6 +19,7 @@ use App\Services\NativeAiGateway;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\StudyScopeCaptureAnalysisService;
+use App\Services\StudyScopeCaptureCommitFence;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -257,11 +258,11 @@ class StudyScopeCaptureController extends Controller
         PlanOwnershipService $ownership,
         PlanCategoryProfileService $profiles,
         StudyAdaptiveActionService $studyActions,
+        StudyScopeCaptureCommitFence $commitFence,
     ) {
         $ownership->authorizeEdit($request, $plan);
         $this->authorizeStudyPlan($plan, $profiles);
         $this->authorizeCapture($plan, $capture);
-        $capture->loadMissing(['items', 'inboxItem']);
 
         $validated = $request->validate([
             'exam_title' => ['nullable', 'string', 'max:255'],
@@ -276,9 +277,19 @@ class StudyScopeCaptureController extends Controller
             'items.*.page_end' => ['nullable', 'integer', 'min:1', 'max:100000'],
         ]);
 
-        $draftItems = collect(data_get($capture->draft_data, 'items', []));
-        $existingItems = $capture->items->keyBy('id');
-        $normalized = [];
+        // Lock Plan -> Capture -> Inbox -> Membership before reading draft
+        // excerpts or writing authoritative StudyScopeItems. This also
+        // rejects a concurrent reanalysis/revocation without partial writes.
+        DB::transaction(function () use ($capture, $plan, $request, $validated, $commitFence) {
+            $usesDraft = collect($validated['items'] ?? [])
+                ->contains(fn ($item) => isset($item['draft_index']));
+            $liveCapture = $commitFence->assertCanConfirm(
+                $capture, $plan, $request->user()?->id, $usesDraft,
+            );
+
+            $draftItems = collect(data_get($liveCapture->draft_data, 'items', []));
+            $existingItems = $liveCapture->items()->get()->keyBy('id');
+            $normalized = [];
 
         foreach (($validated['items'] ?? []) as $index => $item) {
             $subject = trim((string) ($item['subject'] ?? ''));
@@ -316,7 +327,12 @@ class StudyScopeCaptureController extends Controller
             $sourceExcerpt = null;
             if (isset($item['item_id'])) {
                 $existing = $existingItems->get((int) $item['item_id']);
-                $sourceExcerpt = $existing?->source_excerpt;
+                if ($existing === null) {
+                    throw ValidationException::withMessages([
+                        "items.{$index}.item_id" => 'このCaptureに属さない範囲は更新できません。',
+                    ]);
+                }
+                $sourceExcerpt = $existing->source_excerpt;
             } elseif (isset($item['draft_index'])) {
                 $draft = $draftItems->get((int) $item['draft_index']);
                 if (is_array($draft)) {
@@ -342,13 +358,12 @@ class StudyScopeCaptureController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($capture, $validated, $normalized) {
-            $capture->items()->delete();
+            $liveCapture->items()->delete();
 
             foreach ($normalized as $sortOrder => $item) {
                 StudyScopeItem::query()->create([
-                    'study_scope_capture_id' => (int) $capture->id,
-                    'plan_id' => (int) $capture->plan_id,
+                    'study_scope_capture_id' => (int) $liveCapture->id,
+                    'plan_id' => (int) $liveCapture->plan_id,
                     ...$item,
                     // Human confirmation is the authority boundary.
                     'confidence' => 1.0,
@@ -356,7 +371,7 @@ class StudyScopeCaptureController extends Controller
                 ]);
             }
 
-            $capture->update([
+            $liveCapture->update([
                 'status' => 'confirmed',
                 'exam_title' => trim((string) ($validated['exam_title'] ?? '')) ?: null,
                 'exam_date' => $validated['exam_date'] ?? null,
@@ -364,13 +379,13 @@ class StudyScopeCaptureController extends Controller
                 'failure_code' => null,
             ]);
 
-            if ($capture->inboxItem) {
-                $capture->inboxItem->update([
+            if ($liveCapture->inboxItem) {
+                $liveCapture->inboxItem->update([
                     'status' => 'processed',
                     'processed_at' => now(),
                 ]);
             }
-        });
+        }, 3);
 
         $studyActions->tryRefresh($plan, now());
 
