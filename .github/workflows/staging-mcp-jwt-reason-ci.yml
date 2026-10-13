@@ -1,0 +1,27 @@
+name: Staging MCP authentication diagnostic verification
+on:
+  pull_request:
+    branches: [staging/mcp-auth-header-diagnostic-20261013]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl
+          tools: composer:v2
+          coverage: none
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+      - name: Check PHP syntax
+        run: |
+          php -l app/Services/McpStagingAuthFailureDiagnostic.php
+          php -l app/Services/McpAuth0JwtTokenVerifier.php
+          php -l app/Http/Controllers/McpReadOnlyResourceController.php
+      - name: Run regression tests
+        run: php artisan test tests/Feature/McpStagingAuthFailureDiagnosticTest.php tests/Feature/McpAuth0JwtTokenVerifierTest.php tests/Feature/McpAuth0JwtProviderRoutingTest.php tests/Unit/McpJwtClaimConstraintsTest.php tests/Feature/McpReadOnlyResourceTest.php --colors=never
