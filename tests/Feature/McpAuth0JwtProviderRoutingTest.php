@@ -2,15 +2,25 @@
 
 namespace Tests\Feature;
 
+use App\Models\McpDelegatedGrant;
+use App\Models\McpLinkedSubject;
+use App\Models\Plan;
+use App\Models\Task;
+use App\Models\User;
+use App\Services\McpDelegatedIdentityFingerprintService;
 use App\Services\McpExternalTokenVerifier;
 use App\Services\McpOAuthAccountLinkProvider;
 use Firebase\JWT\JWT;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 final class McpAuth0JwtProviderRoutingTest extends TestCase
 {
+    use RefreshDatabase;
+
     private const ISSUER = 'https://canovia-mcp-dev.jp.auth0.com/';
     private const RESOURCE = 'https://canovia-mcp-staging.onrender.com/api/mcp';
     private const CHATGPT_CLIENT = 'internal-auth0-cimd-client-test';
@@ -121,6 +131,79 @@ final class McpAuth0JwtProviderRoutingTest extends TestCase
             ->assertJsonPath('result.tools.0.name', 'canovia_get_development_plan_context')
             ->assertJsonPath('result.tools.0.securitySchemes.0.scopes', ['canovia.development.read']);
         Http::assertSentCount(1);
+    }
+
+    public function test_verified_signed_auth0_jwt_requires_approved_plan_and_revocation_takes_effect(): void
+    {
+        $this->stubJwks();
+        $owner = User::factory()->create();
+        $plan = Plan::query()->create([
+            'user_id' => $owner->id,
+            'owner_token' => Str::random(64),
+            'public_slug' => (string) Str::uuid(),
+            'title' => 'Synthetic JWT-approved development',
+            'category' => '個人開発',
+            'priority' => 1,
+            'priority_mode' => 'manual',
+            'start_date' => today(),
+            'deadline' => today()->addDays(4),
+            'is_public' => false,
+            'is_collaborative' => false,
+        ]);
+        Task::query()->create([
+            'plan_id' => $plan->id,
+            'title' => 'Synthetic signed token task',
+            'status' => 'doing',
+            'progress_percent' => 30,
+            'priority' => 1,
+            'sort_order' => 1,
+        ]);
+
+        $token = $this->token();
+        $invoke = fn (?string $bearer = null) => $this->postJson('/api/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 8,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'canovia_get_development_plan_context',
+                'arguments' => ['plan_id' => $plan->id, 'scope' => 'tasks', 'limit' => 2],
+            ],
+        ], [
+            'Accept' => 'application/json, text/event-stream',
+            'Authorization' => 'Bearer '.($bearer ?? $token),
+        ]);
+
+        // A valid signed token alone never authorizes private Plan content.
+        $invoke()->assertOk()->assertJsonPath('result.isError', true);
+
+        $fingerprints = app(McpDelegatedIdentityFingerprintService::class);
+        $link = McpLinkedSubject::query()->create([
+            'user_id' => $owner->id,
+            'identity_fingerprint' => $fingerprints->subject(self::ISSUER, 'auth0|synthetic-user-1'),
+            'provider_key' => 'chatgpt',
+            'status' => 'linked',
+            'linked_at' => now(),
+        ]);
+        $grant = McpDelegatedGrant::query()->create([
+            'user_id' => $owner->id,
+            'plan_id' => $plan->id,
+            'subject_link_id' => $link->id,
+            'client_resource_fingerprint' => $fingerprints->clientResource(self::CHATGPT_CLIENT, self::RESOURCE),
+            'scope' => 'tasks',
+            'status' => 'active',
+            'consented_at' => now(),
+            'expires_at' => now()->addDay(),
+        ]);
+        $invoke()->assertOk()
+            ->assertJsonPath('result.isError', false)
+            ->assertJsonPath('result.structuredContent.plan.title', 'Synthetic JWT-approved development')
+            ->assertJsonPath('result.structuredContent.tasks.0.title', 'Synthetic signed token task');
+
+        $invoke($this->token(self::LINK_CLIENT))->assertUnauthorized();
+        $grant->update(['scope' => 'overview']);
+        $invoke()->assertOk()->assertJsonPath('result.isError', true);
+        $grant->update(['scope' => 'tasks', 'revoked_at' => now(), 'status' => 'revoked']);
+        $invoke()->assertOk()->assertJsonPath('result.isError', true);
     }
 
     public function test_signed_wrong_client_and_wrong_scope_fail_with_auth_challenge(): void
