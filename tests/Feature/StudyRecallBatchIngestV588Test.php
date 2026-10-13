@@ -97,6 +97,17 @@ class StudyRecallBatchIngestV588Test extends TestCase
             'answer' => '維持する',
         ]);
 
+        $proofs = StudyRecallCandidate::query()->orderBy('id')->get()
+            ->map(fn (StudyRecallCandidate $c) => $c->review_provenance)
+            ->all();
+        $this->assertCount(2, $proofs);
+        $this->assertSame(1, data_get($proofs[0], 'version'));
+        $this->assertSame(1, data_get($proofs[1], 'version'));
+        $this->assertNotSame(
+            data_get($proofs[0], 'source_hash'),
+            data_get($proofs[1], 'source_hash'),
+        );
+
         $this->assertDatabaseCount('native_ai_runs', 1);
         $run = NativeAiRun::query()->firstOrFail();
         $this->assertSame(
