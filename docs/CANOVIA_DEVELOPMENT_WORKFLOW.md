@@ -128,10 +128,8 @@ Release routine:
    authorizes one manual deploy to pinned, promoted production SHA. Verify actual
    Live SHA, successful migrations and health, login/session, Learning, developer
    event ordering, iOS WKWebView/PWA and desktop smoke.
-6. **After that first release is accepted**, owner enables Render Auto Deploy =
-   commit with `production` as the watched branch. For future updates, the
-   approved pinned release-candidate PR merge is the deliberate deployment trigger. Monitor Live
-   SHA, errors and smoke after every promotion; pause auto deploy during incidents.
+6. **After that first release is accepted**, verify GitHub `production` protection and required check enforcement, including checks that run on the **production push/merge SHA**, not only the source PR. Owner then configures Render Auto-Deploy = **After CI Checks Pass** (`autoDeployTrigger=checksPass`) with `production` as the watched branch. Do **not** choose `On Commit`: it does not wait for CI. On the new production SHA, the Promotion Policy Gate, unconditional MySQL 8.0/8.4 disposable matrix, Workspace Resume and Migration Recovery workflows run again. A production merge must be a two-parent merge commit whose release parent is an ancestor of `main`; direct/squash/rebase push is rejected by CI as a second line of defense.
+   Render considers GitHub CI `success`, `neutral`, and `skipped` passing, and detects no-deploy when zero checks are reported. Therefore branch protection is essential to prevent a bypass by absent or skipped checks; validate the precise required job names in GitHub Settings, and do not make security-critical jobs conditional. The owner approves each `release/* -> production` PR; merging it is the future deployment trigger. Monitor Live SHA, migration behavior, errors, login and iOS/Web smoke after each promotion; turn auto deploy OFF immediately for incidents. See [production CD readiness](development/PRODUCTION_CHECKS_PASS_READINESS_2026_10_13.md).
 
 **Branch protection requires owner action:** configure GitHub Settings -> Rules ->
 Rulesets (or Branch protection) for `production`: require PR, required CI
