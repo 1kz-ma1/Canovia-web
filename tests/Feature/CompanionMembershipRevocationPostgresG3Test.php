@@ -251,6 +251,25 @@ final class CompanionMembershipRevocationPostgresG3Test extends TestCase
         $this->assertNull(data_get($candidate->fresh()->metadata, 'apply_audit'));
     }
 
+    public function test_old_shared_candidate_is_marked_for_reproposal_in_full_companion_ui(): void
+    {
+        [, $member, $plan, $task, $candidate, $membership, $thread] = $this->scenario();
+        $candidate->update(['metadata' => [
+            'source' => 'canovia_companion',
+            'source_provenance' => ['version' => 1, 'github_evidence' => []],
+        ]]);
+
+        $this->actingAs($member)
+            ->get(route('companion.show', $thread))
+            ->assertOk()
+            ->assertSee('data-companion-membership-revalidation-required', false)
+            ->assertDontSee('この内容を反映する');
+
+        $preview = app(\App\Services\CompanionThreadSurfaceService::class)
+            ->build($thread->fresh(), $member)['candidatePreviews'][$candidate->id];
+        $this->assertTrue($preview['membership_revalidation_required']);
+    }
+
     public function test_old_shared_owner_candidate_cannot_bypass_missing_origin_proof(): void
     {
         [$owner, $member, $plan, , $candidate] = $this->scenario();
