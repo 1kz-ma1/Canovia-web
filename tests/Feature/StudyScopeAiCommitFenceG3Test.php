@@ -348,7 +348,10 @@ final class StudyScopeAiCommitFenceG3Test extends TestCase
     {
         [$actor, $plan, $source, $capture] = $this->scenario();
         app(StudyScopeCaptureAnalysisService::class)->analyze($capture, $plan, $actor->id);
-        $capture->update(['status' => 'captured']);
+        // Analysis updated a separately locked Eloquent instance.
+        // Refresh first: writing the old in-memory 'captured' value is a
+        // no-op under Eloquent dirty tracking and would not simulate a race.
+        $capture->refresh()->update(['status' => 'captured']);
         $this->assertSame('captured', $capture->fresh()->status);
 
         $this->assertConfirmationRejected($actor, $plan, $capture, $source, 'captured');
