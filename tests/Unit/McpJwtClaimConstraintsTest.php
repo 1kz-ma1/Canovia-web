@@ -135,7 +135,7 @@ final class McpJwtClaimConstraintsTest extends TestCase
         ));
     }
 
-    public function test_absent_ambiguous_and_wrong_typed_client_claims_fail_closed(): void
+    public function test_absent_conflicting_and_wrong_typed_client_claims_fail_closed(): void
     {
         $valid = $this->validClaims();
         $noClient = $valid;
@@ -144,7 +144,18 @@ final class McpJwtClaimConstraintsTest extends TestCase
 
         $both = $valid;
         $both['client_id'] = self::CHATGPT_INTERNAL_CLIENT;
-        $this->assertFalse($this->acceptsClaims($both));
+        $this->assertTrue($this->acceptsClaims($both));
+        $this->assertFalse($this->acceptsClaims($both, self::CANOVIA_LINK_CLIENT));
+
+        $bothWrong = $both;
+        $bothWrong['azp'] = 'attacker-client';
+        $this->assertFalse($this->acceptsClaims($bothWrong));
+        $bothWrong['client_id'] = 'attacker-client';
+        $this->assertFalse($this->acceptsClaims($bothWrong));
+
+        $badTypeSecondary = $both;
+        $badTypeSecondary['client_id'] = [self::CHATGPT_INTERNAL_CLIENT];
+        $this->assertFalse($this->acceptsClaims($badTypeSecondary));
 
         $wrongType = $valid;
         $wrongType['azp'] = [self::CHATGPT_INTERNAL_CLIENT];
