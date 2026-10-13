@@ -19,6 +19,12 @@ return [
     // Never conflate prior identity/Plan consent approval with read exposure.
     'synthetic_read_pilot_enabled' => env('CANOVIA_STAGING_SYNTHETIC_READ_PILOT_ENABLED', false),
     'mcp_explicitly_approved' => env('CANOVIA_STAGING_MCP_EXPLICITLY_APPROVED', false),
+    // Separate operator attestation for one Auth0 CIMD registration:
+    // same Auth0 application's internal tpc_ ID and externally registered
+    // ChatGPT stable metadata URL. Default OFF. Never applies to production,
+    // account-link tokens, arbitrary URL-shaped azp or delegated grants.
+    'mcp_cimd_mapping_verified' => env('CANOVIA_STAGING_MCP_CIMD_MAPPING_VERIFIED', false),
+    'mcp_cimd_external_client_id' => env('CANOVIA_STAGING_MCP_CIMD_EXTERNAL_CLIENT_ID', ''),
     // One-shot synthetic user bootstrap: leave disabled unless an operator
     // explicitly provisions a STAGING-only password out-of-band.
     // Keep SQLite by default. PostgreSQL requires an operator-pinned
