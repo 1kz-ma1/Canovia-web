@@ -6,8 +6,8 @@ use App\Services\McpJwtClaimConstraints;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Claims-only contract tests. Do not mistake synthetic arrays for signed JWT
- * acceptance; a cryptographic verifier and actual Auth0 token remain pending.
+ * Claims-only contract tests. Synthetic arrays do not establish real ChatGPT
+ * token acceptance or bypass the separate RS256 signature and consent gates.
  */
 final class McpJwtClaimConstraintsTest extends TestCase
 {
@@ -52,6 +52,49 @@ final class McpJwtClaimConstraintsTest extends TestCase
         $this->assertTrue($this->acceptsClaims($claims));
     }
 
+    public function test_auth0_openid_access_token_with_exact_resource_and_issuer_userinfo_is_accepted(): void
+    {
+        $claims = $this->validClaims();
+        $userinfo = self::ISSUER.'userinfo';
+
+        $claims['aud'] = [self::RESOURCE, $userinfo];
+        $this->assertTrue($this->acceptsClaims($claims));
+
+        $claims['aud'] = [$userinfo, self::RESOURCE];
+        $this->assertTrue($this->acceptsClaims($claims));
+
+        unset($claims['azp']);
+        $claims['client_id'] = self::CHATGPT_INTERNAL_CLIENT;
+        $this->assertTrue($this->acceptsClaims($claims));
+        $this->assertFalse($this->acceptsClaims($claims, self::CANOVIA_LINK_CLIENT));
+    }
+
+    public function test_openid_dual_audience_never_accepts_extra_or_foreign_targets(): void
+    {
+        $userinfo = self::ISSUER.'userinfo';
+        $claims = $this->validClaims();
+        foreach ([
+            [$userinfo],
+            [self::RESOURCE, self::RESOURCE],
+            [self::RESOURCE, $userinfo, $userinfo],
+            [self::RESOURCE, $userinfo, 'https://evil.example.test'],
+            [self::RESOURCE, 'https://evil.example.test/userinfo'],
+            [self::RESOURCE, 'https://other.auth0.com/userinfo'],
+            [self::RESOURCE, 'https://canovia-mcp-dev.jp.auth0.com/userinfo/'],
+        ] as $audience) {
+            $claims['aud'] = $audience;
+            $this->assertFalse($this->acceptsClaims($claims));
+        }
+
+        // The pair is an Auth0 OpenID Connect exception, not generic
+        // permission to carry secondary audiences without OIDC.
+        $claims['aud'] = [self::RESOURCE, $userinfo];
+        $claims['scope'] = 'canovia.development.read';
+        $this->assertFalse($this->acceptsClaims($claims));
+        $claims['scope'] = 'openid';
+        $this->assertFalse($this->acceptsClaims($claims));
+    }
+
     public function test_rfc9068_client_id_profile_can_match_only_exact_registered_client(): void
     {
         $claims = $this->validClaims();
@@ -68,7 +111,7 @@ final class McpJwtClaimConstraintsTest extends TestCase
             ['iss' => 'https://wrong.jp.auth0.com/'],
             ['iss' => rtrim(self::ISSUER, '/')],
             ['aud' => 'https://other.example.test/api/mcp'],
-            ['aud' => [self::RESOURCE, 'https://canovia-mcp-dev.jp.auth0.com/userinfo']],
+            ['aud' => ['https://canovia-mcp-dev.jp.auth0.com/userinfo']],
             ['aud' => []],
             ['aud' => null],
             ['aud' => [self::RESOURCE, self::RESOURCE]],
