@@ -213,7 +213,10 @@ final class CompanionSessionCommitPublicationG3Test extends TestCase
         $candidate->update(['payload' => $originalPayload]);
         $metadata = (array) $candidate->fresh()->metadata;
         unset($metadata['apply_audit']);
-        $candidate->update(['metadata' => $metadata]);
+        // The original test fixture predates the service's committed audit;
+        // reload first so Eloquent sees the removal as a dirty attribute.
+        $candidate->fresh()->update(['metadata' => $metadata]);
+        $this->assertArrayNotHasKey('apply_audit', (array) $candidate->fresh()->metadata);
         $this->expectRecoveryDenied($request, $candidate->fresh(), $requestId);
         $this->assertNull(session($key));
         $this->assertSame('applied', $candidate->fresh()->status);
