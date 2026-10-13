@@ -167,7 +167,10 @@ final class CompanionGrantRevocationPostgresG3Test extends TestCase
             $this->assertNotFalse($pos, 'Required lock missing for '.$table);
             $positions[] = $pos;
         }
-        $this->assertSame([0, 1, 2, 3], $positions);
+        // A subsequent membership fence adds its own FOR UPDATE between
+        // Candidate and Grant. Verify relative order, not adjacent offsets.
+        $this->assertSame($positions, collect($positions)->sort()->values()->all());
+        $this->assertCount(4, array_unique($positions));
 
         $this->revoke($rival, $grant->id);
         $this->assertNotNull($grant->fresh()->expires_at);
