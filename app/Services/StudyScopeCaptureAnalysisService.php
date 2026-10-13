@@ -11,6 +11,7 @@ use DateTimeImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
+use Throwable;
 
 final class StudyScopeCaptureAnalysisService
 {
@@ -66,6 +67,13 @@ final class StudyScopeCaptureAnalysisService
         ]);
 
         try {
+            $inputBytesHash = null;
+            $inputParts = $this->inputParts($source, $inputBytesHash);
+            // A separate provider-input read must not silently follow an
+            // earlier signature of different private bytes.
+            $this->commitFence->assertInputMatches(
+                $capture, $plan, $userId, $sourceSignature, (string) $inputBytesHash,
+            );
             $result = $this->nativeAi->generateStructured(
                 purpose: 'study_scope_capture_extraction',
                 prompt: $prompt,
@@ -80,7 +88,7 @@ final class StudyScopeCaptureAnalysisService
                     'study_scope_capture_id' => (int) $capture->id,
                     'source_type' => $source->source_type,
                 ],
-                inputParts: $this->inputParts($source),
+                inputParts: $inputParts,
                 featureKey: FeatureKey::StudyScopeCapture,
             );
         } catch (NativeAiExecutionException $exception) {
@@ -151,13 +159,21 @@ final class StudyScopeCaptureAnalysisService
     /**
      * @return array<int,array<string,mixed>>
      */
-    private function inputParts(InboxItem $source): array
+    private function inputParts(InboxItem $source, ?string &$inputBytesHash): array
     {
-        if (! $source->storage_path || ! Storage::exists($source->storage_path)) {
-            throw new RuntimeException('学習範囲の元ファイルを読み込めません。');
+        try {
+            if (! $source->storage_path || ! Storage::exists($source->storage_path)) {
+                throw new RuntimeException('Missing Study Scope file');
+            }
+            $bytes = Storage::get($source->storage_path);
+        } catch (Throwable) {
+            throw new NativeAiExecutionException(
+                '元の試験範囲ファイルが変更または削除されました。再解析してください。',
+                'native_ai_source_changed', 0,
+            );
         }
 
-        $bytes = Storage::get($source->storage_path);
+        $inputBytesHash = hash('sha256', $bytes);
         $base64 = base64_encode($bytes);
 
         if ($source->source_type === 'image') {
