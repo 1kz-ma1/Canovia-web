@@ -1,0 +1,35 @@
+name: Staging MCP client claims compatibility checks
+
+on:
+  pull_request:
+    branches: [staging/mcp-jwt-failure-reasons-20261013]
+
+permissions:
+  contents: read
+
+jobs:
+  verified-client-id:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl
+          tools: composer:v2
+          coverage: none
+      - name: Install reviewed locked dependencies
+        run: |
+          composer validate --strict --no-interaction
+          composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+      - name: Verify PHP syntax
+        run: |
+          php -l app/Services/McpJwtClaimConstraints.php
+          php -l app/Services/McpStagingAuthFailureDiagnostic.php
+          php -l tests/Unit/McpJwtClaimConstraintsTest.php
+          php -l tests/Feature/McpAuth0JwtTokenVerifierTest.php
+          php -l tests/Feature/McpStagingAuthFailureDiagnosticTest.php
+      - name: Test strict signed client claim acceptance and negative controls
+        run: |
+          php artisan test tests/Unit/McpJwtClaimConstraintsTest.php tests/Feature/McpAuth0JwtTokenVerifierTest.php tests/Feature/McpAuth0JwtProviderRoutingTest.php tests/Feature/McpStagingAuthFailureDiagnosticTest.php tests/Feature/McpReadOnlyResourceTest.php --colors=never
