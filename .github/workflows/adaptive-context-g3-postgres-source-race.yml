@@ -13,6 +13,7 @@ on:
       - 'tests/Feature/CompanionPostgresSourceRaceG3Test.php'
       - 'tests/Feature/CompanionGrantRevocationPostgresG3Test.php'
       - 'tests/Feature/CompanionMembershipRevocationPostgresG3Test.php'
+      - 'tests/Feature/CollaborationInviteJoinPostgresG3Test.php'
       - '.github/workflows/adaptive-context-g3-postgres-source-race.yml'
 
 jobs:
@@ -63,9 +64,12 @@ jobs:
           php -l tests/Feature/CompanionPostgresSourceRaceG3Test.php
           php -l tests/Feature/CompanionGrantRevocationPostgresG3Test.php
           php -l tests/Feature/CompanionMembershipRevocationPostgresG3Test.php
+          php -l tests/Feature/CollaborationInviteJoinPostgresG3Test.php
       - name: Independent PostgreSQL sessions source race
         run: php artisan test tests/Feature/CompanionPostgresSourceRaceG3Test.php --stop-on-failure
       - name: Independent PostgreSQL sessions entitlement revocation race
         run: php artisan test tests/Feature/CompanionGrantRevocationPostgresG3Test.php --stop-on-failure
       - name: Independent PostgreSQL sessions membership removal and role downgrade race
         run: php artisan test tests/Feature/CompanionMembershipRevocationPostgresG3Test.php --stop-on-failure
+      - name: Independent PostgreSQL sessions invitation join and revoke race
+        run: php artisan test tests/Feature/CollaborationInviteJoinPostgresG3Test.php --stop-on-failure
