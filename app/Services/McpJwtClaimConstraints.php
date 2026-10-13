@@ -17,8 +17,10 @@ final class McpJwtClaimConstraints
      * Check cryptographically VERIFIED token claims against exact constraints.
      *
      * Auth0 default API access tokens identify the client with azp, while the
-     * RFC 9068 profile uses client_id. Fail closed on missing/both and only
-     * allow an independently confirmed issued OAuth client ID.
+     * RFC 9068 profile uses client_id. Require at least one claim to match
+     * the exact independently confirmed OAuth client. If both are present,
+     * accept only when BOTH independently match that SAME allowlisted client;
+     * conflicting claims still fail closed.
      *
      * @param array<string, mixed> $claims Claims from trusted verified JWT parser only.
      */
@@ -64,10 +66,14 @@ final class McpJwtClaimConstraints
 
         $hasAzp = array_key_exists('azp', $claims);
         $hasClientId = array_key_exists('client_id', $claims);
-        if ($hasAzp === $hasClientId) {
+        if (! $hasAzp && ! $hasClientId) {
             return false;
         }
-        if (($hasAzp ? $claims['azp'] : $claims['client_id']) !== $expectedClientId) {
+        // Both claims are allowed only when they are identical AND both are
+        // the configured OAuth client. A conflicting second claim can never
+        // override or supplement the first.
+        if (($hasAzp && $claims['azp'] !== $expectedClientId)
+            || ($hasClientId && $claims['client_id'] !== $expectedClientId)) {
             return false;
         }
 
