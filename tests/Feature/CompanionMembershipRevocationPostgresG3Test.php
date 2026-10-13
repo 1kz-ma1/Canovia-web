@@ -233,6 +233,175 @@ final class CompanionMembershipRevocationPostgresG3Test extends TestCase
         $this->assertNull($thread->fresh()->last_message_at);
     }
 
+    public function test_removed_and_rejoined_editor_has_new_identity_not_old_ai_authority(): void
+    {
+        [, $member, $plan, $task, $candidate, $oldMember] = $this->scenario();
+        $guard = app(CompanionMembershipCommitGuard::class);
+        $captured = $guard->capture($member, $plan);
+        $this->assertSame((int) $oldMember->id, $captured['membership_id']);
+        $this->assertSame('editor', $captured['role']);
+
+        $replacementId = $this->replaceMembership($oldMember);
+        $this->assertNotSame($captured['membership_id'], $replacementId);
+
+        DB::transaction(function () use ($guard, $member, $plan, $captured): void {
+            $this->lockPlan($plan);
+            $this->assertTrue($guard->canAccess($member, $plan, true));
+            $this->assertFalse($guard->canAccess($member, $plan, true, $captured));
+            $this->assertFalse($guard->canAccess($member, $plan, false, $captured));
+        });
+
+        $metadata = $candidate->metadata;
+        $metadata['membership_provenance'] = $captured;
+        $candidate->update(['metadata' => $metadata]);
+        $this->expectApplyDenied($this->requestFor($member), $candidate->fresh());
+        $this->assertSame('pending', $candidate->fresh()->status);
+        $this->assertNull($candidate->fresh()->apply_request_id);
+        $this->assertSame('Original note', $task->fresh()->next_action_note);
+    }
+
+    public function test_old_membership_ai_reply_cannot_commit_after_same_role_rejoin(): void
+    {
+        [, $member, $plan, $task, , $original, $thread] = $this->scenario();
+        $this->fakeCompanionOutput('Human approved note');
+        $newMemberId = null;
+
+        $real = app(NativeAiGateway::class);
+        $mock = Mockery::mock(NativeAiGateway::class)->makePartial();
+        $mock->shouldReceive('generateStructured')->once()
+            ->andReturnUsing(function (...$args) use ($real, $original, &$newMemberId) {
+                $reply = $real->generateStructured(...$args);
+                $newMemberId = $this->replaceMembership($original);
+
+                return $reply;
+            });
+        app()->instance(NativeAiGateway::class, $mock);
+
+        try {
+            app(CompanionConversationService::class)->send(
+                $thread, $member, 'Please review this Plan', (string) Str::uuid(), $plan, $task,
+            );
+            $this->fail('New member identity must not inherit an earlier AI output.');
+        } catch (NativeAiExecutionException $exception) {
+            $this->assertSame('native_ai_target_changed', $exception->errorCode);
+        }
+
+        $this->assertNotNull($newMemberId);
+        $this->assertNotSame((int) $original->id, $newMemberId);
+        $this->assertSame(1, $thread->messages()->where('role', 'assistant')->count());
+        $this->assertSame(1, $thread->messages()->where('role', 'user')->count());
+        $this->assertSame(1, CompanionMutationCandidate::query()->count());
+        $this->assertNull($thread->fresh()->last_message_at);
+    }
+
+    public function test_valid_ai_output_stamps_membership_on_reply_and_candidate(): void
+    {
+        [, $member, $plan, $task, $legacyCandidate, $membership, $thread] = $this->scenario();
+        $this->fakeCompanionOutput('Human approved note');
+
+        $result = app(CompanionConversationService::class)->send(
+            $thread, $member, 'Please review this Plan', (string) Str::uuid(), $plan, $task,
+        );
+        $expected = app(CompanionMembershipCommitGuard::class)->capture($member, $plan);
+
+        $this->assertSame((int) $membership->id, $expected['membership_id']);
+        $this->assertSame($expected, data_get($result['message']->metadata, 'membership_provenance'));
+        $this->assertCount(1, $result['candidates'], 'Old unproven candidate must not shadow new membership generation.');
+        $this->assertSame($expected, data_get($result['candidates']->first()->metadata, 'membership_provenance'));
+        $this->assertNotSame($legacyCandidate->id, $result['candidates']->first()->id);
+        $this->assertSame(2, CompanionMutationCandidate::query()->count());
+
+        $approval = app(CompanionMutationApplyService::class)->apply(
+            $this->requestFor($member),
+            $result['candidates']->first(),
+            (string) Str::uuid(),
+        );
+        $this->assertFalse($approval['already_applied']);
+        $this->assertSame('Human approved note', $task->fresh()->next_action_note);
+    }
+
+    public function test_membership_insertion_after_absent_capture_does_not_authorize_old_context(): void
+    {
+        [, $member, $plan, , , $original] = $this->scenario();
+        $rival = $this->rival();
+        $rival->prepare('DELETE FROM plan_members WHERE id = :id')
+            ->execute(['id' => $original->id]);
+        $guard = app(CompanionMembershipCommitGuard::class);
+        $before = $guard->capture($member, $plan);
+        $this->assertSame(['scope' => 'unavailable'], $before);
+
+        $rival->beginTransaction();
+        try {
+            DB::beginTransaction();
+            try {
+                $this->lockPlan($plan);
+                $this->assertFalse($guard->canAccess($member, $plan, false, $before));
+
+                $rival->exec("SET LOCAL lock_timeout = '200ms'");
+                try {
+                    $this->insertMember($rival, $plan->id, $member->id);
+                    $this->fail('An aligned member INSERT must wait for the Plan commit.');
+                } catch (PDOException $exception) {
+                    $this->assertSame('55P03', $exception->getCode());
+                }
+                DB::commit();
+            } finally {
+                if (DB::transactionLevel() > 0) DB::rollBack();
+            }
+        } finally {
+            if ($rival->inTransaction()) $rival->rollBack();
+        }
+
+        $replacementId = $this->insertMember($rival, $plan->id, $member->id);
+        $this->assertGreaterThan((int) $original->id, $replacementId);
+
+        DB::transaction(function () use ($guard, $member, $plan, $before): void {
+            $this->lockPlan($plan);
+            $this->assertTrue($guard->canAccess($member, $plan));
+            $this->assertFalse($guard->canAccess($member, $plan, false, $before));
+        });
+    }
+
+    private function fakeCompanionOutput(string $nextAction): void
+    {
+        Http::fake(['https://api.openai.com/v1/responses' => Http::response([
+            'id' => 'resp-g3-membership-epoch', 'status' => 'completed',
+            'output' => [[
+                'type' => 'message', 'content' => [[
+                    'type' => 'output_text', 'text' => json_encode([
+                        'reply' => 'Review a shared Plan',
+                        'memories' => [],
+                        'candidates' => [[
+                            'type' => 'update_task', 'title' => 'Human confirmation',
+                            'summary' => 'No automatic progress',
+                            'payload_json' => json_encode(['next_action_note' => $nextAction]),
+                        ]],
+                    ], JSON_UNESCAPED_UNICODE),
+                ]],
+            ]],
+        ], 200)]);
+    }
+
+    private function replaceMembership(PlanMember $old): int
+    {
+        $rival = $this->rival();
+        $rival->prepare('DELETE FROM plan_members WHERE id = :id')
+            ->execute(['id' => $old->id]);
+
+        return $this->insertMember($rival, $old->plan_id, $old->user_id);
+    }
+
+    private function insertMember(PDO $rival, int $planId, int $userId): int
+    {
+        $stmt = $rival->prepare(
+            "INSERT INTO plan_members (plan_id, user_id, role, joined_at, created_at, updated_at)
+             VALUES (:plan_id, :user_id, 'editor', NOW(), NOW(), NOW()) RETURNING id"
+        );
+        $stmt->execute(['plan_id' => $planId, 'user_id' => $userId]);
+
+        return (int) $stmt->fetchColumn();
+    }
+
     public function test_plan_collaboration_disable_and_owner_or_global_scopes(): void
     {
         [$owner, $member, $plan, , , $membership] = $this->scenario();
