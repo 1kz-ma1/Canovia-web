@@ -5,9 +5,11 @@ on:
     branches: [main]
     paths:
       - 'app/Services/StudyPracticeAssessmentCommitFence.php'
+      - 'app/Services/CompanionMembershipCommitGuard.php'
       - 'app/Services/StudyPracticeOrchestrator.php'
       - 'app/Http/Controllers/StudyPracticeController.php'
       - 'tests/Feature/StudyAssessmentAiCommitFenceG3Test.php'
+      - 'tests/Feature/StudyPracticeGenerationCommitFenceG3Test.php'
       - '.github/workflows/adaptive-context-g3-study-assessment-commit-fence.yml'
 
 jobs:
