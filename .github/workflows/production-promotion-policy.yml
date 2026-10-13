@@ -3,6 +3,10 @@ name: Production Promotion Policy Gate
 on:
   pull_request:
     branches: [production]
+  # Render `After CI Checks Pass` checks the *pushed production SHA*.
+  # PR-only checks do not validate the merge commit and may leave zero checks.
+  push:
+    branches: [production]
   workflow_dispatch:
 
 permissions:
@@ -38,6 +42,25 @@ jobs:
           git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
           git merge-base --is-ancestor "$RELEASE_SHA" refs/remotes/origin/main
           echo "production_release_candidate_pinned_to_main: pass"
+      - name: Check pushed production SHA is an owner-controlled merge of main ancestry
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF}" = "refs/heads/production"
+          # Production promotions use merge commits with the pinned release
+          # SHA as their second parent. Squash, rebase and direct pushes fail.
+          parent_line="$(git show -s --format=%P HEAD)"
+          set -- $parent_line
+          if [ "$#" -ne 2 ]; then
+            echo "production_merge_commit_required" >&2
+            exit 1
+          fi
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$2" refs/remotes/origin/main; then
+            echo "production_release_parent_not_in_main" >&2
+            exit 1
+          fi
+          echo "production_merge_and_main_ancestry: pass"
       - name: Check secretless production env classification with synthetic inputs only
         run: |
           php -l scripts/ops/release_488_production_env_preflight.php
