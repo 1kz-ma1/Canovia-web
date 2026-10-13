@@ -11,6 +11,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
+use Throwable;
 
 final class StudyRecallBatchCandidateExtractionService
 {
@@ -113,6 +114,12 @@ final class StudyRecallBatchCandidateExtractionService
         ]);
 
         try {
+            $inputFileHashes = [];
+            $inputParts = $this->inputParts($sources, $inputFileHashes);
+            $this->commitFence->assertInputMatches(
+                $plan, $task, $userId,
+                $sourceSignatures, $authorization, $inputFileHashes,
+            );
             $result = $this->nativeAi->generateStructured(
                 purpose: 'study_recall_candidate_batch_extraction',
                 prompt: $prompt,
@@ -131,7 +138,7 @@ final class StudyRecallBatchCandidateExtractionService
                     'source_count' => $sources->count(),
                     'batch' => true,
                 ],
-                inputParts: $this->inputParts($sources),
+                inputParts: $inputParts,
             );
         } catch (NativeAiExecutionException $exception) {
             $this->markFailedSources($sources, $plan, $task, $userId, $exception);
@@ -303,7 +310,7 @@ final class StudyRecallBatchCandidateExtractionService
      * @param Collection<int,StudyRecallSource> $sources
      * @return array<int,array<string,mixed>>
      */
-    private function inputParts(Collection $sources): array
+    private function inputParts(Collection $sources, array &$inputFileHashes): array
     {
         $parts = [];
 
@@ -315,7 +322,21 @@ final class StudyRecallBatchCandidateExtractionService
                     .($source->original_name ?: $source->sourceLabel()),
             ];
 
-            $bytes = Storage::get((string) $source->storage_path);
+            try {
+                if (! $source->storage_path || ! Storage::exists($source->storage_path)) {
+                    throw new RuntimeException('Recall batch source missing');
+                }
+                $bytes = Storage::get((string) $source->storage_path);
+            } catch (Throwable) {
+                throw new NativeAiExecutionException(
+                    '複数教材の一部が変更または削除されました。再抽出してください。',
+                    'native_ai_source_changed', 0,
+                );
+            }
+
+            // Keep the original SOURCE_INDEX order in inputParts, while
+            // binding each actual uploaded byte array to its Source ID.
+            $inputFileHashes[(int) $source->id] = hash('sha256', $bytes);
             $mime = (string) $source->mime_type;
             $base64 = base64_encode($bytes);
 

@@ -9,6 +9,7 @@ use App\Models\PlanMember;
 use App\Models\StudyRecallSource;
 use App\Models\Task;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
@@ -53,7 +54,7 @@ final class StudyRecallExtractionCommitFence
         return $proof;
     }
 
-    public function snapshot(StudyRecallSource $source): ?string
+    public function snapshot(StudyRecallSource $source, ?string $providerInputBytesHash = null): ?string
     {
         try {
             $fileDigest = null;
@@ -64,7 +65,7 @@ final class StudyRecallExtractionCommitFence
                     return null;
                 }
 
-                $fileDigest = hash('sha256', Storage::get($path));
+                $fileDigest = $providerInputBytesHash ?? hash('sha256', Storage::get($path));
             }
 
             return hash('sha256', json_encode([
@@ -85,6 +86,72 @@ final class StudyRecallExtractionCommitFence
         } catch (Throwable) {
             return null;
         }
+    }
+
+    /**
+     * Bind each immutable provider input to the original source snapshot
+     * BEFORE paying for AI. A file A -> B -> A must not certify output
+     * generated from B under the original signed A.
+     *
+     * @param array<int,string|null> $expectedSignatures Source-ID keyed hashes
+     * @param array<string,mixed> $authorization original owner/member epoch
+     * @param array<int,string> $inputFileHashes exact bytes sent, keyed by Source ID
+     */
+    public function assertInputMatches(
+        Plan $plan,
+        Task $task,
+        ?int $userId,
+        array $expectedSignatures,
+        array $authorization,
+        array $inputFileHashes,
+    ): void {
+        DB::transaction(function () use (
+            $plan, $task, $userId, $expectedSignatures,
+            $authorization, $inputFileHashes,
+        ): void {
+            // Locks Plan -> Task -> Member -> all Source IDs in ascending
+            // order; also checks current permissions and live disk signature.
+            $this->assertCanCommit(
+                $plan, $task, $userId, $expectedSignatures, $authorization, 0,
+            );
+
+            $ids = array_map('intval', array_keys($expectedSignatures));
+            sort($ids, SORT_NUMERIC);
+            if (count($ids) !== count(array_unique($ids))) {
+                $this->deny('native_ai_source_changed', 0);
+            }
+
+            $sources = StudyRecallSource::query()->whereIn('id', $ids)
+                ->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+
+            $expectedFileIds = [];
+            foreach ($ids as $id) {
+                $source = $sources->get($id);
+                if ($source === null) {
+                    $this->deny('native_ai_source_changed', 0);
+                }
+                if ($source->source_type !== 'text') {
+                    $expectedFileIds[] = $id;
+                    $inputHash = $inputFileHashes[$id] ?? null;
+                    if (! is_string($inputHash)
+                        || ! preg_match('/^[0-9a-f]{64}$/', $inputHash)
+                        || ! hash_equals(
+                            (string) ($expectedSignatures[$id] ?? ''),
+                            $this->snapshot($source, $inputHash) ?? '',
+                        )) {
+                        $this->deny('native_ai_source_changed', 0);
+                    }
+                }
+            }
+
+            $providedIds = array_map('intval', array_keys($inputFileHashes));
+            sort($providedIds, SORT_NUMERIC);
+            if ($providedIds !== $expectedFileIds) {
+                // Missing/swapped/extra input files may not be promoted under
+                // another batch member's Source ID.
+                $this->deny('native_ai_source_changed', 0);
+            }
+        }, 3);
     }
 
     /**

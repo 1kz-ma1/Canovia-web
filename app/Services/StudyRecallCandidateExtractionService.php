@@ -10,6 +10,7 @@ use App\Models\Task;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
+use Throwable;
 
 class StudyRecallCandidateExtractionService
 {
@@ -30,7 +31,6 @@ class StudyRecallCandidateExtractionService
     ): array {
         $authorization = $this->commitFence->captureAuthorization($plan, $userId);
         $sourceSignature = $this->commitFence->snapshot($source);
-        $inputParts = $this->inputParts($source);
         $sourceContext = $source->source_type === 'text'
             ? mb_substr((string) $source->source_text, 0, 50000)
             : '教材ファイルは添付入力として渡しています。';
@@ -59,6 +59,13 @@ class StudyRecallCandidateExtractionService
         ]);
 
         try {
+            $inputFileHashes = [];
+            $inputParts = $this->inputParts($source, $inputFileHashes);
+            $this->commitFence->assertInputMatches(
+                $plan, $task, $userId,
+                [(int) $source->id => $sourceSignature],
+                $authorization, $inputFileHashes,
+            );
             $result = $this->nativeAi->generateStructured(
                 purpose: 'study_recall_candidate_extraction',
                 prompt: $prompt,
@@ -204,17 +211,25 @@ class StudyRecallCandidateExtractionService
     /**
      * @return array<int,array<string,mixed>>
      */
-    private function inputParts(StudyRecallSource $source): array
+    private function inputParts(StudyRecallSource $source, array &$inputFileHashes): array
     {
         if ($source->source_type === 'text') {
             return [];
         }
 
-        if (! $source->storage_path || ! Storage::exists($source->storage_path)) {
-            throw new RuntimeException('教材ファイルを読み込めませんでした。');
+        try {
+            if (! $source->storage_path || ! Storage::exists($source->storage_path)) {
+                throw new RuntimeException('Recall source missing');
+            }
+            $bytes = Storage::get($source->storage_path);
+        } catch (Throwable) {
+            throw new NativeAiExecutionException(
+                '元教材ファイルが変更または削除されました。再抽出してください。',
+                'native_ai_source_changed', 0,
+            );
         }
 
-        $bytes = Storage::get($source->storage_path);
+        $inputFileHashes[(int) $source->id] = hash('sha256', $bytes);
         $mime = (string) $source->mime_type;
         $base64 = base64_encode($bytes);
 

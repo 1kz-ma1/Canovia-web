@@ -16,6 +16,7 @@ on:
       - 'app/Services/StudyRecallBatchCandidateExtractionService.php'
       - 'app/Services/NativeAiPurposeAuthorizationGuard.php'
       - 'tests/Feature/RecallAiCommitFenceV05Test.php'
+      - 'tests/Feature/RecallInputFileRacePostgresG3Test.php'
       - '.github/workflows/adaptive-context-g3-recall-commit-fence.yml'
 
 jobs:
@@ -46,6 +47,7 @@ jobs:
           php -l tests/Feature/StudyRecallBatchIngestV588Test.php
           php -l app/Services/StudyRecallBatchCandidateExtractionService.php
           php -l tests/Feature/RecallAiCommitFenceV05Test.php
+          php -l tests/Feature/RecallInputFileRacePostgresG3Test.php
       - name: G3 Recall after-provider revoke, source change and atomic commit
         run: php artisan test tests/Feature/RecallAiCommitFenceV05Test.php
       - name: Existing Recall single, batch, retry and resource handoff

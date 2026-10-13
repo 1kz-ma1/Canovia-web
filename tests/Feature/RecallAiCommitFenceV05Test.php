@@ -15,6 +15,7 @@ use App\Models\UserProductGrant;
 use App\Services\NativeAiGateway;
 use App\Services\StudyRecallBatchCandidateExtractionService;
 use App\Services\StudyRecallCandidateExtractionService;
+use App\Services\StudyRecallExtractionCommitFence;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -366,6 +367,117 @@ final class RecallAiCommitFenceV05Test extends TestCase
         ]);
 
         return [$editor, $plan, $task, $member, $owner];
+    }
+
+    public function test_single_file_a_b_a_cannot_certify_different_actual_provider_input(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $source = $this->source($user, $plan, $task, 'unit.png');
+        $fence = app(StudyRecallExtractionCommitFence::class);
+        $original = Storage::get($source->storage_path);
+        $signed = $fence->snapshot($source);
+        $auth = $fence->captureAuthorization($plan, $user->id);
+
+        Storage::put($source->storage_path, 'bytes actually supplied to AI');
+        $providerHash = hash('sha256', Storage::get($source->storage_path));
+        Storage::put($source->storage_path, $original);
+
+        $this->denied('native_ai_source_changed', fn () =>
+            $fence->assertInputMatches(
+                $plan, $task, $user->id,
+                [$source->id => $signed], $auth, [$source->id => $providerHash],
+            )
+        );
+
+        $this->assertSame('pending', $source->fresh()->status);
+        $this->assertDatabaseCount('native_ai_runs', 0);
+        $this->assertDatabaseCount('study_recall_candidates', 0);
+    }
+
+    public function test_batch_second_file_a_b_a_blocks_all_before_provider(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $a = $this->source($user, $plan, $task, 'page-a.png');
+        $b = $this->source($user, $plan, $task, 'page-b.png');
+        $fence = app(StudyRecallExtractionCommitFence::class);
+        $auth = $fence->captureAuthorization($plan, $user->id);
+        $expected = [$a->id => $fence->snapshot($a), $b->id => $fence->snapshot($b)];
+        $original = Storage::get($b->storage_path);
+
+        Storage::put($b->storage_path, 'swapped middle page input');
+        $badHash = hash('sha256', Storage::get($b->storage_path));
+        Storage::put($b->storage_path, $original);
+
+        $this->denied('native_ai_source_changed', fn () =>
+            $fence->assertInputMatches(
+                $plan, $task, $user->id, $expected, $auth, [
+                    $a->id => hash('sha256', Storage::get($a->storage_path)),
+                    $b->id => $badHash,
+                ],
+            )
+        );
+        $this->assertDatabaseCount('native_ai_runs', 0);
+        $this->assertDatabaseCount('study_recall_candidates', 0);
+        $this->assertSame('pending', $a->fresh()->status);
+        $this->assertSame('pending', $b->fresh()->status);
+    }
+
+    public function test_batch_source_index_mapping_cannot_swap_or_omit_file_digests(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $a = $this->source($user, $plan, $task, 'first.png');
+        $b = $this->source($user, $plan, $task, 'second.png');
+        $fence = app(StudyRecallExtractionCommitFence::class);
+        $auth = $fence->captureAuthorization($plan, $user->id);
+        $original = [$a->id => $fence->snapshot($a), $b->id => $fence->snapshot($b)];
+        $hashA = hash('sha256', Storage::get($a->storage_path));
+        $hashB = hash('sha256', Storage::get($b->storage_path));
+
+        $fence->assertInputMatches($plan, $task, $user->id, $original, $auth, [
+            $a->id => $hashA, $b->id => $hashB,
+        ]);
+        $this->denied('native_ai_source_changed', fn () =>
+            $fence->assertInputMatches($plan, $task, $user->id, $original, $auth, [
+                $a->id => $hashB, $b->id => $hashA,
+            ])
+        );
+        $this->denied('native_ai_source_changed', fn () =>
+            $fence->assertInputMatches($plan, $task, $user->id, $original, $auth, [
+                $a->id => $hashA,
+            ])
+        );
+
+        $this->assertDatabaseCount('native_ai_runs', 0);
+        $this->assertDatabaseCount('study_recall_candidates', 0);
+    }
+
+    public function test_unmodified_text_recall_needs_no_file_input_digest(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $source = $this->source($user, $plan, $task);
+        $fence = app(StudyRecallExtractionCommitFence::class);
+        $fence->assertInputMatches($plan, $task, $user->id, [
+            $source->id => $fence->snapshot($source),
+        ], $fence->captureAuthorization($plan, $user->id), []);
+
+        $this->assertDatabaseCount('native_ai_runs', 0);
+    }
+
+    public function test_missing_file_before_provider_never_creates_an_ai_run(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $source = $this->source($user, $plan, $task, 'vanished.png');
+        Storage::delete($source->storage_path);
+
+        $this->denied('native_ai_source_changed', fn () =>
+            app(StudyRecallCandidateExtractionService::class)
+                ->extract($source, $plan, $task, $user->id)
+        );
+
+        $this->assertDatabaseCount('native_ai_runs', 0);
+        $this->assertDatabaseCount('study_recall_candidates', 0);
+        $this->assertSame('failed', $source->fresh()->status);
+        Http::assertNothingSent();
     }
 
     private function scenario(): array
