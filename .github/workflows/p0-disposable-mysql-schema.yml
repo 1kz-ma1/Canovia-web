@@ -102,6 +102,18 @@ jobs:
             "${EXPECTED_MYSQL_SERIES}."*) echo "p0_disposable_mysql_engine_${EXPECTED_MYSQL_SERIES}: pass" ;;
             *) echo 'p0_disposable_mysql_engine_version: blocked' >&2; exit 1 ;;
           esac
+      - name: Permit trigger DDL in disposable MySQL CI only
+        # Production/Aiven server settings and privileges remain unverified.
+        env:
+          MYSQL_PWD: ci-only-root-password
+        run: |
+          set -euo pipefail
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=root --database=canovia_p0_ci \
+            -e 'SET GLOBAL log_bin_trust_function_creators = 1'
+          test "$(mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=root --database=canovia_p0_ci \
+            --batch --skip-column-names -e 'SELECT @@GLOBAL.log_bin_trust_function_creators')" = '1'
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
       - name: Lint repair migrations and MySQL test
