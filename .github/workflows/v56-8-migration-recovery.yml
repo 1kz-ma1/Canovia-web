@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/v56-8-migration-recovery
+      - production
   pull_request:
     branches:
       - main
