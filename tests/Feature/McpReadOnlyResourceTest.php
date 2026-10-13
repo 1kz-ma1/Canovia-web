@@ -97,6 +97,18 @@ final class McpReadOnlyResourceTest extends TestCase
         $this->rpc('tools/list', [], 1, '')->assertUnauthorized()
             ->assertHeader('WWW-Authenticate',
                 'Bearer resource_metadata="https://canovia.example.test/.well-known/oauth-protected-resource", scope="canovia.development.read"');
+        // PHP-FPM may supply one empty Authorization value even when no
+        // bearer was presented. OAuth discovery must not call this invalid_token.
+        $this->postJson('/api/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 2,
+            'method' => 'tools/list',
+        ], [
+            'Accept' => 'application/json, text/event-stream',
+            'Content-Type' => 'application/json',
+            'Authorization' => '',
+        ])->assertUnauthorized()->assertHeader('WWW-Authenticate',
+            'Bearer resource_metadata="https://canovia.example.test/.well-known/oauth-protected-resource", scope="canovia.development.read"');
         $this->rpc('tools/list', [], 1, 'forged-bearer-token')->assertUnauthorized()
             ->assertHeader('WWW-Authenticate',
                 'Bearer resource_metadata="https://canovia.example.test/.well-known/oauth-protected-resource", scope="canovia.development.read", error="invalid_token"');
