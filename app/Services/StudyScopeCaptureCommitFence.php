@@ -11,6 +11,8 @@ use App\Models\StudyScopeCapture;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
+use LogicException;
 use Throwable;
 
 /**
@@ -51,6 +53,10 @@ final class StudyScopeCaptureCommitFence
             $liveCapture->update([
                 'status' => 'captured',
                 'failure_code' => null,
+                // A new provider request must not leave an old review draft
+                // available for confirmation while analysis is in flight.
+                'draft_data' => null,
+                'native_ai_run_id' => null,
             ]);
 
             return $signature;
@@ -78,6 +84,65 @@ final class StudyScopeCaptureCommitFence
 
         if ($liveCapture->status !== 'captured') {
             $this->deny('native_ai_target_changed', $runId);
+        }
+
+        return $liveCapture;
+    }
+
+    /**
+     * Validate a human review inside the same transaction that promotes
+     * StudyScopeItems. AI drafts carry their original private-source and
+     * owner/member epoch fingerprint; historical unsigned AI drafts must
+     * be reanalyzed. Manual capture/failed-source entry remains available.
+     */
+    public function assertCanConfirm(
+        StudyScopeCapture $capture,
+        Plan $plan,
+        ?int $userId,
+        bool $usesDraft,
+    ): StudyScopeCapture {
+        if (DB::transactionLevel() < 1) {
+            throw new LogicException('Study Scope confirmation requires a transaction.');
+        }
+
+        $livePlan = Plan::query()->whereKey($plan->id)->lockForUpdate()->first();
+        $liveCapture = StudyScopeCapture::query()->whereKey($capture->id)
+            ->lockForUpdate()->first();
+        $source = $liveCapture === null ? null
+            : InboxItem::query()->whereKey($liveCapture->inbox_item_id)
+                ->lockForUpdate()->first();
+
+        $status = (string) ($liveCapture?->status ?? '');
+        $hasAbandonedDraft = $status === 'captured'
+            && is_string(data_get($liveCapture->draft_data, 'source_signature'));
+        if (! in_array($status, ['captured', 'failed', 'review', 'confirmed'], true)
+            || ($usesDraft && $status !== 'review')
+            || $hasAbandonedDraft) {
+            throw ValidationException::withMessages([
+                'items' => '解析候補が更新されています。再解析して確認するか、手動で範囲を入力してください。',
+            ]);
+        }
+
+        $isAiReview = $status === 'review'
+            && ((int) ($liveCapture->native_ai_run_id ?? 0) > 0 || $usesDraft);
+        $expected = $isAiReview
+            ? data_get($liveCapture->draft_data, 'source_signature')
+            : null;
+        if ($isAiReview && (! is_string($expected) || strlen($expected) !== 64)) {
+            throw ValidationException::withMessages([
+                'items' => '以前のAI解析候補には元資料と権限の証明がありません。再解析してください。',
+            ]);
+        }
+
+        try {
+            $this->assertCurrent(
+                $livePlan, $liveCapture, $source, $plan->id, $capture->id,
+                $userId, $expected, null,
+            );
+        } catch (NativeAiExecutionException) {
+            throw ValidationException::withMessages([
+                'items' => '試験範囲の元資料または共有権限が変更されました。現在の資料から再解析するか、手動で確認してください。',
+            ]);
         }
 
         return $liveCapture;

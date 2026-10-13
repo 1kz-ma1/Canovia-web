@@ -19,6 +19,7 @@ use App\Services\NativeAiGateway;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\StudyScopeCaptureAnalysisService;
+use App\Services\StudyScopeCaptureCommitFence;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -257,11 +258,11 @@ class StudyScopeCaptureController extends Controller
         PlanOwnershipService $ownership,
         PlanCategoryProfileService $profiles,
         StudyAdaptiveActionService $studyActions,
+        StudyScopeCaptureCommitFence $commitFence,
     ) {
         $ownership->authorizeEdit($request, $plan);
         $this->authorizeStudyPlan($plan, $profiles);
         $this->authorizeCapture($plan, $capture);
-        $capture->loadMissing(['items', 'inboxItem']);
 
         $validated = $request->validate([
             'exam_title' => ['nullable', 'string', 'max:255'],
@@ -276,79 +277,97 @@ class StudyScopeCaptureController extends Controller
             'items.*.page_end' => ['nullable', 'integer', 'min:1', 'max:100000'],
         ]);
 
-        $draftItems = collect(data_get($capture->draft_data, 'items', []));
-        $existingItems = $capture->items->keyBy('id');
-        $normalized = [];
+        // Lock Plan -> Capture -> Inbox -> Membership before reading draft
+        // excerpts or writing authoritative StudyScopeItems. This also
+        // rejects a concurrent reanalysis/revocation without partial writes.
+        DB::transaction(function () use ($capture, $plan, $request, $validated, $commitFence) {
+            // Inspect the original submitted indices as well as validated
+            // fields: an explicit draft reference never counts as manual
+            // entry simply because a value was filtered by validation.
+            $usesDraft = collect($request->input('items', []))
+                ->contains(fn ($item) => is_array($item)
+                    && array_key_exists('draft_index', $item));
+            $liveCapture = $commitFence->assertCanConfirm(
+                $capture, $plan, $request->user()?->id, $usesDraft,
+            );
 
-        foreach (($validated['items'] ?? []) as $index => $item) {
-            $subject = trim((string) ($item['subject'] ?? ''));
-            $unit = trim((string) ($item['unit'] ?? ''));
-            $rangeText = trim((string) ($item['range_text'] ?? ''));
-            $pageStart = isset($item['page_start']) && $item['page_start'] !== ''
-                ? (int) $item['page_start']
-                : null;
-            $pageEnd = isset($item['page_end']) && $item['page_end'] !== ''
-                ? (int) $item['page_end']
-                : null;
+            $draftItems = collect(data_get($liveCapture->draft_data, 'items', []));
+            $existingItems = $liveCapture->items()->get()->keyBy('id');
+            $normalized = [];
 
-            $hasContent = $subject !== ''
-                || $unit !== ''
-                || $rangeText !== ''
-                || $pageStart !== null
-                || $pageEnd !== null;
+            foreach (($validated['items'] ?? []) as $index => $item) {
+                $subject = trim((string) ($item['subject'] ?? ''));
+                $unit = trim((string) ($item['unit'] ?? ''));
+                $rangeText = trim((string) ($item['range_text'] ?? ''));
+                $pageStart = isset($item['page_start']) && $item['page_start'] !== ''
+                    ? (int) $item['page_start']
+                    : null;
+                $pageEnd = isset($item['page_end']) && $item['page_end'] !== ''
+                    ? (int) $item['page_end']
+                    : null;
 
-            if (! $hasContent) {
-                continue;
-            }
+                $hasContent = $subject !== ''
+                    || $unit !== ''
+                    || $rangeText !== ''
+                    || $pageStart !== null
+                    || $pageEnd !== null;
 
-            if ($subject === '') {
-                throw ValidationException::withMessages([
-                    "items.{$index}.subject" => '確定する範囲には科目名を入力してください。',
-                ]);
-            }
-
-            if ($pageStart !== null && $pageEnd !== null && $pageEnd < $pageStart) {
-                throw ValidationException::withMessages([
-                    "items.{$index}.page_end" => '終了ページは開始ページ以降にしてください。',
-                ]);
-            }
-
-            $sourceExcerpt = null;
-            if (isset($item['item_id'])) {
-                $existing = $existingItems->get((int) $item['item_id']);
-                $sourceExcerpt = $existing?->source_excerpt;
-            } elseif (isset($item['draft_index'])) {
-                $draft = $draftItems->get((int) $item['draft_index']);
-                if (is_array($draft)) {
-                    $sourceExcerpt = filled($draft['source_excerpt'] ?? null)
-                        ? mb_substr(trim((string) $draft['source_excerpt']), 0, 1000)
-                        : null;
+                if (! $hasContent) {
+                    continue;
                 }
+
+                if ($subject === '') {
+                    throw ValidationException::withMessages([
+                        "items.{$index}.subject" => '確定する範囲には科目名を入力してください。',
+                    ]);
+                }
+
+                if ($pageStart !== null && $pageEnd !== null && $pageEnd < $pageStart) {
+                    throw ValidationException::withMessages([
+                        "items.{$index}.page_end" => '終了ページは開始ページ以降にしてください。',
+                    ]);
+                }
+
+                $sourceExcerpt = null;
+                if (isset($item['item_id'])) {
+                    $existing = $existingItems->get((int) $item['item_id']);
+                    if ($existing === null) {
+                        throw ValidationException::withMessages([
+                            "items.{$index}.item_id" => 'このCaptureに属さない範囲は更新できません。',
+                        ]);
+                    }
+                    $sourceExcerpt = $existing->source_excerpt;
+                } elseif (isset($item['draft_index'])) {
+                    $draft = $draftItems->get((int) $item['draft_index']);
+                    if (is_array($draft)) {
+                        $sourceExcerpt = filled($draft['source_excerpt'] ?? null)
+                            ? mb_substr(trim((string) $draft['source_excerpt']), 0, 1000)
+                            : null;
+                    }
+                }
+
+                $normalized[] = [
+                    'subject' => mb_substr($subject, 0, 120),
+                    'unit' => $unit !== '' ? mb_substr($unit, 0, 255) : null,
+                    'range_text' => $rangeText !== '' ? mb_substr($rangeText, 0, 1000) : null,
+                    'page_start' => $pageStart,
+                    'page_end' => $pageEnd,
+                    'source_excerpt' => $sourceExcerpt,
+                ];
             }
 
-            $normalized[] = [
-                'subject' => mb_substr($subject, 0, 120),
-                'unit' => $unit !== '' ? mb_substr($unit, 0, 255) : null,
-                'range_text' => $rangeText !== '' ? mb_substr($rangeText, 0, 1000) : null,
-                'page_start' => $pageStart,
-                'page_end' => $pageEnd,
-                'source_excerpt' => $sourceExcerpt,
-            ];
-        }
+            if ($normalized === []) {
+                throw ValidationException::withMessages([
+                    'items' => '少なくとも1件の試験範囲を入力してください。',
+                ]);
+            }
 
-        if ($normalized === []) {
-            throw ValidationException::withMessages([
-                'items' => '少なくとも1件の試験範囲を入力してください。',
-            ]);
-        }
-
-        DB::transaction(function () use ($capture, $validated, $normalized) {
-            $capture->items()->delete();
+            $liveCapture->items()->delete();
 
             foreach ($normalized as $sortOrder => $item) {
                 StudyScopeItem::query()->create([
-                    'study_scope_capture_id' => (int) $capture->id,
-                    'plan_id' => (int) $capture->plan_id,
+                    'study_scope_capture_id' => (int) $liveCapture->id,
+                    'plan_id' => (int) $liveCapture->plan_id,
                     ...$item,
                     // Human confirmation is the authority boundary.
                     'confidence' => 1.0,
@@ -356,7 +375,7 @@ class StudyScopeCaptureController extends Controller
                 ]);
             }
 
-            $capture->update([
+            $liveCapture->update([
                 'status' => 'confirmed',
                 'exam_title' => trim((string) ($validated['exam_title'] ?? '')) ?: null,
                 'exam_date' => $validated['exam_date'] ?? null,
@@ -364,13 +383,13 @@ class StudyScopeCaptureController extends Controller
                 'failure_code' => null,
             ]);
 
-            if ($capture->inboxItem) {
-                $capture->inboxItem->update([
+            if ($liveCapture->inboxItem) {
+                $liveCapture->inboxItem->update([
                     'status' => 'processed',
                     'processed_at' => now(),
                 ]);
             }
-        });
+        }, 3);
 
         $studyActions->tryRefresh($plan, now());
 
