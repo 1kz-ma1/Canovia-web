@@ -53,6 +53,10 @@ final class StudyScopeCaptureCommitFence
             $liveCapture->update([
                 'status' => 'captured',
                 'failure_code' => null,
+                // A new provider request must not leave an old review draft
+                // available for confirmation while analysis is in flight.
+                'draft_data' => null,
+                'native_ai_run_id' => null,
             ]);
 
             return $signature;
@@ -109,8 +113,11 @@ final class StudyScopeCaptureCommitFence
                 ->lockForUpdate()->first();
 
         $status = (string) ($liveCapture?->status ?? '');
+        $hasAbandonedDraft = $status === 'captured'
+            && is_string(data_get($liveCapture->draft_data, 'source_signature'));
         if (! in_array($status, ['captured', 'failed', 'review', 'confirmed'], true)
-            || ($usesDraft && $status !== 'review')) {
+            || ($usesDraft && $status !== 'review')
+            || $hasAbandonedDraft) {
             throw ValidationException::withMessages([
                 'items' => '解析候補が更新されています。再解析して確認するか、手動で範囲を入力してください。',
             ]);
