@@ -8,6 +8,7 @@ use App\Exceptions\NativeAiExecutionException;
 use App\Models\InboxItem;
 use App\Models\Plan;
 use App\Models\PlanMember;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -22,15 +23,39 @@ final class InboxAiSuggestionCommitFence
     public function __construct(
         private readonly NativeAiPurposeAuthorizationGuard $purposeGuard,
         private readonly BehaviorIdentityService $identity,
+        private readonly CompanionMembershipCommitGuard $membershipCommit,
     ) {}
 
     /**
      * Sign the exact submitted material, including private attachment bytes,
      * ownership and the pre-existing routing state. No raw content is logged.
      */
-    public function signature(InboxItem $item): string
+    public function signature(InboxItem $item, ?int $userId = null): string
     {
         try {
+            // Bind a linked Plan to ORIGINAL editor admission, not just the
+            // role that happens to be current after the provider call.
+            // Planless Inbox items retain their existing actor/source fence.
+            $authorization = null;
+            if ($item->plan_id !== null) {
+                $actor = $userId !== null && $userId > 0
+                    ? User::query()->find($userId)
+                    : null;
+                $plan = Plan::query()->find($item->plan_id);
+                if ($actor === null || $plan === null) {
+                    $this->deny('native_ai_target_changed', null);
+                }
+
+                $authorization = $this->membershipCommit->capture($actor, $plan);
+                if (
+                    ! in_array($authorization['scope'] ?? null, ['owner', 'member'], true)
+                    || (($authorization['scope'] ?? null) === 'member'
+                        && ($authorization['role'] ?? null) !== PlanMember::ROLE_EDITOR)
+                ) {
+                    $this->deny('native_ai_target_changed', null);
+                }
+            }
+
             $fileHash = null;
             if (in_array($item->source_type, ['image', 'pdf'], true)) {
                 if (! is_string($item->storage_path)
@@ -47,6 +72,7 @@ final class InboxAiSuggestionCommitFence
                 'user_id' => $item->user_id,
                 'actor_token' => $item->actor_token,
                 'plan_id' => $item->plan_id,
+                'authorization' => $authorization,
                 'source_type' => $item->source_type,
                 'status' => $item->status,
                 'title' => $item->title,
@@ -116,13 +142,12 @@ final class InboxAiSuggestionCommitFence
                     $this->deny('native_ai_target_changed', $runId);
                 }
 
-                $canEdit = (int) $plan->user_id === (int) $userId
-                    || ($plan->is_collaborative && PlanMember::query()
-                        ->where('plan_id', $planId)
-                        ->where('user_id', $userId)
-                        ->where('role', PlanMember::ROLE_EDITOR)
-                        ->exists());
-                if (! $canEdit) {
+                // The Plan is locked; lock the actor's membership before
+                // publishing. The signature below compares its generation
+                // epoch and row identity to the pre-provider snapshot.
+                $actor = User::query()->find((int) $userId);
+                if ($actor === null
+                    || ! $this->membershipCommit->canAccess($actor, $plan, true)) {
                     $this->deny('native_ai_target_changed', $runId);
                 }
             }
@@ -134,7 +159,7 @@ final class InboxAiSuggestionCommitFence
                 $this->deny($failure, $runId);
             }
 
-            $currentSignature = $this->signature($live);
+            $currentSignature = $this->signature($live, (int) $userId);
             if (! hash_equals($expectedSignature, $currentSignature)) {
                 $this->deny('native_ai_source_changed', $runId);
             }
