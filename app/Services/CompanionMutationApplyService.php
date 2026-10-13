@@ -24,6 +24,7 @@ class CompanionMutationApplyService
         private readonly FutureMemoService $futureMemos,
         private readonly ExecutionRequestHandoffService $executionRequests,
         private readonly CompanionDerivedEvidenceSourceGuard $derivedSources,
+        private readonly CompanionEntitlementCommitGuard $entitlementCommit,
     ) {}
 
     /**
@@ -137,6 +138,16 @@ class CompanionMutationApplyService
                 ->firstOrFail();
 
             abort_unless((int) $locked->user_id === (int) $user->id, 404);
+
+            // Plan -> Task -> Candidate -> Product Grants -> Repository/Evidence.
+            // The controller's preflight feature check is not a commit fence:
+            // an admin may revoke the grant after that check. Do not mutate
+            // or re-deliver AI instructions without freshly entitled access.
+            if (! $this->entitlementCommit->allowed($user)) {
+                throw ValidationException::withMessages([
+                    'candidate' => 'Companionの利用権限が変更されました。現在の契約状態を確認してください。',
+                ]);
+            }
 
             // The candidate might have been moved, unlinked or deleted
             // while Plan/Task locks were pending. Do not silently switch to

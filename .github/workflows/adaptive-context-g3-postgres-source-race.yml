@@ -5,9 +5,11 @@ on:
     branches: [main]
     paths:
       - 'app/Services/CompanionDerivedEvidenceSourceGuard.php'
+      - 'app/Services/CompanionEntitlementCommitGuard.php'
       - 'app/Services/CompanionMutationApplyService.php'
       - 'app/Services/CompanionConversationService.php'
       - 'tests/Feature/CompanionPostgresSourceRaceG3Test.php'
+      - 'tests/Feature/CompanionGrantRevocationPostgresG3Test.php'
       - '.github/workflows/adaptive-context-g3-postgres-source-race.yml'
 
 jobs:
@@ -50,8 +52,12 @@ jobs:
       - name: Source guard and PostgreSQL integration lint
         run: |
           php -l app/Services/CompanionDerivedEvidenceSourceGuard.php
+          php -l app/Services/CompanionEntitlementCommitGuard.php
           php -l app/Services/CompanionMutationApplyService.php
           php -l app/Services/CompanionConversationService.php
           php -l tests/Feature/CompanionPostgresSourceRaceG3Test.php
+          php -l tests/Feature/CompanionGrantRevocationPostgresG3Test.php
       - name: Independent PostgreSQL sessions source race
         run: php artisan test tests/Feature/CompanionPostgresSourceRaceG3Test.php --stop-on-failure
+      - name: Independent PostgreSQL sessions entitlement revocation race
+        run: php artisan test tests/Feature/CompanionGrantRevocationPostgresG3Test.php --stop-on-failure
