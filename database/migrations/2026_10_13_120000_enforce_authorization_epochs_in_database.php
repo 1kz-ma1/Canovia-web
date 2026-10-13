@@ -14,7 +14,7 @@ return new class extends Migration
         switch (DB::getDriverName()) {
             case 'pgsql':
                 DB::unprepared(<<<'SQL'
-CREATE FUNCTION canovia_plan_authorization_epoch_update() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION canovia_plan_authorization_epoch_update() RETURNS trigger AS $$
 BEGIN
     IF NEW.user_id IS DISTINCT FROM OLD.user_id
         OR NEW.is_collaborative IS DISTINCT FROM OLD.is_collaborative THEN
@@ -29,7 +29,7 @@ SQL);
                 DB::unprepared('CREATE TRIGGER canovia_plan_authorization_epoch BEFORE UPDATE ON plans FOR EACH ROW EXECUTE FUNCTION canovia_plan_authorization_epoch_update()');
 
                 DB::unprepared(<<<'SQL'
-CREATE FUNCTION canovia_member_authorization_epoch_update() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION canovia_member_authorization_epoch_update() RETURNS trigger AS $$
 BEGIN
     IF NEW.role IS DISTINCT FROM OLD.role THEN
         NEW.authorization_epoch := OLD.authorization_epoch + 1;
