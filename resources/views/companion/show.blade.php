@@ -272,6 +272,15 @@
                                                 {{ $candidate->applied_target_type }} #{{ $candidate->applied_target_id }}
                                             @endif
                                         </p>
+                                        @if ($candidate->type === 'prepare_execution_request'
+                                            && $canApplyCompanionCandidates && filled($candidate->apply_request_id)
+                                            && empty($preview['source_stale']))
+                                            <form method="POST" action="{{ route('companion.candidates.apply', [$thread, $candidate]) }}" class="mt-3" data-mutation-once>
+                                                @csrf
+                                                <input type="hidden" name="apply_request_id" value="{{ $candidate->apply_request_id }}">
+                                                <button type="submit" class="btn-secondary px-3 py-2 text-xs">実行リクエストを再開・復旧</button>
+                                            </form>
+                                        @endif
                                     @endif
                                 </div>
                             @endforeach
