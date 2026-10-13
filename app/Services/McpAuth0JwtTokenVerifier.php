@@ -42,6 +42,7 @@ final class McpAuth0JwtTokenVerifier
         return $this->verifyForExpectedClient(
             $accessToken,
             (string) config('canovia_mcp.allowed_client_id', ''),
+            true, // Only resource-server JWT verification can use stage CIMD mapping.
         );
     }
 
@@ -66,6 +67,7 @@ final class McpAuth0JwtTokenVerifier
     private function verifyForExpectedClient(
         string $accessToken,
         string $expectedClientId,
+        bool $allowStageCimdMapping = false,
     ): ?McpVerifiedTokenPrincipal {
         $settings = $this->settings();
         if ($settings === null
@@ -147,13 +149,37 @@ final class McpAuth0JwtTokenVerifier
             );
 
             $now = now()->getTimestamp();
-            if (! $this->claimsPolicy->matches(
+            $matchesInternal = $this->claimsPolicy->matches(
                 $trustedClaims,
                 $settings['issuer'],
                 $settings['resource'],
                 $expectedClientId,
                 $now,
-            )) {
+            );
+
+            // Auth0 CIMD uses the external metadata URL during OAuth, but
+            // separately stores an internal tpc_ client ID. An operator must
+            // prove the one-to-one registration using Auth0 client metadata
+            // BEFORE enabling this isolated-staging-only compatibility path.
+            //
+            // Verify EXACT signed external identity with the SAME full claim
+            // policy (issuer, audience, sub, client, scope, timestamps).
+            // Never accept an arbitrary URL, infer client from input, change
+            // account-link verification, or weaken delegated Plan grants.
+            $externalCimdId = $allowStageCimdMapping
+                ? $this->approvedStagingCimdClientId($expectedClientId)
+                : null;
+            $matchesExternal = ! $matchesInternal
+                && $externalCimdId !== null
+                && $this->claimsPolicy->matches(
+                    $trustedClaims,
+                    $settings['issuer'],
+                    $settings['resource'],
+                    $externalCimdId,
+                    $now,
+                );
+
+            if (! $matchesInternal && ! $matchesExternal) {
                 McpStagingAuthFailureDiagnostic::record(
                     McpStagingAuthFailureDiagnostic::classifyVerifiedClaims(
                         $trustedClaims, $settings['issuer'], $settings['resource'],
@@ -176,6 +202,32 @@ final class McpAuth0JwtTokenVerifier
             McpStagingAuthFailureDiagnostic::record($failurePhase);
             return null;
         }
+    }
+
+    /**
+     * Staging-only, OFF-by-default explicit mapping between Auth0's INTERNAL
+     * client ID and the one stable ChatGPT CIMD URL registered to that ID.
+     * Caller MUST independently attest the real Auth0 Management API record.
+     * This method does not itself verify registration; it only enforces
+     * the narrow approved configuration shape. Production always rejects.
+     */
+    private function approvedStagingCimdClientId(string $internalClientId): ?string
+    {
+        if (config('app.env') !== 'staging'
+            || config('canovia_staging.isolated') !== true
+            || config('canovia_staging.synthetic_read_pilot_enabled') !== true
+            || config('canovia_staging.mcp_explicitly_approved') !== true
+            || config('canovia_staging.mcp_cimd_mapping_verified') !== true
+            || config('canovia_mcp.token_verification_driver') !== 'auth0_jwt'
+            || config('canovia_mcp.auth0_jwt_verification_enabled') !== true
+            || $internalClientId !== config('canovia_mcp.allowed_client_id')
+            || preg_match('/\\Atpc_[A-Za-z0-9_-]{4,251}\\z/D', $internalClientId) !== 1
+            || config('canovia_staging.mcp_cimd_external_client_id')
+                !== 'https://chatgpt.com/oauth/client.json') {
+            return null;
+        }
+
+        return 'https://chatgpt.com/oauth/client.json';
     }
 
     /**
