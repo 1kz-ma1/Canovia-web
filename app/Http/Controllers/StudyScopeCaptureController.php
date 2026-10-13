@@ -14,6 +14,7 @@ use App\Models\Plan;
 use App\Models\StudyScopeCapture;
 use App\Models\StudyScopeItem;
 use App\Services\BehaviorIdentityService;
+use App\Services\CompanionMembershipCommitGuard;
 use App\Services\FeatureAccessService;
 use App\Services\NativeAiGateway;
 use App\Services\PlanCategoryProfileService;
@@ -405,33 +406,68 @@ class StudyScopeCaptureController extends Controller
         StudyScopeCapture $capture,
         PlanOwnershipService $ownership,
         PlanCategoryProfileService $profiles,
+        CompanionMembershipCommitGuard $membership,
     ) {
         $ownership->authorizeEdit($request, $plan);
         $this->authorizeStudyPlan($plan, $profiles);
         $this->authorizeCapture($plan, $capture);
 
-        if ($capture->status === 'confirmed') {
-            throw ValidationException::withMessages([
-                'capture' => '確定済みの範囲はこの画面から破棄できません。',
-            ]);
-        }
+        $deletePath = DB::transaction(function () use (
+            $request, $plan, $capture, $membership,
+        ): ?string {
+            // Match the AI prepare/commit/confirm lock order. A Capture
+            // cannot disappear halfway through a locked AI commit, nor can
+            // a stale route model bypass an Owner/Editor revocation.
+            $livePlan = Plan::query()->whereKey($plan->id)
+                ->lockForUpdate()->firstOrFail();
+            $liveCapture = StudyScopeCapture::query()
+                ->where('plan_id', $livePlan->id)
+                ->whereKey($capture->id)
+                ->lockForUpdate()->firstOrFail();
+            $source = InboxItem::query()->whereKey($liveCapture->inbox_item_id)
+                ->lockForUpdate()->first();
 
-        $capture->loadMissing('inboxItem');
-        $source = $capture->inboxItem;
+            if (! $request->user()
+                || ! $membership->canAccess($request->user(), $livePlan, true)) {
+                abort(403, 'この試験範囲を破棄する権限がありません。');
+            }
+            if ($liveCapture->status === 'confirmed') {
+                throw ValidationException::withMessages([
+                    'capture' => '確定済みの範囲はこの画面から破棄できません。',
+                ]);
+            }
 
-        DB::transaction(function () use ($capture, $source) {
-            $capture->delete();
+            if ($source !== null
+                && ((int) $source->plan_id !== (int) $livePlan->id
+                    || (int) $source->id !== (int) $liveCapture->inbox_item_id)) {
+                throw ValidationException::withMessages([
+                    'capture' => '元資料の参照先が変更されました。再読み込みしてください。',
+                ]);
+            }
 
-            if (
-                $source
+            // Never unlink a file merely because a route-bound InboxItem
+            // happened to have a path: only this Capture's owned file may
+            // be removed after the DB transaction commits.
+            $ownedSource = $source !== null
                 && (bool) data_get($source->metadata, 'study_scope_capture', false)
-            ) {
+                && (int) $source->user_id === (int) $liveCapture->user_id;
+            $path = $ownedSource && is_string($source->storage_path)
+                ? $source->storage_path : null;
+
+            $liveCapture->delete();
+            if ($ownedSource) {
                 $source->delete();
             }
-        });
 
-        if ($source?->storage_path) {
-            Storage::delete($source->storage_path);
+            return $path;
+        }, 3);
+
+        // Physical storage is not transactional. At this point the source
+        // row has been committed deleted; a concurrent AI read can either
+        // consume its earlier immutable bytes (and fail commit) or observe
+        // missing bytes (and fail before provider submission).
+        if ($deletePath !== null && $deletePath !== '') {
+            Storage::delete($deletePath);
         }
 
         return redirect()
