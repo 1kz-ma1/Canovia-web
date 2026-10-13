@@ -15,6 +15,8 @@ on:
       - 'app/Services/StudyRecallExtractionCommitFence.php'
       - 'app/Services/StudyRecallCandidateExtractionService.php'
       - 'app/Services/StudyRecallCandidateReviewFence.php'
+      - 'app/Services/PlanActionDraftApprovalSourceGuard.php'
+      - 'tests/Feature/PlanActionDraftApprovalLockOrderPostgresG3Test.php'
       - 'app/Http/Controllers/StudyRecallCandidateController.php'
       - 'app/Models/StudyRecallCandidate.php'
       - 'resources/views/study_recall/show.blade.php'
@@ -106,6 +108,8 @@ jobs:
           php -l app/Services/StudyRecallExtractionCommitFence.php
           php -l app/Services/StudyRecallCandidateExtractionService.php
           php -l app/Services/StudyRecallCandidateReviewFence.php
+          php -l app/Services/PlanActionDraftApprovalSourceGuard.php
+          php -l tests/Feature/PlanActionDraftApprovalLockOrderPostgresG3Test.php
           php -l app/Http/Controllers/StudyRecallCandidateController.php
           php -l app/Models/StudyRecallCandidate.php
           php -l database/migrations/2026_10_13_200000_add_recall_candidate_review_provenance.php
@@ -156,6 +160,8 @@ jobs:
         run: php artisan test tests/Feature/InboxAiSuggestionCommitFenceG3Test.php --stop-on-failure
       - name: Recall single and batch membership epochs on PostgreSQL 16
         run: php artisan test tests/Feature/RecallAiCommitFenceV05Test.php --stop-on-failure
+      - name: Action Draft approval parent-first lock and repository revocation on PostgreSQL 16
+        run: php artisan test tests/Feature/PlanActionDraftApprovalLockOrderPostgresG3Test.php --stop-on-failure
       - name: Recall human approval signed provenance on PostgreSQL 16
         run: php artisan test tests/Feature/StudyRecallCandidateV4112Test.php tests/Feature/StudyRecallBatchIngestV588Test.php --stop-on-failure
       - name: Study Scope authorization epoch and stale failure regression on PostgreSQL 16
