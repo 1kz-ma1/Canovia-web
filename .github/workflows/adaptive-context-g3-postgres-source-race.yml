@@ -25,6 +25,7 @@ on:
       - 'tests/Feature/StudyRecallBatchIngestV588Test.php'
       - 'app/Services/StudyRecallBatchCandidateExtractionService.php'
       - 'tests/Feature/RecallAiCommitFenceV05Test.php'
+      - 'tests/Feature/RecallInputFileRacePostgresG3Test.php'
       - 'app/Services/StudyScopeCaptureCommitFence.php'
       - 'app/Services/StudyScopeCaptureAnalysisService.php'
       - 'app/Http/Controllers/StudyScopeCaptureController.php'
@@ -118,6 +119,7 @@ jobs:
           php -l tests/Feature/StudyRecallBatchIngestV588Test.php
           php -l app/Services/StudyRecallBatchCandidateExtractionService.php
           php -l tests/Feature/RecallAiCommitFenceV05Test.php
+          php -l tests/Feature/RecallInputFileRacePostgresG3Test.php
           php -l app/Services/StudyScopeCaptureCommitFence.php
           php -l app/Services/StudyScopeCaptureAnalysisService.php
           php -l app/Http/Controllers/StudyScopeCaptureController.php
@@ -164,6 +166,8 @@ jobs:
         run: php artisan test tests/Feature/RecallAiCommitFenceV05Test.php --stop-on-failure
       - name: Action Draft approval parent-first lock and repository revocation on PostgreSQL 16
         run: php artisan test tests/Feature/PlanActionDraftApprovalLockOrderPostgresG3Test.php --stop-on-failure
+      - name: Recall exact provider input file bytes and independent Source race on PostgreSQL 16
+        run: php artisan test tests/Feature/RecallInputFileRacePostgresG3Test.php --stop-on-failure
       - name: Recall human approval signed provenance on PostgreSQL 16
         run: php artisan test tests/Feature/StudyRecallCandidateV4112Test.php tests/Feature/StudyRecallBatchIngestV588Test.php --stop-on-failure
       - name: Study Scope physical file deletion and input-byte race on independent PostgreSQL 16 sessions
