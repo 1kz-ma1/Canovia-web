@@ -1,0 +1,35 @@
+name: Staging MCP azp identifier-form diagnostics
+
+on:
+  pull_request:
+    branches:
+      - staging/mcp-client-claim-profile-20261014
+    paths:
+      - 'app/Services/McpStagingAuthFailureDiagnostic.php'
+      - 'tests/Feature/McpStagingAuthFailureDiagnosticTest.php'
+      - '.github/workflows/staging-mcp-azp-form-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  exact-stage-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl
+          tools: composer:v2
+          coverage: none
+      - name: Install locked dependencies
+        run: |
+          composer validate --strict --no-interaction
+          composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+      - name: Syntax and strict authorization regression
+        run: |
+          php -l app/Services/McpStagingAuthFailureDiagnostic.php
+          php -l tests/Feature/McpStagingAuthFailureDiagnosticTest.php
+          php artisan test tests/Feature/McpStagingAuthFailureDiagnosticTest.php tests/Feature/McpAuth0JwtTokenVerifierTest.php tests/Feature/McpAuth0JwtProviderRoutingTest.php tests/Unit/McpJwtClaimConstraintsTest.php tests/Feature/McpReadOnlyResourceTest.php --colors=never
