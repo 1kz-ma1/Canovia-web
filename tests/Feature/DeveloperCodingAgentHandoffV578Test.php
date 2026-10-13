@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Plan;
+use App\Models\PlanMember;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\ExecutionRequestHandoffService;
@@ -255,6 +256,138 @@ class DeveloperCodingAgentHandoffV578Test extends TestCase
                 $task,
             ),
         ));
+    }
+
+    public function test_confirmed_developer_brief_is_signed_to_live_context_and_stays_visible_when_unchanged(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $this->confirmBrief($user, $plan, $task);
+
+        $state = session(ExecutionRequestHandoffService::sessionKey($plan, $task));
+        $signature = data_get($state, 'execution_request.source.context_fingerprint');
+        $this->assertIsString($signature);
+        $this->assertSame(64, strlen($signature));
+
+        $this->actingAs($user)->get(
+            route('plans.tasks.execution_orchestration.show', [$plan, $task]),
+        )->assertOk()->assertSee('Developer Homeで確認したImplementation Brief');
+
+        $this->assertNotNull(data_get(
+            session(ExecutionRequestHandoffService::sessionKey($plan, $task)),
+            'execution_request',
+        ));
+    }
+
+    public function test_task_change_revokes_confirmed_developer_brief_and_copy_prompt(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $this->confirmBrief($user, $plan, $task);
+        $task->update(['description' => '人が修正した実行条件']);
+
+        $this->assertOldBriefWithheld($user, $plan, $task);
+    }
+
+    public function test_owner_transfer_and_return_revokes_developer_brief(): void
+    {
+        [$owner, $plan, $task] = $this->scenario();
+        $this->confirmBrief($owner, $plan, $task);
+        $other = User::factory()->create();
+        $plan->update(['user_id' => $other->id]);
+        $plan->update(['user_id' => $owner->id]);
+
+        $this->assertOldBriefWithheld($owner, $plan, $task);
+    }
+
+    public function test_editor_role_aba_revokes_developer_brief(): void
+    {
+        [$editor, $plan, $task, $member] = $this->sharedScenario();
+        $this->confirmBrief($editor, $plan, $task);
+        $member->update(['role' => PlanMember::ROLE_VIEWER]);
+        $member->update(['role' => PlanMember::ROLE_EDITOR]);
+
+        $this->assertOldBriefWithheld($editor, $plan, $task);
+    }
+
+    public function test_same_role_rejoin_revokes_developer_brief(): void
+    {
+        [$editor, $plan, $task, $member] = $this->sharedScenario();
+        $this->confirmBrief($editor, $plan, $task);
+        $member->delete();
+        PlanMember::query()->create([
+            'plan_id' => $plan->id,
+            'user_id' => $editor->id,
+            'role' => PlanMember::ROLE_EDITOR,
+            'joined_at' => now(),
+        ]);
+
+        $this->assertOldBriefWithheld($editor, $plan, $task);
+    }
+
+    public function test_distribution_refuses_confirmed_developer_brief_after_source_revalidation_fails(): void
+    {
+        [$owner, $plan, $task] = $this->scenario();
+        $this->confirmBrief($owner, $plan, $task);
+        $task->update(['description' => 'new source']);
+
+        $this->actingAs($owner)->post(
+            route('plans.execution_distribution.prepare', $plan),
+            [
+                'generation_mode' => 'external',
+                'selected_task_ids' => [$task->id],
+            ],
+        )->assertSessionHasErrors('candidate');
+    }
+
+    public function test_unsigned_legacy_developer_brief_fails_closed_without_discarding_inbox_requests(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $this->confirmBrief($user, $plan, $task);
+        $key = ExecutionRequestHandoffService::sessionKey($plan, $task);
+        $state = session($key);
+        unset($state['execution_request']['source']['context_fingerprint']);
+        session()->put($key, $state);
+
+        $this->assertOldBriefWithheld($user, $plan, $task);
+    }
+
+    private function confirmBrief(User $user, Plan $plan, Task $task): void
+    {
+        $this->actingAs($user)->post(
+            route('plans.tasks.development_coding_agent_handoff.prepare', [$plan, $task]),
+            ['confirmed' => '1', 'available_minutes' => 45],
+        )->assertRedirect(
+            route('plans.tasks.execution_orchestration.show', [$plan, $task]),
+        )->assertSessionHasNoErrors();
+    }
+
+    private function assertOldBriefWithheld(User $user, Plan $plan, Task $task): void
+    {
+        $key = ExecutionRequestHandoffService::sessionKey($plan, $task);
+        $this->assertNotNull(data_get(session($key), 'execution_request'));
+
+        $this->actingAs($user)->get(
+            route('plans.tasks.execution_orchestration.show', [$plan, $task]),
+        )->assertOk()->assertDontSee('Developer Homeで確認したImplementation Brief');
+
+        $state = session($key);
+        $this->assertNull(data_get($state, 'execution_request'));
+        $this->assertNull(data_get($state, 'handoff_prompt'));
+        $this->assertNull(data_get($state, 'packet'));
+    }
+
+    private function sharedScenario(): array
+    {
+        [$editor, $plan, $task] = $this->scenario();
+        $owner = User::factory()->create();
+        $plan->update(['user_id' => $owner->id, 'is_collaborative' => true]);
+        $member = PlanMember::query()->create([
+            'plan_id' => $plan->id,
+            'user_id' => $editor->id,
+            'role' => PlanMember::ROLE_EDITOR,
+            'joined_at' => now(),
+        ]);
+
+        return [$editor, $plan, $task, $member];
     }
 
     private function scenario(): array
