@@ -42,7 +42,11 @@ class PlanCollaborationController extends Controller
             abort(403, '共同計画の作成権限がありません。');
         }
 
-        $collaboration->enable($plan);
+        DB::transaction(function () use ($request, $plan, $ownership, $collaboration): void {
+            $lockedPlan = Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
+            $ownership->authorizePlan($request, $lockedPlan);
+            $collaboration->enable($lockedPlan);
+        }, 3);
 
         return redirect()->route('plans.collaboration.settings', $plan)
             ->with('status', '共同計画を有効にしました。参加者は最初は閲覧者として参加します。');
@@ -54,8 +58,11 @@ class PlanCollaborationController extends Controller
         PlanOwnershipService $ownership,
         PlanCollaborationService $collaboration,
     ) {
-        $ownership->authorizePlan($request, $plan);
-        $collaboration->disable($plan);
+        DB::transaction(function () use ($request, $plan, $ownership, $collaboration): void {
+            $lockedPlan = Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
+            $ownership->authorizePlan($request, $lockedPlan);
+            $collaboration->disable($lockedPlan);
+        }, 3);
 
         return redirect()->route('plans.collaboration.settings', $plan)
             ->with('status', '共同計画を停止しました。メンバー情報は再開に備えて保持しています。');
@@ -68,10 +75,13 @@ class PlanCollaborationController extends Controller
         PlanCollaborationService $collaboration,
         PlanActivityService $activity,
     ) {
-        $ownership->authorizePlan($request, $plan);
-        abort_unless($plan->is_collaborative, 404);
-        $collaboration->regenerateInvite($plan);
-        $activity->record($plan, $request->user(), 'invite_regenerated', 'plan', (int) $plan->id);
+        DB::transaction(function () use ($request, $plan, $ownership, $collaboration, $activity): void {
+            $lockedPlan = Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
+            $ownership->authorizePlan($request, $lockedPlan);
+            abort_unless($lockedPlan->is_collaborative, 404);
+            $collaboration->regenerateInvite($lockedPlan);
+            $activity->record($lockedPlan, $request->user(), 'invite_regenerated', 'plan', (int) $lockedPlan->id);
+        }, 3);
 
         return redirect()->route('plans.collaboration.settings', $plan)
             ->with('status', '共有リンクと参加コードを再発行しました。以前の招待情報は使えません。');
@@ -101,7 +111,7 @@ class PlanCollaborationController extends Controller
             return back()->withErrors(['join_code' => '有効な共同計画が見つかりませんでした。'])->withInput();
         }
 
-        return $this->join($request, $plan, $collaboration);
+        return $this->join($request, $plan, $collaboration, 'code', $code);
     }
 
     public function joinByToken(Request $request, string $token, PlanCollaborationService $collaboration)
@@ -121,7 +131,7 @@ class PlanCollaborationController extends Controller
             ]);
         }
 
-        return $this->join($request, $plan, $collaboration);
+        return $this->join($request, $plan, $collaboration, 'token', $token);
     }
 
     public function updateMember(
@@ -181,19 +191,58 @@ class PlanCollaborationController extends Controller
             ->with('status', 'メンバーを共同計画から外しました。');
     }
 
-    private function join(Request $request, Plan $plan, PlanCollaborationService $collaboration)
-    {
-        if ((int) $plan->user_id === (int) $request->user()->id) {
+    private function join(
+        Request $request,
+        Plan $plan,
+        PlanCollaborationService $collaboration,
+        string $credentialType,
+        string $credential,
+    ) {
+        // The previous lookup is only a locator. An invitation may have been
+        // rotated or disabled while a request was in flight. Plan first, then
+        // the unique PlanMember row, and the activity audit in one commit.
+        $result = DB::transaction(function () use ($request, $plan, $collaboration, $credentialType, $credential): ?array {
+            $lockedPlan = Plan::query()->whereKey($plan->id)->lockForUpdate()->first();
+            $currentCredential = $lockedPlan === null ? '' : (string) (
+                $credentialType === 'code'
+                    ? $lockedPlan->collaboration_join_code
+                    : $lockedPlan->collaboration_share_token
+            );
+            if ($lockedPlan === null || ! $lockedPlan->is_collaborative
+                || $lockedPlan->user_id === null || $currentCredential === ''
+                || ! hash_equals($currentCredential, $credential)) {
+                return null;
+            }
+
+            if ((int) $lockedPlan->user_id === (int) $request->user()->id) {
+                return ['owner' => true, 'created' => false];
+            }
+
+            $member = $collaboration->addViewer($lockedPlan, $request->user(), $lockedPlan->user);
+            if ($member->wasRecentlyCreated) {
+                app(PlanActivityService::class)->record(
+                    $lockedPlan, $request->user(), 'member_joined', 'user',
+                    (int) $request->user()->id,
+                    ['member_name' => $request->user()->name],
+                );
+            }
+
+            return ['owner' => false, 'created' => $member->wasRecentlyCreated];
+        }, 3);
+
+        if ($result === null) {
+            if ($credentialType === 'code') {
+                return back()->withErrors(['join_code' => '招待コードの有効性が変更されました。再確認してください。'])->withInput();
+            }
+
+            abort(404, 'この招待リンクは現在無効です。');
+        }
+
+        if ($result['owner']) {
             return redirect()->route('plans.show', $plan)->with('status', 'あなたが作成した共同計画です。');
         }
 
-        $member = $collaboration->addViewer($plan, $request->user(), $plan->user);
-        if ($member->wasRecentlyCreated) {
-            app(PlanActivityService::class)->record($plan, $request->user(), 'member_joined', 'user', (int) $request->user()->id, [
-                'member_name' => $request->user()->name,
-            ]);
-        }
-        $message = $member->wasRecentlyCreated
+        $message = $result['created']
             ? '共同計画に参加しました。最初の権限は閲覧のみです。'
             : 'すでにこの共同計画へ参加しています。';
 
