@@ -26,6 +26,10 @@ final class McpStagingAuthFailureDiagnostic
         'jwt_claims_issuer',
         'jwt_claims_audience',
         'jwt_claims_client',
+        'jwt_client_missing',
+        'jwt_client_both_present_wrong',
+        'jwt_client_azp_mismatch',
+        'jwt_client_client_id_mismatch',
         'jwt_claims_scope',
         'jwt_claims_time',
         'jwt_claims_subject',
@@ -81,9 +85,19 @@ final class McpStagingAuthFailureDiagnostic
 
         $hasAzp = array_key_exists('azp', $claims);
         $hasClientId = array_key_exists('client_id', $claims);
-        if ($hasAzp === $hasClientId
-            || ($hasAzp ? $claims['azp'] : $claims['client_id']) !== $clientId) {
-            return 'jwt_claims_client';
+        // No claim values or IDs leave this method. Log only a fixed reason.
+        if (! $hasAzp && ! $hasClientId) {
+            return 'jwt_client_missing';
+        }
+        if ($hasAzp && $hasClientId
+            && ($claims['azp'] !== $clientId || $claims['client_id'] !== $clientId)) {
+            return 'jwt_client_both_present_wrong';
+        }
+        if ($hasAzp && $claims['azp'] !== $clientId) {
+            return 'jwt_client_azp_mismatch';
+        }
+        if ($hasClientId && $claims['client_id'] !== $clientId) {
+            return 'jwt_client_client_id_mismatch';
         }
 
         if (! in_array(McpProtectedResourceConfiguration::READ_SCOPE, $scopes, true)) {
