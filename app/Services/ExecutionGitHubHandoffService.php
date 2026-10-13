@@ -107,7 +107,7 @@ final class ExecutionGitHubHandoffService
         if (! $this->handoffSources->sourceIsCurrent(
             is_array($orchestrationState['execution_request'] ?? null)
                 ? $orchestrationState['execution_request'] : null,
-            $plan, $task,
+            $plan, $task, $request,
         )) {
             throw ValidationException::withMessages([
                 'github_change' => '元のCompanion実行候補が現在未検証です。新しい根拠でPacketを作成してください。',
@@ -218,7 +218,7 @@ final class ExecutionGitHubHandoffService
         if (! $this->handoffSources->sourceIsCurrent(
             is_array($origin['execution_request'] ?? null)
                 ? $origin['execution_request'] : null,
-            $plan, $task,
+            $plan, $task, $request,
         )) {
             // A historical prepared code change is not independent approval
             // to execute an AI-suggested request after its source revocation.
