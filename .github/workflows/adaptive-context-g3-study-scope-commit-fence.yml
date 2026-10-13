@@ -6,6 +6,7 @@ on:
     paths:
       - 'app/Services/StudyScopeCaptureCommitFence.php'
       - 'app/Services/StudyScopeCaptureAnalysisService.php'
+      - 'app/Http/Controllers/StudyScopeCaptureController.php'
       - 'app/Services/NativeAiPurposeAuthorizationGuard.php'
       - 'tests/Feature/StudyScopeAiCommitFenceG3Test.php'
       - '.github/workflows/adaptive-context-g3-study-scope-commit-fence.yml'
@@ -30,6 +31,7 @@ jobs:
         run: |
           php -l app/Services/StudyScopeCaptureCommitFence.php
           php -l app/Services/StudyScopeCaptureAnalysisService.php
+          php -l app/Http/Controllers/StudyScopeCaptureController.php
           php -l tests/Feature/StudyScopeAiCommitFenceG3Test.php
       - name: Post-provider revoked actor, source, and confirmed state
         run: php artisan test tests/Feature/StudyScopeAiCommitFenceG3Test.php
