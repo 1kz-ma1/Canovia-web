@@ -18,6 +18,7 @@ on:
       - 'tests/Feature/RecallAiCommitFenceV05Test.php'
       - 'app/Services/StudyScopeCaptureCommitFence.php'
       - 'app/Services/StudyScopeCaptureAnalysisService.php'
+      - 'app/Http/Controllers/StudyScopeCaptureController.php'
       - 'tests/Feature/StudyScopeAiCommitFenceG3Test.php'
       - 'app/Services/ExecutionPacketCommitFence.php'
       - 'app/Services/ExecutionOrchestrationContextService.php'
@@ -101,6 +102,7 @@ jobs:
           php -l tests/Feature/RecallAiCommitFenceV05Test.php
           php -l app/Services/StudyScopeCaptureCommitFence.php
           php -l app/Services/StudyScopeCaptureAnalysisService.php
+          php -l app/Http/Controllers/StudyScopeCaptureController.php
           php -l tests/Feature/StudyScopeAiCommitFenceG3Test.php
           php -l app/Services/ExecutionPacketCommitFence.php
           php -l app/Services/ExecutionOrchestrationContextService.php
