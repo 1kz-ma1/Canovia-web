@@ -71,6 +71,7 @@ final class StudyRecallBatchCandidateExtractionService
             }
         }
 
+        $authorization = $this->commitFence->captureAuthorization($plan, $userId);
         $sourceSignatures = $sources->mapWithKeys(
             fn (StudyRecallSource $source) => [
                 (int) $source->id => $this->commitFence->snapshot($source),
@@ -143,13 +144,14 @@ final class StudyRecallBatchCandidateExtractionService
 
         try {
             [$created, $createdPerSource] = DB::transaction(function () use (
-                $sources, $plan, $task, $userId, $sourceSignatures, $result, $cards,
+                $sources, $plan, $task, $userId, $sourceSignatures, $authorization, $result, $cards,
             ): array {
                 $this->commitFence->assertCanCommit(
                     $plan,
                     $task,
                     $userId,
                     $sourceSignatures,
+                    $authorization,
                     (int) $result['run_id'],
                 );
 
