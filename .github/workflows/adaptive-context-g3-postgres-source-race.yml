@@ -13,6 +13,7 @@ on:
       - 'app/Services/GuestPlanClaimService.php'
       - 'database/migrations/2026_10_13_110000_add_authorization_epochs_to_collaborative_plans.php'
       - 'database/migrations/2026_10_13_120000_enforce_authorization_epochs_in_database.php'
+      - 'database/migrations/2026_10_13_130000_immutable_plan_member_binding.php'
       - 'tests/Feature/AuthorizationEpochDatabaseTriggerG3Test.php'
       - 'app/Http/Controllers/PlanCollaborationController.php'
       - 'app/Services/CompanionConversationService.php'
@@ -71,6 +72,7 @@ jobs:
           php -l app/Services/GuestPlanClaimService.php
           php -l database/migrations/2026_10_13_110000_add_authorization_epochs_to_collaborative_plans.php
           php -l database/migrations/2026_10_13_120000_enforce_authorization_epochs_in_database.php
+          php -l database/migrations/2026_10_13_130000_immutable_plan_member_binding.php
           php -l tests/Feature/AuthorizationEpochDatabaseTriggerG3Test.php
           php -l app/Http/Controllers/PlanCollaborationController.php
           php -l tests/Feature/CompanionPostgresSourceRaceG3Test.php
