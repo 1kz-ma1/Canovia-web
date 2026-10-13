@@ -1,0 +1,40 @@
+name: Staging MCP Authorization presence diagnostic lint
+
+on:
+  pull_request:
+    branches:
+      - staging/mcp-auth0-oidc-audience-20261013
+    paths:
+      - 'docker/nginx-mcp-staging-synthetic-read-pilot.conf'
+      - '.github/workflows/staging-mcp-auth-header-diagnostic.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-staging-only-nginx:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact staging Nginx syntax on Debian Nginx
+        run: |
+          docker run --rm --entrypoint nginx \
+            -v "${PWD}/docker/nginx-mcp-staging-synthetic-read-pilot.conf:/etc/nginx/nginx.conf:ro" \
+            nginx:1.26 -t
+      - name: Check diagnostic emits boolean only, never credential or OAuth callback
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s = Path("docker/nginx-mcp-staging-synthetic-read-pilot.conf").read_text()
+          assert "map $http_authorization $stage_auth_header_present {" in s
+          assert "auth_header_present=$stage_auth_header_present" in s
+          assert "default 1;" in s and '"" 0;' in s
+          logline = next(line for line in s.splitlines() if "log_format stage_pilot_safe" in line)
+          for forbidden in ("$http_authorization", "$request_uri", "$args", "$query_string",
+                            "$request_body", "$cookie", "$http_cookie", "$request "):
+              assert forbidden not in logline, forbidden
+          assert "fastcgi_param HTTP_AUTHORIZATION $http_authorization;" in s
+          assert "location = /api/mcp {" in s and "limit_except POST { deny all; }" in s
+          print("stage diagnostic: only authorization-presence bit is logged")
+          PY
