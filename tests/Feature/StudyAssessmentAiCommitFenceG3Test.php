@@ -104,6 +104,71 @@ final class StudyAssessmentAiCommitFenceG3Test extends TestCase
         $this->assertWithheld($session);
     }
 
+    public function test_owner_transfer_away_and_back_after_provider_does_not_resurrect_ai_grade(): void
+    {
+        [$user, $plan, $task, $session] = $this->scenario();
+        $other = User::factory()->create();
+        $this->fakeAssessment($plan, $task);
+        $this->afterGateway(function () use ($plan, $other, $user): void {
+            $plan->update(['user_id' => $other->id]);
+            $plan->update(['user_id' => $user->id]);
+        });
+
+        $this->submit($user, $plan, $task);
+        $this->assertWithheld($session);
+        $this->assertSame((int) $user->id, (int) $plan->fresh()->user_id);
+        $this->assertSame(3, (int) $plan->fresh()->authorization_epoch);
+    }
+
+    public function test_shared_editor_downgrade_then_repromotion_does_not_publish_old_ai_grade(): void
+    {
+        [$user, $plan, $task, $session] = $this->scenario();
+        $owner = User::factory()->create();
+        $plan->update(['user_id' => $owner->id, 'is_collaborative' => true]);
+        $membership = \App\Models\PlanMember::query()->create([
+            'plan_id' => $plan->id,
+            'user_id' => $user->id,
+            'role' => \App\Models\PlanMember::ROLE_EDITOR,
+            'joined_at' => now(),
+        ]);
+        $this->fakeAssessment($plan, $task);
+        $this->afterGateway(function () use ($membership): void {
+            $membership->update(['role' => \App\Models\PlanMember::ROLE_VIEWER]);
+            $membership->update(['role' => \App\Models\PlanMember::ROLE_EDITOR]);
+        });
+
+        $this->submit($user, $plan, $task);
+        $this->assertWithheld($session);
+        $this->assertSame(3, (int) $membership->fresh()->authorization_epoch);
+    }
+
+    public function test_shared_editor_rejoin_with_same_role_does_not_publish_old_ai_grade(): void
+    {
+        [$user, $plan, $task, $session] = $this->scenario();
+        $plan->update(['user_id' => User::factory()->create()->id, 'is_collaborative' => true]);
+        $membership = \App\Models\PlanMember::query()->create([
+            'plan_id' => $plan->id,
+            'user_id' => $user->id,
+            'role' => \App\Models\PlanMember::ROLE_EDITOR,
+            'joined_at' => now(),
+        ]);
+        $this->fakeAssessment($plan, $task);
+        $this->afterGateway(function () use ($membership): void {
+            $userId = $membership->user_id;
+            $planId = $membership->plan_id;
+            $membership->delete();
+            \App\Models\PlanMember::query()->create([
+                'plan_id' => $planId, 'user_id' => $userId,
+                'role' => \App\Models\PlanMember::ROLE_EDITOR, 'joined_at' => now(),
+            ]);
+        });
+
+        $this->submit($user, $plan, $task);
+        $this->assertWithheld($session);
+        $this->assertNotSame((int) $membership->id, (int) \App\Models\PlanMember::query()
+            ->where('plan_id', $plan->id)->where('user_id', $user->id)->firstOrFail()->id);
+    }
+
     public function test_task_move_after_provider_rejects_grade(): void
     {
         [$user, $plan, $task, $session] = $this->scenario();
