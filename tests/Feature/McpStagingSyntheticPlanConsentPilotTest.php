@@ -134,6 +134,11 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
             'scope' => 'tasks', 'duration_days' => 1,
         ]);
         $this->assertStringStartsWith(self::ISSUER.'authorize?', $r->headers->get('Location'));
+        parse_str((string) parse_url((string) $r->headers->get('Location'), PHP_URL_QUERY), $oauthQuery);
+        // Auth0 needs an explicit API audience even when RFC8707 resource
+        // compatibility is disabled; neither value may be caller-supplied.
+        $this->assertSame(self::RESOURCE, $oauthQuery['resource']);
+        $this->assertSame(self::RESOURCE, $oauthQuery['audience']);
         $pending = session('mcp.account_link.pending');
         $this->assertSame('plan_consent', $pending['purpose']);
         $this->assertSame((int) $plan->id, $pending['plan_id']);
