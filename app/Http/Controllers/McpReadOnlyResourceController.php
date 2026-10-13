@@ -56,7 +56,10 @@ final class McpReadOnlyResourceController extends Controller
                 : null;
 
         if ($bearer === null) {
-            return $this->unauthorized($resource, $authorization !== null);
+            // Nginx/PHP-FPM may forward an empty Authorization header even
+            // when the client sent no credentials. An empty header must not
+            // advertise invalid_token in the initial OAuth challenge.
+            return $this->unauthorized($resource, is_string($authorization) && $authorization !== '');
         }
 
         // Every call cryptographically verifies or introspects the token
