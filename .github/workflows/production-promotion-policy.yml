@@ -65,6 +65,7 @@ jobs:
         run: |
           php -l scripts/ops/release_488_production_env_preflight.php
           python3 -m unittest discover -s tests/ci -p 'test_release_488_production_env_preflight.py' -v
+          python3 -m unittest discover -s tests/ci -p 'test_production_checks_pass_workflow_contract.py' -v
       - name: Validate metadata-only Aiven audit remains fail-closed
         run: |
           set -euo pipefail
