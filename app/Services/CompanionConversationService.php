@@ -25,6 +25,7 @@ class CompanionConversationService
         private readonly AiCapacityService $capacity,
         private readonly FutureMemoService $memories,
         private readonly CompanionDerivedEvidenceSourceGuard $derivedSources,
+        private readonly CompanionEntitlementCommitGuard $entitlementCommit,
     ) {}
 
     /**
@@ -166,12 +167,15 @@ class CompanionConversationService
                 Task::query()->whereKey($task->id)->lockForUpdate()->first();
             }
 
-            $denied = $this->purposeGuard->failure(
+            // Serialize existing paid-grant revocations with this AI-derived
+            // commit. A competing UPDATE/DELETE must wait or commit first.
+            $grantAllowed = $this->entitlementCommit->allowed($user);
+            $denied = $grantAllowed ? $this->purposeGuard->failure(
                 (int) $user->id,
                 $plan?->id,
                 $task?->id,
                 FeatureKey::CanoviaCompanion,
-            );
+            ) : 'native_ai_purpose_not_entitled';
 
             if ($denied !== null) {
                 throw new NativeAiExecutionException(
