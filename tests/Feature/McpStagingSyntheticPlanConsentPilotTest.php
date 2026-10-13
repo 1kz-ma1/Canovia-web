@@ -1,0 +1,271 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Http\Middleware\CloseUnopenedMcpStaging;
+use App\Models\McpDelegatedGrant;
+use App\Models\McpLinkedSubject;
+use App\Models\Plan;
+use App\Models\User;
+use App\Services\McpDelegatedIdentityFingerprintService;
+use App\Services\McpStagingLoginPilotPolicy;
+use App\Services\McpStagingSyntheticActorBootstrap;
+use App\Services\McpStagingSyntheticPlanFixtureBootstrap;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use Tests\TestCase;
+
+final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private const ISSUER = 'https://canovia-mcp-dev.jp.auth0.com/';
+    private const RESOURCE = 'https://canovia-mcp-staging.onrender.com/api/mcp';
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withoutMiddleware(CloseUnopenedMcpStaging::class);
+        $this->withoutMiddleware(ThrottleRequests::class);
+        config([
+            'app.env' => 'staging',
+            'canovia_staging.isolated' => true,
+            'canovia_staging.login_pilot_enabled' => true,
+            'canovia_staging.account_link_pilot_enabled' => true,
+            'canovia_staging.plan_consent_pilot_enabled' => false,
+            'canovia_mcp.discovery_enabled' => true,
+            'canovia_mcp.resource_url' => self::RESOURCE,
+            'canovia_mcp.oauth_issuer' => self::ISSUER,
+            'canovia_mcp.read_scope' => 'canovia.development.read',
+            'canovia_mcp.token_verification_driver' => 'auth0_jwt',
+            'canovia_mcp.token_introspection_enabled' => false,
+            'canovia_mcp.auth0_jwt_verification_enabled' => true,
+            'canovia_mcp.account_link_enabled' => true,
+            'canovia_mcp.plan_consent_enabled' => false,
+            'canovia_mcp.delegated_policy_enabled' => false,
+            'canovia_mcp.tools_enabled' => false,
+            'canovia_mcp.allowed_client_id' => 'tpc_staging-synthetic-chatgpt',
+            'canovia_mcp.account_link_client_id' => 'stage-first-party-client',
+            'canovia_mcp.account_link_client_secret' => 'stage-first-party-synthetic-secret',
+            'canovia_mcp.identity_fingerprint_key' => str_repeat('k', 48),
+            'canovia_mcp.account_link_metadata_url' => self::ISSUER.'.well-known/openid-configuration',
+            'canovia_mcp.account_link_authorization_endpoint' => self::ISSUER.'authorize',
+            'canovia_mcp.account_link_token_endpoint' => self::ISSUER.'oauth/token',
+            'canovia_mcp.account_link_redirect_uri' => 'https://canovia-mcp-staging.onrender.com/account/mcp/link/callback',
+        ]);
+        Http::preventStrayRequests();
+    }
+
+    public function test_linked_actor_sees_no_consent_form_without_two_independent_flags(): void
+    {
+        $owner = $this->actor();
+        $plan = $this->fixture($owner);
+        $this->link($owner);
+
+        $this->actingAs($owner)->get('/account')->assertOk()
+            ->assertSee('本人IDの紐付け記録が存在します')
+            ->assertDontSee('data-mcp-staging-plan-consent', false);
+
+        config(['canovia_mcp.plan_consent_enabled' => true]);
+        $this->get('/account')->assertOk()
+            ->assertDontSee('data-mcp-staging-plan-consent', false);
+        $this->post(route('auth.account.mcp_plan_consent.start', ['plan' => $plan->id]), [
+            'scope' => 'tasks', 'duration_days' => 7,
+        ])->assertNotFound();
+
+        config(['canovia_mcp.plan_consent_enabled' => false,
+            'canovia_staging.plan_consent_pilot_enabled' => true]);
+        $this->get('/account')->assertOk()
+            ->assertDontSee('data-mcp-staging-plan-consent', false);
+
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+        Http::assertNothingSent();
+    }
+
+    public function test_only_approved_synthetic_plan_has_a_staged_consent_form(): void
+    {
+        $owner = $this->actor();
+        $plan = $this->fixture($owner);
+        $this->link($owner);
+        $this->enableConsent();
+
+        $this->actingAs($owner)->get('/account')->assertOk()
+            ->assertSee('data-mcp-staging-plan-consent', false)
+            ->assertSee(McpStagingSyntheticPlanFixtureBootstrap::TITLE)
+            ->assertSee('name="scope"', false)
+            ->assertSee('name="duration_days"', false)
+            ->assertDontSee('resources/js/app.js')
+            ->assertDontSee('/build/assets/');
+
+        $foreignPlan = $this->fixture($owner, 'Other user plan', (string) Str::uuid());
+        $this->post(route('auth.account.mcp_plan_consent.start', ['plan' => $foreignPlan->id]), [
+            'scope' => 'overview', 'duration_days' => 7,
+        ])->assertNotFound();
+
+        $plan->forceFill(['title' => 'tampered fixture'])->save();
+        $this->get('/account')->assertOk()
+            ->assertDontSee('data-mcp-staging-plan-consent', false);
+        $this->post(route('auth.account.mcp_plan_consent.start', ['plan' => $plan->id]), [
+            'scope' => 'overview', 'duration_days' => 7,
+        ])->assertNotFound();
+
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+        Http::assertNothingSent();
+    }
+
+    public function test_fresh_oauth_start_is_possible_only_for_linked_synthetic_owner(): void
+    {
+        $owner = $this->actor();
+        $plan = $this->fixture($owner);
+        $this->enableConsent();
+
+        $this->actingAs($owner)->get('/account')->assertOk()
+            ->assertDontSee('data-mcp-staging-plan-consent', false);
+
+        $this->post(route('auth.account.mcp_plan_consent.start', ['plan' => $plan->id]), [
+            'scope' => 'overview', 'duration_days' => 7,
+        ])->assertRedirect(route('auth.account'));
+
+        $this->link($owner);
+        $this->metadata();
+        $r = $this->post(route('auth.account.mcp_plan_consent.start', ['plan' => $plan->id]), [
+            'scope' => 'tasks', 'duration_days' => 1,
+        ]);
+        $this->assertStringStartsWith(self::ISSUER.'authorize?', $r->headers->get('Location'));
+        $pending = session('mcp.account_link.pending');
+        $this->assertSame('plan_consent', $pending['purpose']);
+        $this->assertSame((int) $plan->id, $pending['plan_id']);
+        $this->assertSame('tasks', $pending['scope']);
+        $this->assertSame(1, $pending['duration_days']);
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+    }
+
+    public function test_confirm_and_revoke_are_bounded_to_single_fixture_without_mcp_read(): void
+    {
+        $owner = $this->actor();
+        $plan = $this->fixture($owner);
+        $fingerprint = $this->link($owner);
+        $this->enableConsent();
+
+        $this->actingAs($owner)->withSession(['mcp.plan_consent.verified' => [
+            'actor_id' => (int) $owner->id,
+            'identity_fingerprint' => $fingerprint,
+            'plan_id' => (int) $plan->id,
+            'scope' => 'tasks',
+            'duration_days' => 7,
+            'verified_at' => now()->timestamp,
+        ]])->get('/account')->assertOk()
+            ->assertSee('data-mcp-staging-consent-confirm', false)
+            ->assertSee('この検証用Planの共有許可を確定');
+
+        $this->post(route('auth.account.mcp_plan_consent.confirm'))
+            ->assertRedirect(route('auth.account'));
+
+        $grant = McpDelegatedGrant::query()->sole();
+        $this->assertSame($owner->id, $grant->user_id);
+        $this->assertSame($plan->id, $grant->plan_id);
+        $this->assertSame('tasks', $grant->scope);
+        $this->get('/account')->assertOk()
+            ->assertSee('data-mcp-staging-active-grant', false);
+
+        // Even after consent, stage Nginx excludes /api/mcp and the app
+        // flag must stay OFF. The controller itself also denies the read.
+        $this->assertFalse(config('canovia_mcp.tools_enabled'));
+        $this->postJson('/api/mcp', [
+            'jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list',
+        ])->assertUnauthorized();
+
+        $this->delete(route('auth.account.mcp_grant.revoke', ['grant' => $grant->id]))
+            ->assertRedirect(route('auth.account'));
+        $this->assertSame(McpDelegatedGrant::STATUS_REVOKED, $grant->fresh()->status);
+        $this->get('/account')->assertOk()
+            ->assertDontSee('data-mcp-staging-active-grant', false);
+    }
+
+    public function test_stale_or_tampered_verified_session_cannot_grant_another_plan(): void
+    {
+        $owner = $this->actor();
+        $plan = $this->fixture($owner);
+        $foreignPlan = $this->fixture($owner, 'not-the-fixture', (string) Str::uuid());
+        $fingerprint = $this->link($owner);
+        $this->enableConsent();
+
+        foreach ([
+            ['plan_id' => $foreignPlan->id],
+            ['plan_id' => $plan->id, 'verified_at' => now()->subMinutes(6)->timestamp],
+        ] as $tamper) {
+            $session = array_replace([
+                'actor_id' => (int) $owner->id,
+                'identity_fingerprint' => $fingerprint,
+                'plan_id' => (int) $plan->id,
+                'scope' => 'overview',
+                'duration_days' => 7,
+                'verified_at' => now()->timestamp,
+            ], $tamper);
+            $this->actingAs($owner)->withSession(['mcp.plan_consent.verified' => $session])
+                ->post(route('auth.account.mcp_plan_consent.confirm'))
+                ->assertRedirect(route('auth.account'));
+        }
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+    }
+
+    private function enableConsent(): void
+    {
+        config(['canovia_staging.plan_consent_pilot_enabled' => true,
+            'canovia_mcp.plan_consent_enabled' => true]);
+        $this->assertTrue(app(McpStagingLoginPilotPolicy::class)->planConsentReady());
+    }
+
+    private function actor(): User
+    {
+        return User::factory()->create([
+            'email' => McpStagingSyntheticActorBootstrap::EMAIL,
+            'first_run_completed_at' => now(),
+        ]);
+    }
+
+    private function fixture(User $actor, string $title = McpStagingSyntheticPlanFixtureBootstrap::TITLE,
+        string $requestId = McpStagingSyntheticPlanFixtureBootstrap::REQUEST_ID): Plan
+    {
+        return Plan::query()->create([
+            'user_id' => $actor->id,
+            'owner_token' => Str::random(64),
+            'creation_request_id' => $requestId,
+            'public_slug' => (string) Str::uuid(),
+            'title' => $title,
+            'category' => '個人開発',
+            'priority' => 1, 'priority_mode' => 'manual',
+            'start_date' => today(), 'deadline' => today()->addDays(14),
+            'is_public' => false, 'is_collaborative' => false,
+        ]);
+    }
+
+    private function link(User $owner): string
+    {
+        $fingerprint = app(McpDelegatedIdentityFingerprintService::class)
+            ->subject(self::ISSUER, 'stage-synthetic-external-subject');
+        McpLinkedSubject::query()->create([
+            'user_id' => $owner->id,
+            'identity_fingerprint' => $fingerprint,
+            'provider_key' => 'chatgpt',
+            'status' => McpLinkedSubject::STATUS_LINKED,
+            'linked_at' => now(),
+        ]);
+
+        return $fingerprint;
+    }
+
+    private function metadata(): void
+    {
+        Http::fake([self::ISSUER.'.well-known/openid-configuration' => Http::response([
+            'issuer' => self::ISSUER,
+            'authorization_endpoint' => self::ISSUER.'authorize',
+            'token_endpoint' => self::ISSUER.'oauth/token',
+            'authorization_response_iss_parameter_supported' => true,
+            'code_challenge_methods_supported' => ['S256'],
+            'token_endpoint_auth_methods_supported' => ['client_secret_basic'],
+        ], 200, ['Content-Type' => 'application/json'])]);
+    }
+}
