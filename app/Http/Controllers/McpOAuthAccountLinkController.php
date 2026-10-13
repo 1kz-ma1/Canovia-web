@@ -8,6 +8,7 @@ use App\Services\McpDelegatedIdentityFingerprintService;
 use App\Services\McpOAuthAccountLinkCommitter;
 use App\Services\McpOAuthAccountLinkConfiguration;
 use App\Services\McpOAuthAccountLinkProvider;
+use App\Services\McpStagingLoginPilotPolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -121,6 +122,16 @@ final class McpOAuthAccountLinkController extends Controller
             $scope = $pending['scope'] ?? null;
             $days = $pending['duration_days'] ?? null;
             $plan = is_int($planId) ? Plan::query()->find($planId) : null;
+
+            // A callback cannot convert another Plan into stage consent,
+            // even with a correctly verified external subject.
+            if (config('app.env') === 'staging') {
+                $stage = app(McpStagingLoginPilotPolicy::class);
+                if ($plan === null || ! $stage->planConsentReady()
+                    || ! $stage->isApprovedSyntheticPlan($user, $plan)) {
+                    return $this->failure();
+                }
+            }
 
             if (! $consent->isEnabled()
                 || ! is_string($scope) || ! is_int($days)
