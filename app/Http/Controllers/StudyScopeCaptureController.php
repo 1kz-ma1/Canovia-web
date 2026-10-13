@@ -291,72 +291,72 @@ class StudyScopeCaptureController extends Controller
             $existingItems = $liveCapture->items()->get()->keyBy('id');
             $normalized = [];
 
-        foreach (($validated['items'] ?? []) as $index => $item) {
-            $subject = trim((string) ($item['subject'] ?? ''));
-            $unit = trim((string) ($item['unit'] ?? ''));
-            $rangeText = trim((string) ($item['range_text'] ?? ''));
-            $pageStart = isset($item['page_start']) && $item['page_start'] !== ''
-                ? (int) $item['page_start']
-                : null;
-            $pageEnd = isset($item['page_end']) && $item['page_end'] !== ''
-                ? (int) $item['page_end']
-                : null;
+            foreach (($validated['items'] ?? []) as $index => $item) {
+                $subject = trim((string) ($item['subject'] ?? ''));
+                $unit = trim((string) ($item['unit'] ?? ''));
+                $rangeText = trim((string) ($item['range_text'] ?? ''));
+                $pageStart = isset($item['page_start']) && $item['page_start'] !== ''
+                    ? (int) $item['page_start']
+                    : null;
+                $pageEnd = isset($item['page_end']) && $item['page_end'] !== ''
+                    ? (int) $item['page_end']
+                    : null;
 
-            $hasContent = $subject !== ''
-                || $unit !== ''
-                || $rangeText !== ''
-                || $pageStart !== null
-                || $pageEnd !== null;
+                $hasContent = $subject !== ''
+                    || $unit !== ''
+                    || $rangeText !== ''
+                    || $pageStart !== null
+                    || $pageEnd !== null;
 
-            if (! $hasContent) {
-                continue;
-            }
+                if (! $hasContent) {
+                    continue;
+                }
 
-            if ($subject === '') {
-                throw ValidationException::withMessages([
-                    "items.{$index}.subject" => '確定する範囲には科目名を入力してください。',
-                ]);
-            }
-
-            if ($pageStart !== null && $pageEnd !== null && $pageEnd < $pageStart) {
-                throw ValidationException::withMessages([
-                    "items.{$index}.page_end" => '終了ページは開始ページ以降にしてください。',
-                ]);
-            }
-
-            $sourceExcerpt = null;
-            if (isset($item['item_id'])) {
-                $existing = $existingItems->get((int) $item['item_id']);
-                if ($existing === null) {
+                if ($subject === '') {
                     throw ValidationException::withMessages([
-                        "items.{$index}.item_id" => 'このCaptureに属さない範囲は更新できません。',
+                        "items.{$index}.subject" => '確定する範囲には科目名を入力してください。',
                     ]);
                 }
-                $sourceExcerpt = $existing->source_excerpt;
-            } elseif (isset($item['draft_index'])) {
-                $draft = $draftItems->get((int) $item['draft_index']);
-                if (is_array($draft)) {
-                    $sourceExcerpt = filled($draft['source_excerpt'] ?? null)
-                        ? mb_substr(trim((string) $draft['source_excerpt']), 0, 1000)
-                        : null;
+
+                if ($pageStart !== null && $pageEnd !== null && $pageEnd < $pageStart) {
+                    throw ValidationException::withMessages([
+                        "items.{$index}.page_end" => '終了ページは開始ページ以降にしてください。',
+                    ]);
                 }
+
+                $sourceExcerpt = null;
+                if (isset($item['item_id'])) {
+                    $existing = $existingItems->get((int) $item['item_id']);
+                    if ($existing === null) {
+                        throw ValidationException::withMessages([
+                            "items.{$index}.item_id" => 'このCaptureに属さない範囲は更新できません。',
+                        ]);
+                    }
+                    $sourceExcerpt = $existing->source_excerpt;
+                } elseif (isset($item['draft_index'])) {
+                    $draft = $draftItems->get((int) $item['draft_index']);
+                    if (is_array($draft)) {
+                        $sourceExcerpt = filled($draft['source_excerpt'] ?? null)
+                            ? mb_substr(trim((string) $draft['source_excerpt']), 0, 1000)
+                            : null;
+                    }
+                }
+
+                $normalized[] = [
+                    'subject' => mb_substr($subject, 0, 120),
+                    'unit' => $unit !== '' ? mb_substr($unit, 0, 255) : null,
+                    'range_text' => $rangeText !== '' ? mb_substr($rangeText, 0, 1000) : null,
+                    'page_start' => $pageStart,
+                    'page_end' => $pageEnd,
+                    'source_excerpt' => $sourceExcerpt,
+                ];
             }
 
-            $normalized[] = [
-                'subject' => mb_substr($subject, 0, 120),
-                'unit' => $unit !== '' ? mb_substr($unit, 0, 255) : null,
-                'range_text' => $rangeText !== '' ? mb_substr($rangeText, 0, 1000) : null,
-                'page_start' => $pageStart,
-                'page_end' => $pageEnd,
-                'source_excerpt' => $sourceExcerpt,
-            ];
-        }
-
-        if ($normalized === []) {
-            throw ValidationException::withMessages([
-                'items' => '少なくとも1件の試験範囲を入力してください。',
-            ]);
-        }
+            if ($normalized === []) {
+                throw ValidationException::withMessages([
+                    'items' => '少なくとも1件の試験範囲を入力してください。',
+                ]);
+            }
 
             $liveCapture->items()->delete();
 
