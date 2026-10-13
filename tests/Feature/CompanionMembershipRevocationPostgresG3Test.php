@@ -540,6 +540,39 @@ final class CompanionMembershipRevocationPostgresG3Test extends TestCase
         $this->assertSame('pending', $candidate->fresh()->status);
     }
 
+    public function test_inflight_ai_reply_is_discarded_after_editor_downgrade_and_repromotion(): void
+    {
+        [, $member, $plan, $task, , $membership, $thread] = $this->scenario();
+        $this->fakeCompanionOutput('Should never be persisted');
+        $real = app(NativeAiGateway::class);
+        $mock = Mockery::mock(NativeAiGateway::class)->makePartial();
+        $mock->shouldReceive('generateStructured')->once()
+            ->andReturnUsing(function (...$args) use ($real, $membership) {
+                $reply = $real->generateStructured(...$args);
+                $membership->update(['role' => PlanMember::ROLE_VIEWER]);
+                $membership->update(['role' => PlanMember::ROLE_EDITOR]);
+
+                return $reply;
+            });
+        app()->instance(NativeAiGateway::class, $mock);
+
+        try {
+            app(CompanionConversationService::class)->send(
+                $thread, $member, 'Review the task', (string) Str::uuid(), $plan, $task,
+            );
+            $this->fail('An AI response generated during an earlier Editor lifetime must be denied.');
+        } catch (NativeAiExecutionException $exception) {
+            $this->assertSame('native_ai_target_changed', $exception->errorCode);
+        }
+
+        $this->assertSame(3, (int) $membership->fresh()->authorization_epoch);
+        $this->assertSame(1, $thread->messages()->where('role', 'assistant')->count());
+        $this->assertSame(1, $thread->messages()->where('role', 'user')->count());
+        $this->assertSame(1, CompanionMutationCandidate::query()->count());
+        $this->assertDatabaseCount('future_memos', 0);
+        $this->assertNull($thread->fresh()->last_message_at);
+    }
+
     public function test_owner_transfer_then_restore_advances_plan_epoch_even_with_same_owner(): void
     {
         [$owner, $member, $plan, $task, $candidate] = $this->scenario();
