@@ -140,7 +140,7 @@ final class ExecutionRequestHandoffService
             || (string) data_get($approved, 'actor_type') !== (string) ($payload['actor_type'] ?? 'human_ai')
             || data_get($approved, 'available_minutes') !== ($normalized['available_minutes'] ?? null)
             || data_get($approved, 'available_minutes') !== ($payload['available_minutes'] ?? null)
-            || ! $this->sourceIsCurrent($approved, $plan, $task);
+            || ! $this->sourceIsCurrent($approved, $plan, $task, $request);
 
         if ($deny) {
             throw ValidationException::withMessages([
@@ -195,6 +195,17 @@ final class ExecutionRequestHandoffService
             ]);
         }
 
+        // A human-confirmed Developer Brief is still a projection of
+        // revocable Task/GitHub evidence and Plan membership. Bind the
+        // session handoff to the live, actor-specific context generation.
+        $context = $this->contexts->freshSnapshot($request, $plan, $task);
+        $sourceFingerprint = (string) ($context['context_fingerprint'] ?? '');
+        if ($sourceFingerprint === '') {
+            throw ValidationException::withMessages([
+                'development_handoff' => '現在のDevelopment Contextを確認できませんでした。',
+            ]);
+        }
+
         return $this->confirm(
             request: $request,
             plan: $plan,
@@ -217,7 +228,8 @@ final class ExecutionRequestHandoffService
                     0,
                     500,
                 ),
-                'brief_hash' => hash('sha256', $copyText),
+                'brief_hash' => hash('sha256', mb_substr($copyText, 0, 6000)),
+                'context_fingerprint' => $sourceFingerprint,
             ],
             instruction: $copyText,
             actorType: 'external',
@@ -327,15 +339,45 @@ final class ExecutionRequestHandoffService
     /**
      * A prior human approval is not an ongoing authorization to reuse a
      * Companion-generated instruction whose underlying GitHub Evidence
-     * disappeared or changed. Inbox and explicitly authored Development
-     * briefs are outside this AI-derivative lineage gate.
+     * disappeared or changed. A confirmed Development Implementation Brief
+     * is also derived from revocable GitHub/Task/Owner context, unlike an
+     * independently authored Inbox request.
      *
      * @param array<string,mixed>|null $executionRequest
      */
-    public function sourceIsCurrent(?array $executionRequest, Plan $plan, Task $task): bool
-    {
-        if (! is_array($executionRequest)
-            || data_get($executionRequest, 'source.type') !== 'companion_candidate') {
+    public function sourceIsCurrent(
+        ?array $executionRequest,
+        Plan $plan,
+        Task $task,
+        ?Request $request = null,
+    ): bool {
+        $sourceType = data_get($executionRequest, 'source.type');
+        if ($sourceType === 'development_implementation_brief') {
+            $expected = data_get($executionRequest, 'source.context_fingerprint');
+            $briefHash = data_get($executionRequest, 'source.brief_hash');
+            $instruction = trim((string) data_get($executionRequest, 'instruction'));
+            if ($request === null
+                || (int) $task->plan_id !== (int) $plan->id
+                || (int) data_get($executionRequest, 'target_plan.id') !== (int) $plan->id
+                || (int) data_get($executionRequest, 'target_task.id') !== (int) $task->id
+                || ! is_string($expected) || $expected === ''
+                || ! is_string($briefHash) || $briefHash === ''
+                || $instruction === '' || ! hash_equals($briefHash, hash('sha256', $instruction))
+            ) {
+                return false;
+            }
+
+            try {
+                $live = $this->contexts->freshSnapshot($request, $plan, $task);
+                $current = (string) ($live['context_fingerprint'] ?? '');
+
+                return $current !== '' && hash_equals($expected, $current);
+            } catch (\Throwable) {
+                return false;
+            }
+        }
+
+        if ($sourceType !== 'companion_candidate') {
             return true;
         }
 

@@ -80,7 +80,7 @@ final class ExecutionDistributionService
                 ? $taskState['execution_request']
                 : null;
 
-            if (! $this->handoffSources->sourceIsCurrent($executionRequest, $plan, $task)) {
+            if (! $this->handoffSources->sourceIsCurrent($executionRequest, $plan, $task, $request)) {
                 throw ValidationException::withMessages([
                     'candidate' => '以前のCompanion実行候補の根拠が失効しています。新しい候補を確認してから一括Executionを再生成してください。',
                 ]);

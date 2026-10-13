@@ -43,7 +43,7 @@ final class ExecutionOrchestrationController extends Controller
         $state = $request->session()->get($this->sessionKey($plan, $task), []);
         $handoffSourceStale = is_array($state['execution_request'] ?? null)
             && ! $handoffSources->sourceIsCurrent(
-                $state['execution_request'], $plan, $task,
+                $state['execution_request'], $plan, $task, $request,
             );
         if ($handoffSourceStale) {
             // Drop only session-scoped stale executable projections; the
@@ -51,7 +51,7 @@ final class ExecutionOrchestrationController extends Controller
             $state['execution_request'] = null;
             $state['handoff_prompt'] = null;
             $state['packet'] = null;
-            unset($state['native_run_id']);
+            unset($state['native_run_id'], $state['development_agent_handoff']);
             $request->session()->put($this->sessionKey($plan, $task), $state);
             // Clear the GitHub change preview derived from the same
             // superseded Packet, rather than displaying an executable-
@@ -205,7 +205,7 @@ final class ExecutionOrchestrationController extends Controller
             ? $existingState['execution_request']
             : null;
 
-        if (! $handoffSources->sourceIsCurrent($executionRequest, $plan, $task)) {
+        if (! $handoffSources->sourceIsCurrent($executionRequest, $plan, $task, $request)) {
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'candidate' => '以前のCompanion実行候補の根拠を現在確認できません。新しい候補から実行を準備してください。',
             ]);
