@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Plan;
+use App\Models\PlanArtifact;
 use App\Models\PlanMember;
 use App\Models\Task;
 use App\Models\User;
@@ -321,6 +322,36 @@ class DeveloperCodingAgentHandoffV578Test extends TestCase
         ]);
 
         $this->assertOldBriefWithheld($editor, $plan, $task);
+    }
+
+    public function test_github_connection_lineage_change_revokes_prepared_developer_brief(): void
+    {
+        [$user, $plan, $task] = $this->scenario();
+        $repo = PlanArtifact::query()->create([
+            'plan_id' => $plan->id,
+            'provider' => 'github',
+            'artifact_type' => 'repository',
+            'title' => 'Repository',
+            'url' => 'https://github.com/example/sample',
+            'metadata' => [
+                'github_app_connection' => [
+                    'status' => 'connected',
+                    'source_epoch' => 1,
+                    'installation_id' => 12345,
+                ],
+            ],
+        ]);
+        $this->confirmBrief($user, $plan, $task);
+
+        $repo->update(['metadata' => [
+            'github_app_connection' => [
+                'status' => 'disconnected',
+                'source_epoch' => 2,
+                'installation_id' => null,
+            ],
+        ]]);
+
+        $this->assertOldBriefWithheld($user, $plan, $task);
     }
 
     public function test_distribution_refuses_confirmed_developer_brief_after_source_revalidation_fails(): void
