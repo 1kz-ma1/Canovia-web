@@ -1,0 +1,39 @@
+name: Staging MCP Auth0 audience exact-SHA CI
+
+on:
+  push:
+    branches:
+      - staging/mcp-auth0-oidc-audience-20261013
+    paths:
+      - 'app/Services/McpJwtClaimConstraints.php'
+      - 'tests/Unit/McpJwtClaimConstraintsTest.php'
+      - 'tests/Feature/McpAuth0JwtTokenVerifierTest.php'
+      - '.github/workflows/staging-mcp-auth0-audience-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-stage-auth0:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl
+          tools: composer:v2
+          coverage: none
+      - name: Install reviewed locked dependencies without Composer scripts or plugins
+        run: |
+          composer validate --strict --no-interaction
+          composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+      - name: Lint isolated staging changes
+        run: |
+          php -l app/Services/McpJwtClaimConstraints.php
+          php -l tests/Unit/McpJwtClaimConstraintsTest.php
+          php -l tests/Feature/McpAuth0JwtTokenVerifierTest.php
+      - name: Signed JWT, claims, routing and MCP tool regressions
+        run: |
+          php artisan test tests/Unit/McpJwtClaimConstraintsTest.php tests/Feature/McpAuth0JwtTokenVerifierTest.php tests/Feature/McpAuth0JwtProviderRoutingTest.php tests/Feature/McpReadOnlyResourceTest.php --colors=never
