@@ -8,6 +8,7 @@ use App\Services\PlanCollaborationService;
 use App\Services\PlanActivityService;
 use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class PlanCollaborationController extends Controller
@@ -130,20 +131,26 @@ class PlanCollaborationController extends Controller
         PlanOwnershipService $ownership,
         PlanActivityService $activity,
     ) {
-        $ownership->authorizePlan($request, $plan);
-        abort_unless((int) $member->plan_id === (int) $plan->id, 404);
-
         $validated = $request->validate([
             'role' => ['required', Rule::in(PlanMember::ROLES)],
         ]);
 
-        $beforeRole = $member->role;
-        $member->update(['role' => $validated['role']]);
-        $activity->record($plan, $request->user(), 'member_role_changed', 'user', (int) $member->user_id, [
-            'before_role' => $beforeRole,
-            'after_role' => $validated['role'],
-            'member_name' => $member->user?->name,
-        ]);
+        DB::transaction(function () use ($request, $plan, $member, $ownership, $activity, $validated): void {
+            // Same Plan -> Member order as Companion commit validation.
+            // Recheck owner and membership relation after acquiring the locks.
+            $lockedPlan = Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
+            $ownership->authorizePlan($request, $lockedPlan);
+            $lockedMember = PlanMember::query()->whereKey($member->id)->lockForUpdate()->firstOrFail();
+            abort_unless((int) $lockedMember->plan_id === (int) $lockedPlan->id, 404);
+
+            $beforeRole = $lockedMember->role;
+            $lockedMember->update(['role' => $validated['role']]);
+            $activity->record($lockedPlan, $request->user(), 'member_role_changed', 'user', (int) $lockedMember->user_id, [
+                'before_role' => $beforeRole,
+                'after_role' => $validated['role'],
+                'member_name' => $lockedMember->user?->name,
+            ]);
+        }, 3);
 
         return redirect()->route('plans.collaboration.settings', $plan)
             ->with('status', 'メンバー権限を更新しました。');
@@ -156,14 +163,19 @@ class PlanCollaborationController extends Controller
         PlanOwnershipService $ownership,
         PlanActivityService $activity,
     ) {
-        $ownership->authorizePlan($request, $plan);
-        abort_unless((int) $member->plan_id === (int) $plan->id, 404);
-        $memberName = $member->user?->name;
-        $memberUserId = (int) $member->user_id;
-        $member->delete();
-        $activity->record($plan, $request->user(), 'member_removed', 'user', $memberUserId, [
-            'member_name' => $memberName,
-        ]);
+        DB::transaction(function () use ($request, $plan, $member, $ownership, $activity): void {
+            $lockedPlan = Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
+            $ownership->authorizePlan($request, $lockedPlan);
+            $lockedMember = PlanMember::query()->whereKey($member->id)->lockForUpdate()->firstOrFail();
+            abort_unless((int) $lockedMember->plan_id === (int) $lockedPlan->id, 404);
+
+            $memberName = $lockedMember->user?->name;
+            $memberUserId = (int) $lockedMember->user_id;
+            $lockedMember->delete();
+            $activity->record($lockedPlan, $request->user(), 'member_removed', 'user', $memberUserId, [
+                'member_name' => $memberName,
+            ]);
+        }, 3);
 
         return redirect()->route('plans.collaboration.settings', $plan)
             ->with('status', 'メンバーを共同計画から外しました。');

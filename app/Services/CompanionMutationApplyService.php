@@ -25,6 +25,7 @@ class CompanionMutationApplyService
         private readonly ExecutionRequestHandoffService $executionRequests,
         private readonly CompanionDerivedEvidenceSourceGuard $derivedSources,
         private readonly CompanionEntitlementCommitGuard $entitlementCommit,
+        private readonly CompanionMembershipCommitGuard $membershipCommit,
     ) {}
 
     /**
@@ -139,7 +140,19 @@ class CompanionMutationApplyService
 
             abort_unless((int) $locked->user_id === (int) $user->id, 404);
 
-            // Plan -> Task -> Candidate -> Product Grants -> Repository/Evidence.
+            // The selected Plan/Task/Candidate are already locked; re-query
+            // current collaboration membership instead of using cached
+            // PlanOwnershipService roles from an earlier UI/preflight read.
+            // Writing a Plan-scoped mutation requires Editor/Owner, whereas
+            // personal Future Memo still only needs Plan viewing authority.
+            $requiresEdit = $locked->type !== 'create_future_memo';
+            if (! $this->membershipCommit->canAccess($user, $livePlan, $requiresEdit)) {
+                throw ValidationException::withMessages([
+                    'candidate' => '共同Planの参加または編集権限が変更されました。内容を再確認してください。',
+                ]);
+            }
+
+            // Plan -> Task -> Candidate -> Member -> Product Grants -> Repository/Evidence.
             // The controller's preflight feature check is not a commit fence:
             // an admin may revoke the grant after that check. Do not mutate
             // or re-deliver AI instructions without freshly entitled access.

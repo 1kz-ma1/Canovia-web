@@ -26,6 +26,7 @@ class CompanionConversationService
         private readonly FutureMemoService $memories,
         private readonly CompanionDerivedEvidenceSourceGuard $derivedSources,
         private readonly CompanionEntitlementCommitGuard $entitlementCommit,
+        private readonly CompanionMembershipCommitGuard $membershipCommit,
     ) {}
 
     /**
@@ -165,6 +166,17 @@ class CompanionConversationService
             }
             if ($task) {
                 Task::query()->whereKey($task->id)->lockForUpdate()->first();
+            }
+
+            // The Plan and Task are locked. Serialize a concurrent member
+            // removal/role downgrade and reject a stale AI context before
+            // committing assistant text, proposals or Future Memories.
+            if (! $this->membershipCommit->canAccess($user, $plan)) {
+                throw new NativeAiExecutionException(
+                    '共同Planの参加権限が変更されました。現在の情報で再度確認してください。',
+                    'native_ai_target_changed',
+                    (int) $result['run_id'],
+                );
             }
 
             // Serialize existing paid-grant revocations with this AI-derived
