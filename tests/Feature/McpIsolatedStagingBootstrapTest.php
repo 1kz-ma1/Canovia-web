@@ -448,7 +448,8 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
     {
         $check = $this->guard(['CANOVIA_MCP_TOOLS_ENABLED' => 'true',
             'CANOVIA_STAGING_MCP_EXPLICITLY_APPROVED' => 'true']);
-        $this->assertTrue($check->isSuccessful(), $check->getErrorOutput());
+        // The previously permissive combination is no longer sufficient.
+        $this->assertSame(42, $check->getExitCode());
     }
 
     public function test_blueprint_has_no_auto_deploy_or_live_database_binding(): void
