@@ -20,7 +20,7 @@ Canoviaの複雑さを最初に説明しきるのではなく、ユーザーが�
 ### Goals
 
 - 登録前の訪問者でも、Canoviaの役割、現在利用可能な範囲、将来の方向性が短時間で理解できる。
-- 「診断を試す」または「自分で目標から始める」のどちらでも、本人が確認可能な**次の一歩の提案**に至る。
+- 診断・Goal Discovery・まず触ってみる、の入口を用意し、**目標/Plan作成も診断完了も初回利用の必須条件にしない**。診断/相談を選んだ人には本人が確認可能な次の一歩の候補を返す。
 - 完了後に希望者が結果や計画を保存し、後日のEarly Accessで**理解済みの状態を引き継げる**。保存同意を伴わないゲスト体験から勝手に公開Planを作らない。
 - AppのOverviewは常に本人の今日の行動を主役にし、Canoviaの開発ニュースに乗っ取られない。
 - Featureへの無料の「期待する」と、将来検討する任意の金銭的な「開発を応援する」を明確に分離する。
@@ -42,7 +42,7 @@ Canoviaの複雑さを最初に説明しきるのではなく、ユーザーが�
 | --- | --- | --- |
 | Public | `static-welcome/` にRenderの冷起動用Static Welcomeがある | Marketing/公開情報のIA、診断への入口。既存の待機・復帰挙動を壊さない |
 | App | Overview / My Workspace、Study / Development、Plan/Task/Record、初回導線 | 事前公開用の最小体験制御、将来情報と本人ワークスペースの分離 |
-| Personalization | V58.25 Bootstrap、Study/Development/unsureの本人回答とPlan Seed、既存Plan作成への接続 | ゲスト体験・保存への引継ぎ、説明文、招待導線の受入 |
+| Personalization | V58.25 Bootstrap、Study/Development/unsureの本人回答とPlan Seed、既存Plan作成への接続。診断はSkip可能 | ゲスト体験・保存への引継ぎと、**Skip後にPlan作成へ自動誘導しない非Plan経路**の受入 |
 | Action-grounded Plan Draft | V58.71–V58.76に根拠・本人承認の限定Slice | 自動フルロードマップ生成を標榜せず、事前公開では承認可能な提案だけ提示 |
 | Canovia Future | `GET /feedback`、`roadmap_features`、`roadmap_votes`、Support/取消、自由記述Feedback | マーケティング公開向けの安全な読み取り投影と情報の見せ方 |
 | Product Preview | `GET /product-preview`、L2でFree/Premium/Pro/Dev Pro Coming Soon表示 | 公開の約束や価格の誤認防止。Pre-Launchページとの文脈接続 |
@@ -68,12 +68,12 @@ Canoviaの複雑さを最初に説明しきるのではなく、ユーザーが�
 Proposed main navigation (具体URLは実装PRで決定):
 
 - **Canoviaとは** — 一言の価値提案、現実的な利用例、現在の利用可能範囲。
-- **無料で試す** — 診断と計画提案。診断スキップ→目標起点も同等の入口。
+- **無料で試す** — 「診断する」「Canoviaに相談する」「まず見てみる」の分岐。**どれも目標作成を入場条件にしない**。
 - **Canoviaのこれから** — 一般向けの公開ロードマップ。Canovia Futureの編集済み投影へ。
 - **開発ストーリー / Updates** — 何を改善したか、なぜ改善したか。機密や利用者固有データを出さない。
 - **利用状況 / サポート** — 先行公開である旨、プライバシー、問い合わせ、FAQ。
 
-Primary CTAは「無料で試す」1つ。Secondaryは「今できることを見る」。Coming Soon/未公開は誤って押せる主要CTAにしない。SNSからのリンクは該当する価値説明や更新記事に着地できる。
+Public SiteのPrimary CTAは「無料で試す」1つ。Secondaryは「今できることを見る」。アプリ入口では**診断 / 会話 / まず見てみるを対等な選択肢**とし、目標入力を強制するフォームへ暗黙遷移させない。Coming Soon/未公開は誤って押せる主要CTAにしない。SNSからのリンクは該当する価値説明や更新記事に着地できる。
 
 既存`static-welcome/`は現在、Render Freeの起動待ちとAppへの引渡しが責務。公開用LPそのものと同一視しない。Public Siteを作る際は、この待機・障害時の救済・既存アプリURLへの遷移を維持するか、別ホスト/経路に役割を分離する。ドメイン・SEO・静的配信方針は別の実装判断。
 
@@ -115,15 +115,18 @@ Primary CTAは「無料で試す」1つ。Secondaryは「今できることを�
 
 ## 4. Pre-Launch core journeys
 
-### Journey 1: 診断から計画提案へ
+### Journey 1: 任意の初回ルート — Planなしで入れる
 
-1. Public Siteから「無料で試す」を選ぶ。利用範囲・保存条件・所要入力の概要を説明。
-2. **「簡易診断を受ける」または「診断せず目標から作る」** を選択。選ばない人に職業・レベル・カテゴリ入力を過度に強制しない。
-3. 目的、現在地、必要なときだけ期間・行動可能な時間を取得。Study / Developmentの既存Bootstrapを優先再利用。未対応領域は無根拠な動的診断を作らず、共通の目標入力・最初の行動へフォールバック。
-4. 出所を「本人申告」「公式/確認済み」「観測結果」「推定」「未確認」に分けて扱う。簿記基礎12問のような限定診断を、資格合格判定・能力保証と表現しない。
-5. **編集できる計画案**を提示。最初の行動、理由、未確認事項、確認済み/未確定の区別を示す。複雑な全自動ロードマップ生成は約束しない。
-6. 「この計画を保存する」は**明示的な本人操作**。未認証時はログイン/登録後に権限付きの本人Planへ引き継ぐ。ゲスト下書きの保持期間・削除・端末境界は実装前に決定。
-7. 未保存で離脱する場合も正常終了。再訪時に本人の許可なく個人情報を復元・公開しない。
+1. Public Siteの「無料で試す」や直接アプリ入場からWelcomeへ。利用範囲・保存条件を説明し、**最初の目標/Planは不要**と明示する。
+2. **分岐A: 自分に合う使い方を知る** — V58.25 Personalization Bootstrap。Study / Development複数選択と「まだ分からない」、Skipを許容。必要な質問だけを出す。Plan Seedは任意の提案。
+3. **分岐B: Canoviaに相談する** — 既存のFree Goal Discovery / First Companion Conversationを可能な範囲で再利用。決まっていないことは未確認のまま扱い、会話中にGoal/Plan/Taskを無断確定しない。AI利用不可なら決定論的fallback。
+4. **分岐C: まず見てみる・使ってみる** — Plan/Goal入力なしでOverview等の許可済みSurfaceへ到達できる。公開案内、Inboxなど**Plan不要で実際に動く経路のみ**を提示。開放対象は実装時にroute/permission/empty stateをE2Eで検証し、存在しないPlanなし機能を約束しない。
+5. Aで回答した内容は「本人申告」「公式/確認済み」「観測結果」「推定」「未確認」を区別。簿記基礎12問等の限定診断を資格合格/能力保証にしない。
+6. A/BでPlan Seedが得られた場合は、理由と未確認事項が見える**編集可能な候補**を出せる。ただしSeed/Planを必ず作らせない。本人が明示承認した場合のみ従来Plan作成へ接続。
+7. 「保存」は明示的な本人操作。未ログイン利用と登録後の保存は権限・プライバシー・利用範囲を分離。ゲスト下書きの保持期限/削除/端末境界は個別実装前に決定。
+8. 診断Skip・Plan未作成・途中離脱・再訪は全て正常な状態。必要な時にだけ診断/Goal Discovery/Plan作成へ戻れる。
+
+**現行実装と要修正点（2026-10-13 source inspection）:** `FirstRunController::start` はL1以上の初回Welcome通過後に `personalization.show` へ遷移する。Personalization自体はSkip可能だが、`PersonalizationController::skip` は現在 `plans.create` へ遷移する。このため**「診断はSkip可能」だけでは「Planを作らず使い始められる」を満たさない**。初回画面は単一主CTAで、診断せずHomeへ進む明示選択もまだない。本章のA/B/C分岐は**今回の新規IA提案**であり、現行UIが実装済みであるとの主張ではない。旧7段階案内は自動復活させず、既存ユーザーや既存Planの復帰状態を壊さない。
 
 ### Journey 2: 既存利用者・再訪ユーザー
 
@@ -194,7 +197,7 @@ V41.5 CoinはEntitlementと独立した将来の応援・Gift・自己表現の�
 
 | Product-facing wave | 利用可能な価値 | 機能/権限の公開境界 | 依存するGate |
 | --- | --- | --- | --- |
-| **P0 Pre-Launch Discover** | Public Site、診断または目標起点の計画案プレビュー、公開ロードマップ閲覧 | 独立した明示的な限定プレビュー契約。**L0–L4の意味変更なし**。保存/登録と匿名閲覧を分離 | 安全なゲスト/認証、プライバシー・運用・端末受入 |
+| **P0 Pre-Launch Discover** | Public Site、**Planなし閲覧/最小体験**、任意診断・相談・計画案プレビュー、公開ロードマップ閲覧 | 独立した明示的な限定プレビュー契約。**L0–L4の意味変更なし**。保存/登録と匿名閲覧を分離 | 安全なゲスト/認証、プライバシー・運用・端末受入 |
 | **P1 Invitation Early Access** | 計画の実行、選択されたStudy/Development、Feedback | L1/L2の受入済み能力を招待/許可された利用者へ。Careerは別途L3 Beta | L0–L2の累積Release Gate、初回価値の実証 |
 | **P2 General Early Access** | 無料Core＋Study/Development＋L2 Product Preview | 一般Public L2はProduct Ownerが手動決定。Premium/Pro/Dev ProはComing Soon | 10件を含む最新の累積Manual Check、移行/バックアップ/復帰/サポート |
 | **P3 Expanded capabilities** | Evidenceに応じた高度化、選択的連携、Careerなど | 各機能の成熟度・Entitlement・同意を別々に判断 | 個別E2E/権限/費用/ストア条件 |
@@ -204,8 +207,8 @@ V41.5 CoinはEntitlementと独立した将来の応援・Gift・自己表現の�
 
 ### Pre-Launchで実装してよい最小範囲
 
-- 説明する → 試す → 計画案を見る → 任意で保存/先行登録、の1ループ。
-- 対象Study / Developmentの既存Personalizationを再利用。Careerは対応状況の正直な説明と将来/限定Betaの案内を優先し、不完全な診断を無理に出さない。
+- 説明する → **診断/会話/見るから自由に選ぶ** → できることを体験する → 必要なら計画案を確認/任意保存する、の1ループ。Plan作成/診断をMandatory Funnelにしない。
+- 対象Study / Developmentの既存Personalizationを**任意で再利用**。Careerは対応状況の正直な説明と将来/限定Betaの案内を優先し、不完全な診断を無理に出さない。Planなしで最初の価値を得られる具体経路は実装・実機検証してから公開する。
 - Freeの計画案は編集可能かつ本人確認付き。複数AI Agentによる高コスト計画生成や継続AI利用は約束しない。
 - L2 Product Preview（機能宣伝）と今回のPreview（利用前の体験）を言語的に区別する。
 
@@ -214,8 +217,8 @@ V41.5 CoinはEntitlementと独立した将来の応援・Gift・自己表現の�
 最小ファネル（Event命名やDB schemaは実装時に決め、**本書をもって計測実装済みとしない**）:
 
 1. Public Site閲覧（流入元は安全で粒度の粗い集計）
-2. 診断開始 / 目標直接入力
-3. 計画提案表示 / 途中離脱
+2. 初回入口選択（診断 / 会話 / 見る）およびPlan未作成での到達
+3. 任意の診断・計画提案表示 / 途中離脱
 4. 計画の編集・保存意向
 5. 登録後の同意を伴う保存完了
 6. 招待Early Accessでの最初の実行・再訪
@@ -237,7 +240,7 @@ Privacy:
 | --- | --- | --- | --- |
 | **IA-0** | Orchestrator / Experience | 本書と既存仕様の整合、公開Copy/命名の固定、現行導線棚卸し | 既存機能を未実装と誤認しない、Product Ownerが公開の原則を確認 |
 | **IA-1** | Experience / Public | Static Welcomeの起動救済維持とPublic Siteの情報構成/入口整理 | App起動待ち、SEO、低速時、スマホ、公開/非公開区別が成立 |
-| **IA-2** | Experience / Intelligence | 診断or目標→本人承認可能なPlan Seed→任意保存、Pre-Launch gate | ゲスト/ログイン/戻る/再開、誤計画を確定しない、登録を強制しない |
+| **IA-2** | Experience / Intelligence | **任意の診断 / Free Goal Discovery / Planなし利用**を分岐させる。希望時のみ本人承認可能なPlan Seed→任意保存、Pre-Launch gate | Plan/Goal作成なしで到達可能、SkipでPlan createへ自動遷移しない、ゲスト/ログイン/戻る/再開、本人確認、登録を強制しない |
 | **IA-3** | Experience / Future | V40.7既存Roadmapを安全な公開Viewへ整理 | Hidden/internal候補や秘匿情報を直接URL/APIからも漏らさない |
 | **IA-4** | Future / Feedback | 無料Support・取消・自由記述の再利用、表示/運用の整理 | 1 actor/候補、CSRF、rate limit、不正連打、閾値誤認防止 |
 | **IA-5** | Platform / Experience | 招待型の段階公開とL0–L2 Release Review、iOS/Web E2E | 対象外機能への直接アクセス拒否、downgrade時データ保持 |
@@ -250,6 +253,7 @@ IA-1〜IA-4のうち、最小Pre-Launchに不要な装飾/アニメーション/
 
 ## 10. Acceptance matrix for implementation
 
+- **初回の任意性**: 診断・Goal/Plan作成・機能連携は初回アクセスの必須条件にしない。Skip / まず見てみるから、許可されたHomeと実利用可能なPlan不要の最小価値に到達できる。現在の`PersonalizationController::skip → plans.create` は差分として修正・回帰検証する。
 - **内容の誠実性**: Current/Beta/Coming Soon/Conceptの表現が本番実態と一致する。機能提供日・価格・必要能力・合格確率などを創作しない。
 - **独立した場所**: 既存の個人`My Roadmap`と製品`Canovia Roadmap`が混同されない。Overviewの主情報が広告・Supportで埋まらない。
 - **匿名性/権限**: GuestのPreview/Supportが別ゲストや別UserのContext/Planへ到達できない。ログイン後の引継ぎは本人の明示操作のみ。
