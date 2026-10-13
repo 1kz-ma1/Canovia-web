@@ -349,6 +349,7 @@ final class StudyScopeAiCommitFenceG3Test extends TestCase
         [$actor, $plan, $source, $capture] = $this->scenario();
         app(StudyScopeCaptureAnalysisService::class)->analyze($capture, $plan, $actor->id);
         $capture->update(['status' => 'captured']);
+        $this->assertSame('captured', $capture->fresh()->status);
 
         $this->assertConfirmationRejected($actor, $plan, $capture, $source, 'captured');
     }
