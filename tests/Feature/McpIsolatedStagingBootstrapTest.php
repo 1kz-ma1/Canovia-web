@@ -536,6 +536,51 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
         );
     }
 
+    public function test_plan_consent_pilot_boot_requires_link_and_preserves_mcp_lockdown(): void
+    {
+        $pinned = [
+            'CANOVIA_STAGING_DB_MODE' => 'render_postgres',
+            'CANOVIA_STAGING_POSTGRES_ID' => 'dpg-db43rbbncjis73bmigi0-a',
+            'CANOVIA_STAGING_POSTGRES_USER' => 'canovia_mcp_staging_db_user',
+            'DB_CONNECTION' => 'pgsql',
+            'DB_DATABASE' => 'canovia_mcp_staging_db',
+            'DB_URL' => 'postgresql://canovia_mcp_staging_db_user:synthetic-ci-only'
+                .'@dpg-db43rbbncjis73bmigi0-a:5432/canovia_mcp_staging_db',
+            'CANOVIA_STAGING_WEB_ACCESS_ENABLED' => 'true',
+            'CANOVIA_STAGING_WEB_ACCESS_EXPLICITLY_APPROVED' => 'true',
+            'CANOVIA_STAGING_LOGIN_PILOT_ENABLED' => 'true',
+            'CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED' => 'true',
+            'CANOVIA_STAGING_PLAN_CONSENT_PILOT_ENABLED' => 'true',
+            'CANOVIA_MCP_DISCOVERY_ENABLED' => 'true',
+            'CANOVIA_MCP_ACCOUNT_LINK_ENABLED' => 'true',
+            'CANOVIA_MCP_AUTH0_JWT_VERIFICATION_ENABLED' => 'true',
+            'CANOVIA_MCP_TOKEN_VERIFICATION_DRIVER' => 'auth0_jwt',
+            'CANOVIA_MCP_PLAN_CONSENT_ENABLED' => 'true',
+        ];
+
+        $this->assertTrue($this->guard($pinned)->isSuccessful());
+
+        foreach ([
+            ['CANOVIA_STAGING_PLAN_CONSENT_PILOT_ENABLED' => 'false'],
+            ['CANOVIA_STAGING_PLAN_CONSENT_PILOT_ENABLED' => 'invalid'],
+            ['CANOVIA_STAGING_ACCOUNT_LINK_PILOT_ENABLED' => 'false'],
+            ['CANOVIA_MCP_PLAN_CONSENT_ENABLED' => 'false'],
+            ['CANOVIA_MCP_TOOLS_ENABLED' => 'true'],
+            ['CANOVIA_MCP_DELEGATED_POLICY_ENABLED' => 'true'],
+            ['CANOVIA_MCP_TOKEN_INTROSPECTION_ENABLED' => 'true'],
+            ['CANOVIA_MCP_AUTH0_JWT_VERIFICATION_ENABLED' => 'false'],
+        ] as $bad) {
+            $result = $this->guard([...$pinned, ...$bad]);
+            $this->assertSame(42, $result->getExitCode(), implode(',', array_keys($bad)));
+            $this->assertStringContainsString('BLOCKED', $result->getErrorOutput());
+        }
+
+        // A closed stage is never permitted to arm the consent pilot.
+        $this->assertSame(42, $this->guard([
+            'CANOVIA_STAGING_PLAN_CONSENT_PILOT_ENABLED' => 'true',
+        ])->getExitCode());
+    }
+
     private function guard(array $changes = []): Process
     {
         $env = [
