@@ -24,7 +24,7 @@ final class CompanionMembershipCommitGuard
      * It is not authorization on its own. A new row has a different database
      * identity even when the same actor rejoins with the same role.
      *
-     * @return array{scope:string, membership_id?:int, role?:string, owner_user_id?:int}
+     * @return array{scope:string, plan_epoch?:int, membership_id?:int, membership_epoch?:int, role?:string, owner_user_id?:int}
      */
     public function capture(User $actor, ?Plan $selectedPlan): array
     {
@@ -38,7 +38,11 @@ final class CompanionMembershipCommitGuard
         }
 
         if ($plan->user_id !== null && (int) $plan->user_id === (int) $actor->id) {
-            return ['scope' => 'owner', 'owner_user_id' => (int) $actor->id];
+            return [
+                'scope' => 'owner',
+                'owner_user_id' => (int) $actor->id,
+                'plan_epoch' => (int) $plan->authorization_epoch,
+            ];
         }
 
         if (! $plan->is_collaborative) {
@@ -55,6 +59,8 @@ final class CompanionMembershipCommitGuard
                 'scope' => 'member',
                 'membership_id' => (int) $member->id,
                 'role' => (string) $member->role,
+                'plan_epoch' => (int) $plan->authorization_epoch,
+                'membership_epoch' => (int) $member->authorization_epoch,
             ]
             : ['scope' => 'unavailable'];
     }
@@ -93,9 +99,23 @@ final class CompanionMembershipCommitGuard
             ->first();
 
         if ($plan->user_id !== null && (int) $plan->user_id === (int) $actor->id) {
-            $identity = ['scope' => 'owner', 'owner_user_id' => (int) $actor->id];
+            $identity = [
+                'scope' => 'owner',
+                'owner_user_id' => (int) $actor->id,
+                'plan_epoch' => (int) $plan->authorization_epoch,
+            ];
 
-            return $expectedIdentity === null || $identity === $expectedIdentity;
+            if ($expectedIdentity === null || $identity === $expectedIdentity) {
+                return true;
+            }
+
+            // Prior #533 personal Owner candidates carried only owner id.
+            // Preserve legacy private-Plan behavior. Shared Plan legacy
+            // approval is separately blocked before calling this guard.
+            return ! $plan->is_collaborative
+                && $expectedIdentity === [
+                    'scope' => 'owner', 'owner_user_id' => (int) $actor->id,
+                ];
         }
 
         if (! $plan->is_collaborative || $member === null) {
@@ -112,6 +132,8 @@ final class CompanionMembershipCommitGuard
             'scope' => 'member',
             'membership_id' => (int) $member->id,
             'role' => (string) $member->role,
+            'plan_epoch' => (int) $plan->authorization_epoch,
+            'membership_epoch' => (int) $member->authorization_epoch,
         ];
 
         return $expectedIdentity === null || $identity === $expectedIdentity;
