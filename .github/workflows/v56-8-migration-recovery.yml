@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/v56-8-migration-recovery
+      - production
   pull_request:
     branches:
       - main
@@ -18,6 +19,7 @@ jobs:
         run: |
           php -l scripts/ops/release_488_production_env_preflight.php
           python3 -m unittest discover -s tests/ci -p 'test_release_488_production_env_preflight.py' -v
+          python3 -m unittest discover -s tests/ci -p 'test_production_checks_pass_workflow_contract.py' -v
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
