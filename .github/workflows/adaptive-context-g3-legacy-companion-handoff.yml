@@ -6,6 +6,8 @@ on:
     paths:
       - 'app/Services/CompanionDerivedEvidenceSourceGuard.php'
       - 'app/Services/ExecutionRequestHandoffService.php'
+      - 'app/Services/DevelopmentCodingAgentHandoffService.php'
+      - 'tests/Feature/DeveloperCodingAgentHandoffV578Test.php'
       - 'app/Http/Controllers/ExecutionOrchestrationController.php'
       - 'app/Services/ExecutionDistributionService.php'
       - 'app/Services/ExecutionGitHubHandoffService.php'
@@ -35,6 +37,8 @@ jobs:
         run: |
           php -l app/Services/CompanionDerivedEvidenceSourceGuard.php
           php -l app/Services/ExecutionRequestHandoffService.php
+          php -l app/Services/DevelopmentCodingAgentHandoffService.php
+          php -l tests/Feature/DeveloperCodingAgentHandoffV578Test.php
           php -l app/Http/Controllers/ExecutionOrchestrationController.php
           php -l app/Services/ExecutionDistributionService.php
           php -l app/Services/ExecutionGitHubHandoffService.php
