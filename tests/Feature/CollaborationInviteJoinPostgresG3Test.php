@@ -132,6 +132,9 @@ final class CollaborationInviteJoinPostgresG3Test extends TestCase
             $rival->prepare('SELECT id FROM plans WHERE id = :id FOR UPDATE')
                 ->execute(['id' => $plan->id]);
             DB::statement("SET lock_timeout = '250ms'");
+            // Feature HTTP tests ordinarily turn QueryException into a 500
+            // response; we need to assert the PostgreSQL 55P03 directly.
+            $this->withoutExceptionHandling();
             try {
                 $this->actingAs($owner)
                     ->post(route('plans.collaboration.regenerate', $plan));
