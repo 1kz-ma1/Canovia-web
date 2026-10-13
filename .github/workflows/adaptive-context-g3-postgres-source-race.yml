@@ -84,6 +84,8 @@ jobs:
       - name: Independent PostgreSQL sessions membership removal and role downgrade race
         run: php artisan test tests/Feature/CompanionMembershipRevocationPostgresG3Test.php --stop-on-failure
       - name: Direct SQL authorization epoch trigger regression (PostgreSQL 16)
-        run: php artisan test tests/Feature/AuthorizationEpochDatabaseTriggerG3Test.php --stop-on-failure
+        run: |
+          php artisan migrate --force --no-interaction
+          php artisan test tests/Feature/AuthorizationEpochDatabaseTriggerG3Test.php --stop-on-failure
       - name: Independent PostgreSQL sessions invitation join and revoke race
         run: php artisan test tests/Feature/CollaborationInviteJoinPostgresG3Test.php --stop-on-failure
