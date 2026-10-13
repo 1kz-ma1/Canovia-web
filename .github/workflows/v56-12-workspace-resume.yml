@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/v56-12-workspace-resume-and-session-scope
+      - production
   pull_request:
     branches:
       - main
