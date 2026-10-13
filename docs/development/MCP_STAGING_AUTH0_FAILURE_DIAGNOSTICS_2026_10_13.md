@@ -16,6 +16,16 @@ User retested the Auth0/GitHub link in a separate Safari private session after d
 - The controller categorizes starting preflight, callback config/session/state/issuer/IdP error/code, token rejection, subject fingerprint, consent plan and final confirm. The provider adds bounded categorization for metadata, token endpoint transport/HTTP, token response schema and JWT verifier rejection.
 - No diagnostic codes are persisted to the Canovia database or exposed through the stage account page. Read them through private Render logs only.
 
+## Concrete Auth0 interoperability hypothesis and conservative correction
+
+Auth0's default tenant profile uses the OAuth `audience` request parameter to select the custom API when issuing an API JWT. The account-link authorization URL previously supplied **only** RFC 8707 `resource`. When Resource Parameter Compatibility Profile is disabled, Auth0 may ignore `resource` as the audience selector and issue an opaque/userinfo token or fail authorization; then Canovia's strict API JWT verification rejects the flow. This is plausible, **not yet confirmed** by an observed callback or trusted JWT.
+
+The first-party Auth0 Link authorization URL now additionally supplies `audience` equal to the *same operator-pinned* `resource`. Only `auth0_jwt` verification mode is affected; legacy introspection providers still receive the previous exact `resource`-only request. Both identifiers are server-side and identical; no additional scopes or privileges are requested, and issuer/audience/client/scope/JWKS checks are retained. Auth0 explicitly permits both values and selects `audience` first if both are present. The third-party ChatGPT/CIMD flow still requires its own RFC 8707 compatibility and a later separate acceptance.
+
+Official support:
+- https://support.auth0.com/center/s/article/mcp-audience-error-with-auth0
+- https://auth0.github.io/node-auth0/variables/index.Management.TenantSettingsResourceParameterProfile.html
+
 ## Expected acceptance
 
 1. Run the new `McpStagingOAuthFailureDiagnosticTest`, original `McpOAuthAccountLinkTest` and stage/Plan-consent regressions; ensure syntax/CI success and no user-visible sensitive diagnostic.
