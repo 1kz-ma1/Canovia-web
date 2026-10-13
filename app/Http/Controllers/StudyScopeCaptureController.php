@@ -281,8 +281,12 @@ class StudyScopeCaptureController extends Controller
         // excerpts or writing authoritative StudyScopeItems. This also
         // rejects a concurrent reanalysis/revocation without partial writes.
         DB::transaction(function () use ($capture, $plan, $request, $validated, $commitFence) {
-            $usesDraft = collect($validated['items'] ?? [])
-                ->contains(fn ($item) => isset($item['draft_index']));
+            // Inspect the original submitted indices as well as validated
+            // fields: an explicit draft reference never counts as manual
+            // entry simply because a value was filtered by validation.
+            $usesDraft = collect($request->input('items', []))
+                ->contains(fn ($item) => is_array($item)
+                    && array_key_exists('draft_index', $item));
             $liveCapture = $commitFence->assertCanConfirm(
                 $capture, $plan, $request->user()?->id, $usesDraft,
             );
