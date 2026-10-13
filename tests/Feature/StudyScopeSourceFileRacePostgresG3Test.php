@@ -66,6 +66,9 @@ final class StudyScopeSourceFileRacePostgresG3Test extends TestCase
     {
         [$owner, $plan, $source, $capture] = $this->scenario();
         $rival = $this->rival();
+        // Without this, Laravel converts the expected lock timeout into
+        // an HTTP error response and the test cannot inspect SQLSTATE 55P03.
+        $this->withoutExceptionHandling();
         $rival->beginTransaction();
 
         try {
