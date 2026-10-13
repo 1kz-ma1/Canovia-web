@@ -74,7 +74,9 @@ final class McpStagingAuthFailureDiagnosticTest extends TestCase
         foreach ([
             [['iss' => 'https://wrong.auth0.com/'], 'jwt_claims_issuer'],
             [['aud' => [self::ISSUER.'userinfo']], 'jwt_claims_audience'],
-            [['azp' => 'foreign-client'], 'jwt_claims_client'],
+            [['azp' => 'foreign-client'], 'jwt_client_azp_mismatch'],
+            [['client_id' => self::CLIENT], 'jwt_claims_other'],
+            [['client_id' => 'foreign-client'], 'jwt_client_both_present_wrong'],
             [['scope' => 'openid'], 'jwt_claims_scope'],
             [['exp' => self::NOW - 1], 'jwt_claims_time'],
             [['sub' => ''], 'jwt_claims_subject'],
@@ -86,6 +88,19 @@ final class McpStagingAuthFailureDiagnosticTest extends TestCase
             $this->assertSame($expected, $category);
             $this->assertStringNotContainsString('foreign-client', $category);
         }
+
+        $missing = $claims;
+        unset($missing['azp']);
+        $this->assertSame('jwt_client_missing',
+            McpStagingAuthFailureDiagnostic::classifyVerifiedClaims(
+                $missing, self::ISSUER, self::RESOURCE, self::CLIENT, self::NOW,
+            ));
+        $rfcWrong = $missing;
+        $rfcWrong['client_id'] = 'foreign-client';
+        $this->assertSame('jwt_client_client_id_mismatch',
+            McpStagingAuthFailureDiagnostic::classifyVerifiedClaims(
+                $rfcWrong, self::ISSUER, self::RESOURCE, self::CLIENT, self::NOW,
+            ));
 
         $this->assertSame('jwt_claims_other',
             McpStagingAuthFailureDiagnostic::classifyVerifiedClaims(
