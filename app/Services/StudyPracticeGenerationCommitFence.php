@@ -10,6 +10,7 @@ use App\Models\PlanMember;
 use App\Models\StudyPracticeAttempt;
 use App\Models\StudyPracticeSession;
 use App\Models\Task;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -21,6 +22,7 @@ final class StudyPracticeGenerationCommitFence
     public function __construct(
         private readonly NativeAiPurposeAuthorizationGuard $purposeGuard,
         private readonly PlanCategoryProfileService $categoryProfiles,
+        private readonly CompanionMembershipCommitGuard $membershipCommit,
     ) {}
 
     public function capture(Plan $plan, Task $task, int $userId): string
@@ -62,6 +64,13 @@ final class StudyPracticeGenerationCommitFence
                 ->where('role', PlanMember::ROLE_EDITOR)
                 ->exists());
         if (!$canEdit) {
+            $this->deny('native_ai_target_changed', $runId);
+        }
+
+        // Plan/Task are already locked. Serialize membership revocation
+        // with the durable generation commit by locking the same member row.
+        $actor = User::query()->find($userId);
+        if ($actor === null || ! $this->membershipCommit->canAccess($actor, $currentPlan, true)) {
             $this->deny('native_ai_target_changed', $runId);
         }
 
@@ -225,7 +234,18 @@ final class StudyPracticeGenerationCommitFence
             'plan' => $plan->getAttributes(),
             'task' => $task->getAttributes(),
             'attempts' => $attempts,
+            // The AI's membership lifetime is part of the source signature.
+            'membership_provenance' => $this->authorizationProvenance($plan, $userId),
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    }
+
+    private function authorizationProvenance(Plan $plan, int $userId): array
+    {
+        $actor = User::query()->find($userId);
+
+        return $actor === null
+            ? ['scope' => 'unavailable']
+            : $this->membershipCommit->capture($actor, $plan);
     }
 
     private function deny(string $code, ?int $runId): never
