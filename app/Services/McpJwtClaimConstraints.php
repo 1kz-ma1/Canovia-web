@@ -3,15 +3,11 @@
 namespace App\Services;
 
 /**
- * Security-policy half of a FUTURE Auth0 JWT/JWKS access-token verifier.
+ * Claim-policy layer for Auth0 access tokens after independent RS256/JWKS
+ * signature verification. NEVER authorize decoded but unverified claims.
  *
- * IMPORTANT: These are ONLY the claim checks to perform AFTER a trusted JWT
- * library has verified the RS256 signature, trusted JWKS key ID, and token
- * header/profile. NEVER pass decoded/unverified JWT payloads to authorization.
- * This class is intentionally not connected to any HTTP route or Plan policy.
- *
- * A reviewed cryptographic verifier and independent identity/Plan grants are
- * required before any verified principal may be constructed.
+ * Signature, trusted issuer, exact MCP resource, approved OAuth client, scopes,
+ * token lifetime, linked identity and fresh per-Plan consent remain mandatory.
  */
 final class McpJwtClaimConstraints
 {
@@ -48,11 +44,21 @@ final class McpJwtClaimConstraints
             return false;
         }
 
-        // A multi-element audience (including Auth0 /userinfo) is not
-        // permitted by the existing one-target-resource policy.
+        // Auth0 can issue an RS256 API token for BOTH the requested custom API
+        // and its issuer-owned /userinfo endpoint when OpenID Connect is used.
+        // Accept only that exact documented pair (in either order), never an
+        // arbitrary audience list or a /userinfo-only token. This is called
+        // ONLY after signature and issuer verification by the trusted verifier.
         $audience = $claims['aud'] ?? null;
-        if ($audience !== $expectedResource
-            && $audience !== [$expectedResource]) {
+        $userinfoAudience = $expectedIssuer.'userinfo';
+        $singleResource = $audience === $expectedResource
+            || $audience === [$expectedResource];
+        $auth0OpenIdPair = is_array($audience)
+            && ($audience === [$expectedResource, $userinfoAudience]
+                || $audience === [$userinfoAudience, $expectedResource])
+            && is_string($claims['scope'] ?? null)
+            && in_array('openid', explode(' ', $claims['scope']), true);
+        if (! $singleResource && ! $auth0OpenIdPair) {
             return false;
         }
 
