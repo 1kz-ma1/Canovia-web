@@ -14,6 +14,7 @@ final class ExecutionOrchestrationContextService
     public function __construct(
         private readonly CoreContextService $core,
         private readonly GitHubTaskEvidenceReuseGuard $evidenceGuard,
+        private readonly CompanionMembershipCommitGuard $membershipCommit,
     ) {}
 
     /**
@@ -179,9 +180,21 @@ final class ExecutionOrchestrationContextService
             ],
         ];
 
+        // The Packet can outlive the provider request in a session or a
+        // multi-target bundle. Bind its existing fingerprint to the acting
+        // Owner/Member generation, without exposing member identities or
+        // authorization epochs to AI prompts, sessions or view templates.
+        // A role ABA or remove/rejoin must invalidate even identical Context.
+        $actor = $request->user();
+        $authorization = $actor
+            ? $this->membershipCommit->capture($actor, $canonicalPlan)
+            : ['scope' => 'guest'];
         $snapshot['context_fingerprint'] = hash(
             'sha256',
-            (string) json_encode($snapshot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            (string) json_encode([
+                'context' => $snapshot,
+                'authorization' => $authorization,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         );
 
         return $snapshot;
