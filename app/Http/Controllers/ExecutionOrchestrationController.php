@@ -43,7 +43,7 @@ final class ExecutionOrchestrationController extends Controller
         $state = $request->session()->get($this->sessionKey($plan, $task), []);
         $handoffSourceStale = is_array($state['execution_request'] ?? null)
             && ! $handoffSources->sourceIsCurrent(
-                $state['execution_request'], $plan, $task,
+                $state['execution_request'], $plan, $task, $request,
             );
         if ($handoffSourceStale) {
             // Drop only session-scoped stale executable projections; the
@@ -205,7 +205,7 @@ final class ExecutionOrchestrationController extends Controller
             ? $existingState['execution_request']
             : null;
 
-        if (! $handoffSources->sourceIsCurrent($executionRequest, $plan, $task)) {
+        if (! $handoffSources->sourceIsCurrent($executionRequest, $plan, $task, $request)) {
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'candidate' => '以前のCompanion実行候補の根拠を現在確認できません。新しい候補から実行を準備してください。',
             ]);
