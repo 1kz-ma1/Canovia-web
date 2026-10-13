@@ -221,6 +221,20 @@ final class McpAuth0JwtTokenVerifierTest extends TestCase
             'scope' => 'canovia.development.read',
         ])));
 
+        // Signed tokens with BOTH claims are accepted only if each equals
+        // the same allowlisted OAuth client; conflicting signatures are not
+        // enough for authorization.
+        $this->assertNotNull($this->verifier()->verify($this->token([
+            'client_id' => self::CHATGPT_INTERNAL_CLIENT,
+        ])));
+        $this->assertNull($this->verifier()->verify($this->token([
+            'client_id' => 'foreign-client',
+        ])));
+        $this->assertNull($this->verifier()->verify($this->token([
+            'azp' => 'foreign-client',
+            'client_id' => self::CHATGPT_INTERNAL_CLIENT,
+        ])));
+
         $rfc9068 = $this->validClaims();
         unset($rfc9068['azp']);
         $rfc9068['client_id'] = self::CHATGPT_INTERNAL_CLIENT;
