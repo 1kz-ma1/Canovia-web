@@ -233,6 +233,90 @@ final class CompanionMembershipRevocationPostgresG3Test extends TestCase
         $this->assertNull($thread->fresh()->last_message_at);
     }
 
+    public function test_old_collaborative_candidate_without_origin_proof_is_read_only_even_for_current_editor(): void
+    {
+        [, $member, $plan, $task, $candidate] = $this->scenario();
+        $candidate->update(['metadata' => [
+            'source' => 'canovia_companion',
+            'source_provenance' => ['version' => 1, 'github_evidence' => []],
+        ]]);
+        $preview = app(CompanionMutationApplyService::class)->reviewPreview($candidate->fresh());
+
+        $this->assertTrue($preview['membership_revalidation_required']);
+        $this->assertSame('Original note', $task->fresh()->next_action_note);
+        $this->expectApplyDenied($this->requestFor($member), $candidate->fresh());
+        $this->assertSame('pending', $candidate->fresh()->status);
+        $this->assertNull($candidate->fresh()->apply_request_id);
+        $this->assertSame('Original note', $task->fresh()->next_action_note);
+        $this->assertSame(0, DB::table('companion_mutation_apply_audits')->count());
+    }
+
+    public function test_old_shared_owner_candidate_cannot_bypass_missing_origin_proof(): void
+    {
+        [$owner, $member, $plan, , $candidate] = $this->scenario();
+        // A historic candidate may have been created while the actor was
+        // a collaborator, then promoted to owner. Current ownership cannot
+        // reconstruct its original generation-time permission.
+        $candidate->update([
+            'user_id' => $owner->id,
+            'metadata' => [
+                'source' => 'canovia_companion',
+                'source_provenance' => ['version' => 1, 'github_evidence' => []],
+            ],
+        ]);
+        $this->expectApplyDenied($this->requestFor($owner), $candidate->fresh());
+        $this->assertSame('pending', $candidate->fresh()->status);
+    }
+
+    public function test_old_collaborative_execution_handoff_cannot_republish_session_after_apply(): void
+    {
+        [, $member, $plan, $task, $candidate] = $this->scenario();
+        $originalApplyId = (string) Str::uuid();
+        $candidate->update([
+            'type' => 'prepare_execution_request',
+            'status' => 'applied',
+            'apply_request_id' => $originalApplyId,
+            'applied_target_type' => 'execution_request',
+            'applied_target_id' => $task->id,
+            'metadata' => [
+                'source' => 'canovia_companion',
+                'source_provenance' => ['version' => 1, 'github_evidence' => []],
+            ],
+        ]);
+        $preview = app(CompanionMutationApplyService::class)->reviewPreview($candidate->fresh());
+        $this->assertTrue($preview['membership_revalidation_required']);
+
+        try {
+            app(CompanionMutationApplyService::class)->apply(
+                $this->requestFor($member), $candidate->fresh(), $originalApplyId,
+            );
+            $this->fail('Legacy shared-Plan Execution must not republish a recovered handoff.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('candidate', $exception->errors());
+        }
+        $this->assertSame('applied', $candidate->fresh()->status);
+        $this->assertSame($originalApplyId, $candidate->fresh()->apply_request_id);
+        $this->assertSame('Original note', $task->fresh()->next_action_note);
+    }
+
+    public function test_legacy_pending_private_plan_proposal_keeps_existing_behavior(): void
+    {
+        [$owner, $member, $plan, $task, $candidate] = $this->scenario();
+        $plan->update(['user_id' => $member->id, 'is_collaborative' => false]);
+        $candidate->update(['metadata' => [
+            'source' => 'canovia_companion',
+            'source_provenance' => ['version' => 1, 'github_evidence' => []],
+        ]]);
+
+        $preview = app(CompanionMutationApplyService::class)->reviewPreview($candidate->fresh());
+        $this->assertFalse($preview['membership_revalidation_required']);
+        $applied = app(CompanionMutationApplyService::class)->apply(
+            $this->requestFor($member), $candidate->fresh(), (string) Str::uuid(),
+        );
+        $this->assertFalse($applied['already_applied']);
+        $this->assertSame('Human approved note', $task->fresh()->next_action_note);
+    }
+
     public function test_removed_and_rejoined_editor_has_new_identity_not_old_ai_authority(): void
     {
         [, $member, $plan, $task, $candidate, $oldMember] = $this->scenario();
@@ -298,6 +382,12 @@ final class CompanionMembershipRevocationPostgresG3Test extends TestCase
     {
         [, $member, $plan, $task, $legacyCandidate, $membership, $thread] = $this->scenario();
         $this->fakeCompanionOutput('Human approved note');
+        // Simulate a pre-#533 candidate with no historical role proof: it
+        // must not suppress a fresh safe proposal despite identical payload.
+        $legacyCandidate->update(['metadata' => [
+            'source' => 'canovia_companion',
+            'source_provenance' => ['version' => 1, 'github_evidence' => []],
+        ]]);
 
         $result = app(CompanionConversationService::class)->send(
             $thread, $member, 'Please review this Plan', (string) Str::uuid(), $plan, $task,
@@ -506,6 +596,11 @@ final class CompanionMembershipRevocationPostgresG3Test extends TestCase
             'metadata' => [
                 'source' => 'canovia_companion',
                 'source_provenance' => ['version' => 1, 'github_evidence' => []],
+                'membership_provenance' => [
+                    'scope' => 'member',
+                    'membership_id' => (int) $membership->id,
+                    'role' => PlanMember::ROLE_EDITOR,
+                ],
             ],
         ]);
 
