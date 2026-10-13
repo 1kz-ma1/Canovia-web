@@ -23,6 +23,11 @@ on:
       - 'app/Services/ExecutionOrchestrationContextService.php'
       - 'app/Http/Controllers/ExecutionOrchestrationController.php'
       - 'tests/Feature/ExecutionPacketAiCommitFenceG3Test.php'
+      - 'app/Services/ExecutionRequestHandoffService.php'
+      - 'app/Services/DevelopmentCodingAgentHandoffService.php'
+      - 'app/Services/ExecutionGitHubHandoffService.php'
+      - 'app/Services/ExecutionDistributionService.php'
+      - 'tests/Feature/DeveloperCodingAgentHandoffV578Test.php'
       - 'tests/Feature/InboxAiSuggestionCommitFenceG3Test.php'
       - 'tests/Feature/StudyPracticeGenerationCommitFenceG3Test.php'
       - 'tests/Feature/StudyAssessmentAiCommitFenceG3Test.php'
@@ -101,6 +106,11 @@ jobs:
           php -l app/Services/ExecutionOrchestrationContextService.php
           php -l app/Http/Controllers/ExecutionOrchestrationController.php
           php -l tests/Feature/ExecutionPacketAiCommitFenceG3Test.php
+          php -l app/Services/ExecutionRequestHandoffService.php
+          php -l app/Services/DevelopmentCodingAgentHandoffService.php
+          php -l app/Services/ExecutionGitHubHandoffService.php
+          php -l app/Services/ExecutionDistributionService.php
+          php -l tests/Feature/DeveloperCodingAgentHandoffV578Test.php
           php -l tests/Feature/StudyPracticeGenerationCommitFenceG3Test.php
           php -l tests/Feature/StudyAssessmentAiCommitFenceG3Test.php
           php -l app/Models/Plan.php
@@ -135,5 +145,7 @@ jobs:
         run: php artisan test tests/Feature/StudyScopeAiCommitFenceG3Test.php --stop-on-failure
       - name: Execution Packet authorization epochs on PostgreSQL 16
         run: php artisan test tests/Feature/ExecutionPacketAiCommitFenceG3Test.php --stop-on-failure
+      - name: Developer Brief handoff epoch and source lineage on PostgreSQL 16
+        run: php artisan test tests/Feature/DeveloperCodingAgentHandoffV578Test.php --stop-on-failure
       - name: Independent PostgreSQL sessions invitation join and revoke race
         run: php artisan test tests/Feature/CollaborationInviteJoinPostgresG3Test.php --stop-on-failure
