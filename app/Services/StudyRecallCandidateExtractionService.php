@@ -154,8 +154,9 @@ class StudyRecallCandidateExtractionService
                 // collision must never retrospectively sign an old row.
                 if ($newCandidateIds !== []) {
                     StudyRecallCandidate::query()->whereIn('id', $newCandidateIds)
-                        ->update(['review_provenance' => $this->reviewFence->provenance(
-                            $source, $authorization,
+                        ->update(['review_provenance' => json_encode(
+                            $this->reviewFence->provenance($source, $authorization),
+                            JSON_THROW_ON_ERROR,
                         )]);
                 }
 
