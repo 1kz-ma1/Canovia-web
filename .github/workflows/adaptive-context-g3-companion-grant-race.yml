@@ -53,7 +53,7 @@ jobs:
           php -l app/Services/CompanionMutationApplyService.php
           php -l app/Services/CompanionConversationService.php
           php -l tests/Feature/CompanionGrantRevocationPostgresG3Test.php
-      - name: Independent PostgreSQL sessions: expiry, delete, commit ordering
+      - name: "Independent PostgreSQL sessions: expiry, delete, commit ordering"
         run: php artisan test tests/Feature/CompanionGrantRevocationPostgresG3Test.php --stop-on-failure
       - name: Existing Companion AI persistence and approved mutation regressions
         run: |
