@@ -28,9 +28,9 @@ def xml(classes, failure=None, missing=None, skip=None, extra=False):
             mark = "<error/>" if (cls, method) == failure else (
                 "<skipped/>" if (cls, method) == skip else ""
             )
-            cases.append(f'<testcase classname="Tests\Feature\{cls}" name="{method}">{mark}</testcase>')
+            cases.append(f'<testcase classname="Tests\\Feature\\{cls}" name="{method}">{mark}</testcase>')
     if extra:
-        cases.append('<testcase classname="Tests\Feature\SurpriseTest" name="test_extra"/>')
+        cases.append('<testcase classname="Tests\\Feature\\SurpriseTest" name="test_extra"/>')
     return "<testsuites><testsuite>" + "".join(cases) + "</testsuite></testsuites>"
 
 
@@ -98,7 +98,7 @@ class AppMutationContracts(unittest.TestCase):
         baseline, _ = parse_mutated_junit(original)
         for opts in (
             {"missing": (TARGET, MUTATIONS[0][1])},
-            {"skip": (TARGET, MUTATIONS[0][1])},
+            {"skip": (TARGET, METHODS[0])},
             {"extra": True},
         ):
             with self.subTest(opts=opts), self.assertRaises(Inconclusive):
@@ -108,7 +108,7 @@ class AppMutationContracts(unittest.TestCase):
     def test_doctype_and_duplicate_identity_rejected(self):
         with self.assertRaisesRegex(Inconclusive, "unsafe XML"):
             parse_mutated_junit(self.report('<!DOCTYPE x><testsuite></testsuite>'))
-        item = '<testcase classname="Tests\Feature\Foo" name="test_a"/>'
+        item = '<testcase classname="Tests\\Feature\\Foo" name="test_a"/>'
         with self.assertRaisesRegex(Inconclusive, "duplicate"):
             parse_mutated_junit(self.report("<testsuite>" + item + item + "</testsuite>"))
 
