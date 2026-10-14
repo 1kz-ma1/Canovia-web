@@ -63,11 +63,16 @@ final class PrivateFileLifecycleService
      */
     public function deleteAfterCommit(Collection $candidates): void
     {
-        if (DB::transactionLevel() !== 0) {
-            throw new \LogicException('Physical file cleanup requires a committed database transaction.');
+        $paths = $this->normalize($candidates);
+        if (DB::transactionLevel() > 0) {
+            // Nested outer transaction: no file unlink until the actual
+            // outermost commit. Laravel discards callbacks on rollback.
+            DB::afterCommit(fn () => $this->deleteAfterCommit($paths));
+
+            return;
         }
 
-        foreach ($this->normalize($candidates) as $path) {
+        foreach ($paths as $path) {
             try {
                 if ($this->isReferenced($path)) {
                     continue;
