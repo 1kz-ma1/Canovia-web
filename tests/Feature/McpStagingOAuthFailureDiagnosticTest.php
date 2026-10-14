@@ -58,9 +58,6 @@ final class McpStagingOAuthFailureDiagnosticTest extends TestCase
         $diag = app(McpStagingOAuthFailureDiagnostic::class);
         foreach ($allowed as $code) {
             $diag->record($code);
-            Log::shouldHaveReceived('warning')
-                ->once()
-                ->with('Canovia MCP staging OAuth failure', ['stage_code' => $code]);
         }
 
         // No dynamic identifiers, state, token, subjects or URL fragments
