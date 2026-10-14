@@ -48,3 +48,24 @@ The decision is **HOLD**. Retain all **42 additional test-file occurrences** fro
 Offline synthetic tests cover workflow drift, exact source/method/RefreshDatabase signals, A/B/A′ source and JUnit drift, targeted mutant negative detection, allowlist-only mutation, temp restore on success/failure, observer variants and non-PR denial. They run in existing Platform Preflight and the real 14-process experiment runs in existing disposable PR CI. Also require final-head Workspace Resume, Development Prelaunch, Migration Recovery plus PR mergeability/reviews before squash merging **main only**.
 
 No new always-on workflow, no normal CI command edits, no production or staging deploy, no Render/Aiven/Keycloak changes, no purchases, no API/app/schema/permissions change, no iOS/TestFlight or device verification. An experiment success is not a production acceptance.
+
+
+## Observed disposable evidence — PR #676
+
+At the initially corrected, tested PR SHA `97c63fe0c26718bf8e05be1ad743a80493dda978`, [GitHub Actions #38606644449](https://github.com/1kz-ma1/Canovia-web/actions/runs/38606644449) completed R23 with `OBSERVED_CREATIVE_RESCUE_CONTEXT_MUTATION_SHADOW`:
+
+| Named regression step | A original | B without V5863 | A′ restored | Full-group duration A / B / A′ (seconds) |
+| --- | ---: | ---: | ---: | --- |
+| V58.63 Legacy Creative Development Rescue | 10 | 6 | 10 | 1.0456 / 0.7868 / 1.0421 |
+| V58.69 Team Task Dependencies | 14 | 10 | 14 | 1.5964 / 1.3333 / 1.5403 |
+
+For **both** application mutants (missing `store()` actor authorization; missing Creative Plan category guard):
+- **2/2 original named groups** detected each specific mutant: the required V5863 testcase failed and no other testcase failed.
+- **0/2 omission groups** detected each specific mutant: their neighboring cases remained green. Across both mutants, original detection was **4/4**, shadow detection was **0/4**.
+- A and A′ retained identical ordered JUnit testcase identities, and each B retained exactly the non-V5863 JUnit identities. Four V5863 methods were absent in B.
+- **14/14 independent PHP test processes** ran. The **14/14** R23 offline safety/negative-contract tests also passed in Platform Preflight after correcting a synthetic expected rejection message.
+- Controller source was restored byte-for-byte, verified SHA-256 `b5b58df0db6bc0d8bbd5eb4037f60b2605c48c6019ba90de3c7e922e416ccd96`. No application-code mutation was committed.
+
+The wall-clock group timings are noisy process-level observations, **not** test-only cost attribution, production savings or evidence that removing an invocation reduces net CI duration. This experiment likewise does not prove full-workflow state isolation or domain-authorized replacement of a V5863 check. **Decision remains HOLD: all 42 additional invocations preserved.**
+
+This report originates at the cited earlier PR SHA; documentation and decision-register edits must pass their **own final exact-head CI** before `main` merge. No production deployment or device acceptance was done.
