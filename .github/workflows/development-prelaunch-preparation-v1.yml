@@ -24,11 +24,16 @@ jobs:
         run: |
           php -l app/Services/DevelopmentPrelaunchPreparationService.php
           php -l app/Services/DevelopmentOperationalEvidenceService.php
+          php -l app/Models/DevelopmentOperationalProfile.php
+          php -l app/Http/Controllers/DevelopmentOperationalProfileController.php
+          php -l database/migrations/2026_10_14_154500_create_development_operational_profiles_table.php
           php -l app/Http/Controllers/DevelopmentWorkspaceController.php
           php -l tests/Unit/DevelopmentPrelaunchPreparationServiceTest.php
           php -l tests/Feature/DevelopmentPrelaunchPreparationV1Test.php
           php -l tests/Unit/DevelopmentOperationalEvidenceServiceTest.php
           php -l tests/Feature/DevelopmentOperationalEvidenceV2Test.php
+          php -l tests/Unit/DevelopmentOperationalProfileV3Test.php
+          php -l tests/Feature/DevelopmentOperationalProfileV3FeatureTest.php
       - name: Compile Blade templates
         run: php artisan view:cache
       - name: Targeted behavior and Workspace regression
@@ -36,8 +41,10 @@ jobs:
           php artisan test \
             tests/Unit/DevelopmentPrelaunchPreparationServiceTest.php \
             tests/Unit/DevelopmentOperationalEvidenceServiceTest.php \
+            tests/Unit/DevelopmentOperationalProfileV3Test.php \
             tests/Feature/DevelopmentPrelaunchPreparationV1Test.php \
             tests/Feature/DevelopmentOperationalEvidenceV2Test.php \
+            tests/Feature/DevelopmentOperationalProfileV3FeatureTest.php \
             tests/Feature/DevelopmentWorkspaceV544Test.php \
             tests/Feature/DeveloperHomeV573Test.php \
             tests/Feature/DeveloperWorkspaceSurfacesV580Test.php

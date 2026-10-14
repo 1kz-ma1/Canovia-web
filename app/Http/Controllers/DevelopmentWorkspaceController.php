@@ -9,6 +9,7 @@ use App\Intelligence\Presentation\DevelopmentIntelligencePresentationAdapter;
 use App\Intelligence\Presentation\IntelligencePresentationHistoryService;
 use App\Intelligence\Presentation\IntelligenceStateChangeFeedbackService;
 use App\Models\Plan;
+use App\Models\DevelopmentOperationalProfile;
 use App\Models\Task;
 use App\Services\DevelopmentExecutionContextService;
 use App\Services\DevelopmentImplementationBriefService;
@@ -92,6 +93,8 @@ final class DevelopmentWorkspaceController extends Controller
                 'canEdit' => false,
                 'developmentAdaptiveAction' => null,
                 'developmentPrelaunchPreparation' => null,
+                'developmentOperationalProfile' => null,
+                'developmentOperationalProfileEditable' => false,
                 'developmentOperationalEvidence' => null,
                 'intelligencePresentation' => null,
                 'intelligenceHistory' => [],
@@ -148,10 +151,22 @@ final class DevelopmentWorkspaceController extends Controller
             $plan,
             $focusTaskId > 0 ? $focusTaskId : null,
         );
+        $developmentOperationalProfileEditable = ! $legacyCreative
+            && $developmentSurface === 'work'
+            && $request->user() !== null
+            && $plan->user_id !== null
+            && (int) $plan->user_id === (int) $request->user()->id;
+        // Owner-only private self-report; not public GitHub/provider evidence.
+        $developmentOperationalProfile = $developmentOperationalProfileEditable
+            ? DevelopmentOperationalProfile::query()
+                ->where('plan_id', $plan->id)
+                ->first()?->summary()
+            : null;
         $developmentPrelaunchPreparation = ! $legacyCreative && $developmentSurface === 'work'
             ? $prelaunchPreparation->suggest(
                 $plan,
                 $request->query('release_preflight') === '1',
+                $developmentOperationalProfile,
             )
             : null;
         $primaryAction = $adaptiveAction?->primaryAction();
@@ -223,6 +238,7 @@ final class DevelopmentWorkspaceController extends Controller
                 $developerExecutionContext,
                 (bool) data_get($developmentGithubIntegrationStatus, 'evidence.allowed', false)
                     && (string) data_get($developmentGithubConnection, 'state', '') === 'ready',
+                $developmentOperationalProfile,
             )
             : null;
 
@@ -346,6 +362,8 @@ final class DevelopmentWorkspaceController extends Controller
             'canEdit' => $canEdit,
             'developmentAdaptiveAction' => $adaptiveAction,
             'developmentPrelaunchPreparation' => $developmentPrelaunchPreparation,
+            'developmentOperationalProfile' => $developmentOperationalProfile,
+            'developmentOperationalProfileEditable' => $developmentOperationalProfileEditable,
             'developmentOperationalEvidence' => $developmentOperationalEvidence,
             'intelligencePresentation' => $presentation,
             'intelligenceHistory' => $legacyCreative

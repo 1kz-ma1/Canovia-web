@@ -13,7 +13,7 @@ final class DevelopmentPrelaunchPreparationService
      *
      * @return array{key:string,title:string,detail:string,basis:string,status:string}|null
      */
-    public function suggest(Plan $plan, bool $explicitlyRequested = false): ?array
+    public function suggest(Plan $plan, bool $explicitlyRequested = false, ?array $profile = null): ?array
     {
         // Only the authorized, selected Plan's already loaded Task titles are
         // considered. A page view must not fetch a provider or write state.
@@ -27,10 +27,14 @@ final class DevelopmentPrelaunchPreparationService
                 && $this->mentionsLaunch((string) $task->title)
         );
 
+        $stage = is_array($profile) ? ($profile['stage'] ?? 'unknown') : 'unknown';
         $launchContext = $launchTask instanceof Task
             || $this->mentionsLaunch((string) $plan->title);
+        $publicStage = in_array($stage, ['public_launch', 'live'], true);
 
-        if (! $explicitlyRequested && ! $launchContext) {
+        // The owner explicitly said this is a prototype. Do not automatically
+        // nag about production even when a prospective launch Task exists.
+        if (! $explicitlyRequested && ($stage === 'prototype' || (! $launchContext && ! $publicStage))) {
             return null;
         }
 
@@ -42,7 +46,9 @@ final class DevelopmentPrelaunchPreparationService
             'detail' => '公開先、永続データの有無、バックアップと復元テストの状況を整理しましょう。DBを使わない場合は復元テストを必須にしません。',
             'basis' => $explicitlyRequested
                 ? '公開準備の確認を選択'
-                : 'Planまたは未完了Taskに公開・リリースに関する記述',
+                : ($publicStage
+                    ? 'Plan所有者が登録した公開段階（自己申告）'
+                    : 'Planまたは未完了Taskに公開・リリースに関する記述'),
             'status' => 'unknown',
         ];
     }
