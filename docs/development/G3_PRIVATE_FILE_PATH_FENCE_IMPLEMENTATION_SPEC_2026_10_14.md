@@ -212,3 +212,66 @@ protocol, or production deployment approval. If a caller already holds
 an outer DB transaction, journal mode intentionally **fails closed**
 before I/O. Production traffic compatibility and end-to-end
 rollout must be separately evaluated. G3 remains OPEN.
+
+## 9. G3-R14 — Bounded non-destructive upload-intent reconciliation preview (2026-10-14)
+
+**Development-only observer / not a reaper.** New independent
+`CANOVIA_PRIVATE_FILE_UPLOAD_RECONCILE_PREVIEW_ENABLED=false`
+must be turned on explicitly alongside both existing R11 fence and
+R13 journal opt-ins in a disposable non-production environment.
+Even if all switches are enabled, the observer refuses execution
+when `app()->environment('production')`. There is NO endpoint, timer
+or scheduled job. The default production/runtime behavior is unchanged.
+
+`PrivateFileUploadReconciliationPreviewService::preview($limit)` accepts
+only a strict maximum **1–20**. It SELECTs **only**
+`needs_review` and `prepared` intents older than 24 hours,
+in stable ascending intent ID order, and reports the total eligible and
+number observed; younger `prepared` uploads and `committed` rows are
+never probed. Before looking up any storage metadata it requires the
+journal, fence table and all three canonical source reference tables
+(Inbox `storage_path`, Recall `storage_path`, Career
+`screenshot_path`) and columns to be available.
+
+For each candidate the observer authenticates/decrypts the private
+path internally, validates the configured disk and safe namespace with
+`PrivateFilePathFenceService::fingerprint`, and compares the
+HMAC digest in constant-time. An invalid key, corrupt ciphertext,
+unexpected disk or provider/DB exception produces fixed
+`unverifiable` aggregate counts without emitting the path/error.
+It SELECTs whether a fence row already exists, checks each of the
+three source tables for a current reference, then calls targeted
+`Storage::disk()->exists(path)` **only**. It never inserts/locks a
+fence row, writes a DB row, enumerates storage, reads file contents,
+downloads objects or invokes `delete`. Categories describe what was
+observed, not authoritative state:
+
+- `reference_and_object_observed`
+- `reference_only_observed`
+- `object_without_reference_observed`
+- `neither_observed`
+- `unverifiable`
+
+Outputs are exclusively fixed category names and aggregate counters
+(`eligible`, `observed`, fence-row observed/not observed, zero
+destructive actions). No intent ID, raw path, file name, ciphertext,
+disk identifier, HMAC digest, account, plan, provider exception,
+per-object report or deletion candidate list is emitted. Missing
+schema or query failure returns an `unavailable` aggregate rather
+than partial successes. The CLI is
+`php artisan canovia:private-upload-reconcile-preview --json --limit=10`;
+without the explicit gates it exits nonzero as `blocked`.
+
+**Critical non-atomicity:** a fence-row SELECT does not acquire a
+fence; independent writers may mutate references or bytes between
+the DB queries and targeted object existence request. An object
+`exists() = false` response also cannot prove absence when its
+provider returns false on transient faults. An HMAC match proves
+ledger integrity under the current APP_KEY, NOT that the bytes
+belong to the intended owner, that no external writer exists,
+or that the object has an immutable generation/version.
+Even `object_without_reference_observed` does NOT mean a verified
+orphan, and MUST NEVER trigger automatic or manual deletion without
+a separate approved multi-signal reconciliation protocol.
+No production schema/flag/deploy, backfill or destructive action is
+authorized. G3 remains OPEN.
