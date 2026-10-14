@@ -121,7 +121,8 @@ final class McpDelegatedPlanAccessPolicy
             ->whereNull('revoked_at')
             ->whereNotNull('consented_at')
             ->where('consented_at', '<=', $now)
-            ->where('expires_at', '>', $now)
+            ->where(static fn ($query) => $query
+                ->whereNull('expires_at')->orWhere('expires_at', '>', $now))
             ->when($lockForRead, fn ($query) => $query->lockForUpdate())
             ->first(['id', 'user_id', 'subject_link_id', 'scope']);
 
