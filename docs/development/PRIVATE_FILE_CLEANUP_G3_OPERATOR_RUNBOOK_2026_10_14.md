@@ -395,3 +395,24 @@ enable a real provider capture, migrate live schemas, rotate `APP_KEY`,
 or delete old path-fence/journal/evidence rows without a separately
 reviewed migration and recovery design. Four independent G3 schema
 gates now require operator approval; G3 remains OPEN.
+
+## 17. G3-R18 synthetic receipt contract (not production or deletion-ready)
+
+`CANOVIA_PRIVATE_FILE_WRITE_RECEIPT_HANDOFF_ENABLED` is **OFF
+by default**; the receiving API also demands a disposable
+`APP_ENV=testing`, existing R11/R13/R17 opt-ins, and the synthetic
+R17 data model. This is an automated contract fixture, not a new
+operator CLI, real S3 adapter, active upload integration or release
+procedure. No storage object is written or removed, and no provider
+credentials or SDK calls are involved.
+
+The fixed-field simulated `PutObject` response must match the
+committed journal and owner; the resulting record always has
+`evidence_origin=synthetic_fixture`. Do not interpret the plain-text
+origin label, VersionId-shaped token, success HTTP code, request ID,
+successful encrypted record or matching ETag as provider attestation.
+The output always denies generation proof and deletion approval.
+Never enable this path for live traffic or change cleanup worker
+behavior based on these records. Four separate G3 migration approvals,
+object-generation retention, key rotation, provider IAM/versioning
+review and complete writer fencing remain unresolved.
