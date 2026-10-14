@@ -91,6 +91,7 @@ use App\Http\Controllers\WorkspaceModeController;
 use App\Http\Controllers\StudyWorkspaceController;
 use App\Http\Controllers\StudyWorkspaceTopController;
 use App\Http\Controllers\DevelopmentWorkspaceController;
+use App\Http\Controllers\DevelopmentOperationalProfileController;
 use App\Http\Controllers\DevelopmentRoadmapContextController;
 use App\Http\Controllers\DevelopmentPrivateAiContextPreviewController;
 use App\Http\Controllers\McpProtectedResourceMetadataController;
@@ -147,6 +148,9 @@ Route::get('/workspace/study/top', StudyWorkspaceTopController::class)->middlewa
 Route::get('/workspace/study', StudyWorkspaceController::class)->middleware('early_access.visit')->name('workspace.study.index');
 Route::get('/workspace/development/top', DevelopmentWorkspaceTopController::class)->middleware('early_access.visit')->name('workspace.development.top');
 Route::get('/workspace/development', DevelopmentWorkspaceController::class)->middleware('early_access.visit')->name('workspace.development.index');
+Route::post('/workspace/development/operational-profile/{plan}', DevelopmentOperationalProfileController::class)
+    ->middleware(['auth', 'throttle:10,1'])
+    ->name('workspace.development.operational_profile.update');
 Route::get('/workspace/development/context/{plan}', DevelopmentRoadmapContextController::class)
     ->middleware(['auth', 'throttle:12,1'])
     ->name('workspace.development.context');

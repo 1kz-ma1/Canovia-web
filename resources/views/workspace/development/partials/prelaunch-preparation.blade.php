@@ -107,3 +107,7 @@
         </a>
     </div>
 @endif
+
+@if ($developmentOperationalProfileEditable ?? false)
+    @include('workspace.development.partials.operational-profile-editor')
+@endif
