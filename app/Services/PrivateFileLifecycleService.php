@@ -189,11 +189,26 @@ final class PrivateFileLifecycleService
             return 'quarantined';
         }
 
+        // An outbox entry was sealed against the default private disk at
+        // enqueue time. A later disk switch must never redirect deletion
+        // to a different adapter, bucket or tenant namespace.
+        if (! is_string($row->disk)
+            || $row->disk !== (string) config('filesystems.default', 'local')) {
+            $this->quarantine($id, 'storage_disk_mismatch');
+            return 'quarantined';
+        }
+
         // A still-owned/linked file may NEVER be removed by this outbox.
-        // If that owner later deletes its row, it creates its own new entry.
-        if ($this->isReferenced($path)) {
-            DB::table(self::TABLE)->where('id', $id)->delete();
-            return 'retained';
+        // Missing reference tables/columns or failed reference queries must
+        // NOT be interpreted as an absence of live owners.
+        try {
+            if ($this->isReferenced($path)) {
+                DB::table(self::TABLE)->where('id', $id)->delete();
+                return 'retained';
+            }
+        } catch (Throwable) {
+            $this->retryLater($id, (int) $row->attempt_count, 'reference_check_unavailable');
+            return 'retry';
         }
 
         try {
@@ -225,9 +240,11 @@ final class PrivateFileLifecycleService
     public function isReferenced(string $path): bool
     {
         foreach (self::SOURCES as $source) {
-            if ($this->tableHasPath($source)
-                && DB::table($source['table'])
-                    ->where($source['path'], $path)->exists()) {
+            if (! $this->tableHasPath($source)) {
+                throw new \RuntimeException('Private file reference schema unavailable');
+            }
+            if (DB::table($source['table'])
+                ->where($source['path'], $path)->exists()) {
                 return true;
             }
         }

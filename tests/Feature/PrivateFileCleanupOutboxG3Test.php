@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Mockery;
 use RuntimeException;
@@ -174,6 +175,79 @@ final class PrivateFileCleanupOutboxG3Test extends TestCase
 
         Storage::assertExists($path);
         $this->assertDatabaseCount('private_file_cleanup_entries', 0);
+    }
+
+    public function test_outbox_disk_drift_is_quarantined_without_touching_either_disk(): void
+    {
+        $path = 'inbox/owner/disk-drift.png';
+        Storage::put($path, 'original private bytes');
+        $this->insertPending($path);
+
+        $differentDisk = (string) config('filesystems.default') === 'public'
+            ? 'local' : 'public';
+        Storage::fake($differentDisk);
+        Storage::disk($differentDisk)->put($path, 'other disk bytes');
+        DB::table('private_file_cleanup_entries')->update(['disk' => $differentDisk]);
+
+        $result = app(PrivateFileLifecycleService::class)->retryDue();
+        $this->assertSame(1, $result['quarantined']);
+        Storage::assertExists($path);
+        Storage::disk($differentDisk)->assertExists($path);
+        $this->assertDatabaseHas('private_file_cleanup_entries', [
+            'status' => 'quarantined',
+            'last_reason' => 'storage_disk_mismatch',
+        ]);
+        $this->assertSame(0, app(PrivateFileLifecycleService::class)->retryDue()['selected']);
+    }
+
+    public function test_missing_reference_table_fails_closed_and_backs_off_without_unlink(): void
+    {
+        $path = 'inbox/owner/missing-reference-table.png';
+        Storage::put($path, 'keep private bytes');
+        $this->insertPending($path);
+
+        $schema = Schema::getFacadeRoot();
+        Schema::shouldReceive('hasTable')->once()
+            ->with('inbox_items')->andReturn(false);
+        try {
+            $result = app(PrivateFileLifecycleService::class)->retryDue();
+        } finally {
+            Schema::swap($schema);
+        }
+
+        $this->assertSame(1, $result['retry']);
+        Storage::assertExists($path);
+        $this->assertDatabaseHas('private_file_cleanup_entries', [
+            'status' => 'pending',
+            'attempt_count' => 1,
+            'last_reason' => 'reference_check_unavailable',
+        ]);
+        $this->assertSame(0, app(PrivateFileLifecycleService::class)->retryDue()['selected']);
+    }
+
+    public function test_missing_reference_column_fails_closed_without_unlink(): void
+    {
+        $path = 'study-recall-sources/owner/missing-column.pdf';
+        Storage::put($path, 'keep while schema is incomplete');
+        $this->insertPending($path);
+
+        $schema = Schema::getFacadeRoot();
+        Schema::shouldReceive('hasTable')->once()
+            ->with('inbox_items')->andReturn(true);
+        Schema::shouldReceive('hasColumn')->once()
+            ->with('inbox_items', 'storage_path')->andReturn(false);
+        try {
+            $result = app(PrivateFileLifecycleService::class)->retryDue();
+        } finally {
+            Schema::swap($schema);
+        }
+
+        $this->assertSame(1, $result['retry']);
+        Storage::assertExists($path);
+        $this->assertDatabaseHas('private_file_cleanup_entries', [
+            'status' => 'pending',
+            'last_reason' => 'reference_check_unavailable',
+        ]);
     }
 
     private function insertPending(string $path): void
