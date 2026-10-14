@@ -22,6 +22,8 @@ on:
       - 'app/Contracts/PrivateFileIndependentProviderVerifier.php'
       - 'app/Services/PrivateFileUnavailableProviderVerifier.php'
       - 'app/Services/PrivateFileProviderEvidenceAdmissionService.php'
+      - 'app/Services/PrivateFileTrustReplayPreflightService.php'
+      - 'tests/Feature/PrivateFileTrustReplayPreflightG3Test.php'
       - 'tests/Feature/PrivateFileProviderEvidenceAdmissionG3Test.php'
       - 'tests/Feature/PrivateFileProviderAttestationBoundaryG3Test.php'
       - 'tests/Feature/PrivateFileSyntheticWriteProvenanceG3Test.php'
@@ -128,6 +130,8 @@ jobs:
           php -l app/Contracts/PrivateFileIndependentProviderVerifier.php
           php -l app/Services/PrivateFileUnavailableProviderVerifier.php
           php -l app/Services/PrivateFileProviderEvidenceAdmissionService.php
+          php -l app/Services/PrivateFileTrustReplayPreflightService.php
+          php -l tests/Feature/PrivateFileTrustReplayPreflightG3Test.php
           php -l tests/Feature/PrivateFileProviderEvidenceAdmissionG3Test.php
           php -l tests/Feature/PrivateFileProviderAttestationBoundaryG3Test.php
           php -l tests/Feature/PrivateFileSyntheticWriteProvenanceG3Test.php
@@ -191,6 +195,8 @@ jobs:
         run: php artisan test tests/Feature/PrivateFileProviderAttestationBoundaryG3Test.php --stop-on-failure
       - name: G3 R25 unavailable independent verifier and admission checklist
         run: php artisan test tests/Feature/PrivateFileProviderEvidenceAdmissionG3Test.php --stop-on-failure
+      - name: G3 R26 trust epoch, expiry and replay denial matrix
+        run: php artisan test tests/Feature/PrivateFileTrustReplayPreflightG3Test.php --stop-on-failure
       - name: G3 operator-only CLI dry-run and read-only health are available
         run: |
           php artisan canovia:retry-private-file-cleanup --dry-run
