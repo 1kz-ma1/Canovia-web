@@ -216,6 +216,76 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
         $this->assertDatabaseCount('mcp_delegated_grants', 0);
     }
 
+    public function test_dual_client_connection_guide_is_status_honest_and_stage_only(): void
+    {
+        $owner = $this->actor();
+        $plan = $this->fixture($owner);
+        $this->link($owner);
+        $this->enableConsent();
+        $this->actingAs($owner)->get('/account')->assertOk()
+            ->assertDontSee('data-mcp-staging-dual-client-guide', false);
+
+        // Synthetic read pilot must be explicitly approved. The test remains
+        // in-memory; these flags do not open a network endpoint or real DB.
+        config([
+            'canovia_staging.database_mode' => 'render_postgres',
+            'canovia_staging.postgres_id' => 'dpg-db43rbbncjis73bmigi0-a',
+            'canovia_staging.web_access_enabled' => true,
+            'canovia_staging.web_access_explicitly_approved' => true,
+            'canovia_staging.synthetic_read_pilot_enabled' => true,
+            'canovia_staging.mcp_explicitly_approved' => true,
+            'canovia_mcp.tools_enabled' => true,
+            'canovia_mcp.delegated_policy_enabled' => true,
+        ]);
+        $this->assertTrue(app(\App\Services\McpStagingSyntheticReadPilotPolicy::class)->isReady());
+        $this->get('/account')->assertOk()
+            ->assertSee('data-mcp-staging-dual-client-guide', false)
+            ->assertSee('data-mcp-staging-link-state', false)
+            ->assertSee('本人ID連携：連携記録あり')
+            ->assertSee('共有許可：現在有効な共有許可なし')
+            ->assertSee('同じAuth0アカウント')
+            ->assertSee('ChatGPT側の現在のOAuth接続')
+            ->assertDontSee('github|', false)
+            ->assertDontSee('google-oauth2|', false)
+            ->assertDontSee('data-mcp-staging-active-grant', false);
+
+        $link = McpLinkedSubject::query()->where('user_id', $owner->id)->sole();
+        $fingerprint = app(McpDelegatedIdentityFingerprintService::class)
+            ->clientResource(
+                config('canovia_mcp.allowed_client_id'),
+                config('canovia_mcp.resource_url'),
+            );
+        $grant = McpDelegatedGrant::query()->create([
+            'user_id' => $owner->id,
+            'subject_link_id' => $link->id,
+            'plan_id' => $plan->id,
+            'client_resource_fingerprint' => $fingerprint,
+            'scope' => 'tasks',
+            'status' => McpDelegatedGrant::STATUS_ACTIVE,
+            'consented_at' => now(),
+            'expires_at' => now()->addDays(7),
+        ]);
+
+        $this->get('/account')->assertOk()
+            ->assertSee('共有許可：有効')
+            ->assertSee('共有範囲：概要＋Task')
+            ->assertSee('ChatGPT側の現在のOAuth接続');
+
+        // Revocation updates the honest status; the guide cannot report a
+        // completed ChatGPT login solely from a Canovia-side grant.
+        $grant->update([
+            'status' => McpDelegatedGrant::STATUS_REVOKED,
+            'revoked_at' => now(),
+        ]);
+        $this->get('/account')->assertOk()
+            ->assertSee('共有許可：現在有効な共有許可なし')
+            ->assertDontSee('data-mcp-staging-active-grant', false);
+
+        config(['canovia_staging.synthetic_read_pilot_enabled' => false]);
+        $this->get('/account')->assertOk()
+            ->assertDontSee('data-mcp-staging-dual-client-guide', false);
+    }
+
     private function enableConsent(): void
     {
         config(['canovia_staging.plan_consent_pilot_enabled' => true,
