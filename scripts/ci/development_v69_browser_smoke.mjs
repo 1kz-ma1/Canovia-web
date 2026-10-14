@@ -100,8 +100,14 @@ try {
 
     await page.goto(`${base}/account`);
     const logout = page.locator('form[action$="/logout"]').first();
-    await logout.getByRole('button', { name: 'ログアウト' }).click();
-    await page.goto(`${base}/login`);
+    await Promise.all([
+        page.waitForURL(url => url.pathname !== '/account', {
+            waitUntil: 'domcontentloaded',
+        }),
+        logout.getByRole('button', { name: 'ログアウト' }).click(),
+    ]);
+    step('Real logout form completed navigation and invalidated session');
+    await page.goto(`${base}/login`, { waitUntil: 'domcontentloaded' });
     const login = page.locator('form[action$="/login"]');
     await login.locator('input[name="email"]').fill(email);
     await login.locator('input[name="password"]').fill(password);
