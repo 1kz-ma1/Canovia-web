@@ -52,3 +52,17 @@ A subsequent, separately reviewed phase could compare specific application-level
 ## 5. Verification and production impact
 
 The static Python tests simulate missing/wrong/duplicate/skip/failure testcase JUnit, changed step source, absent/renamed methods, forbidden environment, proper cleanup under success and failure, and fail-closed default entry. CI runs them in existing path-scoped disposable and offline Platform Preflight workflows; normal Workspace Resume, migration/recovery, Development prelaunch must remain green at exact PR head before `main` merge. No new always-on CI, source application changes, production deployment/Render/Aiven/branch-rule/iOS/billing or release authorization.
+
+
+## 6. First observed GitHub Actions evidence (PR #663)
+
+**OBSERVED on initial exact HEAD `5fa4ee66409ee3bab59dc305c8476455d2d2d8ce` (2026-10-14 UTC):** [Disposable Workflow #38591787725](https://github.com/1kz-ma1/Canovia-web/actions/runs/38591787725) passed the R19 step, original/reordered/R18 checks, the independent replay runner and final fingerprint comparison.
+
+The real runner's machine-readable report confirmed:
+- **30** independent PHP processes completed (6 unchanged baselines, 20 injected expected-failure runs, 4 target-omitted runs).
+- **4/4** selected method tripwires were tested; all **20/20** expected failures were detected in the five original named historical contexts, **without a second unexpected failing testcase**.
+- All **4/4** V58.74 omission-shadow calls passed their retained testcases while the injected target method was not present.
+- Original temporary PHP source restored with SHA-256 `aa72d90bf00fd4e10fa5322a984d48f3ff69665c92079ef0e6666d83061fc20d`.
+- Offline synthetic contract tests: **14/14 passed**. The report explicitly retained `assertion_or_state_semantics_equivalence_proven=false`, `permission_to_remove_repeated_invocations=false`, `production_release_authorized=false`.
+
+**Interpretation: HOLD.** Tripwires are intentionally injected into the **test methods**, not into the production implementation. Therefore this is a detection-presence observation, not mutation coverage of real app branches, no proof of absence of context interactions, and no permission to remove any of 42 repetitions. This initial-head evidence alone does not cover later docs/CI revisions; before merge, revalidate all applicable workflows at final HEAD. No environment deployment or device test was performed.
