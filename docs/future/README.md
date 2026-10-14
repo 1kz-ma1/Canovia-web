@@ -136,6 +136,8 @@ and links current behavior back to Active Specs instead of duplicating it.
 
 ### Platform / Ecosystem
 
+- [Identity & Connection UX (Candidate)](CANOVIA_IDENTITY_CONNECTION_UX.md): OAuth/Plan consentを維持したまま本人確認と安全な再連携を簡素化する将来候補。現行実装には適用しない。
+
 - [Canovia Platform / Ecosystem](CANOVIA_PLATFORM_ECOSYSTEM.md)
 
 Covers Future direction for:
