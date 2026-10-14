@@ -8,6 +8,8 @@ on:
       - 'app/Services/PrivateFileUploadService.php'
       - 'app/Services/PrivateFileUploadIntentService.php'
       - 'app/Services/PrivateFileUploadReconciliationPreviewService.php'
+      - 'app/Services/PrivateFileReconciliationSnapshotService.php'
+      - 'tests/Feature/PrivateFileUploadConsistencyProbeG3Test.php'
       - 'tests/Feature/PrivateFileUploadReconciliationPreviewG3Test.php'
       - 'database/migrations/2026_10_14_130000_create_private_file_upload_intents.php'
       - 'tests/Feature/PrivateFileUploadIntentG3Test.php'
@@ -82,6 +84,8 @@ jobs:
           php -l app/Services/PrivateFileUploadService.php
           php -l app/Services/PrivateFileUploadIntentService.php
           php -l app/Services/PrivateFileUploadReconciliationPreviewService.php
+          php -l app/Services/PrivateFileReconciliationSnapshotService.php
+          php -l tests/Feature/PrivateFileUploadConsistencyProbeG3Test.php
           php -l tests/Feature/PrivateFileUploadReconciliationPreviewG3Test.php
           php -l database/migrations/2026_10_14_130000_create_private_file_upload_intents.php
           php -l tests/Feature/PrivateFileUploadIntentG3Test.php
@@ -89,4 +93,4 @@ jobs:
           php -l app/Services/PrivateFilePathFenceService.php
           php -l database/migrations/2026_10_14_120000_create_private_file_path_fences.php
           php -l tests/Feature/PrivateFileCleanupMysqlCurrentReadG3Test.php
-          php artisan test tests/Feature/PrivateFileCleanupMysqlCurrentReadG3Test.php tests/Feature/PrivateFileUploadG3Test.php tests/Feature/PrivateFileUploadIntentG3Test.php tests/Feature/PrivateFileUploadReconciliationPreviewG3Test.php --fail-on-skipped --stop-on-failure
+          php artisan test tests/Feature/PrivateFileCleanupMysqlCurrentReadG3Test.php tests/Feature/PrivateFileUploadG3Test.php tests/Feature/PrivateFileUploadIntentG3Test.php tests/Feature/PrivateFileUploadReconciliationPreviewG3Test.php tests/Feature/PrivateFileUploadConsistencyProbeG3Test.php --fail-on-skipped --stop-on-failure
