@@ -17,6 +17,10 @@ final class AdaptiveLearningHistoryService
     private const WINDOW = 60;
     private const RECENT = 15;
 
+    public function __construct(
+        private readonly LearningReviewComparisonService $comparisons,
+    ) {}
+
     public function forPlanTask(Request $request, Plan $plan, Task $task, string $actorToken): array
     {
         $events = LearningAnswerEvent::query()
@@ -152,6 +156,7 @@ final class AdaptiveLearningHistoryService
             'excluded_count' => $events->count() - $eligible->count(),
             'window' => self::WINDOW,
             'next_action_preview' => $nextActionPreview,
+            'review_comparisons' => $this->comparisons->fromHistory($events, $review),
         ];
     }
 }
