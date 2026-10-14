@@ -32,6 +32,7 @@ on:
       - 'tests/ci/test_g3_owner_scope_review.py'
       - 'tests/ci/test_g3_exit_decision_audit.py'
       - 'docs/development/G3_EXIT_DECISION_R31_2026_10_14.md'
+      - 'docs/development/G3_PROVIDER_AUTHORIZATION_DECISION_R40_2026_10_15.md'
       - 'docs/development/G3_OWNER_SCOPE_CHECKLIST_R30_2026_10_14.md'
       - 'docs/development/G3_DISPOSABLE_APPROVAL_PACKET_R29_2026_10_14.md'
       - 'docs/development/G3_PROVIDER_COLLECTION_PLAN_R28_2026_10_14.md'
