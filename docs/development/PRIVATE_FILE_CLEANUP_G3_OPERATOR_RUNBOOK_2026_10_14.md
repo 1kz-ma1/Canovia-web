@@ -545,3 +545,26 @@ There is no new migration, CLI, scheduled worker or production
 activation. Five existing G3 migrations remain unapproved for Aiven.
 Real provider attestation, generation-fenced operations and crash
 recovery still need a separately reviewed rollout. **G3 OPEN.**
+
+## 23. G3-R24 — Application or SDK metadata never authorizes object operations
+
+`CANOVIA_PRIVATE_FILE_PROVIDER_ATTESTATION_BOUNDARY_ENABLED` is
+OFF by default and confined to disposable `APP_ENV=testing` with
+earlier R11/R13/R20/R21/R23 flags. No live cloud call is performed.
+A matching synthetic R23 chain may yield
+`local_binding_consistent=true`, but all external authenticity,
+generation, writer exclusion, retry and deletion flags stay false.
+
+Never promote an application HMAC, SDK response header, successful
+TLS transport or claimed provider signature into a provider-issued
+immutable-generation receipt. Request IDs and version IDs are not
+signatures. Spoofed trusted flags, bad scope, missing ack, time skew,
+key rotation and payload corruption require manual hold. Never use
+these synthetic states to enqueue cleanup or overwrite/delete files.
+
+There is no new DB migration, operator command, worker, production
+activation or Storage I/O. A real attestation integration would need
+an independently reviewed verifier, request-bound write evidence,
+provider/IAM/versioning status, external-writer controls, conditional
+generation operations and real power-loss tests. Five G3 migrations
+remain unapproved for Aiven. **G3 OPEN.**

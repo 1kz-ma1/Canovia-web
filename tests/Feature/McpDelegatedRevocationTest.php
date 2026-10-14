@@ -88,6 +88,98 @@ final class McpDelegatedRevocationTest extends TestCase
         $this->assertNull($link->fresh()->active_identity_fingerprint);
     }
 
+    public function test_owner_onboarding_shows_only_real_local_state_without_external_connection_claim(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $other = User::factory()->create(['first_run_completed_at' => now()]);
+
+        // All sensitive connection switches OFF: no actionable connection
+        // flow even if the account has old consent records.
+        $this->actingAs($owner)->get(route('auth.account'))
+            ->assertOk()
+            ->assertSee('data-mcp-owner-guide-unavailable', false)
+            ->assertDontSee('data-mcp-owner-guide-next-link', false)
+            ->assertDontSee('data-mcp-owner-guide-next-chatgpt', false);
+
+        $link = $this->link($owner);
+        $plan = $this->plan($owner, 'APPROVED_LOCAL_RECORD_ONLY');
+        $grant = $this->grant($owner, $link, $plan);
+        $this->actingAs($other)->get(route('auth.account'))
+            ->assertOk()
+            ->assertDontSee('APPROVED_LOCAL_RECORD_ONLY')
+            ->assertSee('data-mcp-owner-guide-unavailable', false);
+
+        // A saved grant alone never implies the remote ChatGPT OAuth client
+        // connected, or that MCP reads are currently possible.
+        $this->actingAs($owner)->get(route('auth.account'))
+            ->assertOk()
+            ->assertSee('data-mcp-owner-guide-unavailable', false)
+            ->assertDontSee('data-mcp-owner-guide-next-chatgpt', false);
+
+        $this->actingAs($owner)->delete(route('auth.account.mcp_grant.revoke', ['grant' => $grant->id]))
+            ->assertRedirect(route('auth.account'));
+        $this->assertSame('revoked', $grant->fresh()->status);
+    }
+
+    public function test_owner_onboarding_next_step_requires_real_link_and_unexpired_grant_record(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+
+        // A server-ready account-link flow alone never constitutes consent.
+        config([
+            'canovia_mcp.account_link_enabled' => true,
+            'canovia_mcp.account_link_client_id' => 'disposable-owner-link-client',
+            'canovia_mcp.account_link_client_secret' => str_repeat('s', 32),
+            'canovia_mcp.account_link_metadata_url' => 'https://auth.example.test/.well-known/oauth-authorization-server',
+            'canovia_mcp.account_link_authorization_endpoint' => 'https://auth.example.test/oauth/authorize',
+            'canovia_mcp.account_link_token_endpoint' => 'https://auth.example.test/oauth/token',
+            'canovia_mcp.account_link_redirect_uri' => 'https://canovia.example.test/account/mcp/link/callback',
+            'canovia_mcp.plan_consent_enabled' => true,
+        ]);
+
+        $this->actingAs($owner)->get(route('auth.account'))
+            ->assertOk()
+            ->assertSee('data-mcp-owner-guide-next-link', false)
+            ->assertDontSee('data-mcp-owner-guide-next-consent', false)
+            ->assertDontSee('data-mcp-owner-guide-next-chatgpt', false);
+
+        $link = $this->link($owner);
+        $this->actingAs($owner)->get(route('auth.account'))
+            ->assertOk()
+            ->assertSee('data-mcp-owner-guide-next-consent', false)
+            ->assertDontSee('data-mcp-owner-guide-next-link', false);
+
+        $grant = $this->grant($owner, $link, $this->plan($owner));
+        $this->actingAs($owner)->get(route('auth.account'))
+            ->assertOk()
+            ->assertSee('data-mcp-owner-guide-read-disabled', false)
+            ->assertDontSee('data-mcp-owner-guide-next-chatgpt', false);
+
+        $grant->update(['expires_at' => now()->subMinute()]);
+        $this->actingAs($owner)->get(route('auth.account'))
+            ->assertOk()
+            ->assertSee('data-mcp-owner-guide-next-consent', false)
+            ->assertDontSee('data-mcp-owner-guide-read-disabled', false);
+
+        $grant->update(['expires_at' => null]);
+        config(['canovia_mcp.tools_enabled' => true]);
+        $this->actingAs($owner)->get(route('auth.account'))
+            ->assertOk()
+            ->assertSee('data-mcp-owner-guide-next-chatgpt', false)
+            ->assertSee('接続状態は未確認')
+            ->assertDontSee($link->identity_fingerprint)
+            ->assertDontSee('immutable-test-subject');
+
+        config(['canovia_mcp.tools_enabled' => false]);
+        $this->actingAs($owner)->delete(
+            route('auth.account.mcp_subject.revoke', ['subject' => $link->id]),
+        )->assertRedirect(route('auth.account'));
+        $this->actingAs($owner)->get(route('auth.account'))
+            ->assertOk()
+            ->assertSee('data-mcp-owner-guide-next-link', false)
+            ->assertDontSee('data-mcp-owner-guide-next-chatgpt', false);
+    }
+
     public function test_owner_can_revoke_one_grant_without_revoking_others_and_without_duplicate_events(): void
     {
         $owner = User::factory()->create(['first_run_completed_at' => now()]);

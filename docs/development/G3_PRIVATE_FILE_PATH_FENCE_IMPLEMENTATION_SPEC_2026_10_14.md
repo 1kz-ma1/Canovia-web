@@ -782,3 +782,58 @@ new scheduler, UI changes or production rollout. PostgreSQL 16 and
 MySQL 8.0/8.4 CI cover successful fixture correlation and negative
 security/corruption cases. Five existing G3 migrations remain
 production-unapproved. **G3 OPEN.**
+
+## 19. G3-R24 — Synthetic provider attestation trust boundary (2026-10-14)
+
+R23 validates that fixture-supplied write/attempt/HEAD statements are
+internally consistent, NOT that a provider issued them. R24 introduces
+`PrivateFileProviderAttestationBoundaryService::classify` to make the
+promotion boundary explicit. It invokes R23 and checks a further
+**caller-supplied, strictly shaped synthetic provenance claim** against
+R23's attempt ID, transient token, bucket, key, version ID and request
+ID, plus a bounded received/issued timeline.
+
+The allowed evidence categories are `application_hmac`,
+`sdk_response_headers`, `tls_transport_metadata`, and
+`claimed_provider_signature`. They produce, respectively,
+`application_hmac_not_provider_proof`,
+`sdk_headers_not_provider_attestation`,
+`tls_transport_not_write_attestation`, and
+`claimed_signature_without_trusted_verifier`. Even a claimed AWS
+issuer and signed response are untrusted inputs; the service has
+**no independent provider verifier**, signer allowlist, AWS SDK,
+certificate validation, credential handling or provider I/O.
+An APP_KEY HMAC binds local DB content, not a provider statement;
+successful TLS proves neither durable PutObject nor an immutable
+generation; a claimed signature cannot authenticate itself.
+
+A forged identity, wrong request/key/attempt/bucket/VersionId, stale
+or post-receipt claim, invalid origin, extra authorization fields,
+missing R20 ack, R21/R23 mismatch, APP_KEY rotation or ciphertext
+damage yields redacted negative classification. A local match may set
+`local_binding_consistent=true`; ALL outputs fix
+`independent_provider_verifier_available`,
+`provider_identity_verified`, `write_response_authenticated`,
+`generation_write_bound`, `external_writers_excluded`,
+`retry_authorized`, `delete_authorized`, `network_requests`
+and `storage_mutations` to false. No caller property can flip them.
+
+The new `CANOVIA_PRIVATE_FILE_PROVIDER_ATTESTATION_BOUNDARY_ENABLED`
+flag is independently OFF and confined to `APP_ENV=testing`, R11/
+R13/R20/R21/R23 gates, and disposable S3-shaped configuration.
+Production remains Local by default; R24 does not register a real
+writer, CLI, scheduler, retry or delete. No schema or migration change.
+
+Disposable PG16 and MySQL8.0/8.4 CI check four fake evidence kinds,
+spoofed verified flags, cross-attempt request binding, time skew,
+missing ack/transport errors/mismatched generation, credential epoch
+and ciphertext tampering, default-OFF/production/Local refusal and
+absence of DB/storage side effects.
+
+A future live verifier needs provider-bound request provenance,
+a reviewed and independently authenticated trust root/transport
+identity, anti-replay continuity, write-time generation binding,
+bucket versioning/IAM evidence and writer fencing, plus physical
+crash tests and generation-safe operations. **R24 does not create
+these guarantees. Five previously added G3 production migrations
+remain unapproved; G3 OPEN.**

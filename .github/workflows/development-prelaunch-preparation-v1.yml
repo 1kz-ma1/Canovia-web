@@ -26,6 +26,7 @@ jobs:
           php -l app/Services/DevelopmentOperationalEvidenceService.php
           php -l app/Services/DevelopmentOperationalAttestationService.php
           php -l app/Services/DevelopmentOperationalProviderBoundaryService.php
+          php -l app/Services/DevelopmentOperationalProviderCapabilityService.php
           php -l app/Models/DevelopmentOperationalTarget.php
           php -l app/Http/Controllers/DevelopmentOperationalTargetController.php
           php -l database/migrations/2026_10_14_164000_create_development_operational_targets_table.php
@@ -41,6 +42,7 @@ jobs:
           php -l tests/Feature/DevelopmentOperationalProfileV3FeatureTest.php
           php -l tests/Unit/DevelopmentOperationalAttestationV4Test.php
           php -l tests/Unit/DevelopmentOperationalProviderBoundaryV5Test.php
+          php -l tests/Unit/DevelopmentOperationalProviderCapabilityV51Test.php
           php -l tests/Feature/DevelopmentOperationalAttestationV4FeatureTest.php
       - name: Compile Blade templates
         run: php artisan view:cache
@@ -52,6 +54,7 @@ jobs:
             tests/Unit/DevelopmentOperationalProfileV3Test.php \
             tests/Unit/DevelopmentOperationalAttestationV4Test.php \
             tests/Unit/DevelopmentOperationalProviderBoundaryV5Test.php \
+            tests/Unit/DevelopmentOperationalProviderCapabilityV51Test.php \
             tests/Feature/DevelopmentPrelaunchPreparationV1Test.php \
             tests/Feature/DevelopmentOperationalEvidenceV2Test.php \
             tests/Feature/DevelopmentOperationalProfileV3FeatureTest.php \

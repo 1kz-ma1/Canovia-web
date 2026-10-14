@@ -9,7 +9,7 @@
         && $oauthVerifiedPending['verified_at'] <= now()->timestamp
         && now()->timestamp - $oauthVerifiedPending['verified_at'] <= 300;
 @endphp
-<section class="page-card min-w-0 p-6 sm:p-8" data-mcp-account-link>
+<section id="mcp-owner-link-section" class="page-card min-w-0 p-6 sm:p-8" data-mcp-account-link>
     <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">
         MCP · VERIFIED IDENTITY
     </p>
