@@ -58,6 +58,7 @@ final class DevelopmentOperationalProviderBoundaryService
         $connectionId = $grant['connection_id'] ?? null;
         $workspaceId = $grant['workspace_id'] ?? null;
         $epoch = $grant['consent_epoch'] ?? null;
+        $scopes = is_array($grant['scopes'] ?? null) ? $grant['scopes'] : [];
 
         // An internal permission ledger must populate these attributes.
         // Never derive them from a form, ChatGPT connector or API-key possession.
@@ -70,8 +71,7 @@ final class DevelopmentOperationalProviderBoundaryService
             || ! is_string($workspaceId)
             || ! preg_match('/\Atea-[A-Za-z0-9_-]{4,76}\z/', $workspaceId)
             || ! is_int($epoch) || $epoch < 1
-            || ! in_array('services.read', $grant['scopes'] ?? null ?: [], true)
-            || ! is_array($grant['scopes'] ?? null)
+            || ! in_array('services.read', $scopes, true)
             || (int) ($grant['owner_id'] ?? 0) !== $ownerId
             || (int) ($grant['plan_id'] ?? 0) !== $planId
             || ($grant['service_id'] ?? null) !== $target->resource_ref
