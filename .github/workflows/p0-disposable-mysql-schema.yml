@@ -33,6 +33,8 @@ on:
       - 'tests/ci/test_release_488_mysql_ledger_gate.py'
       - 'scripts/ci/release_488_mysql_ledger_gate.py'
       - 'scripts/ci/development_operational_v58_release_gate.py'
+      - 'scripts/ci/development_operational_v59_candidate_packet.py'
+      - 'tests/ci/test_development_operational_v59_candidate_packet.py'
       - 'scripts/sql/development_operational_v58_schema_snapshot.sql'
       - 'tests/ci/test_development_operational_v58_release_gate.py'
       - 'tests/Feature/DevelopmentOperationalMysqlMigrationV58Test.php'
@@ -139,6 +141,8 @@ jobs:
         run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_inventory_tsv_import.py' -v
       - name: Verify full Laravel migration ledger offline safety and redaction
         run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_full_ledger_offline_check.py' -v
+      - name: Verify V5.9 candidate audit packet pinning and no-authorize states
+        run: python3 -m unittest discover -s tests/ci -p 'test_development_operational_v59_candidate_packet.py' -v
       - name: Verify V5.8 pinned read-only migration decision matrix offline
         run: python3 -m unittest discover -s tests/ci -p 'test_development_operational_v58_release_gate.py' -v
       - name: Verify exact #488 pending ledger, schema coherence, and no-secret output
