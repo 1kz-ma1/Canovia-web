@@ -389,3 +389,26 @@ Artisan::command(
         return $report['status'] === 'synthetic_only' ? 0 : 1;
     },
 )->purpose('Read-only, aggregate synthetic generation evidence health; no storage access or deletion');
+
+
+/**
+ * G3-R20: test-only write-ahead attempt health. No file/network I/O,
+ * attempt identifiers, private paths, request tokens or automatic replay.
+ */
+Artisan::command(
+    'canovia:private-file-write-attempt-health
+        {--json : Only redacted aggregate synthetic attempt counts}',
+    function (\App\Services\PrivateFileWriteAttemptService $attempts): int {
+        $report = $attempts->report();
+        if ($this->option('json')) {
+            $this->line((string) json_encode($report, JSON_THROW_ON_ERROR));
+        } else {
+            $this->line('Private file write attempts: '.$report['status']);
+            $this->line('schema: '.$report['schema']);
+            $this->line('reserved: '.$report['reserved']);
+            $this->line('synthetic_ack_recorded: '.$report['synthetic_ack_recorded']);
+            $this->warn('Never replay/delete an ambiguous request; synthetic receipts are not provider attestations.');
+        }
+        return $report['status'] === 'synthetic_only' ? 0 : 1;
+    },
+)->purpose('R20 synthetic-only read-only write-attempt health; always denies replay/deletion');

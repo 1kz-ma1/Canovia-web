@@ -586,3 +586,71 @@ provider-specific immutable generation record, external-writer
 coordination, independent process crash/restart and ABA tests before
 any operator-managed reclamation. Four existing G3 migrations remain
 unapproved for live Aiven. **G3 OPEN.**
+
+## 15. G3-R20 — Durable prewrite attempt envelope; acknowledgement gap remains (2026-10-14)
+
+R19 demonstrated that a `prepared` upload intent alone cannot distinguish
+a crash *before* a provider request from a crash *after* the provider
+accepted bytes but *before* recording the write result. Neither Laravel
+DB transactions nor generic object storage supports an atomic commit
+across both systems. **It is impossible for code in a crashed process
+to durably record an acknowledgement it never persisted.** R20 solves
+only the narrower *request-correlation preparation* gap, **not** the
+unrecoverable provider-result gap.
+
+A new, fifth **additive, production-unapproved** migration
+`2026_10_14_150000_create_private_file_write_attempts.php` creates
+`private_file_write_attempts`, with a unique, restrict-delete FK
+to the existing immutable `private_file_upload_intents.id`,
+matching path and bucket keyed HMACs, a keyed digest of a 48-character
+random synthetic request token, explicit key epoch, fixed status,
+and nullable *encrypted synthetic* VersionId. There are no plaintext
+private paths, raw request tokens, bucket names, or VersionIds. The
+row is a lifetime claim; never delete and recreate to authorize a
+retry of an ambiguous path.
+
+`PrivateFileWriteAttemptService::reserveSynthetic(intentId)` requires:
+- `APP_ENV=testing` (production and every non-test environment blocked)
+- independently default-OFF
+  `CANOVIA_PRIVATE_FILE_WRITE_ATTEMPT_ENABLED=false`, plus R11/R13
+  opt-in and synthetic S3 driver config in disposable fixture
+- a **previously committed** R13 `prepared` upload intent, an
+  outermost DB boundary, decryptable private path and matching
+  fingerprint, and the new schema
+- an atomically inserted unique attempt row committed **before any
+  hypothetical object write**, returning the request token to test
+  code only; the raw token never persists.
+
+An independent `recordSyntheticAck(attemptId, token, VersionId)`
+allows one status transition `reserved`→`synthetic_ack_recorded`,
+only while the intent remains `prepared`, with HMAC token, epoch,
+bucket, journal path and disk checks under DB locks. It encrypts an
+opaque synthetic VersionId without ever querying a provider or
+establishing that PutObject actually ran. An invalid/null VersionId,
+token mismatch, duplicate ack, changed bucket/APP_KEY/epoch, wrong
+intent or corrupt ciphertext fails closed and cannot overwrite a
+prior acknowledgement. It neither settles the R13 journal nor
+creates/authorizes an R17 owner or generation evidence row.
+
+`review(intentId)` and
+`canovia:private-file-write-attempt-health --json` are redacted,
+SELECT-only, test-environment gated observations. Before any ack
+commit, `reserved_outcome_unknown` explicitly represents **both**
+"never called provider" and "provider may have written bytes".
+After simulated ack commit,
+`synthetic_ack_durable_not_attested` means only that untrusted
+fixture metadata is saved; no true object generation is verified.
+Every result forces `provider_attested=false`,
+`retry_authorized=false`, `delete_authorized=false`; no
+list/read/put/delete, SDK, external API, credential lookup,
+scheduler or automatic replay occurs.
+
+**Scope boundary:** R20 does not connect to real S3/local upload code,
+does not persist actual S3 success responses, does not solve real
+process-death races, has no guaranteed provider idempotency key
+contract and cannot resolve the ambiguity without later provider-side
+generation-aware reconciliation. The request token HMAC and encrypted
+VersionId depend on the current APP_KEY; epoch mismatch prevents
+silent reuse but a safe re-encryption/keyring migration remains
+unimplemented. All five added G3 schemas require independent release
+and Aiven operator approval. G3 remains OPEN.

@@ -14,6 +14,9 @@ on:
       - 'app/Services/PrivateFileGenerationEvidenceService.php'
       - 'app/Services/PrivateFileWriteReceiptHandoffService.php'
       - 'app/Services/PrivateFileSyntheticCrashMatrixService.php'
+      - 'app/Services/PrivateFileWriteAttemptService.php'
+      - 'database/migrations/2026_10_14_150000_create_private_file_write_attempts.php'
+      - 'tests/Feature/PrivateFileWriteAttemptG3Test.php'
       - 'tests/Feature/PrivateFileSyntheticCrashMatrixG3Test.php'
       - 'tests/Feature/PrivateFileWriteReceiptHandoffG3Test.php'
       - 'database/migrations/2026_10_14_140000_create_private_file_generation_evidence.php'
@@ -104,6 +107,9 @@ jobs:
           php -l app/Services/PrivateFileGenerationEvidenceService.php
           php -l app/Services/PrivateFileWriteReceiptHandoffService.php
           php -l app/Services/PrivateFileSyntheticCrashMatrixService.php
+          php -l app/Services/PrivateFileWriteAttemptService.php
+          php -l database/migrations/2026_10_14_150000_create_private_file_write_attempts.php
+          php -l tests/Feature/PrivateFileWriteAttemptG3Test.php
           php -l tests/Feature/PrivateFileSyntheticCrashMatrixG3Test.php
           php -l tests/Feature/PrivateFileWriteReceiptHandoffG3Test.php
           php -l database/migrations/2026_10_14_140000_create_private_file_generation_evidence.php
@@ -145,8 +151,10 @@ jobs:
         run: php artisan test tests/Feature/PrivateFileGenerationEvidenceG3Test.php --stop-on-failure
       - name: G3 R18 synthetic receipt handoff in isolated PHP process
         run: php artisan test tests/Feature/PrivateFileWriteReceiptHandoffG3Test.php --stop-on-failure
-      - name: G3 R19 synthetic crash matrix in isolated final PHP process
+      - name: G3 R19 synthetic crash matrix in isolated PHP process
         run: php artisan test tests/Feature/PrivateFileSyntheticCrashMatrixG3Test.php --stop-on-failure
+      - name: G3 R20 durable write-ahead attempt envelope in isolated final PHP process
+        run: php artisan test tests/Feature/PrivateFileWriteAttemptG3Test.php --stop-on-failure
       - name: G3 operator-only CLI dry-run and read-only health are available
         run: |
           php artisan canovia:retry-private-file-cleanup --dry-run
@@ -156,6 +164,9 @@ jobs:
           php artisan canovia:private-file-cleanup-health --json
           php artisan canovia:private-upload-intent-health --json
           # Operator contract is OFF by default; the deny is intentional.
+          if php artisan canovia:private-file-write-attempt-health --json; then
+            echo 'R20 attempt health must remain disabled by default' >&2; exit 1;
+          fi
           if php artisan canovia:private-file-generation-evidence-health --json; then
             echo 'R17 synthetic evidence must be disabled by default' >&2; exit 1;
           fi
