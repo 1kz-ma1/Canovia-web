@@ -127,7 +127,7 @@ final class McpOAuthPlanConsentController extends Controller
 
         return redirect()->route('auth.account')->with(
             'status',
-            '指定した開発Planの共有範囲と期限を承認しました。ChatGPTからの直接取得はまだ有効になっていません。',
+            'この計画をChatGPTに共有する設定を保存しました。ChatGPT側から確認できるかは、接続後にお試しください。',
         );
     }
 
@@ -148,7 +148,7 @@ final class McpOAuthPlanConsentController extends Controller
     {
         return redirect()->route('auth.account')->with(
             'status',
-            'Plan共有の本人確認・許可を完了できませんでした。対象Planと認証状態を確認し、最初からやり直してください。',
+            '計画の共有設定を完了できませんでした。画面を開き直して、本人確認からお試しください。',
         );
     }
 
