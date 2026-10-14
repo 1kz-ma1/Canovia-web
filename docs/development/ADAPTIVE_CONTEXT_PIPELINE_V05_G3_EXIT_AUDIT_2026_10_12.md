@@ -951,3 +951,39 @@ durability, versioning status, ownership of bytes, conditional delete,
 or support for a future keyring/APP_KEY rotation. No production
 Aiven/Render deployment or live migration of the four previously
 introduced G3 tables is authorized. G3 remains OPEN.
+
+## 64. G3-R19 — Synthetic crash-boundary matrix and explicit replay-denial (2026-10-14)
+
+**Prior gap:** R18's strict synthetic PutObject receipt handoff did not
+exercise the gaps between prewrite journal commitment, storage ack,
+DB owner creation, journal settlement and post-commit synthetic
+evidence recording. An interrupted writer could leave a journal with
+unknown byte existence, or a committed owner without a receipt.
+
+**R19 bounded implementation:** Add an independently OFF-by-default,
+`APP_ENV=testing`-only simulator over the R13/R17/R18 mechanisms. It
+durably prepares intent, simulates a write acknowledgement **without
+Storage I/O**, separately commits an Inbox owner, settles journal and
+invokes R18. Tests halt after each phase and re-read committed DB
+facts with fixed/redacted categories. The first two halt states are
+intentionally observationally identical, proving the ledger cannot
+establish whether the object was physically written. Duplicate path
+replay is blocked; incomplete owner/evidence and corrupted receipt
+are inconclusive. Every response explicitly denies verified object
+write, immutable generation, automatic retry and deletion.
+
+**Acceptance:** Dedicated disposable PG16 and MySQL8.0/8.4 suites
+cover phase boundaries, identical prepared states, owner-vs-journal
+mismatch, incomplete post-commit receipt, synthetic success still
+unattested, duplicate-key prevention, production/OFF/nested-transaction
+denial, immutable read-only review and no Storage deletion. New
+suite is isolated from the existing Inbox route tests in PostgreSQL.
+Review full PR diff, exact CI head, and main mergeability before
+dev-only integration.
+
+**Residual:** There is no real SDK, provider request ID capture,
+authentic VersionId, durable receipt-before-commit handshake, external
+writer coordination, power-loss test, conditional-generation delete,
+key rotation or approved production rollout. R19 uses deterministic
+test stops, not real process kills. All 4 G3 live-schema approvals
+remain separate. G3 remains OPEN.
