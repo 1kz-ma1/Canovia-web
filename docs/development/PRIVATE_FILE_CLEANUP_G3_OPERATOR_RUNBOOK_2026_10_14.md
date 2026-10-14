@@ -592,3 +592,27 @@ without independent security review, real provider acceptance tests,
 power-loss recovery verification and separately approved rollout.
 Local is still the default; five earlier G3 migrations are not
 approved for production Aiven. **G3 OPEN.**
+
+## 25. G3-R26 — Replay-shaped fixture data remains manual hold only
+
+R26's `CANOVIA_PRIVATE_FILE_TRUST_REPLAY_PREFLIGHT_ENABLED`
+defaults OFF and is blocked outside disposable testing with all
+previous gated G3 evidence services. Only read-only PHP fixture
+comparison occurs; there is no external root, signing key or
+persistent replay ledger.
+
+A claimed root name, root epoch, nonce, short expiry or apparently
+increasing sequence is not independent provider authentication.
+Missing history, duplicate nonces, order violations, changed epochs,
+expired claims or container binding override are deny states.
+Even well-ordered synthetic samples mean
+`untrusted_history_not_replay_proof`, **never** authorization
+to retry, overwrite, delete or release a cleanup outbox entry.
+
+Do not substitute a verifier or enable R26 in staging/production.
+Real root rotation, replay durability and provider-bound conditional
+operations need separate security review, live provider evidence,
+crash recovery testing and owner release authorization. No provider
+I/O, new migration or operator command is added by R26.
+Five prior G3 migrations remain unapproved for production Aiven.
+**G3 OPEN.**
