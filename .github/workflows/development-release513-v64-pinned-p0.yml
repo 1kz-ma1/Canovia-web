@@ -1,10 +1,11 @@
-name: V6.4 Pinned PR513 Free Path Acceptance (Disposable)
+name: V6.4-V6.5 Pinned PR513 Free Path Acceptance (Disposable)
 
 on:
   pull_request:
     branches: [main]
     paths:
       - 'tests/Feature/Release513P0JourneyV64Test.php'
+      - 'tests/Feature/Release513FirstActionWithoutSeedV65Test.php'
       - '.github/workflows/development-release513-v64-pinned-p0.yml'
   workflow_dispatch:
 
@@ -33,8 +34,11 @@ jobs:
           set -euo pipefail
           test "$(git -C candidate rev-parse HEAD)" = "bb8248f25545ae0d600fbb68f66c41c360004e2c"
           test -f audit/tests/Feature/Release513P0JourneyV64Test.php
+          test -f audit/tests/Feature/Release513FirstActionWithoutSeedV65Test.php
           test ! -e candidate/tests/Feature/Release513P0JourneyV64Test.php
+          test ! -e candidate/tests/Feature/Release513FirstActionWithoutSeedV65Test.php
           cp audit/tests/Feature/Release513P0JourneyV64Test.php candidate/tests/Feature/
+          cp audit/tests/Feature/Release513FirstActionWithoutSeedV65Test.php candidate/tests/Feature/
           test "$(git -C candidate rev-parse HEAD)" = "bb8248f25545ae0d600fbb68f66c41c360004e2c"
       - uses: shivammathur/setup-php@v2
         with:
@@ -46,7 +50,9 @@ jobs:
         run: composer install --no-interaction --prefer-dist --no-progress
       - name: Lint transplant against historical candidate
         working-directory: candidate
-        run: php -l tests/Feature/Release513P0JourneyV64Test.php
+        run: |
+          php -l tests/Feature/Release513P0JourneyV64Test.php
+          php -l tests/Feature/Release513FirstActionWithoutSeedV65Test.php
       - name: Run same-user journeys against historical candidate and ephemeral SQLite
         working-directory: candidate
         env:
@@ -57,7 +63,7 @@ jobs:
           CACHE_STORE: array
           QUEUE_CONNECTION: sync
           NATIVE_AI_DRIVER: disabled
-        run: php artisan test tests/Feature/Release513P0JourneyV64Test.php --stop-on-failure
+        run: php artisan test tests/Feature/Release513P0JourneyV64Test.php tests/Feature/Release513FirstActionWithoutSeedV65Test.php --stop-on-failure
       - name: Explicitly preserve candidate SHA and no-production-gate conclusion
         working-directory: candidate
         shell: bash
