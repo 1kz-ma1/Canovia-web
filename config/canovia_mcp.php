@@ -22,6 +22,11 @@ return [
     // activate a private-data MCP endpoint.
     'tools_enabled' => env('CANOVIA_MCP_TOOLS_ENABLED', false),
 
+    // Separate opt-in for personally consented learning Plan reads. Disabled
+    // everywhere by default and ALWAYS refused in synthetic-only staging.
+    // No practice evidence, answer history or mutations are exposed.
+    'study_read_enabled' => env('CANOVIA_MCP_STUDY_READ_ENABLED', false),
+
     // Exact HTTPS origins permitted when a browser supplies Origin.
     // An absent Origin from a server-side ChatGPT client is allowed.
     'allowed_origins' => env('CANOVIA_MCP_ALLOWED_ORIGINS', ''),
