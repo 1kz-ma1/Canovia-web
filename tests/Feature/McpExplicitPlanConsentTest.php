@@ -375,6 +375,53 @@ final class McpExplicitPlanConsentTest extends TestCase
         $this->assertDatabaseCount('mcp_delegated_grants', 0);
     }
 
+    public function test_study_plan_requires_separate_toggle_fresh_oauth_and_final_consent(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $outsider = User::factory()->create(['first_run_completed_at' => now()]);
+        $study = $this->plan($owner, '資格学習');
+        $this->linked($owner);
+        $this->provider();
+
+        // Never open a personal Study Plan using only a preexisting
+        // Development consent configuration.
+        $this->actingAs($owner)->post($this->startUrl($study), [
+            'scope' => 'overview', 'duration_days' => 7,
+        ])->assertNotFound();
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+
+        config(['canovia_mcp.study_read_enabled' => true]);
+        $this->actingAs($outsider)->post($this->startUrl($study), [
+            'scope' => 'overview', 'duration_days' => 7,
+        ])->assertNotFound();
+        $query = $this->start($owner, $study, 'tasks', 7);
+        $this->assertSame(self::ACCOUNT_CLIENT, $query['client_id']);
+        $this->assertSame('S256', $query['code_challenge_method']);
+        $this->oauthCallback($query['state'])->assertRedirect(route('auth.account'));
+        $this->assertSame('tasks', session('mcp.plan_consent.verified.scope'));
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+
+        $this->actingAs($owner)->get(route('auth.account'))->assertOk()
+            ->assertSee('data-mcp-plan-consent-confirm', false);
+        $this->actingAs($owner)
+            ->post(route('auth.account.mcp_plan_consent.confirm'))
+            ->assertRedirect(route('auth.account'));
+        $grant = McpDelegatedGrant::query()->sole();
+        $this->assertSame($study->id, $grant->plan_id);
+        $this->assertSame('tasks', $grant->scope);
+
+        // A switched-off Study feature or a synthetic-only staging app
+        // must NEVER re-use the previously approved study grant.
+        config(['canovia_mcp.study_read_enabled' => false]);
+        $this->assertFalse(app(McpDelegatedPlanAccessPolicy::class)->allows(
+            $this->chatgptPrincipal(), $study, 'tasks',
+        ));
+        config(['canovia_mcp.study_read_enabled' => true, 'app.env' => 'staging']);
+        $this->assertFalse(app(McpDelegatedPlanAccessPolicy::class)->allows(
+            $this->chatgptPrincipal(), $study, 'tasks',
+        ));
+    }
+
     private function plan(
         User $owner,
         string $category = '個人開発',

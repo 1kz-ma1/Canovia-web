@@ -10,6 +10,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Services\McpDelegatedIdentityFingerprintService;
 use App\Services\McpReadOnlyContextTool;
+use App\Services\McpReadOnlyStudyContextTool;
 use App\Services\McpDelegatedRevocationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
@@ -397,6 +398,110 @@ final class McpReadOnlyResourceTest extends TestCase
         $this->rpc('ping', [], 1, self::TOKEN, 'https://evil.example.test')->assertStatus(403);
 
         $this->assertDatabaseCount('mcp_delegated_access_events', 0);
+    }
+
+    public function test_opt_in_study_tool_reads_only_approved_private_plan_and_task_fields(): void
+    {
+        $this->idp();
+        $owner = User::factory()->create();
+        $study = $this->plan($owner);
+        $study->update(['category' => '資格学習', 'title' => 'SYNTHETIC_AP_LEARNING']);
+        $this->linkAndGrant($owner, $study, 'overview');
+        $grant = McpDelegatedGrant::query()->sole();
+        Task::query()->create([
+            'plan_id' => $study->id,
+            'title' => 'Network practice',
+            'description' => 'PRIVATE_ANSWER_DO_NOT_EXPORT',
+            'status' => 'doing',
+            'progress_percent' => 35,
+            'priority' => 1,
+            'sort_order' => 1,
+        ]);
+
+        // No tool discovery, read or OAuth consent before the independent
+        // switch is enabled; the development tool must NOT cross domains.
+        $this->rpc('tools/list')->assertOk()->assertJsonCount(1, 'result.tools');
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyContextTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertStatus(400)->assertJsonPath('error.code', -32602);
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyContextTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertOk()->assertJsonPath('result.isError', true);
+
+        config(['canovia_mcp.study_read_enabled' => true]);
+        $this->assertTrue(app(\App\Services\McpExplicitPlanConsentService::class)
+            ->isEligibleMcpPlanOwner($owner, $study));
+        $this->rpc('tools/list')->assertOk()
+            ->assertJsonCount(2, 'result.tools')
+            ->assertJsonPath('result.tools.1.name', McpReadOnlyStudyContextTool::NAME)
+            ->assertJsonPath('result.tools.1.annotations.readOnlyHint', true);
+
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyContextTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertOk()
+            ->assertJsonPath('result.isError', false)
+            ->assertJsonPath('result.structuredContent.plan.title', 'SYNTHETIC_AP_LEARNING')
+            ->assertJsonPath('result.structuredContent.plan.recorded_deadline',
+                today()->addDays(7)->toDateString())
+            ->assertJsonCount(0, 'result.structuredContent.tasks')
+            ->assertDontSee('Network practice');
+
+        // A prior overview grant cannot silently expose Task details.
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyContextTool::NAME,
+            'arguments' => ['plan_id' => $study->id, 'scope' => 'tasks'],
+        ])->assertOk()->assertJsonPath('result.isError', true)
+            ->assertDontSee('Network practice');
+
+        // Mimics a distinct user-approved Tasks grant, not an MCP write.
+        $grant->update(['scope' => 'tasks']);
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyContextTool::NAME,
+            'arguments' => ['plan_id' => $study->id, 'scope' => 'tasks'],
+        ])->assertOk()
+            ->assertJsonPath('result.isError', false)
+            ->assertJsonPath('result.structuredContent.tasks.0.title', 'Network practice')
+            ->assertJsonPath('result.structuredContent.tasks.0.recorded_progress_percent', 35)
+            ->assertDontSee('PRIVATE_ANSWER_DO_NOT_EXPORT');
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyContextTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertOk()->assertJsonPath('result.isError', true)
+            ->assertDontSee('SYNTHETIC_AP_LEARNING');
+
+        $grant->update(['status' => 'revoked', 'revoked_at' => now()]);
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyContextTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertOk()->assertJsonPath('result.isError', true)
+            ->assertDontSee('SYNTHETIC_AP_LEARNING');
+    }
+
+    public function test_study_domain_always_denied_on_synthetic_staging_even_when_switch_is_set(): void
+    {
+        $owner = User::factory()->create();
+        $study = $this->plan($owner);
+        $study->update(['category' => '資格学習', 'title' => 'DO_NOT_EXPOSE']);
+        $principal = new \App\Services\McpVerifiedTokenPrincipal(
+            self::ISSUER,
+            'verified-owner-subject',
+            self::CHATGPT_CLIENT,
+            self::RESOURCE,
+            ['canovia.development.read'],
+            now()->timestamp + 1200,
+        );
+        $this->linkAndGrant($owner, $study);
+        config([
+            'app.env' => 'staging',
+            'canovia_mcp.study_read_enabled' => true,
+        ]);
+        $this->assertFalse(app(\App\Services\McpExplicitPlanConsentService::class)
+            ->isEligibleMcpPlanOwner($owner, $study));
+        $this->assertNull(app(McpReadOnlyStudyContextTool::class)
+            ->read($principal, $study->id, 'overview', 5));
     }
 
     public function test_transport_is_read_only_without_sse_sessions_or_mutation(): void

@@ -176,6 +176,12 @@
             @default
                 @include('workspace.study.views.work')
         @endswitch
+
+        @if (config('canovia_mcp.study_read_enabled') === true
+            && config('app.env') !== 'staging'
+            && ($canEdit ?? false))
+            @include('workspace.study.partials.mcp-plan-consent')
+        @endif
     @endif
 </div>
 

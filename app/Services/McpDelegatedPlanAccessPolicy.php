@@ -44,6 +44,7 @@ final class McpDelegatedPlanAccessPolicy
         Plan $plan,
         string $requestedScope = 'overview',
         bool $lockForRead = false,
+        string $requiredDomain = 'development',
     ): ?McpDelegatedGrant {
         // The calling MCP controller has ALREADY authenticated the token.
         // Require exactly one valid verifier mode; Auth0 signed JWT is not
@@ -52,7 +53,12 @@ final class McpDelegatedPlanAccessPolicy
         if (config('canovia_mcp.delegated_policy_enabled') !== true
             || $this->verifier->mode() === null
             || ! $this->resource->isReady()
-            || ! in_array($requestedScope, ['overview', 'tasks'], true)) {
+            || ! in_array($requestedScope, ['overview', 'tasks'], true)
+            || ! in_array($requiredDomain, ['development', 'study'], true)
+            || ($requiredDomain === 'study' && (
+                config('canovia_mcp.study_read_enabled') !== true
+                || config('app.env') === 'staging'
+            ))) {
             return null;
         }
 
@@ -92,7 +98,7 @@ final class McpDelegatedPlanAccessPolicy
             || $plan->user_id === null
             || (int) $plan->user_id !== (int) $link->user_id
             || (bool) $plan->is_collaborative
-            || $this->profiles->forPlan($plan)->key !== 'development') {
+            || $this->profiles->forPlan($plan)->key !== $requiredDomain) {
             return null;
         }
 

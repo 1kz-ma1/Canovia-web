@@ -150,7 +150,7 @@ final class McpOAuthAccountLinkController extends Controller
                 || ! (is_int($days) || $days === McpExplicitPlanConsentService::UNTIL_REVOKED)
                 || ! $consent->isScopeAndDurationAllowed($scope, $days)
                 || $plan === null
-                || ! $consent->isPersonalDevelopmentOwner($user, $plan)
+                || ! $consent->isEligibleMcpPlanOwner($user, $plan)
                 || ! $consent->matchesLinkedIdentity($user, $fingerprint)) {
                 return $this->failure('link_callback_plan_scope');
             }
