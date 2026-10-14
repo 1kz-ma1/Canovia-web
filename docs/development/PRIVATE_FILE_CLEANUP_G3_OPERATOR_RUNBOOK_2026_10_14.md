@@ -496,3 +496,31 @@ or use this fixture as evidence of real crash recovery. Provider identity,
 versioning status, external writer controls, credential/key rotation and
 real process-kill testing remain open. **G3 OPEN; five prior schema
 migrations still unapproved.**
+
+## 21. G3-R22 — Multiple observations must not be used to reclaim files
+
+`CANOVIA_PRIVATE_FILE_SYNTHETIC_RACE_MATRIX_ENABLED` remains OFF
+by default and hard-blocked outside `APP_ENV=testing`. The additional
+R22 race matrix reads only two to four disposable, caller-supplied
+synthetic R21 observations, all tied to the durable R20 attempt.
+There are **no provider requests, deleted objects, cleanup enqueue,
+migration or new operator command**.
+
+- A→B→A: `aba_pattern_observed_untrusted`, *not* attribution or proof
+  of who wrote which generation.
+- A→A: `equal_snapshots_aba_not_excluded`, *not* evidence of exclusive
+  access, generation validity or permission to retry.
+- Absent/present changes, delete-marker-like or suspended/unversioned
+  states, transport gaps and possible external writers: manual hold.
+- `claimed_exclusive`, `versioning_mode=enabled`, and
+  `claimed_supported` are **unverified fixture claims**.
+
+Every outcome denies provider attestation, generation verification,
+writer exclusivity, race freedom, retries and deletion. Operators must
+not copy synthetic classifications into a live recovery worker or
+Storage::delete path. A real provider integration would require
+independent versioning/IAM checks, bounded authenticated immutable
+write-time evidence, coordinated external writers and generation-safe
+conditional operations, plus a separately approved production gate.
+Local remains the default. No Aiven migration approval was given:
+five previous G3 migrations remain pending. **G3 OPEN.**
