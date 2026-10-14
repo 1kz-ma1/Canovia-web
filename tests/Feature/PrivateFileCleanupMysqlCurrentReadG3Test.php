@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Services\PrivateFileLifecycleService;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
 use PDO;
 use Tests\TestCase;
@@ -13,13 +12,17 @@ use Tests\TestCase;
  */
 final class PrivateFileCleanupMysqlCurrentReadG3Test extends TestCase
 {
-    use DatabaseMigrations;
-
     protected function setUp(): void
     {
         parent::setUp();
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Requires disposable MySQL 8.');
+        if (getenv('CANOVIA_G3_DISPOSABLE_MYSQL_CI') !== '1'
+            || ! app()->environment('testing')
+            || DB::connection()->getDriverName() !== 'mysql'
+            || config('database.connections.mysql.host') !== '127.0.0.1'
+            || config('database.connections.mysql.database') !== 'canovia_g3_ci'
+            || config('database.connections.mysql.username') !== 'canovia_ci'
+            || (string) config('database.connections.mysql.url', '') !== '') {
+            throw new \RuntimeException('G3 test refused: not isolated disposable MySQL.');
         }
     }
 
@@ -33,7 +36,8 @@ final class PrivateFileCleanupMysqlCurrentReadG3Test extends TestCase
 
         DB::transaction(function () use ($path, $rival): void {
             // Ordinary SELECT opens a snapshot before the other connection commits.
-            $this->assertSame(0, DB::table('inbox_items')->count());
+            $this->assertFalse(DB::table('inbox_items')
+                ->where('storage_path', $path)->exists());
 
             $stmt = $rival->prepare(
                 'INSERT INTO inbox_items (source_type, status, storage_path, created_at, updated_at) '
@@ -50,6 +54,9 @@ final class PrivateFileCleanupMysqlCurrentReadG3Test extends TestCase
         });
 
         $this->assertDatabaseHas('inbox_items', ['storage_path' => $path]);
+        // Only this throwaway CI database is accessed. Clean up the rival's
+        // committed row without using a production account or storage key.
+        DB::table('inbox_items')->where('storage_path', $path)->delete();
     }
 
     public function test_current_read_does_not_invent_reference(): void
