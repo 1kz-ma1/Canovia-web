@@ -13,6 +13,7 @@ use App\Services\CareerCaptureService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\TaskEvidenceService;
+use App\Services\PrivateFileCleanupGuard;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -129,11 +130,18 @@ class CareerWorkspaceController extends Controller
         $this->authorizeCareerPlan($plan, $profiles);
         abort_unless((int) $capture->plan_id === (int) $plan->id, 404);
 
-        if ($capture->screenshot_path) {
-            Storage::delete($capture->screenshot_path);
-        }
+        $path = DB::transaction(function () use ($plan, $capture): ?string {
+            $livePlan = Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
+            $liveCapture = CareerCapture::query()
+                ->where('plan_id', $livePlan->id)->whereKey($capture->id)
+                ->lockForUpdate()->firstOrFail();
+            $path = $liveCapture->screenshot_path;
+            $liveCapture->delete();
 
-        $capture->delete();
+            return $path;
+        }, 3);
+
+        app(PrivateFileCleanupGuard::class)->deleteIfUnreferenced($path);
         $this->careerIntelligence->tryRefresh($plan);
 
         return redirect()
