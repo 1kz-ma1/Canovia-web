@@ -1,0 +1,28 @@
+name: MCP Staging Release Drift Guard (Offline)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ops/mcp_staging_release_drift_guard.py'
+      - 'tests/ci/test_mcp_staging_release_drift_guard.py'
+      - 'docs/development/MCP_STAGING_RENDER_DEPLOY_DRIFT_INCIDENT_2026_10_14.md'
+      - '.github/workflows/mcp-staging-release-safety.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mcp-staging-release-drift-offline:
+    name: MCP Staging exact-SHA and no-write regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile no-network metadata guard
+        run: |
+          python3 -m py_compile scripts/ops/mcp_staging_release_drift_guard.py tests/ci/test_mcp_staging_release_drift_guard.py
+      - name: Reproduce drift, reject connector write and verify rollback metadata
+        run: |
+          python3 -m unittest discover -s tests/ci -p 'test_mcp_staging_release_drift_guard.py' -v
