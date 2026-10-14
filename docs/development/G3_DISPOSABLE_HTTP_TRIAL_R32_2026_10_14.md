@@ -66,3 +66,20 @@ approval details or credentials are recorded in this repository.
 
 **Do not close G3 based on R32. Five prior G3 migrations remain
 production-unapproved. No production deploy or schema change.**
+
+## Actual isolated run observed (R32 first trial)
+
+- Workflow: [G3 Disposable S3-Compatible HTTP Trial](https://github.com/1kz-ma1/Canovia-web/actions/runs/38571152324)
+- Tested source HEAD: `3dbffcded260e945475146c23e3879d0eaa29495`
+- Outcome: **success** (all seven unittest scenarios in the
+  ephemeral HTTP trial job completed successfully)
+- Platform preflight, migration recovery and development prelaunch
+  also reported success for this exact source SHA.
+- This is an **observed GitHub Actions run**, not a live AWS run.
+  The record does not verify IAM, independent provider response
+  authenticity, server power-loss durability, nor safe conditional
+  deletion; no AWS keys or live buckets were provided.
+
+A future revision to the test source must produce a new exact-HEAD
+successful run before the same conclusions are attributed to it.
+**G3 OPEN; no production schema or release approval.**
