@@ -288,3 +288,34 @@ digest also prevents ABA reuse, and the ciphertext needs matching
 decryption keys. Investigate all native and external writer paths and
 provider object-generation semantics before defining a safe reaper.
 No retention job or automatic delete is installed under R13.
+
+## 13. G3-R14 aggregate upload-intent reconciliation preview
+
+The explicitly gated
+`CANOVIA_PRIVATE_FILE_UPLOAD_RECONCILE_PREVIEW_ENABLED` switch is
+**OFF by default**, and this observer refuses production runtime
+even if all flags are set. Only in an isolated, disposable, consenting
+development fixture with R11/R13 gates enabled may an operator run:
+
+`php artisan canovia:private-upload-reconcile-preview --json --limit=10`
+
+Limit must be 1–20; output contains *only* fixed aggregate observation
+categories. Eligible records are older-than-24-hours prepared intents
+and all needs-review intents; fresh/prepared and committed rows are
+excluded. It compares decrypted path fingerprint, fence row presence,
+references across Inbox/Recall/Career, and targeted object existence.
+It does NOT print paths/IDs/owners, list object storage, download bytes,
+write DB state, lock a fence, or delete an object.
+
+Interpret all four reference/object combinations as **time-of-check
+observations only**. Do not label object-without-reference "orphan".
+Missing schema, unreadable ciphertext, rotated key, DB/storage errors
+or identity mismatch are non-destructive blockers. A missing fence row
+may mean a writer crashed before its lock was created, not an absent
+or corrupt object. Do not enable this command in production, add a
+cron/queue job, build an automated delete path or extract secret paths
+for ad hoc manual deletion.
+
+Follow the full acceptance and limitations in the R14 §9
+implementation specification. Three production G3 migrations and
+complete writer coverage remain unapproved. G3 stays OPEN.

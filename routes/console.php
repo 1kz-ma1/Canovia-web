@@ -301,3 +301,41 @@ Artisan::command(
             ? 2 : 0;
     },
 )->purpose('Read-only, redacted counts of committed pre-upload intents; never scans or deletes storage');
+
+
+/**
+ * G3-R14: explicitly opt-in, non-production read-only PREVIEW.
+ * No object listing, byte downloads, path/ID output, lock, ledger update,
+ * database owner mutation, or storage deletion. Not an orphan classifier.
+ */
+Artisan::command(
+    'canovia:private-upload-reconcile-preview
+        {--limit=10 : Maximum candidate intents to observe (1..20)}
+        {--json : Return fixed, aggregate observation categories only}',
+    function (\App\Services\PrivateFileUploadReconciliationPreviewService $preview): int {
+        $rawLimit = (string) $this->option('limit');
+        if (! ctype_digit($rawLimit)
+            || (int) $rawLimit < 1 || (int) $rawLimit > 20) {
+            $this->error('Invalid limit: expected 1..20.');
+            return 1;
+        }
+
+        $report = $preview->preview((int) $rawLimit);
+        if ($this->option('json')) {
+            $this->line((string) json_encode($report, JSON_THROW_ON_ERROR));
+        } else {
+            $this->line('Private upload reconcile preview: '.$report['outcome']);
+            $this->line('schema: '.$report['schema']);
+            foreach (['eligible', 'observed', 'fence_row_observed',
+                'fence_row_not_observed', 'destructive_actions'] as $metric) {
+                $this->line($metric.': '.$report[$metric]);
+            }
+            foreach ($report['categories'] as $name => $count) {
+                $this->line($name.': '.$count);
+            }
+            $this->warn('Observation only. NOT an orphan finding or deletion approval.');
+        }
+
+        return in_array($report['outcome'], ['blocked', 'unavailable'], true) ? 1 : 0;
+    },
+)->purpose('G3 R14 opt-in non-production aggregate preview; never lists or deletes private storage');
