@@ -888,3 +888,54 @@ DB/Storage no-mutation. These synthetic checks cannot prove actual
 provider identity, immutable generation, IAM/versioning state, live
 fencing, key rotation or real crash recovery. Five existing G3 schema
 migrations remain unapproved for production Aiven. **G3 OPEN.**
+
+## 21. G3-R26 — Synthetic trust-root epoch, expiry and replay denial (2026-10-14)
+
+R25 introduced a future independently authenticated provider verifier interface,
+but wired only a final verifier that always refuses all candidates. R26
+adds `PrivateFileTrustReplayPreflightService::inspect`, a **testing-only
+negative classifier** for an additional strictly shaped, untrusted claim
+about provider issuer, claimed trust root, trust-root epoch, attempt,
+request, object version, nonce, sequence, issued-at and expires-at.
+No provider signature, trust anchor, authenticated timestamp or
+persistent replay ledger is introduced.
+
+R26 requires a maximum claimed TTL of 60 seconds, no expired/future
+window and exact attempt/request/VersionId correlation to the R25
+synthetic response. A caller-supplied preceding observation is required
+for comparison, but **is not independent, persisted or authoritative**.
+Missing history is `replay_history_unavailable`; duplicate nonce,
+non-increasing sequence or timestamp, changed root/epoch/issuer/attempt,
+and invalid/extra fields yield redacted denial states. A clean-looking
+history remains `untrusted_history_not_replay_proof` after R25's
+local-chain denial is independently rechecked.
+
+Before resolution, R26 also checks the container for bindings that
+attempt to replace the R25 service, concrete unavailable verifier,
+or verifier interface, returning `verifier_override_detected`.
+This detects accidental/fixture substitution; it **cannot secure a
+compromised PHP application/container**. No positive provider verifier
+or authorization path is registered.
+
+Every result forces `trusted_root_verified=false`,
+`replay_protection_verified=false`,
+`independent_verifier_available=false`,
+`provider_authenticated=false`,
+`generation_write_bound=false`,
+`retry_authorized=false`, `delete_authorized=false`,
+`network_requests=false` and `storage_mutations=false`.
+Only `local_binding_consistent` may be true, meaning R25's
+untrusted local chain is consistent, not that provider evidence
+was authenticated. Inputs' key/nonce, bucket or VersionId are
+never returned. No provider SDK, Storage, DB write, worker,
+cleanup scheduling or migration is added.
+
+New `CANOVIA_PRIVATE_FILE_TRUST_REPLAY_PREFLIGHT_ENABLED`
+defaults OFF and requires `APP_ENV=testing`, all relevant R11/R13/
+R20/R21/R23/R24/R25 gates and a disposable S3-shaped filesystem config;
+Local remains the production default. CI exercises dedicated R26
+regressions alongside previous G3 suites on PostgreSQL 16 and MySQL
+8.0/8.4. Real provider trust-root validation, durable anti-replay,
+external-writer fencing, power-loss recovery and atomic conditional
+operations remain unverified. Five existing G3 migrations are
+unapproved for Aiven production. **G3 OPEN.**

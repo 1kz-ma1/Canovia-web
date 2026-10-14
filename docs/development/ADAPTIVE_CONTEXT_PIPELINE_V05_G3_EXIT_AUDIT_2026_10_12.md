@@ -1149,3 +1149,26 @@ immutable versioning/IAM proof, anti-replay continuity, exclusive
 writer fencing, generation-conditional mutation or real kill/restart
 evidence. Five additive G3 migrations remain production-unapproved,
 and no actual deployment is in scope. **G3 OPEN.**
+
+## 71. G3-R26 — Untrusted trust-root claims and replay history never authorize recovery (2026-10-14)
+
+R26 classifies strictly typed synthetic issuer/root/epoch/nonce,
+sequence and short-lived timestamp claims **after** the existing
+R25 denial boundary. Rejects missing claimed history, a repeated
+nonce, non-increasing sequence/issued-at, invalid or rotated root
+claims, expired/future claims, extra authority fields, wrong attempts
+or generations, previous R25 chain failures and DI verifier overrides.
+Even consistent samples remain `untrusted_history_not_replay_proof`
+and all authenticity, root verification, replay protection,
+writer-exclusion, retry and deletion guarantees remain false.
+
+Tests cover duplicate and reordered synthetic events, expiry windows,
+root/epoch drift, malicious verifier-interface and concrete binding,
+injected authority flags, APP_KEY epoch and ciphertext corruption,
+production/OFF/Local gates and zero DB/Storage writes. R26 test inputs
+are not authenticated, the "history" is not durable, and application
+container integrity is not a provider trust root. No new migrations
+or provider I/O. PG16 and MySQL8.0/8.4 CI plus full-diff and
+exact-HEAD merge gates required. Real authenticity, replay persistence,
+external-writer/ABA safety and crash recovery remain unverified.
+**Five G3 production migrations unapproved; G3 OPEN.**

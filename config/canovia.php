@@ -141,6 +141,13 @@ return [
         FILTER_VALIDATE_BOOL
     ),
 
+    // G3-R26: test-only trust epoch, expiry, replay and verifier override
+    // negative classifier. No trusted root, durable replay proof or I/O.
+    'private_file_trust_replay_preflight_enabled' => filter_var(
+        env('CANOVIA_PRIVATE_FILE_TRUST_REPLAY_PREFLIGHT_ENABLED', false),
+        FILTER_VALIDATE_BOOL
+    ),
+
     // A public epoch label, NOT an encryption key. Changing it intentionally
     // blocks old proof reads until an explicit, audited migration exists.
     'private_file_generation_key_epoch' => env(
