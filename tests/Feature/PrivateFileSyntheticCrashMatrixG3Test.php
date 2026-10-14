@@ -33,7 +33,7 @@ final class PrivateFileSyntheticCrashMatrixG3Test extends TestCase
         return app(PrivateFileSyntheticCrashMatrixService::class);
     }
 
-    private function run(string $name, string $stop): array
+    private function runPhase(string $name, string $stop): array
     {
         return $this->pilot()->simulate(
             'inbox/synthetic/'.$name.'.png',
@@ -66,13 +66,13 @@ final class PrivateFileSyntheticCrashMatrixG3Test extends TestCase
 
     public function test_crash_before_and_after_synthetic_write_ack_are_indistinguishable(): void
     {
-        $before = $this->run('before', 'halt_after_prepare');
+        $before = $this->runPhase('before', 'halt_after_prepare');
         $this->assertSame('prepared_unresolved', $before['state']);
         $idBefore = $this->intentId('before');
         $viewBefore = $this->pilot()->review($idBefore);
         $this->assertSame('prepared_no_owner_ambiguous', $viewBefore['state']);
 
-        $after = $this->run('after', 'halt_after_synthetic_write_ack');
+        $after = $this->runPhase('after', 'halt_after_synthetic_write_ack');
         $this->assertSame('prepared_unresolved', $after['state']);
         $idAfter = $this->intentId('after');
         $viewAfter = $this->pilot()->review($idAfter);
@@ -89,7 +89,7 @@ final class PrivateFileSyntheticCrashMatrixG3Test extends TestCase
 
     public function test_crash_after_owner_commit_leaves_prepared_journal_and_no_evidence(): void
     {
-        $r = $this->run('owner', 'halt_after_owner_commit');
+        $r = $this->runPhase('owner', 'halt_after_owner_commit');
         $this->assertSame('owner_committed_journal_prepared', $r['state']);
         $id = $this->intentId('owner');
         $view = $this->pilot()->review($id);
@@ -105,7 +105,7 @@ final class PrivateFileSyntheticCrashMatrixG3Test extends TestCase
 
     public function test_crash_after_journal_settlement_stays_committed_without_evidence(): void
     {
-        $r = $this->run('settled', 'halt_after_journal_settle');
+        $r = $this->runPhase('settled', 'halt_after_journal_settle');
         $this->assertSame('journal_committed_evidence_missing', $r['state']);
         $id = $this->intentId('settled');
         $view = $this->pilot()->review($id);
@@ -121,7 +121,7 @@ final class PrivateFileSyntheticCrashMatrixG3Test extends TestCase
     {
         Storage::fake('local');
         Storage::disk('local')->put('inbox/synthetic/preserved.txt', 'leave bytes alone');
-        $r = $this->run('complete', 'complete');
+        $r = $this->runPhase('complete', 'complete');
         $this->assertSame('synthetic_complete_unattested', $r['state']);
         $id = $this->intentId('complete');
         $view = $this->pilot()->review($id);
@@ -139,9 +139,9 @@ final class PrivateFileSyntheticCrashMatrixG3Test extends TestCase
 
     public function test_duplicate_key_is_blocked_after_crash_without_creating_any_new_owner(): void
     {
-        $first = $this->run('retry', 'halt_after_synthetic_write_ack');
+        $first = $this->runPhase('retry', 'halt_after_synthetic_write_ack');
         $this->assertSame('prepared_unresolved', $first['state']);
-        $retry = $this->run('retry', 'complete');
+        $retry = $this->runPhase('retry', 'complete');
         $this->assertSame('prepare_rejected_or_already_claimed', $retry['state']);
         $this->assertConservative($retry);
         $this->assertDatabaseCount('private_file_upload_intents', 1);
@@ -151,7 +151,7 @@ final class PrivateFileSyntheticCrashMatrixG3Test extends TestCase
 
     public function test_mutated_owner_and_evidence_are_not_interpreted_as_valid(): void
     {
-        $this->run('ownerchange', 'complete');
+        $this->runPhase('ownerchange', 'complete');
         $id = $this->intentId('ownerchange');
         DB::table('inbox_items')->where('storage_path', 'inbox/synthetic/ownerchange.png')
             ->update(['storage_path' => 'inbox/synthetic/unrelated.png']);
@@ -159,7 +159,7 @@ final class PrivateFileSyntheticCrashMatrixG3Test extends TestCase
         $this->assertSame('committed_owner_missing_unverifiable', $changed['state']);
         $this->assertConservative($changed);
 
-        $this->run('corrupt', 'complete');
+        $this->runPhase('corrupt', 'complete');
         $idCorrupt = $this->intentId('corrupt');
         DB::table('private_file_generation_evidence')
             ->where('upload_intent_id', $idCorrupt)
@@ -172,16 +172,16 @@ final class PrivateFileSyntheticCrashMatrixG3Test extends TestCase
     public function test_disabled_wrong_environment_nested_transaction_and_unknown_phase_fail_closed(): void
     {
         config(['canovia.private_file_synthetic_crash_matrix_enabled' => false]);
-        $this->assertSame('blocked', $this->run('off', 'complete')['state']);
+        $this->assertSame('blocked', $this->runPhase('off', 'complete')['state']);
         config(['canovia.private_file_synthetic_crash_matrix_enabled' => true]);
-        $this->assertSame('blocked', $this->run('phase', 'unexpected-phase')['state']);
+        $this->assertSame('blocked', $this->runPhase('phase', 'unexpected-phase')['state']);
 
-        $nested = DB::transaction(fn () => $this->run('nested', 'complete'));
+        $nested = DB::transaction(fn () => $this->runPhase('nested', 'complete'));
         $this->assertSame('blocked', $nested['state']);
         $original = app()['env'];
         app()->instance('env', 'production');
         try {
-            $this->assertSame('blocked', $this->run('prod', 'complete')['state']);
+            $this->assertSame('blocked', $this->runPhase('prod', 'complete')['state']);
             $this->assertSame('blocked', $this->pilot()->review(1)['state']);
         } finally {
             app()->instance('env', $original);
@@ -193,7 +193,7 @@ final class PrivateFileSyntheticCrashMatrixG3Test extends TestCase
 
     public function test_unverified_write_can_never_be_automatically_replayed_or_deleted(): void
     {
-        $this->run('noautoretry', 'halt_after_owner_commit');
+        $this->runPhase('noautoretry', 'halt_after_owner_commit');
         $id = $this->intentId('noautoretry');
         $before = DB::table('private_file_upload_intents')->first(['status', 'updated_at']);
         for ($i = 0; $i < 3; $i++) {
