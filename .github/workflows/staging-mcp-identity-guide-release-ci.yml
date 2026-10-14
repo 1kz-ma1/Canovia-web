@@ -1,0 +1,77 @@
+name: Staging MCP dual-client guide pinned release verification
+
+on:
+  pull_request:
+    branches: [staging/mcp-identity-guide-release-base-20261014]
+    paths:
+      - 'resources/views/auth/staging-pilot-account.blade.php'
+      - 'tests/Feature/McpStagingSyntheticPlanConsentPilotTest.php'
+      - 'docs/development/MCP_STAGING_IDENTITY_GUIDE_RELEASE_2026_10_14.md'
+      - '.github/workflows/staging-mcp-identity-guide-release-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  scoped-stage-guide-and-auth-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+      - name: Locked dependencies without scripts or plugins
+        run: |
+          composer validate --strict --no-interaction
+          composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+      - name: Remove the temporary Plan-read diagnostic from this release
+        run: |
+          test ! -f app/Services/McpStagingPlanReadDenialDiagnostic.php
+          ! grep -Fq 'McpStagingPlanReadDenialDiagnostic' app/Services/McpDelegatedPlanAccessPolicy.php
+          ! grep -Fq 'McpStagingPlanReadDenialDiagnostic' app/Services/McpReadOnlyContextTool.php
+          ! grep -Fq 'mcp_stage_plan_read_denied' app/Services/McpDelegatedPlanAccessPolicy.php
+      - name: PHP and UI template syntax
+        run: |
+          php -l tests/Feature/McpStagingSyntheticPlanConsentPilotTest.php
+          php -l app/Services/McpDelegatedPlanAccessPolicy.php
+          php -l app/Services/McpReadOnlyContextTool.php
+      - name: Assert independent consent and link isolation still fail closed
+        env:
+          APP_ENV: testing
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          SESSION_DRIVER: array
+          CACHE_STORE: array
+        run: |
+          php artisan view:cache
+          php artisan test \
+            tests/Feature/McpStagingPilotUiTest.php \
+            tests/Feature/McpStagingSyntheticPlanConsentPilotTest.php \
+            tests/Feature/McpStagingSyntheticReadPilotTest.php \
+            tests/Feature/McpDelegatedPlanAccessPolicyTest.php \
+            tests/Feature/McpReadOnlyResourceTest.php \
+            tests/Feature/McpExplicitPlanConsentTest.php \
+            tests/Feature/McpSyntheticOAuthConsentReadLifecycleTest.php \
+            tests/Feature/McpAuth0SealedStagingWiringTest.php \
+            --colors=never
+
+  isolated-stage-image-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build exact release's isolated Docker image
+        run: docker build --progress=plain -f Dockerfile.mcp-staging -t canovia-mcp-guide-release:check .
+      - name: Verify stage-only Nginx and PHP-fpm configuration
+        run: |
+          docker run --rm --entrypoint sh canovia-mcp-guide-release:check -c \
+            'cp docker/nginx-mcp-staging-synthetic-read-pilot.conf /etc/nginx/nginx.conf && nginx -t'
+          docker run --rm --entrypoint php canovia-mcp-guide-release:check -l \
+            /var/www/html/app/Services/McpDelegatedPlanAccessPolicy.php
+          docker run --rm --entrypoint php canovia-mcp-guide-release:check -l \
+            /var/www/html/app/Services/McpReadOnlyContextTool.php
