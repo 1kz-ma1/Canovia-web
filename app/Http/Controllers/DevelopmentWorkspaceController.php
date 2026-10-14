@@ -13,6 +13,7 @@ use App\Models\Task;
 use App\Services\DevelopmentExecutionContextService;
 use App\Services\DevelopmentImplementationBriefService;
 use App\Services\DevelopmentHomeService;
+use App\Services\DevelopmentPrelaunchPreparationService;
 use App\Services\DevelopmentCreativePlanAccessService;
 use App\Services\DevelopmentWorkspaceSurfaceService;
 use App\Services\CapabilityActivationService;
@@ -40,6 +41,7 @@ final class DevelopmentWorkspaceController extends Controller
         DevelopmentAdaptiveActionService $developmentActions,
         DevelopmentIntelligencePresentationAdapter $presentationAdapter,
         DevelopmentHomeService $developerHome,
+        DevelopmentPrelaunchPreparationService $prelaunchPreparation,
         DevelopmentWorkspaceSurfaceService $surfaces,
         DevelopmentExecutionContextService $executionContext,
         DevelopmentImplementationBriefService $implementationBriefs,
@@ -87,6 +89,7 @@ final class DevelopmentWorkspaceController extends Controller
                 ),
                 'canEdit' => false,
                 'developmentAdaptiveAction' => null,
+                'developmentPrelaunchPreparation' => null,
                 'intelligencePresentation' => null,
                 'intelligenceHistory' => [],
                 'hasReleaseEvidence' => false,
@@ -142,6 +145,12 @@ final class DevelopmentWorkspaceController extends Controller
             $plan,
             $focusTaskId > 0 ? $focusTaskId : null,
         );
+        $developmentPrelaunchPreparation = ! $legacyCreative && $developmentSurface === 'work'
+            ? $prelaunchPreparation->suggest(
+                $plan,
+                $request->query('release_preflight') === '1',
+            )
+            : null;
         $primaryAction = $adaptiveAction?->primaryAction();
         $actionTaskId = (int) data_get(
             $primaryAction?->metadata,
@@ -324,6 +333,7 @@ final class DevelopmentWorkspaceController extends Controller
                 : [],
             'canEdit' => $canEdit,
             'developmentAdaptiveAction' => $adaptiveAction,
+            'developmentPrelaunchPreparation' => $developmentPrelaunchPreparation,
             'intelligencePresentation' => $presentation,
             'intelligenceHistory' => $legacyCreative
                 ? []

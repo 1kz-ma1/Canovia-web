@@ -486,6 +486,11 @@
             @endif
         </section>
 
+@if (! ($developmentLegacyCreativeActive ?? false))
+    @include('workspace.development.partials.prelaunch-preparation')
+@endif
+
+
         
 
 <details class="page-card p-4 sm:p-5" data-development-active-work-details>

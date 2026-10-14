@@ -919,3 +919,35 @@ generation/conditional deletion, independent keyring/rotation or
 coordinated external writers. R17 introduces a **fourth** additive
 production schema gate, not approval to run it. R11/R13/R14/R15/R16
 default-OFF runtime behavior and G3 OPEN status remain unchanged.
+
+## 63. G3-R18 — Strict synthetic write-response handoff, provenance still absent (2026-10-14)
+
+**R17 gap:** A committed journal/owner evidence fixture accepted a
+VersionId-like string, but did not model the boundary between
+successful write adapter output and a durable owner binding.
+
+**Bounded R18 implementation:** Add `PrivateFileWriteReceiptHandoffService`
+with one independently disabled flag and a test-only hard gate. Parse
+strict synthetic `PutObject` results without accepting arbitrary
+extra fields, alternate origins, error HTTP statuses, ETag-only,
+null/invalid VersionIds, changed owner/disk/key/bucket or intent
+identities. Only after matching the authenticated journal path does
+the existing R17 locked evidence writer persist a **synthetic_fixture**
+row with unique intent identity. No additional database table,
+real provider call, upload/delete path change, local-file I/O,
+scheduled job or production enablement.
+
+**Verification:** Disposable PG16 and MySQL8.0/8.4 runs test
+untrusted fixture rejection, explicit context binding,
+uncommitted intent, mismatch between intent and current owner,
+duplicate response immutability, no secret echo, production and OFF
+gates, and absence of object mutations. Exact PR SHA, complete diff,
+reviewer gates and base mergeability must pass.
+
+**Not solved:** The caller's origin and response are spoofable fixture
+data, not authenticated live S3 provenance. R18 does not establish
+generation proof, request/response atomicity, write-time receipt
+durability, versioning status, ownership of bytes, conditional delete,
+or support for a future keyring/APP_KEY rotation. No production
+Aiven/Render deployment or live migration of the four previously
+introduced G3 tables is authorized. G3 remains OPEN.

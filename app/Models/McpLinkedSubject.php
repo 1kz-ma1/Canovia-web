@@ -14,9 +14,20 @@ final class McpLinkedSubject extends Model
     public const STATUS_REVOKED = 'revoked';
 
     protected $fillable = [
-        'user_id', 'identity_fingerprint', 'provider_key',
+        'user_id', 'identity_fingerprint', 'active_identity_fingerprint', 'provider_key',
         'status', 'linked_at', 'revoked_at',
     ];
+
+    protected static function booted(): void
+    {
+        // Every ORM write reserves the fingerprint ONLY for live links.
+        // Revoke releases it but retains historical rows and foreign keys.
+        static::saving(static function (self $subject): void {
+            $subject->active_identity_fingerprint = $subject->status === self::STATUS_LINKED
+                && $subject->revoked_at === null
+                    ? $subject->identity_fingerprint : null;
+        });
+    }
 
     protected function casts(): array
     {

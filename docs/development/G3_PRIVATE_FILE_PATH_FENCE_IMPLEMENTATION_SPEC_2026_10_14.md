@@ -471,3 +471,57 @@ modifies production upload/delete paths nor enables any cleanup.
 Provider return-code capture, bucket/versioning/IAM verification,
 signed write response binding, all-writer participation, race experiments,
 and owner-reviewed release remain required. G3 remains OPEN.
+
+## 13. G3-R18 — Synthetic PutObject receipt handoff (2026-10-14)
+
+**Test-only contract, NOT a live S3 adapter or authenticated provider response.**
+R17 persistently bound a synthetic opaque VersionId to an existing,
+committed upload intent and matching Inbox/Recall/Career owner.
+R18 adds `PrivateFileWriteReceiptHandoffService::handoffSynthetic`
+as a strict, disposable-fixture handoff to that **same synthetic evidence
+writer**, with no new migration or change to the upload/delete paths.
+
+The entry point requires `APP_ENV=testing` plus independent
+`CANOVIA_PRIVATE_FILE_WRITE_RECEIPT_HANDOFF_ENABLED=false`,
+R17 evidence, R13 journal and R11 fence flags. No app production path can
+call it successfully. It accepts a **fixed allowlist of fixture fields**
+(origin, operation, status_code, intent_id, owner_kind, owner_id,
+disk, bucket, key, version_id, request_id); rejects missing/extra
+fields and unknown or falsely claimed origins; requires exact
+`synthetic_adapter_v1`, `PutObject`, integer HTTP 200 and nonempty,
+non-null opaque VersionId. It does NOT accept ETag as a fallback for
+VersionId. The fixture-supplied bucket/key and owner/intent context must
+match application config and the authenticated decrypted, committed
+prewrite journal; the R17 writer then **independently** verifies the
+locked owner path, bucket/path digest and unique intent before
+persisting `evidence_origin=synthetic_fixture`.
+
+Every return shape has **false**
+`provider_receipt_authenticated`, `generation_verified`, and
+`delete_authorized`, including the only successful status
+`synthetic_handoff_recorded_not_attested`. Failures expose fixed
+redacted status labels, never keys, bucket names, request IDs, raw
+VersionIds, SQL messages or plaintext paths. A duplicate receipt
+cannot replace an already committed synthetic row. Test receipts do
+not cause storage operations, SDK calls, live credential reads,
+network requests or physical deletion.
+
+**Trust model:** a fixture's `origin=synthetic_adapter_v1` is an
+ordinary untrusted string, NOT cryptographically authenticated provider
+provenance. The optional context match proves only compatibility with
+a currently decryptable DB journal and owner, not that S3 stored bytes,
+bucket versioning is enabled, a response was signed, or the response
+came from the same request that persisted bytes. The handoff remains
+test-only; no production caller, real provider SDK, object generation
+identity, or conditional-delete entitlement exists. A real future
+adapter needs a reviewed data flow binding one upload request ID,
+bucket/key, authenticated VersionId from its write completion,
+provider versioning policy, owner transaction, and crash-safe durable
+receipt recovery, without promoting caller-supplied JSON to authority.
+
+PG16 and MySQL8.0/8.4 test suites exercise safe fixture handoff,
+missing/mismatched/error response rejection, no ETag fallback,
+uncommitted journal, owner changes, immutable duplicate record,
+default OFF/production deny, redacted outputs and no Storage I/O.
+Four G3 additive schema migrations remain **not approved for live
+Aiven execution**. G3 remains OPEN.

@@ -85,6 +85,13 @@ return [
         FILTER_VALIDATE_BOOL
     ),
 
+    // G3-R18: synthetic-only PutObject receipt handoff for disposable PHP
+    // tests. No S3 API, provider attestation or deletion permission. OFF.
+    'private_file_write_receipt_handoff_enabled' => filter_var(
+        env('CANOVIA_PRIVATE_FILE_WRITE_RECEIPT_HANDOFF_ENABLED', false),
+        FILTER_VALIDATE_BOOL
+    ),
+
     // A public epoch label, NOT an encryption key. Changing it intentionally
     // blocks old proof reads until an explicit, audited migration exists.
     'private_file_generation_key_epoch' => env(
