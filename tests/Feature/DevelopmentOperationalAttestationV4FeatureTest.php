@@ -42,7 +42,7 @@ final class DevelopmentOperationalAttestationV4FeatureTest extends TestCase
 
         $this->actingAs($user)->post($route, [
             'action' => 'confirm_backup',
-            'target_revision' => 1, 'expected_data_store' => 'server_db',
+            'target_revision' => 1, 'expected_data_store' => 'server_db', 'expected_data_store_revision' => 1,
             'attest' => 'yes',
         ])->assertRedirect();
 
@@ -67,7 +67,7 @@ final class DevelopmentOperationalAttestationV4FeatureTest extends TestCase
 
         $this->actingAs($user)->post($route, [
             'action' => 'confirm_restore', 'attest' => 'yes',
-            'target_revision' => 1, 'expected_data_store' => 'server_db',
+            'target_revision' => 1, 'expected_data_store' => 'server_db', 'expected_data_store_revision' => 1,
         ])->assertRedirect();
 
         $this->assertNotNull(DevelopmentOperationalTarget::query()
@@ -92,7 +92,7 @@ final class DevelopmentOperationalAttestationV4FeatureTest extends TestCase
         foreach (['backup', 'restore'] as $kind) {
             $this->actingAs($user)->post($route, [
                 'action' => 'confirm_'.$kind, 'attest' => 'yes',
-                'target_revision' => 1, 'expected_data_store' => 'server_db',
+                'target_revision' => 1, 'expected_data_store' => 'server_db', 'expected_data_store_revision' => 1,
             ])->assertRedirect();
         }
 
@@ -147,7 +147,7 @@ final class DevelopmentOperationalAttestationV4FeatureTest extends TestCase
 
         $this->actingAs($user)->post($route, [
             'action' => 'confirm_backup', 'attest' => 'yes',
-            'target_revision' => 1, 'expected_data_store' => 'server_db',
+            'target_revision' => 1, 'expected_data_store' => 'server_db', 'expected_data_store_revision' => 1,
         ])->assertStatus(422);
 
         $record = DevelopmentOperationalTarget::query()
@@ -173,7 +173,7 @@ final class DevelopmentOperationalAttestationV4FeatureTest extends TestCase
 
         $this->actingAs($editor)->post($route, [
             'action' => 'confirm_backup', 'attest' => 'yes',
-            'target_revision' => 1, 'expected_data_store' => 'server_db',
+            'target_revision' => 1, 'expected_data_store' => 'server_db', 'expected_data_store_revision' => 1,
         ])->assertNotFound();
 
         $plan->update(['is_collaborative' => true]);
@@ -215,7 +215,7 @@ final class DevelopmentOperationalAttestationV4FeatureTest extends TestCase
         ])->assertRedirect();
         $this->actingAs($user)->post($route, [
             'action' => 'confirm_backup', 'attest' => 'yes',
-            'target_revision' => 1, 'expected_data_store' => 'server_db',
+            'target_revision' => 1, 'expected_data_store' => 'server_db', 'expected_data_store_revision' => 1,
         ])->assertRedirect();
 
         $profile->update(['data_store' => 'cloud_files']);
@@ -446,14 +446,14 @@ final class DevelopmentOperationalAttestationV4FeatureTest extends TestCase
 
         $this->actingAs($owner)->post($route, [
             'action' => 'confirm_backup', 'attest' => 'yes',
-            'target_revision' => 1, 'expected_data_store' => 'server_db',
+            'target_revision' => 1, 'expected_data_store' => 'server_db', 'expected_data_store_revision' => 1,
         ])->assertRedirect();
         $this->actingAs($owner)->get($page)->assertOk()
             ->assertSee('data-development-operator-next="restore"', false);
 
         $this->actingAs($owner)->post($route, [
             'action' => 'confirm_restore', 'attest' => 'yes',
-            'target_revision' => 1, 'expected_data_store' => 'server_db',
+            'target_revision' => 1, 'expected_data_store' => 'server_db', 'expected_data_store_revision' => 1,
         ])->assertRedirect();
         $this->actingAs($owner)->get($page)->assertOk()
             ->assertSee('data-development-operator-next="release_review"', false)
