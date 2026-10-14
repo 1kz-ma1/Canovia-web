@@ -191,6 +191,26 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
             ->assertDontSee('data-mcp-staging-plan-consent', false)
             ->assertDontSee('data-mcp-staging-final-confirm-button', false);
 
+        // This indicator only reports the current server policy. It must not
+        // revoke an existing synthetic grant, leak an identity, or purport to
+        // prove how the historical account link was established.
+        $this->get('/account')->assertOk()
+            ->assertSee('data-mcp-staging-github-only-runtime="not-confirmed"', false)
+            ->assertDontSee('data-mcp-staging-github-only-runtime="enabled"', false);
+        config(['canovia_mcp.account_link_github_only_enabled' => true]);
+        $this->get('/account')->assertOk()
+            ->assertSee('data-mcp-staging-share-complete', false)
+            ->assertSee('data-mcp-staging-github-only-runtime="enabled"', false)
+            ->assertSee('新しく本人確認する場合にGitHubを使用します')
+            ->assertSee('確認のために共有や本人確認の連携を解除する必要はありません')
+            ->assertDontSee('data-mcp-staging-github-only-runtime="not-confirmed"', false)
+            ->assertDontSee('github|', false);
+        $this->assertSame(McpDelegatedGrant::STATUS_ACTIVE, $grant->fresh()->status);
+        $this->assertDatabaseCount('mcp_linked_subjects', 1);
+        $this->assertDatabaseCount('mcp_delegated_grants', 1);
+        Http::assertNothingSent();
+        config(['canovia_mcp.account_link_github_only_enabled' => false]);
+
         // Even after consent, stage Nginx excludes /api/mcp and the app
         // flag must stay OFF. The controller itself also denies the read.
         $this->assertFalse(config('canovia_mcp.tools_enabled'));
