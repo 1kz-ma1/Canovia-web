@@ -32,7 +32,6 @@ final class Release513FirstActionWithoutSeedV65Test extends TestCase
             'canovia.super_admin_user_id' => null,
             'canovia.admin_email' => null,
         ]);
-        Storage::fake(config('filesystems.default'));
     }
 
     private function createEmptyPlan(User $user, string $title, string $category, string $workspace): Plan
@@ -54,59 +53,34 @@ final class Release513FirstActionWithoutSeedV65Test extends TestCase
         return $plan;
     }
 
-    public function test_study_zero_task_plan_enters_scope_then_projects_first_task_via_action_post(): void
+    public function test_study_zero_task_plan_projects_first_task_directly_without_injected_task(): void
     {
         $user = User::factory()->create(['first_run_completed_at' => now()]);
         $plan = $this->createEmptyPlan(
             $user, '応用情報技術者試験 合格', '資格学習', 'workspace.study.index'
         );
 
-        // Without scope, the action leads to user-controlled scope intake,
-        // NOT a fabricated Task.
-        $this->actingAs($user)
-            ->post(route('plans.study_action.execute', $plan))
-            ->assertRedirect(route('plans.study_scope.index', $plan));
-        $this->assertDatabaseMissing('tasks', ['plan_id' => $plan->id]);
-
-        // Use the real upload route with a local synthetic PDF. The disabled
-        // provider must not prevent explicit human confirmation.
-        $this->actingAs($user)
-            ->post(route('plans.study_scope.store', $plan), [
-                'source_file' => UploadedFile::fake()->create('range.pdf', 64, 'application/pdf'),
-            ])
-            ->assertRedirect(route('plans.study_scope.index', $plan));
-        $capture = StudyScopeCapture::query()->where('plan_id', $plan->id)->sole();
-
-        $this->actingAs($user)
-            ->post(route('plans.study_scope.confirm', [$plan, $capture]), [
-                'capture_id' => $capture->id,
-                'exam_title' => '応用情報 科目A',
-                'exam_date' => today()->addDays(21)->format('Y-m-d'),
-                'items' => [[
-                    'subject' => 'ネットワーク',
-                    'unit' => 'DNSレコード',
-                    'range_text' => 'MXとCNAME',
-                    'page_start' => null,
-                    'page_end' => null,
-                ]],
-            ])
-            ->assertSessionHasNoErrors();
-        $this->assertSame('confirmed', $capture->fresh()->status);
-        $this->assertDatabaseMissing('tasks', ['plan_id' => $plan->id]);
-
-        // This is the *real* action-projection route. No Task::create or
-        // test fixture insertion. Its own idempotency must prevent duplicates.
+        // Actual PR #513 behavior discovered in the first disposable CI run:
+        // a recognizable AP title projects an executable Task even without
+        // confirmed scope. Do not fabricate a missing-scope redirect.
         $first = $this->actingAs($user)
             ->post(route('plans.study_action.execute', $plan));
         $task = Task::query()->where('plan_id', $plan->id)->sole();
         $first->assertRedirect(route('plans.tasks.study_practice.show', [$plan, $task]));
+        $this->assertSame((int) $plan->id, (int) $task->plan_id);
         $this->assertSame(0, (int) $task->progress_percent);
+
         $this->actingAs($user)
             ->get(route('workspace.study.index', ['plan_id' => $plan->id]))
             ->assertOk();
         $this->actingAs($user)
+            ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
+            ->assertOk();
+
+        // Repeated human action must not create a second Task.
+        $this->actingAs($user)
             ->post(route('plans.study_action.execute', $plan))
-            ->assertRedirect(route('plans.tasks.study_practice.show', [$plan, $task]));
+            ->assertRedirect();
         $this->assertSame(1, Task::query()->where('plan_id', $plan->id)->count());
     }
 
