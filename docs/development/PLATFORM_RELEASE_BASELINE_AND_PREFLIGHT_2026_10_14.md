@@ -83,3 +83,21 @@ The current startup executes migrations as part of application boot. A failed ap
 - **DELETE CANDIDATE ONLY:** branches proved merged into latest main with no pending PR, no unique commits, no active ownership and no release-history relevance. This is a classification, **not** permission to delete.
 
 References: docs/CANOVIA_DEVELOPMENT_WORKFLOW.md; docs/development/PRODUCTION_CHECKS_PASS_READINESS_2026_10_13.md; GitHub issue #488 and PR #513; Canovia-iOS README.
+
+
+## 6. ACTIVE — encrypted backup copy verification (2026-10-14 follow-up)
+
+The read-only local script scripts/ops/platform_backup_ciphertext_check.py validates that two **operator-supplied and independently stored** encrypted .age files have nonzero, identical size, are distinct regular files (not a symlink or same inode), are not group/other-readable, and both match a **previously recorded** SHA-256 of encrypted bytes. It uses Python standard library, does not touch MySQL/Aiven, never decrypts, and prints **no file path, ciphertext, plaintext or hash**.
+
+First retrieve the offsite ciphertext onto the trusted Mac through an **operator-controlled** method (the tool cannot prove an iCloud.com download). Pass the backup-time SHA-256 from the owner's independent non-secret audit log:
+
+~~~sh
+python3 scripts/ops/platform_backup_ciphertext_check.py \
+  --source "$LOCAL_AGE_FILE" \
+  --offsite-copy "$OFFSITE_DOWNLOADED_AGE_FILE" \
+  --expected-sha256 "$BACKUP_TIME_CIPHERTEXT_SHA256"
+~~~
+
+Missing, identical-inode, altered, symlinked, group-readable or non-.age files return BLOCK and exit 2. Matching copies return **REVIEW_REQUIRED**, exit 0 solely for further human inspection. The result **always** preserves offsite_source_provenance_verified=false, age_decryption_verified=false, isolated_restore_verified=false and release_authorized=false. This is a ciphertext hash/access-mode classifier, **not proof that age encryption is valid or the SQL dump can be restored**.
+
+Do not pass private age identities, database passwords or dumps into CI. This script needs no credentials, does not create backups, does not grant backup account privileges, does not connect to Aiven and does not upload files. A real owner-approved recovery drill remains a separate gate. Existing path-scoped Platform preflight CI is reused for its eight synthetic-file tests (rather than creating a duplicate workflow).
