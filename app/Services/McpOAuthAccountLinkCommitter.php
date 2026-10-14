@@ -26,21 +26,34 @@ final class McpOAuthAccountLinkCommitter
 
         try {
             return DB::transaction(function () use ($user, $fingerprint): bool {
-                // Serialize confirmations for one Canovia actor. The unique
-                // fingerprint DB constraint prevents cross-user double-link.
+                // Serialize confirmations for this Canovia account. The
+                // active-only DB unique index prevents concurrent claims of
+                // the same subject by two accounts even on different workers.
                 $owner = User::query()->whereKey($user->id)->lockForUpdate()->first();
                 if ($owner === null) {
                     return false;
                 }
 
-                $existing = McpLinkedSubject::query()
-                    ->where('identity_fingerprint', $fingerprint)
-                    ->lockForUpdate()
-                    ->first();
+                $active = McpLinkedSubject::query()
+                    ->where('active_identity_fingerprint', $fingerprint)
+                    ->where('status', McpLinkedSubject::STATUS_LINKED)
+                    ->whereNull('revoked_at')
+                    ->lockForUpdate()->first();
 
-                if ($existing !== null && (int) $existing->user_id !== (int) $owner->id) {
+                // Never steal a currently linked identity. Releasing it
+                // requires the previous owner's own authenticated unlink.
+                if ($active !== null && (int) $active->user_id !== (int) $owner->id) {
                     return false;
                 }
+
+                // Only this owner's previously revoked link may be reused.
+                // A link revoked by ANOTHER owner is permanently historical:
+                // create a new row so old grants/audit stay bound to them.
+                $existing = $active ?? McpLinkedSubject::query()
+                    ->where('user_id', $owner->id)
+                    ->where('identity_fingerprint', $fingerprint)
+                    ->orderByDesc('id')
+                    ->lockForUpdate()->first();
 
                 // One active ChatGPT identity per Canovia account. A future
                 // identity switch requires explicit unlink + OAuth recheck.
