@@ -1,0 +1,60 @@
+name: G3 Disposable S3-Compatible HTTP Trial
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tests/ci/test_g3_ephemeral_s3_http.py'
+      - '.github/workflows/g3-disposable-s3-http-trial.yml'
+      - 'docs/development/G3_DISPOSABLE_HTTP_TRIAL_R32_2026_10_14.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ephemeral-s3-compatible-http:
+    name: G3 ephemeral S3-compatible HTTP behavior
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CI: 'true'
+      G3_EPHEMERAL_S3_EMULATOR_ONLY: 'true'
+      G3_S3_ENDPOINT: 'http://127.0.0.1:5000'
+      AWS_ACCESS_KEY_ID: 'g3_emulator_only'
+      AWS_SECRET_ACCESS_KEY: 'g3_fake_not_a_secret'
+      AWS_EC2_METADATA_DISABLED: 'true'
+      AWS_DEFAULT_REGION: 'us-east-1'
+      NO_PROXY: '127.0.0.1,localhost'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned disposable emulator and HTTP S3 client
+        run: |
+          python -m pip install --disable-pip-version-check 'moto[server]==5.2.2' 'boto3==1.40.70'
+      - name: Launch S3-compatible process bound to loopback only
+        run: |
+          moto_server -H 127.0.0.1 -p 5000 > "$RUNNER_TEMP/g3-disposable-emulator.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/g3-disposable-emulator.pid"
+          python - <<'PY'
+          import socket, time
+          for _ in range(60):
+              try:
+                  with socket.create_connection(('127.0.0.1', 5000), timeout=0.3):
+                      break
+              except OSError:
+                  time.sleep(0.5)
+          else:
+              raise SystemExit('Ephemeral emulator was not reachable on loopback.')
+          PY
+      - name: Exercise versioning, ABA, competing writes and ambiguous ACK via HTTP
+        run: |
+          python -m unittest -v tests/ci/test_g3_ephemeral_s3_http.py
+      - name: Stop isolated emulator without invoking S3 DeleteObject
+        if: always()
+        run: |
+          if test -f "$RUNNER_TEMP/g3-disposable-emulator.pid"; then
+            kill "$(cat "$RUNNER_TEMP/g3-disposable-emulator.pid")" || true
+          fi
