@@ -18,6 +18,10 @@ final class PrivateFileUploadIntentService
 {
     private const TABLE = 'private_file_upload_intents';
 
+    public function __construct(
+        private readonly PrivateFilePathFenceService $fence,
+    ) {}
+
     public function enabled(): bool
     {
         return config('canovia.private_file_upload_journal_enabled', false) === true;
@@ -53,7 +57,8 @@ final class PrivateFileUploadIntentService
             $ids = [];
             foreach ($keys as $digest => $path) {
                 if (! preg_match('/^[0-9a-f]{64}$/D', $digest)
-                    || ! is_string($path)) {
+                    || ! is_string($path)
+                    || ! hash_equals($digest, $this->fence->fingerprint($disk, $path))) {
                     throw new RuntimeException('Invalid private upload journal key.');
                 }
 
