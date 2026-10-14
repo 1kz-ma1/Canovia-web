@@ -10,6 +10,8 @@ on:
       - 'tests/Feature/PrivateFileRollbackBoundaryR36Test.php'
       - 'tests/Feature/PrivateFileIndirectStorageHoldR37Test.php'
       - 'app/Services/InboxIntelligenceService.php'
+      - 'app/Services/InboxRoutingService.php'
+      - 'tests/Feature/InboxIntelligenceGuideV4113Test.php'
       - 'app/Services/InboxAiSuggestionCommitFence.php'
       - 'tests/Feature/InboxAiSuggestionCommitFenceG3Test.php'
       - 'app/Services/PrivateFileUploadIntentService.php'
@@ -120,6 +122,8 @@ jobs:
           php -l tests/Feature/PrivateFileRollbackBoundaryR36Test.php
           php -l tests/Feature/PrivateFileIndirectStorageHoldR37Test.php
           php -l app/Services/InboxIntelligenceService.php
+          php -l app/Services/InboxRoutingService.php
+          php -l tests/Feature/InboxIntelligenceGuideV4113Test.php
           php -l app/Services/InboxAiSuggestionCommitFence.php
           php -l tests/Feature/InboxAiSuggestionCommitFenceG3Test.php
           php -l app/Services/PrivateFileUploadIntentService.php
@@ -161,4 +165,4 @@ jobs:
           php -l database/migrations/2026_10_14_120000_create_private_file_path_fences.php
           php -l tests/Feature/PrivateFileCleanupMysqlCurrentReadG3Test.php
           php -l tests/Feature/PrivateFileProviderDeleteHoldR35Test.php
-          php artisan test tests/Feature/InboxAiSuggestionCommitFenceG3Test.php tests/Feature/PrivateFileIndirectStorageHoldR37Test.php tests/Feature/PrivateFileRollbackBoundaryR36Test.php tests/Feature/PrivateFileProviderDeleteHoldR35Test.php tests/Feature/PrivateFileCleanupMysqlCurrentReadG3Test.php tests/Feature/PrivateFileUploadG3Test.php tests/Feature/PrivateFileUploadIntentG3Test.php tests/Feature/PrivateFileUploadReconciliationPreviewG3Test.php tests/Feature/PrivateFileUploadConsistencyProbeG3Test.php tests/Feature/PrivateFileGenerationContractG3Test.php tests/Feature/PrivateFileGenerationEvidenceG3Test.php tests/Feature/PrivateFileWriteReceiptHandoffG3Test.php tests/Feature/PrivateFileSyntheticCrashMatrixG3Test.php tests/Feature/PrivateFileWriteAttemptG3Test.php tests/Feature/PrivateFileProviderReconciliationG3Test.php tests/Feature/PrivateFileSyntheticGenerationRaceG3Test.php tests/Feature/PrivateFileSyntheticWriteProvenanceG3Test.php tests/Feature/PrivateFileProviderAttestationBoundaryG3Test.php tests/Feature/PrivateFileProviderEvidenceAdmissionG3Test.php tests/Feature/PrivateFileTrustReplayPreflightG3Test.php --fail-on-skipped --stop-on-failure
+          php artisan test tests/Feature/InboxIntelligenceGuideV4113Test.php tests/Feature/InboxAiSuggestionCommitFenceG3Test.php tests/Feature/PrivateFileIndirectStorageHoldR37Test.php tests/Feature/PrivateFileRollbackBoundaryR36Test.php tests/Feature/PrivateFileProviderDeleteHoldR35Test.php tests/Feature/PrivateFileCleanupMysqlCurrentReadG3Test.php tests/Feature/PrivateFileUploadG3Test.php tests/Feature/PrivateFileUploadIntentG3Test.php tests/Feature/PrivateFileUploadReconciliationPreviewG3Test.php tests/Feature/PrivateFileUploadConsistencyProbeG3Test.php tests/Feature/PrivateFileGenerationContractG3Test.php tests/Feature/PrivateFileGenerationEvidenceG3Test.php tests/Feature/PrivateFileWriteReceiptHandoffG3Test.php tests/Feature/PrivateFileSyntheticCrashMatrixG3Test.php tests/Feature/PrivateFileWriteAttemptG3Test.php tests/Feature/PrivateFileProviderReconciliationG3Test.php tests/Feature/PrivateFileSyntheticGenerationRaceG3Test.php tests/Feature/PrivateFileSyntheticWriteProvenanceG3Test.php tests/Feature/PrivateFileProviderAttestationBoundaryG3Test.php tests/Feature/PrivateFileProviderEvidenceAdmissionG3Test.php tests/Feature/PrivateFileTrustReplayPreflightG3Test.php --fail-on-skipped --stop-on-failure

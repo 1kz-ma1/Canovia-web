@@ -269,13 +269,26 @@ class InboxRoutingService
             throw ValidationException::withMessages(['destination' => 'Plan Resourceへ追加するにはURLが必要です。']);
         }
 
-        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
-        $provider = match (true) {
-            str_contains($host, 'github.com') => 'github',
-            str_contains($host, 'drive.google.com'), str_contains($host, 'docs.google.com') => 'google_drive',
-            str_contains($host, 'onedrive'), str_contains($host, 'sharepoint') => 'onedrive',
-            default => null,
-        };
+        // Match the actual URL authority, never an arbitrary substring:
+        // github.com.evil.example is NOT GitHub and phishing domains with
+        // "sharepoint" or "onedrive" in their names are not OneDrive.
+        // Do not treat HTTP or userinfo-bearing URLs as trusted resources.
+        $parts = parse_url($url);
+        $scheme = is_array($parts) ? strtolower((string) ($parts['scheme'] ?? '')) : '';
+        $host = is_array($parts) ? strtolower((string) ($parts['host'] ?? '')) : '';
+        $provider = $scheme === 'https' && is_array($parts)
+            && ! isset($parts['user']) && ! isset($parts['pass'])
+            ? match (true) {
+                $this->matchesOfficialHost($host, 'github.com') => 'github',
+                $this->matchesOfficialHost($host, 'drive.google.com'),
+                $this->matchesOfficialHost($host, 'docs.google.com') => 'google_drive',
+                $this->matchesOfficialHost($host, 'onedrive.live.com'),
+                $this->matchesOfficialHost($host, 'onedrive.com'),
+                $this->matchesOfficialHost($host, '1drv.ms'),
+                $this->matchesOfficialHost($host, 'sharepoint.com') => 'onedrive',
+                default => null,
+            }
+            : null;
 
         if ($provider === null) {
             throw ValidationException::withMessages([
@@ -297,6 +310,15 @@ class InboxRoutingService
         ]);
 
         return 'Plan Resourceへ追加しました。';
+    }
+
+    /**
+     * Host boundary: allow exact official domain or its DNS subdomains only.
+     * Do not allow suffix lookalikes such as github.com.attacker.example.
+     */
+    private function matchesOfficialHost(string $host, string $domain): bool
+    {
+        return $host === $domain || str_ends_with($host, '.'.$domain);
     }
 
     private function requirePlan(?Plan $plan): void

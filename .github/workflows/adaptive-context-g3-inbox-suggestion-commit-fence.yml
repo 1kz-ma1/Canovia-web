@@ -6,6 +6,8 @@ on:
     paths:
       - 'app/Services/InboxAiSuggestionCommitFence.php'
       - 'app/Services/InboxIntelligenceService.php'
+      - 'app/Services/InboxRoutingService.php'
+      - 'tests/Feature/InboxIntelligenceGuideV4113Test.php'
       - 'app/Http/Controllers/InboxController.php'
       - 'tests/Feature/InboxAiSuggestionCommitFenceG3Test.php'
       - '.github/workflows/adaptive-context-g3-inbox-suggestion-commit-fence.yml'
@@ -30,6 +32,8 @@ jobs:
         run: |
           php -l app/Services/InboxAiSuggestionCommitFence.php
           php -l app/Services/InboxIntelligenceService.php
+          php -l app/Services/InboxRoutingService.php
+          php -l tests/Feature/InboxIntelligenceGuideV4113Test.php
           php -l app/Http/Controllers/InboxController.php
           php -l tests/Feature/InboxAiSuggestionCommitFenceG3Test.php
       - name: G3 post-provider stale and unauthorized Inbox suggestions
