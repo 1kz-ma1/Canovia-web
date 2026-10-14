@@ -38,7 +38,7 @@
             </p>
             <p class="mt-1 text-xs leading-5 text-slate-400">
                 対象：ChatGPT用の共有許可
-                ・範囲：{{ $grant->scope === 'tasks' ? '概要＋Task' : '概要のみ' }}
+                ・範囲：{{ $grant->scope === 'study_progress' ? '学習概要＋Task＋演習集計' : ($grant->scope === 'tasks' ? '概要＋Task' : '概要のみ') }}
                 ・期限：{{ $grant->expires_at?->format('Y-m-d H:i') ?? '取り消すまで' }}
             </p>
             @if ($grant->expires_at?->isPast())
