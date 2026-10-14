@@ -24,6 +24,7 @@ final class InboxRecallMaterialTransferGuard
     public function __construct(
         private readonly CompanionMembershipCommitGuard $membership,
         private readonly PrivateFilePathFenceService $pathFence,
+        private readonly PrivateFileStorageBoundaryService $storageBoundary,
     ) {}
 
     /**
@@ -77,6 +78,8 @@ final class InboxRecallMaterialTransferGuard
                         $this->reject('コピー中に元教材が変更されました。もう一度確認してください。');
                     }
 
+                    // This legacy copy path has no durable prewrite intent.
+                    $this->storageBoundary->requireLocalLegacyWriter();
                     $extension = pathinfo((string) $inbox->storage_path, PATHINFO_EXTENSION);
                     $newPath = 'study-recall-sources/'.$livePlan->id.'/'.$liveTask->id.'/'
                         .Str::uuid().($extension !== '' ? '.'.$extension : '');
@@ -135,7 +138,7 @@ final class InboxRecallMaterialTransferGuard
         } catch (Throwable $exception) {
             if ($newPath !== null) {
                 try {
-                    Storage::delete($newPath);
+                    $this->storageBoundary->deleteRollbackForLocal($newPath);
                 } catch (Throwable) {
                     // File cleanup is best-effort; do not mask the cause.
                 }
