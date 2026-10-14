@@ -1,6 +1,6 @@
 # Development Operational Readiness V5.3 — Revision-bound manual Render service attestation
 
-> Status: **feature branch / not deployed** (2026-10-14). Deployment and production/Aiven schema upgrade remain separately gated.
+> Status: **integrated into main via PR #625; not verified deployed** (2026-10-14). Deployment and production/Aiven schema upgrade remain separately gated.
 > Source: [V4 explicit operator record](DEVELOPMENT_OPERATIONAL_ATTESTATION_V4_2026_10_14.md), [V5.0 independent provider observation guard](DEVELOPMENT_OPERATIONAL_PROVIDER_BOUNDARY_V5_2026_10_14.md), [V5.1 provider credential denial](DEVELOPMENT_OPERATIONAL_PROVIDER_CAPABILITY_V5_1_2026_10_14.md), [V5.2 read-only operator handoff](DEVELOPMENT_OPERATIONAL_RENDER_MANUAL_HANDOFF_V5_2_2026_10_14.md).
 
 ## Purpose / hard boundary
