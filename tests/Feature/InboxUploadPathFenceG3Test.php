@@ -5,14 +5,14 @@ namespace Tests\Feature;
 use App\Models\InboxItem;
 use App\Models\User;
 use App\Services\PrivateFilePathFenceService;
-use Illuminate\Foundation\Testing\DatabaseTruncation;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 final class InboxUploadPathFenceG3Test extends TestCase
 {
-    use DatabaseTruncation;
+    use RefreshDatabase;
 
     protected function setUp(): void
     {
