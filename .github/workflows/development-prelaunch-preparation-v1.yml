@@ -1,0 +1,38 @@
+name: Development Prelaunch Preparation V1
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  development-prelaunch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: PHP syntax preflight
+        run: |
+          php -l app/Services/DevelopmentPrelaunchPreparationService.php
+          php -l app/Http/Controllers/DevelopmentWorkspaceController.php
+          php -l tests/Unit/DevelopmentPrelaunchPreparationServiceTest.php
+          php -l tests/Feature/DevelopmentPrelaunchPreparationV1Test.php
+      - name: Compile Blade templates
+        run: php artisan view:cache
+      - name: Targeted behavior and Workspace regression
+        run: |
+          php artisan test \
+            tests/Unit/DevelopmentPrelaunchPreparationServiceTest.php \
+            tests/Feature/DevelopmentPrelaunchPreparationV1Test.php \
+            tests/Feature/DevelopmentWorkspaceV544Test.php \
+            tests/Feature/DeveloperHomeV573Test.php \
+            tests/Feature/DeveloperWorkspaceSurfacesV580Test.php
