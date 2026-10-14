@@ -17,6 +17,8 @@ on:
       - 'app/Services/PrivateFileWriteAttemptService.php'
       - 'app/Services/PrivateFileProviderReconciliationService.php'
       - 'app/Services/PrivateFileSyntheticGenerationRaceService.php'
+      - 'app/Services/PrivateFileSyntheticWriteProvenanceService.php'
+      - 'tests/Feature/PrivateFileSyntheticWriteProvenanceG3Test.php'
       - 'tests/Feature/PrivateFileSyntheticGenerationRaceG3Test.php'
       - 'app/Services/PrivateFileSyntheticProviderProbeAdapter.php'
       - 'tests/Feature/PrivateFileProviderReconciliationG3Test.php'
@@ -115,6 +117,8 @@ jobs:
           php -l app/Services/PrivateFileWriteAttemptService.php
           php -l app/Services/PrivateFileProviderReconciliationService.php
           php -l app/Services/PrivateFileSyntheticGenerationRaceService.php
+          php -l app/Services/PrivateFileSyntheticWriteProvenanceService.php
+          php -l tests/Feature/PrivateFileSyntheticWriteProvenanceG3Test.php
           php -l tests/Feature/PrivateFileSyntheticGenerationRaceG3Test.php
           php -l app/Services/PrivateFileSyntheticProviderProbeAdapter.php
           php -l tests/Feature/PrivateFileProviderReconciliationG3Test.php
@@ -169,6 +173,8 @@ jobs:
         run: php artisan test tests/Feature/PrivateFileProviderReconciliationG3Test.php --stop-on-failure
       - name: G3 R22 synthetic generation ABA and external writer matrix
         run: php artisan test tests/Feature/PrivateFileSyntheticGenerationRaceG3Test.php --stop-on-failure
+      - name: G3 R23 synthetic write provenance consistency contract
+        run: php artisan test tests/Feature/PrivateFileSyntheticWriteProvenanceG3Test.php --stop-on-failure
       - name: G3 operator-only CLI dry-run and read-only health are available
         run: |
           php artisan canovia:retry-private-file-cleanup --dry-run
