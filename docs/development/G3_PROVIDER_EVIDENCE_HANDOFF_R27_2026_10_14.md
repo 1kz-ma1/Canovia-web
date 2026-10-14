@@ -28,6 +28,8 @@ The JSON manifest uses exactly:
 
 `review_state` may be only `missing` with `evidence=null`, or
 `candidate` with `evidence={"path":"docs/development/...md","sha256":"<64 lowercase hex>"}`.
+Each requirement must reference a **different Markdown path**; repeating
+one evidence file across multiple independent requirements is invalid.
 The evidence Markdown must be an ordinary nonempty blob in the pinned
 Git commit (not a symbolic link), no larger than 256 KiB. The script
 checks the exact byte SHA-256; it does **not** inspect the substance or
