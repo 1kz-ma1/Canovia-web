@@ -15,6 +15,7 @@ use App\Models\StudyScopeCapture;
 use App\Models\StudyScopeItem;
 use App\Services\BehaviorIdentityService;
 use App\Services\CompanionMembershipCommitGuard;
+use App\Services\PrivateFileLifecycleService;
 use App\Services\FeatureAccessService;
 use App\Services\NativeAiGateway;
 use App\Services\PlanCategoryProfileService;
@@ -459,6 +460,9 @@ class StudyScopeCaptureController extends Controller
                 $source->delete();
             }
 
+            app(PrivateFileLifecycleService::class)
+                ->deleteAfterCommit(collect([$path]));
+
             return $path;
         }, 3);
 
@@ -466,10 +470,6 @@ class StudyScopeCaptureController extends Controller
         // row has been committed deleted; a concurrent AI read can either
         // consume its earlier immutable bytes (and fail commit) or observe
         // missing bytes (and fail before provider submission).
-        if ($deletePath !== null && $deletePath !== '') {
-            Storage::delete($deletePath);
-        }
-
         return redirect()
             ->route('plans.study_scope.index', $plan)
             ->with('success', '未確定の試験範囲を破棄しました。');
