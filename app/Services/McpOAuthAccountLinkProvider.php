@@ -29,6 +29,12 @@ final class McpOAuthAccountLinkProvider
                 ->withoutRedirecting()->connectTimeout(2)->timeout(5)
                 ->get($settings['metadata']);
 
+            if ($response->status() === 429) {
+                // Only the trusted provider metadata request is known to
+                // have returned 429. No body/Retry-After/issuer URL is logged.
+                app(McpStagingOAuthFailureDiagnostic::class)->record('link_provider_metadata_rate_limited');
+                return false;
+            }
             if (! $response->successful()
                 || ! str_contains(strtolower((string) $response->header('Content-Type')), 'application/json')
                 || strlen($response->body()) > 12288) {
@@ -129,7 +135,11 @@ final class McpOAuthAccountLinkProvider
                 ]);
 
             if (! $response->successful()) {
-                app(McpStagingOAuthFailureDiagnostic::class)->record('link_provider_token_http_rejected');
+                app(McpStagingOAuthFailureDiagnostic::class)->record(
+                    $response->status() === 429
+                        ? 'link_provider_token_rate_limited'
+                        : 'link_provider_token_http_rejected',
+                );
                 return null;
             }
             if (! str_contains(strtolower((string) $response->header('Content-Type')), 'application/json')
