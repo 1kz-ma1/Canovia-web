@@ -146,7 +146,7 @@ final class McpOAuthAccountLinkController extends Controller
             }
 
             if (! $consent->isEnabled()
-                || ! is_string($scope) || ! is_int($days)
+                || ! is_string($scope)
                 || ! $consent->isScopeAndDurationAllowed($scope, $days)
                 || $plan === null
                 || ! $consent->isPersonalDevelopmentOwner($user, $plan)
