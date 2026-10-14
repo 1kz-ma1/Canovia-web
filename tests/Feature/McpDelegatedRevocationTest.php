@@ -137,6 +137,53 @@ final class McpDelegatedRevocationTest extends TestCase
         $this->assertDatabaseCount('mcp_delegated_grants', 2);
     }
 
+    public function test_history_preserving_identity_switch_never_resurrects_old_plan_grants(): void
+    {
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        $oldPlan = $this->plan($first, 'FIRST_PRIVATE_PLAN');
+        $newPlan = $this->plan($second, 'SECOND_PRIVATE_PLAN');
+        $oldLink = $this->link($first);
+        $oldGrant = $this->grant($first, $oldLink, $oldPlan);
+        $principal = $this->principal();
+
+        $this->assertTrue(app(McpDelegatedPlanAccessPolicy::class)
+            ->allows($principal, $oldPlan, 'tasks'));
+        $this->actingAs($first)->delete(
+            route('auth.account.mcp_subject.revoke', ['subject' => $oldLink->id]),
+        )->assertRedirect(route('auth.account'));
+
+        $this->assertSame('revoked', $oldGrant->fresh()->status);
+        $this->assertNull($oldLink->fresh()->active_identity_fingerprint);
+        $newLink = $this->link($second);
+        $this->assertNotSame($oldLink->id, $newLink->id);
+        $this->assertSame($oldLink->identity_fingerprint, $newLink->identity_fingerprint);
+        $this->assertDatabaseCount('mcp_delegated_grants', 1);
+
+        // The ChatGPT token for that same issuer+subject may now identify
+        // only the second account. It must never retrieve the first's Plan,
+        // and new owner needs its own independent per-Plan approval.
+        $this->assertFalse(app(McpDelegatedPlanAccessPolicy::class)
+            ->allows($principal, $oldPlan, 'tasks'));
+        $this->assertFalse(app(McpDelegatedPlanAccessPolicy::class)
+            ->allows($principal, $newPlan, 'overview'));
+
+        $newGrant = $this->grant($second, $newLink, $newPlan, 'overview');
+        $this->assertTrue(app(McpDelegatedPlanAccessPolicy::class)
+            ->allows($principal, $newPlan, 'overview'));
+        $this->assertFalse(app(McpDelegatedPlanAccessPolicy::class)
+            ->allows($principal, $newPlan, 'tasks'));
+        $this->assertFalse(app(McpDelegatedPlanAccessPolicy::class)
+            ->allows($principal, $oldPlan, 'overview'));
+
+        $this->actingAs($second)->delete(
+            route('auth.account.mcp_subject.revoke', ['subject' => $newLink->id]),
+        )->assertRedirect();
+        $this->assertSame('revoked', $newGrant->fresh()->status);
+        $this->assertFalse(app(McpDelegatedPlanAccessPolicy::class)
+            ->allows($principal, $newPlan, 'overview'));
+    }
+
     public function test_revoke_is_available_after_plan_transfer_without_exposing_new_owner_title(): void
     {
         $original = User::factory()->create(['first_run_completed_at' => now()]);
