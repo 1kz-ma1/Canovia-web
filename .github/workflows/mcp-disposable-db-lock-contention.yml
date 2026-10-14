@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'tests/Feature/McpDatabaseLockContentionTest.php'
+      - 'tests/Feature/McpMigrationRollbackSafetyTest.php'
       - 'app/Services/McpReadOnlyContextTool.php'
       - 'app/Services/McpDelegatedPlanAccessPolicy.php'
       - 'app/Services/McpDelegatedRevocationService.php'
@@ -92,10 +93,12 @@ jobs:
       - name: Install dependencies without external credentials
         run: composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
       - name: Lint concurrency matrix
-        run: php -l tests/Feature/McpDatabaseLockContentionTest.php
+        run: |
+          php -l tests/Feature/McpDatabaseLockContentionTest.php
+          php -l tests/Feature/McpMigrationRollbackSafetyTest.php
       - name: Migrate ONLY the CI disposable database
         run: |
           php artisan migrate --force --no-interaction
           php artisan migrate --force --no-interaction
       - name: Verify real two-connection MCP lock and uniqueness behavior
-        run: php artisan test tests/Feature/McpDatabaseLockContentionTest.php --fail-on-skipped --stop-on-failure --colors=never
+        run: php artisan test tests/Feature/McpDatabaseLockContentionTest.php tests/Feature/McpMigrationRollbackSafetyTest.php --fail-on-skipped --stop-on-failure --colors=never
