@@ -19,6 +19,10 @@ on:
       - 'app/Services/PrivateFileSyntheticGenerationRaceService.php'
       - 'app/Services/PrivateFileSyntheticWriteProvenanceService.php'
       - 'app/Services/PrivateFileProviderAttestationBoundaryService.php'
+      - 'app/Contracts/PrivateFileIndependentProviderVerifier.php'
+      - 'app/Services/PrivateFileUnavailableProviderVerifier.php'
+      - 'app/Services/PrivateFileProviderEvidenceAdmissionService.php'
+      - 'tests/Feature/PrivateFileProviderEvidenceAdmissionG3Test.php'
       - 'tests/Feature/PrivateFileProviderAttestationBoundaryG3Test.php'
       - 'tests/Feature/PrivateFileSyntheticWriteProvenanceG3Test.php'
       - 'tests/Feature/PrivateFileSyntheticGenerationRaceG3Test.php'
@@ -121,6 +125,10 @@ jobs:
           php -l app/Services/PrivateFileSyntheticGenerationRaceService.php
           php -l app/Services/PrivateFileSyntheticWriteProvenanceService.php
           php -l app/Services/PrivateFileProviderAttestationBoundaryService.php
+          php -l app/Contracts/PrivateFileIndependentProviderVerifier.php
+          php -l app/Services/PrivateFileUnavailableProviderVerifier.php
+          php -l app/Services/PrivateFileProviderEvidenceAdmissionService.php
+          php -l tests/Feature/PrivateFileProviderEvidenceAdmissionG3Test.php
           php -l tests/Feature/PrivateFileProviderAttestationBoundaryG3Test.php
           php -l tests/Feature/PrivateFileSyntheticWriteProvenanceG3Test.php
           php -l tests/Feature/PrivateFileSyntheticGenerationRaceG3Test.php
@@ -181,6 +189,8 @@ jobs:
         run: php artisan test tests/Feature/PrivateFileSyntheticWriteProvenanceG3Test.php --stop-on-failure
       - name: G3 R24 synthetic provider attestation trust boundary
         run: php artisan test tests/Feature/PrivateFileProviderAttestationBoundaryG3Test.php --stop-on-failure
+      - name: G3 R25 unavailable independent verifier and admission checklist
+        run: php artisan test tests/Feature/PrivateFileProviderEvidenceAdmissionG3Test.php --stop-on-failure
       - name: G3 operator-only CLI dry-run and read-only health are available
         run: |
           php artisan canovia:retry-private-file-cleanup --dry-run
