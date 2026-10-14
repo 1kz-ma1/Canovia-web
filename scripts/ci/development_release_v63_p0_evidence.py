@@ -68,7 +68,8 @@ def load_manifest(raw: bytes) -> dict:
     for item in entries:
         if set(item) != {"id", "title", "status", "reason", "source_tests", "ci_evidence", "runtime_evidence"}:
             raise InvalidEvidence()
-        if (item["status"] not in STATUSES
+        if (not isinstance(item["status"], str)
+            or item["status"] not in STATUSES
             or item["ci_evidence"] != "EXACT_HEAD_CI_NOT_FULL_E2E"
             or item["runtime_evidence"] != "UNVERIFIED"
             or not isinstance(item["title"], str)
