@@ -170,3 +170,41 @@ provider supports conditional delete by immutable version/generation,
 review its semantics separately; Laravel's generic `Storage::delete`
 does not supply those semantics. Never enable automatic retries or
 production inventory solely based on this guard.
+
+## 9. MySQL current-read protection and uncoordinated writer boundary (G3-R10)
+
+**Implemented in development:** The cleanup worker continues to hold an
+outbox row lock. For MySQL/MariaDB it now checks every required live-reference
+table using `SELECT id ... FOR UPDATE` instead of the previous snapshot-based
+`EXISTS`. Both the initial and final lookup thus use InnoDB **current
+reads**, not an earlier repeatable-read snapshot. A separately committed
+reference that exists when the locking lookup runs can be detected even
+if an earlier ordinary SELECT established a transaction snapshot.
+
+**Scope of acceptance:** A dedicated *disposable* MySQL 8.0/8.4 regression
+creates a stale REPEATABLE READ snapshot, commits an Inbox reference on an
+independent PDO connection, proves ordinary `EXISTS` still misses it, then
+asserts the new service lookup sees it. This is **not** production Aiven
+verification, nor proof that concurrent writes during unlink are serialized.
+
+**Residual caution:** Without an index on these long path columns,
+InnoDB's locking reads may scan ranges and hold broad next-key/gap locks
+until the cleanup transaction ends. Before any production rollout, measure
+latency, deadlocks and write throughput with representative high-cardinality
+Inbox/Recall/Career data and choose a bounded/indexed coordination key.
+Storage read and unlink remain non-transactional. The worker's double
+lookup is not an object-store version check. If a lock times out, deletion
+must remain fail-closed; do not bypass locking or force a file delete.
+
+**Next required cross-writer contract (NOT implemented or approved):**
+Use a stable, private, indexed (disk + path) identity that does not reveal
+storage keys in logs, coordinate *all* native file writers and the cleanup
+worker on that identity, and prevent new same-key references while physical
+unlink is in progress. Review transaction and lock ordering, crash/rollback,
+encrypted-key rotation, bounded lock duration, storage-provider conditional
+deletion/versioning, and migration/retention impacts before coding. Writers
+include Inbox uploads, Study Scope uploads, Recall uploads, Inbox→Recall copy,
+Career captures where physical storage is used, future imports and external
+direct-SQL/object-store actors. No partial writer rollout may be presented
+as eliminating G3 races. Never deploy this change as an independent
+authorization for production cleanup.
