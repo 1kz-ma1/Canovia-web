@@ -284,6 +284,88 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
         $this->assertDatabaseCount('mcp_delegated_grants', 0);
     }
 
+    public function test_staging_owner_can_preview_and_revoke_opt_in_until_revoked_consent(): void
+    {
+        $owner = $this->actor();
+        $plan = $this->fixture($owner);
+        $fingerprint = $this->link($owner);
+        $this->enableConsent();
+
+        $this->actingAs($owner)->withSession(['mcp.plan_consent.verified' => [
+            'actor_id' => (int) $owner->id,
+            'identity_fingerprint' => $fingerprint,
+            'plan_id' => (int) $plan->id,
+            'scope' => 'overview',
+            'duration_days' => \App\Services\McpExplicitPlanConsentService::UNTIL_REVOKED,
+            'verified_at' => now()->timestamp,
+        ]])->get('/account')->assertOk()
+            ->assertSee('共有する内容を確認')
+            ->assertSee('取り消すまで（いつでも解除できます）')
+            ->assertSee('data-mcp-staging-final-confirm-button', false);
+
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+        $this->post(route('auth.account.mcp_plan_consent.confirm'))->assertRedirect(route('auth.account'));
+        $grant = McpDelegatedGrant::query()->sole();
+        $this->assertSame('active', $grant->status);
+        $this->assertNull($grant->expires_at);
+        $this->get('/account')->assertOk()
+            ->assertSee('data-mcp-staging-share-complete', false)
+            ->assertSee('取り消すまで')
+            ->assertSee('data-mcp-staging-revoke', false)
+            ->assertDontSee('data-mcp-staging-plan-consent', false);
+
+        $this->delete(route('auth.account.mcp_grant.revoke', ['grant' => $grant->id]))
+            ->assertRedirect(route('auth.account'));
+        $this->assertSame('revoked', $grant->fresh()->status);
+        $this->get('/account')->assertOk()
+            ->assertDontSee('data-mcp-staging-share-complete', false)
+            ->assertSee('data-mcp-staging-plan-consent', false);
+    }
+
+    public function test_stage_owner_can_unlink_subject_and_revoke_indefinite_grant(): void
+    {
+        $owner = $this->actor();
+        $plan = $this->fixture($owner);
+        $fingerprint = $this->link($owner);
+        $this->enableConsent();
+        $link = McpLinkedSubject::query()->where('user_id', $owner->id)->sole();
+        $this->assertSame($fingerprint, $link->active_identity_fingerprint);
+
+        $this->actingAs($owner)->get('/account')->assertOk()
+            ->assertSee('data-mcp-staging-subject-unlink', false)
+            ->assertSee('本人確認の連携を解除する');
+
+        $grant = McpDelegatedGrant::query()->create([
+            'user_id' => $owner->id, 'subject_link_id' => $link->id,
+            'plan_id' => $plan->id,
+            'client_resource_fingerprint' => str_repeat('f', 64),
+            'scope' => 'overview', 'status' => McpDelegatedGrant::STATUS_ACTIVE,
+            'consented_at' => now(), 'expires_at' => null,
+        ]);
+        $this->get('/account')->assertOk()
+            ->assertSee('data-mcp-staging-share-complete', false)
+            ->assertSee('data-mcp-staging-subject-unlink', false);
+        $outsider = User::factory()->create(['first_run_completed_at' => now()]);
+        // The isolated stage actor gate blocks this request before the
+        // controller's owner-specific 404 check (generic stage 503).
+        $this->actingAs($outsider)->delete(
+            route('auth.account.mcp_subject.revoke', ['subject' => $link->id]),
+        )->assertStatus(503);
+        $this->assertSame(McpLinkedSubject::STATUS_LINKED, $link->fresh()->status);
+        $this->assertSame(McpDelegatedGrant::STATUS_ACTIVE, $grant->fresh()->status);
+
+        $this->actingAs($owner)->delete(
+            route('auth.account.mcp_subject.revoke', ['subject' => $link->id]),
+        )->assertRedirect(route('auth.account'));
+        $this->assertSame(McpLinkedSubject::STATUS_REVOKED, $link->fresh()->status);
+        $this->assertNull($link->fresh()->active_identity_fingerprint);
+        $this->assertSame(McpDelegatedGrant::STATUS_REVOKED, $grant->fresh()->status);
+        $this->get('/account')->assertOk()
+            ->assertSee('本人確認をはじめる')
+            ->assertDontSee('data-mcp-staging-share-complete', false)
+            ->assertDontSee('data-mcp-staging-subject-unlink', false);
+    }
+
     public function test_stale_or_tampered_verified_session_cannot_grant_another_plan(): void
     {
         $owner = $this->actor();
