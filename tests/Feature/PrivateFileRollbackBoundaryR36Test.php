@@ -54,7 +54,7 @@ final class PrivateFileRollbackBoundaryR36Test extends TestCase
         $path = 'inbox/r36/preserve-on-rollback.txt';
         try {
             app(PrivateFileUploadService::class)->storeAndPersist([
-                ['file' => UploadedFile::fake()->createWithContent('fixture.txt', 'synthetic')],
+                ['file' => UploadedFile::fake()->createWithContent('fixture.txt', 'synthetic'),
                  'path' => $path],
             ], function () {
                 throw new RuntimeException('synthetic owner insert rejected');
@@ -121,7 +121,7 @@ final class PrivateFileRollbackBoundaryR36Test extends TestCase
         $path = 'inbox/r36/local-rollback.txt';
         try {
             app(PrivateFileUploadService::class)->storeAndPersist([
-                ['file' => UploadedFile::fake()->createWithContent('fixture.txt', 'local')],
+                ['file' => UploadedFile::fake()->createWithContent('fixture.txt', 'local'),
                  'path' => $path],
             ], function () {
                 throw new RuntimeException('local owner reject');
