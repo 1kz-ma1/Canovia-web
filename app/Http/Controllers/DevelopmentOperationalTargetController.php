@@ -6,6 +6,7 @@ use App\Models\DevelopmentOperationalProfile;
 use App\Models\DevelopmentOperationalTarget;
 use App\Models\Plan;
 use App\Services\PlanCategoryProfileService;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -77,19 +78,19 @@ final class DevelopmentOperationalTargetController extends Controller
                 $expectedRevision = (int) $payload['target_revision'];
             }
 
-            DB::transaction(static function () use ($plan, $action, $expectedRevision): void {
+            DB::transaction(static function () use ($plan, $request, $action, $expectedRevision): void {
                 $target = DevelopmentOperationalTarget::query()
                     ->where('plan_id', $plan->id)->lockForUpdate()->firstOrFail();
                 if ($action === 'confirm_service') {
-                    abort_unless(
+                    if (! (
                         $target->provider === 'render'
                             && in_array($target->environment, DevelopmentOperationalTarget::ENVIRONMENTS, true)
                             && is_string($target->resource_ref)
                             && preg_match('/\Asrv-[a-zA-Z0-9_-]{4,76}\z/', $target->resource_ref)
-                            && (int) $target->revision === $expectedRevision,
-                        409,
-                        '対象環境が更新されています。再確認してください。',
-                    );
+                            && (int) $target->revision === $expectedRevision
+                    )) {
+                        self::rejectStaleConfirmation($request, $plan);
+                    }
                     $target->service_checked_at = now();
                     $target->service_checked_revision = $target->revision;
                     $target->service_checked_environment = $target->environment;
@@ -118,7 +119,7 @@ final class DevelopmentOperationalTargetController extends Controller
                 $expectedStore = $snapshot['expected_data_store'];
             }
 
-            DB::transaction(static function () use ($plan, $action, $expectedRevision, $expectedStore): void {
+            DB::transaction(static function () use ($plan, $request, $action, $expectedRevision, $expectedStore): void {
                 $target = DevelopmentOperationalTarget::query()
                     ->where('plan_id', $plan->id)->lockForUpdate()->firstOrFail();
                 $kind = str_ends_with($action, 'backup') ? 'backup' : 'restore';
@@ -134,12 +135,9 @@ final class DevelopmentOperationalTargetController extends Controller
                         422,
                         '保存方式を先に登録してください。',
                     );
-                    abort_unless(
-                        $target->revision === $expectedRevision
-                            && $dataStore === $expectedStore,
-                        409,
-                        '対象環境または保存方式が更新されています。最新の画面で再確認してください。',
-                    );
+                    if ($target->revision !== $expectedRevision || $dataStore !== $expectedStore) {
+                        self::rejectStaleConfirmation($request, $plan);
+                    }
                     $target->{$kind.'_confirmed_at'} = now();
                     $target->{$kind.'_revision'} = $target->revision;
                     $target->{$kind.'_store'} = $dataStore;
@@ -161,4 +159,32 @@ final class DevelopmentOperationalTargetController extends Controller
             '運用準備の自己申告を更新しました。Canoviaが外部サービスや復元結果を検証したものではありません。',
         );
     }
+    /**
+     * Safe, owner-scoped 409 recovery. Never retry or rewrite the attestation
+     * automatically: the operator must re-inspect the current target.
+     */
+    private static function rejectStaleConfirmation(Request $request, Plan $plan): never
+    {
+        $returnUrl = route('workspace.development.index', [
+            'plan_id' => $plan->id,
+            'surface' => 'work',
+            'release_preflight' => 1,
+        ]);
+
+        $response = $request->expectsJson()
+            ? response()->json([
+                'code' => 'development_operational_stale',
+                'message' => '対象環境または保存方式が変更されています。最新の画面で確認し直してください。',
+                'reload_url' => $returnUrl,
+            ], 409)
+            : response()->view('workspace.development.operational-stale-conflict', [
+                'returnUrl' => $returnUrl,
+            ], 409);
+
+        throw new HttpResponseException(
+            $response->header('Cache-Control', 'private, no-store')
+                ->header('Referrer-Policy', 'no-referrer'),
+        );
+    }
+
 }

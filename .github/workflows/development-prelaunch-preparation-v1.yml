@@ -50,6 +50,7 @@ jobs:
           php -l tests/Unit/DevelopmentOperationalOperatorReadinessV54Test.php
           php -l tests/Feature/DevelopmentOperationalAttestationV4FeatureTest.php
           php -l tests/Feature/DevelopmentOperationalAcceptanceV55Test.php
+          php -l tests/Feature/DevelopmentOperationalConflictV56Test.php
       - name: Compile Blade templates
         run: php artisan view:cache
       - name: Targeted behavior and Workspace regression
@@ -68,6 +69,7 @@ jobs:
             tests/Feature/DevelopmentOperationalProfileV3FeatureTest.php \
             tests/Feature/DevelopmentOperationalAttestationV4FeatureTest.php \
             tests/Feature/DevelopmentOperationalAcceptanceV55Test.php \
+            tests/Feature/DevelopmentOperationalConflictV56Test.php \
             tests/Feature/DevelopmentWorkspaceV544Test.php \
             tests/Feature/DeveloperHomeV573Test.php \
             tests/Feature/DeveloperWorkspaceSurfacesV580Test.php
