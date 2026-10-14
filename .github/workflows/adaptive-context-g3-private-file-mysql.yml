@@ -13,6 +13,9 @@ on:
       - 'app/Services/PrivateFileGenerationEvidenceService.php'
       - 'app/Services/PrivateFileWriteReceiptHandoffService.php'
       - 'app/Services/PrivateFileSyntheticCrashMatrixService.php'
+      - 'app/Services/PrivateFileWriteAttemptService.php'
+      - 'database/migrations/2026_10_14_150000_create_private_file_write_attempts.php'
+      - 'tests/Feature/PrivateFileWriteAttemptG3Test.php'
       - 'tests/Feature/PrivateFileSyntheticCrashMatrixG3Test.php'
       - 'tests/Feature/PrivateFileWriteReceiptHandoffG3Test.php'
       - 'database/migrations/2026_10_14_140000_create_private_file_generation_evidence.php'
@@ -98,6 +101,9 @@ jobs:
           php -l app/Services/PrivateFileGenerationEvidenceService.php
           php -l app/Services/PrivateFileWriteReceiptHandoffService.php
           php -l app/Services/PrivateFileSyntheticCrashMatrixService.php
+          php -l app/Services/PrivateFileWriteAttemptService.php
+          php -l database/migrations/2026_10_14_150000_create_private_file_write_attempts.php
+          php -l tests/Feature/PrivateFileWriteAttemptG3Test.php
           php -l tests/Feature/PrivateFileSyntheticCrashMatrixG3Test.php
           php -l tests/Feature/PrivateFileWriteReceiptHandoffG3Test.php
           php -l database/migrations/2026_10_14_140000_create_private_file_generation_evidence.php
@@ -111,4 +117,4 @@ jobs:
           php -l app/Services/PrivateFilePathFenceService.php
           php -l database/migrations/2026_10_14_120000_create_private_file_path_fences.php
           php -l tests/Feature/PrivateFileCleanupMysqlCurrentReadG3Test.php
-          php artisan test tests/Feature/PrivateFileCleanupMysqlCurrentReadG3Test.php tests/Feature/PrivateFileUploadG3Test.php tests/Feature/PrivateFileUploadIntentG3Test.php tests/Feature/PrivateFileUploadReconciliationPreviewG3Test.php tests/Feature/PrivateFileUploadConsistencyProbeG3Test.php tests/Feature/PrivateFileGenerationContractG3Test.php tests/Feature/PrivateFileGenerationEvidenceG3Test.php tests/Feature/PrivateFileWriteReceiptHandoffG3Test.php tests/Feature/PrivateFileSyntheticCrashMatrixG3Test.php --fail-on-skipped --stop-on-failure
+          php artisan test tests/Feature/PrivateFileCleanupMysqlCurrentReadG3Test.php tests/Feature/PrivateFileUploadG3Test.php tests/Feature/PrivateFileUploadIntentG3Test.php tests/Feature/PrivateFileUploadReconciliationPreviewG3Test.php tests/Feature/PrivateFileUploadConsistencyProbeG3Test.php tests/Feature/PrivateFileGenerationContractG3Test.php tests/Feature/PrivateFileGenerationEvidenceG3Test.php tests/Feature/PrivateFileWriteReceiptHandoffG3Test.php tests/Feature/PrivateFileSyntheticCrashMatrixG3Test.php tests/Feature/PrivateFileWriteAttemptG3Test.php --fail-on-skipped --stop-on-failure
