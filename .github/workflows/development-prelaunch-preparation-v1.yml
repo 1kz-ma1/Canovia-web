@@ -63,6 +63,8 @@ jobs:
         run: python3 -m unittest discover -s tests/ci -p 'test_development_release_v63_p0_evidence.py' -v
       - name: V6.7 owner-confirmed reflection next-action acceptance
         run: php artisan test tests/Feature/GuidedExecutionNextActionV67Test.php --stop-on-failure
+      - name: V6.8 first action follow-through and study next-action rationale
+        run: php artisan test tests/Feature/DevelopmentFirstActionJourneyV68Test.php --stop-on-failure
       - name: Compile Blade templates
         run: php artisan view:cache
       - name: Targeted behavior and Workspace regression
