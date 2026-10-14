@@ -1,0 +1,104 @@
+name: G3 R34 Disposable Laravel MySQL S3 Crash Trial
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/g3-disposable-laravel-mysql-s3-crash.yml'
+      - 'tests/ci/g3_r34_laravel_crash.php'
+      - 'tests/ci/g3_r34_orchestrator.py'
+      - 'docs/development/G3_LARAVEL_MYSQL_S3_CRASH_R34_2026_10_15.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cross-layer-crash:
+    name: G3 R34 real Laravel MySQL S3 crash recovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: g3-r34-root-ci-only
+          MYSQL_DATABASE: canovia_g3_r34_ci
+          MYSQL_USER: canovia_r34_ci
+          MYSQL_PASSWORD: g3-r34-disposable-only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      CI: 'true'
+      G3_R34_EPHEMERAL_ONLY: 'true'
+      APP_ENV: testing
+      APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+      DB_CONNECTION: mysql
+      DB_HOST: '127.0.0.1'
+      DB_PORT: '3306'
+      DB_DATABASE: canovia_g3_r34_ci
+      DB_USERNAME: canovia_r34_ci
+      DB_PASSWORD: g3-r34-disposable-only
+      DB_URL: ''
+      FILESYSTEM_DISK: s3
+      AWS_ENDPOINT: 'http://127.0.0.1:9000'
+      AWS_USE_PATH_STYLE_ENDPOINT: 'true'
+      AWS_ACCESS_KEY_ID: g3_r34_emulator_only
+      AWS_SECRET_ACCESS_KEY: g3_r34_dummy_no_cloud
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_BUCKET: g3-r34-ci-${{ github.run_id }}-${{ github.run_attempt }}
+      AWS_EC2_METADATA_DISABLED: 'true'
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, mbstring, xml
+          coverage: none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install application and CI-only S3 test adapter
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          composer require --dev --no-interaction --no-progress --no-scripts 'league/flysystem-aws-s3-v3:^3.0'
+          python -m pip install --disable-pip-version-check 'boto3==1.40.70'
+      - name: Check harness syntax
+        run: |
+          php -l tests/ci/g3_r34_laravel_crash.php
+          python -m py_compile tests/ci/g3_r34_orchestrator.py
+      - name: Permit migration trigger routines only in disposable MySQL
+        env:
+          MYSQL_PWD: g3-r34-root-ci-only
+        run: |
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=root --database=canovia_g3_r34_ci \
+            -e 'SET GLOBAL log_bin_trust_function_creators = 1'
+      - name: Migrate only disposable MySQL
+        run: php artisan migrate --force --no-interaction
+      - name: Start local S3-compatible process with runner-only disk
+        run: |
+          mkdir -p "$RUNNER_TEMP/g3-r34-minio-data"
+          chmod 0777 "$RUNNER_TEMP/g3-r34-minio-data"
+          docker run -d --name g3-r34-minio \
+            --cap-drop=ALL --security-opt=no-new-privileges \
+            --pids-limit 128 --memory 1g \
+            -p 127.0.0.1:9000:9000 \
+            -v "$RUNNER_TEMP/g3-r34-minio-data:/data" \
+            -e MINIO_ROOT_USER="$AWS_ACCESS_KEY_ID" \
+            -e MINIO_ROOT_PASSWORD="$AWS_SECRET_ACCESS_KEY" \
+            dappros/minio@sha256:624bad2fe79a8613aa3c5c9b765ebcab365080b8445cf1b05c357cc7753725f0 \
+            server /data --address :9000
+      - name: Crash real PHP processes then S3 server and inspect recovery
+        run: python tests/ci/g3_r34_orchestrator.py
+      - name: Remove disposable MinIO container
+        if: always()
+        run: docker rm -f g3-r34-minio >/dev/null 2>&1 || true
