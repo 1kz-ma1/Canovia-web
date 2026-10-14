@@ -156,7 +156,8 @@ final class McpOAuthAccountLinkController extends Controller
             if (! $consent->isEnabled()) {
                 return $this->failure('link_callback_plan_consent_disabled');
             }
-            if (! is_string($scope) || ! is_int($days)
+            if (! is_string($scope)
+                || ! (is_int($days) || $days === McpExplicitPlanConsentService::UNTIL_REVOKED)
                 || ! $consent->isScopeAndDurationAllowed($scope, $days)) {
                 return $this->failure('link_callback_plan_scope_invalid');
             }
