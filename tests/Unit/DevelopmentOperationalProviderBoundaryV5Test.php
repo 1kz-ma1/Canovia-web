@@ -38,7 +38,6 @@ final class DevelopmentOperationalProviderBoundaryV5Test extends TestCase
             'owner_id' => 7,
             'plan_id' => 42,
             'workspace_id' => 'tea-owner123',
-            'service_owner_id' => 'tea-owner123',
             'service_id' => 'srv-sandbox123',
             'target_revision' => 3,
             'consent_epoch' => 4,
@@ -59,6 +58,8 @@ final class DevelopmentOperationalProviderBoundaryV5Test extends TestCase
             'service_exists' => true,
             'connection_id' => 'conn-owner123',
             'workspace_id' => 'tea-owner123',
+            // Taken from Render's resource.ownerId, NOT from owner grant.
+            'service_owner_id' => 'tea-owner123',
             'service_id' => 'srv-sandbox123',
             'target_revision' => 3,
             'consent_epoch' => 4,
