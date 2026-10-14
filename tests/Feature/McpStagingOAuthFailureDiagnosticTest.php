@@ -56,24 +56,20 @@ final class McpStagingOAuthFailureDiagnosticTest extends TestCase
         }
         $diagnostic->record('link_provider_token_rate_limited=access_token:private');
         $diagnostic->record('link_provider_github_subject_rejected'.chr(10).'secret');
-        $observed = [];
+        // Mockery may evaluate withArgs more than once while matching.
+        // Keep the predicate side-effect free and assert exactly three
+        // allowlisted, single-field events (no dynamic OAuth payload).
         Log::shouldHaveReceived('warning')->withArgs(
-            static function ($message, $context) use (&$observed): bool {
-                if ($message !== 'Canovia MCP staging OAuth failure'
-                    || ! is_array($context)
-                    || array_keys($context) !== ['stage_code']
-                    || ! is_string($context['stage_code'])) {
-                    return false;
-                }
-                $observed[] = $context['stage_code'];
-                return true;
-            },
+            static fn ($message, $context): bool =>
+                $message === 'Canovia MCP staging OAuth failure'
+                && is_array($context)
+                && array_keys($context) === ['stage_code']
+                && in_array($context['stage_code'], [
+                    'link_provider_metadata_rate_limited',
+                    'link_provider_token_rate_limited',
+                    'link_provider_github_subject_rejected',
+                ], true),
         )->times(3);
-        $this->assertSame([
-            'link_provider_metadata_rate_limited',
-            'link_provider_token_rate_limited',
-            'link_provider_github_subject_rejected',
-        ], $observed);
     }
 
     public function test_disabled_pilot_production_and_wrong_isolation_never_log_diagnostics(): void
