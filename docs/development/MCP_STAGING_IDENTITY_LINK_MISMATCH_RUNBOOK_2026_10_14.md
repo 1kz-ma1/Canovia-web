@@ -36,6 +36,15 @@ Environment: isolated Render `canovia-mcp-staging` in confirmed `My Workspace`. 
 - Wrong Auth0 subject, revoked link, different actor, wrong client, expired PKCE/state or unapproved Plan must continue to fail closed.
 - Keep staging and production separated; no Auth0 tenant-wide policy adjustment, secret exposure, HMAC reset, database network exception, or moving-main redeploy just to make a test pass.
 
+## 2026-10-14 follow-up — reported positive consent (not full MCP E2E)
+
+- The owner reported seeing the exact staging message `指定した開発Planの共有範囲と期限を承認しました。ChatGPTからの直接取得はまだ有効になっていません。` after authenticating with the previously linked account.
+- On pinned Live SHA `366fc031`, that exact message is emitted by `McpOAuthPlanConsentController::confirm()` **only after** the `McpExplicitPlanConsentService::grant(...)` call returns true. This is strong source-level support for a successful per-Plan grant transaction; it is not an independently queried DB audit or proof of a ChatGPT read.
+- Around `2026-10-14 02:02–02:03 UTC`, Render shows normal OAuth/account redirect requests with no `link_callback_plan_link_mismatch` failure in that checked interval. The anonymized request logger does not expose final grant status.
+- The hypothesis is that an existing Google Auth0 browser session was selected when the originally linked external identity used GitHub. **This is not proved** until comparing the two historical IdP `iss+sub` identities privately. Do not treat it as a verified security finding or alter the subject-check code.
+- Next separate acceptance: request the exact owner-provided synthetic Development Plan ID, invoke the already connected read-only tool with `overview` first (never infer or discover an ID), optionally `tasks` only if that exact scope was approved; then verify revocation denies a repeated read. Do not label complete until an actual ChatGPT read and subsequent revoke are observed.
+- The fixed confirmation string says ChatGPT direct fetch is not yet enabled. This string is static controller text; do **not infer actual runtime tool enablement or disablement from wording alone**. Confirm with a real authenticated tool call.
+
 ## Immediate operator decision tree
 
 - `sub` differs: preserve refusal; decide whether original link was intended and recover through verified explicit relink (requires user agreement and supported route).
