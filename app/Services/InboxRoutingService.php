@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\EvidenceSource;
+use App\Exceptions\NativeAiExecutionException;
 use App\Models\InboxItem;
 use App\Models\Plan;
 use App\Models\PlanResource;
@@ -173,9 +174,17 @@ class InboxRoutingService
         // Reuse the authorization generation captured at the actual Inbox
         // copy. A revoked/rejoined Editor cannot start the AI under a new
         // epoch after approving material under the old one.
-        $result = $this->recallExtractor->extract(
-            $source, $plan, $task, $actor->id, $transfer['authorization'],
-        );
+        try {
+            $result = $this->recallExtractor->extract(
+                $source, $plan, $task, $actor->id, $transfer['authorization'],
+            );
+        } catch (NativeAiExecutionException $exception) {
+            // Preserve the saved Source for the existing retry workflow, but
+            // do not mark the Inbox as processed or expose a 500 response.
+            throw ValidationException::withMessages([
+                'destination' => $exception->getMessage(),
+            ]);
+        }
 
         $this->recallTransfers->confirmProcessed(
             $item, $plan, $task, $source, $actor, $actorToken,
