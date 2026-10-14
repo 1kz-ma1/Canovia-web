@@ -15,12 +15,12 @@ WORKFLOWS = {
     ),
 }
 GROUP = (
-    "  group: ${ github.workflow }}-${ github.event_name == 'pull_request' "
+    "  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' "
     "&& github.base_ref == 'main' && format('pr-{0}', "
     "github.event.pull_request.number) || format('run-{0}', github.run_id) }}"
 )
 CANCEL = (
-    "  cancel-in-progress: ${ github.event_name == 'pull_request' "
+    "  cancel-in-progress: ${{ github.event_name == 'pull_request' "
     "&& github.base_ref == 'main' }}"
 )
 
