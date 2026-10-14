@@ -195,6 +195,75 @@ class InboxIntelligenceGuideV4113Test extends TestCase
         $this->assertSame('processed', $item->fresh()->status);
     }
 
+    public function test_plan_resource_accepts_only_official_https_service_hosts(): void
+    {
+        [$user, $genericPlan] = $this->scenario();
+        $cases = [
+            ['https://github.com/org/repo', 'github'],
+            ['https://gist.github.com/user/id', 'github'],
+            ['https://drive.google.com/file/d/test/view', 'google_drive'],
+            ['https://docs.google.com/document/d/test/edit', 'google_drive'],
+            ['https://tenant-my.sharepoint.com/personal/user/file', 'onedrive'],
+            ['https://onedrive.live.com/?id=test', 'onedrive'],
+            ['https://1drv.ms/u/s!test', 'onedrive'],
+        ];
+
+        foreach ($cases as [$url, $expectedProvider]) {
+            $item = $this->inbox($user, [
+                'source_type' => 'url',
+                'source_url' => $url,
+                'title' => 'Resource link',
+            ]);
+            $this->actingAs($user)
+                ->post(route('inbox.route', $item), [
+                    'destination' => 'plan_resource',
+                    'plan_id' => $genericPlan->id,
+                ])
+                ->assertRedirect(route('inbox.index'))
+                ->assertSessionHasNoErrors();
+
+            $this->assertSame('processed', $item->fresh()->status);
+            $resource = PlanResource::query()->latest('id')->firstOrFail();
+            $this->assertSame($expectedProvider, $resource->provider, $url);
+            $this->assertSame($url, $resource->url);
+        }
+        $this->assertDatabaseCount('plan_resources', count($cases));
+    }
+
+    public function test_plan_resource_rejects_lookalike_hosts_and_untrusted_url_authorities(): void
+    {
+        [$user, $genericPlan] = $this->scenario();
+        $invalidUrls = [
+            'https://github.com.attacker.example/project',
+            'https://notgithub.com/org/repo',
+            'https://drive.google.com.attacker.example/file',
+            'https://docs.google.com.attacker.example/file',
+            'https://onedrive.attacker.example/file',
+            'https://my-sharepoint.example/file',
+            'https://tenant.sharepoint.com.attacker.example/file',
+            'https://github.com@attacker.example/project',
+            'https://user:pass@github.com/project',
+            'http://github.com/org/repo',
+        ];
+
+        foreach ($invalidUrls as $url) {
+            $item = $this->inbox($user, [
+                'source_type' => 'url',
+                'source_url' => $url,
+                'title' => 'Potentially misleading link',
+            ]);
+            $this->actingAs($user)
+                ->post(route('inbox.route', $item), [
+                    'destination' => 'plan_resource',
+                    'plan_id' => $genericPlan->id,
+                ])
+                ->assertSessionHasErrors('destination');
+
+            $this->assertSame('new', $item->fresh()->status, $url);
+            $this->assertDatabaseCount('plan_resources', 0);
+        }
+    }
+
     public function test_recall_routing_requires_premium_and_creates_candidate_only_after_human_confirmation(): void
     {
         [$user, , , , $studyPlan, $studyTask] = $this->scenario();
