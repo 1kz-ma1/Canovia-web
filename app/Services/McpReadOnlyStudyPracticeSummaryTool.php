@@ -57,7 +57,7 @@ final class McpReadOnlyStudyPracticeSummaryTool
                 ->orderByDesc('applied_at')
                 ->orderByDesc('id')
                 ->limit($limit + 1)
-                ->get(['score_percent', 'weaknesses', 'applied_at']);
+                ->get(['score_percent', 'weaknesses', 'assessment', 'applied_at']);
             $hasMoreAppliedAttempts = $attempts->count() > $limit;
             $attempts = $attempts->take($limit);
 
@@ -69,9 +69,37 @@ final class McpReadOnlyStudyPracticeSummaryTool
                     $scores[] = $value;
                 }
 
-                // Older attempts can include free-form labels. Return only a
-                // bounded set of short weakness names, never the assessment.
-                foreach ((array) $attempt->weaknesses as $label) {
+                // Modern Study attempts classify errors per question. Use
+                // only topic tags for incorrect/partial answers, never raw
+                // question, model rationale or feedback text. Legacy rows
+                // without typed feedback may use the bounded weakness list.
+                $items = data_get($attempt->assessment, 'question_feedback', []);
+                $items = is_array($items) ? array_slice($items, 0, 30) : [];
+                $structured = collect($items)->contains(
+                    static fn ($item): bool => is_array($item)
+                        && (array_key_exists('correctness', $item)
+                            || array_key_exists('error_type', $item))
+                );
+                $labels = [];
+                if ($structured) {
+                    foreach ($items as $item) {
+                        if (! is_array($item)
+                            || ! in_array($item['correctness'] ?? null, ['incorrect', 'partial'], true)) {
+                            continue;
+                        }
+                        $raw = $item['weakness_topics'] ?? [];
+                        if (! is_array($raw) || $raw === []) {
+                            $raw = $item['misconceptions'] ?? [];
+                        }
+                        if (is_array($raw)) {
+                            array_push($labels, ...array_slice($raw, 0, 8));
+                        }
+                    }
+                } else {
+                    $labels = (array) $attempt->weaknesses;
+                }
+
+                foreach ($labels as $label) {
                     if (! is_string($label)) {
                         continue;
                     }
