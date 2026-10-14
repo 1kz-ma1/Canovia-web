@@ -32,6 +32,10 @@ return [
     // never exposed by the isolated synthetic-only staging service.
     'study_summary_read_enabled' => env('CANOVIA_MCP_STUDY_SUMMARY_READ_ENABLED', false),
 
+    // Additional OAuth write scope + per-item Canovia owner confirmation.
+    // This NEVER updates native questions, attempts or Task progress by itself.
+    'study_result_proposals_enabled' => env('CANOVIA_MCP_STUDY_RESULT_PROPOSALS_ENABLED', false),
+
     // Exact HTTPS origins permitted when a browser supplies Origin.
     // An absent Origin from a server-side ChatGPT client is allowed.
     'allowed_origins' => env('CANOVIA_MCP_ALLOWED_ORIGINS', ''),

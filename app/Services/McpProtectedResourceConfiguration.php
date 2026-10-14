@@ -14,6 +14,7 @@ final class McpProtectedResourceConfiguration
     public const RESOURCE_PATH = '/api/mcp';
     public const METADATA_PATH = '/.well-known/oauth-protected-resource';
     public const READ_SCOPE = 'canovia.development.read';
+    public const STUDY_WRITE_SCOPE = 'canovia.study.write';
 
     public function isReady(): bool
     {
@@ -42,7 +43,9 @@ final class McpProtectedResourceConfiguration
         return [
             'resource' => (string) config('canovia_mcp.resource_url'),
             'authorization_servers' => [(string) config('canovia_mcp.oauth_issuer')],
-            'scopes_supported' => [self::READ_SCOPE],
+            'scopes_supported' => config('canovia_mcp.study_result_proposals_enabled') === true
+                && config('app.env') !== 'staging'
+                ? [self::READ_SCOPE, self::STUDY_WRITE_SCOPE] : [self::READ_SCOPE],
         ];
     }
 

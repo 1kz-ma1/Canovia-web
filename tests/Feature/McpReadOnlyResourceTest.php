@@ -7,6 +7,8 @@ use App\Models\McpDelegatedGrant;
 use App\Models\McpLinkedSubject;
 use App\Models\Plan;
 use App\Models\StudyPracticeAttempt;
+use App\Models\McpStudyResultProposal;
+use App\Services\McpProposeStudyResultTool;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\McpDelegatedIdentityFingerprintService;
@@ -410,7 +412,7 @@ final class McpReadOnlyResourceTest extends TestCase
         $study->update(['category' => '資格学習', 'title' => 'SYNTHETIC_AP_LEARNING']);
         $this->linkAndGrant($owner, $study, 'overview');
         $grant = McpDelegatedGrant::query()->sole();
-        Task::query()->create([
+        $task = Task::query()->create([
             'plan_id' => $study->id,
             'title' => 'Network practice',
             'description' => 'PRIVATE_ANSWER_DO_NOT_EXPORT',
@@ -465,6 +467,7 @@ final class McpReadOnlyResourceTest extends TestCase
             'arguments' => ['plan_id' => $study->id, 'scope' => 'tasks'],
         ])->assertOk()
             ->assertJsonPath('result.isError', false)
+            ->assertJsonPath('result.structuredContent.tasks.0.task_id', $task->id)
             ->assertJsonPath('result.structuredContent.tasks.0.title', 'Network practice')
             ->assertJsonPath('result.structuredContent.tasks.0.recorded_progress_percent', 35)
             ->assertDontSee('PRIVATE_ANSWER_DO_NOT_EXPORT');
@@ -644,6 +647,205 @@ final class McpReadOnlyResourceTest extends TestCase
         $this->assertDatabaseCount('mcp_delegated_access_events', 0);
     }
 
+    public function test_mcp_study_result_requires_distinct_write_bearer_and_owner_approval(): void
+    {
+        $this->idp(write: true);
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $study = $this->plan($owner);
+        $study->update(['category' => '資格学習', 'title' => 'SYNTHETIC_AP_OWNER_APPROVAL']);
+        $task = Task::query()->create([
+            'plan_id' => $study->id, 'title' => 'AP network',
+            'status' => 'doing', 'progress_percent' => 10,
+            'priority' => 1, 'sort_order' => 1,
+        ]);
+        $this->linkAndGrant($owner, $study, 'study_progress');
+        $proposalArgs = [
+            'plan_id' => $study->id,
+            'task_id' => $task->id,
+            'idempotency_key' => str_repeat('a', 64),
+            'question_count' => 10,
+            'correct_count' => 7,
+            'weaknesses' => ['ネットワーク', 'DNS'],
+        ];
+        config([
+            'canovia_mcp.study_read_enabled' => true,
+            'canovia_mcp.study_summary_read_enabled' => true,
+        ]);
+        $this->rpc('tools/call', [
+            'name' => McpProposeStudyResultTool::NAME,
+            'arguments' => $proposalArgs,
+        ])->assertStatus(400);
+        config(['canovia_mcp.study_result_proposals_enabled' => true]);
+        $this->rpc('tools/list')->assertOk()
+            ->assertJsonCount(4, 'result.tools')
+            ->assertJsonPath('result.tools.3.name', McpProposeStudyResultTool::NAME)
+            ->assertJsonPath('result.tools.3.annotations.readOnlyHint', false);
+        $first = $this->rpc('tools/call', [
+            'name' => McpProposeStudyResultTool::NAME,
+            'arguments' => $proposalArgs,
+        ]);
+        $first->assertOk()
+            ->assertJsonPath('result.isError', false)
+            ->assertJsonPath('result.structuredContent.status', 'pending')
+            ->assertJsonPath('result.structuredContent.recorded_in_learning_history', false);
+        $id = (int) $first->json('result.structuredContent.proposal_id');
+        $this->assertGreaterThan(0, $id);
+        $this->assertDatabaseCount('mcp_study_result_proposals', 1);
+
+        // Retries are idempotent. A reused key with altered content is denied.
+        $this->rpc('tools/call', [
+            'name' => McpProposeStudyResultTool::NAME,
+            'arguments' => $proposalArgs,
+        ])->assertOk()->assertJsonPath('result.structuredContent.proposal_id', $id);
+        $altered = [...$proposalArgs, 'correct_count' => 8];
+        $this->rpc('tools/call', [
+            'name' => McpProposeStudyResultTool::NAME,
+            'arguments' => $altered,
+        ])->assertOk()->assertJsonPath('result.isError', true);
+        $this->assertDatabaseCount('mcp_study_result_proposals', 1);
+
+        // Pending submissions are NEVER counted as verified study history.
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyPracticeSummaryTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertOk()
+            ->assertJsonPath('result.structuredContent.sample.applied_attempts_considered', 0);
+        $this->actingAs($owner)->get(route('auth.account'))->assertOk()
+            ->assertSee('data-mcp-study-result-proposal', false)
+            ->assertSee('SYNTHETIC_AP_OWNER_APPROVAL')
+            ->assertSee('7 / 10');
+        $this->actingAs($owner)->post(route('auth.account.mcp_study_result.decide', [
+            'proposal' => $id,
+        ]), ['decision' => 'approve'])->assertRedirect(route('auth.account'));
+        $this->assertSame(McpStudyResultProposal::APPROVED,
+            McpStudyResultProposal::query()->findOrFail($id)->status);
+        $this->assertSame(10, $task->fresh()->progress_percent);
+        $this->assertDatabaseCount('study_practice_attempts', 0);
+        // A repeated confirmation cannot commit a second result.
+        $this->post(route('auth.account.mcp_study_result.decide', [
+            'proposal' => $id,
+        ]), ['decision' => 'approve'])->assertRedirect(route('auth.account'));
+        $this->assertDatabaseCount('mcp_study_result_proposals', 1);
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyPracticeSummaryTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertOk()
+            ->assertJsonPath('result.structuredContent.sample.applied_attempts_considered', 1)
+            ->assertJsonPath('result.structuredContent.sample.owner_approved_mcp_results_considered', 1)
+            ->assertJsonPath('result.structuredContent.sample.latest_score_percent', 70)
+            ->assertJsonPath('result.structuredContent.weak_topics.0.topic', 'DNS');
+    }
+
+    public function test_read_only_bearer_cannot_propose_and_no_unapproved_result_leaks(): void
+    {
+        $this->idp(); // Valid token but lacks independent write scope.
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $study = $this->plan($owner);
+        $study->update(['category' => '資格学習']);
+        $task = Task::query()->create([
+            'plan_id' => $study->id, 'title' => 'AP DB',
+            'status' => 'doing', 'progress_percent' => 0,
+            'priority' => 1, 'sort_order' => 1,
+        ]);
+        $this->linkAndGrant($owner, $study, 'study_progress');
+        config([
+            'canovia_mcp.study_read_enabled' => true,
+            'canovia_mcp.study_summary_read_enabled' => true,
+            'canovia_mcp.study_result_proposals_enabled' => true,
+        ]);
+        $this->rpc('tools/list')->assertOk()->assertJsonCount(3, 'result.tools');
+        $this->rpc('tools/call', [
+            'name' => McpProposeStudyResultTool::NAME,
+            'arguments' => [
+                'plan_id' => $study->id, 'task_id' => $task->id,
+                'question_count' => 10, 'correct_count' => 6,
+                'idempotency_key' => str_repeat('b', 64),
+                'weaknesses' => ['DB'],
+            ],
+        ])->assertOk()->assertJsonPath('result.isError', true);
+        $this->assertDatabaseCount('mcp_study_result_proposals', 0);
+    }
+
+    public function test_study_result_rejected_expired_wrong_task_and_wrong_owner_never_affect_scores(): void
+    {
+        $this->idp(write: true);
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $other = User::factory()->create(['first_run_completed_at' => now()]);
+        $study = $this->plan($owner);
+        $study->update(['category' => '資格学習', 'title' => 'SECURE_AP_TEST']);
+        $task = Task::query()->create([
+            'plan_id' => $study->id, 'title' => 'AP database',
+            'status' => 'doing', 'progress_percent' => 5,
+            'priority' => 1, 'sort_order' => 1,
+        ]);
+        $otherStudy = $this->plan($other);
+        $otherStudy->update(['category' => '資格学習']);
+        $foreignTask = Task::query()->create([
+            'plan_id' => $otherStudy->id, 'title' => 'Other account confidential Task',
+            'status' => 'todo', 'progress_percent' => 0,
+            'priority' => 1, 'sort_order' => 1,
+        ]);
+        $this->linkAndGrant($owner, $study, 'study_progress');
+        config([
+            'canovia_mcp.study_read_enabled' => true,
+            'canovia_mcp.study_summary_read_enabled' => true,
+            'canovia_mcp.study_result_proposals_enabled' => true,
+        ]);
+        $args = [
+            'plan_id' => $study->id, 'task_id' => $task->id,
+            'question_count' => 10, 'correct_count' => 4,
+            'idempotency_key' => str_repeat('c', 64),
+            'weaknesses' => ['データベース'],
+        ];
+        $this->rpc('tools/call', [
+            'name' => McpProposeStudyResultTool::NAME,
+            'arguments' => [...$args, 'task_id' => $foreignTask->id],
+        ])->assertOk()->assertJsonPath('result.isError', true)
+            ->assertDontSee('Other account confidential Task');
+        $first = $this->rpc('tools/call', [
+            'name' => McpProposeStudyResultTool::NAME,
+            'arguments' => $args,
+        ]);
+        $first->assertOk()->assertJsonPath('result.isError', false);
+        $id = (int) $first->json('result.structuredContent.proposal_id');
+
+        $this->actingAs($other)->post(route('auth.account.mcp_study_result.decide', [
+            'proposal' => $id,
+        ]), ['decision' => 'approve'])->assertNotFound();
+        $this->assertSame('pending', McpStudyResultProposal::query()->findOrFail($id)->status);
+
+        $this->actingAs($owner)->post(route('auth.account.mcp_study_result.decide', [
+            'proposal' => $id,
+        ]), ['decision' => 'reject'])->assertRedirect();
+        $this->assertSame('rejected', McpStudyResultProposal::query()->findOrFail($id)->status);
+        $this->post(route('auth.account.mcp_study_result.decide', [
+            'proposal' => $id,
+        ]), ['decision' => 'approve'])->assertRedirect();
+        $this->assertSame('rejected', McpStudyResultProposal::query()->findOrFail($id)->status);
+
+        $second = $this->rpc('tools/call', [
+            'name' => McpProposeStudyResultTool::NAME,
+            'arguments' => [...$args, 'idempotency_key' => str_repeat('d', 64)],
+        ]);
+        $second->assertOk()->assertJsonPath('result.isError', false);
+        $secondId = (int) $second->json('result.structuredContent.proposal_id');
+        McpStudyResultProposal::query()->whereKey($secondId)
+            ->update(['expires_at' => now()->subMinute()]);
+        $this->post(route('auth.account.mcp_study_result.decide', [
+            'proposal' => $secondId,
+        ]), ['decision' => 'approve'])->assertRedirect();
+        $this->assertSame('pending', McpStudyResultProposal::query()->findOrFail($secondId)->status);
+
+        // A signed ChatGPT bearer still cannot make rejected or expired
+        // proposals appear in the aggregated, owner-approved results.
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyPracticeSummaryTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertOk()
+            ->assertJsonPath('result.structuredContent.sample.applied_attempts_considered', 0);
+        $this->assertSame(5, $task->fresh()->progress_percent);
+    }
+
     public function test_transport_is_read_only_without_sse_sessions_or_mutation(): void
     {
         $this->idp();
@@ -741,7 +943,7 @@ final class McpReadOnlyResourceTest extends TestCase
         return $link;
     }
 
-    private function idp(string $client = self::CHATGPT_CLIENT): void
+    private function idp(string $client = self::CHATGPT_CLIENT, bool $write = false): void
     {
         Http::fake([self::INTROSPECT => Http::response([
             'active' => true,
@@ -753,7 +955,7 @@ final class McpReadOnlyResourceTest extends TestCase
             'exp' => now()->timestamp + 1200,
             'iat' => now()->timestamp - 60,
             'nbf' => now()->timestamp - 5,
-            'scope' => 'canovia.development.read',
+            'scope' => $write ? 'canovia.development.read canovia.study.write' : 'canovia.development.read',
         ], 200, ['Content-Type' => 'application/json'])]);
     }
 }

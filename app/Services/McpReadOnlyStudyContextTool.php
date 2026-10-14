@@ -64,10 +64,11 @@ final class McpReadOnlyStudyContextTool
                     ->orderBy('sort_order')
                     ->orderBy('id')
                     ->limit($limit + 1)
-                    ->get(['title', 'status', 'progress_percent']);
+                    ->get(['id', 'title', 'status', 'progress_percent']);
 
                 $truncated = $tasks->count() > $limit;
                 $items = $tasks->take($limit)->map(static fn (Task $task): array => [
+                    'task_id' => (int) $task->id,
                     'title' => mb_substr((string) $task->title, 0, 160),
                     'status' => (string) $task->status,
                     'recorded_progress_percent' => $task->progress_percent === null
@@ -112,7 +113,7 @@ final class McpReadOnlyStudyContextTool
         return [
             'name' => self::NAME,
             'title' => 'Read approved Canovia Study Plan context',
-            'description' => 'Read a specifically consented private Study Plan. Overview gives the title and owner-recorded deadline. Tasks requires Tasks consent and returns up to eight task titles, statuses and recorded progress. No exercise questions, answers, scores, personal profile or writes. The Plan ID must be supplied explicitly.',
+            'description' => 'Read a specifically consented private Study Plan. Overview gives the title and owner-recorded deadline. Tasks requires Tasks consent and returns up to eight Task IDs, titles, statuses and recorded progress. No exercise questions, answers, scores, personal profile or writes. The Plan ID must be supplied explicitly.',
             'inputSchema' => [
                 'type' => 'object',
                 'properties' => [
