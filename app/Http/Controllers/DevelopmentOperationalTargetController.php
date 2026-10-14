@@ -1,0 +1,108 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\DevelopmentOperationalProfile;
+use App\Models\DevelopmentOperationalTarget;
+use App\Models\Plan;
+use App\Services\PlanCategoryProfileService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+
+final class DevelopmentOperationalTargetController extends Controller
+{
+    public function __invoke(
+        Request $request,
+        Plan $plan,
+        PlanCategoryProfileService $profiles,
+    ) {
+        $user = $request->user();
+        abort_unless(
+            $user && $plan->user_id !== null
+                && (int) $plan->user_id === (int) $user->id
+                && $profiles->forPlan($plan)->key === 'development',
+            404,
+        );
+
+        $command = $request->validate([
+            'action' => ['required', Rule::in([
+                'set_target', 'confirm_backup', 'confirm_restore',
+                'clear_backup', 'clear_restore',
+            ])],
+        ]);
+        $action = $command['action'];
+
+        if ($action === 'set_target') {
+            $data = $request->validate([
+                'provider' => ['required', Rule::in(DevelopmentOperationalTarget::PROVIDERS)],
+                'environment' => ['required', Rule::in(DevelopmentOperationalTarget::ENVIRONMENTS)],
+                // Identifier only. No arbitrary URL / hostname / SQL / token.
+                'resource_ref' => ['required', 'string', 'regex:/\A[a-zA-Z0-9][a-zA-Z0-9_-]{4,79}\z/'],
+            ]);
+
+            DB::transaction(static function () use ($plan, $data): void {
+                $target = DevelopmentOperationalTarget::query()
+                    ->where('plan_id', $plan->id)->lockForUpdate()->first();
+
+                if (! $target) {
+                    DevelopmentOperationalTarget::query()->create([
+                        'plan_id' => $plan->id,
+                        ...$data,
+                        'revision' => 1,
+                    ]);
+                    return;
+                }
+
+                $changed = $target->provider !== $data['provider']
+                    || $target->environment !== $data['environment']
+                    || $target->resource_ref !== $data['resource_ref'];
+                if ($changed) {
+                    $target->fill($data);
+                    $target->revision = (int) $target->revision + 1;
+                    // Keep earlier timestamp only to show it is now stale.
+                    $target->save();
+                }
+            });
+        } else {
+            // Every statement is a human attestation; never trust form fields
+            // claiming provider verification or backdate timestamps.
+            if (str_starts_with($action, 'confirm_')) {
+                $request->validate(['attest' => ['required', 'in:yes']]);
+            }
+
+            DB::transaction(static function () use ($plan, $action): void {
+                $target = DevelopmentOperationalTarget::query()
+                    ->where('plan_id', $plan->id)->lockForUpdate()->firstOrFail();
+                $kind = str_ends_with($action, 'backup') ? 'backup' : 'restore';
+
+                if (str_starts_with($action, 'confirm_')) {
+                    $dataStore = DevelopmentOperationalProfile::query()
+                        ->where('plan_id', $plan->id)->value('data_store');
+                    abort_unless(
+                        in_array($dataStore, ['server_db', 'local_device', 'cloud_files', 'mixed'], true),
+                        422,
+                        '保存方式を先に登録してください。',
+                    );
+                    $target->{$kind.'_confirmed_at'} = now();
+                    $target->{$kind.'_revision'} = $target->revision;
+                    $target->{$kind.'_store'} = $dataStore;
+                } else {
+                    $target->{$kind.'_confirmed_at'} = null;
+                    $target->{$kind.'_revision'} = null;
+                    $target->{$kind.'_store'} = null;
+                }
+                $target->save();
+            });
+        }
+
+        return redirect()->route('workspace.development.index', [
+            'plan_id' => $plan->id,
+            'surface' => 'work',
+            'release_preflight' => 1,
+        ])->with(
+            'success',
+            '運用準備の自己申告を更新しました。Canoviaが外部サービスや復元結果を検証したものではありません。',
+        );
+    }
+}
