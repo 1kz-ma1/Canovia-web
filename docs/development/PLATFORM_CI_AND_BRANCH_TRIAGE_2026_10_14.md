@@ -124,9 +124,9 @@ Workspace Resume repeatedly spends ~15–18 seconds on Composer/PHP/Node/npm/bui
 
 ### ACTIVE change and acceptance boundary
 
-The existing **Workspace Resume** and **Production Migration Recovery** workflow files receive a workflow-level concurrency key. **Only** a \`pull_request\` event targeting \`main\` groups by workflow identity and PR number, and sets \`cancel-in-progress=true\`. When another commit arrives on the *same* main-targeted PR, its old in-progress run is allowed to cancel; latest PR SHA still executes all unmodified tests with the same job/check names.
+The existing **Workspace Resume** and **Production Migration Recovery** workflow files receive a workflow-level concurrency key. **Only** a `pull_request` event targeting `main` groups by workflow identity and PR number, and sets `cancel-in-progress=true`. When another commit arrives on the *same* main-targeted PR, its old in-progress run is allowed to cancel; latest PR SHA still executes all unmodified tests with the same job/check names.
 
-All other contexts—especially \`push\` to \`production\`, PR into \`production\`, historical hotfix push, and \`workflow_dispatch\` where applicable—use **a unique GitHub run ID** and \`cancel-in-progress=false\`. Unique run IDs are essential: GitHub concurrency can replace a pending run **even if cancel-in-progress=false** when it shares a group. A shared production group is prohibited.
+All other contexts—especially `push` to `production`, PR into `production`, historical hotfix push, and `workflow_dispatch` where applicable—use **a unique GitHub run ID** and `cancel-in-progress=false`. Unique run IDs are essential: GitHub concurrency can replace a pending run **even if cancel-in-progress=false** when it shares a group. A shared production group is prohibited.
 
 No test command, Required Check, job name, branch trigger, branch protection, production operation or Deploy is removed. The dedicated static contract test rejects missing main-only cancellation guards, removal of production push/PR triggers, loss of production test commands and replacement of unique production run IDs. The Platform YAML syntax gate and the existing broad PR CI also run.
 
