@@ -765,6 +765,86 @@ final class McpReadOnlyResourceTest extends TestCase
         $this->assertDatabaseCount('mcp_study_result_proposals', 0);
     }
 
+    public function test_study_result_rejected_expired_wrong_task_and_wrong_owner_never_affect_scores(): void
+    {
+        $this->idp(write: true);
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $other = User::factory()->create(['first_run_completed_at' => now()]);
+        $study = $this->plan($owner);
+        $study->update(['category' => '資格学習', 'title' => 'SECURE_AP_TEST']);
+        $task = Task::query()->create([
+            'plan_id' => $study->id, 'title' => 'AP database',
+            'status' => 'doing', 'progress_percent' => 5,
+            'priority' => 1, 'sort_order' => 1,
+        ]);
+        $otherStudy = $this->plan($other);
+        $otherStudy->update(['category' => '資格学習']);
+        $foreignTask = Task::query()->create([
+            'plan_id' => $otherStudy->id, 'title' => 'Other account confidential Task',
+            'status' => 'todo', 'progress_percent' => 0,
+            'priority' => 1, 'sort_order' => 1,
+        ]);
+        $this->linkAndGrant($owner, $study, 'study_progress');
+        config([
+            'canovia_mcp.study_read_enabled' => true,
+            'canovia_mcp.study_summary_read_enabled' => true,
+            'canovia_mcp.study_result_proposals_enabled' => true,
+        ]);
+        $args = [
+            'plan_id' => $study->id, 'task_id' => $task->id,
+            'question_count' => 10, 'correct_count' => 4,
+            'idempotency_key' => str_repeat('c', 64),
+            'weaknesses' => ['データベース'],
+        ];
+        $this->rpc('tools/call', [
+            'name' => McpProposeStudyResultTool::NAME,
+            'arguments' => [...$args, 'task_id' => $foreignTask->id],
+        ])->assertOk()->assertJsonPath('result.isError', true)
+            ->assertDontSee('Other account confidential Task');
+        $first = $this->rpc('tools/call', [
+            'name' => McpProposeStudyResultTool::NAME,
+            'arguments' => $args,
+        ]);
+        $first->assertOk()->assertJsonPath('result.isError', false);
+        $id = (int) $first->json('result.structuredContent.proposal_id');
+
+        $this->actingAs($other)->post(route('auth.account.mcp_study_result.decide', [
+            'proposal' => $id,
+        ]), ['decision' => 'approve'])->assertNotFound();
+        $this->assertSame('pending', McpStudyResultProposal::query()->findOrFail($id)->status);
+
+        $this->actingAs($owner)->post(route('auth.account.mcp_study_result.decide', [
+            'proposal' => $id,
+        ]), ['decision' => 'reject'])->assertRedirect();
+        $this->assertSame('rejected', McpStudyResultProposal::query()->findOrFail($id)->status);
+        $this->post(route('auth.account.mcp_study_result.decide', [
+            'proposal' => $id,
+        ]), ['decision' => 'approve'])->assertRedirect();
+        $this->assertSame('rejected', McpStudyResultProposal::query()->findOrFail($id)->status);
+
+        $second = $this->rpc('tools/call', [
+            'name' => McpProposeStudyResultTool::NAME,
+            'arguments' => [...$args, 'idempotency_key' => str_repeat('d', 64)],
+        ]);
+        $second->assertOk()->assertJsonPath('result.isError', false);
+        $secondId = (int) $second->json('result.structuredContent.proposal_id');
+        McpStudyResultProposal::query()->whereKey($secondId)
+            ->update(['expires_at' => now()->subMinute()]);
+        $this->post(route('auth.account.mcp_study_result.decide', [
+            'proposal' => $secondId,
+        ]), ['decision' => 'approve'])->assertRedirect();
+        $this->assertSame('pending', McpStudyResultProposal::query()->findOrFail($secondId)->status);
+
+        // A signed ChatGPT bearer still cannot make rejected or expired
+        // proposals appear in the aggregated, owner-approved results.
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyPracticeSummaryTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertOk()
+            ->assertJsonPath('result.structuredContent.sample.applied_attempts_considered', 0);
+        $this->assertSame(5, $task->fresh()->progress_percent);
+    }
+
     public function test_transport_is_read_only_without_sse_sessions_or_mutation(): void
     {
         $this->idp();
