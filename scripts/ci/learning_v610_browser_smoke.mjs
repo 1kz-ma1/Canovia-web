@@ -120,9 +120,14 @@ try {
     step('Graded second answer and advanced to third Question Action');
 
     await page.goto(`${base}/account`);
-    await page.locator('form[action$="/logout"]').first()
-        .getByRole('button',{name:'ログアウト'}).click();
-    await page.goto(`${base}/login`);
+    const logout = page.locator('form[action$="/logout"]').first();
+    await Promise.all([
+        page.waitForURL(url => url.pathname !== '/account', {
+            waitUntil: 'domcontentloaded',
+        }),
+        logout.getByRole('button', {name:'ログアウト'}).click(),
+    ]);
+    await page.goto(`${base}/login`, {waitUntil:'domcontentloaded'});
     const login=page.locator('form[action$="/login"]');
     await login.locator('input[name="email"]').fill(email);
     await login.locator('input[name="password"]').fill(password);
