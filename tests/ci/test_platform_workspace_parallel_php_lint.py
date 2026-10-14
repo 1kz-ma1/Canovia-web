@@ -43,7 +43,7 @@ class ParallelLintTests(unittest.TestCase):
     def test_all_paths_safe_relative_existing_php(self):
         for entry in self.expected():
             with self.subTest(path=entry):
-                self.assertRegex(entry, r"^(?:app|config|database|tests)/[A-Za-z0-9_./-]+\.php$")
+                self.assertRegex(entry, r"^(?:app|config|database|routes|tests)/[A-Za-z0-9_./-]+\.php$")
                 self.assertNotIn("..", entry)
                 self.assertTrue((ROOT / entry).is_file())
 
