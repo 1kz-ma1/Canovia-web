@@ -155,3 +155,60 @@ rotation and storage-provider generation/immutable-key semantics all
 remain outside the guarantee. A partial writer rollout must not be
 described as enabling production cleanup. Runbook §11 and exit audit §57
 track these gates; G3 remains OPEN.
+
+## 8. G3-R13 durable prewrite intent ledger (2026-10-14)
+
+**Development-only, second independent flag OFF by default.** Add
+`CANOVIA_PRIVATE_FILE_UPLOAD_JOURNAL_ENABLED=false`. Enabling it
+requires the existing path-fence flag and new, separately approved
+`private_file_upload_intents` migration. In production neither flag is
+authorized to turn on under R13.
+
+The upload service validates HMAC path digests before I/O, then, ONLY
+when journal mode is enabled, calls `PrivateFileUploadIntentService::prepare`
+**before** its storage/DB-owner transaction starts. `prepare` requires
+DB transaction nesting level zero, inserts encrypted private path and
+digest into the journal with status `prepared`, then **commits** the
+entire batch. Any missing table, invalid digest, duplicate historical
+path or uncommitted parent transaction refuses the upload before bytes
+are written. The primary upload transaction and path fences then work
+as in R12; after it commits the journal status advances to
+`committed`. If the upload transaction throws, newly claimed files
+are best-effort deleted while path locks are held, and the durable
+intents are settled as `needs_review` outside the rolled-back
+transaction. An inability to settle leaves `prepared` visible for
+operator triage and is logged with a fixed redacted code.
+
+Journal rows are retained indefinitely in this design. A unique,
+permanent HMAC path digest prevents reusing a previously prepared path
+even if its bytes are absent; it also makes APP_KEY rotation a
+coordinated schema/identity migration question. `encrypted_path`
+is authenticated application encryption, not plaintext; status
+inspection does NOT decrypt it.
+
+**Read-only operator interface**:
+`php artisan canovia:private-upload-intent-health --json` returns
+only `schema`, `health`, `prepared`, `prepared_stale_24h`,
+`needs_review`, `committed`, `unknown_status`. With `--strict`,
+exit code 1 means unavailable schema/DB and 2 means attention;
+default exit 0 for attention. No storage listing, byte read,
+decryption, auto retry, row reconciliation or deletion is performed.
+
+A `prepared` intent after a crash **does not prove a file exists** or
+that any bytes are orphaned. Conversely, a `committed` status does
+not establish that its object survived independent storage faults.
+Operator investigation must establish owner reference, object version,
+fence/cooperating-writer coverage and generation identity before
+proposing any destructive reclamation.
+
+**Remaining gaps**: Prewrite ledger creation can be aborted, but a
+separate committed write before the main upload transaction may leave
+prepared/needs_review rows when the upload never starts. A process
+crash or kill during storage I/O retains the prepared record without
+proving object existence. R13 has no independent storage version
+reconciliation, automated cleanup, backfill for earlier orphan files,
+Career/external writer support, path-row retention policy, key-rotation
+protocol, or production deployment approval. If a caller already holds
+an outer DB transaction, journal mode intentionally **fails closed**
+before I/O. Production traffic compatibility and end-to-end
+rollout must be separately evaluated. G3 remains OPEN.
