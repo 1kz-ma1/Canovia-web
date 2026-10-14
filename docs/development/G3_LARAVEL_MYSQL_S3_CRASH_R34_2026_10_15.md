@@ -65,3 +65,22 @@ Aiven migration audit or live Web/iPhone evidence has been established.
 
 **G3 OPEN. provider_attested=false, delete_authorized=false,
 production_migrations_approved=false.**
+
+## First measured CI execution (prior to evidence-append HEAD)
+
+- Exact tested HEAD: `fe7245a96a8f4b8182ad6ee040da34ee6bba4e4b`
+- GitHub Actions run: https://github.com/1kz-ma1/Canovia-web/actions/runs/38590003942
+- Job: **G3 R34 real Laravel MySQL S3 crash recovery — SUCCESS**
+- PHP process outcomes: `prewrite CRASH_READY`, `midtransaction CRASH_READY`,
+  `postcommit CRASH_READY`, `success SUCCESS`; the parent confirmed the
+  three crashed processes terminated from real SIGKILL.
+- Independent fresh-Laravel verification: all four
+  `R34_VERIFY_PASS` markers observed after MinIO SIGKILL/restart.
+  MySQL persisted prepared versus committed journal/owner/fence status
+  as specified in the table; midtransaction owner/fence were rolled back.
+- Real HTTP provider generations: **three S3 object generations retained**
+  after server restart, exact content bytes verified and **no delete markers**.
+- This success predates this appended record. Final PR acceptance still
+  requires required CI green for the updated exact HEAD and a full diff review.
+- The experiment demonstrates **the four bounded states only**; it neither
+  proves a real AWS provider nor grants any deletion or production authority.
