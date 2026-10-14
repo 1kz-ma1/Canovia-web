@@ -158,6 +158,10 @@ final class PrivateFilePathFenceG3Test extends TestCase
         ), (string) ($db['username'] ?? ''), (string) ($db['password'] ?? ''),
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 
+        // Commit initial row first: an uncommitted INSERT is invisible
+        // to a plain SELECT and cannot establish the intended lock test.
+        DB::transaction(fn () => $fence->acquireInTransaction($disk, $path));
+
         DB::transaction(function () use ($fence, $disk, $path, $digest, $rival): void {
             $fence->acquireInTransaction($disk, $path);
             $rival->beginTransaction();
