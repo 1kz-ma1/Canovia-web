@@ -30,6 +30,10 @@ on:
       - 'app/Services/StudyRecallBatchCandidateExtractionService.php'
       - 'tests/Feature/RecallAiCommitFenceV05Test.php'
       - 'tests/Feature/RecallInputFileRacePostgresG3Test.php'
+      - 'app/Services/PrivateFileLifecycleService.php'
+      - 'app/Services/AccountDeletionService.php'
+      - 'app/Http/Controllers/PlanController.php'
+      - 'tests/Feature/PrivateFileLifecycleG3Test.php'
       - 'app/Services/StudyScopeCaptureCommitFence.php'
       - 'app/Services/StudyScopeCaptureAnalysisService.php'
       - 'app/Http/Controllers/StudyScopeCaptureController.php'
@@ -128,6 +132,10 @@ jobs:
           php -l app/Services/StudyRecallBatchCandidateExtractionService.php
           php -l tests/Feature/RecallAiCommitFenceV05Test.php
           php -l tests/Feature/RecallInputFileRacePostgresG3Test.php
+          php -l app/Services/PrivateFileLifecycleService.php
+          php -l app/Services/AccountDeletionService.php
+          php -l app/Http/Controllers/PlanController.php
+          php -l tests/Feature/PrivateFileLifecycleG3Test.php
           php -l app/Services/StudyScopeCaptureCommitFence.php
           php -l app/Services/StudyScopeCaptureAnalysisService.php
           php -l app/Http/Controllers/StudyScopeCaptureController.php
@@ -180,6 +188,8 @@ jobs:
         run: php artisan test tests/Feature/RecallInputFileRacePostgresG3Test.php --stop-on-failure
       - name: Recall human approval signed provenance on PostgreSQL 16
         run: php artisan test tests/Feature/StudyRecallCandidateV4112Test.php tests/Feature/StudyRecallBatchIngestV588Test.php --stop-on-failure
+      - name: Plan and account private file retention, cascades and post-commit cleanup on PostgreSQL 16
+        run: php artisan test tests/Feature/PrivateFileLifecycleG3Test.php --stop-on-failure
       - name: Study Scope physical file deletion and input-byte race on independent PostgreSQL 16 sessions
         run: php artisan test tests/Feature/StudyScopeSourceFileRacePostgresG3Test.php --stop-on-failure
       - name: Study Scope authorization epoch and stale failure regression on PostgreSQL 16
