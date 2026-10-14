@@ -185,22 +185,17 @@ class StudyRecallCandidateController extends Controller
                             : 'jpg';
                 }
 
-                $path = $file->storeAs(
-                    'study-recall-sources/'
-                    .$plan->id
-                    .'/'
-                    .$task->id,
-                    (string) Str::uuid().'.'.$extension,
-                );
-
-                if (! is_string($path) || $path === '') {
-                    throw new RuntimeException(
-                        'Recall教材ファイルを保存できませんでした。',
-                    );
+                $uploadPath = 'study-recall-sources/'.$plan->id.'/'.$task->id
+                    .'/'.Str::uuid().'.'.$extension;
+                if (! $privateUploads->enabled()) {
+                    $path = $file->storeAs(dirname($uploadPath), basename($uploadPath));
+                    if (! is_string($path) || $path === '') {
+                        throw new RuntimeException('Recall教材ファイルを保存できませんでした。');
+                    }
                 }
             }
 
-            $source = StudyRecallSource::query()->create([
+            $sourceAttributes = [
                 'plan_id' => (int) $plan->id,
                 'task_id' => (int) $task->id,
                 'plan_resource_id' => (int) $resource->id,
@@ -227,7 +222,15 @@ class StudyRecallCandidateController extends Controller
                         )
                         : null,
                 'status' => 'pending',
-            ]);
+            ];
+            $source = $file && $privateUploads->enabled()
+                ? $privateUploads->storeAndPersist(
+                    [['file' => $file, 'path' => $uploadPath]],
+                    fn (array $paths) => StudyRecallSource::query()->create(
+                        array_replace($sourceAttributes, ['storage_path' => $paths[0]]),
+                    ),
+                )
+                : StudyRecallSource::query()->create($sourceAttributes);
         } catch (Throwable $exception) {
             if ($path) {
                 Storage::delete($path);
