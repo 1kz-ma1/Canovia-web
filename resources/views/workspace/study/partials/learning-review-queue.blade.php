@@ -30,6 +30,9 @@
                         異なる誤答問題 {{ $candidate['distinct_missed_questions'] }}問
                         · 記録された誤答 {{ $candidate['incorrect'] }}件
                     </p>
+                    <a href="{{ $candidate['review_url'] }}"
+                        class="btn-primary inline-flex min-h-10 items-center px-3 text-xs font-semibold"
+                        data-study-learning-review-practice>この分野を復習する</a>
                     <a href="{{ $candidate['history_url'] }}"
                         class="btn-secondary inline-flex min-h-10 items-center px-3 text-xs font-semibold"
                         data-study-learning-review-open>
@@ -42,5 +45,10 @@
     @if(data_get($learningReviewQueue, 'has_more', false))
         <p class="mt-3 text-xs text-slate-400">表示は上位3件です。各Taskの学習履歴から、ほかの復習候補も確認できます。</p>
     @endif
+</section>
+@elseif($canEdit && data_get($learningReviewQueue ?? [], 'has_history', false))
+<section class="page-card p-4 sm:p-5" data-study-learning-review-cleared>
+    <p class="text-sm font-semibold text-slate-100">現在表示できる繰り返し誤答の復習候補はありません。</p>
+    <p class="mt-2 text-xs leading-5 text-slate-400">最近の回答を再集計した結果です。直近で同じ分野に2回続けて正解した場合も候補から外れます。習熟度やTask完了の判定ではなく、対象件数には上限があります。</p>
 </section>
 @endif

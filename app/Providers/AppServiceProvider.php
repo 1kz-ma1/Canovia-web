@@ -86,6 +86,16 @@ class AppServiceProvider extends ServiceProvider
             )
         );
 
+        // V6.13: starting a new Bank Run is a distinct user action.
+        // Keep the established 12/min bound but isolate it from unrelated
+        // Study POST endpoints in the shared anonymous numeric limiter.
+        RateLimiter::for('learning-bank-start', fn (Request $request) =>
+            Limit::perMinute(12)->by($request->user()
+                ? 'user:'.$request->user()->getAuthIdentifier()
+                : 'guest-ip:'.$request->ip()
+            )
+        );
+
         Task::updated(function (Task $task): void {
             if (! app()->bound('request')) {
                 return;

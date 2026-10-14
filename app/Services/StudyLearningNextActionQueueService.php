@@ -30,7 +30,8 @@ final class StudyLearningNextActionQueueService
         ?string $actorToken,
         bool $canEdit,
     ): array {
-        $empty = ['items' => [], 'has_more' => false, 'task_limit' => self::TASK_LIMIT];
+        $empty = ['items' => [], 'has_more' => false, 'has_history' => false,
+            'task_limit' => self::TASK_LIMIT];
         if (! $canEdit || (! $request->user() && ! filled($actorToken))) {
             return $empty;
         }
@@ -85,6 +86,7 @@ final class StudyLearningNextActionQueueService
                 'incorrect' => (int) ($topic['incorrect'] ?? 0),
                 'already_adopted' => (bool) $preview['already_adopted'],
                 'history_url' => route('plans.tasks.learning.history', [$plan, $task]),
+                'review_url' => route('plans.tasks.learning.index', [$plan, $task, 'review' => 1]),
             ];
         }
 
@@ -103,6 +105,7 @@ final class StudyLearningNextActionQueueService
         return [
             'items' => array_slice($rows, 0, self::DISPLAY_LIMIT),
             'has_more' => count($rows) > self::DISPLAY_LIMIT,
+            'has_history' => $taskIds->isNotEmpty(),
             'task_limit' => self::TASK_LIMIT,
         ];
     }
