@@ -139,19 +139,33 @@ final class McpOAuthAccountLinkController extends Controller
             // even with a correctly verified external subject.
             if (config('app.env') === 'staging') {
                 $stage = app(McpStagingLoginPilotPolicy::class);
-                if ($plan === null || ! $stage->planConsentReady()
+                if ($plan === null) {
+                    return $this->failure('link_callback_plan_fixture_missing');
+                }
+                if (! $stage->planConsentReady()
                     || ! $stage->isApprovedSyntheticPlan($user, $plan)) {
-                    return $this->failure('link_callback_plan_scope');
+                    return $this->failure('link_callback_plan_stage_guard');
                 }
             }
 
-            if (! $consent->isEnabled()
-                || ! is_string($scope) || ! is_int($days)
-                || ! $consent->isScopeAndDurationAllowed($scope, $days)
-                || $plan === null
-                || ! $consent->isPersonalDevelopmentOwner($user, $plan)
-                || ! $consent->matchesLinkedIdentity($user, $fingerprint)) {
-                return $this->failure('link_callback_plan_scope');
+            // The prior code emitted one indistinguishable category for all
+            // four conditions. Split fixed codes only; preserve the SAME
+            // fail-closed predicates, short-circuit semantics and public
+            // error. The stage diagnostic logs no claim, identity, Plan,
+            // token or request field. Production never logs these codes.
+            if (! $consent->isEnabled()) {
+                return $this->failure('link_callback_plan_consent_disabled');
+            }
+            if (! is_string($scope) || ! is_int($days)
+                || ! $consent->isScopeAndDurationAllowed($scope, $days)) {
+                return $this->failure('link_callback_plan_scope_invalid');
+            }
+            if ($plan === null
+                || ! $consent->isPersonalDevelopmentOwner($user, $plan)) {
+                return $this->failure('link_callback_plan_owner');
+            }
+            if (! $consent->matchesLinkedIdentity($user, $fingerprint)) {
+                return $this->failure('link_callback_plan_link_mismatch');
             }
 
             $request->session()->put(McpOAuthPlanConsentController::VERIFIED_SESSION, [
