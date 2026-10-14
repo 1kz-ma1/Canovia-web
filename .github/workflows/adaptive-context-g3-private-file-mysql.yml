@@ -1,0 +1,73 @@
+name: Adaptive Context G3 MySQL Current-Read Fence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/PrivateFileLifecycleService.php'
+      - 'tests/Feature/PrivateFileCleanupMysqlCurrentReadG3Test.php'
+      - '.github/workflows/adaptive-context-g3-private-file-mysql.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  mysql-current-reference:
+    name: "G3 current-reference (MySQL ${{ matrix.mysql_series }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        mysql_series: ['8.0', '8.4']
+    services:
+      mysql:
+        image: mysql:${{ matrix.mysql_series }}
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only-root-password
+          MYSQL_DATABASE: canovia_g3_ci
+          MYSQL_USER: canovia_ci
+          MYSQL_PASSWORD: ci-only-ephemeral-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_DATABASE: canovia_g3_ci
+      DB_USERNAME: canovia_ci
+      DB_PASSWORD: ci-only-ephemeral-password
+      DB_URL: ''
+      CANOVIA_G3_DISPOSABLE_MYSQL_CI: '1'
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, mbstring, xml
+          coverage: none
+      - name: Allow migration-trigger DDL only on disposable MySQL
+        env:
+          MYSQL_PWD: ci-only-root-password
+        run: |
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=root --database=canovia_g3_ci \
+            -e 'SET GLOBAL log_bin_trust_function_creators = 1'
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Migrate full application schema exactly once on disposable MySQL
+        run: php artisan migrate --force --no-interaction
+      - name: PHP syntax and independent-session MySQL snapshot regression
+        run: |
+          php -l app/Services/PrivateFileLifecycleService.php
+          php -l tests/Feature/PrivateFileCleanupMysqlCurrentReadG3Test.php
+          php artisan test tests/Feature/PrivateFileCleanupMysqlCurrentReadG3Test.php --fail-on-skipped --stop-on-failure
