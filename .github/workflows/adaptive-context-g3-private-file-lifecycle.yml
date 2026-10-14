@@ -16,6 +16,8 @@ on:
       - 'app/Services/PrivateFileSyntheticCrashMatrixService.php'
       - 'app/Services/PrivateFileWriteAttemptService.php'
       - 'app/Services/PrivateFileProviderReconciliationService.php'
+      - 'app/Services/PrivateFileSyntheticGenerationRaceService.php'
+      - 'tests/Feature/PrivateFileSyntheticGenerationRaceG3Test.php'
       - 'app/Services/PrivateFileSyntheticProviderProbeAdapter.php'
       - 'tests/Feature/PrivateFileProviderReconciliationG3Test.php'
       - 'database/migrations/2026_10_14_150000_create_private_file_write_attempts.php'
@@ -112,6 +114,8 @@ jobs:
           php -l app/Services/PrivateFileSyntheticCrashMatrixService.php
           php -l app/Services/PrivateFileWriteAttemptService.php
           php -l app/Services/PrivateFileProviderReconciliationService.php
+          php -l app/Services/PrivateFileSyntheticGenerationRaceService.php
+          php -l tests/Feature/PrivateFileSyntheticGenerationRaceG3Test.php
           php -l app/Services/PrivateFileSyntheticProviderProbeAdapter.php
           php -l tests/Feature/PrivateFileProviderReconciliationG3Test.php
           php -l database/migrations/2026_10_14_150000_create_private_file_write_attempts.php
@@ -163,6 +167,8 @@ jobs:
         run: php artisan test tests/Feature/PrivateFileWriteAttemptG3Test.php --stop-on-failure
       - name: G3 R21 fail-closed synthetic provider reconciliation in isolated PHP process
         run: php artisan test tests/Feature/PrivateFileProviderReconciliationG3Test.php --stop-on-failure
+      - name: G3 R22 synthetic generation ABA and external writer matrix
+        run: php artisan test tests/Feature/PrivateFileSyntheticGenerationRaceG3Test.php --stop-on-failure
       - name: G3 operator-only CLI dry-run and read-only health are available
         run: |
           php artisan canovia:retry-private-file-cleanup --dry-run
