@@ -687,3 +687,23 @@ live scope control. No cloud calls, spend, release, retry or delete
 are authorized. A later real experiment needs independent
 operator review and specific owner approval. Five prior G3
 production migrations remain unapproved. **G3 OPEN.**
+
+## 30. G3-R31 — External proof hold and source drift check
+
+For a reviewed Git SHA, run only the read-only source check:
+`python3 scripts/ops/g3_exit_decision_audit.py --repo . --sha <40-hex>`.
+
+A full local match reports `HOLD_EXTERNAL_PROOF_REQUIRED`; any
+missing or changed source contract reports
+`HOLD_LOCAL_CONTRACT_DRIFT`. Both deliberately exit 2 and confer
+no live-provider, retry, delete, schema or release authorization.
+Static source markers and CI test listings do not establish
+provider attestation or an approved physical recovery result.
+Do not convert a local HOLD report into a runbook GO.
+
+Read `G3_EXIT_DECISION_R31_2026_10_14.md` and request a
+specific owner decision: continue HOLD without new synthetic
+classifiers, or approve a separate disposable-only scoped pilot.
+Never infer test environment or spending authorization from a
+request packet. Five additive G3 migrations remain unapproved for
+production Aiven. **G3 OPEN.**

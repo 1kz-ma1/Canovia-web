@@ -9,6 +9,7 @@ on:
       - 'scripts/ops/g3_provider_collection_plan.py'
       - 'scripts/ops/g3_disposable_approval_packet.py'
       - 'scripts/ops/g3_owner_scope_review.py'
+      - 'scripts/ops/g3_exit_decision_audit.py'
       - 'scripts/ops/platform_backup_ciphertext_check.py'
       - 'scripts/ops/platform_branch_inventory.py'
       - 'scripts/ops/platform_ci_run_triage.py'
@@ -23,6 +24,8 @@ on:
       - 'tests/ci/test_g3_provider_collection_plan.py'
       - 'tests/ci/test_g3_disposable_approval_packet.py'
       - 'tests/ci/test_g3_owner_scope_review.py'
+      - 'tests/ci/test_g3_exit_decision_audit.py'
+      - 'docs/development/G3_EXIT_DECISION_R31_2026_10_14.md'
       - 'docs/development/G3_OWNER_SCOPE_CHECKLIST_R30_2026_10_14.md'
       - 'docs/development/G3_DISPOSABLE_APPROVAL_PACKET_R29_2026_10_14.md'
       - 'docs/development/G3_PROVIDER_COLLECTION_PLAN_R28_2026_10_14.md'
@@ -57,7 +60,14 @@ jobs:
       - name: Parse all GitHub Actions YAML without printing source content
         run: ruby scripts/ops/platform_workflow_yaml_check.rb .github/workflows/*.yml
       - name: Compile safe preflight
-        run: python3 -m py_compile scripts/ops/platform_release_preflight.py tests/ci/test_platform_release_preflight.py scripts/ops/g3_provider_evidence_inventory.py tests/ci/test_g3_provider_evidence_inventory.py scripts/ops/g3_provider_collection_plan.py tests/ci/test_g3_provider_collection_plan.py scripts/ops/g3_disposable_approval_packet.py tests/ci/test_g3_disposable_approval_packet.py scripts/ops/g3_owner_scope_review.py tests/ci/test_g3_owner_scope_review.py scripts/ops/platform_backup_ciphertext_check.py tests/ci/test_platform_backup_ciphertext_check.py scripts/ops/platform_branch_inventory.py scripts/ops/platform_ci_run_triage.py scripts/ops/platform_ci_runtime_report.py scripts/ops/platform_ci_supersession_report.py scripts/ops/platform_workspace_test_inventory.py scripts/ops/platform_workspace_repeat_context.py scripts/ci/platform_workspace_scenario_equivalence.py tests/ci/test_platform_workspace_scenario_equivalence.py tests/ci/test_platform_workspace_test_inventory.py tests/ci/test_platform_workspace_repeat_context.py tests/ci/test_platform_ci_runtime_report.py tests/ci/test_platform_ci_supersession_report.py tests/ci/test_platform_workspace_parallel_php_lint.py tests/ci/test_platform_pr_ci_supersession_contract.py tests/ci/test_platform_branch_inventory.py tests/ci/test_platform_ci_run_triage.py
+        run: python3 -m py_compile scripts/ops/platform_release_preflight.py tests/ci/test_platform_release_preflight.py scripts/ops/g3_provider_evidence_inventory.py tests/ci/test_g3_provider_evidence_inventory.py scripts/ops/g3_provider_collection_plan.py tests/ci/test_g3_provider_collection_plan.py scripts/ops/g3_disposable_approval_packet.py tests/ci/test_g3_disposable_approval_packet.py scripts/ops/g3_owner_scope_review.py tests/ci/test_g3_owner_scope_review.py scripts/ops/g3_exit_decision_audit.py tests/ci/test_g3_exit_decision_audit.py scripts/ops/platform_backup_ciphertext_check.py tests/ci/test_platform_backup_ciphertext_check.py scripts/ops/platform_branch_inventory.py scripts/ops/platform_ci_run_triage.py scripts/ops/platform_ci_runtime_report.py scripts/ops/platform_ci_supersession_report.py scripts/ops/platform_workspace_test_inventory.py scripts/ops/platform_workspace_repeat_context.py scripts/ci/platform_workspace_scenario_equivalence.py tests/ci/test_platform_workspace_scenario_equivalence.py tests/ci/test_platform_workspace_test_inventory.py tests/ci/test_platform_workspace_repeat_context.py tests/ci/test_platform_ci_runtime_report.py tests/ci/test_platform_ci_supersession_report.py tests/ci/test_platform_workspace_parallel_php_lint.py tests/ci/test_platform_pr_ci_supersession_contract.py tests/ci/test_platform_branch_inventory.py tests/ci/test_platform_ci_run_triage.py
+
+      - name: R31 pinned G3 source status must remain external-evidence HOLD
+        run: |
+          outcome=0
+          python3 scripts/ops/g3_exit_decision_audit.py --repo . --sha "$(git rev-parse HEAD)" > "$RUNNER_TEMP/g3-r31-audit.json" || outcome=$?
+          test "$outcome" -eq 2
+          python3 -c 'import json,os,pathlib; d=json.loads((pathlib.Path(os.environ["RUNNER_TEMP"])/"g3-r31-audit.json").read_text()); assert d["result"] == "HOLD_EXTERNAL_PROOF_REQUIRED", d["result"]; assert all(s == "SOURCE_PRESENT_UNATTESTED" for s in d["local_contracts"].values()); assert d["g3_exit_accepted"] is False and d["production_release_authorized"] is False'
       - name: Validate pinned candidate and fail-closed manual gates
         run: |
           python3 -m unittest discover -s tests/ci -p 'test_platform_release_preflight.py' -v
@@ -65,6 +75,7 @@ jobs:
           python3 -m unittest discover -s tests/ci -p 'test_g3_provider_collection_plan.py' -v
           python3 -m unittest discover -s tests/ci -p 'test_g3_disposable_approval_packet.py' -v
           python3 -m unittest discover -s tests/ci -p 'test_g3_owner_scope_review.py' -v
+          python3 -m unittest discover -s tests/ci -p 'test_g3_exit_decision_audit.py' -v
           python3 -m unittest discover -s tests/ci -p 'test_platform_backup_ciphertext_check.py' -v
           python3 -m unittest discover -s tests/ci -p 'test_platform_branch_inventory.py' -v
           python3 -m unittest discover -s tests/ci -p 'test_platform_ci_run_triage.py' -v
