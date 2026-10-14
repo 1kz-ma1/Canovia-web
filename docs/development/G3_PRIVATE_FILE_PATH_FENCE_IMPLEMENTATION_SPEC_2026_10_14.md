@@ -109,3 +109,49 @@ rollout is **not authorized**.
 **No Aiven/Render/production branch change, scheduler, live deletion,
 migration execution, billing change, deployment or device test is authorized.**
 G3 stays OPEN.
+
+## 7. G3-R12 opt-in native upload path writers (2026-10-14)
+
+**Development-only implementation; feature flag remains OFF.** R12 adds
+`PrivateFileUploadService::storeAndPersist`: supplied immutable UUID
+destination paths are validated and fingerprint-sorted before any I/O;
+every corresponding path fence is acquired within a single DB transaction,
+and all destination keys are checked for existing objects **before writing
+any bytes**. File uploads happen while locks are held, followed by the
+callback that creates all DB source/Inbox rows, then commit. The callback
+must not call AI, external network providers or trigger unrelated writes.
+
+If an upload returns an unexpected path, or any owner insertion fails,
+the service attempts to delete all newly claimed objects **before**
+transaction rollback releases the path locks. It will never try to delete
+a key that existed at preflight; incomplete storage cleanup uses fixed
+redacted warning codes only. A process crash/power loss during upload can
+still leave orphan bytes: there is no durable staging/recovery journal
+for these precommit bytes yet.
+
+Coverage with the flag enabled:
+- `InboxController::store`: file-based Inbox capture now uploads and
+  inserts its Inbox owner in the same path-fenced transaction; chat AI
+  remains after commit and outside locks.
+- `StudyScopeCaptureController::store`: file upload + Inbox and
+  StudyScopeCapture rows within one path-fenced outer transaction; AI
+  extraction still runs afterward.
+- `StudyRecallCandidateController::extract` and `extractFromResource`:
+  file upload and source record in the same fenced transaction. AI
+  extraction runs afterward.
+- `StudyRecallCandidateController::extractBatch`: all generated paths
+  are fenced in sorted order; all files and Recall source rows succeed or
+  new files and DB rows are rolled back as a unit before lock release.
+- Existing `InboxRecallMaterialTransferGuard::copy` remains the earlier
+  initial writer participant.
+
+When the flag is disabled, the old upload/store and DB creation flow
+remains in place; no new schema is queried from these routes.
+
+**Safety not closed:** external writers/direct SQL, Career path updates,
+rollback cleanup that itself fails, process crash after file write but
+before DB commit, leaked keys from historical migrations, APP_KEY
+rotation and storage-provider generation/immutable-key semantics all
+remain outside the guarantee. A partial writer rollout must not be
+described as enabling production cleanup. Runbook §11 and exit audit §57
+track these gates; G3 remains OPEN.
