@@ -284,10 +284,10 @@ jobs:
         run: php artisan test tests/Feature/DevelopmentAiSharingPreferenceTest.php
       - name: Owner-only private development AI Context preview
         run: php artisan test tests/Feature/DevelopmentPrivateAiContextPreviewTest.php
-      - name: GitHub-first AI handoff contract
-        run: php artisan test tests/Unit/DevelopmentAgentGitHubPullHandoffTest.php
-      - name: GitHub-native roadmap revision comparator
-        run: php artisan test tests/Unit/DevelopmentRoadmapRevisionDifferTest.php
+      # Pure PHPUnit TestCase classes: no Laravel app/DB/session setup.
+      # Keep both classes and all assertions; omit only one redundant CLI bootstrap.
+      - name: GitHub-first AI handoff and roadmap revision pure unit contracts
+        run: php artisan test tests/Unit/DevelopmentAgentGitHubPullHandoffTest.php tests/Unit/DevelopmentRoadmapRevisionDifferTest.php
       - name: V58 GitHub-native roadmap parser, reader and workspace
         run: php artisan test tests/Unit/DevelopmentRoadmapMarkdownParserTest.php tests/Unit/DevelopmentRoadmapTableProjectionTest.php tests/Feature/DevelopmentGitHubRoadmapReaderTest.php tests/Feature/DevelopmentGitHubRoadmapWorkspaceTest.php tests/Unit/DevelopmentRoadmapEvidenceLinkerTest.php tests/Feature/DevelopmentRoadmapPrEvidenceTest.php tests/Unit/DevelopmentRoadmapIssueContextTest.php tests/Feature/DevelopmentRoadmapIssueEvidenceTest.php
       - name: V58.85 Nested evidence regression
