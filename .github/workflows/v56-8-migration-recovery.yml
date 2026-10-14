@@ -10,6 +10,13 @@ on:
       - main
       - production
 
+# Only superseded main-target PR runs may be cancelled.
+# Production pushes and production PRs use unique run IDs, so they cannot
+# cancel or replace a pending release validation.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.base_ref == 'main' && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' }}
+
 jobs:
   migration-recovery:
     runs-on: ubuntu-latest
