@@ -18,6 +18,7 @@ final class DevelopmentOperationalEvidenceService
         Plan $plan,
         ?array $executionContext,
         bool $currentGithubEvidenceAllowed,
+        ?array $selfReportedProfile = null,
     ): array {
         $scope = $currentGithubEvidenceAllowed
             && ($executionContext['task'] ?? null) instanceof Task
@@ -98,6 +99,8 @@ final class DevelopmentOperationalEvidenceService
                 $scope ? 'Taskに関連するGitHub観測（照合未完了）' : 'GitHub証拠を使用できない');
         }
 
+        $checks = $this->withSelfReportedContext($checks, $selfReportedProfile);
+
         usort($checks, fn (array $a, array $b): int => $a['priority'] <=> $b['priority']);
 
         return [
@@ -107,6 +110,82 @@ final class DevelopmentOperationalEvidenceService
                 return $item;
             }, $checks),
         ];
+    }
+
+    /**
+     * Self-report can change relevance, NEVER prove a backup or live deploy.
+     * Even "not applicable" is explicitly conditional on owner's declaration.
+     *
+     * @param array<int,array<string,mixed>> $checks
+     * @param array<string,mixed>|null $profile
+     * @return array<int,array<string,mixed>>
+     */
+    private function withSelfReportedContext(array $checks, ?array $profile): array
+    {
+        if (! is_array($profile)) {
+            return $checks;
+        }
+
+        $allowedStage = ['unknown', 'prototype', 'preview', 'public_launch', 'live'];
+        $allowedRuntime = ['unknown', 'web', 'ios', 'android', 'hybrid', 'backend', 'other'];
+        $allowedStore = ['unknown', 'none', 'local_device', 'server_db', 'cloud_files', 'mixed'];
+        $stage = in_array($profile['stage'] ?? null, $allowedStage, true)
+            ? $profile['stage']
+            : 'unknown';
+        $runtime = in_array($profile['runtime'] ?? null, $allowedRuntime, true)
+            ? $profile['runtime']
+            : 'unknown';
+        $store = in_array($profile['data_store'] ?? null, $allowedStore, true)
+            ? $profile['data_store']
+            : 'unknown';
+
+        foreach ($checks as &$check) {
+            if ($check['key'] === 'environment' && ($stage !== 'unknown' || $runtime !== 'unknown')) {
+                $check['detail'] = '公開段階や実行環境はPlan所有者から申告されていますが、ホスト・配信経路・稼働SHAは未照合です。';
+                $check['source'] = 'Plan所有者の入力（本番環境の実測なし）';
+            }
+            if ($check['key'] === 'data' && $store !== 'unknown') {
+                $check['status'] = 'declared';
+                $check['priority'] = 75;
+                $check['source'] = 'Plan所有者の自己申告（外部検証なし）';
+                $check['detail'] = match ($store) {
+                    'none' => '現在の設計では永続データを保存しないと申告されています。実際の保存処理やログは未検証です。',
+                    'local_device' => '端末内にデータを保存すると申告されています。端末交換・故障時の退避と復元を検討してください。',
+                    'server_db' => 'サーバーDBに保存すると申告されています。対象DBと復元可能なバックアップを別途確認してください。',
+                    'cloud_files' => 'クラウド上のファイル保存を申告されています。削除・上書き時の世代管理と復旧を確認してください。',
+                    default => '複数またはその他の保存先を申告されています。各保存先の保全と復旧手順を分けて確認してください。',
+                };
+            } elseif ($check['key'] === 'data' && $store === 'unknown' && in_array($stage, ['public_launch', 'live'], true)) {
+                $check['priority'] = 8;
+            }
+
+            if (in_array($check['key'], ['backup', 'restore'], true)) {
+                if ($store === 'none') {
+                    $check['status'] = 'not_applicable';
+                    $check['priority'] = $check['key'] === 'backup' ? 90 : 91;
+                    $check['detail'] = '永続データなしという自己申告に基づき、データ復旧の確認を一旦対象外にしています。保存処理が追加されたら再確認してください。';
+                    $check['source'] = 'Plan所有者の自己申告に基づく暫定判断';
+                } elseif ($store === 'local_device') {
+                    $check['detail'] = $check['key'] === 'backup'
+                        ? '端末内データの退避・同期・機種変更時の保護方法を確認してください。MySQLバックアップは前提にしません。'
+                        : '端末内データが失われた場合の復元・再取得方法を確認してください。サーバーDB復元は前提にしません。';
+                } elseif ($store === 'cloud_files') {
+                    $check['detail'] = $check['key'] === 'backup'
+                        ? 'クラウドファイルのバージョニング・削除保護・独立コピーの有無を確認してください。'
+                        : '誤削除・上書きから実際にファイルを復元できるか、保護された試験先で確認してください。';
+                }
+            }
+
+            if ($check['key'] === 'deploy' && in_array($runtime, ['ios', 'android', 'hybrid'], true)) {
+                $check['detail'] .= ' モバイル向けには配信審査・署名・実機での確認も別途必要です。';
+            }
+            if ($check['key'] === 'deploy' && $stage === 'prototype') {
+                $check['detail'] .= ' 現在は試作段階との申告なので、公開デプロイを今すぐ行う必要はありません。';
+            }
+        }
+        unset($check);
+
+        return $checks;
     }
 
     private function check(
