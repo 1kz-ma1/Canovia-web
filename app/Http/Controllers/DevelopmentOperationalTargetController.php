@@ -106,6 +106,7 @@ final class DevelopmentOperationalTargetController extends Controller
             // claiming provider verification or backdate timestamps.
             $expectedRevision = null;
             $expectedStore = null;
+            $expectedStoreRevision = null;
             if (str_starts_with($action, 'confirm_')) {
                 // Acknowledge the exact environment AND storage category shown
                 // when the owner checked the real backup or isolated restore.
@@ -114,12 +115,14 @@ final class DevelopmentOperationalTargetController extends Controller
                 $snapshot = $request->validate([
                     'target_revision' => ['required', 'integer', 'min:1'],
                     'expected_data_store' => ['required', Rule::in(DevelopmentOperationalProfile::DATA_STORES)],
+                    'expected_data_store_revision' => ['required', 'integer', 'min:1'], 
                 ]);
                 $expectedRevision = (int) $snapshot['target_revision'];
                 $expectedStore = $snapshot['expected_data_store'];
+                $expectedStoreRevision = (int) $snapshot['expected_data_store_revision'];
             }
 
-            DB::transaction(static function () use ($plan, $request, $action, $expectedRevision, $expectedStore): void {
+            DB::transaction(static function () use ($plan, $request, $action, $expectedRevision, $expectedStore, $expectedStoreRevision): void {
                 $target = DevelopmentOperationalTarget::query()
                     ->where('plan_id', $plan->id)->lockForUpdate()->firstOrFail();
                 $kind = str_ends_with($action, 'backup') ? 'backup' : 'restore';
@@ -135,16 +138,21 @@ final class DevelopmentOperationalTargetController extends Controller
                         422,
                         '保存方式を先に登録してください。',
                     );
-                    if ($target->revision !== $expectedRevision || $dataStore !== $expectedStore) {
+                    if ($target->revision !== $expectedRevision
+                        || $dataStore !== $expectedStore
+                        || (int) $profile->data_store_revision < 1
+                        || (int) $profile->data_store_revision !== $expectedStoreRevision) {
                         self::rejectStaleConfirmation($request, $plan);
                     }
                     $target->{$kind.'_confirmed_at'} = now();
                     $target->{$kind.'_revision'} = $target->revision;
                     $target->{$kind.'_store'} = $dataStore;
+                    $target->{$kind.'_store_revision'} = $profile->data_store_revision;
                 } else {
                     $target->{$kind.'_confirmed_at'} = null;
                     $target->{$kind.'_revision'} = null;
                     $target->{$kind.'_store'} = null;
+                    $target->{$kind.'_store_revision'} = null;
                 }
                 $target->save();
             });
