@@ -214,6 +214,71 @@ final class McpExplicitPlanConsentTest extends TestCase
         ));
     }
 
+    public function test_opt_in_until_revoked_consent_is_persistent_but_revocable(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($owner);
+        $link = $this->linked($owner);
+        $this->provider();
+
+        $query = $this->start($owner, $plan, 'tasks', McpExplicitPlanConsentService::UNTIL_REVOKED);
+        $this->assertSame(McpExplicitPlanConsentService::UNTIL_REVOKED, session('mcp.account_link.pending')['duration_days']);
+        $this->oauthCallback($query['state'])->assertRedirect(route('auth.account'));
+        $this->actingAs($owner)->get(route('auth.account'))->assertOk()
+            ->assertSee('取り消すまで')
+            ->assertSee('このPlanの共有許可を確定');
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+
+        $this->post(route('auth.account.mcp_plan_consent.confirm'))->assertRedirect(route('auth.account'));
+        $grant = McpDelegatedGrant::query()->sole();
+        $this->assertSame($link->id, $grant->subject_link_id);
+        $this->assertNull($grant->expires_at);
+        $this->assertSame('tasks', $grant->scope);
+        $this->assertTrue(app(McpDelegatedPlanAccessPolicy::class)
+            ->allows($this->chatgptPrincipal(), $plan, 'tasks'));
+
+        $this->travel(45)->days();
+        $this->assertTrue(app(McpDelegatedPlanAccessPolicy::class)
+            ->allows($this->chatgptPrincipal(), $plan, 'tasks'));
+        $this->travelBack();
+
+        $this->actingAs($owner)->delete(
+            route('auth.account.mcp_grant.revoke', ['grant' => $grant->id]),
+        )->assertRedirect(route('auth.account'));
+        $this->assertSame('revoked', $grant->fresh()->status);
+        $this->assertFalse(app(McpDelegatedPlanAccessPolicy::class)
+            ->allows($this->chatgptPrincipal(), $plan, 'tasks'));
+    }
+
+    public function test_indefinite_consent_can_be_replaced_by_finite_scope_only_with_fresh_oauth(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner);
+        $this->linked($owner);
+        $this->provider();
+
+        $q = $this->start($owner, $plan, 'tasks', McpExplicitPlanConsentService::UNTIL_REVOKED);
+        $this->oauthCallback($q['state'])->assertRedirect();
+        $this->actingAs($owner)->post(route('auth.account.mcp_plan_consent.confirm'))->assertRedirect();
+
+        $grant = McpDelegatedGrant::query()->sole();
+        $this->assertNull($grant->expires_at);
+
+        $q = $this->start($owner, $plan, 'overview', 1);
+        $this->oauthCallback($q['state'])->assertRedirect();
+        $this->actingAs($owner)->post(route('auth.account.mcp_plan_consent.confirm'))->assertRedirect();
+
+        $this->assertSame($grant->id, McpDelegatedGrant::query()->sole()->id);
+        $this->assertSame('overview', $grant->fresh()->scope);
+        $this->assertNotNull($grant->fresh()->expires_at);
+        $this->assertFalse(app(McpDelegatedPlanAccessPolicy::class)
+            ->allows($this->chatgptPrincipal(), $plan, 'tasks'));
+        $this->travel(2)->days();
+        $this->assertFalse(app(McpDelegatedPlanAccessPolicy::class)
+            ->allows($this->chatgptPrincipal(), $plan, 'overview'));
+        $this->travelBack();
+    }
+
     public function test_cancelled_and_expired_pending_consents_never_issue_access(): void
     {
         $owner = User::factory()->create();
@@ -353,7 +418,7 @@ final class McpExplicitPlanConsentTest extends TestCase
     }
 
     /** @return array<string, string> */
-    private function start(User $user, Plan $plan, string $scope, int $days): array
+    private function start(User $user, Plan $plan, string $scope, int|string $days): array
     {
         $response = $this->actingAs($user)->post($this->startUrl($plan), [
             'scope' => $scope, 'duration_days' => $days,
