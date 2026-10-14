@@ -510,6 +510,159 @@ final class McpAuth0JwtProviderRoutingTest extends TestCase
         $this->assertSame('overview', $grant->scope);
     }
 
+    public function test_github_only_wrong_signed_identity_cannot_inherit_existing_grant_and_revoke_denies_old_token(): void
+    {
+        // Full OAuth controller + signed third-party JWT read flow in an
+        // isolated in-memory database. NEVER use real GitHub identities,
+        // Auth0 credentials, Render staging data, or production access.
+        config(['canovia_mcp.account_link_github_only_enabled' => true]);
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = Plan::query()->create([
+            'user_id' => $owner->id,
+            'owner_token' => Str::random(64),
+            'public_slug' => (string) Str::uuid(),
+            'title' => 'SYNTHETIC_GITHUB_OVERVIEW_IDENTITY_FENCE',
+            'category' => '個人開発',
+            'priority' => 1,
+            'priority_mode' => 'manual',
+            'start_date' => today(),
+            'deadline' => today()->addDays(4),
+            'is_public' => false,
+            'is_collaborative' => false,
+        ]);
+        $originalSubject = 'github|410001';
+        $otherSubject = 'github|410002';
+        $fingerprints = app(McpDelegatedIdentityFingerprintService::class);
+        $link = McpLinkedSubject::query()->create([
+            'user_id' => $owner->id,
+            'provider_key' => 'chatgpt',
+            'identity_fingerprint' => $fingerprints->subject(self::ISSUER, $originalSubject),
+            'status' => McpLinkedSubject::STATUS_LINKED,
+            'linked_at' => now(),
+        ]);
+        $grant = McpDelegatedGrant::query()->create([
+            'user_id' => $owner->id,
+            'plan_id' => $plan->id,
+            'subject_link_id' => $link->id,
+            'client_resource_fingerprint' => $fingerprints->clientResource(self::CHATGPT_CLIENT, self::RESOURCE),
+            'scope' => 'overview',
+            'status' => McpDelegatedGrant::STATUS_ACTIVE,
+            'consented_at' => now(),
+            'expires_at' => null,
+        ]);
+
+        // Make both synthetic identities validly RS256-signed with identical
+        // issuer, audience, scope and APPROVED ChatGPT client. Only the
+        // original immutable GitHub subject may use the existing grant.
+        $callbackSubject = $otherSubject;
+        Http::fake([
+            self::META => Http::response([
+                'issuer' => self::ISSUER,
+                'authorization_endpoint' => self::ISSUER.'authorize',
+                'token_endpoint' => self::EXCHANGE,
+                'authorization_response_iss_parameter_supported' => true,
+                'code_challenge_methods_supported' => ['S256'],
+                'token_endpoint_auth_methods_supported' => ['client_secret_basic'],
+                'scopes_supported' => ['openid', 'profile'],
+            ], 200, ['Content-Type' => 'application/json']),
+            self::EXCHANGE => function () use (&$callbackSubject) {
+                return Http::response([
+                    'access_token' => $this->token(self::LINK_CLIENT, ['sub' => $callbackSubject]),
+                    'token_type' => 'Bearer',
+                    'expires_in' => 900,
+                ], 200, ['Content-Type' => 'application/json']);
+            },
+            self::JWKS => Http::response(['keys' => [$this->jwk]], 200, ['Content-Type' => 'application/json']),
+        ]);
+
+        $read = fn (string $subject) => $this->postJson('/api/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 85,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'canovia_get_development_plan_context',
+                'arguments' => ['plan_id' => $plan->id, 'scope' => 'overview'],
+            ],
+        ], [
+            'Accept' => 'application/json, text/event-stream',
+            'Authorization' => 'Bearer '.$this->token(self::CHATGPT_CLIENT, ['sub' => $subject]),
+        ]);
+        $read($originalSubject)->assertOk()
+            ->assertJsonPath('result.isError', false)
+            ->assertJsonPath('result.structuredContent.plan.title', $plan->title);
+        $read($otherSubject)->assertOk()->assertJsonPath('result.isError', true)
+            ->assertDontSee($plan->title);
+
+        // Follow the exact user-facing path: an existing grant, fresh
+        // GitHub-only Plan consent OAuth, callback from ANOTHER GitHub
+        // subject. Deny preview; do not replace or revoke the old grant.
+        $start = $this->actingAs($owner)->post(
+            route('auth.account.mcp_plan_consent.start', ['plan' => $plan->id]),
+            ['scope' => 'overview', 'duration_days' => 'until_revoked'],
+        )->assertRedirect();
+        parse_str((string) parse_url((string) $start->headers->get('Location'), PHP_URL_QUERY), $query);
+        $this->assertSame('github', $query['connection']);
+        $this->assertSame('login', $query['prompt']);
+
+        $this->get(route('auth.account.mcp_link.callback').'?'.http_build_query([
+            'state' => $query['state'],
+            'iss' => self::ISSUER,
+            'code' => 'synthetic-wrong-github-callback-123456',
+        ]))->assertRedirect(route('auth.account'));
+        $this->assertNull(session('mcp.plan_consent.verified'));
+        $this->post(route('auth.account.mcp_plan_consent.confirm'))
+            ->assertRedirect(route('auth.account'));
+        $this->assertSame(McpDelegatedGrant::STATUS_ACTIVE, $grant->fresh()->status);
+        $this->assertNull($grant->fresh()->expires_at);
+        $this->assertSame($link->id, $grant->fresh()->subject_link_id);
+        $this->assertDatabaseCount('mcp_delegated_grants', 1);
+        $this->assertDatabaseCount('mcp_linked_subjects', 1);
+        $read($originalSubject)->assertOk()->assertJsonPath('result.isError', false);
+        $read($otherSubject)->assertOk()->assertJsonPath('result.isError', true)
+            ->assertDontSee($plan->title);
+
+        // The correctly linked GitHub can repeat OAuth, view the preview,
+        // and cancel instead of granting. Cancellation must leave the
+        // already-consented overview-only grant intact.
+        $callbackSubject = $originalSubject;
+        $start = $this->post(
+            route('auth.account.mcp_plan_consent.start', ['plan' => $plan->id]),
+            ['scope' => 'overview', 'duration_days' => 'until_revoked'],
+        )->assertRedirect();
+        parse_str((string) parse_url((string) $start->headers->get('Location'), PHP_URL_QUERY), $correctQuery);
+        $this->get(route('auth.account.mcp_link.callback').'?'.http_build_query([
+            'state' => $correctQuery['state'],
+            'iss' => self::ISSUER,
+            'code' => 'synthetic-correct-github-callback-123456',
+        ]))->assertRedirect(route('auth.account'));
+        $this->assertTrue(session('mcp.plan_consent.verified.github_only_proof'));
+        $this->post(route('auth.account.mcp_plan_consent.cancel'))
+            ->assertRedirect(route('auth.account'));
+        $this->assertNull(session('mcp.plan_consent.verified'));
+        $this->post(route('auth.account.mcp_plan_consent.confirm'))
+            ->assertRedirect(route('auth.account'));
+        $this->assertSame(McpDelegatedGrant::STATUS_ACTIVE, $grant->fresh()->status);
+        $read($originalSubject)->assertOk()->assertJsonPath('result.isError', false);
+
+        // Only a separately authorized grant-revocation operation (here
+        // restricted to disposable in-memory fixture data) disables even a
+        // still-valid ChatGPT bearer. Replay cannot revive that grant.
+        $this->delete(route('auth.account.mcp_grant.revoke', ['grant' => $grant->id]))
+            ->assertRedirect(route('auth.account'));
+        $this->assertSame(McpDelegatedGrant::STATUS_REVOKED, $grant->fresh()->status);
+        $this->assertNotNull($grant->fresh()->revoked_at);
+        $read($originalSubject)->assertOk()->assertJsonPath('result.isError', true)
+            ->assertDontSee($plan->title);
+        $read($otherSubject)->assertOk()->assertJsonPath('result.isError', true)
+            ->assertDontSee($plan->title);
+        $this->post(route('auth.account.mcp_plan_consent.confirm'))
+            ->assertRedirect(route('auth.account'));
+        $this->assertSame(McpDelegatedGrant::STATUS_REVOKED, $grant->fresh()->status);
+        $this->assertDatabaseCount('mcp_delegated_grants', 1);
+        $this->assertDatabaseCount('mcp_linked_subjects', 1);
+        $this->assertDatabaseCount('plans', 1);
+    }
+
     public function test_enabling_github_only_after_generic_oauth_does_not_reuse_earlier_confirmation(): void
     {
         $owner = User::factory()->create(['first_run_completed_at' => now()]);
