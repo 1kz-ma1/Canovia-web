@@ -1083,3 +1083,22 @@ Require exact HEAD green CI, reviewed diff and safe mergeability.
 writers, S3 versioning/IAM validation, atomic provider-DB commit,
 generation-fenced delete, true kill/restart/power-loss test or approved
 production migration. **Five G3 migrations unapproved; G3 OPEN.**
+
+## 68. G3-R23 — Write evidence correlation remains unauthenticated (2026-10-14)
+
+R23 implements a testing-only, read-only classifier for a synthetic
+PutObject response, R20 durable attempt and R21 later observation.
+Consistency checks include attempt/token, bucket/key, stored encrypted
+ack version, timestamp and strict capability fields. Invalid,
+cross-attempt, tampered, expired or missing evidence returns redacted
+negative states. Even a fully matching chain returns
+`synthetic_chain_consistent_unattested` and all authentication,
+generation, writer-isolation, retry and deletion flags false.
+
+Acceptance requires new isolated PG16/MySQL8.0/8.4 regression checks
+on the exact PR HEAD, full diff review and mergeability. No additional
+G3 database migration or provider access is introduced. Actual
+provider response provenance, versioning/IAM guarantees, external
+writer exclusion, real power-loss recovery and conditional generation
+operations remain unverified. Five prior migrations are not approved
+for Aiven production. **G3 OPEN.**
