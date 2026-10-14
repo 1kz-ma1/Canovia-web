@@ -405,3 +405,69 @@ Disposable PG16 and MySQL8.0/8.4 tests prove default OFF,
 production hard deny, null/suspended-version rejection, token mismatch,
 unbound equality remaining unauthorized, and object bytes unchanged.
 **G3 remains OPEN.**
+
+## 12. G3-R17 — Synthetic generation-evidence to upload-owner binding (2026-10-14)
+
+**Development-only, proof-model pilot; no real provider receipts.** R16 showed
+that neither the default `local` disk nor an `s3` configuration establishes
+an authenticated write-time VersionId. R17 introduces a **fourth**
+additive, separately gated schema migration
+`2026_10_14_140000_create_private_file_generation_evidence.php`:
+`private_file_generation_evidence` with a unique/restrict-delete FK to
+`private_file_upload_intents.id`, copied path HMAC, bucket identity HMAC,
+fixed provider `s3`, allowlisted owning table kind and primary key,
+encrypted VersionId, explicit key epoch and
+`evidence_origin=synthetic_fixture`. No raw key, path, bucket, user account,
+or VersionId is stored in plaintext. The historical upload-intent ID,
+not the rotatable path HMAC, anchors the relational ownership identity.
+
+`PrivateFileGenerationEvidenceService::recordSyntheticCandidate()` is
+**only callable in disposable `APP_ENV=testing`**, after the R11/R13
+flags plus independent default-OFF
+`CANOVIA_PRIVATE_FILE_GENERATION_EVIDENCE_ENABLED` are explicitly enabled.
+Requires default s3 driver/config in an isolated fixture, a committed
+upload intent, authenticated decryption of its path, matching HMAC, and
+a locked, existing Inbox / Study Recall / Career owner row whose private
+path exactly equals the intent path. The operation inserts one
+synthetic row inside a DB transaction and uses a unique intent FK to
+reject duplicate or overwritten evidence. No Storage adapter, network
+request, AWS SDK, bucket inspection, upload, or deletion is invoked.
+Invalid/missing/null VersionIds, external owner kinds, mismatched paths,
+nested transactions, unavailable schema and production/disabled modes
+fail closed with fixed messages.
+
+`inspect(intentId)` is read-only. It checks evidence origin, configured
+`CANOVIA_PRIVATE_FILE_GENERATION_KEY_EPOCH`, bucket digest, journal
+status, path HMAC, authenticated ciphertext and current owner reference.
+It returns only allowlisted categories such as
+`legacy_or_missing_evidence`, `key_epoch_mismatch`,
+`bucket_identity_mismatch`, `owner_reference_changed`,
+`identity_unverifiable` or
+`synthetic_binding_not_provider_verified`. Every outcome has
+`generation_verified=false` and `delete_authorized=false`.
+The operator-facing
+`canovia:private-file-generation-evidence-health --json` returns only
+redacted aggregate synthetic counts, disabled by default and hard-blocked
+in production. It never calls `inspect` on an account-selected ID.
+
+**Key rotation and historical compatibility:** `key_epoch` is a
+non-secret version label, *not* a keyring or key-derivation scheme.
+Changing the epoch fails closed before trusting old rows. Changing
+`APP_KEY` even without changing the label invalidates existing
+authenticated ciphertext and/or keyed HMAC checks; no automatic
+re-encryption, key retrieval, recovery, or cleanup is permitted.
+The unique journal FK is stable independently of HMAC rotation, but
+the current path-fence and journal digests remain tied to `APP_KEY`.
+Old/legacy uploads without an intent or evidence are reported missing,
+never inferred as proof and never backfilled here. Physical providers,
+historic orphan detection, retention policies and immutable generation
+conditional deletion all remain separately gated.
+
+**R17 cannot establish true provider provenance.** A synthetic VersionId
+is an opaque fixture input, not the signed/successful return from
+`PutObject`. Even a perfectly matching durable DB owner binding is not
+proof that a bucket was versioned or bytes have not changed. R17 neither
+modifies production upload/delete paths nor enables any cleanup.
+Provider return-code capture, bucket/versioning/IAM verification,
+signed write response binding, all-writer participation, race experiments,
+and owner-reviewed release remain required. G3 remains OPEN.
