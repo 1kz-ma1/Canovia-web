@@ -368,3 +368,30 @@ is not enabled or is suspended. The operator must not turn on G3
 physical deletion, configure automatic retry/cron, provision S3 or
 alter Aiven/Render based on this static report. Provider and
 generation-aware deletion require a later, owner-reviewed release gate.
+
+## 16. G3-R17 synthetic ownership-to-generation binding (NO LIVE USE)
+
+A fourth independent migration adds
+`private_file_generation_evidence`. It is **not approved for live
+Aiven execution** and is unrelated to any production deployment. The
+separate `CANOVIA_PRIVATE_FILE_GENERATION_EVIDENCE_ENABLED` flag remains
+OFF by default. The fixture-writing API additionally hard-requires
+`APP_ENV=testing` and refuses production even if the flag is set.
+
+In a disposable test database only, a committed upload intent may be
+associated with exactly one matching Inbox / Recall / Career owner and
+an **encrypted synthetic** VersionId. This establishes a *database
+identity model*, not proof that an S3 provider returned or retained that
+VersionId. A renamed/deleted owner, corrupted ciphertext, HMAC/key
+change, bucket change, epoch change, or legacy intent without evidence
+must result in a non-authoritative/blocked status.
+
+`php artisan canovia:private-file-generation-evidence-health --json`
+returns only aggregate status and synthetic row counts. It does not
+decrypt tokens for display, inspect private files, enumerate provider
+objects, invoke a scheduler, or mutate DB/Storage. Neither its output nor
+a successful synthetic inspection grants object deletion. Do not
+enable a real provider capture, migrate live schemas, rotate `APP_KEY`,
+or delete old path-fence/journal/evidence rows without a separately
+reviewed migration and recovery design. Four independent G3 schema
+gates now require operator approval; G3 remains OPEN.
