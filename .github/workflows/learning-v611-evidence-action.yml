@@ -8,6 +8,7 @@ on:
       - 'scripts/ci/learning_v611_browser_smoke.mjs'
       - 'scripts/ci/learning_v610_disposable_bank.php'
       - 'app/Services/AdaptiveLearningHistoryService.php'
+      - 'app/Providers/AppServiceProvider.php'
       - 'app/Http/Controllers/AdaptiveLearningNextActionController.php'
       - 'resources/views/learning/history.blade.php'
       - 'routes/web.php'
