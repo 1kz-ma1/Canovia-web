@@ -319,3 +319,28 @@ for ad hoc manual deletion.
 Follow the full acceptance and limitations in the R14 §9
 implementation specification. Three production G3 migrations and
 complete writer coverage remain unapproved. G3 stays OPEN.
+
+## 14. G3-R15 weak-metadata consistency pilot
+
+Optional `CANOVIA_PRIVATE_FILE_UPLOAD_CONSISTENCY_PROBE_ENABLED`
+is **OFF by default**, requires the R11/R13/R14 development-only opt-ins,
+and cannot bypass the production deny. It uses the existing
+`canovia:private-upload-reconcile-preview --json --limit=10` command.
+It does not create an additional operator command, endpoint, timer, or
+destructive recovery path.
+
+For the R14-selected encrypted intents, R15 makes two separate observations
+of the source reference booleans, an already-existing fence row, and targeted
+object metadata (exists, size, last modified). Only aggregate fixed keys are
+returned: `consistency_probe` and
+`consistency.weak_pair_unchanged/change_observed/unverifiable/generation_verified`.
+The last field is **always 0**: this release verifies no immutable storage
+generation. If the pair changes or storage metadata cannot be read, the R14
+category is `unverifiable`; never infer absence or deletion eligibility.
+
+**Do not use an unchanged weak pair to reclaim bytes.** Identical
+size/mtime cannot detect all replacements or object-generation ABA.
+Provider-specific generation tokens, conditional version-bound deletion,
+coordinated every-writer fencing, external writer isolation, and explicit
+operator signoff are still separate, unsatisfied safety gates. Production
+Aiven/Render/live database operations remain out of scope.
