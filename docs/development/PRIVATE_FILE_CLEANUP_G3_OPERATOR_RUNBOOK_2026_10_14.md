@@ -440,3 +440,33 @@ Storage::delete, CLI cleanup or production enablement. The tests
 demonstrate *which states remain unsafe*, not that real process
 crash durability has been established. Four G3 production schema
 migrations and full provider/source-lane rollout gates remain open.
+
+## 19. G3-R20 synthetic write-ahead attempts — unresolved outcome is NOT retry authorization
+
+The additional `private_file_write_attempts` table is a **fifth,
+unapproved** G3 migration for disposable CI only. The new
+`CANOVIA_PRIVATE_FILE_WRITE_ATTEMPT_ENABLED` flag is OFF by default,
+and both reservation and inspection are hard-blocked outside
+`APP_ENV=testing`. No existing upload/cleanup service uses this
+table in production.
+
+R20's synthetic fixture permanently claims a previously committed
+`prepared` upload-intent identity *before* a simulated request.
+If the process stops before `recordSyntheticAck`, the persisted
+`reserved` status is ambiguous even if the provider may already
+have accepted bytes. Do not auto-replay, delete, or overwrite the
+object. A subsequent synthetic receipt is saved encrypted and is
+still not a provider attestation, immutable VersionId proof or owner
+authorization. Duplicate reservation, token reuse and overwrite
+are rejected, not silently retried.
+
+For safe review in a disposable test fixture only:
+`php artisan canovia:private-file-write-attempt-health --json`.
+It returns aggregated fixed-label counts with no IDs, paths, tokens,
+credentials or VersionIds, and has no physical Storage operations.
+This is **not** a real power-loss durability acceptance; no
+object-store API is contacted. Future work needs an approved provider
+adapter, a bound authenticated success receipt, idempotency
+semantics, external-writer isolation, and explicit human recovery
+decisions. Production Aiven/Render/branch and deployment remain
+unchanged. G3 OPEN.
