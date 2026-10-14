@@ -58,6 +58,7 @@ on:
       - 'app/Http/Controllers/StudyScopeCaptureController.php'
       - 'database/migrations/2026_10_14_100000_create_private_file_cleanup_entries.php'
       - 'tests/Feature/PrivateFileCleanupOutboxG3Test.php'
+      - 'tests/Feature/PrivateFileProviderDeleteHoldR35Test.php'
       - 'routes/console.php'
       - 'app/Services/AccountDeletionService.php'
       - 'app/Http/Controllers/PlanController.php'
@@ -195,6 +196,8 @@ jobs:
         run: php artisan test tests/Feature/PrivateFileProviderAttestationBoundaryG3Test.php --stop-on-failure
       - name: G3 R25 unavailable independent verifier and admission checklist
         run: php artisan test tests/Feature/PrivateFileProviderEvidenceAdmissionG3Test.php --stop-on-failure
+      - name: G3 R35 external provider deletion holds, local cleanup compatibility
+        run: php artisan test tests/Feature/PrivateFileProviderDeleteHoldR35Test.php --fail-on-skipped --stop-on-failure
       - name: G3 R26 trust epoch, expiry and replay denial matrix
         run: php artisan test tests/Feature/PrivateFileTrustReplayPreflightG3Test.php --stop-on-failure
       - name: G3 operator-only CLI dry-run and read-only health are available

@@ -84,3 +84,15 @@ production_migrations_approved=false.**
   requires required CI green for the updated exact HEAD and a full diff review.
 - The experiment demonstrates **the four bounded states only**; it neither
   proves a real AWS provider nor grants any deletion or production authority.
+
+## Final acceptance after evidence-append
+
+- Final tested PR head: `372f5ed8a8c75ee8c335d90b2e027e4a97ce47ab`.
+- Final [R34 trial run](https://github.com/1kz-ma1/Canovia-web/actions/runs/38590328725): **success**.
+- The other required checks at that head were successful: Platform Release Preflight,
+  Production Migration Recovery Validation, Development Prelaunch Preparation,
+  and V56.12 Workspace Resume Validation.
+- PR #661 merged to development `main` as
+  `cfa3ee04a2b7306557088fe0ed83e5d44016430a`.
+- This evidence changes neither production status nor G3 OPEN; see R35 for
+  the external-provider deletion HOLD and the next independent approval gate.
