@@ -36,7 +36,7 @@
                 <form method="POST" action="{{ route('plans.tasks.learning.start', [$plan, $task]) }}"
                     class="mt-4 space-y-3" data-learning-topic-review-start>
                     @csrf
-                    <input type="hidden" name="start_request_id" value="{{ $startRequestId }}">
+                    <input type="hidden" name="start_request_id" value="{{ $reviewStartRequestId }}">
                     <input type="hidden" name="mode" value="understanding">
                     <input type="hidden" name="review_topic" value="{{ $reviewPreview['topic'] }}">
                     <input type="hidden" name="review_source_signature" value="{{ $reviewPreview['source_signature'] }}">
