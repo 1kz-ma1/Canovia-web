@@ -1,0 +1,86 @@
+name: Learning V6.10 Disposable Chromium Bank Journey
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/learning-v610-disposable-browser.yml'
+      - 'scripts/ci/learning_v610_browser_smoke.mjs'
+      - 'scripts/ci/learning_v610_disposable_bank.php'
+      - 'docs/development/LEARNING_BROWSER_P0_V6_10_2026_10_15.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  learning-chromium-v610:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked application deps
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          npm ci --ignore-scripts
+          npm run build
+      - name: Pin disposable local SQLite and disable provider effects
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "APP_ENV=testing" >> "$GITHUB_ENV"
+          echo "APP_DEBUG=false" >> "$GITHUB_ENV"
+          echo "APP_URL=http://127.0.0.1:8792" >> "$GITHUB_ENV"
+          echo "CANOVIA_LEARNING_V610_BASE_URL=http://127.0.0.1:8792" >> "$GITHUB_ENV"
+          echo "CANOVIA_LEARNING_V610_FIXTURE=1" >> "$GITHUB_ENV"
+          echo "DB_CONNECTION=sqlite" >> "$GITHUB_ENV"
+          echo "DB_DATABASE=$RUNNER_TEMP/learning-v610-browser.sqlite" >> "$GITHUB_ENV"
+          echo "SESSION_DRIVER=file" >> "$GITHUB_ENV"
+          echo "CACHE_STORE=file" >> "$GITHUB_ENV"
+          echo "QUEUE_CONNECTION=sync" >> "$GITHUB_ENV"
+          echo "MAIL_MAILER=array" >> "$GITHUB_ENV"
+          echo "NATIVE_AI_DRIVER=disabled" >> "$GITHUB_ENV"
+          cp .env.example .env
+          touch "$RUNNER_TEMP/learning-v610-browser.sqlite"
+      - name: Prepare synthetic isolated web application
+        run: |
+          php artisan key:generate --force --no-interaction
+          php artisan migrate --force --no-interaction
+          php -l scripts/ci/learning_v610_disposable_bank.php
+          node --check scripts/ci/learning_v610_browser_smoke.mjs
+          php scripts/ci/learning_v610_disposable_bank.php --seed
+      - name: Install pinned headless Chromium (CI only)
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+          npx playwright install --with-deps chromium
+          git diff --exit-code -- package-lock.json package.json
+      - name: Serve isolated app on loopback
+        shell: bash
+        run: |
+          set -euo pipefail
+          nohup php artisan serve --host=127.0.0.1 --port=8791 > "$RUNNER_TEMP/learning-v610-php-server.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/learning-v610-php-server.pid"
+          for i in $(seq 1 40); do
+            if curl --silent --fail --output /dev/null http://127.0.0.1:8792/register; then exit 0; fi
+            sleep 1
+          done
+          echo "Disposable browser server failed to start" >&2
+          exit 1
+      - name: Exercise real Study first Action, Bank grading and persisted next question
+        run: node scripts/ci/learning_v610_browser_smoke.mjs
+      - name: Clarify browser-proof limits
+        run: |
+          echo "Study: Chromium desktop, synthetic account, synthetic published Bank only. Real browser creates Plan, Task, Run and Answers."
+          echo "NOT tested: real licensed Bank content, human recommendation quality, automatic Task next_action update, iPhone WKWebView, Aiven or Render Live."
+          echo "NO Study release, production migration or app-store GO from browser CI."
