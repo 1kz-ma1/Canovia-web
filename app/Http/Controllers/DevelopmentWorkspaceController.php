@@ -14,6 +14,7 @@ use App\Services\DevelopmentExecutionContextService;
 use App\Services\DevelopmentImplementationBriefService;
 use App\Services\DevelopmentHomeService;
 use App\Services\DevelopmentPrelaunchPreparationService;
+use App\Services\DevelopmentOperationalEvidenceService;
 use App\Services\DevelopmentCreativePlanAccessService;
 use App\Services\DevelopmentWorkspaceSurfaceService;
 use App\Services\CapabilityActivationService;
@@ -42,6 +43,7 @@ final class DevelopmentWorkspaceController extends Controller
         DevelopmentIntelligencePresentationAdapter $presentationAdapter,
         DevelopmentHomeService $developerHome,
         DevelopmentPrelaunchPreparationService $prelaunchPreparation,
+        DevelopmentOperationalEvidenceService $operationalEvidenceService,
         DevelopmentWorkspaceSurfaceService $surfaces,
         DevelopmentExecutionContextService $executionContext,
         DevelopmentImplementationBriefService $implementationBriefs,
@@ -90,6 +92,7 @@ final class DevelopmentWorkspaceController extends Controller
                 'canEdit' => false,
                 'developmentAdaptiveAction' => null,
                 'developmentPrelaunchPreparation' => null,
+                'developmentOperationalEvidence' => null,
                 'intelligencePresentation' => null,
                 'intelligenceHistory' => [],
                 'hasReleaseEvidence' => false,
@@ -214,6 +217,15 @@ final class DevelopmentWorkspaceController extends Controller
             }
         }
 
+        $developmentOperationalEvidence = $developmentPrelaunchPreparation
+            ? $operationalEvidenceService->assess(
+                $plan,
+                $developerExecutionContext,
+                (bool) data_get($developmentGithubIntegrationStatus, 'evidence.allowed', false)
+                    && (string) data_get($developmentGithubConnection, 'state', '') === 'ready',
+            )
+            : null;
+
         $githubCapabilityActivation = $legacyCreative
             ? null
             : $capabilityActivation->github(
@@ -334,6 +346,7 @@ final class DevelopmentWorkspaceController extends Controller
             'canEdit' => $canEdit,
             'developmentAdaptiveAction' => $adaptiveAction,
             'developmentPrelaunchPreparation' => $developmentPrelaunchPreparation,
+            'developmentOperationalEvidence' => $developmentOperationalEvidence,
             'intelligencePresentation' => $presentation,
             'intelligenceHistory' => $legacyCreative
                 ? []
