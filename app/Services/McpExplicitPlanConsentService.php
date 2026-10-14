@@ -17,6 +17,7 @@ final class McpExplicitPlanConsentService
 {
     public const SCOPES = ['overview', 'tasks'];
     public const DURATIONS_DAYS = [1, 7, 30];
+    public const UNTIL_REVOKED = 'until_revoked';
 
     public function __construct(
         private readonly McpOAuthAccountLinkConfiguration $linkConfiguration,
@@ -57,6 +58,7 @@ final class McpExplicitPlanConsentService
             ->where('provider_key', 'chatgpt')
             ->where('status', McpLinkedSubject::STATUS_LINKED)
             ->whereNull('revoked_at')
+            ->whereColumn('identity_fingerprint', 'active_identity_fingerprint')
             ->whereNotNull('linked_at')
             ->where('linked_at', '<=', now())
             ->exists();
@@ -68,6 +70,7 @@ final class McpExplicitPlanConsentService
             ->where('user_id', $actor->id)
             ->where('provider_key', 'chatgpt')
             ->where('identity_fingerprint', $fingerprint)
+            ->where('active_identity_fingerprint', $fingerprint)
             ->where('status', McpLinkedSubject::STATUS_LINKED)
             ->whereNull('revoked_at')
             ->whereNotNull('linked_at')
@@ -75,10 +78,11 @@ final class McpExplicitPlanConsentService
             ->exists();
     }
 
-    public function isScopeAndDurationAllowed(string $scope, int $days): bool
+    public function isScopeAndDurationAllowed(string $scope, int|string $days): bool
     {
         return in_array($scope, self::SCOPES, true)
-            && in_array($days, self::DURATIONS_DAYS, true);
+            && (in_array($days, self::DURATIONS_DAYS, true)
+                || $days === self::UNTIL_REVOKED);
     }
 
     /**
@@ -91,7 +95,7 @@ final class McpExplicitPlanConsentService
         int $planId,
         string $identityFingerprint,
         string $scope,
-        int $days,
+        int|string $days,
     ): bool {
         if (! $this->isEnabled()
             || ! preg_match('/\A[a-f0-9]{64}\z/D', $identityFingerprint)
@@ -118,6 +122,7 @@ final class McpExplicitPlanConsentService
                 ->where('user_id', $owner->id)
                 ->where('provider_key', 'chatgpt')
                 ->where('identity_fingerprint', $identityFingerprint)
+                ->where('active_identity_fingerprint', $identityFingerprint)
                 ->where('status', McpLinkedSubject::STATUS_LINKED)
                 ->whereNull('revoked_at')
                 ->whereNotNull('linked_at')
@@ -147,7 +152,8 @@ final class McpExplicitPlanConsentService
                 'scope' => $scope,
                 'status' => McpDelegatedGrant::STATUS_ACTIVE,
                 'consented_at' => now(),
-                'expires_at' => now()->addDays($days),
+                'expires_at' => $days === self::UNTIL_REVOKED
+                    ? null : now()->addDays($days),
                 'revoked_at' => null,
             ];
             if ($grant !== null) {
