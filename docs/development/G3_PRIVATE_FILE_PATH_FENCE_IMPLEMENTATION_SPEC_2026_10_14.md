@@ -1013,3 +1013,20 @@ An operator still needs separate disposable-scope approval before any
 real provider access, followed by independently verified evidence,
 crash recovery, versioning/IAM and writer/generation fencing review.
 Five production-unapproved G3 migrations remain. **G3 OPEN.**
+
+## 24. G3-R29 — Offline disposable approval request (2026-10-14)
+
+R29 adds `g3_disposable_approval_packet.py`: an offline R28
+collection-plan wrapper with immutable candidate SHA, isolated
+synthetic scope, proposed budget and time caps, temporary identity,
+restricted evidence custody, immutable proposed action list, explicit
+stop triggers and manual abort/quarantine instructions. A complete
+packet is `OWNER_DECISION_REQUIRED` with exit code 2, not consent.
+All provider, cost, conditional deletion, release and migration
+authorizations are false; no real provider or DB I/O is performed.
+
+Dedicated local Git fixture tests cover forged approvals, oversized
+requests, scope substitutions and removed stop/abort controls in
+Platform Offline Preflight CI. See the R29 approval-packet document
+for candidate limits and separate owner decisions. Five prior G3
+migrations remain unapproved. **G3 OPEN.**

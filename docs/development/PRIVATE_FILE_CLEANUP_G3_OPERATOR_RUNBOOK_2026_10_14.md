@@ -657,3 +657,20 @@ provider access and independent review of sanitized results.
 No live provider access, migration, DB/Storage mutation, worker or
 runtime functionality is introduced. Five earlier G3 migrations
 remain unapproved for production Aiven. **G3 OPEN.**
+
+## 28. G3-R29 — Explicit owner decision before any disposable provider test
+
+The owner-facing review matrix is in
+`G3_DISPOSABLE_APPROVAL_PACKET_R29_2026_10_14.md`. Offline checker:
+`python3 scripts/ops/g3_disposable_approval_packet.py --repo . --packet /private/location/request.json`.
+It must return `OWNER_DECISION_REQUIRED` even for a perfect request.
+Requested actions, bounded budget, custody and stop/abort controls
+are **proposals** only; this command neither authorizes nor performs
+cloud access, cost, conditional deletion or cleanup.
+
+Require fresh explicit owner permission identifying disposable
+resources and controls *outside Git* before a human operator performs
+any real trial. Independently review provider identity, credentials,
+writer fencing, retry/recovery behavior and actual conditional
+operations. Do not publish keys, identity IDs or user data in Git.
+Five earlier G3 migrations are still unapproved. **G3 OPEN.**
