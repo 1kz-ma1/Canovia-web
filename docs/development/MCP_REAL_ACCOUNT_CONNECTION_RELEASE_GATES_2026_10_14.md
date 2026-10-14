@@ -111,3 +111,8 @@ A dedicated CI-only matrix runs against fresh **PostgreSQL 17 / MySQL 8.0 / MySQ
 - GitHub must be selected in the IdP itself; do not claim Canovia can force GitHub. A provider-specific redirect can be implemented only after separately verified Auth0 connection selection **and** immutable subject validation.
 - Tests cover off-by-default, linked vs unlinked, unexpired vs expired/indefinite grant, revoke/unlink, other owner's page isolation, and no raw identity fingerprint/token exposure. No Auth0, deployment or database changes in this UI slice.
 
+## 11. Unsafe MCP schema rollback and old-writer reproduction (disposable only)
+
+- MySQL 8.0 / 8.4 and PostgreSQL 17 CI additionally exercise both 2026-10-14 MCP migrations **after** real schema creation. A non-expiring grant makes `000100.down()` refuse; reused historic external identity makes `000200.down()` refuse. Neither case may delete original grant rows or metadata-only audit.
+- A deliberately unsafe *old writer* using raw SQL inserts a second linked record without `active_identity_fingerprint`. This row is evidence of the **known pre-cutover risk**: even with the active-only unique index, a legacy writer can bypass the reservation. The `000200.up()` replay must reject the duplicate rather than silently accepting two active owners. Production migration must therefore **fence all legacy writers** before changing the global unique constraint.
+- CI simulates only disposable DB behavior; no Aiven backup is created or restored, no historic records may be deleted to force a successful downgrade, and no production migration or deployment is authorized by a green matrix. Operator identity and actual Aiven version/restore readiness remain **BLOCKED/UNVERIFIED**.
