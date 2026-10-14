@@ -1,0 +1,26 @@
+name: Platform Release Preflight (Offline)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ops/platform_release_preflight.py'
+      - 'tests/ci/test_platform_release_preflight.py'
+      - '.github/workflows/platform-release-preflight.yml'
+      - 'docs/development/PLATFORM_RELEASE_BASELINE_AND_PREFLIGHT_2026_10_14.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-preflight-tests:
+    name: Platform release preflight offline tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile safe preflight
+        run: python3 -m py_compile scripts/ops/platform_release_preflight.py tests/ci/test_platform_release_preflight.py
+      - name: Validate pinned candidate and fail-closed manual gates
+        run: python3 -m unittest discover -s tests/ci -p 'test_platform_release_preflight.py' -v
