@@ -6,10 +6,15 @@ on:
     paths:
       - 'scripts/ops/platform_release_preflight.py'
       - 'scripts/ops/platform_backup_ciphertext_check.py'
+      - 'scripts/ops/platform_branch_inventory.py'
+      - 'scripts/ops/platform_ci_run_triage.py'
       - 'tests/ci/test_platform_release_preflight.py'
       - 'tests/ci/test_platform_backup_ciphertext_check.py'
+      - 'tests/ci/test_platform_branch_inventory.py'
+      - 'tests/ci/test_platform_ci_run_triage.py'
       - '.github/workflows/platform-release-preflight.yml'
       - 'docs/development/PLATFORM_RELEASE_BASELINE_AND_PREFLIGHT_2026_10_14.md'
+      - 'docs/development/PLATFORM_CI_AND_BRANCH_TRIAGE_2026_10_14.md'
   workflow_dispatch:
 
 permissions:
@@ -23,8 +28,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Compile safe preflight
-        run: python3 -m py_compile scripts/ops/platform_release_preflight.py tests/ci/test_platform_release_preflight.py scripts/ops/platform_backup_ciphertext_check.py tests/ci/test_platform_backup_ciphertext_check.py
+        run: python3 -m py_compile scripts/ops/platform_release_preflight.py tests/ci/test_platform_release_preflight.py scripts/ops/platform_backup_ciphertext_check.py tests/ci/test_platform_backup_ciphertext_check.py scripts/ops/platform_branch_inventory.py scripts/ops/platform_ci_run_triage.py tests/ci/test_platform_branch_inventory.py tests/ci/test_platform_ci_run_triage.py
       - name: Validate pinned candidate and fail-closed manual gates
         run: |
           python3 -m unittest discover -s tests/ci -p 'test_platform_release_preflight.py' -v
           python3 -m unittest discover -s tests/ci -p 'test_platform_backup_ciphertext_check.py' -v
+          python3 -m unittest discover -s tests/ci -p 'test_platform_branch_inventory.py' -v
+          python3 -m unittest discover -s tests/ci -p 'test_platform_ci_run_triage.py' -v
