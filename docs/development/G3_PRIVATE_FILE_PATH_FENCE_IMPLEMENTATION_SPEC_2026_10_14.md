@@ -1030,3 +1030,29 @@ requests, scope substitutions and removed stop/abort controls in
 Platform Offline Preflight CI. See the R29 approval-packet document
 for candidate limits and separate owner decisions. Five prior G3
 migrations remain unapproved. **G3 OPEN.**
+
+## 25. G3-R30 — Offline owner-checklist and hypothetical operation fence (2026-10-14)
+
+R30 introduces `scripts/ops/g3_owner_scope_review.py`, which
+requires R29's complete but **unapproved** owner packet and binds
+a review to its immutable candidate SHA and locally computed
+canonical-JSON SHA-256. Eleven fixed checkpoints remain
+`pending_out_of_band`; untrusted approvals/signatures are rejected.
+A proposed sequence of disposable synthetic inspect/PUT/HEAD/process
+restart actions must match narrow targets and respect cumulative
+proposed R29 time/cost/object/request limits. Conditional generation
+delete, even for disposable objects, is not in R30's allowed list.
+
+A fully valid review yields only `OWNER_CHECKLIST_PENDING` and
+process exit 2. No authenticated consent, provider connection,
+real-world quota enforcement, IAM boundary, provider generation
+assurance, retry/delete or release permission exists. The caller
+supplies the proposed operations and digest, so matching them proves
+neither scope compliance in a live account nor a real owner's
+approval. See `G3_OWNER_SCOPE_CHECKLIST_R30_2026_10_14.md`
+for checkpoint ownership and the future runtime interception gaps.
+
+R30 adds only an offline validator, disposable local-Git tests
+within Platform Release Preflight and documentation. No migration,
+cloud/DB/Storage calls, production or conditional delete activation.
+Five prior G3 migrations remain unapproved. **G3 OPEN.**
