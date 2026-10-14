@@ -52,6 +52,42 @@ final class McpDelegatedRevocationTest extends TestCase
         $this->assertDatabaseCount('mcp_delegated_access_events', 0);
     }
 
+    public function test_owner_connection_state_is_truthful_before_and_after_identity_unlink(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $outsider = User::factory()->create(['first_run_completed_at' => now()]);
+
+        $this->actingAs($owner)->get(route('auth.account'))
+            ->assertOk()
+            ->assertSee('data-mcp-owner-connection-state', false)
+            ->assertSee('data-mcp-linked-identity-absent', false)
+            ->assertSee('ChatGPT側の接続状態は、この画面からは確認できません。')
+            ->assertDontSee('data-mcp-linked-identity-present', false);
+
+        $link = $this->link($owner);
+        $this->actingAs($owner)->get(route('auth.account'))
+            ->assertOk()
+            ->assertSee('data-mcp-linked-identity-present', false)
+            ->assertDontSee('data-mcp-linked-identity-absent', false)
+            ->assertDontSee($link->identity_fingerprint)
+            ->assertDontSee('immutable-test-subject');
+
+        $this->actingAs($outsider)->get(route('auth.account'))
+            ->assertOk()
+            ->assertSee('data-mcp-linked-identity-absent', false)
+            ->assertDontSee('data-mcp-linked-identity-present', false);
+
+        $this->actingAs($owner)->delete(
+            route('auth.account.mcp_subject.revoke', ['subject' => $link->id]),
+        )->assertRedirect(route('auth.account'));
+
+        $this->actingAs($owner)->get(route('auth.account'))
+            ->assertOk()
+            ->assertSee('data-mcp-linked-identity-absent', false)
+            ->assertDontSee('data-mcp-linked-identity-present', false);
+        $this->assertNull($link->fresh()->active_identity_fingerprint);
+    }
+
     public function test_owner_can_revoke_one_grant_without_revoking_others_and_without_duplicate_events(): void
     {
         $owner = User::factory()->create(['first_run_completed_at' => now()]);
