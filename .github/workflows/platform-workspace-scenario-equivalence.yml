@@ -1,0 +1,53 @@
+name: Platform Workspace Scenario Equivalence (Disposable)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ci/platform_workspace_scenario_equivalence.py'
+      - 'tests/ci/test_platform_workspace_scenario_equivalence.py'
+      - '.github/workflows/platform-workspace-scenario-equivalence.yml'
+
+permissions:
+  contents: read
+
+# Same-PR main revisions can safely supersede obsolete probes.
+# This workflow is NOT a production release gate.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.base_ref == 'main' && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' }}
+
+jobs:
+  isolated-scenario-probe:
+    name: Disposable SQLite overlap method-parity probe
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - name: Install pinned composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Build the same frontend assets as Workspace Resume
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+      - name: Validate offline manifest and JUnit parser
+        run: python3 -m unittest discover -s tests/ci -p 'test_platform_workspace_scenario_equivalence.py' -v
+      - name: Compare two historical regression contexts on isolated SQLite
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          DB_URL: ''
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+          NATIVE_AI_DRIVER: disabled
+        run: python3 scripts/ci/platform_workspace_scenario_equivalence.py --run
