@@ -152,7 +152,8 @@ final class McpReadOnlyResourceController extends Controller
                 if ($this->studySummaryToolEnabled()) {
                     $definitions[] = $summaryTool->definition();
                 }
-                if ($proposalService->isEnabled()) {
+                if ($proposalService->isEnabled()
+                    && in_array(\App\Services\McpProtectedResourceConfiguration::STUDY_WRITE_SCOPE, $principal->scopes, true)) {
                     $definitions[] = $proposalTool->definition();
                 }
             }
