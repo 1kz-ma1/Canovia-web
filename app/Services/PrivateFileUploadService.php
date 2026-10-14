@@ -20,6 +20,7 @@ final class PrivateFileUploadService
 {
     public function __construct(
         private readonly PrivateFilePathFenceService $fence,
+        private readonly PrivateFileUploadIntentService $intents,
     ) {}
 
     public function enabled(): bool
@@ -58,7 +59,15 @@ final class PrivateFileUploadService
         // Identical deterministic lock order avoids inversions in a batch.
         ksort($keys, SORT_STRING);
 
-        return DB::transaction(function () use ($disk, $uploads, $persist, $keys): mixed {
+        // Only the optional journal mode performs a durable, PRE-write
+        // commit. If the caller already owns a DB transaction, abort before
+        // touching bytes instead of writing an uncommitted recovery record.
+        $intentIds = $this->intents->enabled()
+            ? $this->intents->prepare($disk, $keys)
+            : [];
+
+        try {
+            $result = DB::transaction(function () use ($disk, $uploads, $persist, $keys): mixed {
             foreach ($keys as $path) {
                 $this->fence->acquireInTransaction($disk, $path);
             }
@@ -106,6 +115,33 @@ final class PrivateFileUploadService
                 }
                 throw $exception;
             }
-        }, 1);
+            }, 1);
+        } catch (Throwable $exception) {
+            if ($intentIds !== []) {
+                $this->settleIntentSafely($intentIds, 'needs_review');
+            }
+            throw $exception;
+        }
+
+        if ($intentIds !== []) {
+            $this->settleIntentSafely($intentIds, 'committed');
+        }
+
+        return $result;
+    }
+
+    /** @param list<int> $ids */
+    private function settleIntentSafely(array $ids, string $status): void
+    {
+        try {
+            $this->intents->settle($ids, $status);
+        } catch (Throwable) {
+            // Committed bytes and DB owners must NOT be rolled back based on
+            // a later journal status-write error. Leave 'prepared' visible
+            // for operator review. No user paths, exception messages or IDs.
+            Log::warning('Private upload journal settle unavailable', [
+                'reason' => 'journal_settle_unavailable',
+            ]);
+        }
     }
 }
