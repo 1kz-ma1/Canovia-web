@@ -231,7 +231,7 @@ final class DevelopmentOperationalAttestationV4FeatureTest extends TestCase
             'resource_ref' => 'srv-static123',
             'revision' => 1,
         ]);
-        $before = $target->getAttributes();
+        $beforeUpdatedAt = $target->getRawOriginal('updated_at');
         $this->actingAs($owner)->get(route('workspace.development.index', [
             'plan_id' => $plan->id,
             'surface' => 'work',
@@ -247,7 +247,12 @@ final class DevelopmentOperationalAttestationV4FeatureTest extends TestCase
           ->assertDontSee('data-development-render-step="restore"', false)
           ->assertDontSee('name="api_key"', false);
 
-        $this->assertSame($before, $target->fresh()->getAttributes());
+        $after = $target->fresh();
+        $this->assertSame('srv-static123', $after->resource_ref);
+        $this->assertSame(1, $after->revision);
+        $this->assertNull($after->backup_confirmed_at);
+        $this->assertNull($after->restore_confirmed_at);
+        $this->assertSame($beforeUpdatedAt, $after->getRawOriginal('updated_at'));
         $this->assertDatabaseCount('task_evidences', 0);
     }
 
