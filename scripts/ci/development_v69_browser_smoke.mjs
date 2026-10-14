@@ -30,7 +30,7 @@ const step = (name) => process.stdout.write(`PASS ${name}\n`);
 try {
     const initial = await page.goto(`${base}/plans/create/manual`, { waitUntil: 'domcontentloaded' });
     assert.equal(initial.status(), 200, 'Initial Guest page must be accessible');
-    if (new URL(page.url()).pathname === '/first-run') {
+    if (new URL(page.url()).pathname === '/welcome') {
         await page.locator('form[data-first-run-start]')
             .getByRole('button', { name: 'Canoviaと始める' }).click();
         step('Entered through actual first-run consent/intro form');
