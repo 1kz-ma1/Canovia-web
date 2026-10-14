@@ -6,6 +6,7 @@ use App\Models\DevelopmentOperationalProfile;
 use App\Models\Plan;
 use App\Services\PlanCategoryProfileService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 final class DevelopmentOperationalProfileController extends Controller
@@ -35,10 +36,32 @@ final class DevelopmentOperationalProfileController extends Controller
         ]);
 
         if ($validated !== []) {
-            DevelopmentOperationalProfile::query()->updateOrCreate(
-                ['plan_id' => (int) $plan->id],
-                $validated,
-            );
+            DB::transaction(static function () use ($plan, $validated): void {
+                // Serialize storage changes with recovery confirmations, which
+                // lock the same profile row before recording any claim.
+                $profile = DevelopmentOperationalProfile::query()
+                    ->where('plan_id', $plan->id)->lockForUpdate()->first();
+                if (! $profile) {
+                    DevelopmentOperationalProfile::query()->create([
+                        'plan_id' => (int) $plan->id,
+                        ...$validated,
+                    ]);
+                    return;
+                }
+
+                if (array_key_exists('data_store', $validated)
+                    && $profile->data_store !== $validated['data_store']) {
+                    // Never wrap an exhausted counter and revalidate old forms.
+                    abort_unless((int) $profile->data_store_revision >= 1
+                        && (int) $profile->data_store_revision < 4294967295, 409);
+                    $profile->data_store_revision = (int) $profile->data_store_revision + 1;
+                }
+
+                $profile->fill($validated);
+                if ($profile->isDirty()) {
+                    $profile->save();
+                }
+            });
         }
 
         return redirect()->route('workspace.development.index', [
