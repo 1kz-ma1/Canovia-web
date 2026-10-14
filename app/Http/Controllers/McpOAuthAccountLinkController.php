@@ -162,6 +162,7 @@ final class McpOAuthAccountLinkController extends Controller
                 'scope' => $scope,
                 'duration_days' => $days,
                 'verified_at' => now()->timestamp,
+                'github_only_proof' => $configuration->githubOnlyEnabled(),
             ]);
             return redirect()->route('auth.account')->with(
                 'status',
@@ -178,6 +179,7 @@ final class McpOAuthAccountLinkController extends Controller
             'actor_id' => (int) $user->id,
             'identity_fingerprint' => $fingerprint,
             'verified_at' => now()->timestamp,
+            'github_only_proof' => $configuration->githubOnlyEnabled(),
         ]);
 
         return redirect()->route('auth.account')->with(
@@ -204,6 +206,9 @@ final class McpOAuthAccountLinkController extends Controller
             || $verified['verified_at'] > now()->timestamp
             || now()->timestamp - $verified['verified_at'] > self::MAX_AGE_SECONDS
             || ! is_string($verified['identity_fingerprint'] ?? null)
+            // Do not accept a generic verified session if GitHub-only was
+            // enabled after OAuth but before final human confirmation.
+            || ($configuration->githubOnlyEnabled() && ($verified['github_only_proof'] ?? null) !== true)
             || ! $committer->confirm($user, $verified['identity_fingerprint'])) {
             return $this->failure('link_confirm_rejected');
         }

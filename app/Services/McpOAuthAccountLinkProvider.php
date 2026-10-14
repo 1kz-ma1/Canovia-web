@@ -93,6 +93,12 @@ final class McpOAuthAccountLinkProvider
         if ($this->verifier->mode() === 'auth0_jwt') {
             $params['audience'] = $settings['resource'];
         }
+        if ($this->configuration->githubOnlyEnabled()) {
+            // Auth0 documents this exact social connection selector. Server
+            // controlled, never copied from untrusted form/query parameters.
+            $params['connection'] = 'github';
+            $params['prompt'] = 'login';
+        }
 
         return $settings['authorize'].'?'.http_build_query(
             $params, '', '&', PHP_QUERY_RFC3986,
@@ -153,6 +159,15 @@ final class McpOAuthAccountLinkProvider
         $principal = $this->verifier->verifyAccountLink($body['access_token']);
         if ($principal === null) {
             app(McpStagingOAuthFailureDiagnostic::class)->record('link_provider_jwt_rejected');
+            return null;
+        }
+        if ($this->configuration->githubOnlyEnabled()
+            && preg_match('/\Agithub\|[0-9]{1,20}\z/D', $principal->subject) !== 1) {
+            // Auth0 may return another primary subject after identity
+            // account-linking, even if connection=github was requested.
+            // Never treat the redirect itself as GitHub identity proof.
+            app(McpStagingOAuthFailureDiagnostic::class)->record('link_provider_github_subject_rejected');
+            return null;
         }
         return $principal;
     }

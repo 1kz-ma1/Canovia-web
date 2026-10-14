@@ -67,6 +67,13 @@ return [
     'plan_consent_enabled' => env('CANOVIA_MCP_PLAN_CONSENT_ENABLED', false),
 
     'account_link_enabled' => env('CANOVIA_MCP_ACCOUNT_LINK_ENABLED', false),
+
+    // Auth0-only explicit GitHub identity route. In OFF mode, preserve the
+    // historical generic OAuth flow. When ON, every signed link/consent
+    // token must identify a GitHub primary subject; linked Auth0 secondary
+    // identities are deliberately rejected until independently reviewed.
+    // Requires an approved GitHub social connection in the Auth0 tenant.
+    'account_link_github_only_enabled' => env('CANOVIA_MCP_ACCOUNT_LINK_GITHUB_ONLY_ENABLED', false),
     'account_link_client_id' => env('CANOVIA_MCP_ACCOUNT_LINK_CLIENT_ID', ''),
     'account_link_client_secret' => env('CANOVIA_MCP_ACCOUNT_LINK_CLIENT_SECRET', ''),
     'account_link_metadata_url' => env('CANOVIA_MCP_ACCOUNT_LINK_METADATA_URL', ''),
