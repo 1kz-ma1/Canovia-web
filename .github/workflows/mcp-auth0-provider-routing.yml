@@ -6,6 +6,9 @@ on:
     paths:
       - 'app/Services/McpExternalTokenVerifier.php'
       - 'app/Services/McpDelegatedPlanAccessPolicy.php'
+      - 'app/Services/McpOAuthAccountLinkCommitter.php'
+      - 'tests/Feature/McpReadOnlyResourceTest.php'
+      - 'tests/Feature/McpOAuthAccountLinkTest.php'
       - 'tests/Feature/McpDelegatedPlanAccessPolicyTest.php'
       - 'app/Services/McpAuth0JwtTokenVerifier.php'
       - 'app/Services/McpOAuthAccountLinkConfiguration.php'
@@ -36,6 +39,9 @@ jobs:
         run: |
           php -l app/Services/McpExternalTokenVerifier.php
           php -l app/Services/McpDelegatedPlanAccessPolicy.php
+          php -l app/Services/McpOAuthAccountLinkCommitter.php
+          php -l tests/Feature/McpOAuthAccountLinkTest.php
+          php -l tests/Feature/McpReadOnlyResourceTest.php
           php -l tests/Feature/McpDelegatedPlanAccessPolicyTest.php
           php -l app/Services/McpAuth0JwtTokenVerifier.php
           php -l app/Services/McpOAuthAccountLinkConfiguration.php
@@ -51,4 +57,4 @@ jobs:
           SESSION_DRIVER: array
           CACHE_STORE: array
         run: |
-          php artisan test tests/Feature/McpAuth0JwtProviderRoutingTest.php tests/Feature/McpAuth0JwtTokenVerifierTest.php tests/Feature/McpReadOnlyResourceTest.php tests/Feature/McpOAuthAccountLinkTest.php tests/Feature/McpDelegatedPlanAccessPolicyTest.php --colors=never
+          php artisan test tests/Feature/McpAuth0JwtProviderRoutingTest.php tests/Feature/McpAuth0JwtTokenVerifierTest.php tests/Feature/McpReadOnlyResourceTest.php tests/Feature/McpOAuthAccountLinkTest.php tests/Feature/McpDelegatedPlanAccessPolicyTest.php tests/Feature/McpDelegatedRevocationTest.php tests/Feature/McpSyntheticOAuthConsentReadLifecycleTest.php --colors=never
