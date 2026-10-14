@@ -676,17 +676,17 @@ Dedicated positive/negative tests cover legitimate native generation, alternativ
 **Follow-on to #574:** MySQL current reads eliminated the stale-repeatable-read reference query gap, but neither database query can atomically exclude a separate uncoordinated storage/DB writer from the check→unlink interval. The next design unit must be shared between storage writer and cleanup worker, not simply a third SELECT.
 
 **Implemented bounded pilot:** Add a non-destructive, uniquely indexed
-\`private_file_path_fences\` row store containing only HMAC-SHA256 keyed
+`private_file_path_fences` row store containing only HMAC-SHA256 keyed
 disk/path fingerprints with a domain separator, never raw private paths.
-\`PrivateFilePathFenceService\` validates path/disk and presence of APP_KEY,
+`PrivateFilePathFenceService` validates path/disk and presence of APP_KEY,
 requires an existing DB transaction, insert-or-ignores the persistent row,
-then holds \`SELECT ... FOR UPDATE\` for that digest until the enclosing
-transaction completes. \`CANOVIA_PRIVATE_FILE_PATH_FENCE_ENABLED\` defaults to
+then holds `SELECT ... FOR UPDATE` for that digest until the enclosing
+transaction completes. `CANOVIA_PRIVATE_FILE_PATH_FENCE_ENABLED` defaults to
 **false**; when true, the existing worker locks this row after its Outbox
 lock and before references/storage I/O, and the Inbox→Recall transaction
 locks its generated destination path before writing bytes and the DB source
 record. Missing schema/key fails closed: worker records
-\`path_fence_unavailable\` with non-destructive retry. Disabled mode keeps
+`path_fence_unavailable` with non-destructive retry. Disabled mode keeps
 the legacy cleanup/copy behavior unchanged.
 
 **Acceptance:** A disposable PG16 suite must prove digest/path secrecy,
@@ -697,8 +697,8 @@ matrix must prove independent-session lock blocking and row reuse.
 Dedicated G3 PostgreSQL Source Race, P0 MySQL Migration, Migration Recovery
 and Workspace Resume continue gating exact PR head.
 
-**Intentionally NOT covered:** \`InboxController::store\`,
-\`StudyScopeCaptureController::store\`, \`StudyRecallCandidateController\` and
+**Intentionally NOT covered:** `InboxController::store`,
+`StudyScopeCaptureController::store`, `StudyRecallCandidateController` and
 some Career path references, direct SQL, object-store writers or earlier
 untracked orphans. No full safety claim is made until every storage writer
 uses the same lock and its storage lifecycle is managed. Legacy MySQL
@@ -711,4 +711,4 @@ Render, Aiven schema, live worker, cron, storage listing, billing, deployment
 or device mutation was performed. G3 stays OPEN.
 
 **Canonical scope/next-stage checklist:**
-\`docs/development/G3_PRIVATE_FILE_PATH_FENCE_IMPLEMENTATION_SPEC_2026_10_14.md\`.
+`docs/development/G3_PRIVATE_FILE_PATH_FENCE_IMPLEMENTATION_SPEC_2026_10_14.md`.
