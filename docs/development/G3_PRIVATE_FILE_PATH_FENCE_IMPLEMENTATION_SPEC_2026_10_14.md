@@ -525,3 +525,64 @@ uncommitted journal, owner changes, immutable duplicate record,
 default OFF/production deny, redacted outputs and no Storage I/O.
 Four G3 additive schema migrations remain **not approved for live
 Aiven execution**. G3 remains OPEN.
+
+## 14. G3-R19 — Durable synthetic crash-boundary matrix (2026-10-14)
+
+**Isolated DB fixture only; never a real storage write.** R18 validates
+synthetic PutObject-shaped responses after the upload-intent journal is
+`committed`, but did not reproduce worker death at the durable
+boundaries. R19 adds `PrivateFileSyntheticCrashMatrixService`, gated by
+`CANOVIA_PRIVATE_FILE_SYNTHETIC_CRASH_MATRIX_ENABLED=false` in addition
+to R11 path-fence, R13 journal, R17 evidence and R18 handoff opt-ins.
+It is hard-locked to `APP_ENV=testing`, an outermost DB boundary and
+an isolated fixture with S3-style configuration. It never instantiates
+an SDK, performs Storage::put, reads any object, makes network calls,
+schedules work or invokes delete.
+
+The simulator steps through *separate durable DB commits*:
+1. `prepare` commits the prewrite journal row, with status `prepared`.
+2. A **synthetic** write acknowledgement is represented by a test
+   checkpoint only, **not actual bytes or provider success**.
+3. A synthetic Inbox owner reference is independently committed.
+4. The journal transitions `prepared` → `committed`.
+5. The R18 synthetic response handoff persists R17 synthetic evidence,
+   only after its own journal-and-owner path validation.
+
+Deterministic halt points stop after steps 1, 2, 3 or 4; the final
+case completes all five. Importantly, halt after steps 1 and 2 leaves
+**identical durable DB state**: prepared journal with no owner. There
+is no way to determine from this ledger whether storage actually
+received bytes. An owner committed while journal remains prepared, and
+a committed journal without evidence, are also **not** proof of a
+successful object write or safe replay.
+
+A separate read-only `review(intentId)` revalidates journal ciphertext
+and HMAC, checks for current Inbox references and uses R17 evidence
+identity/epoch validation for synthetic receipt. It emits only fixed
+status labels such as `prepared_no_owner_ambiguous`,
+`prepared_with_owner_ambiguous`,
+`committed_owner_without_evidence`, and
+`synthetic_evidence_present_unattested`. Missing owner, multiple
+references, corrupted ciphertext, mismatched path identity or
+invalid R17 evidence all fail closed with inconclusive categories.
+It never queries provider object bytes or attempts a replay.
+
+Every simulated step and read-only review returns
+`object_write_verified=false`, `generation_verified=false`,
+`delete_authorized=false`, `retry_authorized=false` and
+`storage_mutations=0`. Replaying the same key after a simulated crash
+is rejected by R13's permanently unique HMAC digest: historical key
+reuse/ABA is not automatically authorized. No production
+`PrivateFileUploadService` or cleanup worker path is changed.
+
+**R19 is NOT a full crash-safety guarantee.** PHPUnit's injected
+checkpoints are deterministic *returns*, not operating-system process
+kills; they cannot establish durability under arbitrary power loss,
+filesystem flush or real S3 write success. Real write receipt
+persistence between provider response and DB commit remains absent.
+An untracked object may still exist after physical write/crash.
+Future phases need dedicated, crash-safe outbox/staging plus a
+provider-specific immutable generation record, external-writer
+coordination, independent process crash/restart and ABA tests before
+any operator-managed reclamation. Four existing G3 migrations remain
+unapproved for live Aiven. **G3 OPEN.**
