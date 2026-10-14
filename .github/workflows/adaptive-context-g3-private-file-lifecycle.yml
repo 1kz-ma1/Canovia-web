@@ -1,0 +1,42 @@
+name: Adaptive Context G3 Private File Lifecycle
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/PrivateFileLifecycleService.php'
+      - 'app/Services/AccountDeletionService.php'
+      - 'app/Http/Controllers/PlanController.php'
+      - 'tests/Feature/PrivateFileLifecycleG3Test.php'
+      - 'tests/Feature/IosSoftLaunchWebReadinessV561Test.php'
+      - 'tests/Feature/SafePlanResourceRecallHandoffV5811Test.php'
+      - '.github/workflows/adaptive-context-g3-private-file-lifecycle.yml'
+
+jobs:
+  private-file-lifecycle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP lint
+        run: |
+          php -l app/Services/PrivateFileLifecycleService.php
+          php -l app/Services/AccountDeletionService.php
+          php -l app/Http/Controllers/PlanController.php
+          php -l tests/Feature/PrivateFileLifecycleG3Test.php
+          php -l tests/Feature/IosSoftLaunchWebReadinessV561Test.php
+          php -l tests/Feature/SafePlanResourceRecallHandoffV5811Test.php
+      - name: G3 Plan and account private file lifecycle, retained Inbox and rollback
+        run: php artisan test tests/Feature/PrivateFileLifecycleG3Test.php --stop-on-failure
+      - name: Existing account deletion and resource private file recovery
+        run: php artisan test tests/Feature/IosSoftLaunchWebReadinessV561Test.php tests/Feature/SafePlanResourceRecallHandoffV5811Test.php --stop-on-failure
