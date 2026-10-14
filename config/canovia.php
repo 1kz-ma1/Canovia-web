@@ -106,6 +106,13 @@ return [
         FILTER_VALIDATE_BOOL
     ),
 
+    // G3-R21: synthetic provider observation classification ONLY. Testing-only,
+    // no provider SDK, remote I/O, automatic retry or deletion. OFF.
+    'private_file_provider_reconciliation_enabled' => filter_var(
+        env('CANOVIA_PRIVATE_FILE_PROVIDER_RECONCILIATION_ENABLED', false),
+        FILTER_VALIDATE_BOOL
+    ),
+
     // A public epoch label, NOT an encryption key. Changing it intentionally
     // blocks old proof reads until an explicit, audited migration exists.
     'private_file_generation_key_epoch' => env(

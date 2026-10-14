@@ -654,3 +654,49 @@ VersionId depend on the current APP_KEY; epoch mismatch prevents
 silent reuse but a safe re-encryption/keyring migration remains
 unimplemented. All five added G3 schemas require independent release
 and Aiven operator approval. G3 remains OPEN.
+
+## 16. G3-R21 — Synthetic provider observation classification (2026-10-14)
+
+R20 persists one write-ahead attempt, but its `reserved` state does not
+establish whether an external provider ever received the request. R21 adds
+`PrivateFileSyntheticProviderProbeAdapter` and
+`PrivateFileProviderReconciliationService` to classify a **supplied, untrusted
+fixture observation**, never to contact S3 or another storage provider.
+No sixth migration is needed; the existing R13 journal and R20 attempt
+record are read with no mutations.
+
+The new `CANOVIA_PRIVATE_FILE_PROVIDER_RECONCILIATION_ENABLED` flag is
+independently OFF by default. Classification requires `APP_ENV=testing`,
+R11/R13/R20 enabled, and a disposable S3-shaped configuration.
+The synthetic payload is strictly whitelisted: fixed origin; one R20
+attempt ID, transient request token, disk, bucket, key, outcome, nullable
+VersionId, and observed Unix time. Unexpected authority claims or extra
+fields fail closed. The token is re-HMACed with the R20 domain, bucket and
+path compared to the durable HMAC/encrypted journal, and APP_KEY epoch,
+journal status, record status, ciphertext and schema are checked.
+Observations older than five minutes, future observations and observations
+pre-dating reservation are rejected. Clock freshness does **not** prove a
+linearizable provider snapshot.
+
+Labels include `present_without_durable_ack`,
+`version_match_unattested`, `version_mismatch_unattested`,
+`present_generation_unknown`, `absent_not_replay_safe`,
+`provider_outcome_unknown`, `transport_outcome_unknown`, and
+fixed redacted invalid/unverifiable states. For **every** outcome,
+`provider_attested=false`, `generation_verified=false`,
+`retry_authorized=false`, `delete_authorized=false`.
+A matching synthetic VersionId does not authenticate a PutObject,
+exclude external writers or ABA, or establish safe conditional deletion.
+Object absence cannot authorize retry: delayed writes, multiple versions,
+delete markers, consistency limits and races remain possible.
+
+The fixture adapter operates in memory and accepts no SDK response as
+authenticated provenance. No live provider I/O, list/head/get/put/delete,
+new CLI, scheduler, storage mutations, migrations, UI or automatic cleanup
+changes. Local remains the production default and is explicitly unsupported
+for this synthetic S3 generation probe. CI exercises the isolated suite on
+PostgreSQL 16 and MySQL 8.0/8.4, including corrupt/rotated bindings, denial
+gates, receipt mismatch, expired samples, network faults and ABA negative
+cases. These synthetic tests do not validate real process death, provider
+authenticity or production schema compatibility. Five earlier G3 migrations
+remain unapproved for Aiven; **G3 OPEN**.

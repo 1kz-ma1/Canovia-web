@@ -1023,3 +1023,32 @@ generation–bound conditional operations, key rotation, external
 uncoordinated writers, actual kill/restart/power loss, manual
 reconciliation criteria, storage retention/cost and FIVE unapproved
 production migrations. G3 is **OPEN**, not released.
+
+## 66. G3-R21 — Untrusted synthetic provider query results do not resolve an unknown write (2026-10-14)
+
+**New bounded evidence:** `PrivateFileProviderReconciliationService` reads
+the durable R20 prewrite attempt and R13 journal and checks their HMAC,
+APP_KEY epoch, encrypted key, bucket, token, schema and fixture timestamp
+against a strict, synthetic HEAD-like observation. The test adapter never
+contacts an object provider. It classifies absent/present/matching/
+mismatching/unknown, network/timeout, invalid or expired observations
+under fixed labels without leaking paths, buckets, VersionIds or tokens.
+All responses deny provider authentication, generation verification,
+retry and deletion. There are **no new schema changes**.
+
+**Acceptance gate:** The dedicated PG16 and MySQL8.0/8.4 suites cover
+same-VersionId still untrusted, VersionId mismatch, ack missing despite
+presence, network error, timeout, absence without replay, ABA-compatible
+equal snapshots, cross-attempt/token/key/bucket mismatch, origin spoofing,
+extra authority fields, stale/future receipt, APP_KEY/epoch/cipher corruption,
+production/OFF/Local denial, read-only DB/storage and no cleanup writes.
+CI verification must be tied to the exact PR HEAD and checked again for
+mergeability/reviewer gates.
+
+**Residual:** The fake request token and sample do not make S3 HEAD an
+authenticated write receipt or make a read linearizable. External writes,
+ABA, versioning-disabled/suspended or delete marker states, missing provider
+request correlation, object mutation atomicity, real crash/restart, key
+rotation and production deployment remain unresolved. The default Local
+storage driver has no immutable generation guarantee. All five existing G3
+additive migrations remain unapproved for Aiven. **G3 OPEN**.

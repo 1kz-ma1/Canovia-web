@@ -470,3 +470,29 @@ adapter, a bound authenticated success receipt, idempotency
 semantics, external-writer isolation, and explicit human recovery
 decisions. Production Aiven/Render/branch and deployment remain
 unchanged. G3 OPEN.
+
+## 20. G3-R21 — Synthetic provider observation is not recovery authorization
+
+The independently OFF-by-default
+`CANOVIA_PRIVATE_FILE_PROVIDER_RECONCILIATION_ENABLED` gate requires
+`APP_ENV=testing`, R11/R13/R20 opt-ins and a disposable S3-like
+configuration. The in-memory `PrivateFileSyntheticProviderProbeAdapter`
+builds only fake HEAD-like observations. The read-only
+`PrivateFileProviderReconciliationService` consumes them with strict
+attempt/token, path, bucket, epoch, recency and ciphertext validation.
+
+Only fixed redacted result labels leave the classifier. A matching
+VersionId is `version_match_unattested`, not confirmed generation.
+Absence is `absent_not_replay_safe`, never safe-to-overwrite.
+Timeout/network error and ambiguous or corrupt records require manual
+hold. These labels grant **no** deletion, retry or live object inspection
+permission. No new operator command exists. Local is not considered a
+provider with immutable generation proof.
+
+R21 does not call Storage/S3, run a scheduler, modify a journal, add
+a migration, or enroll any live writer. Do not enable the synthetic gate,
+run unreviewed Aiven migrations, promote to production, delete objects,
+or use this fixture as evidence of real crash recovery. Provider identity,
+versioning status, external writer controls, credential/key rotation and
+real process-kill testing remain open. **G3 OPEN; five prior schema
+migrations still unapproved.**
