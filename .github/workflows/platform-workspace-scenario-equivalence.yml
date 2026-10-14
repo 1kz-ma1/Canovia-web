@@ -7,10 +7,13 @@ on:
       - 'scripts/ci/platform_workspace_scenario_equivalence.py'
       - 'scripts/ci/platform_workspace_group_repeatability.py'
       - 'scripts/ci/platform_workspace_omission_shadow_r18.py'
+      - 'scripts/ci/platform_workspace_r19_negative_controls.py'
       - 'tests/ci/test_platform_workspace_scenario_equivalence.py'
       - 'tests/ci/test_platform_workspace_scenario_order.py'
       - 'tests/ci/test_platform_workspace_group_repeatability.py'
       - 'tests/ci/test_platform_workspace_omission_shadow_r18.py'
+      - 'tests/ci/test_platform_workspace_r19_negative_controls.py'
+      - 'docs/development/PLATFORM_WORKSPACE_R19_NEGATIVE_CONTROLS_2026_10_15.md'
       - '.github/workflows/platform-workspace-scenario-equivalence.yml'
 
 permissions:
@@ -51,6 +54,7 @@ jobs:
           python3 -m unittest discover -s tests/ci -p 'test_platform_workspace_scenario_order.py' -v
           python3 -m unittest discover -s tests/ci -p 'test_platform_workspace_group_repeatability.py' -v
           python3 -m unittest discover -s tests/ci -p 'test_platform_workspace_omission_shadow_r18.py' -v
+          python3 -m unittest discover -s tests/ci -p 'test_platform_workspace_r19_negative_controls.py' -v
       - name: Compare original and reordered regression contexts on isolated SQLite
         env:
           APP_ENV: testing
@@ -73,6 +77,17 @@ jobs:
           QUEUE_CONNECTION: sync
           NATIVE_AI_DRIVER: disabled
         run: python3 scripts/ci/platform_workspace_omission_shadow_r18.py --run
+      - name: R19 detect four V5871 tripwires in five distinct historical groups
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          DB_URL: ''
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+          NATIVE_AI_DRIVER: disabled
+        run: python3 scripts/ci/platform_workspace_r19_negative_controls.py --run
       - name: Repeat original and reversed regression groups three times each
         id: repeat
         env:
