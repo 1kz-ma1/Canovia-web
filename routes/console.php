@@ -228,3 +228,43 @@ Artisan::command(
         return 0;
     },
 )->purpose('Retry bounded verified private file cleanup after committed deletes; operator-only, no automatic production scheduling');
+
+
+/**
+ * Aggregate, read-only cleanup health check. Does not scan object storage,
+ * decrypt any private paths, run a retry, or configure a scheduled task.
+ *
+ * --strict returns 2 for attention and 1 for unavailable schema/DB.
+ * Default exit 0 for attention (human operator inspection without a failing
+ * shell session); unavailable schema/DB always fails closed with exit 1.
+ */
+Artisan::command(
+    'canovia:private-file-cleanup-health
+        {--json : Print only aggregate JSON without private paths or IDs}
+        {--strict : Return exit 2 when quarantine or stale work needs attention}',
+    function (\App\Services\PrivateFileCleanupHealthService $health): int {
+        $report = $health->report();
+        if ($this->option('json')) {
+            $this->line((string) json_encode($report, JSON_THROW_ON_ERROR));
+        } else {
+            $this->line('Private file cleanup health: '.$report['health']);
+            $this->line('schema: '.$report['schema']);
+            foreach ([
+                'pending', 'pending_due', 'pending_stale_24h',
+                'pending_high_retry_5', 'pending_without_retry_date',
+                'quarantined', 'unknown_status',
+            ] as $metric) {
+                $this->line($metric.': '.$report[$metric]);
+            }
+            foreach ($report['quarantined_reasons'] as $reason => $count) {
+                $this->line('quarantine_'. $reason .': '.$count);
+            }
+        }
+
+        if ($report['health'] === 'unavailable') {
+            return 1;
+        }
+        return $report['health'] === 'attention' && $this->option('strict')
+            ? 2 : 0;
+    },
+)->purpose('Read-only private deletion health: overdue work, high retries, quarantine and safe reason-code counts');
