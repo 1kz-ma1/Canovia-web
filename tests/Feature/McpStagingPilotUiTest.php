@@ -63,16 +63,16 @@ final class McpStagingPilotUiTest extends TestCase
         ])->assertRedirect('/account');
 
         $this->get('/account')->assertOk()
-            ->assertSee('ログインできました')
+            ->assertSee('ChatGPTとCanoviaをつなぐ')
             ->assertSee(McpStagingSyntheticActorBootstrap::EMAIL)
-            ->assertSee('Auth0の本人IDを確認')
-            ->assertSee('まだ無効です')
+            ->assertSee('1. 本人確認')
+            ->assertSee('連携のテストは現在利用できません')
             ->assertSee('ログアウト')
             ->assertDontSee('アカウントと本人所有データを削除')
             ->assertDontSee('プライバシーポリシー')
             ->assertDontSee('resources/js/app.js')
             ->assertDontSee('name="duration_days"', false)
-            ->assertDontSee('Auth0で本人確認を開始');
+            ->assertDontSee('本人確認をはじめる');
         $this->post('/logout')->assertRedirect('/login');
     }
 
@@ -106,14 +106,14 @@ final class McpStagingPilotUiTest extends TestCase
         ]);
 
         $this->actingAs($user)->get('/account')->assertOk()
-            ->assertSee('Auth0の本人確認はまだ無効です')
-            ->assertDontSee('Auth0で本人確認を開始')
-            ->assertDontSee('本人IDの紐付けを確定');
+            ->assertSee('本人確認は現在利用できません')
+            ->assertDontSee('本人確認をはじめる')
+            ->assertDontSee('このアカウントを使う');
 
         config(['canovia_staging.account_link_pilot_enabled' => true]);
         $this->get('/account')->assertOk()
-            ->assertSee('Auth0で本人確認を開始')
-            ->assertDontSee('本人IDの紐付けを確定')
+            ->assertSee('本人確認をはじめる')
+            ->assertDontSee('このアカウントを使う')
             ->assertDontSee('name="duration_days"', false);
 
         // Disabling the pilot must also suppress a verified-session confirm
@@ -124,18 +124,18 @@ final class McpStagingPilotUiTest extends TestCase
             'identity_fingerprint' => str_repeat('a', 64),
             'verified_at' => now()->timestamp,
         ]])->get('/account')->assertOk()
-            ->assertSee('Auth0の本人確認はまだ無効です')
-            ->assertDontSee('本人IDの紐付けを確定')
-            ->assertDontSee('Auth0で本人確認を開始');
+            ->assertSee('本人確認は現在利用できません')
+            ->assertDontSee('このアカウントを使う')
+            ->assertDontSee('本人確認をはじめる');
 
         config([
             'canovia_staging.account_link_pilot_enabled' => true,
             'canovia_mcp.tools_enabled' => true,
         ]);
         $this->get('/account')->assertOk()
-            ->assertSee('Auth0の本人確認はまだ無効です')
-            ->assertDontSee('本人IDの紐付けを確定')
-            ->assertDontSee('Auth0で本人確認を開始');
+            ->assertSee('本人確認は現在利用できません')
+            ->assertDontSee('このアカウントを使う')
+            ->assertDontSee('本人確認をはじめる');
 
         $this->assertDatabaseCount('mcp_linked_subjects', 0);
         $this->assertDatabaseCount('mcp_delegated_grants', 0);
