@@ -14,7 +14,7 @@
     </summary>
     <p class="mt-2 text-xs leading-5 text-slate-400">
         AP学習などの支援用に、計画名・登録した期限・Taskの進捗を必要な範囲だけChatGPTに共有できます。
-        演習問題・回答・採点結果やプロフィールは共有しません。
+        演習問題・回答・採点詳細やプロフィールは共有しません。演習の集計は別途明示的に選んだ場合だけ共有できます。
         共有には外部サービスでの本人再確認と最終承認が必要です。
     </p>
     @if ($studyMcpReady)
@@ -28,6 +28,9 @@
                 <select class="form-control mt-1 block w-full" name="scope" required>
                     <option value="overview">計画名・期限のみ</option>
                     <option value="tasks">計画名・期限＋Taskの名前・状態・進捗</option>
+                    @if (config('canovia_mcp.study_summary_read_enabled') === true)
+                        <option value="study_progress">計画・Task＋反映済み演習の得点・弱点集計</option>
+                    @endif
                 </select>
             </label>
             <label class="block text-xs text-slate-300">
