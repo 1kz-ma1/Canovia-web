@@ -173,7 +173,7 @@
                 </details>
             </section>
         @else
-            <section class="page-card p-5 sm:p-6" data-guided-execution-prepare>
+            <section id="guided-execution-prepare" class="page-card p-5 sm:p-6" data-guided-execution-prepare>
                 <p class="text-[10px] font-black uppercase tracking-[.16em] text-cyan-300">BEFORE ACTION</p>
                 <h2 class="mt-1 text-xl font-black text-slate-100">始める前に、今回だけ見るポイントを決める</h2>
                 <p class="mt-2 max-w-3xl text-xs leading-5 text-slate-500">全部埋める必要はありません。「今回やること」だけでも開始できます。意識点や観測点を決めると、戻ってきた時の振り返りがEvidenceとして使いやすくなります。</p>
@@ -255,6 +255,12 @@
                         </p>
                         @if ($alreadyAdopted)
                             <p class="mt-3 text-xs font-bold text-emerald-300" data-reflection-next-action-adopted>次のActionに反映済み</p>
+                            @if (! $activeExecution)
+                                <a href="#guided-execution-prepare"
+                                   class="btn-primary mt-3 inline-flex min-h-11 items-center justify-center"
+                                   data-reflection-next-action-start>このActionで次の作業を始める</a>
+                                <p class="mt-2 text-xs text-slate-400">次の作業は下の準備画面から開始できます。開始するまで新しいEvidenceや進捗は記録されません。</p>
+                            @endif
                         @elseif ($mayAdopt)
                             <form method="POST"
                                   action="{{ route('plans.tasks.guided_execution.confirm_next_action', [$plan, $task, $latestCompleted]) }}"
