@@ -18,6 +18,7 @@
 
 ## MCP staging and public-release readiness (2026-10-09)
 
+- [**2026-10-14 real ChatGPT OAuth, scoped Development Plan/Task read & revocation acceptance**](development/MCP_CHATGPT_STAGING_REAL_OAUTH_READ_REVOCATION_ACCEPTANCE_2026_10_14.md): **PASS for one isolated synthetic staging fixture only**, including wrong-subject denial, approved overview/tasks reads and post-revocation denial. Staging diagnostic removal and all production security/rollout gates remain open; this dated evidence supersedes older *not-yet-tested* staging statements but does not imply production activation.
 - [Isolated synthetic Development Plan consent pilot](development/MCP_STAGING_SYNTHETIC_PLAN_CONSENT_PILOT_2026_10_13.md): off-by-default staging-only, owner-verified scope and expiry; MCP reads stay disabled.
 - [ChatGPT MCP Phase 1 Development-only read acceptance](development/MCP_CHATGPT_PHASE1_DEVELOPMENT_READ_2026_10_11.md): approved implementation scope, OAuth Tool declaration, Auth0/JWT gating, and real ChatGPT E2E proof still required.
 - [Closed staging synthetic Plan/Task read fixture](development/MCP_STAGING_SYNTHETIC_READ_FIXTURE_2026_10_09.md): operator-only fixed sample Plan; no live OAuth/ChatGPT access yet.
