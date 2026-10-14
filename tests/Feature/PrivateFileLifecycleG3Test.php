@@ -183,6 +183,73 @@ final class PrivateFileLifecycleG3Test extends TestCase
         // orphan requiring an operator-owned cleanup/reconciliation policy.
     }
 
+    public function test_career_capture_deletion_defers_file_unlink_until_outer_commit(): void
+    {
+        $owner = User::factory()->create();
+        [$plan] = $this->planWithTask($owner);
+        $plan->update(['category' => '就活・キャリア']);
+        $path = 'career-captures/'.$plan->id.'/old-screenshot.png';
+        Storage::put($path, 'screenshot bytes');
+        $capture = $this->career($owner, $plan, $path);
+
+        DB::transaction(function () use ($owner, $plan, $capture, $path): void {
+            $this->actingAs($owner)
+                ->delete(route('plans.career.captures.destroy', [$plan, $capture]))
+                ->assertRedirect()->assertSessionHasNoErrors();
+
+            $this->assertDatabaseMissing('career_captures', ['id' => $capture->id]);
+            Storage::assertExists($path);
+        });
+
+        Storage::assertMissing($path);
+    }
+
+    public function test_rolled_back_career_capture_deletion_preserves_file_and_record(): void
+    {
+        $owner = User::factory()->create();
+        [$plan] = $this->planWithTask($owner);
+        $plan->update(['category' => '就活・キャリア']);
+        $path = 'career-captures/'.$plan->id.'/rollback.png';
+        Storage::put($path, 'must survive');
+        $capture = $this->career($owner, $plan, $path);
+
+        try {
+            DB::transaction(function () use ($owner, $plan, $capture, $path): void {
+                $this->actingAs($owner)
+                    ->delete(route('plans.career.captures.destroy', [$plan, $capture]))
+                    ->assertRedirect()->assertSessionHasNoErrors();
+                Storage::assertExists($path);
+                throw new RuntimeException('rollback Career Capture deletion');
+            });
+            $this->fail('Expected enclosing rollback.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('rollback Career Capture deletion', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('career_captures', ['id' => $capture->id]);
+        Storage::assertExists($path);
+    }
+
+    public function test_career_capture_deletion_preserves_path_referenced_by_another_inbox(): void
+    {
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        [$plan] = $this->planWithTask($owner);
+        $plan->update(['category' => '就活・キャリア']);
+        $path = 'career-captures/'.$plan->id.'/referenced.png';
+        Storage::put($path, 'reference must survive');
+        $capture = $this->career($owner, $plan, $path);
+        $inbox = $this->inbox($other, null, $path);
+
+        $this->actingAs($owner)
+            ->delete(route('plans.career.captures.destroy', [$plan, $capture]))
+            ->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('career_captures', ['id' => $capture->id]);
+        $this->assertDatabaseHas('inbox_items', ['id' => $inbox->id]);
+        Storage::assertExists($path);
+    }
+
     private function planWithTask(User $owner): array
     {
         $plan = Plan::query()->create([
