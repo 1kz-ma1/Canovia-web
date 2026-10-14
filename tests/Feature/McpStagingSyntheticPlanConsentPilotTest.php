@@ -65,7 +65,7 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
         $this->link($owner);
 
         $this->actingAs($owner)->get('/account')->assertOk()
-            ->assertSee('本人IDの紐付け記録が存在します')
+            ->assertSee('本人確認が済んでいます')
             ->assertDontSee('data-mcp-staging-plan-consent', false);
 
         config(['canovia_mcp.plan_consent_enabled' => true]);
@@ -163,7 +163,7 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
             'verified_at' => now()->timestamp,
         ]])->get('/account')->assertOk()
             ->assertSee('data-mcp-staging-consent-confirm', false)
-            ->assertSee('この検証用Planの共有許可を確定');
+            ->assertSee('この計画の共有を許可する');
 
         $this->post(route('auth.account.mcp_plan_consent.confirm'))
             ->assertRedirect(route('auth.account'));
@@ -241,10 +241,16 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
         $this->get('/account')->assertOk()
             ->assertSee('data-mcp-staging-dual-client-guide', false)
             ->assertSee('data-mcp-staging-link-state', false)
-            ->assertSee('本人ID連携：連携記録あり')
-            ->assertSee('共有許可：現在有効な共有許可なし')
-            ->assertSee('同じAuth0アカウント')
-            ->assertSee('ChatGPT側の現在のOAuth接続')
+            ->assertSee('data-mcp-staging-connection-help', false)
+            ->assertSee('接続の進め方')
+            ->assertSee('うまく接続できないとき')
+            ->assertSee('本人確認で選んだものと同じアカウント')
+            ->assertDontSee('Auth0')
+            ->assertDontSee('外部ID')
+            ->assertSee('本人確認：済み')
+            ->assertSee('計画の共有：許可していません')
+            ->assertSee('同じアカウント')
+            ->assertSee('ChatGPT側の接続が完了したとは限りません')
             ->assertDontSee('github|', false)
             ->assertDontSee('google-oauth2|', false)
             ->assertDontSee('data-mcp-staging-active-grant', false);
@@ -267,9 +273,9 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
         ]);
 
         $this->get('/account')->assertOk()
-            ->assertSee('共有許可：有効')
-            ->assertSee('共有範囲：概要＋Task')
-            ->assertSee('ChatGPT側の現在のOAuth接続');
+            ->assertSee('計画の共有：許可中')
+            ->assertSee('共有内容：計画の概要とタスク')
+            ->assertSee('ChatGPT側の接続が完了したとは限りません');
 
         // Revocation updates the honest status; the guide cannot report a
         // completed ChatGPT login solely from a Canovia-side grant.
@@ -278,7 +284,7 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
             'revoked_at' => now(),
         ]);
         $this->get('/account')->assertOk()
-            ->assertSee('共有許可：現在有効な共有許可なし')
+            ->assertSee('計画の共有：許可していません')
             ->assertDontSee('data-mcp-staging-active-grant', false);
 
         config(['canovia_staging.synthetic_read_pilot_enabled' => false]);
