@@ -216,6 +216,8 @@
                             class="flex flex-wrap items-center gap-2">
                             @csrf
                             <input type="hidden" name="action" value="confirm_{{ $kind }}">
+                            <input type="hidden" name="target_revision" value="{{ $operationalTarget->revision }}">
+                            <input type="hidden" name="expected_data_store" value="{{ $operationalStore }}">
                             <label class="flex items-start gap-2 text-[11px] text-slate-300">
                                 <input type="checkbox" name="attest" value="yes" required class="mt-0.5">
                                 {{ $label }}ことを自分で確認した
