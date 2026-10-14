@@ -104,9 +104,17 @@ class OmissionShadowTests(unittest.TestCase):
 
     def test_other_repeat_context_removed_fails_closed(self):
         original = WORKFLOW.read_text(encoding="utf-8")
+        other_command = (
+            "        run: php artisan test "
+            "tests/Feature/PlanActionDraftV5873Test.php "
+            "tests/Feature/PlanActionDraftV5872Test.php "
+            "tests/Feature/PlanActionDraftV5871Test.php"
+        )
+        self.assertEqual(original.count(other_command), 1)
         modified = original.replace(
-            "tests/Feature/PlanActionDraftV5871Test.php",
-            "tests/Feature/PlanActionDraftV5872Test.php", 1,
+            other_command,
+            other_command.replace(" tests/Feature/PlanActionDraftV5871Test.php", ""),
+            1,
         )
         with self.assertRaises(Inconclusive):
             validate_scope(modified)
