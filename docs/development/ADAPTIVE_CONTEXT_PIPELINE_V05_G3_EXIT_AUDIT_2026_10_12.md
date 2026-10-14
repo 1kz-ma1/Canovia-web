@@ -1281,3 +1281,33 @@ account scope, request/budget ceilings, revocation, original
 evidence custody, writer/ABA/conditional-operation and crash tests,
 Aiven audit and release acceptance remain outstanding. Five previous
 G3 migrations are still production-unapproved. **G3 OPEN.**
+
+## 77. G3-R32 — First isolated S3-compatible HTTP experiment (2026-10-14)
+
+Following the owner's request to test in an isolated environment,
+a GitHub-hosted temporary runner started a **localhost Moto S3 API
+emulator**, not Amazon S3. Run
+[38571152324](https://github.com/1kz-ma1/Canovia-web/actions/runs/38571152324)
+passed seven HTTP/SDK scenarios at commit
+`3dbffcded260e945475146c23e3879d0eaa29495`:
+versioned A→B→A retrieval, four concurrent writers with
+distinct version IDs, ambiguous discarded PUT response and repeated
+write, client reconnect, unversioned bucket failure to supply a
+usable generation, metadata non-attestation classification, and
+strict localhost/dummy-credential scope rejection.
+
+This is **an isolated emulation result, not an independent AWS S3
+provider verification**. The response loss is a client-side
+injection, not a real network failure; the client reconnect is
+not a server crash/restart recovery; no conditional delete, live
+IAM, cloud versioning state, external writer fencing, physical
+durability, actual account credentials or real provider signature
+was tested. Test teardown terminates only the ephemeral runner's
+local process; no `DeleteObject` is called.
+
+R31's hold remains. Real provider evidence requires a separate
+authorized disposable AWS account, trust root, scoped principal,
+cost control, generation/concurrency and crash-recovery study,
+qualified operator review and separately approved destructive
+operations. Five earlier G3 migrations remain production-unapproved.
+**G3 OPEN; no real S3 access or production rollout.**
