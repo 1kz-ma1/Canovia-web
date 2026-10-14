@@ -166,9 +166,10 @@ def main() -> int:
     parser.add_argument("--candidate-sha", required=True)
     parser.add_argument("--main-snapshot-sha", required=True)
     parser.add_argument("--release-ref", required=True)
+    parser.add_argument("--git-repo", default=str(ROOT), help="Local audited Git clone (offline, no fetch)")
     args = parser.parse_args()
     try:
-        result = inspect(ROOT, args.production_branch_sha, args.candidate_sha,
+        result = inspect(Path(args.git_repo), args.production_branch_sha, args.candidate_sha,
                          args.main_snapshot_sha, args.release_ref)
         code = 0  # Report generation success ONLY. Report always BLOCK.
     except (IncompleteSnapshot, ValueError, OverflowError):
