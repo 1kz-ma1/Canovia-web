@@ -116,8 +116,10 @@ final class McpOAuthPlanConsentController extends Controller
             || ! is_int($verified['plan_id'] ?? null)
             || ! is_string($verified['identity_fingerprint'] ?? null)
             || ! is_string($verified['scope'] ?? null)
+            || ! (is_int($verified['duration_days'] ?? null)
+                || ($verified['duration_days'] ?? null) === McpExplicitPlanConsentService::UNTIL_REVOKED)
             || ! $consent->isScopeAndDurationAllowed(
-                $verified['scope'], $verified['duration_days'] ?? '',
+                $verified['scope'], $verified['duration_days'],
             )
             || ! $consent->grant(
                 $actor,
