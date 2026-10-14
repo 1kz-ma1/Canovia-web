@@ -2,9 +2,13 @@ name: MCP Isolated Staging Docker Smoke
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, release/mcp-staging-live-baseline-20261014]
     paths:
       - 'Dockerfile.mcp-staging'
+      - 'app/Services/McpOAuthAccountLinkProvider.php'
+      - 'app/Services/McpOAuthAccountLinkConfiguration.php'
+      - 'app/Services/McpStagingOAuthFailureDiagnostic.php'
+      - 'resources/views/auth/staging-pilot-account.blade.php'
       - 'docker/mcp-staging-start.sh'
       - 'docker/render-start.sh'
       - 'docker/nginx.conf'

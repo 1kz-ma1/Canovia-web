@@ -2,7 +2,7 @@ name: MCP Auth0 JWT Provider Routing
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, release/mcp-staging-live-baseline-20261014]
     paths:
       - 'app/Services/McpExternalTokenVerifier.php'
       - 'app/Services/McpDelegatedPlanAccessPolicy.php'
@@ -10,6 +10,9 @@ on:
       - 'app/Services/McpAuth0JwtTokenVerifier.php'
       - 'app/Services/McpOAuthAccountLinkConfiguration.php'
       - 'app/Services/McpOAuthAccountLinkProvider.php'
+      - 'app/Http/Controllers/McpOAuthAccountLinkController.php'
+      - 'app/Http/Controllers/McpOAuthPlanConsentController.php'
+      - 'tests/Feature/McpStagingProviderPreflightTest.php'
       - 'app/Http/Controllers/McpReadOnlyResourceController.php'
       - 'config/canovia_mcp.php'
       - 'tests/Feature/McpAuth0JwtProviderRoutingTest.php'
