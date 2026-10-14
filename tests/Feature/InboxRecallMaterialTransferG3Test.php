@@ -74,6 +74,29 @@ final class InboxRecallMaterialTransferG3Test extends TestCase
         Http::assertSentCount(1);
     }
 
+    public function test_opted_in_recall_copy_acquires_private_path_fence_before_writing(): void
+    {
+        config(['canovia.private_file_path_fence_enabled' => true]);
+        [$actor, $plan, $task, $inbox] = $this->scenario();
+
+        $this->routeRecall($actor, $plan, $task, $inbox)
+            ->assertSessionHasNoErrors();
+
+        $source = StudyRecallSource::firstOrFail();
+        $this->assertSame('ready', $source->status);
+        $this->assertSame(1, \Illuminate\Support\Facades\DB::table(
+            'private_file_path_fences'
+        )->count());
+        $fence = app(\App\Services\PrivateFilePathFenceService::class);
+        $this->assertDatabaseHas('private_file_path_fences', [
+            'path_digest' => $fence->fingerprint(
+                (string) config('filesystems.default'),
+                $source->storage_path,
+            ),
+        ]);
+        $this->assertSame('original uploaded image A', Storage::get($source->storage_path));
+    }
+
     public function test_text_inbox_still_routes_into_recall_with_no_copy(): void
     {
         [$actor, $plan, $task, $inbox] = $this->scenario('text');
