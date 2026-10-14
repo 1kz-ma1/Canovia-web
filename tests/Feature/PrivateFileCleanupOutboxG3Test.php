@@ -250,6 +250,80 @@ final class PrivateFileCleanupOutboxG3Test extends TestCase
         ]);
     }
 
+    public function test_reference_created_during_checksum_read_prevents_final_unlink(): void
+    {
+        $path = 'inbox/owner/late-reference.png';
+        Storage::put($path, 'sealed original bytes');
+        $this->insertPending($path);
+
+        $realManager = Storage::getFacadeRoot();
+        $disk = Mockery::mock();
+        $disk->shouldReceive('exists')->once()->with($path)->andReturn(true);
+        $disk->shouldReceive('get')->once()->with($path)
+            ->andReturnUsing(function () use ($path): string {
+                // Simulate a new surviving Inbox owner while the storage read
+                // is in progress, *after* the first live-reference check.
+                InboxItem::query()->create([
+                    'source_type' => 'image',
+                    'status' => 'new',
+                    'storage_path' => $path,
+                ]);
+                return 'sealed original bytes';
+            });
+        $disk->shouldNotReceive('delete');
+        Storage::shouldReceive('disk')->once()
+            ->with((string) config('filesystems.default'))->andReturn($disk);
+
+        try {
+            $result = app(PrivateFileLifecycleService::class)->retryDue();
+        } finally {
+            Storage::swap($realManager);
+        }
+
+        $this->assertSame(1, $result['retained']);
+        Storage::assertExists($path);
+        $this->assertDatabaseHas('inbox_items', ['storage_path' => $path]);
+        $this->assertDatabaseCount('private_file_cleanup_entries', 0);
+    }
+
+    public function test_reference_schema_lost_during_checksum_read_fails_closed(): void
+    {
+        $path = 'study-recall-sources/owner/late-schema-failure.pdf';
+        Storage::put($path, 'sealed original bytes');
+        $this->insertPending($path);
+
+        $realManager = Storage::getFacadeRoot();
+        $realSchema = Schema::getFacadeRoot();
+        $disk = Mockery::mock();
+        $disk->shouldReceive('exists')->once()->with($path)->andReturn(true);
+        $disk->shouldReceive('get')->once()->with($path)
+            ->andReturnUsing(function (): string {
+                // The initial reference check succeeded. Make the second
+                // check unqueryable before it can authorize a physical delete.
+                Schema::shouldReceive('hasTable')->once()
+                    ->with('inbox_items')->andReturn(false);
+                return 'sealed original bytes';
+            });
+        $disk->shouldNotReceive('delete');
+        Storage::shouldReceive('disk')->once()
+            ->with((string) config('filesystems.default'))->andReturn($disk);
+
+        try {
+            $result = app(PrivateFileLifecycleService::class)->retryDue();
+        } finally {
+            Storage::swap($realManager);
+            Schema::swap($realSchema);
+        }
+
+        $this->assertSame(1, $result['retry']);
+        Storage::assertExists($path);
+        $this->assertDatabaseHas('private_file_cleanup_entries', [
+            'status' => 'pending',
+            'attempt_count' => 1,
+            'last_reason' => 'reference_check_unavailable',
+        ]);
+    }
+
     private function insertPending(string $path): void
     {
         DB::table('private_file_cleanup_entries')->insert([
