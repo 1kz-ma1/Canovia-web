@@ -136,7 +136,14 @@ final class DevelopmentOperationalProviderBoundaryService
         }
 
         try {
-            return new DateTimeImmutable($value);
+            $timestamp = new DateTimeImmutable($value);
+            // DateTimeImmutable normalizes impossible days (e.g. February 30).
+            // Reject them rather than silently accepting forged freshness.
+            if ($timestamp->format('Y-m-d\\TH:i:s') !== substr($value, 0, 19)) {
+                return null;
+            }
+
+            return $timestamp;
         } catch (Throwable) {
             return null;
         }
