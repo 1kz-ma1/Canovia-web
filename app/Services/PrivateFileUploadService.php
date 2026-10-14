@@ -21,6 +21,7 @@ final class PrivateFileUploadService
     public function __construct(
         private readonly PrivateFilePathFenceService $fence,
         private readonly PrivateFileUploadIntentService $intents,
+        private readonly PrivateFileStorageBoundaryService $storageBoundary,
     ) {}
 
     public function enabled(): bool
@@ -40,6 +41,12 @@ final class PrivateFileUploadService
 
         if ($uploads === []) {
             throw new RuntimeException('Private upload list is empty.');
+        }
+
+        // An external store may retain bytes if owner persistence fails.
+        // Do not begin external writes without the durable PRE-write journal.
+        if (! $this->storageBoundary->isLocalDefaultDisk() && ! $this->intents->enabled()) {
+            throw new RuntimeException('Private external upload requires durable journal.');
         }
 
         $disk = (string) config('filesystems.default', 'local');
@@ -100,7 +107,15 @@ final class PrivateFileUploadService
             } catch (Throwable $exception) {
                 // Cleanup stays inside the transaction while our path locks
                 // are held. Never delete keys that existed before our writes.
-                foreach ($claimed as $path) {
+                if ($claimed !== [] && ! $this->storageBoundary->isLocalDefaultDisk()) {
+                    // In a versioned provider, a same-body ABA or another
+                    // writer could now occupy this path. Preserve the object;
+                    // the journal is settled to needs_review outside the rollback.
+                    Log::warning('Private upload rollback cleanup held', [
+                        'reason' => 'provider_generation_delete_unverified',
+                    ]);
+                }
+                foreach ($this->storageBoundary->isLocalDefaultDisk() ? $claimed : [] as $path) {
                     try {
                         if (! $storage->delete($path)) {
                             Log::warning('Private upload rollback cleanup incomplete', [

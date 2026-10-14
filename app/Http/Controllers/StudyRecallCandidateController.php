@@ -14,6 +14,7 @@ use App\Services\BehaviorIdentityService;
 use App\Services\FeatureAccessService;
 use App\Services\PlanOwnershipService;
 use App\Services\PrivateFileUploadService;
+use App\Services\PrivateFileStorageBoundaryService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\StudyRecallBatchCandidateExtractionService;
 use App\Services\StudyRecallCandidateExtractionService;
@@ -67,6 +68,7 @@ class StudyRecallCandidateController extends Controller
             $uploadPath = 'study-recall-sources/'.$plan->id.'/'.$task->id
                 .'/'.Str::uuid().'.'.$extension;
             if (! $privateUploads->enabled()) {
+                app(PrivateFileStorageBoundaryService::class)->requireLocalLegacyWriter();
                 $path = $file->storeAs(dirname($uploadPath), basename($uploadPath));
             }
         }
@@ -188,6 +190,7 @@ class StudyRecallCandidateController extends Controller
                 $uploadPath = 'study-recall-sources/'.$plan->id.'/'.$task->id
                     .'/'.Str::uuid().'.'.$extension;
                 if (! $privateUploads->enabled()) {
+                    app(PrivateFileStorageBoundaryService::class)->requireLocalLegacyWriter();
                     $path = $file->storeAs(dirname($uploadPath), basename($uploadPath));
                     if (! is_string($path) || $path === '') {
                         throw new RuntimeException('Recall教材ファイルを保存できませんでした。');
@@ -233,7 +236,7 @@ class StudyRecallCandidateController extends Controller
                 : StudyRecallSource::query()->create($sourceAttributes);
         } catch (Throwable $exception) {
             if ($path) {
-                Storage::delete($path);
+                app(PrivateFileStorageBoundaryService::class)->deleteRollbackForLocal($path);
             }
 
             throw $exception;
@@ -373,6 +376,7 @@ class StudyRecallCandidateController extends Controller
                 },
             );
         } else {
+        app(PrivateFileStorageBoundaryService::class)->requireLocalLegacyWriter();
         try {
             foreach ($files as $file) {
                 $mime = (string) $file->getMimeType();
@@ -425,7 +429,7 @@ class StudyRecallCandidateController extends Controller
             }
         } catch (Throwable $exception) {
             if ($paths !== []) {
-                Storage::delete($paths);
+                app(PrivateFileStorageBoundaryService::class)->deleteRollbackForLocal($paths);
             }
 
             if ($sources->isNotEmpty()) {
