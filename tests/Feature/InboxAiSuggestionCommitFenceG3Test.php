@@ -164,6 +164,47 @@ final class InboxAiSuggestionCommitFenceG3Test extends TestCase
         Http::assertSentCount(0);
     }
 
+    public function test_inbox_content_correction_before_provider_blocks_submission(): void
+    {
+        [$user, $item] = $this->scenario('image');
+        $this->mutateOnSecondFileRead($user, $item, function () use ($item): void {
+            $item->update(['content' => 'corrected before provider']);
+        });
+        $this->assertNoPreProviderSubmission($item);
+        $this->assertSame('corrected before provider', $item->fresh()->content);
+    }
+
+    public function test_inbox_owner_transfer_before_provider_blocks_submission(): void
+    {
+        [$user, $item] = $this->scenario('image');
+        $other = User::factory()->create();
+        $this->mutateOnSecondFileRead($user, $item, function () use ($item, $other): void {
+            $item->update(['user_id' => $other->id]);
+        });
+        $this->assertNoPreProviderSubmission($item);
+        $this->assertSame($other->id, $item->fresh()->user_id);
+    }
+
+    public function test_shared_editor_downgrade_before_provider_blocks_private_file_submission(): void
+    {
+        [$editor, $item, $plan, $membership] = $this->sharedEditorScenario('image');
+        $this->mutateOnSecondFileRead($editor, $item, function () use ($membership): void {
+            $membership->update(['role' => PlanMember::ROLE_VIEWER]);
+        });
+        $this->assertNoPreProviderSubmission($item);
+        $this->assertSame(PlanMember::ROLE_VIEWER, $membership->fresh()->role);
+    }
+
+    public function test_entitlement_expiration_before_provider_blocks_private_file_submission(): void
+    {
+        [$user, $item] = $this->scenario('image');
+        $this->mutateOnSecondFileRead($user, $item, function () use ($user): void {
+            UserProductGrant::query()->where('user_id', $user->id)
+                ->update(['expires_at' => now()->subMinute()]);
+        });
+        $this->assertNoPreProviderSubmission($item);
+    }
+
     public function test_post_provider_file_change_withholds_stale_candidate(): void
     {
         [$user, $item] = $this->scenario('image');
@@ -307,9 +348,44 @@ final class InboxAiSuggestionCommitFenceG3Test extends TestCase
         $this->assertSame('新しいPlanタイトル', $plan->fresh()->title);
     }
 
-    private function sharedEditorScenario(): array
+    private function assertNoPreProviderSubmission(InboxItem $item): void
     {
-        [$editor, $item] = $this->scenario();
+        $this->assertSame('new', $item->fresh()->status);
+        $this->assertNull(data_get($item->fresh()->metadata, 'routing_suggestion'));
+        $this->assertDatabaseCount('native_ai_runs', 0);
+        Http::assertSentCount(0);
+    }
+
+    private function mutateOnSecondFileRead(User $user, InboxItem $item, callable $mutate): void
+    {
+        // Storage bytes remain identical. Inject a committed database change
+        // immediately after preparing the provider input, but before the
+        // pre-provider admission transaction. Prior R38 code sent AI anyway.
+        $real = Storage::getFacadeRoot();
+        $fake = Mockery::mock();
+        $fake->shouldReceive('exists')->atLeast()->once()->andReturn(true);
+        $reads = 0;
+        $fake->shouldReceive('get')->twice()->with($item->storage_path)
+            ->andReturnUsing(function () use (&$reads, $mutate): string {
+                $reads++;
+                if ($reads === 2) {
+                    $mutate();
+                }
+
+                return 'original-image-bytes';
+            });
+        Storage::swap($fake);
+        try {
+            $this->suggest($user, $item)->assertSessionHas('status');
+        } finally {
+            Storage::swap($real);
+        }
+        $this->assertSame(2, $reads);
+    }
+
+    private function sharedEditorScenario(string $type = 'text'): array
+    {
+        [$editor, $item] = $this->scenario($type);
         $owner = User::factory()->create();
         $plan = $this->plan($owner);
         $plan->update(['is_collaborative' => true]);
