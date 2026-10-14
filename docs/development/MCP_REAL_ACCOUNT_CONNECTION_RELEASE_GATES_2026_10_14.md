@@ -72,6 +72,14 @@ Schema changes from PR #587 `2026_10_14_000100_allow_nonexpiring_mcp_grants.php`
 - **External synthetic staging**: exact reviewed stage SHA and disabled-flag checks; two-client GitHub identity match; overview/tasks read with real ChatGPT; wrong OAuth account denied; revoke read denied; expired/indefinite grant; status page truthfulness; 429 provenance if reproduced. Stage fixture remains **synthetic only**.
 - **Owner-accepted real account (LAST)**: after approved production release and explicit per-Plan consent only, authorize exactly one personal Development Plan at **overview** scope first. Then, only on an additional deliberate consent, `tasks`; confirm partial metadata; change permissions; revoke; prove post-revoke denial; unlink; verify new account gets no old grants. Do not read another real Plan to “test discovery.”
 
+## 8. Current security slice: corrupt live-reservation and token-verification revocation
+
+Implementation scope of this feature branch (no schema/config/deploy changes):
+
+- A live external-identity record must have an **exact** active reservation equal to its immutable historical HMAC fingerprint. Confirmations inspect linked/unrevoked identity claims by original fingerprint, not only the potentially missing active reservation. If an out-of-band write or interrupted migration leaves a live row with `active_identity_fingerprint=NULL` or a different fingerprint, **both** its owner and a second account fail closed. Normal released/revoked history can still re-link after fresh OAuth and must not inherit consent.
+- During a trusted remote bearer verification callback, an owner may revoke an indefinite grant or unlink the external identity. A subsequent request continuation must independently re-check current grant/link records before returning any Plan data, and must not record `context_read`.
+- The tests above exercise a deterministic **revocation-between-token-verification-and-read** ordering and malformed-row negative controls. They do **not** establish actual overlapping multi-connection `SELECT ... FOR UPDATE` behavior; a separate disposable PostgreSQL 17 / MySQL 8.0+ multi-connection lock-contention matrix remains required before real user access. Do not label this gate complete on SQLite success alone.
+
 ## 7. Small PR sequence, ownership and stop conditions
 
 1. **This PR — spec/evidence only**: record gaps, operator release gates, user-state semantics and test matrix. No OAuth, configuration or DB writes; no production activation.
