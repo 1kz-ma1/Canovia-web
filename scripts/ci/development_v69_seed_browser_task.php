@@ -49,7 +49,7 @@ if ($verify) {
         'task_evidence_count' => $evidenceCount,
         'task_progress_percent' => (int) $task->progress_percent,
         'task_next_action' => $task->next_action_note,
-    ], JSON_THROW_ON_ERROR)."\\n";
+    ], JSON_THROW_ON_ERROR).PHP_EOL;
     exit(0);
 }
 
