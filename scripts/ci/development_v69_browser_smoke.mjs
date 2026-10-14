@@ -41,6 +41,9 @@ try {
 
     const form = page.locator('form[data-onboarding-target="plan-form"]');
     await form.locator('input[name="title"]').fill(title);
+    // Category is deliberately hidden in progressive-disclosure details.
+    // Open it as a human does; do not force hidden DOM interactions.
+    await form.locator('details:has(select[name="category"]) > summary').click();
     await form.locator('select[name="category"]').selectOption('個人開発');
     await form.locator('button[type="submit"]').click();
     await page.waitForURL(url => !url.pathname.startsWith('/plans/create'), { timeout: 25000 });
