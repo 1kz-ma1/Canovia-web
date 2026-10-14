@@ -103,10 +103,15 @@ final class DevelopmentOperationalAttestationService
 
             $sameRevision = (int) $target->{$kind.'_revision'} === (int) $target->revision;
             $sameStore = (string) $target->{$kind.'_store'} === $dataStore;
+            // Existing pre-V5.7 claims lack a storage-epoch snapshot and must
+            // be reviewed again. An A->B->A change must never revive a claim.
+            $epoch = (int) (is_array($profile) ? ($profile['data_store_revision'] ?? 0) : 0);
+            $sameStoreEpoch = $epoch >= 1
+                && (int) $target->{$kind.'_store_revision'} === $epoch;
             $ageDays = $kind === 'backup' ? 7 : 90;
             $tooOld = $at->lt(Carbon::now()->subDays($ageDays));
             $fromFuture = $at->gt(Carbon::now()->addMinute());
-            $stale = ! $sameRevision || ! $sameStore || $tooOld || $fromFuture;
+            $stale = ! $sameRevision || ! $sameStore || ! $sameStoreEpoch || $tooOld || $fromFuture;
 
             $projected[$kind] = [
                 'status' => $stale ? 'stale' : 'operator_confirmed',

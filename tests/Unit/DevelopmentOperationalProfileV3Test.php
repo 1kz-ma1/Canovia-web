@@ -37,7 +37,7 @@ class DevelopmentOperationalProfileV3Test extends TestCase
             'data_store' => 'none',
         ]);
         $this->assertSame(
-            ['stage' => 'live', 'runtime' => 'ios', 'data_store' => 'none'],
+            ['stage' => 'live', 'runtime' => 'ios', 'data_store' => 'none', 'data_store_revision' => 0],
             $m->summary()
         );
 
@@ -45,7 +45,7 @@ class DevelopmentOperationalProfileV3Test extends TestCase
         $m->runtime = 'unknown';
         $m->data_store = 'unrecognized';
         $this->assertSame(
-            ['stage' => 'unknown', 'runtime' => 'unknown', 'data_store' => 'unknown'],
+            ['stage' => 'unknown', 'runtime' => 'unknown', 'data_store' => 'unknown', 'data_store_revision' => 0],
             $m->summary()
         );
     }

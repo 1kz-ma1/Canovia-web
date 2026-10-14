@@ -76,7 +76,7 @@ final class DevelopmentOperationalOperatorReadinessV54Test extends TestCase
     {
         Carbon::setTestNow('2026-10-14 18:00:00');
         $target = $this->target();
-        $profile = ['data_store' => 'server_db'];
+        $profile = ['data_store' => 'server_db', 'data_store_revision' => 1];
         $this->assertSame('service', $this->summarize($profile, $target)['next']['key']);
 
         $target->service_checked_at = Carbon::now();
@@ -87,11 +87,13 @@ final class DevelopmentOperationalOperatorReadinessV54Test extends TestCase
         $target->backup_confirmed_at = Carbon::now();
         $target->backup_revision = 1;
         $target->backup_store = 'server_db';
+        $target->backup_store_revision = 1;
         $this->assertSame('restore', $this->summarize($profile, $target)['next']['key']);
 
         $target->restore_confirmed_at = Carbon::now();
         $target->restore_revision = 1;
         $target->restore_store = 'server_db';
+        $target->restore_store_revision = 1;
         $summary = $this->summarize($profile, $target);
         $this->assertSame('release_review', $summary['next']['key']);
         $this->assertSame('operator_confirmed', $this->checkStatus($summary, 'service'));
@@ -112,20 +114,21 @@ final class DevelopmentOperationalOperatorReadinessV54Test extends TestCase
         $target->backup_confirmed_at = Carbon::now();
         $target->backup_revision = 1;
         $target->backup_store = 'server_db';
+        $target->backup_store_revision = 1;
 
-        $summary = $this->summarize(['data_store' => 'server_db'], $target);
+        $summary = $this->summarize(['data_store' => 'server_db', 'data_store_revision' => 1], $target);
         $this->assertSame('stale', $this->checkStatus($summary, 'service'));
         $this->assertSame('service', $summary['next']['key']);
 
         $target->service_checked_at = Carbon::now();
         $target->revision = 2;
-        $summary = $this->summarize(['data_store' => 'server_db'], $target);
+        $summary = $this->summarize(['data_store' => 'server_db', 'data_store_revision' => 1], $target);
         $this->assertSame('stale', $this->checkStatus($summary, 'service'));
         $this->assertSame('stale', $this->checkStatus($summary, 'backup'));
 
         $target->service_checked_revision = 2;
         $target->backup_revision = 2;
-        $summary = $this->summarize(['data_store' => 'cloud_files'], $target);
+        $summary = $this->summarize(['data_store' => 'cloud_files', 'data_store_revision' => 1], $target);
         $this->assertSame('stale', $this->checkStatus($summary, 'backup'));
         $this->assertSame('backup', $summary['next']['key']);
     }
@@ -137,10 +140,10 @@ final class DevelopmentOperationalOperatorReadinessV54Test extends TestCase
         $this->assertNull($this->summarize(null, $this->target(), $this->plan(42, 0)));
         $other = $this->target();
         $other->provider = 'other';
-        $this->assertNull($this->summarize(['data_store' => 'server_db'], $other));
+        $this->assertNull($this->summarize(['data_store' => 'server_db', 'data_store_revision' => 1], $other));
         $other->provider = 'render';
         $other->resource_ref = 'https://example.com/secret';
-        $this->assertNull($this->summarize(['data_store' => 'server_db'], $other));
+        $this->assertNull($this->summarize(['data_store' => 'server_db', 'data_store_revision' => 1], $other));
     }
 
     public function test_future_dated_v4_recovery_claim_is_stale_in_summary(): void
@@ -150,7 +153,8 @@ final class DevelopmentOperationalOperatorReadinessV54Test extends TestCase
         $target->backup_confirmed_at = Carbon::now()->addHours(2);
         $target->backup_revision = 1;
         $target->backup_store = 'server_db';
-        $summary = $this->summarize(['data_store' => 'server_db'], $target);
+        $target->backup_store_revision = 1;
+        $summary = $this->summarize(['data_store' => 'server_db', 'data_store_revision' => 1], $target);
         $this->assertSame('stale', $this->checkStatus($summary, 'backup'));
     }
 }

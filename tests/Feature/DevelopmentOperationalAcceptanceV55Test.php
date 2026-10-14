@@ -57,13 +57,14 @@ final class DevelopmentOperationalAcceptanceV55Test extends TestCase
         ]);
     }
 
-    private function confirm(Plan $plan, string $kind, int $revision, string $store): array
+    private function confirm(Plan $plan, string $kind, int $revision, string $store, int $storeRevision = 1): array
     {
         return [
             'action' => 'confirm_'.$kind,
             'attest' => 'yes',
             'target_revision' => $revision,
             'expected_data_store' => $store,
+            'expected_data_store_revision' => $storeRevision,
         ];
     }
 
@@ -194,7 +195,7 @@ final class DevelopmentOperationalAcceptanceV55Test extends TestCase
         $this->actingAs($owner)->get($this->page($plan))->assertOk()
             ->assertSee('name="expected_data_store" value="cloud_files"', false);
         $this->actingAs($owner)->post($this->targetRoute($plan),
-            $this->confirm($plan, 'backup', 1, 'cloud_files')
+            $this->confirm($plan, 'backup', 1, 'cloud_files', 2)
         )->assertRedirect();
         $this->assertSame('cloud_files', DevelopmentOperationalTarget::query()
             ->where('plan_id', $plan->id)->firstOrFail()->backup_store);

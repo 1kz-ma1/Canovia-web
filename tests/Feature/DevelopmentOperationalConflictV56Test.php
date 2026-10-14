@@ -120,7 +120,7 @@ final class DevelopmentOperationalConflictV56Test extends TestCase
             $this->actingAs($owner)->post($this->routeFor($plan), [
                 'action' => 'confirm_'.$kind,
                 'target_revision' => 1,
-                'expected_data_store' => 'server_db',
+                'expected_data_store' => 'server_db', 'expected_data_store_revision' => 1,
                 'attest' => 'yes',
             ])->assertStatus(409)
               ->assertSee('data-development-operational-stale-reload', false);
@@ -134,7 +134,7 @@ final class DevelopmentOperationalConflictV56Test extends TestCase
         $this->actingAs($owner)->post($this->routeFor($plan), [
             'action' => 'confirm_backup',
             'target_revision' => 2,
-            'expected_data_store' => 'server_db',
+            'expected_data_store' => 'server_db', 'expected_data_store_revision' => 1,
             'attest' => 'yes',
         ])->assertStatus(409)
           ->assertSee('最新のDevelopment Workを開く');

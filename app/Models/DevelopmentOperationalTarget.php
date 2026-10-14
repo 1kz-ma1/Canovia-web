@@ -13,7 +13,7 @@ final class DevelopmentOperationalTarget extends Model
         'plan_id', 'provider', 'environment', 'resource_ref',
         'revision', 'backup_confirmed_at', 'backup_revision',
         'backup_store', 'restore_confirmed_at', 'restore_revision',
-        'restore_store', 'service_checked_at',
+        'restore_store', 'backup_store_revision', 'restore_store_revision', 'service_checked_at',
         'service_checked_revision', 'service_checked_environment',
     ];
 
@@ -25,6 +25,8 @@ final class DevelopmentOperationalTarget extends Model
             'restore_confirmed_at' => 'datetime',
             'backup_revision' => 'integer',
             'restore_revision' => 'integer',
+            'backup_store_revision' => 'integer',
+            'restore_store_revision' => 'integer',
             'service_checked_at' => 'datetime',
             'service_checked_revision' => 'integer',
         ];

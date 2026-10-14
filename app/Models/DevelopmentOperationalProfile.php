@@ -12,18 +12,24 @@ final class DevelopmentOperationalProfile extends Model
 
     protected $fillable = ['plan_id', 'stage', 'runtime', 'data_store'];
 
+    protected function casts(): array
+    {
+        return ['data_store_revision' => 'integer'];
+    }
+
     public function plan()
     {
         return $this->belongsTo(Plan::class);
     }
 
-    /** @return array{stage:string,runtime:string,data_store:string} */
+    /** @return array{stage:string,runtime:string,data_store:string,data_store_revision:int} */
     public function summary(): array
     {
         return [
             'stage' => in_array($this->stage, self::STAGES, true) ? $this->stage : 'unknown',
             'runtime' => in_array($this->runtime, self::RUNTIMES, true) ? $this->runtime : 'unknown',
             'data_store' => in_array($this->data_store, self::DATA_STORES, true) ? $this->data_store : 'unknown',
+            'data_store_revision' => (int) ($this->data_store_revision ?? 0),
         ];
     }
 }
