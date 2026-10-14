@@ -183,6 +183,7 @@ final class DevelopmentOperationalAttestationV4FeatureTest extends TestCase
           ->assertDontSee('data-development-operational-attestations', false)
           ->assertDontSee('data-development-provider-connection-state', false)
           ->assertDontSee('data-development-render-operator-handoff', false)
+          ->assertDontSee('data-development-operator-summary', false)
           ->assertDontSee('data-development-render-target-id', false)
           ->assertDontSee('srv-private123', false)
           ->assertDontSee('data-development-operational-status="operator_confirmed"', false);
@@ -404,6 +405,77 @@ final class DevelopmentOperationalAttestationV4FeatureTest extends TestCase
             'action' => 'confirm_service', 'target_revision' => 2, 'attest' => 'yes',
         ])->assertStatus(409);
         $this->assertNull($target->fresh()->service_checked_at);
+    }
+
+    public function test_owner_sees_read_only_self_report_summary_and_ordered_next_actions(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($owner, '初回公開準備');
+        $this->profile($plan, 'server_db');
+        $target = DevelopmentOperationalTarget::query()->create([
+            'plan_id' => $plan->id,
+            'provider' => 'render',
+            'environment' => 'staging',
+            'resource_ref' => 'srv-summary123',
+            'revision' => 1,
+        ]);
+        $route = route('workspace.development.operational_target.update', $plan);
+        $page = route('workspace.development.index', ['plan_id' => $plan->id, 'surface' => 'work']);
+
+        $this->actingAs($owner)->get($page)->assertOk()
+            ->assertSee('data-development-operator-summary', false)
+            ->assertSee('data-development-operator-check="service"', false)
+            ->assertSee('data-development-operator-check="backup"', false)
+            ->assertSee('data-development-operator-check="restore"', false)
+            ->assertSee('data-development-operator-next="service"', false)
+            ->assertSee('外部APIによる照合なし', false);
+        $this->assertNull($target->fresh()->service_checked_at);
+
+        $this->actingAs($owner)->post($route, [
+            'action' => 'confirm_service', 'target_revision' => 1, 'attest' => 'yes',
+        ])->assertRedirect();
+        $this->actingAs($owner)->get($page)->assertOk()
+            ->assertSee('data-development-operator-status="operator_confirmed"', false)
+            ->assertSee('data-development-operator-next="backup"', false);
+
+        $this->actingAs($owner)->post($route, [
+            'action' => 'confirm_backup', 'attest' => 'yes',
+        ])->assertRedirect();
+        $this->actingAs($owner)->get($page)->assertOk()
+            ->assertSee('data-development-operator-next="restore"', false);
+
+        $this->actingAs($owner)->post($route, [
+            'action' => 'confirm_restore', 'attest' => 'yes',
+        ])->assertRedirect();
+        $this->actingAs($owner)->get($page)->assertOk()
+            ->assertSee('data-development-operator-next="release_review"', false)
+            ->assertSee('既存の公開品質ゲートは別途必要', false)
+            ->assertSee('data-development-operational-check="deploy"', false);
+
+        $this->assertDatabaseCount('task_evidences', 0);
+        $this->assertSame('srv-summary123', $target->fresh()->resource_ref);
+    }
+
+    public function test_nonpersistent_store_has_not_applicable_summary_recovery_without_confirmation(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($owner, '静的アプリ');
+        $this->profile($plan, 'none');
+        DevelopmentOperationalTarget::query()->create([
+            'plan_id' => $plan->id,
+            'provider' => 'render',
+            'environment' => 'staging',
+            'resource_ref' => 'srv-static7890',
+            'revision' => 1,
+        ]);
+
+        $this->actingAs($owner)->get(route('workspace.development.index', [
+            'plan_id' => $plan->id, 'surface' => 'work',
+        ]))->assertOk()
+          ->assertSee('data-development-operator-summary', false)
+          ->assertSee('data-development-operator-status="not_applicable"', false)
+          ->assertSee('data-development-operator-next="service"', false)
+          ->assertDontSee('data-development-confirm-submit="backup"', false);
     }
 
     private function plan(User $user, string $title): Plan

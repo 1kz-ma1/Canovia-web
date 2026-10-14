@@ -105,7 +105,8 @@ final class DevelopmentOperationalAttestationService
             $sameStore = (string) $target->{$kind.'_store'} === $dataStore;
             $ageDays = $kind === 'backup' ? 7 : 90;
             $tooOld = $at->lt(Carbon::now()->subDays($ageDays));
-            $stale = ! $sameRevision || ! $sameStore || $tooOld;
+            $fromFuture = $at->gt(Carbon::now()->addMinute());
+            $stale = ! $sameRevision || ! $sameStore || $tooOld || $fromFuture;
 
             $projected[$kind] = [
                 'status' => $stale ? 'stale' : 'operator_confirmed',
