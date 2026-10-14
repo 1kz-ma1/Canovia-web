@@ -987,3 +987,39 @@ writer coordination, power-loss test, conditional-generation delete,
 key rotation or approved production rollout. R19 uses deterministic
 test stops, not real process kills. All 4 G3 live-schema approvals
 remain separate. G3 remains OPEN.
+
+## 65. G3-R20 — Persist attempt identity before provider call; persistable receipt still uncertain (2026-10-14)
+
+**Finding:** R19's synthetic halt before/after write acknowledgement
+leaves an indistinguishable `prepared` journal. No application
+transaction can retroactively capture a provider response when the
+process died before committing it. Avoid claiming exactly-once
+object storage mutation or automatically safe replay.
+
+**Bounded R20 implementation:** Add a fifth, additive
+`private_file_write_attempts` migration (not approved for live DB).
+A disposable `APP_ENV=testing`-only and default-OFF
+`PrivateFileWriteAttemptService` reserves a permanent unique
+intent claim, randomized request-token HMAC, path/bucket bindings,
+and key epoch before any simulated request. Later it may encrypt one
+synthetic VersionId as an acknowledged-but-**unattested** fixture.
+A read-only review classifies never-persisted acknowledgements as
+`reserved_outcome_unknown` regardless of whether simulated
+provider memory observed success. Duplicate key, unexpected/late
+status, tampered ciphertext, wrong token, key/epoch/bucket rotation
+all block. No real Storage access, SDK, scheduler, auto retry,
+cleanup or deletion permission.
+
+**Acceptance:** R20 disposable PG16 and MySQL8.0/8.4 tests cover
+committed prewrite reservation, same-state pre-/post-ack crash gap,
+separate synthetic acknowledgement persistence before owner insert,
+one-time immutability, token isolation, corrupt/legacy/current-key
+compatibility, OFF/production/nested-transaction deny, redacted
+aggregate operator report and no physical writes/deletes.
+
+**Remaining G3 blockers:** real provider receipt provenance and
+version ID attestation, durable provider-to-DB atomicity, object
+generation–bound conditional operations, key rotation, external
+uncoordinated writers, actual kill/restart/power loss, manual
+reconciliation criteria, storage retention/cost and FIVE unapproved
+production migrations. G3 is **OPEN**, not released.
