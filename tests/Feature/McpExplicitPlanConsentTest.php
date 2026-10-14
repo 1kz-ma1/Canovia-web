@@ -422,6 +422,65 @@ final class McpExplicitPlanConsentTest extends TestCase
         ));
     }
 
+    public function test_ap_progress_scope_requires_separate_opt_in_and_fresh_oauth_confirmation(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $study = $this->plan($owner, '資格学習');
+        $development = $this->plan($owner);
+        $this->linked($owner);
+        $this->provider();
+
+        config(['canovia_mcp.study_read_enabled' => true]);
+        $this->actingAs($owner)->post($this->startUrl($study), [
+            'scope' => 'study_progress', 'duration_days' => 7,
+        ])->assertRedirect(route('auth.account'));
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+
+        config(['canovia_mcp.study_summary_read_enabled' => true]);
+        // A Development Plan can never opt into Study progress, even when
+        // both switches are on. Ownership and domain are both mandatory.
+        $this->actingAs($owner)->post($this->startUrl($development), [
+            'scope' => 'study_progress', 'duration_days' => 7,
+        ])->assertRedirect(route('auth.account'));
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+
+        $q = $this->start($owner, $study, 'study_progress', 7);
+        $this->oauthCallback($q['state'])->assertRedirect(route('auth.account'));
+        $this->assertSame('study_progress', session('mcp.plan_consent.verified.scope'));
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+        $this->actingAs($owner)->get(route('auth.account'))->assertOk()
+            ->assertSee('反映済み演習の正答率・弱点集計');
+
+        // Only a distinct final explicit owner action activates progress
+        // access. The external OAuth callback alone never writes the grant.
+        $this->actingAs($owner)->post(route('auth.account.mcp_plan_consent.confirm'))
+            ->assertRedirect(route('auth.account'));
+        $grant = McpDelegatedGrant::query()->sole();
+        $this->assertSame($study->id, $grant->plan_id);
+        $this->assertSame('study_progress', $grant->scope);
+
+        $principal = $this->chatgptPrincipal();
+        $policy = app(McpDelegatedPlanAccessPolicy::class);
+        $this->assertNotNull($policy->authorizedGrant(
+            $principal, $study, 'study_progress', requiredDomain: 'study',
+        ));
+        $this->assertNull($policy->authorizedGrant(
+            $principal, $study, 'study_progress', requiredDomain: 'development',
+        ));
+        $this->assertNull($policy->authorizedGrant(
+            $principal, $development, 'study_progress', requiredDomain: 'study',
+        ));
+
+        config(['canovia_mcp.study_summary_read_enabled' => false]);
+        $this->assertNull($policy->authorizedGrant(
+            $principal, $study, 'study_progress', requiredDomain: 'study',
+        ));
+        config(['canovia_mcp.study_summary_read_enabled' => true, 'app.env' => 'staging']);
+        $this->assertNull($policy->authorizedGrant(
+            $principal, $study, 'study_progress', requiredDomain: 'study',
+        ));
+    }
+
     private function plan(
         User $owner,
         string $category = '個人開発',

@@ -6,11 +6,13 @@ use App\Models\DevelopmentAiSharingPreference;
 use App\Models\McpDelegatedGrant;
 use App\Models\McpLinkedSubject;
 use App\Models\Plan;
+use App\Models\StudyPracticeAttempt;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\McpDelegatedIdentityFingerprintService;
 use App\Services\McpReadOnlyContextTool;
 use App\Services\McpReadOnlyStudyContextTool;
+use App\Services\McpReadOnlyStudyPracticeSummaryTool;
 use App\Services\McpDelegatedRevocationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
@@ -502,6 +504,144 @@ final class McpReadOnlyResourceTest extends TestCase
             ->isEligibleMcpPlanOwner($owner, $study));
         $this->assertNull(app(McpReadOnlyStudyContextTool::class)
             ->read($principal, $study->id, 'overview', 5));
+    }
+
+    public function test_ap_practice_summary_requires_separate_progress_consent_and_excludes_private_answers(): void
+    {
+        $this->idp();
+        $owner = User::factory()->create();
+        $study = $this->plan($owner);
+        $study->update(['category' => '資格学習', 'title' => 'Synthetic AP Exam Plan']);
+        $this->linkAndGrant($owner, $study, 'tasks');
+        $grant = McpDelegatedGrant::query()->sole();
+        $task = Task::query()->create([
+            'plan_id' => $study->id,
+            'title' => 'AP network basics', 'status' => 'doing',
+            'progress_percent' => 25, 'priority' => 1, 'sort_order' => 1,
+        ]);
+
+        $record = function (int $score, array $weak, bool $applied, ?int $userId) use ($study, $task): void {
+            StudyPracticeAttempt::query()->create([
+                'plan_id' => $study->id,
+                'task_id' => $task->id,
+                'user_id' => $userId,
+                'request_hash' => bin2hex(random_bytes(32)),
+                'exercise_title' => 'SECRET_ATTEMPT_TITLE_NOT_EXPORTED',
+                'questions' => [['body' => 'SECRET_QUESTION_NOT_EXPORTED']],
+                'answers' => [['text' => 'SECRET_ANSWER_NOT_EXPORTED']],
+                'assessment' => $score === 80
+                    ? [
+                        'rationale' => 'SECRET_GRADING_DETAIL_NOT_EXPORTED',
+                        'question_feedback' => [[
+                            'correctness' => 'incorrect',
+                            'weakness_topics' => ['ネットワーク'],
+                            'explanation' => 'SECRET_MODERN_FEEDBACK_NOT_EXPORTED',
+                        ]],
+                    ]
+                    : ['rationale' => 'SECRET_GRADING_DETAIL_NOT_EXPORTED'],
+                'score_percent' => $score,
+                'recommended_task_progress_percent' => 30,
+                'weaknesses' => $weak,
+                'applied_at' => $applied ? now() : null,
+            ]);
+        };
+        $record(60, ['ネットワーク', 'データベース'], true, $owner->id);
+        $record(80, ['LEGACY_LABEL_IGNORED_FOR_TYPED_FEEDBACK'], true, $owner->id);
+        $record(100, ['PRIVATE_UNAPPLIED_WEAKNESS'], false, $owner->id);
+        $record(0, ['PRIVATE_OTHER_USER_WEAKNESS'], true, User::factory()->create()->id);
+
+        config(['canovia_mcp.study_read_enabled' => true]);
+        $this->rpc('tools/list')->assertOk()->assertJsonCount(2, 'result.tools');
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyPracticeSummaryTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertStatus(400)->assertJsonPath('error.code', -32602);
+
+        config(['canovia_mcp.study_summary_read_enabled' => true]);
+        $this->rpc('tools/list')->assertOk()
+            ->assertJsonCount(3, 'result.tools')
+            ->assertJsonPath('result.tools.2.name', McpReadOnlyStudyPracticeSummaryTool::NAME)
+            ->assertJsonPath('result.tools.2.annotations.readOnlyHint', true);
+
+        // Existing Tasks consent and a signed bearer are NOT sufficient.
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyPracticeSummaryTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertOk()->assertJsonPath('result.isError', true)
+            ->assertDontSee('Synthetic AP Exam Plan');
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyPracticeSummaryTool::NAME,
+            'arguments' => ['plan_id' => $study->id, 'scope' => 'overview'],
+        ])->assertStatus(400)->assertJsonPath('error.code', -32602);
+
+        // Separate explicit owner approval simulated by a scoped fixture
+        // grant, not by granting access through the MCP client.
+        $grant->update(['scope' => 'study_progress']);
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyPracticeSummaryTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertOk()
+            ->assertJsonPath('result.isError', false)
+            ->assertJsonPath('result.structuredContent.scope', 'study_progress')
+            ->assertJsonPath('result.structuredContent.plan.title', 'Synthetic AP Exam Plan')
+            ->assertJsonPath('result.structuredContent.sample.applied_attempts_considered', 2)
+            ->assertJsonPath('result.structuredContent.sample.average_score_percent', 70)
+            ->assertJsonPath('result.structuredContent.sample.latest_score_percent', 80)
+            ->assertJsonPath('result.structuredContent.weak_topics.0.topic', 'ネットワーク')
+            ->assertJsonPath('result.structuredContent.weak_topics.0.mentions', 2)
+            ->assertDontSee('SECRET_QUESTION_NOT_EXPORTED')
+            ->assertDontSee('SECRET_ANSWER_NOT_EXPORTED')
+            ->assertDontSee('SECRET_GRADING_DETAIL_NOT_EXPORTED')
+            ->assertDontSee('SECRET_MODERN_FEEDBACK_NOT_EXPORTED')
+            ->assertDontSee('LEGACY_LABEL_IGNORED_FOR_TYPED_FEEDBACK')
+            ->assertDontSee('PRIVATE_OTHER_USER_WEAKNESS')
+            ->assertDontSee('PRIVATE_UNAPPLIED_WEAKNESS');
+        // A stronger scope must not be reusable in Development context.
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyContextTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertOk()->assertJsonPath('result.isError', true);
+        // Progress grants may also read the tasks named in the consent UI.
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyContextTool::NAME,
+            'arguments' => ['plan_id' => $study->id, 'scope' => 'tasks'],
+        ])->assertOk()
+            ->assertJsonPath('result.isError', false)
+            ->assertJsonPath('result.structuredContent.tasks.0.title', 'AP network basics');
+
+        $grant->update(['scope' => 'overview']);
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyPracticeSummaryTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertOk()->assertJsonPath('result.isError', true);
+        $grant->update(['scope' => 'study_progress', 'status' => 'revoked', 'revoked_at' => now()]);
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyPracticeSummaryTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertOk()->assertJsonPath('result.isError', true)
+            ->assertDontSee('Synthetic AP Exam Plan');
+    }
+
+    public function test_ap_summary_never_appears_on_synthetic_staging_even_when_enabled(): void
+    {
+        config([
+            'canovia_mcp.study_read_enabled' => true,
+            'canovia_mcp.study_summary_read_enabled' => true,
+            'app.env' => 'staging',
+        ]);
+        $owner = User::factory()->create();
+        $study = $this->plan($owner);
+        $study->update(['category' => '資格学習']);
+        $this->linkAndGrant($owner, $study, 'study_progress');
+        $principal = new \App\Services\McpVerifiedTokenPrincipal(
+            self::ISSUER, 'verified-owner-subject', self::CHATGPT_CLIENT,
+            self::RESOURCE, ['canovia.development.read'], now()->timestamp + 1200,
+        );
+        $this->assertNull(app(McpReadOnlyStudyPracticeSummaryTool::class)
+            ->read($principal, $study->id, 8));
+        $this->assertFalse(app(\App\Services\McpExplicitPlanConsentService::class)
+            ->isScopeEligibleForPlan($study, 'study_progress'));
+        $this->assertDatabaseCount('mcp_delegated_access_events', 0);
     }
 
     public function test_transport_is_read_only_without_sse_sessions_or_mutation(): void

@@ -37,7 +37,7 @@ final class McpOAuthPlanConsentController extends Controller
         }
 
         $validated = $request->validate([
-            'scope' => ['required', 'in:overview,tasks'],
+            'scope' => ['required', 'in:overview,tasks,study_progress'],
             'duration_days' => ['required', 'in:1,7,30,until_revoked'],
         ]);
         $scope = (string) $validated['scope'];
@@ -49,7 +49,8 @@ final class McpOAuthPlanConsentController extends Controller
         // linked stable IdP subject and live-compatible account-link client.
         if (! $consent->isEnabled()
             || ! $consent->hasActiveLinkedIdentity($actor)
-            || ! $consent->isScopeAndDurationAllowed($scope, $days)) {
+            || ! $consent->isScopeAndDurationAllowed($scope, $days)
+            || ! $consent->isScopeEligibleForPlan($plan, $scope)) {
             return $this->failure();
         }
 
@@ -124,6 +125,8 @@ final class McpOAuthPlanConsentController extends Controller
             || ! $consent->isScopeAndDurationAllowed(
                 $verified['scope'], $verified['duration_days'],
             )
+            // The grant() transaction rechecks the study-only scope with
+            // locked owner and Plan rows, after the verified ID is validated.
             || ! $consent->grant(
                 $actor,
                 $verified['plan_id'],

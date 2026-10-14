@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
  */
 final class McpExplicitPlanConsentService
 {
-    public const SCOPES = ['overview', 'tasks'];
+    public const SCOPES = ['overview', 'tasks', 'study_progress'];
     public const DURATIONS_DAYS = [1, 7, 30];
     public const UNTIL_REVOKED = 'until_revoked';
 
@@ -67,6 +67,22 @@ final class McpExplicitPlanConsentService
             && $plan->user_id !== null
             && (int) $plan->user_id === (int) $actor->id
             && ! (bool) $plan->is_collaborative
+            && $this->profiles->forPlan($plan)->key === 'study';
+    }
+
+    /**
+     * Detailed practice summaries require a stronger, separate grant.
+     * It must never be accepted for Development or a synthetic staging Plan.
+     */
+    public function isScopeEligibleForPlan(Plan $plan, string $scope): bool
+    {
+        if ($scope !== 'study_progress') {
+            return in_array($scope, ['overview', 'tasks'], true);
+        }
+
+        return config('canovia_mcp.study_read_enabled') === true
+            && config('canovia_mcp.study_summary_read_enabled') === true
+            && config('app.env') !== 'staging'
             && $this->profiles->forPlan($plan)->key === 'study';
     }
 
@@ -126,7 +142,8 @@ final class McpExplicitPlanConsentService
             $owner = User::query()->whereKey($actor->id)->lockForUpdate()->first();
             $plan = Plan::query()->whereKey($planId)->lockForUpdate()->first();
             if ($owner === null || $plan === null
-                || ! $this->isEligibleMcpPlanOwner($owner, $plan)) {
+                || ! $this->isEligibleMcpPlanOwner($owner, $plan)
+                || ! $this->isScopeEligibleForPlan($plan, $scope)) {
                 return false;
             }
             // Recheck the immutable synthetic fixture UNDER the database
