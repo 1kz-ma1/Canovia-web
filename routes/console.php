@@ -242,7 +242,7 @@ Artisan::command(
     'canovia:private-file-cleanup-health
         {--json : Print only aggregate JSON without private paths or IDs}
         {--strict : Return exit 2 when quarantine or stale work needs attention}',
-    function (\App\\Services\\PrivateFileCleanupHealthService $health): int {
+    function (\App\Services\PrivateFileCleanupHealthService $health): int {
         $report = $health->report();
         if ($this->option('json')) {
             $this->line((string) json_encode($report, JSON_THROW_ON_ERROR));
