@@ -700,3 +700,53 @@ gates, receipt mismatch, expired samples, network faults and ABA negative
 cases. These synthetic tests do not validate real process death, provider
 authenticity or production schema compatibility. Five earlier G3 migrations
 remain unapproved for Aiven; **G3 OPEN**.
+
+## 17. G3-R22 — Synthetic multi-observation generation race matrix (2026-10-14)
+
+R21 compares one untrusted provider-shaped sample to a persisted R20
+attempt. **R22 does not treat multiple matching HEAD-like samples as a
+linearizable history.** The added
+`PrivateFileSyntheticGenerationRaceService::assess(intentId, observations,
+claims)` consumes only two to four ordered R21 observations (within the
+R21 five-minute, post-reservation window), and rechecks the independently
+gated R21 HMAC/key epoch, encrypted path, bucket and attempt token for
+**each** sample. No live SDK/provider or Storage operations occur.
+
+Strict fixture-only claims contain `versioning_mode`
+(enabled/suspended/disabled/unknown), `writer_coordination`
+(claimed_exclusive/external_possible/unknown), and
+`conditional_generation` (claimed_supported/unsupported/unknown).
+Unknown keys, authority fields, type errors, invalid labels and reordered
+or equal timestamps are rejected. **Every claim is untrusted, including
+`claimed_exclusive` and `claimed_supported`.**
+
+Fixed, redacted classifications include
+`aba_pattern_observed_untrusted` for A→B→A;
+`generation_transition_untrusted`, `presence_transition_untrusted`,
+`absence_not_replay_safe`, `generation_unknown`,
+`versioning_unverified_or_unsupported`,
+`external_writer_unexcluded`, `conditional_generation_unavailable`,
+`observation_gap_unresolved`, `observation_binding_unverifiable`,
+and `equal_snapshots_aba_not_excluded` for A→A (even if supposedly
+exclusive, enabled and conditionally writable). Claims about Versioning
+do not establish actual bucket status; an S3 null Version ID, suspended
+versioning or delete marker cannot be treated as immutable proof.
+A synthetic A→B→A is **not** proof of who wrote B.
+
+All statuses force `provider_attested`, `generation_verified`,
+`writer_exclusivity_verified`, `race_free`, `retry_authorized`,
+`delete_authorized`, `network_requests` and `storage_mutations`
+to false. New `CANOVIA_PRIVATE_FILE_SYNTHETIC_RACE_MATRIX_ENABLED`
+is independent, default OFF, `APP_ENV=testing` and R11/R13/R20/R21
+gates required; S3-shaped disposable fixture only. Local production
+default remains unsupported for immutable-version claims. No new
+migration, owner/cleanup mutation, CLI, cron, real provider calls or UI.
+
+Dedicated PostgreSQL 16 / MySQL 8.0/8.4 CI exercises A→A, A→B→A,
+presence/absence, null/unknown generations, writer/versioning/conditional
+claims, malformed and cross-attempt samples, timing gaps, production/OFF,
+APP_KEY/epoch/tampered encryption and read-only invariants. This does
+**not** test real provider consistency, external-writer isolation,
+power loss, authenticated receipt, generation-bound conditional
+deletion or a keyring. Five prior G3 additive migrations remain
+unapproved for Aiven; **G3 OPEN**.
