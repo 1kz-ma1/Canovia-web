@@ -46,7 +46,7 @@ class InboxIntelligenceService
         ReleaseLevelService $releaseLevels,
     ): array {
         $signature = $this->commitFence->signature($item, $request->user()?->id);
-        $suggestion = $this->suggest($item, $request->user()?->id, $signature);
+        $suggestion = $this->suggest($item, $request->user()?->id, $signature, $request);
 
         return $this->commitFence->commit(
             $item, $signature, $suggestion, $request, $releaseLevels,
@@ -60,6 +60,7 @@ class InboxIntelligenceService
         InboxItem $item,
         ?int $userId = null,
         ?string $expectedSignature = null,
+        ?Request $request = null,
     ): array
     {
         $prompt = implode("\n", [
@@ -96,8 +97,14 @@ class InboxIntelligenceService
         $providerInputHash = null;
         $inputParts = $this->inputParts($item, $providerInputHash);
         if ($expectedSignature !== null) {
+            if ($request === null) {
+                throw new NativeAiExecutionException(
+                    'AI送信前の認可確認を実施できませんでした。',
+                    'native_ai_actor_unverified',
+                );
+            }
             $this->commitFence->assertInputMatches(
-                $item, $userId, $expectedSignature, $providerInputHash,
+                $item, $request, $expectedSignature, $providerInputHash,
             );
         }
 
