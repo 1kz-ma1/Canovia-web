@@ -7,6 +7,9 @@ on:
       - 'app/Services/PrivateFileLifecycleService.php'
       - 'app/Services/PrivateFilePathFenceService.php'
       - 'app/Services/PrivateFileUploadService.php'
+      - 'app/Services/PrivateFileStorageBoundaryService.php'
+      - 'tests/Feature/PrivateFileRollbackBoundaryR36Test.php'
+      - 'app/Services/InboxRecallMaterialTransferGuard.php'
       - 'app/Services/PrivateFileUploadIntentService.php'
       - 'app/Services/PrivateFileUploadReconciliationPreviewService.php'
       - 'app/Services/PrivateFileReconciliationSnapshotService.php'
@@ -196,6 +199,8 @@ jobs:
         run: php artisan test tests/Feature/PrivateFileProviderAttestationBoundaryG3Test.php --stop-on-failure
       - name: G3 R25 unavailable independent verifier and admission checklist
         run: php artisan test tests/Feature/PrivateFileProviderEvidenceAdmissionG3Test.php --stop-on-failure
+      - name: G3 R36 rollback deletion and legacy-writer boundary
+        run: php artisan test tests/Feature/PrivateFileRollbackBoundaryR36Test.php --fail-on-skipped --stop-on-failure
       - name: G3 R35 external provider deletion holds, local cleanup compatibility
         run: php artisan test tests/Feature/PrivateFileProviderDeleteHoldR35Test.php --fail-on-skipped --stop-on-failure
       - name: G3 R26 trust epoch, expiry and replay denial matrix

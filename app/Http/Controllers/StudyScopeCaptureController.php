@@ -17,6 +17,7 @@ use App\Services\BehaviorIdentityService;
 use App\Services\CompanionMembershipCommitGuard;
 use App\Services\PrivateFileLifecycleService;
 use App\Services\PrivateFileUploadService;
+use App\Services\PrivateFileStorageBoundaryService;
 use App\Services\FeatureAccessService;
 use App\Services\NativeAiGateway;
 use App\Services\PlanCategoryProfileService;
@@ -185,11 +186,12 @@ class StudyScopeCaptureController extends Controller
                 ['file' => $file, 'path' => $uploadPath],
             ], fn (array $paths) => $persist($paths[0]));
         } else {
+            app(PrivateFileStorageBoundaryService::class)->requireLocalLegacyWriter();
             $storagePath = $file->storeAs(dirname($uploadPath), basename($uploadPath));
             try {
                 [$item, $capture] = $persist($storagePath);
             } catch (Throwable $exception) {
-                Storage::delete($storagePath);
+                app(PrivateFileStorageBoundaryService::class)->deleteRollbackForLocal($storagePath);
                 throw $exception;
             }
         }

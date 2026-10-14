@@ -6,6 +6,8 @@ on:
     paths:
       - '.github/workflows/g3-disposable-laravel-mysql-s3-crash.yml'
       - 'tests/ci/g3_r34_laravel_crash.php'
+      - 'app/Services/PrivateFileUploadService.php'
+      - 'app/Services/PrivateFileStorageBoundaryService.php'
       - 'tests/ci/g3_r34_orchestrator.py'
       - 'docs/development/G3_LARAVEL_MYSQL_S3_CRASH_R34_2026_10_15.md'
   workflow_dispatch:
