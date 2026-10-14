@@ -26,6 +26,7 @@ jobs:
           php -l app/Services/DevelopmentOperationalEvidenceService.php
           php -l app/Services/DevelopmentOperationalAttestationService.php
           php -l app/Services/DevelopmentOperationalProviderBoundaryService.php
+          php -l app/Services/DevelopmentOperationalProviderCapabilityService.php
           php -l app/Models/DevelopmentOperationalTarget.php
           php -l app/Http/Controllers/DevelopmentOperationalTargetController.php
           php -l database/migrations/2026_10_14_164000_create_development_operational_targets_table.php
