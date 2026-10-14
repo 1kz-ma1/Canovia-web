@@ -73,7 +73,8 @@ final class AdaptiveLearningHistoryService
             ->filter(fn (array $t) => $t['incorrect'] >= 2
                 && count($t['missed_question_ids']) >= 2
                 && $t['recent_correct'] !== [true, true])
-            ->sort(fn (array $a, array $b) => ($b['incorrect'] <=> $a['incorrect'])
+            ->sort(fn (array $a, array $b) => (count($b['missed_question_ids']) <=> count($a['missed_question_ids']))
+                ?: ($b['incorrect'] <=> $a['incorrect'])
                 ?: ($b['answered'] <=> $a['answered'])
                 ?: strcmp($a['name'], $b['name']))
             ->take(5)
@@ -81,6 +82,7 @@ final class AdaptiveLearningHistoryService
                 'name' => $t['name'],
                 'answered' => $t['answered'],
                 'incorrect' => $t['incorrect'],
+                'distinct_missed_questions' => count($t['missed_question_ids']),
             ])->values();
 
         $recent = $events->take(self::RECENT)->map(function (LearningAnswerEvent $event): array {

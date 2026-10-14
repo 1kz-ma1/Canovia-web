@@ -24,6 +24,7 @@ use App\Services\PlanOwnershipService;
 use App\Services\PlanPriorityService;
 use App\Services\StudyActivityPolicyService;
 use App\Services\StudyWorkspaceViewService;
+use App\Services\StudyLearningNextActionQueueService;
 use App\Services\WorkspaceModeOnboardingService;
 use App\Services\ExecutionSetupService;
 use App\Services\PersonalizationContextService;
@@ -46,6 +47,7 @@ final class StudyWorkspaceController extends Controller
         StudyWorkspaceStateResolver $studyState,
         StudyWorkspaceSurfacePolicy $surfacePolicy,
         StudyWorkspaceViewService $views,
+        StudyLearningNextActionQueueService $learningActionQueue,
         BehaviorIdentityService $identity,
         ExecutionSetupService $executionSetup,
         StudyIntelligencePresentationAdapter $presentationAdapter,
@@ -226,6 +228,12 @@ final class StudyWorkspaceController extends Controller
         // Older StudyPracticeSession runs remain canonical and recoverable.
         // Surface the actor-owned unfinished run without converting its drafts
         // to new LearningRun records or silently creating a fresh session.
+        // Separate advisory Bank-answer review suggestions from the existing
+        // Study Intelligence Action recommendation. No Task mutation on GET.
+        $learningReviewQueue = ($canEdit && $studySurface === 'work')
+            ? $learningActionQueue->forWorkspace($request, $plan, $actorToken, $canEdit)
+            : ['items' => [], 'has_more' => false];
+
         $legacyPracticeResume = null;
         if ($canEdit && $studySurface === 'work') {
             $legacyQuery = StudyPracticeSession::query()
@@ -260,6 +268,7 @@ final class StudyWorkspaceController extends Controller
         }
 
         return view('workspace.study.index', [
+            'learningReviewQueue' => $learningReviewQueue,
             'legacyPracticeResume' => $legacyPracticeResume,
             'studyPlans' => $studyPlans,
             'plan' => $plan,
