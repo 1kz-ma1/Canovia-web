@@ -225,6 +225,21 @@ final class PrivateFileLifecycleService
                 return 'quarantined';
             }
 
+            // A live reference may have appeared while the file was read
+            // for SHA verification. Check all reference sources again as
+            // close as possible to unlink, failing closed if DB reads fail.
+            // This narrows the window; it cannot coordinate external
+            // writers that create references after this final check.
+            try {
+                if ($this->isReferenced($path)) {
+                    DB::table(self::TABLE)->where('id', $id)->delete();
+                    return 'retained';
+                }
+            } catch (Throwable) {
+                $this->retryLater($id, (int) $row->attempt_count, 'reference_check_unavailable');
+                return 'retry';
+            }
+
             if (! $storage->delete($path)) {
                 $this->retryLater($id, (int) $row->attempt_count, 'storage_delete_false');
                 return 'retry';

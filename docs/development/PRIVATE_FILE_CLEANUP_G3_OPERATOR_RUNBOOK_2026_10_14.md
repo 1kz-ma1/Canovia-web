@@ -142,3 +142,31 @@ These guards **do not** serialize a new reference inserted after the final
 successful check, prove the origin of same-byte replacements, or recover
 legacy orphan files. G3 remains OPEN. Neither guard authorizes live retry,
 production schema execution, scheduler activation or a storage inventory.
+
+## 8. Post-checksum live-reference fence (G3-R9)
+
+The cleanup worker now queries **all three** live reference sources twice:
+once before storage I/O, and again after confirming the stored SHA-256 but
+immediately before `Storage::delete`. If a new reference is visible to the
+transaction's second DB read, the file is retained and the obsolete outbox
+intent is removed. If the second query is unavailable, deletion stops and
+the pending row gets `reference_check_unavailable` retry backoff.
+
+This is a narrow defense-in-depth improvement, **not a global lock**.
+**Database isolation matters:** PostgreSQL's default READ COMMITTED can see
+a newly committed reference at the second statement. On MySQL's default
+REPEATABLE READ, ordinary non-locking SELECTs may reuse the transaction's
+initial snapshot and miss a separately committed reference entirely.
+No MySQL cross-session guarantee or additional locking is claimed.
+There remains a check→unlink window even after the second query; an
+uncoordinated process may insert a DB reference immediately afterward,
+or change the object without a conditional versioned delete. Never
+describe SHA-256 + two checks as atomic consistency.
+
+Before any production activation, decide and test a provider-compatible
+writer coordination/immutable-key protocol covering **all** Inbox,
+Study Recall, Career and external upload/update paths. If a storage
+provider supports conditional delete by immutable version/generation,
+review its semantics separately; Laravel's generic `Storage::delete`
+does not supply those semantics. Never enable automatic retries or
+production inventory solely based on this guard.
