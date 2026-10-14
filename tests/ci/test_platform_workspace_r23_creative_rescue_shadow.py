@@ -96,7 +96,7 @@ class CreativeRescueR23Tests(unittest.TestCase):
             a, b = cases(full), cases(shadow)
             with self.subTest(label=label):
                 r23.A_B_A_prime(a, b, a, full, shadow)
-                with self.assertRaisesRegex(r23.Inconclusive, "neighboring"):
+                with self.assertRaisesRegex(r23.Inconclusive, "group class inventory changed"):
                     r23.A_B_A_prime(a, b[:-1], a, full, shadow)
 
     def test_wrong_order_or_missing_target_case_is_blocked(self):
