@@ -201,7 +201,6 @@ final class PrivateFileTrustReplayPreflightG3Test extends TestCase
         foreach ([
             ['root_epoch' => 'synthetic-epoch-b'],
             ['trust_root_claim' => 'claimed-root-02'],
-            ['issuer_claim' => 'other'],
             ['attempt_id' => 999999],
         ] as $change) {
             $candidate = $args;
@@ -210,6 +209,11 @@ final class PrivateFileTrustReplayPreflightG3Test extends TestCase
             $this->assertSame('untrusted_root_or_history_changed', $result['state']);
             $this->assertDenied($result);
         }
+
+        $args[7]['issuer_claim'] = 'other';
+        $result = $this->assess($args);
+        $this->assertSame('invalid_previous_fixture', $result['state']);
+        $this->assertDenied($result);
     }
 
     public function test_expired_too_long_future_and_invalid_time_bounded_envelopes_fail(): void
