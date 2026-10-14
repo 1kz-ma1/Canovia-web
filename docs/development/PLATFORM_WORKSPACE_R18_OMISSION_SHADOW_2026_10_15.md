@@ -42,3 +42,22 @@ A passing omission experiment **must show that four V5871 testcases are absent i
 - New synthetic tests: passing A/B/A′; contaminated B; missing target in A; different restored A′; missing class; failing or skipped JUnit; invalid workflows and outside-GitHub fail-closed.
 - GitHub Actions: existing `Platform Workspace Scenario Equivalence (Disposable)` plus existing Platform Preflight, Workspace Resume, Development Prelaunch and Migration Recovery; check current PR HEAD and full diff before `main` integration.
 - No normal Workspace Resume changes, new required CI, branch rules, source app, API, schema/migration, environment secrets, production, Render, Aiven, iOS, billing or release operations. It is an isolated **CI evidence experiment**, not a production deployment.
+
+
+## Real isolated observation — PR #660 (initial tested head)
+
+**OBSERVED on `9a1127600754753367cd760342a80140e5cba4ac`, 2026-10-14 UTC:** [Disposable Actions #38588375574](https://github.com/1kz-ma1/Canovia-web/actions/runs/38588375574) succeeded in the original scenario probe, R18 A/B/A′ step, existing 12-run repeatability step, independent 12-run runner and cross-runner JUnit fingerprint comparison. The new offline R18 contract suite passed **13/13**. The initial earlier PR head failed one synthetic test due to modifying a PHP-lint appearance instead of an Artisan command; the test fixture was corrected to mutate the actual V58.73 Artisan command before this successful run.
+
+| Observation | A original | B only V5871 omitted | A′ restored |
+| --- | ---: | ---: | ---: |
+| Entire group JUnit cases | 27 | 23 | 27 |
+| Whole group duration in this runner | 1.742 s | 1.577 s | 1.741 s |
+| Executed selected V5871 cases | 4 | 0 | 4 |
+
+The four source-controlled V5871 cases **absent only in B** are:
+- `test_manual_evidence_creates_inert_proposal_and_accept_once`
+- `test_legacy_work_log_is_scoped_to_plan_and_snapshot_is_kept`
+- `test_rejection_and_cross_plan_draft_do_not_mutate_tasks`
+- `test_collaborative_editor_viewer_and_stranger_are_forbidden`
+
+All 23 non-V5871 JUnit testcase identities matched, and A/A′ matched in inventory and observed first-appearance class order. These are **local test-identity omissions**, not demonstrated removal of four unique assertions from the overall Workspace Resume, proof of no cross-context side effects, or savings of ~0.165 seconds per production CI run. Authorization/Plan isolation remains particularly sensitive; **no removal is approved**. This evidence is from the initial tested PR head; the documentation HEAD that records it must independently complete relevant PR checks before development `main` integration.
