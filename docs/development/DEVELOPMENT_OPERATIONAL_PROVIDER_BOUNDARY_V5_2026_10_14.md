@@ -1,6 +1,6 @@
 # Development Operational Readiness V5.0 — Provider Observation Boundary
 
-> Status: **CONTRACT + FAIL-CLOSED GUARD IMPLEMENTED IN FEATURE BRANCH ONLY** (2026-10-14). Not connected to a Render account; not deployed; no provider observation is currently available to the Development Workspace.
+> Status: **V5.0 INTEGRATED INTO main VIA PR #609** (2026-10-14). Not connected to a Render account; not deployed; no provider observation is currently available to the Development Workspace. [V5.1 provider capability gate](DEVELOPMENT_OPERATIONAL_PROVIDER_CAPABILITY_V5_1_2026_10_14.md) keeps unsupported credentials disabled.
 > Depends on [V1](DEVELOPMENT_PRELAUNCH_PREPARATION_V1_2026_10_14.md), [V2](DEVELOPMENT_OPERATIONAL_EVIDENCE_V2_2026_10_14.md), [V3](DEVELOPMENT_OPERATIONAL_PROFILE_V3_2026_10_14.md), [V4](DEVELOPMENT_OPERATIONAL_ATTESTATION_V4_2026_10_14.md), and the [canonical Operational Readiness design](DEVELOPMENT_OPERATIONAL_READINESS_SPEC_2026_10_14.md).
 > V53.8's seven Release Quality Gates are authoritative and unchanged.
 
