@@ -326,7 +326,13 @@ class SafePlanResourceRecallHandoffV5811Test extends TestCase
             'candidate_count' => 0,
         ]);
 
-        app(AccountDeletionService::class)->delete($user);
+        $hasOuterTransaction = \Illuminate\Support\Facades\DB::transactionLevel() > 0;
+        \Illuminate\Support\Facades\DB::transaction(function () use ($user, $path): void {
+            app(AccountDeletionService::class)->delete($user);
+            // The cleanup outbox must never unlink storage while the
+            // enclosing account-delete transaction is still uncommitted.
+            Storage::disk('local')->assertExists($path);
+        });
 
         $this->assertDatabaseMissing('study_recall_sources', [
             'id' => $source->id,
@@ -334,11 +340,14 @@ class SafePlanResourceRecallHandoffV5811Test extends TestCase
         $this->assertDatabaseMissing('plan_resources', [
             'id' => $resource->id,
         ]);
-        // RefreshDatabase wraps the request in an outer never-committed test
-        // transaction. DB::afterCommit correctly defers physical cleanup.
-        // The actual post-commit unlink is exercised by the isolated PG16
-        // PrivateFileLifecycleG3Test (without a wrapping transaction).
-        Storage::disk('local')->assertExists($path);
+        // Both valid PHPUnit modes are exercised depending on whether
+        // RefreshDatabase provided an outer test transaction. The invariant
+        // above holds in either case; final unlink only follows outer commit.
+        if ($hasOuterTransaction) {
+            Storage::disk('local')->assertExists($path);
+        } else {
+            Storage::disk('local')->assertMissing($path);
+        }
     }
 
     public function test_source_ui_shows_plan_resource_provenance(): void
