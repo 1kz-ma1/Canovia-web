@@ -14,6 +14,10 @@ on:
       - 'app/Services/InboxIntelligenceService.php'
       - 'app/Services/StudyRecallExtractionCommitFence.php'
       - 'app/Services/StudyRecallCandidateExtractionService.php'
+      - 'app/Services/InboxRecallMaterialTransferGuard.php'
+      - 'app/Services/InboxRoutingService.php'
+      - 'tests/Feature/InboxRecallMaterialTransferG3Test.php'
+      - 'tests/Feature/InboxRecallTransferPostgresG3Test.php'
       - 'app/Services/StudyRecallCandidateReviewFence.php'
       - 'app/Services/PlanActionDraftApprovalSourceGuard.php'
       - 'tests/Feature/PlanActionDraftApprovalLockOrderPostgresG3Test.php'
@@ -109,6 +113,10 @@ jobs:
           php -l tests/Feature/InboxAiSuggestionCommitFenceG3Test.php
           php -l app/Services/StudyRecallExtractionCommitFence.php
           php -l app/Services/StudyRecallCandidateExtractionService.php
+          php -l app/Services/InboxRecallMaterialTransferGuard.php
+          php -l app/Services/InboxRoutingService.php
+          php -l tests/Feature/InboxRecallMaterialTransferG3Test.php
+          php -l tests/Feature/InboxRecallTransferPostgresG3Test.php
           php -l app/Services/StudyRecallCandidateReviewFence.php
           php -l app/Services/PlanActionDraftApprovalSourceGuard.php
           php -l tests/Feature/PlanActionDraftApprovalLockOrderPostgresG3Test.php
@@ -166,6 +174,8 @@ jobs:
         run: php artisan test tests/Feature/RecallAiCommitFenceV05Test.php --stop-on-failure
       - name: Action Draft approval parent-first lock and repository revocation on PostgreSQL 16
         run: php artisan test tests/Feature/PlanActionDraftApprovalLockOrderPostgresG3Test.php --stop-on-failure
+      - name: Inbox to Recall private material copy and update race on independent PostgreSQL 16 sessions
+        run: php artisan test tests/Feature/InboxRecallTransferPostgresG3Test.php --stop-on-failure
       - name: Recall exact provider input file bytes and independent Source race on PostgreSQL 16
         run: php artisan test tests/Feature/RecallInputFileRacePostgresG3Test.php --stop-on-failure
       - name: Recall human approval signed provenance on PostgreSQL 16
