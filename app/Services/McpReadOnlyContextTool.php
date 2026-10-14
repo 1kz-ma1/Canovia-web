@@ -39,6 +39,7 @@ final class McpReadOnlyContextTool
         return DB::transaction(function () use ($principal, $planId, $scope, $limit): ?array {
             $plan = Plan::query()->whereKey($planId)->lockForUpdate()->first();
             if ($plan === null) {
+                McpStagingPlanReadDenialDiagnostic::record('plan_not_found');
                 return null;
             }
 
