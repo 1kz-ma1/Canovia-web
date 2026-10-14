@@ -529,7 +529,16 @@ final class McpReadOnlyResourceTest extends TestCase
                 'exercise_title' => 'SECRET_ATTEMPT_TITLE_NOT_EXPORTED',
                 'questions' => [['body' => 'SECRET_QUESTION_NOT_EXPORTED']],
                 'answers' => [['text' => 'SECRET_ANSWER_NOT_EXPORTED']],
-                'assessment' => ['rationale' => 'SECRET_GRADING_DETAIL_NOT_EXPORTED'],
+                'assessment' => $score === 80
+                    ? [
+                        'rationale' => 'SECRET_GRADING_DETAIL_NOT_EXPORTED',
+                        'question_feedback' => [[
+                            'correctness' => 'incorrect',
+                            'weakness_topics' => ['ネットワーク'],
+                            'explanation' => 'SECRET_MODERN_FEEDBACK_NOT_EXPORTED',
+                        ]],
+                    ]
+                    : ['rationale' => 'SECRET_GRADING_DETAIL_NOT_EXPORTED'],
                 'score_percent' => $score,
                 'recommended_task_progress_percent' => 30,
                 'weaknesses' => $weak,
@@ -537,7 +546,7 @@ final class McpReadOnlyResourceTest extends TestCase
             ]);
         };
         $record(60, ['ネットワーク', 'データベース'], true, $owner->id);
-        $record(80, ['ネットワーク'], true, $owner->id);
+        $record(80, ['LEGACY_LABEL_IGNORED_FOR_TYPED_FEEDBACK'], true, $owner->id);
         $record(100, ['PRIVATE_UNAPPLIED_WEAKNESS'], false, $owner->id);
         $record(0, ['PRIVATE_OTHER_USER_WEAKNESS'], true, User::factory()->create()->id);
 
@@ -583,6 +592,8 @@ final class McpReadOnlyResourceTest extends TestCase
             ->assertDontSee('SECRET_QUESTION_NOT_EXPORTED')
             ->assertDontSee('SECRET_ANSWER_NOT_EXPORTED')
             ->assertDontSee('SECRET_GRADING_DETAIL_NOT_EXPORTED')
+            ->assertDontSee('SECRET_MODERN_FEEDBACK_NOT_EXPORTED')
+            ->assertDontSee('LEGACY_LABEL_IGNORED_FOR_TYPED_FEEDBACK')
             ->assertDontSee('PRIVATE_OTHER_USER_WEAKNESS')
             ->assertDontSee('PRIVATE_UNAPPLIED_WEAKNESS');
         // A stronger scope must not be reusable in Development context.
