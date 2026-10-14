@@ -42,3 +42,20 @@ The implementation **always** sets `normal_workspace_workflow_modified=false`, `
 ## Integration requirements
 
 Offline synthetic tests cover five companion-set identities, exact historical commands, tampered controller anchor, missing target case and drifted other cases, missing/forged original detection, spoofed V5871 appearing in omitted group, omission variants that do or do not detect, negative environment guards, `finally` byte-restoration after success/failure and default-deny CLI. Existing Platform Preflight, Development Prelaunch, Workspace Resume, Production Migration Recovery and disposable replay workflows must all finish success at exact PR head before merging `main`. The only changes allowed in this PR are this specification, a diagnostic script + Python contracts and path-scoped CI wiring. No normal CI command is removed, reordered or parallelized.
+
+
+## Observed disposable result — PR #670
+
+On initial tested PR HEAD `821c55d2e5a1b15812dc9c47afee469e940852c9`, [GitHub Actions #38602121674](https://github.com/1kz-ma1/Canovia-web/actions/runs/38602121674) completed the R21 scoped experiment with result `OBSERVED_FIVE_CONTEXT_LEAVE_ONE_OUT_MATRIX`.
+
+| Mutation | Unchanged five named groups detecting | Five V5871-omitted shadows detecting | Five logical leave-one-out corridors with four other detectors |
+| --- | ---: | ---: | ---: |
+| `cross_plan_worklog_source_scope` | **5/5** | **0/5** | **5/5** |
+| `dismiss_owner_authorization` | **5/5** | **0/5** | **5/5** |
+| **Total** | **10/10** | **0/10** | **10/10** |
+
+Each of five original groups had exactly one failed testcase under each mutation, in `PlanActionDraftV5871Test`. None of the V5871-free companion groups detected either fault; they retained exactly their original non-V5871 JUnit cases and passed. However, each isolated one-occurrence-omission scenario still retains four *other* original named groups detecting both faults. **This is an arithmetic ledger over separately executed PHP processes, not an actual modified 72-step Workspace Resume execution.**
+
+The runner completed **30 independent PHP processes**: 5 baseline normal, 5 baseline omitted, 10 application-mutated normal and 10 mutated omission groups. Added offline synthetic R21 contract suite passed **15/15**. The disposable controller was restored to SHA-256 `f347864c13669d7d479a43f4d10ab1284b2cb0ca98a6716106dcd97c8a46f1d1`.
+
+**Interpretation and decision: HOLD.** These two app mutations are real security-relevant changes to code in the disposable runner, but this does not establish any other security or state boundary, performance improvement, or safe test deletion. The R21 PR still requires its own final-HEAD checks after adding this evidence. No application source change, production deployment or release permission is included.
