@@ -346,9 +346,11 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
             ->assertSee('data-mcp-staging-share-complete', false)
             ->assertSee('data-mcp-staging-subject-unlink', false);
         $outsider = User::factory()->create(['first_run_completed_at' => now()]);
+        // The isolated stage actor gate blocks this request before the
+        // controller's owner-specific 404 check (generic stage 503).
         $this->actingAs($outsider)->delete(
             route('auth.account.mcp_subject.revoke', ['subject' => $link->id]),
-        )->assertNotFound();
+        )->assertServiceUnavailable();
         $this->assertSame(McpLinkedSubject::STATUS_LINKED, $link->fresh()->status);
         $this->assertSame(McpDelegatedGrant::STATUS_ACTIVE, $grant->fresh()->status);
 
