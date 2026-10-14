@@ -3,6 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\McpLinkedSubject;
+use App\Models\McpDelegatedGrant;
+use App\Models\Plan;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Str;
 use App\Models\User;
 use App\Services\McpDelegatedRevocationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -300,6 +304,147 @@ final class McpOAuthAccountLinkTest extends TestCase
             'actor_user_id' => $first->id,
             'event_kind' => 'subject_relinked',
         ]);
+    }
+
+    public function test_owner_unlink_frees_external_identity_for_another_owner_without_moving_historical_grants(): void
+    {
+        $first = User::factory()->create(['first_run_completed_at' => now()]);
+        $second = User::factory()->create(['first_run_completed_at' => now()]);
+        $this->stubProvider();
+
+        $this->oauthCallback($this->query($this->start($first))['state']);
+        $this->actingAs($first)->post(route('auth.account.mcp_link.confirm'))->assertRedirect();
+        $original = McpLinkedSubject::query()->sole();
+        $fingerprint = $original->identity_fingerprint;
+        $this->assertSame($fingerprint, $original->active_identity_fingerprint);
+
+        $plan = Plan::query()->create([
+            'user_id' => $first->id,
+            'owner_token' => Str::random(64),
+            'public_slug' => (string) Str::uuid(),
+            'title' => 'HISTORICAL_OWNER_ONLY_PLAN',
+            'category' => '個人開発',
+            'priority' => 1,
+            'priority_mode' => 'manual',
+            'start_date' => today(),
+            'deadline' => today()->addDays(14),
+            'is_public' => false,
+            'is_collaborative' => false,
+        ]);
+        $oldGrant = McpDelegatedGrant::query()->create([
+            'user_id' => $first->id,
+            'subject_link_id' => $original->id,
+            'plan_id' => $plan->id,
+            'client_resource_fingerprint' => str_repeat('f', 64),
+            'scope' => 'tasks',
+            'status' => 'active',
+            'consented_at' => now(),
+            'expires_at' => now()->addDays(7),
+        ]);
+
+        // Only the old owner can release the linked identity. A released
+        // identity can be claimed only after new OAuth+explicit confirmation.
+        $this->actingAs($first)->delete(
+            route('auth.account.mcp_subject.revoke', ['subject' => $original->id]),
+        )->assertRedirect();
+        $this->assertNull($original->fresh()->active_identity_fingerprint);
+        $this->assertSame('revoked', $original->fresh()->status);
+        $this->assertSame('revoked', $oldGrant->fresh()->status);
+
+        $this->oauthCallback($this->query($this->start($second))['state']);
+        $this->assertDatabaseCount('mcp_linked_subjects', 1);
+        $this->actingAs($second)->post(route('auth.account.mcp_link.confirm'))->assertRedirect();
+
+        $this->assertDatabaseCount('mcp_linked_subjects', 2);
+        $new = McpLinkedSubject::query()->where('user_id', $second->id)->sole();
+        $this->assertNotSame($original->id, $new->id);
+        $this->assertSame($fingerprint, $new->identity_fingerprint);
+        $this->assertSame($fingerprint, $new->active_identity_fingerprint);
+        $this->assertSame($first->id, $original->fresh()->user_id);
+        $this->assertSame($original->id, $oldGrant->fresh()->subject_link_id);
+        $this->assertSame($first->id, $oldGrant->fresh()->user_id);
+        $this->assertSame('revoked', $oldGrant->fresh()->status);
+        $this->assertDatabaseCount('mcp_delegated_grants', 1);
+        $this->assertDatabaseMissing('mcp_delegated_grants', [
+            'user_id' => $second->id,
+        ]);
+        $this->assertDatabaseHas('mcp_delegated_access_events', [
+            'actor_user_id' => $first->id, 'subject_link_id' => $original->id,
+            'event_kind' => 'subject_unlinked',
+        ]);
+        $this->assertDatabaseHas('mcp_delegated_access_events', [
+            'actor_user_id' => $second->id, 'subject_link_id' => $new->id,
+            'event_kind' => 'subject_linked',
+        ]);
+
+        // The original owner cannot reclaim it while the second owner has it.
+        $this->oauthCallback($this->query($this->start($first))['state']);
+        $this->actingAs($first)->post(route('auth.account.mcp_link.confirm'))->assertRedirect();
+        $this->assertDatabaseCount('mcp_linked_subjects', 2);
+        $this->assertNull($original->fresh()->active_identity_fingerprint);
+        $this->assertSame('linked', $new->fresh()->status);
+        $this->assertSame('revoked', $oldGrant->fresh()->status);
+    }
+
+    public function test_database_enforces_one_active_identity_even_when_previous_history_is_revoked(): void
+    {
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        $fingerprint = str_repeat('a', 64);
+        McpLinkedSubject::query()->create([
+            'user_id' => $first->id,
+            'identity_fingerprint' => $fingerprint,
+            'provider_key' => 'chatgpt',
+            'status' => McpLinkedSubject::STATUS_REVOKED,
+            'revoked_at' => now(), 'linked_at' => now()->subDay(),
+        ]);
+        $live = McpLinkedSubject::query()->create([
+            'user_id' => $second->id,
+            'identity_fingerprint' => $fingerprint,
+            'provider_key' => 'chatgpt',
+            'status' => McpLinkedSubject::STATUS_LINKED,
+            'linked_at' => now(),
+        ]);
+        $this->assertDatabaseCount('mcp_linked_subjects', 2);
+        $this->assertSame($fingerprint, $live->active_identity_fingerprint);
+
+        $this->expectException(QueryException::class);
+        McpLinkedSubject::query()->create([
+            'user_id' => $first->id,
+            'identity_fingerprint' => $fingerprint,
+            'provider_key' => 'chatgpt',
+            'status' => McpLinkedSubject::STATUS_LINKED,
+            'linked_at' => now(),
+        ]);
+    }
+
+    public function test_active_only_identity_migration_replays_without_deleting_history(): void
+    {
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        $fingerprint = str_repeat('b', 64);
+        $old = McpLinkedSubject::query()->create([
+            'user_id' => $first->id, 'identity_fingerprint' => $fingerprint,
+            'provider_key' => 'chatgpt', 'status' => McpLinkedSubject::STATUS_REVOKED,
+            'linked_at' => now()->subDay(), 'revoked_at' => now()->subHour(),
+        ]);
+        $new = McpLinkedSubject::query()->create([
+            'user_id' => $second->id, 'identity_fingerprint' => $fingerprint,
+            'provider_key' => 'chatgpt', 'status' => McpLinkedSubject::STATUS_LINKED,
+            'linked_at' => now(),
+        ]);
+
+        $migration = require base_path(
+            'database/migrations/2026_10_14_000200_preserve_historical_mcp_identity_links.php',
+        );
+        $migration->up();
+        $migration->up();
+
+        $this->assertDatabaseCount('mcp_linked_subjects', 2);
+        $this->assertNull($old->fresh()->active_identity_fingerprint);
+        $this->assertSame($fingerprint, $new->fresh()->active_identity_fingerprint);
+        $this->assertSame($first->id, $old->fresh()->user_id);
+        $this->assertSame($second->id, $new->fresh()->user_id);
     }
 
     private function start(User $user): string
