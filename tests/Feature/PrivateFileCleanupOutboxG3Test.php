@@ -252,6 +252,18 @@ final class PrivateFileCleanupOutboxG3Test extends TestCase
 
     public function test_reference_created_during_checksum_read_prevents_final_unlink(): void
     {
+        if (DB::connection()->getDriverName() !== 'pgsql') {
+            $this->markTestSkipped('Independent committed-reference race requires PostgreSQL 16.');
+        }
+
+        $db = config('database.connections.pgsql');
+        $rival = new \\PDO(sprintf('pgsql:host=%s;port=%d;dbname=%s',
+            (string) ($db['host'] ?? '127.0.0.1'),
+            (int) ($db['port'] ?? 5432),
+            (string) ($db['database'] ?? ''),
+        ), (string) ($db['username'] ?? ''), (string) ($db['password'] ?? ''),
+        [\\PDO::ATTR_ERRMODE => \\PDO::ERRMODE_EXCEPTION]);
+
         $path = 'inbox/owner/late-reference.png';
         Storage::put($path, 'sealed original bytes');
         $this->insertPending($path);
@@ -260,14 +272,15 @@ final class PrivateFileCleanupOutboxG3Test extends TestCase
         $disk = Mockery::mock();
         $disk->shouldReceive('exists')->once()->with($path)->andReturn(true);
         $disk->shouldReceive('get')->once()->with($path)
-            ->andReturnUsing(function () use ($path): string {
-                // Simulate a new surviving Inbox owner while the storage read
-                // is in progress, *after* the first live-reference check.
-                InboxItem::query()->create([
-                    'source_type' => 'image',
-                    'status' => 'new',
-                    'storage_path' => $path,
-                ]);
+            ->andReturnUsing(function () use ($path, $rival): string {
+                // A separate PostgreSQL session commits a new DB reference
+                // while the cleanup worker has its own transaction open,
+                // AFTER the first reference check but BEFORE the last one.
+                $statement = $rival->prepare(
+                    'INSERT INTO inbox_items (source_type, status, storage_path, created_at, updated_at) '
+                    .'VALUES (\'image\', \'new\', :path, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
+                );
+                $statement->execute(['path' => $path]);
                 return 'sealed original bytes';
             });
         $disk->shouldNotReceive('delete');
