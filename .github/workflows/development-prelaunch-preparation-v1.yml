@@ -54,6 +54,7 @@ jobs:
             tests/Unit/DevelopmentOperationalProfileV3Test.php \
             tests/Unit/DevelopmentOperationalAttestationV4Test.php \
             tests/Unit/DevelopmentOperationalProviderBoundaryV5Test.php \
+            tests/Unit/DevelopmentOperationalProviderCapabilityV51Test.php \
             tests/Feature/DevelopmentPrelaunchPreparationV1Test.php \
             tests/Feature/DevelopmentOperationalEvidenceV2Test.php \
             tests/Feature/DevelopmentOperationalProfileV3FeatureTest.php \
