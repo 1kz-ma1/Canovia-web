@@ -99,6 +99,36 @@ final class InboxAiSuggestionCommitFence
     }
 
     /**
+     * R41 canonical source lock order for a Plan-linked Inbox item:
+     * Plan -> Inbox, followed by membership. Recall transfer already
+     * locks Plan -> Task -> Inbox; taking Inbox -> Plan in R39 inverted
+     * that order and could deadlock with a concurrent transfer.
+     *
+     * Use the original route-loaded Plan ID ONLY to choose which parent
+     * row to lock first. The live Inbox row is then locked and its current
+     * plan_id MUST still match; never silently lock a newly retargeted Plan
+     * out of order. Unlinked Inbox items lock only their own row.
+     *
+     * @return array{0: ?Plan, 1: InboxItem, 2: ?int}
+     */
+    private function lockSourceGraph(InboxItem $item): array
+    {
+        $originalPlanId = $item->plan_id === null ? null : (int) $item->plan_id;
+        $plan = $originalPlanId === null ? null
+            : Plan::query()->whereKey($originalPlanId)->lockForUpdate()->first();
+
+        $live = InboxItem::query()->whereKey($item->id)->lockForUpdate()->first();
+        $livePlanId = $live?->plan_id === null ? null : (int) $live->plan_id;
+
+        if ($live === null || $livePlanId !== $originalPlanId
+            || ($originalPlanId !== null && $plan === null)) {
+            $this->deny('native_ai_target_changed', null);
+        }
+
+        return [$plan, $live, $originalPlanId];
+    }
+
+    /**
      * R38-R39 pre-provider seal: compare the hash of bytes actually encoded into
      * the AI request with the ORIGINAL source/authorization signature.
      * A->B input mismatches fail before submission, even if another writer
@@ -120,8 +150,8 @@ final class InboxAiSuggestionCommitFence
         DB::transaction(function () use (
             $item, $request, $userId, $expectedSignature, $providerInputHash,
         ): void {
-            $live = InboxItem::query()->whereKey($item->id)->lockForUpdate()->first();
-            if ($live === null || ! in_array($live->status, ['new', 'review'], true)) {
+            [$plan, $live, $planId] = $this->lockSourceGraph($item);
+            if (! in_array($live->status, ['new', 'review'], true)) {
                 $this->deny('native_ai_target_changed', null);
             }
 
@@ -140,9 +170,7 @@ final class InboxAiSuggestionCommitFence
                 }
             }
 
-            $planId = $live->plan_id === null ? null : (int) $live->plan_id;
             if ($planId !== null) {
-                $plan = Plan::query()->whereKey($planId)->lockForUpdate()->first();
                 $actor = User::query()->find($userId);
                 if ($plan === null || $actor === null
                     || ! $this->membershipCommit->canAccess($actor, $plan, true)) {
@@ -184,12 +212,8 @@ final class InboxAiSuggestionCommitFence
         return DB::transaction(function () use (
             $item, $expectedSignature, $suggestion, $request, $releaseLevels,
         ): array {
-            $live = InboxItem::query()->whereKey($item->id)->lockForUpdate()->first();
+            [$plan, $live, $planId] = $this->lockSourceGraph($item);
             $runId = (int) ($suggestion['run_id'] ?? 0);
-
-            if ($live === null) {
-                $this->deny('native_ai_target_changed', $runId);
-            }
 
             $userId = $request->user()?->id;
             if ($userId === null || $userId <= 0) {
@@ -212,13 +236,7 @@ final class InboxAiSuggestionCommitFence
                 $this->deny('native_ai_target_changed', $runId);
             }
 
-            $planId = $live->plan_id === null ? null : (int) $live->plan_id;
             if ($planId !== null) {
-                $plan = Plan::query()->whereKey($planId)->lockForUpdate()->first();
-                if ($plan === null) {
-                    $this->deny('native_ai_target_changed', $runId);
-                }
-
                 // The Plan is locked; lock the actor's membership before
                 // publishing. The signature below compares its generation
                 // epoch and row identity to the pre-provider snapshot.
