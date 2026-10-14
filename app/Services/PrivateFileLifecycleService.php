@@ -202,6 +202,18 @@ final class PrivateFileLifecycleService
             return 'quarantined';
         }
 
+        // R35: SHA-256 + DB-reference reads cannot authorize deletion of an
+        // S3/object-store generation. A remote adapter may change after the
+        // final check (including same-body ABA), and path-only delete can
+        // target a later writer. Quarantine BEFORE storage I/O or unlink.
+        // This explicitly keeps local-disk legacy behavior unchanged; no
+        // runtime flag may bypass the external-provider proof requirement.
+        $diskConfig = config('filesystems.disks.'.(string) $row->disk);
+        if (! is_array($diskConfig) || ($diskConfig['driver'] ?? null) !== 'local') {
+            $this->quarantine($id, 'provider_generation_delete_unverified');
+            return 'quarantined';
+        }
+
         // The flag is OFF until every native writer shares this lock.
         // After the outbox row lock, hold the path row lock through final
         // reference verification and physical unlink, never outside a
