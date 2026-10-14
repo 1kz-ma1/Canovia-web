@@ -326,24 +326,23 @@ class InboxRoutingService
             // collection are not valid commit-time authorization. Re-check
             // current Editor/Owner against DB-locked Plan/Member rows, or
             // the live guest-owner cookie for an anonymous personal Plan.
-            if ($actor !== null) {
-                if (! $this->membership->canAccess($actor, $livePlan, true)) {
+            if ($livePlan->user_id === null) {
+                // Cookie-owned guest Plans remain editable even when their
+                // owner later logs in: preserve the existing ownership path.
+                if (! $this->ownership->owns($request, $livePlan)) {
                     throw ValidationException::withMessages([
-                        'plan_id' => '対象Planの編集権限が変更されました。',
+                        'plan_id' => '対象Planの所有権が変更されました。',
                     ]);
                 }
-            } elseif (! $this->ownership->owns($request, $livePlan)) {
+            } elseif ($actor === null
+                || ! $this->membership->canAccess($actor, $livePlan, true)) {
                 throw ValidationException::withMessages([
-                    'plan_id' => '対象Planの所有権が変更されました。',
+                    'plan_id' => '対象Planの編集権限が変更されました。',
                 ]);
             }
 
-            if ($live->source_type !== 'url') {
-                throw ValidationException::withMessages([
-                    'destination' => 'Plan Resourceへ追加できるのはURL付きのInboxです。',
-                ]);
-            }
-
+            // R43 preserves the prior URL-in-text Inbox behavior as well.
+            // Source type is checked for drift; only a real URL is required.
             $url = trim((string) $live->source_url);
             if ($url === '') {
                 throw ValidationException::withMessages([
