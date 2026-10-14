@@ -21,6 +21,7 @@ final class PrivateFileLifecycleService
 {
     public function __construct(
         private readonly PrivateFilePathFenceService $pathFence,
+        private readonly PrivateFileStorageBoundaryService $storageBoundary,
     ) {}
 
     private const TABLE = 'private_file_cleanup_entries';
@@ -78,19 +79,28 @@ final class PrivateFileLifecycleService
                 continue;
             }
 
-            try {
-                if (! Storage::disk($disk)->exists($path)) {
-                    continue; // Absent at registration: never target a future reused path.
-                }
-                $digest = hash('sha256', Storage::disk($disk)->get($path));
-                $status = 'pending';
-                $reason = null;
-            } catch (Throwable) {
-                // Do not auto-delete if the exact bytes could not be sealed.
+            if (! $this->storageBoundary->isLocalDefaultDisk()) {
+                // R37: R35 forbids provider deletion, so do not even HEAD/GET
+                // its bytes while enrolling cleanup. Retain an encrypted
+                // manual-review record without consulting an external adapter.
                 $digest = null;
                 $status = 'quarantined';
-                $reason = 'source_unavailable';
-                $this->warn('storage_unavailable');
+                $reason = 'provider_generation_delete_unverified';
+            } else {
+                try {
+                    if (! Storage::disk($disk)->exists($path)) {
+                        continue; // Absent locally: never delete a reused future path.
+                    }
+                    $digest = hash('sha256', Storage::disk($disk)->get($path));
+                    $status = 'pending';
+                    $reason = null;
+                } catch (Throwable) {
+                    // Do not auto-delete if the original bytes cannot be sealed.
+                    $digest = null;
+                    $status = 'quarantined';
+                    $reason = 'source_unavailable';
+                    $this->warn('storage_unavailable');
+                }
             }
 
             $ids[] = (int) DB::table(self::TABLE)->insertGetId([

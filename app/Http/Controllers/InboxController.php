@@ -19,6 +19,7 @@ use App\Services\InboxRoutingService;
 use App\Services\NativeAiGateway;
 use App\Services\PlanOwnershipService;
 use App\Services\PrivateFileUploadService;
+use App\Services\PrivateFileStorageBoundaryService;
 use App\Services\ReleaseLevelService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -137,6 +138,7 @@ class InboxController extends Controller
         InboxIntelligenceService $intelligence,
         ReleaseLevelService $releaseLevels,
         PrivateFileUploadService $privateUploads,
+        PrivateFileStorageBoundaryService $storageBoundary,
     ) {
         $validated = $request->validate([
             'title' => ['nullable', 'string', 'max:255'],
@@ -249,8 +251,11 @@ class InboxController extends Controller
                 array_replace($itemAttributes, ['storage_path' => $paths[0]]),
             ));
         } else {
-            // Feature OFF: preserve the existing upload/insert behavior.
+            // R37: the legacy file path lacks durable prewrite intent.
+            // Reject remote/unknown adapters before UploadedFile->storeAs
+            // can resolve a provider client or write an unowned generation.
             if ($file) {
+                $storageBoundary->requireLocalLegacyWriter();
                 $itemAttributes['storage_path'] = $file->storeAs(
                     dirname($uploadCandidatePath), basename($uploadCandidatePath),
                 );
