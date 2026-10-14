@@ -138,3 +138,15 @@ No test command, Required Check, job name, branch trigger, branch protection, pr
 - **RECOMMENDED:** expand to Development Prelaunch only after its current active Development-lane owner confirms the shared workflow boundary; do not modify it in parallel.
 
 This is a scheduling/cost optimization for obsolete *main PR* revisions, not a new path filter. Never treat cancelled/old-SHA CI as release evidence. Re-run/inspect final SHA checks before merging to main. Production promotions still require owner GO, full required checks on the exact merge SHA and actual Render/Aiven evidence.
+
+## Platform PR concurrency live acceptance — evidence protocol (2026-10-14)
+
+**CURRENT TEST STATE: IN PROGRESS; NOT VERIFIED.** Only the Platform lane's own documentation is changed on this branch; no product behavior, GitHub rules or production settings are modified.
+
+1. Start a normal PR from the dedicated Platform feature branch into main. Capture each GitHub Actions run ID, PR number, SHA, status and conclusion for both long-running always-on checks (Workspace Resume, Production Migration Recovery).
+2. While the first Workspace Resume run is executing, add a second documentation-only commit to this same PR to trigger a second run.
+3. Check the two distinct head SHAs. Expected: old Workspace Resume and old Migration Recovery runs may have conclusion cancelled if still active; new SHA must run fully with success. Any old run already completed successfully before the new run started cannot demonstrate cancellation.
+4. Record the full run IDs and observed results. An old run marked pending while a new run is also pending is inconclusive. No force-cancel through API is permitted.
+5. All current-head CI including Platform Offline, Workspace Resume, Migration Recovery and Development Prelaunch must succeed before main merge. Protect production pushes/PRs: no production event is created by this experiment.
+
+**LIMIT:** A successful cancellation for a main-target PR does not prove production-context isolation at runtime. Static production isolation contract tests remain the only verification there; owner release GO is still required.
