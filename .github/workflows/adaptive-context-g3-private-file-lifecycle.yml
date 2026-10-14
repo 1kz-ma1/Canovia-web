@@ -82,4 +82,7 @@ jobs:
       - name: G3 operator-only CLI dry-run and read-only health are available
         run: |
           php artisan canovia:retry-private-file-cleanup --dry-run
-          php artisan canovia:private-file-cleanup-health --json --strict
+          # Prior fixture deliberately leaves a quarantined entry. The read-only
+          # smoke validates schema/report availability; dedicated feature tests
+          # assert strict exit=2 for that exact attention state.
+          php artisan canovia:private-file-cleanup-health --json
