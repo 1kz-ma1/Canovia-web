@@ -18,6 +18,9 @@
 
 ## MCP staging and public-release readiness (2026-10-09)
 
+- [Staging identity-link mismatch runbook (2026-10-14)](development/MCP_STAGING_IDENTITY_LINK_MISMATCH_RUNBOOK_2026_10_14.md): 認証成功後のsubject/fingerprint不一致を安全に切り分ける運用手順。復旧や受入完了は未確認。
+- [Future Identity & Connection UX](future/CANOVIA_IDENTITY_CONNECTION_UX.md): パスキー等の追加認証、必要時の接続コード、安全な再連携とPlan同意の分離（**Candidate / not implemented**）。
+
 - [Isolated synthetic Development Plan consent pilot](development/MCP_STAGING_SYNTHETIC_PLAN_CONSENT_PILOT_2026_10_13.md): off-by-default staging-only, owner-verified scope and expiry; MCP reads stay disabled.
 - [ChatGPT MCP Phase 1 Development-only read acceptance](development/MCP_CHATGPT_PHASE1_DEVELOPMENT_READ_2026_10_11.md): approved implementation scope, OAuth Tool declaration, Auth0/JWT gating, and real ChatGPT E2E proof still required.
 - [Closed staging synthetic Plan/Task read fixture](development/MCP_STAGING_SYNTHETIC_READ_FIXTURE_2026_10_09.md): operator-only fixed sample Plan; no live OAuth/ChatGPT access yet.
