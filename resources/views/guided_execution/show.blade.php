@@ -238,6 +238,37 @@
                             </div>
                         @endif
                     </div>
+                @if ($latestCompleted->next_adjustment && $latestCompleted->task_evidence_id)
+                    @php
+                        $proposedNextAction = trim((string) $latestCompleted->next_adjustment);
+                        $currentNextAction = (string) ($task->next_action_note ?? '');
+                        $alreadyAdopted = $currentNextAction === $proposedNextAction;
+                        $mayAdopt = ! in_array($task->status, ['done', 'cancelled'], true)
+                            && (int) $task->progress_percent < 100
+                            && mb_strlen($proposedNextAction) <= 1000;
+                    @endphp
+                    <div class="mt-4 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.04] p-4" data-reflection-next-action>
+                        <p class="text-sm font-bold text-slate-100">次にやることへつなげる</p>
+                        <p class="mt-1 text-xs leading-5 text-slate-400">
+                            振り返りは保存済みです。次のActionへは、あなたが確認してから反映します。
+                            Taskの完了・進捗率やGitHubの実績は変更しません。
+                        </p>
+                        @if ($alreadyAdopted)
+                            <p class="mt-3 text-xs font-bold text-emerald-300" data-reflection-next-action-adopted>次のActionに反映済み</p>
+                        @elseif ($mayAdopt)
+                            <form method="POST"
+                                  action="{{ route('plans.tasks.guided_execution.confirm_next_action', [$plan, $task, $latestCompleted]) }}"
+                                  class="mt-3" data-mutation-once>
+                                @csrf
+                                <input type="hidden" name="expected_next_action_hash"
+                                       value="{{ hash('sha256', $currentNextAction) }}">
+                                <button type="submit" class="btn-primary">この内容を次のActionに反映する</button>
+                            </form>
+                        @else
+                            <p class="mt-3 text-xs text-amber-200">完了済みのTaskや長すぎる提案はここから反映できません。PlanのTask編集で確認してください。</p>
+                        @endif
+                    </div>
+                @endif
                 @endif
             </section>
         @endif
