@@ -568,3 +568,27 @@ an independently reviewed verifier, request-bound write evidence,
 provider/IAM/versioning status, external-writer controls, conditional
 generation operations and real power-loss tests. Five G3 migrations
 remain unapproved for Aiven. **G3 OPEN.**
+
+## 24. G3-R25 — Independent provider verification preflight stays deny-only
+
+`CANOVIA_PRIVATE_FILE_PROVIDER_EVIDENCE_ADMISSION_ENABLED` remains
+OFF by default. Only disposable testing environments with all prior
+R11/R13/R20/R21/R23/R24 gates and S3-shaped fixture config can call
+R25's read-only evidence admission service. No live SDK, trust root,
+provider keys, remote requests, cron or operator action exists.
+
+The seven independently required checks are provider identity/trust
+root, authenticated response, request-to-generation binding,
+anti-replay continuity, versioning/IAM, external-writer fencing and
+generation-fenced conditional operations. Each is **unverified**.
+All-claimed input still yields `independent_verifier_unavailable`.
+Missing or unknown claims yield `independent_requirements_unmet`.
+A matching local R24 chain is not remote authenticity, recoverable
+object ownership or authorization to retry, overwrite or delete.
+
+Do not use R25 labels to bypass hold/manual investigation. The
+unavailable verifier must never be replaced, re-bound or activated
+without independent security review, real provider acceptance tests,
+power-loss recovery verification and separately approved rollout.
+Local is still the default; five earlier G3 migrations are not
+approved for production Aiven. **G3 OPEN.**

@@ -837,3 +837,54 @@ bucket versioning/IAM evidence and writer fencing, plus physical
 crash tests and generation-safe operations. **R24 does not create
 these guarantees. Five previously added G3 production migrations
 remain unapproved; G3 OPEN.**
+
+## 20. G3-R25 — Independent verifier contract and deny-only evidence admission (2026-10-14)
+
+R24 separates local HMAC/SDK/TLS/synthetic provider claims from real
+provider attestation. R25 adds a **future verifier interface**:
+`App\\Contracts\\PrivateFileIndependentProviderVerifier::verify(array)`.
+The **only concrete wired verifier** is the final
+`PrivateFileUnavailableProviderVerifier`, which always returns
+`independent_verifier_unavailable` with authenticity and
+write-generation binding false. This does not install an SDK, trust
+root, real provider signing policy, production verifier or allow-path.
+
+`PrivateFileProviderEvidenceAdmissionService::review` performs strict,
+read-only admission *preflight* on a synthetic candidate. It requires
+a previously valid R24 local chain and exact scoped attempt ID, request
+ID, version ID, bucket and key. It rejects unknown/extra fields, fake
+verified flags, wrong types, stale/future evidence and cross-attempt
+data. Claim-only fields are `trust_root`, `write_binding`,
+`anti_replay`, `bucket_versioning`, `writer_isolation` and
+`generation_preconditions`. Each accepts only bounded claimed,
+missing or unknown labels; suspended/disabled/unknown versioning is
+explicitly unready. All fields are **caller-controlled assertions**,
+not independently checked capabilities.
+
+Missing conditions are `independent_requirements_unmet`; even when
+every field says claimed, the sole verifier returns
+`independent_verifier_unavailable`. A local match can set
+`local_binding_consistent=true`, but no result sets independent
+verifier availability, provider authentication, write-bound generation,
+writer exclusivity, retry, deletion, network requests or storage
+mutation to true. A fixed, redacted `missing_independent_checks`
+list always names seven prerequisites: identity and trust root,
+response authenticity, request/generation binding, anti-replay,
+versioning/IAM, external-writer fence and generation-conditional
+operations. It does not disclose private paths, keys or versions.
+
+`CANOVIA_PRIVATE_FILE_PROVIDER_EVIDENCE_ADMISSION_ENABLED` defaults
+OFF and the service requires `APP_ENV=testing` plus R11/R13/R20/R21/
+R23/R24 test gates and disposable S3-shaped driver. The default Local
+production topology remains unchanged. There is no new migration,
+command, job, SDK/provider call, reattempt or deletion, and no
+user-facing or production write path wired to the contract.
+
+PostgreSQL 16 and MySQL 8.0/8.4 tests cover all-claimed denial,
+missing/stale/invalid fields, authorization spoofing, wrong
+attempt/request/version/key/bucket, R24 broken chain, missing durable
+ack, corruption/key rotation, OFF/production/Local denial and
+DB/Storage no-mutation. These synthetic checks cannot prove actual
+provider identity, immutable generation, IAM/versioning state, live
+fencing, key rotation or real crash recovery. Five existing G3 schema
+migrations remain unapproved for production Aiven. **G3 OPEN.**

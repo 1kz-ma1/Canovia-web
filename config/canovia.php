@@ -134,6 +134,13 @@ return [
         FILTER_VALIDATE_BOOL
     ),
 
+    // G3-R25: deny-only admission for untrusted provider evidence claims.
+    // This is testing-only; no real verifier or provider integration. OFF.
+    'private_file_provider_evidence_admission_enabled' => filter_var(
+        env('CANOVIA_PRIVATE_FILE_PROVIDER_EVIDENCE_ADMISSION_ENABLED', false),
+        FILTER_VALIDATE_BOOL
+    ),
+
     // A public epoch label, NOT an encryption key. Changing it intentionally
     // blocks old proof reads until an explicit, audited migration exists.
     'private_file_generation_key_epoch' => env(

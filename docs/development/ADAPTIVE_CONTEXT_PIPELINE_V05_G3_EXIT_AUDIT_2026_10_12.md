@@ -1124,3 +1124,28 @@ corresponding authority and mutation flag stays false.
 diff review and clean current-base merge required. No live runtime,
 migration, storage I/O or operator action is introduced. Five existing
 G3 migrations remain production-unapproved. **G3 OPEN.**
+
+## 70. G3-R25 — Independent provider evidence cannot be admitted with synthetic claims (2026-10-14)
+
+**Bounded implementation:** R25 declares an interface for an eventual
+independently authenticated write-generation verifier but wires only
+a final no-authority implementation. A gated synthetic admission
+service checks exact candidate scope, time, allowed claimed/missing
+values and existing R24 local-chain evidence. It returns the same
+seven unmet independent-verification requirements regardless of
+self-reported "fully satisfied" claims. No evidence is promoted into
+retry, deletion, provider authentication or generation assurance.
+
+**Acceptance:** tests on isolated PostgreSQL 16 and MySQL 8.0/8.4
+exercise a wholly claimed candidate and negative authorization
+spoofing, missing/unknown prerequisites, cross-attempt/version/path
+claims, stale evidence, missing durable ack, rotation/ciphertext
+tampering, production/OFF/Local blocks and no DB/Storage writes.
+Full diff, exact-HEAD CI and clean latest-base review are required
+for any development merge.
+
+**Residual:** no real cloud provider verifier, external root of trust,
+immutable versioning/IAM proof, anti-replay continuity, exclusive
+writer fencing, generation-conditional mutation or real kill/restart
+evidence. Five additive G3 migrations remain production-unapproved,
+and no actual deployment is in scope. **G3 OPEN.**
