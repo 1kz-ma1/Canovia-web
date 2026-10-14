@@ -138,7 +138,7 @@ final class InboxRecallMaterialTransferG3Test extends TestCase
         });
 
         $this->routeRecall($actor, $plan, $task, $inbox)
-            ->assertSessionHasNoErrors();
+            ->assertSessionHasErrors('destination');
         $this->assertDatabaseCount('study_recall_candidates', 0);
         $this->assertSame('new', $inbox->fresh()->status);
     }
@@ -158,7 +158,7 @@ final class InboxRecallMaterialTransferG3Test extends TestCase
         });
 
         $this->routeRecall($actor, $plan, $task, $inbox)
-            ->assertSessionHasNoErrors();
+            ->assertSessionHasErrors('destination');
         $this->assertDatabaseCount('study_recall_candidates', 0);
         $this->assertSame('new', $inbox->fresh()->status);
     }
@@ -168,7 +168,11 @@ final class InboxRecallMaterialTransferG3Test extends TestCase
         [$actor, $plan, $task, $inbox] = $this->scenario();
         $other = User::factory()->create();
         $inbox->update(['user_id' => $other->id]);
-        $this->routeRecall($actor, $plan, $task, $inbox)->assertForbidden();
+        $this->actingAs($actor)
+            ->post(route('inbox.route', $inbox), [
+                'destination' => 'recall_material',
+                'plan_id' => $plan->id, 'task_id' => $task->id,
+            ])->assertForbidden();
         $this->assertDatabaseCount('study_recall_sources', 0);
         Http::assertNothingSent();
     }
