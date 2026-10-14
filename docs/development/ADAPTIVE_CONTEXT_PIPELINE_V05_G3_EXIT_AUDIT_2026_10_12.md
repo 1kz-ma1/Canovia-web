@@ -885,3 +885,37 @@ generation contract, external writer coverage, APP_KEY rotation or
 production approval. All three G3 DB migration gates remain
 separately unapproved. No Render/Aiven/live Storage operations or
 automatic cleanup are performed.
+
+## 62. G3-R17 — Storage-independent synthetic write-evidence ownership model (2026-10-14)
+
+**R16 gap:** existing upload-intent journal rows were bound to an
+encrypted private path but not a specific source-record owner or a
+write-time provider VersionId, and APP_KEY-derived HMAC digest rotation
+was unresolved. There was no persistent evidence shape on which to
+base a future versioning-enabled provider adapter.
+
+**R17 pilot:** Adds
+`private_file_generation_evidence` keyed by a unique foreign key to
+a committed upload-intent row, with HMAC bucket/path binding,
+allowlisted owner kind/ID, encrypted opaque synthetic VersionId,
+explicit key epoch and synthetic-only provenance. Recording requires
+test environment + separately enabled flags and verifies exact
+owning DB reference while locked in one transaction. No real storage
+calls or authorization for deletion. Read-only inspection fails closed
+for owner/path/status changes, corrupted token, missing legacy evidence,
+bucket/key epoch changes and unknown provenance. Every result forces
+`generation_verified=false; delete_authorized=false`.
+
+**Verification gate:** Disposable PG16 and MySQL8.0/8.4 schema/test
+coverage includes committed-owner binding, failed/duplicate/invalid
+records, legacy behavior, encryption/redaction, production/disabled
+gates, epoch and bucket rotation incompatibility, safe CLI reporting
+and unchanged physical bytes. Check exact reviewed CI HEAD before
+development integration.
+
+**Not resolved:** No real S3 adapter capture, versioning-enabled
+bucket attestation, signed response provenance, immutable provider
+generation/conditional deletion, independent keyring/rotation or
+coordinated external writers. R17 introduces a **fourth** additive
+production schema gate, not approval to run it. R11/R13/R14/R15/R16
+default-OFF runtime behavior and G3 OPEN status remain unchanged.
