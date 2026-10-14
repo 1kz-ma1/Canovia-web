@@ -5,14 +5,14 @@ namespace Tests\Feature;
 use App\Models\InboxItem;
 use App\Models\Plan;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class IosSoftLaunchWebReadinessV561Test extends TestCase
 {
-    use DatabaseMigrations;
+    use DatabaseTruncation;
 
     protected function setUp(): void
     {
