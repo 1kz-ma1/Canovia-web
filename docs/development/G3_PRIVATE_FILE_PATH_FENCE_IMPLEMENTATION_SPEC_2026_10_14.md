@@ -750,3 +750,35 @@ APP_KEY/epoch/tampered encryption and read-only invariants. This does
 power loss, authenticated receipt, generation-bound conditional
 deletion or a keyring. Five prior G3 additive migrations remain
 unapproved for Aiven; **G3 OPEN**.
+
+## 18. G3-R23 — Synthetic write-time provenance correlation (2026-10-14)
+
+R23 adds `PrivateFileSyntheticWriteProvenanceService` to compare three
+fixture-supplied artifacts: a durable R20 write attempt, a strictly
+shaped synthetic PutObject receipt, and a later R21 observation.
+It reuses R21's validation of request-token HMAC, encrypted journal path,
+bucket, APP_KEY epoch and durable synthetic version evidence.
+
+The synthetic receipt contains only fixed operation/origin/status,
+attempt/token/disk/bucket/key, version and request identifiers, and
+receive timestamp. Strict capability-claim fields cover versioning,
+response binding, external writers and conditional operations.
+Unexpected fields, spoofed origins, mismatched attempts, keys, tokens,
+versions, stale times, missing acknowledgements, key-epoch rotation
+and damaged ciphertext are denied with redacted labels.
+
+`synthetic_chain_consistent_unattested` is an INTERNAL fixture
+consistency result only. It is not cryptographic authentication of an
+external provider response, proof of an immutable generation, exclusion
+of ABA/external writers, or permission to retry or delete. Every result
+fixes provider_attested, write_receipt_authenticated,
+generation_verified, external_writers_excluded, retry_authorized,
+delete_authorized, network_requests and storage_mutations to false.
+
+`CANOVIA_PRIVATE_FILE_SYNTHETIC_WRITE_PROVENANCE_ENABLED` is
+independently default OFF and allowed only in testing with R11/R13/R20/R21
+gates. Local remains the live default. No migrations, provider API calls,
+new scheduler, UI changes or production rollout. PostgreSQL 16 and
+MySQL 8.0/8.4 CI cover successful fixture correlation and negative
+security/corruption cases. Five existing G3 migrations remain
+production-unapproved. **G3 OPEN.**

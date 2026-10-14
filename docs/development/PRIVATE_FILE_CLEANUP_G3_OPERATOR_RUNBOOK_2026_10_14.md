@@ -524,3 +524,24 @@ write-time evidence, coordinated external writers and generation-safe
 conditional operations, plus a separately approved production gate.
 Local remains the default. No Aiven migration approval was given:
 five previous G3 migrations remain pending. **G3 OPEN.**
+
+## 22. G3-R23 — Matching synthetic write evidence is not operational authority
+
+The R23 flag `CANOVIA_PRIVATE_FILE_SYNTHETIC_WRITE_PROVENANCE_ENABLED`
+is OFF by default and the classifier is testing-only. It compares
+fixture-supplied PutObject-shaped metadata with a durable R20 attempt
+and R21 observation. It does not contact the provider or mutate files.
+
+`synthetic_chain_consistent_unattested` indicates a matching test
+envelope, not an authenticated remote write. The request ID, APP_KEY
+HMAC, VersionId and self-reported capability labels do not prove
+object ownership, writer exclusivity, or a recoverable generation.
+Missing acknowledgement, changed key epoch, mismatched version,
+wrong token/bucket/key and unavailable provider guarantees require
+manual hold. Never translate any R23 label to automatic retry,
+overwrite or file removal.
+
+There is no new migration, CLI, scheduled worker or production
+activation. Five existing G3 migrations remain unapproved for Aiven.
+Real provider attestation, generation-fenced operations and crash
+recovery still need a separately reviewed rollout. **G3 OPEN.**
