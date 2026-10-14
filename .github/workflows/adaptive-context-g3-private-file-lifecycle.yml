@@ -7,6 +7,9 @@ on:
       - 'app/Services/PrivateFileLifecycleService.php'
       - 'app/Services/PrivateFilePathFenceService.php'
       - 'app/Services/PrivateFileUploadService.php'
+      - 'app/Services/PrivateFileUploadIntentService.php'
+      - 'database/migrations/2026_10_14_130000_create_private_file_upload_intents.php'
+      - 'tests/Feature/PrivateFileUploadIntentG3Test.php'
       - 'app/Http/Controllers/InboxController.php'
       - 'app/Http/Controllers/StudyRecallCandidateController.php'
       - 'tests/Feature/PrivateFileUploadG3Test.php'
@@ -81,6 +84,9 @@ jobs:
           php -l app/Services/PrivateFileLifecycleService.php
           php -l app/Services/PrivateFilePathFenceService.php
           php -l app/Services/PrivateFileUploadService.php
+          php -l app/Services/PrivateFileUploadIntentService.php
+          php -l database/migrations/2026_10_14_130000_create_private_file_upload_intents.php
+          php -l tests/Feature/PrivateFileUploadIntentG3Test.php
           php -l app/Http/Controllers/InboxController.php
           php -l app/Http/Controllers/StudyRecallCandidateController.php
           php -l tests/Feature/PrivateFileUploadG3Test.php
@@ -106,7 +112,7 @@ jobs:
           php -l tests/Feature/IosSoftLaunchWebReadinessV561Test.php
           php -l tests/Feature/SafePlanResourceRecallHandoffV5811Test.php
       - name: G3 private file lifecycle and durable retry outbox on PostgreSQL 16
-        run: php artisan test tests/Feature/PrivateFileLifecycleG3Test.php tests/Feature/PrivateFileCleanupOutboxG3Test.php tests/Feature/PrivateFileCleanupHealthG3Test.php tests/Feature/PrivateFilePathFenceG3Test.php tests/Feature/InboxRecallMaterialTransferG3Test.php tests/Feature/PrivateFileUploadG3Test.php tests/Feature/InboxUploadPathFenceG3Test.php tests/Feature/StudyScopeCaptureV534Test.php tests/Feature/StudyRecallBatchIngestV588Test.php tests/Feature/StudyRecallCandidateV4112Test.php --stop-on-failure
+        run: php artisan test tests/Feature/PrivateFileLifecycleG3Test.php tests/Feature/PrivateFileCleanupOutboxG3Test.php tests/Feature/PrivateFileCleanupHealthG3Test.php tests/Feature/PrivateFilePathFenceG3Test.php tests/Feature/InboxRecallMaterialTransferG3Test.php tests/Feature/PrivateFileUploadG3Test.php tests/Feature/PrivateFileUploadIntentG3Test.php tests/Feature/InboxUploadPathFenceG3Test.php tests/Feature/StudyScopeCaptureV534Test.php tests/Feature/StudyRecallBatchIngestV588Test.php tests/Feature/StudyRecallCandidateV4112Test.php --stop-on-failure
       - name: G3 opt-in Resource Recall route regression in isolated PHP process
         run: php artisan test tests/Feature/SafePlanResourceRecallHandoffV5811Test.php --stop-on-failure
       - name: G3 operator-only CLI dry-run and read-only health are available
@@ -116,3 +122,4 @@ jobs:
           # smoke validates schema/report availability; dedicated feature tests
           # assert strict exit=2 for that exact attention state.
           php artisan canovia:private-file-cleanup-health --json
+          php artisan canovia:private-upload-intent-health --json
