@@ -13,6 +13,7 @@ use App\Models\Task;
 use App\Services\BehaviorIdentityService;
 use App\Services\FeatureAccessService;
 use App\Services\PlanOwnershipService;
+use App\Services\PrivateFileUploadService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\StudyRecallBatchCandidateExtractionService;
 use App\Services\StudyRecallCandidateExtractionService;
@@ -37,6 +38,7 @@ class StudyRecallCandidateController extends Controller
         BehaviorIdentityService $identity,
         FeatureAccessService $featureAccess,
         StudyRecallCandidateExtractionService $extractor,
+        PrivateFileUploadService $privateUploads,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
         $featureAccess->authorizeUse(
@@ -103,6 +105,7 @@ class StudyRecallCandidateController extends Controller
         BehaviorIdentityService $identity,
         FeatureAccessService $featureAccess,
         StudyRecallCandidateExtractionService $extractor,
+        PrivateFileUploadService $privateUploads,
     ) {
         $this->authorizeTask(
             $request,
@@ -265,6 +268,7 @@ class StudyRecallCandidateController extends Controller
         BehaviorIdentityService $identity,
         FeatureAccessService $featureAccess,
         StudyRecallBatchCandidateExtractionService $extractor,
+        PrivateFileUploadService $privateUploads,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
         $featureAccess->authorizeUse(
