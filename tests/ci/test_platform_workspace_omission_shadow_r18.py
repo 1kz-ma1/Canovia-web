@@ -17,7 +17,7 @@ from scripts.ci.platform_workspace_omission_shadow_r18 import (
 )
 
 
-def xml(files, *, target_missing=False, fail=False, extra=False, drop=False):
+def xml(files, *, target_missing=False, fail=False, extra=False, drop=False, rename=False):
     cases = []
     for path in files:
         cls = Path(path).stem
@@ -27,8 +27,8 @@ def xml(files, *, target_missing=False, fail=False, extra=False, drop=False):
             continue
         for method in (("test_a", "test_b") if cls == TARGET else ("test_fixture",)):
             cases.append('<testcase classname="Tests\\Feature\\' + cls
-                         + '" name="' + method + '">'
-                         + ("<failure/>" if fail and method == "test_a" else "")
+                         + '" name="' + ("test_changed" if rename and cls.endswith("V5872Test") else method) + '">'
+                         + ("<failure/>" if fail else "")
                          + "</testcase>")
     if extra:
         cases.append('<testcase classname="Tests\\Feature\\SurpriseTest" name="test_extra"/>')
@@ -55,6 +55,7 @@ class OmissionShadowTests(unittest.TestCase):
                     fail=opts.get("fail", False),
                     extra=opts.get("extra", False),
                     drop=opts.get("drop", False),
+                    rename=opts.get("rename", False),
                 ), encoding="utf-8")
             return opts.get("elapsed", 0.5)
 
@@ -112,7 +113,7 @@ class OmissionShadowTests(unittest.TestCase):
 
     def test_omitted_shadow_changed_retained_cases_blocks(self):
         with self.assertRaisesRegex(Inconclusive, "remaining JUnit"):
-            self.replay(lambda label, _: {"drop": True}
+            self.replay(lambda label, _: {"rename": True}
                         if label == "omitted_shadow" else {})
 
     def test_omitted_shadow_adds_unexpected_class_blocks(self):
