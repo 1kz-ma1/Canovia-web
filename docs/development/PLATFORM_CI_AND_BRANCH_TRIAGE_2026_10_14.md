@@ -83,3 +83,29 @@ ruby scripts/ops/platform_workflow_yaml_check.rb .github/workflows/*.yml
 It checks **YAML syntax only**, not GitHub Actions trigger semantics, permissions, branch rules, or runtime behavior. It prints a fixed error label, filename and line number but no YAML source snippets, and fails closed for empty/missing/symlinked inputs. Seven disposable tests cover valid YAML, the previously broken unquoted-colon case, its quoted fix, empty/missing/symlinked files and no input.
 
 This is a low-cost guard (Ruby standard-library Psych; no Composer, npm, credentials, remote API or service dependencies). It does **not** automatically fix workflow files, change required checks, or authorize production releases. A workflow with syntactically valid YAML may still fail to load or run for other reasons; inspect live Actions job creation and results as separate evidence.
+
+
+## ACTIVE follow-up — bounded Actions runtime metrics (2026-10-14)
+
+**CURRENT observation (single sample, not representative):** exact PR-head
+`3129d72636ba3020dbd8414bca968aa3de6df7ab`:
+- Workspace Resume [run 38537757172](https://github.com/1kz-ma1/Canovia-web/actions/runs/38537757172): **96 s** job runtime (08:48:36–08:50:12 UTC); Composer **7 s**.
+- Production Migration Recovery [run 38537757142](https://github.com/1kz-ma1/Canovia-web/actions/runs/38537757142): **32 s** (08:48:37–08:49:09 UTC); Composer **6 s**.
+- Development Prelaunch [run 38537757167](https://github.com/1kz-ma1/Canovia-web/actions/runs/38537757167): **22 s**; Composer **6 s**.
+- Platform Release Preflight [run 38537757096](https://github.com/1kz-ma1/Canovia-web/actions/runs/38537757096): **7 s**.
+
+These values are GitHub job wall-clock intervals, **not GitHub billable minutes**. The same PR triggers multiple independent jobs. Repeated Composer/npm/build steps are *observed work*, not sufficient proof they can be removed: migrations, session compatibility and MySQL safety rely on distinct domain tests. Reducing coverage or using skip/neutral as substitute for Required Checks is forbidden.
+
+**ACTIVE implementation:** `scripts/ops/platform_ci_runtime_report.py` collects a bounded sample of up to 30 Actions runs using only GitHub CLI `gh api --method GET` for a fixed repository and read-only run/job endpoints. No token is printed or passed as a command argument. It prints only aggregate job durations (median and nearest-rank p90), successful setup-step repetition, and zero-job/incomplete evidence counts. It neither alters CI nor certifies test coverage equivalence or release readiness. With the owner's existing GitHub CLI login:
+
+~~~sh
+python3 scripts/ops/platform_ci_runtime_report.py --live --event pull_request --limit 20
+~~~
+
+If missing permissions, incomplete results, pagination, invalid timestamps or no successful jobs, the tool stops/reports insufficient evidence. Raw API JSON/logs are never written by live mode; operators must not redirect secret-bearing raw logs into GitHub. Synthetic offline snapshots for tests can be provided with `--snapshot /path/to/synthetic-evidence.json`; live REST access is **not** required in CI.
+
+**NEXT, not implemented:** compare three or more samples over distinct PR SHAs before changing cache paths, scheduling or test selection. Group by workflow and content/trigger paths, compare test-coverage contracts, and identify safe reuse. Investigate Composer cache integrity and PR poisoning risk before enabling shared caches; do not reduce unconditional production checks.
+
+**Branch review examples, NOT DELETE APPROVAL:** `ci/p0-release-gate-20261011` is an ancestor of main (ahead=0 at sampled comparison), so it is a human-only review candidate after confirming PR linkage and no consumers. `docs/development-operational-v2-status-20261014` (ahead 2 / behind 23) and `feature/v52-0-ios-readiness-foundation` (ahead 2 / behind 2316) have unique history and must stay on hold. A Squash-merged branch may still appear diverged by ancestry; never infer safe deletion solely from ahead/behind. No branches were deleted or closed.
+
+**Status:** CURRENT measured metadata; ACTIVE read-only metrics tool; FUTURE selective CI optimization; NOT VERIFIED production Aiven/Render changes, iOS smoke, runtime improvement percentage, exact cleanup ownership.
