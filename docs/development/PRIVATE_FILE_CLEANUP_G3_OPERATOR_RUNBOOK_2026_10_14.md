@@ -119,3 +119,26 @@ verification and an approved storage-writer coordination design.
 **No production deploy, Aiven schema mutation, Render cron, production
 deletion, branch promotion, OAuth/MCP or billing change is authorized by
 this document.**
+
+## 7. Destructive preflight: disk drift and reference-schema failures (G3-R8)
+
+Before unlink, the worker verifies that the entry's sealed disk is the
+currently configured default private disk. A mismatch is quarantined with
+the **fixed** reason `storage_disk_mismatch`. This is a stop signal, not
+permission to switch disks or forcibly retry: verify the original storage
+topology and the release's disk configuration privately. Changing defaults
+while old entries remain pending requires a reviewed migration/rotation plan.
+
+All three live-reference sources are mandatory for destructive checks:
+`inbox_items.storage_path`, `study_recall_sources.storage_path`, and
+`career_captures.screenshot_path`. If a required table/column is absent,
+or the reference query fails, the worker schedules non-destructive backoff
+with the fixed pending reason `reference_check_unavailable`. It never treats
+an unqueryable source as an empty table. Do not manually shorten backoff or
+execute unverified storage deletes. The read-only health command likewise
+treats missing outbox columns as `unavailable`, not zero outstanding work.
+
+These guards **do not** serialize a new reference inserted after the final
+successful check, prove the origin of same-byte replacements, or recover
+legacy orphan files. G3 remains OPEN. Neither guard authorizes live retry,
+production schema execution, scheduler activation or a storage inventory.
