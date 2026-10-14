@@ -53,6 +53,8 @@ jobs:
           php -l tests/Feature/DevelopmentOperationalAcceptanceV55Test.php
           php -l tests/Feature/DevelopmentOperationalConflictV56Test.php
           php -l tests/Feature/DevelopmentOperationalStorageEpochV57Test.php
+      - name: Verify V5.9 pinned release packet is always unapproved
+        run: python3 -m unittest discover -s tests/ci -p 'test_development_operational_v59_candidate_packet.py' -v
       - name: Compile Blade templates
         run: php artisan view:cache
       - name: Targeted behavior and Workspace regression
