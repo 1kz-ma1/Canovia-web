@@ -157,6 +157,28 @@ final class PrivateFileUploadReconciliationPreviewG3Test extends TestCase
         $this->assertStringNotContainsString(str_repeat('f', 64), json_encode($result));
     }
 
+    public function test_production_environment_always_blocks_even_when_all_flags_are_enabled(): void
+    {
+        $path = 'inbox/synthetic/production-denial.png';
+        $this->journal($path);
+        Storage::put($path, 'must remain unchanged');
+        $originalEnv = app()['env'];
+
+        app()->instance('env', 'production');
+        try {
+            $result = $this->preview();
+        } finally {
+            app()->instance('env', $originalEnv);
+        }
+
+        $this->assertSame('blocked', $result['outcome']);
+        $this->assertSame('not_checked', $result['schema']);
+        $this->assertSame(0, $result['eligible']);
+        $this->assertSame(0, $result['observed']);
+        $this->assertDatabaseCount('private_file_path_fences', 0);
+        $this->assertSame('must remain unchanged', Storage::get($path));
+    }
+
     public function test_disabled_mode_and_missing_schema_never_probe_objects(): void
     {
         $path = 'inbox/synthetic/dont-look.png';
