@@ -165,5 +165,26 @@ class ReplayTests(TestCase):
         self.assertFalse(result["assertion_semantics_equivalence_proven"])
 
 
+    def test_cross_runner_fingerprint_stable_when_timing_differs(self):
+        first = self.replay()
+        second = self.replay(lambda name, files: {"elapsed": 11.5})
+        signature = first["comparison_fingerprint_sha256"]
+        self.assertRegex(signature, r"^[a-f0-9]{64}$")
+        self.assertEqual(signature, second["comparison_fingerprint_sha256"])
+        self.assertFalse(first["permission_to_remove_repeated_invocations"])
+
+    def test_cross_runner_fingerprint_detects_inventory_drift(self):
+        first = self.replay()
+        # Consistent within runner B, but different from runner A.
+        second = self.replay(
+            lambda name, files: {"reduce_target": True}
+            if name.startswith("adaptive_single_question_") else {}
+        )
+        self.assertEqual(first["total_group_replays"], second["total_group_replays"])
+        self.assertNotEqual(first["comparison_fingerprint_sha256"],
+                            second["comparison_fingerprint_sha256"])
+        self.assertFalse(second["permission_to_remove_repeated_invocations"])
+
+
 if __name__ == "__main__":
     main()
