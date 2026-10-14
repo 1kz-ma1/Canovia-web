@@ -20,6 +20,7 @@ final class PrivateFileCleanupHealthService
         'file_bytes_changed',
         'invalid_encrypted_path',
         'unsafe_cleanup_entry',
+        'storage_disk_mismatch',
     ];
 
     /**
@@ -52,8 +53,9 @@ final class PrivateFileCleanupHealthService
                 return $report;
             }
             foreach ([
+                'encrypted_path', 'disk', 'expected_sha256',
                 'status', 'next_attempt_at', 'attempt_count',
-                'created_at', 'last_reason',
+                'created_at', 'updated_at', 'last_reason',
             ] as $requiredColumn) {
                 if (! Schema::hasColumn(self::TABLE, $requiredColumn)) {
                     return $report;
