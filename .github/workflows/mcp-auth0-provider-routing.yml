@@ -13,6 +13,10 @@ on:
       - 'app/Services/McpAuth0JwtTokenVerifier.php'
       - 'app/Services/McpOAuthAccountLinkConfiguration.php'
       - 'app/Services/McpOAuthAccountLinkProvider.php'
+      - 'app/Http/Controllers/McpOAuthAccountLinkController.php'
+      - 'app/Http/Controllers/McpOAuthPlanConsentController.php'
+      - 'resources/views/auth/partials/mcp-account-link.blade.php'
+      - 'config/canovia_mcp.php'
       - 'app/Http/Controllers/McpReadOnlyResourceController.php'
       - 'config/canovia_mcp.php'
       - 'tests/Feature/McpAuth0JwtProviderRoutingTest.php'
@@ -46,6 +50,8 @@ jobs:
           php -l app/Services/McpAuth0JwtTokenVerifier.php
           php -l app/Services/McpOAuthAccountLinkConfiguration.php
           php -l app/Services/McpOAuthAccountLinkProvider.php
+          php -l app/Http/Controllers/McpOAuthAccountLinkController.php
+          php -l app/Http/Controllers/McpOAuthPlanConsentController.php
           php -l app/Http/Controllers/McpReadOnlyResourceController.php
           php -l tests/Feature/McpAuth0JwtProviderRoutingTest.php
       - name: Verify JWT and legacy OAuth read-only regression
