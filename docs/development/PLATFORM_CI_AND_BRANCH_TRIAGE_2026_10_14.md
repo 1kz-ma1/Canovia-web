@@ -254,3 +254,40 @@ The read-only offline command `python3 scripts/ops/platform_workspace_test_inven
 The full Workspace Resume run on the **final PR SHA** must pass, proving both previously separate classes pass in the same process. This is a functional compatibility check, **not a quantitative performance claim**. Combining two CLI invocations may save only sub-second process startup while the ~120–150-second job still runs hundreds of scenarios. Any requirement to keep separate process-global state for these two classes would invalidate this optimization; revert if the tests prove coupled. Do **not** generalize this grouping to stateful Feature tests or remove repeated file occurrences.
 
 No required checks, branch protection, app source, Render/Aiven, production release settings or resources are modified by this slice.
+
+
+## ACTIVE: Workspace repeated-regression context evidence (2026-10-14)
+
+### CURRENT — exact named context inventory
+
+At this source revision, Workspace Resume runs 72 separate `php artisan test` invocations naming 160 test-file occurrences across 118 unique test files. Exactly **21 files appear more than once**, accounting for **42 extra appearances**. This is not a claim that any of them are expendable.
+
+Representative named overlap examples:
+
+| Test file | Appearances | Cross-context evidence |
+| --- | ---: | --- |
+| `AdaptiveLearningSingleQuestionV5878Test.php` | 7 | ranking, exam simulation, typed answers, autosave, history, candidate queue, legacy regression |
+| `AdaptiveLearningCandidateQueueV5879Test.php` | 5 | adjustment, ranking, simulation, cross-run evidence, queue compatibility |
+| `PlanActionDraftV5871Test.php` | 5 | quality/staleness, sequential approval, typed evidence, multi-evidence revision, owner approval |
+| `AdaptiveLearningExamSimulationV5880Test.php` | 4 | adjustment, ranking, verified exam readiness, legacy regression |
+| `QuestionBankV402Test.php` | 4 | simulation, publication readiness, candidate queue, legacy regression |
+
+Source inspection of the **eight most-repeated classes** confirmed they extend Laravel's `Tests\TestCase` and use `Illuminate\Foundation\Testing\RefreshDatabase`. This suggests stateful HTTP/model/DB coverage and shows why name-based de-duplication or grouping could silently weaken isolation. `RefreshDatabase` in a source file is **not proof** that two different full-suite invocations are interchangeable, that their setup is independent, or that removing one is safe.
+
+### ACTIVE — fail-closed static audit, not an optimizer
+
+The read-only `scripts/ops/platform_workspace_repeat_context.py` enumerates every repeated file's **exact named CI execution contexts**, their original order, and evidence of Laravel TestCase, RefreshDatabase, and DatabaseTransactions/DatabaseMigrations references. It includes a SHA-256 fingerprint of the ordered explicit test-file arguments. For the owner/operator on a repository checkout:
+
+~~~sh
+python3 scripts/ops/platform_workspace_repeat_context.py
+~~~
+
+The tool validates literal safe test paths, bounded size, local source availability, and syntax of the explicit Artisan commands. Unrecognized commands, missing/symlinked/oversized source evidence, unsafe paths or missing step attribution fail closed. It emits metadata, names and boolean signals only, never application/test source, secrets, or test execution logs. None of these signals can grant permission to remove or regroup a test.
+
+Existing Platform Release Preflight CI runs 13 synthetic/source-bound regression tests from `tests/ci/test_platform_workspace_repeat_context.py`, checking the exact 21/42 baseline, identity of the highest-repeated test, Laravel/DB risk signals, source validity and invalid input handling. No PHP test group, test count, migration, production trigger, concurrency policy, Required Check or deployment is changed by this instrumentation.
+
+### NEXT — targeted, empirical equivalence reviews (not implemented)
+
+Before any duplicate removal, require: (1) a specific test-file occurrence and named regression context selected; (2) isolated and grouped runs comparing exact assertions, DB/tenant/session boundaries, timing and order-dependent failures over multiple PR SHAs; (3) explicit sign-off that the cross-context acceptance intent remains covered; and (4) all standard workspace, migration, development and platform checks green on the exact PR head. Do **not** use per-step total time as an estimate of one repeated file's cost; multiple test files can execute together in the same step.
+
+**Status:** CURRENT 21 repeated state/context observations; ACTIVE read-only audit and guard; FUTURE equivalence research, NOT VERIFIED any safe duplicate deletion, sustained speedup or billing improvement. Production/Render/Aiven remain untouched.
