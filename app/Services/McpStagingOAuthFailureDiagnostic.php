@@ -25,6 +25,14 @@ final class McpStagingOAuthFailureDiagnostic
         'link_callback_token',
         'link_callback_subject',
         'link_callback_plan_scope',
+        // Diagnostic-only split of the same fail-closed Plan consent gates.
+        // Values are never interpolated; stage-only, fixed categories.
+        'link_callback_plan_fixture_missing',
+        'link_callback_plan_stage_guard',
+        'link_callback_plan_consent_disabled',
+        'link_callback_plan_scope_invalid',
+        'link_callback_plan_owner',
+        'link_callback_plan_link_mismatch',
         'link_callback_unexpected_purpose',
         'link_confirm_rejected',
         'link_provider_metadata_unreachable',
