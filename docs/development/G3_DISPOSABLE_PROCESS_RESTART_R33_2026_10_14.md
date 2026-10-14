@@ -17,6 +17,10 @@ upstream origin does **not** establish independently verified artifact
 provenance. The CI records the downloaded image manifest digest,
 restricts Docker privileges, mounts only runner-local synthetic data,
 passes only dummy credentials, and exposes port 9000 on localhost.
+The experimentally observed and pinned mirror image manifest is
+`sha256:624bad2fe79a8613aa3c5c9b765ebcab365080b8445cf1b05c357cc7753725f0`.
+Digest pinning prevents accidental retagging but does not certify the
+mirror's upstream build provenance or make it safe for production.
 **This mirror is unsuitable as a production trust root.** The
 test provides compatibility evidence only, never independent
 provider attestation.
@@ -84,3 +88,34 @@ license activation (`License activation failed`). No license
 bypass was attempted. R33 then moved to a restricted historical
 community mirror. Each attempt must be reported under its own
 exact tested SHA; failed startup does not establish data behavior.
+
+
+## First successful measured trial (pre-digest-pin HEAD)
+
+- **GitHub Actions run:** [38577430323](https://github.com/1kz-ma1/Canovia-web/actions/runs/38577430323)
+- **Observed feature HEAD:** `d276c6a66038a86ee970dbdbc91650c14a8af1ac`.
+- **CI job:** `G3 isolated MinIO mirror SIGKILL and version persistence`, **SUCCESS**.
+- Actual `PREPARE PASS`: 3 A→B→A + 4 concurrent + 2 same-body
+  attempts produced **9 distinct versioned HTTP PUTs**, then re-read.
+- Actual `OUTAGE PASS`: container was SIGKILLed and the localhost
+  TCP endpoint refused connections.
+- Actual `RESTART PASS`: the same runner-local volume retained **all
+  nine historical object versions** with SHA-256 content verification;
+  a tenth post-restart PUT/GET was successful.
+- No S3 delete API was issued. All provider-authenticated, safe-delete
+  and G3-release verdicts remain **false**.
+
+The first MinIO mirror startup in run `38576997198` failed solely
+because the container's unprivileged process could not write its
+runner-local mount. The test runner's *dedicated disposable directory*
+was made writable; no existing filesystem or production permission
+was changed. This successful run predates pinning the observed
+container image digest. A new exact-HEAD CI run after digest pinning
+is required for final acceptance.
+
+This test is **process-level container SIGKILL/restart**, not a
+host power-loss durability test, actual AWS S3 provider validation,
+real Laravel upload/outbox atomic recovery, externally fenced writes,
+or a provider-authenticated generation-safe delete experiment.
+
+**G3 OPEN. Five existing additive migrations remain production-unapproved.**
