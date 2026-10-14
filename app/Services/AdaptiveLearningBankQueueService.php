@@ -69,7 +69,7 @@ final class AdaptiveLearningBankQueueService
     }
 
     /** Keep the initial ready queue nonempty without mutating already queued questions. */
-    public function refill(LearningRun $run): void
+    public function refill(LearningRun $run, ?string $reviewTopic = null): void
     {
         if ($run->status !== LearningRun::STATUS_ACTIVE || ! $run->question_pack_id) return;
         $pack = QuestionPack::query()->whereKey($run->question_pack_id)
@@ -96,7 +96,25 @@ final class AdaptiveLearningBankQueueService
         $fallback = $available->reject(fn (Question $q) =>
             in_array((int) $q->id, $preferredIds, true))->values();
 
-        foreach ($preferred->concat($fallback)->take($target - $reserved) as $question) {
+        $ordered = $preferred->concat($fallback);
+        if (filled($reviewTopic)) {
+            // V6.13: only at *new Run initial lock*, not on ordinary refills.
+            // Preserve candidate priority within topic and unrelated remainder;
+            // never mutate already locked question snapshots.
+            $topicKey = mb_strtolower(trim((string) $reviewTopic));
+            $ordered = $ordered->sortBy(function (Question $question) use ($topicKey): int {
+                $metadata = $question->learning_metadata ?? [];
+                $terms = is_array($metadata)
+                    ? array_merge(
+                        is_array($metadata['concepts'] ?? null) ? $metadata['concepts'] : [],
+                        is_array($metadata['weakness_targets'] ?? null) ? $metadata['weakness_targets'] : [],
+                    )
+                    : [];
+                return collect($terms)->contains(fn ($term) => is_string($term)
+                    && mb_strtolower(trim($term)) === $topicKey) ? 0 : 1;
+            })->values();
+        }
+        foreach ($ordered->take($target - $reserved) as $question) {
             $input = collect($question->response_schema)->firstWhere('id', 'answer');
             $run->items()->create([
                 'ordinal' => $nextOrdinal++,
