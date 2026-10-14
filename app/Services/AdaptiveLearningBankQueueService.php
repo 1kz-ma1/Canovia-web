@@ -78,6 +78,9 @@ final class AdaptiveLearningBankQueueService
 
         // The depth is an experiment setting, not a final optimal constant.
         $target = max(1, min(5, (int) config('study.adaptive_learning.locked_queue_size', 2)));
+        // Topic review requires two independent matching source Questions
+        // locked up front even when the general queue size is configured as 1.
+        if (filled($reviewTopic)) $target = max($target, 2);
         $reserved = LearningRunItem::where('learning_run_id', $run->id)
             ->where('ordinal', '>=', $run->current_ordinal)->count();
         if ($reserved >= $target) return;
