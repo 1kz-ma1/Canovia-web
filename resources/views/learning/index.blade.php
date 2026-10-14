@@ -36,7 +36,7 @@
                 <form method="POST" action="{{ route('plans.tasks.learning.start', [$plan, $task]) }}"
                     class="mt-4 space-y-3" data-learning-topic-review-start>
                     @csrf
-                    <input type="hidden" name="start_request_id" value="{{ IlluminateSupportStr::uuid() }}">
+                    <input type="hidden" name="start_request_id" value="{{ $startRequestId }}">
                     <input type="hidden" name="mode" value="understanding">
                     <input type="hidden" name="review_topic" value="{{ $reviewPreview['topic'] }}">
                     <input type="hidden" name="review_source_signature" value="{{ $reviewPreview['source_signature'] }}">
@@ -169,7 +169,7 @@
                       class="mt-4 space-y-3 rounded-xl border border-slate-700 p-4"
                       data-adaptive-exam-option="{{ $profile['key'] }}">
                     @csrf
-                    <input type="hidden" name="start_request_id" value="{{ \Illuminate\Support\Str::uuid() }}">
+                    <input type="hidden" name="start_request_id" value="{{ $startRequestId }}">
                     <input type="hidden" name="exam_profile_key" value="{{ $profile['key'] }}">
                     <input type="hidden" name="question_pack_id" value="{{ $pack->id }}">
                     <p class="text-sm font-semibold text-slate-100">
