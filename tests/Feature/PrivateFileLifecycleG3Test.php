@@ -166,7 +166,8 @@ final class PrivateFileLifecycleG3Test extends TestCase
         $path = 'study-recall-sources/'.$plan->id.'/'.$task->id.'/failure.pdf';
         $this->recall($owner, $plan, $task, $path);
 
-        Storage::shouldReceive('exists')->once()->with($path)
+        Storage::shouldReceive('disk')->once()
+            ->with((string) config('filesystems.default'))
             ->andThrow(new RuntimeException('disk temporarily unavailable'));
         Log::shouldReceive('warning')->once()->with(
             'Private file cleanup failed after DB commit',
@@ -179,8 +180,11 @@ final class PrivateFileLifecycleG3Test extends TestCase
 
         $this->assertDatabaseMissing('plans', ['id' => $plan->id]);
         $this->assertDatabaseCount('study_recall_sources', 0);
-        // In this bounded slice the inaccessible file is a known residual
-        // orphan requiring an operator-owned cleanup/reconciliation policy.
+        // Without an authentic byte hash the new durable outbox must refuse
+        // destructive automatic retry, retaining a quarantine record.
+        $this->assertDatabaseHas('private_file_cleanup_entries', [
+            'status' => 'quarantined', 'last_reason' => 'source_unavailable',
+        ]);
     }
 
     public function test_career_capture_deletion_defers_file_unlink_until_outer_commit(): void
