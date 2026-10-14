@@ -20,7 +20,7 @@ except ImportError:
     from platform_workspace_test_inventory import ROOT, WORKFLOW, inventory
 
 PATH = re.compile(r"tests/(?:Feature|Unit)/[A-Za-z0-9_.-]+\.php\Z")
-STEP = re.compile(r"^      - name: ([A-Za-z0-9_. /():,@+&-]{1,120})$")
+STEP = re.compile(r"^      - name: ([A-Za-z0-9_. /():,@+#&-]{1,120})$")
 COMMAND = re.compile(r"^        run: php artisan test (.+)$")
 MAX_SOURCE_BYTES = 256_000
 
