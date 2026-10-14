@@ -1,0 +1,47 @@
+name: Staging MCP Plan read denial diagnostics
+
+on:
+  pull_request:
+    branches: [staging/mcp-plan-read-diagnostic-base-20261014]
+    paths:
+      - app/Services/McpStagingPlanReadDenialDiagnostic.php
+      - app/Services/McpDelegatedPlanAccessPolicy.php
+      - app/Services/McpReadOnlyContextTool.php
+      - tests/Feature/McpStagingPlanReadDenialDiagnosticTest.php
+      - .github/workflows/staging-mcp-plan-read-denial-ci.yml
+
+permissions:
+  contents: read
+
+jobs:
+  fixed-deny-categories-and-policy-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+      - name: Install locked dependencies with no third-party scripts
+        run: |
+          composer validate --strict --no-interaction
+          composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+      - name: Syntax and policy check
+        run: |
+          php -l app/Services/McpStagingPlanReadDenialDiagnostic.php
+          php -l app/Services/McpDelegatedPlanAccessPolicy.php
+          php -l app/Services/McpReadOnlyContextTool.php
+          php -l tests/Feature/McpStagingPlanReadDenialDiagnosticTest.php
+      - name: Offline signed-token and Plan authorization regression
+        env:
+          APP_ENV: testing
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          SESSION_DRIVER: array
+          CACHE_STORE: array
+        run: |
+          php artisan test tests/Feature/McpStagingPlanReadDenialDiagnosticTest.php tests/Feature/McpDelegatedPlanAccessPolicyTest.php tests/Feature/McpReadOnlyResourceTest.php tests/Feature/McpExplicitPlanConsentTest.php tests/Feature/McpStagingSyntheticReadPilotTest.php --colors=never
