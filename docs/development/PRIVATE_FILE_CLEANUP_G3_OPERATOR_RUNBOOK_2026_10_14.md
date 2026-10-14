@@ -344,3 +344,27 @@ Provider-specific generation tokens, conditional version-bound deletion,
 coordinated every-writer fencing, external writer isolation, and explicit
 operator signoff are still separate, unsatisfied safety gates. Production
 Aiven/Render/live database operations remain out of scope.
+
+## 15. G3-R16 offline provider-generation readiness contract
+
+`CANOVIA_PRIVATE_FILE_GENERATION_CONTRACT_ENABLED` is OFF by default,
+and this developer-only inventory refuses production execution.
+In a disposable local fixture only, optionally run:
+
+`php artisan canovia:private-file-generation-contract --json`
+
+The command reads solely the configured filesystem driver and prints
+redacted **capability gaps**. A local driver lacks provider-generated
+immutable object version IDs. An S3 driver only demonstrates a possible
+adapter configuration: it does not connect to a bucket, verify
+Versioning status, inspect credentials, capture upload VersionIds,
+exercise If-Match, check policy or authorize deletion.
+
+Never interpret matching ETags, equal file bytes/size/mtime, or two
+synthetic equal VersionIds as evidence that an object may be reclaimed.
+Version-specific delete and current-key conditional delete have
+different semantics. `null` VersionId can be reused when versioning
+is not enabled or is suspended. The operator must not turn on G3
+physical deletion, configure automatic retry/cron, provision S3 or
+alter Aiven/Render based on this static report. Provider and
+generation-aware deletion require a later, owner-reviewed release gate.
