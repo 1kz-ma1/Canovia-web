@@ -215,6 +215,13 @@ class AuthController extends Controller
                 ->with(['plan:id,user_id,title'])
                 ->orderByDesc('updated_at')
                 ->paginate(6, ['*'], 'mcp_grants_page'),
+            'mcpHasCurrentConsentRecord' => McpDelegatedGrant::query()
+                ->where('user_id', $user->id)
+                ->where('status', McpDelegatedGrant::STATUS_ACTIVE)
+                ->whereNull('revoked_at')
+                ->where(static fn ($query) => $query
+                    ->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+                ->exists(),
             'mcpLinkedSubjects' => McpLinkedSubject::query()
                 ->where('user_id', $user->id)
                 ->where('status', McpLinkedSubject::STATUS_LINKED)
