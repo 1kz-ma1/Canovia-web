@@ -53,6 +53,7 @@ final class McpDelegatedPlanAccessPolicy
             || $this->verifier->mode() === null
             || ! $this->resource->isReady()
             || ! in_array($requestedScope, ['overview', 'tasks'], true)) {
+            McpStagingPlanReadDenialDiagnostic::record('policy_precondition');
             return null;
         }
 
@@ -63,6 +64,7 @@ final class McpDelegatedPlanAccessPolicy
             || $principal->expiresAt <= $now->getTimestamp()
             || $principal->expiresAt > $now->getTimestamp() + 3600
             || ! in_array(McpProtectedResourceConfiguration::READ_SCOPE, $principal->scopes, true)) {
+            McpStagingPlanReadDenialDiagnostic::record('principal_constraints');
             return null;
         }
 
@@ -74,6 +76,7 @@ final class McpDelegatedPlanAccessPolicy
         );
 
         if ($subjectFingerprint === null || $clientResourceFingerprint === null) {
+            McpStagingPlanReadDenialDiagnostic::record('fingerprint_unavailable');
             return null;
         }
 
@@ -87,11 +90,16 @@ final class McpDelegatedPlanAccessPolicy
             ->when($lockForRead, fn ($query) => $query->lockForUpdate())
             ->first();
 
-        if ($link === null
-            || $plan->user_id === null
+        if ($link === null) {
+            McpStagingPlanReadDenialDiagnostic::record('linked_identity_mismatch');
+            return null;
+        }
+
+        if ($plan->user_id === null
             || (int) $plan->user_id !== (int) $link->user_id
             || (bool) $plan->is_collaborative
             || $this->profiles->forPlan($plan)->key !== 'development') {
+            McpStagingPlanReadDenialDiagnostic::record('plan_owner_or_category');
             return null;
         }
 
@@ -100,6 +108,7 @@ final class McpDelegatedPlanAccessPolicy
         // Only the one immutable synthetic fixture may cross this boundary.
         if (config('app.env') === 'staging') {
             if (config('canovia_staging.isolated') !== true) {
+                McpStagingPlanReadDenialDiagnostic::record('stage_fixture_mismatch');
                 return null;
             }
             $owner = User::query()->whereKey($link->user_id)
@@ -108,6 +117,7 @@ final class McpDelegatedPlanAccessPolicy
             if ($owner === null
                 || ! app(McpStagingLoginPilotPolicy::class)
                     ->isApprovedSyntheticPlan($owner, $plan)) {
+                McpStagingPlanReadDenialDiagnostic::record('stage_fixture_mismatch');
                 return null;
             }
         }
@@ -125,13 +135,33 @@ final class McpDelegatedPlanAccessPolicy
             ->when($lockForRead, fn ($query) => $query->lockForUpdate())
             ->first(['id', 'user_id', 'subject_link_id', 'scope']);
 
-        if ($grant === null || ! in_array($grant->scope, ['overview', 'tasks'], true)) {
+        if ($grant === null) {
+            // Only on the isolated, owner-approved staging read pilot, check
+            // whether an otherwise active grant exists for this verified link
+            // and Plan. No metadata or IDs are emitted into logs or HTTP.
+            $bindingMismatch = McpStagingPlanReadDenialDiagnostic::enabled()
+                && McpDelegatedGrant::query()
+                    ->where('subject_link_id', $link->id)
+                    ->where('user_id', $link->user_id)
+                    ->where('plan_id', $plan->id)
+                    ->where('status', McpDelegatedGrant::STATUS_ACTIVE)
+                    ->whereNull('revoked_at')
+                    ->whereNotNull('consented_at')
+                    ->where('consented_at', '<=', $now)
+                    ->where('expires_at', '>', $now)
+                    ->exists();
+            McpStagingPlanReadDenialDiagnostic::record($bindingMismatch
+                ? 'grant_client_binding_mismatch'
+                : 'grant_missing_or_inactive');
+            return null;
+        }
+        if (! in_array($grant->scope, ['overview', 'tasks'], true)
+            || ($requestedScope === 'tasks' && $grant->scope !== 'tasks')) {
+            McpStagingPlanReadDenialDiagnostic::record('scope_denied');
             return null;
         }
 
         // An overview-only grant must NEVER authorize Task title/progress data.
-        return ($requestedScope === 'overview' || $grant->scope === 'tasks')
-            ? $grant
-            : null;
+        return $grant;
     }
 }
