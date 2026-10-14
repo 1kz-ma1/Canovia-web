@@ -395,3 +395,41 @@ R15 observed 12 passing PHP invocations with stable 27-case inventories for both
 **OBSERVED (initial full-code HEAD `fd5e29983e8da9a0cfc1c707d672bcaab5f0c8e1`, 2026-10-14 UTC):** [disposable workflow run #38576816315](https://github.com/1kz-ma1/Canovia-web/actions/runs/38576816315) completed successfully, including its original runner, a second independently provisioned runner, and the fail-closed comparison job. Both separate runners executed the 12 fresh-PHP-process replays (24 total). Within each, both original/reverse variants of Learning and Plan Draft preserved identical 27-case JUnit inventories with zero failed/skipped cases. The independently emitted full-inventory/order SHA-256 fingerprints both equalled `a4d563e7e462978c8372126fa74afa24fc5bed1a2078bbdd9a0053ce91435c9a`. This is a **two-runner empirical parity observation**, not proof of all-environment repeatability.
 
 At that same HEAD, [Platform Preflight #38576816336](https://github.com/1kz-ma1/Canovia-web/actions/runs/38576816336), [Workspace Resume #38576816237](https://github.com/1kz-ma1/Canovia-web/actions/runs/38576816237), [Development Prelaunch #38576816226](https://github.com/1kz-ma1/Canovia-web/actions/runs/38576816226), and [Migration Recovery #38576816435](https://github.com/1kz-ma1/Canovia-web/actions/runs/38576816435) each concluded **success**. A later documentation commit or changing base requires current-head verification again before `main` integration; these observations do not grant production approval or removal of any of the 42 repeated test-file appearances.
+
+
+## R17 ACTIVE: repeated regression intent and companion-context matrix (2026-10-14)
+
+### Decision question
+
+R16 observed matching full JUnit identity/order fingerprints on two independently provisioned disposable CI runners (PR #656, integrated into development `main`). That observation alone cannot establish the *reason* a regression file appears in multiple normal Workspace Resume steps. R17 answers a narrower, static question: **which named regression step and co-invoked files accompany each repeated invocation?** The analysis **must not** infer semantic isolation, safety of consolidation, or a right to delete tests from name similarity.
+
+### Source-bound observed inventory
+
+On the R17 development base (`main` `2e20ad70d990997d0c6d6a1a25ba372accb9dae3`), Workspace Resume contains 72 `php artisan test` commands, 160 file appearances, 118 distinct files, and 21 repeated file paths accounting for **42 additional appearances** (63 total appearances of repeated files).
+
+A complete read of explicit fixed commands showed **21/21 repeated files have distinct co-invoked companion-file sets at every occurrence**, and each occurrence has a different **declared** CI step title. No repeated file has two exact identical argv groups in the current inventory. Examples drawn directly from the workflow:
+
+| File | Appearances | Observed declared regression step families | Companion sets |
+| --- | ---: | --- | ---: |
+| AdaptiveLearningSingleQuestionV5878Test | 7 | ranking, exam simulation, typed answers, autosave, history, queue, legacy behavior | 7 distinct |
+| AdaptiveLearningCandidateQueueV5879Test | 5 | mistap adjustment, recommendation, simulation, cross-run evidence, queue compatibility | 5 distinct |
+| PlanActionDraftV5871Test | 5 | stale quality, sequential approvals, typed and multiple evidence, base action approval | 5 distinct |
+| QuestionBankV402Test | 4 | exam simulation, Bank publication, queue, legacy practice | 4 distinct |
+
+These are names and execution membership **only**; whether the named step protects a distinct assertion or state transition is not yet known. Therefore **0 repetitions are approved for removal or regrouping**, even where a file's JUnit testcases match another context. Distinct co-runners are not themselves proof that rerunning the repeated file is necessary, only a reason to demand evidence before altering those contexts.
+
+### R17 implementation contract
+
+Read-only `scripts/ops/platform_workspace_context_intent_matrix.py` reuses the fail-closed existing repeated-context source inspection and parses fixed literal CLI argv under the existing named Workspace Resume steps. It reports:
+- every repeated file's exact ordinal and declared step title, ordered companion-file paths, total grouped files and immutable ordered-command SHA-256;
+- distinct companion-file **sets** separately from distinct ordered full argv, avoiding a false distinction based only on ordering;
+- source-only Laravel/DB signals from the pre-existing static inspector, labelled strictly as signals;
+- either `DISTINCT_COMPANION_CONTEXTS_HOLD` or `REPEATED_COMPANION_CONTEXTS_HOLD`, always `safe_to_remove=false` and `automatically_approved_removal_candidates=0`.
+
+The CLI pins the current `72/160/118/21/42` inventory and returns `BLOCK` with exit code 2 on drift, malformed/missing named invocation, duplicate file within one Artisan command, unsafe source, or incomplete evidence. Static Python tests validate real inventory, all 63 appearances, different vs identical companion membership, ordering changes, identical labels, fail-closed command parsing, and denied removal. Tests are added to the **existing** path-scoped Platform Release Preflight; no new workflow/CI requirement is created.
+
+### Exit gate for any future targeted deduplication decision
+
+For a *specific occurrence* (file + exact named step + neighboring group) a separate review must document: (1) the step's independently stated regression intent with Learning/Development owner confirmation as applicable; (2) which assertions and external side effects/state boundaries the repeated file truly contributes in that group, beyond other files; (3) exact-SHA standalone/group/with-and-without evidence for that named context, including negative tests and order-dependent state, and no lost security/legacy/tenant boundary; (4) full CI and fresh PR reviewer/owner approval for the *proposed change*. This R17 PR performs **none of those removals or approvals** and does not assess CI-runtime or billing savings. R15–R16 evidence remains bounded to its tested environment.
+
+**Production impact:** zero application/UI/API/schema/privilege changes. Normal Workspace Resume and 42 repeated appearances are unchanged. New Python audit is read-only and uses existing GH CI permissions. No production/Render/Aiven/iOS/secret/billing/branch protection changes or release authorization. Final-head CI acceptance must be observed separately before `main` merge.
