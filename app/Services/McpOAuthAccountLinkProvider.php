@@ -29,6 +29,12 @@ final class McpOAuthAccountLinkProvider
                 ->withoutRedirecting()->connectTimeout(2)->timeout(5)
                 ->get($settings['metadata']);
 
+            if ($response->status() === 429) {
+                // Only the trusted provider metadata request is known to
+                // have returned 429. No body/Retry-After/issuer URL is logged.
+                app(McpStagingOAuthFailureDiagnostic::class)->record('link_provider_metadata_rate_limited');
+                return false;
+            }
             if (! $response->successful()
                 || ! str_contains(strtolower((string) $response->header('Content-Type')), 'application/json')
                 || strlen($response->body()) > 12288) {
@@ -93,6 +99,12 @@ final class McpOAuthAccountLinkProvider
         if ($this->verifier->mode() === 'auth0_jwt') {
             $params['audience'] = $settings['resource'];
         }
+        if ($this->configuration->githubOnlyEnabled()) {
+            // Auth0 documents this exact social connection selector. Server
+            // controlled, never copied from untrusted form/query parameters.
+            $params['connection'] = 'github';
+            $params['prompt'] = 'login';
+        }
 
         return $settings['authorize'].'?'.http_build_query(
             $params, '', '&', PHP_QUERY_RFC3986,
@@ -123,7 +135,11 @@ final class McpOAuthAccountLinkProvider
                 ]);
 
             if (! $response->successful()) {
-                app(McpStagingOAuthFailureDiagnostic::class)->record('link_provider_token_http_rejected');
+                app(McpStagingOAuthFailureDiagnostic::class)->record(
+                    $response->status() === 429
+                        ? 'link_provider_token_rate_limited'
+                        : 'link_provider_token_http_rejected',
+                );
                 return null;
             }
             if (! str_contains(strtolower((string) $response->header('Content-Type')), 'application/json')
@@ -153,6 +169,15 @@ final class McpOAuthAccountLinkProvider
         $principal = $this->verifier->verifyAccountLink($body['access_token']);
         if ($principal === null) {
             app(McpStagingOAuthFailureDiagnostic::class)->record('link_provider_jwt_rejected');
+            return null;
+        }
+        if ($this->configuration->githubOnlyEnabled()
+            && preg_match('/\Agithub\|[0-9]{1,20}\z/D', $principal->subject) !== 1) {
+            // Auth0 may return another primary subject after identity
+            // account-linking, even if connection=github was requested.
+            // Never treat the redirect itself as GitHub identity proof.
+            app(McpStagingOAuthFailureDiagnostic::class)->record('link_provider_github_subject_rejected');
+            return null;
         }
         return $principal;
     }
