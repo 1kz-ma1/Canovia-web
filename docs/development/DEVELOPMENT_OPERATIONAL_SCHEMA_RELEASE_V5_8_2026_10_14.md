@@ -1,6 +1,6 @@
 # Development Operational Readiness V5.8 — Migration compatibility, rollback and release gate
 
-**State: implementation / disposable-CI-only, not a production audit or deployment.** 2026-10-14 JST.
+**State: merged into `main` via PR #642; disposable-CI-only, not a production audit or deployment.** 2026-10-14 JST.
 **Owning lane:** Development; coordinate external deployment/DB actions with Platform.
 **Source of authority:** [controlled production promotion](../CANOVIA_DEVELOPMENT_WORKFLOW.md), [V5.3 manual service confirmation](DEVELOPMENT_OPERATIONAL_MANUAL_SERVICE_ATTESTATION_V5_3_2026_10_14.md), [V5.7 storage ABA epoch](DEVELOPMENT_OPERATIONAL_STORAGE_EPOCH_V5_7_2026_10_14.md), [Aiven release hold](https://github.com/1kz-ma1/Canovia-web/issues/488).
 
