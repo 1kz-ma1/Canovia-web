@@ -171,3 +171,40 @@ The old Workspace Resume job ran from 09:57:52 to 09:59:10 UTC before cancellati
 **OBSERVED:** workflow-level concurrency cancels superseded in-progress **main-targeted PR** runs and permits the newer exact SHA to finish with all required broad CI green. This confirms functional cancellation behavior but **does not quantify billed time savings**; partial runs may still incur charges. Actual production PR/push behavior remains NOT VERIFIED by live experiment and must not be tested on production without owner authorization.
 
 Evidence was obtained using GitHub Actions read-only run/job metadata; no GitHub cancel API, Render deploy, Aiven DB, production branch, checkout of user secrets or PR cleanup was performed. The final documentation-only head commit adding this record must itself pass all current-head PR checks before merge.
+
+## ACTIVE follow-up — exact-SHA CI cancellation measurement (2026-10-14)
+
+### CURRENT evidence, read-only
+
+From the latest 100 GitHub Actions run records sampled after the Platform PR #629 experiment: Workspace Resume showed 3 `cancelled` conclusions and Migration Recovery showed 1. These are counts in a **bounded recent sample**, not historical totals or billing evidence.
+
+A controlled PR #629 supersession had two cancelled old-SHA jobs: Workspace Resume ran for 78 seconds before cancellation, and Migration Recovery ran for 26 seconds. The new-SHA jobs completed successfully. Cancelling prevents *further* obsolete checks but does not recover those elapsed runner seconds or prove a reduction in billed minutes. GitHub queue/pending times cannot be inferred from `run_started_at` alone.
+
+### ACTIVE implementation
+
+`scripts/ops/platform_ci_supersession_report.py` reads a bounded sample (max 30) of PR GitHub Actions run metadata and complete jobs pages. It records:
+
+- **Observed job-start latency**: job.started_at minus workflow run.created_at, not an SLA or full GitHub queue breakdown.
+- **Cancelled job wall-clock seconds**: successful timestamp readings on cancelled jobs, not billed minutes and not a counterfactual estimate of saved time.
+- **Confirmed supersession pairs** only when the exact GitHub workflow ID and **same main-target PR number** match, two distinct head SHAs exist, the older run was cancelled with a cancelled job, and the newer run has completed successfully. Partial or unverified job lists BLOCK the audit rather than being treated as zero work.
+- Incomplete PR identity, missing timestamps, zero-job failures and incomplete sample coverage are surfaced explicitly. No user data, log text or API token is returned.
+
+Use the existing owner's authenticated GitHub CLI on their Mac (no new provider configuration required):
+
+~~~sh
+python3 scripts/ops/platform_ci_supersession_report.py --live --limit 20
+~~~
+
+For offline synthetic fixtures:
+
+~~~sh
+python3 scripts/ops/platform_ci_supersession_report.py --snapshot /path/to/synthetic-evidence.json
+~~~
+
+**Important limitation:** GitHub may return an empty `pull_requests` association for Actions runs after the original PR is merged. The audit **does not infer a PR identity from head_branch alone**, because old branches can be reused or squash-merged. Such runs still contribute directly observed cancelled wall-clock counts, but **not** confirmed same-PR supersession pairs. The verified historical evidence for #629 is separately retained above in this runbook. A live report can show no pair even if previous contemporaneous evidence did verify a cancellation; that is intentional fail-closed behavior.
+
+The tool makes read-only GitHub REST GET calls via `gh api`, does not cancel or rerun jobs, changes no workflow triggers or Required Checks, and is not used as production release authorization. Synthetic tests in the existing Platform Preflight cover wrong PR, wrong workflow ID, production targets, same SHA reruns, unknown timestamps, incomplete pagination and false-success prevention.
+
+### Recommended next decisions, NOT IMPLEMENTED
+
+Measure repeated workloads on **active** PRs over multiple SHAs and compare observed runner time, start latency and cancelled work without claiming pricing benefit. Before changing a broadly used workflow's triggers or tests, prove equivalent security/recovery coverage and coordinate with the relevant Development/G3 lane. A Release Candidate's production checks must remain unconditional and isolated. No production operation was performed to validate this instrumentation.
