@@ -1,0 +1,66 @@
+name: V6.4 Pinned PR513 Free Path Acceptance (Disposable)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tests/Feature/Release513P0JourneyV64Test.php'
+      - '.github/workflows/development-release513-v64-pinned-p0.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pinned-pr513-p0:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Read candidate test from reviewed PR head
+        uses: actions/checkout@v4
+        with:
+          path: audit
+          persist-credentials: false
+      - name: Fetch exact, unchanged historical release #513
+        uses: actions/checkout@v4
+        with:
+          ref: bb8248f25545ae0d600fbb68f66c41c360004e2c
+          path: candidate
+          persist-credentials: false
+      - name: Enforce exact candidate and isolated test checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C candidate rev-parse HEAD)" = "bb8248f25545ae0d600fbb68f66c41c360004e2c"
+          test -f audit/tests/Feature/Release513P0JourneyV64Test.php
+          test ! -e candidate/tests/Feature/Release513P0JourneyV64Test.php
+          cp audit/tests/Feature/Release513P0JourneyV64Test.php candidate/tests/Feature/
+          test "$(git -C candidate rev-parse HEAD)" = "bb8248f25545ae0d600fbb68f66c41c360004e2c"
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+      - name: Install candidate dependencies (no live credentials)
+        working-directory: candidate
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Lint transplant against historical candidate
+        working-directory: candidate
+        run: php -l tests/Feature/Release513P0JourneyV64Test.php
+      - name: Run same-user journeys against historical candidate and ephemeral SQLite
+        working-directory: candidate
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          SESSION_DRIVER: array
+          CACHE_STORE: array
+          QUEUE_CONNECTION: sync
+          NATIVE_AI_DRIVER: disabled
+        run: php artisan test tests/Feature/Release513P0JourneyV64Test.php --stop-on-failure
+      - name: Explicitly preserve candidate SHA and no-production-gate conclusion
+        working-directory: candidate
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "bb8248f25545ae0d600fbb68f66c41c360004e2c"
+          echo "Candidate route integration is not browser/device E2E, Live Render verification, or release approval."
