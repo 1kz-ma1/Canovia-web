@@ -331,3 +331,77 @@ doubles the number of metadata/DB observation rounds and is bounded by R14's
 provider metadata failure, deliberate same-size ABA false-negative, default
 OFF behavior, production deny, redacted output, and no destructive changes on
 disposable PostgreSQL16 and MySQL8.0/8.4. **G3 remains OPEN.**
+
+## 11. G3-R16 — Offline storage provider generation contract (2026-10-14)
+
+**Non-production, OFF by default, design contract only.** Existing filesystems
+configuration shows the application defaults to `local`, while an `s3`
+disk is also defined. Neither a configured S3 disk nor the generic
+Flysystem adapter implies a live bucket, versioning enabled, write-time
+VersionId capture, or audited conditional-delete operation. The
+application's `composer.json` does not explicitly require an S3 SDK
+and no G3 upload/delete flow stores or conditions on a provider VersionId.
+
+New `PrivateFileGenerationContractService` provides a bounded, **offline
+configuration inventory** behind
+`CANOVIA_PRIVATE_FILE_GENERATION_CONTRACT_ENABLED=false`. It always
+blocks in production even if enabled. It only reads the configured
+default disk driver from Laravel's in-process configuration and emits
+fixed labels. It does NOT read credentials, endpoints, bucket names or
+files; connect to any provider; instantiate an S3 SDK; write DB rows;
+capture a version; or delete anything.
+
+- `local`: `unsupported_local_no_generation`.
+- `s3`: `provider_contract_not_integrated` (configured possibility,
+  not provider/bucket verification).
+- Other or missing driver: `unsupported_or_unknown_driver`.
+- Every result: `provider_generation=not_verified`,
+  `bucket_versioning=not_verified`,
+  `write_time_version_binding=not_implemented`,
+  `conditional_delete_enforcement=not_implemented`,
+  `all_writers_coordinated=false`,
+  `generation_verified=false` and `delete_authorized=false`.
+
+The CLI `php artisan canovia:private-file-generation-contract --json`
+prints only this offline, allowlisted report. With the flag OFF or
+production environment, the result is `blocked` and exit code 1.
+No extra schema/adapter/permission and no runtime rollout is performed.
+
+An additional **synthetic-only** comparison contract
+`compareUnboundVersionIds(writeVersion, observedVersion)` returns
+fixed redacted labels for missing/invalid, mismatch and matching values.
+A version equal to the literal `null` (or empty/oversized/invalid
+token) can never count as a non-null immutable generation. Even
+`version_match_unbound` returns
+`generation_verified=false` and `delete_authorized=false` because
+the two caller-supplied tokens are not authenticated against a
+durable write-time record bound to provider/bucket/path/owner.
+
+**Important S3 semantics and future implementation requirements:**
+S3 versioning-enabled buckets issue opaque VersionIds per object version;
+an unversioned or suspended bucket may expose a `null` version which
+can be overwritten. S3 `If-Match` with an ETag conditionally deletes
+the **current** object, and ETag is *not* equivalent to VersionId.
+A version-specific DeleteObject request has distinct semantics from a
+conditional delete of the current key: independent live writer/reference
+coordination, bucket policy and object version retention still matter.
+Before any later implementation: explicitly audit provider/bucket
+versioning state, IAM and bucket policy; capture/write-ahead the
+authenticated VersionId of the newly created object at upload time;
+bind it to durable owner identity and path HMAC, design key rotation;
+prove all writers participate in fences; verify API conditional
+semantics/real storage races; define authorization and recovery
+preconditions with an owner-approved threat model. None is supplied
+by R16; no `Storage::delete` call is modified.
+
+Source references (AWS primary):
+- https://docs.aws.amazon.com/AmazonS3/latest/userguide/versioning-workflows.html
+- https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-deletes.html
+- https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObject.html
+- https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeletingObjectsfromVersioningSuspendedBuckets.html
+
+Disposable PG16 and MySQL8.0/8.4 tests prove default OFF,
+`local` and `s3` classification, no secret leakage, no provider calls,
+production hard deny, null/suspended-version rejection, token mismatch,
+unbound equality remaining unauthorized, and object bytes unchanged.
+**G3 remains OPEN.**

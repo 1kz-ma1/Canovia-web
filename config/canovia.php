@@ -70,4 +70,11 @@ return [
         env('CANOVIA_PRIVATE_FILE_UPLOAD_CONSISTENCY_PROBE_ENABLED', false),
         FILTER_VALIDATE_BOOL
     ),
+
+    // G3-R16: config-only provider generation inventory, no storage/network I/O,
+    // never a deletion authority. OFF by default; production always blocked.
+    'private_file_generation_contract_enabled' => filter_var(
+        env('CANOVIA_PRIVATE_FILE_GENERATION_CONTRACT_ENABLED', false),
+        FILTER_VALIDATE_BOOL
+    ),
 ];

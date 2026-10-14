@@ -856,3 +856,32 @@ APP_KEY rotation/retention and all three separate G3 live database schema
 gates. This is **not** a source-of-truth object-generation verifier,
 orphan classifier, production release or permission to delete bytes.
 G3 remains OPEN.
+
+## 61. G3-R16 — Provider-generation semantics audited; offline fail-closed contract (2026-10-14)
+
+R15's two weak snapshots may miss ABA or a same-size/mtime overwrite.
+R16 inspects Canovia's current filesystem config (default `local`,
+`s3` declared) and relevant S3 API semantics, then adds an optional
+offline `PrivateFileGenerationContractService` without introducing a
+storage adapter, bucket request or secret inspection.
+
+Under OFF-by-default
+`CANOVIA_PRIVATE_FILE_GENERATION_CONTRACT_ENABLED`, development
+operators may read a fixed-category driver and missing-capability
+report. Production is hard-blocked. Synthetic VersionId comparisons
+reject missing, literal-null and mismatched IDs; even equality is
+reported as `version_match_unbound` with
+`generation_verified=false` and `delete_authorized=false`.
+The operator CLI never prints raw IDs, paths, bucket names or keys.
+PG16 / MySQL8.0/8.4 tests cover no-side-effect classification,
+local/S3/unknown driver, fail-closed token checks, credential
+redaction, production deny and default flag disable.
+
+**Still OPEN:** no authenticated write-time object VersionId is
+captured or durably bound to reference/path; no actual provider
+versioning/IAM/bucket policy verified; no S3 adapter execution,
+VersionId-aware or If-Match-guarded delete, lease, immutable
+generation contract, external writer coverage, APP_KEY rotation or
+production approval. All three G3 DB migration gates remain
+separately unapproved. No Render/Aiven/live Storage operations or
+automatic cleanup are performed.
