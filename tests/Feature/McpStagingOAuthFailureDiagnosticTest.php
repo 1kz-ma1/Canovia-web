@@ -118,7 +118,7 @@ final class McpStagingOAuthFailureDiagnosticTest extends TestCase
             ->assertRedirect(route('auth.account'));
         $this->get('/account')
             ->assertOk()
-            ->assertSee('外部IDの本人確認を完了できませんでした。')
+            ->assertSee('本人確認を完了できませんでした。')
             ->assertDontSee('link_callback_configuration');
 
         Log::shouldHaveReceived('warning')->once()->with(
