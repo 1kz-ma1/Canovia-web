@@ -7,15 +7,13 @@
 
 V6.4の通しテストはPlan保存→Workspace→実行→Evidence保存まで動いたが、**途中でTaskをテストfixtureに直接挿入**していた。V6.5では、新たなテスト`tests/Feature/Release513FirstActionWithoutSeedV65Test.php`で**Taskモデルの手動挿入を一切行わず**、候補に実在するHTTP操作を通す。
 
-### 学習：範囲を人間が確定→実際のActionを実行
+### 学習：範囲未登録からTaskを直接投影（固定候補CIでの実測）
 
 1. Freeの合成アカウントで`POST plans.store`→資格学習Plan作成。初期Tasks=0。
-2. `POST plans.study_action.execute`はまだTaskを作らず、`plans.study_scope.index`へのリダイレクトを返す（先に範囲を把握する）。
-3. `POST plans.study_scope.store`で合成PDFをアップロード。テストでは`native_ai.driver=disabled`、秘密情報・実外部AI送信なし。
-4. `POST plans.study_scope.confirm`にて本人の明示した数学/ネットワークなどの範囲を確定。まだTasks=0。
-5. **二度目の`POST plans.study_action.execute`で本物のStudyActionTaskProjectorが最初のTaskを生成**し、実行画面へ遷移することを確認。再POSTしてもTaskは重複しない。
+2. **候補実測の結果、`POST plans.study_action.execute`は範囲未登録でも最初のTaskを直接作成し、`plans.tasks.study_practice.show`へ遷移する。** 元の設計予想だった`plans.study_scope.index`へのリダイレクトとは異なる。
+3. 同じPlanにTaskが1件だけ作成され、Taskの画面とWorkspaceが表示できること、再POSTによってTaskが増殖しないことを検証する。
 
-合格できても、ブラウザ上で「範囲資料の準備」と「Scope確認」をユーザーが直感的に操作できるか、問題Bankが用意できるか、適応レコメンドの教育的妥当性は未確認。
+学習範囲未確認のまま実践Taskが生成されるため、「十分な情報なしでも次の行動へ進める」というUXの利点と、「範囲/理解度に根差した推奨か不明」という品質リスクを別に記録する。実際の学習問題が出題可能か、自然な手順で正しく採点・保存されるか、適応推薦が妥当かはこのテストの成功だけでは証明できない。
 
 ### 開発：空Planから初期タスク作成画面→本人がJSONを取り込む
 
@@ -34,7 +32,7 @@ V6.4/V6.5のHTTP統合成功・実際の初回利用価値・CI成功・本番�
 
 ## 製品P0判定
 
-- 学習P0-03は**動作する候補のHTTP経路を検証**できる。ただし新規ユーザーの実UI操作と完走時間は未計測。
+- 学習P0-03は**Task=0件から直接作成するHTTP経路を固定候補で実測**できる。ただしScope未確認の妥当性、新規ユーザーの実UI操作と完走時間は未計測。
 - 開発P0-03は**ユーザーによるJSON貼り付けを条件としてTask生成**。この手順を省いたゼロ摩擦導線の動作は未確認。
 - P0-06の学習Evidenceに基づく本当に適切な次Actionと、開発Reflectionからの自動次Actionは未確認のまま。
 - P0-01/02/07/08のFree実ユーザー完走と同一ファネル、Web・iPhone実機、Aiven/Render/復旧・本番GOは別ゲート。PR #513の**選定状態は`BLOCKED_NEEDS_P0_E2E`のまま**。
