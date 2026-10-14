@@ -45,6 +45,7 @@ jobs:
       DB_USERNAME: canovia_ci
       DB_PASSWORD: ci-only-ephemeral-password
       DB_URL: ''
+      CANOVIA_G3_DISPOSABLE_MYSQL_CI: '1'
       CACHE_STORE: array
       SESSION_DRIVER: array
       QUEUE_CONNECTION: sync
@@ -63,6 +64,8 @@ jobs:
             --user=root --database=canovia_g3_ci \
             -e 'SET GLOBAL log_bin_trust_function_creators = 1'
       - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Migrate full application schema exactly once on disposable MySQL
+        run: php artisan migrate --force --no-interaction
       - name: PHP syntax and independent-session MySQL snapshot regression
         run: |
           php -l app/Services/PrivateFileLifecycleService.php
