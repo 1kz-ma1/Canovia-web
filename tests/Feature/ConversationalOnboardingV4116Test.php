@@ -48,7 +48,7 @@ class ConversationalOnboardingV4116Test extends TestCase
         ]);
     }
 
-    public function test_new_account_enters_first_companion_instead_of_empty_home(): void
+    public function test_new_account_can_browse_planless_then_choose_first_companion(): void
     {
         $this->post(route('auth.register'), [
             'name' => 'New User',
@@ -68,8 +68,16 @@ class ConversationalOnboardingV4116Test extends TestCase
             ->assertRedirect(route('personalization.show', ['source' => 'first_run']));
 
         $this->post(route('personalization.skip'))
-            ->assertRedirect(route('plans.create'));
+            ->assertRedirect(route('workspace.overview.index'));
 
+        // Skip must be genuinely Plan-free after account registration.
+        $this->get(route('workspace.overview.index'))
+            ->assertOk()
+            ->assertSee('data-overview-workspace', false)
+            ->assertSee('data-overview-first-use-workspaces', false);
+        $this->assertDatabaseCount('plans', 0);
+
+        // Original First Companion remains available by explicit choice.
         $this->get(route('plans.create'))
             ->assertOk()
             ->assertSee('FIRST COMPANION', false)
