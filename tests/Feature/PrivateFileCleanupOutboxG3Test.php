@@ -257,12 +257,12 @@ final class PrivateFileCleanupOutboxG3Test extends TestCase
         }
 
         $db = config('database.connections.pgsql');
-        $rival = new \\PDO(sprintf('pgsql:host=%s;port=%d;dbname=%s',
+        $rival = new \PDO(sprintf('pgsql:host=%s;port=%d;dbname=%s',
             (string) ($db['host'] ?? '127.0.0.1'),
             (int) ($db['port'] ?? 5432),
             (string) ($db['database'] ?? ''),
         ), (string) ($db['username'] ?? ''), (string) ($db['password'] ?? ''),
-        [\\PDO::ATTR_ERRMODE => \\PDO::ERRMODE_EXCEPTION]);
+        [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]);
 
         $path = 'inbox/owner/late-reference.png';
         Storage::put($path, 'sealed original bytes');
