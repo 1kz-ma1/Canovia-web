@@ -55,6 +55,10 @@ final class DevelopmentOperationalAttestationV4FeatureTest extends TestCase
         ]))->assertOk()
           ->assertSee('data-development-operational-attestations', false)
           ->assertSee('data-development-provider-connection-state="unavailable"', false)
+          ->assertSee('data-development-render-operator-handoff', false)
+          ->assertSee('data-development-render-target-id', false)
+          ->assertSee('data-development-render-step="backup"', false)
+          ->assertSee('data-development-render-step="restore"', false)
           ->assertSee('外部サービスの自動照合：未接続')
           ->assertSee('data-development-operational-status="operator_confirmed"', false)
           ->assertSee('data-development-operational-check="restore"', false)
@@ -178,6 +182,8 @@ final class DevelopmentOperationalAttestationV4FeatureTest extends TestCase
         ]))->assertOk()
           ->assertDontSee('data-development-operational-attestations', false)
           ->assertDontSee('data-development-provider-connection-state', false)
+          ->assertDontSee('data-development-render-operator-handoff', false)
+          ->assertDontSee('data-development-render-target-id', false)
           ->assertDontSee('srv-private123', false)
           ->assertDontSee('data-development-operational-status="operator_confirmed"', false);
 
@@ -211,6 +217,58 @@ final class DevelopmentOperationalAttestationV4FeatureTest extends TestCase
             'plan_id' => $plan->id,
         ]))->assertOk()
           ->assertSee('data-development-operational-status="stale"', false);
+    }
+
+    public function test_render_handoff_is_read_only_and_no_data_requires_no_database_recovery(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($owner, '公開予定の静的アプリ');
+        $this->profile($plan, 'none');
+        $target = DevelopmentOperationalTarget::query()->create([
+            'plan_id' => $plan->id,
+            'provider' => 'render',
+            'environment' => 'staging',
+            'resource_ref' => 'srv-static123',
+            'revision' => 1,
+        ]);
+        $before = $target->getAttributes();
+        $this->actingAs($owner)->get(route('workspace.development.index', [
+            'plan_id' => $plan->id,
+            'surface' => 'work',
+        ]))->assertOk()
+          ->assertSee('data-development-render-operator-handoff', false)
+          ->assertSee('srv-static123', false)
+          ->assertSee('href="https://dashboard.render.com/"', false)
+          ->assertSee('rel="noopener noreferrer"', false)
+          ->assertSee('data-development-render-step="service_identity"', false)
+          ->assertSee('data-development-render-step="environment"', false)
+          ->assertSee('data-development-render-step="deployment"', false)
+          ->assertDontSee('data-development-render-step="backup"', false)
+          ->assertDontSee('data-development-render-step="restore"', false)
+          ->assertDontSee('name="api_key"', false);
+
+        $this->assertSame($before, $target->fresh()->getAttributes());
+        $this->assertDatabaseCount('task_evidences', 0);
+    }
+
+    public function test_other_provider_does_not_show_render_handoff(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($owner, '公開予定');
+        $this->profile($plan, 'server_db');
+        DevelopmentOperationalTarget::query()->create([
+            'plan_id' => $plan->id,
+            'provider' => 'other',
+            'environment' => 'production',
+            'resource_ref' => 'myprovider123',
+            'revision' => 1,
+        ]);
+
+        $this->actingAs($owner)->get(route('workspace.development.index', [
+            'plan_id' => $plan->id, 'surface' => 'work',
+        ]))->assertOk()
+          ->assertDontSee('data-development-render-operator-handoff', false)
+          ->assertDontSee('data-development-render-dashboard-link', false);
     }
 
     private function plan(User $user, string $title): Plan
