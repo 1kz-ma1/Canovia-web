@@ -13,6 +13,7 @@ on:
       - 'tests/Feature/InboxUploadPathFenceG3Test.php'
       - 'tests/Feature/StudyScopeCaptureV534Test.php'
       - 'tests/Feature/StudyRecallBatchIngestV588Test.php'
+      - 'tests/Feature/StudyRecallCandidateV4112Test.php'
       - 'app/Services/InboxRecallMaterialTransferGuard.php'
       - 'config/canovia.php'
       - 'database/migrations/2026_10_14_120000_create_private_file_path_fences.php'
@@ -86,6 +87,7 @@ jobs:
           php -l tests/Feature/InboxUploadPathFenceG3Test.php
           php -l tests/Feature/StudyScopeCaptureV534Test.php
           php -l tests/Feature/StudyRecallBatchIngestV588Test.php
+          php -l tests/Feature/StudyRecallCandidateV4112Test.php
           php -l app/Services/InboxRecallMaterialTransferGuard.php
           php -l config/canovia.php
           php -l database/migrations/2026_10_14_120000_create_private_file_path_fences.php
@@ -104,7 +106,7 @@ jobs:
           php -l tests/Feature/IosSoftLaunchWebReadinessV561Test.php
           php -l tests/Feature/SafePlanResourceRecallHandoffV5811Test.php
       - name: G3 private file lifecycle and durable retry outbox on PostgreSQL 16
-        run: php artisan test tests/Feature/PrivateFileLifecycleG3Test.php tests/Feature/PrivateFileCleanupOutboxG3Test.php tests/Feature/PrivateFileCleanupHealthG3Test.php tests/Feature/PrivateFilePathFenceG3Test.php tests/Feature/InboxRecallMaterialTransferG3Test.php tests/Feature/PrivateFileUploadG3Test.php tests/Feature/InboxUploadPathFenceG3Test.php tests/Feature/StudyScopeCaptureV534Test.php tests/Feature/StudyRecallBatchIngestV588Test.php --stop-on-failure
+        run: php artisan test tests/Feature/PrivateFileLifecycleG3Test.php tests/Feature/PrivateFileCleanupOutboxG3Test.php tests/Feature/PrivateFileCleanupHealthG3Test.php tests/Feature/PrivateFilePathFenceG3Test.php tests/Feature/InboxRecallMaterialTransferG3Test.php tests/Feature/PrivateFileUploadG3Test.php tests/Feature/InboxUploadPathFenceG3Test.php tests/Feature/StudyScopeCaptureV534Test.php tests/Feature/StudyRecallBatchIngestV588Test.php tests/Feature/StudyRecallCandidateV4112Test.php tests/Feature/SafePlanResourceRecallHandoffV5811Test.php --stop-on-failure
       - name: G3 operator-only CLI dry-run and read-only health are available
         run: |
           php artisan canovia:retry-private-file-cleanup --dry-run
