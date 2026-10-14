@@ -37,6 +37,47 @@ final class McpStagingOAuthFailureDiagnosticTest extends TestCase
             ]);
     }
 
+    public function test_plan_consent_callback_codes_are_fixed_and_stage_only(): void
+    {
+        config([
+            'app.env' => 'staging',
+            'canovia_staging.isolated' => true,
+            'canovia_staging.login_pilot_enabled' => true,
+            'canovia_staging.account_link_pilot_enabled' => true,
+        ]);
+
+        Log::spy();
+        $allowed = [
+            'link_callback_plan_fixture_missing',
+            'link_callback_plan_stage_guard',
+            'link_callback_plan_consent_disabled',
+            'link_callback_plan_scope_invalid',
+            'link_callback_plan_owner',
+            'link_callback_plan_link_mismatch',
+        ];
+        $diag = app(McpStagingOAuthFailureDiagnostic::class);
+        foreach ($allowed as $code) {
+            $diag->record($code);
+            Log::shouldHaveReceived('warning')
+                ->once()
+                ->with('Canovia MCP staging OAuth failure', ['stage_code' => $code]);
+        }
+
+        // No dynamic identifiers, state, token, subjects or URL fragments
+        // can ever become diagnostic codes or leak in message context.
+        $diag->record('link_callback_plan_link_mismatch:sub=SECRET');
+        $diag->record('link_callback_plan_scope_invalid?code=SECRET');
+        $diag->record('https://chatgpt.com/oauth/client.json');
+        Log::shouldHaveReceived('warning')->times(count($allowed));
+
+        // Suppressed entirely on non-isolated stage and in production.
+        config(['canovia_staging.isolated' => false]);
+        $diag->record('link_callback_plan_link_mismatch');
+        config(['canovia_staging.isolated' => true, 'app.env' => 'production']);
+        $diag->record('link_callback_plan_link_mismatch');
+        Log::shouldHaveReceived('warning')->times(count($allowed));
+    }
+
     public function test_disabled_pilot_production_and_wrong_isolation_never_log_diagnostics(): void
     {
         Log::spy();
