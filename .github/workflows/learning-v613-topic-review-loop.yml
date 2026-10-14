@@ -6,6 +6,8 @@ on:
     paths:
       - '.github/workflows/learning-v613-topic-review-loop.yml'
       - 'app/Http/Controllers/AdaptiveLearningController.php'
+      - 'app/Providers/AppServiceProvider.php'
+      - 'routes/web.php'
       - 'app/Services/AdaptiveLearningReviewEntryService.php'
       - 'app/Services/AdaptiveLearningBankQueueService.php'
       - 'app/Services/StudyLearningNextActionQueueService.php'
