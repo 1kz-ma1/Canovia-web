@@ -1,11 +1,13 @@
 @inject('providerCapabilityService', 'App\\Services\\DevelopmentOperationalProviderCapabilityService')
 @inject('operatorHandoffService', 'App\\Services\\DevelopmentOperationalOperatorHandoffService')
 @inject('operationalAttestationService', 'App\\Services\\DevelopmentOperationalAttestationService')
+@inject('operatorReadinessService', 'App\\Services\\DevelopmentOperationalOperatorReadinessService')
 @php
     $operationalTarget = $developmentOperationalTarget ?? null;
     $providerCapability = $providerCapabilityService->status($operationalTarget);
     $operatorHandoff = $operatorHandoffService->build($plan, $operationalTarget, $developmentOperationalProfile ?? null);
     $serviceIdentityCheck = $operationalAttestationService->projectServiceIdentity($plan, $operationalTarget);
+    $operatorReadiness = $operatorReadinessService->summarize($plan, $developmentOperationalProfile ?? null, $operationalTarget);
     $operationalStore = data_get($developmentOperationalProfile, 'data_store', 'unknown');
     $canAttestRecovery = in_array($operationalStore, ['server_db', 'local_device', 'cloud_files', 'mixed'], true);
 @endphp
@@ -67,6 +69,52 @@
                 {{ data_get($operationalTarget, 'environment') }}
                 · 自己申告・外部サービス未接続
             </p>
+            @if ($operatorReadiness)
+                <section class="mt-3 rounded-lg border border-white/10 bg-slate-950/30 p-3"
+                    aria-label="運用確認の自己申告一覧"
+                    data-development-operator-summary>
+                    <p class="text-xs font-semibold text-slate-200">公開準備の手動確認記録</p>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-400">
+                        {{ $operatorReadiness['basis'] }}
+                    </p>
+                    <div class="mt-2 space-y-2">
+                        @foreach ($operatorReadiness['checks'] as $check)
+                            <div class="rounded-md border border-white/10 px-2.5 py-2"
+                                data-development-operator-check="{{ $check['key'] }}"
+                                data-development-operator-status="{{ $check['status'] }}">
+                                <div class="flex flex-wrap items-baseline justify-between gap-2">
+                                    <span class="text-[11px] font-semibold text-slate-200">{{ $check['label'] }}</span>
+                                    <span class="text-[11px] text-slate-400">
+                                        @switch ($check['status'])
+                                            @case ('operator_confirmed')
+                                                所有者の申告あり
+                                                @break
+                                            @case ('stale')
+                                                要再確認
+                                                @break
+                                            @case ('not_applicable')
+                                                申告上は対象外
+                                                @break
+                                            @default
+                                                未記録
+                                        @endswitch
+                                    </span>
+                                </div>
+                                <p class="mt-1 text-[11px] leading-5 text-slate-400">{{ $check['detail'] }}</p>
+                                @if ($check['recorded_at'])
+                                    <p class="mt-1 text-[10px] text-slate-500">前回の申告：{{ $check['recorded_at'] }}</p>
+                                @endif
+                                <p class="mt-1 text-[10px] text-slate-500">{{ $check['source'] }}</p>
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="mt-3 border-t border-white/10 pt-2"
+                        data-development-operator-next="{{ $operatorReadiness['next']['key'] }}">
+                        <p class="text-[11px] font-semibold text-slate-200">{{ $operatorReadiness['next']['title'] }}</p>
+                        <p class="mt-1 text-[11px] leading-5 text-slate-400">{{ $operatorReadiness['next']['detail'] }}</p>
+                    </div>
+                </section>
+            @endif
             <div class="mt-2 rounded-lg border border-white/10 bg-slate-950/30 px-3 py-2"
                 data-development-provider-connection-state="{{ $providerCapability['state'] }}" role="status">
                 <p class="text-[11px] font-semibold text-slate-300">外部サービスの自動照合：未接続</p>
