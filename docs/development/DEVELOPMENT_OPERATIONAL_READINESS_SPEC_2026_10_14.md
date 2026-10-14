@@ -1,6 +1,6 @@
 # Development Operational Readiness / Release Safety Coach — Specification
 
-> Status: **LONG-TERM PROPOSAL; V1 CONTEXTUAL SUGGESTION MERGED INTO MAIN** (2026-10-14).
+> Status: **LONG-TERM PROPOSAL; V1+V2 READ-ONLY GUIDANCE MERGED INTO MAIN** (2026-10-14).
 > This document does not claim a shipped Development Mode feature, a completed release, or authorization to change production.
 > Ownership: **Development** (experience and state-driven guidance) with **Platform** co-review (security, backup, database, deployment and operational policy).
 > Related current contracts: [V53.8 Development Readiness](../V53.8_DEVELOPER_READINESS.md), [V57.3 Developer Home](../V57.3_DEVELOPER_HOME_V1.md), [V58.0 focused surfaces](../V58.0_DEVELOPER_WORKSPACE_SURFACES.md), [Development Workflow](../CANOVIA_DEVELOPMENT_WORKFLOW.md), [GitHub-native roadmap](GITHUB_NATIVE_ROADMAP_CONTRACT.md).
@@ -19,12 +19,13 @@ This is **not** a universal setup wizard or a generic DevOps score. Early protot
 
 - V53.8 owns seven Task-correlated Release Quality Gates: implementation, CI, review, merge, production deploy, verification, spec sync.
 - PR #593 implements a narrow, Work-only prelaunch preparation suggestion (Plan/active Task cue or explicit request). This is a read-only, **unverified** prompt, not a production recovery test; see [implemented V1 slice](DEVELOPMENT_PRELAUNCH_PREPARATION_V1_2026_10_14.md).
+- PR #595 implements an additional bounded, ranked, Work-only **GitHub source-labeled** six-check projection. Exact-SHA CI / production deployment may be *observed* through authorized Task evidence, while host identity, stored data, backups and isolated restore remain **unknown** without independent proof. See [V2 implemented slice](DEVELOPMENT_OPERATIONAL_EVIDENCE_V2_2026_10_14.md).
 - V57.3 owns State-derived Next Action and Development Home; GitHub is an optional sensor, not mandatory onboarding.
 - V58.0 organizes Development Plan Workspaces into Work / Repository / Team / Improvements / Preview surfaces.
 - GitHub-native evidence distinguishes declared intent, observed PR/CI, deployment, and independent device confirmation. A green CI does not prove production health.
 - Existing GitHub and deployment evidence can be missing or stale. Existing authorization, Task progress, ownership and provider-cost rules remain authoritative.
 
-### PROPOSED / NOT IMPLEMENTED (evidence-aware extensions beyond V1)
+### PROPOSED / NOT IMPLEMENTED (independent operational attestations beyond V2)
 
 Add an **Operational Readiness projection** that assesses the *release/recovery foundation* for a Development Plan, repository and target environment. It contextualizes the seven existing gates rather than adding new V53.8 weights or silently claiming "Release Ready."
 
