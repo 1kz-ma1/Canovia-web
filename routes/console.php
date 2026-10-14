@@ -193,3 +193,38 @@ Artisan::command(
         return $report['configuration_ready'] ? 0 : 1;
     },
 )->purpose('Check stage-only Auth0 wiring without revealing credentials or enabling external access');
+
+
+/**
+ * Explicit operator retry ONLY. No scheduler is enabled by this definition.
+ * Database migration and storage/release approval are separate production gates.
+ * Never print an encrypted/raw storage key or private account identifier.
+ */
+Artisan::command(
+    'canovia:retry-private-file-cleanup
+        {--limit=50 : Maximum pending cleanup entries (1..200)}
+        {--dry-run : Print aggregate pending/quarantined counts without deleting}',
+    function (\App\Services\PrivateFileLifecycleService $files): int {
+        if ($this->option('dry-run')) {
+            $counts = $files->statusCounts();
+            $this->line('private_file_cleanup_pending: '.$counts['pending']);
+            $this->line('private_file_cleanup_quarantined: '.$counts['quarantined']);
+
+            return 0;
+        }
+
+        $rawLimit = (string) $this->option('limit');
+        if (! ctype_digit($rawLimit) || (int) $rawLimit < 1 || (int) $rawLimit > 200) {
+            $this->error('Invalid limit: expected an integer between 1 and 200.');
+
+            return 1;
+        }
+
+        $result = $files->retryDue((int) $rawLimit);
+        foreach ($result as $key => $value) {
+            $this->line('private_file_cleanup_'.$key.': '.$value);
+        }
+
+        return 0;
+    },
+)->purpose('Retry bounded verified private file cleanup after committed deletes; operator-only, no automatic production scheduling');

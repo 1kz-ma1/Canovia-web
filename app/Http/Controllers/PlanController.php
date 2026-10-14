@@ -655,6 +655,8 @@ class PlanController extends Controller
             // independently-owned file must remain accessible afterward.
             $paths = $files->pathsCascadedByPlan((int) $live->id);
             $live->delete();
+            // Durable cleanup entry commits atomically with Plan deletion.
+            $files->deleteAfterCommit($paths);
 
             return $paths;
         }, 3);
@@ -662,8 +664,6 @@ class PlanController extends Controller
         // Physical deletes cannot be rolled back with SQL. Do not unlink
         // until the Plan transaction commits; retain any file still
         // referenced by another Inbox, Recall or Career record.
-        $files->deleteAfterCommit($paths);
-
         return redirect()->route('home')->with('success', '計画を削除しました。');
     }
 }

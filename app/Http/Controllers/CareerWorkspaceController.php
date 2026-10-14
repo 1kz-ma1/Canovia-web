@@ -140,11 +140,12 @@ class CareerWorkspaceController extends Controller
 
             $path = $liveCapture->screenshot_path;
             $liveCapture->delete();
+            $paths = collect([$path])->filter()->values();
+            app(PrivateFileLifecycleService::class)->deleteAfterCommit($paths);
 
-            return collect([$path])->filter()->values();
+            return $paths;
         }, 3);
 
-        app(PrivateFileLifecycleService::class)->deleteAfterCommit($paths);
         $this->careerIntelligence->tryRefresh($plan);
 
         return redirect()
