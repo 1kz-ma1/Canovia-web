@@ -92,3 +92,14 @@ Implementation scope of this feature branch (no schema/config/deploy changes):
 - During a trusted remote bearer verification callback, an owner may revoke an indefinite grant or unlink the external identity. A subsequent request continuation must independently re-check current grant/link records before returning any Plan data, and must not record `context_read`.
 - The tests above exercise a deterministic **revocation-between-token-verification-and-read** ordering and malformed-row negative controls. They do **not** establish actual overlapping multi-connection `SELECT ... FOR UPDATE` behavior; a separate disposable PostgreSQL 17 / MySQL 8.0+ multi-connection lock-contention matrix remains required before real user access. Do not label this gate complete on SQLite success alone.
 
+
+## 9. Disposable real-database contention matrix (separate acceptance)
+
+A dedicated CI-only matrix runs against fresh **PostgreSQL 17 / MySQL 8.0 / MySQL 8.4** databases named `canovia_mcp_lock_ci` on `127.0.0.1`. The job must never use Render, Aiven or public staging databases, and the feature test rejects non-CI environments/targets before creating fixtures.
+
+- A real `McpReadOnlyContextTool::read()` invoked inside an outer transaction holds locks on the Plan, linked subject and grant while producing whitelisted metadata and `context_read` audit. An independent PDO connection issues `FOR UPDATE NOWAIT` and must fail on **all three rows** until the reader commits.
+- Once the read commits, a user-initiated grant revoke or identity unlink must succeed and every **subsequent** read must return no Context. The original `context_read` event remains exactly once; denied reads add none.
+- An uncommitted active-identity insert must prevent a different owner's simultaneous insert through the DB unique reservation (bounded lock timeout); after commit, the duplicate remains rejected. This independently tests the database uniqueness fence, not a synthetic-only Eloquent precheck.
+- All checks must be green for **each** engine. Test runner DB target must be a uniquely named disposable local database. Missing real-DB matrix evidence leaves production authorization **blocked**.
+- This proves selected DB row-lock / uniqueness behavior, **not** every real-world clock interleaving, Auth0 token revocation, production Aiven backup or every write path. Those remain separate reviews.
+
