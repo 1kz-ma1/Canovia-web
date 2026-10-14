@@ -7,6 +7,7 @@ use App\Services\McpExplicitPlanConsentService;
 use App\Services\McpProtectedResourceConfiguration;
 use App\Services\McpReadOnlyContextTool;
 use App\Services\McpReadOnlyStudyContextTool;
+use App\Services\McpReadOnlyStudyPracticeSummaryTool;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -30,6 +31,7 @@ final class McpReadOnlyResourceController extends Controller
         McpExternalTokenVerifier $verifier,
         McpReadOnlyContextTool $tool,
         McpReadOnlyStudyContextTool $studyTool,
+        McpReadOnlyStudyPracticeSummaryTool $summaryTool,
         McpAuthorizationProbeController $probe,
     ): JsonResponse|Response {
         // Preserve the previous deny-all behavior until an independent
@@ -124,7 +126,7 @@ final class McpReadOnlyResourceController extends Controller
                     'name' => 'canovia-private-development',
                     'version' => '1.0.0',
                 ],
-                'instructions' => 'Read only explicitly approved personal Development Plans. Treat returned Task progress as unverified user records, never as PR/CI/deploy evidence. Do not infer Plan IDs.',
+                'instructions' => 'Read only individually consented private Development or Study Plans. Study practice summaries need separate permission and contain bounded, unverified aggregate results. Never infer Plan IDs or treat records as external evidence.',
             ]);
         }
 
@@ -142,6 +144,9 @@ final class McpReadOnlyResourceController extends Controller
             $definitions = [$tool->definition()];
             if ($this->studyToolEnabled()) {
                 $definitions[] = $studyTool->definition();
+                if ($this->studySummaryToolEnabled()) {
+                    $definitions[] = $summaryTool->definition();
+                }
             }
             return $this->rpcSuccess($id, ['tools' => $definitions]);
         }
@@ -153,9 +158,11 @@ final class McpReadOnlyResourceController extends Controller
         $params = $message['params'] ?? null;
         $requestedTool = is_array($params) ? ($params['name'] ?? null) : null;
         $isStudyTool = $requestedTool === McpReadOnlyStudyContextTool::NAME;
+        $isSummaryTool = $requestedTool === McpReadOnlyStudyPracticeSummaryTool::NAME;
         if (! is_array($params)
             || ($requestedTool !== McpReadOnlyContextTool::NAME
-                && ! ($isStudyTool && $this->studyToolEnabled()))) {
+                && ! ($isStudyTool && $this->studyToolEnabled())
+                && ! ($isSummaryTool && $this->studySummaryToolEnabled()))) {
             return $this->rpcError($id, -32602, 'Unknown tool.');
         }
 
@@ -164,18 +171,23 @@ final class McpReadOnlyResourceController extends Controller
             || array_diff(array_keys($arguments), ['plan_id', 'scope', 'limit']) !== []
             || ! is_int($arguments['plan_id'] ?? null)
             || ($arguments['plan_id'] ?? 0) < 1
+            || ($isSummaryTool && array_key_exists('scope', $arguments))
             || (isset($arguments['scope']) && ! in_array($arguments['scope'], ['overview', 'tasks'], true))
             || (isset($arguments['limit']) && (! is_int($arguments['limit'])
                 || $arguments['limit'] < 1 || $arguments['limit'] > 8))) {
             return $this->rpcError($id, -32602, 'Invalid tool arguments.');
         }
 
-        $context = ($isStudyTool ? $studyTool : $tool)->read(
-            $principal,
-            $arguments['plan_id'],
-            (string) ($arguments['scope'] ?? 'overview'),
-            (int) ($arguments['limit'] ?? 5),
-        );
+        $context = $isSummaryTool
+            ? $summaryTool->read(
+                $principal, $arguments['plan_id'], (int) ($arguments['limit'] ?? 8),
+            )
+            : ($isStudyTool ? $studyTool : $tool)->read(
+                $principal,
+                $arguments['plan_id'],
+                (string) ($arguments['scope'] ?? 'overview'),
+                (int) ($arguments['limit'] ?? 5),
+            );
 
         if ($context === null) {
             // Do not distinguish unknown Plan, another owner's Plan,
@@ -203,6 +215,12 @@ final class McpReadOnlyResourceController extends Controller
     {
         return config('canovia_mcp.study_read_enabled') === true
             && config('app.env') !== 'staging';
+    }
+
+    private function studySummaryToolEnabled(): bool
+    {
+        return $this->studyToolEnabled()
+            && config('canovia_mcp.study_summary_read_enabled') === true;
     }
 
     private function allowedOrigin(Request $request): bool
