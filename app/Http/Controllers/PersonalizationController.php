@@ -165,11 +165,14 @@ final class PersonalizationController extends Controller
             ],
         );
 
+        // Pre-Launch IA-2: skipping a diagnosis must not force the next
+        // step to be Plan creation. Overview supports zero-Plan actors
+        // and shows optional first-use workspace choices.
         return redirect()
-            ->route('plans.create')
+            ->route('workspace.overview.index')
             ->with(
                 'status',
-                '診断はあとからいつでもできます。まずは今進めたいことから始めましょう。',
+                '診断やPlan作成はあとからで大丈夫です。まずはCanoviaを見てみましょう。',
             );
     }
 

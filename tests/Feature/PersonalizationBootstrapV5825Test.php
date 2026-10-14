@@ -379,23 +379,52 @@ class PersonalizationBootstrapV5825Test extends TestCase
         );
     }
 
-    public function test_skip_keeps_personalization_optional_and_allows_normal_plan_creation_path(): void
+    public function test_skip_enters_planless_overview_without_forcing_plan_creation(): void
     {
         $user = User::factory()->create();
 
         $this->actingAs($user)
             ->post(route('personalization.skip'))
-            ->assertRedirect(route('plans.create'));
+            ->assertRedirect(route('workspace.overview.index'));
 
         $stored = UserPersonalizationContext::query()
             ->where('user_id', $user->id)
             ->firstOrFail();
 
         $this->assertNotNull($stored->skipped_at);
+        $this->assertDatabaseCount('plans', 0);
 
+        // The real zero-Plan surface must render, not just redirect.
+        $this->actingAs($user)
+            ->get(route('workspace.overview.index'))
+            ->assertOk()
+            ->assertSee('data-overview-workspace', false)
+            ->assertSee('data-overview-first-use-workspaces', false);
+        $this->assertDatabaseCount('plans', 0);
+
+        // A later, explicitly chosen Plan creation is still possible.
         $this->actingAs($user)
             ->get(route('plans.create'))
             ->assertOk();
+    }
+
+    public function test_guest_first_run_can_skip_diagnosis_and_reach_planless_overview(): void
+    {
+        $this->post(route('first_run.start'))
+            ->assertRedirect(route('personalization.show', ['source' => 'first_run']));
+
+        $this->post(route('personalization.skip'))
+            ->assertRedirect(route('workspace.overview.index'));
+
+        $this->get(route('workspace.overview.index'))
+            ->assertOk()
+            ->assertSee('data-overview-workspace', false)
+            ->assertSee('data-overview-first-use-workspaces', false);
+
+        $this->assertDatabaseCount('plans', 0);
+        $this->assertDatabaseHas('behavior_events', [
+            'event_type' => BehaviorEventType::PersonalizationSkipped->value,
+        ]);
     }
 
     public function test_unsure_only_keeps_questionnaire_light_and_produces_no_forced_seed(): void
@@ -461,8 +490,14 @@ class PersonalizationBootstrapV5825Test extends TestCase
 
         $this->actingAs($user)
             ->post(route('personalization.skip'))
-            ->assertRedirect(route('plans.create'));
+            ->assertRedirect(route('workspace.overview.index'));
 
+        $this->actingAs($user)
+            ->get(route('workspace.overview.index'))
+            ->assertOk()
+            ->assertDontSee('data-onboarding-auto="1"', false);
+
+        // The legacy Plan editor remains opt-in and does not auto-tour.
         $this->actingAs($user)
             ->get(route('plans.create'))
             ->assertOk()

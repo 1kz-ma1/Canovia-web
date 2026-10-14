@@ -1,5 +1,9 @@
 # Canovia documentation index (2026-10-08)
 
+## Pre-Launch IA-2 — planless onboarding slice (2026-10-15)
+
+- [IA-2a Personalization Skip → zero-Plan Overview](development/PRELAUNCH_IA2A_PLANLESS_SKIP_2026_10_15.md): fix the misleading Skip-to-Plan-creation funnel; validate authenticated and guest zero-Plan Overview, opt-in Plan creation and preserved release gate. **Development main only, not a public launch or release approval.**
+
 ## Pre-Launch public IA and staged participation (2026-10-13)
 
 - [Pre-Launch Public Site / App / Future IA specification](development/PRELAUNCH_PUBLIC_APP_FUTURE_IA_SPEC_2026_10_13.md): **product design, not a release authorization**. Guest diagnosis/Plan Seed preview, marketing site vs My Workspace vs Canovia Future responsibilities, curated public roadmap, existing free Support reuse, no pay-for-priority, release gates and small implementation slices.
