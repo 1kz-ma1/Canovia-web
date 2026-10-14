@@ -118,6 +118,8 @@ final class AccountDeletionService
             // here together with the User.
             $liveUser->delete();
 
+            // Persist cleanup intent in the same transaction as removal.
+    
             return $storagePaths;
         }, 3);
 
