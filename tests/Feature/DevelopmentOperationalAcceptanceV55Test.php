@@ -7,6 +7,7 @@ use App\Models\Plan;
 use App\Models\PlanMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -68,6 +69,9 @@ final class DevelopmentOperationalAcceptanceV55Test extends TestCase
 
     public function test_owner_journey_records_three_distinct_self_reports_and_stales_on_rebind(): void
     {
+        // This synthetic multi-tab journey compresses several minutes of
+        // owner interactions into one test; retain live HTTP rate limits.
+        $this->withoutMiddleware(ThrottleRequests::class);
         $owner = User::factory()->create(['first_run_completed_at' => now()]);
         $plan = $this->plan($owner);
 
