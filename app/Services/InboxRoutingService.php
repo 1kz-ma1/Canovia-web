@@ -6,11 +6,9 @@ use App\Enums\EvidenceSource;
 use App\Models\InboxItem;
 use App\Models\Plan;
 use App\Models\PlanResource;
-use App\Models\StudyRecallSource;
 use App\Models\Task;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class InboxRoutingService
@@ -19,6 +17,7 @@ class InboxRoutingService
         private readonly FutureMemoService $futureMemos,
         private readonly CareerCaptureService $careerCaptures,
         private readonly StudyRecallCandidateExtractionService $recallExtractor,
+        private readonly InboxRecallMaterialTransferGuard $recallTransfers,
         private readonly TaskEvidenceService $evidence,
         private readonly PlanActivityService $activity,
         private readonly ExecutionRequestHandoffService $executionRequests,
@@ -48,6 +47,13 @@ class InboxRoutingService
             'keep_inbox' => 'Inboxに残しました。',
             default => throw ValidationException::withMessages(['destination' => '未対応の整理先です。']),
         };
+
+        // Recall performs the Inbox "processed" update in its own second
+        // locked authorization/source transaction AFTER AI completes. Never
+        // write a stale route-bound Inbox model over that verified result.
+        if ($destination === 'recall_material') {
+            return ['message' => $message, 'destination' => $destination];
+        }
 
         if ($destination !== 'keep_inbox') {
             $metadata = is_array($item->metadata) ? $item->metadata : [];
@@ -152,32 +158,29 @@ class InboxRoutingService
             ]);
         }
 
-        $recallPath = null;
-        if (in_array($item->source_type, ['image', 'pdf'], true)) {
-            if (! $item->storage_path || ! Storage::exists($item->storage_path)) {
-                throw ValidationException::withMessages(['destination' => 'Inbox教材ファイルを読み込めませんでした。']);
-            }
-            $extension = pathinfo((string) $item->storage_path, PATHINFO_EXTENSION);
-            $recallPath = 'study-recall-sources/'.$plan->id.'/'.$task->id.'/'.Str::uuid().($extension ? '.'.$extension : '');
-            Storage::copy($item->storage_path, $recallPath);
+        $actor = $request->user();
+        if ($actor === null) {
+            throw ValidationException::withMessages([
+                'destination' => 'AI教材の取り込みにはログインが必要です。',
+            ]);
         }
 
-        $source = StudyRecallSource::query()->create([
-            'plan_id' => (int) $plan->id,
-            'task_id' => (int) $task->id,
-            'user_id' => $request->user()?->id,
-            'actor_token' => $request->user() ? null : $actorToken,
-            'source_type' => in_array($item->source_type, ['image', 'pdf'], true) ? $item->source_type : 'text',
-            'original_name' => $item->original_name,
-            'mime_type' => $item->mime_type,
-            'storage_path' => $recallPath,
-            'source_text' => in_array($item->source_type, ['image', 'pdf'], true)
-                ? null
-                : trim((string) $item->content),
-            'status' => 'pending',
-        ]);
+        $transfer = $this->recallTransfers->copy(
+            $item, $plan, $task, $actor, $actorToken,
+        );
 
-        $result = $this->recallExtractor->extract($source, $plan, $task, $request->user()?->id);
+        $source = $transfer['source'];
+        // Reuse the authorization generation captured at the actual Inbox
+        // copy. A revoked/rejoined Editor cannot start the AI under a new
+        // epoch after approving material under the old one.
+        $result = $this->recallExtractor->extract(
+            $source, $plan, $task, $actor->id, $transfer['authorization'],
+        );
+
+        $this->recallTransfers->confirmProcessed(
+            $item, $plan, $task, $source, $actor, $actorToken,
+            $transfer['signature'], $transfer['authorization'],
+        );
 
         return $result['created'].'件のRecall Candidateを作成しました。Deck追加前に確認してください。';
     }
