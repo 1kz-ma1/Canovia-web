@@ -11,6 +11,8 @@ import json
 from pathlib import Path
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 from scripts.ci.development_operational_v60_git_release_delta import (
     ROOT, IncompleteSnapshot, SHA, changed_paths, git, inspect, is_ancestor, summary,
 )
