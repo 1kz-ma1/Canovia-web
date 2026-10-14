@@ -59,6 +59,8 @@ jobs:
         run: python3 -m unittest discover -s tests/ci -p 'test_development_operational_v60_git_release_delta.py' -v
       - name: Verify V6.1 exact candidate-vs-main scope choice remains NO-GO
         run: python3 -m unittest discover -s tests/ci -p 'test_development_operational_v61_release_scope_compare.py' -v
+      - name: Validate V6.3 pinned PR513 P0 evidence matrix is never release GO
+        run: python3 -m unittest discover -s tests/ci -p 'test_development_release_v63_p0_evidence.py' -v
       - name: Compile Blade templates
         run: php artisan view:cache
       - name: Targeted behavior and Workspace regression

@@ -1,0 +1,172 @@
+{
+  "version": "v6.3",
+  "audit_date": "2026-10-14",
+  "repository": "1kz-ma1/Canovia-web",
+  "release_pr": 513,
+  "candidate_sha": "bb8248f25545ae0d600fbb68f66c41c360004e2c",
+  "baseline_branch": "production",
+  "baseline_sha": "15abdc9de6f24b5250fb255c579d1aa55facaf1a",
+  "evidence_origin": "GitHub fetch_file at pinned candidate SHA; PR513 exact-head CI metadata; not live or hardware evidence",
+  "candidate_unchanged": true,
+  "all_p0_end_to_end_verified": false,
+  "release_authorized": false,
+  "selection_status": "BLOCKED_NEEDS_P0_E2E",
+  "live_render_sha_verified": false,
+  "live_aiven_schema_verified": false,
+  "isolated_restore_verified": false,
+  "physical_iphone_verified": false,
+  "gates": [
+    {
+      "id": "P0-01",
+      "title": "新規登録と復帰",
+      "status": "TEST_REFERENCES_FOUND_NOT_E2E",
+      "reason": "登録/初回ゲートと復帰は独立したテストがあるが、実公開設定とデバイスでの連続導線は未確認",
+      "source_tests": [
+        {
+          "path": "tests/Feature/FirstRunUxV4123Test.php",
+          "method": "test_unfinished_new_account_returns_to_welcome_after_logout_and_login"
+        },
+        {
+          "path": "tests/Feature/WorkspaceResumeAndSessionScopeV5612Test.php",
+          "method": "test_root_resumes_each_persisted_public_workspace"
+        }
+      ],
+      "ci_evidence": "EXACT_HEAD_CI_NOT_FULL_E2E",
+      "runtime_evidence": "UNVERIFIED"
+    },
+    {
+      "id": "P0-02",
+      "title": "現在地を理解し計画する",
+      "status": "TEST_REFERENCES_FOUND_NOT_E2E",
+      "reason": "Goal ContextとAI停止時の代替は個別テストあり。新規利用者の入力負荷・実行可能性とAI失敗の実際の公開環境は未実測",
+      "source_tests": [
+        {
+          "path": "tests/Feature/AdaptiveGoalDiscoveryV4114Test.php",
+          "method": "test_goal_is_saved_before_plan_exists_and_first_question_is_current_state"
+        },
+        {
+          "path": "tests/Feature/ConversationalOnboardingV4116Test.php",
+          "method": "test_provider_unavailable_falls_back_to_deterministic_goal_discovery_without_blocking_free_path"
+        }
+      ],
+      "ci_evidence": "EXACT_HEAD_CI_NOT_FULL_E2E",
+      "runtime_evidence": "UNVERIFIED"
+    },
+    {
+      "id": "P0-03",
+      "title": "最初の行動提示",
+      "status": "CRITICAL_FLOW_GAP",
+      "reason": "Plan作成でTask0件を正常とするテストあり。作成直後に非空の次アクションが確実に表示される新規ユーザー通し受入は未確認",
+      "source_tests": [
+        {
+          "path": "tests/Feature/PlanActionFirstCreationV5866Test.php",
+          "method": "test_generic_study_and_development_plans_enter_matching_workspace_without_manual_roadmap"
+        },
+        {
+          "path": "tests/Feature/StudyAdaptiveActionV536Test.php",
+          "method": "test_missing_scope_produces_action_without_creating_task"
+        },
+        {
+          "path": "tests/Feature/DeveloperHomeV573Test.php",
+          "method": "test_empty_development_plan_can_start_without_a_github_repository"
+        }
+      ],
+      "ci_evidence": "EXACT_HEAD_CI_NOT_FULL_E2E",
+      "runtime_evidence": "UNVERIFIED"
+    },
+    {
+      "id": "P0-04",
+      "title": "作業・演習実践",
+      "status": "TEST_REFERENCES_FOUND_NOT_E2E",
+      "reason": "Guided Execution/演習の独立テストあり。新規作成Planからの自然な実行導線と実ブラウザ操作は未確認",
+      "source_tests": [
+        {
+          "path": "tests/Feature/GuidedExecutionV4114Test.php",
+          "method": "test_real_world_task_prefers_guided_execution_over_timer"
+        },
+        {
+          "path": "tests/Feature/AdaptiveLearningSingleQuestionV5878Test.php",
+          "method": "test_one_answer_is_persisted_and_can_end_after_a_single_question_without_task_mutation"
+        }
+      ],
+      "ci_evidence": "EXACT_HEAD_CI_NOT_FULL_E2E",
+      "runtime_evidence": "UNVERIFIED"
+    },
+    {
+      "id": "P0-05",
+      "title": "実績と永続保存",
+      "status": "TEST_REFERENCES_FOUND_NOT_E2E",
+      "reason": "演習Draft永続化、重複排除、反映とアクセス制限の個別テストあり。新規導線からの保存→ログアウト→復帰をひとまとまりで未確認",
+      "source_tests": [
+        {
+          "path": "tests/Feature/StudyPracticeDraftPersistenceV4071Test.php",
+          "method": "test_answers_resume_silently_from_database_after_browser_session_state_is_lost"
+        },
+        {
+          "path": "tests/Feature/GuidedExecutionV4114Test.php",
+          "method": "test_reflection_is_idempotent_and_does_not_duplicate_evidence"
+        }
+      ],
+      "ci_evidence": "EXACT_HEAD_CI_NOT_FULL_E2E",
+      "runtime_evidence": "UNVERIFIED"
+    },
+    {
+      "id": "P0-06",
+      "title": "記録に基づく次の行動更新",
+      "status": "CRITICAL_FLOW_GAP",
+      "reason": "学習Evidenceで次Actionを更新するサービス単位テストが存在。新規ユーザーの学習・開発それぞれで実績から新しい推奨へ到達するUI通しテストは未確認",
+      "source_tests": [
+        {
+          "path": "tests/Feature/StudyAdaptiveActionV536Test.php",
+          "method": "test_new_evidence_supersedes_previous_action_when_best_action_changes"
+        },
+        {
+          "path": "tests/Feature/StudyPracticeLearningLoopV393Test.php",
+          "method": "test_recent_weaknesses_are_included_in_next_generation_prompt"
+        },
+        {
+          "path": "tests/Feature/DeveloperTaskAssociationV572Test.php",
+          "method": "test_human_link_creates_artifact_relation_and_evidence_without_progress_change"
+        }
+      ],
+      "ci_evidence": "EXACT_HEAD_CI_NOT_FULL_E2E",
+      "runtime_evidence": "UNVERIFIED"
+    },
+    {
+      "id": "P0-07",
+      "title": "無料の基本循環",
+      "status": "TEST_REFERENCES_FOUND_NOT_E2E",
+      "reason": "Free権限と初回Companionの個別テストあり。初回作成から実績・次Actionまで無料のみで達成できる公開設定実測なし",
+      "source_tests": [
+        {
+          "path": "tests/Feature/FeatureAccessV406Test.php",
+          "method": "test_existing_v406_features_remain_free_for_guest_and_user"
+        },
+        {
+          "path": "tests/Feature/ConversationalOnboardingV4116Test.php",
+          "method": "test_free_user_gets_native_first_companion_reply_and_goal_context_stays_source_of_truth"
+        }
+      ],
+      "ci_evidence": "EXACT_HEAD_CI_NOT_FULL_E2E",
+      "runtime_evidence": "UNVERIFIED"
+    },
+    {
+      "id": "P0-08",
+      "title": "離脱・不具合の観測",
+      "status": "TEST_REFERENCES_FOUND_NOT_E2E",
+      "reason": "コホート、日次訪問、Feedback、初期活性化の集計テストあり。8ステップ全体の漏れないユーザーファネルと実環境ログの確認なし",
+      "source_tests": [
+        {
+          "path": "tests/Feature/EarlyAccessObservabilityV5823Test.php",
+          "method": "test_insights_use_database_facts_for_activation_and_events_for_retention"
+        },
+        {
+          "path": "tests/Feature/BehaviorTrackingTest.php",
+          "method": "test_work_session_start_records_the_observable_start_events"
+        }
+      ],
+      "ci_evidence": "EXACT_HEAD_CI_NOT_FULL_E2E",
+      "runtime_evidence": "UNVERIFIED"
+    }
+  ]
+}
