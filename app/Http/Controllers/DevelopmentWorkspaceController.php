@@ -10,12 +10,14 @@ use App\Intelligence\Presentation\IntelligencePresentationHistoryService;
 use App\Intelligence\Presentation\IntelligenceStateChangeFeedbackService;
 use App\Models\Plan;
 use App\Models\DevelopmentOperationalProfile;
+use App\Models\DevelopmentOperationalTarget;
 use App\Models\Task;
 use App\Services\DevelopmentExecutionContextService;
 use App\Services\DevelopmentImplementationBriefService;
 use App\Services\DevelopmentHomeService;
 use App\Services\DevelopmentPrelaunchPreparationService;
 use App\Services\DevelopmentOperationalEvidenceService;
+use App\Services\DevelopmentOperationalAttestationService;
 use App\Services\DevelopmentCreativePlanAccessService;
 use App\Services\DevelopmentWorkspaceSurfaceService;
 use App\Services\CapabilityActivationService;
@@ -45,6 +47,7 @@ final class DevelopmentWorkspaceController extends Controller
         DevelopmentHomeService $developerHome,
         DevelopmentPrelaunchPreparationService $prelaunchPreparation,
         DevelopmentOperationalEvidenceService $operationalEvidenceService,
+        DevelopmentOperationalAttestationService $operationalAttestations,
         DevelopmentWorkspaceSurfaceService $surfaces,
         DevelopmentExecutionContextService $executionContext,
         DevelopmentImplementationBriefService $implementationBriefs,
@@ -95,6 +98,7 @@ final class DevelopmentWorkspaceController extends Controller
                 'developmentPrelaunchPreparation' => null,
                 'developmentOperationalProfile' => null,
                 'developmentOperationalProfileEditable' => false,
+                'developmentOperationalTarget' => null,
                 'developmentOperationalEvidence' => null,
                 'intelligencePresentation' => null,
                 'intelligenceHistory' => [],
@@ -161,6 +165,9 @@ final class DevelopmentWorkspaceController extends Controller
             ? DevelopmentOperationalProfile::query()
                 ->where('plan_id', $plan->id)
                 ->first()?->summary()
+            : null;
+        $developmentOperationalTarget = $developmentOperationalProfileEditable
+            ? DevelopmentOperationalTarget::query()->where('plan_id', $plan->id)->first()
             : null;
         $developmentPrelaunchPreparation = ! $legacyCreative && $developmentSurface === 'work'
             ? $prelaunchPreparation->suggest(
@@ -239,6 +246,13 @@ final class DevelopmentWorkspaceController extends Controller
                 (bool) data_get($developmentGithubIntegrationStatus, 'evidence.allowed', false)
                     && (string) data_get($developmentGithubConnection, 'state', '') === 'ready',
                 $developmentOperationalProfile,
+                $developmentOperationalProfileEditable
+                    ? $operationalAttestations->project(
+                        $plan,
+                        $developmentOperationalProfile,
+                        $developmentOperationalTarget,
+                    )
+                    : null,
             )
             : null;
 
@@ -364,6 +378,7 @@ final class DevelopmentWorkspaceController extends Controller
             'developmentPrelaunchPreparation' => $developmentPrelaunchPreparation,
             'developmentOperationalProfile' => $developmentOperationalProfile,
             'developmentOperationalProfileEditable' => $developmentOperationalProfileEditable,
+            'developmentOperationalTarget' => $developmentOperationalTarget,
             'developmentOperationalEvidence' => $developmentOperationalEvidence,
             'intelligencePresentation' => $presentation,
             'intelligenceHistory' => $legacyCreative

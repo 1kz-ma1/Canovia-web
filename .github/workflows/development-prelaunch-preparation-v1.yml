@@ -24,6 +24,10 @@ jobs:
         run: |
           php -l app/Services/DevelopmentPrelaunchPreparationService.php
           php -l app/Services/DevelopmentOperationalEvidenceService.php
+          php -l app/Services/DevelopmentOperationalAttestationService.php
+          php -l app/Models/DevelopmentOperationalTarget.php
+          php -l app/Http/Controllers/DevelopmentOperationalTargetController.php
+          php -l database/migrations/2026_10_14_164000_create_development_operational_targets_table.php
           php -l app/Models/DevelopmentOperationalProfile.php
           php -l app/Http/Controllers/DevelopmentOperationalProfileController.php
           php -l database/migrations/2026_10_14_154500_create_development_operational_profiles_table.php
@@ -34,6 +38,8 @@ jobs:
           php -l tests/Feature/DevelopmentOperationalEvidenceV2Test.php
           php -l tests/Unit/DevelopmentOperationalProfileV3Test.php
           php -l tests/Feature/DevelopmentOperationalProfileV3FeatureTest.php
+          php -l tests/Unit/DevelopmentOperationalAttestationV4Test.php
+          php -l tests/Feature/DevelopmentOperationalAttestationV4FeatureTest.php
       - name: Compile Blade templates
         run: php artisan view:cache
       - name: Targeted behavior and Workspace regression
@@ -42,9 +48,11 @@ jobs:
             tests/Unit/DevelopmentPrelaunchPreparationServiceTest.php \
             tests/Unit/DevelopmentOperationalEvidenceServiceTest.php \
             tests/Unit/DevelopmentOperationalProfileV3Test.php \
+            tests/Unit/DevelopmentOperationalAttestationV4Test.php \
             tests/Feature/DevelopmentPrelaunchPreparationV1Test.php \
             tests/Feature/DevelopmentOperationalEvidenceV2Test.php \
             tests/Feature/DevelopmentOperationalProfileV3FeatureTest.php \
+            tests/Feature/DevelopmentOperationalAttestationV4FeatureTest.php \
             tests/Feature/DevelopmentWorkspaceV544Test.php \
             tests/Feature/DeveloperHomeV573Test.php \
             tests/Feature/DeveloperWorkspaceSurfacesV580Test.php
