@@ -339,3 +339,31 @@ Artisan::command(
         return in_array($report['outcome'], ['blocked', 'unavailable'], true) ? 1 : 0;
     },
 )->purpose('G3 R14 opt-in non-production aggregate preview; never lists or deletes private storage');
+
+
+/**
+ * G3-R16: operator-facing DESIGN CONTRACT ONLY.
+ * Config-only, read-only; absolutely no object/credential lookup, storage
+ * mutation, conditional deletion, or production enablement.
+ */
+Artisan::command(
+    'canovia:private-file-generation-contract
+        {--json : Print only fixed non-secret capability labels}',
+    function (\App\Services\PrivateFileGenerationContractService $contract): int {
+        $report = $contract->report();
+        if ($this->option('json')) {
+            $this->line((string) json_encode($report, JSON_THROW_ON_ERROR));
+        } else {
+            $this->line('Private file generation contract: '.$report['assessment']);
+            foreach ([
+                'driver', 'provider_generation', 'write_time_version_binding',
+                'conditional_delete_enforcement', 'bucket_versioning',
+            ] as $field) {
+                $this->line($field.': '.$report[$field]);
+            }
+            $this->warn('This is configuration inventory, NOT provider proof or permission to delete.');
+        }
+
+        return $report['assessment'] === 'blocked' ? 1 : 0;
+    },
+)->purpose('Non-production, offline private object-generation readiness inventory; never grants deletion');
