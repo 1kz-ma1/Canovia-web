@@ -65,13 +65,15 @@ jobs:
           php -l tests/Feature/SafePlanResourceRecallHandoffV5811Test.php
       - name: G3 Plan and account private file lifecycle, retained Inbox and rollback
         run: php artisan test tests/Feature/PrivateFileLifecycleG3Test.php --stop-on-failure
-      - name: Existing account deletion and resource private file recovery on SQLite
-        # These legacy suites use RefreshDatabase's nested/rolled-back
-        # transaction, so afterCommit deliberately preserves source bytes.
-        # Run them under their original SQLite driver; actual post-commit
-        # physical unlink is covered by the PG16 test above.
+      - name: Existing V56.1 account deletion in rolled-back SQLite fixture
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ':memory:'
           DB_URL: ''
-        run: php artisan test tests/Feature/IosSoftLaunchWebReadinessV561Test.php tests/Feature/SafePlanResourceRecallHandoffV5811Test.php --stop-on-failure
+        run: php artisan test tests/Feature/IosSoftLaunchWebReadinessV561Test.php --filter=test_account_deletion_removes_owned_plan_standalone_data_and_private_file_without_deleting_another_users_plan --stop-on-failure
+      - name: Existing V58.11 Resource Recall account deletion in rolled-back SQLite fixture
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          DB_URL: ''
+        run: php artisan test tests/Feature/SafePlanResourceRecallHandoffV5811Test.php --filter=test_account_deletion_removes_resource_derived_recall_private_file --stop-on-failure
