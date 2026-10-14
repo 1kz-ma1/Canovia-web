@@ -111,6 +111,37 @@ final class AdaptiveLearningHistoryService
             ];
         })->values();
 
+        // V6.11: only recorded, actor-scoped Understanding/Practice answers
+        // can offer an optional next Action. A correction/extra answer invalidates
+        // an earlier preview; no grading event is converted into TaskEvidence.
+        $sourceSignature = hash('sha256', json_encode([
+            'policy' => 'learning_next_action_v611',
+            'plan_id' => (int) $plan->id,
+            'task_id' => (int) $task->id,
+            'user_id' => $request->user()?->id,
+            'actor_token' => $request->user() ? null : $actorToken,
+            'window' => $events->map(fn (LearningAnswerEvent $event) => [
+                'id' => (int) $event->id,
+                'question_id' => (int) ($event->item?->question_id ?? 0),
+                'correct' => (bool) $event->was_correct,
+                'adjustment_id' => $event->evaluationAdjustment?->id,
+            ])->all(),
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE));
+        $first = $review->first();
+        $canAdopt = $first !== null
+            && ! in_array((string) $task->status, ['done', 'completed', 'cancelled'], true)
+            && (int) $task->progress_percent < 100;
+        $nextAction = $canAdopt
+            ? '「'.$first['name'].'」を別の問題で再確認し、誤答の理由を見直す'
+            : null;
+        $nextActionPreview = $nextAction === null ? null : [
+            'topic' => $first['name'],
+            'label' => $nextAction,
+            'source_signature' => $sourceSignature,
+            'expected_next_action_hash' => hash('sha256', (string) ($task->next_action_note ?? '')),
+            'already_adopted' => (string) ($task->next_action_note ?? '') === $nextAction,
+        ];
+
         return [
             'recent' => $recent,
             'review_topics' => $review,
@@ -118,6 +149,7 @@ final class AdaptiveLearningHistoryService
             'correct_count' => $events->where('was_correct', true)->count(),
             'excluded_count' => $events->count() - $eligible->count(),
             'window' => self::WINDOW,
+            'next_action_preview' => $nextActionPreview,
         ];
     }
 }
