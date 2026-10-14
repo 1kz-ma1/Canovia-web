@@ -34,7 +34,7 @@ The guard requires all of the following:
 3. Server-side connection identity is independently verified; grant is active, not revoked, within its expiry (or explicitly until revoked).
 4. Grant's owner, Plan, target service ID and target revision all match the currently selected Plan/target.
 5. Grant is scoped to one authenticated Render workspace ID and carries explicit `services.read` Canovia-side consent.
-6. Connection ID, workspace ID, service ID, target revision and monotonically changing consent epoch all match the authenticated provider-adapter observation.
+6. Connection ID, workspace ID, **service owner ID returned by the provider**, service ID, target revision and monotonically changing consent epoch all match the authenticated provider-adapter observation. The adapter must read the service's actual owner ID from the API response; it must never copy this value from the grant.
 7. Observation timestamp is unambiguously timezone-aware, no more than 15 minutes old, and not more than 60 seconds in the future.
 
 Changing target identity or revision, removing consent, expiring the grant, switching account/workspace, or rotating the authorization epoch **must invalidate the old receipt**. Missing permission or a 401/403/404 must be unknown/not proven, not a verified absence or success. The guard returns safe codes without raw provider payloads, secrets, environment variables, owner email, logs, or credentials.
