@@ -7,7 +7,7 @@ use App\Models\Plan;
 use App\Services\DevelopmentOperationalAttestationService;
 use App\Services\DevelopmentOperationalEvidenceService;
 use Illuminate\Support\Carbon;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 final class DevelopmentOperationalAttestationV4Test extends TestCase
 {
