@@ -1172,3 +1172,28 @@ or provider I/O. PG16 and MySQL8.0/8.4 CI plus full-diff and
 exact-HEAD merge gates required. Real authenticity, replay persistence,
 external-writer/ABA safety and crash recovery remain unverified.
 **Five G3 production migrations unapproved; G3 OPEN.**
+
+## 72. G3-R27 — Auditable evidence inventory, no provider or operator attestation (2026-10-14)
+
+R27 introduces a read-only offline Python inventory that checks
+required *document references* against immutable local Git object
+bytes and SHA-256. Eleven fixed requirements include the seven
+independent R25 gates plus crash/restart recovery, DB/provider
+reconciliation, key rotation/revocation, and explicit owner release
+review. Fixed owner-role labels and complete manifests cannot prove
+who reviewed the original evidence.
+
+A manifest with all matching references is only
+`MANUAL_REVIEW_ONLY` (exit 2), never provider-verified or
+release-authorized. Missing/invalid records, duplicate keys,
+forged verification fields, changed commits or unsafe Git blobs
+fail closed. No credentials, S3/Render/Aiven calls, live DB checks,
+storage writes, migrations, retries, deletes or deployment.
+
+Acceptance requires isolated local-Git fixture regressions within
+Platform offline CI, exact-HEAD green checks, full diff review and
+safe main integration. Evidence facts themselves, provider IAM and
+versioning, external writer/ABA safety, durable replay state,
+power-loss recovery, migration authorization and physical verification
+are not established. Five prior G3 migrations remain unapproved.
+**G3 OPEN.**

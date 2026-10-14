@@ -616,3 +616,28 @@ crash recovery testing and owner release authorization. No provider
 I/O, new migration or operator command is added by R26.
 Five prior G3 migrations remain unapproved for production Aiven.
 **G3 OPEN.**
+
+## 26. G3-R27 — Evidence dossier integrity is not an operator GO
+
+Read the dedicated `G3_PROVIDER_EVIDENCE_HANDOFF_R27_2026_10_14.md`
+before preparing a manifest. Offline script:
+`python3 scripts/ops/g3_provider_evidence_inventory.py --repo . --manifest /path/to/review.json`
+
+The manifest refers only to sanitized Markdown files stored in a
+**pinned local Git commit**. The script verifies object presence and
+SHA-256 but does not verify the origin or substance of the claims.
+A full match returns `MANUAL_REVIEW_ONLY` with exit code 2.
+Unverified/missing evidence returns `BLOCK`; malformed, forged
+approval flags, path traversal, bad schema or duplicate keys return
+`INVALID`. All results keep release, retry and deletion authorization
+false. Never treat `PIN_MATCH_UNTRUSTED` as proof of safe recovery.
+
+Separate qualified reviewers must verify authentic provider logs,
+bucket/IAM/versioning, writer controls, immutable generation,
+replay handling and crash tests, and the product owner must explicitly
+approve any production release or Aiven DDL. Do not commit provider
+credentials, object keys or private user information as evidence.
+
+R27 performs no provider/DB/network/Storage calls, adds no runtime
+feature flag, command, migration, worker, automatic retry or deletion.
+Five G3 migrations remain unapproved. **G3 OPEN.**
