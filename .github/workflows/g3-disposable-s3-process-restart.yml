@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/g3-disposable-s3-process-restart.yml'
-      - 'tests/ci/g3_disposable_minio_restart.py'
+      - 'tests/ci/g3_disposable_localstack_restart.py'
       - 'docs/development/G3_DISPOSABLE_PROCESS_RESTART_R33_2026_10_14.md'
   workflow_dispatch:
 
@@ -14,13 +14,13 @@ permissions:
 
 jobs:
   isolated-s3-process-restart:
-    name: G3 isolated MinIO SIGKILL and version persistence
+    name: G3 isolated LocalStack SIGKILL and version persistence
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
       CI: 'true'
-      G3_R33_EPHEMERAL_MINIO_ONLY: 'true'
-      G3_R33_ENDPOINT: 'http://127.0.0.1:9000'
+      G3_R33_EPHEMERAL_LOCALSTACK_ONLY: 'true'
+      G3_R33_ENDPOINT: 'http://127.0.0.1:4566'
       AWS_ACCESS_KEY_ID: 'g3_r33_emulator_only'
       AWS_SECRET_ACCESS_KEY: 'g3_dummy_credential_no_cloud'
       AWS_EC2_METADATA_DISABLED: 'true'
@@ -34,41 +34,40 @@ jobs:
       - name: Install disposable S3 HTTP client
         run: python -m pip install --disable-pip-version-check 'boto3==1.40.70'
       - name: Refuse cloud credentials and unintended endpoints before startup
-        run: python tests/ci/g3_disposable_minio_restart.py gate
+        run: python tests/ci/g3_disposable_localstack_restart.py gate
       - name: Start versioned S3-compatible server with runner-local persistent disk
         run: |
-          mkdir -p "$RUNNER_TEMP/g3-r33-minio-data"
-          docker run -d --name g3-r33-minio \
-            -p 127.0.0.1:9000:9000 \
-            -v "$RUNNER_TEMP/g3-r33-minio-data:/data" \
-            -e MINIO_ROOT_USER="$AWS_ACCESS_KEY_ID" \
-            -e MINIO_ROOT_PASSWORD="$AWS_SECRET_ACCESS_KEY" \
-            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z \
-            server /data --address :9000
+          mkdir -p "$RUNNER_TEMP/g3-r33-localstack-data"
+          docker run -d --name g3-r33-localstack \
+            -p 127.0.0.1:4566:4566 \
+            -v "$RUNNER_TEMP/g3-r33-localstack-data:/var/lib/localstack" \
+            -e SERVICES=s3 \
+            -e PERSISTENCE=1 \
+            localstack/localstack:2026.08.3
           python - <<'PY'
           import socket, time
           for _ in range(80):
               try:
-                  with socket.create_connection(('127.0.0.1',9000),timeout=.3):
+                  with socket.create_connection(('127.0.0.1',4566),timeout=.3):
                       break
               except OSError:
                   time.sleep(.5)
           else:
-              raise SystemExit("R33 isolated MinIO endpoint not ready")
+              raise SystemExit("R33 isolated LocalStack endpoint not ready")
           PY
       - name: PUT and GET nine fixture versions via localhost HTTP
-        run: python tests/ci/g3_disposable_minio_restart.py prepare --manifest "$RUNNER_TEMP/g3-r33-manifest.json"
+        run: python tests/ci/g3_disposable_localstack_restart.py prepare --manifest "$RUNNER_TEMP/g3-r33-manifest.json"
       - name: Force-stop storage process with SIGKILL and assert unavailability
         run: |
-          docker kill --signal=KILL g3-r33-minio
-          python tests/ci/g3_disposable_minio_restart.py outage
+          docker kill --signal=KILL g3-r33-localstack
+          python tests/ci/g3_disposable_localstack_restart.py outage
       - name: Restart same process container using the same runner-local disk
         run: |
-          docker start g3-r33-minio
+          docker start g3-r33-localstack
           python - <<'PY'
           import boto3, os, time
           from botocore.config import Config
-          c = boto3.client('s3',endpoint_url='http://127.0.0.1:9000',
+          c = boto3.client('s3',endpoint_url='http://127.0.0.1:4566',
               region_name='us-east-1',
               aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
               aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
@@ -81,11 +80,11 @@ jobs:
               except Exception:
                   time.sleep(.5)
           else:
-              raise SystemExit("R33 MinIO did not recover on same disk")
+              raise SystemExit("R33 LocalStack did not recover on same disk")
           PY
       - name: Independently read historical versions and accept post-restart PUT
-        run: python tests/ci/g3_disposable_minio_restart.py verify --manifest "$RUNNER_TEMP/g3-r33-manifest.json"
+        run: python tests/ci/g3_disposable_localstack_restart.py verify --manifest "$RUNNER_TEMP/g3-r33-manifest.json"
       - name: Stop and remove only this runner-local disposable container
         if: always()
         run: |
-          docker rm -f g3-r33-minio >/dev/null 2>&1 || true
+          docker rm -f g3-r33-localstack >/dev/null 2>&1 || true
