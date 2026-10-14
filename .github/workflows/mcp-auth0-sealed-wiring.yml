@@ -27,6 +27,8 @@ on:
       - 'resources/views/auth/staging-pilot-login.blade.php'
       - 'resources/views/auth/staging-pilot-account.blade.php'
       - 'app/Http/Controllers/AuthController.php'
+      - 'resources/views/auth/partials/mcp-delegated-access-revocation.blade.php'
+      - 'tests/Feature/McpDelegatedRevocationTest.php'
       - 'tests/Feature/McpIsolatedStagingBootstrapTest.php'
       - 'tests/Feature/McpAuth0SealedStagingWiringTest.php'
       - 'routes/console.php'
@@ -72,6 +74,8 @@ jobs:
           php -l app/Http/Middleware/CloseUnopenedMcpStaging.php
           php -l tests/Feature/McpStagingLoginPilotPolicyTest.php
           php -l tests/Feature/McpIsolatedStagingBootstrapTest.php
+          php -l app/Http/Controllers/AuthController.php
+          php -l tests/Feature/McpDelegatedRevocationTest.php
           sh -n docker/mcp-staging-start.sh
           sh -n docker/render-start.sh
       - name: Assert no stage access, tokens, network or credentials
@@ -83,4 +87,4 @@ jobs:
           SESSION_DRIVER: array
           CACHE_STORE: array
         run: |
-          php artisan test tests/Feature/McpAuth0SealedStagingWiringTest.php tests/Feature/McpStagingProviderPreflightTest.php tests/Feature/McpStagingLoginPilotPolicyTest.php tests/Feature/McpIsolatedStagingBootstrapTest.php tests/Feature/McpStagingPilotUiTest.php tests/Feature/McpStagingSyntheticPlanConsentPilotTest.php tests/Feature/McpStagingSyntheticReadPilotTest.php tests/Feature/McpExplicitPlanConsentTest.php tests/Feature/McpStagingOAuthFailureDiagnosticTest.php tests/Feature/McpOAuthAccountLinkTest.php --colors=never
+          php artisan test tests/Feature/McpAuth0SealedStagingWiringTest.php tests/Feature/McpStagingProviderPreflightTest.php tests/Feature/McpStagingLoginPilotPolicyTest.php tests/Feature/McpIsolatedStagingBootstrapTest.php tests/Feature/McpStagingPilotUiTest.php tests/Feature/McpStagingSyntheticPlanConsentPilotTest.php tests/Feature/McpStagingSyntheticReadPilotTest.php tests/Feature/McpExplicitPlanConsentTest.php tests/Feature/McpStagingOAuthFailureDiagnosticTest.php tests/Feature/McpOAuthAccountLinkTest.php tests/Feature/McpDelegatedRevocationTest.php --colors=never
