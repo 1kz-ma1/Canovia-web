@@ -211,16 +211,16 @@ authorization for production cleanup.
 
 ## 10. Opt-in path-identity fence pilot (G3-R11)
 
-The additive \`private_file_path_fences\` table and
-\`PrivateFilePathFenceService\` establish a keyed HMAC disk/path identity
+The additive `private_file_path_fences` table and
+`PrivateFilePathFenceService` establish a keyed HMAC disk/path identity
 and a persistent, unique InnoDB/PostgreSQL row-lock protocol.
-The flag \`CANOVIA_PRIVATE_FILE_PATH_FENCE_ENABLED\` is **OFF by default**.
+The flag `CANOVIA_PRIVATE_FILE_PATH_FENCE_ENABLED` is **OFF by default**.
 The only pilot participants are the durable cleanup worker and
 Inbox→Recall copy of a newly generated UUID destination file.
 Never enable this flag in production under this development milestone.
 Missing table/invalid key/transaction conditions fail closed; the
 cleanup worker retains bytes and retries using fixed code
-\`path_fence_unavailable\`.
+`path_fence_unavailable`.
 
 The lock row is held through storage I/O and DB reference mutation within
 the owning DB transaction. Rows must not be deleted to reclaim space
@@ -234,5 +234,5 @@ Career path integrations and external SQL/storage writers do not yet
 participate. The former MySQL gap/next-key locking query risks and
 same-byte storage-version race remain; a path-lock pilot cannot fix them.
 Review the current, versioned
-\`G3_PRIVATE_FILE_PATH_FENCE_IMPLEMENTATION_SPEC_2026_10_14.md\`
+`G3_PRIVATE_FILE_PATH_FENCE_IMPLEMENTATION_SPEC_2026_10_14.md`
 before any further changes. G3 remains OPEN.
