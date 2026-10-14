@@ -9,6 +9,7 @@ use App\Models\QuestionPack;
 use App\Models\Task;
 use App\Services\AdaptiveLearningAnswerDraftService;
 use App\Services\AdaptiveLearningHistoryService;
+use App\Services\AdaptiveLearningReviewEntryService;
 use App\Services\AdaptiveLearningBankQueueService;
 use App\Services\AdaptiveLearningCandidateService;
 use App\Services\AdaptiveExamProfileRegistry;
@@ -54,7 +55,8 @@ final class AdaptiveLearningController extends Controller
         AdaptiveExamProfileRegistry $examProfiles,
         AdaptiveExamPackReadinessService $examReadiness,
         AdaptiveLearningModeRecommendationService $recommendations,
-        AdaptiveLearningHistoryService $history)
+        AdaptiveLearningHistoryService $history,
+        AdaptiveLearningReviewEntryService $reviewEntry)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         // Filter eligible packs before applying the display cap. Limiting the
@@ -96,7 +98,15 @@ final class AdaptiveLearningController extends Controller
             ->where('status', LearningRun::STATUS_ACTIVE)
             ->latest('id')->limit(10)->get();
 
+        $reviewPreview = $request->boolean('review')
+            ? $reviewEntry->preview($request, $plan, $task, $identity->resolve($request))
+            : null;
+        $reviewPacks = $reviewPreview
+            ? $reviewEntry->packsForTopic((string) $reviewPreview['topic'])
+            : collect();
+
         return view('learning.index', [
+            'reviewPreview' => $reviewPreview, 'reviewPacks' => $reviewPacks,
             'plan' => $plan, 'task' => $task, 'packs' => $packs,
             'activeRuns' => $activeRuns,
             'examProfiles' => $availableExamProfiles, 'examPacks' => $examPacks,
@@ -111,13 +121,16 @@ final class AdaptiveLearningController extends Controller
     public function start(Request $request, Plan $plan, Task $task,
         PlanOwnershipService $ownership, PlanCategoryProfileService $profiles,
         BehaviorIdentityService $identity, AdaptiveLearningBankQueueService $queue,
-        AdaptiveLearningCandidateService $candidates)
+        AdaptiveLearningCandidateService $candidates,
+        AdaptiveLearningReviewEntryService $reviewEntry)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         $input = $request->validate([
             'start_request_id' => ['required', 'uuid'],
             'question_pack_id' => ['required', 'integer'],
             'mode' => ['required', 'in:understanding,practice'],
+            'review_topic' => ['required_with:review_source_signature', 'nullable', 'string', 'max:50'],
+            'review_source_signature' => ['required_with:review_topic', 'nullable', 'regex:/\\A[a-f0-9]{64}\\z/'],
         ]);
         $pack = QuestionPack::where('status', 'published')
             ->findOrFail($input['question_pack_id']);
@@ -125,7 +138,25 @@ final class AdaptiveLearningController extends Controller
         $userId = $request->user()?->id;
         $token = $userId ? null : $identity->resolve($request);
 
-        $run = DB::transaction(function () use ($input, $pack, $userId, $token, $plan, $task, $queue, $candidates) {
+        $reviewTopic = null;
+        if (filled($input['review_topic'] ?? null)) {
+            // POST re-derives the actor's *current* preview. A forged field,
+            // correction or extra answer cannot choose arbitrary curriculum.
+            $preview = $reviewEntry->preview($request, $plan, $task, $identity->resolve($request));
+            abort_unless(is_array($preview)
+                && mb_strtolower(trim((string) $preview['topic']))
+                    === mb_strtolower(trim((string) $input['review_topic']))
+                && hash_equals((string) $preview['source_signature'],
+                    (string) ($input['review_source_signature'] ?? '')),
+                409, '回答記録が変わりました。復習候補を開き直してください。');
+            abort_unless($reviewEntry->supportsReview($pack, (string) $preview['topic']),
+                409, 'この分野の復習問題が足りません。公開済みの問題集を確認してください。');
+            $reviewTopic = (string) $preview['topic'];
+        } elseif (filled($input['review_source_signature'] ?? null)) {
+            abort(422, '復習する分野が指定されていません。');
+        }
+
+        $run = DB::transaction(function () use ($input, $pack, $userId, $token, $plan, $task, $queue, $candidates, $reviewTopic) {
             $existing = LearningRun::where('start_request_id', $input['start_request_id'])
                 ->lockForUpdate()->first();
 
@@ -149,14 +180,15 @@ final class AdaptiveLearningController extends Controller
                 'pack_title_snapshot' => $pack->title,
                 'pack_version_snapshot' => $pack->version,
                 'mode' => $input['mode'], 'status' => LearningRun::STATUS_ACTIVE,
-                'current_ordinal' => 1, 'queue_policy_version' => 'bank_locked_v1',
+                'current_ordinal' => 1,
+                'queue_policy_version' => $reviewTopic ? 'bank_topic_review_initial_v613' : 'bank_locked_v1',
                 'started_at' => now(),
             ]);
             // On a resumed short-session learning habit, carry over only
             // actor-scoped recorded evidence before locking the first items.
             // With no history, candidate order remains deterministic Bank order.
             $candidates->refresh($new);
-            $queue->refill($new);
+            $queue->refill($new, $reviewTopic);
             if ($new->items()->doesntExist()) {
                 throw ValidationException::withMessages([
                     'question_pack_id' => '現在、この問題集から回答可能な問題を準備できませんでした。',
