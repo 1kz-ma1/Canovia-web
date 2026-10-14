@@ -45,6 +45,7 @@ final class McpDatabaseLockContentionTest extends TestCase
             $this->markTestSkipped('Only the pinned disposable, loopback MCP database race CI may run this test.');
         }
 
+        $this->withoutVite();
         config([
             'native_ai.driver' => 'disabled',
             'canovia_mcp.discovery_enabled' => true,
@@ -239,7 +240,7 @@ final class McpDatabaseLockContentionTest extends TestCase
             'is_collaborative' => false,
         ]);
         $principal = new McpVerifiedTokenPrincipal(
-            self::ISSUER, 'disposable-external-person',
+            self::ISSUER, 'disposable-external-'.(string) Str::uuid(),
             self::CLIENT, self::RESOURCE, ['canovia.development.read'],
             now()->timestamp + 1200,
         );
