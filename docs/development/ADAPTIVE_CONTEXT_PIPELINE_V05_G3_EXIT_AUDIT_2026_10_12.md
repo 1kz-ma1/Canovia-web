@@ -1052,3 +1052,34 @@ request correlation, object mutation atomicity, real crash/restart, key
 rotation and production deployment remain unresolved. The default Local
 storage driver has no immutable generation guarantee. All five existing G3
 additive migrations remain unapproved for Aiven. **G3 OPEN**.
+
+## 67. G3-R22 — Multiple untrusted provider observations remain race-unsafe (2026-10-14)
+
+**Question:** Can two or more identical synthetic snapshots prove no
+intervening write? **No.** A sequence A→A can conceal A→B→A. A synthetic
+A→B→A demonstrates the classification contract but cannot attest an
+actual external writer or immutable generation. Versioning status,
+claimed writer exclusivity and conditional operation support must be
+verified independently at the real provider boundary; fixture-supplied
+claims are not authority.
+
+**Bounded implementation:** A test-only, independently OFF R22 service
+reuses R21 independently verified attempt-to-journal binding per
+observation. Two to four timestamp-ordered synthetic snapshots and
+three strictly typed claims yield only redacted fixed states. All
+authorizations, authenticity and race-free flags remain false. No
+new migration, provider I/O, Storage mutation or existing user flow is
+added. The Local default remains outside the S3-shaped fixture.
+
+**Acceptance:** isolated PG16/MySQL8.0/8.4 suites cover identical
+versions despite ABA risk, explicit A→B→A, changed generation and
+presence, absence, unversioned/suspended claims, external writer
+possibility, unsupported conditional operations, network/timeouts,
+cross-intent spoof, corrupt/encrypted journal/key epoch, invalid
+timestamps/extra authority fields and OFF/production/Local denials.
+Require exact HEAD green CI, reviewed diff and safe mergeability.
+
+**Residual:** no provider-attested PutObject, lock spanning external
+writers, S3 versioning/IAM validation, atomic provider-DB commit,
+generation-fenced delete, true kill/restart/power-loss test or approved
+production migration. **Five G3 migrations unapproved; G3 OPEN.**
