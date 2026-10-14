@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\NativeAiExecutionException;
 use App\Models\InboxItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -45,7 +46,7 @@ class InboxIntelligenceService
         ReleaseLevelService $releaseLevels,
     ): array {
         $signature = $this->commitFence->signature($item, $request->user()?->id);
-        $suggestion = $this->suggest($item, $request->user()?->id);
+        $suggestion = $this->suggest($item, $request->user()?->id, $signature);
 
         return $this->commitFence->commit(
             $item, $signature, $suggestion, $request, $releaseLevels,
@@ -55,7 +56,11 @@ class InboxIntelligenceService
     /**
      * @return array<string,mixed>
      */
-    public function suggest(InboxItem $item, ?int $userId = null): array
+    public function suggest(
+        InboxItem $item,
+        ?int $userId = null,
+        ?string $expectedSignature = null,
+    ): array
     {
         $prompt = implode("\n", [
             'あなたはCanovia Inboxの振り分け候補を作るアシスタントです。',
@@ -85,6 +90,17 @@ class InboxIntelligenceService
             'file: '.($item->original_name ?: 'なし'),
         ]);
 
+        // The signature above and the provider attachment require separate
+        // storage reads. Bind the hash of EXACTLY the input bytes encoded into
+        // this request to the pre-request signature before any AI billing.
+        $providerInputHash = null;
+        $inputParts = $this->inputParts($item, $providerInputHash);
+        if ($expectedSignature !== null) {
+            $this->commitFence->assertInputMatches(
+                $item, $userId, $expectedSignature, $providerInputHash,
+            );
+        }
+
         $result = $this->nativeAi->generateStructured(
             purpose: 'inbox_routing_suggestion',
             prompt: $prompt,
@@ -99,7 +115,7 @@ class InboxIntelligenceService
                 'inbox_item_id' => (int) $item->id,
                 'source_type' => $item->source_type,
             ],
-            inputParts: $this->inputParts($item),
+            inputParts: $inputParts,
         );
 
         $data = $result['data'];
@@ -148,13 +164,26 @@ class InboxIntelligenceService
     /**
      * @return array<int,array<string,mixed>>
      */
-    private function inputParts(InboxItem $item): array
+    private function inputParts(InboxItem $item, ?string &$fileHash): array
     {
-        if (! $item->storage_path || ! Storage::exists($item->storage_path)) {
+        $fileHash = null;
+        if (! in_array($item->source_type, ['image', 'pdf'], true)) {
             return [];
         }
-
-        $bytes = Storage::get($item->storage_path);
+        try {
+            if (! $item->storage_path || ! Storage::exists($item->storage_path)) {
+                throw new \RuntimeException('Private source missing.');
+            }
+            $bytes = Storage::get($item->storage_path);
+        } catch (\Throwable) {
+            // Missing or unreadable material cannot become a text-only AI
+            // request. No file path or exception message leaves this layer.
+            throw new NativeAiExecutionException(
+                '添付ファイルが変更または削除されました。確認して再実行してください。',
+                'native_ai_source_changed',
+            );
+        }
+        $fileHash = hash('sha256', $bytes);
         $base64 = base64_encode($bytes);
 
         if ($item->source_type === 'image') {

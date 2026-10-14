@@ -12,7 +12,7 @@
         && $mcpVerifiedGrant['verified_at'] <= now()->timestamp
         && now()->timestamp - $mcpVerifiedGrant['verified_at'] <= 300
         && $mcpConsentPlan !== null
-        && $mcpConsentService->isPersonalDevelopmentOwner($user, $mcpConsentPlan)
+        && $mcpConsentService->isEligibleMcpPlanOwner($user, $mcpConsentPlan)
         && is_string($mcpVerifiedGrant['identity_fingerprint'] ?? null)
         && $mcpConsentService->matchesLinkedIdentity($user, $mcpVerifiedGrant['identity_fingerprint'])
         && is_string($mcpVerifiedGrant['scope'] ?? null)

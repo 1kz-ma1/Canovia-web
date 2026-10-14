@@ -6,6 +6,7 @@ use App\Services\McpExternalTokenVerifier;
 use App\Services\McpExplicitPlanConsentService;
 use App\Services\McpProtectedResourceConfiguration;
 use App\Services\McpReadOnlyContextTool;
+use App\Services\McpReadOnlyStudyContextTool;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -28,6 +29,7 @@ final class McpReadOnlyResourceController extends Controller
         McpExplicitPlanConsentService $consent,
         McpExternalTokenVerifier $verifier,
         McpReadOnlyContextTool $tool,
+        McpReadOnlyStudyContextTool $studyTool,
         McpAuthorizationProbeController $probe,
     ): JsonResponse|Response {
         // Preserve the previous deny-all behavior until an independent
@@ -137,7 +139,11 @@ final class McpReadOnlyResourceController extends Controller
                 return $this->rpcError($id, -32602, 'Invalid pagination.');
             }
 
-            return $this->rpcSuccess($id, ['tools' => [$tool->definition()]]);
+            $definitions = [$tool->definition()];
+            if ($this->studyToolEnabled()) {
+                $definitions[] = $studyTool->definition();
+            }
+            return $this->rpcSuccess($id, ['tools' => $definitions]);
         }
 
         if ($method !== 'tools/call') {
@@ -145,8 +151,11 @@ final class McpReadOnlyResourceController extends Controller
         }
 
         $params = $message['params'] ?? null;
+        $requestedTool = is_array($params) ? ($params['name'] ?? null) : null;
+        $isStudyTool = $requestedTool === McpReadOnlyStudyContextTool::NAME;
         if (! is_array($params)
-            || ($params['name'] ?? null) !== McpReadOnlyContextTool::NAME) {
+            || ($requestedTool !== McpReadOnlyContextTool::NAME
+                && ! ($isStudyTool && $this->studyToolEnabled()))) {
             return $this->rpcError($id, -32602, 'Unknown tool.');
         }
 
@@ -161,7 +170,7 @@ final class McpReadOnlyResourceController extends Controller
             return $this->rpcError($id, -32602, 'Invalid tool arguments.');
         }
 
-        $context = $tool->read(
+        $context = ($isStudyTool ? $studyTool : $tool)->read(
             $principal,
             $arguments['plan_id'],
             (string) ($arguments['scope'] ?? 'overview'),
@@ -188,6 +197,12 @@ final class McpReadOnlyResourceController extends Controller
             'content' => [['type' => 'text', 'text' => $serialized]],
             'structuredContent' => $context,
         ]);
+    }
+
+    private function studyToolEnabled(): bool
+    {
+        return config('canovia_mcp.study_read_enabled') === true
+            && config('app.env') !== 'staging';
     }
 
     private function allowedOrigin(Request $request): bool

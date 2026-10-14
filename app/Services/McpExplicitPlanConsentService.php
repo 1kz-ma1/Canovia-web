@@ -51,6 +51,25 @@ final class McpExplicitPlanConsentService
             && $this->profiles->forPlan($plan)->key === 'development';
     }
 
+    /**
+     * Reuse existing explicit per-Plan OAuth consent only for supported
+     * domains. Study requires a second, OFF-by-default switch and is never
+     * permitted through the isolated synthetic-only staging account.
+     */
+    public function isEligibleMcpPlanOwner(User $actor, Plan $plan): bool
+    {
+        if ($this->isPersonalDevelopmentOwner($actor, $plan)) {
+            return true;
+        }
+
+        return config('canovia_mcp.study_read_enabled') === true
+            && config('app.env') !== 'staging'
+            && $plan->user_id !== null
+            && (int) $plan->user_id === (int) $actor->id
+            && ! (bool) $plan->is_collaborative
+            && $this->profiles->forPlan($plan)->key === 'study';
+    }
+
     public function hasActiveLinkedIdentity(User $actor): bool
     {
         return McpLinkedSubject::query()
@@ -107,7 +126,7 @@ final class McpExplicitPlanConsentService
             $owner = User::query()->whereKey($actor->id)->lockForUpdate()->first();
             $plan = Plan::query()->whereKey($planId)->lockForUpdate()->first();
             if ($owner === null || $plan === null
-                || ! $this->isPersonalDevelopmentOwner($owner, $plan)) {
+                || ! $this->isEligibleMcpPlanOwner($owner, $plan)) {
                 return false;
             }
             // Recheck the immutable synthetic fixture UNDER the database

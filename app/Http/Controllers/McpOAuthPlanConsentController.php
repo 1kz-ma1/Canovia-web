@@ -27,7 +27,7 @@ final class McpOAuthPlanConsentController extends Controller
         McpOAuthAccountLinkProvider $provider,
     ): RedirectResponse {
         $actor = $request->user();
-        abort_unless($actor && $consent->isPersonalDevelopmentOwner($actor, $plan), 404);
+        abort_unless($actor && $consent->isEligibleMcpPlanOwner($actor, $plan), 404);
         // Stage grants may target only the pre-existing, immutable synthetic
         // fixture; a caller-supplied Plan ID is never a stage authorization.
         if (config('app.env') === 'staging') {
