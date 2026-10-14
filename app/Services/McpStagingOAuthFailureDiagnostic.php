@@ -29,9 +29,12 @@ final class McpStagingOAuthFailureDiagnostic
         'link_confirm_rejected',
         'link_provider_metadata_unreachable',
         'link_provider_metadata_invalid',
+        'link_provider_metadata_rate_limited',
         'link_provider_token_request_invalid',
         'link_provider_token_unreachable',
         'link_provider_token_http_rejected',
+        'link_provider_token_rate_limited',
+        'link_provider_github_subject_rejected',
         'link_provider_token_payload_invalid',
         'link_provider_jwt_rejected',
     ];
