@@ -120,9 +120,20 @@ class DecisionRegisterTests(unittest.TestCase):
             build_register(source)
 
     def test_mutated_source_inventory_blocks(self):
+        original = (
+            "        run: php artisan test "
+            "tests/Feature/PlanActionDraftV5875Test.php "
+            "tests/Feature/PlanActionDraftV5874Test.php "
+            "tests/Feature/PlanActionDraftV5873Test.php "
+            "tests/Feature/PlanActionDraftV5872Test.php "
+            "tests/Feature/PlanActionDraftV5871Test.php"
+        )
+        self.assertEqual(SOURCE.count(original), 1)
         changed = SOURCE.replace(
-            "tests/Feature/PlanActionDraftV5871Test.php",
-            "tests/Feature/PlanActionDraftV5872Test.php", 1)
+            original,
+            original.replace(" tests/Feature/PlanActionDraftV5871Test.php", ""),
+            1,
+        )
         with self.assertRaises(IncompleteEvidence):
             build_register(changed)
 
