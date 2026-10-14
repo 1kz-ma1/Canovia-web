@@ -26,6 +26,8 @@
         <p class="mt-3 text-xs leading-5 text-slate-400">上記の件数は最新{{ $history['window'] }}件以内。誤タップ申告は採点記録を消さず、復習候補の集計から除外しています。</p>
     </header>
 
+    @include('learning.partials.review-comparisons')
+
     <section class="page-card p-5 sm:p-7" data-learning-review-topics>
         <h2 class="text-lg font-bold text-slate-50">見直してみる分野</h2>
         <p class="mt-2 text-xs leading-6 text-slate-400">異なる問題で2回以上の不正解があり、直近2回連続正解でない分野のみ表示。復習の候補であり、「苦手」と断定するものではありません。</p>
