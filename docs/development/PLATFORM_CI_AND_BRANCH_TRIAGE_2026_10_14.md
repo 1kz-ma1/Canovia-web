@@ -342,3 +342,31 @@ The initial exact-head [disposable run #38571316647](https://github.com/1kz-ma1/
 | Plan Action Draft V5871 | 27 | 4 | 4 | All four reordered groups and the standalone target succeeded |
 
 The entire 27-case group inventory remained identical across each of the four orders; no failed, skipped, duplicated or missing JUnit cases were observed. The comparison deliberately changed **class/file order only**, not methods within classes. Distinct order-sensitive failure was not observed for these combinations, this runner and this SHA. This does **not** prove global order independence, hidden-state independence, cross-context acceptance equivalence, safe duplication removal, or billable-time savings. All 42 repeated invocations remain. Final PR integration and any subsequent source revision must independently pass its own current-head checks.
+
+
+## R15 ACTIVE: disposable fixed-group repetition without deduplicating regressions (2026-10-14)
+
+### Scope
+
+The observed four file-order variants on PR #651 were single runs per variant. They demonstrate bounded order parity, not whether the same invocation yields stable results when repeatedly executed. R15 adds **three consecutive repeats** for each original and reversed historical group in the *existing* path-scoped disposable Workspace Scenario Equivalence workflow.
+
+- Learning: original Candidate Queue V5879 + Single Question V5878 + Question Bank V402 group and its exact reversed-file-order group, each independently run three times.
+- Plan Draft: original V5874 + V5873 + V5872 + V5871 group and its exact reverse, each independently run three times.
+- Total: **12** new group executions, each in a distinct PHP subprocess with fresh SQLite `:memory:`, array cache/session and the exact PHP/Composer/npm frontend setup already required by #646.
+- For every repeat, JUnit must include every expected group class, zero skipped/failed/duplicated testcases, the same *full* testcase identity set, and the same actual first-appearance class order for repeats of the same variant. Original versus reverse variants must show observably distinct class orders. Any drift or failed run produces BLOCK, never a false success.
+- Report actual runner timings as observed min/median/max **per group variant**, not estimated per-file speedups, cost savings, or SLA. JUnit evidence is temporary; no raw application logs or XML contents are published.
+
+### Guardrails and verification
+
+The new `scripts/ci/platform_workspace_group_repeatability.py` and its 12 synthetic tests operate only through the already-installed disposable CI workflow, triggered by file changes to the probe, its test, or its workflow. Production events are not triggered; all existing Workspace Resume checks and **42 repeated file appearances** are unchanged. The tool refuses runs outside `GITHUB_ACTIONS=true`, requires the exact current Workspace historical group membership, never accesses Aiven/Render and does not authorize release or test deletion.
+
+**OBSERVED on PR #653 (initial exact SHA `7b99424c9c3462f905ef81a41b10afd6b82070af`):** [Disposable Actions run #38573546554](https://github.com/1kz-ma1/Canovia-web/actions/runs/38573546554) completed **success** on 2026-10-14 UTC, including 12 offline contract tests and the real 12-run PHP/SQLite replay. Each of the four group variants passed three independent PHP invocations with an identical **27-case full JUnit identity inventory** and identical observed per-variant class order; original and reverse groups showed different actual class orders. No fail, skip or missing case was observed.
+
+| Group | Three repeats | Observed elapsed range | Median elapsed |
+| --- | --- | ---: | ---: |
+| Adaptive Learning original | 3/3 success | 2.076–2.116 s | 2.104 s |
+| Adaptive Learning reverse | 3/3 success | 2.054–2.097 s | 2.061 s |
+| Plan Draft original | 3/3 success | 1.680–1.701 s | 1.681 s |
+| Plan Draft reverse | 3/3 success | 1.679–1.700 s | 1.688 s |
+
+Elapsed measurements are per *whole group*, not per redundant file or billable GH runner minutes. The exact HEAD containing this evidence still must pass all five relevant checks before integration. These 12 successes show bounded same-runner repeatability, **not** a statistical guarantee across future runs or permission to remove any repeated regression context. No production, Aiven, Render or branch-rule operation was exercised.
