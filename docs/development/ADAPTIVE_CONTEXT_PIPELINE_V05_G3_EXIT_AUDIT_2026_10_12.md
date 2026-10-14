@@ -1311,3 +1311,35 @@ cost control, generation/concurrency and crash-recovery study,
 qualified operator review and separately approved destructive
 operations. Five earlier G3 migrations remain production-unapproved.
 **G3 OPEN; no real S3 access or production rollout.**
+
+## 78. G3-R33 — Ephemeral server SIGKILL and persisted-version HTTP evidence (2026-10-14)
+
+The user authorized **isolated** practical recovery tests. First
+attempts failed at **environment setup**, not a negative storage
+assertion: official MinIO Quay image could not be pulled (registry
+authorization error); the official LocalStack image required a
+paid/assigned auth token and no bypass occurred; a third-party
+archive image needed writable runner-local scratch data.
+
+GitHub Actions run
+[38577430323](https://github.com/1kz-ma1/Canovia-web/actions/runs/38577430323)
+then actually succeeded on R33 feature SHA
+`d276c6a66038a86ee970dbdbc91650c14a8af1ac`.
+Restricted localhost S3-compatible HTTP calls to temporary MinIO
+storage yielded 9 fixture generation PUTs (three ABA, four
+concurrent writers, two same-body ACK-ambiguous writes). CI sent
+a real container SIGKILL and verified a dead TCP listener,
+restarted the same process container with the same ephemeral data
+volume, re-read all 9 version IDs with content hash checks and
+performed a tenth post-restart PUT/GET successfully.
+
+The container is a **third-party mirror** of a historical MinIO
+Community image and cannot supply a provider-authenticated AWS
+write-time attestation. Its observed manifest digest
+`sha256:624bad2fe79a8613aa3c5c9b765ebcab365080b8445cf1b05c357cc7753725f0`
+is now pinned for subsequent CI replay. Network partitions,
+real lost HTTP ACK, external IAM/writer fencing, genuine hardware
+power loss, Laravel outbox/database reconciliation and safe
+generation-conditional deletes were **not** tested. No DeleteObject,
+AWS account, real credentials, Render/Aiven or production operation.
+Five production G3 migrations remain unapproved. **G3 OPEN.**
