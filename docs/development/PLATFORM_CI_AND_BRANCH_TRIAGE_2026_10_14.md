@@ -315,3 +315,30 @@ An isolated vs grouped testcase-name match plus successful test exit establishes
 **OBSERVED (PR #646, exact head `0cdada6a29186f56f54c2437b5c3832102c4a869`):** [Actions run #38568791836](https://github.com/1kz-ma1/Canovia-web/actions/runs/38568791836) completed **success** after the disposable workflow matched the main Workspace Resume's frontend setup (`npm ci --ignore-scripts` and `npm run build`). Adaptive Learning target class: **15** identical passing testcase names, observed alone **1.66 s** versus original group **2.41 s**. Plan Action Draft target: **4** identical passing testcase names, alone **0.86 s** versus group **1.76 s**. Durations cover different executed file counts, so they must not be interpreted as the cost of a duplicate invocation. An earlier head's [run #38568556032](https://github.com/1kz-ma1/Canovia-web/actions/runs/38568556032) failed in the Adaptive Learning original group when this frontend setup was absent; this shows environment sensitivity but does **not** prove the precise failure mechanism.
 
 The two selected classes showed method-list parity and passing results under the reproduced settings, **not** generic state isolation, method assertion equivalence, removal safety, stable timing benefit, or production behavior. No repeated invocation was removed. The final documentation head must complete required checks before merge.
+
+
+## ACTIVE: observable execution-order sensitivity probe (2026-10-14)
+
+The prior disposable PHPUnit experiment verified 15 Adaptive Learning and 4 Plan Action Draft selected testcases in isolated versus historical grouped calls. This does not prove that file ordering or the presence of other Feature tests cannot affect state.
+
+**Scope of this slice:** extend the existing path-scoped disposable workflow, without introducing a new Always-On CI:
+- For each fixed Adaptive Learning and Plan Draft scenario, retain the original group and isolated invocation; add the reversed file order and distinct target-first, target-last and (where distinct) target-middle positions. The exact original file membership is validated for every variant.
+- Inspect **all** PHPUnit JUnit testcase identities in every group, not only the highlighted test class. All classes from the original group must execute, each case must be unique and unskipped/unfailed, and the entire group testcase set must equal the original for all reorderings. The selected class must also match its single-file testcase set.
+- Extract the **observed first-appearance class order from JUnit**. Different command argument order alone is insufficient; fewer than two different observed class orders is an inconclusive result and fails closed.
+- Keep fixed local `php artisan test` arguments, a disposable GitHub-hosted runner with PHP 8.4 and the same Composer/npm frontend setup as Workspace Resume, enforced SQLite `:memory:`, array sessions/cache and no external credentials. JUnit files are ephemeral and never uploaded.
+- Synthetic safety tests verify entire-group preservation, missing/duplicate cases, selected class position, unchanged order detection, method-set drift and the permanent no-release/no-deduplication flags.
+
+**Interpretation:** If each permutation passes and reports the same testcase identities, the experiment observes *no order-dependent failure for these variants and this SHA*. This is not proof of global order independence, absence of hidden shared state, cross-context regression equivalence, or safe removal of one of the 42 repeated occurrences. It measures test **file/class** ordering, not randomizing PHPUnit methods inside a class. It is not a performance/billing experiment. Normal Required Checks and all Workspace Resume invocations remain unchanged.
+
+**Verification:** require exact-PR-head GitHub Actions for the disposable probe, Platform Preflight, Development Prelaunch, Migration Recovery and full Workspace Resume to succeed before a main-only merge. Record the run ID and counts after real execution. Production branch, Render, Aiven, PR/branch cleanup, iOS and release approval are out of scope.
+
+### OBSERVED — ordered JUnit evidence on PR #651
+
+The initial exact-head [disposable run #38571316647](https://github.com/1kz-ma1/Canovia-web/actions/runs/38571316647) passed after the frontend build, offline contracts and PHP comparison. The experiment observed **four distinct actual class execution orders** for each scenario, not merely four different argv lists:
+
+| Scenario | Original group testcases | Target testcase count | Distinct observed class orders | Variant outcome |
+| --- | ---: | ---: | ---: | --- |
+| Adaptive Learning — Single Question V5878 | 27 | 15 | 4 | All four reordered groups and the standalone target succeeded |
+| Plan Action Draft V5871 | 27 | 4 | 4 | All four reordered groups and the standalone target succeeded |
+
+The entire 27-case group inventory remained identical across each of the four orders; no failed, skipped, duplicated or missing JUnit cases were observed. The comparison deliberately changed **class/file order only**, not methods within classes. Distinct order-sensitive failure was not observed for these combinations, this runner and this SHA. This does **not** prove global order independence, hidden-state independence, cross-context acceptance equivalence, safe duplication removal, or billable-time savings. All 42 repeated invocations remain. Final PR integration and any subsequent source revision must independently pass its own current-head checks.
