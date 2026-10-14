@@ -135,11 +135,19 @@ final class StudyLearningTopicRemeasureV613Test extends TestCase
         $this->historicalMiss($owner, $plan, $task, $pack, $net1);
         $this->historicalMiss($owner, $plan, $task, $pack, $net2);
         $this->actingAs($owner);
+        // Even the lowest permitted global queue depth may not release a
+        // non-topic second Question for a focused review.
+        config(['study.adaptive_learning.locked_queue_size' => 1]);
 
         $url = route('plans.tasks.learning.index', [$plan, $task, 'review' => 1]);
-        $this->get($url)->assertOk()->assertSee('data-learning-topic-review-entry', false)
+        $index = $this->get($url)->assertOk()
+            ->assertSee('data-learning-topic-review-entry', false)
             ->assertSee('data-learning-topic-review-start', false)
             ->assertSee('この分野の問題を解く');
+        preg_match_all('/name="start_request_id" value="([^"]+)"/',
+            $index->getContent(), $startIds);
+        $this->assertGreaterThanOrEqual(2, count($startIds[1]));
+        $this->assertNotSame($startIds[1][0], $startIds[1][1]);
         $this->get(route('workspace.study.index', ['plan_id' => $plan->id, 'surface' => 'work']))
             ->assertOk()->assertSee('data-study-learning-review-practice', false)
             ->assertSee($url, false);
@@ -201,6 +209,13 @@ final class StudyLearningTopicRemeasureV613Test extends TestCase
         $preview = $this->preview($owner, $plan, $task);
         $this->startReview($plan, $task, $foreignPack, $preview, (string) Str::uuid())
             ->assertStatus(409);
+        $this->post(route('plans.tasks.learning.start', [$plan, $task]), [
+            'start_request_id' => (string) Str::uuid(),
+            'question_pack_id' => $pack->id,
+            'mode' => 'practice',
+            'review_topic' => $preview['topic'],
+            'review_source_signature' => $preview['source_signature'],
+        ])->assertStatus(409);
         $this->post(route('plans.tasks.learning.start', [$plan, $task]), [
             'start_request_id' => (string) Str::uuid(),
             'question_pack_id' => $pack->id, 'mode' => 'understanding',
