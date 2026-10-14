@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/ci/platform_workspace_scenario_equivalence.py'
       - 'tests/ci/test_platform_workspace_scenario_equivalence.py'
+      - 'tests/ci/test_platform_workspace_scenario_order.py'
       - '.github/workflows/platform-workspace-scenario-equivalence.yml'
 
 permissions:
@@ -39,8 +40,10 @@ jobs:
           npm ci --ignore-scripts
           npm run build
       - name: Validate offline manifest and JUnit parser
-        run: python3 -m unittest discover -s tests/ci -p 'test_platform_workspace_scenario_equivalence.py' -v
-      - name: Compare two historical regression contexts on isolated SQLite
+        run: |
+          python3 -m unittest discover -s tests/ci -p 'test_platform_workspace_scenario_equivalence.py' -v
+          python3 -m unittest discover -s tests/ci -p 'test_platform_workspace_scenario_order.py' -v
+      - name: Compare original and reordered regression contexts on isolated SQLite
         env:
           APP_ENV: testing
           DB_CONNECTION: sqlite
