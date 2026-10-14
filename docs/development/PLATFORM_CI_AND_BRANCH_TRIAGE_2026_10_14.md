@@ -331,3 +331,14 @@ The prior disposable PHPUnit experiment verified 15 Adaptive Learning and 4 Plan
 **Interpretation:** If each permutation passes and reports the same testcase identities, the experiment observes *no order-dependent failure for these variants and this SHA*. This is not proof of global order independence, absence of hidden shared state, cross-context regression equivalence, or safe removal of one of the 42 repeated occurrences. It measures test **file/class** ordering, not randomizing PHPUnit methods inside a class. It is not a performance/billing experiment. Normal Required Checks and all Workspace Resume invocations remain unchanged.
 
 **Verification:** require exact-PR-head GitHub Actions for the disposable probe, Platform Preflight, Development Prelaunch, Migration Recovery and full Workspace Resume to succeed before a main-only merge. Record the run ID and counts after real execution. Production branch, Render, Aiven, PR/branch cleanup, iOS and release approval are out of scope.
+
+### OBSERVED — ordered JUnit evidence on PR #651
+
+The initial exact-head [disposable run #38571316647](https://github.com/1kz-ma1/Canovia-web/actions/runs/38571316647) passed after the frontend build, offline contracts and PHP comparison. The experiment observed **four distinct actual class execution orders** for each scenario, not merely four different argv lists:
+
+| Scenario | Original group testcases | Target testcase count | Distinct observed class orders | Variant outcome |
+| --- | ---: | ---: | ---: | --- |
+| Adaptive Learning — Single Question V5878 | 27 | 15 | 4 | All four reordered groups and the standalone target succeeded |
+| Plan Action Draft V5871 | 27 | 4 | 4 | All four reordered groups and the standalone target succeeded |
+
+The entire 27-case group inventory remained identical across each of the four orders; no failed, skipped, duplicated or missing JUnit cases were observed. The comparison deliberately changed **class/file order only**, not methods within classes. Distinct order-sensitive failure was not observed for these combinations, this runner and this SHA. This does **not** prove global order independence, hidden-state independence, cross-context acceptance equivalence, safe duplication removal, or billable-time savings. All 42 repeated invocations remain. Final PR integration and any subsequent source revision must independently pass its own current-head checks.
