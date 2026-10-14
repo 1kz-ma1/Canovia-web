@@ -49,4 +49,11 @@ return [
         env('CANOVIA_PRIVATE_FILE_PATH_FENCE_ENABLED', false),
         FILTER_VALIDATE_BOOL
     ),
+
+    // G3-R13: durable pre-upload intent journal is separately OFF by default;
+    // enabling requires the path fence and an approved, migrated ledger.
+    'private_file_upload_journal_enabled' => filter_var(
+        env('CANOVIA_PRIVATE_FILE_UPLOAD_JOURNAL_ENABLED', false),
+        FILTER_VALIDATE_BOOL
+    ),
 ];

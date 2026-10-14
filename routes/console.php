@@ -268,3 +268,36 @@ Artisan::command(
             ? 2 : 0;
     },
 )->purpose('Read-only private deletion health: overdue work, high retries, quarantine and safe reason-code counts');
+
+
+/**
+ * G3-R13: aggregate, READ-ONLY recovery ledger visibility. Neither object
+ * storage nor the encrypted path value is inspected. No cleanup is scheduled
+ * or performed by this command. An intent is NOT proof of an orphan.
+ */
+Artisan::command(
+    'canovia:private-upload-intent-health
+        {--json : Print safe aggregate statuses only}
+        {--strict : Exit 2 for stale, failed or unknown intents}',
+    function (\App\Services\PrivateFileUploadIntentService $journal): int {
+        $report = $journal->report();
+        if ($this->option('json')) {
+            $this->line((string) json_encode($report, JSON_THROW_ON_ERROR));
+        } else {
+            $this->line('Private upload intent health: '.$report['health']);
+            $this->line('schema: '.$report['schema']);
+            foreach ([
+                'prepared', 'prepared_stale_24h', 'needs_review',
+                'committed', 'unknown_status',
+            ] as $field) {
+                $this->line($field.': '.$report[$field]);
+            }
+        }
+        if ($report['health'] === 'unavailable') {
+            return 1;
+        }
+
+        return $report['health'] === 'attention' && $this->option('strict')
+            ? 2 : 0;
+    },
+)->purpose('Read-only, redacted counts of committed pre-upload intents; never scans or deletes storage');

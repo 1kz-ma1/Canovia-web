@@ -254,3 +254,37 @@ the path lock, and Career/external object writers remain outside the
 contract. Neither a successful upload nor this pilot authorizes
 automatic Outbox retries, broad object scans, extra production DDL,
 or production deployment. New code is not a recovery inventory.
+
+## 12. G3-R13 opt-in prewrite upload intent recovery (NO automatic deletion)
+
+The third additive G3 migration
+`private_file_upload_intents` records one encrypted path + keyed
+digest per planned private object write. The feature flag
+`CANOVIA_PRIVATE_FILE_UPLOAD_JOURNAL_ENABLED` is **OFF by default**,
+separate from the equally disabled path-fence flag. Production Aiven
+migration, flag enablement, Render deploy, CLI execution against
+production data and destructive recovery require **separate owner and
+operator approval**.
+
+In isolated, disposable development/staging environments, run
+`php artisan canovia:private-upload-intent-health --json` for
+redacted aggregate reporting only, optionally `--strict` for
+attention-status exit 2. The command does not decrypt private
+paths, list storage keys, run cleanup, repair DB references, or
+trigger a scheduler. It is read-only.
+
+- `prepared`: durable prewrite claim that may represent an active
+  request, a crash, an aborted request or bytes that were never written.
+- `prepared_stale_24h`: candidates for human investigation, not
+  automatically orphaned files.
+- `committed`: upload DB transaction returned and settlement succeeded.
+- `needs_review`: upload failed, and byte cleanup was only best effort;
+  an operator must establish object and reference state.
+- `unknown_status` or `schema=unavailable`: fail closed; do not infer
+  there are no pending writes.
+
+Do not purge intent rows or rotate APP_KEY independently: the keyed
+digest also prevents ABA reuse, and the ciphertext needs matching
+decryption keys. Investigate all native and external writer paths and
+provider object-generation semantics before defining a safe reaper.
+No retention job or automatic delete is installed under R13.
