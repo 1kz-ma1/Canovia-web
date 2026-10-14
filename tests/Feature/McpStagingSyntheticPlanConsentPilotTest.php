@@ -166,7 +166,11 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
             ->assertSee('この計画の共有を許可する');
 
         $this->post(route('auth.account.mcp_plan_consent.confirm'))
-            ->assertRedirect(route('auth.account'));
+            ->assertRedirect(route('auth.account'))
+            ->assertSessionHas(
+                'status',
+                'この計画をChatGPTに共有する設定を保存しました。ChatGPT側から確認できるかは、接続後にお試しください。',
+            );
 
         $grant = McpDelegatedGrant::query()->sole();
         $this->assertSame($owner->id, $grant->user_id);
