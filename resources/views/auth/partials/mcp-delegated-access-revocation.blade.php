@@ -11,9 +11,9 @@
     <div class="mt-3 min-w-0 rounded-xl border border-white/10 bg-slate-950/20 p-3 text-xs leading-6 text-slate-200"
         data-mcp-owner-connection-state>
         @if ($mcpLinkedSubjects->total() > 0)
-            <p data-mcp-linked-identity-present>本人ID：有効な紐付け記録があります。</p>
+            <p data-mcp-linked-identity-present>本人ID：解除されていない紐付け記録があります。</p>
         @else
-            <p data-mcp-linked-identity-absent>本人ID：現在有効な紐付け記録はありません。</p>
+            <p data-mcp-linked-identity-absent>本人ID：解除されていない紐付け記録はありません。</p>
         @endif
         <p class="mt-1 text-slate-400">
             ChatGPT側の接続状態は、この画面からは確認できません。
