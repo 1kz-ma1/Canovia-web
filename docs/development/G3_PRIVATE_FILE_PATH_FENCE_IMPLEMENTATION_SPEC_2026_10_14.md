@@ -980,3 +980,36 @@ Production Aiven migration approvals (five previous additions),
 live object/provider evidence, durable retry/replay state,
 crash/ABA proof, manual operator review and owner release approval
 remain absent. **G3 OPEN.**
+
+## 23. G3-R28 — Offline provider evidence collection-plan readiness (2026-10-14)
+
+After R27's Git-pinned *document integrity* inventory, R28 introduces
+`scripts/ops/g3_provider_collection_plan.py` for an even earlier stage:
+a strictly shaped, offline, **unapproved collection plan**. The script
+uses only the local Git object database to verify a pinned commit,
+cross-checks exactly eleven R27 evidence requirements and their
+security/storage/platform/release owner roles, fixes the acquisition
+source class and isolated disposable/offline review target per gate,
+and requires two exact negative-test scenarios per requirement.
+
+The plan must explicitly declare `execution_mode=offline_plan_only`,
+`environment=disposable_only`, `authorization=not_granted`,
+`capture_state=not_started`, `review_state=unverified`, separate owner
+approval required, and restricted external custody of originals with
+only redacted candidate Git summaries. Incorrect scope, forged approval
+fields, wrong source method, missing scenarios, duplicate entries,
+invalid or nonlocal pinned commit and unexpected metadata fail closed.
+A fully correct plan is **`PLAN_REVIEW_ONLY` with exit code 2**, no
+authorization, provider authenticity, collection, retry, deletion or
+production modification. No live S3/Render/Aiven contact, SDK, secrets,
+provider verifier, schema change or file mutation exists here.
+
+`G3_PROVIDER_COLLECTION_PLAN_R28_2026_10_14.md` lists the intended
+evidence source, reviewer, custody and negative cases for each gate,
+along with the explicit human authorization and later R27 inventory
+handoff. CI executes isolated local-Git regression fixtures within
+Platform Release Preflight; no application production logic is wired.
+An operator still needs separate disposable-scope approval before any
+real provider access, followed by independently verified evidence,
+crash recovery, versioning/IAM and writer/generation fencing review.
+Five production-unapproved G3 migrations remain. **G3 OPEN.**

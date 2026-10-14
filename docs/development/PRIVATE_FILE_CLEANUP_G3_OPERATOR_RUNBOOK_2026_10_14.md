@@ -641,3 +641,19 @@ credentials, object keys or private user information as evidence.
 R27 performs no provider/DB/network/Storage calls, adds no runtime
 feature flag, command, migration, worker, automatic retry or deletion.
 Five G3 migrations remain unapproved. **G3 OPEN.**
+
+## 27. G3-R28 — Offline collection-plan hold
+
+Read `G3_PROVIDER_COLLECTION_PLAN_R28_2026_10_14.md` before
+planning any external provider assessment. Run locally:
+`python3 scripts/ops/g3_provider_collection_plan.py --repo . --plan /private/location/plan.json`.
+
+The manifest must declare `authorization=not_granted`,
+`capture_state=not_started` and `review_state=unverified` for all
+eleven requirements. A valid plan only returns
+`PLAN_REVIEW_ONLY`, exit code 2, with no collection/release/delete
+authority. Require distinct owner approval for any actual disposable
+provider access and independent review of sanitized results.
+No live provider access, migration, DB/Storage mutation, worker or
+runtime functionality is introduced. Five earlier G3 migrations
+remain unapproved for production Aiven. **G3 OPEN.**

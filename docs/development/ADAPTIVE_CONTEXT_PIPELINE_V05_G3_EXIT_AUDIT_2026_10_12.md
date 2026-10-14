@@ -1197,3 +1197,29 @@ versioning, external writer/ABA safety, durable replay state,
 power-loss recovery, migration authorization and physical verification
 are not established. Five prior G3 migrations remain unapproved.
 **G3 OPEN.**
+
+## 73. G3-R28 — Explicit disposable collection scope before provider access (2026-10-14)
+
+R28 adds an offline evidence collection *planning* contract for the
+eleven R27 independent acceptance requirements. Each gate must name
+a fixed owner role, isolated acquisition target/source class and two
+specific failure scenarios. Every candidate declares that data capture
+has not started, no independent verification is complete and
+separate owner authorization is required. Raw originals must stay in
+restricted external custody; only sanitized findings may be versioned.
+
+Offline verification checks the local Git-pinned candidate commit and
+exact input schema; rejects missing/duplicate requirements, forged
+approval or capture status, production/staging references, improper
+capture methods, invalid negative cases or an unresolvable commit.
+Even an entirely correct plan returns `PLAN_REVIEW_ONLY` (exit 2)
+and all provider-auth, collection, release, retry, delete and
+production-change flags false.
+
+The isolated local Git unit matrix runs inside existing Platform
+offline preflight CI. This change neither collects provider evidence
+nor approves disposable access, and no cloud/network/DB/Storage call
+or migration is introduced. Future provider capability, IAM,
+authenticity, replay durability, ABA fencing and crash safety still
+require independent manual review and owner approval. Five existing
+G3 migrations remain unapproved for production Aiven. **G3 OPEN.**
