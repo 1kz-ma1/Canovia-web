@@ -120,6 +120,13 @@ return [
         FILTER_VALIDATE_BOOL
     ),
 
+    // G3-R23: fixture-only write-time provenance correlation, no provider
+    // attestation or authorization. OFF, APP_ENV=testing only.
+    'private_file_synthetic_write_provenance_enabled' => filter_var(
+        env('CANOVIA_PRIVATE_FILE_SYNTHETIC_WRITE_PROVENANCE_ENABLED', false),
+        FILTER_VALIDATE_BOOL
+    ),
+
     // A public epoch label, NOT an encryption key. Changing it intentionally
     // blocks old proof reads until an explicit, audited migration exists.
     'private_file_generation_key_epoch' => env(
