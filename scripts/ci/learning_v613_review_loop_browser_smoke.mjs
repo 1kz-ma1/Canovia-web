@@ -219,7 +219,14 @@ try {
     const focusedStart = reviewEntry.locator('[data-learning-topic-review-start]');
     await focusedStart.waitFor({state:'visible'});
     await focusedStart.locator('select[name="question_pack_id"]').selectOption(packId);
+    const focusedPostPromise = page.waitForResponse(response =>
+        response.request().method() === 'POST'
+        && new URL(response.url()).pathname.endsWith('/learning'));
     await focusedStart.getByRole('button',{name:'この分野の問題を解く'}).click();
+    const focusedPost = await focusedPostPromise;
+    assert.equal(focusedPost.status(),302,
+        'Focused Bank Run POST must redirect to its first Question; status='
+        + focusedPost.status() + ', page=' + new URL(page.url()).pathname);
     await page.locator('[data-learning-question="1"]').waitFor({state:'visible'});
     const focusedPath = new URL(page.url()).pathname;
     assert.notEqual(focusedPath,runPath,'Topic review must create a fresh actor-bound Run');
