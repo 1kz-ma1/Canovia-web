@@ -1,6 +1,6 @@
 # Development Operational Attestation V4 — scope-bound owner recovery records
 
-> Status: **IMPLEMENTED IN FEATURE BRANCH / NOT YET MERGED OR DEPLOYED** (2026-10-14).
+> Status: **INTEGRATED INTO `main` BY PR #604; NOT IN VERIFIED RENDER PRODUCTION** (2026-10-14).
 > Previous stages: [V1 contextual suggestion](DEVELOPMENT_PRELAUNCH_PREPARATION_V1_2026_10_14.md), [V2 source-labeled GitHub observations](DEVELOPMENT_OPERATIONAL_EVIDENCE_V2_2026_10_14.md), [V3 owner-reported app data/runtime](DEVELOPMENT_OPERATIONAL_PROFILE_V3_2026_10_14.md).
 > The [future Operational Readiness specification](DEVELOPMENT_OPERATIONAL_READINESS_SPEC_2026_10_14.md) still governs *independent provider attestations*, which **are not supplied by V4**.
 
