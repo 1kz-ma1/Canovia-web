@@ -1,6 +1,6 @@
 # Canovia Development Operational Readiness V5.7 — Storage Epoch / ABA Fence
 
-> Status: feature-branch candidate only; no deployment, real Aiven DDL, or physical-device acceptance (2026-10-14).
+> Status: **integrated into main via PR #638; not verified deployed**. No real Aiven DDL or physical-device acceptance (2026-10-14).
 > Scope: owner-only manual Development Operational Profile and backup/restore attestations. Not an automated provider observation or a release authorization.
 
 ## Defect and policy
