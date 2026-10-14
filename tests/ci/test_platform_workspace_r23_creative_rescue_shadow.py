@@ -105,8 +105,9 @@ class CreativeRescueR23Tests(unittest.TestCase):
         a, b = cases(group), cases(shadow)
         with self.assertRaisesRegex(r23.Inconclusive, "restored"):
             r23.A_B_A_prime(a, b, tuple(reversed(a)), group, shadow)
+        missing_method = tuple(x for x in a if x[1] != r23.METHODS[0])
         with self.assertRaisesRegex(r23.Inconclusive, "method coverage"):
-            r23.A_B_A_prime(a[:-1], b, a[:-1], group, shadow)
+            r23.A_B_A_prime(missing_method, b, missing_method, group, shadow)
 
     def test_junit_expected_target_method_must_fail_in_full_group(self):
         group = r23.GROUPS[0][1]
