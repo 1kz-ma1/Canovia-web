@@ -5,10 +5,26 @@
     </p>
     <h2 class="mt-2 text-lg font-bold text-slate-50">外部AIの共有許可・紐付けの解除</h2>
     <p class="mt-2 text-xs leading-5 text-slate-400">
-        現在、ChatGPTのOAuth接続と外部からのPlan読み取りは有効になっていません。
-        将来、本人確認と正式な接続許可が導入された場合も、この画面から許可を取り消せる仕組みです。
-        共有の準備設定とは別に管理します。
+        この画面では、Canoviaアカウントに紐付く外部本人IDと、Planごとの共有許可を管理できます。
+        本人IDの紐付け、Plan共有許可、ChatGPT側のOAuth接続は別々の手続きです。
     </p>
+    <div class="mt-3 min-w-0 rounded-xl border border-white/10 bg-slate-950/20 p-3 text-xs leading-6 text-slate-200"
+        data-mcp-owner-connection-state>
+        @if ($mcpLinkedSubjects->total() > 0)
+            <p data-mcp-linked-identity-present>本人ID：有効な紐付け記録があります。</p>
+        @else
+            <p data-mcp-linked-identity-absent>本人ID：現在有効な紐付け記録はありません。</p>
+        @endif
+        <p class="mt-1 text-slate-400">
+            ChatGPT側の接続状態は、この画面からは確認できません。
+            紐付け記録やPlan共有許可があっても、ChatGPTでの接続完了や実際の読み取り成功を意味しません。
+        </p>
+        <p class="mt-1 text-slate-400">
+            接続するときは、Canoviaで本人IDを確認し、共有したいPlanの範囲を承認した後、
+            ChatGPT側でも同じ認証プロバイダーの本人アカウントを選んで接続してください。
+            認証画面が別のアカウントを自動選択する場合は、そのまま承認せず認証先を確認してください。
+        </p>
+    </div>
 
     <h3 class="mt-4 text-sm font-bold text-slate-100">Planごとの許可</h3>
     @forelse ($mcpActiveGrants as $grant)
