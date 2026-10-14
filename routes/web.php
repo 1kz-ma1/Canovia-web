@@ -61,6 +61,7 @@ use App\Http\Controllers\DevelopmentPreviewController;
 use App\Http\Controllers\StudyPracticeController;
 use App\Http\Controllers\AdaptiveLearningController;
 use App\Http\Controllers\AdaptiveLearningHistoryController;
+use App\Http\Controllers\AdaptiveLearningNextActionController;
 use App\Http\Controllers\AdaptiveLearningAnswerDraftController;
 use App\Http\Controllers\AdaptiveLearningExamController;
 use App\Http\Controllers\AdaptiveLearningEvaluationAdjustmentController;
@@ -658,6 +659,7 @@ Route::middleware('feature.access:'.FeatureKey::AiPractice->value)->group(functi
     // Adaptive Learning pilot: Bank-only single-choice A/B. Exam mode remains gated.
     Route::get('/plans/{plan}/tasks/{task}/learning', [AdaptiveLearningController::class, 'index'])->name('plans.tasks.learning.index');
     Route::get('/plans/{plan}/tasks/{task}/learning/history', [AdaptiveLearningHistoryController::class, 'index'])->name('plans.tasks.learning.history');
+    Route::post('/plans/{plan}/tasks/{task}/learning/confirm-next-action', AdaptiveLearningNextActionController::class)->middleware('throttle:12,1')->name('plans.tasks.learning.next_action.confirm');
     Route::post('/plans/{plan}/tasks/{task}/learning/answers/{answerEvent}/adjustment', [AdaptiveLearningEvaluationAdjustmentController::class, 'store'])->middleware('throttle:12,1')->name('plans.tasks.learning.evaluation_adjustments.store');
     Route::post('/plans/{plan}/tasks/{task}/learning/exam-start', [AdaptiveLearningExamController::class, 'start'])->middleware('throttle:12,1')->name('plans.tasks.learning.exam.start');
     Route::get('/plans/{plan}/tasks/{task}/learning/exam/{learningRun}', [AdaptiveLearningExamController::class, 'show'])->name('plans.tasks.learning.exam.show');
