@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'app/Services/PrivateFileLifecycleService.php'
+      - 'app/Services/PrivateFileCleanupHealthService.php'
+      - 'tests/Feature/PrivateFileCleanupHealthG3Test.php'
       - 'app/Http/Controllers/StudyScopeCaptureController.php'
       - 'database/migrations/2026_10_14_100000_create_private_file_cleanup_entries.php'
       - 'tests/Feature/PrivateFileCleanupOutboxG3Test.php'
@@ -63,6 +65,8 @@ jobs:
       - name: PHP lint
         run: |
           php -l app/Services/PrivateFileLifecycleService.php
+          php -l app/Services/PrivateFileCleanupHealthService.php
+          php -l tests/Feature/PrivateFileCleanupHealthG3Test.php
           php -l app/Http/Controllers/StudyScopeCaptureController.php
           php -l database/migrations/2026_10_14_100000_create_private_file_cleanup_entries.php
           php -l tests/Feature/PrivateFileCleanupOutboxG3Test.php
@@ -74,6 +78,8 @@ jobs:
           php -l tests/Feature/IosSoftLaunchWebReadinessV561Test.php
           php -l tests/Feature/SafePlanResourceRecallHandoffV5811Test.php
       - name: G3 private file lifecycle and durable retry outbox on PostgreSQL 16
-        run: php artisan test tests/Feature/PrivateFileLifecycleG3Test.php tests/Feature/PrivateFileCleanupOutboxG3Test.php --stop-on-failure
-      - name: G3 operator-only CLI dry-run is available
-        run: php artisan canovia:retry-private-file-cleanup --dry-run
+        run: php artisan test tests/Feature/PrivateFileLifecycleG3Test.php tests/Feature/PrivateFileCleanupOutboxG3Test.php tests/Feature/PrivateFileCleanupHealthG3Test.php --stop-on-failure
+      - name: G3 operator-only CLI dry-run and read-only health are available
+        run: |
+          php artisan canovia:retry-private-file-cleanup --dry-run
+          php artisan canovia:private-file-cleanup-health --json --strict
