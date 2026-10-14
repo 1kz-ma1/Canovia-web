@@ -17,6 +17,7 @@ final class McpExplicitPlanConsentService
 {
     public const SCOPES = ['overview', 'tasks'];
     public const DURATIONS_DAYS = [1, 7, 30];
+    public const UNTIL_REVOKED = 'until_revoked';
 
     public function __construct(
         private readonly McpOAuthAccountLinkConfiguration $linkConfiguration,
@@ -75,10 +76,11 @@ final class McpExplicitPlanConsentService
             ->exists();
     }
 
-    public function isScopeAndDurationAllowed(string $scope, int $days): bool
+    public function isScopeAndDurationAllowed(string $scope, int|string $days): bool
     {
         return in_array($scope, self::SCOPES, true)
-            && in_array($days, self::DURATIONS_DAYS, true);
+            && (in_array($days, self::DURATIONS_DAYS, true)
+                || $days === self::UNTIL_REVOKED);
     }
 
     /**
@@ -91,7 +93,7 @@ final class McpExplicitPlanConsentService
         int $planId,
         string $identityFingerprint,
         string $scope,
-        int $days,
+        int|string $days,
     ): bool {
         if (! $this->isEnabled()
             || ! preg_match('/\A[a-f0-9]{64}\z/D', $identityFingerprint)
@@ -147,7 +149,8 @@ final class McpExplicitPlanConsentService
                 'scope' => $scope,
                 'status' => McpDelegatedGrant::STATUS_ACTIVE,
                 'consented_at' => now(),
-                'expires_at' => now()->addDays($days),
+                'expires_at' => $days === self::UNTIL_REVOKED
+                    ? null : now()->addDays($days),
                 'revoked_at' => null,
             ];
             if ($grant !== null) {

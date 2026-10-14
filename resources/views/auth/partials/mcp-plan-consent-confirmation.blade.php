@@ -16,7 +16,8 @@
         && is_string($mcpVerifiedGrant['identity_fingerprint'] ?? null)
         && $mcpConsentService->matchesLinkedIdentity($user, $mcpVerifiedGrant['identity_fingerprint'])
         && is_string($mcpVerifiedGrant['scope'] ?? null)
-        && is_int($mcpVerifiedGrant['duration_days'] ?? null)
+        && (is_int($mcpVerifiedGrant['duration_days'] ?? null)
+            || ($mcpVerifiedGrant['duration_days'] ?? null) === \App\Services\McpExplicitPlanConsentService::UNTIL_REVOKED)
         && $mcpConsentService->isScopeAndDurationAllowed(
             $mcpVerifiedGrant['scope'], $mcpVerifiedGrant['duration_days'],
         );
@@ -36,7 +37,7 @@
             <p class="break-words">対象Plan：{{ $mcpConsentPlan->title }}</p>
             <p>接続先：ChatGPT（承認対象クライアント）</p>
             <p>共有範囲：{{ $mcpVerifiedGrant['scope'] === 'tasks' ? '概要＋進行中Task' : '概要のみ' }}</p>
-            <p>有効期間：承認から{{ $mcpVerifiedGrant['duration_days'] }}日</p>
+            <p>共有期間：{{ $mcpVerifiedGrant['duration_days'] === \App\Services\McpExplicitPlanConsentService::UNTIL_REVOKED ? '取り消すまで' : '承認から'.$mcpVerifiedGrant['duration_days'].'日' }}</p>
             <p class="text-amber-200">Task説明・証拠・認証情報は共有対象外です。</p>
         </div>
         <div class="mt-3 flex flex-wrap items-center gap-2">
