@@ -42,6 +42,7 @@ class SafePlanResourceRecallHandoffV5811Test extends TestCase
 
     public function test_task_linked_resource_creates_recall_source_from_explicit_pdf_without_fetching_resource_url(): void
     {
+        config(['canovia.private_file_path_fence_enabled' => true]);
         [$user, $plan, $task] = $this->scenario();
         $this->grantPremium($user);
 
@@ -79,6 +80,11 @@ class SafePlanResourceRecallHandoffV5811Test extends TestCase
         $this->assertSame('chapter.pdf', $source->original_name);
         $this->assertSame('ready', $source->status);
         Storage::assertExists($source->storage_path);
+        $this->assertDatabaseHas('private_file_path_fences', [
+            'path_digest' => app(\App\Services\PrivateFilePathFenceService::class)
+                ->fingerprint((string) config('filesystems.default'),
+                    $source->storage_path),
+        ]);
 
         $this->assertDatabaseHas('study_recall_candidates', [
             'study_recall_source_id' => $source->id,
