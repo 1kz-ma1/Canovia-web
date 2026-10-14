@@ -67,6 +67,8 @@ def parse_v58_report(raw: bytes) -> str:
         raise InvalidPacket()
     if any(data[key] is not False for key in V58_KEYS - {"result", "code"}):
         raise InvalidPacket()
+    if not isinstance(data["result"], str) or not isinstance(data["code"], str):
+        raise InvalidPacket()
     if data["result"] == "REVIEW_REQUIRED" and data["code"] in V58_REVIEW:
         return data["code"]
     if data["result"] == "BLOCK" and data["code"] in V58_BLOCK:
