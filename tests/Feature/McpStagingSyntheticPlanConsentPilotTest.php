@@ -350,7 +350,7 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
         // controller's owner-specific 404 check (generic stage 503).
         $this->actingAs($outsider)->delete(
             route('auth.account.mcp_subject.revoke', ['subject' => $link->id]),
-        )->assertServiceUnavailable();
+        )->assertStatus(503);
         $this->assertSame(McpLinkedSubject::STATUS_LINKED, $link->fresh()->status);
         $this->assertSame(McpDelegatedGrant::STATUS_ACTIVE, $grant->fresh()->status);
 
