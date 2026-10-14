@@ -79,6 +79,7 @@ final class McpDelegatedPlanAccessPolicy
 
         $link = McpLinkedSubject::query()
             ->where('identity_fingerprint', $subjectFingerprint)
+            ->where('active_identity_fingerprint', $subjectFingerprint)
             ->where('provider_key', 'chatgpt')
             ->where('status', McpLinkedSubject::STATUS_LINKED)
             ->whereNull('revoked_at')

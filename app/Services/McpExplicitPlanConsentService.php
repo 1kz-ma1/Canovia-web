@@ -58,6 +58,7 @@ final class McpExplicitPlanConsentService
             ->where('provider_key', 'chatgpt')
             ->where('status', McpLinkedSubject::STATUS_LINKED)
             ->whereNull('revoked_at')
+            ->whereColumn('identity_fingerprint', 'active_identity_fingerprint')
             ->whereNotNull('linked_at')
             ->where('linked_at', '<=', now())
             ->exists();
@@ -69,6 +70,7 @@ final class McpExplicitPlanConsentService
             ->where('user_id', $actor->id)
             ->where('provider_key', 'chatgpt')
             ->where('identity_fingerprint', $fingerprint)
+            ->where('active_identity_fingerprint', $fingerprint)
             ->where('status', McpLinkedSubject::STATUS_LINKED)
             ->whereNull('revoked_at')
             ->whereNotNull('linked_at')
@@ -120,6 +122,7 @@ final class McpExplicitPlanConsentService
                 ->where('user_id', $owner->id)
                 ->where('provider_key', 'chatgpt')
                 ->where('identity_fingerprint', $identityFingerprint)
+                ->where('active_identity_fingerprint', $identityFingerprint)
                 ->where('status', McpLinkedSubject::STATUS_LINKED)
                 ->whereNull('revoked_at')
                 ->whereNotNull('linked_at')
