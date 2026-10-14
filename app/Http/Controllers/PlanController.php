@@ -12,6 +12,7 @@ use App\Services\BehaviorEventLogger;
 use App\Services\ContinuityService;
 use App\Services\ExecutionActionPolicyService;
 use App\Services\PlanOwnershipService;
+use App\Services\PrivateFileCleanupGuard;
 use App\Services\PlanCollaborationService;
 use App\Services\PlanActivityService;
 use App\Services\PlanCategoryProfileService;
@@ -646,7 +647,8 @@ class PlanController extends Controller
 
         $plan->delete();
 
-        $careerScreenshotPaths->each(fn ($path) => Storage::delete($path));
+        $cleanup = app(PrivateFileCleanupGuard::class);
+        $careerScreenshotPaths->each(fn ($path) => $cleanup->deleteIfUnreferenced($path));
 
         return redirect()->route('home')->with('success', '計画を削除しました。');
     }
