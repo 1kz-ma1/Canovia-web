@@ -291,3 +291,25 @@ Existing Platform Release Preflight CI runs 13 synthetic/source-bound regression
 Before any duplicate removal, require: (1) a specific test-file occurrence and named regression context selected; (2) isolated and grouped runs comparing exact assertions, DB/tenant/session boundaries, timing and order-dependent failures over multiple PR SHAs; (3) explicit sign-off that the cross-context acceptance intent remains covered; and (4) all standard workspace, migration, development and platform checks green on the exact PR head. Do **not** use per-step total time as an estimate of one repeated file's cost; multiple test files can execute together in the same step.
 
 **Status:** CURRENT 21 repeated state/context observations; ACTIVE read-only audit and guard; FUTURE equivalence research, NOT VERIFIED any safe duplicate deletion, sustained speedup or billing improvement. Production/Render/Aiven remain untouched.
+
+
+## ACTIVE: disposable empirical overlap parity for Learning and Plan Draft (2026-10-14)
+
+### Hypothesis and scope
+
+Workspace Resume has 72 Artisan invocations, 160 explicit test file appearances, 118 unique files, and 42 additional appearances across 21 duplicated Feature paths. Adaptive Learning and Plan Action Draft's top repeated classes use `Tests\TestCase` and `RefreshDatabase`; static inspection alone does not prove any duplicated test invocation expendable. The authoritative workflow remains unchanged.
+
+This slice adds a **path-scoped disposable GitHub Actions experiment** for two existing scenarios:
+
+1. **Learning:** `AdaptiveLearningSingleQuestionV5878Test.php` alone versus the original V58.79 group with Candidate Queue V5879 and QuestionBank V402.
+2. **Plan Draft:** `PlanActionDraftV5871Test.php` alone versus the original V58.74 group containing V5874, V5873, V5872 and V5871.
+
+`scripts/ci/platform_workspace_scenario_equivalence.py` only runs with `--run` on `GITHUB_ACTIONS=true`, using fixed, source-verified arguments and a forced testing/SQLite in-memory environment. It invokes each variant in its own PHP process, writes ephemeral JUnit XML under a temporary directory, compares the selected class's sorted testcase names and requires zero failures, errors or skips. XML is size-bounded, duplicate/missing class names block, and no raw test logs, secrets or source contents are emitted in the audit report.
+
+`.github/workflows/platform-workspace-scenario-equivalence.yml` runs only on PRs into main that modify the probe script, its contract tests or its workflow. It installs pinned Composer dependencies in the throwaway GitHub runner and runs the real four-variant comparison. It has read-only repo permissions and its own main-PR concurrency group; there is no production trigger. The existing Platform Preflight runs 12 synthetic/manifest contract checks without PHP or API calls.
+
+### Acceptance and limits
+
+An isolated vs grouped testcase-name match plus successful test exit establishes **observed parity in the tested environment and particular PR SHA only**. It does **not** establish identical assertions, order-independent mutation semantics, absence of hidden global state, cross-context regression purpose, CI runtime reduction, billing impact or permission to remove any of the 42 repeated occurrences. No normal Workspace Resume check is weakened or skipped. Production is not exercised. If any source-path drift, test failure, missing JUnit evidence or parser issue occurs, the experiment must fail closed and be repaired before merging.
+
+**Current status:** ACTIVE experiment implemented, empirical outcome must be filled from actual exact-SHA PR Actions run IDs; no duplicate removal authorized.
