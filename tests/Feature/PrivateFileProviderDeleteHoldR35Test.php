@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
+use Mockery;
 
 final class PrivateFileProviderDeleteHoldR35Test extends TestCase
 {
@@ -36,7 +37,9 @@ final class PrivateFileProviderDeleteHoldR35Test extends TestCase
         // The S3 Flysystem adapter is intentionally NOT installed. Any
         // Storage::disk call would be an unsafe provider operation and fail.
         $realStorage = Storage::getFacadeRoot();
-        Storage::shouldNotReceive('disk');
+        $denyStorage = Mockery::mock();
+        $denyStorage->shouldNotReceive('disk');
+        Storage::swap($denyStorage);
         try {
             $result = app(PrivateFileLifecycleService::class)->retryDue();
         } finally {
