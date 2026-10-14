@@ -64,13 +64,14 @@ class StudyRecallCandidateController extends Controller
             $name = (string) $file->getClientOriginalName();
             $sourceType = $mime === 'application/pdf' ? 'pdf' : 'image';
             $extension = strtolower((string) $file->getClientOriginalExtension());
-            $path = $file->storeAs(
-                'study-recall-sources/'.$plan->id.'/'.$task->id,
-                (string) Str::uuid().'.'.$extension,
-            );
+            $uploadPath = 'study-recall-sources/'.$plan->id.'/'.$task->id
+                .'/'.Str::uuid().'.'.$extension;
+            if (! $privateUploads->enabled()) {
+                $path = $file->storeAs(dirname($uploadPath), basename($uploadPath));
+            }
         }
 
-        $source = StudyRecallSource::query()->create([
+        $sourceAttributes = [
             'plan_id' => (int) $plan->id,
             'task_id' => (int) $task->id,
             'user_id' => $request->user()?->id,
@@ -81,7 +82,16 @@ class StudyRecallCandidateController extends Controller
             'storage_path' => $path,
             'source_text' => $sourceType === 'text' ? trim((string) ($validated['source_text'] ?? '')) : null,
             'status' => 'pending',
-        ]);
+        ];
+
+        $source = $file && $privateUploads->enabled()
+            ? $privateUploads->storeAndPersist(
+                [['file' => $file, 'path' => $uploadPath]],
+                fn (array $paths) => StudyRecallSource::query()->create(
+                    array_replace($sourceAttributes, ['storage_path' => $paths[0]]),
+                ),
+            )
+            : StudyRecallSource::query()->create($sourceAttributes);
 
         try {
             $result = $extractor->extract($source, $plan, $task, $request->user()?->id);
