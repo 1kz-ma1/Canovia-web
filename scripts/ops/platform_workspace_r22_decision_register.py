@@ -24,6 +24,7 @@ except ImportError:
     from platform_workspace_test_inventory import ROOT
 
 TARGET = "tests/Feature/PlanActionDraftV5871Test.php"
+CREATIVE_TARGET = "tests/Feature/DevelopmentCreativePlanRescueV5863Test.php"
 EVIDENCE_DOCS = (
     ("R18", "PLATFORM_WORKSPACE_R18_OMISSION_SHADOW_2026_10_15.md",
      ("PR #660", "27 | 23 | 27", "no removal is approved")),
@@ -34,6 +35,12 @@ EVIDENCE_DOCS = (
       "HOLD")),
     ("R21", "PLATFORM_WORKSPACE_R21_FIVE_CONTEXT_MATRIX_2026_10_15.md",
      ("PR #670", "10/10", "0/10", "not an actual modified 72-step")),
+    ("R23", "PLATFORM_WORKSPACE_R23_CREATIVE_RESCUE_SHADOW_2026_10_15.md",
+     ("PR #676", "14/14 independent PHP", "0/4", "HOLD")),
+)
+CREATIVE_CONTEXTS = (
+    "V58.63 Legacy Creative Development Rescue",
+    "V58.69 Team Task Dependencies",
 )
 TARGET_CONTEXTS = (
     "V58.75 Draft Quality and Staleness Guard",
@@ -80,8 +87,8 @@ def verify_docs(reader: Callable[[str], str] = read_doc) -> list[dict]:
             "current_sha_experiment_replay": False,
             "reviewed_for_test_removal": False,
         })
-    if len(sources) != 4:
-        raise IncompleteEvidence("incomplete R18-R21 document provenance")
+    if len(sources) != 5:
+        raise IncompleteEvidence("incomplete R18-R23 document provenance")
     return sources
 
 
@@ -101,7 +108,8 @@ def build_register(workflow: str, read_source=None, read_document=read_doc) -> d
     docs = verify_docs(read_document)
     context_rows = matrix["contexts"]
     paths = [item["test_file"] for item in context_rows]
-    if len(paths) != len(set(paths)) or paths.count(TARGET) != 1:
+    if (len(paths) != len(set(paths)) or paths.count(TARGET) != 1
+            or paths.count(CREATIVE_TARGET) != 1):
         raise IncompleteEvidence("repeated test-file census drift")
     target_item = next(item for item in context_rows if item["test_file"] == TARGET)
     target_titles = tuple(row["declared_regression_step"] for row in target_item["occurrences"])
@@ -110,26 +118,44 @@ def build_register(workflow: str, read_source=None, read_document=read_doc) -> d
             or set(target_titles) != set(TARGET_CONTEXTS)
             or target_item["distinct_companion_sets"] != 5):
         raise IncompleteEvidence("R21 directly studied contexts changed")
+    creative_item = next(item for item in context_rows if item["test_file"] == CREATIVE_TARGET)
+    creative_titles = tuple(row["declared_regression_step"] for row in creative_item["occurrences"])
+    if (creative_item["invocations"] != 2
+            or creative_item["additional_invocations"] != 1
+            or set(creative_titles) != set(CREATIVE_CONTEXTS)
+            or creative_item["distinct_companion_sets"] != 2):
+        raise IncompleteEvidence("R23 creative rescue contexts changed")
     rows = []
     for record in context_rows:
-        studied = record["test_file"] == TARGET
+        plan_studied = record["test_file"] == TARGET
+        creative_studied = record["test_file"] == CREATIVE_TARGET
+        studied = plan_studied or creative_studied
         evidence = ["R17_STATIC_NAMED_GROUP_AND_COMPANIONS"]
-        if studied:
+        if plan_studied:
             evidence += ["R18_ONE_GROUP_JUNIT_OMISSION_DOCUMENTED",
                          "R19_TEST_METHOD_TRIPWIRES_DOCUMENTED",
                          "R20_TWO_APP_MUTANTS_DOCUMENTED",
                          "R21_FIVE_GROUP_LEAVE_ONE_OUT_DOCUMENTED"]
+        elif creative_studied:
+            evidence += ["R23_CREATIVE_RESCUE_TWO_GROUP_SHADOW_AND_APP_MUTANTS_DOCUMENTED"]
         occurrences = []
         for step in record["occurrences"]:
-            verified_scope = studied and step["declared_regression_step"] in TARGET_CONTEXTS
+            verified_scope = (
+                (plan_studied and step["declared_regression_step"] in TARGET_CONTEXTS)
+                or (creative_studied and step["declared_regression_step"] in CREATIVE_CONTEXTS)
+            )
             if studied and not verified_scope:
-                raise IncompleteEvidence("unexpected V5871 regression context")
+                raise IncompleteEvidence("unexpected studied regression context")
             occurrences.append({
                 "command_ordinal": step["command_ordinal"],
                 "named_regression_step": step["declared_regression_step"],
                 "ordered_command_sha256": step["ordered_command_sha256"],
                 "companion_test_files": step["companion_test_files"],
                 "historical_two_mutant_probe_documented": verified_scope,
+                "historical_mutant_scope": (
+                    "R20_R21_PLAN_DRAFT" if plan_studied
+                    else "R23_CREATIVE_PLAN" if creative_studied else None
+                ),
                 "other_companion_files_alone_detected_these_two_mutants":
                     False if verified_scope else None,
                 "step_specific_intent_accepted_by_domain_owner": False,
@@ -143,11 +169,12 @@ def build_register(workflow: str, read_source=None, read_document=read_doc) -> d
             "distinct_companion_sets": record["distinct_companion_sets"],
             "static_source_signals": record["source_signals"],
             "evidence_level": (
-                "SCOPED_HISTORICAL_MUTATION_OBSERVATIONS_HOLD" if studied
+                "SCOPED_HISTORICAL_MUTATION_OBSERVATIONS_HOLD" if plan_studied
+                else "SCOPED_HISTORICAL_CREATIVE_MUTATION_OBSERVATIONS_HOLD" if creative_studied
                 else "CURRENT_STATIC_CONTEXT_INVENTORY_ONLY_HOLD"
             ),
             "historical_evidence_tags": evidence,
-            "historical_experiment_context_count": 5 if studied else 0,
+            "historical_experiment_context_count": 5 if plan_studied else 2 if creative_studied else 0,
             "unreviewed_security_impact": not studied,
             "manual_review_order": (
                 "PRIORITIZE_KNOWN_AUTH_AND_PLAN_BOUNDARIES" if studied
@@ -160,7 +187,7 @@ def build_register(workflow: str, read_source=None, read_document=read_doc) -> d
     total_instances = sum(x["original_invocations"] for x in rows)
     total_extra = sum(x["additional_invocations"] for x in rows)
     scoped = sum(x["historical_experiment_context_count"] for x in rows)
-    if (len(rows), total_instances, total_extra, scoped) != (21, 63, 42, 5):
+    if (len(rows), total_instances, total_extra, scoped) != (21, 63, 42, 7):
         raise IncompleteEvidence("decision register does not account for all repetitions")
     return {
         "result": "HOLD_MANUAL_CONTEXT_DECISION_REQUIRED",
@@ -172,9 +199,9 @@ def build_register(workflow: str, read_source=None, read_document=read_doc) -> d
         "repeated_test_files": len(rows),
         "additional_repeated_invocations": total_extra,
         "all_repeated_file_occurrences": total_instances,
-        "historically_experimented_file_count": 1,
+        "historically_experimented_file_count": 2,
         "historically_experimented_file_occurrences": scoped,
-        "static_only_file_count": 20,
+        "static_only_file_count": 19,
         "static_only_file_occurrences": total_instances - scoped,
         "historical_experiments_revalidated_at_current_main_sha": False,
         "historical_sources": docs,
