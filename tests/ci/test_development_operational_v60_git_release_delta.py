@@ -61,6 +61,20 @@ class V60GitDeltaTest(unittest.TestCase):
             self.assertEqual(sum(r["candidate_delta"]["risk_area_path_counts"].values()),
                              r["candidate_delta"]["changed_paths"])
             self.assertEqual("BLOCK", r["result"])
+            # V6 tool checkout may differ from the historical release tree.
+            script = ROOT / "scripts/ci/development_operational_v60_git_release_delta.py"
+            result = subprocess.run(
+                [sys.executable, str(script),
+                 "--production-branch-sha", f.baseline,
+                 "--candidate-sha", candidate,
+                 "--main-snapshot-sha", final,
+                 "--release-ref", name,
+                 "--git-repo", str(f.path)],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertEqual("BLOCK", json.loads(result.stdout)["result"])
+            self.assertEqual(2, json.loads(result.stdout)["commits_after_candidate_in_main_snapshot"])
             self.assertEqual("NEWER_MAIN_NOT_IN_PINNED_CANDIDATE", r["reason"])
             for field in ("release_authorized", "production_database_modified",
                           "backup_restore_verified", "deployed_sha_verified",
