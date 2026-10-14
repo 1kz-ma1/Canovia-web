@@ -219,7 +219,6 @@ class AuthController extends Controller
                 ->where('user_id', $user->id)
                 ->where('status', McpLinkedSubject::STATUS_LINKED)
                 ->whereNull('revoked_at')
-                ->whereColumn('identity_fingerprint', 'active_identity_fingerprint')
                 ->orderByDesc('linked_at')
                 ->paginate(6, ['*'], 'mcp_subjects_page'),
             'chatgptPreparedPreferences' => DevelopmentAiSharingPreference::query()
