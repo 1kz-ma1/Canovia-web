@@ -114,6 +114,7 @@ final class AdaptiveLearningController extends Controller
             'learningRecommendations' => $learningRecommendations,
             'learningHistory' => $history->forPlanTask($request, $plan, $task, $identity->resolve($request)),
             'startRequestId' => (string) Str::uuid(),
+            'reviewStartRequestId' => (string) Str::uuid(),
             'examStartRequestId' => (string) Str::uuid(),
         ]);
     }
@@ -140,6 +141,8 @@ final class AdaptiveLearningController extends Controller
 
         $reviewTopic = null;
         if (filled($input['review_topic'] ?? null)) {
+            abort_unless($input['mode'] === LearningRun::MODE_UNDERSTANDING, 409,
+                '分野指定の復習は理解モードで開始してください。');
             // POST re-derives the actor's *current* preview. A forged field,
             // correction or extra answer cannot choose arbitrary curriculum.
             $preview = $reviewEntry->preview($request, $plan, $task, $identity->resolve($request));
