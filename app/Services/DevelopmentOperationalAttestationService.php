@@ -9,6 +9,55 @@ use Illuminate\Support\Carbon;
 final class DevelopmentOperationalAttestationService
 {
     /**
+     * Standalone operator check: never overlay V53.8 or V2 environment/deploy.
+     * A human's Render dashboard inspection is not a provider API receipt.
+     *
+     * @return array{status:string,source:string,detail:string,checkedAt?:string}|null
+     */
+    public function projectServiceIdentity(
+        Plan $plan,
+        ?DevelopmentOperationalTarget $target,
+    ): ?array {
+        if (! $target || (int) $plan->getKey() <= 0
+            || (int) $plan->user_id <= 0
+            || (int) $target->plan_id !== (int) $plan->getKey()
+            || $target->provider !== 'render'
+            || ! in_array($target->environment, DevelopmentOperationalTarget::ENVIRONMENTS, true)
+            || ! is_string($target->resource_ref)
+            || ! preg_match('/\Asrv-[a-zA-Z0-9_-]{4,76}\z/', $target->resource_ref)
+            || (int) $target->revision < 1) {
+            return null;
+        }
+
+        $source = 'Plan所有者のRender画面の手動照合（外部API検証なし）';
+        $at = $target->service_checked_at;
+
+        if (! $at) {
+            return [
+                'status' => 'unknown',
+                'source' => $source,
+                'detail' => 'サービスIDと環境の手動照合記録はまだありません。',
+            ];
+        }
+
+        // The server sets the timestamp. Historical invalid/future values
+        // never upgrade a human claim to verified or current.
+        $stale = (int) $target->service_checked_revision !== (int) $target->revision
+            || $target->service_checked_environment !== $target->environment
+            || $at->lt(Carbon::now()->subDays(7))
+            || $at->gt(Carbon::now()->addMinute());
+
+        return [
+            'status' => $stale ? 'stale' : 'operator_confirmed',
+            'source' => $source,
+            'detail' => $stale
+                ? '以前の手動照合は、対象サービス・環境の変更または7日経過により再確認が必要です。'
+                : '所有者がRender画面でサービスIDと環境の対応を確認したと申告しました。外部サービスへの接続・現在のデプロイ・稼働SHA・バックアップは検証していません。',
+            'checkedAt' => $at->format('Y-m-d H:i'),
+        ];
+    }
+
+    /**
      * A bound, owner-reported confirmation, NOT an independent verification.
      * Every read is a pure projection; provider connectors are never queried.
      *
