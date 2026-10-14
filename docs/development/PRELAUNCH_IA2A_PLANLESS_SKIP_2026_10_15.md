@@ -31,7 +31,10 @@ Existing `PersonalizationBootstrapV5825Test` gains/updates checks for:
    opening Plan creation deliberately, without having created a Plan.
 2. New guest using **Welcome start → Personalization Skip → Overview**,
    observing actual no-Plan UI and the existing `PersonalizationSkipped` event.
-3. Old automatic Plan tour remaining OFF when the optional editor is opened.
+3. New registered-account onboarding choosing Skip: real no-Plan
+   Overview renders; original First Companion is still available
+   when the actor explicitly visits Plan creation.
+4. Old automatic Plan tour remaining OFF when the optional editor is opened.
 
 The rest of the old Bootstrap/seed-result tests remain unchanged. The
 V56.12 Workspace Resume CI runs this suite plus its release-level guards;
