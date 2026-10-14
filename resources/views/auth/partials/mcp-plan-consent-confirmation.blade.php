@@ -16,7 +16,8 @@
         && is_string($mcpVerifiedGrant['identity_fingerprint'] ?? null)
         && $mcpConsentService->matchesLinkedIdentity($user, $mcpVerifiedGrant['identity_fingerprint'])
         && is_string($mcpVerifiedGrant['scope'] ?? null)
-        && array_key_exists('duration_days', $mcpVerifiedGrant)
+        && (is_int($mcpVerifiedGrant['duration_days'] ?? null)
+            || ($mcpVerifiedGrant['duration_days'] ?? null) === \App\Services\McpExplicitPlanConsentService::UNTIL_REVOKED)
         && $mcpConsentService->isScopeAndDurationAllowed(
             $mcpVerifiedGrant['scope'], $mcpVerifiedGrant['duration_days'],
         );
