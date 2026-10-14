@@ -153,9 +153,8 @@ final class PrivateFileSyntheticCrashMatrixG3Test extends TestCase
     {
         $this->run('ownerchange', 'complete');
         $id = $this->intentId('ownerchange');
-        InboxItem::query()->firstOrFail()->update([
-            'storage_path' => 'inbox/synthetic/unrelated.png',
-        ]);
+        DB::table('inbox_items')->where('storage_path', 'inbox/synthetic/ownerchange.png')
+            ->update(['storage_path' => 'inbox/synthetic/unrelated.png']);
         $changed = $this->pilot()->review($id);
         $this->assertSame('committed_owner_missing_unverifiable', $changed['state']);
         $this->assertConservative($changed);
