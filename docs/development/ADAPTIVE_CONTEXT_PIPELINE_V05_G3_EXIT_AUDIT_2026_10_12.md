@@ -747,3 +747,41 @@ table and Outbox table still need a separately accepted Aiven
 migration and owner release decision. R12 is not a production
 enablement, deploy, scheduler, live deletion, inventory or device
 verification. **G3 remains OPEN.**
+
+## 58. G3-R13 — Durable prewrite journal for interrupted private uploads (2026-10-14)
+
+**R12 gap:** physical private bytes could be written during an
+upload transaction and left orphaned by a worker crash, process kill,
+storage rollback failure or provider error; an in-transaction recovery
+record would roll back alongside its reference, losing evidence.
+
+**Bounded fix:** Add `private_file_upload_intents` additive migration
+with unique retained HMAC-SHA256 path digest, Laravel authenticated
+encrypted path, disk, status and timestamps. With both
+`CANOVIA_PRIVATE_FILE_PATH_FENCE_ENABLED` and new
+`CANOVIA_PRIVATE_FILE_UPLOAD_JOURNAL_ENABLED` enabled, the upload
+service first rejects an existing outer transaction, validates all
+private keys, durably commits `prepared` intent rows for the full
+batch **before storage I/O**, then executes existing fenced uploads
+and owner inserts. A successful main commit settles to `committed`
+outside the transaction; upload failure leaves `needs_review`;
+journal settlement failure conservatively retains `prepared`.
+Default mode leaves R12 behavior unchanged.
+
+**Proof and boundary:** Synthetic failure leaves encrypted committed
+journal rows after storage and DB rollback; simulated crash after
+prepare preserves an unresolved intent without auto deletion;
+historically claimed path cannot be silently reused; a nested outer
+transaction fails before object write; read-only reporting and
+strict schema checks do not leak paths. Tests run on disposable PG16
+and MySQL8.0/8.4, with prior G3 lifecycle, source-race,
+Workspace and Migration Recovery gates at exact PR HEAD.
+
+**Not solved:** An intent is only a proposed write, never proof of
+unreferenced bytes; no storage inventory, object-generation API,
+reconciliation, manual reaper, pre-R13 backfill, partial-byte repair,
+external-writer coordination, APP_KEY rotation or automatic cleanup
+is authorized. The journal is a **third separate G3 schema gate**,
+alongside cleanup Outbox and permanent path-fence schema. G3 remains
+OPEN; no production, Aiven, Render, cron, billing, storage deletion,
+app-store/device test or deployment is performed here.
