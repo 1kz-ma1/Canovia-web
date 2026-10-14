@@ -131,7 +131,9 @@ final class PrivateFileCleanupHealthG3Test extends TestCase
         $this->assertStringNotContainsString('secret-user-id', $json);
         $this->assertStringNotContainsString('secret-source.pdf', $json);
         $this->assertStringNotContainsString('"encrypted_path":', $json);
-        $this->assertStringNotContainsString('disk', $json);
+        // Fixed reason-code names may mention a disk; only the raw disk
+        // field/value itself must never be exported.
+        $this->assertStringNotContainsString('"disk":', $json);
         $this->assertStringNotContainsString('expected_sha256', $json);
     }
 
