@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Mockery;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -70,6 +71,42 @@ final class PrivateFileCleanupOutboxG3Test extends TestCase
             'status' => 'quarantined', 'last_reason' => 'file_bytes_changed',
         ]);
         $this->assertSame(0, app(PrivateFileLifecycleService::class)->retryDue()['selected']);
+    }
+
+    public function test_transient_storage_delete_failure_is_retried_after_backoff(): void
+    {
+        $path = 'inbox/owner/transient-failure.png';
+        Storage::put($path, 'retry safely');
+        $this->insertPending($path);
+
+        $realManager = Storage::getFacadeRoot();
+        $disk = Mockery::mock();
+        $disk->shouldReceive('exists')->once()->with($path)->andReturn(true);
+        $disk->shouldReceive('get')->once()->with($path)->andReturn('retry safely');
+        $disk->shouldReceive('delete')->once()->with($path)->andReturn(false);
+        Storage::shouldReceive('disk')->once()
+            ->with((string) config('filesystems.default'))->andReturn($disk);
+        try {
+            $result = app(PrivateFileLifecycleService::class)->retryDue();
+            $this->assertSame(1, $result['retry']);
+        } finally {
+            Storage::swap($realManager);
+        }
+
+        Storage::assertExists($path);
+        $this->assertDatabaseHas('private_file_cleanup_entries', [
+            'status' => 'pending', 'attempt_count' => 1,
+            'last_reason' => 'storage_delete_false',
+        ]);
+        $this->assertSame(0, app(PrivateFileLifecycleService::class)->retryDue()['selected']);
+
+        DB::table('private_file_cleanup_entries')->update([
+            'next_attempt_at' => now()->subMinute(),
+        ]);
+        $this->assertSame(1,
+            app(PrivateFileLifecycleService::class)->retryDue()['deleted']);
+        Storage::assertMissing($path);
+        $this->assertDatabaseCount('private_file_cleanup_entries', 0);
     }
 
     public function test_locked_cleanup_entry_allows_only_one_attempt_and_no_duplicate_unlink(): void
