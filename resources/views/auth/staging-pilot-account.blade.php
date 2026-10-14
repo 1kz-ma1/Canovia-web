@@ -66,6 +66,32 @@
         @endif
     </div>
 
+    {{-- Owner-visible guidance only. This cannot inspect the separate ChatGPT
+         OAuth session and must never claim its identity is verified. --}}
+    @if ($syntheticReadReady && $linkReady)
+        <section class="detail" data-mcp-staging-dual-client-guide>
+            <h2>ChatGPTへの接続は、本人ID確認とは別の操作です</h2>
+            <p class="muted">Canoviaの「本人ID接続」とChatGPTの「MCP接続」は、Auth0で別々に認証されます。ブラウザに残った別アカウントのログインが再利用される場合があります。</p>
+            <div class="note" data-mcp-staging-link-state>
+                Canovia側の本人ID連携：{{ $linked ? '連携記録あり' : '未連携' }}。
+                この表示は、現在のChatGPT側の認証アカウントを示すものではありません。
+            </div>
+            <div class="note" data-mcp-staging-grant-state>
+                検証用Planの共有許可：{{ $activeGrant ? '有効' : '現在有効な共有許可なし' }}。
+                @if ($activeGrant)
+                    共有範囲：{{ $activeGrant->scope === 'tasks' ? '概要＋Task' : '概要のみ' }}。
+                @endif
+            </div>
+            <ol>
+                <li>Canovia側でAuth0の本人IDを確認し、紐付けを確定します。</li>
+                <li>対象の検証用Plan・共有範囲・期限を確認し、別途共有を承認します。</li>
+                <li>ChatGPTのCanovia MCP Staging接続時にも、Canovia側で紐付けた<strong>同じAuth0アカウント</strong>を明示的に選択します。GoogleとGitHubは、同じ人でも別の外部IDです。</li>
+                <li>意図しないアカウントで自動ログインされた場合は、ChatGPT側のMCP接続を再認証し、認証に使うブラウザのAuth0セッションを確認します。</li>
+            </ol>
+            <p class="muted" data-mcp-staging-chatgpt-unknown>Canoviaは、ChatGPT側の現在のOAuth接続・ログイン中の外部IDをこの画面から確認できません。接続・読み取りの成功はChatGPT側で別途テストしてください。認証コードやアクセストークンは入力・共有しないでください。</p>
+        </section>
+    @endif
+
     <section class="detail" data-mcp-account-link>
         <h2>Auth0の本人IDを確認</h2>
         <p class="muted">これから認証プロバイダーで本人確認し、確認結果をこの検証用アカウントに紐付けます。実際のデータ共有は行いません。</p>
