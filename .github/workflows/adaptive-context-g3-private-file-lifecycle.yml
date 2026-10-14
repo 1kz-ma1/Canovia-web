@@ -10,6 +10,8 @@ on:
       - 'app/Services/PrivateFileUploadIntentService.php'
       - 'app/Services/PrivateFileUploadReconciliationPreviewService.php'
       - 'app/Services/PrivateFileReconciliationSnapshotService.php'
+      - 'app/Services/PrivateFileGenerationContractService.php'
+      - 'tests/Feature/PrivateFileGenerationContractG3Test.php'
       - 'tests/Feature/PrivateFileUploadConsistencyProbeG3Test.php'
       - 'tests/Feature/PrivateFileUploadReconciliationPreviewG3Test.php'
       - 'database/migrations/2026_10_14_130000_create_private_file_upload_intents.php'
@@ -91,6 +93,8 @@ jobs:
           php -l app/Services/PrivateFileUploadIntentService.php
           php -l app/Services/PrivateFileUploadReconciliationPreviewService.php
           php -l app/Services/PrivateFileReconciliationSnapshotService.php
+          php -l app/Services/PrivateFileGenerationContractService.php
+          php -l tests/Feature/PrivateFileGenerationContractG3Test.php
           php -l tests/Feature/PrivateFileUploadConsistencyProbeG3Test.php
           php -l tests/Feature/PrivateFileUploadReconciliationPreviewG3Test.php
           php -l database/migrations/2026_10_14_130000_create_private_file_upload_intents.php
@@ -120,7 +124,7 @@ jobs:
           php -l tests/Feature/IosSoftLaunchWebReadinessV561Test.php
           php -l tests/Feature/SafePlanResourceRecallHandoffV5811Test.php
       - name: G3 private file lifecycle and durable retry outbox on PostgreSQL 16
-        run: php artisan test tests/Feature/PrivateFileLifecycleG3Test.php tests/Feature/PrivateFileCleanupOutboxG3Test.php tests/Feature/PrivateFileCleanupHealthG3Test.php tests/Feature/PrivateFilePathFenceG3Test.php tests/Feature/InboxRecallMaterialTransferG3Test.php tests/Feature/PrivateFileUploadG3Test.php tests/Feature/PrivateFileUploadIntentG3Test.php tests/Feature/PrivateFileUploadReconciliationPreviewG3Test.php tests/Feature/PrivateFileUploadConsistencyProbeG3Test.php tests/Feature/InboxUploadPathFenceG3Test.php tests/Feature/StudyScopeCaptureV534Test.php tests/Feature/StudyRecallBatchIngestV588Test.php tests/Feature/StudyRecallCandidateV4112Test.php --stop-on-failure
+        run: php artisan test tests/Feature/PrivateFileLifecycleG3Test.php tests/Feature/PrivateFileCleanupOutboxG3Test.php tests/Feature/PrivateFileCleanupHealthG3Test.php tests/Feature/PrivateFilePathFenceG3Test.php tests/Feature/InboxRecallMaterialTransferG3Test.php tests/Feature/PrivateFileUploadG3Test.php tests/Feature/PrivateFileUploadIntentG3Test.php tests/Feature/PrivateFileUploadReconciliationPreviewG3Test.php tests/Feature/PrivateFileUploadConsistencyProbeG3Test.php tests/Feature/PrivateFileGenerationContractG3Test.php tests/Feature/InboxUploadPathFenceG3Test.php tests/Feature/StudyScopeCaptureV534Test.php tests/Feature/StudyRecallBatchIngestV588Test.php tests/Feature/StudyRecallCandidateV4112Test.php --stop-on-failure
       - name: G3 opt-in Resource Recall route regression in isolated PHP process
         run: php artisan test tests/Feature/SafePlanResourceRecallHandoffV5811Test.php --stop-on-failure
       - name: G3 operator-only CLI dry-run and read-only health are available
@@ -131,6 +135,10 @@ jobs:
           # assert strict exit=2 for that exact attention state.
           php artisan canovia:private-file-cleanup-health --json
           php artisan canovia:private-upload-intent-health --json
+          # Operator contract is OFF by default; the deny is intentional.
+          if php artisan canovia:private-file-generation-contract --json; then
+            echo 'R16 generation contract must remain disabled by default' >&2; exit 1;
+          fi
           # Default preview is OFF; verify it cannot inspect keys.
           if php artisan canovia:private-upload-reconcile-preview --json; then
             echo 'R14 preview must be disabled in CI by default' >&2; exit 1;
