@@ -1,5 +1,5 @@
 @extends('auth.staging-pilot-shell')
-@section('title', '本人ID接続テスト | Canovia')
+@section('title', 'ChatGPT連携の準備 | Canovia')
 @section('content')
 @php
     $linkSettings = app(\App\Services\McpOAuthAccountLinkConfiguration::class)->settings();
@@ -56,51 +56,55 @@
         : null;
 @endphp
     <p class="eyebrow">{{ $syntheticReadReady ? 'STAGING / SYNTHETIC MCP READ PILOT' : 'STAGING / IDENTITY LINK ONLY' }}</p>
-    <h1>ログインできました</h1>
+    <h1>ChatGPTとCanoviaをつなぐ</h1>
     <p class="muted">検証用アカウント：{{ $user->email }}</p>
     <div class="note">
         @if ($syntheticReadReady)
-            検証用合成Development Planに限定したMCP読み取りの検証モードです。実際の読み取りには、有効な本人ID連携・個別の共有承認・認証済みChatGPTアクセストークンが必要です。
+            これは接続テスト用の画面です。ChatGPTに共有できるのは、テスト用に用意した計画だけです。普段の計画は共有されません。
         @else
-            Canoviaのログインは成功しています。ChatGPTからのMCP読み取りは、まだ無効です。
+            ログインできました。ChatGPT連携のテストは現在利用できません。
         @endif
     </div>
 
-    {{-- Owner-visible guidance only. This cannot inspect the separate ChatGPT
-         OAuth session and must never claim its identity is verified. --}}
+    {{-- This is a Canovia-side checklist only. Never infer the ChatGPT-side
+         OAuth login/account from a linked record or a Plan grant. --}}
     @if ($syntheticReadReady && $linkReady)
         <section class="detail" data-mcp-staging-dual-client-guide>
-            <h2>ChatGPTへの接続は、本人ID確認とは別の操作です</h2>
-            <p class="muted">Canoviaの「本人ID接続」とChatGPTの「MCP接続」は、Auth0で別々に認証されます。ブラウザに残った別アカウントのログインが再利用される場合があります。</p>
+            <h2>接続の進め方</h2>
+            <p class="muted">この画面で準備を済ませたら、ChatGPTでCanoviaを接続します。順番に進めれば大丈夫です。</p>
             <div class="note" data-mcp-staging-link-state>
-                Canovia側の本人ID連携：{{ $linked ? '連携記録あり' : '未連携' }}。
-                この表示は、現在のChatGPT側の認証アカウントを示すものではありません。
+                <strong>1. 本人確認：{{ $linked ? '済み' : '未完了' }}</strong>
+                <span> — あなたの計画をほかの人に見せないための確認です。</span>
             </div>
             <div class="note" data-mcp-staging-grant-state>
-                検証用Planの共有許可：{{ $activeGrant ? '有効' : '現在有効な共有許可なし' }}。
+                <strong>2. 計画の共有：{{ $activeGrant ? '許可中' : '許可していません' }}</strong>
                 @if ($activeGrant)
-                    共有範囲：{{ $activeGrant->scope === 'tasks' ? '概要＋Task' : '概要のみ' }}。
+                    <span> — 共有内容：{{ $activeGrant->scope === 'tasks' ? '計画の概要とタスク' : '計画の概要のみ' }}</span>
                 @endif
             </div>
             <ol>
-                <li>Canovia側でAuth0の本人IDを確認し、紐付けを確定します。</li>
-                <li>対象の検証用Plan・共有範囲・期限を確認し、別途共有を承認します。</li>
-                <li>ChatGPTのCanovia MCP Staging接続時にも、Canovia側で紐付けた<strong>同じAuth0アカウント</strong>を明示的に選択します。GoogleとGitHubは、同じ人でも別の外部IDです。</li>
-                <li>意図しないアカウントで自動ログインされた場合は、ChatGPT側のMCP接続を再認証し、認証に使うブラウザのAuth0セッションを確認します。</li>
+                <li>下の「本人確認」で使うアカウントを確認します。</li>
+                <li>ChatGPTに見せる計画と内容、共有する期間を選びます。</li>
+                <li>ChatGPTの連携設定から「Canovia MCP Staging」を接続します。その際、<strong>本人確認で選んだものと同じアカウント</strong>でログインしてください。</li>
             </ol>
-            <p class="muted" data-mcp-staging-chatgpt-unknown>Canoviaは、ChatGPT側の現在のOAuth接続・ログイン中の外部IDをこの画面から確認できません。接続・読み取りの成功はChatGPT側で別途テストしてください。認証コードやアクセストークンは入力・共有しないでください。</p>
+            <details class="note" data-mcp-staging-connection-help>
+                <summary>うまく接続できないとき</summary>
+                <p>ChatGPT側のCanovia接続をいったん解除して、再接続してみてください。最初にGitHubで本人確認した場合は、ChatGPTでもGitHubを選びます。Googleを使った場合も同様です。</p>
+                <p>別のアカウントで自動ログインしてしまう場合は、接続画面を開いたブラウザで、以前のログインが残っていないか確認してください。</p>
+            </details>
+            <p class="muted" data-mcp-staging-chatgpt-unknown>ここに「済み」「許可中」と表示されても、ChatGPT側の接続が完了したとは限りません。接続できたかどうかはChatGPTから実際に計画を確認して確かめてください。</p>
         </section>
     @endif
 
     <section class="detail" data-mcp-account-link>
-        <h2>Auth0の本人IDを確認</h2>
-        <p class="muted">これから認証プロバイダーで本人確認し、確認結果をこの検証用アカウントに紐付けます。実際のデータ共有は行いません。</p>
+        <h2>1. 本人確認</h2>
+        <p class="muted">接続に使うアカウントを確認します。この操作だけでは、ChatGPTに計画は共有されません。</p>
         @if ($canConfirm)
-            <p class="note" role="status">Auth0の確認が完了しました。紐付ける場合のみ確定してください。</p>
+            <p class="note" role="status">本人確認ができました。このアカウントを使う場合は、下のボタンで確定してください。</p>
             <div class="row">
                 <form method="POST" action="{{ route('auth.account.mcp_link.confirm') }}">
                     @csrf
-                    <button type="submit">本人IDの紐付けを確定</button>
+                    <button type="submit">このアカウントを使う</button>
                 </form>
                 <form method="POST" action="{{ route('auth.account.mcp_link.cancel') }}">
                     @csrf
@@ -108,37 +112,37 @@
                 </form>
             </div>
         @elseif ($linked)
-            <p class="note" role="status">本人IDの紐付け記録が存在します。Planの共有承認は別の操作です。</p>
+            <p class="note" role="status">本人確認が済んでいます。共有する計画は次の項目で選べます。</p>
         @elseif ($linkReady)
             <form method="POST" action="{{ route('auth.account.mcp_link.start') }}">
                 @csrf
-                <button type="submit">Auth0で本人確認を開始</button>
+                <button type="submit">本人確認をはじめる</button>
             </form>
         @else
             <p class="note warning" data-mcp-account-link-disabled>
-                Auth0の本人確認はまだ無効です。安全性の検証が完了するまで、この画面に留まります。
+                本人確認は現在利用できません。
             </p>
         @endif
     </section>
 
     @if ($fixture !== null)
         <section class="detail" data-mcp-staging-plan-consent>
-            <h2>検証用Development Planの共有承認</h2>
+            <h2>2. ChatGPTに見せる計画を選ぶ</h2>
             <p class="muted">対象：{{ $fixture->title }}</p>
             @if ($syntheticReadReady)
-                <p class="muted" data-mcp-synthetic-plan-id>検証用Plan ID：{{ $fixture->id }}</p>
+                <p class="muted" data-mcp-synthetic-plan-id>テスト用Plan番号：{{ $fixture->id }}</p>
             @endif
-            <p class="note warning">ここでの承認は隔離ステージングの合成データだけが対象です。{{ $syntheticReadReady ? '有効な共有許可の範囲のみMCP読み取り可能です。' : 'ChatGPTからのMCP読み取りはまだ無効です。' }}</p>
+            <p class="note warning">共有するのはテスト用の計画だけです。{{ $syntheticReadReady ? '選んだ範囲の情報だけをChatGPTから確認できます。' : '現在、ChatGPTとの共有は利用できません。' }}</p>
             @if ($canConfirmConsent)
                 <div class="note" role="status" data-mcp-staging-consent-confirm>
-                    Auth0で本人IDを再確認できました。対象：{{ $fixture->title }}。
-                    共有範囲：{{ $pendingConsent['scope'] === 'tasks' ? '概要＋Task' : '概要のみ' }}。
+                    本人確認ができました。共有する計画：{{ $fixture->title }}。
+                    共有する内容：{{ $pendingConsent['scope'] === 'tasks' ? '計画の概要とタスク' : '計画の概要だけ' }}。
                     期間：承認から{{ $pendingConsent['duration_days'] }}日。
                 </div>
                 <div class="row">
                     <form method="POST" action="{{ route('auth.account.mcp_plan_consent.confirm') }}">
                         @csrf
-                        <button type="submit">この検証用Planの共有許可を確定</button>
+                        <button type="submit">この計画の共有を許可する</button>
                     </form>
                     <form method="POST" action="{{ route('auth.account.mcp_plan_consent.cancel') }}">
                         @csrf
@@ -148,32 +152,32 @@
             @else
                 @if ($activeGrant)
                     <div class="note" data-mcp-staging-active-grant>
-                        検証用Planの共有承認があります。
+                        この計画を共有しています。
                         共有範囲：{{ $activeGrant->scope === 'tasks' ? '概要＋Task' : '概要のみ' }}。
                         有効期限：{{ $activeGrant->expires_at->format('Y-m-d H:i') }}。
-                        {{ $syntheticReadReady ? '有効な共有範囲でのみMCP読み取りが可能です。' : 'MCPの読み取りは引き続き無効です。' }}
+                        {{ $syntheticReadReady ? '許可した内容だけをChatGPTから確認できます。' : 'ChatGPTとの共有は現在利用できません。' }}
                     </div>
                     <form method="POST" action="{{ route('auth.account.mcp_grant.revoke', ['grant' => $activeGrant->id]) }}">
                         @csrf
                         @method('DELETE')
-                        <button class="secondary" type="submit">この検証用Planの共有許可を取り消す</button>
+                        <button class="secondary" type="submit">共有をやめる</button>
                     </form>
                 @endif
                 <form method="POST" action="{{ route('auth.account.mcp_plan_consent.start', ['plan' => $fixture->id]) }}">
                     @csrf
-                    <label for="mcp-scope">共有範囲</label>
+                    <label for="mcp-scope">ChatGPTに見せる内容</label>
                     <select id="mcp-scope" name="scope" required>
-                        <option value="overview">概要のみ</option>
-                        <option value="tasks">概要＋Task</option>
+                        <option value="overview">計画の概要だけ</option>
+                        <option value="tasks">計画の概要とタスク（名前・状態・進捗）</option>
                     </select>
-                    <label for="mcp-duration">有効期限</label>
+                    <label for="mcp-duration">共有する期間</label>
                     <select id="mcp-duration" name="duration_days" required>
                         <option value="1">1日</option>
                         <option value="7" selected>7日</option>
                         <option value="30">30日</option>
                     </select>
                     <div class="row">
-                        <button type="submit">Auth0で本人IDを再確認して承認へ</button>
+                        <button type="submit">本人確認して共有内容を確認する</button>
                     </div>
                 </form>
             @endif
