@@ -1,7 +1,9 @@
 @inject('providerCapabilityService', 'App\\Services\\DevelopmentOperationalProviderCapabilityService')
+@inject('operatorHandoffService', 'App\\Services\\DevelopmentOperationalOperatorHandoffService')
 @php
     $operationalTarget = $developmentOperationalTarget ?? null;
     $providerCapability = $providerCapabilityService->status($operationalTarget);
+    $operatorHandoff = $operatorHandoffService->build($plan, $operationalTarget, $developmentOperationalProfile ?? null);
     $operationalStore = data_get($developmentOperationalProfile, 'data_store', 'unknown');
     $canAttestRecovery = in_array($operationalStore, ['server_db', 'local_device', 'cloud_files', 'mixed'], true);
 @endphp
@@ -78,6 +80,39 @@
                     </p>
                 @endif
             </div>
+            @if ($operatorHandoff)
+                <details class="mt-3 rounded-lg border border-white/10 px-3 py-2"
+                    data-development-render-operator-handoff>
+                    <summary class="cursor-pointer text-xs font-semibold text-slate-300">
+                        Renderで安全に手動確認する（認証情報不要）
+                    </summary>
+                    <p class="mt-2 text-[11px] leading-5 text-slate-400">
+                        この案内は確認手順です。CanoviaはRenderにアクセスせず、結果を取得・保存していません。
+                        操作の前に、Render上のWorkspaceと登録サービスが一致するか確認してください。
+                    </p>
+                    <div class="mt-2 text-[11px] text-slate-300">
+                        照合対象ID：
+                        <code class="break-all select-all" data-development-render-target-id>{{ $operatorHandoff['resource_ref'] }}</code>
+                        <span class="ml-1 text-slate-500">（{{ $operatorHandoff['environment'] }}・所有者の申告）</span>
+                    </div>
+                    <a href="https://dashboard.render.com/" target="_blank" rel="noopener noreferrer"
+                        class="mt-2 inline-flex min-h-10 items-center text-xs font-semibold text-sky-300 underline underline-offset-4"
+                        data-development-render-dashboard-link>Renderダッシュボードを開く（別タブ）</a>
+                    <ol class="mt-2 list-decimal space-y-2 pl-4">
+                        @foreach ($operatorHandoff['steps'] as $step)
+                            <li class="text-[11px] leading-5 text-slate-300"
+                                data-development-render-step="{{ $step['key'] }}">
+                                <span class="font-semibold">{{ $step['title'] }}</span>
+                                <p class="text-slate-400">{{ $step['detail'] }}</p>
+                            </li>
+                        @endforeach
+                    </ol>
+                    <p class="mt-2 text-[10px] leading-5 text-slate-500">
+                        APIキー・トークン・環境変数・DB接続文字列・ログをCanoviaに貼り付けないでください。
+                        実施を記録する場合は下の所有者申告を使います。申告しても独立検証済みにはなりません。
+                    </p>
+                </details>
+            @endif
             @if ($canAttestRecovery)
                 @foreach (['backup' => 'バックアップを取得した', 'restore' => '隔離環境で復元テストを実施した'] as $kind => $label)
                     <div class="mt-3 flex flex-wrap items-center gap-2" data-development-confirm-kind="{{ $kind }}">
