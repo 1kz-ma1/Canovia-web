@@ -63,4 +63,11 @@ return [
         env('CANOVIA_PRIVATE_FILE_UPLOAD_RECONCILE_PREVIEW_ENABLED', false),
         FILTER_VALIDATE_BOOL
     ),
+
+    // G3-R15: optional double-sampling of weak object metadata and references.
+    // No immutable generation guarantee or deletion authorization; OFF.
+    'private_file_upload_consistency_probe_enabled' => filter_var(
+        env('CANOVIA_PRIVATE_FILE_UPLOAD_CONSISTENCY_PROBE_ENABLED', false),
+        FILTER_VALIDATE_BOOL
+    ),
 ];
