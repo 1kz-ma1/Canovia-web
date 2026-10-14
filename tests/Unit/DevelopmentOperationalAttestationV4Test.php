@@ -48,7 +48,7 @@ final class DevelopmentOperationalAttestationV4Test extends TestCase
     public function test_absent_or_cross_plan_target_never_attests_environment(): void
     {
         $s = new DevelopmentOperationalAttestationService();
-        $profile = ['data_store' => 'server_db'];
+        $profile = ['data_store' => 'server_db', 'data_store_revision' => 1];
         $this->assertSame([], $s->project($this->plan(), $profile, null));
         $this->assertSame([], $s->project($this->plan(99), $profile, $this->target()));
 
@@ -65,16 +65,17 @@ final class DevelopmentOperationalAttestationV4Test extends TestCase
         $target->backup_confirmed_at = Carbon::now()->subHours(2);
         $target->backup_revision = 1;
         $target->backup_store = 'server_db';
+        $target->backup_store_revision = 1;
 
         $projection = (new DevelopmentOperationalAttestationService())
-            ->project($this->plan(), ['data_store' => 'server_db'], $target);
+            ->project($this->plan(), ['data_store' => 'server_db', 'data_store_revision' => 1], $target);
 
         $this->assertSame('operator_confirmed', $projection['backup']['status']);
         $this->assertArrayNotHasKey('restore', $projection);
         $this->assertStringContainsString('独立検証なし', $projection['backup']['source']);
 
         $result = (new DevelopmentOperationalEvidenceService())->assess(
-            $this->plan(), null, false, ['data_store' => 'server_db'], $projection,
+            $this->plan(), null, false, ['data_store' => 'server_db', 'data_store_revision' => 1], $projection,
         );
         $this->assertSame('operator_confirmed', $this->check($result, 'backup')['status']);
         $this->assertSame('unknown', $this->check($result, 'restore')['status']);
@@ -90,15 +91,16 @@ final class DevelopmentOperationalAttestationV4Test extends TestCase
         $target->restore_confirmed_at = Carbon::now();
         $target->restore_revision = 1;
         $target->restore_store = 'server_db';
+        $target->restore_store_revision = 1;
 
         $target->revision = 2;
         $stale = (new DevelopmentOperationalAttestationService())
-            ->project($this->plan(), ['data_store' => 'server_db'], $target);
+            ->project($this->plan(), ['data_store' => 'server_db', 'data_store_revision' => 1], $target);
         $this->assertSame('stale', $stale['restore']['status']);
 
         $target->revision = 1;
         $changedStore = (new DevelopmentOperationalAttestationService())
-            ->project($this->plan(), ['data_store' => 'cloud_files'], $target);
+            ->project($this->plan(), ['data_store' => 'cloud_files', 'data_store_revision' => 1], $target);
         $this->assertSame('stale', $changedStore['restore']['status']);
     }
 
@@ -109,17 +111,19 @@ final class DevelopmentOperationalAttestationV4Test extends TestCase
         $target->backup_confirmed_at = Carbon::now()->subDays(8);
         $target->backup_revision = 1;
         $target->backup_store = 'server_db';
+        $target->backup_store_revision = 1;
         $target->restore_confirmed_at = Carbon::now()->subDays(91);
         $target->restore_revision = 1;
         $target->restore_store = 'server_db';
+        $target->restore_store_revision = 1;
 
         $evidence = (new DevelopmentOperationalAttestationService())
-            ->project($this->plan(), ['data_store' => 'server_db'], $target);
+            ->project($this->plan(), ['data_store' => 'server_db', 'data_store_revision' => 1], $target);
         $this->assertSame('stale', $evidence['backup']['status']);
         $this->assertSame('stale', $evidence['restore']['status']);
 
         $result = (new DevelopmentOperationalEvidenceService())->assess(
-            $this->plan(), null, false, ['data_store' => 'server_db'], $evidence
+            $this->plan(), null, false, ['data_store' => 'server_db', 'data_store_revision' => 1], $evidence
         );
         $this->assertSame('backup', $result['primary']['key']);
         $this->assertSame('stale', $this->check($result, 'backup')['status']);
@@ -141,11 +145,11 @@ final class DevelopmentOperationalAttestationV4Test extends TestCase
         $this->assertStringContainsString('外部API検証なし', $manual['source']);
         $this->assertArrayNotHasKey('verified', $manual);
 
-        $v4 = $attestation->project($plan, ['data_store' => 'server_db'], $target);
+        $v4 = $attestation->project($plan, ['data_store' => 'server_db', 'data_store_revision' => 1], $target);
         $this->assertSame('declared', $v4['environment']['status']);
         $this->assertArrayNotHasKey('service_identity', $v4);
         $result = (new DevelopmentOperationalEvidenceService())->assess(
-            $plan, null, false, ['data_store' => 'server_db'], $v4,
+            $plan, null, false, ['data_store' => 'server_db', 'data_store_revision' => 1], $v4,
         );
         $this->assertSame('unknown', $this->check($result, 'deploy')['status']);
         $this->assertSame('unknown', $this->check($result, 'ci')['status']);
@@ -206,6 +210,7 @@ final class DevelopmentOperationalAttestationV4Test extends TestCase
         $target->backup_confirmed_at = Carbon::now();
         $target->backup_revision = 1;
         $target->backup_store = 'server_db';
+        $target->backup_store_revision = 1;
 
         $evidence = (new DevelopmentOperationalAttestationService())
             ->project($this->plan(), ['data_store' => 'none'], $target);
