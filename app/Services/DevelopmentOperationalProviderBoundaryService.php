@@ -96,6 +96,8 @@ final class DevelopmentOperationalProviderBoundaryService
             || ($observation['service_exists'] ?? null) !== true
             || ($observation['connection_id'] ?? null) !== $connectionId
             || ($observation['workspace_id'] ?? null) !== $workspaceId
+            // Must originate from the provider's service.ownerId, not the grant.
+            || ($observation['service_owner_id'] ?? null) !== $workspaceId
             || ($observation['service_id'] ?? null) !== $target->resource_ref
             || ($observation['consent_epoch'] ?? null) !== $epoch
             || ($observation['target_revision'] ?? null) !== (int) $target->revision) {
