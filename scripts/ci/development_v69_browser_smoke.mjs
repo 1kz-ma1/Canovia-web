@@ -98,7 +98,7 @@ try {
     assert.equal(await page.locator('[data-guided-execution-active]').getByText(next).count() > 0, true);
     step('Started follow-up action without submitting another reflection');
 
-    await page.goto(`${base}/auth/account`);
+    await page.goto(`${base}/account`);
     const logout = page.locator('form[action$="/logout"]').first();
     await logout.getByRole('button', { name: 'ログアウト' }).click();
     await page.goto(`${base}/login`);
