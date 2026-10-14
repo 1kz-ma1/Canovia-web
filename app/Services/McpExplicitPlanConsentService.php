@@ -58,6 +58,7 @@ final class McpExplicitPlanConsentService
             ->where('provider_key', 'chatgpt')
             ->where('status', McpLinkedSubject::STATUS_LINKED)
             ->whereNull('revoked_at')
+            ->whereColumn('identity_fingerprint', 'active_identity_fingerprint')
             ->whereNotNull('linked_at')
             ->where('linked_at', '<=', now())
             ->exists();
