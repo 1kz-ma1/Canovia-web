@@ -141,7 +141,7 @@ This is a scheduling/cost optimization for obsolete *main PR* revisions, not a n
 
 ## Platform PR concurrency live acceptance — evidence protocol (2026-10-14)
 
-**CURRENT TEST STATE: IN PROGRESS; NOT VERIFIED.** Only the Platform lane's own documentation is changed on this branch; no product behavior, GitHub rules or production settings are modified.
+**CURRENT TEST STATE: VERIFIED for main-target PR supersession; production remains NOT VERIFIED by live event.** Only the Platform lane's own documentation is changed on this branch; no product behavior, GitHub rules or production settings are modified.
 
 1. Start a normal PR from the dedicated Platform feature branch into main. Capture each GitHub Actions run ID, PR number, SHA, status and conclusion for both long-running always-on checks (Workspace Resume, Production Migration Recovery).
 2. While the first Workspace Resume run is executing, add a second documentation-only commit to this same PR to trigger a second run.
@@ -154,3 +154,20 @@ This is a scheduling/cost optimization for obsolete *main PR* revisions, not a n
 ### Controlled second revision — evidence marker
 
 The second commit was deliberately made after GitHub API showed the first SHA's Workspace Resume run 38546176452 as **in_progress**, along with Migration Recovery run 38546176439 as **in_progress**. Old head SHA: 65efc41a8917173f377b57e30d291df6f35508c7. The observable outcomes are assessed only using the GitHub API run statuses after this commit; no claim of cancellation is made by this marker alone.
+
+### Empirical result from PR #629 (2026-10-14 UTC)
+
+Controlled PR #629 used the same feature branch, target main and two documentation-only head SHAs:
+
+| Exact check | Old run (head 65efc41a...) | New run (head bc034b8b...) |
+| --- | --- | --- |
+| Workspace Resume | [#38546176452](https://github.com/1kz-ma1/Canovia-web/actions/runs/38546176452): **cancelled** | [#38546226514](https://github.com/1kz-ma1/Canovia-web/actions/runs/38546226514): **success** |
+| Production Migration Recovery Validation | [#38546176439](https://github.com/1kz-ma1/Canovia-web/actions/runs/38546176439): **cancelled** | [#38546226390](https://github.com/1kz-ma1/Canovia-web/actions/runs/38546226390): **success** |
+| Development Prelaunch | Old success | New success |
+| Platform Release Preflight | Old success | New success |
+
+The old Workspace Resume job ran from 09:57:52 to 09:59:10 UTC before cancellation (78 seconds). New Workspace Resume waited in pending until the old run exited, then ran. Old Migration Recovery job was cancelled after ~26 seconds. Neither old nor new SHA corresponds to a production release candidate. Old runs cancelled by supersession are not failures of application test logic.
+
+**OBSERVED:** workflow-level concurrency cancels superseded in-progress **main-targeted PR** runs and permits the newer exact SHA to finish with all required broad CI green. This confirms functional cancellation behavior but **does not quantify billed time savings**; partial runs may still incur charges. Actual production PR/push behavior remains NOT VERIFIED by live experiment and must not be tested on production without owner authorization.
+
+Evidence was obtained using GitHub Actions read-only run/job metadata; no GitHub cancel API, Render deploy, Aiven DB, production branch, checkout of user secrets or PR cleanup was performed. The final documentation-only head commit adding this record must itself pass all current-head PR checks before merge.
