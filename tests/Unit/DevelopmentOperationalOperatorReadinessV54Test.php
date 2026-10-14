@@ -43,7 +43,7 @@ final class DevelopmentOperationalOperatorReadinessV54Test extends TestCase
         ))->summarize($plan ?? $this->plan(), $profile, $target);
     }
 
-    private function status(array $summary, string $key): string
+    private function checkStatus(array $summary, string $key): string
     {
         foreach ($summary['checks'] as $check) {
             if ($check['key'] === $key) {
@@ -58,9 +58,9 @@ final class DevelopmentOperationalOperatorReadinessV54Test extends TestCase
         $summary = $this->summarize(null, $this->target());
         $this->assertCount(3, $summary['checks']);
         $this->assertSame('storage', $summary['next']['key']);
-        $this->assertSame('unknown', $this->status($summary, 'service'));
-        $this->assertSame('unknown', $this->status($summary, 'backup'));
-        $this->assertSame('unknown', $this->status($summary, 'restore'));
+        $this->assertSame('unknown', $this->checkStatus($summary, 'service'));
+        $this->assertSame('unknown', $this->checkStatus($summary, 'backup'));
+        $this->assertSame('unknown', $this->checkStatus($summary, 'restore'));
         $this->assertStringContainsString('自己申告', $summary['basis']);
     }
 
@@ -68,8 +68,8 @@ final class DevelopmentOperationalOperatorReadinessV54Test extends TestCase
     {
         $summary = $this->summarize(['data_store' => 'none'], $this->target());
         $this->assertSame('service', $summary['next']['key']);
-        $this->assertSame('not_applicable', $this->status($summary, 'backup'));
-        $this->assertSame('not_applicable', $this->status($summary, 'restore'));
+        $this->assertSame('not_applicable', $this->checkStatus($summary, 'backup'));
+        $this->assertSame('not_applicable', $this->checkStatus($summary, 'restore'));
     }
 
     public function test_guidance_advances_from_service_to_backup_to_restore_without_release_go(): void
@@ -94,9 +94,9 @@ final class DevelopmentOperationalOperatorReadinessV54Test extends TestCase
         $target->restore_store = 'server_db';
         $summary = $this->summarize($profile, $target);
         $this->assertSame('release_review', $summary['next']['key']);
-        $this->assertSame('operator_confirmed', $this->status($summary, 'service'));
-        $this->assertSame('operator_confirmed', $this->status($summary, 'backup'));
-        $this->assertSame('operator_confirmed', $this->status($summary, 'restore'));
+        $this->assertSame('operator_confirmed', $this->checkStatus($summary, 'service'));
+        $this->assertSame('operator_confirmed', $this->checkStatus($summary, 'backup'));
+        $this->assertSame('operator_confirmed', $this->checkStatus($summary, 'restore'));
         $this->assertStringContainsString('独立検証', $summary['next']['detail']);
         $this->assertArrayNotHasKey('release_approved', $summary);
         $this->assertArrayNotHasKey('verified', $summary);
@@ -114,19 +114,19 @@ final class DevelopmentOperationalOperatorReadinessV54Test extends TestCase
         $target->backup_store = 'server_db';
 
         $summary = $this->summarize(['data_store' => 'server_db'], $target);
-        $this->assertSame('stale', $this->status($summary, 'service'));
+        $this->assertSame('stale', $this->checkStatus($summary, 'service'));
         $this->assertSame('service', $summary['next']['key']);
 
         $target->service_checked_at = Carbon::now();
         $target->revision = 2;
         $summary = $this->summarize(['data_store' => 'server_db'], $target);
-        $this->assertSame('stale', $this->status($summary, 'service'));
-        $this->assertSame('stale', $this->status($summary, 'backup'));
+        $this->assertSame('stale', $this->checkStatus($summary, 'service'));
+        $this->assertSame('stale', $this->checkStatus($summary, 'backup'));
 
         $target->service_checked_revision = 2;
         $target->backup_revision = 2;
         $summary = $this->summarize(['data_store' => 'cloud_files'], $target);
-        $this->assertSame('stale', $this->status($summary, 'backup'));
+        $this->assertSame('stale', $this->checkStatus($summary, 'backup'));
         $this->assertSame('backup', $summary['next']['key']);
     }
 
@@ -151,6 +151,6 @@ final class DevelopmentOperationalOperatorReadinessV54Test extends TestCase
         $target->backup_revision = 1;
         $target->backup_store = 'server_db';
         $summary = $this->summarize(['data_store' => 'server_db'], $target);
-        $this->assertSame('stale', $this->status($summary, 'backup'));
+        $this->assertSame('stale', $this->checkStatus($summary, 'backup'));
     }
 }
