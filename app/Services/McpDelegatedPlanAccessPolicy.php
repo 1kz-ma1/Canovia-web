@@ -53,7 +53,11 @@ final class McpDelegatedPlanAccessPolicy
         if (config('canovia_mcp.delegated_policy_enabled') !== true
             || $this->verifier->mode() === null
             || ! $this->resource->isReady()
-            || ! in_array($requestedScope, ['overview', 'tasks'], true)
+            || ! in_array($requestedScope, ['overview', 'tasks', 'study_progress'], true)
+            || ($requestedScope === 'study_progress' && (
+                $requiredDomain !== 'study'
+                || config('canovia_mcp.study_summary_read_enabled') !== true
+            ))
             || ! in_array($requiredDomain, ['development', 'study'], true)
             || ($requiredDomain === 'study' && (
                 config('canovia_mcp.study_read_enabled') !== true
@@ -133,13 +137,21 @@ final class McpDelegatedPlanAccessPolicy
             ->when($lockForRead, fn ($query) => $query->lockForUpdate())
             ->first(['id', 'user_id', 'subject_link_id', 'scope']);
 
-        if ($grant === null || ! in_array($grant->scope, ['overview', 'tasks'], true)) {
+        if ($grant === null
+            || ! in_array($grant->scope, ['overview', 'tasks', 'study_progress'], true)
+            || ($grant->scope === 'study_progress' && (
+                $requiredDomain !== 'study'
+                || config('canovia_mcp.study_summary_read_enabled') !== true
+            ))) {
             return null;
         }
 
         // An overview-only grant must NEVER authorize Task title/progress data.
-        return ($requestedScope === 'overview' || $grant->scope === 'tasks')
-            ? $grant
-            : null;
+        return match ($requestedScope) {
+            'overview' => $grant,
+            'tasks' => in_array($grant->scope, ['tasks', 'study_progress'], true) ? $grant : null,
+            'study_progress' => $grant->scope === 'study_progress' ? $grant : null,
+            default => null,
+        };
     }
 }
