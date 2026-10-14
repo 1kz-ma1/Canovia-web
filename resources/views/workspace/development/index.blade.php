@@ -298,10 +298,6 @@
             ])
         @endif
 
-        @if (($developmentSurface ?? 'work') === 'work' && ! ($developmentLegacyCreativeActive ?? false))
-            @include('workspace.development.partials.prelaunch-preparation')
-        @endif
-
         @switch($developmentSurface ?? 'work')
             @case('repository')
                 @include('workspace.development.surfaces.repository')
