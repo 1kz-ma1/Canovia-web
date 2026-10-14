@@ -258,8 +258,20 @@ final class PrivateFileLifecycleService
             if (! $this->tableHasPath($source)) {
                 throw new \RuntimeException('Private file reference schema unavailable');
             }
-            if (DB::table($source['table'])
-                ->where($source['path'], $path)->exists()) {
+            $query = DB::table($source['table'])
+                ->where($source['path'], $path);
+
+            // MySQL/MariaDB's default REPEATABLE READ can reuse a stale
+            // snapshot for exists(). A locking SELECT is a CURRENT read;
+            // first(['id']) deliberately preserves FOR UPDATE in SQL
+            // (an exists() optimization need not include that clause).
+            // This cannot serialize writers that do not share a path fence,
+            // and broad gap/next-key locks require separate indexing review.
+            if (in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+                if ($query->lockForUpdate()->first(['id']) !== null) {
+                    return true;
+                }
+            } elseif ($query->exists()) {
                 return true;
             }
         }
