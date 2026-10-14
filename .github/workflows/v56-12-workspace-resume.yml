@@ -38,206 +38,212 @@ jobs:
       - name: Learning session draft autosave client regression
         run: node --test tests/js/learning-answer-autosave.test.mjs
       - name: PHP lint
+        shell: bash
         run: |
-          php -l app/Http/Controllers/HomeController.php
-          php -l app/Services/ContinuityService.php
-          php -l tests/Feature/WorkspaceResumeAndSessionScopeV5612Test.php
-          php -l tests/Feature/WorkspaceModePersistenceV542Test.php
-          php -l tests/Feature/ReleaseLevelFoundationV5820Test.php
-          php -l tests/Feature/ReleaseReviewV5824Test.php
-          php -l app/Services/ReleaseGateService.php
-          php -l app/Http/Controllers/AdminReleaseGateController.php
-          php -l tests/Feature/ReleaseGateInventoryV5821Test.php
-          php -l app/Http/Controllers/ProductPreviewController.php
-          php -l tests/Feature/ProductPreviewV5822Test.php
-          php -l app/Services/EarlyAccessService.php
-          php -l app/Services/EarlyAccessTelemetryService.php
-          php -l app/Services/EarlyAccessInsightsService.php
-          php -l app/Http/Controllers/AdminEarlyAccessController.php
-          php -l app/Http/Middleware/TrackEarlyAccessVisit.php
-          php -l tests/Feature/EarlyAccessObservabilityV5823Test.php
-          php -l app/Models/ReleaseReviewCheck.php
-          php -l app/Services/ReleaseReviewService.php
-          php -l tests/Feature/ReleaseReviewV5824Test.php
-          php -l database/migrations/2026_10_07_010000_create_release_review_checks_table.php
-          php -l app/Http/Controllers/PersonalizationController.php
-          php -l app/Services/PersonalizationContextService.php
-          php -l app/Services/PersonalizationBootstrapService.php
-          php -l app/Models/UserPersonalizationContext.php
-          php -l tests/Feature/PersonalizationBootstrapV5825Test.php
-          php -l database/migrations/2026_10_07_020000_create_user_personalization_contexts_table.php
-          php -l app/Services/CapabilityActivationService.php
-          php -l app/Http/Controllers/CapabilityActivationController.php
-          php -l tests/Feature/CapabilityActivationV5826Test.php
-          php -l app/Services/PersonalizationLivingProfileService.php
-          php -l app/Http/Controllers/PersonalizationContextUpdateController.php
-          php -l tests/Feature/LivingProfileV5827Test.php
-          php -l app/Services/StudyBehaviorPersonalizationAdapter.php
-          php -l tests/Feature/StudyBehaviorPersonalizationV5828Test.php
-          php -l app/Services/PlanLifecyclePersonalizationAdapter.php
-          php -l tests/Feature/PlanLifecyclePersonalizationV5829Test.php
-          php -l app/Services/PlanCompletionFingerprintService.php
-          php -l tests/Feature/PlanCompletionFingerprintV5830Test.php
-          php -l app/Services/ReturnAfterAbsencePersonalizationAdapter.php
-          php -l tests/Feature/ReturnAfterAbsencePersonalizationV5831Test.php
-          php -l app/Services/DevelopmentPersonalizationSignalService.php
-          php -l tests/Feature/CandidateEvidenceReopenV5832Test.php
-          php -l app/Services/PersonalizationConfidenceCalibrationService.php
-          php -l app/Services/StudyReviewCyclePersonalizationAdapter.php
-          php -l tests/Feature/StudyReviewCyclePersonalizationV5833Test.php
-          php -l tests/Feature/LongUsageWindowPersonalizationV5834Test.php
-          php -l tests/Feature/OverviewRelevanceV5865Test.php
-          php -l app/Services/BookkeepingJournalEntryGrader.php
-          php -l app/Services/BookkeepingJournalPracticeService.php
-          php -l app/Http/Controllers/BookkeepingJournalPracticeController.php
-          php -l tests/Feature/BookkeepingJournalPracticeV5862Test.php
-          php -l app/Services/StudyOfficialExamReferenceService.php
-          php -l tests/Feature/OfficialExamScopeAwareStudyV5864Test.php
-          php -l app/Services/DevelopmentCreativePlanAccessService.php
-          php -l app/Http/Controllers/DevelopmentCreativePlanSelectionController.php
-          php -l tests/Feature/DevelopmentCreativePlanRescueV5863Test.php
-          php -l tests/Feature/PlanActionFirstCreationV5866Test.php
-          php -l app/Services/PlanIntentClassificationService.php
-          php -l tests/Feature/PlanIntentClassificationV5867Test.php
-          php -l database/migrations/2026_10_08_130000_add_workspace_domain_override_to_plans.php
-          php -l tests/Feature/PlanDomainOverrideV5868Test.php
-          php -l app/Http/Controllers/PlanActionDraftController.php
-          php -l app/Models/PlanActionDraft.php
-          php -l app/Models/PlanActionDraftRevision.php
-          php -l app/Services/PlanActionDraftEvidenceService.php
-          php -l app/Services/PlanActionDraftTypedEvidenceService.php
-          php -l app/Services/PlanActionDraftStepService.php
-          php -l app/Services/PlanActionDraftQualityService.php
-          php -l app/Services/PlanActionDraftSpotlightService.php
-          php -l app/Http/Controllers/PlanActionDraftSpotlightController.php
-          php -l database/migrations/2026_10_08_190000_add_action_draft_spotlight_acknowledged_to_plans.php
-          php -l tests/Feature/PlanActionDraftSpotlightV5876Test.php
-          php -l tests/Feature/LearningAdjustmentMigrationRecoveryV5884Test.php
-          php -l database/migrations/2026_10_08_230000_create_learning_answer_evaluation_adjustments.php
-          php -l app/Intelligence/Presentation/IntelligenceStateChangeFeedbackService.php
-          php -l tests/Feature/IntelligenceEvidenceArrayDiffV5885Test.php
-          php -l app/Services/WorkspaceNavigationService.php
-          php -l app/Http/Middleware/RememberWorkspaceScreen.php
-          php -l tests/Feature/LearningImmersionShellV5888Test.php
-          php -l tests/Feature/LegacyStudyWorkspaceResumeV5887Test.php
-          php -l tests/Feature/ContextualWorkspaceNavigationV5883Test.php
-          php -l tests/Feature/ReleaseLevelFoundationV5820Test.php
-          php -l tests/Feature/PrimaryNavigationCompanionV510Test.php
-          php -l tests/Feature/WorkspaceModeBarV541Test.php
-          php -l app/Http/Controllers/AdaptiveLearningController.php
-          php -l app/Http/Controllers/AdaptiveLearningAnswerDraftController.php
-          php -l app/Http/Controllers/AdaptiveLearningHistoryController.php
-          php -l app/Services/AdaptiveLearningHistoryService.php
-          php -l tests/Feature/AdaptiveLearningHistoryUiTest.php
-          php -l app/Services/AdaptiveLearningAnswerDraftService.php
-          php -l tests/Feature/AdaptiveLearningSessionDraftL3cTest.php
-          php -l app/Services/AdaptiveLearningBankQueueService.php
-          php -l app/Models/LearningRun.php
-          php -l app/Models/LearningRunItem.php
-          php -l app/Models/LearningAnswerEvent.php
-          php -l database/migrations/2026_10_08_200000_create_learning_runs_and_answer_events.php
-          php -l tests/Feature/AdaptiveLearningSingleQuestionV5878Test.php
-          php -l tests/Feature/AdaptiveLearningTypedAnswersL3Test.php
-          php -l app/Services/AdaptiveLearningTypedAnswerService.php
-          php -l database/migrations/2026_10_09_160000_add_typed_answer_payload_to_learning_answer_events.php
-          php -l app/Services/QuestionPackPublicationReadinessService.php
-          php -l app/Http/Controllers/AdminQuestionPackController.php
-          php -l tests/Feature/QuestionPackPublicationReadinessL2Test.php
-          php -l tests/Feature/LearningBundledPackDeliveryL2Test.php
-          php -l app/Models/LearningRunCandidate.php
-          php -l app/Services/AdaptiveLearningCandidateService.php
-          php -l database/migrations/2026_10_08_210000_create_learning_run_candidates.php
-          php -l tests/Feature/AdaptiveLearningCandidateQueueV5879Test.php
-          php -l tests/Feature/AdaptiveLearningCrossRunCandidateL4Test.php
-          php -l app/Models/LearningExamResponseDraft.php
-          php -l app/Services/AdaptiveExamProfileRegistry.php
-          php -l app/Http/Controllers/AdaptiveLearningExamController.php
-          php -l database/migrations/2026_10_08_220000_add_exam_simulation_to_learning_runs.php
-          php -l config/adaptive_exam_profiles.php
-          php -l tests/Feature/AdaptiveLearningExamSimulationV5880Test.php
-          php -l app/Services/AdaptiveExamPackReadinessService.php
-          php -l tests/Feature/AdaptiveLearningVerifiedApExamL5Test.php
-          php -l tests/Feature/ApExamCandidateBundleAuditTest.php
-          php -l tests/Feature/ApExamCandidateReviewQueueTest.php
-          php -l tests/Feature/ApExamCandidateRevisionPreviewTest.php
-          php -l tests/Feature/ApExamCandidateQualityReviewTest.php
-          php -l tests/Feature/ApExamIpaAttributionReadinessTest.php
-          php -l app/Services/ApExamIpaAttributionReadinessService.php
-          php -l app/Services/ApExamCandidateQualityReviewService.php
-          php -l app/Services/ApExamCandidateRevisionPreviewService.php
-          php -l app/Services/ApExamCandidateAuditService.php
-          php -l app/Services/AdaptiveLearningModeRecommendationService.php
-          php -l tests/Feature/AdaptiveLearningModeRecommendationV5881Test.php
-          php -l app/Models/LearningAnswerEvaluationAdjustment.php
-          php -l app/Http/Controllers/AdaptiveLearningEvaluationAdjustmentController.php
-          php -l database/migrations/2026_10_08_230000_create_learning_answer_evaluation_adjustments.php
-          php -l tests/Feature/AdaptiveLearningEvaluationAdjustmentV5882Test.php
-          php -l database/migrations/2026_10_08_180000_add_proposal_fingerprint_to_action_draft_steps.php
-          php -l tests/Feature/PlanActionDraftV5875Test.php
-          php -l app/Models/PlanActionDraftStep.php
-          php -l database/migrations/2026_10_08_170000_create_plan_action_draft_steps_table.php
-          php -l tests/Feature/PlanActionDraftV5874Test.php
-          php -l tests/Feature/PlanActionDraftV5873Test.php
-          php -l database/migrations/2026_10_08_160000_add_evidence_revisions_to_plan_action_drafts.php
-          php -l tests/Feature/PlanActionDraftV5872Test.php
-          php -l database/migrations/2026_10_08_150000_create_plan_action_drafts_table.php
-          php -l tests/Feature/PlanActionDraftV5871Test.php
-          php -l database/migrations/2026_10_09_000200_create_mcp_identity_links_and_delegated_grants.php
-          php -l app/Models/McpLinkedSubject.php
-          php -l app/Models/McpDelegatedGrant.php
-          php -l app/Services/McpDelegatedIdentityFingerprintService.php
-          php -l database/migrations/2026_10_09_000300_create_mcp_delegated_access_events_table.php
-          php -l app/Services/McpStagingSyntheticActorBootstrap.php
-          php -l tests/Feature/McpStagingSyntheticActorBootstrapTest.php
-          php -l app/Http/Middleware/CloseUnopenedMcpStaging.php
-          php -l config/canovia_staging.php
-          php -l tests/Feature/McpIsolatedStagingBootstrapTest.php
+          set -euo pipefail
+          # Preserve all 197 original PHP paths, including any repeats.
+          # The xargs exit code fails the job if any child php -l fails.
+          cat <<'CANOVIA_PHP_LINT_FILES' | xargs -r -P 4 -n 1 php -l
+          app/Http/Controllers/HomeController.php
+          app/Services/ContinuityService.php
+          tests/Feature/WorkspaceResumeAndSessionScopeV5612Test.php
+          tests/Feature/WorkspaceModePersistenceV542Test.php
+          tests/Feature/ReleaseLevelFoundationV5820Test.php
+          tests/Feature/ReleaseReviewV5824Test.php
+          app/Services/ReleaseGateService.php
+          app/Http/Controllers/AdminReleaseGateController.php
+          tests/Feature/ReleaseGateInventoryV5821Test.php
+          app/Http/Controllers/ProductPreviewController.php
+          tests/Feature/ProductPreviewV5822Test.php
+          app/Services/EarlyAccessService.php
+          app/Services/EarlyAccessTelemetryService.php
+          app/Services/EarlyAccessInsightsService.php
+          app/Http/Controllers/AdminEarlyAccessController.php
+          app/Http/Middleware/TrackEarlyAccessVisit.php
+          tests/Feature/EarlyAccessObservabilityV5823Test.php
+          app/Models/ReleaseReviewCheck.php
+          app/Services/ReleaseReviewService.php
+          tests/Feature/ReleaseReviewV5824Test.php
+          database/migrations/2026_10_07_010000_create_release_review_checks_table.php
+          app/Http/Controllers/PersonalizationController.php
+          app/Services/PersonalizationContextService.php
+          app/Services/PersonalizationBootstrapService.php
+          app/Models/UserPersonalizationContext.php
+          tests/Feature/PersonalizationBootstrapV5825Test.php
+          database/migrations/2026_10_07_020000_create_user_personalization_contexts_table.php
+          app/Services/CapabilityActivationService.php
+          app/Http/Controllers/CapabilityActivationController.php
+          tests/Feature/CapabilityActivationV5826Test.php
+          app/Services/PersonalizationLivingProfileService.php
+          app/Http/Controllers/PersonalizationContextUpdateController.php
+          tests/Feature/LivingProfileV5827Test.php
+          app/Services/StudyBehaviorPersonalizationAdapter.php
+          tests/Feature/StudyBehaviorPersonalizationV5828Test.php
+          app/Services/PlanLifecyclePersonalizationAdapter.php
+          tests/Feature/PlanLifecyclePersonalizationV5829Test.php
+          app/Services/PlanCompletionFingerprintService.php
+          tests/Feature/PlanCompletionFingerprintV5830Test.php
+          app/Services/ReturnAfterAbsencePersonalizationAdapter.php
+          tests/Feature/ReturnAfterAbsencePersonalizationV5831Test.php
+          app/Services/DevelopmentPersonalizationSignalService.php
+          tests/Feature/CandidateEvidenceReopenV5832Test.php
+          app/Services/PersonalizationConfidenceCalibrationService.php
+          app/Services/StudyReviewCyclePersonalizationAdapter.php
+          tests/Feature/StudyReviewCyclePersonalizationV5833Test.php
+          tests/Feature/LongUsageWindowPersonalizationV5834Test.php
+          tests/Feature/OverviewRelevanceV5865Test.php
+          app/Services/BookkeepingJournalEntryGrader.php
+          app/Services/BookkeepingJournalPracticeService.php
+          app/Http/Controllers/BookkeepingJournalPracticeController.php
+          tests/Feature/BookkeepingJournalPracticeV5862Test.php
+          app/Services/StudyOfficialExamReferenceService.php
+          tests/Feature/OfficialExamScopeAwareStudyV5864Test.php
+          app/Services/DevelopmentCreativePlanAccessService.php
+          app/Http/Controllers/DevelopmentCreativePlanSelectionController.php
+          tests/Feature/DevelopmentCreativePlanRescueV5863Test.php
+          tests/Feature/PlanActionFirstCreationV5866Test.php
+          app/Services/PlanIntentClassificationService.php
+          tests/Feature/PlanIntentClassificationV5867Test.php
+          database/migrations/2026_10_08_130000_add_workspace_domain_override_to_plans.php
+          tests/Feature/PlanDomainOverrideV5868Test.php
+          app/Http/Controllers/PlanActionDraftController.php
+          app/Models/PlanActionDraft.php
+          app/Models/PlanActionDraftRevision.php
+          app/Services/PlanActionDraftEvidenceService.php
+          app/Services/PlanActionDraftTypedEvidenceService.php
+          app/Services/PlanActionDraftStepService.php
+          app/Services/PlanActionDraftQualityService.php
+          app/Services/PlanActionDraftSpotlightService.php
+          app/Http/Controllers/PlanActionDraftSpotlightController.php
+          database/migrations/2026_10_08_190000_add_action_draft_spotlight_acknowledged_to_plans.php
+          tests/Feature/PlanActionDraftSpotlightV5876Test.php
+          tests/Feature/LearningAdjustmentMigrationRecoveryV5884Test.php
+          database/migrations/2026_10_08_230000_create_learning_answer_evaluation_adjustments.php
+          app/Intelligence/Presentation/IntelligenceStateChangeFeedbackService.php
+          tests/Feature/IntelligenceEvidenceArrayDiffV5885Test.php
+          app/Services/WorkspaceNavigationService.php
+          app/Http/Middleware/RememberWorkspaceScreen.php
+          tests/Feature/LearningImmersionShellV5888Test.php
+          tests/Feature/LegacyStudyWorkspaceResumeV5887Test.php
+          tests/Feature/ContextualWorkspaceNavigationV5883Test.php
+          tests/Feature/ReleaseLevelFoundationV5820Test.php
+          tests/Feature/PrimaryNavigationCompanionV510Test.php
+          tests/Feature/WorkspaceModeBarV541Test.php
+          app/Http/Controllers/AdaptiveLearningController.php
+          app/Http/Controllers/AdaptiveLearningAnswerDraftController.php
+          app/Http/Controllers/AdaptiveLearningHistoryController.php
+          app/Services/AdaptiveLearningHistoryService.php
+          tests/Feature/AdaptiveLearningHistoryUiTest.php
+          app/Services/AdaptiveLearningAnswerDraftService.php
+          tests/Feature/AdaptiveLearningSessionDraftL3cTest.php
+          app/Services/AdaptiveLearningBankQueueService.php
+          app/Models/LearningRun.php
+          app/Models/LearningRunItem.php
+          app/Models/LearningAnswerEvent.php
+          database/migrations/2026_10_08_200000_create_learning_runs_and_answer_events.php
+          tests/Feature/AdaptiveLearningSingleQuestionV5878Test.php
+          tests/Feature/AdaptiveLearningTypedAnswersL3Test.php
+          app/Services/AdaptiveLearningTypedAnswerService.php
+          database/migrations/2026_10_09_160000_add_typed_answer_payload_to_learning_answer_events.php
+          app/Services/QuestionPackPublicationReadinessService.php
+          app/Http/Controllers/AdminQuestionPackController.php
+          tests/Feature/QuestionPackPublicationReadinessL2Test.php
+          tests/Feature/LearningBundledPackDeliveryL2Test.php
+          app/Models/LearningRunCandidate.php
+          app/Services/AdaptiveLearningCandidateService.php
+          database/migrations/2026_10_08_210000_create_learning_run_candidates.php
+          tests/Feature/AdaptiveLearningCandidateQueueV5879Test.php
+          tests/Feature/AdaptiveLearningCrossRunCandidateL4Test.php
+          app/Models/LearningExamResponseDraft.php
+          app/Services/AdaptiveExamProfileRegistry.php
+          app/Http/Controllers/AdaptiveLearningExamController.php
+          database/migrations/2026_10_08_220000_add_exam_simulation_to_learning_runs.php
+          config/adaptive_exam_profiles.php
+          tests/Feature/AdaptiveLearningExamSimulationV5880Test.php
+          app/Services/AdaptiveExamPackReadinessService.php
+          tests/Feature/AdaptiveLearningVerifiedApExamL5Test.php
+          tests/Feature/ApExamCandidateBundleAuditTest.php
+          tests/Feature/ApExamCandidateReviewQueueTest.php
+          tests/Feature/ApExamCandidateRevisionPreviewTest.php
+          tests/Feature/ApExamCandidateQualityReviewTest.php
+          tests/Feature/ApExamIpaAttributionReadinessTest.php
+          app/Services/ApExamIpaAttributionReadinessService.php
+          app/Services/ApExamCandidateQualityReviewService.php
+          app/Services/ApExamCandidateRevisionPreviewService.php
+          app/Services/ApExamCandidateAuditService.php
+          app/Services/AdaptiveLearningModeRecommendationService.php
+          tests/Feature/AdaptiveLearningModeRecommendationV5881Test.php
+          app/Models/LearningAnswerEvaluationAdjustment.php
+          app/Http/Controllers/AdaptiveLearningEvaluationAdjustmentController.php
+          database/migrations/2026_10_08_230000_create_learning_answer_evaluation_adjustments.php
+          tests/Feature/AdaptiveLearningEvaluationAdjustmentV5882Test.php
+          database/migrations/2026_10_08_180000_add_proposal_fingerprint_to_action_draft_steps.php
+          tests/Feature/PlanActionDraftV5875Test.php
+          app/Models/PlanActionDraftStep.php
+          database/migrations/2026_10_08_170000_create_plan_action_draft_steps_table.php
+          tests/Feature/PlanActionDraftV5874Test.php
+          tests/Feature/PlanActionDraftV5873Test.php
+          database/migrations/2026_10_08_160000_add_evidence_revisions_to_plan_action_drafts.php
+          tests/Feature/PlanActionDraftV5872Test.php
+          database/migrations/2026_10_08_150000_create_plan_action_drafts_table.php
+          tests/Feature/PlanActionDraftV5871Test.php
+          database/migrations/2026_10_09_000200_create_mcp_identity_links_and_delegated_grants.php
+          app/Models/McpLinkedSubject.php
+          app/Models/McpDelegatedGrant.php
+          app/Services/McpDelegatedIdentityFingerprintService.php
+          database/migrations/2026_10_09_000300_create_mcp_delegated_access_events_table.php
+          app/Services/McpStagingSyntheticActorBootstrap.php
+          tests/Feature/McpStagingSyntheticActorBootstrapTest.php
+          app/Http/Middleware/CloseUnopenedMcpStaging.php
+          config/canovia_staging.php
+          tests/Feature/McpIsolatedStagingBootstrapTest.php
+          app/Services/McpStagingSyntheticPlanFixtureBootstrap.php
+          tests/Feature/McpStagingSyntheticPlanFixtureBootstrapTest.php
+          tests/Feature/McpStagingSyntheticFixtureReadinessTest.php
+          app/Services/McpStagingSyntheticCredentialRotator.php
+          tests/Feature/McpStagingSyntheticCredentialRotatorTest.php
+          app/Services/McpStagingProviderPreflightService.php
+          tests/Feature/McpStagingProviderPreflightTest.php
+          routes/console.php
+          app/Services/McpReadOnlyContextTool.php
+          app/Http/Controllers/McpReadOnlyResourceController.php
+          tests/Feature/McpReadOnlyResourceTest.php
+          app/Services/McpExplicitPlanConsentService.php
+          app/Http/Controllers/McpOAuthPlanConsentController.php
+          tests/Feature/McpExplicitPlanConsentTest.php
+          app/Services/McpOAuthAccountLinkConfiguration.php
+          app/Services/McpOAuthAccountLinkProvider.php
+          app/Services/McpOAuthAccountLinkCommitter.php
+          app/Http/Controllers/McpOAuthAccountLinkController.php
+          tests/Feature/McpOAuthAccountLinkTest.php
+          app/Services/McpDelegatedRevocationService.php
+          app/Http/Controllers/McpDelegatedRevocationController.php
+          tests/Feature/McpDelegatedRevocationTest.php
+          app/Services/McpDelegatedPlanAccessPolicy.php
+          tests/Feature/McpDelegatedPlanAccessPolicyTest.php
+          app/Services/McpVerifiedTokenPrincipal.php
+          app/Services/McpAccessTokenIntrospector.php
+          tests/Feature/McpAccessTokenIntrospectorTest.php
+          tests/Feature/McpSyntheticOAuthConsentReadLifecycleTest.php
+          config/canovia_mcp.php
+          app/Services/McpProtectedResourceConfiguration.php
+          app/Http/Controllers/McpProtectedResourceMetadataController.php
+          app/Http/Controllers/McpAuthorizationProbeController.php
+          tests/Feature/McpProtectedResourceGateTest.php
+          database/migrations/2026_10_09_000100_create_development_ai_sharing_preference_tables.php
+          app/Models/DevelopmentAiSharingPreference.php
+          app/Models/DevelopmentAiSharingPreferenceEvent.php
+          app/Services/DevelopmentAiSharingPreferenceService.php
+          app/Http/Controllers/DevelopmentAiSharingPreferenceController.php
+          tests/Feature/DevelopmentAiSharingPreferenceTest.php
+          app/Services/PlanSpecializationService.php
+          app/Http/Controllers/PlanSpecializationController.php
+          tests/Feature/PlanSpecializationOverrideV5870Test.php
+          app/Services/DevelopmentTeamTaskProjectionService.php
+          tests/Feature/DevelopmentTeamTaskDependencyV5869Test.php
+          CANOVIA_PHP_LINT_FILES
           sh -n docker/mcp-staging-start.sh
-          php -l app/Services/McpStagingSyntheticPlanFixtureBootstrap.php
-          php -l tests/Feature/McpStagingSyntheticPlanFixtureBootstrapTest.php
-          php -l tests/Feature/McpStagingSyntheticFixtureReadinessTest.php
-          php -l app/Services/McpStagingSyntheticCredentialRotator.php
-          php -l tests/Feature/McpStagingSyntheticCredentialRotatorTest.php
           sh -n docker/render-start.sh
-          php -l app/Services/McpStagingProviderPreflightService.php
-          php -l tests/Feature/McpStagingProviderPreflightTest.php
-          php -l routes/console.php
-          php -l app/Services/McpReadOnlyContextTool.php
-          php -l app/Http/Controllers/McpReadOnlyResourceController.php
-          php -l tests/Feature/McpReadOnlyResourceTest.php
-          php -l app/Services/McpExplicitPlanConsentService.php
-          php -l app/Http/Controllers/McpOAuthPlanConsentController.php
-          php -l tests/Feature/McpExplicitPlanConsentTest.php
-          php -l app/Services/McpOAuthAccountLinkConfiguration.php
-          php -l app/Services/McpOAuthAccountLinkProvider.php
-          php -l app/Services/McpOAuthAccountLinkCommitter.php
-          php -l app/Http/Controllers/McpOAuthAccountLinkController.php
-          php -l tests/Feature/McpOAuthAccountLinkTest.php
-          php -l app/Services/McpDelegatedRevocationService.php
-          php -l app/Http/Controllers/McpDelegatedRevocationController.php
-          php -l tests/Feature/McpDelegatedRevocationTest.php
-          php -l app/Services/McpDelegatedPlanAccessPolicy.php
-          php -l tests/Feature/McpDelegatedPlanAccessPolicyTest.php
-          php -l app/Services/McpVerifiedTokenPrincipal.php
-          php -l app/Services/McpAccessTokenIntrospector.php
-          php -l tests/Feature/McpAccessTokenIntrospectorTest.php
-          php -l tests/Feature/McpSyntheticOAuthConsentReadLifecycleTest.php
-          php -l config/canovia_mcp.php
-          php -l app/Services/McpProtectedResourceConfiguration.php
-          php -l app/Http/Controllers/McpProtectedResourceMetadataController.php
-          php -l app/Http/Controllers/McpAuthorizationProbeController.php
-          php -l tests/Feature/McpProtectedResourceGateTest.php
-          php -l database/migrations/2026_10_09_000100_create_development_ai_sharing_preference_tables.php
-          php -l app/Models/DevelopmentAiSharingPreference.php
-          php -l app/Models/DevelopmentAiSharingPreferenceEvent.php
-          php -l app/Services/DevelopmentAiSharingPreferenceService.php
-          php -l app/Http/Controllers/DevelopmentAiSharingPreferenceController.php
-          php -l tests/Feature/DevelopmentAiSharingPreferenceTest.php
-          php -l app/Services/PlanSpecializationService.php
-          php -l app/Http/Controllers/PlanSpecializationController.php
-          php -l tests/Feature/PlanSpecializationOverrideV5870Test.php
-          php -l app/Services/DevelopmentTeamTaskProjectionService.php
-          php -l tests/Feature/DevelopmentTeamTaskDependencyV5869Test.php
       - run: php artisan view:cache
       - run: php artisan migrate --force
       - name: MCP staging synthetic actor and strict PostgreSQL isolation

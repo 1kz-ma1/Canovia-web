@@ -208,3 +208,24 @@ The tool makes read-only GitHub REST GET calls via `gh api`, does not cancel or 
 ### Recommended next decisions, NOT IMPLEMENTED
 
 Measure repeated workloads on **active** PRs over multiple SHAs and compare observed runner time, start latency and cancelled work without claiming pricing benefit. Before changing a broadly used workflow's triggers or tests, prove equivalent security/recovery coverage and coordinate with the relevant Development/G3 lane. A Release Candidate's production checks must remain unconditional and isolated. No production operation was performed to validate this instrumentation.
+
+
+## ACTIVE optimization — bounded parallel Workspace Resume PHP lint (2026-10-14)
+
+### CURRENT baseline, measured on the original serial implementation
+
+The Workspace Resume CI workflow's **PHP lint** step has 197 distinct invocations in sequence, covering **194 unique PHP file paths** (3 repeated checks), then exactly two shell syntax checks. GitHub Actions job-step metadata for eight recent successful runs showed PHP lint step durations: **10, 10, 9, 8, 8, 8, 10, 10 seconds** (median **9 seconds**). These are wall-clock seconds with second-level rounding, not billable minutes or a guaranteed benchmark.
+
+### ACTIVE change
+
+Only the PHP lint step in \`.github/workflows/v56-12-workspace-resume.yml\` is altered:
+- All **197 path occurrences in the original order**, including the 3 duplicates, are preserved verbatim as an inline heredoc in the workflow. The two original \`sh -n\` syntax checks still execute after the PHP lints.
+- GNU \`xargs -r -P 4 -n 1 php -l\` runs the unchanged per-file PHP lint executable with at most four child processes at a time. Every PHP path is a literal allowlisted relative path; no shell expansion, untrusted dynamic discovery or \`eval\`. The shell uses \`set -euo pipefail\`; any syntax error or missing file returns nonzero and blocks CI.
+- The snapshot \`tests/ci/fixtures/workspace_php_lint_expected.txt\` pins the original path sequence. The synthetic test \`tests/ci/test_platform_workspace_parallel_php_lint.py\` verifies path parity, existing on-disk files, three duplicate occurrences, shell syntax checks and failure propagation with a mock PHP executable. The existing Platform Preflight and broad PR CI execute these checks.
+- **No PHP regression test, migration, Node test, Required Check name, job name, event, concurrency rule or production guard changes.** Process output order may vary (the set and total count of PHP lint invocations may not). Future edits must deliberately update the pinned fixture and rerun parity tests.
+
+### NEXT: acceptance evidence
+
+The optimization is a hypothesis until a final-head PR finishes Workspace Resume successfully. Record the new GitHub Actions run ID and \`PHP lint\` job-step duration from live metadata. A single before/after measurement is **not proof** of a sustained reduction or a billing impact: compare 5 or more representative completed PR runs on distinct commits and report median/p90. Keep normal error path regression tests and CI green, especially the release safety suites.
+
+**Production not exercised:** workflow source affects the future production validation only if separately promoted. No changes to production branch, Render, Aiven or existing deployment settings. All release gates remain intact.
