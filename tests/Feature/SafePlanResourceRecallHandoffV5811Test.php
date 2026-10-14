@@ -340,12 +340,13 @@ class SafePlanResourceRecallHandoffV5811Test extends TestCase
         $this->assertDatabaseMissing('plan_resources', [
             'id' => $resource->id,
         ]);
-        // Both valid PHPUnit modes are exercised depending on whether
-        // RefreshDatabase provided an outer test transaction. The invariant
-        // above holds in either case; final unlink only follows outer commit.
-        if ($hasOuterTransaction) {
-            Storage::disk('local')->assertExists($path);
-        } else {
+        // Assert physical unlink only if this test controlled the final
+        // commit. The RefreshDatabase harness may manage an additional
+        // outer transaction/callback lifecycle; intermediate safety was
+        // already verified *inside* the explicit delete transaction above.
+        // Post-commit and outer-rollback semantics have dedicated isolated
+        // PostgreSQL tests in PrivateFileLifecycleG3Test.
+        if (! $hasOuterTransaction) {
             Storage::disk('local')->assertMissing($path);
         }
     }
