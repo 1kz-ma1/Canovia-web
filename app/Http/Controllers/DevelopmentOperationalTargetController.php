@@ -29,6 +29,7 @@ final class DevelopmentOperationalTargetController extends Controller
             'action' => ['required', Rule::in([
                 'set_target', 'confirm_backup', 'confirm_restore',
                 'clear_backup', 'clear_restore',
+                'confirm_service', 'clear_service',
             ])],
         ]);
         $action = $command['action'];
@@ -63,6 +64,41 @@ final class DevelopmentOperationalTargetController extends Controller
                     // Keep earlier timestamp only to show it is now stale.
                     $target->save();
                 }
+            });
+        } elseif (in_array($action, ['confirm_service', 'clear_service'], true)) {
+            // The browser may have an outdated target open when the owner
+            // changes the binding in another tab. Never rebind the assertion.
+            $expectedRevision = null;
+            if ($action === 'confirm_service') {
+                $payload = $request->validate([
+                    'attest' => ['required', 'in:yes'],
+                    'target_revision' => ['required', 'integer', 'min:1'],
+                ]);
+                $expectedRevision = (int) $payload['target_revision'];
+            }
+
+            DB::transaction(static function () use ($plan, $action, $expectedRevision): void {
+                $target = DevelopmentOperationalTarget::query()
+                    ->where('plan_id', $plan->id)->lockForUpdate()->firstOrFail();
+                if ($action === 'confirm_service') {
+                    abort_unless(
+                        $target->provider === 'render'
+                            && in_array($target->environment, DevelopmentOperationalTarget::ENVIRONMENTS, true)
+                            && is_string($target->resource_ref)
+                            && preg_match('/\Asrv-[a-zA-Z0-9_-]{4,76}\z/', $target->resource_ref)
+                            && (int) $target->revision === $expectedRevision,
+                        409,
+                        '対象環境が更新されています。再確認してください。',
+                    );
+                    $target->service_checked_at = now();
+                    $target->service_checked_revision = $target->revision;
+                    $target->service_checked_environment = $target->environment;
+                } else {
+                    $target->service_checked_at = null;
+                    $target->service_checked_revision = null;
+                    $target->service_checked_environment = null;
+                }
+                $target->save();
             });
         } else {
             // Every statement is a human attestation; never trust form fields

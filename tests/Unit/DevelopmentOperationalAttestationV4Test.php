@@ -125,6 +125,80 @@ final class DevelopmentOperationalAttestationV4Test extends TestCase
         $this->assertSame('stale', $this->check($result, 'backup')['status']);
     }
 
+    public function test_manual_service_check_is_independent_of_release_and_backup_proof(): void
+    {
+        Carbon::setTestNow('2026-10-14 18:00:00');
+        $plan = $this->plan();
+        $plan->user_id = 7;
+        $target = $this->target();
+        $target->service_checked_at = Carbon::now()->subHour();
+        $target->service_checked_revision = 1;
+        $target->service_checked_environment = 'production';
+
+        $attestation = new DevelopmentOperationalAttestationService();
+        $manual = $attestation->projectServiceIdentity($plan, $target);
+        $this->assertSame('operator_confirmed', $manual['status']);
+        $this->assertStringContainsString('外部API検証なし', $manual['source']);
+        $this->assertArrayNotHasKey('verified', $manual);
+
+        $v4 = $attestation->project($plan, ['data_store' => 'server_db'], $target);
+        $this->assertSame('declared', $v4['environment']['status']);
+        $this->assertArrayNotHasKey('service_identity', $v4);
+        $result = (new DevelopmentOperationalEvidenceService())->assess(
+            $plan, null, false, ['data_store' => 'server_db'], $v4,
+        );
+        $this->assertSame('unknown', $this->check($result, 'deploy')['status']);
+        $this->assertSame('unknown', $this->check($result, 'ci')['status']);
+        $this->assertSame('unknown', $this->check($result, 'backup')['status']);
+        $this->assertSame('unknown', $this->check($result, 'restore')['status']);
+        $this->assertSame('declared', $this->check($result, 'environment')['status']);
+    }
+
+    public function test_manual_service_confirmation_stales_on_change_age_and_future_timestamp(): void
+    {
+        Carbon::setTestNow('2026-10-14 18:00:00');
+        $plan = $this->plan();
+        $plan->user_id = 7;
+        $target = $this->target();
+        $s = new DevelopmentOperationalAttestationService();
+        $this->assertSame('unknown', $s->projectServiceIdentity($plan, $target)['status']);
+
+        $target->service_checked_at = Carbon::now()->subHours(2);
+        $target->service_checked_revision = 1;
+        $target->service_checked_environment = 'production';
+        $this->assertSame('operator_confirmed', $s->projectServiceIdentity($plan, $target)['status']);
+
+        $target->revision = 2;
+        $this->assertSame('stale', $s->projectServiceIdentity($plan, $target)['status']);
+        $target->revision = 1;
+        $target->environment = 'staging';
+        $this->assertSame('stale', $s->projectServiceIdentity($plan, $target)['status']);
+        $target->environment = 'production';
+        $target->service_checked_at = Carbon::now()->subDays(8);
+        $this->assertSame('stale', $s->projectServiceIdentity($plan, $target)['status']);
+        $target->service_checked_at = Carbon::now()->addMinutes(5);
+        $this->assertSame('stale', $s->projectServiceIdentity($plan, $target)['status']);
+    }
+
+    public function test_service_check_projection_requires_owned_exact_render_target(): void
+    {
+        $plan = $this->plan();
+        $plan->user_id = 7;
+        $target = $this->target();
+        $s = new DevelopmentOperationalAttestationService();
+        $this->assertNull($s->projectServiceIdentity($plan, null));
+        $this->assertNull($s->projectServiceIdentity($this->plan(88), $target));
+
+        $target->provider = 'other';
+        $this->assertNull($s->projectServiceIdentity($plan, $target));
+        $target->provider = 'render';
+        $target->resource_ref = 'https://attacker.test';
+        $this->assertNull($s->projectServiceIdentity($plan, $target));
+        $target->resource_ref = 'srv-safe000';
+        $plan->user_id = 0;
+        $this->assertNull($s->projectServiceIdentity($plan, $target));
+    }
+
     public function test_no_persistent_data_is_never_upgraded_to_verified_recovery(): void
     {
         Carbon::setTestNow('2026-10-14 08:00:00');

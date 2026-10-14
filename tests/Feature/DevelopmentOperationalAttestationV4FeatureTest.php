@@ -276,6 +276,136 @@ final class DevelopmentOperationalAttestationV4FeatureTest extends TestCase
           ->assertDontSee('data-development-render-dashboard-link', false);
     }
 
+    public function test_owner_can_confirm_and_revoke_revision_bound_manual_service_check_without_release_proof(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($owner, 'サービス照合');
+        $this->profile($plan, 'none');
+        $target = DevelopmentOperationalTarget::query()->create([
+            'plan_id' => $plan->id, 'provider' => 'render',
+            'environment' => 'production', 'resource_ref' => 'srv-check1234',
+            'revision' => 1,
+        ]);
+        $route = route('workspace.development.operational_target.update', $plan);
+        $page = route('workspace.development.index', ['plan_id' => $plan->id, 'surface' => 'work']);
+
+        $this->actingAs($owner)->get($page)->assertOk()
+            ->assertSee('data-development-service-check-status="unknown"', false)
+            ->assertSee('data-development-service-check-submit', false)
+            ->assertSee('name="target_revision" value="1"', false);
+
+        $this->actingAs($owner)->post($route, [
+            'action' => 'confirm_service', 'attest' => 'yes',
+        ])->assertSessionHasErrors('target_revision');
+        $this->assertNull($target->fresh()->service_checked_at);
+
+        $this->actingAs($owner)->post($route, [
+            'action' => 'confirm_service', 'target_revision' => 1,
+            'attest' => 'yes', 'origin' => 'authenticated_provider_adapter',
+            'verified' => true, 'api_key' => 'DO_NOT_PERSIST',
+        ])->assertRedirect();
+
+        $record = $target->fresh();
+        $this->assertNotNull($record->service_checked_at);
+        $this->assertSame(1, $record->service_checked_revision);
+        $this->assertSame('production', $record->service_checked_environment);
+        $this->assertNull($record->backup_confirmed_at);
+        $this->assertNull($record->restore_confirmed_at);
+        $this->assertArrayNotHasKey('api_key', $record->getAttributes());
+
+        $this->actingAs($owner)->get($page)->assertOk()
+            ->assertSee('data-development-service-check-status="operator_confirmed"', false)
+            ->assertSee('data-development-service-check-clear', false)
+            ->assertSee('data-development-operational-status="declared"', false)
+            ->assertSee('data-development-operational-check="deploy"', false);
+
+        $this->actingAs($owner)->post($route, ['action' => 'clear_service'])->assertRedirect();
+        $this->assertNull($target->fresh()->service_checked_at);
+        $this->assertNull($target->fresh()->service_checked_revision);
+        $this->assertNull($target->fresh()->service_checked_environment);
+        $this->assertDatabaseCount('task_evidences', 0);
+    }
+
+    public function test_changed_target_stales_service_check_and_old_form_cannot_reconfirm(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($owner, '環境変更');
+        $this->profile($plan, 'server_db');
+        $route = route('workspace.development.operational_target.update', $plan);
+        $this->actingAs($owner)->post($route, [
+            'action' => 'set_target', 'provider' => 'render',
+            'environment' => 'staging', 'resource_ref' => 'srv-bounded12',
+        ])->assertRedirect();
+
+        $this->actingAs($owner)->post($route, [
+            'action' => 'confirm_service', 'target_revision' => 1,
+            'attest' => 'yes',
+        ])->assertRedirect();
+
+        $this->actingAs($owner)->post($route, [
+            'action' => 'set_target', 'provider' => 'render',
+            'environment' => 'production', 'resource_ref' => 'srv-bounded12',
+        ])->assertRedirect();
+
+        $target = DevelopmentOperationalTarget::query()->where('plan_id', $plan->id)->firstOrFail();
+        $this->assertSame(2, $target->revision);
+        $this->assertSame(1, $target->service_checked_revision);
+        $this->assertSame('staging', $target->service_checked_environment);
+
+        $page = route('workspace.development.index', ['plan_id' => $plan->id, 'surface' => 'work']);
+        $this->actingAs($owner)->get($page)->assertOk()
+            ->assertSee('data-development-service-check-status="stale"', false)
+            ->assertSee('name="target_revision" value="2"', false);
+
+        $this->actingAs($owner)->post($route, [
+            'action' => 'confirm_service', 'target_revision' => 1, 'attest' => 'yes',
+        ])->assertStatus(409);
+
+        $this->assertSame(1, $target->fresh()->service_checked_revision);
+        $this->actingAs($owner)->post($route, [
+            'action' => 'confirm_service', 'target_revision' => 2, 'attest' => 'yes',
+        ])->assertRedirect();
+        $this->assertSame('production', $target->fresh()->service_checked_environment);
+        $this->assertSame(2, $target->fresh()->service_checked_revision);
+        $this->actingAs($owner)->get($page)->assertOk()
+            ->assertSee('data-development-service-check-status="operator_confirmed"', false);
+    }
+
+    public function test_non_owner_cannot_write_service_check_and_other_provider_is_ineligible(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $editor = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = $this->plan($owner, '共同制作環境');
+        $this->profile($plan, 'none');
+        $target = DevelopmentOperationalTarget::query()->create([
+            'plan_id' => $plan->id, 'provider' => 'render',
+            'environment' => 'staging', 'resource_ref' => 'srv-secret123',
+            'revision' => 1,
+        ]);
+        $route = route('workspace.development.operational_target.update', $plan);
+        $plan->update(['is_collaborative' => true]);
+        PlanMember::query()->create([
+            'plan_id' => $plan->id, 'user_id' => $editor->id,
+            'role' => PlanMember::ROLE_EDITOR, 'joined_at' => now(),
+        ]);
+        $this->actingAs($editor)->post($route, [
+            'action' => 'confirm_service', 'target_revision' => 1, 'attest' => 'yes',
+        ])->assertNotFound();
+        $this->actingAs($editor)->post($route, [
+            'action' => 'clear_service',
+        ])->assertNotFound();
+        $this->actingAs($editor)->get(route('workspace.development.index', [
+            'plan_id' => $plan->id, 'surface' => 'work',
+        ]))->assertOk()->assertDontSee('data-development-service-check-status', false);
+        $this->assertNull($target->fresh()->service_checked_at);
+
+        $target->update(['provider' => 'other', 'resource_ref' => 'other12345', 'revision' => 2]);
+        $this->actingAs($owner)->post($route, [
+            'action' => 'confirm_service', 'target_revision' => 2, 'attest' => 'yes',
+        ])->assertStatus(409);
+        $this->assertNull($target->fresh()->service_checked_at);
+    }
+
     private function plan(User $user, string $title): Plan
     {
         return Plan::query()->create([
