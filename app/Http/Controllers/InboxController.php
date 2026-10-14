@@ -18,6 +18,7 @@ use App\Services\InboxIntelligenceService;
 use App\Services\InboxRoutingService;
 use App\Services\NativeAiGateway;
 use App\Services\PlanOwnershipService;
+use App\Services\PrivateFileUploadService;
 use App\Services\ReleaseLevelService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -135,6 +136,7 @@ class InboxController extends Controller
         NativeAiGateway $nativeAi,
         InboxIntelligenceService $intelligence,
         ReleaseLevelService $releaseLevels,
+        PrivateFileUploadService $privateUploads,
     ) {
         $validated = $request->validate([
             'title' => ['nullable', 'string', 'max:255'],
@@ -175,6 +177,7 @@ class InboxController extends Controller
         $userId = $request->user()?->id;
         $sourceType = 'text';
         $storagePath = null;
+        $uploadCandidatePath = null;
         $mimeType = null;
         $originalName = null;
         $byteSize = null;
@@ -185,10 +188,8 @@ class InboxController extends Controller
             $originalName = (string) $file->getClientOriginalName();
             $byteSize = (int) $file->getSize();
             $extension = strtolower((string) $file->getClientOriginalExtension());
-            $storagePath = $file->storeAs(
-                'inbox/'.($userId ?: 'guest').'/'.now()->format('Y/m'),
-                (string) Str::uuid().'.'.$extension,
-            );
+            $uploadCandidatePath = 'inbox/'.($userId ?: 'guest').'/'
+                .now()->format('Y/m').'/'.Str::uuid().'.'.$extension;
         } elseif ($sourceUrl !== '') {
             $sourceType = 'url';
         }
@@ -223,7 +224,7 @@ class InboxController extends Controller
             }
         }
 
-        $item = InboxItem::query()->create([
+        $itemAttributes = [
             'user_id' => $userId,
             'actor_token' => $userId ? null : $actorToken,
             'plan_id' => $planId,
@@ -237,7 +238,25 @@ class InboxController extends Controller
             'original_name' => $originalName,
             'byte_size' => $byteSize,
             'metadata' => $intakeMetadata,
-        ]);
+        ];
+
+        if ($file && $privateUploads->enabled()) {
+            // Lock the generated destination while bytes and Inbox ownership
+            // are created together. Never run AI while holding this lock.
+            $item = $privateUploads->storeAndPersist([
+                ['file' => $file, 'path' => $uploadCandidatePath],
+            ], fn (array $paths) => InboxItem::query()->create(
+                array_replace($itemAttributes, ['storage_path' => $paths[0]]),
+            ));
+        } else {
+            // Feature OFF: preserve the existing upload/insert behavior.
+            if ($file) {
+                $itemAttributes['storage_path'] = $file->storeAs(
+                    dirname($uploadCandidatePath), basename($uploadCandidatePath),
+                );
+            }
+            $item = InboxItem::query()->create($itemAttributes);
+        }
 
         $redirect = $this->redirectAfterAction($request);
 
