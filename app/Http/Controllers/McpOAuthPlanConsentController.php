@@ -37,7 +37,7 @@ final class McpOAuthPlanConsentController extends Controller
         }
 
         $validated = $request->validate([
-            'scope' => ['required', 'in:overview,tasks'],
+            'scope' => ['required', 'in:overview,tasks,study_progress'],
             'duration_days' => ['required', 'in:1,7,30,until_revoked'],
         ]);
         $scope = (string) $validated['scope'];
@@ -49,7 +49,8 @@ final class McpOAuthPlanConsentController extends Controller
         // linked stable IdP subject and live-compatible account-link client.
         if (! $consent->isEnabled()
             || ! $consent->hasActiveLinkedIdentity($actor)
-            || ! $consent->isScopeAndDurationAllowed($scope, $days)) {
+            || ! $consent->isScopeAndDurationAllowed($scope, $days)
+            || ! $consent->isScopeEligibleForPlan($plan, $scope)) {
             return $this->failure();
         }
 
@@ -123,6 +124,10 @@ final class McpOAuthPlanConsentController extends Controller
                 || ($verified['duration_days'] ?? null) === McpExplicitPlanConsentService::UNTIL_REVOKED)
             || ! $consent->isScopeAndDurationAllowed(
                 $verified['scope'], $verified['duration_days'],
+            )
+            || ! $consent->isScopeEligibleForPlan(
+                \App\Models\Plan::query()->find($verified['plan_id']) ?? new \App\Models\Plan,
+                $verified['scope'],
             )
             || ! $consent->grant(
                 $actor,
