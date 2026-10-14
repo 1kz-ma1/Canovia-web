@@ -52,6 +52,7 @@ on:
       - '.github/workflows/**'
       - 'docs/development/PLATFORM_RELEASE_BASELINE_AND_PREFLIGHT_2026_10_14.md'
       - 'docs/development/PLATFORM_CI_AND_BRANCH_TRIAGE_2026_10_14.md'
+      - 'docs/development/PLATFORM_WORKSPACE_R19_NEGATIVE_CONTROLS_2026_10_15.md'
   workflow_dispatch:
 
 permissions:
