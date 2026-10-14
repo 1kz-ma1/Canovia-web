@@ -104,6 +104,7 @@ class StudyRecallCandidateV4112Test extends TestCase
 
     public function test_pdf_is_sent_to_responses_api_as_input_file(): void
     {
+        config(['canovia.private_file_path_fence_enabled' => true]);
         [$user, $plan, $task] = $this->scenario();
         $this->grantPremium($user);
 
@@ -125,6 +126,11 @@ class StudyRecallCandidateV4112Test extends TestCase
         $this->assertSame('pdf', $source->source_type);
         $this->assertSame('application/pdf', $source->mime_type);
         Storage::disk('local')->assertExists($source->storage_path);
+        $this->assertDatabaseHas('private_file_path_fences', [
+            'path_digest' => app(\App\Services\PrivateFilePathFenceService::class)
+                ->fingerprint((string) config('filesystems.default'),
+                    $source->storage_path),
+        ]);
 
         Http::assertSent(function ($request) {
             $content = data_get($request->data(), 'input.0.content', []);
