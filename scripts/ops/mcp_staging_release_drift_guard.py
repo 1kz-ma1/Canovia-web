@@ -47,6 +47,8 @@ def assess(snapshot: dict, *, expected_sha: str = LIVE_APPROVED_SHA, mode: str =
         raise SnapshotInvalid()
 
     failed: set[str] = set()
+    if expected_sha != LIVE_APPROVED_SHA:
+        failed.add("PINNED_SHA_UNAPPROVED")
     service = snapshot.get("service")
     deploys = snapshot.get("deploys")
     candidate = snapshot.get("candidate")
@@ -158,7 +160,7 @@ def main() -> int:
         }
     print(json.dumps(result, sort_keys=True))
     # Exit 0 means only metadata precheck, NOT mutation permission.
-    return 0 if result["snapshot_precheck_passed"] and a.mode == "audit" else 1
+    return 0 if result["decision"] == "REVIEW_ONLY" and a.mode == "audit" else 1
 
 
 if __name__ == "__main__":
