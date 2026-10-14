@@ -155,8 +155,8 @@ final class McpMigrationRollbackSafetyTest extends TestCase
         $this->assertSame(2, McpLinkedSubject::query()
             ->where('identity_fingerprint', $fingerprint)
             ->where('status', McpLinkedSubject::STATUS_LINKED)->count());
-        $this->assertDatabaseCount('mcp_delegated_grants',
-            McpDelegatedGrant::query()->count());
+        $this->assertSame(2, McpLinkedSubject::query()
+            ->where('identity_fingerprint', $fingerprint)->count());
         // This is a STOP signal for operators: do not "fix" the corrupt
         // fixture by deleting an audit-bearing historical identity.
     }
