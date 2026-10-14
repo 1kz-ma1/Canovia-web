@@ -38,6 +38,7 @@ jobs:
       - name: Start versioned S3-compatible server with runner-local persistent disk
         run: |
           mkdir -p "$RUNNER_TEMP/g3-r33-minio-data"
+          chmod 0777 "$RUNNER_TEMP/g3-r33-minio-data" # synthetic ephemeral runner data only; container runs nonroot
           docker run -d --name g3-r33-minio \
             --cap-drop=ALL --security-opt=no-new-privileges \
             --pids-limit 128 --memory 1g \
