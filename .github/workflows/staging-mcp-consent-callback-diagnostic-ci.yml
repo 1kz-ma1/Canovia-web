@@ -1,0 +1,45 @@
+name: Staging MCP Plan consent OAuth diagnostic
+
+on:
+  pull_request:
+    branches: [staging/mcp-cimd-verified-mapping-20261014]
+    paths:
+      - app/Http/Controllers/McpOAuthAccountLinkController.php
+      - app/Services/McpStagingOAuthFailureDiagnostic.php
+      - tests/Feature/McpStagingOAuthFailureDiagnosticTest.php
+      - .github/workflows/staging-mcp-consent-callback-diagnostic-ci.yml
+
+permissions:
+  contents: read
+
+jobs:
+  fixed-categories-no-token-leaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+      - name: Install pinned dependencies without scripts or plugins
+        run: |
+          composer validate --strict --no-interaction
+          composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+      - name: Lint narrowed callback and diagnostics
+        run: |
+          php -l app/Http/Controllers/McpOAuthAccountLinkController.php
+          php -l app/Services/McpStagingOAuthFailureDiagnostic.php
+          php -l tests/Feature/McpStagingOAuthFailureDiagnosticTest.php
+      - name: Offline synthetic OAuth and Plan consent regression
+        env:
+          APP_ENV: testing
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          SESSION_DRIVER: array
+          CACHE_STORE: array
+        run: |
+          php artisan test tests/Feature/McpStagingOAuthFailureDiagnosticTest.php tests/Feature/McpStagingSyntheticPlanConsentPilotTest.php tests/Feature/McpOAuthAccountLinkTest.php tests/Feature/McpExplicitPlanConsentTest.php --colors=never
