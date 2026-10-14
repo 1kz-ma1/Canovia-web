@@ -674,3 +674,16 @@ any real trial. Independently review provider identity, credentials,
 writer fencing, retry/recovery behavior and actual conditional
 operations. Do not publish keys, identity IDs or user data in Git.
 Five earlier G3 migrations are still unapproved. **G3 OPEN.**
+
+## 29. G3-R30 — Offline owner review remains pending
+
+Review `G3_OWNER_SCOPE_CHECKLIST_R30_2026_10_14.md`.
+Run `python3 scripts/ops/g3_owner_scope_review.py --repo . --packet /private/request.json --review /private/review.json`
+only with a local synthetic request.
+
+`OWNER_CHECKLIST_PENDING`, exit 2, is a syntactic check of
+an unapproved proposal. It proves neither reviewer identity nor
+live scope control. No cloud calls, spend, release, retry or delete
+are authorized. A later real experiment needs independent
+operator review and specific owner approval. Five prior G3
+production migrations remain unapproved. **G3 OPEN.**
