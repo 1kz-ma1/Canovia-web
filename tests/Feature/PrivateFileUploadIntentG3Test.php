@@ -130,6 +130,47 @@ final class PrivateFileUploadIntentG3Test extends TestCase
         $this->assertDatabaseCount('private_file_upload_intents', 1);
     }
 
+    public function test_forged_path_digest_is_rejected_before_journal_or_bytes(): void
+    {
+        $disk = (string) config('filesystems.default');
+        $path = 'inbox/synthetic/forged-key.png';
+        $other = 'inbox/synthetic/not-the-same-key.png';
+        $digest = app(PrivateFilePathFenceService::class)->fingerprint($disk, $other);
+
+        try {
+            app(PrivateFileUploadIntentService::class)->prepare($disk, [$digest => $path]);
+            $this->fail('A digest of another private path must be denied.');
+        } catch (RuntimeException $e) {
+            $this->assertSame('Invalid private upload journal key.', $e->getMessage());
+        }
+        Storage::assertMissing($path);
+        $this->assertDatabaseCount('private_file_upload_intents', 0);
+    }
+
+    public function test_partial_batch_conflict_rolls_back_all_prepared_journal_rows(): void
+    {
+        $disk = (string) config('filesystems.default');
+        $fence = app(PrivateFilePathFenceService::class);
+        $journal = app(PrivateFileUploadIntentService::class);
+        $already = 'study-recall-sources/synthetic/reserved.pdf';
+        $new = 'study-recall-sources/synthetic/new.png';
+        $reservedDigest = $fence->fingerprint($disk, $already);
+        $freshDigest = $fence->fingerprint($disk, $new);
+        $journal->prepare($disk, [$reservedDigest => $already]);
+
+        $batch = [$reservedDigest => $already, $freshDigest => $new];
+        ksort($batch, SORT_STRING);
+        try {
+            $journal->prepare($disk, $batch);
+            $this->fail('Duplicate durable claim must abort entire batch');
+        } catch (\Illuminate\Database\QueryException) {
+            // Unique digest is permanent, so no bytes can be written here.
+        }
+        $this->assertDatabaseCount('private_file_upload_intents', 1);
+        Storage::assertMissing($new);
+        Storage::assertMissing($already);
+    }
+
     public function test_parent_transaction_cannot_fake_a_durable_prewrite_commit(): void
     {
         $path = 'inbox/synthetic/nested-rejected.png';
