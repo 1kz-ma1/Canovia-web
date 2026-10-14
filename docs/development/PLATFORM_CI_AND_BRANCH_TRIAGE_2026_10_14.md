@@ -229,3 +229,28 @@ Only the PHP lint step in \`.github/workflows/v56-12-workspace-resume.yml\` is a
 The optimization is a hypothesis until a final-head PR finishes Workspace Resume successfully. Record the new GitHub Actions run ID and \`PHP lint\` job-step duration from live metadata. A single before/after measurement is **not proof** of a sustained reduction or a billing impact: compare 5 or more representative completed PR runs on distinct commits and report median/p90. Keep normal error path regression tests and CI green, especially the release safety suites.
 
 **Production not exercised:** workflow source affects the future production validation only if separately promoted. No changes to production branch, Render, Aiven or existing deployment settings. All release gates remain intact.
+
+
+## ACTIVE: reduce only verified pure-PHPUnit CLI startup (2026-10-14)
+
+### CURRENT inventory and isolation findings
+
+The Workspace Resume workflow before this slice contained **73 separate \`php artisan test\` commands**, naming **160 test file occurrences** across **118 distinct test file paths**. The other **42 file occurrences** are deliberate or historical cross-scenario regression repetitions, not presumed redundant. The biggest repeats include Adaptive Learning Single Question (7), Candidate Queue (5), and PlanActionDraftV5871 (5). These test classes frequently exercise SQLite/Laravel state and must **not** be merged or de-duplicated based on filename alone.
+
+Two individually launched GitHub roadmap tests were inspected directly:
+- \`tests/Unit/DevelopmentAgentGitHubPullHandoffTest.php\`
+- \`tests/Unit/DevelopmentRoadmapRevisionDifferTest.php\`
+
+Both extend \`PHPUnit\Framework\TestCase\` directly, using literal input arrays and pure service method assertions with no Laravel \`Tests\TestCase\`, database, session, HTTP, or external provider fixture. They are an explicitly scoped low-risk consolidation candidate, unlike other Feature or mixed Unit+Feature suites.
+
+### ACTIVE change and CI contract
+
+The two adjacent \`php artisan test\` commands become **one** \`php artisan test\` invocation with both files on the same command line. The assertions and file order are unchanged. Expected **72 CLI invocations**, still **160 test file occurrences, 118 unique paths, and 42 repeated occurrences**. A different individual step title is replaced with one combined title; required job/check names are unchanged. The rest of the Workspace Resume workflow is untouched, including security, permissions, database, PHP lint, migrations and production triggers.
+
+The read-only offline command \`python3 scripts/ops/platform_workspace_test_inventory.py\` describes command count and repeated file use. \`tests/ci/test_platform_workspace_test_inventory.py\` guards the exact grouping and current baseline, confirms both classes remain pure \`PHPUnit\Framework\TestCase\` without \`RefreshDatabase\` or \`DatabaseTransactions\`, and asserts continued presence of sensitive security and AP exam regressions. Both commands run in existing Platform Preflight alongside existing PHP/YAML and staging safety tests.
+
+### Verification and residual risk
+
+The full Workspace Resume run on the **final PR SHA** must pass, proving both previously separate classes pass in the same process. This is a functional compatibility check, **not a quantitative performance claim**. Combining two CLI invocations may save only sub-second process startup while the ~120–150-second job still runs hundreds of scenarios. Any requirement to keep separate process-global state for these two classes would invalidate this optimization; revert if the tests prove coupled. Do **not** generalize this grouping to stateful Feature tests or remove repeated file occurrences.
+
+No required checks, branch protection, app source, Render/Aiven, production release settings or resources are modified by this slice.
