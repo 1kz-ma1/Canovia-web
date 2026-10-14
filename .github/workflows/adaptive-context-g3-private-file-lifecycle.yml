@@ -15,11 +15,38 @@ on:
 jobs:
   private-file-lifecycle:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: canovia_file_cleanup
+          POSTGRES_USER: canovia_ci
+          POSTGRES_PASSWORD: local_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U canovia_ci -d canovia_file_cleanup"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: canovia_file_cleanup
+      DB_USERNAME: canovia_ci
+      DB_PASSWORD: local_ci_only
+      SESSION_DRIVER: array
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
+          extensions: pdo_pgsql,pgsql
           coverage: none
       - run: composer install --no-interaction --prefer-dist --no-progress
       - uses: actions/setup-node@v4
