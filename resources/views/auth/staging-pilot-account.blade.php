@@ -135,6 +135,18 @@
             <a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">ChatGPTを開く（別のタブ）</a>
         </section>
 
+        {{-- Runtime policy status only: do not expose a saved env value, an
+             Auth0 subject, historic provider or ChatGPT connection state. --}}
+        <section class="detail" data-mcp-staging-current-provider-policy>
+            <h2>新しい本人確認の方式</h2>
+            @if (app(\App\Services\McpOAuthAccountLinkConfiguration::class)->githubOnlyEnabled())
+                <p data-mcp-staging-github-only-runtime="enabled">このサーバーでは、新しく本人確認する場合にGitHubを使用します。</p>
+            @else
+                <p data-mcp-staging-github-only-runtime="not-confirmed">この画面ではGitHub専用の本人確認が有効だと確認できません。</p>
+            @endif
+            <p class="muted">これは現在のサーバー設定の表示です。既存の本人確認で使ったサービスやChatGPT側で選んだアカウントを証明するものではありません。確認のために共有や本人確認の連携を解除する必要はありません。</p>
+        </section>
+
         <section class="detail" data-mcp-staging-grant-management>
             <h2>共有の管理</h2>
             <p class="muted">共有する内容や期間は変更できます。共有をやめると、ChatGPTからこの計画を取得できなくなります。</p>
