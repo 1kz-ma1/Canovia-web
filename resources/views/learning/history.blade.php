@@ -44,6 +44,29 @@
         @endif
     </section>
 
+    @if($history['next_action_preview'] ?? null)
+        @php($nextAction = $history['next_action_preview'])
+        <section class="page-card border-cyan-300/20 p-5 sm:p-7" data-learning-next-action-preview>
+            <p class="text-xs font-bold tracking-widest text-cyan-400">NEXT ACTION / REVIEW PROPOSAL</p>
+            <h2 class="mt-2 text-lg font-bold text-slate-50">学習結果から考える次のAction</h2>
+            <p class="mt-2 text-sm leading-6 text-slate-300">{{ $nextAction['label'] }}</p>
+            <p class="mt-2 text-xs leading-5 text-slate-400">
+                異なる問題での繰り返し誤答から作った復習候補です。理解度・合格可能性を断定せず、Task進捗やEvidenceは変更しません。
+                Taskの次Actionを書き換えるかどうかは本人が決めます。
+            </p>
+            @if($nextAction['already_adopted'])
+                <p class="mt-4 text-sm font-semibold text-emerald-300" data-learning-next-action-adopted>この復習Actionは反映済みです。</p>
+            @else
+                <form method="POST" action="{{ route('plans.tasks.learning.next_action.confirm', [$plan, $task]) }}" class="mt-4">
+                    @csrf
+                    <input type="hidden" name="source_signature" value="{{ $nextAction['source_signature'] }}">
+                    <input type="hidden" name="expected_next_action_hash" value="{{ $nextAction['expected_next_action_hash'] }}">
+                    <button type="submit" class="btn-primary min-h-11 px-4">この復習を次のActionに反映する</button>
+                </form>
+            @endif
+        </section>
+    @endif
+
     <section class="page-card p-5 sm:p-7" data-learning-recent-answers>
         <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="text-lg font-bold text-slate-50">最近の回答</h2>
