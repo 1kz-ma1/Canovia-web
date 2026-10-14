@@ -6,6 +6,11 @@ on:
     paths:
       - 'app/Services/StudyRecallExtractionCommitFence.php'
       - 'app/Services/StudyRecallCandidateExtractionService.php'
+      - 'app/Services/InboxRecallMaterialTransferGuard.php'
+      - 'app/Services/InboxRoutingService.php'
+      - 'app/Http/Controllers/InboxController.php'
+      - 'tests/Feature/InboxRecallMaterialTransferG3Test.php'
+      - 'tests/Feature/InboxRecallTransferPostgresG3Test.php'
       - 'app/Services/StudyRecallCandidateReviewFence.php'
       - 'app/Http/Controllers/StudyRecallCandidateController.php'
       - 'app/Models/StudyRecallCandidate.php'
@@ -39,6 +44,10 @@ jobs:
         run: |
           php -l app/Services/StudyRecallExtractionCommitFence.php
           php -l app/Services/StudyRecallCandidateExtractionService.php
+          php -l app/Services/InboxRecallMaterialTransferGuard.php
+          php -l app/Services/InboxRoutingService.php
+          php -l tests/Feature/InboxRecallMaterialTransferG3Test.php
+          php -l tests/Feature/InboxRecallTransferPostgresG3Test.php
           php -l app/Services/StudyRecallCandidateReviewFence.php
           php -l app/Http/Controllers/StudyRecallCandidateController.php
           php -l app/Models/StudyRecallCandidate.php
@@ -48,6 +57,8 @@ jobs:
           php -l app/Services/StudyRecallBatchCandidateExtractionService.php
           php -l tests/Feature/RecallAiCommitFenceV05Test.php
           php -l tests/Feature/RecallInputFileRacePostgresG3Test.php
+      - name: G3 Inbox-to-Recall exact source byte transfer, epoch and post-AI status
+        run: php artisan test tests/Feature/InboxRecallMaterialTransferG3Test.php tests/Feature/InboxIntelligenceGuideV4113Test.php --stop-on-failure
       - name: G3 Recall after-provider revoke, source change and atomic commit
         run: php artisan test tests/Feature/RecallAiCommitFenceV05Test.php
       - name: Existing Recall single, batch, retry and resource handoff
