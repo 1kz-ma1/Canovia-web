@@ -97,7 +97,7 @@ class StudyScopeCaptureV534Test extends TestCase
             ->assertSessionHasNoErrors();
 
         $capture = StudyScopeCapture::firstOrFail();
-        $inbox = InboxItem::firstOrFail();
+        $inbox = InboxItem::query()->findOrFail($capture->inbox_item_id);
         $run = NativeAiRun::firstOrFail();
 
         $this->assertSame('review', $capture->status);
