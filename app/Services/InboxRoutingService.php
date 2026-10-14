@@ -9,6 +9,7 @@ use App\Models\Plan;
 use App\Models\PlanResource;
 use App\Models\Task;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -22,6 +23,8 @@ class InboxRoutingService
         private readonly TaskEvidenceService $evidence,
         private readonly PlanActivityService $activity,
         private readonly ExecutionRequestHandoffService $executionRequests,
+        private readonly CompanionMembershipCommitGuard $membership,
+        private readonly PlanOwnershipService $ownership,
     ) {}
 
     /**
@@ -43,16 +46,17 @@ class InboxRoutingService
             'career_capture' => $this->toCareerCapture($request, $item, $plan, $actorToken),
             'recall_material' => $this->toRecall($request, $item, $plan, $task, $actorToken),
             'task_evidence' => $this->toEvidence($request, $item, $plan, $task, $actorToken),
-            'plan_resource' => $this->toResource($request, $item, $plan),
+            'plan_resource' => $this->toResource($request, $item, $plan, $actorToken),
             'execution_request' => $this->toExecutionRequest($request, $item, $data, $plan, $task),
             'keep_inbox' => 'Inboxに残しました。',
             default => throw ValidationException::withMessages(['destination' => '未対応の整理先です。']),
         };
 
-        // Recall performs the Inbox "processed" update in its own second
-        // locked authorization/source transaction AFTER AI completes. Never
-        // write a stale route-bound Inbox model over that verified result.
-        if ($destination === 'recall_material') {
+        // Recall owns its delayed post-AI commit. Resource routing now owns
+        // one locked transaction covering the resource, activity and Inbox
+        // acknowledgement. Do not overwrite either verified result with the
+        // stale controller-bound Inbox model.
+        if (in_array($destination, ['recall_material', 'plan_resource'], true)) {
             return ['message' => $message, 'destination' => $destination];
         }
 
@@ -261,55 +265,149 @@ class InboxRoutingService
         return '実行リクエストを確認しました。全体ContextとDependencyを確認して、担当へ渡す指示を組み立てます。';
     }
 
-    private function toResource(Request $request, InboxItem $item, ?Plan $plan): string
-    {
+    /**
+     * R43: resource creation is an exactly-once decision for a single Inbox
+     * item, protected by the same Plan -> Inbox -> Member lock order as G3
+     * Recall/Inbox AI. No external calls or AI are inside this transaction.
+     */
+    private function toResource(
+        Request $request,
+        InboxItem $item,
+        ?Plan $plan,
+        string $actorToken,
+    ): string {
         $this->requirePlan($plan);
-        $url = trim((string) $item->source_url);
-        if ($url === '') {
-            throw ValidationException::withMessages(['destination' => 'Plan Resourceへ追加するにはURLが必要です。']);
-        }
 
-        // Match the actual URL authority, never an arbitrary substring:
-        // github.com.evil.example is NOT GitHub and phishing domains with
-        // "sharepoint" or "onedrive" in their names are not OneDrive.
-        // Do not treat HTTP or userinfo-bearing URLs as trusted resources.
-        $parts = parse_url($url);
-        $scheme = is_array($parts) ? strtolower((string) ($parts['scheme'] ?? '')) : '';
-        $host = is_array($parts) ? strtolower((string) ($parts['host'] ?? '')) : '';
-        $provider = $scheme === 'https' && is_array($parts)
-            && ! isset($parts['user']) && ! isset($parts['pass'])
-            ? match (true) {
-                $this->matchesOfficialHost($host, 'github.com') => 'github',
-                $this->matchesOfficialHost($host, 'drive.google.com'),
-                $this->matchesOfficialHost($host, 'docs.google.com') => 'google_drive',
-                $this->matchesOfficialHost($host, 'onedrive.live.com'),
-                $this->matchesOfficialHost($host, 'onedrive.com'),
-                $this->matchesOfficialHost($host, '1drv.ms'),
-                $this->matchesOfficialHost($host, 'sharepoint.com') => 'onedrive',
-                default => null,
+        return DB::transaction(function () use ($request, $item, $plan, $actorToken): string {
+            $livePlan = Plan::query()->whereKey($plan->id)->lockForUpdate()->first();
+            if ($livePlan === null) {
+                throw ValidationException::withMessages([
+                    'plan_id' => '対象Planが変更されました。選択し直してください。',
+                ]);
             }
-            : null;
 
-        if ($provider === null) {
-            throw ValidationException::withMessages([
-                'destination' => '現行ResourceはGoogle Drive / OneDrive / GitHub URLに対応しています。このURLはInboxに残してください。',
+            $live = InboxItem::query()->whereKey($item->id)->lockForUpdate()->first();
+            if ($live === null || ! in_array($live->status, ['new', 'review'], true)) {
+                throw ValidationException::withMessages([
+                    'destination' => 'Inboxはすでに整理済みか変更されています。更新して確認してください。',
+                ]);
+            }
+
+            // Route model is only the original snapshot. Detect DB edits,
+            // ownership transfers and metadata changes between validation
+            // and row-lock admission, even if the external URL is unchanged.
+            foreach ([
+                'user_id', 'actor_token', 'plan_id', 'source_type', 'status',
+                'title', 'content', 'source_url', 'storage_path', 'mime_type',
+                'original_name', 'byte_size', 'metadata', 'processed_at',
+            ] as $field) {
+                if ($live->getRawOriginal($field) !== $item->getRawOriginal($field)) {
+                    throw ValidationException::withMessages([
+                        'destination' => 'Inboxの内容が変更されました。更新して再確認してください。',
+                    ]);
+                }
+            }
+
+            $actor = $request->user();
+            if ($live->user_id !== null) {
+                if ($actor === null || (int) $live->user_id !== (int) $actor->id) {
+                    throw ValidationException::withMessages([
+                        'destination' => 'Inboxの所有権が変更されました。',
+                    ]);
+                }
+            } elseif (! is_string($live->actor_token)
+                || ! hash_equals($live->actor_token, $actorToken)) {
+                throw ValidationException::withMessages([
+                    'destination' => 'Inboxの本人確認情報が変更されました。',
+                ]);
+            }
+
+            // The controller's PlanOwnershipService role cache and Plan
+            // collection are not valid commit-time authorization. Re-check
+            // current Editor/Owner against DB-locked Plan/Member rows, or
+            // the live guest-owner cookie for an anonymous personal Plan.
+            if ($actor !== null) {
+                if (! $this->membership->canAccess($actor, $livePlan, true)) {
+                    throw ValidationException::withMessages([
+                        'plan_id' => '対象Planの編集権限が変更されました。',
+                    ]);
+                }
+            } elseif (! $this->ownership->owns($request, $livePlan)) {
+                throw ValidationException::withMessages([
+                    'plan_id' => '対象Planの所有権が変更されました。',
+                ]);
+            }
+
+            if ($live->source_type !== 'url') {
+                throw ValidationException::withMessages([
+                    'destination' => 'Plan Resourceへ追加できるのはURL付きのInboxです。',
+                ]);
+            }
+
+            $url = trim((string) $live->source_url);
+            if ($url === '') {
+                throw ValidationException::withMessages([
+                    'destination' => 'Plan Resourceへ追加するにはURLが必要です。',
+                ]);
+            }
+
+            // R42 provider-host checks apply to the LIVE source, not the
+            // original route-model URL. No provider link is fetched.
+            $parts = parse_url($url);
+            $scheme = is_array($parts) ? strtolower((string) ($parts['scheme'] ?? '')) : '';
+            $host = is_array($parts) ? strtolower((string) ($parts['host'] ?? '')) : '';
+            $provider = $scheme === 'https' && is_array($parts)
+                && ! isset($parts['user']) && ! isset($parts['pass'])
+                ? match (true) {
+                    $this->matchesOfficialHost($host, 'github.com') => 'github',
+                    $this->matchesOfficialHost($host, 'drive.google.com'),
+                    $this->matchesOfficialHost($host, 'docs.google.com') => 'google_drive',
+                    $this->matchesOfficialHost($host, 'onedrive.live.com'),
+                    $this->matchesOfficialHost($host, 'onedrive.com'),
+                    $this->matchesOfficialHost($host, '1drv.ms'),
+                    $this->matchesOfficialHost($host, 'sharepoint.com') => 'onedrive',
+                    default => null,
+                }
+                : null;
+
+            if ($provider === null) {
+                throw ValidationException::withMessages([
+                    'destination' => '現行ResourceはGoogle Drive / OneDrive / GitHub URLに対応しています。このURLはInboxに残してください。',
+                ]);
+            }
+
+            $resource = $livePlan->resources()->create([
+                'created_by_user_id' => $actor?->id,
+                'provider' => $provider,
+                'resource_type' => 'file',
+                'title' => $live->title ?: $host,
+                'url' => $url,
             ]);
-        }
 
-        $resource = $plan->resources()->create([
-            'created_by_user_id' => $request->user()?->id,
-            'provider' => $provider,
-            'resource_type' => 'file',
-            'title' => $item->title ?: $host,
-            'url' => $url,
-        ]);
+            $this->activity->record(
+                $livePlan, $actor, 'resource_created', 'plan_resource',
+                (int) $resource->id, [
+                    'resource_title' => $resource->title,
+                    'source' => 'inbox',
+                ],
+            );
 
-        $this->activity->record($plan, $request->user(), 'resource_created', 'plan_resource', (int) $resource->id, [
-            'resource_title' => $resource->title,
-            'source' => 'inbox',
-        ]);
+            $metadata = is_array($live->metadata) ? $live->metadata : [];
+            $metadata['routing_confirmed'] = [
+                'destination' => 'plan_resource',
+                'plan_id' => (int) $livePlan->id,
+                'task_id' => null,
+                'confirmed_at' => now()->toIso8601String(),
+            ];
+            $live->update([
+                'plan_id' => (int) $livePlan->id,
+                'status' => 'processed',
+                'processed_at' => now(),
+                'metadata' => $metadata,
+            ]);
 
-        return 'Plan Resourceへ追加しました。';
+            return 'Plan Resourceへ追加しました。';
+        }, 3);
     }
 
     /**
