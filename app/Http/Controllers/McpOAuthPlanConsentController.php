@@ -125,10 +125,8 @@ final class McpOAuthPlanConsentController extends Controller
             || ! $consent->isScopeAndDurationAllowed(
                 $verified['scope'], $verified['duration_days'],
             )
-            || ! $consent->isScopeEligibleForPlan(
-                \App\Models\Plan::query()->find($verified['plan_id']) ?? new \App\Models\Plan,
-                $verified['scope'],
-            )
+            // The grant() transaction rechecks the study-only scope with
+            // locked owner and Plan rows, after the verified ID is validated.
             || ! $consent->grant(
                 $actor,
                 $verified['plan_id'],
