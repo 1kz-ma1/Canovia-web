@@ -29,7 +29,15 @@ page.setDefaultTimeout(20000);
 const step = (name) => process.stdout.write(`PASS ${name}\n`);
 try {
     const initial = await page.goto(`${base}/plans/create/manual`, { waitUntil: 'domcontentloaded' });
-    assert.equal(initial.status(), 200, 'Guest must see the real Plan creation form');
+    assert.equal(initial.status(), 200, 'Initial Guest page must be accessible');
+    if (new URL(page.url()).pathname === '/first-run') {
+        await page.locator('form[data-first-run-start]')
+            .getByRole('button', { name: 'Canoviaと始める' }).click();
+        step('Entered through actual first-run consent/intro form');
+        await page.goto(`${base}/plans/create/manual`, { waitUntil: 'domcontentloaded' });
+    }
+    assert.equal(new URL(page.url()).pathname, '/plans/create/manual',
+        'Guest should enter Plan form after real onboarding start');
 
     const form = page.locator('form[data-onboarding-target="plan-form"]');
     await form.locator('input[name="title"]').fill(title);
