@@ -99,29 +99,75 @@ final class InboxAiSuggestionCommitFence
     }
 
     /**
-     * R38 pre-provider seal: compare the hash of bytes actually encoded into
+     * R38-R39 pre-provider seal: compare the hash of bytes actually encoded into
      * the AI request with the ORIGINAL source/authorization signature.
      * A->B input mismatches fail before submission, even if another writer
      * later restores A. This is a content integrity check, NOT immutable
      * provider-generation attestation or protection against A->B->A entirely
-     * between the first and final reads.
+     * between the first and final reads. R39 locks live owner/Plan rows and
+     * reauthorizes original source state before any remote provider call.
      */
     public function assertInputMatches(
         InboxItem $item,
-        ?int $userId,
+        Request $request,
         string $expectedSignature,
         ?string $providerInputHash,
     ): void {
-        $isFile = in_array($item->source_type, ['image', 'pdf'], true);
-        if (($isFile && (! is_string($providerInputHash)
-                || ! preg_match('/^[a-f0-9]{64}$/', $providerInputHash)))
-            || (! $isFile && $providerInputHash !== null)
-            || ! hash_equals(
-                $expectedSignature,
-                $this->signature($item, $userId, $providerInputHash),
-            )) {
-            $this->deny('native_ai_source_changed', null);
-        }
+        // The byte seal must be checked against CURRENT database ownership,
+        // not a stale route-loaded model. This transaction closes before
+        // calling the remote AI: never hold SQL locks over provider latency.
+        $userId = $request->user()?->id;
+        DB::transaction(function () use (
+            $item, $request, $userId, $expectedSignature, $providerInputHash,
+        ): void {
+            $live = InboxItem::query()->whereKey($item->id)->lockForUpdate()->first();
+            if ($live === null || ! in_array($live->status, ['new', 'review'], true)) {
+                $this->deny('native_ai_target_changed', null);
+            }
+
+            if ($userId === null || $userId <= 0) {
+                $this->deny('native_ai_actor_unverified', null);
+            }
+            if ($live->user_id !== null) {
+                if ((int) $live->user_id !== (int) $userId) {
+                    $this->deny('native_ai_target_changed', null);
+                }
+            } else {
+                $actorToken = $this->identity->resolve($request);
+                if (! is_string($live->actor_token)
+                    || ! hash_equals($live->actor_token, $actorToken)) {
+                    $this->deny('native_ai_target_changed', null);
+                }
+            }
+
+            $planId = $live->plan_id === null ? null : (int) $live->plan_id;
+            if ($planId !== null) {
+                $plan = Plan::query()->whereKey($planId)->lockForUpdate()->first();
+                $actor = User::query()->find($userId);
+                if ($plan === null || $actor === null
+                    || ! $this->membershipCommit->canAccess($actor, $plan, true)) {
+                    $this->deny('native_ai_target_changed', null);
+                }
+            }
+
+            $failure = $this->purposeGuard->failure(
+                $userId, $planId, null, FeatureKey::AutomaticAiExecution,
+            );
+            if ($failure !== null) {
+                $this->deny($failure, null);
+            }
+
+            $isFile = in_array($live->source_type, ['image', 'pdf'], true);
+            if (($isFile && (! is_string($providerInputHash)
+                    || ! preg_match('/^[a-f0-9]{64}$/', $providerInputHash)))
+                || (! $isFile && $providerInputHash !== null)
+                || ! hash_equals(
+                    $expectedSignature,
+                    $this->signature($live, $userId, $providerInputHash),
+                )) {
+                $this->deny('native_ai_source_changed', null);
+            }
+        }, 3);
     }
 
     /**
