@@ -1255,3 +1255,29 @@ real-world scope enforcement, budget/release authority and delete
 always false. Disposable local-Git CI is the only verification;
 no real provider API, new migration or recovery operation.
 Five G3 production migrations remain unapproved. **G3 OPEN.**
+
+## 76. G3-R31 — Evidence gap decision: external provider proof HOLD (2026-10-14)
+
+Pinned Git source checks now cover five additive migration files,
+default-OFF R23–R26 test flags, unavailable independent verifier,
+PG16/MySQL negative-suite references and four R27–R30 offline
+review/checklist tools. These are limited code-source observations,
+not provider authentication, deployed runtime configuration, real
+operator approval or even proof of actual CI completion. R31 tests
+intentional source drift, removed migration, unsafe verifier claim,
+changed flag defaults, missing CI suites, symlinks and false closure.
+
+The R31 verdict remains `HOLD_EXTERNAL_PROOF_REQUIRED` when all
+checked sources exist; missing source is `HOLD_LOCAL_CONTRACT_DRIFT`.
+Both exit nonzero and fix release, delete, retry, production
+migration and G3 exit authority to false. No new migration or
+cloud/API access.
+
+**Decision:** Stop accumulating synthetic proof layers as a
+substitute for independent provider evidence. Future implementation
+is blocked on an explicit product-owner choice to keep G3 on HOLD
+or authorize a specific disposable-provider pilot. Human-approved
+account scope, request/budget ceilings, revocation, original
+evidence custody, writer/ABA/conditional-operation and crash tests,
+Aiven audit and release acceptance remain outstanding. Five previous
+G3 migrations are still production-unapproved. **G3 OPEN.**
