@@ -14,6 +14,9 @@
         'stale' => '対象が不一致',
         'attention' => '対応が必要',
         'review' => '照合が必要',
+        'declared' => '本人申告',
+        'not_applicable' => '暫定的に対象外',
+        'operator_confirmed' => '所有者の実施申告',
     ];
 @endphp
 
@@ -110,4 +113,7 @@
 
 @if ($developmentOperationalProfileEditable ?? false)
     @include('workspace.development.partials.operational-profile-editor')
+    @if ($prelaunch)
+        @include('workspace.development.partials.operational-attestations')
+    @endif
 @endif
