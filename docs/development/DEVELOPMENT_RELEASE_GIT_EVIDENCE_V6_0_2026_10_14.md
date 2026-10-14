@@ -46,13 +46,14 @@ This procedure does not change GitHub branches or the actual application:
 2. Ensure a local `refs/heads/release/2026-10-13-bb8248f` exists and resolves **exactly** to the observed GitHub release SHA, then check out the release SHA in a detached checkout. Do not use `main` or `HEAD` as an operator's candidate argument.
 3. From that clean, pinned checkout, execute:
    ```sh
-   python3 scripts/ci/development_operational_v60_git_release_delta.py \
+   python3 <V6.0-tool-checkout>/scripts/ci/development_operational_v60_git_release_delta.py \
+     --git-repo <trusted-historical-release-clone> \
      --production-branch-sha 15abdc9de6f24b5250fb255c579d1aa55facaf1a \
      --candidate-sha bb8248f25545ae0d600fbb68f66c41c360004e2c \
      --main-snapshot-sha 1b51344eba91312de1d4db478bbf6a1a107ba517 \
      --release-ref release/2026-10-13-bb8248f
    ```
-   This reproduces the **initial observed snapshot**, not the newest main. To audit the final candidate/main, substitute a **freshly observed exact SHA**, review the new delta, and run from an exact checkout that contains this V6.0 script. If auditing old #513 source, V6.0 did not exist at that time: run the V6.0 version from a separate vetted tool checkout or approved tooling path while pointing the Git repo worktree at the fixed candidate. Do **not** pretend the historical candidate contains the new V6.0 audit code; see this limitation and rerun the tool against a disposable clone in a reviewed environment.
+   This reproduces the **initial observed snapshot**, not the newest main. The **tool checkout** is a vetted V6.0 tree; the **target Git repository** is a separate trusted local clone containing the historical candidate, its local release ref and all ancestry commits, with its HEAD detached at that candidate. Neither checkout fetches or deploys as a side effect. To audit a newer main snapshot, substitute a freshly observed exact SHA with ancestry locally present. Do **not** imply V6.0 source existed in the historical #513 candidate.
 4. Record only sanitized output and reviewed provenance. The local Git analysis **never replaces** V5.8's operator-held SELECT-only Aiven schema/ledger inspection, V5.9's candidate packet, owner signoff, or the Release #488 production controls.
 
 ## Blocking release gaps
