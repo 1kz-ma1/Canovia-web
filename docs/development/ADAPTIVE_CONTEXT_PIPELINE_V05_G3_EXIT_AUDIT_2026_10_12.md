@@ -822,3 +822,37 @@ schema/flag gates require separate owner/operator approval.
 No `production`/Render/Aiven mutation, storage enumeration,
 physical delete, cron, real account inspection, release or device
 verification occurred.
+
+## 60. G3-R15 — Double-sampled weak metadata and reference change observation (2026-10-14)
+
+**Gap:** R14 observed file existence and DB ownership only once, so visible
+concurrent changes between storage/SQL observations were not detected.
+Generic Flysystem metadata cannot prove immutable provider generation
+identity; interpreting it as one would introduce destructive ABA risk.
+
+**Scoped developer-only implementation:** New OFF-by-default
+`CANOVIA_PRIVATE_FILE_UPLOAD_CONSISTENCY_PROBE_ENABLED` adds a
+`PrivateFileReconciliationSnapshotService` to R14's capped opt-in preview,
+observing existing fence-row existence, Inbox/Recall/Career reference
+booleans and targeted file exists/size/mtime twice. Changes are flagged
+`unverifiable`, never orphan; equal samples retain ordinary observational
+categories with explicit `weak_metadata_not_generation_bound` status
+and `generation_verified=0`. Missing/invalid metadata is
+`unverifiable`. No new table, provider VersionId capture, lock, writes,
+object listing, checksum, upload/delete workflow changes, scheduler or
+automatic retry. Existing R14 behavior stays unchanged with the new
+switch OFF. Production runtime remains blocked regardless of flags.
+
+**Acceptance:** Disposable PostgreSQL16 and MySQL8.0/8.4 tests simulate
+object size changes and inserted DB references between samples, validate
+the same-size/mtime replacement false-negative without claiming version
+proof, fail closed on invalid provider metadata, check OFF/production
+gates, redacted CLI outputs and verify that the observer never deletes.
+Review exact PR-head CI, full diff, base stability and merge protection.
+
+**Still open:** same-size/mtime ABA, provider generation-bound operations,
+non-cooperating SQL/Storage/Career writers, object-storage failures,
+APP_KEY rotation/retention and all three separate G3 live database schema
+gates. This is **not** a source-of-truth object-generation verifier,
+orphan classifier, production release or permission to delete bytes.
+G3 remains OPEN.
