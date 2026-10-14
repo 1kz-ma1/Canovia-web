@@ -1,6 +1,6 @@
 # Canovia Development Operational Readiness V5.5 — Stale-form guard and end-to-end acceptance
 
-> Status: feature branch / CI acceptance under review (2026-10-14).
+> Status: integrated into `main` via PR #631; **not verified deployed** (2026-10-14).
 > Supersedes no production runbook or seven V53.8 authoritative Release Quality Gates.
 > Requires V4, V5.0–V5.4 code; does not imply that a private Plan or a physical iPhone was accessed.
 
