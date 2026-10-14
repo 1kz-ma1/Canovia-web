@@ -28,8 +28,15 @@ class StudyRecallCandidateExtractionService
         Plan $plan,
         Task $task,
         ?int $userId = null,
+        ?array $routingAuthorization = null,
     ): array {
         $authorization = $this->commitFence->captureAuthorization($plan, $userId);
+        if ($routingAuthorization !== null && $authorization !== $routingAuthorization) {
+            throw new NativeAiExecutionException(
+                'Inboxからコピーした後に共有権限が変更されました。もう一度確認してください。',
+                'native_ai_target_changed', 0,
+            );
+        }
         $sourceSignature = $this->commitFence->snapshot($source);
         $sourceContext = $source->source_type === 'text'
             ? mb_substr((string) $source->source_text, 0, 50000)
