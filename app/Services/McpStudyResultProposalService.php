@@ -162,6 +162,18 @@ final class McpStudyResultProposalService
                 return false;
             }
 
+            // Reserve the same link -> grant lock order as MCP reads and
+            // identity unlinks. The snapshot is not an authorization source;
+            // all locked records are rechecked before committing.
+            $grantSnapshot = McpDelegatedGrant::query()
+                ->whereKey($snapshot->grant_id)->where('user_id', $actor->id)
+                ->where('plan_id', $plan->id)->first();
+            if ($grantSnapshot === null) {
+                return false;
+            }
+            $link = McpLinkedSubject::query()
+                ->whereKey($grantSnapshot->subject_link_id)
+                ->where('user_id', $actor->id)->lockForUpdate()->first();
             $grant = McpDelegatedGrant::query()->whereKey($snapshot->grant_id)
                 ->where('user_id', $actor->id)->where('plan_id', $plan->id)
                 ->lockForUpdate()->first();
@@ -171,20 +183,20 @@ final class McpStudyResultProposalService
                 || $proposal->status !== McpStudyResultProposal::PENDING) {
                 return false;
             }
-            // Rejecting the draft requires only ownership; this is always
-            // safe even if OAuth/consent was revoked in the meantime.
+            // Rejecting the draft requires only ownership. Approval is
+            // denied if any currently linked identity or grant has changed.
             if ($approve) {
-                $link = McpLinkedSubject::query()
-                    ->whereKey($grant->subject_link_id)->where('user_id', $actor->id)
-                    ->where('provider_key', 'chatgpt')
-                    ->whereColumn('identity_fingerprint', 'active_identity_fingerprint')
-                    ->where('status', McpLinkedSubject::STATUS_LINKED)
-                    ->whereNull('revoked_at')->first();
                 $expected = $this->fingerprints->clientResource(
                     (string) config('canovia_mcp.allowed_client_id'),
                     (string) config('canovia_mcp.resource_url'),
                 );
                 if ($link === null || $expected === null
+                    || (int) $grant->subject_link_id !== (int) $link->id
+                    || $link->provider_key !== 'chatgpt'
+                    || $link->status !== McpLinkedSubject::STATUS_LINKED
+                    || $link->revoked_at !== null
+                    || $link->identity_fingerprint !== $link->active_identity_fingerprint
+                    || $link->linked_at === null || $link->linked_at->isFuture()
                     || ! hash_equals($expected, (string) $grant->client_resource_fingerprint)
                     || $grant->status !== McpDelegatedGrant::STATUS_ACTIVE
                     || $grant->revoked_at !== null
