@@ -37,6 +37,37 @@ final class McpStagingOAuthFailureDiagnosticTest extends TestCase
             ]);
     }
 
+    public function test_allowlist_includes_only_fixed_rate_limit_and_github_subject_codes(): void
+    {
+        config([
+            'app.env' => 'staging',
+            'canovia_staging.isolated' => true,
+            'canovia_staging.login_pilot_enabled' => true,
+            'canovia_staging.account_link_pilot_enabled' => true,
+        ]);
+        Log::spy();
+        $diagnostic = app(McpStagingOAuthFailureDiagnostic::class);
+        foreach ([
+            'link_provider_metadata_rate_limited',
+            'link_provider_token_rate_limited',
+            'link_provider_github_subject_rejected',
+        ] as $code) {
+            $diagnostic->record($code);
+        }
+        $diagnostic->record('link_provider_token_rate_limited=access_token:private');
+        $diagnostic->record('link_provider_github_subject_rejected'.chr(10).'secret');
+        Log::shouldHaveReceived('warning')->times(3);
+        foreach ([
+            'link_provider_metadata_rate_limited',
+            'link_provider_token_rate_limited',
+            'link_provider_github_subject_rejected',
+        ] as $code) {
+            Log::shouldHaveReceived('warning')->once()->with(
+                'Canovia MCP staging OAuth failure', ['stage_code' => $code],
+            );
+        }
+    }
+
     public function test_disabled_pilot_production_and_wrong_isolation_never_log_diagnostics(): void
     {
         Log::spy();
