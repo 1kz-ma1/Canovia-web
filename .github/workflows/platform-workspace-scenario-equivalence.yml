@@ -13,6 +13,7 @@ on:
       - 'tests/ci/test_platform_workspace_group_repeatability.py'
       - 'tests/ci/test_platform_workspace_omission_shadow_r18.py'
       - 'tests/ci/test_platform_workspace_r19_negative_controls.py'
+      - 'docs/development/PLATFORM_WORKSPACE_R19_NEGATIVE_CONTROLS_2026_10_15.md'
       - '.github/workflows/platform-workspace-scenario-equivalence.yml'
 
 permissions:
