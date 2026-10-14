@@ -203,7 +203,8 @@ final class McpDatabaseLockContentionTest extends TestCase
         $this->assertSame(1, McpLinkedSubject::query()
             ->where('identity_fingerprint', $fingerprint)
             ->where('status', 'linked')->count());
-        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+        $this->assertSame(0, McpDelegatedGrant::query()
+            ->where('user_id', $second->id)->count());
     }
 
     private function assertNowaitBlocked(ConnectionInterface $connection, string $table, int $id): void
