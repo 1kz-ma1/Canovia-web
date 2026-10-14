@@ -56,16 +56,24 @@ final class McpStagingOAuthFailureDiagnosticTest extends TestCase
         }
         $diagnostic->record('link_provider_token_rate_limited=access_token:private');
         $diagnostic->record('link_provider_github_subject_rejected'.chr(10).'secret');
-        Log::shouldHaveReceived('warning')->times(3);
-        foreach ([
+        $observed = [];
+        Log::shouldHaveReceived('warning')->withArgs(
+            static function ($message, $context) use (&$observed): bool {
+                if ($message !== 'Canovia MCP staging OAuth failure'
+                    || ! is_array($context)
+                    || array_keys($context) !== ['stage_code']
+                    || ! is_string($context['stage_code'])) {
+                    return false;
+                }
+                $observed[] = $context['stage_code'];
+                return true;
+            },
+        )->times(3);
+        $this->assertSame([
             'link_provider_metadata_rate_limited',
             'link_provider_token_rate_limited',
             'link_provider_github_subject_rejected',
-        ] as $code) {
-            Log::shouldHaveReceived('warning')->once()->with(
-                'Canovia MCP staging OAuth failure', ['stage_code' => $code],
-            );
-        }
+        ], $observed);
     }
 
     public function test_disabled_pilot_production_and_wrong_isolation_never_log_diagnostics(): void
