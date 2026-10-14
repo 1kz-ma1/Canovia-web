@@ -42,7 +42,7 @@ final class DevelopmentOperationalEvidenceService
 
         $checks = [
             $this->check(
-                'environment', 10, '本番の公開先を特定する', 'unknown',
+                'environment', 10, '公開先とデータの保存・復旧方法を確認する', 'unknown',
                 '公開対象の環境・サービスと実際のデプロイブランチは、Canovia上ではまだ照合していません。',
                 '独立した本番環境の確認が必要'
             ),
