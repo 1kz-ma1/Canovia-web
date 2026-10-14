@@ -150,3 +150,7 @@ This is a scheduling/cost optimization for obsolete *main PR* revisions, not a n
 5. All current-head CI including Platform Offline, Workspace Resume, Migration Recovery and Development Prelaunch must succeed before main merge. Protect production pushes/PRs: no production event is created by this experiment.
 
 **LIMIT:** A successful cancellation for a main-target PR does not prove production-context isolation at runtime. Static production isolation contract tests remain the only verification there; owner release GO is still required.
+
+### Controlled second revision — evidence marker
+
+The second commit was deliberately made after GitHub API showed the first SHA's Workspace Resume run 38546176452 as **in_progress**, along with Migration Recovery run 38546176439 as **in_progress**. Old head SHA: 65efc41a8917173f377b57e30d291df6f35508c7. The observable outcomes are assessed only using the GitHub API run statuses after this commit; no claim of cancellation is made by this marker alone.
