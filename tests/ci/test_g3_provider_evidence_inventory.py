@@ -31,20 +31,24 @@ class EvidenceInventoryTests(unittest.TestCase):
             'environment': 'disposable',
             'requirements': [],
         }
-        self.document = 'docs/development/disposable_r27_evidence.md'
-        evidence_path = self.repo / self.document
-        evidence_path.parent.mkdir(parents=True)
-        evidence_path.write_text('untrusted local fixture\n', encoding='utf-8')
+        self.documents = {}
+        for requirement in REQUIREMENTS:
+            document = 'docs/development/r27_' + requirement + '.md'
+            evidence_path = self.repo / document
+            evidence_path.parent.mkdir(parents=True, exist_ok=True)
+            evidence_path.write_text('untrusted local fixture ' + requirement + '\n', encoding='utf-8')
+            self.documents[requirement] = document
         self.git('add', '.')
         self.git('commit', '-qm', 'pinned fixture')
         self.manifest['candidate_sha'] = self.git('rev-parse', 'HEAD')
-        digest = hashlib.sha256(evidence_path.read_bytes()).hexdigest()
         for requirement, role in REQUIREMENTS.items():
+            document = self.documents[requirement]
+            digest = hashlib.sha256((self.repo / document).read_bytes()).hexdigest()
             self.manifest['requirements'].append({
                 'id': requirement,
                 'owner_role': role,
                 'review_state': 'candidate',
-                'evidence': {'path': self.document, 'sha256': digest},
+                'evidence': {'path': document, 'sha256': digest},
             })
 
     def git(self, *args):
@@ -97,7 +101,7 @@ class EvidenceInventoryTests(unittest.TestCase):
             self.assertEqual(self.outcome(other)['result'], 'INVALID')
 
     def test_moved_commit_cannot_reuse_old_hash(self):
-        (self.repo / self.document).write_text('different untrusted data\n', encoding='utf-8')
+        (self.repo / self.documents['provider_identity_and_trust_root']).write_text('different untrusted data\n', encoding='utf-8')
         self.git('add', '.')
         self.git('commit', '-qm', 'changed artifact')
         candidate = copy.deepcopy(self.manifest)
@@ -143,6 +147,13 @@ class EvidenceInventoryTests(unittest.TestCase):
         self.assertEqual(self.outcome(m)['result'], 'BLOCK')
         m['candidate_sha'] = 'a' * 39
         self.assertEqual(self.outcome(m)['result'], 'INVALID')
+
+    def test_shared_document_cannot_impersonate_two_independent_requirements(self):
+        m = copy.deepcopy(self.manifest)
+        m['requirements'][1]['evidence'] = copy.deepcopy(m['requirements'][0]['evidence'])
+        result = self.outcome(m)
+        self.assertEqual(result['result'], 'INVALID')
+        self.assert_no_permission(result)
 
     def test_symlink_blob_is_rejected_even_with_matching_hash(self):
         outside = self.repo / 'outside.txt'
