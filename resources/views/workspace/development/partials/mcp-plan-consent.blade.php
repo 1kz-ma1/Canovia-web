@@ -38,8 +38,9 @@
                     許可の有効期限
                     <select name="duration_days" class="form-control mt-1 block w-full min-w-0 max-w-full" required>
                         <option value="1">1日</option>
-                        <option value="7" selected>7日</option>
+                        <option value="7">7日</option>
                         <option value="30">30日</option>
+                        <option value="until_revoked" selected>取り消すまで共有する</option>
                     </select>
                 </label>
             </div>
