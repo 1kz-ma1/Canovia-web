@@ -164,7 +164,7 @@ class ScopeReviewTests(unittest.TestCase):
 
     def test_ordered_elapsed_time_and_narrow_intent_count(self):
         review = copy.deepcopy(self.review)
-        review["intents"][2]["elapsed_minutes"] = 1
+        review["intents"][2]["elapsed_minutes"] = 2
         self.assertEqual(self.check(review=review)["result"], "OWNER_CHECKLIST_PENDING")
         review["intents"][2]["elapsed_minutes"] = 0
         self.assertEqual(self.check(review=review)["result"], "INVALID")
