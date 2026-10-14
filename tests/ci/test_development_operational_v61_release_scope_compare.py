@@ -107,10 +107,13 @@ class V61ScopeComparisonTest(unittest.TestCase):
             f.git("branch", ref)
             new = f.add("database/migrations/2026_10_14_020000_new.php", "<?php")
             f.git("checkout", "-q", old)
-            for wrong in ["0"*40, "not-a-sha", f.base]:
+            for wrong in ["0"*40, "not-a-sha", new]:
                 with self.subTest(wrong=wrong):
                     with self.assertRaises(IncompleteSnapshot):
                         compare(f.root, wrong, old, new, ref)
+            # The actual baseline must remain valid; a later commit cannot
+            # masquerade as a prior production ancestor of the old release.
+            self.assertFalse(compare(f.root, f.base, old, new, ref)["release_authorized"])
             f.git("branch", "-f", ref, new)
             with self.assertRaises(IncompleteSnapshot):
                 compare(f.root, f.base, old, new, ref)
