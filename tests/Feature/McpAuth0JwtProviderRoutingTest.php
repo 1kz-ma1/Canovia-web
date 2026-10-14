@@ -318,6 +318,20 @@ final class McpAuth0JwtProviderRoutingTest extends TestCase
         $this->assertSame(self::RESOURCE, $query['audience']);
         $this->assertSame(self::RESOURCE, $query['resource']);
 
+        // A single HTTP fake must derive a fresh signed token for each
+        // case. Repeated Http::fake calls append callbacks and can reuse the
+        // first response, incorrectly making wrong-provider cases pass.
+        $currentSubject = 'github|123456789';
+        Http::fake([
+            self::EXCHANGE => function () use (&$currentSubject) {
+                return Http::response([
+                    'access_token' => $this->token(self::LINK_CLIENT, ['sub' => $currentSubject]),
+                    'token_type' => 'Bearer',
+                    'expires_in' => 900,
+                ], 200, ['Content-Type' => 'application/json']);
+            },
+            self::JWKS => Http::response(['keys' => [$this->jwk]], 200, ['Content-Type' => 'application/json']),
+        ]);
         foreach ([
             ['github|123456789', true],
             ['auth0|123456789', false],
@@ -325,15 +339,8 @@ final class McpAuth0JwtProviderRoutingTest extends TestCase
             ['github|not-numeric', false],
             ['github|', false],
         ] as [$subject, $accepted]) {
+            $currentSubject = $subject;
             Cache::flush();
-            Http::fake([
-                self::EXCHANGE => Http::response([
-                    'access_token' => $this->token(self::LINK_CLIENT, ['sub' => $subject]),
-                    'token_type' => 'Bearer',
-                    'expires_in' => 900,
-                ], 200, ['Content-Type' => 'application/json']),
-                self::JWKS => Http::response(['keys' => [$this->jwk]], 200, ['Content-Type' => 'application/json']),
-            ]);
             $principal = $provider->exchangeAndVerify(str_repeat('c', 30), str_repeat('v', 43));
             $this->assertSame($accepted, $principal !== null, 'unexpected GitHub-only subject decision');
             if ($accepted) {
