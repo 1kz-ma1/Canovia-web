@@ -32,6 +32,10 @@ on:
       - 'tests/ci/test_p0_mysql_full_ledger_offline_check.py'
       - 'tests/ci/test_release_488_mysql_ledger_gate.py'
       - 'scripts/ci/release_488_mysql_ledger_gate.py'
+      - 'scripts/ci/development_operational_v58_release_gate.py'
+      - 'scripts/sql/development_operational_v58_schema_snapshot.sql'
+      - 'tests/ci/test_development_operational_v58_release_gate.py'
+      - 'tests/Feature/DevelopmentOperationalMysqlMigrationV58Test.php'
       - 'scripts/sql/release_488_mysql_schema_snapshot.sql'
       - 'scripts/ops/p0_mysql_operator_select_only_collect.sh'
       - '.github/workflows/p0-disposable-mysql-schema.yml'
@@ -128,12 +132,15 @@ jobs:
           php -l database/migrations/2026_10_12_010000_add_source_revision_to_development_activity_observations.php
           php -l database/migrations/2026_10_13_021000_add_source_epoch_to_development_activity_observations.php
           php -l tests/Feature/NextReleaseMysqlSourceRevisionMigrationTest.php
+          php -l tests/Feature/DevelopmentOperationalMysqlMigrationV58Test.php
       - name: Verify offline schema and migration-ledger decision matrix
         run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_inventory_offline_triage.py' -v
       - name: Verify operator-local MySQL TSV import boundary and error redaction
         run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_inventory_tsv_import.py' -v
       - name: Verify full Laravel migration ledger offline safety and redaction
         run: python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_full_ledger_offline_check.py' -v
+      - name: Verify V5.8 pinned read-only migration decision matrix offline
+        run: python3 -m unittest discover -s tests/ci -p 'test_development_operational_v58_release_gate.py' -v
       - name: Verify exact #488 pending ledger, schema coherence, and no-secret output
         run: |
           python3 -m unittest discover -s tests/ci -p 'test_release_488_mysql_ledger_gate.py' -v
@@ -296,3 +303,28 @@ jobs:
           echo "p0_select_only_data_preflight_and_corruption_negative: pass"
       - name: Enforce authorization epoch triggers for direct SQL on disposable MySQL
         run: php artisan test tests/Feature/AuthorizationEpochDatabaseTriggerG3Test.php --stop-on-failure
+      - name: Audit V5.3/V5.7 physical schema vs exact ledger on disposable MySQL
+        env:
+          MYSQL_PWD: ci-only-ephemeral-password
+        run: |
+          set -euo pipefail
+          scratch="$(mktemp -d)"
+          trap 'rm -rf -- "$scratch"' EXIT
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=canovia_ci --database=canovia_p0_ci \
+            --batch --raw --skip-column-names \
+            < scripts/sql/p0_mysql_readonly_full_migration_ledger.sql \
+            > "$scratch/ledger.tsv"
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=canovia_ci --database=canovia_p0_ci \
+            --batch --raw --skip-column-names \
+            < scripts/sql/development_operational_v58_schema_snapshot.sql \
+            > "$scratch/schema.tsv"
+          python3 scripts/ci/development_operational_v58_release_gate.py \
+            --candidate-sha "$(git rev-parse HEAD)" \
+            --ledger "$scratch/ledger.tsv" --schema "$scratch/schema.tsv" \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["result"]=="REVIEW_REQUIRED" and d["code"]=="BOTH_MIGRATIONS_APPLIED_NOT_RELEASE_GO" and d["release_authorized"] is False and d["backup_restore_verified"] is False'
+      - name: Rehearse V5.3 then V5.7 preserving historical manual attestations
+        run: php artisan test tests/Feature/DevelopmentOperationalMysqlMigrationV58Test.php --fail-on-skipped --stop-on-failure
+      - name: Retain full ledger idempotence after V5.8 ordered rehearsal
+        run: php artisan migrate --force --no-interaction
