@@ -66,8 +66,15 @@ final class McpStagingLoginPilotPolicy
             return true;
         }
 
-        // Revocation is allowed only for an existing, personally owned grant;
-        // the controller additionally enforces the one synthetic Plan.
+        // Staging can unlink only the authenticated synthetic owner.
+        // Subject ID ownership and the stage actor are rechecked by the
+        // controller; unlink revokes every associated grant atomically.
+        if ($method === 'DELETE'
+            && preg_match('#\Aaccount/mcp/subjects/[1-9][0-9]*\z#D', $path) === 1) {
+            return true;
+        }
+
+        // Grant revocation still requires stage-only Plan ownership.
         return $method === 'DELETE'
             && preg_match('#\Aaccount/mcp/grants/[1-9][0-9]*\z#D', $path) === 1;
     }
