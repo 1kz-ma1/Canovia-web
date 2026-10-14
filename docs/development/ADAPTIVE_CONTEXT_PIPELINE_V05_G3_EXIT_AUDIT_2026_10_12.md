@@ -670,3 +670,45 @@ Dedicated positive/negative tests cover legitimate native generation, alternativ
 **Acceptance:** `PrivateFileCleanupMysqlCurrentReadG3Test` opens a consistent-read snapshot on disposable MySQL 8.0/8.4, commits a new Inbox reference from an independent PDO session, verifies ordinary snapshot `EXISTS` is stale, and verifies the current-reading service detects that reference. A separate path with no owner remains unreferenced. The dedicated matrix and the established PostgreSQL16 lifecycle/source-race plus migration/workspace checks must pass at the exact PR HEAD.
 
 **Limitations:** A missing path index means MySQL `FOR UPDATE` may acquire wide gap/next-key locks, with new contention/deadlock risk. The test does *not* exercise live Aiven or prove safety for writes that begin after the last lookup, uncoordinated external writers, same-byte path reuse or object-store generation changes. All native writers must share a formally designed path identity/lock protocol before claiming race closure, and safe storage backend semantics require additional approval. The full contract is not implemented in this stage; G3 remains OPEN. No new schema or production migration was applied; #567's `private_file_cleanup_entries` production release gate remains. No `production` branch, Render, Aiven, live storage, cron, deployment, billing or physical-device operation.
+
+## 56. G3-R11 — Keyed durable path-fence foundation and opt-in first writer (2026-10-14)
+
+**Follow-on to #574:** MySQL current reads eliminated the stale-repeatable-read reference query gap, but neither database query can atomically exclude a separate uncoordinated storage/DB writer from the check→unlink interval. The next design unit must be shared between storage writer and cleanup worker, not simply a third SELECT.
+
+**Implemented bounded pilot:** Add a non-destructive, uniquely indexed
+`private_file_path_fences` row store containing only HMAC-SHA256 keyed
+disk/path fingerprints with a domain separator, never raw private paths.
+`PrivateFilePathFenceService` validates path/disk and presence of APP_KEY,
+requires an existing DB transaction, insert-or-ignores the persistent row,
+then holds `SELECT ... FOR UPDATE` for that digest until the enclosing
+transaction completes. `CANOVIA_PRIVATE_FILE_PATH_FENCE_ENABLED` defaults to
+**false**; when true, the existing worker locks this row after its Outbox
+lock and before references/storage I/O, and the Inbox→Recall transaction
+locks its generated destination path before writing bytes and the DB source
+record. Missing schema/key fails closed: worker records
+`path_fence_unavailable` with non-destructive retry. Disabled mode keeps
+the legacy cleanup/copy behavior unchanged.
+
+**Acceptance:** A disposable PG16 suite must prove digest/path secrecy,
+validation, idempotent row reuse, rollback, transaction requirement,
+independent-session lock exclusion, opt-in physical cleanup and missing-schema
+non-deletion, plus Recall copy integration. A disposable MySQL 8.0/8.4
+matrix must prove independent-session lock blocking and row reuse.
+Dedicated G3 PostgreSQL Source Race, P0 MySQL Migration, Migration Recovery
+and Workspace Resume continue gating exact PR head.
+
+**Intentionally NOT covered:** `InboxController::store`,
+`StudyScopeCaptureController::store`, `StudyRecallCandidateController` and
+some Career path references, direct SQL, object-store writers or earlier
+untracked orphans. No full safety claim is made until every storage writer
+uses the same lock and its storage lifecycle is managed. Legacy MySQL
+path-column scans may hold broad next-key locks. The new fence rows are
+retained without automatic pruning; APP_KEY rotation requires a coordinated
+plan; storage read/hash/delete is still not version-conditional.
+This is a new **additive migration** and *requires separate production/Aiven
+operator review in addition to #567's Outbox migration*. No production branch,
+Render, Aiven schema, live worker, cron, storage listing, billing, deployment
+or device mutation was performed. G3 stays OPEN.
+
+**Canonical scope/next-stage checklist:**
+`docs/development/G3_PRIVATE_FILE_PATH_FENCE_IMPLEMENTATION_SPEC_2026_10_14.md`.

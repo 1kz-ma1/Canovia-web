@@ -19,6 +19,10 @@ use Throwable;
  */
 final class PrivateFileLifecycleService
 {
+    public function __construct(
+        private readonly PrivateFilePathFenceService $pathFence,
+    ) {}
+
     private const TABLE = 'private_file_cleanup_entries';
 
     private const SOURCES = [
@@ -196,6 +200,19 @@ final class PrivateFileLifecycleService
             || $row->disk !== (string) config('filesystems.default', 'local')) {
             $this->quarantine($id, 'storage_disk_mismatch');
             return 'quarantined';
+        }
+
+        // The flag is OFF until every native writer shares this lock.
+        // After the outbox row lock, hold the path row lock through final
+        // reference verification and physical unlink, never outside a
+        // transaction. A missing fence table stops deletion safely.
+        if ($this->pathFence->enabled()) {
+            try {
+                $this->pathFence->acquireInTransaction((string) $row->disk, $path);
+            } catch (Throwable) {
+                $this->retryLater($id, (int) $row->attempt_count, 'path_fence_unavailable');
+                return 'retry';
+            }
         }
 
         // A still-owned/linked file may NEVER be removed by this outbox.

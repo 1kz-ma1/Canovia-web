@@ -23,6 +23,7 @@ final class InboxRecallMaterialTransferGuard
 {
     public function __construct(
         private readonly CompanionMembershipCommitGuard $membership,
+        private readonly PrivateFilePathFenceService $pathFence,
     ) {}
 
     /**
@@ -79,6 +80,17 @@ final class InboxRecallMaterialTransferGuard
                     $extension = pathinfo((string) $inbox->storage_path, PATHINFO_EXTENSION);
                     $newPath = 'study-recall-sources/'.$livePlan->id.'/'.$liveTask->id.'/'
                         .Str::uuid().($extension !== '' ? '.'.$extension : '');
+
+                    // Pilot writer: take the same path fence as the cleanup
+                    // worker while the DB transaction owns the Recall source
+                    // insert and the physical copy. Do not claim other native
+                    // upload routes participate yet.
+                    if ($this->pathFence->enabled()) {
+                        $this->pathFence->acquireInTransaction(
+                            (string) config('filesystems.default', 'local'),
+                            $newPath,
+                        );
+                    }
 
                     try {
                         if (! Storage::put($newPath, $bytes)

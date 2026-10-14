@@ -67,6 +67,41 @@ final class PrivateFileCleanupMysqlCurrentReadG3Test extends TestCase
         });
     }
 
+    public function test_opt_in_row_fence_serializes_two_independent_mysql_connections(): void
+    {
+        config(['canovia.private_file_path_fence_enabled' => true]);
+        $fence = app(\App\Services\PrivateFilePathFenceService::class);
+        $disk = (string) config('filesystems.default');
+        $path = 'study-recall-sources/synthetic/'.\Illuminate\Support\Str::uuid().'/lock.png';
+        $digest = $fence->fingerprint($disk, $path);
+        $rival = $this->rival();
+
+        // Persist the key before entering the competing transactions.
+        DB::transaction(fn () => $fence->acquireInTransaction($disk, $path));
+        DB::transaction(function () use ($fence, $disk, $path, $digest, $rival): void {
+            $fence->acquireInTransaction($disk, $path);
+            $rival->beginTransaction();
+            try {
+                $rival->exec('SET SESSION innodb_lock_wait_timeout = 1');
+                $stmt = $rival->prepare(
+                    'SELECT id FROM private_file_path_fences WHERE path_digest = :digest FOR UPDATE',
+                );
+                try {
+                    $stmt->execute(['digest' => $digest]);
+                    $this->fail('Second MySQL session bypassed the active path fence.');
+                } catch (\PDOException $e) {
+                    $this->assertSame(1205, (int) ($e->errorInfo[1] ?? 0));
+                }
+            } finally {
+                $rival->rollBack();
+            }
+        });
+
+        DB::transaction(fn () => $fence->acquireInTransaction($disk, $path));
+        $this->assertDatabaseHas('private_file_path_fences', ['path_digest' => $digest]);
+        $this->assertDatabaseMissing('private_file_path_fences', ['path_digest' => $path]);
+    }
+
     private function rival(): PDO
     {
         $db = config('database.connections.mysql');
