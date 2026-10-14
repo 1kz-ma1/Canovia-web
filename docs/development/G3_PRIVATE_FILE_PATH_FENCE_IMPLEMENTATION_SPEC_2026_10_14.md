@@ -939,3 +939,44 @@ regressions alongside previous G3 suites on PostgreSQL 16 and MySQL
 external-writer fencing, power-loss recovery and atomic conditional
 operations remain unverified. Five existing G3 migrations are
 unapproved for Aiven production. **G3 OPEN.**
+
+## 22. G3-R27 — Pinned offline provider-evidence inventory and operator handoff (2026-10-14)
+
+R27 moves beyond synthetic denial samples to a **non-authorizing,
+offline handoff** for real provider assessment. New
+`scripts/ops/g3_provider_evidence_inventory.py` accepts a strictly
+typed JSON manifest referencing an exact local Git commit and eleven
+mandatory independent evidence requirements (R25's seven trust
+requirements plus recovery, reconciliation, key rotation and
+release-operator approval). The tool uses only local `git cat-file`,
+`ls-tree` and `show` to check ordinary Markdown blob existence,
+size and SHA-256 in the pinned commit. It has no network, provider
+SDK, database, secret, mutation or migration access.
+
+An absent report or missing/invalid reference is `BLOCK`.
+Malformed manifest, unexpected proof-of-authorization attributes,
+duplicate JSON keys or requirements, wrong owner-role labels,
+symbolic link blobs, missing commit or path traversal fail closed.
+Even eleven hash-matching files produce only
+`MANUAL_REVIEW_ONLY` and script exit code **2**. Every report has
+`provider_verified=false`, `generation_verified=false`,
+`replay_protection_verified=false`, `writer_fencing_verified=false`,
+`crash_recovery_verified=false`, `release_authorized=false`,
+`retry_authorized=false`, `delete_authorized=false` and
+`production_modified=false`. No file contents, cloud identifiers,
+private object paths, nonces, keys or credentials are printed.
+
+This checks **version-controlled report integrity, not independent
+provider truth**. Plausible Markdown and matching SHA-256 can be
+self-created, so security/storage/release reviewers must independently
+authenticate original records. The separate
+`G3_PROVIDER_EVIDENCE_HANDOFF_R27_2026_10_14.md` defines responsible
+roles, proof requirements, safe usage and owner-release gates. CI
+runs disposable local Git tests in the existing Platform offline
+preflight workflow. Existing G3 R11–R26 production pathways remain
+unchanged; no runtime flag or migration is added.
+
+Production Aiven migration approvals (five previous additions),
+live object/provider evidence, durable retry/replay state,
+crash/ABA proof, manual operator review and owner release approval
+remain absent. **G3 OPEN.**
