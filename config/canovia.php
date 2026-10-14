@@ -113,6 +113,13 @@ return [
         FILTER_VALIDATE_BOOL
     ),
 
+    // G3-R22: test-only synthetic generation race classification. No live
+    // provider queries, automatic replay or deletion. OFF by default.
+    'private_file_synthetic_race_matrix_enabled' => filter_var(
+        env('CANOVIA_PRIVATE_FILE_SYNTHETIC_RACE_MATRIX_ENABLED', false),
+        FILTER_VALIDATE_BOOL
+    ),
+
     // A public epoch label, NOT an encryption key. Changing it intentionally
     // blocks old proof reads until an explicit, audited migration exists.
     'private_file_generation_key_epoch' => env(
