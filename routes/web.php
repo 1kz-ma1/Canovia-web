@@ -528,6 +528,8 @@ Route::post('/plans/{plan}/tasks/{task}/guided-execution', [GuidedExecutionContr
     ->name('plans.tasks.guided_execution.prepare');
 Route::post('/plans/{plan}/tasks/{task}/guided-execution/{guidedExecution}/reflect', [GuidedExecutionController::class, 'reflect'])
     ->name('plans.tasks.guided_execution.reflect');
+Route::post('/plans/{plan}/tasks/{task}/guided-execution/{guidedExecution}/confirm-next-action', [GuidedExecutionController::class, 'confirmNextAction'])
+    ->name('plans.tasks.guided_execution.confirm_next_action');
 Route::post('/plans/{plan}/tasks/{task}/guided-execution/{guidedExecution}/cancel', [GuidedExecutionController::class, 'cancel'])
     ->name('plans.tasks.guided_execution.cancel');
 
