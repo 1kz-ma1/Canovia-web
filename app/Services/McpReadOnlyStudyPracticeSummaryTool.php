@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Plan;
+use App\Models\McpStudyResultProposal;
 use App\Models\StudyPracticeAttempt;
 use Illuminate\Support\Facades\DB;
 
@@ -50,7 +51,7 @@ final class McpReadOnlyStudyPracticeSummaryTool
 
             // Only applied results are final Canovia study evidence; drafts,
             // generated exercises and unconfirmed assessments are excluded.
-            $attempts = StudyPracticeAttempt::query()
+            $native = StudyPracticeAttempt::query()
                 ->where('plan_id', $plan->id)
                 ->where('user_id', $plan->user_id)
                 ->whereNotNull('applied_at')
@@ -58,13 +59,48 @@ final class McpReadOnlyStudyPracticeSummaryTool
                 ->orderByDesc('id')
                 ->limit($limit + 1)
                 ->get(['score_percent', 'weaknesses', 'assessment', 'applied_at']);
-            $hasMoreAppliedAttempts = $attempts->count() > $limit;
-            $attempts = $attempts->take($limit);
+            $ownerConfirmed = McpStudyResultProposal::query()
+                ->where('plan_id', $plan->id)
+                ->where('user_id', $plan->user_id)
+                ->where('status', McpStudyResultProposal::APPROVED)
+                ->whereNotNull('decided_at')
+                ->orderByDesc('decided_at')
+                ->orderByDesc('id')
+                ->limit($limit + 1)
+                ->get(['question_count', 'correct_count', 'weakness_topics', 'decided_at']);
+
+            // Both evidence sources are truncated BEFORE projection. The
+            // external source is recorded as OWNER-APPROVED, not exam-verified;
+            // no ChatGPT proposal or rejection can enter this query.
+            $combined = collect();
+            foreach ($native as $item) {
+                $combined->push([
+                    'score_percent' => $item->score_percent,
+                    'weaknesses' => $item->weaknesses,
+                    'assessment' => $item->assessment,
+                    'source' => 'native',
+                    'timestamp' => $item->applied_at?->getTimestamp() ?? 0,
+                ]);
+            }
+            foreach ($ownerConfirmed as $item) {
+                $combined->push([
+                    'score_percent' => (int) round(
+                        100 * $item->correct_count / max(1, $item->question_count),
+                    ),
+                    'weaknesses' => $item->weakness_topics,
+                    'assessment' => [],
+                    'source' => 'owner_approved_mcp',
+                    'timestamp' => $item->decided_at?->getTimestamp() ?? 0,
+                ]);
+            }
+            $truncatedAttempts = $combined->count() > $limit;
+            $attempts = $combined->sortByDesc('timestamp')->take($limit)->values();
+            $approvedExternalCount = $attempts->where('source', 'owner_approved_mcp')->count();
 
             $scores = [];
             $topics = [];
             foreach ($attempts as $attempt) {
-                $value = $attempt->score_percent;
+                $value = $attempt['score_percent'];
                 if (is_int($value) && $value >= 0 && $value <= 100) {
                     $scores[] = $value;
                 }
@@ -73,7 +109,7 @@ final class McpReadOnlyStudyPracticeSummaryTool
                 // only topic tags for incorrect/partial answers, never raw
                 // question, model rationale or feedback text. Legacy rows
                 // without typed feedback may use the bounded weakness list.
-                $items = data_get($attempt->assessment, 'question_feedback', []);
+                $items = data_get($attempt['assessment'], 'question_feedback', []);
                 $items = is_array($items) ? array_slice($items, 0, 30) : [];
                 $structured = collect($items)->contains(
                     static fn ($item): bool => is_array($item)
@@ -96,7 +132,7 @@ final class McpReadOnlyStudyPracticeSummaryTool
                         }
                     }
                 } else {
-                    $labels = (array) $attempt->weaknesses;
+                    $labels = (array) $attempt['weaknesses'];
                 }
 
                 foreach ($labels as $label) {
@@ -143,15 +179,16 @@ final class McpReadOnlyStudyPracticeSummaryTool
                 'sample' => [
                     'applied_attempts_considered' => $attempts->count(),
                     'scored_attempts' => count($scores),
+                    'owner_approved_mcp_results_considered' => $approvedExternalCount,
                     'average_score_percent' => $scores !== []
                         ? (int) round(array_sum($scores) / count($scores))
                         : null,
                     'latest_score_percent' => $scores[0] ?? null,
                 ],
                 'weak_topics' => array_slice($weak, 0, 5),
-                'truncated' => count($weak) > 5 || $hasMoreAppliedAttempts,
+                'truncated' => count($weak) > 5 || $truncatedAttempts,
                 'completion' => 'unverified',
-                'caveat' => 'Only aggregated owner-applied Canovia study records. Weakness labels and scores may be model-derived or user-recorded, not independently verified. No raw questions, answers, assessments or attempts are exported.',
+                'caveat' => 'Aggregated native applied attempts and separately owner-approved external proposals only. Scores and weaknesses are unverified; pending/rejected submissions and raw questions or answers are never shared.',
             ];
         }, 3);
     }

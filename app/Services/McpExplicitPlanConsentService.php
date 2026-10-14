@@ -206,6 +206,13 @@ final class McpExplicitPlanConsentService
                 $event = 'grant_consented';
             }
 
+            // Refreshing/downgrading consent invalidates ALL earlier
+            // unapproved proposals, even after a rapid revoke/re-consent.
+            DB::table('mcp_study_result_proposals')
+                ->where('grant_id', $grant->id)
+                ->where('status', 'pending')
+                ->update(['status' => 'rejected', 'decided_at' => now(), 'updated_at' => now()]);
+
             DB::table('mcp_delegated_access_events')->insert([
                 'actor_user_id' => $owner->id,
                 'subject_link_id' => $link->id,

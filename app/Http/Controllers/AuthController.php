@@ -6,6 +6,7 @@ use App\Enums\ReleaseLevel;
 use App\Models\User;
 use App\Models\DevelopmentAiSharingPreference;
 use App\Models\McpDelegatedGrant;
+use App\Models\McpStudyResultProposal;
 use App\Models\McpLinkedSubject;
 use App\Services\AccountDeletionService;
 use App\Services\GuestPlanClaimService;
@@ -209,6 +210,12 @@ class AuthController extends Controller
 
         return view('auth.account', [
             'user' => $user,
+            'mcpStudyResultProposals' => McpStudyResultProposal::query()
+                ->where('user_id', $user->id)
+                ->where('status', McpStudyResultProposal::PENDING)
+                ->where('expires_at', '>', now())
+                ->with(['plan:id,user_id,title', 'task:id,plan_id,title'])
+                ->orderBy('expires_at')->limit(8)->get(),
             'mcpActiveGrants' => McpDelegatedGrant::query()
                 ->where('user_id', $user->id)
                 ->where('status', McpDelegatedGrant::STATUS_ACTIVE)

@@ -8,13 +8,16 @@ use App\Services\McpProtectedResourceConfiguration;
 use App\Services\McpReadOnlyContextTool;
 use App\Services\McpReadOnlyStudyContextTool;
 use App\Services\McpReadOnlyStudyPracticeSummaryTool;
+use App\Services\McpProposeStudyResultTool;
+use App\Services\McpStudyResultProposalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 /**
- * Stateless MCP Streamable HTTP subset: JSON-RPC POST only, one read-only
- * tool, no sessions, no SSE, no write methods and no OAuth issuance.
+ * Stateless MCP Streamable HTTP subset: JSON-RPC POST only. Optional
+ * write-scoped Study tool creates a pending owner-approval request ONLY.
+ * It cannot autonomously record results, adjust Task progress or issue OAuth.
  *
  * OFF by default. Real IdP configuration and consent must be reviewed
  * independently before enabling any data response in production.
@@ -32,6 +35,8 @@ final class McpReadOnlyResourceController extends Controller
         McpReadOnlyContextTool $tool,
         McpReadOnlyStudyContextTool $studyTool,
         McpReadOnlyStudyPracticeSummaryTool $summaryTool,
+        McpProposeStudyResultTool $proposalTool,
+        McpStudyResultProposalService $proposalService,
         McpAuthorizationProbeController $probe,
     ): JsonResponse|Response {
         // Preserve the previous deny-all behavior until an independent
@@ -126,7 +131,7 @@ final class McpReadOnlyResourceController extends Controller
                     'name' => 'canovia-private-development',
                     'version' => '1.0.0',
                 ],
-                'instructions' => 'Read only individually consented private Development or Study Plans. Study practice summaries need separate permission and contain bounded, unverified aggregate results. Never infer Plan IDs or treat records as external evidence.',
+                'instructions' => 'Read only individually consented private Development or Study Plans. Proposing an AP result requires a separate OAuth write scope and per-item Canovia owner confirmation; proposal != applied learning result. Never infer Plan IDs or treat model assessments as verified.' ,
             ]);
         }
 
@@ -147,6 +152,10 @@ final class McpReadOnlyResourceController extends Controller
                 if ($this->studySummaryToolEnabled()) {
                     $definitions[] = $summaryTool->definition();
                 }
+                if ($proposalService->isEnabled()
+                    && in_array(\App\Services\McpProtectedResourceConfiguration::STUDY_WRITE_SCOPE, $principal->scopes, true)) {
+                    $definitions[] = $proposalTool->definition();
+                }
             }
             return $this->rpcSuccess($id, ['tools' => $definitions]);
         }
@@ -159,14 +168,39 @@ final class McpReadOnlyResourceController extends Controller
         $requestedTool = is_array($params) ? ($params['name'] ?? null) : null;
         $isStudyTool = $requestedTool === McpReadOnlyStudyContextTool::NAME;
         $isSummaryTool = $requestedTool === McpReadOnlyStudyPracticeSummaryTool::NAME;
+        $isProposalTool = $requestedTool === McpProposeStudyResultTool::NAME;
         if (! is_array($params)
             || ($requestedTool !== McpReadOnlyContextTool::NAME
                 && ! ($isStudyTool && $this->studyToolEnabled())
-                && ! ($isSummaryTool && $this->studySummaryToolEnabled()))) {
+                && ! ($isSummaryTool && $this->studySummaryToolEnabled())
+                && ! ($isProposalTool && $proposalService->isEnabled()))) {
             return $this->rpcError($id, -32602, 'Unknown tool.');
         }
 
         $arguments = $params['arguments'] ?? null;
+        if ($isProposalTool) {
+            if (! is_array($arguments)
+                || array_diff(array_keys($arguments), [
+                    'plan_id', 'task_id', 'idempotency_key',
+                    'question_count', 'correct_count', 'weaknesses',
+                ]) !== []
+                || ! is_int($arguments['plan_id'] ?? null)
+                || ! is_int($arguments['task_id'] ?? null)
+                || ! is_int($arguments['question_count'] ?? null)
+                || ! is_int($arguments['correct_count'] ?? null)
+                || ! is_string($arguments['idempotency_key'] ?? null)
+                || ! is_array($arguments['weaknesses'] ?? null)
+                || ! array_is_list($arguments['weaknesses'])) {
+                return $this->rpcError($id, -32602, 'Invalid tool arguments.');
+            }
+
+            $context = $proposalTool->propose(
+                $principal, $arguments['plan_id'], $arguments['task_id'],
+                $arguments['idempotency_key'], $arguments['question_count'],
+                $arguments['correct_count'], $arguments['weaknesses'],
+            );
+            return $this->contextResult($id, $context);
+        }
         if (! is_array($arguments)
             || array_diff(array_keys($arguments), ['plan_id', 'scope', 'limit']) !== []
             || ! is_int($arguments['plan_id'] ?? null)
@@ -189,9 +223,13 @@ final class McpReadOnlyResourceController extends Controller
                 (int) ($arguments['limit'] ?? 5),
             );
 
+        return $this->contextResult($id, $context);
+    }
+
+    /** @param array<string,mixed>|null $context */
+    private function contextResult(int|string $id, ?array $context): JsonResponse
+    {
         if ($context === null) {
-            // Do not distinguish unknown Plan, another owner's Plan,
-            // missing permission, revocation or insufficient scope.
             return $this->rpcSuccess($id, [
                 'isError' => true,
                 'content' => [[
@@ -200,7 +238,6 @@ final class McpReadOnlyResourceController extends Controller
                 ]],
             ]);
         }
-
         $serialized = json_encode($context,
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 

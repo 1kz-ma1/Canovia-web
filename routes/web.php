@@ -28,6 +28,7 @@ use App\Http\Controllers\InboxController;
 use App\Http\Controllers\RecommendationController;
 use App\Http\Controllers\WorkSessionController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\McpStudyResultDecisionController;
 use App\Http\Controllers\OfflineWorkSessionController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\CanoviaFutureController;
@@ -277,6 +278,10 @@ Route::post('/account/mcp/plans/consent/confirm', [McpOAuthPlanConsentController
 Route::post('/account/mcp/plans/consent/cancel', [McpOAuthPlanConsentController::class, 'cancel'])
     ->middleware(['auth', 'throttle:10,1'])
     ->name('auth.account.mcp_plan_consent.cancel');
+Route::post('/account/mcp/study-results/{proposal}/decision', McpStudyResultDecisionController::class)
+    ->whereNumber('proposal')
+    ->middleware(['auth', 'throttle:8,1'])
+    ->name('auth.account.mcp_study_result.decide');
 Route::delete('/account/mcp/grants/{grant}', [McpDelegatedRevocationController::class, 'grant'])
     ->whereNumber('grant')
     ->middleware(['auth', 'throttle:8,1'])
