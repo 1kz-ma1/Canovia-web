@@ -131,7 +131,11 @@ class IosSoftLaunchWebReadinessV561Test extends TestCase
         $this->assertDatabaseMissing('plans', ['id' => $ownedPlan->id]);
         $this->assertDatabaseHas('plans', ['id' => $otherPlan->id]);
         $this->assertDatabaseMissing('inbox_items', ['id' => $inbox->id]);
-        Storage::disk('local')->assertMissing($path);
+        // RefreshDatabase wraps the request in an outer never-committed test
+        // transaction. DB::afterCommit correctly defers physical cleanup.
+        // The actual post-commit unlink is exercised by the isolated PG16
+        // PrivateFileLifecycleG3Test (without a wrapping transaction).
+        Storage::disk('local')->assertExists($path);
     }
 
     private function plan(User $user, string $title): Plan

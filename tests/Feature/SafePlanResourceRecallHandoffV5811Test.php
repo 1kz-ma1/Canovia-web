@@ -328,7 +328,11 @@ class SafePlanResourceRecallHandoffV5811Test extends TestCase
         $this->assertDatabaseMissing('plan_resources', [
             'id' => $resource->id,
         ]);
-        Storage::disk('local')->assertMissing($path);
+        // RefreshDatabase wraps the request in an outer never-committed test
+        // transaction. DB::afterCommit correctly defers physical cleanup.
+        // The actual post-commit unlink is exercised by the isolated PG16
+        // PrivateFileLifecycleG3Test (without a wrapping transaction).
+        Storage::disk('local')->assertExists($path);
     }
 
     public function test_source_ui_shows_plan_resource_provenance(): void

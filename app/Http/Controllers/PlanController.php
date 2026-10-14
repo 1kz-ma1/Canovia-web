@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use App\Models\Plan;
 use App\Models\GoalContext;
 use App\Enums\WorkspaceMode;
@@ -12,6 +12,7 @@ use App\Services\BehaviorEventLogger;
 use App\Services\ContinuityService;
 use App\Services\ExecutionActionPolicyService;
 use App\Services\PlanOwnershipService;
+use App\Services\PrivateFileLifecycleService;
 use App\Services\PlanCollaborationService;
 use App\Services\PlanActivityService;
 use App\Services\PlanCategoryProfileService;
@@ -634,19 +635,34 @@ class PlanController extends Controller
         return redirect()->route('plans.show', $plan)->with('success', '計画を更新しました。');
     }
 
-    public function destroy(Request $request, Plan $plan, PlanOwnershipService $ownership)
-    {
+    public function destroy(
+        Request $request,
+        Plan $plan,
+        PlanOwnershipService $ownership,
+        PrivateFileLifecycleService $files,
+    ) {
         $ownership->authorizePlan($request, $plan);
 
-        $careerScreenshotPaths = $plan->careerCaptures()
-            ->whereNotNull('screenshot_path')
-            ->pluck('screenshot_path')
-            ->filter()
-            ->values();
+        $paths = DB::transaction(function () use ($request, $plan, $ownership, $files) {
+            $live = Plan::query()->whereKey($plan->id)
+                ->lockForUpdate()->firstOrFail();
+            // Re-check current owner or guest owner cookie after the lock,
+            // rather than trusting a route model from before the request.
+            $ownership->authorizePlan($request, $live);
 
-        $plan->delete();
+            // Recall and Career are cascaded by Plan deletion. An Inbox
+            // attachment is NOT cascaded: Inbox.plan_id is SET NULL and its
+            // independently-owned file must remain accessible afterward.
+            $paths = $files->pathsCascadedByPlan((int) $live->id);
+            $live->delete();
 
-        $careerScreenshotPaths->each(fn ($path) => Storage::delete($path));
+            return $paths;
+        }, 3);
+
+        // Physical deletes cannot be rolled back with SQL. Do not unlink
+        // until the Plan transaction commits; retain any file still
+        // referenced by another Inbox, Recall or Career record.
+        $files->deleteAfterCommit($paths);
 
         return redirect()->route('home')->with('success', '計画を削除しました。');
     }

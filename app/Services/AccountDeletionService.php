@@ -7,10 +7,13 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 
 final class AccountDeletionService
 {
+    public function __construct(
+        private readonly PrivateFileLifecycleService $files,
+    ) {}
+
     /**
      * Delete the Canovia account and user-owned content.
      *
@@ -21,23 +24,22 @@ final class AccountDeletionService
     {
         $userId = (int) $user->id;
         $email = (string) $user->email;
-        $ownedPlanIds = Plan::query()
-            ->where('user_id', $userId)
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->values();
+        $storagePaths = DB::transaction(function () use (
+            $user, $userId, $email,
+        ): Collection {
+            $liveUser = User::query()->whereKey($userId)
+                ->lockForUpdate()->firstOrFail();
+            $ownedPlanIds = Plan::query()->where('user_id', $userId)
+                ->orderBy('id')->lockForUpdate()
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->values();
 
-        $storagePaths = $this->storagePaths(
-            $userId,
-            $ownedPlanIds,
-        );
+            // Collect bytes before removing rows/cascades, under locked
+            // user/Plan authority. A late-created Source cannot be silently
+            // excluded by the previous unlocked outside-transaction query.
+            $storagePaths = $this->storagePaths($userId, $ownedPlanIds);
 
-        DB::transaction(function () use (
-            $user,
-            $userId,
-            $email,
-            $ownedPlanIds,
-        ): void {
             // Remove file-backed rows before Plan cascade so their DB records
             // do not turn into ownerless/null-user records.
             $this->deleteRows(
@@ -114,17 +116,12 @@ final class AccountDeletionService
             // Cascade-owned data (memberships, product grants, future memos,
             // companion preferences, provider connections, etc.) is removed
             // here together with the User.
-            $user->delete();
-        });
+            $liveUser->delete();
 
-        $storagePaths->each(function (string $path): void {
-            try {
-                Storage::delete($path);
-            } catch (\Throwable) {
-                // The account is already gone. Missing/unavailable storage
-                // must not resurrect or roll back personal DB data.
-            }
-        });
+            return $storagePaths;
+        }, 3);
+
+        $this->files->deleteAfterCommit($storagePaths);
     }
 
     /**
