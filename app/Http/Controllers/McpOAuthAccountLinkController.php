@@ -178,7 +178,7 @@ final class McpOAuthAccountLinkController extends Controller
             ]);
             return redirect()->route('auth.account')->with(
                 'status',
-                '本人IDの再確認が完了しました。対象Plan・共有範囲・期限を確認して、共有許可を確定してください。',
+                '本人確認ができました。共有する計画・内容・期間を確認して、よければ許可してください。',
             );
         }
         if (isset($pending['purpose'])) {
@@ -195,7 +195,7 @@ final class McpOAuthAccountLinkController extends Controller
 
         return redirect()->route('auth.account')->with(
             'status',
-            '認証プロバイダーによる本人確認が完了しました。連携を確定するには、内容を確認して確定ボタンを押してください。',
+            '本人確認ができました。このアカウントを使う場合は、確認ボタンを押してください。',
         );
     }
 
@@ -223,7 +223,7 @@ final class McpOAuthAccountLinkController extends Controller
 
         return redirect()->route('auth.account')->with(
             'status',
-            '外部IDとの紐付けが完了しました。ChatGPTへのPlan共有はまだ許可していません。',
+            '接続に使うアカウントを確認しました。ChatGPTに見せる計画は、別途選んで許可してください。',
         );
     }
 
@@ -236,7 +236,7 @@ final class McpOAuthAccountLinkController extends Controller
         ]);
 
         return redirect()->route('auth.account')->with(
-            'status', '外部IDの紐付け操作を中止しました。',
+            'status', '本人確認を中止しました。',
         );
     }
 
@@ -246,7 +246,7 @@ final class McpOAuthAccountLinkController extends Controller
         app(McpStagingOAuthFailureDiagnostic::class)->record($stageCode);
         return redirect()->route('auth.account')->with(
             'status',
-            '外部IDの本人確認を完了できませんでした。設定と認証状態をご確認のうえ、最初からやり直してください。',
+            '本人確認を完了できませんでした。もう一度最初からお試しください。',
         );
     }
 
