@@ -30,7 +30,11 @@ final class InboxAiSuggestionCommitFence
      * Sign the exact submitted material, including private attachment bytes,
      * ownership and the pre-existing routing state. No raw content is logged.
      */
-    public function signature(InboxItem $item, ?int $userId = null): string
+    public function signature(
+        InboxItem $item,
+        ?int $userId = null,
+        ?string $providerInputHash = null,
+    ): string
     {
         try {
             // Bind a linked Plan to ORIGINAL editor admission, not just the
@@ -64,7 +68,8 @@ final class InboxAiSuggestionCommitFence
                     $this->deny('native_ai_source_changed', null);
                 }
 
-                $fileHash = hash('sha256', Storage::get($item->storage_path));
+                $fileHash = $providerInputHash
+                    ?? hash('sha256', Storage::get($item->storage_path));
             }
 
             return hash('sha256', json_encode([
@@ -89,6 +94,32 @@ final class InboxAiSuggestionCommitFence
         } catch (NativeAiExecutionException $exception) {
             throw $exception;
         } catch (Throwable) {
+            $this->deny('native_ai_source_changed', null);
+        }
+    }
+
+    /**
+     * R38 pre-provider seal: compare the hash of bytes actually encoded into
+     * the AI request with the ORIGINAL source/authorization signature.
+     * A->B input mismatches fail before submission, even if another writer
+     * later restores A. This is a content integrity check, NOT immutable
+     * provider-generation attestation or protection against A->B->A entirely
+     * between the first and final reads.
+     */
+    public function assertInputMatches(
+        InboxItem $item,
+        ?int $userId,
+        string $expectedSignature,
+        ?string $providerInputHash,
+    ): void {
+        $isFile = in_array($item->source_type, ['image', 'pdf'], true);
+        if (($isFile && (! is_string($providerInputHash)
+                || ! preg_match('/^[a-f0-9]{64}$/', $providerInputHash)))
+            || (! $isFile && $providerInputHash !== null)
+            || ! hash_equals(
+                $expectedSignature,
+                $this->signature($item, $userId, $providerInputHash),
+            )) {
             $this->deny('native_ai_source_changed', null);
         }
     }

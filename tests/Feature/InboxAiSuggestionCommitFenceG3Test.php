@@ -104,6 +104,66 @@ final class InboxAiSuggestionCommitFenceG3Test extends TestCase
         $this->assertSame('内容を訂正しました', $item->fresh()->content);
     }
 
+    public function test_unchanged_image_input_is_bound_and_suggestion_is_persisted(): void
+    {
+        [$user, $item] = $this->scenario('image');
+        $this->suggest($user, $item)->assertSessionHasNoErrors();
+
+        $this->assertSame('review', $item->fresh()->status);
+        $this->assertSame(
+            'task_evidence',
+            data_get($item->fresh()->metadata, 'routing_suggestion.destination'),
+        );
+        Http::assertSentCount(1);
+    }
+
+    public function test_second_storage_read_changed_before_ai_provider_is_denied_without_submission(): void
+    {
+        [$user, $item] = $this->scenario('image');
+
+        // First file read signs original A; second produces B as the EXACT
+        // proposed provider payload. Old code submitted B and could later
+        // accept restored A. The new pre-provider seal must stop here.
+        $original = Storage::getFacadeRoot();
+        $changed = Mockery::mock();
+        $changed->shouldReceive('exists')->atLeast()->once()->andReturn(true);
+        $changed->shouldReceive('get')->twice()
+            ->with($item->storage_path)
+            ->andReturn('original-image-bytes', 'replaced-image-bytes');
+        Storage::swap($changed);
+        try {
+            $this->suggest($user, $item)->assertSessionHas('status');
+        } finally {
+            Storage::swap($original);
+        }
+
+        $this->assertSame('new', $item->fresh()->status);
+        $this->assertNull(data_get($item->fresh()->metadata, 'routing_suggestion'));
+        $this->assertDatabaseCount('native_ai_runs', 0);
+        Http::assertSentCount(0);
+    }
+
+    public function test_file_disappearing_between_signature_and_payload_is_not_sent_as_text(): void
+    {
+        [$user, $item] = $this->scenario('image');
+        $original = Storage::getFacadeRoot();
+        $disappeared = Mockery::mock();
+        $disappeared->shouldReceive('exists')->twice()
+            ->with($item->storage_path)->andReturn(true, false);
+        $disappeared->shouldReceive('get')->once()
+            ->with($item->storage_path)->andReturn('original-image-bytes');
+        Storage::swap($disappeared);
+        try {
+            $this->suggest($user, $item)->assertSessionHas('status');
+        } finally {
+            Storage::swap($original);
+        }
+
+        $this->assertSame('new', $item->fresh()->status);
+        $this->assertDatabaseCount('native_ai_runs', 0);
+        Http::assertSentCount(0);
+    }
+
     public function test_post_provider_file_change_withholds_stale_candidate(): void
     {
         [$user, $item] = $this->scenario('image');
