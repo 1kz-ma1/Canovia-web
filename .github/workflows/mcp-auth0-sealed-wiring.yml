@@ -69,6 +69,7 @@ jobs:
           php -l app/Services/McpOAuthAccountLinkProvider.php
           php -l app/Http/Controllers/McpOAuthAccountLinkController.php
           php -l tests/Feature/McpStagingOAuthFailureDiagnosticTest.php
+          php -l tests/Feature/McpStagingProviderPreflightTest.php
           php -l app/Services/McpExplicitPlanConsentService.php
           php -l app/Http/Controllers/McpOAuthPlanConsentController.php
           php -l app/Http/Controllers/McpOAuthAccountLinkController.php
