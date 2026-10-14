@@ -135,6 +135,39 @@ final class PrivateFileCleanupHealthG3Test extends TestCase
         $this->assertStringNotContainsString('expected_sha256', $json);
     }
 
+    public function test_partial_outbox_schema_is_unavailable_not_a_healthy_empty_queue(): void
+    {
+        $schema = Schema::getFacadeRoot();
+        Schema::shouldReceive('hasTable')->once()
+            ->with('private_file_cleanup_entries')->andReturn(true);
+        Schema::shouldReceive('hasColumn')->once()
+            ->with('private_file_cleanup_entries', 'encrypted_path')->andReturn(true);
+        Schema::shouldReceive('hasColumn')->once()
+            ->with('private_file_cleanup_entries', 'disk')->andReturn(false);
+        try {
+            $report = app(PrivateFileCleanupHealthService::class)->report();
+        } finally {
+            Schema::swap($schema);
+        }
+
+        $this->assertSame('unavailable', $report['schema']);
+        $this->assertSame('unavailable', $report['health']);
+    }
+
+    public function test_disk_mismatch_quarantine_reason_is_counted_without_exposing_disk_names(): void
+    {
+        $path = 'inbox/private-owner/disk-mismatch.png';
+        $this->insertEntry($path, 'quarantined', now(), null, 0, 'storage_disk_mismatch');
+
+        $report = app(PrivateFileCleanupHealthService::class)->report();
+        $this->assertSame(1, $report['quarantined_reasons']['storage_disk_mismatch']);
+        $this->assertSame('attention', $report['health']);
+        $json = json_encode($report, JSON_THROW_ON_ERROR);
+        $this->assertStringNotContainsString('private-owner', $json);
+        $this->assertStringNotContainsString('local', $json);
+        $this->assertStringNotContainsString('"disk":', $json);
+    }
+
     private function insertEntry(
         string $path,
         string $status,
