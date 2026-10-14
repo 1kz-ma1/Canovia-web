@@ -22,6 +22,7 @@ final class PrivateFileSyntheticCrashMatrixService
         private readonly PrivateFilePathFenceService $fence,
         private readonly PrivateFileUploadIntentService $intents,
         private readonly PrivateFileWriteReceiptHandoffService $handoff,
+        private readonly PrivateFileGenerationEvidenceService $evidence,
     ) {}
 
     private const STOPS = [
@@ -200,11 +201,12 @@ final class PrivateFileSyntheticCrashMatrixService
             if ($owners !== 1) {
                 return $result('committed_owner_missing_unverifiable');
             }
-            $evidence = DB::table('private_file_generation_evidence')
-                ->where('upload_intent_id', $intentId)->exists();
-            return $result($evidence
-                ? 'synthetic_evidence_present_unattested'
-                : 'committed_owner_without_evidence');
+            $evidence = $this->evidence->inspect($intentId);
+            return $result(match ($evidence['state']) {
+                'legacy_or_missing_evidence' => 'committed_owner_without_evidence',
+                'synthetic_binding_not_provider_verified' => 'synthetic_evidence_present_unattested',
+                default => 'evidence_identity_unverifiable',
+            });
         } catch (Throwable) {
             return $result('unverifiable');
         }
