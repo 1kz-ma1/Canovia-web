@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Enums\ProductKey;
+use App\Services\InboxRoutingService;
 use App\Models\CareerCapture;
 use App\Models\FutureMemo;
 use App\Models\InboxItem;
 use App\Models\NativeAiRun;
 use App\Models\Plan;
 use App\Models\PlanResource;
+use App\Models\PlanMember;
 use App\Models\StudyRecallCandidate;
 use App\Models\Task;
 use App\Models\TaskEvidence;
@@ -16,6 +18,8 @@ use App\Models\User;
 use App\Models\UserProductGrant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -262,6 +266,111 @@ class InboxIntelligenceGuideV4113Test extends TestCase
             $this->assertSame('new', $item->fresh()->status, $url);
             $this->assertDatabaseCount('plan_resources', 0);
         }
+    }
+
+    public function test_plan_resource_repeat_confirmation_is_rejected_without_second_write(): void
+    {
+        [$user, $plan] = $this->scenario();
+        $item = $this->inbox($user, [
+            'source_type' => 'url',
+            'source_url' => 'https://github.com/org/repo',
+        ]);
+
+        $this->actingAs($user)->post(route('inbox.route', $item), [
+            'destination' => 'plan_resource', 'plan_id' => $plan->id,
+        ])->assertSessionHasNoErrors();
+
+        $this->actingAs($user)->post(route('inbox.route', $item), [
+            'destination' => 'plan_resource', 'plan_id' => $plan->id,
+        ])->assertSessionHasErrors('destination');
+
+        $this->assertDatabaseCount('plan_resources', 1);
+        $this->assertSame('processed', $item->fresh()->status);
+        $this->assertSame('plan_resource', data_get($item->fresh()->metadata,
+            'routing_confirmed.destination'));
+    }
+
+    public function test_resource_commit_rejects_original_inbox_snapshot_after_db_url_correction(): void
+    {
+        [$user, $plan] = $this->scenario();
+        $item = $this->inbox($user, [
+            'source_type' => 'url', 'source_url' => 'https://github.com/org/old',
+        ]);
+        // The original Inbox model remains the request snapshot after a
+        // concurrent actor corrects the database row.
+        InboxItem::query()->whereKey($item->id)
+            ->update(['source_url' => 'https://github.com/org/new']);
+
+        $request = Request::create('/inbox/route', 'POST');
+        $request->setUserResolver(static fn () => $user);
+
+        try {
+            app(InboxRoutingService::class)->route(
+                $request, $item, ['destination' => 'plan_resource'], $plan, null, 'irrelevant',
+            );
+            $this->fail('A stale Inbox model must not commit a Plan Resource.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('destination', $exception->errors());
+        }
+
+        $this->assertSame('new', $item->fresh()->status);
+        $this->assertDatabaseCount('plan_resources', 0);
+    }
+
+    public function test_resource_commit_refuses_downgraded_editor_after_route_loaded_plan(): void
+    {
+        [$owner, $plan] = $this->scenario();
+        $plan->update(['is_collaborative' => true]);
+        $editor = User::factory()->create();
+        $member = PlanMember::query()->create([
+            'plan_id' => $plan->id,
+            'user_id' => $editor->id,
+            'role' => PlanMember::ROLE_EDITOR,
+            'joined_at' => now(),
+        ]);
+        $item = $this->inbox($editor, [
+            'source_type' => 'url', 'source_url' => 'https://github.com/org/repo',
+        ]);
+        // Controller's view of an Editor may be stale. Commit must use
+        // current DB membership and must not create or mark processed.
+        $member->update(['role' => PlanMember::ROLE_VIEWER]);
+        $request = Request::create('/inbox/route', 'POST');
+        $request->setUserResolver(static fn () => $editor);
+        try {
+            app(InboxRoutingService::class)->route(
+                $request, $item, ['destination' => 'plan_resource'], $plan, null, 'irrelevant',
+            );
+            $this->fail('Viewer must not commit a Plan Resource.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('plan_id', $exception->errors());
+        }
+
+        $this->assertDatabaseCount('plan_resources', 0);
+        $this->assertSame('new', $item->fresh()->status);
+    }
+
+    public function test_resource_commit_preserves_original_owned_plan_when_inbox_is_retargeted(): void
+    {
+        [$user, $plan] = $this->scenario();
+        $item = $this->inbox($user, [
+            'source_type' => 'url', 'source_url' => 'https://github.com/org/repo',
+        ]);
+        $other = $this->plan($user, 'Another Plan', '個人開発');
+        InboxItem::query()->whereKey($item->id)->update(['plan_id' => $other->id]);
+
+        $request = Request::create('/inbox/route', 'POST');
+        $request->setUserResolver(static fn () => $user);
+        try {
+            app(InboxRoutingService::class)->route(
+                $request, $item, ['destination' => 'plan_resource'], $plan, null, 'irrelevant',
+            );
+            $this->fail('Retargeted Inbox must not commit under the earlier Plan.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('destination', $exception->errors());
+        }
+        $this->assertDatabaseCount('plan_resources', 0);
+        $this->assertSame('new', $item->fresh()->status);
+        $this->assertSame($other->id, $item->fresh()->plan_id);
     }
 
     public function test_recall_routing_requires_premium_and_creates_candidate_only_after_human_confirmation(): void
