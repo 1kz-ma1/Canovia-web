@@ -65,7 +65,6 @@ final class DevelopmentOperationalTargetController extends Controller
                     $target->save();
                 }
             });
-        } else {
         } elseif (in_array($action, ['confirm_service', 'clear_service'], true)) {
             // The browser may have an outdated target open when the owner
             // changes the binding in another tab. Never rebind the assertion.
@@ -101,6 +100,7 @@ final class DevelopmentOperationalTargetController extends Controller
                 }
                 $target->save();
             });
+        } else {
             // Every statement is a human attestation; never trust form fields
             // claiming provider verification or backdate timestamps.
             if (str_starts_with($action, 'confirm_')) {
