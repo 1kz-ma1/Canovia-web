@@ -68,3 +68,18 @@ Before any proposed deletion inspect *closed and merged PR history*, activity in
 Nine synthetic local Git topology tests and nine synthetic workflow-run metadata tests were added. The existing path-scoped Platform Release Preflight workflow is extended; no extra workflow is added.
 
 NOT VERIFIED: exact G3 setup failure cause, live Aiven schema/privileges/backup freshness, offsite decrypt/recovery, actual iPhone smoke, authorization to delete or release.
+
+
+## ACTIVE follow-up — all-workflow YAML syntax gate
+
+After PR #617 fixed the unquoted colon in the G3 grant-race workflow, its real GitHub PR Actions job ran successfully. To prevent the same pre-job parsing class of regression, the existing **Platform Release Preflight (Offline)** workflow now triggers when any file under .github/workflows/ is changed and parses every source-controlled .yml workflow before the other Platform tests. No new GitHub workflow file or production Required Check was created or modified.
+
+The source-controlled Ruby Psych validator is scripts/ops/platform_workflow_yaml_check.rb, invoked as:
+
+~~~sh
+ruby scripts/ops/platform_workflow_yaml_check.rb .github/workflows/*.yml
+~~~
+
+It checks **YAML syntax only**, not GitHub Actions trigger semantics, permissions, branch rules, or runtime behavior. It prints a fixed error label, filename and line number but no YAML source snippets, and fails closed for empty/missing/symlinked inputs. Seven disposable tests cover valid YAML, the previously broken unquoted-colon case, its quoted fix, empty/missing/symlinked files and no input.
+
+This is a low-cost guard (Ruby standard-library Psych; no Composer, npm, credentials, remote API or service dependencies). It does **not** automatically fix workflow files, change required checks, or authorize production releases. A workflow with syntactically valid YAML may still fail to load or run for other reasons; inspect live Actions job creation and results as separate evidence.
