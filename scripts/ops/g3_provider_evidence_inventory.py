@@ -110,6 +110,7 @@ def evaluate(repo, manifest):
         return report('INVALID')
 
     items = {}
+    used_paths = set()
     for item in manifest['requirements']:
         if not exact(item, ('id', 'owner_role', 'review_state', 'evidence')):
             return report('INVALID')
@@ -126,8 +127,10 @@ def evaluate(repo, manifest):
             if (not exact(ref, ('path', 'sha256'))
                     or not allowed_path(ref['path'])
                     or type(ref['sha256']) is not str
-                    or not DIGEST.fullmatch(ref['sha256'])):
+                    or not DIGEST.fullmatch(ref['sha256'])
+                    or ref['path'] in used_paths):
                 return report('INVALID')
+            used_paths.add(ref['path'])
         items[key] = item
     if set(items) != set(REQUIREMENTS):
         return report('INVALID')
