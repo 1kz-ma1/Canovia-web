@@ -18,6 +18,42 @@
             </div>
         </section>
     @endif
+    @if($reviewPreview ?? null)
+        <section class="page-card p-5 sm:p-7" data-learning-topic-review-entry>
+            <p class="text-xs font-bold tracking-widest text-cyan-300">TOPIC REVIEW / RECORDED ANSWERS</p>
+            <h2 class="mt-2 text-xl font-bold text-slate-50">「{{ $reviewPreview['topic'] }}」を別の問題で確認する</h2>
+            <p class="mt-2 text-xs leading-6 text-slate-300">
+                同じTask内の異なる問題での誤答から作った、暫定の復習候補です。
+                開始時点の回答履歴を再確認し、対応する公開済みQuestion Bankの問題を優先して提示します。
+                正解してもTask進捗や習熟度は自動確定しません。
+            </p>
+            @if($reviewPacks->isEmpty())
+                <p class="mt-4 rounded-lg border border-amber-700/40 p-3 text-sm text-amber-200" data-learning-review-no-pack>
+                    現在、この分野に対応する独立した問題が2問以上ある公開問題集はありません。
+                    通常の問題集で学習するか、問題集が追加されてから再確認してください。
+                </p>
+            @else
+                <form method="POST" action="{{ route('plans.tasks.learning.start', [$plan, $task]) }}"
+                    class="mt-4 space-y-3" data-learning-topic-review-start>
+                    @csrf
+                    <input type="hidden" name="start_request_id" value="{{ IlluminateSupportStr::uuid() }}">
+                    <input type="hidden" name="mode" value="understanding">
+                    <input type="hidden" name="review_topic" value="{{ $reviewPreview['topic'] }}">
+                    <input type="hidden" name="review_source_signature" value="{{ $reviewPreview['source_signature'] }}">
+                    <label for="review-pack" class="block text-sm font-semibold text-slate-200">復習する問題集</label>
+                    <select id="review-pack" name="question_pack_id" class="form-control w-full" required>
+                        @foreach($reviewPacks as $reviewPack)
+                            <option value="{{ $reviewPack->id }}">{{ $reviewPack->title }} / {{ $reviewPack->subject ?: '分野未指定' }}（v{{ $reviewPack->version }}）</option>
+                        @endforeach
+                    </select>
+                    <p class="text-xs text-slate-400">理解モードで始めます。同じ問題を再出題する場合があります。1問ずつ採点して結果を再測定します。</p>
+                    <button type="submit" class="btn-primary" data-learning-review-submit>この分野の問題を解く</button>
+                </form>
+            @endif
+            <a href="{{ route('workspace.study.index', ['plan_id' => $plan->id, 'surface' => 'work']) }}"
+                class="mt-4 inline-flex text-sm font-semibold text-sky-300">← 学習Workspaceへ戻る</a>
+        </section>
+    @endif
     <section class="page-card p-5 sm:p-7" data-adaptive-learning-start>
         <p class="text-xs font-bold tracking-widest text-cyan-400">ADAPTIVE LEARNING / EARLY PILOT</p>
         <h1 class="mt-2 text-2xl font-bold text-slate-50">1問から始める学習</h1>
