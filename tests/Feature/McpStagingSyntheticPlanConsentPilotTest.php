@@ -345,8 +345,16 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
         $this->get('/account')->assertOk()
             ->assertSee('data-mcp-staging-share-complete', false)
             ->assertSee('data-mcp-staging-subject-unlink', false);
-        $this->delete(route('auth.account.mcp_subject.revoke', ['subject' => $link->id]))
-            ->assertRedirect(route('auth.account'));
+        $outsider = User::factory()->create(['first_run_completed_at' => now()]);
+        $this->actingAs($outsider)->delete(
+            route('auth.account.mcp_subject.revoke', ['subject' => $link->id]),
+        )->assertNotFound();
+        $this->assertSame(McpLinkedSubject::STATUS_LINKED, $link->fresh()->status);
+        $this->assertSame(McpDelegatedGrant::STATUS_ACTIVE, $grant->fresh()->status);
+
+        $this->actingAs($owner)->delete(
+            route('auth.account.mcp_subject.revoke', ['subject' => $link->id]),
+        )->assertRedirect(route('auth.account'));
         $this->assertSame(McpLinkedSubject::STATUS_REVOKED, $link->fresh()->status);
         $this->assertNull($link->fresh()->active_identity_fingerprint);
         $this->assertSame(McpDelegatedGrant::STATUS_REVOKED, $grant->fresh()->status);
