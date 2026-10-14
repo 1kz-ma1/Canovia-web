@@ -39,6 +39,15 @@ Future UX (NOT implemented by this acceptance):
 - Guide ChatGPT plugin reauthorization with the browser context/Auth0 SSO session in mind. No generic "enable all tools" fix and no forced provider bypass.
 - Keep generic MCP denial responses; provide precise diagnostic codes **only server-side** and only in deliberately isolated, time-bounded staging tests.
 
+## Follow-up UX implementation slice (2026-10-14, feature branch only)
+
+The staging-only Account view now adds an explicit, **truthful** two-client connection guide:
+- A separately verified Canovia identity-link record is shown only as `連携記録あり`, never as proof of which GitHub/Google/other subject ChatGPT has authenticated.
+- An active, finite Plan grant is presented as `有効`; after revocation or in the absence of a grant the state is `現在有効な共有許可なし`. This grants no access by itself.
+- The owner is instructed to use the **same Auth0 account for the independent ChatGPT OAuth connection**, avoiding accidental SSO account reuse. Canovia explicitly states that it **cannot** inspect ChatGPT's login state.
+- This onboarding guidance is visible **only** when the isolated synthetic Staging read pilot and the Stage owner-account-link gate are both ready. It never appears in the normal Canovia product login, does not change OAuth/token handling, does not ask for tokens/subjects and does not enable production.
+- A dedicated feature regression covers visibility gates, active and revoked grant states, and non-disclosure. The feature code requires separate review, green CI, and an authorized pinned stage deployment before any claim of live UI acceptance. It is **not** a production-facing general user UX yet.
+
 ## Negative and scope limits
 
 - The subject-mismatch test was not an adversarial cryptographic penetration test.
