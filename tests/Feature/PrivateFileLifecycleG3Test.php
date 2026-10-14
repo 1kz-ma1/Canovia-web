@@ -10,7 +10,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Services\AccountDeletionService;
 use App\Services\PrivateFileLifecycleService;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -20,7 +20,7 @@ use Tests\TestCase;
 
 final class PrivateFileLifecycleG3Test extends TestCase
 {
-    use DatabaseMigrations;
+    use DatabaseTruncation;
 
     protected function setUp(): void
     {
