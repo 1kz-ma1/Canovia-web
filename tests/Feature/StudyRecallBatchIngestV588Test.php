@@ -42,6 +42,7 @@ class StudyRecallBatchIngestV588Test extends TestCase
 
     public function test_two_images_use_one_native_ai_run_and_map_candidates_to_sources(): void
     {
+        config(['canovia.private_file_path_fence_enabled' => true]);
         [$user, $plan, $task] = $this->scenario();
         $this->grantPremium($user);
 
@@ -75,6 +76,16 @@ class StudyRecallBatchIngestV588Test extends TestCase
             ->get();
 
         $this->assertCount(2, $sources);
+        $fence = app(\App\Services\PrivateFilePathFenceService::class);
+        foreach ($sources as $source) {
+            Storage::assertExists($source->storage_path);
+            $this->assertDatabaseHas('private_file_path_fences', [
+                'path_digest' => $fence->fingerprint(
+                    (string) config('filesystems.default'),
+                    $source->storage_path,
+                ),
+            ]);
+        }
         $this->assertTrue($sources->every(
             fn (StudyRecallSource $source) =>
                 $source->status === 'ready',

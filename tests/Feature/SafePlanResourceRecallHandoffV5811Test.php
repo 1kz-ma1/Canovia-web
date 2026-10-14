@@ -42,6 +42,7 @@ class SafePlanResourceRecallHandoffV5811Test extends TestCase
 
     public function test_task_linked_resource_creates_recall_source_from_explicit_pdf_without_fetching_resource_url(): void
     {
+        config(['canovia.private_file_path_fence_enabled' => true]);
         [$user, $plan, $task] = $this->scenario();
         $this->grantPremium($user);
 
@@ -79,6 +80,11 @@ class SafePlanResourceRecallHandoffV5811Test extends TestCase
         $this->assertSame('chapter.pdf', $source->original_name);
         $this->assertSame('ready', $source->status);
         Storage::assertExists($source->storage_path);
+        $this->assertDatabaseHas('private_file_path_fences', [
+            'path_digest' => app(\App\Services\PrivateFilePathFenceService::class)
+                ->fingerprint((string) config('filesystems.default'),
+                    $source->storage_path),
+        ]);
 
         $this->assertDatabaseHas('study_recall_candidates', [
             'study_recall_source_id' => $source->id,
@@ -320,7 +326,13 @@ class SafePlanResourceRecallHandoffV5811Test extends TestCase
             'candidate_count' => 0,
         ]);
 
-        app(AccountDeletionService::class)->delete($user);
+        $hasOuterTransaction = \Illuminate\Support\Facades\DB::transactionLevel() > 0;
+        \Illuminate\Support\Facades\DB::transaction(function () use ($user, $path): void {
+            app(AccountDeletionService::class)->delete($user);
+            // The cleanup outbox must never unlink storage while the
+            // enclosing account-delete transaction is still uncommitted.
+            Storage::disk('local')->assertExists($path);
+        });
 
         $this->assertDatabaseMissing('study_recall_sources', [
             'id' => $source->id,
@@ -328,11 +340,15 @@ class SafePlanResourceRecallHandoffV5811Test extends TestCase
         $this->assertDatabaseMissing('plan_resources', [
             'id' => $resource->id,
         ]);
-        // RefreshDatabase wraps the request in an outer never-committed test
-        // transaction. DB::afterCommit correctly defers physical cleanup.
-        // The actual post-commit unlink is exercised by the isolated PG16
-        // PrivateFileLifecycleG3Test (without a wrapping transaction).
-        Storage::disk('local')->assertExists($path);
+        // Assert physical unlink only if this test controlled the final
+        // commit. The RefreshDatabase harness may manage an additional
+        // outer transaction/callback lifecycle; intermediate safety was
+        // already verified *inside* the explicit delete transaction above.
+        // Post-commit and outer-rollback semantics have dedicated isolated
+        // PostgreSQL tests in PrivateFileLifecycleG3Test.
+        if (! $hasOuterTransaction) {
+            Storage::disk('local')->assertMissing($path);
+        }
     }
 
     public function test_source_ui_shows_plan_resource_provenance(): void

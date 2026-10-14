@@ -236,3 +236,21 @@ same-byte storage-version race remain; a path-lock pilot cannot fix them.
 Review the current, versioned
 `G3_PRIVATE_FILE_PATH_FENCE_IMPLEMENTATION_SPEC_2026_10_14.md`
 before any further changes. G3 remains OPEN.
+
+## 11. Opt-in upload writer coordination (G3-R12)
+
+The same disabled-by-default `CANOVIA_PRIVATE_FILE_PATH_FENCE_ENABLED`
+now guards native Inbox upload, Study Scope capture, Recall single and
+Resource-linked upload, and multi-file Recall batch. Each storage key
+is preflighted under its path fence so a pre-existing object cannot be
+overwritten. Newly claimed files and DB references share a transaction;
+failure cleanup runs before releasing locks and never deletes keys
+that pre-existed the attempt. Fixed warning reason codes, not paths or
+usernames, describe failed rollback cleanup.
+
+**Do not enable in production:** a process crash between physical write
+and commit still produces an orphan, an uncoordinated actor can bypass
+the path lock, and Career/external object writers remain outside the
+contract. Neither a successful upload nor this pilot authorizes
+automatic Outbox retries, broad object scans, extra production DDL,
+or production deployment. New code is not a recovery inventory.

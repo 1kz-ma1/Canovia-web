@@ -712,3 +712,38 @@ or device mutation was performed. G3 stays OPEN.
 
 **Canonical scope/next-stage checklist:**
 `docs/development/G3_PRIVATE_FILE_PATH_FENCE_IMPLEMENTATION_SPEC_2026_10_14.md`.
+
+## 57. G3-R12 — Transaction-scoped native upload participation (2026-10-14)
+
+**Gap:** #576 introduced the persistent HMAC path-lock row and pilot
+Recall copy/Outbox participation, but ordinary Inbox, Study Scope,
+Recall single/Resource and multi-file upload routes wrote bytes before
+saving their owning DB reference and did not acquire the shared lock.
+Exception cleanup could run after partial DB commits, potentially
+leaving inconsistent owners or touching a reused path.
+
+**Narrow opt-in implementation:** A new `PrivateFileUploadService`
+requires the existing feature flag, an ordered set of generated private
+destination paths and an owner-insertion callback. It acquires the exact
+HMAC path rows in fingerprint sort order, refuses existing destination
+objects without writing, physically uploads only under held DB locks,
+then creates all owners within one transaction. On failure, it performs
+best-effort unlink of newly claimed files while the transaction still
+holds the fences, then rethrows for DB rollback. Inbox, Study Scope,
+Recall single/Resource/batch routes use this service only with the
+R11 flag ON; legacy OFF mode and post-commit AI behavior remain.
+
+**Acceptance:** Test non-overwrite, failed-owner rollback, batch
+all-or-nothing, and exact saved path lock identity with disposable
+PG16 and existing route regressions. Keep existing PG16 source races,
+disposable MySQL8 current-read/fence, MySQL P0 migration, Workspace,
+Recall AI and Migration Recovery checks. Verify exact reviewed HEAD.
+
+**Residual:** best-effort cleanup can fail and process death can leave
+orphan files; external/direct storage/SQL actors still ignore fence;
+some Career integrations remain uncoordinated; same-byte object
+replacement/version semantics are unresolved. The permanent fence
+table and Outbox table still need a separately accepted Aiven
+migration and owner release decision. R12 is not a production
+enablement, deploy, scheduler, live deletion, inventory or device
+verification. **G3 remains OPEN.**

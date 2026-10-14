@@ -41,6 +41,7 @@ class StudyScopeCaptureV534Test extends TestCase
 
     public function test_study_scope_capture_is_free_and_supports_an_ordinary_school_test_plan(): void
     {
+        config(['canovia.private_file_path_fence_enabled' => true]);
         $user = User::factory()->create();
         $plan = $this->plan($user, '定期テスト学習');
 
@@ -96,7 +97,7 @@ class StudyScopeCaptureV534Test extends TestCase
             ->assertSessionHasNoErrors();
 
         $capture = StudyScopeCapture::firstOrFail();
-        $inbox = InboxItem::firstOrFail();
+        $inbox = InboxItem::query()->findOrFail($capture->inbox_item_id);
         $run = NativeAiRun::firstOrFail();
 
         $this->assertSame('review', $capture->status);
@@ -115,6 +116,10 @@ class StudyScopeCaptureV534Test extends TestCase
         $this->assertSame($plan->id, $inbox->plan_id);
         $this->assertTrue((bool) data_get($inbox->metadata, 'study_scope_capture'));
         Storage::assertExists($inbox->storage_path);
+        $this->assertDatabaseHas('private_file_path_fences', [
+            'path_digest' => app(\App\Services\PrivateFilePathFenceService::class)
+                ->fingerprint((string) config('filesystems.default'), $inbox->storage_path),
+        ]);
 
         $this->assertSame('study_scope_capture_extraction', $run->purpose);
         $this->assertSame('study_scope_capture', $run->feature_key);

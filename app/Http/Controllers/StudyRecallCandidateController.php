@@ -13,6 +13,7 @@ use App\Models\Task;
 use App\Services\BehaviorIdentityService;
 use App\Services\FeatureAccessService;
 use App\Services\PlanOwnershipService;
+use App\Services\PrivateFileUploadService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\StudyRecallBatchCandidateExtractionService;
 use App\Services\StudyRecallCandidateExtractionService;
@@ -37,6 +38,7 @@ class StudyRecallCandidateController extends Controller
         BehaviorIdentityService $identity,
         FeatureAccessService $featureAccess,
         StudyRecallCandidateExtractionService $extractor,
+        PrivateFileUploadService $privateUploads,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
         $featureAccess->authorizeUse(
@@ -62,13 +64,14 @@ class StudyRecallCandidateController extends Controller
             $name = (string) $file->getClientOriginalName();
             $sourceType = $mime === 'application/pdf' ? 'pdf' : 'image';
             $extension = strtolower((string) $file->getClientOriginalExtension());
-            $path = $file->storeAs(
-                'study-recall-sources/'.$plan->id.'/'.$task->id,
-                (string) Str::uuid().'.'.$extension,
-            );
+            $uploadPath = 'study-recall-sources/'.$plan->id.'/'.$task->id
+                .'/'.Str::uuid().'.'.$extension;
+            if (! $privateUploads->enabled()) {
+                $path = $file->storeAs(dirname($uploadPath), basename($uploadPath));
+            }
         }
 
-        $source = StudyRecallSource::query()->create([
+        $sourceAttributes = [
             'plan_id' => (int) $plan->id,
             'task_id' => (int) $task->id,
             'user_id' => $request->user()?->id,
@@ -79,7 +82,16 @@ class StudyRecallCandidateController extends Controller
             'storage_path' => $path,
             'source_text' => $sourceType === 'text' ? trim((string) ($validated['source_text'] ?? '')) : null,
             'status' => 'pending',
-        ]);
+        ];
+
+        $source = $file && $privateUploads->enabled()
+            ? $privateUploads->storeAndPersist(
+                [['file' => $file, 'path' => $uploadPath]],
+                fn (array $paths) => StudyRecallSource::query()->create(
+                    array_replace($sourceAttributes, ['storage_path' => $paths[0]]),
+                ),
+            )
+            : StudyRecallSource::query()->create($sourceAttributes);
 
         try {
             $result = $extractor->extract($source, $plan, $task, $request->user()?->id);
@@ -103,6 +115,7 @@ class StudyRecallCandidateController extends Controller
         BehaviorIdentityService $identity,
         FeatureAccessService $featureAccess,
         StudyRecallCandidateExtractionService $extractor,
+        PrivateFileUploadService $privateUploads,
     ) {
         $this->authorizeTask(
             $request,
@@ -172,22 +185,17 @@ class StudyRecallCandidateController extends Controller
                             : 'jpg';
                 }
 
-                $path = $file->storeAs(
-                    'study-recall-sources/'
-                    .$plan->id
-                    .'/'
-                    .$task->id,
-                    (string) Str::uuid().'.'.$extension,
-                );
-
-                if (! is_string($path) || $path === '') {
-                    throw new RuntimeException(
-                        'Recall教材ファイルを保存できませんでした。',
-                    );
+                $uploadPath = 'study-recall-sources/'.$plan->id.'/'.$task->id
+                    .'/'.Str::uuid().'.'.$extension;
+                if (! $privateUploads->enabled()) {
+                    $path = $file->storeAs(dirname($uploadPath), basename($uploadPath));
+                    if (! is_string($path) || $path === '') {
+                        throw new RuntimeException('Recall教材ファイルを保存できませんでした。');
+                    }
                 }
             }
 
-            $source = StudyRecallSource::query()->create([
+            $sourceAttributes = [
                 'plan_id' => (int) $plan->id,
                 'task_id' => (int) $task->id,
                 'plan_resource_id' => (int) $resource->id,
@@ -214,7 +222,15 @@ class StudyRecallCandidateController extends Controller
                         )
                         : null,
                 'status' => 'pending',
-            ]);
+            ];
+            $source = $file && $privateUploads->enabled()
+                ? $privateUploads->storeAndPersist(
+                    [['file' => $file, 'path' => $uploadPath]],
+                    fn (array $paths) => StudyRecallSource::query()->create(
+                        array_replace($sourceAttributes, ['storage_path' => $paths[0]]),
+                    ),
+                )
+                : StudyRecallSource::query()->create($sourceAttributes);
         } catch (Throwable $exception) {
             if ($path) {
                 Storage::delete($path);
@@ -265,6 +281,7 @@ class StudyRecallCandidateController extends Controller
         BehaviorIdentityService $identity,
         FeatureAccessService $featureAccess,
         StudyRecallBatchCandidateExtractionService $extractor,
+        PrivateFileUploadService $privateUploads,
     ) {
         $this->authorizeTask($request, $plan, $task, $ownership);
         $featureAccess->authorizeUse(
@@ -310,6 +327,52 @@ class StudyRecallCandidateController extends Controller
         $paths = [];
         $sources = collect();
 
+        if ($privateUploads->enabled()) {
+            $uploads = [];
+            $prepared = [];
+            foreach ($files as $file) {
+                $mime = (string) $file->getMimeType();
+                $type = $mime === 'application/pdf' ? 'pdf' : 'image';
+                $ext = strtolower((string) $file->getClientOriginalExtension());
+                if ($ext === '') {
+                    $ext = $type === 'pdf' ? 'pdf' : 'jpg';
+                }
+                $path = 'study-recall-sources/'.$plan->id.'/'.$task->id
+                    .'/'.Str::uuid().'.'.$ext;
+                $uploads[] = ['file' => $file, 'path' => $path];
+                $prepared[] = [
+                    'plan_id' => (int) $plan->id,
+                    'task_id' => (int) $task->id,
+                    'user_id' => $request->user()?->id,
+                    'actor_token' => $request->user() ? null : $actorToken,
+                    'source_type' => $type,
+                    'original_name' => mb_substr(
+                        (string) $file->getClientOriginalName(), 0, 255,
+                    ),
+                    'mime_type' => $mime,
+                    'source_text' => null,
+                    'status' => 'pending',
+                ];
+            }
+
+            // All generated keys are locked in sorted order, all bytes are
+            // stored, then all source records are inserted. A failed source
+            // insert removes the newly written files before lock release.
+            $sources = $privateUploads->storeAndPersist(
+                $uploads,
+                function (array $storedPaths) use ($prepared) {
+                    $created = collect();
+                    foreach ($prepared as $index => $attributes) {
+                        $created->push(StudyRecallSource::query()->create(
+                            array_replace($attributes, [
+                                'storage_path' => $storedPaths[$index],
+                            ]),
+                        ));
+                    }
+                    return $created;
+                },
+            );
+        } else {
         try {
             foreach ($files as $file) {
                 $mime = (string) $file->getMimeType();
@@ -372,6 +435,7 @@ class StudyRecallCandidateController extends Controller
             }
 
             throw $exception;
+        }
         }
 
         try {
