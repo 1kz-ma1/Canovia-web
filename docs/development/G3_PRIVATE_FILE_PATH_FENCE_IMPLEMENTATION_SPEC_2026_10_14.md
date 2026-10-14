@@ -1056,3 +1056,27 @@ R30 adds only an offline validator, disposable local-Git tests
 within Platform Release Preflight and documentation. No migration,
 cloud/DB/Storage calls, production or conditional delete activation.
 Five prior G3 migrations remain unapproved. **G3 OPEN.**
+
+## 26. G3-R31 — Pinned exit-decision audit and external proof hold (2026-10-14)
+
+R31 compares a pinned Git commit's five additive migration sources,
+default-OFF provider test flags, the R25 unavailable verifier, R23–R26
+PG/MySQL CI references, R27–R30 offline validators, and the G3 OPEN
+decision documents. It emits only redacted local source states:
+`SOURCE_PRESENT_UNATTESTED` or `MISSING_OR_DRIFTED`.
+All local matches still produce `HOLD_EXTERNAL_PROOF_REQUIRED`,
+exit code 2; any drift produces `HOLD_LOCAL_CONTRACT_DRIFT`,
+exit code 2. No output grants provider identity proof, replay safety,
+writer fencing, safe delete, recovery, retry, owner approval,
+migration approval, release or G3 exit.
+
+The static checks cannot prove complete semantics, actual runtime
+configuration, cloud behavior or independent original evidence.
+CI executes the checker on the exact PR checkout and isolated
+mutation tests. See `G3_EXIT_DECISION_R31_2026_10_14.md` for
+remaining real-provider and operator gates and the explicit
+owner choice: keep G3 on HOLD or authorize a tightly scoped
+disposable-only pilot separately. No additional synthetic contract
+iterations should be interpreted as reducing these external gaps.
+No new migration, provider/network call or production mutation.
+**G3 OPEN.**
