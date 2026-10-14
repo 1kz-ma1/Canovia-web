@@ -42,4 +42,11 @@ return [
         env('CANOVIA_STUDY_SCENARIO_LAB_ENABLED', false),
         FILTER_VALIDATE_BOOL
     ),
+
+    // G3-R11: private path row-fencing pilot. OFF until every storage
+    // writer participates and the additional DB schema is approved.
+    'private_file_path_fence_enabled' => filter_var(
+        env('CANOVIA_PRIVATE_FILE_PATH_FENCE_ENABLED', false),
+        FILTER_VALIDATE_BOOL
+    ),
 ];
