@@ -56,4 +56,11 @@ return [
         env('CANOVIA_PRIVATE_FILE_UPLOAD_JOURNAL_ENABLED', false),
         FILTER_VALIDATE_BOOL
     ),
+
+    // G3-R14: explicitly gated non-production read-only targeted preview.
+    // Neither flag authorizes object deletion or production reconciliation.
+    'private_file_upload_reconcile_preview_enabled' => filter_var(
+        env('CANOVIA_PRIVATE_FILE_UPLOAD_RECONCILE_PREVIEW_ENABLED', false),
+        FILTER_VALIDATE_BOOL
+    ),
 ];
