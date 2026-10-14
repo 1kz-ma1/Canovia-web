@@ -259,7 +259,7 @@
                                 <a href="#guided-execution-prepare"
                                    class="btn-primary mt-3 inline-flex min-h-11 items-center justify-center"
                                    data-reflection-next-action-start>このActionで次の作業を始める</a>
-                                <p class="mt-2 text-xs text-slate-400">次の作業は下の準備画面から開始できます。開始するまで新しいEvidenceや進捗は記録されません。</p>
+                                <p class="mt-2 text-xs text-slate-400">次の作業はリンク先の準備画面から開始できます。開始するまで新しいEvidenceや進捗は記録されません。</p>
                             @endif
                         @elseif ($mayAdopt)
                             <form method="POST"
