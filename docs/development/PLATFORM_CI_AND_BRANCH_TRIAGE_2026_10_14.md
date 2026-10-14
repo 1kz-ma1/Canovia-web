@@ -109,3 +109,32 @@ If missing permissions, incomplete results, pagination, invalid timestamps or no
 **Branch review examples, NOT DELETE APPROVAL:** `ci/p0-release-gate-20261011` is an ancestor of main (ahead=0 at sampled comparison), so it is a human-only review candidate after confirming PR linkage and no consumers. `docs/development-operational-v2-status-20261014` (ahead 2 / behind 23) and `feature/v52-0-ios-readiness-foundation` (ahead 2 / behind 2316) have unique history and must stay on hold. A Squash-merged branch may still appear diverged by ancestry; never infer safe deletion solely from ahead/behind. No branches were deleted or closed.
 
 **Status:** CURRENT measured metadata; ACTIVE read-only metrics tool; FUTURE selective CI optimization; NOT VERIFIED production Aiven/Render changes, iOS smoke, runtime improvement percentage, exact cleanup ownership.
+
+
+## ACTIVE follow-up — safe superseded-PR cancellation (2026-10-14)
+
+### CURRENT runtime evidence (GitHub Actions job metadata, not billing)
+
+Sampled completed PR runs:
+- Workspace Resume: 96, 140, 90, 149, 141 seconds (five observed jobs; median **140 s**).
+- Production Migration Recovery: 32, 39, 34 seconds (three jobs; median **34 s**).
+- Development Prelaunch: 22, 19, 18 seconds (three jobs; median **19 s**).
+
+Workspace Resume repeatedly spends ~15–18 seconds on Composer/PHP/Node/npm/build setup, while hundreds of checks and application regressions account for the remaining runtime. Thus removing a 5–8-second Composer step without established equivalent coverage would not solve the main bottleneck. Different exact PR SHAs and environmental load also affect measurements. These are job wall-clock durations, not billed compute minutes.
+
+### ACTIVE change and acceptance boundary
+
+The existing **Workspace Resume** and **Production Migration Recovery** workflow files receive a workflow-level concurrency key. **Only** a \`pull_request\` event targeting \`main\` groups by workflow identity and PR number, and sets \`cancel-in-progress=true\`. When another commit arrives on the *same* main-targeted PR, its old in-progress run is allowed to cancel; latest PR SHA still executes all unmodified tests with the same job/check names.
+
+All other contexts—especially \`push\` to \`production\`, PR into \`production\`, historical hotfix push, and \`workflow_dispatch\` where applicable—use **a unique GitHub run ID** and \`cancel-in-progress=false\`. Unique run IDs are essential: GitHub concurrency can replace a pending run **even if cancel-in-progress=false** when it shares a group. A shared production group is prohibited.
+
+No test command, Required Check, job name, branch trigger, branch protection, production operation or Deploy is removed. The dedicated static contract test rejects missing main-only cancellation guards, removal of production push/PR triggers, loss of production test commands and replacement of unique production run IDs. The Platform YAML syntax gate and the existing broad PR CI also run.
+
+### Acceptance and limitations
+
+- **Verified by PR CI:** the final candidate SHA runs Workspace Resume, Migration Recovery, Development Prelaunch and Platform Preflight successfully, and the new static contract tests pass.
+- **NOT VERIFIED until a later PR iteration:** GitHub Actions actually cancels a superseded run in practice, any minute savings, stability under multiple rapid changes. Record before/after evidence using the bounded runtime tool.
+- **Production-safe by source contract, not yet empirically exercised:** production push and production PR contexts must remain independent. No production push/deploy is initiated for this test.
+- **RECOMMENDED:** expand to Development Prelaunch only after its current active Development-lane owner confirms the shared workflow boundary; do not modify it in parallel.
+
+This is a scheduling/cost optimization for obsolete *main PR* revisions, not a new path filter. Never treat cancelled/old-SHA CI as release evidence. Re-run/inspect final SHA checks before merging to main. Production promotions still require owner GO, full required checks on the exact merge SHA and actual Render/Aiven evidence.
