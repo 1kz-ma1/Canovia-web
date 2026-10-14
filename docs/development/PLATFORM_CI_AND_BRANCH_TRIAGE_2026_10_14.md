@@ -370,3 +370,21 @@ The new `scripts/ci/platform_workspace_group_repeatability.py` and its 12 synthe
 | Plan Draft reverse | 3/3 success | 1.679–1.700 s | 1.688 s |
 
 Elapsed measurements are per *whole group*, not per redundant file or billable GH runner minutes. The exact HEAD containing this evidence still must pass all five relevant checks before integration. These 12 successes show bounded same-runner repeatability, **not** a statistical guarantee across future runs or permission to remove any repeated regression context. No production, Aiven, Render or branch-rule operation was exercised.
+
+
+## R16 ACTIVE: independent disposable runner JUnit fingerprint comparison (2026-10-14)
+
+### Problem, scope and acceptance
+
+R15 observed 12 passing PHP invocations with stable 27-case inventories for both Learning and Plan Draft groups on **one** ephemeral GitHub Actions runner. It did not verify agreement across separate hosts. R16 adds an independent runner to the **existing path-scoped** disposable scenario workflow (not the required Workspace Resume workflow) and compares their full group JUnit evidence:
+
+1. The original disposable probe continues to run both the order-parity experiment and fixed-group R15 replay. A second independent `ubuntu-latest` job installs the same PHP 8.4, Composer dependencies and npm-built frontend, then runs the same 12 fixed-group PHP/SQLite replays. Each job uses its own ephemeral filesystem and `:memory:` DB; neither writes user/application records.
+2. Each runner produces a lowercase SHA-256 fingerprint of the complete sorted **(JUnit classname, testcase name)** inventory and both original/reverse *observed first-appearance class orders* for each of the two pinned scenarios. It intentionally excludes timings so host-level duration differences cannot create false drift.
+3. Each runner must report `OBSERVED_FIXED_GROUP_REPEATABILITY`, exactly 12 replays, no failed/skipped/omitted cases, and immutable no-dedup/no-production authorization flags before it can expose a fingerprint. The final comparison job runs even after a prerequisite job fails, and fails closed unless **both jobs succeeded** and both 64-character fingerprints are present and equal. It does not download or persist raw JUnit, test logs or per-test timing.
+4. Python synthetic contract tests check fingerprint stability despite timing differences, deliberate testcase-inventory drift across hypothetical runners, and the path-scoped CI comparison contract. All 42 existing repeated appearances, 72 standard Workspace Resume Artisan commands, Required Checks, production workflows and release controls remain untouched.
+
+### Evidence and decision boundary
+
+**PENDING live acceptance:** at the new PR's exact final HEAD, require the disposable workflow's **three jobs** (original, independent, compare) plus Platform Release Preflight, Workspace Resume, Development Prelaunch and Production Migration Recovery Validation to succeed. Record run IDs and result/HEAD before closing R16. A successful comparison establishes only two-runner agreement in the CI configurations that actually ran, not repeated evidence across dates, OS/PHP versions, true assertion-semantic independence, provider behavior or safe removal of any duplicate test invocation. No automatic test deduplication or CI-cost saving is claimed.
+
+**Safety:** no production/Render/Aiven/iOS/billing/branch-rule change, no secrets, no network storage beyond normal disposable CI dependency installation, no new always-on workflow and no branch deletion. GitHub `main` integration is permitted only under current `AGENTS.md` exact-head and full-check gates; it is not a production release approval.
