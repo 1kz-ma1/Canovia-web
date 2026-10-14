@@ -785,3 +785,40 @@ is authorized. The journal is a **third separate G3 schema gate**,
 alongside cleanup Outbox and permanent path-fence schema. G3 remains
 OPEN; no production, Aiven, Render, cron, billing, storage deletion,
 app-store/device test or deployment is performed here.
+
+## 59. G3-R14 — Bounded read-only upload-intent object/reference observer (2026-10-14)
+
+R13 retained encrypted, durable `prepared` and `needs_review`
+upload intents through process death and transaction rollback. It
+did not inspect whether any surviving object existed or had a
+current owning database reference. R14 implements an **optional
+non-production, fixed-output observation** without deletion powers.
+
+`PrivateFileUploadReconciliationPreviewService` is gated by
+`CANOVIA_PRIVATE_FILE_UPLOAD_RECONCILE_PREVIEW_ENABLED=false` in
+addition to the R11/R13 gates, and rejects production runtime.
+The bounded 1–20 explicit CLI reads only aged `prepared` and
+`needs_review` journal rows. It checks complete source schemas,
+decrypts each private key internally, validates HMAC disk/path,
+SELECTs whether the existing fence row is present, SELECTs all three
+source reference tables, and tests the exact object key by
+`Storage::exists`. No row creation/locking/mutation, object listing,
+byte reads, file unlink, scheduler or provider credentials are added.
+Only allowlisted aggregate counts are returned; corruption or storage
+failures return `unverifiable` rather than exposing raw data.
+Disposable PostgreSQL16 and MySQL8.0/8.4 tests cover redaction,
+immutable no-write observations, all four reference/object cases,
+staleness and limit gates, corrupted ciphertext, digest mismatch,
+schema failure, opt-in disabled behavior and default CLI rejection.
+
+**Still OPEN:** These are inherently racy observations, not a
+generation-bound or atomic reference/storage snapshot. An object
+without a currently visible reference is not classified as orphan;
+false-negative provider `exists()` is possible. Legacy untracked
+objects, direct SQL/Storage mutations, some Career paths, key rotation,
+path-fence growth, crash recovery reconciliation and immutable provider
+generation deletion remain unresolved. Three G3 production
+schema/flag gates require separate owner/operator approval.
+No `production`/Render/Aiven mutation, storage enumeration,
+physical delete, cron, real account inspection, release or device
+verification occurred.
