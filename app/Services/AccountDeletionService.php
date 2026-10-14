@@ -7,7 +7,6 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 
 final class AccountDeletionService
 {
@@ -17,8 +16,9 @@ final class AccountDeletionService
      * Shared Plans owned by another user survive. User-authored rows that can
      * outlive a User through nullable foreign keys are explicitly removed.
      */
-    public function delete(User $user): void
+    public function delete(User $user, ?PrivateFileCleanupGuard $cleanup = null): void
     {
+        $cleanup ??= app(PrivateFileCleanupGuard::class);
         $userId = (int) $user->id;
         $email = (string) $user->email;
         $ownedPlanIds = Plan::query()
@@ -117,14 +117,7 @@ final class AccountDeletionService
             $user->delete();
         });
 
-        $storagePaths->each(function (string $path): void {
-            try {
-                Storage::delete($path);
-            } catch (\Throwable) {
-                // The account is already gone. Missing/unavailable storage
-                // must not resurrect or roll back personal DB data.
-            }
-        });
+        $storagePaths->each(fn (string $path) => $cleanup->deleteIfUnreferenced($path));
     }
 
     /**
