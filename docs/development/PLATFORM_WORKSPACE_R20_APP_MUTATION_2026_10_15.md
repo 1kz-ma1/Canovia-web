@@ -31,3 +31,22 @@ After EACH mutation and in an outer `finally`, byte-for-byte restore the origina
 This can show whether two very specific application faults are detected under each historical context, and whether the other three co-runner files detect the fault even when V5871 is absent. It is **not** proof of broad assertion equivalence, authorization invariance, lack of hidden shared state, or a safe path to remove one of the 42 repeated test occurrences.
 
 The decision stays **HOLD: 42 repeated appearances preserved**. No production rollout, release, Aiven/Render, iOS, payment, GH branch rules, or runtime application controller modifications are permitted. Integration is only for read-only CI diagnostic code, synthetic offline tests, and this specification. Exact PR HEAD must pass disposable probe, Platform Preflight, Development Prelaunch, Workspace Resume, and Production Migration Recovery before main-only squash merge.
+
+
+## First observed disposable evidence (PR #666; pre-documentation final HEAD)
+
+**OBSERVED on exact initial corrected PR SHA `ac6135dbfaac6b7ee08678f22bb7d6d6347c1562`**, [Disposable GitHub Actions #38595913142](https://github.com/1kz-ma1/Canovia-web/actions/runs/38595913142) R20 actual application mutation step completed successfully.
+
+| Controller mutation | 5 historical groups containing V5871 | V58.74 shadow *without* V5871 | What the experiment establishes |
+| --- | ---: | ---: | --- |
+| WorkLog Plan ownership restriction removed | **5/5** detected by V5871 legacy WorkLog test | **0** failing testcases | Three other group files did not expose the cross-Plan WorkLog flaw in this one scoped run |
+| Draft dismiss owner authorization bypassed | **5/5** detected by V5871 collaboration permissions test | **0** failing testcases | Three other group files did not expose this actor-permission flaw in this one scoped run |
+
+- Each of the **10** mutated original-group invocations had **exactly one failing case**, always the explicitly selected V5871 method; **no other class** reported a failing testcase. The independent PHP process count was **18/18** (6 positive baselines + 12 mutation/shadow invocations).
+- Both three-file shadows remained green under mutation, retained the complete baseline JUnit identity inventory and did not run V5871.
+- The controller was restored byte-for-byte, with SHA-256 `f347864c13669d7d479a43f4d10ab1284b2cb0ca98a6716106dcd97c8a46f1d1`. **No application-code mutation was committed.**
+- The final corrected initial HEAD passed **12/12** offline mutation contracts in Platform Preflight; the first PR HEAD had one incorrect synthetic skipped-case fixture and was fixed before the observed run. No initial failing HEAD is acceptable merge evidence.
+
+**Interpretation:** These two application mutations strengthen evidence that the V5871 test class has *substantive security-regression detection* in each of its five historical invocations. Its omission from the V58.74 group leaves the three neighboring classes blind to **these specific two flaws** in the tested invocation. Nevertheless, V5871 remains present in four other full Workspace Resume groups, so the experiment neither proves full-CI loss of detection if this single occurrence were removed nor warrants that removal. It also does not prove state or assertion equivalence, or uncover all possible mutant classes. **Decision: HOLD, preserve all 42 repeated appearances** pending separate Development acceptance and broader cross-context semantic/reliability evidence.
+
+The observation comes from the cited PR SHA; documentation-only revisions and any later branch changes require their own exact-final-HEAD CI before `main` integration. No Render, Aiven, production or device verification was performed.
