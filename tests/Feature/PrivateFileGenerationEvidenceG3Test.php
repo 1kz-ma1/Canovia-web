@@ -241,7 +241,7 @@ final class PrivateFileGenerationEvidenceG3Test extends TestCase
         app(PrivateFileGenerationEvidenceService::class)
             ->recordSyntheticCandidate($intent, 'inbox', $owner, 'do-not-print-version');
         Storage::fake('local');
-        Storage::put('inbox/synthetic/keep.png', 'must-preserve-bytes');
+        Storage::disk('local')->put('inbox/synthetic/keep.png', 'must-preserve-bytes');
         $this->artisan('canovia:private-file-generation-evidence-health', [
             '--json' => true,
         ])->assertSuccessful()
@@ -249,7 +249,7 @@ final class PrivateFileGenerationEvidenceG3Test extends TestCase
             ->doesntExpectOutputToContain('do-not-print-version')
             ->doesntExpectOutputToContain('owner.png');
         $this->assertSame('must-preserve-bytes',
-            Storage::get('inbox/synthetic/keep.png'));
+            Storage::disk('local')->get('inbox/synthetic/keep.png'));
         $this->assertDatabaseCount('private_file_cleanup_entries', 0);
     }
 }
