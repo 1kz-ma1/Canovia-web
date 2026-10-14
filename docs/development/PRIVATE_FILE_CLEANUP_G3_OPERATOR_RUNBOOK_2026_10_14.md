@@ -416,3 +416,27 @@ Never enable this path for live traffic or change cleanup worker
 behavior based on these records. Four separate G3 migration approvals,
 object-generation retention, key rotation, provider IAM/versioning
 review and complete writer fencing remain unresolved.
+
+## 18. G3-R19 synthetic crash-boundary acceptance only
+
+The extra `CANOVIA_PRIVATE_FILE_SYNTHETIC_CRASH_MATRIX_ENABLED`
+flag is OFF and the driver refuses any runtime outside
+`APP_ENV=testing`. It makes **no physical storage write** and
+does not register a scheduled or operator-facing recovery job.
+Its simulated "write acknowledgement" is never provider proof.
+
+Disposable PG16 and MySQL8.0/8.4 tests create synthetic journal and
+owner rows at independent transaction boundaries, and halt
+deterministically after prepare, synthetic write acknowledgement,
+owner commit, journal settlement or synthetic handoff.
+`review(intentId)` returns redacted status only. A prepared row without
+an owner is ambiguous **both before and after synthetic write ack**;
+it is neither "never written" nor "orphan proven." Committed owners
+without settled journals and committed journals without evidence must
+also be reviewed, not automatically retried.
+
+Never turn any R19 state into real upload retry, object scan,
+Storage::delete, CLI cleanup or production enablement. The tests
+demonstrate *which states remain unsafe*, not that real process
+crash durability has been established. Four G3 production schema
+migrations and full provider/source-lane rollout gates remain open.
