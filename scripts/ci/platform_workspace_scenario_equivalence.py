@@ -67,7 +67,12 @@ def validate_manifest(source: str, read_sources: bool = True) -> None:
                     raise Inconclusive("oversized scenario source")
 
 
-def read_junit(path: Path, target: str) -> tuple[str, ...]:
+def read_junit_all(path: Path) -> tuple[tuple[str, str], ...]:
+    """Return every executed (class, method) in actual recorded order.
+
+    Observing the target class alone is insufficient: a group invocation may
+    accidentally omit an adjacent regression file and still look successful.
+    """
     if path.is_symlink() or not path.is_file() or not 0 < path.stat().st_size <= MAX_XML_BYTES:
         raise Inconclusive("JUnit result missing or oversized")
     data = path.read_bytes()
@@ -82,20 +87,59 @@ def read_junit(path: Path, target: str) -> tuple[str, ...]:
     cases = root.findall(".//testcase")
     if not cases:
         raise Inconclusive("no JUnit testcases")
+    observed = []
     for case in cases:
-        if case.find("failure") is not None or case.find("error") is not None or case.find("skipped") is not None:
+        if any(case.find(tag) is not None for tag in ("failure", "error", "skipped")):
             raise Inconclusive("failed or skipped testcase")
-    selected = []
-    for case in cases:
-        cls = case.get("classname", "").replace(".", "\\").rsplit("\\", 1)[-1]
+        cls = case.get("classname", "").replace(".", "\\")
         name = case.get("name", "")
-        if cls == target:
-            if not name or len(name) > 300:
-                raise Inconclusive("invalid test method name")
-            selected.append(name)
+        if (not cls or len(cls) > 300 or not name or len(name) > 300
+            or any(char in cls for char in ("<", ">", "\\n"))):
+            raise Inconclusive("invalid JUnit testcase identity")
+        observed.append((cls, name))
+    if len(observed) != len(set(observed)):
+        raise Inconclusive("duplicated JUnit testcase identity")
+    return tuple(observed)
+
+
+def read_junit(path: Path, target: str) -> tuple[str, ...]:
+    selected = [name for cls, name in read_junit_all(path)
+                if cls.rsplit("\\", 1)[-1] == target]
     if not selected or len(selected) != len(set(selected)):
         raise Inconclusive("missing or duplicated target testcases")
     return tuple(sorted(selected))
+
+
+def group_orders(target: str, group: tuple[str, ...]) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """Fixed, bounded file permutations; never duplicate or omit group members."""
+    selected = expected_file(target)
+    if group.count(selected) != 1 or len(group) < 3 or len(set(group)) != len(group):
+        raise Inconclusive("invalid order-sensitivity source group")
+    rest = tuple(p for p in group if p != selected)
+    variants = (
+        ("original_group", group),
+        ("reverse_group", tuple(reversed(group))),
+        ("target_first", (selected, *rest)),
+        ("target_last", (*rest, selected)),
+        ("target_middle", (rest[0], selected, *rest[1:])),
+    )
+    seen = set()
+    result = []
+    for label, files in variants:
+        if files in seen:
+            continue
+        seen.add(files)
+        if sorted(files) != sorted(group):
+            raise Inconclusive("changed regression group membership")
+        result.append((label, files))
+    if len(result) < 3 or len(result) > 5:
+        raise Inconclusive("insufficient distinct order permutations")
+    return tuple(result)
+
+
+def observed_class_order(inventory: tuple[tuple[str, str], ...]) -> tuple[str, ...]:
+    """First class appearance in JUnit, not merely the requested argv order."""
+    return tuple(dict.fromkeys(cls.rsplit("\\", 1)[-1] for cls, _ in inventory))
 
 
 def runner(command: list[str], junit: Path) -> float:
@@ -132,28 +176,52 @@ def experiment() -> dict:
     with tempfile.TemporaryDirectory(prefix="canovia-test-compare-") as tmp:
         folder = Path(tmp)
         for key, target, group in EXPERIMENTS:
-            baseline = []
-            for label, files in (("alone", [expected_file(target)]), ("original_group", list(group))):
+            expected_classes = {Path(file).stem for file in group}
+            recorded = []
+            variants = (("alone", (expected_file(target),)), *group_orders(target, group))
+            for label, files in variants:
                 path = folder / (key + "_" + label + ".xml")
                 cmd = ["php", "artisan", "test", "--without-tty",
                        "--log-junit", str(path), *files]
                 try:
                     elapsed = runner(cmd, path)
-                    methods = read_junit(path, target)
+                    inventory = read_junit_all(path)
+                    methods = tuple(sorted(name for cls, name in inventory
+                                           if cls.rsplit("\\", 1)[-1] == target))
+                    observed = observed_class_order(inventory)
+                    expected = {target} if label == "alone" else expected_classes
+                    if not methods or len(methods) != len(set(methods)) or set(observed) != expected:
+                        raise Inconclusive("missing expected class or target testcases")
                 except Inconclusive as exc:
-                    # Only fixed scenario labels and fixed internal failure codes.
+                    # Only fixed scenario labels and internal errors; no raw logs.
                     raise Inconclusive(key + "_" + label + ":" + str(exc)) from exc
-                baseline.append((label, methods, elapsed))
-            if baseline[0][1] != baseline[1][1]:
+                recorded.append((label, methods, inventory, observed, elapsed))
+            if any(entry[1] != recorded[0][1] for entry in recorded[1:]):
                 raise Inconclusive("selected testcase method set differs across contexts")
+            canonical = tuple(sorted(recorded[1][2]))
+            if any(tuple(sorted(entry[2])) != canonical for entry in recorded[2:]):
+                raise Inconclusive("full group testcase inventory differs across orders")
+            class_orders = {entry[3] for entry in recorded[1:]}
+            if len(class_orders) < 2:
+                raise Inconclusive("class execution order did not observably vary")
             observations.append({
                 "scenario": key,
                 "selected_test_class": target,
-                "selected_testcases": len(baseline[0][1]),
-                "alone_elapsed_seconds": round(baseline[0][2], 2),
-                "original_group_elapsed_seconds": round(baseline[1][2], 2),
+                "selected_testcases": len(recorded[0][1]),
+                "alone_elapsed_seconds": round(recorded[0][4], 2),
+                "original_group_elapsed_seconds": round(recorded[1][4], 2),
+                "group_variants_executed": len(recorded) - 1,
+                "distinct_observed_class_orders": len(class_orders),
+                "total_group_testcases_per_variant": len(canonical),
+                "group_execution_orders": [
+                    {"variant": label, "class_order": list(order)}
+                    for label, _, _, order, _ in recorded[1:]
+                ],
                 "same_selected_testcase_names": True,
+                "same_full_group_testcase_inventory": True,
+                "all_variants_passed": True,
                 "both_runs_passed": True,
+                "order_sensitive_failure_observed": False,
                 "can_remove_duplicate": False,
             })
     return {
@@ -161,6 +229,7 @@ def experiment() -> dict:
         "runner": "isolated-GitHub-Actions-SQLite-memory",
         "scenarios": observations,
         "test_order_independence_proven": False,
+        "tested_file_order_variations_passed": True,
         "cross_context_coverage_equivalence_proven": False,
         "permission_to_remove_repeated_invocations": False,
         "release_authorized": False,

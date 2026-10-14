@@ -90,18 +90,31 @@ class ScenarioEquivalenceTests(TestCase):
         def fake_runner(argv, path):
             self.assertEqual(argv[:3], ["php", "artisan", "test"])
             self.assertIn("--without-tty", argv)
-            self.assertIn("--log-junit", argv)
+            idx = argv.index("--log-junit")
+            files = argv[idx + 2:]
             target = "AdaptiveLearningSingleQuestionV5878Test" if "adaptive" in path.name else "PlanActionDraftV5871Test"
-            path.write_bytes(xml(target, "test_alpha", "test_beta"))
+            cases = []
+            for file in files:
+                classname = Path(file).stem
+                names = ("test_alpha", "test_beta") if classname == target else ("test_fixture",)
+                for name in names:
+                    cases.append('<testcase classname="Tests\\\\Feature\\\\' + classname
+                                 + '" name="' + name + '" />')
+            path.write_text("<testsuites><testsuite>" + "".join(cases)
+                            + "</testsuite></testsuites>", encoding="utf-8")
             seen.append(tuple(argv))
             return 0.4
         with mock.patch.dict(os.environ, {"GITHUB_ACTIONS": "true"}):
             with mock.patch("scripts.ci.platform_workspace_scenario_equivalence.runner",
                             side_effect=fake_runner):
                 result = experiment()
-        self.assertEqual(len(seen), 4)
+        self.assertEqual(len(seen), 10)
         self.assertEqual(result["result"], "OBSERVED_SCENARIO_PARITY")
         self.assertEqual([x["selected_testcases"] for x in result["scenarios"]], [2, 2])
+        self.assertEqual([x["group_variants_executed"] for x in result["scenarios"]], [4, 4])
+        self.assertTrue(all(x["distinct_observed_class_orders"] >= 2 for x in result["scenarios"]))
+        self.assertTrue(all(x["same_full_group_testcase_inventory"] for x in result["scenarios"]))
+        self.assertFalse(result["test_order_independence_proven"])
         self.assertFalse(result["cross_context_coverage_equivalence_proven"])
         self.assertFalse(result["permission_to_remove_repeated_invocations"])
         self.assertFalse(result["release_authorized"])
