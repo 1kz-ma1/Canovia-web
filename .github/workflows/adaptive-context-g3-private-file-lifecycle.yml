@@ -13,6 +13,8 @@ on:
       - 'app/Services/PrivateFileGenerationContractService.php'
       - 'app/Services/PrivateFileGenerationEvidenceService.php'
       - 'app/Services/PrivateFileWriteReceiptHandoffService.php'
+      - 'app/Services/PrivateFileSyntheticCrashMatrixService.php'
+      - 'tests/Feature/PrivateFileSyntheticCrashMatrixG3Test.php'
       - 'tests/Feature/PrivateFileWriteReceiptHandoffG3Test.php'
       - 'database/migrations/2026_10_14_140000_create_private_file_generation_evidence.php'
       - 'tests/Feature/PrivateFileGenerationEvidenceG3Test.php'
@@ -101,6 +103,8 @@ jobs:
           php -l app/Services/PrivateFileGenerationContractService.php
           php -l app/Services/PrivateFileGenerationEvidenceService.php
           php -l app/Services/PrivateFileWriteReceiptHandoffService.php
+          php -l app/Services/PrivateFileSyntheticCrashMatrixService.php
+          php -l tests/Feature/PrivateFileSyntheticCrashMatrixG3Test.php
           php -l tests/Feature/PrivateFileWriteReceiptHandoffG3Test.php
           php -l database/migrations/2026_10_14_140000_create_private_file_generation_evidence.php
           php -l tests/Feature/PrivateFileGenerationEvidenceG3Test.php
@@ -139,8 +143,10 @@ jobs:
         run: php artisan test tests/Feature/SafePlanResourceRecallHandoffV5811Test.php --stop-on-failure
       - name: G3 R17 synthetic generation evidence in isolated PHP process
         run: php artisan test tests/Feature/PrivateFileGenerationEvidenceG3Test.php --stop-on-failure
-      - name: G3 R18 synthetic receipt handoff in isolated final PHP process
+      - name: G3 R18 synthetic receipt handoff in isolated PHP process
         run: php artisan test tests/Feature/PrivateFileWriteReceiptHandoffG3Test.php --stop-on-failure
+      - name: G3 R19 synthetic crash matrix in isolated final PHP process
+        run: php artisan test tests/Feature/PrivateFileSyntheticCrashMatrixG3Test.php --stop-on-failure
       - name: G3 operator-only CLI dry-run and read-only health are available
         run: |
           php artisan canovia:retry-private-file-cleanup --dry-run
