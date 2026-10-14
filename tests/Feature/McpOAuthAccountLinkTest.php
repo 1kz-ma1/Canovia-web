@@ -12,6 +12,8 @@ use App\Services\McpDelegatedRevocationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
+use App\Services\McpOAuthAccountLinkCommitter;
 use Tests\TestCase;
 
 final class McpOAuthAccountLinkTest extends TestCase
@@ -384,6 +386,47 @@ final class McpOAuthAccountLinkTest extends TestCase
         $this->assertNull($original->fresh()->active_identity_fingerprint);
         $this->assertSame('linked', $new->fresh()->status);
         $this->assertSame('revoked', $oldGrant->fresh()->status);
+    }
+
+    public function test_inconsistent_live_identity_reservation_fails_closed_for_both_owners(): void
+    {
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        $fingerprint = str_repeat('c', 64);
+
+        $link = McpLinkedSubject::query()->create([
+            'user_id' => $first->id,
+            'identity_fingerprint' => $fingerprint,
+            'provider_key' => 'chatgpt',
+            'status' => McpLinkedSubject::STATUS_LINKED,
+            'linked_at' => now(),
+        ]);
+        $this->assertSame($fingerprint, $link->active_identity_fingerprint);
+
+        // Simulate an interrupted migration or direct-SQL drift. ORM saves
+        // normally preserve the invariant; only a raw disposable DB write
+        // can deliberately produce this malformed live record.
+        foreach ([null, str_repeat('d', 64)] as $invalidReservation) {
+            DB::table('mcp_linked_subjects')->where('id', $link->id)
+                ->update(['active_identity_fingerprint' => $invalidReservation]);
+
+            $committer = app(McpOAuthAccountLinkCommitter::class);
+            $this->assertFalse($committer->confirm($second, $fingerprint));
+            $this->assertFalse($committer->confirm($first, $fingerprint));
+            $this->assertDatabaseCount('mcp_linked_subjects', 1);
+            $this->assertDatabaseCount('mcp_delegated_grants', 0);
+            $this->assertDatabaseCount('mcp_delegated_access_events', 0);
+        }
+
+        // Restoring the exact active reservation permits the original
+        // owner's idempotent confirm, never a different owner's claim.
+        DB::table('mcp_linked_subjects')->where('id', $link->id)
+            ->update(['active_identity_fingerprint' => $fingerprint]);
+        $committer = app(McpOAuthAccountLinkCommitter::class);
+        $this->assertTrue($committer->confirm($first, $fingerprint));
+        $this->assertFalse($committer->confirm($second, $fingerprint));
+        $this->assertDatabaseCount('mcp_linked_subjects', 1);
+        $this->assertDatabaseCount('mcp_delegated_access_events', 0);
     }
 
     public function test_database_enforces_one_active_identity_even_when_previous_history_is_revoked(): void
