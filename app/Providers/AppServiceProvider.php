@@ -20,6 +20,9 @@ use App\Models\Task;
 use App\Services\RequestBehaviorHistory;
 use App\Support\RequestPerformance;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -73,6 +76,16 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // V6.11 confirmation must not be exhausted by the different Study
+        // answer/start/next endpoints sharing numeric throttle buckets.
+        // Register in the provider so the named limiter survives route:cache.
+        RateLimiter::for('learning-next-action-confirm', fn (Request $request) =>
+            Limit::perMinute(8)->by($request->user()
+                ? 'user:'.$request->user()->getAuthIdentifier()
+                : 'guest-ip:'.$request->ip()
+            )
+        );
+
         Task::updated(function (Task $task): void {
             if (! app()->bound('request')) {
                 return;
