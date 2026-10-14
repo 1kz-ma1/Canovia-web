@@ -38,6 +38,7 @@ final class PrivateFileUploadReconciliationPreviewService
 
     public function __construct(
         private readonly PrivateFilePathFenceService $fence,
+        private readonly PrivateFileReconciliationSnapshotService $snapshots,
     ) {}
 
     /**
@@ -59,6 +60,14 @@ final class PrivateFileUploadReconciliationPreviewService
             'fence_row_observed' => 0,
             'fence_row_not_observed' => 0,
             'categories' => array_fill_keys(self::CATEGORIES, 0),
+            'consistency_probe' => 'disabled',
+            'consistency' => [
+                'weak_pair_unchanged' => 0,
+                'change_observed' => 0,
+                'unverifiable' => 0,
+                // Flysystem metadata has no immutable generation identity.
+                'generation_verified' => 0,
+            ],
             'destructive_actions' => 0,
         ];
 
@@ -69,6 +78,11 @@ final class PrivateFileUploadReconciliationPreviewService
             || ! $this->fence->enabled()
             || config('canovia.private_file_upload_journal_enabled', false) !== true) {
             return $report;
+        }
+
+        $probeEnabled = config('canovia.private_file_upload_consistency_probe_enabled', false) === true;
+        if ($probeEnabled) {
+            $report['consistency_probe'] = 'weak_metadata_not_generation_bound';
         }
 
         try {
@@ -115,24 +129,47 @@ final class PrivateFileUploadReconciliationPreviewService
                         continue;
                     }
 
-                    // Existing fence row is an observation only; never
-                    // insert a new fence, acquire a lock or mutate the row.
-                    $fenceExists = DB::table(self::FENCE_TABLE)
-                        ->where('path_digest', $digest)->exists();
+                    if ($probeEnabled) {
+                        // Two reads can reveal SOME concurrent changes, but
+                        // stable size/mtime are not a provider generation ID.
+                        // No locks, object bytes, list operations or writes.
+                        $first = $this->snapshots->capture($disk, $path, $digest);
+                        $second = $this->snapshots->capture($disk, $path, $digest);
+                        if (! $this->snapshots->valid($first)
+                            || ! $this->snapshots->valid($second)) {
+                            $report['consistency']['unverifiable']++;
+                            $report['categories']['unverifiable']++;
+                            continue;
+                        }
+
+                        if ($first !== $second) {
+                            $report['consistency']['change_observed']++;
+                            $report['categories']['unverifiable']++;
+                            continue;
+                        }
+
+                        $report['consistency']['weak_pair_unchanged']++;
+                        $fenceExists = $second['fence'];
+                        $referenced = in_array(true, $second['references'], true);
+                        $objectSeen = $second['exists'];
+                    } else {
+                        // R14 compatibility: single time-of-check, no
+                        // additional storage metadata operation.
+                        $fenceExists = DB::table(self::FENCE_TABLE)
+                            ->where('path_digest', $digest)->exists();
+                        $referenced = false;
+                        foreach (self::REFERENCES as $source) {
+                            if (DB::table($source['table'])
+                                ->where($source['column'], $path)->exists()) {
+                                $referenced = true;
+                            }
+                        }
+                        $objectSeen = Storage::disk($disk)->exists($path);
+                    }
+
                     $report[$fenceExists
                         ? 'fence_row_observed' : 'fence_row_not_observed']++;
 
-                    $referenced = false;
-                    foreach (self::REFERENCES as $source) {
-                        if (DB::table($source['table'])
-                            ->where($source['column'], $path)->exists()) {
-                            $referenced = true;
-                        }
-                    }
-
-                    // Targeted metadata-only key lookup; NEVER list/read
-                    // object bytes or use Storage::delete / move / put.
-                    $objectSeen = Storage::disk($disk)->exists($path);
                     $category = match (true) {
                         $referenced && $objectSeen => 'reference_and_object_observed',
                         $referenced => 'reference_only_observed',
@@ -141,6 +178,9 @@ final class PrivateFileUploadReconciliationPreviewService
                     };
                     $report['categories'][$category]++;
                 } catch (Throwable) {
+                    if ($probeEnabled) {
+                        $report['consistency']['unverifiable']++;
+                    }
                     $report['categories']['unverifiable']++;
                 }
             }
@@ -184,6 +224,12 @@ final class PrivateFileUploadReconciliationPreviewService
             'fence_row_observed' => 0,
             'fence_row_not_observed' => 0,
             'categories' => array_fill_keys(self::CATEGORIES, 0),
+            'consistency' => [
+                'weak_pair_unchanged' => 0,
+                'change_observed' => 0,
+                'unverifiable' => 0,
+                'generation_verified' => 0,
+            ],
         ];
     }
 }
