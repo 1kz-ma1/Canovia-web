@@ -37,10 +37,12 @@ final class McpOAuthPlanConsentController extends Controller
 
         $validated = $request->validate([
             'scope' => ['required', 'in:overview,tasks'],
-            'duration_days' => ['required', 'integer', 'in:1,7,30'],
+            'duration_days' => ['required', 'in:1,7,30,until_revoked'],
         ]);
         $scope = (string) $validated['scope'];
-        $days = (int) $validated['duration_days'];
+        $days = $validated['duration_days'] === McpExplicitPlanConsentService::UNTIL_REVOKED
+            ? McpExplicitPlanConsentService::UNTIL_REVOKED
+            : (int) $validated['duration_days'];
 
         // Never create a consent without an independently verified, currently
         // linked stable IdP subject and live-compatible account-link client.
@@ -114,7 +116,9 @@ final class McpOAuthPlanConsentController extends Controller
             || ! is_int($verified['plan_id'] ?? null)
             || ! is_string($verified['identity_fingerprint'] ?? null)
             || ! is_string($verified['scope'] ?? null)
-            || ! is_int($verified['duration_days'] ?? null)
+            || ! $consent->isScopeAndDurationAllowed(
+                $verified['scope'], $verified['duration_days'] ?? '',
+            )
             || ! $consent->grant(
                 $actor,
                 $verified['plan_id'],
