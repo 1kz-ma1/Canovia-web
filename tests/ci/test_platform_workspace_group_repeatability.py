@@ -186,5 +186,19 @@ class ReplayTests(TestCase):
         self.assertFalse(second["permission_to_remove_repeated_invocations"])
 
 
+    def test_cross_runner_workflow_blocks_incomplete_or_different_evidence(self):
+        workflow = (ROOT / ".github/workflows/platform-workspace-scenario-equivalence.yml").read_text(encoding="utf-8")
+        self.assertEqual(workflow.count("    runs-on: ubuntu-latest"), 3)
+        self.assertEqual(workflow.count("id: repeat"), 2)
+        self.assertEqual(workflow.count(
+            "python3 scripts/ci/platform_workspace_group_repeatability.py --run | tee"
+        ), 2)
+        self.assertIn("needs: [isolated-scenario-probe, independent-runner-replay]", workflow)
+        self.assertIn("first != second", workflow)
+        self.assertIn("if: ${{ always() }}", workflow)
+        self.assertNotIn("actions/upload-artifact", workflow)
+        self.assertNotIn("workflow_dispatch", workflow)
+
+
 if __name__ == "__main__":
     main()
