@@ -71,7 +71,7 @@ final class StudyLearningReviewComparisonV614Test extends TestCase
         ]);
     }
 
-    private function run(User $actor, Plan $plan, Task $task, QuestionPack $pack,
+    private function makeRun(User $actor, Plan $plan, Task $task, QuestionPack $pack,
         string $policy = 'bank_locked_v1', string $mode = 'understanding'): LearningRun
     {
         return LearningRun::create([
@@ -127,14 +127,14 @@ final class StudyLearningReviewComparisonV614Test extends TestCase
         [$owner, $plan, $task, $pack] = $this->fixture();
         $a = $this->question($pack, 'DNS', 1);
         $b = $this->question($pack, 'DNS', 2);
-        $original = $this->run($owner, $plan, $task, $pack);
+        $original = $this->makeRun($owner, $plan, $task, $pack);
         $this->answer($original, $a, 1, false);
         $this->answer($original, $b, 2, true);
         // Two distinct misses across independent source questions are present
         // in the historical scope; repeated tests must stay factual.
-        $another = $this->run($owner, $plan, $task, $pack);
+        $another = $this->makeRun($owner, $plan, $task, $pack);
         $this->answer($another, $b, 1, false);
-        $focused = $this->run($owner, $plan, $task, $pack, 'bank_topic_review_initial_v613');
+        $focused = $this->makeRun($owner, $plan, $task, $pack, 'bank_topic_review_initial_v613');
         $this->answer($focused, $a, 1, true);
         $this->answer($focused, $b, 2, true);
 
@@ -162,9 +162,9 @@ final class StudyLearningReviewComparisonV614Test extends TestCase
         [$owner, $plan, $task, $pack] = $this->fixture();
         $old = $this->question($pack, 'DNS', 1);
         $novel = $this->question($pack, 'DNS', 2);
-        $original = $this->run($owner, $plan, $task, $pack);
+        $original = $this->makeRun($owner, $plan, $task, $pack);
         $this->answer($original, $old, 1, false, true); // excluded baseline
-        $focused = $this->run($owner, $plan, $task, $pack, 'bank_topic_review_initial_v613');
+        $focused = $this->makeRun($owner, $plan, $task, $pack, 'bank_topic_review_initial_v613');
         $this->answer($focused, $old, 1, true);
         $this->answer($focused, $novel, 2, false, true); // excluded after
         $entry = $this->summary($owner, $plan, $task)['review_comparisons'][0];
@@ -187,7 +187,7 @@ final class StudyLearningReviewComparisonV614Test extends TestCase
         $q1 = $this->question($pack, 'NW', 1);
         $q2 = $this->question($pack, 'NW', 2);
         $foreign = User::factory()->create();
-        $foreignRun = $this->run($foreign, $plan, $task, $pack);
+        $foreignRun = $this->makeRun($foreign, $plan, $task, $pack);
         $this->answer($foreignRun, $q1, 1, false);
         $otherTask = Task::create([
             'plan_id' => $plan->id, 'title' => '他Task',
@@ -195,9 +195,9 @@ final class StudyLearningReviewComparisonV614Test extends TestCase
             'progress_percent' => 0, 'status' => 'todo',
             'priority' => 2, 'activation_cost' => 2, 'sort_order' => 2,
         ]);
-        $this->answer($this->run($owner, $plan, $otherTask, $pack), $q2, 1, false);
-        $this->answer($this->run($owner, $plan, $task, $pack, 'bank_locked_v1', 'exam'), $q1, 1, false);
-        $focused = $this->run($owner, $plan, $task, $pack, 'bank_topic_review_initial_v613');
+        $this->answer($this->makeRun($owner, $plan, $otherTask, $pack), $q2, 1, false);
+        $this->answer($this->makeRun($owner, $plan, $task, $pack, 'bank_locked_v1', 'exam'), $q1, 1, false);
+        $focused = $this->makeRun($owner, $plan, $task, $pack, 'bank_topic_review_initial_v613');
         $this->answer($focused, $q1, 1, true);
         $this->answer($focused, $q2, 2, true);
         $comparison = $this->summary($owner, $plan, $task)['review_comparisons'][0];
@@ -214,9 +214,9 @@ final class StudyLearningReviewComparisonV614Test extends TestCase
     {
         [$owner, $plan, $task, $pack] = $this->fixture();
         $question = $this->question($pack, '<script>attack()</script>', 1);
-        $this->answer($this->run($owner, $plan, $task, $pack), $question, 1, false);
+        $this->answer($this->makeRun($owner, $plan, $task, $pack), $question, 1, false);
         $this->assertSame([], $this->summary($owner, $plan, $task)['review_comparisons']);
-        $focused = $this->run($owner, $plan, $task, $pack, 'bank_topic_review_initial_v613');
+        $focused = $this->makeRun($owner, $plan, $task, $pack, 'bank_topic_review_initial_v613');
         $this->answer($focused, $question, 1, true);
         $page = $this->actingAs($owner)->get(route('plans.tasks.learning.history', [$plan, $task]));
         $page->assertOk()->assertSee('data-learning-review-comparisons', false)
