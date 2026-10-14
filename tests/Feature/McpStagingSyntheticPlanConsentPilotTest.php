@@ -6,6 +6,7 @@ use App\Http\Middleware\CloseUnopenedMcpStaging;
 use App\Models\McpDelegatedGrant;
 use App\Models\McpLinkedSubject;
 use App\Models\Plan;
+use App\Models\Task;
 use App\Models\User;
 use App\Services\McpDelegatedIdentityFingerprintService;
 use App\Services\McpStagingLoginPilotPolicy;
@@ -163,7 +164,11 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
             'verified_at' => now()->timestamp,
         ]])->get('/account')->assertOk()
             ->assertSee('data-mcp-staging-consent-confirm', false)
-            ->assertSee('この計画の共有を許可する');
+            ->assertSee('data-mcp-staging-consent-preview', false)
+            ->assertSee('この内容で共有を許可する')
+            ->assertDontSee('data-mcp-staging-plan-consent', false)
+            ->assertDontSee('data-mcp-staging-dual-client-guide', false)
+            ->assertDontSee('data-mcp-staging-share-complete', false);
 
         $this->post(route('auth.account.mcp_plan_consent.confirm'))
             ->assertRedirect(route('auth.account'))
@@ -177,7 +182,14 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
         $this->assertSame($plan->id, $grant->plan_id);
         $this->assertSame('tasks', $grant->scope);
         $this->get('/account')->assertOk()
-            ->assertSee('data-mcp-staging-active-grant', false);
+            ->assertSee('data-mcp-staging-active-grant', false)
+            ->assertSee('data-mcp-staging-share-complete', false)
+            ->assertSee('ChatGPTでできること')
+            ->assertSee('data-mcp-staging-next-step', false)
+            ->assertSee('data-mcp-staging-change-settings', false)
+            ->assertSee('この計画の共有をやめる')
+            ->assertDontSee('data-mcp-staging-plan-consent', false)
+            ->assertDontSee('data-mcp-staging-final-confirm-button', false);
 
         // Even after consent, stage Nginx excludes /api/mcp and the app
         // flag must stay OFF. The controller itself also denies the read.
@@ -190,7 +202,86 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
             ->assertRedirect(route('auth.account'));
         $this->assertSame(McpDelegatedGrant::STATUS_REVOKED, $grant->fresh()->status);
         $this->get('/account')->assertOk()
-            ->assertDontSee('data-mcp-staging-active-grant', false);
+            ->assertDontSee('data-mcp-staging-active-grant', false)
+            ->assertDontSee('data-mcp-staging-share-complete', false)
+            ->assertSee('data-mcp-staging-plan-consent', false);
+    }
+
+    public function test_verified_consent_shows_only_whitelisted_preview_and_primary_confirmation(): void
+    {
+        $owner = $this->actor();
+        $plan = $this->fixture($owner);
+        $fingerprint = $this->link($owner);
+        $this->enableConsent();
+
+        Task::query()->create([
+            'plan_id' => $plan->id,
+            'title' => 'Review staging scenario',
+            'description' => 'PRIVATE_DESCRIPTION_MUST_NOT_APPEAR',
+            'status' => 'doing',
+            'progress_percent' => 25,
+            'priority' => 1,
+            'sort_order' => 1,
+        ]);
+
+        $session = [
+            'actor_id' => (int) $owner->id,
+            'identity_fingerprint' => $fingerprint,
+            'plan_id' => (int) $plan->id,
+            'scope' => 'tasks',
+            'duration_days' => 7,
+            'verified_at' => now()->timestamp,
+        ];
+        $this->actingAs($owner)->withSession(['mcp.plan_consent.verified' => $session])
+            ->get('/account')->assertOk()
+            ->assertSee('共有内容のプレビュー')
+            ->assertSee($plan->title)
+            ->assertSee('Review staging scenario')
+            ->assertSee('記録上の進捗：25%')
+            ->assertSee('共有期間：')
+            ->assertSee('data-mcp-staging-final-confirm-button', false)
+            ->assertSee('今は共有しない')
+            ->assertDontSee('PRIVATE_DESCRIPTION_MUST_NOT_APPEAR')
+            ->assertDontSee('data-mcp-staging-dual-client-guide', false)
+            ->assertDontSee('data-mcp-staging-plan-consent', false)
+            ->assertDontSee('data-mcp-staging-share-complete', false)
+            ->assertDontSee('data-mcp-staging-change-settings', false)
+            ->assertDontSee('name="scope"', false)
+            ->assertDontSee('name="duration_days"', false);
+
+        // Overview grants must not preview task metadata before approval.
+        $session['scope'] = 'overview';
+        $this->withSession(['mcp.plan_consent.verified' => $session])
+            ->get('/account')->assertOk()
+            ->assertSee('計画の名前のみ')
+            ->assertDontSee('Review staging scenario')
+            ->assertDontSee('PRIVATE_DESCRIPTION_MUST_NOT_APPEAR')
+            ->assertDontSee('data-mcp-staging-task-preview', false);
+
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+    }
+
+    public function test_expired_verified_consent_does_not_show_preview_or_create_grant(): void
+    {
+        $owner = $this->actor();
+        $plan = $this->fixture($owner);
+        $fingerprint = $this->link($owner);
+        $this->enableConsent();
+
+        $this->actingAs($owner)->withSession(['mcp.plan_consent.verified' => [
+            'actor_id' => (int) $owner->id,
+            'identity_fingerprint' => $fingerprint,
+            'plan_id' => (int) $plan->id,
+            'scope' => 'tasks',
+            'duration_days' => 7,
+            'verified_at' => now()->subMinutes(6)->timestamp,
+        ]])->get('/account')->assertOk()
+            ->assertDontSee('data-mcp-staging-consent-preview', false)
+            ->assertDontSee('data-mcp-staging-final-confirm-button', false)
+            ->assertSee('data-mcp-staging-plan-consent', false);
+        $this->post(route('auth.account.mcp_plan_consent.confirm'))
+            ->assertRedirect(route('auth.account'));
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
     }
 
     public function test_stale_or_tampered_verified_session_cannot_grant_another_plan(): void
@@ -277,9 +368,12 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
         ]);
 
         $this->get('/account')->assertOk()
-            ->assertSee('計画の共有：許可中')
-            ->assertSee('共有内容：計画の概要とタスク')
-            ->assertSee('ChatGPT側の接続が完了したとは限りません');
+            ->assertSee('data-mcp-staging-share-complete', false)
+            ->assertSee('ChatGPTが確認できる内容')
+            ->assertSee('計画名・タスクの名前・状態・記録上の進捗')
+            ->assertSee('ChatGPT側が接続済みかどうか')
+            ->assertDontSee('data-mcp-staging-dual-client-guide', false)
+            ->assertDontSee('data-mcp-staging-plan-consent', false);
 
         // Revocation updates the honest status; the guide cannot report a
         // completed ChatGPT login solely from a Canovia-side grant.
@@ -289,7 +383,8 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
         ]);
         $this->get('/account')->assertOk()
             ->assertSee('計画の共有：許可していません')
-            ->assertDontSee('data-mcp-staging-active-grant', false);
+            ->assertDontSee('data-mcp-staging-active-grant', false)
+            ->assertDontSee('data-mcp-staging-share-complete', false);
 
         config(['canovia_staging.synthetic_read_pilot_enabled' => false]);
         $this->get('/account')->assertOk()
