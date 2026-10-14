@@ -218,6 +218,7 @@
                             <input type="hidden" name="action" value="confirm_{{ $kind }}">
                             <input type="hidden" name="target_revision" value="{{ $operationalTarget->revision }}">
                             <input type="hidden" name="expected_data_store" value="{{ $operationalStore }}">
+                            <input type="hidden" name="expected_data_store_revision" value="{{ (int) data_get($developmentOperationalProfile, 'data_store_revision', 0) }}">
                             <label class="flex items-start gap-2 text-[11px] text-slate-300">
                                 <input type="checkbox" name="attest" value="yes" required class="mt-0.5">
                                 {{ $label }}ことを自分で確認した
