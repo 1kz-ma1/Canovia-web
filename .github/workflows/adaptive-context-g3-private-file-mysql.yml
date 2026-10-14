@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - 'app/Services/PrivateFileLifecycleService.php'
+      - 'app/Services/PrivateFilePathFenceService.php'
+      - 'database/migrations/2026_10_14_120000_create_private_file_path_fences.php'
+      - 'config/canovia.php'
       - 'tests/Feature/PrivateFileCleanupMysqlCurrentReadG3Test.php'
       - '.github/workflows/adaptive-context-g3-private-file-mysql.yml'
 
@@ -69,5 +72,7 @@ jobs:
       - name: PHP syntax and independent-session MySQL snapshot regression
         run: |
           php -l app/Services/PrivateFileLifecycleService.php
+          php -l app/Services/PrivateFilePathFenceService.php
+          php -l database/migrations/2026_10_14_120000_create_private_file_path_fences.php
           php -l tests/Feature/PrivateFileCleanupMysqlCurrentReadG3Test.php
           php artisan test tests/Feature/PrivateFileCleanupMysqlCurrentReadG3Test.php --fail-on-skipped --stop-on-failure
