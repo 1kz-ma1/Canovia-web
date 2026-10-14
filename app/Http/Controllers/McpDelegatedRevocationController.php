@@ -49,6 +49,17 @@ final class McpDelegatedRevocationController extends Controller
         int $subject,
         McpDelegatedRevocationService $revocations,
     ): RedirectResponse {
+        if (config('app.env') === 'staging') {
+            $actor = $request->user();
+            abort_unless($actor
+                && $actor->email === McpStagingSyntheticActorBootstrap::EMAIL
+                && app(McpStagingLoginPilotPolicy::class)->accountLinkReady()
+                && McpLinkedSubject::query()->whereKey($subject)
+                    ->where('user_id', $actor->id)
+                    ->where('status', McpLinkedSubject::STATUS_LINKED)
+                    ->whereNull('revoked_at')->exists(), 404);
+        }
+
         abort_unless(
             $request->user()
                 && $revocations->revokeSubject($request->user(), $subject),
