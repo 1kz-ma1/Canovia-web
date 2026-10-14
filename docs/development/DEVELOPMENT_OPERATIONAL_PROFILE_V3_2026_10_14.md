@@ -1,6 +1,6 @@
 # Development Operational Profile V3 — self-reported context, no verification claim
 
-> Status: implementation on feature branch; **not deployed** as of 2026-10-14.
+> Status: **implemented in `main` via PR #598**; **not independently verified on Render production** as of 2026-10-14.
 > Evolves [V1](DEVELOPMENT_PRELAUNCH_PREPARATION_V1_2026_10_14.md) and [V2](DEVELOPMENT_OPERATIONAL_EVIDENCE_V2_2026_10_14.md).
 > Future independent attestation and deploy gates remain governed by [Operational Readiness](DEVELOPMENT_OPERATIONAL_READINESS_SPEC_2026_10_14.md).
 
