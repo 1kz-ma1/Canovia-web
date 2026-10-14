@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Services\McpStagingProviderPreflightService;
+use App\Services\McpOAuthAccountLinkProvider;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -43,6 +45,51 @@ final class McpStagingProviderPreflightTest extends TestCase
         ]);
 
         Http::preventStrayRequests();
+    }
+
+    public function test_auth0_metadata_429_is_only_a_stage_local_enum_and_blocks_oauth_start(): void
+    {
+        config([
+            'app.env' => 'staging',
+            'canovia_staging.isolated' => true,
+            'canovia_staging.login_pilot_enabled' => true,
+            'canovia_staging.account_link_pilot_enabled' => true,
+        ]);
+        Log::spy();
+        Http::fake([self::METADATA => Http::response(
+            ['access_token' => 'NEVER-LOG-THIS'], 429,
+            ['Content-Type' => 'application/json', 'Retry-After' => '93'],
+        )]);
+
+        $this->assertFalse(app(McpOAuthAccountLinkProvider::class)->isProviderVerified());
+        Http::assertSentCount(1);
+        Log::shouldHaveReceived('warning')->once()->with(
+            'Canovia MCP staging OAuth failure',
+            ['stage_code' => 'link_provider_metadata_rate_limited'],
+        );
+    }
+
+    public function test_auth0_token_429_is_diagnosed_without_payload_and_never_accepts_link(): void
+    {
+        config([
+            'app.env' => 'staging',
+            'canovia_staging.isolated' => true,
+            'canovia_staging.login_pilot_enabled' => true,
+            'canovia_staging.account_link_pilot_enabled' => true,
+        ]);
+        Log::spy();
+        Http::fake(['https://idp.example.test/oauth/token' => Http::response(
+            ['error' => 'rate_limited', 'access_token' => 'NEVER-LOG-THIS'],
+            429, ['Content-Type' => 'application/json', 'Retry-After' => '20'],
+        )]);
+
+        $this->assertNull(app(McpOAuthAccountLinkProvider::class)
+            ->exchangeAndVerify(str_repeat('c', 30), str_repeat('v', 43)));
+        Http::assertSentCount(1);
+        Log::shouldHaveReceived('warning')->once()->with(
+            'Canovia MCP staging OAuth failure',
+            ['stage_code' => 'link_provider_token_rate_limited'],
+        );
     }
 
     public function test_default_cli_checks_local_only_and_never_calls_provider(): void

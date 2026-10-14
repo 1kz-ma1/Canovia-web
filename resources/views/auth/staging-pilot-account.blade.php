@@ -229,12 +229,15 @@
         <section class="detail" data-mcp-account-link>
             <h2>1. 本人確認</h2>
             <p class="muted">接続に使うアカウントを確認します。この操作だけでは、ChatGPTに計画は共有されません。</p>
+            @if (app(\App\Services\McpOAuthAccountLinkConfiguration::class)->githubOnlyEnabled())
+                <p class="muted" data-mcp-stage-github-only-warning>GitHubアカウントを確認してください。違うアカウントが自動選択された場合は承認せず戻ってください。ChatGPT側の認証は別操作です。</p>
+            @endif
             @if ($linked)
                 <p class="note" role="status">本人確認が済んでいます。共有する計画は次の項目で選べます。</p>
             @elseif ($linkReady)
                 <form method="POST" action="{{ route('auth.account.mcp_link.start') }}">
                     @csrf
-                    <button type="submit">本人確認をはじめる</button>
+                    <button type="submit" @if (app(\App\Services\McpOAuthAccountLinkConfiguration::class)->githubOnlyEnabled()) data-mcp-stage-github-only-identity @endif>{{ app(\App\Services\McpOAuthAccountLinkConfiguration::class)->githubOnlyEnabled() ? 'GitHubで本人確認する' : '本人確認をはじめる' }}</button>
                 </form>
             @else
                 <p class="note warning" data-mcp-account-link-disabled>本人確認は現在利用できません。</p>
