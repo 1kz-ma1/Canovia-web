@@ -418,6 +418,35 @@ final class McpOAuthAccountLinkTest extends TestCase
         ]);
     }
 
+    public function test_active_only_identity_migration_replays_without_deleting_history(): void
+    {
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        $fingerprint = str_repeat('b', 64);
+        $old = McpLinkedSubject::query()->create([
+            'user_id' => $first->id, 'identity_fingerprint' => $fingerprint,
+            'provider_key' => 'chatgpt', 'status' => McpLinkedSubject::STATUS_REVOKED,
+            'linked_at' => now()->subDay(), 'revoked_at' => now()->subHour(),
+        ]);
+        $new = McpLinkedSubject::query()->create([
+            'user_id' => $second->id, 'identity_fingerprint' => $fingerprint,
+            'provider_key' => 'chatgpt', 'status' => McpLinkedSubject::STATUS_LINKED,
+            'linked_at' => now(),
+        ]);
+
+        $migration = require base_path(
+            'database/migrations/2026_10_14_000200_preserve_historical_mcp_identity_links.php',
+        );
+        $migration->up();
+        $migration->up();
+
+        $this->assertDatabaseCount('mcp_linked_subjects', 2);
+        $this->assertNull($old->fresh()->active_identity_fingerprint);
+        $this->assertSame($fingerprint, $new->fresh()->active_identity_fingerprint);
+        $this->assertSame($first->id, $old->fresh()->user_id);
+        $this->assertSame($second->id, $new->fresh()->user_id);
+    }
+
     private function start(User $user): string
     {
         $response = $this->actingAs($user)
