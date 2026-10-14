@@ -142,6 +142,7 @@ final class DevelopmentOperationalProviderBoundaryV5Test extends TestCase
             ['owner_id' => 8],
             ['plan_id' => 43],
             ['workspace_id' => 'tea-other123'],
+            ['service_owner_id' => 'tea-other123'],
             ['service_id' => 'srv-other123'],
             ['consent_epoch' => 5],
             ['target_revision' => 2],
