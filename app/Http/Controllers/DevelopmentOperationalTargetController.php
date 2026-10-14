@@ -103,22 +103,42 @@ final class DevelopmentOperationalTargetController extends Controller
         } else {
             // Every statement is a human attestation; never trust form fields
             // claiming provider verification or backdate timestamps.
+            $expectedRevision = null;
+            $expectedStore = null;
             if (str_starts_with($action, 'confirm_')) {
+                // Acknowledge the exact environment AND storage category shown
+                // when the owner checked the real backup or isolated restore.
+                // Otherwise an old tab could silently attest a new binding.
                 $request->validate(['attest' => ['required', 'in:yes']]);
+                $snapshot = $request->validate([
+                    'target_revision' => ['required', 'integer', 'min:1'],
+                    'expected_data_store' => ['required', Rule::in(DevelopmentOperationalProfile::DATA_STORES)],
+                ]);
+                $expectedRevision = (int) $snapshot['target_revision'];
+                $expectedStore = $snapshot['expected_data_store'];
             }
 
-            DB::transaction(static function () use ($plan, $action): void {
+            DB::transaction(static function () use ($plan, $action, $expectedRevision, $expectedStore): void {
                 $target = DevelopmentOperationalTarget::query()
                     ->where('plan_id', $plan->id)->lockForUpdate()->firstOrFail();
                 $kind = str_ends_with($action, 'backup') ? 'backup' : 'restore';
 
                 if (str_starts_with($action, 'confirm_')) {
-                    $dataStore = DevelopmentOperationalProfile::query()
-                        ->where('plan_id', $plan->id)->value('data_store');
+                    // The profile row is also locked so concurrent changes to
+                    // the selected storage category cannot pass the fence.
+                    $profile = DevelopmentOperationalProfile::query()
+                        ->where('plan_id', $plan->id)->lockForUpdate()->first();
+                    $dataStore = $profile?->data_store;
                     abort_unless(
                         in_array($dataStore, ['server_db', 'local_device', 'cloud_files', 'mixed'], true),
                         422,
                         '保存方式を先に登録してください。',
+                    );
+                    abort_unless(
+                        $target->revision === $expectedRevision
+                            && $dataStore === $expectedStore,
+                        409,
+                        '対象環境または保存方式が更新されています。最新の画面で再確認してください。',
                     );
                     $target->{$kind.'_confirmed_at'} = now();
                     $target->{$kind.'_revision'} = $target->revision;
