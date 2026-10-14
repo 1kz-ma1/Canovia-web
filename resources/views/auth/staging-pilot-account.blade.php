@@ -14,11 +14,13 @@
         && is_int($verified['verified_at'] ?? null)
         && $verified['verified_at'] <= now()->timestamp
         && now()->timestamp - $verified['verified_at'] <= 300;
-    $linked = \App\Models\McpLinkedSubject::query()
+    $activeSubject = \App\Models\McpLinkedSubject::query()
         ->where('user_id', $user->id)
         ->where('status', \App\Models\McpLinkedSubject::STATUS_LINKED)
         ->whereNull('revoked_at')
-        ->exists();
+        ->whereColumn('identity_fingerprint', 'active_identity_fingerprint')
+        ->first();
+    $linked = $activeSubject !== null;
     $stagePolicy = app(\App\Services\McpStagingLoginPilotPolicy::class);
     $syntheticReadReady = app(\App\Services\McpStagingSyntheticReadPilotPolicy::class)->isReady();
     $consentService = app(\App\Services\McpExplicitPlanConsentService::class);
@@ -41,7 +43,11 @@
         && is_string($pendingConsent['identity_fingerprint'] ?? null)
         && $consentService->matchesLinkedIdentity($user, $pendingConsent['identity_fingerprint'])
         && in_array($pendingConsent['scope'] ?? null, ['overview', 'tasks'], true)
-        && in_array($pendingConsent['duration_days'] ?? null, [1, 7, 30], true)
+        && (is_int($pendingConsent['duration_days'] ?? null)
+            || ($pendingConsent['duration_days'] ?? null) === \App\Services\McpExplicitPlanConsentService::UNTIL_REVOKED)
+        && app(\App\Services\McpExplicitPlanConsentService::class)->isScopeAndDurationAllowed(
+            (string) $pendingConsent['scope'], $pendingConsent['duration_days'],
+        )
         && is_int($pendingConsent['verified_at'] ?? null)
         && $pendingConsent['verified_at'] <= now()->timestamp
         && now()->timestamp - $pendingConsent['verified_at'] <= 300;
@@ -51,7 +57,8 @@
             ->where('plan_id', $fixture->id)
             ->where('status', \App\Models\McpDelegatedGrant::STATUS_ACTIVE)
             ->whereNull('revoked_at')
-            ->where('expires_at', '>', now())
+            ->where(static fn ($query) => $query
+                ->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->first()
         : null;
     // Preview only the same whitelisted fields that ChatGPT may later read.
@@ -74,7 +81,7 @@
             <div class="note" data-mcp-staging-consent-preview>
                 <p><strong>計画：</strong>{{ $consentPreview['plan']['title'] }}</p>
                 <p><strong>共有する情報：</strong>{{ $pendingConsent['scope'] === 'tasks' ? '計画の概要とタスクの名前・状態・記録上の進捗' : '計画の名前のみ' }}</p>
-                <p><strong>共有期間：</strong>許可した日から{{ $pendingConsent['duration_days'] }}日間</p>
+                <p><strong>共有期間：</strong>{{ $pendingConsent['duration_days'] === \App\Services\McpExplicitPlanConsentService::UNTIL_REVOKED ? '取り消すまで（いつでも解除できます）' : '許可した日から'.$pendingConsent['duration_days'].'日間' }}</p>
                 @if ($pendingConsent['scope'] === 'tasks')
                     <p><strong>共有するタスクの例（最大5件）：</strong></p>
                     @if (count($consentPreview['tasks']) > 0)
@@ -115,7 +122,7 @@
             <div class="note" data-mcp-staging-active-grant>
                 <p><strong>共有する計画：</strong>{{ $fixture->title }}</p>
                 <p><strong>ChatGPTが確認できる内容：</strong>{{ $activeGrant->scope === 'tasks' ? '計画名・タスクの名前・状態・記録上の進捗' : '計画名' }}</p>
-                <p><strong>共有期限：</strong>{{ $activeGrant->expires_at->format('Y年n月j日 H:i') }}</p>
+                <p><strong>共有期限：</strong>{{ $activeGrant->expires_at?->format('Y年n月j日 H:i') ?? '取り消すまで' }}</p>
             </div>
             <h2>ChatGPTでできること</h2>
             <p>{{ $activeGrant->scope === 'tasks' ? '計画の内容や、Canoviaに記録したタスクの進み具合を確認できます。' : '共有した計画の名前を確認できます。タスク情報は共有していません。' }}</p>
@@ -143,8 +150,9 @@
                     <label for="mcp-duration">変更後の共有期間</label>
                     <select id="mcp-duration" name="duration_days" required>
                         <option value="1">1日</option>
-                        <option value="7" selected>7日</option>
+                        <option value="7">7日</option>
                         <option value="30">30日</option>
+                        <option value="until_revoked" selected>取り消すまで共有する</option>
                     </select>
                     <div class="row">
                         <button type="submit">変更内容を確認する</button>
@@ -156,6 +164,17 @@
                 @method('DELETE')
                 <button class="secondary" type="submit" data-mcp-staging-revoke>この計画の共有をやめる</button>
             </form>
+            @if ($activeSubject)
+                <details class="note" data-mcp-staging-subject-unlink>
+                    <summary>本人確認の連携を解除する</summary>
+                    <p>解除すると、このアカウントの関連するすべての計画の共有許可が取り消されます。あとで別のCanoviaアカウントに同じGitHubを連携する場合も、改めて本人確認と共有承認が必要です。</p>
+                    <form method="POST" action="{{ route('auth.account.mcp_subject.revoke', ['subject' => $activeSubject->id]) }}">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="secondary" data-mcp-staging-unlink-button>本人確認の連携を解除する</button>
+                    </form>
+                </details>
+            @endif
         </section>
 
     @elseif ($canConfirm)
@@ -222,6 +241,20 @@
             @endif
         </section>
 
+        @if ($linked && $activeSubject)
+            <section class="detail" data-mcp-staging-subject-unlink>
+                <details>
+                    <summary>本人確認の連携を解除する</summary>
+                    <p>解除すると、このアカウントの計画共有許可もすべて取り消します。別のアカウントへの再連携には改めて本人確認が必要です。</p>
+                    <form method="POST" action="{{ route('auth.account.mcp_subject.revoke', ['subject' => $activeSubject->id]) }}">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="secondary" data-mcp-staging-unlink-button>本人確認の連携を解除する</button>
+                    </form>
+                </details>
+            </section>
+        @endif
+
         @if ($fixture !== null)
             <section class="detail" data-mcp-staging-plan-consent>
                 <h2>2. ChatGPTに見せる計画を選ぶ</h2>
@@ -240,8 +273,9 @@
                     <label for="mcp-duration">共有する期間</label>
                     <select id="mcp-duration" name="duration_days" required>
                         <option value="1">1日</option>
-                        <option value="7" selected>7日</option>
+                        <option value="7">7日</option>
                         <option value="30">30日</option>
+                        <option value="until_revoked" selected>取り消すまで共有する</option>
                     </select>
                     <div class="row">
                         <button type="submit">本人確認して共有内容を確認する</button>
