@@ -45,16 +45,28 @@ jobs:
             -e PERSISTENCE=1 \
             localstack/localstack:2026.08.3
           python - <<'PY'
-          import socket, time
-          for _ in range(80):
+          import boto3, os, time
+          from botocore.config import Config
+          c=boto3.client('s3',region_name='us-east-1',
+              endpoint_url='http://127.0.0.1:4566',
+              aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+              aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
+              config=Config(s3={'addressing_style':'path'},
+                            retries={'max_attempts':1},
+                            connect_timeout=1,read_timeout=2))
+          for attempt in range(80):
               try:
-                  with socket.create_connection(('127.0.0.1',4566),timeout=.3):
+                  response=c.list_buckets()
+                  if response['ResponseMetadata']['HTTPStatusCode']==200:
                       break
-              except OSError:
+              except Exception:
                   time.sleep(.5)
           else:
-              raise SystemExit("R33 isolated LocalStack endpoint not ready")
+              raise SystemExit('R33 local S3 API never became healthy')
           PY
+      - name: Print only disposable container startup errors
+        if: failure()
+        run: docker logs --tail 60 g3-r33-localstack 2>&1 || true
       - name: PUT and GET nine fixture versions via localhost HTTP
         run: python tests/ci/g3_disposable_localstack_restart.py prepare --manifest "$RUNNER_TEMP/g3-r33-manifest.json"
       - name: Force-stop storage process with SIGKILL and assert unavailability
