@@ -647,6 +647,21 @@
                         @if ($displayNextReason)
                             <p class="mt-2 text-sm leading-6 text-slate-300">{{ $displayNextReason }}</p>
                         @endif
+                        @if (in_array($progressionKind, ['general_practice_return', 'exam_mode', 'reinforce_current', 'continue_current'], true))
+                            @php
+                                $activePhase = (array) data_get($practiceStrategy ?? [], 'learning_phase', []);
+                                $activePhaseReason = trim((string) ($activePhase['reason'] ?? ''));
+                            @endphp
+                            @if ($activePhaseReason !== '')
+                                <div class="mt-3 rounded-xl border border-white/10 bg-slate-950/30 px-3 py-3" data-study-next-action-reason>
+                                    <p class="text-xs font-bold text-cyan-200">なぜこの学習方針？</p>
+                                    <p class="mt-1 text-xs leading-5 text-slate-300">{{ $activePhaseReason }}</p>
+                                    @if ($currentAttempt?->next_action && $currentAttempt->next_action !== $task->next_action_note)
+                                        <p class="mt-2 text-xs leading-5 text-slate-400">採点結果の提案「{{ $currentAttempt->next_action }}」と、Canoviaが確定するTaskの次Actionは別です。現在の学習段階と試験日を考慮して、最終的な行動を選びます。</p>
+                                    @endif
+                                </div>
+                            @endif
+                        @endif
                         @if ($progressionKind === 'verify_mastery')
                             <p class="mt-3 text-xs leading-5 text-cyan-100/80">1回の高得点だけでは完了にせず、別の問題でも理解が安定しているかCanoviaが確認します。</p>
                         @else
