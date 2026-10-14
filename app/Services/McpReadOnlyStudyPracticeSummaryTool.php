@@ -56,8 +56,10 @@ final class McpReadOnlyStudyPracticeSummaryTool
                 ->whereNotNull('applied_at')
                 ->orderByDesc('applied_at')
                 ->orderByDesc('id')
-                ->limit($limit)
+                ->limit($limit + 1)
                 ->get(['score_percent', 'weaknesses', 'applied_at']);
+            $hasMoreAppliedAttempts = $attempts->count() > $limit;
+            $attempts = $attempts->take($limit);
 
             $scores = [];
             $topics = [];
@@ -119,7 +121,7 @@ final class McpReadOnlyStudyPracticeSummaryTool
                     'latest_score_percent' => $scores[0] ?? null,
                 ],
                 'weak_topics' => array_slice($weak, 0, 5),
-                'truncated' => count($weak) > 5 || $attempts->count() >= $limit,
+                'truncated' => count($weak) > 5 || $hasMoreAppliedAttempts,
                 'completion' => 'unverified',
                 'caveat' => 'Only aggregated owner-applied Canovia study records. Weakness labels and scores may be model-derived or user-recorded, not independently verified. No raw questions, answers, assessments or attempts are exported.',
             ];
