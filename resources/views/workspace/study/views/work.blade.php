@@ -10,6 +10,8 @@
         'feedback' => $intelligenceStateChange ?? null,
     ])
 
+    @include('workspace.study.partials.learning-review-queue')
+
     <div
         class="space-y-5"
         data-study-workspace-composed
