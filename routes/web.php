@@ -666,7 +666,7 @@ Route::middleware('feature.access:'.FeatureKey::AiPractice->value)->group(functi
     Route::post('/plans/{plan}/tasks/{task}/learning/exam/{learningRun}/answer', [AdaptiveLearningExamController::class, 'answer'])->middleware('throttle:60,1')->name('plans.tasks.learning.exam.answer');
     Route::post('/plans/{plan}/tasks/{task}/learning/exam/{learningRun}/navigate', [AdaptiveLearningExamController::class, 'navigate'])->middleware('throttle:60,1')->name('plans.tasks.learning.exam.navigate');
     Route::post('/plans/{plan}/tasks/{task}/learning/exam/{learningRun}/finish', [AdaptiveLearningExamController::class, 'finish'])->middleware('throttle:12,1')->name('plans.tasks.learning.exam.finish');
-    Route::post('/plans/{plan}/tasks/{task}/learning', [AdaptiveLearningController::class, 'start'])->middleware('throttle:12,1')->name('plans.tasks.learning.start');
+    Route::post('/plans/{plan}/tasks/{task}/learning', [AdaptiveLearningController::class, 'start'])->middleware('throttle:learning-bank-start')->name('plans.tasks.learning.start');
     Route::get('/plans/{plan}/tasks/{task}/learning/{learningRun}', [AdaptiveLearningController::class, 'show'])->name('plans.tasks.learning.show');
     Route::post('/plans/{plan}/tasks/{task}/learning/{learningRun}/answer', [AdaptiveLearningController::class, 'answer'])->middleware('throttle:40,1')->name('plans.tasks.learning.answer');
     Route::post('/plans/{plan}/tasks/{task}/learning/{learningRun}/draft', [AdaptiveLearningAnswerDraftController::class, 'store'])->middleware('throttle:90,1')->name('plans.tasks.learning.draft');
