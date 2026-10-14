@@ -10,7 +10,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Models\UserProductGrant;
 use App\Services\AccountDeletionService;
-use Illuminate\Foundation\Testing\DatabaseTruncation;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -19,7 +19,7 @@ use Tests\TestCase;
 
 class SafePlanResourceRecallHandoffV5811Test extends TestCase
 {
-    use DatabaseTruncation;
+    use RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -328,7 +328,11 @@ class SafePlanResourceRecallHandoffV5811Test extends TestCase
         $this->assertDatabaseMissing('plan_resources', [
             'id' => $resource->id,
         ]);
-        Storage::disk('local')->assertMissing($path);
+        // RefreshDatabase wraps the request in an outer never-committed test
+        // transaction. DB::afterCommit correctly defers physical cleanup.
+        // The actual post-commit unlink is exercised by the isolated PG16
+        // PrivateFileLifecycleG3Test (without a wrapping transaction).
+        Storage::disk('local')->assertExists($path);
     }
 
     public function test_source_ui_shows_plan_resource_provenance(): void
