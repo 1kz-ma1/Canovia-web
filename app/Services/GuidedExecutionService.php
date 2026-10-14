@@ -185,6 +185,7 @@ class GuidedExecutionService
             ->with('evidence')
             ->where('status', GuidedExecution::STATUS_COMPLETED)
             ->latest('reflected_at')
+            ->latest('id')
             ->first();
     }
 
