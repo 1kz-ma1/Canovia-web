@@ -322,6 +322,40 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
             ->assertSee('data-mcp-staging-plan-consent', false);
     }
 
+    public function test_stage_owner_can_unlink_subject_and_revoke_indefinite_grant(): void
+    {
+        $owner = $this->actor();
+        $plan = $this->fixture($owner);
+        $fingerprint = $this->link($owner);
+        $this->enableConsent();
+        $link = McpLinkedSubject::query()->where('user_id', $owner->id)->sole();
+        $this->assertSame($fingerprint, $link->active_identity_fingerprint);
+
+        $this->actingAs($owner)->get('/account')->assertOk()
+            ->assertSee('data-mcp-staging-subject-unlink', false)
+            ->assertSee('本人確認の連携を解除する');
+
+        $grant = McpDelegatedGrant::query()->create([
+            'user_id' => $owner->id, 'subject_link_id' => $link->id,
+            'plan_id' => $plan->id,
+            'client_resource_fingerprint' => str_repeat('f', 64),
+            'scope' => 'overview', 'status' => McpDelegatedGrant::STATUS_ACTIVE,
+            'consented_at' => now(), 'expires_at' => null,
+        ]);
+        $this->get('/account')->assertOk()
+            ->assertSee('data-mcp-staging-share-complete', false)
+            ->assertSee('data-mcp-staging-subject-unlink', false);
+        $this->delete(route('auth.account.mcp_subject.revoke', ['subject' => $link->id]))
+            ->assertRedirect(route('auth.account'));
+        $this->assertSame(McpLinkedSubject::STATUS_REVOKED, $link->fresh()->status);
+        $this->assertNull($link->fresh()->active_identity_fingerprint);
+        $this->assertSame(McpDelegatedGrant::STATUS_REVOKED, $grant->fresh()->status);
+        $this->get('/account')->assertOk()
+            ->assertSee('本人確認をはじめる')
+            ->assertDontSee('data-mcp-staging-share-complete', false)
+            ->assertDontSee('data-mcp-staging-subject-unlink', false);
+    }
+
     public function test_stale_or_tampered_verified_session_cannot_grant_another_plan(): void
     {
         $owner = $this->actor();
