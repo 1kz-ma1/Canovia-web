@@ -1223,3 +1223,17 @@ or migration is introduced. Future provider capability, IAM,
 authenticity, replay durability, ABA fencing and crash safety still
 require independent manual review and owner approval. Five existing
 G3 migrations remain unapproved for production Aiven. **G3 OPEN.**
+
+## 74. G3-R29 — Owner review packet is not operating permission (2026-10-14)
+
+R29 checks an immutable-SHA R28 plan in a narrow request for
+a *future* disposable provider trial. Strict review fields cover
+test scope, proposed budget/time/object/request limits, secrets
+custody, operations, stop triggers, quarantine and human revocation.
+Synthetic all-valid packets remain `OWNER_DECISION_REQUIRED`.
+Untrusted assertions that owner/security approval exists are
+invalid; all operational authority and provider authenticity flags
+remain false. Offline CI checks cross-SHA, scope/authorization
+forgery, overspending and removed stop/abort steps. No live calls,
+migrations, releases, retries or delete operations were added.
+Five production G3 migrations remain unapproved. **G3 OPEN.**
