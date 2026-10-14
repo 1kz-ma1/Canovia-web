@@ -55,7 +55,8 @@
             ->where('plan_id', $fixture->id)
             ->where('status', \App\Models\McpDelegatedGrant::STATUS_ACTIVE)
             ->whereNull('revoked_at')
-            ->where('expires_at', '>', now())
+            ->where(static fn ($query) => $query
+                ->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->first()
         : null;
     // Preview only the same whitelisted fields that ChatGPT may later read.
