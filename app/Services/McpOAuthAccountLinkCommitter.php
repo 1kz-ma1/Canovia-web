@@ -34,15 +34,31 @@ final class McpOAuthAccountLinkCommitter
                     return false;
                 }
 
-                $active = McpLinkedSubject::query()
-                    ->where('active_identity_fingerprint', $fingerprint)
+                // Check ALL live claims for the immutable identity, not
+                // just rows whose active reservation looks healthy. A partial
+                // migration / out-of-band write could leave a status=linked
+                // row with an absent or mismatched active fingerprint. Such a
+                // row must block a second account, not silently release it.
+                // The database UNIQUE reservation remains the final race
+                // fence for otherwise-healthy concurrent confirmations.
+                $liveLinks = McpLinkedSubject::query()
+                    ->where('identity_fingerprint', $fingerprint)
                     ->where('status', McpLinkedSubject::STATUS_LINKED)
                     ->whereNull('revoked_at')
-                    ->lockForUpdate()->first();
+                    ->lockForUpdate()->get();
 
-                // Never steal a currently linked identity. Releasing it
-                // requires the previous owner's own authenticated unlink.
-                if ($active !== null && (int) $active->user_id !== (int) $owner->id) {
+                if ($liveLinks->count() > 1) {
+                    return false;
+                }
+
+                $active = $liveLinks->first();
+                if ($active !== null
+                    && ($active->active_identity_fingerprint !== $fingerprint
+                        || $active->provider_key !== 'chatgpt'
+                        || (int) $active->user_id !== (int) $owner->id)) {
+                    // Even the current owner must not "confirm" a corrupt
+                    // reservation as valid. Require operator review/repair;
+                    // no new linked row, grant or audit is created.
                     return false;
                 }
 
