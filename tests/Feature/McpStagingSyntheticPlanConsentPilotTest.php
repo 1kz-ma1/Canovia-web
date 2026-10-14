@@ -284,6 +284,44 @@ final class McpStagingSyntheticPlanConsentPilotTest extends TestCase
         $this->assertDatabaseCount('mcp_delegated_grants', 0);
     }
 
+    public function test_staging_owner_can_preview_and_revoke_opt_in_until_revoked_consent(): void
+    {
+        $owner = $this->actor();
+        $plan = $this->fixture($owner);
+        $fingerprint = $this->link($owner);
+        $this->enableConsent();
+
+        $this->actingAs($owner)->withSession(['mcp.plan_consent.verified' => [
+            'actor_id' => (int) $owner->id,
+            'identity_fingerprint' => $fingerprint,
+            'plan_id' => (int) $plan->id,
+            'scope' => 'overview',
+            'duration_days' => \App\Services\McpExplicitPlanConsentService::UNTIL_REVOKED,
+            'verified_at' => now()->timestamp,
+        ]])->get('/account')->assertOk()
+            ->assertSee('共有する内容を確認')
+            ->assertSee('取り消すまで（いつでも解除できます）')
+            ->assertSee('data-mcp-staging-final-confirm-button', false);
+
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+        $this->post(route('auth.account.mcp_plan_consent.confirm'))->assertRedirect(route('auth.account'));
+        $grant = McpDelegatedGrant::query()->sole();
+        $this->assertSame('active', $grant->status);
+        $this->assertNull($grant->expires_at);
+        $this->get('/account')->assertOk()
+            ->assertSee('data-mcp-staging-share-complete', false)
+            ->assertSee('取り消すまで')
+            ->assertSee('data-mcp-staging-revoke', false)
+            ->assertDontSee('data-mcp-staging-plan-consent', false);
+
+        $this->delete(route('auth.account.mcp_grant.revoke', ['grant' => $grant->id]))
+            ->assertRedirect(route('auth.account'));
+        $this->assertSame('revoked', $grant->fresh()->status);
+        $this->get('/account')->assertOk()
+            ->assertDontSee('data-mcp-staging-share-complete', false)
+            ->assertSee('data-mcp-staging-plan-consent', false);
+    }
+
     public function test_stale_or_tampered_verified_session_cannot_grant_another_plan(): void
     {
         $owner = $this->actor();
