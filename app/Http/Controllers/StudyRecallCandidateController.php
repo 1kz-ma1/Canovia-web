@@ -327,6 +327,52 @@ class StudyRecallCandidateController extends Controller
         $paths = [];
         $sources = collect();
 
+        if ($privateUploads->enabled()) {
+            $uploads = [];
+            $prepared = [];
+            foreach ($files as $file) {
+                $mime = (string) $file->getMimeType();
+                $type = $mime === 'application/pdf' ? 'pdf' : 'image';
+                $ext = strtolower((string) $file->getClientOriginalExtension());
+                if ($ext === '') {
+                    $ext = $type === 'pdf' ? 'pdf' : 'jpg';
+                }
+                $path = 'study-recall-sources/'.$plan->id.'/'.$task->id
+                    .'/'.Str::uuid().'.'.$ext;
+                $uploads[] = ['file' => $file, 'path' => $path];
+                $prepared[] = [
+                    'plan_id' => (int) $plan->id,
+                    'task_id' => (int) $task->id,
+                    'user_id' => $request->user()?->id,
+                    'actor_token' => $request->user() ? null : $actorToken,
+                    'source_type' => $type,
+                    'original_name' => mb_substr(
+                        (string) $file->getClientOriginalName(), 0, 255,
+                    ),
+                    'mime_type' => $mime,
+                    'source_text' => null,
+                    'status' => 'pending',
+                ];
+            }
+
+            // All generated keys are locked in sorted order, all bytes are
+            // stored, then all source records are inserted. A failed source
+            // insert removes the newly written files before lock release.
+            $sources = $privateUploads->storeAndPersist(
+                $uploads,
+                function (array $storedPaths) use ($prepared) {
+                    $created = collect();
+                    foreach ($prepared as $index => $attributes) {
+                        $created->push(StudyRecallSource::query()->create(
+                            array_replace($attributes, [
+                                'storage_path' => $storedPaths[$index],
+                            ]),
+                        ));
+                    }
+                    return $created;
+                },
+            );
+        } else {
         try {
             foreach ($files as $file) {
                 $mime = (string) $file->getMimeType();
@@ -389,6 +435,7 @@ class StudyRecallCandidateController extends Controller
             }
 
             throw $exception;
+        }
         }
 
         try {
