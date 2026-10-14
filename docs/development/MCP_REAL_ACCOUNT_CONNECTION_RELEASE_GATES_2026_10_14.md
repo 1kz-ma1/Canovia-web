@@ -103,3 +103,11 @@ A dedicated CI-only matrix runs against fresh **PostgreSQL 17 / MySQL 8.0 / MySQ
 - All checks must be green for **each** engine. Test runner DB target must be a uniquely named disposable local database. Missing real-DB matrix evidence leaves production authorization **blocked**.
 - This proves selected DB row-lock / uniqueness behavior, **not** every real-world clock interleaving, Auth0 token revocation, production Aiven backup or every write path. Those remain separate reviews.
 
+## 10. Normal Account onboarding (development-only UI implementation)
+
+- The normal product Account page displays one owner-only state-based guide: connection unavailable when first-party identity configuration or explicit consent is disabled; next identity confirmation when no linked record; Development Plan selection when linked but without an unexpired **local** grant record; or connection guidance only after a local grant exists. A record is **not** proof of remote ChatGPT OAuth state, currently authorized Plan ownership or successful tool read.
+- The first step links to the existing account-link form rather than bypassing PKCE or confirmation. The second links to the existing Development workspace, where the owner must still select and authorize an explicit personal Plan.
+- When MCP reads are OFF, even an unexpired Plan-grant record is not described as readable; no ChatGPT launch CTA appears in the connection guide. The existing dedicated consent/revocation screens remain available and authoritative.
+- GitHub must be selected in the IdP itself; do not claim Canovia can force GitHub. A provider-specific redirect can be implemented only after separately verified Auth0 connection selection **and** immutable subject validation.
+- Tests cover off-by-default, linked vs unlinked, unexpired vs expired/indefinite grant, revoke/unlink, other owner's page isolation, and no raw identity fingerprint/token exposure. No Auth0, deployment or database changes in this UI slice.
+
