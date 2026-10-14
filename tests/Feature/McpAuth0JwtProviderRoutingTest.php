@@ -515,6 +515,11 @@ final class McpAuth0JwtProviderRoutingTest extends TestCase
         // Full OAuth controller + signed third-party JWT read flow in an
         // isolated in-memory database. NEVER use real GitHub identities,
         // Auth0 credentials, Render staging data, or production access.
+        // Repeated callback/consent attempts are synthetic adversarial cases,
+        // not a rate-limit acceptance test. Preserve the real middleware in
+        // production; bypass only this test's HTTP request throttle, as the
+        // separate staging consent tests already do.
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
         config(['canovia_mcp.account_link_github_only_enabled' => true]);
         $owner = User::factory()->create(['first_run_completed_at' => now()]);
         $plan = Plan::query()->create([
