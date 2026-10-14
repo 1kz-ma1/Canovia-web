@@ -164,7 +164,7 @@ final class AdaptiveLearningNextActionV611Test extends TestCase
     {
         [$owner, $plan, $task, $pack] = $this->fixture();
         $same = $this->answer($owner, $plan, $task, $pack);
-        $sourceQuestion = $same->item->question;
+        $sourceQuestion = Question::findOrFail($same->item->question_id);
         $this->answer($owner, $plan, $task, $pack, false, $sourceQuestion);
         $other = User::factory()->create();
         $this->answer($other, $plan, $task, $pack);
