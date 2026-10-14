@@ -5,6 +5,10 @@
     <nav class="flex flex-wrap items-center justify-between gap-3 text-sm" aria-label="学習の移動先">
         <a href="{{ route('plans.tasks.learning.index', [$plan, $task]) }}" class="font-semibold text-sky-400">← 学習モードと問題集</a>
         <a href="{{ route('plans.tasks.learning.history', [$plan, $task]) }}" class="font-semibold text-sky-300">回答履歴を見る →</a>
+        <a href="{{ route('workspace.study.index', ['plan_id' => $plan->id, 'surface' => 'work']) }}"
+            class="font-semibold text-emerald-300" data-learning-review-return-work>
+            学習Workspaceで復習候補を再確認 →
+        </a>
     </nav>
     <section class="page-card p-5 sm:p-7">
         <p class="text-xs font-bold tracking-widest text-cyan-400">QUESTION BANK / ONE QUESTION AT A TIME</p>
