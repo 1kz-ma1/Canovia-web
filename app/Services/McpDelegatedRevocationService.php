@@ -94,6 +94,7 @@ final class McpDelegatedRevocationService
                 $subject->forceFill([
                     'status' => McpLinkedSubject::STATUS_REVOKED,
                     'revoked_at' => now(),
+                    'active_identity_fingerprint' => null,
                 ])->save();
 
                 $this->audit(
