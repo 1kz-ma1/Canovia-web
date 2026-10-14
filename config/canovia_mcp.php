@@ -27,6 +27,11 @@ return [
     // No practice evidence, answer history or mutations are exposed.
     'study_read_enabled' => env('CANOVIA_MCP_STUDY_READ_ENABLED', false),
 
+    // Explicit additional per-Plan opt-in: bounded, aggregated results of
+    // OWNER-APPLIED study attempts only. Distinct from Tasks consent and
+    // never exposed by the isolated synthetic-only staging service.
+    'study_summary_read_enabled' => env('CANOVIA_MCP_STUDY_SUMMARY_READ_ENABLED', false),
+
     // Exact HTTPS origins permitted when a browser supplies Origin.
     // An absent Origin from a server-side ChatGPT client is allowed.
     'allowed_origins' => env('CANOVIA_MCP_ALLOWED_ORIGINS', ''),
