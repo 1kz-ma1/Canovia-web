@@ -69,7 +69,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          nohup php artisan serve --host=127.0.0.1 --port=8791 > "$RUNNER_TEMP/learning-v610-php-server.log" 2>&1 &
+          nohup php artisan serve --host=127.0.0.1 --port=8792 > "$RUNNER_TEMP/learning-v610-php-server.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/learning-v610-php-server.pid"
           for i in $(seq 1 40); do
             if curl --silent --fail --output /dev/null http://127.0.0.1:8792/register; then exit 0; fi
