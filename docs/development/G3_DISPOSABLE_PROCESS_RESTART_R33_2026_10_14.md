@@ -4,30 +4,30 @@
 
 R32 demonstrated localhost HTTP generation behavior using Moto but not a
 storage process crash/restart. R33 runs a **separate** S3-compatible
-single-node MinIO server in an ephemeral GitHub Actions Ubuntu runner,
+LocalStack server in an ephemeral GitHub Actions Ubuntu runner,
 with a runner-local, temporarily mounted disk path. The process receives
 SIGKILL and is started again using its **same mounted directory**.
 Tests then independently re-read each previously acknowledged version.
 
-The image is a named historical upstream community release
-`quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z`.
-This is an older unmaintained release used for a short-lived disposable
-test, **not** a recommended production image. No MinIO or AWS endpoint
-is publicly exposed: Docker binds port 9000 to `127.0.0.1` only.
+The official image is versioned as `localstack/localstack:2026.08.3`.
+It is run with `PERSISTENCE=1` and a dedicated runner-local mount at
+`/var/lib/localstack`; this is **emulator snapshot persistence**, not
+physical-disk fsync durability or a real AWS S3 service. No LocalStack or AWS endpoint
+is publicly exposed: Docker binds port 4566 to `127.0.0.1` only.
 
 ## Actual phases and expected evidence
 
 1. Runtime isolation refuses execution outside CI, with any AWS profile,
    session/web-identity/container credentials, altered dummy credentials
    or a non-exact localhost endpoint.
-2. Start MinIO against only a temporary runner-local `/data` mount.
+2. Start LocalStack against only a temporary runner-local `/data` mount.
    Create a randomized disposable bucket and enable versioning.
 3. Perform **nine actual HTTP PUTs**: three A→B→A replacement generations,
    four concurrent writers to one key, and two identical replayed
    writes whose first application ACK is intentionally discarded.
    Read back each version, verify cryptographic content digests and
    check that there are no delete markers.
-4. Kill the real MinIO container with `SIGKILL`. Ensure its TCP port
+4. Kill the real LocalStack container with `SIGKILL`. Ensure its TCP port
    is unavailable; no S3 delete operation is issued.
 5. Restart the *same container* with the *same disk*. Re-query
    versioning configuration, validate nine historical version IDs,
@@ -45,7 +45,7 @@ network partition or authentic AWS S3 operation is tested.
 
 ## Trust and safety boundary
 
-- All operations use `http://127.0.0.1:9000` and fixed fake MinIO
+- All operations use `http://127.0.0.1:4566` and fixed fake LocalStack
   credentials. No GitHub secret, AWS account, production Render,
   Aiven, real Canovia storage bucket or customer object is accessed.
 - There is no S3 `DeleteObject`, no lifecycle cleanup call, no
@@ -67,3 +67,11 @@ Future independent AWS verification needs a specifically approved
 separate account/bucket, verified identity/IAM and request semantics,
 operator log review, an isolated crash/DB reconciliation experiment
 and separate authorization for any destructive generation experiment.
+
+## First CI execution and changed test server
+
+The initial PR #654 run `38575404147` could not start an older MinIO
+image from Quay: the container registry returned an authorization error.
+**No storage test was executed in that run.** The workflow was changed
+to the official version-named LocalStack image, and subsequent results
+must be evaluated against their own exact tested commit and CI logs.
