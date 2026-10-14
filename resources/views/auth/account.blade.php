@@ -127,6 +127,7 @@
         @endif
     </section>
 
+    @include('auth.partials.mcp-connection-guide')
     @include('auth.partials.mcp-account-link')
     @include('auth.partials.mcp-plan-consent-confirmation')
     @include('auth.partials.mcp-delegated-access-revocation')
