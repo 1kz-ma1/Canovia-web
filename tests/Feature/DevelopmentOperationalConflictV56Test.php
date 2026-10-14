@@ -88,7 +88,7 @@ final class DevelopmentOperationalConflictV56Test extends TestCase
             'attest' => 'yes',
             'redirect_to' => 'https://attacker.example/collect',
         ])->assertStatus(409)
-          ->assertHeader('Cache-Control', 'private, no-store')
+          ->assertHeader('Cache-Control', 'no-store, private')
           ->assertHeader('Referrer-Policy', 'no-referrer')
           ->assertSee('data-development-operational-stale-conflict', false)
           ->assertSee('role="alert"', false)
@@ -155,7 +155,7 @@ final class DevelopmentOperationalConflictV56Test extends TestCase
             'attest' => 'yes',
             'api_key' => 'must-not-leak',
         ])->assertStatus(409)
-          ->assertHeader('Cache-Control', 'private, no-store')
+          ->assertHeader('Cache-Control', 'no-store, private')
           ->assertJsonPath('code', 'development_operational_stale')
           ->assertJsonPath('reload_url', $this->reloadUrl($plan))
           ->assertDontSee('must-not-leak', false)
