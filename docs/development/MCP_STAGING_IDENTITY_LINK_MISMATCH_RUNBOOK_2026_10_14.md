@@ -45,6 +45,15 @@ Environment: isolated Render `canovia-mcp-staging` in confirmed `My Workspace`. 
 - Next separate acceptance: request the exact owner-provided synthetic Development Plan ID, invoke the already connected read-only tool with `overview` first (never infer or discover an ID), optionally `tasks` only if that exact scope was approved; then verify revocation denies a repeated read. Do not label complete until an actual ChatGPT read and subsequent revoke are observed.
 - The fixed confirmation string says ChatGPT direct fetch is not yet enabled. This string is static controller text; do **not infer actual runtime tool enablement or disablement from wording alone**. Confirm with a real authenticated tool call.
 
+## 2026-10-14 ChatGPT read rejection after owner approval — confirmed scope semantics
+
+- Owner supplied exact synthetic Plan ID `1`. Two actual ChatGPT tool calls with `scope=overview` and `scope=tasks, limit=2` both returned `Plan unavailable or not authorized for the requested scope.` No private Plan/Task payload was returned.
+- Source at pinned stage SHA `366fc031`: `McpExplicitPlanConsentService::grant()` stores one grant scope, either `overview` or `tasks`, overwriting the former scope on re-consent; `McpDelegatedPlanAccessPolicy::authorizedGrant()` **permits overview whenever an active grant exists**, and permits tasks only for `tasks` grant. Thus a user's `概要＋Task` selection (stored as `tasks`) **authorizes both reads**; trying alternative scopes does not fix this rejection.
+- Render around `2026-10-14 02:06:48 UTC` and `02:09:58 UTC` logged `POST 200 auth_header_present=1`. Because the MCP handler returns per-Plan denial inside a successful JSON-RPC response, HTTP 200 does **not** imply an authorized tool read. The request log contains no Plan or subject.
+- Leading, **unproved**, explanation: owner re-consented through the originally linked GitHub Auth0 identity, while the separately persisted **ChatGPT OAuth connection token** remains associated with a Google/Auth0 identity. A Canovia browser relogin does not update the token stored for ChatGPT. Never assert exact JWT `sub` without safe comparison.
+- Preferred non-destructive next experiment: first inspect authenticated staging Account for **active grant and Plan ID 1**, then reauthorize **only the ChatGPT-side Canovia MCP Staging OAuth connection** using the same GitHub/Auth0 account used for the successful Canovia ID link + Plan consent; retain existing Plan grant, synthetic user, stage configuration and production boundaries. Repeat a single `overview` read. Do not disconnect/revoke the Canovia subject link or reset the fingerprint key to diagnose.
+- If fresh same-subject ChatGPT authorization still fails, investigate token `issuer, sub`, client/resource fingerprint, owner/Plan binding and grant status through a separately reviewed stage-only read-only fixed-category diagnostic, without exposing raw subjects, hashes, tokens or secrets.
+
 ## Immediate operator decision tree
 
 - `sub` differs: preserve refusal; decide whether original link was intended and recover through verified explicit relink (requires user agreement and supported route).
