@@ -23,14 +23,15 @@ if (
     || config('database.default') !== 'sqlite'
     || ! str_starts_with((string) config('database.connections.sqlite.database'), '/')
     || ! str_starts_with((string) config('app.url'), 'http://127.0.0.1:')
-    || count($argv) !== 3
+    || ! in_array(count($argv), [2, 3], true)
 ) {
     fwrite(STDERR, "V6.9 test fixture blocked: isolated local CI SQLite required.\n");
     exit(2);
 }
 
-$email = (string) $argv[1];
-$title = (string) $argv[2];
+$verify = count($argv) === 2 && $argv[1] === '--verify';
+$email = $verify ? 'v69-browser@example.invalid' : (string) $argv[1];
+$title = $verify ? 'V69 ブラウザ開発Plan' : (string) ($argv[2] ?? '');
 if ($email !== 'v69-browser@example.invalid' || $title !== 'V69 ブラウザ開発Plan') {
     fwrite(STDERR, "V6.9 fixture must target its single synthetic actor and Plan.\n");
     exit(2);
@@ -38,6 +39,19 @@ if ($email !== 'v69-browser@example.invalid' || $title !== 'V69 ブラウザ開�
 
 $user = User::query()->where('email', $email)->sole();
 $plan = Plan::query()->where('user_id', $user->id)->where('title', $title)->sole();
+
+if ($verify) {
+    $task = Task::query()->where('plan_id', $plan->id)->sole();
+    $evidenceCount = \App\Models\TaskEvidence::query()->where('task_id', $task->id)->count();
+    $executionCount = \App\Models\GuidedExecution::query()->where('task_id', $task->id)->count();
+    echo json_encode([
+        'guided_execution_count' => $executionCount,
+        'task_evidence_count' => $evidenceCount,
+        'task_progress_percent' => (int) $task->progress_percent,
+        'task_next_action' => $task->next_action_note,
+    ], JSON_THROW_ON_ERROR)."\\n";
+    exit(0);
+}
 
 if (Task::query()->where('plan_id', $plan->id)->exists()) {
     fwrite(STDERR, "V6.9 fixture must only seed a zero-Task Plan.\n");
