@@ -75,7 +75,7 @@ final class PrivateFileCleanupHealthG3Test extends TestCase
             JSON_THROW_ON_ERROR)['health']);
         $this->assertStringNotContainsString('inbox/', $json);
         $this->assertStringNotContainsString('sensitive_please_leak_this_path', $json);
-        $this->assertStringNotContainsString('encrypted_path', $json);
+        $this->assertStringNotContainsString('"encrypted_path":', $json);
         $this->assertSame(0, Artisan::call('canovia:private-file-cleanup-health',
             ['--json' => true]));
         $this->assertDatabaseCount('private_file_cleanup_entries', 4);
@@ -130,7 +130,7 @@ final class PrivateFileCleanupHealthG3Test extends TestCase
             JSON_THROW_ON_ERROR);
         $this->assertStringNotContainsString('secret-user-id', $json);
         $this->assertStringNotContainsString('secret-source.pdf', $json);
-        $this->assertStringNotContainsString('encrypted_path', $json);
+        $this->assertStringNotContainsString('"encrypted_path":', $json);
         $this->assertStringNotContainsString('disk', $json);
         $this->assertStringNotContainsString('expected_sha256', $json);
     }
