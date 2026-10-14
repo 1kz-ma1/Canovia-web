@@ -1,9 +1,11 @@
 @inject('providerCapabilityService', 'App\\Services\\DevelopmentOperationalProviderCapabilityService')
 @inject('operatorHandoffService', 'App\\Services\\DevelopmentOperationalOperatorHandoffService')
+@inject('operationalAttestationService', 'App\\Services\\DevelopmentOperationalAttestationService')
 @php
     $operationalTarget = $developmentOperationalTarget ?? null;
     $providerCapability = $providerCapabilityService->status($operationalTarget);
     $operatorHandoff = $operatorHandoffService->build($plan, $operationalTarget, $developmentOperationalProfile ?? null);
+    $serviceIdentityCheck = $operationalAttestationService->projectServiceIdentity($plan, $operationalTarget);
     $operationalStore = data_get($developmentOperationalProfile, 'data_store', 'unknown');
     $canAttestRecovery = in_array($operationalStore, ['server_db', 'local_device', 'cloud_files', 'mixed'], true);
 @endphp
@@ -107,6 +109,51 @@
                             </li>
                         @endforeach
                     </ol>
+                    @if ($serviceIdentityCheck)
+                        <div class="mt-3 rounded-lg border border-white/10 p-3"
+                            data-development-service-check-status="{{ $serviceIdentityCheck['status'] }}">
+                            <p class="text-[11px] font-semibold text-slate-300">
+                                手動のサービス環境照合：
+                                @if ($serviceIdentityCheck['status'] === 'operator_confirmed')
+                                    所有者が確認済み（外部検証なし）
+                                @elseif ($serviceIdentityCheck['status'] === 'stale')
+                                    要再確認
+                                @else
+                                    未記録
+                                @endif
+                            </p>
+                            <p class="mt-1 text-[11px] leading-5 text-slate-400">{{ $serviceIdentityCheck['detail'] }}</p>
+                            @if (isset($serviceIdentityCheck['checkedAt']))
+                                <p class="mt-1 text-[10px] text-slate-500">前回の申告：{{ $serviceIdentityCheck['checkedAt'] }}</p>
+                            @endif
+                            <form method="POST"
+                                action="{{ route('workspace.development.operational_target.update', $plan) }}"
+                                class="mt-2 flex flex-wrap items-center gap-2">
+                                @csrf
+                                <input type="hidden" name="action" value="confirm_service">
+                                <input type="hidden" name="target_revision" value="{{ $operationalTarget->revision }}">
+                                <label class="flex items-start gap-2 text-[11px] text-slate-300">
+                                    <input type="checkbox" name="attest" value="yes" required class="mt-0.5">
+                                    Render画面でこのサービスIDと環境の対応を自分で確認した（不一致なら先に登録情報を修正）
+                                </label>
+                                <button class="btn-secondary min-h-10 px-3 text-xs" type="submit"
+                                    data-development-service-check-submit>手動照合を記録</button>
+                            </form>
+                            @if ($operationalTarget->service_checked_at)
+                                <form method="POST"
+                                    action="{{ route('workspace.development.operational_target.update', $plan) }}"
+                                    class="mt-2">
+                                    @csrf
+                                    <input type="hidden" name="action" value="clear_service">
+                                    <button class="text-[11px] text-slate-400 underline underline-offset-4"
+                                        type="submit" data-development-service-check-clear>照合記録を取り消す</button>
+                                </form>
+                            @endif
+                            <p class="mt-2 text-[10px] text-slate-500">
+                                これは所有者の申告です。7日経過・対象Revision変更で古い記録と判定します。CI・デプロイ・復元検証を代替しません。
+                            </p>
+                        </div>
+                    @endif
                     <p class="mt-2 text-[10px] leading-5 text-slate-500">
                         APIキー・トークン・環境変数・DB接続文字列・ログをCanoviaに貼り付けないでください。
                         実施を記録する場合は下の所有者申告を使います。申告しても独立検証済みにはなりません。
