@@ -14,11 +14,13 @@
         && is_int($verified['verified_at'] ?? null)
         && $verified['verified_at'] <= now()->timestamp
         && now()->timestamp - $verified['verified_at'] <= 300;
-    $linked = \App\Models\McpLinkedSubject::query()
+    $activeSubject = \App\Models\McpLinkedSubject::query()
         ->where('user_id', $user->id)
         ->where('status', \App\Models\McpLinkedSubject::STATUS_LINKED)
         ->whereNull('revoked_at')
-        ->exists();
+        ->whereColumn('identity_fingerprint', 'active_identity_fingerprint')
+        ->first();
+    $linked = $activeSubject !== null;
     $stagePolicy = app(\App\Services\McpStagingLoginPilotPolicy::class);
     $syntheticReadReady = app(\App\Services\McpStagingSyntheticReadPilotPolicy::class)->isReady();
     $consentService = app(\App\Services\McpExplicitPlanConsentService::class);
@@ -162,6 +164,17 @@
                 @method('DELETE')
                 <button class="secondary" type="submit" data-mcp-staging-revoke>この計画の共有をやめる</button>
             </form>
+            @if ($activeSubject)
+                <details class="note" data-mcp-staging-subject-unlink>
+                    <summary>本人確認の連携を解除する</summary>
+                    <p>解除すると、このアカウントの関連するすべての計画の共有許可が取り消されます。あとで別のCanoviaアカウントに同じGitHubを連携する場合も、改めて本人確認と共有承認が必要です。</p>
+                    <form method="POST" action="{{ route('auth.account.mcp_subject.revoke', ['subject' => $activeSubject->id]) }}">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="secondary" data-mcp-staging-unlink-button>本人確認の連携を解除する</button>
+                    </form>
+                </details>
+            @endif
         </section>
 
     @elseif ($canConfirm)
@@ -227,6 +240,20 @@
                 <p class="note warning" data-mcp-account-link-disabled>本人確認は現在利用できません。</p>
             @endif
         </section>
+
+        @if ($linked && $activeSubject)
+            <section class="detail" data-mcp-staging-subject-unlink>
+                <details>
+                    <summary>本人確認の連携を解除する</summary>
+                    <p>解除すると、このアカウントの計画共有許可もすべて取り消します。別のアカウントへの再連携には改めて本人確認が必要です。</p>
+                    <form method="POST" action="{{ route('auth.account.mcp_subject.revoke', ['subject' => $activeSubject->id]) }}">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="secondary" data-mcp-staging-unlink-button>本人確認の連携を解除する</button>
+                    </form>
+                </details>
+            </section>
+        @endif
 
         @if ($fixture !== null)
             <section class="detail" data-mcp-staging-plan-consent>
