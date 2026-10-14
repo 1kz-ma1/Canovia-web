@@ -133,7 +133,12 @@ final class Release513P0JourneyV64Test extends TestCase
             ])->assertRedirect(route('plans.tasks.study_practice.show', [$plan, $task]));
 
         $this->assertSame(65, $task->fresh()->progress_percent);
-        $this->assertSame('MXとCNAMEの違いを3問復習する', $task->fresh()->next_action_note);
+        // The candidate's StudyTaskProgressionService intentionally replaces
+        // imported provider next_action with its general-practice policy.
+        // Keep the observed authoritative Task value separate from the
+        // original AI assessment text; do not mistake it for lost evidence.
+        $this->assertSame('MXとCNAMEの違いを3問復習する', $attempt->fresh()->next_action);
+        $this->assertSame('総合演習で全体成績を再確認する', $task->fresh()->next_action_note);
         $this->assertNotNull($attempt->fresh()->applied_at);
         $this->actingAs($owner)
             ->get(route('plans.tasks.study_practice.show', [$plan, $task]))
