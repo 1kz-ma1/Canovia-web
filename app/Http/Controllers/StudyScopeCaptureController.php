@@ -16,6 +16,7 @@ use App\Models\StudyScopeItem;
 use App\Services\BehaviorIdentityService;
 use App\Services\CompanionMembershipCommitGuard;
 use App\Services\PrivateFileLifecycleService;
+use App\Services\PrivateFileUploadService;
 use App\Services\FeatureAccessService;
 use App\Services\NativeAiGateway;
 use App\Services\PlanCategoryProfileService;
@@ -94,6 +95,7 @@ class StudyScopeCaptureController extends Controller
         BehaviorIdentityService $identity,
         NativeAiGateway $nativeAi,
         StudyScopeCaptureAnalysisService $analysis,
+        PrivateFileUploadService $privateUploads,
     ) {
         $ownership->authorizeEdit($request, $plan);
         $this->authorizeStudyPlan($plan, $profiles);
@@ -124,13 +126,13 @@ class StudyScopeCaptureController extends Controller
             $extension = $sourceType === 'pdf' ? 'pdf' : 'jpg';
         }
 
-        $storagePath = $file->storeAs(
-            'inbox/'.($userId ?: 'guest').'/'.now()->format('Y/m'),
-            (string) Str::uuid().'.'.$extension,
-        );
+        $uploadPath = 'inbox/'.($userId ?: 'guest').'/'.now()->format('Y/m')
+            .'/'.Str::uuid().'.'.$extension;
 
-        try {
-            [$item, $capture] = DB::transaction(function () use (
+        $persist = function (string $storagePath) use (
+            $plan, $validated, $file, $mimeType, $sourceType, $userId, $actorToken,
+        ): array {
+            return DB::transaction(function () use (
                 $plan,
                 $validated,
                 $file,
@@ -176,9 +178,20 @@ class StudyScopeCaptureController extends Controller
 
                 return [$item, $capture];
             });
-        } catch (Throwable $exception) {
-            Storage::delete($storagePath);
-            throw $exception;
+        };
+
+        if ($privateUploads->enabled()) {
+            [$item, $capture] = $privateUploads->storeAndPersist([
+                ['file' => $file, 'path' => $uploadPath],
+            ], fn (array $paths) => $persist($paths[0]));
+        } else {
+            $storagePath = $file->storeAs(dirname($uploadPath), basename($uploadPath));
+            try {
+                [$item, $capture] = $persist($storagePath);
+            } catch (Throwable $exception) {
+                Storage::delete($storagePath);
+                throw $exception;
+            }
         }
 
         if (! $nativeAi->isConfigured()) {
