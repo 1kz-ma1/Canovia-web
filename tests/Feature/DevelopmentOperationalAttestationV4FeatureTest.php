@@ -54,6 +54,8 @@ final class DevelopmentOperationalAttestationV4FeatureTest extends TestCase
             'plan_id' => $plan->id,
         ]))->assertOk()
           ->assertSee('data-development-operational-attestations', false)
+          ->assertSee('data-development-provider-connection-state="unavailable"', false)
+          ->assertSee('外部サービスの自動照合：未接続')
           ->assertSee('data-development-operational-status="operator_confirmed"', false)
           ->assertSee('data-development-operational-check="restore"', false)
           ->assertSee('独立検証なし', false);
@@ -175,6 +177,7 @@ final class DevelopmentOperationalAttestationV4FeatureTest extends TestCase
             'plan_id' => $plan->id,
         ]))->assertOk()
           ->assertDontSee('data-development-operational-attestations', false)
+          ->assertDontSee('data-development-provider-connection-state', false)
           ->assertDontSee('srv-private123', false)
           ->assertDontSee('data-development-operational-status="operator_confirmed"', false);
 

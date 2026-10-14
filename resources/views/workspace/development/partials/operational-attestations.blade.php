@@ -1,5 +1,7 @@
+@inject('providerCapabilityService', 'App\\Services\\DevelopmentOperationalProviderCapabilityService')
 @php
     $operationalTarget = $developmentOperationalTarget ?? null;
+    $providerCapability = $providerCapabilityService->status($operationalTarget);
     $operationalStore = data_get($developmentOperationalProfile, 'data_store', 'unknown');
     $canAttestRecovery = in_array($operationalStore, ['server_db', 'local_device', 'cloud_files', 'mixed'], true);
 @endphp
@@ -61,6 +63,21 @@
                 {{ data_get($operationalTarget, 'environment') }}
                 · 自己申告・外部サービス未接続
             </p>
+            <div class="mt-2 rounded-lg border border-white/10 bg-slate-950/30 px-3 py-2"
+                data-development-provider-connection-state="{{ $providerCapability['state'] }}" role="status">
+                <p class="text-[11px] font-semibold text-slate-300">外部サービスの自動照合：未接続</p>
+                @if ($providerCapability['provider'] === 'render')
+                    <p class="mt-1 text-[11px] leading-5 text-slate-400">
+                        RenderのAPIキーは所属Workspace全体にアクセスでき、公式MCPのOAuthも変更操作を含みます。
+                        安全な読み取り専用の認可方法が確認できるまで、Canoviaからの接続や自動検証は提供しません。
+                        APIキーやトークンは入力しないでください。
+                    </p>
+                @else
+                    <p class="mt-1 text-[11px] leading-5 text-slate-400">
+                        このProviderの認証・権限確認は未対応です。登録内容は自己申告として扱います。
+                    </p>
+                @endif
+            </div>
             @if ($canAttestRecovery)
                 @foreach (['backup' => 'バックアップを取得した', 'restore' => '隔離環境で復元テストを実施した'] as $kind => $label)
                     <div class="mt-3 flex flex-wrap items-center gap-2" data-development-confirm-kind="{{ $kind }}">
