@@ -13,6 +13,7 @@ use App\Models\UserProductGrant;
 use App\Services\NativeAiGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -336,6 +337,55 @@ final class InboxAiSuggestionCommitFenceG3Test extends TestCase
         $this->assertWithheld($item);
         $this->assertNotEquals($originalMemberId, PlanMember::query()
             ->where('plan_id', $plan->id)->where('user_id', $editor->id)->firstOrFail()->id);
+    }
+
+    public function test_plan_first_lock_order_in_pre_provider_admission_and_final_commit(): void
+    {
+        // SQLite does not emit FOR UPDATE. Verify actual lock SQL in both
+        // disposable MySQL 8.0/8.4 and PostgreSQL 16 CI environments.
+        if (! in_array(DB::getDriverName(), ['mysql', 'pgsql'], true)) {
+            $this->markTestSkipped('Real SQL row locks require MySQL or PostgreSQL.');
+        }
+
+        [$user, $item] = $this->scenario('image');
+        $plan = $this->plan($user);
+        $item->update(['plan_id' => $plan->id]);
+
+        $order = [];
+        DB::listen(static function ($query) use (&$order): void {
+            $sql = strtolower((string) $query->sql);
+            if (! str_contains($sql, 'for update')) {
+                return;
+            }
+            if (preg_match('/from\s+[`"]?plans[`"]?\s/', $sql)) {
+                $order[] = 'plan';
+            } elseif (preg_match('/from\s+[`"]?inbox_items[`"]?\s/', $sql)) {
+                $order[] = 'inbox';
+            }
+        });
+
+        $this->suggest($user, $item)->assertSessionHasNoErrors();
+        $this->assertSame('review', $item->fresh()->status);
+        $this->assertSame(
+            ['plan', 'inbox', 'plan', 'inbox'],
+            $order,
+            'Both pre-provider and post-provider paths must lock Plan before Inbox.',
+        );
+    }
+
+    public function test_plan_retargeted_after_input_signing_is_denied_before_provider(): void
+    {
+        [$user, $item] = $this->scenario('image');
+        $originalPlan = $this->plan($user);
+        $newPlan = $this->plan($user);
+        $item->update(['plan_id' => $originalPlan->id]);
+
+        $this->mutateOnSecondFileRead($user, $item, function () use ($item, $newPlan): void {
+            $item->update(['plan_id' => $newPlan->id]);
+        });
+
+        $this->assertNoPreProviderSubmission($item);
+        $this->assertSame($newPlan->id, $item->fresh()->plan_id);
     }
 
     public function test_unrelated_plan_title_update_does_not_invalidate_inbox_editor(): void
