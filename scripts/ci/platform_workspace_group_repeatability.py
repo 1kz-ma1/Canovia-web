@@ -7,6 +7,7 @@ It is not evidence permitting deletion of any regression invocation.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -41,6 +42,7 @@ def collect() -> dict:
     if REPETITIONS != 3 or len(EXPERIMENTS) != 2 or MAX_RUNS != 12:
         raise Inconclusive("unexpected replay bounds")
     results = []
+    fingerprint_evidence = []
     with tempfile.TemporaryDirectory(prefix="canovia-repeat-") as temp:
         folder = Path(temp)
         for key, target, original in EXPERIMENTS:
@@ -98,6 +100,14 @@ def collect() -> dict:
                 })
             if len(set(order_signatures)) != len(VARIANTS):
                 raise Inconclusive("original and reversed class orders indistinguishable")
+            fingerprint_evidence.append({
+                "scenario": key,
+                "full_testcase_inventory": canonical_inventory,
+                "variants": [
+                    {"variant": entry["variant"], "observed_class_order": entry["observed_class_order"]}
+                    for entry in variant_reports
+                ],
+            })
             results.append({
                 "scenario": key,
                 "target": target,
@@ -117,6 +127,12 @@ def collect() -> dict:
         "scenarios": results,
         "total_group_replays": MAX_RUNS,
         "all_replay_testcases_passed": True,
+        # SHA-256 covers every full JUnit testcase identity and observed class order,
+        # but deliberately excludes host-specific timing. No raw JUnit is retained.
+        "comparison_fingerprint_sha256": hashlib.sha256(json.dumps(
+            fingerprint_evidence, sort_keys=True, separators=(",", ":"),
+            ensure_ascii=True,
+        ).encode("utf-8")).hexdigest(),
         "repeatability_beyond_this_runner_proven": False,
         "assertion_semantics_equivalence_proven": False,
         "cross_context_regression_equivalence_proven": False,

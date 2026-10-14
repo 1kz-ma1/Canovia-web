@@ -25,6 +25,8 @@ jobs:
     name: Disposable SQLite overlap method-parity probe
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    outputs:
+      fingerprint: ${{ steps.repeat.outputs.fingerprint }}
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -58,6 +60,7 @@ jobs:
           NATIVE_AI_DRIVER: disabled
         run: python3 scripts/ci/platform_workspace_scenario_equivalence.py --run
       - name: Repeat original and reversed regression groups three times each
+        id: repeat
         env:
           APP_ENV: testing
           DB_CONNECTION: sqlite
@@ -67,4 +70,111 @@ jobs:
           SESSION_DRIVER: array
           QUEUE_CONNECTION: sync
           NATIVE_AI_DRIVER: disabled
-        run: python3 scripts/ci/platform_workspace_group_repeatability.py --run
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/platform_workspace_group_repeatability.py --run | tee "$RUNNER_TEMP/platform-repeatability.json"
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          report = json.loads((Path(os.environ["RUNNER_TEMP"]) / "platform-repeatability.json").read_text(encoding="utf-8"))
+          fingerprint = report.get("comparison_fingerprint_sha256", "")
+          if (report.get("result") != "OBSERVED_FIXED_GROUP_REPEATABILITY"
+                  or report.get("total_group_replays") != 12
+                  or report.get("all_replay_testcases_passed") is not True
+                  or report.get("permission_to_remove_repeated_invocations") is not False
+                  or report.get("production_release_authorized") is not False
+                  or not isinstance(fingerprint, str)
+                  or not re.fullmatch(r"[a-f0-9]{64}", fingerprint)):
+              raise SystemExit("Invalid or incomplete isolated replay evidence")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write("fingerprint=" + fingerprint + "\n")
+          PY
+
+  independent-runner-replay:
+    name: Independent runner fixed-group replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    outputs:
+      fingerprint: ${{ steps.repeat.outputs.fingerprint }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - name: Install pinned composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Build the same frontend assets as Workspace Resume
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+      - name: Validate fixed-group replay contract
+        run: python3 -m unittest discover -s tests/ci -p 'test_platform_workspace_group_repeatability.py' -v
+      - name: Repeat original and reversed regression groups three times each
+        id: repeat
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          DB_URL: ''
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+          NATIVE_AI_DRIVER: disabled
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/platform_workspace_group_repeatability.py --run | tee "$RUNNER_TEMP/platform-repeatability.json"
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          report = json.loads((Path(os.environ["RUNNER_TEMP"]) / "platform-repeatability.json").read_text(encoding="utf-8"))
+          fingerprint = report.get("comparison_fingerprint_sha256", "")
+          if (report.get("result") != "OBSERVED_FIXED_GROUP_REPEATABILITY"
+                  or report.get("total_group_replays") != 12
+                  or report.get("all_replay_testcases_passed") is not True
+                  or report.get("permission_to_remove_repeated_invocations") is not False
+                  or report.get("production_release_authorized") is not False
+                  or not isinstance(fingerprint, str)
+                  or not re.fullmatch(r"[a-f0-9]{64}", fingerprint)):
+              raise SystemExit("Invalid or incomplete isolated replay evidence")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write("fingerprint=" + fingerprint + "\n")
+          PY
+
+  compare-independent-runners:
+    name: Cross-runner full JUnit fingerprint comparison
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    needs: [isolated-scenario-probe, independent-runner-replay]
+    if: ${{ always() }}
+    steps:
+      - name: Require two successful independent runners and matching evidence
+        env:
+          FIRST_STATUS: ${{ needs['isolated-scenario-probe'].result }}
+          SECOND_STATUS: ${{ needs['independent-runner-replay'].result }}
+          FIRST_FINGERPRINT: ${{ needs['isolated-scenario-probe'].outputs.fingerprint }}
+          SECOND_FINGERPRINT: ${{ needs['independent-runner-replay'].outputs.fingerprint }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          first = os.environ["FIRST_FINGERPRINT"]
+          second = os.environ["SECOND_FINGERPRINT"]
+          if (os.environ["FIRST_STATUS"] != "success" or os.environ["SECOND_STATUS"] != "success"
+                  or not re.fullmatch(r"[0-9a-f]{64}", first)
+                  or not re.fullmatch(r"[0-9a-f]{64}", second)
+                  or first != second):
+              raise SystemExit("BLOCK: independent-runner JUnit inventory or class-order parity not demonstrated")
+          print("OBSERVED: two independent runners matched full testcase identities and variant class orders")
+          print("No repeated regression invocation removal or production release is authorized")
+          PY
