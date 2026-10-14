@@ -77,4 +77,17 @@ return [
         env('CANOVIA_PRIVATE_FILE_GENERATION_CONTRACT_ENABLED', false),
         FILTER_VALIDATE_BOOL
     ),
+
+    // G3-R17: synthetic-only write-intent-to-owner evidence fixture.
+    // OFF by default; no provider receipt capture or deletion authority.
+    'private_file_generation_evidence_enabled' => filter_var(
+        env('CANOVIA_PRIVATE_FILE_GENERATION_EVIDENCE_ENABLED', false),
+        FILTER_VALIDATE_BOOL
+    ),
+
+    // A public epoch label, NOT an encryption key. Changing it intentionally
+    // blocks old proof reads until an explicit, audited migration exists.
+    'private_file_generation_key_epoch' => env(
+        'CANOVIA_PRIVATE_FILE_GENERATION_KEY_EPOCH', 'app-key-v1'
+    ),
 ];

@@ -367,3 +367,25 @@ Artisan::command(
         return $report['assessment'] === 'blocked' ? 1 : 0;
     },
 )->purpose('Non-production, offline private object-generation readiness inventory; never grants deletion');
+
+
+/**
+ * G3-R17: no private path/version/owner details and no provider operations.
+ * Only fixed aggregate labels for disposable synthetic-evidence fixtures.
+ */
+Artisan::command(
+    'canovia:private-file-generation-evidence-health
+        {--json : Print redacted synthetic-only evidence counts}',
+    function (\App\Services\PrivateFileGenerationEvidenceService $service): int {
+        $report = $service->report();
+        if ($this->option('json')) {
+            $this->line((string) json_encode($report, JSON_THROW_ON_ERROR));
+        } else {
+            $this->line('Private generation evidence: '.$report['status']);
+            $this->line('schema: '.$report['schema']);
+            $this->line('synthetic_count: '.$report['synthetic_count']);
+            $this->warn('Synthetic fixtures are not provider attestations or deletion approval.');
+        }
+        return $report['status'] === 'synthetic_only' ? 0 : 1;
+    },
+)->purpose('Read-only, aggregate synthetic generation evidence health; no storage access or deletion');

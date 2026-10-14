@@ -11,6 +11,9 @@ on:
       - 'app/Services/PrivateFileUploadReconciliationPreviewService.php'
       - 'app/Services/PrivateFileReconciliationSnapshotService.php'
       - 'app/Services/PrivateFileGenerationContractService.php'
+      - 'app/Services/PrivateFileGenerationEvidenceService.php'
+      - 'database/migrations/2026_10_14_140000_create_private_file_generation_evidence.php'
+      - 'tests/Feature/PrivateFileGenerationEvidenceG3Test.php'
       - 'tests/Feature/PrivateFileGenerationContractG3Test.php'
       - 'tests/Feature/PrivateFileUploadConsistencyProbeG3Test.php'
       - 'tests/Feature/PrivateFileUploadReconciliationPreviewG3Test.php'
@@ -94,6 +97,9 @@ jobs:
           php -l app/Services/PrivateFileUploadReconciliationPreviewService.php
           php -l app/Services/PrivateFileReconciliationSnapshotService.php
           php -l app/Services/PrivateFileGenerationContractService.php
+          php -l app/Services/PrivateFileGenerationEvidenceService.php
+          php -l database/migrations/2026_10_14_140000_create_private_file_generation_evidence.php
+          php -l tests/Feature/PrivateFileGenerationEvidenceG3Test.php
           php -l tests/Feature/PrivateFileGenerationContractG3Test.php
           php -l tests/Feature/PrivateFileUploadConsistencyProbeG3Test.php
           php -l tests/Feature/PrivateFileUploadReconciliationPreviewG3Test.php
@@ -127,6 +133,8 @@ jobs:
         run: php artisan test tests/Feature/PrivateFileLifecycleG3Test.php tests/Feature/PrivateFileCleanupOutboxG3Test.php tests/Feature/PrivateFileCleanupHealthG3Test.php tests/Feature/PrivateFilePathFenceG3Test.php tests/Feature/InboxRecallMaterialTransferG3Test.php tests/Feature/PrivateFileUploadG3Test.php tests/Feature/PrivateFileUploadIntentG3Test.php tests/Feature/PrivateFileUploadReconciliationPreviewG3Test.php tests/Feature/PrivateFileUploadConsistencyProbeG3Test.php tests/Feature/PrivateFileGenerationContractG3Test.php tests/Feature/InboxUploadPathFenceG3Test.php tests/Feature/StudyScopeCaptureV534Test.php tests/Feature/StudyRecallBatchIngestV588Test.php tests/Feature/StudyRecallCandidateV4112Test.php --stop-on-failure
       - name: G3 opt-in Resource Recall route regression in isolated PHP process
         run: php artisan test tests/Feature/SafePlanResourceRecallHandoffV5811Test.php --stop-on-failure
+      - name: G3 R17 synthetic generation evidence in isolated final PHP process
+        run: php artisan test tests/Feature/PrivateFileGenerationEvidenceG3Test.php --stop-on-failure
       - name: G3 operator-only CLI dry-run and read-only health are available
         run: |
           php artisan canovia:retry-private-file-cleanup --dry-run
@@ -136,6 +144,9 @@ jobs:
           php artisan canovia:private-file-cleanup-health --json
           php artisan canovia:private-upload-intent-health --json
           # Operator contract is OFF by default; the deny is intentional.
+          if php artisan canovia:private-file-generation-evidence-health --json; then
+            echo 'R17 synthetic evidence must be disabled by default' >&2; exit 1;
+          fi
           if php artisan canovia:private-file-generation-contract --json; then
             echo 'R16 generation contract must remain disabled by default' >&2; exit 1;
           fi
