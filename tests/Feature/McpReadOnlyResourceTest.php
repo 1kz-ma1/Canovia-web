@@ -10,6 +10,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Services\McpDelegatedIdentityFingerprintService;
 use App\Services\McpReadOnlyContextTool;
+use App\Services\McpDelegatedRevocationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\Http;
@@ -259,6 +260,85 @@ final class McpReadOnlyResourceTest extends TestCase
 
         $link->update(['status' => 'linked', 'revoked_at' => null]);
         $this->assertDatabaseCount('mcp_delegated_access_events', 0);
+    }
+
+    public function test_grant_revoked_during_token_verification_cannot_return_private_plan_or_read_audit(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner);
+        $this->linkAndGrant($owner, $plan);
+        $grant = McpDelegatedGrant::query()->sole();
+
+        // An explicitly approved until-revoked grant must fail just as
+        // firmly as a finite grant once its owner revokes it.
+        $grant->update(['expires_at' => null]);
+        $tokenChecks = 0;
+        Http::fake(function (ClientRequest $request) use ($owner, $grant, &$tokenChecks) {
+            $this->assertSame(self::INTROSPECT, $request->url());
+            $tokenChecks++;
+            app(McpDelegatedRevocationService::class)->revokeGrant($owner, $grant->id);
+
+            return Http::response([
+                'active' => true, 'iss' => self::ISSUER,
+                'sub' => 'verified-owner-subject',
+                'client_id' => self::CHATGPT_CLIENT,
+                'aud' => self::RESOURCE, 'token_type' => 'Bearer',
+                'exp' => now()->timestamp + 1200,
+                'iat' => now()->timestamp - 60,
+                'nbf' => now()->timestamp - 5,
+                'scope' => 'canovia.development.read',
+            ], 200, ['Content-Type' => 'application/json']);
+        });
+
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyContextTool::NAME,
+            'arguments' => ['plan_id' => $plan->id, 'scope' => 'overview'],
+        ])->assertOk()
+            ->assertJsonPath('result.isError', true)
+            ->assertJsonPath('result.content.0.text', 'Plan unavailable or not authorized for the requested scope.')
+            ->assertDontSee('Sensitive Development Plan');
+        $this->assertSame(1, $tokenChecks);
+        $this->assertSame('revoked', $grant->fresh()->status);
+        $this->assertDatabaseHas('mcp_delegated_access_events', [
+            'grant_id' => $grant->id, 'event_kind' => 'grant_revoked',
+        ]);
+        $this->assertSame(0, \Illuminate\Support\Facades\DB::table('mcp_delegated_access_events')
+            ->where('event_kind', 'context_read')->count());
+    }
+
+    public function test_identity_unlinked_during_token_verification_cannot_return_private_plan(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner);
+        $link = $this->linkAndGrant($owner, $plan);
+        $grant = McpDelegatedGrant::query()->sole();
+
+        Http::fake(function (ClientRequest $request) use ($owner, $link) {
+            $this->assertSame(self::INTROSPECT, $request->url());
+            app(McpDelegatedRevocationService::class)->revokeSubject($owner, $link->id);
+            return Http::response([
+                'active' => true, 'iss' => self::ISSUER,
+                'sub' => 'verified-owner-subject',
+                'client_id' => self::CHATGPT_CLIENT,
+                'aud' => self::RESOURCE, 'token_type' => 'Bearer',
+                'exp' => now()->timestamp + 1200,
+                'iat' => now()->timestamp - 60,
+                'nbf' => now()->timestamp - 5,
+                'scope' => 'canovia.development.read',
+            ], 200, ['Content-Type' => 'application/json']);
+        });
+
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyContextTool::NAME,
+            'arguments' => ['plan_id' => $plan->id, 'scope' => 'tasks'],
+        ])->assertOk()
+            ->assertJsonPath('result.isError', true)
+            ->assertDontSee('Sensitive Development Plan');
+        $this->assertSame('revoked', $link->fresh()->status);
+        $this->assertNull($link->fresh()->active_identity_fingerprint);
+        $this->assertSame('revoked', $grant->fresh()->status);
+        $this->assertSame(0, \Illuminate\Support\Facades\DB::table('mcp_delegated_access_events')
+            ->where('event_kind', 'context_read')->count());
     }
 
     public function test_idp_token_for_wrong_oauth_client_is_rejected_before_any_private_plan_access(): void
