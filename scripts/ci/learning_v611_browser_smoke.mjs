@@ -154,8 +154,20 @@ try {
     assert.equal(beforeAdopt.task_evidence_count,0);
     step('Two distinct wrong answers produced a review suggestion without mutating the Task');
 
+    const confirmedResponsePromise = page.waitForResponse(response =>
+        response.request().method() === 'POST'
+        && new URL(response.url()).pathname.endsWith('/learning/confirm-next-action'),
+    );
     await page.locator('[data-learning-next-action-preview] form')
         .getByRole('button',{name:'この復習を次のActionに反映する'}).click();
+    const confirmedResponse = await confirmedResponsePromise;
+    assert.equal(confirmedResponse.status(), 302,
+        'Owner confirmation must respond with a real POST redirect; status='
+        + confirmedResponse.status() + ', page=' + new URL(page.url()).pathname);
+    const refreshed = await page.goto(
+        `${base}/plans/${planId}/tasks/${created.task_id}/learning/history`,
+        {waitUntil:'domcontentloaded'});
+    assert.equal(refreshed.status(),200);
     await page.locator('[data-learning-next-action-adopted]').waitFor({state:'visible'});
     step('Owner explicitly confirmed the suggested next Action in real browser');
 
