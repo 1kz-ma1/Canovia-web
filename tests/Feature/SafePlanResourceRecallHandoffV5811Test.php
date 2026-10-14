@@ -10,7 +10,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Models\UserProductGrant;
 use App\Services\AccountDeletionService;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -19,7 +19,7 @@ use Tests\TestCase;
 
 class SafePlanResourceRecallHandoffV5811Test extends TestCase
 {
-    use DatabaseMigrations;
+    use DatabaseTruncation;
 
     protected function setUp(): void
     {
