@@ -342,3 +342,22 @@ The initial exact-head [disposable run #38571316647](https://github.com/1kz-ma1/
 | Plan Action Draft V5871 | 27 | 4 | 4 | All four reordered groups and the standalone target succeeded |
 
 The entire 27-case group inventory remained identical across each of the four orders; no failed, skipped, duplicated or missing JUnit cases were observed. The comparison deliberately changed **class/file order only**, not methods within classes. Distinct order-sensitive failure was not observed for these combinations, this runner and this SHA. This does **not** prove global order independence, hidden-state independence, cross-context acceptance equivalence, safe duplication removal, or billable-time savings. All 42 repeated invocations remain. Final PR integration and any subsequent source revision must independently pass its own current-head checks.
+
+
+## R15 ACTIVE: disposable fixed-group repetition without deduplicating regressions (2026-10-14)
+
+### Scope
+
+The observed four file-order variants on PR #651 were single runs per variant. They demonstrate bounded order parity, not whether the same invocation yields stable results when repeatedly executed. R15 adds **three consecutive repeats** for each original and reversed historical group in the *existing* path-scoped disposable Workspace Scenario Equivalence workflow.
+
+- Learning: original Candidate Queue V5879 + Single Question V5878 + Question Bank V402 group and its exact reversed-file-order group, each independently run three times.
+- Plan Draft: original V5874 + V5873 + V5872 + V5871 group and its exact reverse, each independently run three times.
+- Total: **12** new group executions, each in a distinct PHP subprocess with fresh SQLite \`:memory:\`, array cache/session and the exact PHP/Composer/npm frontend setup already required by #646.
+- For every repeat, JUnit must include every expected group class, zero skipped/failed/duplicated testcases, the same *full* testcase identity set, and the same actual first-appearance class order for repeats of the same variant. Original versus reverse variants must show observably distinct class orders. Any drift or failed run produces BLOCK, never a false success.
+- Report actual runner timings as observed min/median/max **per group variant**, not estimated per-file speedups, cost savings, or SLA. JUnit evidence is temporary; no raw application logs or XML contents are published.
+
+### Guardrails and verification
+
+The new \`scripts/ci/platform_workspace_group_repeatability.py\` and its 12 synthetic tests operate only through the already-installed disposable CI workflow, triggered by file changes to the probe, its test, or its workflow. Production events are not triggered; all existing Workspace Resume checks and **42 repeated file appearances** are unchanged. The tool refuses runs outside \`GITHUB_ACTIONS=true\`, requires the exact current Workspace historical group membership, never accesses Aiven/Render and does not authorize release or test deletion.
+
+**ACTIVE but NOT YET VERIFIED:** Record current SHA, exact disposable Actions run ID, and each group's testcase/three-repeat result once live CI completes. Full PR-head Workspace Resume, Development Prelaunch, Migration Recovery, Platform Preflight, and disposable scenario CI must all succeed before Squash merging to main. Even with 12 green executions, this is only an observed small repetition sample, not statistical proof of no flakes over time, absence of hidden state, equivalence of all cross-context regressions, or authority to remove any repeated invocation.
