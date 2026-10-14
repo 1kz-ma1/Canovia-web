@@ -1102,3 +1102,25 @@ provider response provenance, versioning/IAM guarantees, external
 writer exclusion, real power-loss recovery and conditional generation
 operations remain unverified. Five prior migrations are not approved
 for Aiven production. **G3 OPEN.**
+
+## 69. G3-R24 — No promotion of application/SDK/TLS claims into provider attestation (2026-10-14)
+
+**Bounded change:** the R24 synthetic, test-only service checks an
+additional claimed provenance envelope against R23's durable attempt,
+synthetic receipt and R21 observation. Wrong issuer shapes, extra
+verified/authorized fields, cross-request/version/key/bucket binding,
+timing anomalies, missing ack, transport gaps, epoch/ciphertext damage
+and APP_KEY rotation are rejected. All classification labels are fixed
+and redacted. Only `local_binding_consistent` can be true.
+
+**Trust boundary:** application HMAC, SDK response headers, TLS metadata
+and a claimed provider signature are NOT independently verified
+provider evidence. R24 provides no signer trust root, provider API
+inspection, immutable versioning proof, response authentication,
+writer fencing, replay protection or conditional deletion; every
+corresponding authority and mutation flag stays false.
+
+**Acceptance:** dedicated PG16/MySQL8.0/8.4 suites, exact-HEAD CI, full
+diff review and clean current-base merge required. No live runtime,
+migration, storage I/O or operator action is introduced. Five existing
+G3 migrations remain production-unapproved. **G3 OPEN.**
