@@ -101,6 +101,37 @@ final class PrivateFileLifecycleG3Test extends TestCase
         Storage::assertMissing($privatePath);
     }
 
+    public function test_http_account_deletion_unlinks_owned_inbox_after_commit_without_touching_other_users_data(): void
+    {
+        $owner = User::factory()->create(['email' => 'erase-private@example.com']);
+        $other = User::factory()->create();
+        [$plan, $task] = $this->planWithTask($owner);
+        [$otherPlan] = $this->planWithTask($other);
+
+        $path = 'inbox/'.$owner->id.'/personal.pdf';
+        $otherPath = 'inbox/'.$other->id.'/other.pdf';
+        Storage::put($path, 'private bytes');
+        Storage::put($otherPath, 'other bytes');
+        $this->inbox($owner, $plan, $path);
+        $otherInbox = $this->inbox($other, $otherPlan, $otherPath);
+
+        $this->actingAs($owner)
+            ->delete(route('auth.account.destroy'), [
+                'password' => 'password',
+                'confirmation_email' => ' ERASE-PRIVATE@example.com ',
+            ])
+            ->assertRedirect(route('home'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertGuest();
+        $this->assertDatabaseMissing('users', ['id' => $owner->id]);
+        $this->assertDatabaseMissing('plans', ['id' => $plan->id]);
+        $this->assertDatabaseHas('plans', ['id' => $otherPlan->id]);
+        $this->assertDatabaseHas('inbox_items', ['id' => $otherInbox->id]);
+        Storage::assertMissing($path);
+        Storage::assertExists($otherPath);
+    }
+
     public function test_nested_outer_rollback_preserves_db_rows_and_file_bytes(): void
     {
         $owner = User::factory()->create();
