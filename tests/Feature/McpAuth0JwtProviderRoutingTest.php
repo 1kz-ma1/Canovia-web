@@ -294,6 +294,214 @@ final class McpAuth0JwtProviderRoutingTest extends TestCase
         // per-Plan human confirmation; this flow does not create one.
     }
 
+    public function test_github_only_oauth_route_requires_signed_github_primary_subject(): void
+    {
+        $provider = app(McpOAuthAccountLinkProvider::class);
+        $state = str_repeat('s', 43);
+        $challenge = str_repeat('c', 43);
+        $generic = $provider->authorizationUrl($state, $challenge);
+        $this->assertNotNull($generic);
+        parse_str((string) parse_url($generic, PHP_URL_QUERY), $genericParams);
+        $this->assertArrayNotHasKey('connection', $genericParams);
+        $this->assertArrayNotHasKey('prompt', $genericParams);
+
+        config(['canovia_mcp.account_link_github_only_enabled' => true]);
+        $this->assertTrue(app(\App\Services\McpOAuthAccountLinkConfiguration::class)->githubOnlyEnabled());
+
+        $target = $provider->authorizationUrl($state, $challenge);
+        $this->assertNotNull($target);
+        parse_str((string) parse_url($target, PHP_URL_QUERY), $query);
+        $this->assertSame('github', $query['connection']);
+        $this->assertSame('login', $query['prompt']);
+        $this->assertSame('S256', $query['code_challenge_method']);
+        $this->assertSame(self::LINK_CLIENT, $query['client_id']);
+        $this->assertSame(self::RESOURCE, $query['audience']);
+        $this->assertSame(self::RESOURCE, $query['resource']);
+
+        // A single HTTP fake must derive a fresh signed token for each
+        // case. Repeated Http::fake calls append callbacks and can reuse the
+        // first response, incorrectly making wrong-provider cases pass.
+        $currentSubject = 'github|123456789';
+        Http::fake([
+            self::EXCHANGE => function () use (&$currentSubject) {
+                return Http::response([
+                    'access_token' => $this->token(self::LINK_CLIENT, ['sub' => $currentSubject]),
+                    'token_type' => 'Bearer',
+                    'expires_in' => 900,
+                ], 200, ['Content-Type' => 'application/json']);
+            },
+            self::JWKS => Http::response(['keys' => [$this->jwk]], 200, ['Content-Type' => 'application/json']),
+        ]);
+        foreach ([
+            ['github|123456789', true],
+            ['auth0|123456789', false],
+            ['google-oauth2|123456789', false],
+            ['github|not-numeric', false],
+            ['github|', false],
+        ] as [$subject, $accepted]) {
+            $currentSubject = $subject;
+            Cache::flush();
+            $principal = $provider->exchangeAndVerify(str_repeat('c', 30), str_repeat('v', 43));
+            $this->assertSame($accepted, $principal !== null, 'unexpected GitHub-only subject decision');
+            if ($accepted) {
+                $this->assertSame($subject, $principal->subject);
+            }
+        }
+
+        // A GitHub-only operator setting must not silently fall back to a
+        // different, unverified OAuth mechanism.
+        config(['canovia_mcp.token_verification_driver' => 'introspection']);
+        $this->assertNull($provider->authorizationUrl($state, $challenge));
+    }
+
+    public function test_github_only_link_requires_callback_and_second_explicit_owner_confirmation(): void
+    {
+        config(['canovia_mcp.account_link_github_only_enabled' => true]);
+        Http::fake([
+            self::META => Http::response([
+                'issuer' => self::ISSUER,
+                'authorization_endpoint' => self::ISSUER.'authorize',
+                'token_endpoint' => self::EXCHANGE,
+                'authorization_response_iss_parameter_supported' => true,
+                'code_challenge_methods_supported' => ['S256'],
+                'token_endpoint_auth_methods_supported' => ['client_secret_basic'],
+                'scopes_supported' => ['openid', 'profile'],
+            ], 200, ['Content-Type' => 'application/json']),
+            self::EXCHANGE => Http::response([
+                'access_token' => $this->token(self::LINK_CLIENT, ['sub' => 'github|34567890']),
+                'token_type' => 'Bearer',
+                'expires_in' => 900,
+            ], 200, ['Content-Type' => 'application/json']),
+            self::JWKS => Http::response(['keys' => [$this->jwk]], 200, ['Content-Type' => 'application/json']),
+        ]);
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+
+        $start = $this->actingAs($owner)
+            ->post(route('auth.account.mcp_link.start'))->assertRedirect();
+        parse_str((string) parse_url((string) $start->headers->get('Location'), PHP_URL_QUERY), $query);
+        $this->assertSame('github', $query['connection']);
+        $this->assertDatabaseCount('mcp_linked_subjects', 0);
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+
+        $this->actingAs($owner)->get(route('auth.account.mcp_link.callback').'?'.http_build_query([
+            'state' => $query['state'],
+            'iss' => self::ISSUER,
+            'code' => 'synthetic-valid-github-code-123456789',
+        ]))->assertRedirect(route('auth.account'));
+
+        $this->assertTrue(session('mcp.account_link.verified.github_only_proof'));
+        $this->assertDatabaseCount('mcp_linked_subjects', 0);
+        $this->actingAs($owner)->post(route('auth.account.mcp_link.confirm'))
+            ->assertRedirect(route('auth.account'));
+
+        $this->assertDatabaseCount('mcp_linked_subjects', 1);
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+        $link = McpLinkedSubject::query()->sole();
+        $this->assertSame(
+            app(McpDelegatedIdentityFingerprintService::class)->subject(self::ISSUER, 'github|34567890'),
+            $link->identity_fingerprint,
+        );
+    }
+
+    public function test_fresh_github_only_plan_consent_requires_distinct_verified_callback_and_final_post(): void
+    {
+        config(['canovia_mcp.account_link_github_only_enabled' => true]);
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $plan = Plan::query()->create([
+            'user_id' => $owner->id,
+            'owner_token' => Str::random(64),
+            'public_slug' => (string) Str::uuid(),
+            'title' => 'SYNTHETIC_GITHUB_CONSENT_ONLY',
+            'category' => '個人開発',
+            'priority' => 1,
+            'priority_mode' => 'manual',
+            'start_date' => today(),
+            'deadline' => today()->addDays(4),
+            'is_public' => false,
+            'is_collaborative' => false,
+        ]);
+        McpLinkedSubject::query()->create([
+            'user_id' => $owner->id,
+            'provider_key' => 'chatgpt',
+            'identity_fingerprint' => app(McpDelegatedIdentityFingerprintService::class)
+                ->subject(self::ISSUER, 'github|34567890'),
+            'status' => 'linked',
+            'linked_at' => now(),
+        ]);
+        Http::fake([
+            self::META => Http::response([
+                'issuer' => self::ISSUER,
+                'authorization_endpoint' => self::ISSUER.'authorize',
+                'token_endpoint' => self::EXCHANGE,
+                'authorization_response_iss_parameter_supported' => true,
+                'code_challenge_methods_supported' => ['S256'],
+                'token_endpoint_auth_methods_supported' => ['client_secret_basic'],
+                'scopes_supported' => ['openid', 'profile'],
+            ], 200, ['Content-Type' => 'application/json']),
+            self::EXCHANGE => Http::response([
+                'access_token' => $this->token(self::LINK_CLIENT, ['sub' => 'github|34567890']),
+                'token_type' => 'Bearer', 'expires_in' => 900,
+            ], 200, ['Content-Type' => 'application/json']),
+            self::JWKS => Http::response(['keys' => [$this->jwk]], 200, ['Content-Type' => 'application/json']),
+        ]);
+
+        $start = $this->actingAs($owner)->post(
+            route('auth.account.mcp_plan_consent.start', ['plan' => $plan->id]),
+            ['scope' => 'overview', 'duration_days' => 7],
+        )->assertRedirect();
+        parse_str((string) parse_url((string) $start->headers->get('Location'), PHP_URL_QUERY), $query);
+        $this->assertSame('github', $query['connection']);
+        $this->assertSame('login', $query['prompt']);
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+
+        $this->actingAs($owner)->get(route('auth.account.mcp_link.callback').'?'.http_build_query([
+            'state' => $query['state'], 'iss' => self::ISSUER,
+            'code' => 'synthetic-fresh-consent-123456789',
+        ]))->assertRedirect(route('auth.account'));
+        $this->assertTrue(session('mcp.plan_consent.verified.github_only_proof'));
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+
+        $this->actingAs($owner)->post(route('auth.account.mcp_plan_consent.confirm'))
+            ->assertRedirect(route('auth.account'));
+        $this->assertDatabaseCount('mcp_delegated_grants', 1);
+        $grant = McpDelegatedGrant::query()->sole();
+        $this->assertSame($owner->id, $grant->user_id);
+        $this->assertSame($plan->id, $grant->plan_id);
+        $this->assertSame('overview', $grant->scope);
+    }
+
+    public function test_enabling_github_only_after_generic_oauth_does_not_reuse_earlier_confirmation(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $this->actingAs($owner)->withSession([
+            'mcp.account_link.verified' => [
+                'actor_id' => $owner->id,
+                'identity_fingerprint' => str_repeat('a', 64),
+                'verified_at' => now()->timestamp,
+                'github_only_proof' => false,
+            ],
+        ]);
+
+        config(['canovia_mcp.account_link_github_only_enabled' => true]);
+        $this->actingAs($owner)->post(route('auth.account.mcp_link.confirm'))
+            ->assertRedirect(route('auth.account'));
+        $this->assertDatabaseCount('mcp_linked_subjects', 0);
+
+        $this->actingAs($owner)->withSession([
+            'mcp.plan_consent.verified' => [
+                'actor_id' => $owner->id,
+                'identity_fingerprint' => str_repeat('a', 64),
+                'plan_id' => 1,
+                'scope' => 'overview',
+                'duration_days' => 7,
+                'verified_at' => now()->timestamp,
+                'github_only_proof' => false,
+            ],
+        ])->post(route('auth.account.mcp_plan_consent.confirm'))
+            ->assertRedirect(route('auth.account'));
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+    }
+
     public function test_metadata_missing_scope_never_allows_legacy_introspection_linking(): void
     {
         config([

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Plan;
 use App\Services\McpExplicitPlanConsentService;
 use App\Services\McpOAuthAccountLinkProvider;
+use App\Services\McpOAuthAccountLinkConfiguration;
 use App\Services\McpStagingLoginPilotPolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -89,6 +90,7 @@ final class McpOAuthPlanConsentController extends Controller
     public function confirm(
         Request $request,
         McpExplicitPlanConsentService $consent,
+        McpOAuthAccountLinkConfiguration $linkConfiguration,
     ): RedirectResponse {
         $actor = $request->user();
         abort_unless($actor, 403);
@@ -115,6 +117,7 @@ final class McpOAuthPlanConsentController extends Controller
             || now()->timestamp - $verified['verified_at'] > self::MAX_AGE_SECONDS
             || ! is_int($verified['plan_id'] ?? null)
             || ! is_string($verified['identity_fingerprint'] ?? null)
+            || ($linkConfiguration->githubOnlyEnabled() && ($verified['github_only_proof'] ?? null) !== true)
             || ! is_string($verified['scope'] ?? null)
             || ! (is_int($verified['duration_days'] ?? null)
                 || ($verified['duration_days'] ?? null) === McpExplicitPlanConsentService::UNTIL_REVOKED)

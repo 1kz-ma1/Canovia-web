@@ -27,7 +27,13 @@
             <li>
                 <strong>1. 本人IDを確認する</strong>
                 <span class="ml-1 text-slate-400">{{ $mcpIdentityRecorded ? 'Canovia側に紐付け記録があります' : '未完了' }}</span>
-                <p class="text-slate-400">認証画面では、使用したいGitHubアカウントを選んでください。別のアカウントで自動ログインされた場合は承認せず、認証先を確認してください。</p>
+                <p class="text-slate-400">
+                    @if (app(\App\Services\McpOAuthAccountLinkConfiguration::class)->githubOnlyEnabled())
+                        GitHub専用の認証画面に進みます。別のGitHubアカウントが自動選択された場合は、承認せず確認してください。
+                    @else
+                        認証画面では、本人確認に使う外部アカウントを確認してください。別のアカウントで自動ログインされた場合は承認を中止してください。
+                    @endif
+                </p>
             </li>
             <li>
                 <strong>2. 計画と共有する情報を選ぶ</strong>

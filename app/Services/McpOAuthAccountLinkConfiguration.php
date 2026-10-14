@@ -29,6 +29,10 @@ final class McpOAuthAccountLinkConfiguration
             || ($mode === 'auth0_jwt' && $jwt && ! $introspection);
 
         if (config('canovia_mcp.account_link_enabled') !== true
+            // Never silently fall back to generic IdP when the operator
+            // expects GitHub-only enforcement but no signed JWT verifier.
+            || (config('canovia_mcp.account_link_github_only_enabled') === true
+                && $mode !== 'auth0_jwt')
             || ! $verificationReady
             || ! $this->resource->isReady()) {
             return null;
@@ -83,6 +87,13 @@ final class McpOAuthAccountLinkConfiguration
         }
 
         return $settings;
+    }
+
+    public function githubOnlyEnabled(): bool
+    {
+        return config('canovia_mcp.account_link_github_only_enabled') === true
+            && config('canovia_mcp.token_verification_driver') === 'auth0_jwt'
+            && $this->settings() !== null;
     }
 
     private function trustedUrl(string $url): bool
