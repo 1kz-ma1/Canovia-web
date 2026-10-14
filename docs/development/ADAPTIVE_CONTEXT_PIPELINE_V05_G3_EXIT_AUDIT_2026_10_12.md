@@ -1237,3 +1237,21 @@ remain false. Offline CI checks cross-SHA, scope/authorization
 forgery, overspending and removed stop/abort steps. No live calls,
 migrations, releases, retries or delete operations were added.
 Five production G3 migrations remain unapproved. **G3 OPEN.**
+
+## 75. G3-R30 — Owner checklist remains unverified; scope simulation is not enforcement (2026-10-14)
+
+The R30 offline tool joins the R29 unapproved packet to a fixed
+11-checkpoint owner/security/storage/platform review matrix and
+hypothetical disposable inspect/PUT/HEAD/restart operations. It
+rejects forged owner approval, forged checklist completion, packet
+digest/SHA mismatch, changed targets, real user data, conditional
+delete and cumulative proposed quota overrun. The local checksum
+is not an independently signed authorization; estimates are
+untrusted and do not measure actual provider usage.
+
+All-green fixture syntax remains `OWNER_CHECKLIST_PENDING`,
+exit 2, with owner/security verification, provider access,
+real-world scope enforcement, budget/release authority and delete
+always false. Disposable local-Git CI is the only verification;
+no real provider API, new migration or recovery operation.
+Five G3 production migrations remain unapproved. **G3 OPEN.**
