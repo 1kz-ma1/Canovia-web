@@ -412,7 +412,7 @@ final class McpReadOnlyResourceTest extends TestCase
         $study->update(['category' => '資格学習', 'title' => 'SYNTHETIC_AP_LEARNING']);
         $this->linkAndGrant($owner, $study, 'overview');
         $grant = McpDelegatedGrant::query()->sole();
-        Task::query()->create([
+        $task = Task::query()->create([
             'plan_id' => $study->id,
             'title' => 'Network practice',
             'description' => 'PRIVATE_ANSWER_DO_NOT_EXPORT',
@@ -467,6 +467,7 @@ final class McpReadOnlyResourceTest extends TestCase
             'arguments' => ['plan_id' => $study->id, 'scope' => 'tasks'],
         ])->assertOk()
             ->assertJsonPath('result.isError', false)
+            ->assertJsonPath('result.structuredContent.tasks.0.task_id', $task->id)
             ->assertJsonPath('result.structuredContent.tasks.0.title', 'Network practice')
             ->assertJsonPath('result.structuredContent.tasks.0.recorded_progress_percent', 35)
             ->assertDontSee('PRIVATE_ANSWER_DO_NOT_EXPORT');
