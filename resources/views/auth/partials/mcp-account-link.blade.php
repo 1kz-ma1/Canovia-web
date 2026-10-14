@@ -45,12 +45,18 @@
         @if ($mcpLinkedSubjects->total() === 0)
             <form method="POST" action="{{ route('auth.account.mcp_link.start') }}" class="mt-3">
                 @csrf
-                <button type="submit" class="btn-secondary min-h-11 px-4 text-xs">
-                    認証プロバイダーで本人確認を開始
+                <button type="submit" class="btn-secondary min-h-11 px-4 text-xs"
+                    @if (app(\App\Services\McpOAuthAccountLinkConfiguration::class)->githubOnlyEnabled()) data-mcp-github-only-link-start @endif>
+                    {{ app(\App\Services\McpOAuthAccountLinkConfiguration::class)->githubOnlyEnabled()
+                        ? 'GitHubで本人確認する'
+                        : '認証プロバイダーで本人確認を開始' }}
                 </button>
             </form>
             <p class="mt-2 text-[11px] text-slate-500">
                 別ページで本人認証後、この画面で確認・確定します。情報は自動共有されません。
+                @if (app(\App\Services\McpOAuthAccountLinkConfiguration::class)->githubOnlyEnabled())
+                    別のGitHubアカウントが自動選択されたときは、承認せずアカウントを確認してください。
+                @endif
             </p>
         @else
             <p class="mt-3 text-xs text-amber-200">
