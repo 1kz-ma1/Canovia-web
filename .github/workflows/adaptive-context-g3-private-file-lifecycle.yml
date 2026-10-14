@@ -7,6 +7,7 @@ on:
       - 'app/Services/PrivateFileLifecycleService.php'
       - 'app/Services/AccountDeletionService.php'
       - 'app/Http/Controllers/PlanController.php'
+      - 'app/Http/Controllers/CareerWorkspaceController.php'
       - 'tests/Feature/PrivateFileLifecycleG3Test.php'
       - 'tests/Feature/IosSoftLaunchWebReadinessV561Test.php'
       - 'tests/Feature/SafePlanResourceRecallHandoffV5811Test.php'
@@ -60,6 +61,7 @@ jobs:
           php -l app/Services/PrivateFileLifecycleService.php
           php -l app/Services/AccountDeletionService.php
           php -l app/Http/Controllers/PlanController.php
+          php -l app/Http/Controllers/CareerWorkspaceController.php
           php -l tests/Feature/PrivateFileLifecycleG3Test.php
           php -l tests/Feature/IosSoftLaunchWebReadinessV561Test.php
           php -l tests/Feature/SafePlanResourceRecallHandoffV5811Test.php
