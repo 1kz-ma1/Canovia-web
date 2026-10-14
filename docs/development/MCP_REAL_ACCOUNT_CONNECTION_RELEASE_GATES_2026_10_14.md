@@ -72,14 +72,6 @@ Schema changes from PR #587 `2026_10_14_000100_allow_nonexpiring_mcp_grants.php`
 - **External synthetic staging**: exact reviewed stage SHA and disabled-flag checks; two-client GitHub identity match; overview/tasks read with real ChatGPT; wrong OAuth account denied; revoke read denied; expired/indefinite grant; status page truthfulness; 429 provenance if reproduced. Stage fixture remains **synthetic only**.
 - **Owner-accepted real account (LAST)**: after approved production release and explicit per-Plan consent only, authorize exactly one personal Development Plan at **overview** scope first. Then, only on an additional deliberate consent, `tasks`; confirm partial metadata; change permissions; revoke; prove post-revoke denial; unlink; verify new account gets no old grants. Do not read another real Plan to “test discovery.”
 
-## 8. Current security slice: corrupt live-reservation and token-verification revocation
-
-Implementation scope of this feature branch (no schema/config/deploy changes):
-
-- A live external-identity record must have an **exact** active reservation equal to its immutable historical HMAC fingerprint. Confirmations inspect linked/unrevoked identity claims by original fingerprint, not only the potentially missing active reservation. If an out-of-band write or interrupted migration leaves a live row with `active_identity_fingerprint=NULL` or a different fingerprint, **both** its owner and a second account fail closed. Normal released/revoked history can still re-link after fresh OAuth and must not inherit consent.
-- During a trusted remote bearer verification callback, an owner may revoke an indefinite grant or unlink the external identity. A subsequent request continuation must independently re-check current grant/link records before returning any Plan data, and must not record `context_read`.
-- The tests above exercise a deterministic **revocation-between-token-verification-and-read** ordering and malformed-row negative controls. They do **not** establish actual overlapping multi-connection `SELECT ... FOR UPDATE` behavior; a separate disposable PostgreSQL 17 / MySQL 8.0+ multi-connection lock-contention matrix remains required before real user access. Do not label this gate complete on SQLite success alone.
-
 ## 7. Small PR sequence, ownership and stop conditions
 
 1. **This PR — spec/evidence only**: record gaps, operator release gates, user-state semantics and test matrix. No OAuth, configuration or DB writes; no production activation.
@@ -91,3 +83,12 @@ Implementation scope of this feature branch (no schema/config/deploy changes):
 **STOP / NO-GO:** unknown production OAuth issuer/client/redirect; failing or missing required CI; unverified token/client claims; unproven backup restore; old writers not fenced during uniqueness change; wrong-subject acceptance; leaked credentials; inability to revoke; unresolved access control race; absent product-owner production consent.
 
 Related contracts: [Plan consent](MCP_EXPLICIT_PLAN_CONSENT_CONTRACT.md), [account linking](MCP_OAUTH_ACCOUNT_LINK_CONTRACT.md), [read-only resource](MCP_READ_ONLY_RESOURCE_CONTRACT.md), [revocation](MCP_DELEGATED_REVOCATION_CONTRACT.md), [identity relink](MCP_IDENTITY_RELINK_AFTER_UNLINK_2026_10_14.md), [staging acceptance](MCP_CHATGPT_STAGING_REAL_OAUTH_READ_REVOCATION_ACCEPTANCE_2026_10_14.md), [Auth0 callback/scope](MCP_CHATGPT_AUTH0_CALLBACK_SCOPE_ACCEPTANCE_2026_10_13.md), [indefinite/relink staging release](MCP_INDEFINITE_CONSENT_AND_IDENTITY_RELINK_2026_10_14.md).
+
+## 8. Current security slice: corrupt live-reservation and token-verification revocation
+
+Implementation scope of this feature branch (no schema/config/deploy changes):
+
+- A live external-identity record must have an **exact** active reservation equal to its immutable historical HMAC fingerprint. Confirmations inspect linked/unrevoked identity claims by original fingerprint, not only the potentially missing active reservation. If an out-of-band write or interrupted migration leaves a live row with `active_identity_fingerprint=NULL` or a different fingerprint, **both** its owner and a second account fail closed. Normal released/revoked history can still re-link after fresh OAuth and must not inherit consent.
+- During a trusted remote bearer verification callback, an owner may revoke an indefinite grant or unlink the external identity. A subsequent request continuation must independently re-check current grant/link records before returning any Plan data, and must not record `context_read`.
+- The tests above exercise a deterministic **revocation-between-token-verification-and-read** ordering and malformed-row negative controls. They do **not** establish actual overlapping multi-connection `SELECT ... FOR UPDATE` behavior; a separate disposable PostgreSQL 17 / MySQL 8.0+ multi-connection lock-contention matrix remains required before real user access. Do not label this gate complete on SQLite success alone.
+
