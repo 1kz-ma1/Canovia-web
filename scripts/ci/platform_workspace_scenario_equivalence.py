@@ -137,8 +137,12 @@ def experiment() -> dict:
                 path = folder / (key + "_" + label + ".xml")
                 cmd = ["php", "artisan", "test", "--without-tty",
                        "--log-junit", str(path), *files]
-                elapsed = runner(cmd, path)
-                methods = read_junit(path, target)
+                try:
+                    elapsed = runner(cmd, path)
+                    methods = read_junit(path, target)
+                except Inconclusive as exc:
+                    # Only fixed scenario labels and fixed internal failure codes.
+                    raise Inconclusive(key + "_" + label + ":" + str(exc)) from exc
                 baseline.append((label, methods, elapsed))
             if baseline[0][1] != baseline[1][1]:
                 raise Inconclusive("selected testcase method set differs across contexts")
@@ -171,8 +175,14 @@ def main() -> int:
         if not args.run:
             raise Inconclusive("must opt into isolated comparison")
         result = experiment()
-    except (Inconclusive, OSError, UnicodeError, ValueError):
+    except Inconclusive as exc:
+        # Inconclusive messages are static internal literals, never raw logs.
         result = {"result": "BLOCK", "code": "INCOMPLETE_OR_FAILED_SCENARIO_EVIDENCE",
+                  "failure_stage": str(exc)[:120],
+                  "permission_to_remove_repeated_invocations": False,
+                  "release_authorized": False}
+    except (OSError, UnicodeError, ValueError):
+        result = {"result": "BLOCK", "code": "INVALID_RUNNER_ENVIRONMENT",
                   "permission_to_remove_repeated_invocations": False,
                   "release_authorized": False}
     print(json.dumps(result, ensure_ascii=True, sort_keys=True))
