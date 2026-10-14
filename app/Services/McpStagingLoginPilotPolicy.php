@@ -50,6 +50,13 @@ final class McpStagingLoginPilotPolicy
             return true;
         }
 
+        // An identity owner may always sever an existing stage link even
+        // while the independent Plan-consent switch is OFF.
+        if ($method === 'DELETE'
+            && preg_match('#\Aaccount/mcp/subjects/[1-9][0-9]*\z#D', $path) === 1) {
+            return true;
+        }
+
         if (! $this->planConsentReady()) {
             return false;
         }
@@ -63,14 +70,6 @@ final class McpStagingLoginPilotPolicy
 
         if ($method === 'POST'
             && preg_match('#\Aaccount/mcp/plans/[1-9][0-9]*/consent/start\z#D', $path) === 1) {
-            return true;
-        }
-
-        // Staging can unlink only the authenticated synthetic owner.
-        // Subject ID ownership and the stage actor are rechecked by the
-        // controller; unlink revokes every associated grant atomically.
-        if ($method === 'DELETE'
-            && preg_match('#\Aaccount/mcp/subjects/[1-9][0-9]*\z#D', $path) === 1) {
             return true;
         }
 
