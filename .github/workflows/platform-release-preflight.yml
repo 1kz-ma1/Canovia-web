@@ -7,6 +7,7 @@ on:
       - 'scripts/ops/platform_release_preflight.py'
       - 'scripts/ops/g3_provider_evidence_inventory.py'
       - 'scripts/ops/g3_provider_collection_plan.py'
+      - 'scripts/ops/g3_disposable_approval_packet.py'
       - 'scripts/ops/platform_backup_ciphertext_check.py'
       - 'scripts/ops/platform_branch_inventory.py'
       - 'scripts/ops/platform_ci_run_triage.py'
@@ -17,6 +18,8 @@ on:
       - 'tests/ci/test_platform_release_preflight.py'
       - 'tests/ci/test_g3_provider_evidence_inventory.py'
       - 'tests/ci/test_g3_provider_collection_plan.py'
+      - 'tests/ci/test_g3_disposable_approval_packet.py'
+      - 'docs/development/G3_DISPOSABLE_APPROVAL_PACKET_R29_2026_10_14.md'
       - 'docs/development/G3_PROVIDER_COLLECTION_PLAN_R28_2026_10_14.md'
       - 'docs/development/G3_PROVIDER_EVIDENCE_HANDOFF_R27_2026_10_14.md'
       - 'tests/ci/test_platform_backup_ciphertext_check.py'
@@ -47,12 +50,13 @@ jobs:
       - name: Parse all GitHub Actions YAML without printing source content
         run: ruby scripts/ops/platform_workflow_yaml_check.rb .github/workflows/*.yml
       - name: Compile safe preflight
-        run: python3 -m py_compile scripts/ops/platform_release_preflight.py tests/ci/test_platform_release_preflight.py scripts/ops/g3_provider_evidence_inventory.py tests/ci/test_g3_provider_evidence_inventory.py scripts/ops/g3_provider_collection_plan.py tests/ci/test_g3_provider_collection_plan.py scripts/ops/platform_backup_ciphertext_check.py tests/ci/test_platform_backup_ciphertext_check.py scripts/ops/platform_branch_inventory.py scripts/ops/platform_ci_run_triage.py scripts/ops/platform_ci_runtime_report.py scripts/ops/platform_ci_supersession_report.py scripts/ops/platform_workspace_test_inventory.py tests/ci/test_platform_workspace_test_inventory.py tests/ci/test_platform_ci_runtime_report.py tests/ci/test_platform_ci_supersession_report.py tests/ci/test_platform_workspace_parallel_php_lint.py tests/ci/test_platform_pr_ci_supersession_contract.py tests/ci/test_platform_branch_inventory.py tests/ci/test_platform_ci_run_triage.py
+        run: python3 -m py_compile scripts/ops/platform_release_preflight.py tests/ci/test_platform_release_preflight.py scripts/ops/g3_provider_evidence_inventory.py tests/ci/test_g3_provider_evidence_inventory.py scripts/ops/g3_provider_collection_plan.py tests/ci/test_g3_provider_collection_plan.py scripts/ops/g3_disposable_approval_packet.py tests/ci/test_g3_disposable_approval_packet.py scripts/ops/platform_backup_ciphertext_check.py tests/ci/test_platform_backup_ciphertext_check.py scripts/ops/platform_branch_inventory.py scripts/ops/platform_ci_run_triage.py scripts/ops/platform_ci_runtime_report.py scripts/ops/platform_ci_supersession_report.py scripts/ops/platform_workspace_test_inventory.py tests/ci/test_platform_workspace_test_inventory.py tests/ci/test_platform_ci_runtime_report.py tests/ci/test_platform_ci_supersession_report.py tests/ci/test_platform_workspace_parallel_php_lint.py tests/ci/test_platform_pr_ci_supersession_contract.py tests/ci/test_platform_branch_inventory.py tests/ci/test_platform_ci_run_triage.py
       - name: Validate pinned candidate and fail-closed manual gates
         run: |
           python3 -m unittest discover -s tests/ci -p 'test_platform_release_preflight.py' -v
           python3 -m unittest discover -s tests/ci -p 'test_g3_provider_evidence_inventory.py' -v
           python3 -m unittest discover -s tests/ci -p 'test_g3_provider_collection_plan.py' -v
+          python3 -m unittest discover -s tests/ci -p 'test_g3_disposable_approval_packet.py' -v
           python3 -m unittest discover -s tests/ci -p 'test_platform_backup_ciphertext_check.py' -v
           python3 -m unittest discover -s tests/ci -p 'test_platform_branch_inventory.py' -v
           python3 -m unittest discover -s tests/ci -p 'test_platform_ci_run_triage.py' -v
