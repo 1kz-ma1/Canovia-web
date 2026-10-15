@@ -93,15 +93,15 @@ jobs:
         run: composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
       - name: Syntax check all new experiment code
         run: |
-          php -l tests/Support/LearningContextDeadlockWorkerV016B.php
-          php -l tests/Feature/LearningContextSqlMutationDeadlockV016BTest.php
+          php -l tests/Support/LearningContextUncontrolledWriterV017.php
+          php -l tests/Feature/LearningContextUncontrolledWriterV017Test.php
           php -l tests/Support/LearningContextSqlMutationProbe.php
       - name: Migrate ONLY disposable CI database
         run: |
           php artisan migrate --force --no-interaction
           php artisan migrate --force --no-interaction
       - name: Task-first triggered deadlock and transactionally keyed replay
-        run: php artisan test tests/Feature/LearningContextSqlMutationDeadlockV016BTest.php --fail-on-skipped --stop-on-failure --colors=never
+        run: php artisan test tests/Feature/LearningContextUncontrolledWriterV017Test.php --fail-on-skipped --stop-on-failure --colors=never
       - name: Verify temporary SQL probe and replay tables are removed
         run: |
           set -euo pipefail
