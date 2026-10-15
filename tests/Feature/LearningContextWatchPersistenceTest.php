@@ -157,6 +157,7 @@ final class LearningContextWatchPersistenceTest extends TestCase
                 'assessment' => ['rationale' => 'PRIVATE_ASSESSMENT'],
                 'score_percent' => 60,
                 'weaknesses' => [],
+                'recommended_task_progress_percent' => 30,
                 'applied_at' => now()->subDays(23 - $i),
             ]);
             $old ??= $attempt;
