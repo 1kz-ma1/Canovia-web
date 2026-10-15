@@ -209,11 +209,13 @@ final class LearningContextCaptureBenchmarkV020Test extends TestCase
             $max = $times[self::SAMPLES - 1];
             self::assertLessThanOrEqual($p95, $p50);
             self::assertLessThanOrEqual($max, $p95);
-            printf(
+            // STDERR bypasses PHPUnit's successful-test output buffer;
+            // only fixed labels and synthetic-size summaries are emitted.
+            fwrite(STDERR, sprintf(
                 "V020_SYNTHETIC_CAPTURE engine=%s dimension=%s rows=%d mode=%s samples=%d p50_ms=%.3f p95_ms=%.3f max_ms=%.3f\n",
                 DB::getDriverName(), $dimension, $profileRows, $mode,
                 self::SAMPLES, $p50 / 1_000_000, $p95 / 1_000_000, $max / 1_000_000,
-            );
+            ));
         }
         return $baseline;
     }
