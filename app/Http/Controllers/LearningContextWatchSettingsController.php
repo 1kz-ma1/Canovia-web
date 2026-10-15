@@ -30,8 +30,8 @@ final class LearningContextWatchSettingsController extends Controller
 
         // Still allow data erasure if the feature has been disabled or the
         // Plan category/privacy changed since the original consent.
-        abort_unless($available || $state !== null, 404);
         $eligible = $this->eligible($plan, $profiles);
+        abort_unless(($available && $eligible) || $state !== null, 404);
         $candidateCount = $state === null ? 0 : LearningContextChangeRecord::query()
             ->where('user_id', $owner->id)
             ->where('plan_id', $plan->id)
