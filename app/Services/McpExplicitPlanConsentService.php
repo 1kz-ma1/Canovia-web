@@ -23,6 +23,7 @@ final class McpExplicitPlanConsentService
         private readonly McpOAuthAccountLinkConfiguration $linkConfiguration,
         private readonly McpDelegatedIdentityFingerprintService $fingerprints,
         private readonly PlanCategoryProfileService $profiles,
+        private readonly McpStudyPilotAccessPolicy $apPilot,
     ) {}
 
     public function isEnabled(): bool
@@ -67,7 +68,8 @@ final class McpExplicitPlanConsentService
             && $plan->user_id !== null
             && (int) $plan->user_id === (int) $actor->id
             && ! (bool) $plan->is_collaborative
-            && $this->profiles->forPlan($plan)->key === 'study';
+            && $this->profiles->forPlan($plan)->key === 'study'
+            && $this->apPilot->allowsPlan($plan);
     }
 
     /**
@@ -83,7 +85,8 @@ final class McpExplicitPlanConsentService
         return config('canovia_mcp.study_read_enabled') === true
             && config('canovia_mcp.study_summary_read_enabled') === true
             && config('app.env') !== 'staging'
-            && $this->profiles->forPlan($plan)->key === 'study';
+            && $this->profiles->forPlan($plan)->key === 'study'
+            && $this->apPilot->allowsPlan($plan);
     }
 
     public function hasActiveLinkedIdentity(User $actor): bool

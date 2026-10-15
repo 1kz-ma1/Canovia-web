@@ -408,6 +408,7 @@ final class McpReadOnlyResourceTest extends TestCase
     {
         $this->idp();
         $owner = User::factory()->create();
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
         $study = $this->plan($owner);
         $study->update(['category' => '資格学習', 'title' => 'SYNTHETIC_AP_LEARNING']);
         $this->linkAndGrant($owner, $study, 'overview');
@@ -488,6 +489,7 @@ final class McpReadOnlyResourceTest extends TestCase
     public function test_study_domain_always_denied_on_synthetic_staging_even_when_switch_is_set(): void
     {
         $owner = User::factory()->create();
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
         $study = $this->plan($owner);
         $study->update(['category' => '資格学習', 'title' => 'DO_NOT_EXPOSE']);
         $principal = new \App\Services\McpVerifiedTokenPrincipal(
@@ -513,6 +515,7 @@ final class McpReadOnlyResourceTest extends TestCase
     {
         $this->idp();
         $owner = User::factory()->create();
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
         $study = $this->plan($owner);
         $study->update(['category' => '資格学習', 'title' => 'Synthetic AP Exam Plan']);
         $this->linkAndGrant($owner, $study, 'tasks');
@@ -633,6 +636,7 @@ final class McpReadOnlyResourceTest extends TestCase
             'app.env' => 'staging',
         ]);
         $owner = User::factory()->create();
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
         $study = $this->plan($owner);
         $study->update(['category' => '資格学習']);
         $this->linkAndGrant($owner, $study, 'study_progress');
@@ -651,6 +655,7 @@ final class McpReadOnlyResourceTest extends TestCase
     {
         $this->idp(write: true);
         $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
         $study = $this->plan($owner);
         $study->update(['category' => '資格学習', 'title' => 'SYNTHETIC_AP_OWNER_APPROVAL']);
         $task = Task::query()->create([
@@ -740,6 +745,7 @@ final class McpReadOnlyResourceTest extends TestCase
     {
         $this->idp(); // Valid token but lacks independent write scope.
         $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
         $study = $this->plan($owner);
         $study->update(['category' => '資格学習']);
         $task = Task::query()->create([
@@ -770,6 +776,7 @@ final class McpReadOnlyResourceTest extends TestCase
     {
         $this->idp(write: true);
         $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
         $other = User::factory()->create(['first_run_completed_at' => now()]);
         $study = $this->plan($owner);
         $study->update(['category' => '資格学習', 'title' => 'SECURE_AP_TEST']);
@@ -844,6 +851,87 @@ final class McpReadOnlyResourceTest extends TestCase
         ])->assertOk()
             ->assertJsonPath('result.structuredContent.sample.applied_attempts_considered', 0);
         $this->assertSame(5, $task->fresh()->progress_percent);
+    }
+
+    public function test_ap_pilot_denies_real_study_even_when_other_flags_and_grants_are_enabled(): void
+    {
+        $this->idp(write: true);
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $other = User::factory()->create(['first_run_completed_at' => now()]);
+        $study = $this->plan($owner);
+        $study->update(['category' => '資格学習', 'title' => 'PRIVATE_AP_PILOT_ONLY']);
+        $task = Task::query()->create([
+            'plan_id' => $study->id,
+            'title' => 'Private AP Network Task',
+            'status' => 'doing',
+            'progress_percent' => 10,
+            'priority' => 1,
+            'sort_order' => 1,
+        ]);
+        $this->linkAndGrant($owner, $study, 'study_progress');
+        config([
+            'canovia_mcp.study_read_enabled' => true,
+            'canovia_mcp.study_summary_read_enabled' => true,
+            'canovia_mcp.study_result_proposals_enabled' => true,
+        ]);
+
+        $policy = app(\App\Services\McpStudyPilotAccessPolicy::class);
+        foreach (['', '0', '1,2', '01', '-1', 'garbage'] as $invalid) {
+            config(['canovia_mcp.ap_pilot_owner_id' => $invalid]);
+            $this->assertFalse($policy->configured());
+            $this->assertFalse($policy->allowsPlan($study));
+        }
+
+        // The normal Development read-only tool remains reachable, but
+        // Study tools disappear while the owner pilot is unconfigured.
+        $this->rpc('tools/list')->assertOk()
+            ->assertJsonCount(1, 'result.tools');
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyContextTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertStatus(400)->assertJsonPath('error.code', -32602);
+
+        // Another real user being allowlisted MUST NOT receive the original
+        // owner's Plan, even with a valid ChatGPT token and active grant.
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $other->id]);
+        $this->assertTrue($policy->configured());
+        $this->assertFalse($policy->allowsPlan($study));
+        $consent = app(\App\Services\McpExplicitPlanConsentService::class);
+        $this->assertFalse($consent->isEligibleMcpPlanOwner($owner, $study));
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyContextTool::NAME,
+            'arguments' => ['plan_id' => $study->id, 'scope' => 'tasks'],
+        ])->assertOk()->assertJsonPath('result.isError', true)
+            ->assertDontSee('PRIVATE_AP_PILOT_ONLY');
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyPracticeSummaryTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertOk()->assertJsonPath('result.isError', true)
+            ->assertDontSee('PRIVATE_AP_PILOT_ONLY');
+        $this->rpc('tools/call', [
+            'name' => McpProposeStudyResultTool::NAME,
+            'arguments' => [
+                'plan_id' => $study->id,
+                'task_id' => $task->id,
+                'question_count' => 10,
+                'correct_count' => 7,
+                'idempotency_key' => str_repeat('e', 64),
+                'weaknesses' => ['network'],
+            ],
+        ])->assertOk()->assertJsonPath('result.isError', true);
+        $this->assertDatabaseCount('mcp_study_result_proposals', 0);
+        $this->assertSame(10, $task->fresh()->progress_percent);
+
+        // The existing Development domain cannot be affected by the
+        // AP-only owner allowlist; signed owner authorization is independent.
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
+        $this->assertTrue($policy->allowsPlan($study));
+        $this->assertTrue($consent->isEligibleMcpPlanOwner($owner, $study));
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyContextTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertOk()
+            ->assertJsonPath('result.structuredContent.plan.title', 'PRIVATE_AP_PILOT_ONLY');
     }
 
     public function test_transport_is_read_only_without_sse_sessions_or_mutation(): void

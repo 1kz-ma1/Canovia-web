@@ -251,7 +251,8 @@ final class McpReadOnlyResourceController extends Controller
     private function studyToolEnabled(): bool
     {
         return config('canovia_mcp.study_read_enabled') === true
-            && config('app.env') !== 'staging';
+            && config('app.env') !== 'staging'
+            && app(\App\Services\McpStudyPilotAccessPolicy::class)->configured();
     }
 
     private function studySummaryToolEnabled(): bool

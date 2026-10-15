@@ -22,6 +22,7 @@ final class McpDelegatedPlanAccessPolicy
         private readonly McpExternalTokenVerifier $verifier,
         private readonly McpDelegatedIdentityFingerprintService $fingerprints,
         private readonly PlanCategoryProfileService $profiles,
+        private readonly McpStudyPilotAccessPolicy $apPilot,
     ) {}
 
     public function allows(
@@ -102,7 +103,8 @@ final class McpDelegatedPlanAccessPolicy
             || $plan->user_id === null
             || (int) $plan->user_id !== (int) $link->user_id
             || (bool) $plan->is_collaborative
-            || $this->profiles->forPlan($plan)->key !== $requiredDomain) {
+            || $this->profiles->forPlan($plan)->key !== $requiredDomain
+            || ($requiredDomain === 'study' && ! $this->apPilot->allowsPlan($plan))) {
             return null;
         }
 
