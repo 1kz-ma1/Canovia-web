@@ -1,6 +1,12 @@
 <?php
 
 return [
+    // OFF until separate owner-facing opt-in and release verification.
+    // Does not authorize automatic notification or cross-Plan monitoring.
+    'learning_context_watch' => [
+        'persistence_enabled' => env('CANOVIA_LEARNING_CONTEXT_WATCH_PERSISTENCE_ENABLED', false),
+    ],
+
     'reasoning' => [
         // deterministic | auto | openai
         'mode' => env('CANOVIA_INTELLIGENCE_REASONING_MODE', 'deterministic'),
