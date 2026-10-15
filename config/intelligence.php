@@ -7,6 +7,8 @@ return [
         'persistence_enabled' => env('CANOVIA_LEARNING_CONTEXT_WATCH_PERSISTENCE_ENABLED', false),
         // Shadow-only source mutation epoch; never used for Watch freshness.
         'epoch_shadow_enabled' => env('CANOVIA_LEARNING_CONTEXT_EPOCH_SHADOW_ENABLED', false),
+        // v0.19 ephemeral buckets: OFF by default and hard-denied outside local/testing.
+        'capture_diagnostics_enabled' => env('CANOVIA_LEARNING_CAPTURE_DIAGNOSTICS_ENABLED', false),
     ],
 
     'reasoning' => [
