@@ -92,7 +92,7 @@ try {
     await first.getByText('V610 検証用ネットワーク問題 1').waitFor();
     await first.locator('input[name="choice"][value="B"]').check();
     await first.locator('textarea[name="reasoning"]').fill('選択肢Bを選んだ理由のメモ');
-    await first.getByRole('button',{name:'この1問を採点・保存'}).click();
+    await newQuestionOne.getByRole('button',{name:'この1問を採点・保存'}).click();
     const feedback1 = page.locator('[data-learning-answer-feedback]');
     await feedback1.waitFor();
     await feedback1.getByText('不正解',{exact:true}).waitFor();
@@ -113,7 +113,7 @@ try {
     step('Resumed from saved Study history and advanced to next Question Action');
 
     await second.locator('input[name="choice"][value="A"]').check();
-    await second.getByRole('button',{name:'この1問を採点・保存'}).click();
+    await newQuestionTwo.getByRole('button',{name:'この1問を採点・保存'}).click();
     await page.locator('[data-learning-answer-feedback]').getByText('正解',{exact:true}).waitFor();
     await page.getByRole('button',{name:'次の問題へ'}).click();
     await page.locator('[data-learning-question="3"]').waitFor();
@@ -230,15 +230,15 @@ try {
     await page.getByText('V616 未回答ネットワーク問題 4').waitFor();
     step('Owner selected a different published Bank and started a fresh unseen-source Run');
 
-    const first = page.locator('[data-learning-question="1"]');
-    await first.locator('input[name="choice"][value="A"]').check();
+    const newQuestionOne = page.locator('[data-learning-question="1"]');
+    await newQuestionOne.locator('input[name="choice"][value="A"]').check();
     await first.getByRole('button',{name:'この1問を採点・保存'}).click();
     await page.locator('[data-learning-answer-feedback]').getByText('正解',{exact:true}).waitFor();
     await page.getByRole('button',{name:'次の問題へ'}).click();
     await page.locator('[data-learning-question="2"]').waitFor();
     await page.getByText('V616 未回答ネットワーク問題 5').waitFor();
-    const second = page.locator('[data-learning-question="2"]');
-    await second.locator('input[name="choice"][value="A"]').check();
+    const newQuestionTwo = page.locator('[data-learning-question="2"]');
+    await newQuestionTwo.locator('input[name="choice"][value="A"]').check();
     await second.getByRole('button',{name:'この1問を採点・保存'}).click();
     await page.locator('[data-learning-answer-feedback]').getByText('正解',{exact:true}).waitFor();
     await page.locator('[data-learning-review-return-work]').click();
