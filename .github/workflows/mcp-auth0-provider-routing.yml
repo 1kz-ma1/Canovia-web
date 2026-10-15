@@ -9,6 +9,8 @@ on:
       - 'app/Services/McpOAuthAccountLinkCommitter.php'
       - 'tests/Feature/McpReadOnlyResourceTest.php'
       - 'app/Services/McpReadOnlyStudyContextTool.php'
+      - 'app/Services/McpStudyPilotAccessPolicy.php'
+      - 'app/Services/McpProtectedResourceConfiguration.php'
       - 'app/Services/McpReadOnlyStudyPracticeSummaryTool.php'
       - 'app/Services/McpProposeStudyResultTool.php'
       - 'app/Services/McpStudyResultProposalService.php'
@@ -67,6 +69,8 @@ jobs:
           php -l app/Http/Controllers/McpOAuthPlanConsentController.php
           php -l app/Http/Controllers/McpReadOnlyResourceController.php
           php -l app/Services/McpReadOnlyStudyContextTool.php
+          php -l app/Services/McpStudyPilotAccessPolicy.php
+          php -l app/Services/McpProtectedResourceConfiguration.php
           php -l app/Services/McpReadOnlyStudyPracticeSummaryTool.php
           php -l app/Services/McpStudyResultProposalService.php
           php -l app/Services/McpProposeStudyResultTool.php
