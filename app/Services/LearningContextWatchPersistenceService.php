@@ -206,7 +206,12 @@ final class LearningContextWatchPersistenceService
 
                 return $this->result($status);
             }, 3);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // Expose failing fixture details ONLY to disposable CI. Production
+            // must never reveal private source/persistence errors.
+            if (app()->environment('testing')) {
+                throw $e;
+            }
             return $this->result('blocked_error');
         }
     }
