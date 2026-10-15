@@ -24,7 +24,7 @@ function createElement() {
     };
 }
 
-async function startWelcome({ search = '', returning = false, healthReady = true, appUrl = 'https://app.canovia.com', publicRoadmapReady = false, supportAnchorReady = false } = {}) {
+async function startWelcome({ search = '', returning = false, healthReady = true, appUrl = 'https://pacekeeper-d3mm.onrender.com', publicRoadmapReady = false, supportAnchorReady = false } = {}) {
     const els = new Map([
         ['[data-status]', createElement()],
         ['[data-open]', createElement()],
@@ -107,21 +107,21 @@ test('default free-to-try entry opens the configured app only after ready health
     assert.equal(w.els.get('[data-open]').disabled, false);
     assert.equal(w.els.get('[data-open]').textContent, 'Canoviaを開く');
     assert.equal(w.fetchCalls.length, 1);
-    assert.ok(w.fetchCalls[0].url.startsWith('https://app.canovia.com/health?from=welcome&t='));
+    assert.ok(w.fetchCalls[0].url.startsWith('https://pacekeeper-d3mm.onrender.com/health?from=welcome&t='));
     assert.equal(w.fetchCalls[0].options.credentials, 'omit');
     assert.deepEqual(w.assignments, []);
     w.els.get('[data-open]').click();
-    assert.deepEqual(w.assignments, ['https://app.canovia.com']);
+    assert.deepEqual(w.assignments, ['https://pacekeeper-d3mm.onrender.com']);
     assert.equal(w.storage.get('canovia.welcome.seen.v1'), '1');
 });
 
 test('future and support links keep a fixed public destination, not an arbitrary redirect', async () => {
     const expected = [
-        ['?destination=future', 'https://app.canovia.com/feedback', '現在の無料Support候補を見る'],
-        ['?destination=support', 'https://app.canovia.com/feedback', '無料Support・フィードバックへ'],
-        ['?destination=https%3A%2F%2Fevil.example', 'https://app.canovia.com', 'Canoviaを開く'],
-        ['?destination=%2F%2Fevil.example', 'https://app.canovia.com', 'Canoviaを開く'],
-        ['?destination=bogus', 'https://app.canovia.com', 'Canoviaを開く'],
+        ['?destination=future', 'https://pacekeeper-d3mm.onrender.com/feedback', '現在の無料Support候補を見る'],
+        ['?destination=support', 'https://pacekeeper-d3mm.onrender.com/feedback', '無料Support・フィードバックへ'],
+        ['?destination=https%3A%2F%2Fevil.example', 'https://pacekeeper-d3mm.onrender.com', 'Canoviaを開く'],
+        ['?destination=%2F%2Fevil.example', 'https://pacekeeper-d3mm.onrender.com', 'Canoviaを開く'],
+        ['?destination=bogus', 'https://pacekeeper-d3mm.onrender.com', 'Canoviaを開く'],
     ];
     for (const [search, url, label] of expected) {
         const w = await startWelcome({ search });
@@ -138,13 +138,13 @@ test('roadmap and support anchor only enable after both flags explicitly accepte
     const future = await startWelcome({ search: '?destination=future', publicRoadmapReady: true });
     assert.equal(future.els.get('[data-open]').textContent, '開発ロードマップを見る');
     future.els.get('[data-open]').click();
-    assert.deepEqual(future.assignments, ['https://app.canovia.com/feedback']);
+    assert.deepEqual(future.assignments, ['https://pacekeeper-d3mm.onrender.com/feedback']);
     const support = await startWelcome({ search: '?destination=support', supportAnchorReady: true });
     support.els.get('[data-open]').click();
-    assert.deepEqual(support.assignments, ['https://app.canovia.com/feedback#support-candidates']);
+    assert.deepEqual(support.assignments, ['https://pacekeeper-d3mm.onrender.com/feedback#support-candidates']);
     const partial = await startWelcome({ search: '?destination=support', publicRoadmapReady: true });
     partial.els.get('[data-open]').click();
-    assert.deepEqual(partial.assignments, ['https://app.canovia.com/feedback']);
+    assert.deepEqual(partial.assignments, ['https://pacekeeper-d3mm.onrender.com/feedback']);
 });
 
 test('returning actor preserves ready-only auto entry and respects explicit public destination', async () => {
@@ -153,7 +153,7 @@ test('returning actor preserves ready-only auto entry and respects explicit publ
     const automatic = w.scheduled.find((item) => item.delay === 450);
     assert.ok(automatic, 'should only auto-enter after healthy ready state');
     automatic.callback();
-    assert.deepEqual(w.assignments, ['https://app.canovia.com/feedback']);
+    assert.deepEqual(w.assignments, ['https://pacekeeper-d3mm.onrender.com/feedback']);
 });
 
 test('cold start preserves retry and explicit open-anyway; it never auto-redirects before ready', async () => {
@@ -162,5 +162,5 @@ test('cold start preserves retry and explicit open-anyway; it never auto-redirec
     assert.deepEqual(w.assignments, []);
     assert.ok(w.scheduled.some((item) => item.delay === 2200));
     w.els.get('[data-open-anyway]').click();
-    assert.deepEqual(w.assignments, ['https://app.canovia.com/feedback']);
+    assert.deepEqual(w.assignments, ['https://pacekeeper-d3mm.onrender.com/feedback']);
 });

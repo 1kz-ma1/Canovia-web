@@ -1,0 +1,60 @@
+name: Pre-Launch Public DNS/TLS + Live Static Read-only Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/prelaunch-public-dns-tls-readonly.yml'
+      - 'scripts/ci/prelaunch_static_public_dns_tls_probe.mjs'
+      - 'tests/js/prelaunch-static-public-dns-tls-probe.test.mjs'
+      - 'static-welcome/config.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-unit:
+    name: "Public DNS/TLS probe guardrails (offline)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check and no-network negative controls
+        run: |
+          set -euo pipefail
+          node --check scripts/ci/prelaunch_static_public_dns_tls_probe.mjs
+          node --test tests/js/prelaunch-static-public-dns-tls-probe.test.mjs
+
+  publicly-visible-read-only:
+    name: "Public TLS handshake and STATIC GET only (NOT release acceptance)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    needs: offline-unit
+    env:
+      # This only permits DNS lookup, TLS handshake, and 2 allowlisted
+      # unauthenticated GETs to the EXISTING STATIC Render host. It does
+      # not send HTTP GET to the Web Laravel origin or wake it.
+      CANOVIA_STATIC_URL_PROBE_APPROVED: 'YES'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Probe public domain TLS and current static site
+        run: |
+          set -euo pipefail
+          node scripts/ci/prelaunch_static_public_dns_tls_probe.mjs --live-read-only
+      - name: State what this did not accept
+        if: always()
+        run: |
+          echo 'Read-only, anonymous public TLS/Static GET only.'
+          echo 'This did not assert custom-domain backend parity, Laravel health/CORS, real Safari/iPhone, Live SHA or production deploy readiness.'
+          echo 'No GitHub production merge, Render deploy or database operation authorized.'
