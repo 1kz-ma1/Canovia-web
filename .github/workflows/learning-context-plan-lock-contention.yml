@@ -29,6 +29,8 @@ on:
       - 'database/migrations/2026_10_15_120000_create_learning_context_source_epochs_table.php'
       - 'tests/Feature/LearningContextPlanLockContentionTest.php'
       - 'tests/Feature/LearningContextSourceEpochShadowTest.php'
+      - 'tests/Feature/LearningContextSourceAuthorityV018Test.php'
+      - 'docs/development/decisions/2026-10-15_LEARNING_CONTEXT_SOURCE_AUTHORITY_V018.md'
       - 'tests/Feature/LearningContextPlanReviewEpochV011Test.php'
       - 'tests/Feature/LearningContextOwnerPlanEditV012Test.php'
       - 'tests/Feature/LearningContextEligibilityTransitionsV013Test.php'
@@ -210,6 +212,7 @@ jobs:
             tests/Feature/LearningContextWatchPersistenceTest.php \
             tests/Feature/LearningContextWatchSettingsTest.php \
             tests/Feature/LearningContextSourceEpochShadowTest.php \
+            tests/Feature/LearningContextSourceAuthorityV018Test.php \
             tests/Feature/LearningContextPlanReviewEpochV011Test.php \
             tests/Feature/LearningContextOwnerPlanEditV012Test.php \
             tests/Feature/LearningContextEligibilityTransitionsV013Test.php \
