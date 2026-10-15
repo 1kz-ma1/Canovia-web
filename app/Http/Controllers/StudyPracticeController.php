@@ -21,6 +21,7 @@ use App\Intelligence\Study\StudyAdaptiveActionService;
 use App\Services\PracticeQuestionDemandRecorder;
 use App\Services\StudyPracticeOrchestrator;
 use App\Services\StudyPracticeAssessmentCommitFence;
+use App\Services\LearningContextSourceEpochService;
 use App\Services\StudyPracticeGenerationCommitFence;
 use App\Services\StudyPracticePromptService;
 use App\Services\StudyPracticeReliabilityService;
@@ -1385,6 +1386,8 @@ class StudyPracticeController extends Controller
                 'progress_after_percent' => $progressAfter,
                 'applied_at' => now(),
             ]);
+            // Same Plan-first transaction: only first successful apply bumps.
+            app(LearningContextSourceEpochService::class)->record($lockedPlan, 'practice_applied');
 
             if ($attempt->study_practice_session_id) {
                 StudyPracticeSession::query()
