@@ -24,7 +24,7 @@ if (
     || (string) getenv('DB_URL') !== ''
     || config('app.url') !== 'http://127.0.0.1:8799'
     || (string) getenv('NATIVE_AI_DRIVER') !== 'disabled'
-    || $argv !== [__FILE__, '--seed-task']
+    || count($argv) !== 2 || $argv[1] !== '--seed-task'
 ) {
     fwrite(STDERR, "V621_SYNTHETIC_TASK_NONDISPOSABLE_DENIED\n");
     exit(2);
