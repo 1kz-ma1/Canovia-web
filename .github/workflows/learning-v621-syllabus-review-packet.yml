@@ -1,0 +1,59 @@
+name: Learning V6.21 Official Syllabus Review Packet
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/learning-v621-syllabus-review-packet.yml'
+      - 'app/Console/Commands/ExportStudyOfficialSyllabusReviewPacket.php'
+      - 'app/Services/StudyOfficialSyllabusReviewPacketService.php'
+      - 'tests/Feature/StudyOfficialSyllabusReviewPacketV621Test.php'
+      - 'app/Services/StudyOfficialSyllabusBridgeService.php'
+      - 'config/study_official_syllabus.php'
+      - 'docs/development/LEARNING_OFFICIAL_SYLLABUS_REVIEW_PACKET_V6_21_2026_10_15.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  review-packet-v621:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+      - name: Install locked PHP deps
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Prepare isolated test environment and lint
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          echo "APP_ENV=testing" >> .env
+          echo "DB_CONNECTION=sqlite" >> .env
+          echo "DB_DATABASE=:memory:" >> .env
+          echo "CACHE_STORE=array" >> .env
+          echo "SESSION_DRIVER=array" >> .env
+          echo "NATIVE_AI_DRIVER=disabled" >> .env
+          php artisan key:generate --force --no-interaction
+          php -l app/Services/StudyOfficialSyllabusReviewPacketService.php
+          php -l app/Console/Commands/ExportStudyOfficialSyllabusReviewPacket.php
+          php -l tests/Feature/StudyOfficialSyllabusReviewPacketV621Test.php
+      - name: Run V6.21 inventory and existing V6.20/V6.19 regressions
+        run: |
+          APP_ENV=testing CACHE_STORE=array DB_CONNECTION=sqlite DB_DATABASE=:memory: \
+          php artisan test \
+            tests/Feature/StudyOfficialSyllabusReviewPacketV621Test.php \
+            tests/Feature/StudyOfficialSyllabusBridgeV620Test.php \
+            tests/Feature/StudyLearningBankTopicCoverageV619Test.php
+      - name: State evidence boundary
+        run: |
+          echo "Verified: synthetic read-only review packet, exact Question hashes, fail-closed AP scope and no prompt/answer export."
+          echo "NOT verified: human transcription, two-person content/rights review, official mapping or coverage, real device, Render, Aiven or production."
