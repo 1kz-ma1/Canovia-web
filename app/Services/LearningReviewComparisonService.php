@@ -13,7 +13,7 @@ use Illuminate\Support\Collection;
  */
 final class LearningReviewComparisonService
 {
-    private const FOCUSED_POLICIES = ['bank_topic_review_initial_v613', 'bank_topic_distinct_initial_v616'];
+    private const FOCUSED_POLICIES = ['bank_topic_review_initial_v613', 'bank_topic_distinct_initial_v616', 'bank_topic_delayed_distinct_initial_v617'];
     private const RUN_LIMIT = 3;
 
     public function __construct(
