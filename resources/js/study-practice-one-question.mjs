@@ -79,9 +79,13 @@ const mountWhenReady = () => {
     // Run after the existing StudyPractice draft-restoration listener.
     window.requestAnimationFrame(() => mountLegacyStudyQuestionPager());
 };
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', mountWhenReady);
-} else {
-    mountWhenReady();
+// Unit tests import the module in Node without a browser window, then call
+// the exported mount function with a synthetic root.
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', mountWhenReady);
+    } else {
+        mountWhenReady();
+    }
+    document.addEventListener('canovia:page-ready', mountWhenReady);
 }
-document.addEventListener('canovia:page-ready', mountWhenReady);
