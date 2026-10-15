@@ -421,7 +421,10 @@ class PlanReviewAssistantController extends Controller
         $metricsBefore = $progressService->calculate($plan);
 
         $appliedNow = DB::transaction(function () use ($plan, $draft, $proposal, $selectedOperations, $metricsBefore, $progressService, $requestHash) {
-            Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
+            // Bind all following writes to the current, locked Plan. The
+            // preflight owner check above can become stale while waiting.
+            $plan = Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
+            $this->authorizePlanOwner($plan);
 
             if (PlanAdjustment::query()
                 ->where('plan_id', $plan->id)
@@ -449,6 +452,12 @@ class PlanReviewAssistantController extends Controller
                 ]);
                 $before = $plan->only(array_keys($changes));
                 $plan->update($changes);
+                if ($plan->wasChanged()) {
+                    // A Plan update can change the Study eligibility,
+                    // deadline/title or even only updated_at in v0.7 hash.
+                    app(\App\Services\LearningContextSourceEpochService::class)
+                        ->record($plan, 'plan_updated');
+                }
 
                 $appliedOperations[] = array_merge($operation, ['before' => $before]);
             }
@@ -514,6 +523,8 @@ class PlanReviewAssistantController extends Controller
                     $createdTaskMap[$operation['client_ref']] = $task;
                 }
 
+                app(\App\Services\LearningContextSourceEpochService::class)
+                    ->record($plan, 'task_created');
                 $appliedOperations[] = array_merge($operation, ['created_task_id' => $task->id]);
             }
 
@@ -558,6 +569,10 @@ class PlanReviewAssistantController extends Controller
                         'progress_reason' => $operation['progress_reason'] ?: $task->progress_reason,
                         'status' => $this->resolveTaskStatus($progressAfter),
                     ]);
+                    if ($task->wasChanged()) {
+                        app(\App\Services\LearningContextSourceEpochService::class)
+                            ->record($plan, 'task_updated');
+                    }
                 }
 
                 $appliedOperations[] = array_merge($operation, [
@@ -599,6 +614,10 @@ class PlanReviewAssistantController extends Controller
 
                 $before = $task->only(array_keys($changes));
                 $task->update($changes);
+                if ($task->wasChanged()) {
+                    app(\App\Services\LearningContextSourceEpochService::class)
+                        ->record($plan, 'task_updated');
+                }
 
                 $appliedOperations[] = array_merge($operation, ['before' => $before]);
             }
@@ -611,6 +630,10 @@ class PlanReviewAssistantController extends Controller
                 $task = $plan->tasks()->whereKey($operation['task_id'])->lockForUpdate()->firstOrFail();
                 $beforeStatus = $task->status;
                 $task->update(['status' => 'cancelled']);
+                if ($task->wasChanged()) {
+                    app(\App\Services\LearningContextSourceEpochService::class)
+                        ->record($plan, 'task_updated');
+                }
 
                 $appliedOperations[] = array_merge($operation, ['before_status' => $beforeStatus]);
             }
@@ -632,6 +655,12 @@ class PlanReviewAssistantController extends Controller
                     }
 
                     $task->update(['sort_order' => $sortOrder + 1]);
+                    if ($task->wasChanged()) {
+                        // Even a reordering write changes updated_at, an
+                        // input to the current full-history source revision.
+                        app(\App\Services\LearningContextSourceEpochService::class)
+                            ->record($plan, 'task_updated');
+                    }
                 }
 
                 $appliedOperations[] = $operation;

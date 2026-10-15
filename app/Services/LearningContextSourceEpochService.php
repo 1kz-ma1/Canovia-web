@@ -28,6 +28,7 @@ final class LearningContextSourceEpochService
         'task_deleted',
         'practice_applied',
         'approved_result_changed',
+        'plan_updated',
     ];
 
     public function enabled(): bool

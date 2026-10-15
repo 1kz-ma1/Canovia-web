@@ -548,7 +548,15 @@ class CompanionMutationApplyService
         }
 
         $plan->update($changes);
+        // The authoritative v0.7 hash includes Plan.updated_at, so even
+        // changes to other Plan attributes can invalidate its revision.
+        $sourceChanged = $plan->wasChanged();
         $plan->refresh();
+        if ($sourceChanged) {
+            // Companion apply already holds this Plan row lock. Shadow only.
+            app(LearningContextSourceEpochService::class)
+                ->record($plan, 'plan_updated');
+        }
 
         if ((string) $plan->title !== $previousTitle) {
             $this->goalContexts->syncPlanTitle($plan, $previousTitle);
