@@ -26,7 +26,8 @@ test('real offline Chromium renders intro and navigation without viewport overfl
             }));
             assert.ok(overflow.pageWidth <= overflow.viewportWidth + 1,
                 `overflow at ${viewport.width}px: ${JSON.stringify(overflow)}`);
-            assert.equal(await page.locator('a[href="./index.html?destination=future"]').count(), 1);
+            assert.equal(await page.locator('a[href="./index.html?destination=future"]').count(), 0);
+            assert.match(await page.locator('#future').innerText(), /開発ロードマップは準備中/);
             assert.equal(await page.locator('a[href="./index.html?destination=support"]').count(), 1);
             assert.ok(await page.locator('.hero-actions .button-primary').isVisible());
             await context.close();

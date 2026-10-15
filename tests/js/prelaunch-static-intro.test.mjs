@@ -24,7 +24,7 @@ function createElement() {
     };
 }
 
-async function startWelcome({ search = '', returning = false, healthReady = true, appUrl = 'https://app.canovia.com' } = {}) {
+async function startWelcome({ search = '', returning = false, healthReady = true, appUrl = 'https://app.canovia.com', publicRoadmapReady = false, supportAnchorReady = false } = {}) {
     const els = new Map([
         ['[data-status]', createElement()],
         ['[data-open]', createElement()],
@@ -37,7 +37,7 @@ async function startWelcome({ search = '', returning = false, healthReady = true
     const storage = new Map(returning ? [['canovia.welcome.seen.v1', '1']] : []);
     const fetchCalls = [];
     const win = {
-        CANOVIA_WELCOME_CONFIG: { appUrl },
+        CANOVIA_WELCOME_CONFIG: { appUrl, publicRoadmapReady, supportAnchorReady },
         location: { search, assign: (href) => assignments.push(href) },
         setTimeout: (callback, delay) => {
             scheduled.push({ callback, delay });
@@ -79,10 +79,13 @@ test('public intro is static, provides honest launch copy and routes through the
     const html = read('static-welcome/intro.html');
     assert.match(html, /<h1[^>]*>[\s\S]*やったことを、/);
     assert.match(html, /先行公開に向けて準備中/);
-    assert.match(html, /診断やPlan作成は、最初から必須ではありません/);
-    for (const target of ['./index.html', './index.html?destination=future', './index.html?destination=support']) {
+    assert.match(html, /診断・相談・Planなしで始める入口も、Web版の更新に合わせて準備しています/);
+    assert.doesNotMatch(html, />無料で試す</);
+    for (const target of ['./index.html', './index.html?destination=support']) {
         assert.ok(html.includes(`href="${target}"`), `missing route ${target}`);
     }
+    assert.match(html, /開発ロードマップは準備中/);
+    assert.doesNotMatch(html, /href="\.\/index\.html\?destination=future"/);
     assert.match(html, /金銭的支援・購入ではありません/);
     assert.doesNotMatch(html, /<script/i);
     assert.doesNotMatch(html, /https?:\/\//i);
@@ -114,8 +117,8 @@ test('default free-to-try entry opens the configured app only after ready health
 
 test('future and support links keep a fixed public destination, not an arbitrary redirect', async () => {
     const expected = [
-        ['?destination=future', 'https://app.canovia.com/feedback', '開発ロードマップを見る'],
-        ['?destination=support', 'https://app.canovia.com/feedback#support-candidates', '無料Support・フィードバックへ'],
+        ['?destination=future', 'https://app.canovia.com/feedback', '現在の無料Support候補を見る'],
+        ['?destination=support', 'https://app.canovia.com/feedback', '無料Support・フィードバックへ'],
         ['?destination=https%3A%2F%2Fevil.example', 'https://app.canovia.com', 'Canoviaを開く'],
         ['?destination=%2F%2Fevil.example', 'https://app.canovia.com', 'Canoviaを開く'],
         ['?destination=bogus', 'https://app.canovia.com', 'Canoviaを開く'],
@@ -126,6 +129,22 @@ test('future and support links keep a fixed public destination, not an arbitrary
         w.els.get('[data-open]').click();
         assert.deepEqual(w.assignments, [url]);
     }
+});
+
+test('roadmap and support anchor only enable after both flags explicitly accepted', async () => {
+    const config = read('static-welcome/config.js');
+    assert.match(config, /publicRoadmapReady: false/);
+    assert.match(config, /supportAnchorReady: false/);
+    const future = await startWelcome({ search: '?destination=future', publicRoadmapReady: true });
+    assert.equal(future.els.get('[data-open]').textContent, '開発ロードマップを見る');
+    future.els.get('[data-open]').click();
+    assert.deepEqual(future.assignments, ['https://app.canovia.com/feedback']);
+    const support = await startWelcome({ search: '?destination=support', supportAnchorReady: true });
+    support.els.get('[data-open]').click();
+    assert.deepEqual(support.assignments, ['https://app.canovia.com/feedback#support-candidates']);
+    const partial = await startWelcome({ search: '?destination=support', publicRoadmapReady: true });
+    partial.els.get('[data-open]').click();
+    assert.deepEqual(partial.assignments, ['https://app.canovia.com/feedback']);
 });
 
 test('returning actor preserves ready-only auto entry and respects explicit public destination', async () => {
@@ -143,5 +162,5 @@ test('cold start preserves retry and explicit open-anyway; it never auto-redirec
     assert.deepEqual(w.assignments, []);
     assert.ok(w.scheduled.some((item) => item.delay === 2200));
     w.els.get('[data-open-anyway]').click();
-    assert.deepEqual(w.assignments, ['https://app.canovia.com/feedback#support-candidates']);
+    assert.deepEqual(w.assignments, ['https://app.canovia.com/feedback']);
 });
