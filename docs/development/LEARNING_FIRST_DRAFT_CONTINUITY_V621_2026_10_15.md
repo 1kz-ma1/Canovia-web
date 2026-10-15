@@ -21,9 +21,9 @@ This is distinct from the Question Bank's newer `LearningRun` with per-answer gr
 
 Add `.github/workflows/learning-v621-draft-browser.yml` using headless Chromium at **390×844** with `APP_ENV=testing`, `CI=true`, `NATIVE_AI_DRIVER=disabled`, a fresh **only** disposable `$RUNNER_TEMP/learning-v621-browser.sqlite`, Laravel bound to `127.0.0.1:8799` and no remote provider, real user or secret.
 
-Test script **creates the guest Study Plan, registered synthetic account, first Task, imported synthetic external-style question JSON, answers and assessment exclusively via real browser UI**. No Plan/Task/Answer/Attempt database seed or synthetic answer API bypass.
+The browser **creates the guest Study Plan and registers the synthetic account through the real UI**. A strictly pinned disposable SQLite helper `learning_v621_synthetic_task.php --seed-task` then creates **one synthetic Task** for this isolated validation, because the new Study Workspace may direct a fresh Plan through missing-context confirmation instead of presenting the assumed Task creation form. **Initial Task creation from first-use UI is NOT proven by this test** and remains a separate acceptance item. From that point, all imported synthetic external-style question JSON, answer edits, autosaves, reload, submission and assessment occur via actual browser UI. There is no Plan/Answer/Attempt database seed or fabricated answer API.
 
-Its read-only PHP checker `learning_v621_draft_readonly.php` is pinned to local CI env, exact temporary SQLite path and test account. It returns **only** opaque state flags/counters, not Plan IDs/answer text/exam material. It proves:
+Its read-only PHP checker `learning_v621_draft_readonly.php` is pinned to local CI env, exact temporary SQLite path and test account. It returns **only** synthetic status flags/counters, not Plan IDs/answer text/exam material. It proves:
 1. Generated external-style 2-question JSON import creates ready StudyPracticeSession but no graded Attempt.
 2. First radio answer causes real POST `/draft` 204 and visible **server saved**; DB has Q1 draft and **zero Attempts**.
 3. Clear **origin localStorage** before hard reload; radio answer remains checked, proving server/PHP session restoration rather than relying solely on local cache.
