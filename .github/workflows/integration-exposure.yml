@@ -30,7 +30,13 @@ jobs:
           php-version: '8.4'
           extensions: mbstring, pdo_sqlite, sqlite3
           coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
       - run: composer install --no-interaction --prefer-dist --no-progress
+      # Authorization failures render Blade views that use the real Vite manifest.
+      - run: npm ci --ignore-scripts && npm run build
       - run: >-
           php artisan test tests/Feature/IntegrationExposureBoundaryTest.php
           tests/Feature/ReleaseLevelFoundationV5820Test.php tests/Feature/FeatureAccessV406Test.php
