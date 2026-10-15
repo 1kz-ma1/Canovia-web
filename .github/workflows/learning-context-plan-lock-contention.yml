@@ -9,6 +9,8 @@ on:
       - 'app/Http/Controllers/StudyRecallController.php'
       - 'app/Http/Controllers/AdaptiveLearningNextActionController.php'
       - 'app/Http/Controllers/GuidedExecutionController.php'
+      - 'app/Intelligence/Study/StudyActionTaskProjector.php'
+      - 'app/Services/CompanionMutationApplyService.php'
       - 'app/Services/LearningContextWatchPersistenceService.php'
       - 'app/Services/LearningContextSourceEpochService.php'
       - 'app/Services/McpStudyResultProposalService.php'
@@ -16,6 +18,12 @@ on:
       - 'database/migrations/2026_10_15_120000_create_learning_context_source_epochs_table.php'
       - 'tests/Feature/LearningContextPlanLockContentionTest.php'
       - 'tests/Feature/LearningContextSourceEpochShadowTest.php'
+      - 'tests/Feature/StudyActionCommitFenceG3Test.php'
+      - 'tests/Feature/CanoviaCompanionMutationApplyV4115Test.php'
+      - 'tests/Feature/GuidedExecutionNextActionV67Test.php'
+      - 'tests/Feature/AdaptiveLearningNextActionV611Test.php'
+      - 'tests/Feature/StudyRecallTaskProgressionV586Test.php'
+      - 'docs/development/LEARNING_CONTEXT_SOURCE_EPOCH_WRITERS_V010_2026_10_15.md'
       - 'docs/development/LEARNING_CONTEXT_SOURCE_EPOCH_SHADOW_V09_2026_10_15.md'
       - 'docs/development/LEARNING_CONTEXT_SOURCE_LOCK_V05_2026_10_15.md'
       - 'docs/development/LEARNING_CONTEXT_SOURCE_WRITER_AUDIT_V06_2026_10_15.md'
@@ -107,6 +115,8 @@ jobs:
           php -l app/Http/Controllers/StudyRecallController.php
           php -l app/Http/Controllers/AdaptiveLearningNextActionController.php
           php -l app/Http/Controllers/GuidedExecutionController.php
+          php -l app/Intelligence/Study/StudyActionTaskProjector.php
+          php -l app/Services/CompanionMutationApplyService.php
           php -l tests/Feature/LearningContextPlanLockContentionTest.php
           php -l app/Services/LearningContextSourceEpochService.php
           php -l database/migrations/2026_10_15_120000_create_learning_context_source_epochs_table.php
@@ -144,6 +154,8 @@ jobs:
             tests/Feature/AdaptiveLearningNextActionV611Test.php \
             tests/Feature/GuidedExecutionNextActionV67Test.php \
             tests/Feature/GuidedExecutionV4114Test.php \
+            tests/Feature/StudyActionCommitFenceG3Test.php \
+            tests/Feature/CanoviaCompanionMutationApplyV4115Test.php \
             tests/Feature/StudyRecallTaskProgressionV586Test.php \
             tests/Feature/StudyTaskProgressionV4110Test.php \
             tests/Feature/LearningContextSourceCaptureTest.php \
