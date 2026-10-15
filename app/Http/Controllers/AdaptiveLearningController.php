@@ -10,6 +10,7 @@ use App\Models\Task;
 use App\Services\AdaptiveLearningAnswerDraftService;
 use App\Services\AdaptiveLearningHistoryService;
 use App\Services\AdaptiveLearningReviewEntryService;
+use App\Services\AdaptiveLearningDistinctReviewService;
 use App\Services\AdaptiveLearningBankQueueService;
 use App\Services\AdaptiveLearningCandidateService;
 use App\Services\AdaptiveExamProfileRegistry;
