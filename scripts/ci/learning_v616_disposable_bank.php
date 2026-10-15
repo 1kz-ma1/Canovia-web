@@ -69,7 +69,7 @@ $pack = QuestionPack::query()->create([
     'slug' => 'learning-v616-distinct-disposable',
     'title' => 'V616 合成別問題',
     'exam_code' => 'AP', 'subject' => '科目A', 'version' => '1',
-    'status' => 'published',
+    'status' => 'published', 'metadata' => ['match_terms' => ['AP']],
 ]);
 foreach ([4, 5] as $ordinal) {
     Question::query()->create([
