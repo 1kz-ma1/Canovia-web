@@ -91,6 +91,8 @@
                 class="mt-4 inline-flex text-sm font-semibold text-sky-300">← 学習Workspaceへ戻る</a>
         </section>
     @endif
+    @include('learning.partials.delayed-recheck', ['cue' => $delayedRecheck, 'isHistory' => false])
+
     <section class="page-card p-5 sm:p-7" data-adaptive-learning-start>
         <p class="text-xs font-bold tracking-widest text-cyan-400">ADAPTIVE LEARNING / EARLY PILOT</p>
         <h1 class="mt-2 text-2xl font-bold text-slate-50">1問から始める学習</h1>
