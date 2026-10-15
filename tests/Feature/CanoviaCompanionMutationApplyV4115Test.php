@@ -130,6 +130,47 @@ class CanoviaCompanionMutationApplyV4115Test extends TestCase
         $this->assertSame($created->first()->id, $candidate->fresh()->applied_target_id);
     }
 
+    public function test_private_study_companion_task_changes_increment_shadow_only_on_real_writes(): void
+    {
+        config(['intelligence.learning_context_watch.epoch_shadow_enabled' => true]);
+        [$user, $plan, $task, $thread] = $this->scenario();
+        $plan->update(['category' => '資格学習']);
+        $this->actingAs($user);
+
+        $create = $this->candidate($user, $thread, $plan, null, 'create_task', [
+            'title' => '新しい復習Task', 'priority' => 2,
+        ]);
+        $this->post(route('companion.candidates.apply', [$thread, $create]), [
+            'apply_request_id' => (string) Str::uuid(),
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('learning_context_source_epochs', [
+            'plan_id' => $plan->id, 'epoch' => 1, 'last_mutation_kind' => 'task_created',
+        ]);
+
+        $update = $this->candidate($user, $thread, $plan, $task, 'update_task', [
+            'next_action_note' => 'DNSの誤答を再確認する',
+        ]);
+        $this->post(route('companion.candidates.apply', [$thread, $update]), [
+            'apply_request_id' => (string) Str::uuid(),
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('DNSの誤答を再確認する', $task->fresh()->next_action_note);
+        $this->assertDatabaseHas('learning_context_source_epochs', [
+            'plan_id' => $plan->id, 'epoch' => 2, 'last_mutation_kind' => 'task_updated',
+        ]);
+
+        // A distinct human approval with the same existing Task field values
+        // cannot fabricate another source mutation.
+        $noOp = $this->candidate($user, $thread, $plan, $task, 'update_task', [
+            'next_action_note' => 'DNSの誤答を再確認する',
+        ]);
+        $this->post(route('companion.candidates.apply', [$thread, $noOp]), [
+            'apply_request_id' => (string) Str::uuid(),
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('learning_context_source_epochs', [
+            'plan_id' => $plan->id, 'epoch' => 2,
+        ]);
+    }
+
     public function test_plan_update_is_owner_only_syncs_goal_title_and_ignores_public_setting(): void
     {
         [$user, $plan, $task, $thread] = $this->scenario();
