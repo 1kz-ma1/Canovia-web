@@ -19,6 +19,7 @@ import sys
 
 PINNED_SHA = "069e9b5790345feb9bb9edd437ac1c5a39a73efd"
 IA2J_SHA = "fdbe29de79f0ca7df255a978e13f94f248a3ff32"
+V621_SHA = "ce3c57dd3fbfcbef606d32920822d1c9b8eaf72b"
 BASE_URL = "http://127.0.0.1:8797"
 STATE_FILENAME = "ia2i-private-state.json"
 DB_FILENAME = "ia2i-disposable.sqlite"
@@ -34,6 +35,8 @@ def lab_profile(source_sha: str) -> tuple[int, str, str]:
         return (8797, "canovia-ia2i-session", "Canovia IA2i Local Acceptance")
     if source_sha == IA2J_SHA:
         return (8798, "canovia-ia2j-session", "Canovia IA2j Local Acceptance")
+    if source_sha == V621_SHA:
+        return (8799, "canovia-v621-session", "Canovia V621 Safari Draft Acceptance")
     raise SafetyError("Source SHA is not in the explicit local acceptance allowlist")
 
 
