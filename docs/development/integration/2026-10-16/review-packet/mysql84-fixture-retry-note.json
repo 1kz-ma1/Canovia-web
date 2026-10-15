@@ -1,0 +1,17 @@
+{
+  "initial_attempt_result": "failed",
+  "initial_attempt_tests": 23,
+  "initial_attempt_passed": 22,
+  "initial_attempt_errors": 1,
+  "observation": "Reused synthetic DB contained the fixed p0-ci-state-reference from the preceding run",
+  "action": "Reset only the owned disposable fixture, replayed exact 94-to-114 upgrade, reran once",
+  "source_changed_to_make_test_pass": false,
+  "clean_run": {
+    "tool": "phpunit",
+    "result": "passed",
+    "tests": 23,
+    "passed": 23,
+    "assertions": 345,
+    "duration_ms": 4956
+  }
+}

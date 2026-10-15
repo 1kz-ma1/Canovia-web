@@ -1,0 +1,135 @@
+{
+  "headRefOid": "cbc5cbb8562dea3185aba9f40c396e7372e9e18f",
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:03:55Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821196812/job/116717907938",
+      "name": "development-prelaunch",
+      "startedAt": "2026-10-15T23:03:29Z",
+      "status": "COMPLETED",
+      "workflowName": "Development Prelaunch Preparation V1"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:04:30Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821196948/job/116717908820",
+      "name": "chromium-v69",
+      "startedAt": "2026-10-15T23:03:29Z",
+      "status": "COMPLETED",
+      "workflowName": "Development V6.9 Disposable Chromium Journey"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:03:55Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821196848/job/116717908718",
+      "name": "publication-and-session",
+      "startedAt": "2026-10-15T23:03:29Z",
+      "status": "COMPLETED",
+      "workflowName": "Integration Publication Boundaries"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:04:48Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821196815/job/116717908041",
+      "name": "learning-evidence-v611",
+      "startedAt": "2026-10-15T23:03:28Z",
+      "status": "COMPLETED",
+      "workflowName": "Learning V6.11 Evidence To Confirmed Next Action"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:05:17Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821196840/job/116717908021",
+      "name": "learning-review-v613",
+      "startedAt": "2026-10-15T23:03:28Z",
+      "status": "COMPLETED",
+      "workflowName": "Learning V6.13 Topic Review Remeasure Loop"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:04:32Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821196938/job/116717908601",
+      "name": "learning-chromium-v621",
+      "startedAt": "2026-10-15T23:03:29Z",
+      "status": "COMPLETED",
+      "workflowName": "Learning V6.21 Disposable Legacy Draft Continuity"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:03:43Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821196833/job/116717908936",
+      "name": "Platform release preflight offline tests",
+      "startedAt": "2026-10-15T23:03:29Z",
+      "status": "COMPLETED",
+      "workflowName": "Platform Release Preflight (Offline)"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:04:29Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821196835/job/116717908276",
+      "name": "first-use-chromium",
+      "startedAt": "2026-10-15T23:03:29Z",
+      "status": "COMPLETED",
+      "workflowName": "Pre-Launch IA-2d Disposable Chromium First-Use Journeys"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:04:04Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821196853/job/116717909524",
+      "name": "migration-recovery",
+      "startedAt": "2026-10-15T23:03:29Z",
+      "status": "COMPLETED",
+      "workflowName": "Production Migration Recovery Validation"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:05:14Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821196822/job/116717908952",
+      "name": "workspace-resume",
+      "startedAt": "2026-10-15T23:03:29Z",
+      "status": "COMPLETED",
+      "workflowName": "V56.12 Workspace Resume Validation"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:04:25Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821196848/job/116717909072",
+      "name": "browser (welcome)",
+      "startedAt": "2026-10-15T23:03:28Z",
+      "status": "COMPLETED",
+      "workflowName": "Integration Publication Boundaries"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:04:31Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821196848/job/116717909031",
+      "name": "browser (development)",
+      "startedAt": "2026-10-15T23:03:29Z",
+      "status": "COMPLETED",
+      "workflowName": "Integration Publication Boundaries"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:04:26Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821196848/job/116717909043",
+      "name": "browser (study)",
+      "startedAt": "2026-10-15T23:03:29Z",
+      "status": "COMPLETED",
+      "workflowName": "Integration Publication Boundaries"
+    }
+  ]
+}

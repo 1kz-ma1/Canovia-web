@@ -1,0 +1,13 @@
+{
+  "source_sha": "a2a8febbdcfc9f820fa423be19cc048394b6a3e9",
+  "scope": "8 publication/auth/session/MCP/startup test files",
+  "report": {
+    "tool": "phpunit",
+    "result": "passed",
+    "tests": 58,
+    "passed": 58,
+    "assertions": 596,
+    "duration_ms": 5833
+  },
+  "production_verified": false
+}

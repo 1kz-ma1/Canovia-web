@@ -1,0 +1,15 @@
+{
+  "main": "626a4ea6b19842089da91b107cc61da234858c7d",
+  "production": "15abdc9de6f24b5250fb255c579d1aa55facaf1a",
+  "ios_main": "fc0e0c498afe35eda494f63356f7a0bae156bdbb",
+  "master_pr_769_head": "d1cdead047f6fe540a0e10db492709d21715ec1e",
+  "local_tested_aggregate": "1875c7ab5d599fff155ef2108e70078ca93c7cc4",
+  "formal_release_sha": null,
+  "render_live_verified": false,
+  "github_ci_verified": false,
+  "production_authorized": false,
+  "latest_migration_branch_sha": "99ff945fc190bae41c65ed10ba041027fae3b3d2",
+  "later_delta_scope": "two-file shell retry-bound validation follow-up; targeted checks passed, no broad rerun claimed",
+  "latest_local_qualified_source": "3334e9ea9d173e13fff2c6cbafb50dbfd9af346e",
+  "latest_qualification": "58 boundary tests and fresh MySQL 8.4 94-to-114 upgrade + 23 schema tests passed"
+}

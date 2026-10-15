@@ -1,0 +1,13 @@
+{
+  "series": "8.0",
+  "version": "8.0.46",
+  "image_id": "sha256:6cd09145362dfe6831b14545de3d5fd6cc75c37cfd6ef8561429c1fc73518b39",
+  "base_sha": "15abdc9de6f24b5250fb255c579d1aa55facaf1a",
+  "candidate_sha": "1875c7ab5d599fff155ef2108e70078ca93c7cc4",
+  "baseline_migrations": 94,
+  "candidate_migrations": 114,
+  "result": "passed",
+  "real_aiven_verified": false,
+  "physical_device_verified": false,
+  "release_authorized": false
+}
