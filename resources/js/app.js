@@ -1379,40 +1379,56 @@ function openOfflineDb() {
                 request.result.createObjectStore(offlineStoreName);
             }
         };
-        request.onsuccess = () => resolve(request.result);
+        request.onsuccess = () => {
+            const db = request.result;
+            // Other tabs and logout may ask to delete this database.
+            db.onversionchange = () => db.close();
+            resolve(db);
+        };
         request.onerror = () => reject(request.error);
     });
 }
 
 async function writeOfflineState(key, value) {
     const db = await openOfflineDb();
-    await new Promise((resolve, reject) => {
-        const tx = db.transaction(offlineStoreName, 'readwrite');
-        tx.objectStore(offlineStoreName).put(value, key);
-        tx.oncomplete = resolve;
-        tx.onerror = () => reject(tx.error);
-    });
+    try {
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction(offlineStoreName, 'readwrite');
+            tx.objectStore(offlineStoreName).put(value, key);
+            tx.oncomplete = resolve;
+            tx.onerror = () => reject(tx.error);
+        });
+    } finally {
+        db.close();
+    }
 }
-
 
 async function readOfflineState(key) {
     const db = await openOfflineDb();
-    return await new Promise((resolve, reject) => {
-        const tx = db.transaction(offlineStoreName, 'readonly');
-        const request = tx.objectStore(offlineStoreName).get(key);
-        request.onsuccess = () => resolve(request.result || null);
-        request.onerror = () => reject(request.error);
-    });
+    try {
+        return await new Promise((resolve, reject) => {
+            const tx = db.transaction(offlineStoreName, 'readonly');
+            const request = tx.objectStore(offlineStoreName).get(key);
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error);
+        });
+    } finally {
+        db.close();
+    }
 }
 
 async function deleteOfflineState(key) {
     const db = await openOfflineDb();
-    await new Promise((resolve, reject) => {
-        const tx = db.transaction(offlineStoreName, 'readwrite');
-        tx.objectStore(offlineStoreName).delete(key);
-        tx.oncomplete = resolve;
-        tx.onerror = () => reject(tx.error);
-    });
+    try {
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction(offlineStoreName, 'readwrite');
+            tx.objectStore(offlineStoreName).delete(key);
+            tx.oncomplete = resolve;
+            tx.onerror = () => reject(tx.error);
+        });
+    } finally {
+        db.close();
+    }
 }
 
 function offlineSessionElapsedSeconds(session) {
