@@ -8,6 +8,8 @@ on:
       - 'scripts/ci/prelaunch_pinned_mysql19_offline_gate.py'
       - 'scripts/sql/prelaunch_pinned_mysql19_select_only_snapshot.sql'
       - 'scripts/ops/prelaunch_pinned_mysql19_collect.sh'
+      - 'scripts/ci/prelaunch_pinned_mysql19_local_source_gate.py'
+      - 'tests/ci/test_prelaunch_pinned_mysql19_local_source_gate.py'
       - 'tests/ci/test_prelaunch_pinned_mysql19_offline_gate.py'
       - 'scripts/ci/p0_mysql_metadata_grants_guard.py'
       - 'tests/ci/test_p0_mysql_metadata_grants_guard.py'
@@ -85,6 +87,21 @@ jobs:
           assert len(old)==94 and len(new)==113 and old <= new and len(new-old)==19
           print('pinned_94_113_manifest: pass')
           PY
+      - name: Prove local offline source preflight without Aiven or credentials
+        shell: bash
+        env:
+          CANOVIA_PINNED_MYSQL19_LIVE_CHECKOUT: live
+          CANOVIA_PINNED_MYSQL19_CANDIDATE_CHECKOUT: candidate
+        run: |
+          set -euo pipefail
+          python3 audit/scripts/ci/prelaunch_pinned_mysql19_local_source_gate.py \
+            --audit-root audit --live-root live --candidate-root candidate
+          # The disposable app-migration job intentionally sets DB_PASSWORD.
+          # Offline source verification must not inherit *any* DB credentials.
+          env -u DB_PASSWORD -u DB_URL -u DATABASE_URL -u MYSQL_PWD \
+            bash audit/scripts/ops/prelaunch_pinned_mysql19_collect.sh --preflight-offline \
+            | grep -Fx 'PRODUCTION_RELEASE_AUTHORIZED: false'
+          echo 'offline_source_integrity_gate_no_network: pass'
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
@@ -113,6 +130,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m unittest discover -s tests/ci -p 'test_prelaunch_pinned_mysql19_offline_gate.py' -v
+          python3 -m unittest discover -s tests/ci -p 'test_prelaunch_pinned_mysql19_local_source_gate.py' -v
           python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_metadata_grants_guard.py' -v
           bash -n scripts/ops/prelaunch_pinned_mysql19_collect.sh
           set +e

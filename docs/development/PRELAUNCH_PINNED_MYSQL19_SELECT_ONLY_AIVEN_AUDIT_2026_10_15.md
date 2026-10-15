@@ -13,6 +13,18 @@ Implementation:
 - `tests/ci/test_prelaunch_pinned_mysql19_offline_gate.py`: synthetic negative-control tests and output redaction. The existing disposable MySQL 8.0/8.4 94→113 upgrade workflow is extended to run the read-only metadata SQL and offline gate **both before and after** upgrade on throwaway schemas.
 - **Least-privilege account rehearsal (2026-10-15):** the disposable migration CI separately creates a synthetic `p0_readonly_ci` principal with only schema-scoped `REFERENCES` and migration-table `SELECT`, runs `SHOW GRANTS FOR CURRENT_USER()` through the real MySQL client, validates the result against `p0_mysql_metadata_grants_guard.py`, proves `users` and `mcp_linked_subjects` SELECT are denied, and runs the 94 / 113 snapshot and ledger SQL using **this restricted principal**, not `canovia_ci` the writer. The root user is used only to set up the disposable CI grant and migrations. The CI principal is not the real Aiven auditor, nor proof that Aiven grants have been created or verified.
 
+## Offline source-integrity preflight (no Aiven, mysql or permission)
+
+Before providing database details, check out the exact two fixed source SHAs in separate clean local directories. Set only the two local filesystem paths `CANOVIA_PINNED_MYSQL19_LIVE_CHECKOUT` and `CANOVIA_PINNED_MYSQL19_CANDIDATE_CHECKOUT` and run:
+
+```bash
+bash scripts/ops/prelaunch_pinned_mysql19_collect.sh --preflight-offline
+```
+
+This does not read a MySQL login path, CA or database credentials, does not invoke MySQL, and has no Aiven/Render network operation. It reports `OFFLINE_SOURCE_INTEGRITY_CONFIRMED_NOT_AIVEN_READY` only if the **exact** source HEADs (`15abdc9...` and `6d7dbcf...`) are present, the physical/tracked migration manifest has exactly 94 and 113 files (+19), and audit SQL/collector/validators plus pinned migrations have **no local uncommitted edits, staged edits or untracked additions**. Matching Git HEAD alone is insufficient, because a local SQL or migration file can change without moving HEAD. Unknown or ignored extra migration PHP files also block. The output never includes local paths, credential values or migration identifiers.
+
+A clean source preflight **does not verify** the real Aiven service, account, schema, TLS connection, backup or release eligibility. The actual collector still needs the existing narrow grants, verified CA and separate explicit operator authorization. `MYSQL_TEST_LOGIN_FILE` overrides are forbidden. Offline preflight mode should be completed before attempting any live database operation, and a production Web wake requires its own independent permission gate.
+
 ## Operator-controlled procedure (only after explicit approval)
 
 1. In Aiven Console independently identify intended service, TLS CA, MySQL major version, and the precise application database. Compare with the current Release Issue #488. Do not infer the target from an old shell profile or README.
