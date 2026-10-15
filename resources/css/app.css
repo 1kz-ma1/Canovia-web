@@ -2187,6 +2187,22 @@ html[data-theme-resolved="light"] .workspace-mode-option strong {
 .plan-secondary-actions > summary::-webkit-details-marker { display: none; }
 @media (max-width: 767px) {
     .adaptive-entry-card { display: none; }
+    /* First use must not strand an empty Plan without a visible Task entry. */
+    .adaptive-entry-card[data-plan-empty-entry] {
+        display: flex;
+        align-items: stretch;
+    }
+    .adaptive-entry-card[data-plan-empty-entry] > div {
+        width: 100%;
+        min-width: 0;
+    }
+    .adaptive-entry-card[data-plan-empty-entry] .btn-primary,
+    .adaptive-entry-card[data-plan-empty-entry] .btn-secondary {
+        width: 100%;
+        min-height: 44px;
+        justify-content: center;
+        text-align: center;
+    }
 }
 
 /* =============================================================================
