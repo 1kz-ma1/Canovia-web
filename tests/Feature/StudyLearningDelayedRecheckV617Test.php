@@ -118,7 +118,7 @@ final class StudyLearningDelayedRecheckV617Test extends TestCase
         $this->record($owner, $plan, $task, $pack, $q[1], true, $lastAt);
     }
 
-    private function post(Plan $plan, Task $task, QuestionPack $pack, array $cue,
+    private function submitDelayed(Plan $plan, Task $task, QuestionPack $pack, array $cue,
         array $overrides = [])
     {
         return $this->postJson(route('plans.tasks.learning.start', [$plan, $task]), array_merge([
@@ -141,7 +141,7 @@ final class StudyLearningDelayedRecheckV617Test extends TestCase
             ->assertOk()->assertSee('data-learning-delayed-not-yet', false);
         $this->get(route('plans.tasks.learning.index', [$plan, $task]))
             ->assertOk()->assertDontSee('data-learning-delayed-start', false);
-        $this->post($plan, $task, $pack, $history['delayed_recheck'])->assertStatus(409);
+        $this->submitDelayed($plan, $task, $pack, $history['delayed_recheck'])->assertStatus(409);
 
         // This is a controlled timestamp correction in an isolated test,
         // not an actual scheduled task or a live clock manipulation.
@@ -168,7 +168,7 @@ final class StudyLearningDelayedRecheckV617Test extends TestCase
         $this->actingAs($owner);
         $cue = $this->history($owner, $plan, $task)['delayed_recheck'];
         $this->assertSame('due', $cue['state']);
-        $this->post($plan, $task, $pack, $cue)->assertRedirect();
+        $this->submitDelayed($plan, $task, $pack, $cue)->assertRedirect();
         $run = LearningRun::query()->where('queue_policy_version',
             'bank_topic_delayed_distinct_initial_v617')->sole();
         $this->assertEqualsCanonicalizing([$q[2]->id, $q[3]->id],
@@ -203,22 +203,22 @@ final class StudyLearningDelayedRecheckV617Test extends TestCase
         $this->seedProgress($owner, $plan, $task, $pack, $q, now()->subDays(2));
         $this->actingAs($owner);
         $cue = $this->history($owner, $plan, $task)['delayed_recheck'];
-        $this->post($plan, $task, $pack, $cue, ['delayed_topic' => 'SQL'])->assertStatus(409);
-        $this->post($plan, $task, $pack, $cue,
+        $this->submitDelayed($plan, $task, $pack, $cue, ['delayed_topic' => 'SQL'])->assertStatus(409);
+        $this->submitDelayed($plan, $task, $pack, $cue,
             ['delayed_source_signature' => str_repeat('0', 64)])->assertStatus(409);
-        $this->post($plan, $task, $pack, $cue, ['mode' => 'practice'])->assertStatus(409);
-        $this->post($plan, $task, $pack, $cue, ['delayed_distinct' => null])->assertStatus(409);
-        $this->post($plan, $task, $pack, $cue,
+        $this->submitDelayed($plan, $task, $pack, $cue, ['mode' => 'practice'])->assertStatus(409);
+        $this->submitDelayed($plan, $task, $pack, $cue, ['delayed_distinct' => null])->assertStatus(409);
+        $this->submitDelayed($plan, $task, $pack, $cue,
             ['review_topic' => 'DNS', 'review_source_signature' => $cue['source_signature']])
             ->assertStatus(409);
         $other = User::factory()->create();
         $this->actingAs($other);
-        $this->post($plan, $task, $pack, $cue)->assertForbidden();
+        $this->submitDelayed($plan, $task, $pack, $cue)->assertForbidden();
         $this->actingAs($owner);
 
         // A later answer invalidates the initial signature and the due state.
         $this->record($owner, $plan, $task, $pack, $q[0], true, now());
-        $this->post($plan, $task, $pack, $cue)->assertStatus(409);
+        $this->submitDelayed($plan, $task, $pack, $cue)->assertStatus(409);
         $task->update(['status' => 'done', 'progress_percent' => 100]);
         $this->assertNull($this->history($owner, $plan, $task)['delayed_recheck']);
         $this->assertDatabaseMissing('learning_runs',
@@ -236,7 +236,7 @@ final class StudyLearningDelayedRecheckV617Test extends TestCase
         $this->get(route('plans.tasks.learning.index', [$plan, $task]))
             ->assertOk()->assertSee('data-learning-delayed-no-pack', false)
             ->assertDontSee('data-learning-delayed-start', false);
-        $this->post($plan, $task, $pack, $cue)->assertStatus(409);
+        $this->submitDelayed($plan, $task, $pack, $cue)->assertStatus(409);
 
         $secondTask = Task::create([
             'plan_id' => $plan->id, 'title' => '別のTask',
