@@ -1,0 +1,35 @@
+name: Pre-Launch IA-2i Local Mac Lab Guardrails
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/prelaunch-ia2i-local-lab.yml'
+      - 'scripts/ci/prelaunch_ia2i_local_lab.py'
+      - 'scripts/ci/test_prelaunch_ia2i_local_lab.py'
+      - 'docs/development/PRELAUNCH_IA2I_MAC_LOCAL_ACCEPTANCE_LAB_2026_10_15.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-guardrails:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Parse safety script and tests
+        run: python -m py_compile scripts/ci/prelaunch_ia2i_local_lab.py scripts/ci/test_prelaunch_ia2i_local_lab.py
+      - name: Verify frozen-SHA, .env, lab permissions and process-secret isolation
+        run: python -m unittest discover -s scripts/ci -p 'test_prelaunch_ia2i_local_lab.py' -v
+      - name: Boundaries
+        run: |
+          echo "Only synthetic Git worktrees and local SQLite are created inside GitHub runner temp."
+          echo "No user Mac, iPhone, Render, Aiven, staging service or production data was touched."
+          echo "This CI does not authorize native device acceptance or production release."

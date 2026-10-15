@@ -42,6 +42,8 @@ A usable acceptance run needs **one identified frozen source SHA**, **one isolat
 
 Both paths must check exact running SHA (not only branch name), human account identity, no leaking logs, and default-off external features. If URL, DB destination, build identity or permissions are unknown, record `BLOCKED` rather than pretending the test passed.
 
+**Macローカル準備を実際に進める場合:** [IA-2i Mac隔離Webラボ手順](PRELAUNCH_IA2I_MAC_LOCAL_ACCEPTANCE_LAB_2026_10_15.md) に、固定SHAのGit worktree・別ディレクトリSQLite・`.env`排除・外部変数を継承しないLaravelコマンドのガードを実装した。これはオーナー自身のMacで起動するためのツールで、GitHub CIでは安全性の合成検証のみ。物理iPhoneのURL/TLS/実機操作は依然BLOCKED / NOT RUN。
+
 ## 3. Operator evidence template (no credentials, secrets or PII)
 
 Make a private run record outside git for any real test. It can contain only:
