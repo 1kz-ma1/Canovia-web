@@ -9,9 +9,6 @@
  */
 declare(strict_types=1);
 
-use PDO;
-use PDOException;
-
 [$script, $mode, $role, $planId, $taskId, $directory] = array_pad($argv, 6, null);
 $driver = getenv('DB_CONNECTION');
 $port = (int) getenv('DB_PORT');
@@ -142,7 +139,12 @@ try {
     fwrite(STDERR, 'V016B_WORKER_FAILURE:'.get_class($e)."\n");
 } finally {
     if ($pdo instanceof PDO && $pdo->inTransaction()) {
-        $pdo->rollBack();
+        try {
+            $pdo->rollBack();
+        } catch (PDOException) {
+            // A deadlock victim may already have been rolled back by MySQL.
+            // Still report the original SQLSTATE to the parent test.
+        }
     }
     file_put_contents($path('result.json'), json_encode($result, JSON_THROW_ON_ERROR), LOCK_EX);
 }
