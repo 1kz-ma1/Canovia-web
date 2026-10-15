@@ -129,6 +129,16 @@ class CanoviaFutureV407Test extends TestCase
             ->assertSee('一般向けの確認済み機能')
             ->assertSee('対象者限定で公開済み')
             ->assertSee('公開確認日: 2026-10-15');
+
+        config()->set('canovia_public_roadmap.items', [array_merge($item, ['status' => 'rolling_out'])]);
+        $this->get(route('feedback.index'))->assertDontSee('一般向けの確認済み機能');
+        config()->set('canovia_public_roadmap.items', [array_merge($item, [
+            'status' => 'rolling_out',
+            'owner_release_verified' => true,
+            'release_verified_on' => '2026-10-15',
+            'access_scope' => 'limited',
+        ])]);
+        $this->get(route('feedback.index'))->assertSee('段階公開中');
     }
 
     public function test_hidden_or_invalid_public_cards_and_private_metadata_do_not_leak(): void
