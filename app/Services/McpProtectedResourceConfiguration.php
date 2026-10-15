@@ -43,8 +43,11 @@ final class McpProtectedResourceConfiguration
         return [
             'resource' => (string) config('canovia_mcp.resource_url'),
             'authorization_servers' => [(string) config('canovia_mcp.oauth_issuer')],
-            'scopes_supported' => config('canovia_mcp.study_result_proposals_enabled') === true
-                && config('app.env') !== 'staging'
+            'scopes_supported' => config('canovia_mcp.tools_enabled') === true
+                && config('canovia_mcp.study_read_enabled') === true
+                && config('canovia_mcp.study_summary_read_enabled') === true
+                && config('canovia_mcp.study_result_proposals_enabled') === true
+                && app(McpStudyPilotAccessPolicy::class)->configured()
                 ? [self::READ_SCOPE, self::STUDY_WRITE_SCOPE] : [self::READ_SCOPE],
         ];
     }
