@@ -356,6 +356,43 @@ final class LearningContextSourceCaptureTest extends TestCase
         $this->assertFalse($capture->isCurrent($owner, $plan->id, $before['source_revision']));
     }
 
+    public function test_over_budget_applied_practice_refuses_partial_revision(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner);
+        $task = $this->task($plan);
+        $capture = app(LearningContextSourceCaptureService::class);
+        $before = $capture->capture($owner, $plan->id);
+        $this->assertNotNull($before);
+
+        // Batches avoid SQLite/driver bind-variable limits; no real people
+        // or private questions. 513 exceeds the strictly bounded 512 rows.
+        $now = now();
+        for ($batch = 0; $batch < 5; ++$batch) {
+            $rows = [];
+            $start = $batch * 110;
+            $stop = min(513, $start + 110);
+            for ($i = $start; $i < $stop; ++$i) {
+                $rows[] = [
+                    'user_id' => $owner->id, 'plan_id' => $plan->id,
+                    'task_id' => $task->id,
+                    'request_hash' => hash('sha256', 'source-limit-'.$plan->id.'-'.$i),
+                    'exercise_title' => 'synthetic',
+                    'questions' => '[]', 'answers' => '[]',
+                    'assessment' => '{}',
+                    'score_percent' => 60,
+                    'recommended_task_progress_percent' => 50,
+                    'applied_at' => $now,
+                    'created_at' => $now, 'updated_at' => $now,
+                ];
+            }
+            StudyPracticeAttempt::query()->insert($rows);
+        }
+
+        $this->assertNull($capture->capture($owner, $plan->id));
+        $this->assertFalse($capture->isCurrent($owner, $plan->id, $before['source_revision']));
+    }
+
     public function test_task_window_is_bounded_and_does_not_export_descriptions(): void
     {
         $owner = User::factory()->create();
