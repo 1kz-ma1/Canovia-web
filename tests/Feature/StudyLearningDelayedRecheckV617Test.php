@@ -131,10 +131,14 @@ final class StudyLearningDelayedRecheckV617Test extends TestCase
 
     public function test_pending_then_due_only_after_24h_with_two_existing_wrong_sources(): void
     {
+        fwrite(STDERR, "[V617 debug] entering pending test\\n");
         [$owner, $plan, $task, $pack, $q] = $this->fixture();
+        fwrite(STDERR, "[V617 debug] fixture built\\n");
         $this->seedProgress($owner, $plan, $task, $pack, $q, now()->subHours(23));
+        fwrite(STDERR, "[V617 debug] progress seeded\\n");
         $this->actingAs($owner);
         $history = $this->history($owner, $plan, $task);
+        fwrite(STDERR, "[V617 debug] history derived\\n");
         $this->assertNull($history['next_action_preview']);
         $this->assertSame('later', $history['delayed_recheck']['state']);
         $this->get(route('plans.tasks.learning.history', [$plan, $task]))
