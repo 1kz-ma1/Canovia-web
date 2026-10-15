@@ -25,6 +25,22 @@ This does not read a MySQL login path, CA or database credentials, does not invo
 
 A clean source preflight **does not verify** the real Aiven service, account, schema, TLS connection, backup or release eligibility. The actual collector still needs the existing narrow grants, verified CA and separate explicit operator authorization. `MYSQL_TEST_LOGIN_FILE` overrides are forbidden. Offline preflight mode should be completed before attempting any live database operation, and a production Web wake requires its own independent permission gate.
 
+## One-command Mac preparation (2026-10-15; local Git only)
+
+To avoid manually preparing three detached checkouts, use `scripts/ops/prelaunch_pinned_mysql19_stage_local.sh` from a **local checkout of Canovia-web** on the Mac. The script creates an entirely new private directory at the owner-selected absolute location; it does **not** overwrite existing directories, change the source repository, fetch from GitHub, contact Aiven, execute MySQL or wake Render.
+
+```bash
+# Run from the root of a locally cloned Canovia-web repository.
+bash scripts/ops/prelaunch_pinned_mysql19_stage_local.sh \
+  --destination "$HOME/Canovia-Aiven-Source-Review"
+```
+
+The local Git object database must **already contain** three exact immutable commits: audited tool `e04c646c78e021268801cacb1d8ef1b0ad276101`, old Live `15abdc9de6f24b5250fb255c579d1aa55facaf1a`, and candidate `6d7dbcfedd35f33ba2827ed8c7c3d98ca30fc3d6`. If a checkout is shallow or any object is missing, the tool **stops before creating a destination** (`PINNED_OBJECT_NOT_PRESENT_LOCALLY`); it never runs `git fetch` or updates a branch. The owner may separately refresh their local Git object database from their verified GitHub remote and rerun to a *new, nonexistent destination*.
+
+On success this command creates only `$HOME/Canovia-Aiven-Source-Review/{audit,live,candidate}` plus `offline-verdict.txt`, with a private parent directory and **no production credentials**. `audit` is pinned to the independently CI-reviewed audit code from PR #752, rather than to a future moving `main`; `live` and `candidate` are exact source SHAs. It invokes only the reviewed collector's `--preflight-offline`, checks an explicit `PRODUCTION_RELEASE_AUTHORIZED: false`, and prints the sanitised classification `OFFLINE_PREPARED_NO_AIVEN_CONNECTION`.
+
+**No live Aiven audit is run by the staging command.** It does not verify whether a real Aiven least-privilege account exists, whether its TLS CA is valid or whether current ledger has 94 migrations. After checking the offline result, separately review Aiven service identity and minimal grants privately, and obtain explicit Owner approval before performing any live SELECT. Do not share credentials, CA, host/user names, raw migration ledger or SHOW GRANTS in GitHub/ChatGPT. A clean local stage is **not** static or Web release approval.
+
 ## Operator-controlled procedure (only after explicit approval)
 
 1. In Aiven Console independently identify intended service, TLS CA, MySQL major version, and the precise application database. Compare with the current Release Issue #488. Do not infer the target from an old shell profile or README.
