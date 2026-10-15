@@ -6,6 +6,7 @@ use App\Models\LearningContextChangeRecord;
 use App\Models\LearningContextWatchState;
 use App\Models\Plan;
 use App\Models\Task;
+use App\Models\StudyPracticeAttempt;
 use App\Models\User;
 use App\Services\LearningContextWatchPersistenceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -136,6 +137,56 @@ final class LearningContextWatchPersistenceTest extends TestCase
         $this->assertNotSame($oldHash, LearningContextWatchState::query()->sole()->source_revision);
         $this->assertSame('superseded', LearningContextChangeRecord::query()->sole()->status);
         $this->assertDatabaseMissing('learning_context_change_records', ['status' => 'delivered']);
+    }
+
+    public function test_old_practice_correction_supersedes_prior_review_candidate_without_new_alert(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner);
+        $task = $this->task($plan);
+        $old = null;
+        for ($i = 0; $i < 11; ++$i) {
+            $attempt = StudyPracticeAttempt::query()->create([
+                'user_id' => $owner->id,
+                'plan_id' => $plan->id,
+                'task_id' => $task->id,
+                'request_hash' => hash('sha256', 'historical-persistence-'.$plan->id.'-'.$i),
+                'exercise_title' => 'SYNTHETIC_OWNER_STUDY',
+                'questions' => [['body' => 'PRIVATE_QUESTION']],
+                'answers' => [['answer' => 'PRIVATE_ANSWER']],
+                'assessment' => ['rationale' => 'PRIVATE_ASSESSMENT'],
+                'score_percent' => 60,
+                'weaknesses' => [],
+                'applied_at' => now()->subDays(23 - $i),
+            ]);
+            $old ??= $attempt;
+        }
+
+        $service = $this->enable();
+        $this->actingAs($owner);
+        $this->assertTrue($service->optIn($owner, $plan->id));
+        $task->update(['status' => 'paused']);
+        $this->assertSame('recorded_review_candidate',
+            $service->advance($owner, $plan->id)['status']);
+        $before = LearningContextWatchState::query()->sole()->source_revision;
+        $candidate = LearningContextChangeRecord::query()->sole();
+
+        // The oldest row falls outside the latest-eight displayed sample.
+        // Its correction must retire the previously persisted review only.
+        $old->update(['score_percent' => 14]);
+        $this->assertSame('updated_no_candidate',
+            $service->advance($owner, $plan->id)['status']);
+        $this->assertNotSame($before,
+            LearningContextWatchState::query()->sole()->source_revision);
+        $this->assertSame('superseded', $candidate->fresh()->status);
+        $this->assertDatabaseCount('learning_context_change_records', 1);
+        $this->assertDatabaseMissing('learning_context_change_records', ['status' => 'delivered']);
+
+        $old->delete();
+        $this->assertSame('updated_no_candidate',
+            $service->advance($owner, $plan->id)['status']);
+        $this->assertDatabaseCount('learning_context_change_records', 1);
+        $this->assertSame('unchanged', $service->advance($owner, $plan->id)['status']);
     }
 
     public function test_owner_opt_out_erases_baseline_and_records_even_when_flag_disabled(): void
