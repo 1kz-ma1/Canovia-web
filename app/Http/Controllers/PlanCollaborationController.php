@@ -45,6 +45,13 @@ class PlanCollaborationController extends Controller
         DB::transaction(function () use ($request, $plan, $ownership, $collaboration): void {
             $lockedPlan = Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
             $ownership->authorizePlan($request, $lockedPlan);
+            // A private Study Plan becomes ineligible at the moment it is
+            // shared. Record against the still-eligible, locked *before*
+            // state; the same SQL transaction rolls this back on failure.
+            if (! $lockedPlan->is_collaborative) {
+                app(\App\Services\LearningContextSourceEpochService::class)
+                    ->record($lockedPlan, 'plan_updated');
+            }
             $collaboration->enable($lockedPlan);
         }, 3);
 
@@ -61,7 +68,14 @@ class PlanCollaborationController extends Controller
         DB::transaction(function () use ($request, $plan, $ownership, $collaboration): void {
             $lockedPlan = Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
             $ownership->authorizePlan($request, $lockedPlan);
+            $wasCollaborative = (bool) $lockedPlan->is_collaborative;
             $collaboration->disable($lockedPlan);
+            // Re-entering a private Study Plan is a source change too.
+            // No-op disable requests must not advance the counter.
+            if ($wasCollaborative) {
+                app(\App\Services\LearningContextSourceEpochService::class)
+                    ->record($lockedPlan, 'plan_updated');
+            }
         }, 3);
 
         return redirect()->route('plans.collaboration.settings', $plan)
