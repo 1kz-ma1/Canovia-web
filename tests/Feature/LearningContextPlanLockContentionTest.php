@@ -190,6 +190,7 @@ final class LearningContextPlanLockContentionTest extends TestCase
 
     public function test_guided_reflection_next_action_confirmation_blocks_on_parent_plan_lock(): void
     {
+        config(['intelligence.learning_context_watch.epoch_shadow_enabled' => true]);
         [$user, $plan, $task] = $this->fixture();
         $task->update(['next_action_note' => 'BEFORE_GUIDED']);
         $this->actingAs($user)->withoutExceptionHandling();
@@ -226,6 +227,7 @@ final class LearningContextPlanLockContentionTest extends TestCase
 
         $this->assertSame('BEFORE_GUIDED', $task->fresh()->next_action_note);
         $this->assertSame(15, (int) $task->fresh()->progress_percent);
+        $this->assertDatabaseMissing('learning_context_source_epochs', ['plan_id' => $plan->id]);
         $this->assertSame(0, LearningContextChangeRecord::query()
             ->where('plan_id', $plan->id)->count());
 
@@ -234,6 +236,9 @@ final class LearningContextPlanLockContentionTest extends TestCase
             $payload,
         )->assertRedirect(route('plans.tasks.guided_execution.show', [$plan, $task]));
         $this->assertSame('AFTER_GUIDED', $task->fresh()->next_action_note);
+        $this->assertDatabaseHas('learning_context_source_epochs', [
+            'plan_id' => $plan->id, 'epoch' => 1, 'last_mutation_kind' => 'task_updated',
+        ]);
         $this->assertSame(15, (int) $task->fresh()->progress_percent);
         $this->assertSame(0, LearningContextChangeRecord::query()
             ->where('plan_id', $plan->id)->count());
