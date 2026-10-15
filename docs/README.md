@@ -16,6 +16,7 @@
 
 ## Pre-Launch IA-2 — planless onboarding slice (2026-10-15)
 
+- [Learning V6.21 first-answer draft continuity](development/LEARNING_FIRST_DRAFT_CONTINUITY_V621_2026_10_15.md): legacy external JSON practice first-answer draft saved vs scored Attempt semantics, visible 204/419 feedback and disposable mobile-sized Chromium reload/assessment proof. No iPhone/production validation.
 - [IA-2d Disposable Chromium three-entry E2E](development/PRELAUNCH_IA2D_DISPOSABLE_BROWSER_E2E_2026_10_15.md): real loopback Chromium smoke for browse/diagnose/converse/first Study action, safe no-provider SQLite, and compatibility with older browser journeys. Not live mobile/browser acceptance.
 - [IA-2c Planless Overview re-entry](development/PRELAUNCH_IA2C_PLANLESS_OVERVIEW_REENTRY_2026_10_15.md): explain first value without Plan, offer existing Companion, L1-gated diagnosis and optional manual Plan, retain mode choices; guard generic existing Plans from mistaken first-use onboarding.
 - [IA-2b Welcome three-option choice](development/PRELAUNCH_IA2B_FIRST_RUN_ENTRY_CHOICES_2026_10_15.md): Diagnose, existing First Companion, or planless Overview. Legacy POST and L0 gate retained; no new release/AI access or production deployment.
