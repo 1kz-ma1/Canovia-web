@@ -63,8 +63,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             'canovia_staging.postgres_user' => 'canovia_mcp_staging_db_user',
             'database.default' => 'pgsql',
             'database.connections.pgsql.database' => 'canovia_mcp_staging_db',
-            'database.connections.pgsql.url' =>
-                'postgresql://canovia_mcp_staging_db_user:synthetic-not-a-real-secret@dpg-db43rbbncjis73bmigi0-a:5432/canovia_mcp_staging_db',
+            'database.connections.pgsql.url' => 'postgresql://canovia_mcp_staging_db_user:synthetic-not-a-real-secret@dpg-db43rbbncjis73bmigi0-a:5432/canovia_mcp_staging_db',
         ]);
 
         $db = Mockery::mock();
@@ -87,8 +86,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             'canovia_staging.postgres_user' => 'canovia_mcp_staging_db_user',
             'database.default' => 'pgsql',
             'database.connections.pgsql.database' => 'canovia_mcp_staging_db',
-            'database.connections.pgsql.url' =>
-                'postgresql://canovia_mcp_staging_db_user:synthetic-not-a-real-secret@dpg-db43rbbncjis73bmigi0-a:5432/canovia_mcp_staging_db',
+            'database.connections.pgsql.url' => 'postgresql://canovia_mcp_staging_db_user:synthetic-not-a-real-secret@dpg-db43rbbncjis73bmigi0-a:5432/canovia_mcp_staging_db',
         ]);
 
         $db = Mockery::mock();
@@ -124,6 +122,7 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
     {
         $boot = file_get_contents(base_path('docker/render-start.sh'));
         $stage = file_get_contents(base_path('docker/mcp-staging-start.sh'));
+        $policy = file_get_contents(base_path('docker/startup-migration-policy.sh'));
 
         $this->assertIsString($boot);
         $this->assertIsString($stage);
@@ -131,20 +130,20 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
         $this->assertStringContainsString('APP_ENV', $boot);
         $this->assertStringContainsString(
             'php artisan migrate --force --no-interaction --quiet >/dev/null 2>&1',
-            $boot
+            $policy
         );
         $this->assertStringContainsString(
             'MCP isolated staging migrations: failed (details suppressed)',
-            $boot
+            $policy
         );
         $this->assertStringContainsString(
             'if ! php artisan "$cache_command" >/dev/null 2>&1',
             $boot
         );
-        // The original production migration path must remain available.
+        // Hosted startup defaults to a read-only ledger fence.
         $this->assertStringContainsString(
-            'migration_output="$(php artisan migrate --force 2>&1)"',
-            $boot
+            'CANOVIA_STARTUP_MIGRATIONS:-check',
+            $policy
         );
         $this->assertStringContainsString(
             'configured database mode=${CANOVIA_STAGING_DB_MODE:-sqlite}',
@@ -468,7 +467,6 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
         $this->assertStringContainsString('CMD ["./docker/render-start.sh"]', $prod);
     }
 
-
     public function test_stage_login_pilot_has_independent_no_full_site_gate(): void
     {
         $pin = [
@@ -626,19 +624,20 @@ final class McpIsolatedStagingBootstrapTest extends TestCase
             'QUEUE_CONNECTION' => 'sync',
             'MAIL_MAILER' => 'log',
         ];
-        foreach (['DB_URL','DATABASE_URL','DB_HOST','DB_USERNAME','DB_PASSWORD',
-            'MYSQL_ATTR_SSL_CA','PGPASSWORD','PGHOST','PGDATABASE','DB_SOCKET','SESSION_DOMAIN',
-            'GITHUB_READ_TOKEN','GITHUB_APP_ID','GITHUB_APP_PRIVATE_KEY',
-            'GITHUB_APP_PRIVATE_KEY_BASE64','GITHUB_APP_WEBHOOK_SECRET',
-            'GITHUB_TOKEN','OPENAI_API_KEY','ANTHROPIC_API_KEY',
-            'STRIPE_SECRET','STRIPE_WEBHOOK_SECRET','AWS_ACCESS_KEY_ID',
-            'AWS_SECRET_ACCESS_KEY','RESEND_API_KEY'] as $name) {
+        foreach (['DB_URL', 'DATABASE_URL', 'DB_HOST', 'DB_USERNAME', 'DB_PASSWORD',
+            'MYSQL_ATTR_SSL_CA', 'PGPASSWORD', 'PGHOST', 'PGDATABASE', 'DB_SOCKET', 'SESSION_DOMAIN',
+            'GITHUB_READ_TOKEN', 'GITHUB_APP_ID', 'GITHUB_APP_PRIVATE_KEY',
+            'GITHUB_APP_PRIVATE_KEY_BASE64', 'GITHUB_APP_WEBHOOK_SECRET',
+            'GITHUB_TOKEN', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY',
+            'STRIPE_SECRET', 'STRIPE_WEBHOOK_SECRET', 'AWS_ACCESS_KEY_ID',
+            'AWS_SECRET_ACCESS_KEY', 'RESEND_API_KEY'] as $name) {
             $env[$name] = '';
         }
 
         $proc = new Process(['sh', base_path('docker/mcp-staging-start.sh'),
             '--check-only'], base_path(), array_replace($env, $changes), null, 5);
         $proc->run();
+
         return $proc;
     }
 }

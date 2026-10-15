@@ -1,0 +1,82 @@
+name: Integration Migration Safety
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docker/render-start.sh'
+      - 'docker/startup-migration-policy.sh'
+      - 'app/Console/Commands/CheckReleaseSchemaLedger.php'
+      - 'scripts/ci/integration_mysql_upgrade.py'
+      - 'scripts/ci/integration_upgrade_fixture.php'
+      - 'tests/Feature/ReleaseSchemaLedgerFenceTest.php'
+      - 'tests/Feature/RenderStartupMigrationRetryV569Test.php'
+      - '.github/workflows/integration-migration-safety.yml'
+      - '.github/workflows/production-promotion-policy.yml'
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  startup-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, sqlite3, pdo_sqlite
+          coverage: none
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - run: sh -n docker/render-start.sh && sh -n docker/startup-migration-policy.sh
+      - run: >-
+          php artisan test tests/Feature/ReleaseSchemaLedgerFenceTest.php
+          tests/Feature/RenderStartupMigrationRetryV569Test.php
+          tests/Feature/McpIsolatedStagingBootstrapTest.php --colors=never
+  upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        series: ['8.0', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql
+          coverage: none
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Create identified loopback-only disposable MySQL
+        env:
+          SERIES: ${{ matrix.series }}
+        run: |
+          set -euo pipefail
+          if [ "$SERIES" = '8.0' ]; then name=canovia-integration-80; port=13380; else name=canovia-integration-84; port=13384; fi
+          docker run -d --name "$name" --label canovia.integration=2026-10-16 \
+            -p "127.0.0.1:$port:3306" -e MYSQL_ROOT_PASSWORD=ci-only-root-password \
+            -e MYSQL_DATABASE=canovia_p0_ci -e MYSQL_USER=canovia_ci \
+            -e MYSQL_PASSWORD=ci-only-ephemeral-password "mysql:$SERIES" --log-bin-trust-function-creators=1
+          for attempt in $(seq 1 60); do
+            if docker exec -e MYSQL_PWD=ci-only-ephemeral-password "$name" mysql -u canovia_ci -Nse 'SELECT 1'; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Rehearse exact historical upgrade, retained rows, retry and legacy-writer fences
+        env:
+          SERIES: ${{ matrix.series }}
+        run: >-
+          python3 scripts/ci/integration_mysql_upgrade.py --series "$SERIES"
+          --artifacts "$RUNNER_TEMP/integration-upgrade"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-mysql-${{ matrix.series }}
+          path: ${{ runner.temp }}/integration-upgrade/
