@@ -9,6 +9,7 @@ on:
       - 'scripts/ci/test_prelaunch_ia2i_local_lab.py'
       - 'docs/development/PRELAUNCH_IA2I_MAC_LOCAL_ACCEPTANCE_LAB_2026_10_15.md'
       - 'docs/development/PRELAUNCH_IA2K_SECOND_PINNED_MAC_SAFARI_ACCEPTANCE_2026_10_15.md'
+      - 'docs/development/LEARNING_V621_THIRD_PINNED_MAC_SAFARI_ACCEPTANCE_2026_10_15.md'
   workflow_dispatch:
 
 permissions:
@@ -31,7 +32,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Parse safety script and tests
         run: python -m py_compile scripts/ci/prelaunch_ia2i_local_lab.py scripts/ci/test_prelaunch_ia2i_local_lab.py
-      - name: Verify IA-2h/IA-2j pinned SHA, per-lab port, cookie, .env, DB and secret isolation
+      - name: Verify IA-2h/IA-2j/V6.21 exact SHA, independent ports/cookies, .env, DB and secret isolation
         run: python -m unittest discover -s scripts/ci -p 'test_prelaunch_ia2i_local_lab.py' -v
       - name: Boundaries
         run: |
