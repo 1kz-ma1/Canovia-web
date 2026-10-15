@@ -155,9 +155,10 @@ final class ApExamCandidateHumanReviewIntakeService
 
             $checks = $row['checks'];
             if (! is_array($checks) || ! $this->exactKeys($checks, self::CHECKS)
-                || array_diff(array_values($checks), [
-                    'pending', 'checked_claim', 'needs_revision',
-                ]) !== []) {
+                || collect(array_values($checks))->contains(fn ($status) =>
+                    ! is_string($status) || ! in_array($status, [
+                        'pending', 'checked_claim', 'needs_revision',
+                    ], true))) {
                 $errors[] = 'invalid_review_dimensions';
                 continue;
             }
