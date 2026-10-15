@@ -33,6 +33,11 @@ final class OverviewRelevanceV5865Test extends TestCase
             ->get(route('workspace.overview.index'))
             ->assertOk()
             ->assertSee('data-overview-first-use-workspaces', false)
+            ->assertSee('data-overview-planless-start', false)
+            ->assertSee('Planがなくても、Canoviaを試せます')
+            ->assertSee('data-overview-start-conversation', false)
+            ->assertSee('data-overview-start-diagnosis', false)
+            ->assertSee('data-overview-start-manual-plan', false)
             ->assertDontSee('data-overview-primary-action', false)
             ->assertDontSee('data-overview-mode-summaries', false)
             ->assertDontSee('data-overview-inbox', false)
@@ -40,6 +45,59 @@ final class OverviewRelevanceV5865Test extends TestCase
             ->assertDontSee('href="#overview-inbox"', false)
             ->assertDontSee('href="#overview-changes"', false)
             ->assertDontSee('まだ優先Actionはありません。');
+    }
+
+    public function test_guest_browse_can_reenter_diagnosis_and_companion_without_automatic_plan(): void
+    {
+        $this->post(route('first_run.start'), ['entry' => 'browse'])
+            ->assertRedirect(route('workspace.overview.index'));
+
+        $this->get(route('workspace.overview.index'))
+            ->assertOk()
+            ->assertSee('data-overview-planless-start', false)
+            ->assertSee('href="'.route('personalization.show').'"', false)
+            ->assertSee('href="'.route('plans.create').'"', false);
+
+        $this->get(route('personalization.show'))
+            ->assertOk()
+            ->assertSee('data-personalization-bootstrap', false);
+        $this->get(route('plans.create'))->assertOk();
+        $this->assertDatabaseCount('plans', 0);
+    }
+
+    public function test_core_stable_no_plan_shows_companion_but_not_l1_diagnosis(): void
+    {
+        config([
+            'release_levels.public_level' =>
+                \App\Enums\ReleaseLevel::CoreStable->value,
+        ]);
+        $user = User::factory()->create(['first_run_completed_at' => now()]);
+
+        $this->actingAs($user)
+            ->get(route('workspace.overview.index'))
+            ->assertOk()
+            ->assertSee('data-overview-planless-start', false)
+            ->assertSee('data-overview-start-conversation', false)
+            ->assertSee('data-overview-start-manual-plan', false)
+            ->assertDontSee('data-overview-start-diagnosis', false)
+            ->assertDontSee('data-overview-primary-action', false);
+
+        // Direct GET to the unreleased diagnosis still has its usual
+        // server-side release gate; hiding the link is not authorization.
+        $this->actingAs($user)->get(route('personalization.show'))
+            ->assertRedirect(route('workspace.overview.index'));
+    }
+
+    public function test_existing_non_specialized_plan_is_not_mistaken_for_first_use(): void
+    {
+        $user = User::factory()->create(['first_run_completed_at' => now()]);
+        $this->plan($user, '自由な計画', 'その他');
+
+        $this->actingAs($user)
+            ->get(route('workspace.overview.index'))
+            ->assertOk()
+            ->assertDontSee('data-overview-planless-start', false)
+            ->assertDontSee('data-overview-first-use-workspaces', false);
     }
 
     public function test_single_study_plan_shows_only_related_mode_and_no_empty_inbox_or_changes(): void
@@ -56,6 +114,7 @@ final class OverviewRelevanceV5865Test extends TestCase
             ->assertOk()
             ->assertSee('data-overview-mode="study"', false)
             ->assertSee($study->title)
+            ->assertDontSee('data-overview-planless-start', false)
             ->assertDontSee('data-overview-mode="development"', false)
             ->assertDontSee('data-overview-mode="career"', false)
             ->assertDontSee('data-overview-inbox', false)

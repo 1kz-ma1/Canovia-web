@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ReleaseLevel;
 use App\Enums\WorkspaceMode;
 use App\Intelligence\Enums\IntelligenceDomain;
 use App\Intelligence\Presentation\IntelligenceStateChangeFeedbackService;
@@ -14,6 +15,7 @@ use App\Services\HomePageDataService;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanPriorityService;
+use App\Services\ReleaseLevelService;
 use App\Services\WorkspaceModeRegistry;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -31,6 +33,7 @@ final class OverviewWorkspaceController extends Controller
         BehaviorIdentityService $identity,
         IntelligenceStateChangeFeedbackService $stateChanges,
         WorkspaceModeRegistry $workspaceModes,
+        ReleaseLevelService $releaseLevels,
     ) {
         $homeData = $home->build($request, prefetch: true);
         $plans = $ownership->ownedPlans($request, [
@@ -104,12 +107,17 @@ final class OverviewWorkspaceController extends Controller
             ->take(2)
             ->values();
 
+        // First-use guidance belongs only to genuinely Plan-free actors.
+        // A generic/non-specialized Plan still counts as an existing Plan.
+        $isPlanless = $plans->isEmpty();
+        $canOfferDiagnosis = $isPlanless && $releaseLevels->allowsMinimum(
+            ReleaseLevel::EarlyAccessCore,
+            $request->user(),
+            $request,
+        );
+
         $firstUseModeChoices = collect();
-        if (
-            ! $studyPlan instanceof Plan
-            && ! $developmentPlan instanceof Plan
-            && ! $careerPlan instanceof Plan
-        ) {
+        if ($isPlanless) {
             $firstUseModeChoices = $workspaceModes->available()
                 ->reject(fn ($definition) =>
                     $definition->mode === WorkspaceMode::Overview
@@ -164,6 +172,8 @@ final class OverviewWorkspaceController extends Controller
             )->take(4)->values(),
             'intelligenceChanges' => $intelligenceChanges,
             'firstUseModeChoices' => $firstUseModeChoices,
+            'isPlanless' => $isPlanless,
+            'canOfferDiagnosis' => $canOfferDiagnosis,
         ]);
     }
 
