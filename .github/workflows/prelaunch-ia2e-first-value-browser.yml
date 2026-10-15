@@ -52,7 +52,6 @@ jobs:
           echo "QUEUE_CONNECTION=sync" >> "$GITHUB_ENV"
           echo "NATIVE_AI_DRIVER=disabled" >> "$GITHUB_ENV"
           echo "MAIL_MAILER=array" >> "$GITHUB_ENV"
-          echo "NATIVE_AI_DRIVER=disabled" >> "$GITHUB_ENV"
           cp .env.example .env
           touch "$RUNNER_TEMP/ia2e-browser.sqlite"
       - name: Prepare synthetic isolated web application
@@ -70,7 +69,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          nohup php artisan serve --host=127.0.0.1 --port=8791 > "$RUNNER_TEMP/ia2e-php-server.log" 2>&1 &
+          nohup php artisan serve --host=127.0.0.1 --port=8797 > "$RUNNER_TEMP/ia2e-php-server.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/ia2e-php-server.pid"
           for i in $(seq 1 40); do
             if curl --silent --fail --output /dev/null http://127.0.0.1:8797/register; then exit 0; fi
