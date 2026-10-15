@@ -31,7 +31,19 @@ This benchmark is repeatable code and transparent environment-qualified CI evide
 
 ## Outcome and remaining gaps
 
-At specification creation the benchmark has **not run**; do not invent measurements here. After green CI, cite the run link and representative values with database name, synthetic fixture sizes and 21-sample qualifiers rather than claiming production improvement.
+### First disposable GitHub Actions observation (2026-10-15)
+
+The benchmark passed on all three ephemeral engines at PR #764 head `f51266b167b307b09ea3a0ff7b899235265f3974`, workflow run **38732733034**. Each engine's single test reported **1 PHPUnit warning and 1,309 assertions**, with successful Task/Practice cap and source-hash invariants. The **21-sample, warmed-up, diagnostics-OFF** p50/p95 (ms) from this ONE CI run are:
+
+| Engine (ephemeral) | Task 0 | Task 256 | Native practice 0 (1 Task) | Native practice 512 (1 Task) |
+| --- | --- | --- | --- | --- |
+| SQLite :memory: | 1.055 / 1.137 | 7.496 / 7.749 | 1.178 / 1.206 | 31.536 / 33.736 |
+| PostgreSQL 17 | 3.821 / 4.401 | 8.829 / 9.334 | 4.050 / 4.614 | 25.207 / 26.973 |
+| MySQL 8.4 | 4.702 / 4.842 | 11.978 / 17.414 | 4.817 / 4.906 | 36.740 / 38.381 |
+
+Every one of the other intermediate levels (`Task 8/32/128`, `practice 8/128`) and the diagnostics-ON counterpart is printed as a fixed-field line `V020_SYNTHETIC_CAPTURE` in the same run's respective job log. **Do not pool rows across runner hosts or treat a single 21-sample p95 as a fleet SLA.** Variance across re-runs, PHP/database cold caches, source-index behavior, realistic answer sizes, competing DB locks and actual user distribution are not controlled here. Observed numbers do NOT prove that production has a latency problem or that any epoch/trigger replacement is safe; the main v0.18 architecture remains unchanged. The CI metrics are included only as a reference baseline for **future synthetic comparisons**.
+
+
 
 Other workloads not tested: mixed approved MCP + native counts, corrections/deletes during capture, independent raw SQL writers, revoked or collaborative Plans, hot concurrent Plan locks, queue/HTTP/network latency, device flows, broad PHP/DB version matrix, cold starts and realistic assessment sizes. The v0.14–v0.17 trigger research still has production NO-GO due to Task-first deadlocks; v0.18 full-history hash is authoritative, v0.19 diagnostic collector is local/test-only. **No migration, runtime Watch enablement, persistent/production telemetry, Aiven/Render operation, delivery, subscription, MCP permission or deployment is authorized.**
 
