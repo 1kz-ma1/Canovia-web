@@ -1270,8 +1270,21 @@ class StudyPracticeController extends Controller
         $alreadyApplied = false;
         $progressionDecision = null;
 
-        DB::transaction(function () use ($request, $plan, $task, $validated, $actorToken, $evidenceProgress, $progressionService, $strategyService, &$alreadyApplied, &$progressionDecision) {
-            $attempt = $this->attemptQuery($request, $plan, $task, $actorToken)
+        DB::transaction(function () use ($request, $plan, $task, $ownership, $validated, $actorToken, $evidenceProgress, $progressionService, $strategyService, &$alreadyApplied, &$progressionDecision) {
+            // Keep source writer order consistent with Learning source capture
+            // and MCP owner approval: Plan -> Task -> Attempt. This prevents a
+            // half-applied Task/progress state from being read by a watcher
+            // participating in this Plan fence.
+            $lockedPlan = Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
+            $this->authorizeStudyPlan($lockedPlan);
+            $this->authorizeTask($request, $lockedPlan, $task, $ownership);
+            $lockedTask = Task::query()
+                ->where('plan_id', $lockedPlan->id)
+                ->whereKey($task->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $attempt = $this->attemptQuery($request, $lockedPlan, $lockedTask, $actorToken)
                 ->whereKey((int) $validated['attempt_id'])
                 ->where('request_hash', $validated['request_hash'])
                 ->lockForUpdate()
@@ -1300,12 +1313,6 @@ class StudyPracticeController extends Controller
                 return;
             }
 
-            $lockedTask = Task::query()
-                ->where('plan_id', $plan->id)
-                ->whereKey($task->id)
-                ->lockForUpdate()
-                ->firstOrFail();
-
             if ($lockedTask->status === 'cancelled') {
                 throw ValidationException::withMessages([
                     'attempt_id' => 'このTaskは現在中止されています。学習結果を反映するには、先にTask状態を見直してください。',
@@ -1329,12 +1336,12 @@ class StudyPracticeController extends Controller
                 ->take($historyLimit)
                 ->get();
             $nextStrategy = $strategyService->build(
-                $plan,
+                $lockedPlan,
                 $lockedTask,
                 $recentAttempts,
             );
             $progressionDecision = $progressionService->resolve(
-                $plan,
+                $lockedPlan,
                 $lockedTask,
                 $recentAttempts->take(8)->values(),
                 (array) ($nextStrategy['learning_phase'] ?? []),
