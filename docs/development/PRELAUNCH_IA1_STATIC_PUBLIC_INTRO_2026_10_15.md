@@ -20,6 +20,7 @@ IA-1 は `static-welcome/intro.html` を静的な「Canoviaとは」ページと
 ## 受入条件・未完了
 
 - Node回帰テスト：導線の存在、広告/購入誤認のない表現、無JSの静的紹介ページ、既存の起動待ち復旧コントロール、実ヘルスReady後の入場、固定ルートのみの誘導、再訪者の準備完了後の自動入場、起動中の救済。
+- 実Chromium（ネットワークでの本番サイト接続を禁止）：紹介ページのモバイル390px/デスクトップ1280px表示、水平はみ出しなし、3つの体験/2つのFuture導線、既存Welcomeから紹介ページへの画面クリック遷移。これは **ローカル静的ファイル** だけの動作確認であり、本番の配信・実機iOSの検証ではない。
 - 静的サイト配置時には `intro.html` の直接URL/リンク、モバイル表示、アクセシビリティ、Web Appのゲスト `/feedback` と `/welcome` を手動で確認する。まだ **Render Static Site / 実機 / Safari / iPhone WKWebView で検証済みではない**。
 - **Render設定の実測（2026-10-15）:** `Canovia-Welcome` Static Site (`srv-dahn5k142hec739l0fmg`) は `branch=main` かつ `autoDeploy=yes / autoDeployTrigger=commit`、`rootDir=static-welcome`。Web本体のRender Auto Deploy OFFとは独立。**このPRをmainへ統合すると静的公開サイトが自動更新される可能性が高い。** Ownerから静的公開の別途GOがあるか、自動デプロイOFFへの明示承認とその設定確認ができるまで、**PRはマージせずOPEN/HOLD** とする。
 - 静的サイトの自動公開を運用で制御したうえで統合し、実配信後にユーザーが直接 `/intro.html` を閲覧できることを確認する。本番Web/productionブランチ/Aiven/iOS/権限/課金への変更は行わない。
