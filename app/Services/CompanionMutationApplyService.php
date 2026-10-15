@@ -548,10 +548,9 @@ class CompanionMutationApplyService
         }
 
         $plan->update($changes);
-        $sourceChanged = $plan->wasChanged([
-            'title', 'category', 'workspace_domain_override',
-            'start_date', 'deadline', 'is_public', 'is_collaborative',
-        ]);
+        // The authoritative v0.7 hash includes Plan.updated_at, so even
+        // changes to other Plan attributes can invalidate its revision.
+        $sourceChanged = $plan->wasChanged();
         $plan->refresh();
         if ($sourceChanged) {
             // Companion apply already holds this Plan row lock. Shadow only.
