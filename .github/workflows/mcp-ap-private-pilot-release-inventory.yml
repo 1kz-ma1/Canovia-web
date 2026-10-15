@@ -1,0 +1,42 @@
+name: MCP AP Private Pilot Pinned Inventory (No Deploy)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ci/mcp_ap_private_pilot_release_inventory.py'
+      - 'tests/ci/test_mcp_ap_private_pilot_release_inventory.py'
+      - 'docs/development/MCP_AP_PRIVATE_PILOT_PINNED_RELEASE_INVENTORY_2026_10_15.md'
+      - '.github/workflows/mcp-ap-private-pilot-release-inventory.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-pinned-diff:
+    name: MCP AP pilot pinned offline delta and HOLD
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Both exact source commits, including historical production, are required.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test fail-closed local Git report
+        run: |
+          python3 -m unittest discover -s tests/ci -p 'test_mcp_ap_private_pilot_release_inventory.py' -v
+          python3 -m py_compile scripts/ci/mcp_ap_private_pilot_release_inventory.py
+      - name: Inventory immutable 2026-10-15 source snapshot (always HOLD)
+        run: |
+          python3 scripts/ci/mcp_ap_private_pilot_release_inventory.py \
+            --baseline 15abdc9de6f24b5250fb255c579d1aa55facaf1a \
+            --snapshot e81e2ac4a82aa37012aa7f716ad3a60543b5a489 \
+            --output ap-private-pilot-pinned-diff.json
+      - name: Preserve read-only source inventory artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-ap-private-pilot-pinned-source-inventory
+          path: ap-private-pilot-pinned-diff.json
+          retention-days: 7
