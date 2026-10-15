@@ -141,7 +141,8 @@ final class AdaptiveLearningController extends Controller
         BehaviorIdentityService $identity, AdaptiveLearningBankQueueService $queue,
         AdaptiveLearningCandidateService $candidates,
         AdaptiveLearningReviewEntryService $reviewEntry,
-        AdaptiveLearningDistinctReviewService $distinctReview)
+        AdaptiveLearningDistinctReviewService $distinctReview,
+        AdaptiveLearningHistoryService $history)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         $input = $request->validate([
