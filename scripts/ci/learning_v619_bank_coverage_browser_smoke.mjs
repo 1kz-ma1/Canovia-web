@@ -74,6 +74,10 @@ try {
     const practiceUrl = page.url();
     const bankWorkspaceResponse = await page.goto(`${base}/workspace/study?plan_id=${planId}&surface=work`, {waitUntil:'domcontentloaded'});
     assert.equal(bankWorkspaceResponse.status(),200);
+    assert.equal(await page.locator('[data-study-learning-bank-coverage]').count(),0,
+        'The Work view must not duplicate Question Bank provenance');
+    await page.locator('[data-study-work-analysis-link]').click();
+    await page.waitForURL(url => url.searchParams.get('surface') === 'analysis');
     const initialBankCard = page.locator('[data-study-learning-bank-coverage]');
     await initialBankCard.waitFor({state:'visible'});
     const confirmedScope = await initialBankCard.locator('[data-study-bank-scope-confirmed]').count();
@@ -239,11 +243,17 @@ try {
     assert.equal(await candidateCard.locator('[data-study-plan-priority-item]').first()
         .getAttribute('data-study-plan-priority-actionable'),'true');
     step('Study Workspace ranked the repeated-error topic with two unseen published source Questions');
+    const bankAnalysis = await page.goto(`${base}/workspace/study?plan_id=${planId}&surface=analysis`,
+        {waitUntil:'domcontentloaded'});
+    assert.equal(bankAnalysis.status(),200);
     const afterAnswers = page.locator('[data-study-learning-bank-coverage]');
     await afterAnswers.waitFor({state:'visible'});
     await afterAnswers.locator('[data-study-bank-topic-state="partial_record"]').first().waitFor();
     await afterAnswers.locator('[data-study-bank-preflight-summary]').waitFor();
     step('Actual browser answers change Plan-wide source-ID exposure from no record to partial only');
+    const backToWork = await page.goto(`${base}/workspace/study?plan_id=${planId}&surface=work`,
+        {waitUntil:'domcontentloaded'});
+    assert.equal(backToWork.status(),200);
 
 
     // V6.19: Existing review still offers the old route. We explicitly
