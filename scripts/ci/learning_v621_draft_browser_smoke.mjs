@@ -58,24 +58,23 @@ try {
     await register.locator('input[name="password_confirmation"]').fill(password);
     await register.getByRole('button',{name:'登録してそのまま続ける'}).click();
     await page.waitForURL(url=>url.pathname!=='/register');
-    // Task creation is an independently tested desktop-width Workspace
-    // journey (V6.12). The mobile viewport gate begins at classic Practice.
-    await page.setViewportSize({width:1280,height:850});
-    const workspaceResponse=await page.goto(base+'/workspace/study?plan_id='+planId);
-    assert.equal(workspaceResponse.status(),200);
-    const start=page.locator('form[action$="/plans/'+planId+'/study-action/execute"]').first();
-    await start.waitFor({state:'visible'});
-    await start.locator('button[type="submit"]').click();
-    await page.waitForURL(url=>/\/study-practice$/.test(url.pathname));
-    const path=new URL(page.url()).pathname;
-    const match=path.match(/\/plans\/(\d+)\/tasks\/(\d+)\/study-practice$/);
-    assert.ok(match);
-    assert.equal(Number(match[1]),planId);
-    await page.setViewportSize({width:390,height:844});
-    log('owner-created-task-and-opened-classic-study-practice');
+    // The first Task recommendation may require missing-context setup,
+    // rather than offering a Task creation form. It is a separate acceptance
+    // journey. Isolate the user-reported *legacy draft* UI on a synthetic
+    // Task created only in the strictly pinned disposable SQLite fixture.
+    const seeded=JSON.parse(execFileSync('php', [
+        'scripts/ci/learning_v621_synthetic_task.php','--seed-task',
+    ],{env:process.env,encoding:'utf8',timeout:25000}));
+    assert.equal(seeded.plan_id,planId);
+    assert.ok(Number.isSafeInteger(seeded.task_id)&&seeded.task_id>0);
+    const path='/plans/'+planId+'/tasks/'+seeded.task_id+'/study-practice';
+    const study=await page.goto(base+path,{waitUntil:'domcontentloaded'});
+    assert.equal(study.status(),200);
+    await page.locator('[data-study-practice-root]').waitFor({state:'visible'});
+    log('disposable-task-fixture-used-first-task-flow-not-proven');
 
     const questionPayload={
-        flow:'study_practice',target_plan:{id:planId},target_task:{id:Number(match[2])},
+        flow:'study_practice',target_plan:{id:planId},target_task:{id:seeded.task_id},
         title:'V621 合成の2問セット',
         questions:[
             {id:'q1',type:'single_choice',prompt:'合成Q1: テスト専用の選択問題',
@@ -145,7 +144,7 @@ try {
     log('both-answers-submitted-for-evaluation-no-fake-scored-history');
 
     const assessment={
-        flow:'study_assessment',target_plan:{id:planId},target_task:{id:Number(match[2])},
+        flow:'study_assessment',target_plan:{id:planId},target_task:{id:seeded.task_id},
         score_percent:50,recommended_task_progress_percent:20,
         strengths:['合成の確認'],weaknesses:['合成の再確認'],
         evidence_summary:'合成データの学習評価',next_action:'合成の復習に進む',
