@@ -1,6 +1,16 @@
 (() => {
     const config = window.CANOVIA_WELCOME_CONFIG || window.PACEKEEPER_WELCOME_CONFIG || {};
     const appUrl = String(config.appUrl || '').replace(/\/$/, '');
+    // Only these public routes are selectable from static links.
+    // Never turn the query string into an arbitrary redirect URL.
+    const destination = new URLSearchParams(window.location.search).get('destination');
+    const destinationPaths = {
+        future: '/feedback',
+        support: '/feedback#support-candidates',
+    };
+    const targetUrl = Object.prototype.hasOwnProperty.call(destinationPaths, destination)
+        ? `${appUrl}${destinationPaths[destination]}`
+        : appUrl;
     const status = document.querySelector('[data-status]');
     const openButton = document.querySelector('[data-open]');
     const openAnyway = document.querySelector('[data-open-anyway]');
@@ -37,7 +47,7 @@
 
     const openApp = () => {
         localStorage.setItem(seenKey, '1');
-        window.location.assign(appUrl);
+        window.location.assign(targetUrl);
     };
 
     const showSlowState = () => {
@@ -56,7 +66,11 @@
         status.textContent = '準備できました';
         status.classList.add('is-ready');
         openButton.disabled = false;
-        openButton.textContent = 'Canoviaを開く';
+        openButton.textContent = destination === 'future'
+            ? '開発ロードマップを見る'
+            : destination === 'support'
+                ? '無料Support・フィードバックへ'
+                : 'Canoviaを開く';
         slowNotice?.classList.add('hidden');
         if (returning) window.setTimeout(openApp, 450);
     };
