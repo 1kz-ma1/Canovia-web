@@ -1,0 +1,63 @@
+name: Learning V6.26 AP80 Safe Draft Packaging
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/learning-v626-ap80-safe-draft.yml'
+      - 'app/Services/ApExamCandidateDraftPreparationService.php'
+      - 'app/Console/Commands/PrepareApExamCandidateNewDraft.php'
+      - 'tests/Feature/ApExamCandidateDraftPreparationV626Test.php'
+      - 'app/Services/ApExamCandidateRevisionComparisonService.php'
+      - 'app/Services/ApExamCandidateHumanReviewIntakeService.php'
+      - 'resources/question_packs/ap/ap-a-2026-cbt-80-candidate-v2.json'
+      - 'docs/development/LEARNING_AP80_SAFE_DRAFT_V6_26_2026_10_15.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  safe-ap80-draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+      - name: Install locked PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Prepare disposable Laravel test environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          echo "APP_ENV=testing" >> .env
+          echo "DB_CONNECTION=sqlite" >> .env
+          echo "DB_DATABASE=:memory:" >> .env
+          echo "CACHE_STORE=array" >> .env
+          echo "SESSION_DRIVER=array" >> .env
+          echo "NATIVE_AI_DRIVER=disabled" >> .env
+          php artisan key:generate --force --no-interaction
+          php -l app/Services/ApExamCandidateDraftPreparationService.php
+          php -l app/Console/Commands/PrepareApExamCandidateNewDraft.php
+          php -l tests/Feature/ApExamCandidateDraftPreparationV626Test.php
+      - name: V6.26 and preserved candidate/review/import gate tests
+        run: |
+          APP_ENV=testing DB_CONNECTION=sqlite DB_DATABASE=:memory: CACHE_STORE=array \
+          php artisan test \
+            tests/Feature/ApExamCandidateDraftPreparationV626Test.php \
+            tests/Feature/ApExamCandidateRevisionComparisonV625Test.php \
+            tests/Feature/ApExamCandidateHumanReviewIntakeV624Test.php \
+            tests/Feature/ApExamCandidateQualityReviewTest.php \
+            tests/Feature/ApExamCandidateRevisionPreviewTest.php \
+            tests/Feature/ApExamCandidateBundleAuditTest.php
+      - name: Proof limitation
+        run: |
+          echo "Only offline synthetics and draft-only test import checked."
+          echo "No independent human approval, rights determination, production import, publishing, Render deploy or device verification."
