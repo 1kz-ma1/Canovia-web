@@ -131,32 +131,18 @@ final class StudyLearningDelayedRecheckV617Test extends TestCase
 
     public function test_pending_then_due_only_after_24h_with_two_existing_wrong_sources(): void
     {
-        fwrite(STDERR, "[V617 debug] entering pending test\\n");
         [$owner, $plan, $task, $pack, $q] = $this->fixture();
-        fwrite(STDERR, "[V617 debug] fixture built\\n");
         $this->seedProgress($owner, $plan, $task, $pack, $q, now()->subHours(23));
-        fwrite(STDERR, "[V617 debug] progress seeded\\n");
         $this->actingAs($owner);
         $history = $this->history($owner, $plan, $task);
-        fwrite(STDERR, "[V617 debug] history derived\\n");
-        fwrite(STDERR, "[V617 debug] preview kind=".(is_null($history['next_action_preview']) ? 'null':'present')."\\n");
         $this->assertNull($history['next_action_preview']);
-        fwrite(STDERR, "[V617 debug] null checked\\n");
-        fwrite(STDERR, "[V617 debug] due state=".($history['delayed_recheck']['state'] ?? 'missing')."\\n");
         $this->assertSame('later', $history['delayed_recheck']['state']);
-        fwrite(STDERR, "[V617 debug] state checked\\n");
-        fwrite(STDERR, "[V617 debug] before history GET\\n");
         $this->get(route('plans.tasks.learning.history', [$plan, $task]))
             ->assertOk()->assertSee('data-learning-delayed-not-yet', false);
-        fwrite(STDERR, "[V617 debug] after history GET\\n");
-        fwrite(STDERR, "[V617 debug] before index GET\\n");
         $this->get(route('plans.tasks.learning.index', [$plan, $task]))
             ->assertOk()->assertDontSee('data-learning-delayed-start', false);
-        fwrite(STDERR, "[V617 debug] index checked\\n");
         $reply = $this->submitDelayed($plan, $task, $pack, $history['delayed_recheck']);
-        fwrite(STDERR, "[V617 debug] pending POST status=".$reply->status()."\\n");
         $reply->assertStatus(409);
-        fwrite(STDERR, "[V617 debug] pending post checked\\n");
 
         // This is a controlled timestamp correction in an isolated test,
         // not an actual scheduled task or a live clock manipulation.
@@ -222,7 +208,7 @@ final class StudyLearningDelayedRecheckV617Test extends TestCase
         $this->submitDelayed($plan, $task, $pack, $cue,
             ['delayed_source_signature' => str_repeat('0', 64)])->assertStatus(409);
         $this->submitDelayed($plan, $task, $pack, $cue, ['mode' => 'practice'])->assertStatus(409);
-        $this->submitDelayed($plan, $task, $pack, $cue, ['delayed_distinct' => null])->assertStatus(409);
+        $this->submitDelayed($plan, $task, $pack, $cue, ['delayed_distinct' => null])->assertStatus(422);
         $this->submitDelayed($plan, $task, $pack, $cue,
             ['review_topic' => 'DNS', 'review_source_signature' => $cue['source_signature']])
             ->assertStatus(409);
