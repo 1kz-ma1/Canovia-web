@@ -1,0 +1,338 @@
+{
+  "schema": "canovia.learning.ap_a_80_owner_editorial_packet.v1",
+  "packet_status": "owner_submitted_ai_assisted_first_pass_only",
+  "record_date": "2026-10-15",
+  "candidate_key": "ap/ap-a-2026-cbt-80-candidate-v2",
+  "candidate_slug": "ap-a-2026-cbt-80-candidate-v2",
+  "candidate_version": "0.4.0-review-required",
+  "review_provenance": "owner_supplied_evaluations_from_separate_temporary_ai_chat_not_authenticated_independent_professional_review",
+  "quality_reviewer_authenticated": false,
+  "rights_reviewer_authenticated": false,
+  "approval_evidence_attached": false,
+  "publication_authorized": false,
+  "database_import_allowed": false,
+  "independent_human_review_verified": false,
+  "rights_independently_verified": false,
+  "applicability": "editorial_planning_only_not_v624_review_notes_and_not_v625_revision_proposal",
+  "review_items": [
+    {
+      "key": "db-view-009",
+      "number": 13,
+      "decision": "keep_foundation",
+      "correct_answer": "ア",
+      "answer_unchanged": true,
+      "difficulty": "easy",
+      "foundation": "keep",
+      "diagnosis": "limited_due_to_categorical_distractors",
+      "exam_practice": "create_separate_sql_view_update_example",
+      "notable_issue": "Absolute wording in ウ (どのDBMSでも常に) and エ (定義できない) makes elimination too easy.",
+      "text_revision_required": false,
+      "new_question_ref": "ap80-extra-view-update-v1"
+    },
+    {
+      "key": "calc-mm1-015",
+      "number": 24,
+      "decision": "keep_foundation",
+      "correct_answer": "イ",
+      "answer_unchanged": true,
+      "difficulty": "easy_to_lower_standard",
+      "foundation": "keep",
+      "diagnosis": "conditional_supporting_calculation",
+      "exam_practice": "add_arrival_rate_utilization_application",
+      "notable_issue": "Formula is given; inequality alone cannot establish M/M/1 concept mastery; optionally distinguish waiting before service from total system time.",
+      "text_revision_required": false,
+      "new_question_ref": "ap80-extra-mm1-arrival-v1"
+    },
+    {
+      "key": "sec-dkim-023",
+      "number": 34,
+      "decision": "text_revision_and_add_applied_question",
+      "correct_answer": "ア",
+      "answer_unchanged": true,
+      "difficulty": "easy",
+      "foundation": "text_revision",
+      "diagnosis": "separate_dmarc_alignment",
+      "exam_practice": "separate_dmarc_result_case",
+      "notable_issue": "DKIM-Signature is a direct answer cue; retain existing four choices including OP25B in the original slot.",
+      "text_revision_required": true,
+      "new_question_ref": "ap80-extra-dmarc-alignment-v1"
+    },
+    {
+      "key": "quality-reliability-032",
+      "number": 48,
+      "decision": "text_revision_and_add_subcharacteristic",
+      "correct_answer": "ア",
+      "answer_unchanged": true,
+      "difficulty": "easy",
+      "foundation": "text_revision",
+      "diagnosis": "separate_reliability_subcharacteristics",
+      "exam_practice": "case_based_quality_model",
+      "notable_issue": "Specify ISO/IEC 25010:2011 and main characteristic; availability is a reliability subcharacteristic rather than a competing main characteristic.",
+      "text_revision_required": true,
+      "new_question_ref": "ap80-extra-availability-v1",
+      "reported_quality_score": null
+    },
+    {
+      "key": "test-boundary-043",
+      "number": 61,
+      "decision": "text_revision_and_add_three_value_case",
+      "correct_answer": "イ",
+      "answer_unchanged": true,
+      "difficulty": "easy",
+      "foundation": "text_revision",
+      "diagnosis": "boundary_coverage_skill_not_just_definition",
+      "exam_practice": "add_three_value_analysis",
+      "notable_issue": "Current explanation shows 6-value illustration only; all four 3-value boundary neighborhoods can require 8 values. Original alternative ウ is overly easy to reject.",
+      "text_revision_required": true,
+      "new_question_ref": "ap80-extra-bva3-v1",
+      "reported_quality_score": 83
+    },
+    {
+      "key": "sec-csrf-047",
+      "number": 68,
+      "decision": "text_revision_and_add_samesite_case",
+      "correct_answer": "ア",
+      "answer_unchanged": true,
+      "difficulty": "easy",
+      "foundation": "text_revision",
+      "diagnosis": "separate_browser_cookie_and_server_validation",
+      "exam_practice": "add_cross_site_post_case",
+      "notable_issue": "The term CSRF対策トークン leaks the answer. Keep answer ア and original options in text-only revision; different answer positions belong to a new question.",
+      "text_revision_required": true,
+      "new_question_ref": "ap80-extra-samesite-lax-v1",
+      "reported_quality_score": 78
+    }
+  ],
+  "text_revision_proposals": [
+    {
+      "key": "sec-dkim-023",
+      "reason": "Remove DKIM-Signature direct answer cue and clarify selective signature scope and From-domain alignment.",
+      "fields": {
+        "prompt": "電子メールの署名対象となるヘッダー情報や本文を基に、送信側がドメインに対応する秘密鍵で電子署名を付与する。受信側はDNSから取得した公開鍵を使って署名を検証する。この技術はどれか。",
+        "explanation": "DKIMは、ドメインに対応する秘密鍵でメールの選択されたヘッダーフィールドと本文の署名対象部分に電子署名し、受信側がDNS上の公開鍵で検証する技術です。署名ドメインはDKIM-Signatureのd=、公開鍵のセレクタはs=で示されます。本文の署名範囲はl=で制限される場合があり、検証結果が本文全文の完全性を常に保証するわけではありません。署名ドメインと表示用Fromドメインは一致するとは限らず、Fromとの整合性（アライメント）を扱う仕組みがDMARCです。SPFは送信元IPの権限、S/MIMEは証明書などを使う電子メールの署名・暗号化、OP25Bは外向きTCP25番ポートの通信制限に関係します。"
+      }
+    },
+    {
+      "key": "quality-reliability-032",
+      "reason": "Anchor the question explicitly to ISO/IEC 25010:2011 main product-quality characteristics and explain availability as a reliability subcharacteristic.",
+      "fields": {
+        "prompt": "オンライン予約システムにおいて、決められた条件下で一定期間にわたり、必要な機能を継続して正しく提供できることを重視している。ISO/IEC 25010:2011の製品品質モデルにおいて、この要求に最も直接対応する主特性はどれか。",
+        "explanation": "正答はアの信頼性です。ISO/IEC 25010:2011において信頼性は、所定の条件下で一定期間、求められた機能を適切に果たす性質を表します。副特性には成熟性、可用性、障害許容性、回復性があります。可用性は必要なときに利用できる性質であり、信頼性とは対立せず、その副特性です。互換性は他のシステムとの共存や相互運用、移植性は別環境への移行、使用性は利用や学習のしやすさに関係します。ISO/IEC 25010:2023は9つの主特性に改訂されていますが、可用性が信頼性の副特性である点は変わりません。"
+      }
+    },
+    {
+      "key": "test-boundary-043",
+      "reason": "Define the two acceptance/rejection transition points and explicitly distinguish a 6-value illustration from full three-value coverage of four identified boundaries.",
+      "fields": {
+        "prompt": "整数の年齢について、18以上65以下だけを受理する入力欄がある。受理・不受理が切り替わる下限と上限の2カ所を対象として、2値境界値分析でテストする。必要なテストデータの組合せとして最も適切なものはどれか。",
+        "explanation": "2値境界値分析では、各同値パーティションの境界値と、隣接する別パーティションに属する最も近い値を選びます。本問では下限の17（不受理）・18（受理）と、上限の65（受理）・66（不受理）を確認するので正答はイです。3値境界値分析は、指定した各境界値とその前後の隣接値を確認します。受理側の境界値18・65だけを例にすると17・18・19と64・65・66の6値ですが、17・18・65・66の4境界値すべてと両隣を対象とする場合には、重複を除いて16・17・18・19・64・65・66・67の8値となります。本問は受理・不受理の切替点に限定しており、入力値全体の定義域の境界を網羅したとは主張しません。"
+      }
+    },
+    {
+      "key": "sec-csrf-047",
+      "reason": "Remove the CSRF name cue and explicitly assert that the authentication cookie is sent and forged state-changing request is accepted; distinguish browser SameSite controls from server verification.",
+      "fields": {
+        "prompt": "ある銀行のWebサイトはセッションCookieで利用者を認証し、POST要求で送金処理を行う。攻撃者が別サイトのフォームから、利用者の意図しない送金要求をブラウザに送信させた。その要求には有効な認証Cookieが付与され、銀行側は要求元や要求固有の検証値を確認せずに送金を実行した。この攻撃はどれか。",
+        "explanation": "正答はアのCSRF（クロスサイトリクエストフォージェリ）です。攻撃者が利用者のブラウザを介し、利用者の認証状態を悪用して対象サイトに意図しない状態変更要求を送信させます。成立には有効な認証情報が要求に付与され、対象システムが不正な要求を排除できないことなどが必要です。主な対策にはサーバ側でのCSRFトークン検証、Origin/Refererなどによる要求元検証、SameSite Cookieの適切な設定があります。SameSiteはブラウザによるCookie送信制御であり、サーバで要求を拒否する検証そのものではありません。例えば明示的なSameSite=LaxのセッションCookieは通常のクロスサイトPOSTに送信されないため、トークン検証がないだけでは攻撃成立を断定できません。XSSは悪意あるスクリプト実行、ブルートフォースは認証情報の総当たり、DNSキャッシュポイズニングはDNS応答の偽装に関係します。"
+      }
+    }
+  ],
+  "new_question_candidates": [
+    {
+      "id": "ap80-extra-view-update-v1",
+      "parent_key": "db-view-009",
+      "purpose": "exam_application",
+      "target_skill": "Read CREATE VIEW and reason about PostgreSQL automatic updatability.",
+      "difficulty": "standard",
+      "prompt": "PostgreSQLで次のビューを定義した。INSTEAD OFトリガーやルールによる更新処理は用意していない。\nCREATE VIEW dept_summary AS SELECT dept_id, COUNT(*) AS cnt FROM employee GROUP BY dept_id;\nこのビューのcnt列をUPDATEで直接更新しようとする場合の説明として、最も適切なものはどれか。",
+      "choices": [
+        [
+          "ア",
+          "GROUP BYと集約を含むため、このビューは通常の自動更新可能ビューの条件を満たさない。"
+        ],
+        [
+          "イ",
+          "cntは整数なので、常に直接更新できる。"
+        ],
+        [
+          "ウ",
+          "VIEWはSELECTを記述して定義できないので、CREATE VIEW自体が失敗する。"
+        ],
+        [
+          "エ",
+          "WHERE句がないので、集約結果のcntを基表へ必ず反映できる。"
+        ]
+      ],
+      "answer": "ア",
+      "explanation": "PostgreSQLの自動更新可能なビューには制約があり、GROUP BYや集約関数を含むビューはその条件を満たしません。ビューを定義できることとUPDATEできることは別です。INSTEAD OFトリガー等による特別な実装がある場合は別途考慮します。",
+      "sources": [
+        "https://www.postgresql.org/docs/current/sql-createview.html"
+      ]
+    },
+    {
+      "id": "ap80-extra-mm1-arrival-v1",
+      "parent_key": "calc-mm1-015",
+      "purpose": "exam_application",
+      "target_skill": "Relate M/M/1 arrival rate, service time and utilization before solving waiting threshold.",
+      "difficulty": "lower_standard",
+      "prompt": "要求がポアソン過程に従って到着し、サービス時間が指数分布に従う1台の処理装置があり、安定状態にある。平均サービス時間Tは0.1秒とする。利用率をρ=λT、平均待ち時間（サービス開始まで、サービス時間は含まない）をWq=ρT/(1−ρ)とする。Wqが0.1秒以上となる平均到着率λの最小値はどれか。",
+      "choices": [
+        [
+          "ア",
+          "3件/秒"
+        ],
+        [
+          "イ",
+          "5件/秒"
+        ],
+        [
+          "ウ",
+          "7件/秒"
+        ],
+        [
+          "エ",
+          "8件/秒"
+        ]
+      ],
+      "answer": "イ",
+      "explanation": "T>0、0≤ρ<1のもとでWq≥Tからρ/(1−ρ)≥1、よってρ≥0.5。ρ=λT、T=0.1秒なのでλ≥0.5/0.1=5件/秒。7件/秒と8件/秒も条件を満たしますが最小ではなく、3件/秒は条件未達です。",
+      "sources": []
+    },
+    {
+      "id": "ap80-extra-dmarc-alignment-v1",
+      "parent_key": "sec-dkim-023",
+      "purpose": "weakness_diagnosis",
+      "target_skill": "Distinguish authentication pass from DMARC From-domain alignment.",
+      "difficulty": "standard",
+      "prompt": "メールのFromはnotice@example.jp、DKIM検証はpass（d=mailer.other.jp）、SPF検証もpass（MAIL FROMドメイン=other.jp）だった。example.jpとother.jpは異なる組織ドメインである。このメールのDMARC認証結果について適切な説明はどれか。ただし、他に整合する署名や識別子はない。",
+      "choices": [
+        [
+          "ア",
+          "DKIMがpassなのでDMARCも必ずpassとなる。"
+        ],
+        [
+          "イ",
+          "SPFがpassなのでDMARCも必ずpassとなる。"
+        ],
+        [
+          "ウ",
+          "DKIMとSPFが両方passなのでDMARCも必ずpassとなる。"
+        ],
+        [
+          "エ",
+          "いずれの認証識別子もFromドメインと整合せず、DMARCはfailとなる。"
+        ]
+      ],
+      "answer": "エ",
+      "explanation": "DMARCではFromドメインと整合したDKIMまたはSPFの少なくとも一方が成功する必要があります。other.jpとexample.jpは異なる組織ドメインであり、relaxedアライメントでも一致しません。したがってDMARCはfailです。ただしfailと実際の受信拒否は別で、適用ポリシーを確認する必要があります。",
+      "sources": [
+        "https://www.rfc-editor.org/rfc/rfc7489"
+      ]
+    },
+    {
+      "id": "ap80-extra-availability-v1",
+      "parent_key": "quality-reliability-032",
+      "purpose": "weakness_diagnosis",
+      "target_skill": "Identify availability as a reliability subcharacteristic under ISO/IEC 25010:2011.",
+      "difficulty": "standard",
+      "prompt": "ISO/IEC 25010:2011の製品品質モデルで、オンライン予約システムが利用を必要とする時点に稼働し、アクセス可能であることを品質目標とした。この要求を最も直接表す信頼性の副特性はどれか。",
+      "choices": [
+        [
+          "ア",
+          "成熟性"
+        ],
+        [
+          "イ",
+          "可用性"
+        ],
+        [
+          "ウ",
+          "障害許容性"
+        ],
+        [
+          "エ",
+          "回復性"
+        ]
+      ],
+      "answer": "イ",
+      "explanation": "必要なときに利用可能であることを表すのは可用性です。2011年版で可用性は信頼性の副特性です。成熟性は通常運用時の故障の起こりにくさ、障害許容性は故障発生時に動作を維持する性質、回復性は障害後に所定状態へ復旧できる性質を指します。",
+      "sources": [
+        "https://www.iso.org/obp/ui/?_escaped_fragment_=iso%3Astd%3Aiso-iec%3A25010%3Aed-1%3Av1%3Aen"
+      ]
+    },
+    {
+      "id": "ap80-extra-bva3-v1",
+      "parent_key": "test-boundary-043",
+      "purpose": "weakness_diagnosis",
+      "target_skill": "Select all 3-value BVA neighbors for four identified acceptance partition boundary values.",
+      "difficulty": "standard",
+      "prompt": "整数入力で18以上65以下のみ受理する。入力値の定義域は0以上120以下とする。ただし今回は受理・不受理の切替付近の4つの境界値17・18・65・66のみを対象とし、定義域の端点0・120は対象外とする。これら4境界値に対して、各値と前後の隣接値を確認する3値境界値分析を適用したとき、必要なテストデータ集合はどれか。",
+      "choices": [
+        [
+          "ア",
+          "16,17,18,19,64,65,66,68"
+        ],
+        [
+          "イ",
+          "16,17,18,19,64,65,66,67"
+        ],
+        [
+          "ウ",
+          "16,17,18,20,64,65,66,67"
+        ],
+        [
+          "エ",
+          "16,17,18,19,63,65,66,67"
+        ]
+      ],
+      "answer": "イ",
+      "explanation": "3値境界値分析では、指定した各境界値とその前後の隣接値を確認します。17→16,17,18、18→17,18,19、65→64,65,66、66→65,66,67なので、重複を除いた8値が必要です。アは67を欠き、ウは19を、エは64を欠いています。0・120は今回の対象外と明示しています。",
+      "sources": [
+        "https://istqb.org/wp-content/uploads/2024/11/ISTQB_CTFL_Syllabus_v4.0.1.pdf"
+      ]
+    },
+    {
+      "id": "ap80-extra-samesite-lax-v1",
+      "parent_key": "sec-csrf-047",
+      "purpose": "weakness_diagnosis",
+      "target_skill": "Distinguish SameSite browser cookie policy from server-side CSRF token checks.",
+      "difficulty": "standard",
+      "prompt": "銀行サイトはセッションCookieだけで認証しており、CookieにはSameSite=Laxを明示的に設定している。送金処理はPOSTのみで、GETでは状態変更しない。別のサイトからトップレベル画面遷移を伴うPOSTフォームを銀行に送信する場合、一般的なブラウザの動作として正しいものはどれか。",
+      "choices": [
+        [
+          "ア",
+          "トップレベル遷移なのでLaxの認証Cookieは必ず送信される。"
+        ],
+        [
+          "イ",
+          "HTTPSで送信する場合はLaxの認証Cookieが必ず送信される。"
+        ],
+        [
+          "ウ",
+          "クロスサイトPOSTは安全なメソッドではないため、通常そのLax Cookieは送信されない。"
+        ],
+        [
+          "エ",
+          "Laxが設定されると、ブラウザはPOST要求そのものを一切送信できない。"
+        ]
+      ],
+      "answer": "ウ",
+      "explanation": "明示的なSameSite=Laxは、クロスサイト要求ではトップレベル遷移かつ安全なメソッドなどにCookie送信を制限します。POSTは安全なメソッドではなく、認証Cookieは通常付与されません。フォーム送信自体が禁止されるわけではありません。SameSite未指定Cookieの一部ブラウザによる既定値例外とは区別し、サーバ側の要求検証も別途必要です。",
+      "sources": [
+        "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html"
+      ]
+    }
+  ],
+  "review_and_publication_guards": {
+    "source_candidate_unchanged": true,
+    "new_questions_are_not_question_pack_import_json": true,
+    "source_answer_options_unchanged": true,
+    "does_not_mutate_database": true,
+    "does_not_populate_v624_notes": true,
+    "not_independent_review": true,
+    "pending_rights_review": true,
+    "all_generated_question_text_unapproved": true,
+    "recheck_required_after_any_edit": true
+  },
+  "base_source_git_blob_sha1": "d597503caf4588bfd829cf1ed45d0b31a1e39b1e"
+}
