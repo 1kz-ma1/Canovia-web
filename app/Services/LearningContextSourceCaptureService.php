@@ -204,7 +204,7 @@ final class LearningContextSourceCaptureService
                     'source_revision' => $revision,
                     'snapshot' => [
                         'schema' => 'canovia.learning_context_snapshot.v1',
-                        'delivery' => 'ephemeral_explicitly_consented_read_only',
+                        'delivery' => 'internal_owner_scoped_read_only',
                         'purpose' => 'support_one_private_study_plan',
                         'sources' => ['raw_evidence_shared' => false],
                         'facts' => [
