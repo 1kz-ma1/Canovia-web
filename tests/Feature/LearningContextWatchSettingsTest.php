@@ -155,7 +155,9 @@ final class LearningContextWatchSettingsTest extends TestCase
         $this->post($this->refreshUrl($plan))->assertSessionHas('success');
         $this->assertSame('superseded', $candidate->fresh()->status);
         $task->update(['status' => 'paused']);
-        $this->post($this->refreshUrl($plan))->assertSessionHas('success');
+        $this->post($this->refreshUrl($plan))
+            ->assertRedirect($this->url($plan))
+            ->assertSessionHas('success');
         $this->assertDatabaseCount('learning_context_change_records', 1);
     }
 
@@ -232,12 +234,15 @@ final class LearningContextWatchSettingsTest extends TestCase
         $this->assertDatabaseCount('learning_context_watch_states', 1);
 
         config(['app.env' => 'staging']);
-        $this->post($this->refreshUrl($plan))->assertNotFound();
-        $this->post($this->enableUrl($plan), ['consent' => '1'])->assertNotFound();
-        $this->get($this->url($plan))->assertOk()
-            ->assertSee('data-learning-watch-disable')
-            ->assertDontSee('data-learning-watch-manual-check');
-        $this->delete($this->disableUrl($plan))->assertRedirect();
+        // The synthetic-only staging transport refuses all HTTP before
+        // controller-level owner and flag validation.
+        $this->post($this->refreshUrl($plan))->assertStatus(503);
+        $this->post($this->enableUrl($plan), ['consent' => '1'])->assertStatus(503);
+        $this->get($this->url($plan))->assertStatus(503);
+        $this->delete($this->disableUrl($plan))->assertStatus(503);
+        // Internal owner erasure remains available despite HTTP lockdown.
+        $this->assertTrue(app(\App\Services\LearningContextWatchPersistenceService::class)
+            ->optOut($owner, $plan->id));
         $this->assertDatabaseCount('learning_context_watch_states', 0);
     }
 }
