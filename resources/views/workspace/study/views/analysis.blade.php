@@ -14,6 +14,8 @@
         </div>
     </section>
 
+    @include('workspace.study.partials.learning-bank-coverage')
+
     <div
         class="space-y-5"
         data-study-workspace-composed
