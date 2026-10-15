@@ -1,0 +1,38 @@
+name: Integration Freeze Source Inventory
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ci/integration_freeze_manifest.py'
+      - 'tests/ci/test_integration_freeze_manifest.py'
+      - 'docs/development/integration/**'
+      - '.github/workflows/integration-freeze-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify complete history, immutable refs and more than 300 changed paths
+        run: python3 -m unittest discover -s tests/ci -p test_integration_freeze_manifest.py -v
+      - name: Generate source-only inventory for exact candidate
+        env:
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python3 scripts/ci/integration_freeze_manifest.py
+          --base 15abdc9de6f24b5250fb255c579d1aa55facaf1a
+          --candidate "$CANDIDATE_SHA" > integration-source-manifest.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: integration-source-inventory
+          path: integration-source-manifest.json
