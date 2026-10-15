@@ -327,6 +327,52 @@ final class LearningContextPlanLockContentionTest extends TestCase
             ->where('plan_id', $plan->id)->count());
     }
 
+    public function test_owner_plan_settings_form_waits_for_plan_lock_and_updates_shadow_atomically(): void
+    {
+        [$owner, $plan, $task] = $this->fixture();
+        config(['intelligence.learning_context_watch.epoch_shadow_enabled' => true]);
+        $this->actingAs($owner)->withoutExceptionHandling();
+
+        $payload = [
+            'title' => 'AFTER_PLAN_FORM_EDIT',
+            'category' => '資格学習',
+            'priority' => 1,
+            'priority_mode' => 'manual',
+            'deadline' => today()->addDays(15)->toDateString(),
+        ];
+        $contender = DB::connection('learning_lock_contender');
+        $this->withContendedPlan($contender, $plan, function () use ($plan, $payload): void {
+            $this->expectLockDenied(function () use ($plan, $payload): void {
+                $this->put(route('plans.update', $plan), $payload);
+            });
+        });
+
+        self::assertSame('SYNTHETIC_LOCK_PLAN', $plan->fresh()->title);
+        self::assertSame(today()->addDays(10)->toDateString(),
+            $plan->fresh()->deadline->toDateString());
+        self::assertSame(15, (int) $task->fresh()->progress_percent);
+        self::assertSame(0, DB::table('learning_context_source_epochs')
+            ->where('plan_id', $plan->id)->count());
+        self::assertSame(0, DB::table('goal_contexts')
+            ->where('plan_id', $plan->id)->count());
+
+        $this->put(route('plans.update', $plan), $payload)
+            ->assertRedirect(route('plans.show', $plan));
+        self::assertSame('AFTER_PLAN_FORM_EDIT', $plan->fresh()->title);
+        self::assertSame(today()->addDays(15)->toDateString(),
+            $plan->fresh()->deadline->toDateString());
+        self::assertSame(1, (int) DB::table('learning_context_source_epochs')
+            ->where('plan_id', $plan->id)->value('epoch'));
+        self::assertSame('AFTER_PLAN_FORM_EDIT',
+            (string) $plan->fresh()->goalContext?->desired_state);
+
+        // A repeated same-value POST is not a second source revision.
+        $this->put(route('plans.update', $plan), $payload)
+            ->assertRedirect(route('plans.show', $plan));
+        self::assertSame(1, (int) DB::table('learning_context_source_epochs')
+            ->where('plan_id', $plan->id)->value('epoch'));
+    }
+
     /** @return array{User,Plan,Task} */
     private function fixture(): array
     {
