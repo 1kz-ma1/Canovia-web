@@ -91,6 +91,7 @@ use App\Http\Controllers\CoreFragmentBundleController;
 use App\Http\Controllers\ClientPerformanceController;
 use App\Http\Controllers\WorkspaceModeController;
 use App\Http\Controllers\StudyWorkspaceController;
+use App\Http\Controllers\LearningContextWatchSettingsController;
 use App\Http\Controllers\StudyWorkspaceTopController;
 use App\Http\Controllers\DevelopmentWorkspaceController;
 use App\Http\Controllers\DevelopmentOperationalProfileController;
@@ -149,6 +150,19 @@ Route::get('/', [HomeController::class, 'index'])->middleware('early_access.visi
 Route::get('/workspace/overview', OverviewWorkspaceController::class)->middleware('early_access.visit')->name('workspace.overview.index');
 Route::get('/workspace/study/top', StudyWorkspaceTopController::class)->middleware('early_access.visit')->name('workspace.study.top');
 Route::get('/workspace/study', StudyWorkspaceController::class)->middleware('early_access.visit')->name('workspace.study.index');
+// Explicitly owner-authenticated, Study Plan-scoped, no scheduler or notification routes.
+Route::get('/workspace/study/context-watch/{plan}', [LearningContextWatchSettingsController::class, 'show'])
+    ->middleware(['auth', 'throttle:30,1'])
+    ->name('workspace.study.context_watch.show');
+Route::post('/workspace/study/context-watch/{plan}', [LearningContextWatchSettingsController::class, 'store'])
+    ->middleware(['auth', 'throttle:6,1'])
+    ->name('workspace.study.context_watch.enable');
+Route::post('/workspace/study/context-watch/{plan}/compare', [LearningContextWatchSettingsController::class, 'refresh'])
+    ->middleware(['auth', 'throttle:6,1'])
+    ->name('workspace.study.context_watch.refresh');
+Route::delete('/workspace/study/context-watch/{plan}', [LearningContextWatchSettingsController::class, 'destroy'])
+    ->middleware(['auth', 'throttle:6,1'])
+    ->name('workspace.study.context_watch.disable');
 Route::get('/workspace/development/top', DevelopmentWorkspaceTopController::class)->middleware('early_access.visit')->name('workspace.development.top');
 Route::get('/workspace/development', DevelopmentWorkspaceController::class)->middleware('early_access.visit')->name('workspace.development.index');
 Route::post('/workspace/development/operational-profile/{plan}', DevelopmentOperationalProfileController::class)
