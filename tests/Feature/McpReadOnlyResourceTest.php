@@ -875,7 +875,7 @@ final class McpReadOnlyResourceTest extends TestCase
             'canovia_mcp.study_result_proposals_enabled' => true,
         ]);
 
-        $policy = app(\\App\\Services\\McpStudyPilotAccessPolicy::class);
+        $policy = app(\App\Services\McpStudyPilotAccessPolicy::class);
         foreach (['', '0', '1,2', '01', '-1', 'garbage'] as $invalid) {
             config(['canovia_mcp.ap_pilot_owner_id' => $invalid]);
             $this->assertFalse($policy->configured());
@@ -887,7 +887,7 @@ final class McpReadOnlyResourceTest extends TestCase
         config(['canovia_mcp.ap_pilot_owner_id' => (string) $other->id]);
         $this->assertTrue($policy->configured());
         $this->assertFalse($policy->allowsPlan($study));
-        $consent = app(\\App\\Services\\McpExplicitPlanConsentService::class);
+        $consent = app(\App\Services\McpExplicitPlanConsentService::class);
         $this->assertFalse($consent->isEligibleMcpPlanOwner($owner, $study));
         $this->rpc('tools/call', [
             'name' => McpReadOnlyStudyContextTool::NAME,
