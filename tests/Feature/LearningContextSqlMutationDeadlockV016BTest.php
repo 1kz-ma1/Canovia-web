@@ -155,11 +155,11 @@ final class LearningContextSqlMutationDeadlockV016BTest extends TestCase
             }
 
             $until = microtime(true) + 22;
-            $await = static function (callable $done, string $why) use ($until, $processes): void {
+            $await = static function (callable $done, string $why) use ($until, $processes, $directory, $mode): void {
                 while (! $done()) {
                     foreach ($processes as $role => $entry) {
                         $state = proc_get_status($entry['process']);
-                        if (! $state['running']) {
+                        if (! $state['running'] && ! is_file($directory."/$mode.$role.result.json")) {
                             $stderr = trim((string) stream_get_contents($entry['pipes'][2]));
                             throw new RuntimeException(
                                 'Disposable worker exited before handshake: role='.$role
