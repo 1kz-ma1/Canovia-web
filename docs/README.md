@@ -16,6 +16,7 @@
 
 ## Pre-Launch IA-2 — planless onboarding slice (2026-10-15)
 
+- [Learning V6.21 third pinned Mac Safari lab](development/LEARNING_V621_THIRD_PINNED_MAC_SAFARI_ACCEPTANCE_2026_10_15.md): owner-only third immutable SHA/port/cookie/SQLite, safe runbook to verify legacy external-AI first-answer draft save, reload and UI; Mac Safari acceptance **NOT RUN** by CI, production remains NO-GO.
 - [Learning V6.21 first-answer draft continuity](development/LEARNING_FIRST_DRAFT_CONTINUITY_V621_2026_10_15.md): legacy external JSON practice first-answer draft saved vs scored Attempt semantics, visible 204/419 feedback and disposable mobile-sized Chromium reload/assessment proof. No iPhone/production validation.
 - [IA-2d Disposable Chromium three-entry E2E](development/PRELAUNCH_IA2D_DISPOSABLE_BROWSER_E2E_2026_10_15.md): real loopback Chromium smoke for browse/diagnose/converse/first Study action, safe no-provider SQLite, and compatibility with older browser journeys. Not live mobile/browser acceptance.
 - [IA-2c Planless Overview re-entry](development/PRELAUNCH_IA2C_PLANLESS_OVERVIEW_REENTRY_2026_10_15.md): explain first value without Plan, offer existing Companion, L1-gated diagnosis and optional manual Plan, retain mode choices; guard generic existing Plans from mistaken first-use onboarding.
