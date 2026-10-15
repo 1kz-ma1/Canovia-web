@@ -12,6 +12,8 @@ on:
       - 'resources/views/workspace/study/partials/learning-bank-coverage.blade.php'
       - 'tests/Feature/StudyLearningBankTopicCoverageV619Test.php'
       - 'scripts/ci/learning_v619_bank_coverage_browser_smoke.mjs'
+      - 'scripts/ci/learning_v616_disposable_bank.php'
+      - 'scripts/ci/learning_v617_disposable_delayed.php'
       - 'docs/development/LEARNING_BANK_TOPIC_COVERAGE_P0_V6_19_2026_10_15.md'
   workflow_dispatch:
 
