@@ -1,0 +1,53 @@
+name: Learning Context Watch Persistence (No Delivery)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/LearningContextWatchPersistenceService.php'
+      - 'app/Models/LearningContextWatchState.php'
+      - 'app/Models/LearningContextChangeRecord.php'
+      - 'config/intelligence.php'
+      - 'database/migrations/2026_10_15_110000_create_learning_context_watch_persistence.php'
+      - 'tests/Feature/LearningContextWatchPersistenceTest.php'
+      - 'docs/development/LEARNING_CONTEXT_WATCH_PERSISTENCE_V03_2026_10_15.md'
+      - '.github/workflows/learning-context-watch-persistence.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bounded-watch-persistence:
+    name: Encrypted baseline and dedupe safety tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+      - name: Install reviewed locked dependencies, no application hooks
+        run: composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+      - name: Syntax check for persistence service and migration
+        run: |
+          php -l app/Services/LearningContextWatchPersistenceService.php
+          php -l app/Models/LearningContextWatchState.php
+          php -l app/Models/LearningContextChangeRecord.php
+          php -l database/migrations/2026_10_15_110000_create_learning_context_watch_persistence.php
+          php -l tests/Feature/LearningContextWatchPersistenceTest.php
+      - name: SQLite integration tests, NO external connections or notification delivery
+        env:
+          APP_ENV: testing
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ":memory:"
+          SESSION_DRIVER: array
+          CACHE_STORE: array
+        run: |
+          php artisan test tests/Feature/LearningContextWatchPersistenceTest.php tests/Feature/LearningContextSourceCaptureTest.php tests/Unit/LearningContextChangeDetectionServiceTest.php --colors=never
