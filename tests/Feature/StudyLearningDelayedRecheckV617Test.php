@@ -139,10 +139,16 @@ final class StudyLearningDelayedRecheckV617Test extends TestCase
         $this->actingAs($owner);
         $history = $this->history($owner, $plan, $task);
         fwrite(STDERR, "[V617 debug] history derived\\n");
+        fwrite(STDERR, "[V617 debug] preview kind=".(is_null($history['next_action_preview']) ? 'null':'present')."\\n");
         $this->assertNull($history['next_action_preview']);
+        fwrite(STDERR, "[V617 debug] null checked\\n");
+        fwrite(STDERR, "[V617 debug] due state=".($history['delayed_recheck']['state'] ?? 'missing')."\\n");
         $this->assertSame('later', $history['delayed_recheck']['state']);
+        fwrite(STDERR, "[V617 debug] state checked\\n");
+        fwrite(STDERR, "[V617 debug] before history GET\\n");
         $this->get(route('plans.tasks.learning.history', [$plan, $task]))
             ->assertOk()->assertSee('data-learning-delayed-not-yet', false);
+        fwrite(STDERR, "[V617 debug] after history GET\\n");
         $this->get(route('plans.tasks.learning.index', [$plan, $task]))
             ->assertOk()->assertDontSee('data-learning-delayed-start', false);
         $this->submitDelayed($plan, $task, $pack, $history['delayed_recheck'])->assertStatus(409);
