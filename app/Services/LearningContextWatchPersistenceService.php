@@ -194,14 +194,18 @@ final class LearningContextWatchPersistenceService
                     'encrypted_baseline' => $current,
                 ])->save();
 
-                $older = LearningContextChangeRecord::query()
+                // Portable SQLite/MySQL retention: OFFSET without LIMIT is
+                // not valid SQLite SQL. Keep the latest bounded IDs and delete
+                // everything else in one Plan-scoped query.
+                $retainedIds = LearningContextChangeRecord::query()
                     ->where('plan_id', $planId)
                     ->orderByDesc('id')
-                    ->skip(self::MAX_RECORDS)
+                    ->limit(self::MAX_RECORDS)
                     ->pluck('id')->all();
-                if ($older !== []) {
+                if ($retainedIds !== []) {
                     LearningContextChangeRecord::query()
-                        ->where('plan_id', $planId)->whereIn('id', $older)->delete();
+                        ->where('plan_id', $planId)
+                        ->whereNotIn('id', $retainedIds)->delete();
                 }
 
                 return $this->result($status);
