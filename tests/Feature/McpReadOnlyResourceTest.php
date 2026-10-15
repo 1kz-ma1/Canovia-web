@@ -882,6 +882,15 @@ final class McpReadOnlyResourceTest extends TestCase
             $this->assertFalse($policy->allowsPlan($study));
         }
 
+        // The normal Development read-only tool remains reachable, but
+        // Study tools disappear while the owner pilot is unconfigured.
+        $this->rpc('tools/list')->assertOk()
+            ->assertJsonCount(1, 'result.tools');
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyStudyContextTool::NAME,
+            'arguments' => ['plan_id' => $study->id],
+        ])->assertStatus(400)->assertJsonPath('error.code', -32602);
+
         // Another real user being allowlisted MUST NOT receive the original
         // owner's Plan, even with a valid ChatGPT token and active grant.
         config(['canovia_mcp.ap_pilot_owner_id' => (string) $other->id]);
