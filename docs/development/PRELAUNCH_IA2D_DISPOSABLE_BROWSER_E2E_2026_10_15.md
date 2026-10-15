@@ -27,7 +27,9 @@ Development/Learning acceptance steps.
      -> Overview -> optional First Companion (mobile-sized viewport).
   2. **Diagnose** Welcome -> selected Study answers -> real Plan Seed
      -> explicit human acceptance -> editor prefill -> Plan stored ->
-     Study Workspace -> submit first recommended Study Action.
+     Study Workspace -> click the UI's actual first recommended Action
+     and verify its destination renders. A new Plan may require a
+     learning-scope setup GET instead of a practice POST.
   3. **Converse** Welcome -> user-text Goal Discovery -> rendered
      follow-up answer(s) -> explicit first Plan creation -> non-planless
      Overview. External AI is disabled, so conversation uses the
@@ -56,5 +58,5 @@ a **NO-GO** and must be fixed and rerun before development PR integration.
 
 The first Study Action may lead to a practice setup awaiting a real
 question bank; this browser journey does not invent or grade question
-content. It checks actual Study Action submission, not completion of
-AP study.
+content. It checks actual Study Action navigation/destination, not completion of
+AP study or creation of a Task.

@@ -19,7 +19,7 @@ if (base !== 'http://127.0.0.1:8796'
   throw Error('IA-2d strictly isolated local test boundary not satisfied');
 }
 const browser = await chromium.launch({headless: true, args: ['--no-sandbox']});
-const log = name => process.stdout.write('PASS IA-2d ' + name + '\\n');
+const log = name => process.stdout.write('PASS IA-2d ' + name + '\n');
 const journey = async (name, run, mobile = false) => {
   const context = await browser.newContext({
     locale: 'ja-JP',
@@ -88,12 +88,29 @@ try {
     await page.locator('[data-study-workspace]').waitFor();
     log('human accepted Study seed and created actual first Plan via browser');
 
-    const action = page.locator('form[action$="/plans/' + planId + '/study-action/execute"]').first();
-    await action.waitFor({state: 'visible'});
-    await action.locator('button[type="submit"]').click();
-    await page.waitForURL(url => url.pathname.includes('/study-practice'), {timeout: 25000});
-    assert.notEqual(new URL(page.url()).pathname, '/workspace/study');
-    log('Study Workspace first recommended Action submitted through real form');
+    // A new Study Plan can recommend a GET to confirm learning scope
+    // instead of a POST that creates/executes a Task. Follow the live
+    // first Action the UI actually recommends, not a hard-coded route.
+    const firstAction = page.locator(
+      '[data-study-workspace-action], [data-study-workspace-missing-context], '
+      + '[data-study-workspace-recommendation]',
+    ).first();
+    await firstAction.waitFor({state:'visible'});
+    const firstActionLink = firstAction.locator('a[href]').first();
+    const firstActionForm = firstAction.locator('form').first();
+    const originalPath = new URL(page.url()).pathname;
+    if (await firstActionLink.count()) {
+      await firstActionLink.click();
+    } else if (await firstActionForm.count()) {
+      await firstActionForm.locator('button[type="submit"]').click();
+    } else {
+      throw Error('First Study Action was rendered without any permitted clickable action');
+    }
+    await page.waitForURL(url => url.pathname !== originalPath, {timeout: 25000});
+    const destination = await page.goto(page.url(), {waitUntil:'domcontentloaded'});
+    assert.equal(destination.status(), 200, 'First Study Action destination must render');
+    assert.notEqual(new URL(page.url()).pathname, originalPath);
+    log('Study Workspace first recommended Action followed to actual destination');
   });
 
   await journey('conversation', async page => {
@@ -135,7 +152,7 @@ try {
     assert.equal(await page.locator('[data-overview-planless-start]').count(), 0);
     log('confirmed conversational Plan -> Overview is now a real nonempty Plan state');
   });
-  process.stdout.write('IA-2d DISPOSABLE CHROMIUM FIRST-USE ACCEPTANCE PASS\\n');
+  process.stdout.write('IA-2d DISPOSABLE CHROMIUM FIRST-USE ACCEPTANCE PASS\n');
 } finally {
   await browser.close();
 }
