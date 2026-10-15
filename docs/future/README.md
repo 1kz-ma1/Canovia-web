@@ -136,6 +136,8 @@ and links current behavior back to Active Specs instead of duplicating it.
 
 ### Platform / Ecosystem
 
+- [Identity & Connection UX (Candidate)](CANOVIA_IDENTITY_CONNECTION_UX.md): future-only step-up and safer reconnect, without changing current OAuth/consent authorization boundaries.
+
 - [Canovia Platform / Ecosystem](CANOVIA_PLATFORM_ECOSYSTEM.md)
 
 Covers Future direction for:

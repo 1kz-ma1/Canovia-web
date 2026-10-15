@@ -50,6 +50,9 @@
 
 ## MCP staging and public-release readiness (2026-10-09)
 
+- [Historic MCP Staging identity-link incident triage](development/MCP_STAGING_IDENTITY_LINK_MISMATCH_RUNBOOK_2026_10_14.md): fixed-code rejection vs different Auth0 subject/fingerprint hypotheses, updated with current Staging Live checkpoint; no real-account data or OAuth configuration changes.
+- [Future Identity & Connection UX (candidate)](future/CANOVIA_IDENTITY_CONNECTION_UX.md): passkey/step-up/relink/optional connection-code concept only, never an OAuth/Plan permission bypass or current backlog.
+
 - [**2026-10-14 real ChatGPT OAuth, scoped Development Plan/Task read & revocation acceptance**](development/MCP_CHATGPT_STAGING_REAL_OAUTH_READ_REVOCATION_ACCEPTANCE_2026_10_14.md): **PASS for one isolated synthetic staging fixture only**, including wrong-subject denial, approved overview/tasks reads and post-revocation denial. Staging diagnostic removal and all production security/rollout gates remain open; this dated evidence supersedes older *not-yet-tested* staging statements but does not imply production activation.
 - [Isolated synthetic Development Plan consent pilot](development/MCP_STAGING_SYNTHETIC_PLAN_CONSENT_PILOT_2026_10_13.md): off-by-default staging-only, owner-verified scope and expiry; MCP reads stay disabled.
 - [ChatGPT MCP Phase 1 Development-only read acceptance](development/MCP_CHATGPT_PHASE1_DEVELOPMENT_READ_2026_10_11.md): approved implementation scope, OAuth Tool declaration, Auth0/JWT gating, and real ChatGPT E2E proof still required.
