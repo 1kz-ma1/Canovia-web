@@ -140,8 +140,21 @@ class GuidedExecutionController extends Controller
             'expected_next_action_hash' => ['required', 'regex:/\\A[a-f0-9]{64}\\z/'],
         ]);
 
-        DB::transaction(function () use ($request, $task, $guidedExecution, $identity, $guided, $validated) {
-            $currentTask = Task::query()->whereKey($task->id)->lockForUpdate()->firstOrFail();
+        DB::transaction(function () use ($request, $plan, $task, $guidedExecution, $identity, $guided, $validated): void {
+            // All source-visible Task mutations must serialize behind the
+            // parent Plan lock (same order as Learning Context Watch capture).
+            // The route-bound Plan/Task and prior authorization can be stale.
+            $lockedPlan = Plan::query()->whereKey($plan->id)
+                ->lockForUpdate()->firstOrFail();
+            $currentTask = Task::query()->where('plan_id', $lockedPlan->id)
+                ->whereKey($task->id)->lockForUpdate()->firstOrFail();
+            $currentTask->setRelation('plan', $lockedPlan);
+
+            // Re-read owner/editor rights rather than reusing the service's
+            // request-local role cache from the initial route authorization.
+            $this->authorizeTask(
+                $request, $lockedPlan, $currentTask, new PlanOwnershipService(),
+            );
             $latest = $guided->latestCompletedFor(
                 $currentTask,
                 $request->user()?->id,
