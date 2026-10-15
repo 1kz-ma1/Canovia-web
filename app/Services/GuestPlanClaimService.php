@@ -34,6 +34,11 @@ class GuestPlanClaimService
                 $claimedNow = false;
                 if ($plan->user_id === null) {
                     $plan->forceFill(['user_id' => $user->id])->save();
+                    // The new owner may now have a private Study Plan.
+                    // Initialize shadow source epoch only on a real claim;
+                    // competing owner claims and retries do not advance it.
+                    app(LearningContextSourceEpochService::class)
+                        ->record($plan, 'plan_updated');
                     $claimedNow = true;
                 }
 

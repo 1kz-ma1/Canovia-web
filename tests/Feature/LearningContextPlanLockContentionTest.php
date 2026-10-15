@@ -373,6 +373,65 @@ final class LearningContextPlanLockContentionTest extends TestCase
             ->where('plan_id', $plan->id)->value('epoch'));
     }
 
+    public function test_private_study_collaboration_exit_waits_on_plan_before_shadow_epoch_commit(): void
+    {
+        [$owner, $plan, $task] = $this->fixture();
+        config(['intelligence.learning_context_watch.epoch_shadow_enabled' => true]);
+        $this->actingAs($owner)->withoutExceptionHandling();
+
+        $contender = DB::connection('learning_lock_contender');
+        $this->withContendedPlan($contender, $plan, function () use ($plan): void {
+            $this->expectLockDenied(function () use ($plan): void {
+                $this->post(route('plans.collaboration.enable', $plan));
+            });
+        });
+        self::assertFalse($plan->fresh()->is_collaborative);
+        self::assertSame(0, DB::table('learning_context_source_epochs')
+            ->where('plan_id', $plan->id)->count());
+
+        $this->post(route('plans.collaboration.enable', $plan))
+            ->assertRedirect(route('plans.collaboration.settings', $plan));
+        self::assertTrue($plan->fresh()->is_collaborative);
+        self::assertSame(1, (int) DB::table('learning_context_source_epochs')
+            ->where('plan_id', $plan->id)->value('epoch'));
+        self::assertSame(15, (int) $task->fresh()->progress_percent);
+        self::assertNull(app(\App\Services\LearningContextSourceCaptureService::class)
+            ->capture($owner, $plan->id));
+    }
+
+    public function test_guest_study_owner_claim_waits_on_plan_and_does_not_half_transfer(): void
+    {
+        [$original, $plan] = $this->fixture();
+        $plan->update(['user_id' => null]);
+        $newOwner = User::factory()->create();
+        config(['intelligence.learning_context_watch.epoch_shadow_enabled' => true]);
+        $request = \Illuminate\Http\Request::create('/', 'GET', [], [
+            'pace_keeper_owner_token_'.$plan->id => $plan->owner_token,
+        ]);
+        $claim = app(\App\Services\GuestPlanClaimService::class);
+        $contender = DB::connection('learning_lock_contender');
+        $this->withContendedPlan($contender, $plan, function () use ($claim, $request, $newOwner): void {
+            $this->expectLockDenied(function () use ($claim, $request, $newOwner): void {
+                $claim->claim($request, $newOwner);
+            });
+        });
+        self::assertNull($plan->fresh()->user_id);
+        self::assertSame(0, DB::table('learning_context_source_epochs')
+            ->where('plan_id', $plan->id)->count());
+
+        self::assertSame(1, $claim->claim($request, $newOwner));
+        self::assertSame($newOwner->id, $plan->fresh()->user_id);
+        self::assertSame(1, (int) DB::table('learning_context_source_epochs')
+            ->where('plan_id', $plan->id)->value('epoch'));
+        self::assertSame(0, $claim->claim($request, $newOwner));
+        self::assertSame(1, (int) DB::table('learning_context_source_epochs')
+            ->where('plan_id', $plan->id)->value('epoch'));
+        self::assertNotNull(app(\App\Services\LearningContextSourceCaptureService::class)
+            ->capture($newOwner, $plan->id));
+        self::assertNull(app(\App\Services\LearningContextSourceCaptureService::class)
+            ->capture($original, $plan->id));
+    }
+
     /** @return array{User,Plan,Task} */
     private function fixture(): array
     {
