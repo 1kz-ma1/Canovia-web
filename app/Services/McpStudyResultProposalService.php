@@ -16,6 +16,7 @@ final class McpStudyResultProposalService
         private readonly McpDelegatedPlanAccessPolicy $policy,
         private readonly McpExplicitPlanConsentService $consent,
         private readonly McpDelegatedIdentityFingerprintService $fingerprints,
+        private readonly McpStudyPilotAccessPolicy $apPilot,
     ) {}
 
     public function isEnabled(): bool
@@ -24,7 +25,8 @@ final class McpStudyResultProposalService
             && config('canovia_mcp.study_read_enabled') === true
             && config('canovia_mcp.study_summary_read_enabled') === true
             && config('canovia_mcp.study_result_proposals_enabled') === true
-            && config('app.env') !== 'staging';
+            && config('app.env') !== 'staging'
+            && $this->apPilot->configured();
     }
 
     /**
