@@ -113,8 +113,22 @@ try {
 
     await page.locator('[data-study-practice-next]').click();
     const second=page.locator('[data-study-practice-question]').nth(1);
-    await second.locator('textarea[name="answers[q2][answer]"]').fill('合成の短い回答');
-    await page.locator('[data-study-practice-draft-status][data-save-state="saved"]').waitFor();
+    const q2=second.locator('textarea[name="answers[q2][answer]"]');
+
+    // Simulate authentication/CSRF expiry: HTTP 419 must NEVER show saved.
+    await page.route('**/study-practice/draft', route =>
+        route.fulfill({status:419,contentType:'text/html',body:'synthetic expired session'}));
+    await q2.fill('合成の一時回答');
+    await page.locator('[data-study-practice-draft-status][data-save-state="failed"]')
+        .waitFor({state:'visible'});
+    assert.equal(verify().attempt_count,0);
+    assert.equal(verify().has_q2_saved,false);
+    log('expired-draft-write-does-not-claim-server-save');
+
+    await page.unroute('**/study-practice/draft');
+    await q2.fill('合成の短い回答');
+    await page.locator('[data-study-practice-draft-status][data-save-state="saved"]')
+        .waitFor({state:'visible'});
     await page.locator('[data-study-practice-final-submit]').click();
     await page.locator('#practice-evaluation').waitFor({state:'visible'});
     assert.ok((await page.locator('#studyPracticeEvaluationPrompt').inputValue()).length>40);
