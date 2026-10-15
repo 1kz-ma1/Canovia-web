@@ -1,5 +1,9 @@
 # Canovia documentation index (2026-10-13)
 
+## Paused lane integration handoffs
+
+- [Learning / AP科目A80問 統合前の停止・再開引き継ぎ](development/LEARNING_AP80_INTEGRATION_PAUSE_HANDOFF_2026_10_16.md): V6.24–V6.28の統合証跡、Git記録6件/チャット評価9件/正式承認0件、未反映のIPA解説、main/production/Render差分、再開・公開ゲートを区別。**新規実装は一時停止、教材は未公開。**
+
 ## Product direction and decision memory (2026-10-13)
 
 - [Learning Context v0.18 source authority decision](development/decisions/2026-10-15_LEARNING_CONTEXT_SOURCE_AUTHORITY_V018.md): owner-scoped Study full-history hash stays authoritative, application Epoch remains shadow-only, SQL-trigger probe is NOT approved for production; automatic Watch and release remain OFF.
