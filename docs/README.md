@@ -3,6 +3,7 @@
 ## Product direction and decision memory (2026-10-13)
 
 - [Learning Context v0.18 source authority decision](development/decisions/2026-10-15_LEARNING_CONTEXT_SOURCE_AUTHORITY_V018.md): owner-scoped Study full-history hash stays authoritative, application Epoch remains shadow-only, SQL-trigger probe is NOT approved for production; automatic Watch and release remain OFF.
+- [Learning Context v0.19 capture diagnostics](development/LEARNING_CONTEXT_CAPTURE_DIAGNOSTICS_V019_2026_10_15.md): development/test-only in-memory fixed-bucket capture duration/source-size/cap outcomes, default OFF, hard-denied in staging/production; no telemetry transport or real-user measurements.
 - [Product Decision Memory operating specification](development/PRODUCT_DECISION_MEMORY_OPERATING_SPEC_2026_10_13.md): **active lightweight GitHub documentation practice**, not a Dev Pro runtime implementation.
 - [Core early access / internal Dev Pro / World strategic decisions](development/decisions/2026-10-13_CANOVIA_STRATEGY_DEVPRO_WORLD.md): explicit decision status, provisional validation signals, security/release boundaries and follow-up ledger.
 - [Canovia World independent app concept](future/CANOVIA_WORLD_COMPANION_APP_CONCEPT.md): future-only first-party app candidate; no separate Beta launch or cross-app authorization implemented.
