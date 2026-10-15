@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from scripts.ops.platform_workspace_r22_decision_register import (
-    EVIDENCE_DOCS, GATES, TARGET, TARGET_CONTEXTS, WORKFLOW, IncompleteEvidence,
+    EVIDENCE_DOCS, GATES, TARGET, CREATIVE_TARGET, TARGET_CONTEXTS, CREATIVE_CONTEXTS, WORKFLOW, IncompleteEvidence,
     build_register, read_doc, verify_docs,
 )
 from scripts.ops.platform_workspace_context_intent_matrix import audit
@@ -58,10 +58,10 @@ class DecisionRegisterTests(unittest.TestCase):
 
     def test_studied_target_is_exactly_five_not_five_removal_candidates(self):
         r = self.report
-        self.assertEqual(r["historically_experimented_file_count"], 1)
-        self.assertEqual(r["historically_experimented_file_occurrences"], 5)
-        self.assertEqual(r["static_only_file_count"], 20)
-        self.assertEqual(r["static_only_file_occurrences"], 58)
+        self.assertEqual(r["historically_experimented_file_count"], 2)
+        self.assertEqual(r["historically_experimented_file_occurrences"], 7)
+        self.assertEqual(r["static_only_file_count"], 19)
+        self.assertEqual(r["static_only_file_occurrences"], 56)
         item = next(x for x in r["contexts"] if x["test_file"] == TARGET)
         self.assertEqual(item["additional_invocations"], 4)
         self.assertEqual({x["named_regression_step"] for x in item["occurrences"]},
@@ -74,9 +74,24 @@ class DecisionRegisterTests(unittest.TestCase):
                             for x in item["occurrences"]))
         self.assertTrue(all(not x["safe_to_remove"] for x in r["contexts"]))
 
+    def test_r23_creative_contexts_explicitly_scoped_and_held(self):
+        record = next(x for x in self.report["contexts"] if x["test_file"] == CREATIVE_TARGET)
+        self.assertEqual(record["historical_experiment_context_count"], 2)
+        self.assertEqual(record["additional_invocations"], 1)
+        self.assertEqual(record["evidence_level"],
+                         "SCOPED_HISTORICAL_CREATIVE_MUTATION_OBSERVATIONS_HOLD")
+        self.assertEqual({x["named_regression_step"] for x in record["occurrences"]},
+                         set(CREATIVE_CONTEXTS))
+        self.assertTrue(all(x["historical_mutant_scope"] == "R23_CREATIVE_PLAN"
+                            for x in record["occurrences"]))
+        self.assertTrue(all(x["other_companion_files_alone_detected_these_two_mutants"] is False
+                            for x in record["occurrences"]))
+        self.assertFalse(record["safe_to_remove"])
+
     def test_unexamined_files_not_inferred_safe_or_security_clean(self):
-        rows = [x for x in self.report["contexts"] if x["test_file"] != TARGET]
-        self.assertEqual(len(rows), 20)
+        rows = [x for x in self.report["contexts"]
+                if x["test_file"] not in (TARGET, CREATIVE_TARGET)]
+        self.assertEqual(len(rows), 19)
         self.assertTrue(all(x["unreviewed_security_impact"] for x in rows))
         self.assertTrue(all(x["evidence_level"] ==
                             "CURRENT_STATIC_CONTEXT_INVENTORY_ONLY_HOLD" for x in rows))
@@ -85,7 +100,7 @@ class DecisionRegisterTests(unittest.TestCase):
                             for x in rows for step in x["occurrences"]))
 
     def test_historical_documents_are_not_current_sha_ci_attestations(self):
-        self.assertEqual(len(self.report["historical_sources"]), 4)
+        self.assertEqual(len(self.report["historical_sources"]), 5)
         self.assertFalse(self.report["historical_experiments_revalidated_at_current_main_sha"])
         for doc in self.report["historical_sources"]:
             self.assertFalse(doc["current_sha_experiment_replay"])
@@ -96,7 +111,7 @@ class DecisionRegisterTests(unittest.TestCase):
     def test_all_evidence_source_documents_are_present(self):
         evidence = verify_docs()
         self.assertEqual([x["stage"] for x in evidence],
-                         ["R18", "R19", "R20", "R21"])
+                         ["R18", "R19", "R20", "R21", "R23"])
         self.assertEqual(len(evidence), len(EVIDENCE_DOCS))
 
     def test_missing_document_blocks_instead_of_fallback_success(self):
