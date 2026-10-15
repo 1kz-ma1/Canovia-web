@@ -191,6 +191,53 @@ final class LearningContextSourceEpochShadowTest extends TestCase
             ->isCurrent($owner, $plan->id, $baseline['source_revision']));
     }
 
+    public function test_first_party_http_task_update_and_delete_record_in_same_transaction(): void
+    {
+        [$owner, $plan, $task] = $this->fixture();
+        $this->enabled();
+        $this->withoutVite();
+        $this->actingAs($owner);
+
+        $payload = [
+            'title' => 'HTTP_STUDY_SOURCE_CHANGED',
+            'description' => 'PRIVATE_NOT_STORED_IN_EPOCH',
+            'estimated_minutes' => 25, 'remaining_minutes' => 25,
+            'progress_percent' => 30, 'status' => 'doing',
+            'priority' => 1, 'activation_cost' => 1,
+        ];
+        $this->put(route('tasks.update', $task), $payload)
+            ->assertRedirect(route('plans.show', $plan));
+        $this->assertSame(1, DB::table('learning_context_source_epochs')
+            ->where('plan_id', $plan->id)->value('epoch'));
+        $this->assertSame('task_updated', DB::table('learning_context_source_epochs')
+            ->where('plan_id', $plan->id)->value('last_mutation_kind'));
+        $this->assertStringNotContainsString('PRIVATE_NOT_STORED_IN_EPOCH',
+            json_encode(DB::table('learning_context_source_epochs')->first(), JSON_THROW_ON_ERROR));
+
+        $this->delete(route('tasks.destroy', $task))
+            ->assertRedirect(route('plans.show', $plan));
+        $this->assertSame(2, DB::table('learning_context_source_epochs')
+            ->where('plan_id', $plan->id)->value('epoch'));
+        $this->assertFalse(Task::query()->whereKey($task->id)->exists());
+    }
+
+    public function test_no_epoch_for_unrelated_development_or_collaborative_plan_even_if_shadow_enabled(): void
+    {
+        [, $plan] = $this->fixture();
+        $shadow = $this->enabled();
+        $plan->update(['category' => 'ソフトウェア開発']);
+        $this->assertNull($this->record($plan->fresh(), 'task_updated'));
+        $this->assertDatabaseCount('learning_context_source_epochs', 0);
+
+        $plan->update(['category' => '資格学習', 'is_collaborative' => true]);
+        $this->assertNull($this->record($plan->fresh(), 'task_updated'));
+        $this->assertDatabaseCount('learning_context_source_epochs', 0);
+
+        $plan->update(['is_collaborative' => false, 'is_public' => true]);
+        $this->assertNull($this->record($plan->fresh(), 'task_updated'));
+        $this->assertNull($shadow->inspect($plan->id));
+    }
+
     public function test_migration_replay_preserves_epoch_and_incomplete_table_is_rejected(): void
     {
         [, $plan] = $this->fixture();
