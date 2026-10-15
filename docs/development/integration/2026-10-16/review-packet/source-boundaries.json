@@ -9,5 +9,7 @@
   "github_ci_verified": false,
   "production_authorized": false,
   "latest_migration_branch_sha": "99ff945fc190bae41c65ed10ba041027fae3b3d2",
-  "later_delta_scope": "two-file shell retry-bound validation follow-up; targeted checks passed, no broad rerun claimed"
+  "later_delta_scope": "two-file shell retry-bound validation follow-up; targeted checks passed, no broad rerun claimed",
+  "latest_local_qualified_source": "3334e9ea9d173e13fff2c6cbafb50dbfd9af346e",
+  "latest_qualification": "58 boundary tests and fresh MySQL 8.4 94-to-114 upgrade + 23 schema tests passed"
 }

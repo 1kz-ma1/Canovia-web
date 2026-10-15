@@ -19,6 +19,8 @@ Local aggregate `1875c7ab5d599fff155ef2108e70078ca93c7cc4` combines A/B/C withou
 
 ## Completed local evidence
 
+Final combined boundary check at `3334e9ea9d173e13fff2c6cbafb50dbfd9af346e`: **58 tests / 596 assertions passed**; MySQL 8.4 fresh upgrade and 23-test schema regression also passed at that source. Later packet commits add evidence only. Earlier full-suite numbers retain their original exact source, as documented above.
+
 | Check | Result / limits |
 | --- | --- |
 | Full unchanged main, same machine/dependencies | 2,660 tests: 2,255 passed, 64 failed, 253 errors, 88 skipped, 2 risky |
@@ -26,7 +28,7 @@ Local aggregate `1875c7ab5d599fff155ef2108e70078ca93c7cc4` combines A/B/C withou
 | Baseline comparison | **No added failure or error test IDs.** 15 additional tests passed. This is not a green full suite or proof of all skipped behavior. |
 | Existing baseline causes | Remain UNCONFIRMED. [Failure/error index](existing-failure-index.json) records what already failed at fixed main; investigate only integration-relevant cases. Never suppress assertions or relabel them as successes. |
 | Disposable upgrade | MySQL **8.0.46 and 8.4.11**: historical 94 schema → complete 114, all 20 additions, repeat migration, sealed historical rows, old SQL writer epoch/rebind fences passed at aggregate SHA |
-| Additional schema/trigger regression | MySQL 8.0 at aggregate: 23 tests / 345 assertions passed. Independent 8.4 unchanged-main comparison also passed 23 / 345; it is not mislabelled as a changed-candidate result. |
+| Additional schema/trigger regression | MySQL 8.0 at aggregate: 23 tests / 345 assertions passed. MySQL 8.4 at qualified source `3334e9ea`: 23 / 345 passed after a clean 94→114 fixture reset. An earlier same-DB rerun collided with its own fixed test reference; the [retry note](mysql84-fixture-retry-note.json) retains that failed attempt and the clean rerun without a source workaround. |
 | Old/new HTTP compatibility | Old production authentication/session sources and frozen old lockfile runtime → new aggregate on disposable MySQL 8.4: old login/new account restoration; real invalid-CSRF 419; new logout invalidates old account access |
 | Logical backup/restore rehearsal | Both owned disposable MySQL containers: dumped/restored 114 ledger, byte-equal ordered row dumps, equal actual trigger definitions; ~5 seconds each. **Not Aiven backup availability, production RTO or real data recovery.** |
 | Three real Chromium journeys | At aggregate SHA: all welcome choices/planless skip; Development guest claim + confirmed follow-through + login restoration; Study first draft + reload + 204/419 feedback + assessment passed. Provider-free child environment and private SQLite per journey. Initial Development Task is synthetic. |
