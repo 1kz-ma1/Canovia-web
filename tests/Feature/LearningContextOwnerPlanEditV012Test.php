@@ -78,9 +78,10 @@ final class LearningContextOwnerPlanEditV012Test extends TestCase
             app(LearningContextSourceEpochService::class)->inspect($plan->id)['last_mutation_kind']);
         $this->assertNotSame($before['source_revision'],
             $source->capture($owner, $plan->id)['source_revision']);
-        $this->assertDatabaseHas('plan_activity_logs', [
-            'plan_id' => $plan->id, 'event_type' => 'plan_updated',
-        ]);
+        // Plan activity is collaborative-only by contract; title Goal
+        // Context synchronization should commit with the private Plan.
+        $this->assertSame('PRIVATE_STUDY_UPDATED',
+            $plan->fresh()->goalContext?->desired_state);
 
         // Exact same update: no new source writes, but preserve existing
         // activity-log behavior for explicit owner confirmation.
@@ -105,9 +106,7 @@ final class LearningContextOwnerPlanEditV012Test extends TestCase
         $this->assertSame('PRIVATE_STUDY_ORIGINAL', $plan->fresh()->title);
         $this->assertNull(app(LearningContextSourceEpochService::class)
             ->inspect($plan->id));
-        $this->assertDatabaseMissing('plan_activity_logs', [
-            'plan_id' => $plan->id, 'event_type' => 'plan_updated',
-        ]);
+        $this->assertDatabaseCount('plan_activity_logs', 0);
     }
 
     public function test_owner_only_and_other_domain_does_not_allocate_study_shadow(): void
