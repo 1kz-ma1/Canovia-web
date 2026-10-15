@@ -4,9 +4,14 @@
     // Only these public routes are selectable from static links.
     // Never turn the query string into an arbitrary redirect URL.
     const destination = new URLSearchParams(window.location.search).get('destination');
+    // The current Live Web exposes /feedback for free Support, but not yet
+    // the curated roadmap or the new in-page Support anchor.
+    // Explicit defaults prevent a static-only deploy from promising Web features.
+    const publicRoadmapReady = config.publicRoadmapReady === true;
+    const supportAnchorReady = config.supportAnchorReady === true;
     const destinationPaths = {
         future: '/feedback',
-        support: '/feedback#support-candidates',
+        support: supportAnchorReady ? '/feedback#support-candidates' : '/feedback',
     };
     const targetUrl = Object.prototype.hasOwnProperty.call(destinationPaths, destination)
         ? `${appUrl}${destinationPaths[destination]}`
@@ -67,7 +72,7 @@
         status.classList.add('is-ready');
         openButton.disabled = false;
         openButton.textContent = destination === 'future'
-            ? '開発ロードマップを見る'
+            ? (publicRoadmapReady ? '開発ロードマップを見る' : '現在の無料Support候補を見る')
             : destination === 'support'
                 ? '無料Support・フィードバックへ'
                 : 'Canoviaを開く';
