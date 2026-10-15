@@ -140,7 +140,7 @@ final class StudyOfficialSyllabusBridgeV620Test extends TestCase
             ->assertSee('2027年度以降に向けた別の新制度シラバス案');
         $response->assertDontSee('公式試験範囲のカバー率：100%');
         $this->actingAs($owner)->get(route('workspace.study.index', [
-            'plan_id' => $plan->id, 'surface' => 'analysis',
+            'plan_id' => $plan->id, 'surface' => 'preparation',
         ]))->assertOk()->assertSee('data-study-official-syllabus-bridge', false);
         $this->actingAs($owner)->get(route('workspace.study.index', [
             'plan_id' => $plan->id, 'surface' => 'work',
