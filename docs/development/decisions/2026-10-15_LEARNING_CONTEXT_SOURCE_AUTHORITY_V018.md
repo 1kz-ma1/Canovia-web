@@ -57,6 +57,6 @@ No application API/schema/service behavior is changed by this decision record an
 
 ## Implementation evidence / follow-up ledger
 
-At document creation: architecture choice recorded; no runtime code, migrations, deploy or product availability changed. v0.18 test and CI PR to be linked **after** creation/verification, not invented in this document. Final status and exact SHA belong to the PR evidence, not inferred from this record.
+At document creation: architecture choice recorded; no runtime code, migrations, deploy or product availability changed. **Implementation PR: [#757](https://github.com/1kz-ma1/Canovia-web/pull/757)**, adding the v0.18 SQLite authority regression and keeping PostgreSQL/MySQL source-probe suites. The PR's exact-head workflow results and merge commit, rather than this decision record, determine CI integration status. This record is **not** evidence of deploy, device verification or permission to enable Watch.
 
 **Next scoped improvement:** first instrument **read-only, privacy-safe aggregates** for the actual capped-hash path (capture duration bucket, capped-out count, eligible source cardinality) only after a separate telemetry/privacy/performance spec; no PII, raw contents, user-linked logs, automatic external send or new databases. Prefer delaying such work until it assists near-term release validation.
