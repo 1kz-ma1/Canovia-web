@@ -674,6 +674,7 @@ final class McpReadOnlyResourceTest extends TestCase
             'answers' => [['text' => 'SECRET_ANSWER_BODY']],
             'assessment' => ['rationale' => 'SECRET_GRADING_REASON'],
             'score_percent' => 60,
+            'recommended_task_progress_percent' => 25,
             'weaknesses' => ['DNS'],
             'applied_at' => now(),
         ]);
@@ -790,7 +791,8 @@ final class McpReadOnlyResourceTest extends TestCase
                 self::ISSUER, 'verified-owner-subject', self::CHATGPT_CLIENT,
                 self::RESOURCE, ['canovia.development.read'], now()->timestamp + 1200,
             ), $plan->id));
-        $this->rpc('tools/call', $tool)->assertStatus(400);
+        // The entire isolated staging HTTP transport is closed (503), not only the Study tool.
+        $this->rpc('tools/call', $tool)->assertStatus(503);
     }
 
     public function test_mcp_study_result_requires_distinct_write_bearer_and_owner_approval(): void
