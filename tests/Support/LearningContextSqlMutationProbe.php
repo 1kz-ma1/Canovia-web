@@ -142,7 +142,7 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 SQL));
         foreach (self::SOURCES as $table => $events) {
             foreach ($events as $event) {
