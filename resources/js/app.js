@@ -3154,6 +3154,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const answerElements = [...form.querySelectorAll('[name^="answers["]')];
     const namePattern = /^answers\[([^\]]+)\]\[([^\]]+)\](\[\])?$/;
     let saveTimer = null;
+    const draftStatus = form.querySelector('[data-study-practice-draft-status]');
+    let editVersion = 0;
+    const announceDraft = (state, message) => {
+        if (!draftStatus || !form.isConnected) return;
+        draftStatus.dataset.saveState = state;
+        draftStatus.textContent = message;
+    };
 
     const collectAnswers = () => {
         const answers = {};
@@ -3233,8 +3240,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return snapshot;
     };
 
-    const persistServer = async (snapshot, keepalive = false) => {
-        if (!csrfToken || !snapshot) return;
+    const persistServer = async (snapshot, keepalive = false, sentVersion = editVersion) => {
+        if (!csrfToken || !snapshot) {
+            if (!keepalive && sentVersion === editVersion) {
+                announceDraft('failed', 'サーバーに途中回答を保存できませんでした。ページを離れる前に接続を確認してください。');
+            }
+            return;
+        }
 
         const payload = JSON.stringify({
             practice_session_id: practiceSessionId,
@@ -3246,7 +3258,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (keepalive && payload.length > 50000) return;
 
         try {
-            await fetch(draftUrl, {
+            const response = await fetch(draftUrl, {
                 method: 'POST',
                 credentials: 'same-origin',
                 keepalive,
@@ -3257,16 +3269,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 body: payload,
             });
+            // A redirected login page (often HTTP 200), 403/419 or stale
+            // StudyPracticeSession must never be described as saved.
+            if (response.status !== 204 || response.redirected) {
+                throw new Error('draft-save-not-confirmed');
+            }
+            if (!keepalive && sentVersion === editVersion) {
+                announceDraft('saved', '途中回答をサーバーへ保存しました（採点・学習履歴への反映はまだです）。');
+            }
         } catch (_) {
-            // Draft persistence is intentionally silent. The local snapshot is
-            // kept and will be retried when this same practice session reopens.
+            // Local fallback is best effort and not an authenticated server save.
+            if (!keepalive && sentVersion === editVersion) {
+                announceDraft('failed', 'サーバーへの途中保存に失敗しました。接続を確認してください（この端末には下書きを一時保持しています）。');
+            }
         }
     };
 
     const scheduleSave = () => {
         const snapshot = persistLocal();
+        editVersion += 1;
+        announceDraft('saving', '途中回答を保存中…');
         if (saveTimer) window.clearTimeout(saveTimer);
-        saveTimer = window.setTimeout(() => persistServer(snapshot), 450);
+        const sentVersion = editVersion;
+        saveTimer = window.setTimeout(() => persistServer(snapshot, false, sentVersion), 450);
     };
 
     const localDraft = readLocalDraft();

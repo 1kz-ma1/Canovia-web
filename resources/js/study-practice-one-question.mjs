@@ -72,7 +72,20 @@ export function mountLegacyStudyQuestionPager(root = document) {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+// The shared shell can render this page after DOMContentLoaded via instant
+// navigation. Mount on first load AND when the core page is replaced; the
+// form-level flag keeps repeat events idempotent.
+const mountWhenReady = () => {
     // Run after the existing StudyPractice draft-restoration listener.
     window.requestAnimationFrame(() => mountLegacyStudyQuestionPager());
-});
+};
+// Unit tests import the module in Node without a browser window, then call
+// the exported mount function with a synthetic root.
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', mountWhenReady);
+    } else {
+        mountWhenReady();
+    }
+    document.addEventListener('canovia:page-ready', mountWhenReady);
+}
