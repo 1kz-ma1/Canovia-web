@@ -1,0 +1,33 @@
+name: Pre-Launch IA-1 Static Intro
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'static-welcome/index.html'
+      - 'static-welcome/intro.html'
+      - 'static-welcome/styles.css'
+      - 'static-welcome/intro.css'
+      - 'static-welcome/app.js'
+      - 'static-welcome/config.js'
+      - 'tests/js/prelaunch-static-intro.test.mjs'
+      - '.github/workflows/prelaunch-ia1-static-intro.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-intro:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Parse existing cold-start JavaScript
+        run: node --check static-welcome/app.js
+      - name: IA-1 public intro and cold-start regressions
+        run: node --test tests/js/prelaunch-static-intro.test.mjs
