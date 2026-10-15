@@ -224,7 +224,10 @@ final class LearningContextWatchPersistenceService
         try {
             return DB::transaction(function () use ($actor, $planId): bool {
                 $plan = Plan::query()->whereKey($planId)->lockForUpdate()->first();
-                if (! $this->validOwnerPlan($actor, $plan)) {
+                // Opt-out must remain possible after public/collaborative or
+                // Study category changes; it only needs CURRENT ownership.
+                if ($plan === null || $plan->user_id === null
+                    || (int) $plan->user_id !== (int) $actor->id) {
                     return false;
                 }
                 LearningContextChangeRecord::query()->where('plan_id', $planId)->delete();
