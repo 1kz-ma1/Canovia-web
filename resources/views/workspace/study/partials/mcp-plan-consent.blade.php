@@ -15,6 +15,7 @@
     <p class="mt-2 text-xs leading-5 text-slate-400">
         AP学習などの支援用に、計画名・登録した期限・Taskの進捗を必要な範囲だけChatGPTに共有できます。
         演習問題・回答・採点詳細やプロフィールは共有しません。演習の集計は別途明示的に選んだ場合だけ共有できます。
+        Learning Context Snapshotを選んだ場合に限り、承認済み記録をもとに弱点傾向と暫定的な復習候補も生成して共有します。通知・再計画・Task更新は行いません。
         共有には外部サービスでの本人再確認と最終承認が必要です。
     </p>
     @if ($studyMcpReady)
@@ -30,6 +31,9 @@
                     <option value="tasks">計画名・期限＋Taskの名前・状態・進捗</option>
                     @if (config('canovia_mcp.study_summary_read_enabled') === true)
                         <option value="study_progress">計画・Task＋反映済み演習の得点・弱点集計</option>
+                    @endif
+                    @if (config('canovia_mcp.study_summary_read_enabled') === true && config('canovia_mcp.learning_context_snapshot_enabled') === true)
+                        <option value="learning_context">Learning Context Snapshot：計画・Task＋承認済み演習集計・弱点傾向と暫定的な復習提案</option>
                     @endif
                 </select>
             </label>

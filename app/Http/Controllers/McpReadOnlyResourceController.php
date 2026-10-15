@@ -8,6 +8,7 @@ use App\Services\McpProtectedResourceConfiguration;
 use App\Services\McpReadOnlyContextTool;
 use App\Services\McpReadOnlyStudyContextTool;
 use App\Services\McpReadOnlyStudyPracticeSummaryTool;
+use App\Services\McpReadOnlyLearningContextSnapshotTool;
 use App\Services\McpProposeStudyResultTool;
 use App\Services\McpStudyResultProposalService;
 use Illuminate\Http\JsonResponse;
@@ -35,6 +36,7 @@ final class McpReadOnlyResourceController extends Controller
         McpReadOnlyContextTool $tool,
         McpReadOnlyStudyContextTool $studyTool,
         McpReadOnlyStudyPracticeSummaryTool $summaryTool,
+        McpReadOnlyLearningContextSnapshotTool $snapshotTool,
         McpProposeStudyResultTool $proposalTool,
         McpStudyResultProposalService $proposalService,
         McpAuthorizationProbeController $probe,
@@ -152,6 +154,9 @@ final class McpReadOnlyResourceController extends Controller
                 if ($this->studySummaryToolEnabled()) {
                     $definitions[] = $summaryTool->definition();
                 }
+                if ($snapshotTool->enabled()) {
+                    $definitions[] = $snapshotTool->definition();
+                }
                 if ($proposalService->isEnabled()
                     && in_array(\App\Services\McpProtectedResourceConfiguration::STUDY_WRITE_SCOPE, $principal->scopes, true)) {
                     $definitions[] = $proposalTool->definition();
@@ -168,11 +173,13 @@ final class McpReadOnlyResourceController extends Controller
         $requestedTool = is_array($params) ? ($params['name'] ?? null) : null;
         $isStudyTool = $requestedTool === McpReadOnlyStudyContextTool::NAME;
         $isSummaryTool = $requestedTool === McpReadOnlyStudyPracticeSummaryTool::NAME;
+        $isSnapshotTool = $requestedTool === McpReadOnlyLearningContextSnapshotTool::NAME;
         $isProposalTool = $requestedTool === McpProposeStudyResultTool::NAME;
         if (! is_array($params)
             || ($requestedTool !== McpReadOnlyContextTool::NAME
                 && ! ($isStudyTool && $this->studyToolEnabled())
                 && ! ($isSummaryTool && $this->studySummaryToolEnabled())
+                && ! ($isSnapshotTool && $snapshotTool->enabled())
                 && ! ($isProposalTool && $proposalService->isEnabled()))) {
             return $this->rpcError($id, -32602, 'Unknown tool.');
         }
@@ -202,7 +209,7 @@ final class McpReadOnlyResourceController extends Controller
             return $this->contextResult($id, $context);
         }
         if (! is_array($arguments)
-            || array_diff(array_keys($arguments), ['plan_id', 'scope', 'limit']) !== []
+            || array_diff(array_keys($arguments), $isSnapshotTool ? ['plan_id'] : ['plan_id', 'scope', 'limit']) !== []
             || ! is_int($arguments['plan_id'] ?? null)
             || ($arguments['plan_id'] ?? 0) < 1
             || ($isSummaryTool && array_key_exists('scope', $arguments))
@@ -212,7 +219,9 @@ final class McpReadOnlyResourceController extends Controller
             return $this->rpcError($id, -32602, 'Invalid tool arguments.');
         }
 
-        $context = $isSummaryTool
+        $context = $isSnapshotTool
+            ? $snapshotTool->read($principal, $arguments['plan_id'])
+            : ($isSummaryTool
             ? $summaryTool->read(
                 $principal, $arguments['plan_id'], (int) ($arguments['limit'] ?? 8),
             )
@@ -221,7 +230,7 @@ final class McpReadOnlyResourceController extends Controller
                 $arguments['plan_id'],
                 (string) ($arguments['scope'] ?? 'overview'),
                 (int) ($arguments['limit'] ?? 5),
-            );
+            ));
 
         return $this->contextResult($id, $context);
     }

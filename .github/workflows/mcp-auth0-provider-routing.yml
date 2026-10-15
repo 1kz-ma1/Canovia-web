@@ -9,6 +9,9 @@ on:
       - 'app/Services/McpOAuthAccountLinkCommitter.php'
       - 'tests/Feature/McpReadOnlyResourceTest.php'
       - 'app/Services/McpReadOnlyStudyContextTool.php'
+      - 'app/Services/LearningContextSnapshotService.php'
+      - 'app/Services/McpReadOnlyLearningContextSnapshotTool.php'
+      - 'resources/views/auth/partials/mcp-delegated-access-revocation.blade.php'
       - 'app/Services/McpStudyPilotAccessPolicy.php'
       - 'app/Services/McpProtectedResourceConfiguration.php'
       - 'app/Services/McpReadOnlyStudyPracticeSummaryTool.php'
@@ -24,6 +27,8 @@ on:
       - 'resources/views/auth/partials/mcp-plan-consent-confirmation.blade.php'
       - 'tests/Feature/McpExplicitPlanConsentTest.php'
       - 'tests/Feature/McpOAuthAccountLinkTest.php'
+      - 'app/Http/Controllers/McpOAuthPlanConsentController.php'
+      - 'resources/views/auth/partials/mcp-plan-consent-confirmation.blade.php'
       - 'tests/Feature/McpDelegatedPlanAccessPolicyTest.php'
       - 'app/Services/McpAuth0JwtTokenVerifier.php'
       - 'app/Services/McpOAuthAccountLinkConfiguration.php'
@@ -69,6 +74,8 @@ jobs:
           php -l app/Http/Controllers/McpOAuthPlanConsentController.php
           php -l app/Http/Controllers/McpReadOnlyResourceController.php
           php -l app/Services/McpReadOnlyStudyContextTool.php
+          php -l app/Services/LearningContextSnapshotService.php
+          php -l app/Services/McpReadOnlyLearningContextSnapshotTool.php
           php -l app/Services/McpStudyPilotAccessPolicy.php
           php -l app/Services/McpProtectedResourceConfiguration.php
           php -l app/Services/McpReadOnlyStudyPracticeSummaryTool.php

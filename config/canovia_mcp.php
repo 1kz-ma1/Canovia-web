@@ -37,6 +37,11 @@ return [
     // never exposed by the isolated synthetic-only staging service.
     'study_summary_read_enabled' => env('CANOVIA_MCP_STUDY_SUMMARY_READ_ENABLED', false),
 
+    // Distinct per-Plan learning_context consent; no existing study_progress
+    // grant silently permits the richer derived Context Snapshot.
+    // Requires Study read + applied-practice aggregate and owner allowlist.
+    'learning_context_snapshot_enabled' => env('CANOVIA_MCP_LEARNING_CONTEXT_SNAPSHOT_ENABLED', false),
+
     // Additional OAuth write scope + per-item Canovia owner confirmation.
     // This NEVER updates native questions, attempts or Task progress by itself.
     'study_result_proposals_enabled' => env('CANOVIA_MCP_STUDY_RESULT_PROPOSALS_ENABLED', false),

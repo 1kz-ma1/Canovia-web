@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
  */
 final class McpExplicitPlanConsentService
 {
-    public const SCOPES = ['overview', 'tasks', 'study_progress'];
+    public const SCOPES = ['overview', 'tasks', 'study_progress', 'learning_context'];
     public const DURATIONS_DAYS = [1, 7, 30];
     public const UNTIL_REVOKED = 'until_revoked';
 
@@ -78,8 +78,13 @@ final class McpExplicitPlanConsentService
      */
     public function isScopeEligibleForPlan(Plan $plan, string $scope): bool
     {
-        if ($scope !== 'study_progress') {
+        if (! in_array($scope, ['study_progress', 'learning_context'], true)) {
             return in_array($scope, ['overview', 'tasks'], true);
+        }
+
+        if ($scope === 'learning_context'
+            && config('canovia_mcp.learning_context_snapshot_enabled') !== true) {
+            return false;
         }
 
         return config('canovia_mcp.study_read_enabled') === true

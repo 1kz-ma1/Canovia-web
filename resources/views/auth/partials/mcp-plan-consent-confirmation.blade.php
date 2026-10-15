@@ -39,7 +39,7 @@
         <div class="mt-3 min-w-0 rounded-xl border border-white/10 bg-slate-950/25 p-3 text-xs leading-6 text-slate-200">
             <p class="break-words">対象Plan：{{ $mcpConsentPlan->title }}</p>
             <p>接続先：ChatGPT（承認対象クライアント）</p>
-            <p>共有範囲：{{ $mcpVerifiedGrant['scope'] === 'study_progress' ? '学習Plan概要＋進行中Task＋反映済み演習の正答率・弱点集計' : ($mcpVerifiedGrant['scope'] === 'tasks' ? '概要＋進行中Task' : '概要のみ') }}</p>
+            <p>共有範囲：{{ $mcpVerifiedGrant['scope'] === 'learning_context' ? 'Learning Context Snapshot：学習Plan・進行中Task・反映済み演習集計・弱点傾向・暫定的な復習提案' : ($mcpVerifiedGrant['scope'] === 'study_progress' ? '学習Plan概要＋進行中Task＋反映済み演習の正答率・弱点集計' : ($mcpVerifiedGrant['scope'] === 'tasks' ? '概要＋進行中Task' : '概要のみ')) }}</p>
             <p>共有期間：{{ $mcpVerifiedGrant['duration_days'] === \App\Services\McpExplicitPlanConsentService::UNTIL_REVOKED ? '取り消すまで' : '承認から'.$mcpVerifiedGrant['duration_days'].'日' }}</p>
             <p class="text-amber-200">Task説明・証拠・問題文・回答・採点詳細・認証情報は共有対象外です。</p>
         </div>

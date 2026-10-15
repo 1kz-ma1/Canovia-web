@@ -93,7 +93,9 @@ final class McpStudyResultProposalService
                 lockForRead: true,
                 requiredDomain: 'study',
             );
-            if ($grant === null) {
+            // A richer read-only Context grant cannot authorize result writes;
+            // preserve the existing independently consented study_progress write flow.
+            if ($grant === null || $grant->scope !== 'study_progress') {
                 return null;
             }
 
