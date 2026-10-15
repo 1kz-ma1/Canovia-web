@@ -548,7 +548,16 @@ class CompanionMutationApplyService
         }
 
         $plan->update($changes);
+        $sourceChanged = $plan->wasChanged([
+            'title', 'category', 'workspace_domain_override',
+            'start_date', 'deadline', 'is_public', 'is_collaborative',
+        ]);
         $plan->refresh();
+        if ($sourceChanged) {
+            // Companion apply already holds this Plan row lock. Shadow only.
+            app(LearningContextSourceEpochService::class)
+                ->record($plan, 'plan_updated');
+        }
 
         if ((string) $plan->title !== $previousTitle) {
             $this->goalContexts->syncPlanTitle($plan, $previousTitle);
