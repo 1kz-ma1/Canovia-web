@@ -79,7 +79,7 @@ final class PublicRoadmapProjectionService
                 continue; // Voting/considering belong to the existing Support section.
             }
 
-            if ($stage === 'released'
+            if (in_array($status, ['rolling_out', 'released'], true)
                 && (($item['owner_release_verified'] ?? false) !== true
                     || ! $this->validDate($item['release_verified_on'] ?? null)
                     || ! in_array($item['access_scope'] ?? null, ['public', 'limited'], true))) {
@@ -102,7 +102,7 @@ final class PublicRoadmapProjectionService
                 },
             ];
 
-            if ($stage === 'released') {
+            if (in_array($status, ['rolling_out', 'released'], true)) {
                 $entry['release_verified_on'] = $item['release_verified_on'];
             }
             $sections[$stage]['items'][] = $entry;
