@@ -52,9 +52,21 @@ if ($argv[1] === '--age-answers') {
         fwrite(STDERR, "Expected exactly two correctly graded V6.16 browser answers.\n");
         exit(2);
     }
-    foreach ($two as $item) {
-        $item->answer->update(['answered_at' => now()->subHours(26)
-            ->addSeconds((int) $item->ordinal)]);
+    // Preserve temporal order of all five *existing* browser-submitted
+    // answers: original three occurred before the two corrected rechecks.
+    // Merely shifting latest two would leave contradictory event timestamps.
+    $answers = \App\Models\LearningAnswerEvent::query()
+        ->whereHas('item.run', fn ($query) => $query->where('plan_id', $plan->id)
+            ->where('task_id', $task->id)->where('user_id', $owner->id))
+        ->orderBy('id')->get();
+    if ($answers->count() !== 5) {
+        fwrite(STDERR, "Expected five already browser-submitted answers.\n");
+        exit(2);
+    }
+    $hours = [36, 35, 34, 26, 26];
+    foreach ($answers as $i => $answer) {
+        $answer->update(['answered_at' => now()->subHours($hours[$i])
+            ->addSeconds($i === 4 ? 15 : 0)]);
     }
     echo json_encode(['adjusted_existing_answer_ids' =>
         $two->map(fn ($item) => (int) $item->answer->id)->all(),
