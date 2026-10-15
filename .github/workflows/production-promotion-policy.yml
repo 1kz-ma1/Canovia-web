@@ -17,6 +17,8 @@ jobs:
   # promotion, even when no migration files changed. Main PRs remain path-scoped.
   production-mysql-integrity:
     uses: ./.github/workflows/p0-disposable-mysql-schema.yml
+  production-upgrade-and-startup:
+    uses: ./.github/workflows/integration-migration-safety.yml
   promotion-contract:
     name: Production promotion contract
     runs-on: ubuntu-latest
@@ -76,5 +78,7 @@ jobs:
       - name: Confirm production schema writes on startup remain explicit
         run: |
           set -euo pipefail
-          grep -Fq 'php artisan migrate --force' docker/render-start.sh
-          echo "production_startup_migration_review_required: pass"
+          grep -Fq 'canovia_prepare_startup_schema' docker/render-start.sh
+          grep -Fq 'CANOVIA_STARTUP_MIGRATIONS:-check' docker/startup-migration-policy.sh
+          grep -Fq 'CANOVIA_APPROVED_MIGRATION_SHA' docker/startup-migration-policy.sh
+          echo "production_startup_no_implicit_ddl: pass"
