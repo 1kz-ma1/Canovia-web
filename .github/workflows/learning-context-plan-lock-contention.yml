@@ -11,6 +11,7 @@ on:
       - 'app/Services/LearningContextWatchPersistenceService.php'
       - 'tests/Feature/LearningContextPlanLockContentionTest.php'
       - 'docs/development/LEARNING_CONTEXT_SOURCE_LOCK_V05_2026_10_15.md'
+      - 'docs/development/LEARNING_CONTEXT_SOURCE_WRITER_AUDIT_V06_2026_10_15.md'
       - '.github/workflows/learning-context-plan-lock-contention.yml'
   workflow_dispatch:
 
