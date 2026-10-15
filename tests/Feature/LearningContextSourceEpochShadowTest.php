@@ -48,10 +48,10 @@ final class LearningContextSourceEpochShadowTest extends TestCase
         return app(LearningContextSourceEpochService::class);
     }
 
-    private function record(Plan $plan, string $kind): int
+    private function record(Plan $plan, string $kind): ?int
     {
         $service = app(LearningContextSourceEpochService::class);
-        return DB::transaction(function () use ($plan, $kind, $service): int {
+        return DB::transaction(function () use ($plan, $kind, $service): ?int {
             $locked = Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
             return $service->record($locked, $kind);
         });
