@@ -153,7 +153,10 @@ final class LearningContextChangeDetectionService
         if (! is_array($snapshot)
             || ($snapshot['schema'] ?? null) !== self::SNAPSHOT
             || ($snapshot['purpose'] ?? null) !== 'support_one_private_study_plan'
-            || ($snapshot['delivery'] ?? null) !== 'ephemeral_explicitly_consented_read_only'
+            || ! in_array($snapshot['delivery'] ?? null, [
+                'ephemeral_explicitly_consented_read_only',
+                'internal_owner_scoped_read_only',
+            ], true)
             || ($snapshot['sources']['raw_evidence_shared'] ?? null) !== false) {
             return null;
         }
