@@ -130,6 +130,7 @@
         data-plan-board-region="activity"
     >
         @if ($workspaceActivity->isNotEmpty())
+            <p class="mb-2 text-[10px] font-bold text-slate-400">作業ログ</p>
             <div class="canovia-plan-board-activity-list">
                 @foreach ($workspaceActivity as $activity)
                     <article>
@@ -147,7 +148,28 @@
                 @endforeach
             </div>
         @else
-            <p class="canovia-plan-board-empty">まだ作業実績はありません。</p>
+            <p class="canovia-plan-board-empty">時間を記録した作業はまだありません。</p>
+        @endif
+
+        @if (! empty($workspaceBoard['reflections']))
+            <section class="mt-3 border-t border-slate-700/50 pt-3" data-plan-board-reflections aria-label="自分の振り返りEvidence">
+                <p class="mb-2 text-[10px] font-bold text-cyan-300">振り返りEvidence · 自分の記録</p>
+                <ol class="grid gap-2">
+                    @foreach ($workspaceBoard['reflections'] as $reflection)
+                        <li class="min-w-0 rounded-lg border border-cyan-300/15 bg-cyan-300/[0.035] p-2"
+                            data-plan-board-reflection-task="{{ $reflection['task_id'] }}">
+                            <a class="block break-words text-[11px] font-bold leading-5 text-sky-200 underline-offset-2 hover:underline focus-visible:underline"
+                               href="{{ $reflection['url'] }}">
+                                {{ $reflection['task_title'] }}の振り返りを見る →
+                            </a>
+                            <p class="mt-1 break-words text-[10px] leading-4 text-slate-300">{{ $reflection['outcome'] }}</p>
+                            <p class="mt-1 text-[9px] text-slate-500">
+                                {{ $reflection['date'] ?? '日付なし' }} · 振り返りとして保存済み（進捗率への自動反映なし）
+                            </p>
+                        </li>
+                    @endforeach
+                </ol>
+            </section>
         @endif
     </x-dashboard-document-region>
 
