@@ -12,7 +12,20 @@ Visitors should understand three different claims:
 
 Additionally, **これから** (`planned`) expresses direction without a delivery or timing promise. Existing `roadmap_features` candidate cards still retain their full `RoadmapFeatureStatus` lifecycle, Support votes/cancellation, and feedback. The curated public development stories are **not** a new `RoadmapFeature` table, Support tally, Plan, Task, deployment indicator, or product entitlement.
 
-## Editing a public card — only when development state changes
+## Operational trigger — consider a manual update during ordinary feature development
+
+The public roadmap is **a lightweight editorial companion to normal Canovia development**, not a separate backlog and not an automatic synchronization destination.
+
+At feature specification, implementation PR review, testing/acceptance, and approved release, the responsible developer/AI should briefly ask: **「今回の変更は、訪問者に伝えるCanoviaの現在地・今後の方向性を変えるか？」**
+
+- **Yes:** when starting a meaningful public-facing capability, moving an already listed capability into meaningful development, verification, owner-accepted limited/public release, changing user availability or deciding to stop/cancel it, consider updating/adding/hiding the relevant public card.
+- **No:** internal refactors, incidental fixes, CI/tooling, security-sensitive work, or changes not meaningful to visitors do not require a roadmap edit. Do not manufacture cards or progress percentages to satisfy a process.
+- **Editorial check:** check that the entry is understandable, accurately scoped, non-sensitive, and does not promise a delivery date or unsupported capability. If update is warranted, apply it manually via a reviewed GitHub PR to the config source below (same feature PR or a separate PR). If not, continue the feature work without extra paperwork.
+- **Deployment boundary:** changes to this config are delivered only as part of a controlled application release. Editing or merging `main` is not a live-site update. If owner-accepted deployment is a future event, keep the status honest until that acceptance occurs.
+
+No background queue, webhooks, GitHub or CI parser, scheduled process, or Support-vote threshold should create or move these cards. **Only change what visitors need to know, when it is relevant.**
+
+## Editing a public card — manual source of truth
 
 Source of truth: **`config/canovia_public_roadmap.php`**, reviewed in a dedicated GitHub PR. Each item has:
 
@@ -33,6 +46,8 @@ Edit the appropriate card, update the calendar date, and submit a reviewed PR. F
 ```
 
 Without **all three fields**, a staged rollout or released entry is *not rendered*. Only set these fields after the actual environment, deployment SHA, required user eligibility and acceptance are independently checked and explicitly accepted by the owner. Passing CI, merging main, creating PR, preparing Render, or an old device smoke is not acceptance. The guard requires affirmative editorial evidence fields but cannot independently prove their truth. No automatic promotion to `released` occurs.
+
+The review decision is defined in the [Pre-Launch Public IA Specification](PRELAUNCH_PUBLIC_APP_FUTURE_IA_SPEC_2026_10_13.md#ongoing-editorial-review-when-implementing-canovia-adopted-2026-10-15). The developer may make an editorial update in the same code PR or a follow-up PR; the owner still controls when it reaches actual production. Do not assume GitHub feature development progress directly equals a public release.
 
 The initial snapshot intentionally contains **no released cards**, because the first public release/physical device acceptance is still owner-gated. Empty published sections present an honest explanatory state. The initial illustrative development, first-use verification, and future external-integration cards do not promise deployment dates or that GitHub activity auto-sync is available in Pre-Launch. Before an actual public promotion, re-review every visible card for product accuracy and audience.
 
