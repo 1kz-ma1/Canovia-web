@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'app/Http/Controllers/TaskController.php'
+      - 'app/Http/Controllers/PlanReviewAssistantController.php'
       - 'app/Http/Controllers/StudyPracticeController.php'
       - 'app/Http/Controllers/StudyRecallController.php'
       - 'app/Http/Controllers/AdaptiveLearningNextActionController.php'
@@ -18,12 +19,15 @@ on:
       - 'database/migrations/2026_10_15_120000_create_learning_context_source_epochs_table.php'
       - 'tests/Feature/LearningContextPlanLockContentionTest.php'
       - 'tests/Feature/LearningContextSourceEpochShadowTest.php'
+      - 'tests/Feature/LearningContextPlanReviewEpochV011Test.php'
+      - 'tests/Feature/MutationIdempotencyV390Test.php'
       - 'tests/Feature/StudyActionCommitFenceG3Test.php'
       - 'tests/Feature/CanoviaCompanionMutationApplyV4115Test.php'
       - 'tests/Feature/GuidedExecutionNextActionV67Test.php'
       - 'tests/Feature/AdaptiveLearningNextActionV611Test.php'
       - 'tests/Feature/StudyRecallTaskProgressionV586Test.php'
       - 'docs/development/LEARNING_CONTEXT_SOURCE_EPOCH_WRITERS_V010_2026_10_15.md'
+      - 'docs/development/LEARNING_CONTEXT_PLAN_REVIEW_EPOCH_V011_2026_10_15.md'
       - 'docs/development/LEARNING_CONTEXT_SOURCE_EPOCH_SHADOW_V09_2026_10_15.md'
       - 'docs/development/LEARNING_CONTEXT_SOURCE_LOCK_V05_2026_10_15.md'
       - 'docs/development/LEARNING_CONTEXT_SOURCE_WRITER_AUDIT_V06_2026_10_15.md'
@@ -111,6 +115,8 @@ jobs:
       - name: PHP syntax checks
         run: |
           php -l app/Http/Controllers/TaskController.php
+          php -l app/Http/Controllers/PlanReviewAssistantController.php
+          php -l tests/Feature/LearningContextPlanReviewEpochV011Test.php
           php -l app/Http/Controllers/StudyPracticeController.php
           php -l app/Http/Controllers/StudyRecallController.php
           php -l app/Http/Controllers/AdaptiveLearningNextActionController.php
@@ -162,5 +168,7 @@ jobs:
             tests/Feature/LearningContextWatchPersistenceTest.php \
             tests/Feature/LearningContextWatchSettingsTest.php \
             tests/Feature/LearningContextSourceEpochShadowTest.php \
+            tests/Feature/LearningContextPlanReviewEpochV011Test.php \
+            tests/Feature/MutationIdempotencyV390Test.php \
             tests/Unit/LearningContextChangeDetectionServiceTest.php \
             --colors=never
