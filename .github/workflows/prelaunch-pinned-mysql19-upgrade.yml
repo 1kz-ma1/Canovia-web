@@ -5,6 +5,10 @@ on:
     paths:
       - '.github/workflows/prelaunch-pinned-mysql19-upgrade.yml'
       - 'scripts/ci/prelaunch_pinned_mysql19_fixture.php'
+      - 'scripts/ci/prelaunch_pinned_mysql19_offline_gate.py'
+      - 'scripts/sql/prelaunch_pinned_mysql19_select_only_snapshot.sql'
+      - 'scripts/ops/prelaunch_pinned_mysql19_collect.sh'
+      - 'tests/ci/test_prelaunch_pinned_mysql19_offline_gate.py'
   workflow_dispatch:
 permissions:
   contents: read
@@ -101,6 +105,22 @@ jobs:
           mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
             --user=root --database=canovia_p0_ci \
             -e 'SET GLOBAL log_bin_trust_function_creators = 1'
+      - name: Unit-test pinned read-only auditor and validate safe operator wrapper
+        working-directory: audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/ci -p 'test_prelaunch_pinned_mysql19_offline_gate.py' -v
+          bash -n scripts/ops/prelaunch_pinned_mysql19_collect.sh
+          set +e
+          output="$(CI=true CANOVIA_PINNED_MYSQL19_OPERATOR_APPROVED=YES \
+            CANOVIA_P0_TARGET_VERIFIED=YES CANOVIA_P0_GRANTS_REVIEWED=YES \
+            bash scripts/ops/prelaunch_pinned_mysql19_collect.sh 2>&1)"
+          rc=$?
+          set -e
+          test "$rc" -eq 2
+          test "$output" = 'PINNED_MYSQL19_READONLY: BLOCK (CI_NOT_OPERATOR)'
+          echo 'pinned_19_operator_collector_rejects_ci: pass'
       - name: Install exact historical dependencies
         working-directory: live
         run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
@@ -113,6 +133,28 @@ jobs:
           set -euo pipefail
           php artisan migrate --force --no-interaction
           php artisan migrate --force --no-interaction
+      - name: Read-only operator-style offline classification of old 94 schema
+        env:
+          MYSQL_PWD: ci-only-ephemeral-password
+        shell: bash
+        run: |
+          set -euo pipefail
+          scratch="$(mktemp -d)"
+          trap 'rm -rf -- "$scratch"' EXIT
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=canovia_ci --database=canovia_p0_ci \
+            --batch --raw --skip-column-names \
+            < candidate/scripts/sql/p0_mysql_readonly_full_migration_ledger.sql \
+            > "$scratch/ledger.tsv"
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=canovia_ci --database=canovia_p0_ci \
+            --batch --raw --skip-column-names \
+            < audit/scripts/sql/prelaunch_pinned_mysql19_select_only_snapshot.sql \
+            > "$scratch/schema.tsv"
+          python3 audit/scripts/ci/prelaunch_pinned_mysql19_offline_gate.py \
+            --live-root live --candidate-root candidate \
+            --ledger "$scratch/ledger.tsv" --schema "$scratch/schema.tsv" \
+            | python3 -c 'import json,sys; x=json.load(sys.stdin); assert x["result"]=="REVIEW_REQUIRED" and x["code"]=="PINNED_94_PENDING_19_METADATA_MATCH" and x["release_authorized"] is False and x["production_migration_permissions_verified"] is False'
       - name: Seed synthetic legacy user/member/repo observation/MCP identities/grant
         working-directory: live
         run: php ../audit/scripts/ci/prelaunch_pinned_mysql19_fixture.php seed
@@ -126,6 +168,28 @@ jobs:
           set -euo pipefail
           php artisan migrate --force --no-interaction
           php artisan migrate --force --no-interaction
+      - name: Read-only operator-style offline classification of upgraded 113 schema
+        env:
+          MYSQL_PWD: ci-only-ephemeral-password
+        shell: bash
+        run: |
+          set -euo pipefail
+          scratch="$(mktemp -d)"
+          trap 'rm -rf -- "$scratch"' EXIT
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=canovia_ci --database=canovia_p0_ci \
+            --batch --raw --skip-column-names \
+            < candidate/scripts/sql/p0_mysql_readonly_full_migration_ledger.sql \
+            > "$scratch/ledger.tsv"
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=canovia_ci --database=canovia_p0_ci \
+            --batch --raw --skip-column-names \
+            < audit/scripts/sql/prelaunch_pinned_mysql19_select_only_snapshot.sql \
+            > "$scratch/schema.tsv"
+          python3 audit/scripts/ci/prelaunch_pinned_mysql19_offline_gate.py \
+            --live-root live --candidate-root candidate \
+            --ledger "$scratch/ledger.tsv" --schema "$scratch/schema.tsv" \
+            | python3 -c 'import json,sys; x=json.load(sys.stdin); assert x["result"]=="REVIEW_REQUIRED" and x["code"]=="PINNED_113_APPLIED_METADATA_MATCH" and x["release_authorized"] is False and x["production_migration_permissions_verified"] is False'
       - name: Verify existing rows, finite grant, unique replacement and triggers
         working-directory: candidate
         run: php ../audit/scripts/ci/prelaunch_pinned_mysql19_fixture.php verify
