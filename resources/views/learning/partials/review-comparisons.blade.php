@@ -102,6 +102,24 @@
                             この復習と現在の候補の関係は、保存済みの情報からは一意に判断できません。
                         </p>
                     @endif
+                    <div class="mt-3 border-t border-slate-700 pt-3 text-xs leading-6"
+                        data-learning-review-followup-guidance>
+                        @if($comparison['topic_state'] === 'still_suggested')
+                            <a class="font-semibold text-sky-300"
+                                data-learning-review-next-distinct
+                                href="{{ route('plans.tasks.learning.index', [$plan, $task, 'review' => 1]) }}">
+                                次の確認：別問題があるか調べる →
+                            </a>
+                            <p class="mt-1 text-slate-400">未回答の別問題が2問以上ある問題集なら、本人の操作で開始できます。</p>
+                        @else
+                            <a class="font-semibold text-sky-300"
+                                data-learning-review-next-ordinary
+                                href="{{ route('plans.tasks.learning.index', [$plan, $task]) }}">
+                                次の確認：問題集から自分で選ぶ →
+                            </a>
+                            <p class="mt-1 text-slate-400">翌日以降に再確認する場合も、開始は手動です。現在の復習候補がないときは別問題の優先出題を保証しません。</p>
+                        @endif
+                    </div>
                     <p class="mt-2 text-xs text-slate-400">
                         同一問題での「不正解→正解」{{ $comparison['wrong_to_correct_count'] }}件。
                         別問題や24時間以上の間隔が記録されても、応用力や長期的な定着はこの比較だけでは確認できません。
