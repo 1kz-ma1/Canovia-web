@@ -1,0 +1,44 @@
+name: Canovia Future Public Roadmap Regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'config/canovia_public_roadmap.php'
+      - 'app/Services/PublicRoadmapProjectionService.php'
+      - 'app/Http/Controllers/CanoviaFutureController.php'
+      - 'resources/views/feedback/index.blade.php'
+      - 'tests/Feature/CanoviaFutureV407Test.php'
+      - 'docs/development/PRELAUNCH_MANUAL_PUBLIC_ROADMAP_2026_10_15.md'
+      - '.github/workflows/canovia-future-public-roadmap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-roadmap-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          extensions: mbstring, sqlite3, pdo_sqlite
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: PHP syntax checks
+        run: |
+          php -l config/canovia_public_roadmap.php
+          php -l app/Services/PublicRoadmapProjectionService.php
+          php -l app/Http/Controllers/CanoviaFutureController.php
+          php -l tests/Feature/CanoviaFutureV407Test.php
+      - name: Guest roadmap publication and existing Support regression
+        run: php artisan test tests/Feature/CanoviaFutureV407Test.php

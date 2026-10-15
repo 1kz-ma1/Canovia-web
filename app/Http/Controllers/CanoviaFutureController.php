@@ -5,11 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\RoadmapFeature;
 use App\Models\RoadmapVote;
 use App\Services\BehaviorIdentityService;
+use App\Services\PublicRoadmapProjectionService;
 use Illuminate\Http\Request;
 
 class CanoviaFutureController extends Controller
 {
-    public function index(Request $request, BehaviorIdentityService $identity)
+    public function index(Request $request, BehaviorIdentityService $identity, PublicRoadmapProjectionService $publicRoadmap)
     {
         $voterKey = $this->voterKey($request, $identity);
         $supported = RoadmapVote::query()
@@ -35,6 +36,7 @@ class CanoviaFutureController extends Controller
 
         return view('feedback.index', [
             'features' => $features,
+            'publicRoadmapSections' => $publicRoadmap->build(),
         ]);
     }
 
