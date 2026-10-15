@@ -685,13 +685,13 @@ final class McpReadOnlyResourceTest extends TestCase
         ]);
 
         // Feature OFF: not discoverable; old aggregate consent cannot escalate.
-        $this->rpc('tools/list')->assertOk()->assertJsonCount(4, 'result.tools');
+        $this->rpc('tools/list')->assertOk()->assertJsonCount(3, 'result.tools');
         $args = ['name' => McpReadOnlyLearningContextSnapshotTool::NAME,
             'arguments' => ['plan_id' => $plan->id]];
         $this->rpc('tools/call', $args)->assertStatus(400)
             ->assertJsonPath('error.code', -32602);
         config(['canovia_mcp.learning_context_snapshot_enabled' => true]);
-        $this->rpc('tools/list')->assertOk()->assertJsonCount(5, 'result.tools')
+        $this->rpc('tools/list')->assertOk()->assertJsonCount(4, 'result.tools')
             ->assertJsonPath('result.tools.3.name', McpReadOnlyLearningContextSnapshotTool::NAME)
             ->assertJsonPath('result.tools.3.annotations.readOnlyHint', true);
         $this->rpc('tools/call', $args)->assertOk()->assertJsonPath('result.isError', true);
