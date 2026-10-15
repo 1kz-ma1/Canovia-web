@@ -6,9 +6,14 @@
  */
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 
 const base = process.env.CANOVIA_IA2E_BASE_URL;
+const engine = process.env.CANOVIA_IA2E_BROWSER_ENGINE ?? 'chromium';
+if (!['chromium', 'webkit'].includes(engine)) {
+    throw Error('Unsupported browser engine for isolated first-value smoke');
+}
+const mobile = engine === 'webkit';
 if (base !== 'http://127.0.0.1:8797' ||
     process.env.CANOVIA_IA2E_BROWSER_FIXTURE !== '1' ||
     process.env.APP_ENV !== 'testing' ||
@@ -22,10 +27,14 @@ const email = 'ia2e-browser@example.invalid';
 const password = 'IA2e-only!test-Password';
 const title = 'IA2e 初回体験開発Plan';
 const next = '次はログアウト後のホーム復帰を直す';
-const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+const browser = await (mobile ? webkit : chromium).launch({
+    headless: true,
+    ...(mobile ? {} : { args: ['--no-sandbox'] }),
+});
 const ctx = await browser.newContext({
-    viewport: { width: 1280, height: 850 },
+    viewport: mobile ? { width: 390, height: 844 } : { width: 1280, height: 850 },
     locale: 'ja-JP',
+    ...(mobile ? { isMobile: true, hasTouch: true } : {}),
 });
 const page = await ctx.newPage();
 page.setDefaultTimeout(20000);
@@ -37,6 +46,10 @@ try {
     await page.locator('[data-first-run-choice="browse"]').click();
     await page.waitForURL(url => url.pathname === '/workspace/overview');
     await page.locator('[data-overview-planless-start]').waitFor({state:'visible'});
+    if (mobile) {
+        assert.ok(await page.locator('[data-overview-start-manual-plan]').isVisible(),
+            'Mobile WebKit must expose an accessible optional Plan action');
+    }
     assert.equal(await page.locator('[data-overview-primary-action]').count(), 0,
         'A zero-Plan visitor must not see a fictitious recommended Action');
     step('Guest chose Browse and reached a truthful Planless Overview without a forced diagnosis');
@@ -71,6 +84,23 @@ try {
     const planPage = await page.goto(`${base}/plans/${planId}`);
     assert.equal(planPage.status(), 200);
     const firstTaskLink = page.locator('[data-plan-optional-task-planning]');
+    if (mobile && !await firstTaskLink.isVisible()) {
+        const visibility = await firstTaskLink.evaluate((node) => {
+            const chain = [];
+            for (let el = node, i = 0; el && i < 10; el = el.parentElement, i++) {
+                const style = getComputedStyle(el);
+                chain.push({
+                    tag: el.tagName,
+                    classes: String(el.className).slice(0, 160),
+                    display: style.display,
+                    visibility: style.visibility,
+                    rects: el.getClientRects().length,
+                });
+            }
+            return { width: document.documentElement.clientWidth, chain };
+        });
+        process.stdout.write(`MOBILE WEBKIT VISIBILITY DIAGNOSTIC ${JSON.stringify(visibility)}\n`);
+    }
     await firstTaskLink.waitFor({ state: 'visible' });
     await firstTaskLink.click();
     const importer = page.locator('form[data-ai-plan-generation-import]');
@@ -145,6 +175,9 @@ try {
         'After human approval the Plan Dashboard should show the real next Action');
     const reflections = page.locator('[data-plan-board-reflections]');
     await reflections.waitFor({state:'attached'});
+    if (mobile) {
+        assert.ok(await reflections.isVisible(), 'Mobile WebKit must show the saved Evidence region');
+    }
     const reflection = reflections.locator(`[data-plan-board-reflection-task="${created.task_id}"]`);
     assert.equal(await reflection.count(), 1, 'A saved Evidence should appear exactly once as a reflection');
     assert.match(await reflection.innerText(), /ホームに戻ると画面の状態が一部失われた/);
@@ -183,7 +216,11 @@ try {
     step('Started follow-up action without submitting another reflection');
 
     await page.goto(`${base}/account`);
-    const logout = page.locator('form[action$="/logout"]').first();
+    // The desktop header has another logout form that is deliberately hidden
+    // on mobile. Exercise the account page's visible form, not .first().
+    const logout = page.locator('main form[action$="/logout"]');
+    assert.equal(await logout.count(), 1);
+    assert.ok(await logout.isVisible(), 'The account logout action must be visible');
     await Promise.all([
         page.waitForURL(url => url.pathname !== '/account', {
             waitUntil: 'domcontentloaded',
@@ -217,6 +254,7 @@ try {
     assert.equal(checked.plan_id, planId);
     assert.equal(checked.task_evidence_count, 1);
     step('Backend facts match browser-visible action (2 runs, 1 Evidence, progress unchanged)');
+    step(`Acceptance engine: ${engine}${mobile ? ' / touch 390x844' : ' / desktop 1280x850'}`);
     process.stdout.write('IA-2e FIRST VALUE E2E PASS (owner-entered Task; browser Evidence and current state; NOT real device/live public GO)\n');
 } finally {
     await ctx.close();
