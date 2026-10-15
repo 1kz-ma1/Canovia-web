@@ -115,8 +115,16 @@ try {
     assert.match(await page.locator('[data-study-practice-draft-status]').innerText(),/途中回答/);
     log('hard-reload-restores-first-answer-with-localStorage-cleared');
 
-    await page.locator('[data-study-practice-next]').click();
     const second=page.locator('[data-study-practice-question]').nth(1);
+    // After Q1 is restored, the pager chooses the first unanswered Q2.
+    // "Next" is intentionally hidden on the final page; never force a
+    // click on a hidden button or misdiagnose legitimate resume behavior.
+    if (!(await second.isVisible())) {
+        const next=page.locator('[data-study-practice-next]');
+        await next.waitFor({state:'visible'});
+        await next.click();
+    }
+    await second.waitFor({state:'visible'});
     const q2=second.locator('textarea[name="answers[q2][answer]"]');
 
     // Simulate authentication/CSRF expiry: HTTP 419 must NEVER show saved.
