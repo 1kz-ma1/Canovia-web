@@ -8,6 +8,7 @@ on:
       - 'scripts/ci/prelaunch_ia2i_local_lab.py'
       - 'scripts/ci/test_prelaunch_ia2i_local_lab.py'
       - 'docs/development/PRELAUNCH_IA2I_MAC_LOCAL_ACCEPTANCE_LAB_2026_10_15.md'
+      - 'docs/development/PRELAUNCH_IA2K_SECOND_PINNED_MAC_SAFARI_ACCEPTANCE_2026_10_15.md'
   workflow_dispatch:
 
 permissions:
@@ -17,16 +18,20 @@ jobs:
   offline-guardrails:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.12']
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
       - name: Parse safety script and tests
         run: python -m py_compile scripts/ci/prelaunch_ia2i_local_lab.py scripts/ci/test_prelaunch_ia2i_local_lab.py
-      - name: Verify frozen-SHA, .env, lab permissions and process-secret isolation
+      - name: Verify IA-2h/IA-2j pinned SHA, per-lab port, cookie, .env, DB and secret isolation
         run: python -m unittest discover -s scripts/ci -p 'test_prelaunch_ia2i_local_lab.py' -v
       - name: Boundaries
         run: |
