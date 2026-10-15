@@ -1,0 +1,63 @@
+name: Learning V6.27 AP80 Editorial Packet QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/learning-v627-ap80-editorial-packet.yml'
+      - 'docs/learning/review_packets/AP_A_80_OWNER_FIRST_PASS_6Q_V627_2026_10_15.json'
+      - 'docs/development/LEARNING_AP80_OWNER_FIRST_PASS_V6_27_2026_10_15.md'
+      - 'tests/Feature/ApExamCandidateOwnerEditorialPacketV627Test.php'
+      - 'app/Services/ApExamCandidateRevisionComparisonService.php'
+      - 'app/Services/ApExamCandidateDraftPreparationService.php'
+      - 'app/Services/ApExamCandidateHumanReviewIntakeService.php'
+      - 'resources/question_packs/ap/ap-a-2026-cbt-80-candidate-v2.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  editorial-packet-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+      - name: Install locked dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Configure disposable local testing only
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          echo "APP_ENV=testing" >> .env
+          echo "DB_CONNECTION=sqlite" >> .env
+          echo "DB_DATABASE=:memory:" >> .env
+          echo "CACHE_STORE=array" >> .env
+          echo "SESSION_DRIVER=array" >> .env
+          echo "NATIVE_AI_DRIVER=disabled" >> .env
+          php artisan key:generate --force --no-interaction
+          php -l tests/Feature/ApExamCandidateOwnerEditorialPacketV627Test.php
+          php -r 'json_decode(file_get_contents("docs/learning/review_packets/AP_A_80_OWNER_FIRST_PASS_6Q_V627_2026_10_15.json"), true, 64, JSON_THROW_ON_ERROR);'
+      - name: Synthetic editorial packet and preserved AP80 review gates
+        run: |
+          APP_ENV=testing DB_CONNECTION=sqlite DB_DATABASE=:memory: CACHE_STORE=array \
+          php artisan test \
+            tests/Feature/ApExamCandidateOwnerEditorialPacketV627Test.php \
+            tests/Feature/ApExamCandidateDraftPreparationV626Test.php \
+            tests/Feature/ApExamCandidateRevisionComparisonV625Test.php \
+            tests/Feature/ApExamCandidateHumanReviewIntakeV624Test.php \
+            tests/Feature/ApExamCandidateQualityReviewTest.php \
+            tests/Feature/ApExamCandidateRevisionPreviewTest.php \
+            tests/Feature/ApExamCandidateBundleAuditTest.php
+      - name: Boundaries
+        run: |
+          echo "Only owner-supplied AI-assisted editorial notes and synthetic test fixtures checked."
+          echo "No authenticated expert or rights review, Question Pack import/publish, release authorization, Aiven/Render write or device validation."
