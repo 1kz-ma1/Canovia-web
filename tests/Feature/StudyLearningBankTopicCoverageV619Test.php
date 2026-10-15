@@ -57,7 +57,7 @@ final class StudyLearningBankTopicCoverageV619Test extends TestCase
             'slug' => 'v619-'.Str::lower(Str::random(12)),
             'title' => $topic.'問題集', 'exam_code' => $examCode,
             'subject' => $subject, 'version' => '1', 'status' => 'published',
-            'metadata' => $meta,
+            'metadata' => array_merge(['match_terms' => ['AP']], $meta),
         ]);
         $qs = [];
         for ($i = 1; $i <= $count; $i++) {
