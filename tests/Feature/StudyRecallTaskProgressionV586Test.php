@@ -198,6 +198,7 @@ class StudyRecallTaskProgressionV586Test extends TestCase
 
     public function test_explicit_recall_completion_finishes_task_records_evidence_and_advances_to_next_task(): void
     {
+        config(['intelligence.learning_context_watch.epoch_shadow_enabled' => true]);
         [$user, $plan, $task, $nextTask] = $this->scenario();
         $this->masteredDeck($plan, $task);
 
@@ -224,6 +225,9 @@ class StudyRecallTaskProgressionV586Test extends TestCase
         $this->assertSame(100, $task->progress_percent);
         $this->assertSame(0, $task->remaining_minutes);
         $this->assertSame('done', $task->status);
+        $this->assertDatabaseHas('learning_context_source_epochs', [
+            'plan_id' => $plan->id, 'epoch' => 1, 'last_mutation_kind' => 'task_updated',
+        ]);
         $this->assertStringContainsString(
             'Recall定着確認',
             (string) $task->progress_reason,
@@ -255,6 +259,9 @@ class StudyRecallTaskProgressionV586Test extends TestCase
             );
 
         $this->assertDatabaseCount('task_evidences', 1);
+        $this->assertDatabaseHas('learning_context_source_epochs', [
+            'plan_id' => $plan->id, 'epoch' => 1,
+        ]);
     }
 
     private function masteredDeck(Plan $plan, Task $task): void

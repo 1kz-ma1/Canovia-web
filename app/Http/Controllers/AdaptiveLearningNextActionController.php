@@ -69,6 +69,9 @@ final class AdaptiveLearningNextActionController extends Controller
             ), 409, 'Taskの次Actionが変更されています。再確認してください。');
 
             $current->update(['next_action_note' => $recommended]);
+            // Human-confirmed revision; exact retries above do not bump.
+            app(\App\Services\LearningContextSourceEpochService::class)
+                ->record($livePlan, 'task_updated');
             $activity->record($livePlan, $request->user(), 'task_updated', 'task', (int) $current->id, [
                 'source' => 'owner_confirmed_learning_review_v611',
                 'learning_evidence_signature' => (string) $preview['source_signature'],

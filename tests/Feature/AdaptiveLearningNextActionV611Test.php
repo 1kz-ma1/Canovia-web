@@ -108,6 +108,7 @@ final class AdaptiveLearningNextActionV611Test extends TestCase
 
     public function test_real_owner_can_confirm_two_distinct_misses_without_fabricating_progress(): void
     {
+        config(['intelligence.learning_context_watch.epoch_shadow_enabled' => true]);
         [$owner, $plan, $task, $pack] = $this->fixture();
         $this->actingAs($owner);
         $this->answer($owner, $plan, $task, $pack);
@@ -123,12 +124,18 @@ final class AdaptiveLearningNextActionV611Test extends TestCase
             ->assertSee('この復習を次のActionに反映する');
         $this->assertSame('以前のAction', $task->fresh()->next_action_note);
         $this->confirm($plan, $task, $candidate)->assertRedirect($url);
+        $this->assertDatabaseHas('learning_context_source_epochs', [
+            'plan_id' => $plan->id, 'epoch' => 1, 'last_mutation_kind' => 'task_updated',
+        ]);
         $this->assertSame($candidate['label'], $task->fresh()->next_action_note);
         $this->assertSame(35, $task->fresh()->progress_percent);
         $this->assertSame(30, $task->fresh()->remaining_minutes);
         $this->assertDatabaseCount('task_evidences', 0);
         $this->assertDatabaseCount('study_practice_attempts', 0);
         $this->confirm($plan, $task, $candidate)->assertRedirect($url);
+        $this->assertDatabaseHas('learning_context_source_epochs', [
+            'plan_id' => $plan->id, 'epoch' => 1,
+        ]);
         $this->get($url)->assertOk()->assertSee('data-learning-next-action-adopted', false);
     }
 

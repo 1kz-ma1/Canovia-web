@@ -407,6 +407,8 @@ class StudyRecallController extends Controller
                 'next_action_note' => $nextAction,
                 'status' => 'done',
             ]);
+            app(\App\Services\LearningContextSourceEpochService::class)
+                ->record($lockedPlan, 'task_updated');
 
             $evidence->record(
                 $lockedTask,

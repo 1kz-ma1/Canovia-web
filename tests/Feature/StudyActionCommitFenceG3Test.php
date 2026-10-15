@@ -110,11 +110,15 @@ final class StudyActionCommitFenceG3Test extends TestCase
 
     public function test_active_verified_action_creates_once_and_stale_replay_cannot_create_duplicate(): void
     {
+        config(['intelligence.learning_context_watch.epoch_shadow_enabled' => true]);
         [$owner, $plan] = $this->scenario();
         $result = app(StudyAdaptiveActionService::class)->refresh($plan, now());
 
         $first = $this->project($plan, $result, $owner);
         $this->assertTrue($first['created']);
+        $this->assertDatabaseHas('learning_context_source_epochs', [
+            'plan_id' => $plan->id, 'epoch' => 1, 'last_mutation_kind' => 'task_created',
+        ]);
         $this->assertSame($first['task']->id,
             $result->projection->fresh()->projected_task_id);
 
@@ -122,6 +126,9 @@ final class StudyActionCommitFenceG3Test extends TestCase
         // this pre-creation evaluation, even from a second browser tab.
         $this->assertDenied(409, fn () => $this->project($plan, $result, $owner));
         $this->assertDatabaseCount('tasks', 1);
+        $this->assertDatabaseHas('learning_context_source_epochs', [
+            'plan_id' => $plan->id, 'epoch' => 1,
+        ]);
         $this->assertDatabaseCount('task_dependencies', 0);
         $this->assertSame(1, IntelligenceActionProjection::count());
     }
