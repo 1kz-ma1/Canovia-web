@@ -215,6 +215,147 @@ final class LearningContextSourceCaptureTest extends TestCase
         $this->assertFalse($service->isCurrent($owner, $plan->id, $a['source_revision']));
     }
 
+    public function test_old_native_attempt_corrections_and_deletion_invalidate_revision_without_invented_learning_change(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner);
+        $task = $this->task($plan);
+        $old = null;
+        for ($i = 0; $i < 12; ++$i) {
+            $attempt = $this->attempt($owner, $plan, $task, 60);
+            $attempt->update(['applied_at' => now()->subDays(24 - $i)]);
+            $old ??= $attempt;
+        }
+
+        $capture = app(LearningContextSourceCaptureService::class);
+        $detector = app(LearningContextChangeDetectionService::class);
+        $before = $capture->capture($owner, $plan->id);
+        $this->assertNotNull($before);
+        $this->assertTrue($before['snapshot']['facts']['recent_practice']['truncated']);
+        $this->assertSame(8, $before['snapshot']['facts']['recent_practice']['applied_attempts_considered']);
+
+        $old->update(['score_percent' => 10]);
+        $corrected = $capture->capture($owner, $plan->id);
+        $this->assertNotSame($before['source_revision'], $corrected['source_revision']);
+        $this->assertFalse($capture->isCurrent($owner, $plan->id, $before['source_revision']));
+        $this->assertSame($before['snapshot'], $corrected['snapshot']);
+        $this->assertSame('unchanged', $detector->compare($before, $corrected)['status']);
+        $this->assertStringNotContainsString('SECRET_GRADING_RATIONALE',
+            json_encode($corrected, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE));
+
+        $old->update(['assessment' => ['rationale' => 'PRIVATE_CORRECTION_SECRET']]);
+        $assessmentCorrected = $capture->capture($owner, $plan->id);
+        $this->assertNotSame($corrected['source_revision'], $assessmentCorrected['source_revision']);
+        $this->assertStringNotContainsString('PRIVATE_CORRECTION_SECRET',
+            json_encode($assessmentCorrected, JSON_THROW_ON_ERROR));
+
+        $old->delete();
+        $deleted = $capture->capture($owner, $plan->id);
+        $this->assertNotSame($assessmentCorrected['source_revision'], $deleted['source_revision']);
+        $this->assertSame($before['snapshot'], $deleted['snapshot']);
+        $this->assertFalse($capture->isCurrent($owner, $plan->id, $assessmentCorrected['source_revision']));
+    }
+
+    public function test_out_of_window_task_change_invalidates_hash_but_not_visible_eight_tasks(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner);
+        $later = null;
+        for ($i = 0; $i < 12; ++$i) {
+            $later = $this->task($plan, 'Task '.$i);
+        }
+        $capture = app(LearningContextSourceCaptureService::class);
+        $before = $capture->capture($owner, $plan->id);
+        $this->assertTrue($before['snapshot']['facts']['active_tasks']['truncated']);
+        $later->update(['progress_percent' => 87, 'title' => 'HIDDEN_12TH_TASK']);
+        $after = $capture->capture($owner, $plan->id);
+        $this->assertSame($before['snapshot'], $after['snapshot']);
+        $this->assertNotSame($before['source_revision'], $after['source_revision']);
+        $this->assertStringNotContainsString('HIDDEN_12TH_TASK', json_encode($after, JSON_THROW_ON_ERROR));
+
+        $later->delete();
+        $this->assertNotSame($after['source_revision'],
+            $capture->capture($owner, $plan->id)['source_revision']);
+    }
+
+    public function test_old_approved_mcp_result_correction_and_revocation_invalidate_history_revision(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner);
+        $task = $this->task($plan);
+        for ($i = 0; $i < 10; ++$i) {
+            $attempt = $this->attempt($owner, $plan, $task, 70);
+            $attempt->update(['applied_at' => now()->subDays(10 - $i)]);
+        }
+
+        $link = McpLinkedSubject::query()->create([
+            'user_id' => $owner->id, 'provider_key' => 'chatgpt',
+            'identity_fingerprint' => hash('sha256', 'historical-owner'),
+            'status' => 'linked', 'linked_at' => now(),
+        ]);
+        $grant = McpDelegatedGrant::query()->create([
+            'subject_link_id' => $link->id, 'user_id' => $owner->id,
+            'plan_id' => $plan->id,
+            'client_resource_fingerprint' => hash('sha256', 'historical-client'),
+            'scope' => 'study_progress', 'status' => 'active',
+            'consented_at' => now(), 'expires_at' => now()->addDays(7),
+        ]);
+        $old = McpStudyResultProposal::query()->create([
+            'user_id' => $owner->id, 'plan_id' => $plan->id, 'task_id' => $task->id,
+            'grant_id' => $grant->id,
+            'idempotency_key' => hash('sha256', 'historical-attempt'),
+            'payload_hash' => hash('sha256', 'historical-payload'),
+            'question_count' => 10, 'correct_count' => 6,
+            'weakness_topics' => ['PRIVATE_OLD_SQL_TOPIC'],
+            'status' => McpStudyResultProposal::APPROVED,
+            'decided_at' => now()->subDays(40),
+            'expires_at' => now()->addDays(7),
+        ]);
+
+        $capture = app(LearningContextSourceCaptureService::class);
+        $before = $capture->capture($owner, $plan->id);
+        $this->assertSame(0,
+            $before['snapshot']['facts']['recent_practice']['owner_approved_external_results_considered']);
+        $old->update(['correct_count' => 8]);
+        $changed = $capture->capture($owner, $plan->id);
+        $this->assertNotSame($before['source_revision'], $changed['source_revision']);
+        $this->assertSame($before['snapshot'], $changed['snapshot']);
+        $this->assertStringNotContainsString('PRIVATE_OLD_SQL_TOPIC',
+            json_encode($changed, JSON_THROW_ON_ERROR));
+
+        $old->update(['status' => McpStudyResultProposal::REJECTED]);
+        $revoked = $capture->capture($owner, $plan->id);
+        $this->assertNotSame($changed['source_revision'], $revoked['source_revision']);
+        $this->assertSame($before['snapshot'], $revoked['snapshot']);
+        $this->assertFalse($capture->isCurrent($owner, $plan->id, $changed['source_revision']));
+    }
+
+    public function test_over_budget_active_tasks_refuse_partial_fingerprint(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner);
+        $task = $this->task($plan);
+        $capture = app(LearningContextSourceCaptureService::class);
+        $before = $capture->capture($owner, $plan->id);
+        $this->assertNotNull($before);
+
+        // Synthetic bulk fixtures; no accounts or real exam data.
+        $now = now();
+        $bulk = [];
+        for ($i = 0; $i < 256; ++$i) {
+            $bulk[] = [
+                'plan_id' => $plan->id,
+                'title' => 'Synthetic overflow '.$i,
+                'status' => 'todo', 'progress_percent' => 0,
+                'priority' => 1, 'sort_order' => $i + 10,
+                'created_at' => $now, 'updated_at' => $now,
+            ];
+        }
+        Task::query()->insert($bulk);
+        $this->assertNull($capture->capture($owner, $plan->id));
+        $this->assertFalse($capture->isCurrent($owner, $plan->id, $before['source_revision']));
+    }
+
     public function test_task_window_is_bounded_and_does_not_export_descriptions(): void
     {
         $owner = User::factory()->create();
