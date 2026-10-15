@@ -26,6 +26,8 @@
         <p class="mt-3 text-xs leading-5 text-slate-400">上記の件数は最新{{ $history['window'] }}件以内。誤タップ申告は採点記録を消さず、復習候補の集計から除外しています。</p>
     </header>
 
+    @include('learning.partials.delayed-recheck', ['cue' => $history['delayed_recheck'], 'isHistory' => true])
+
     @include('learning.partials.review-comparisons')
 
     <section class="page-card p-5 sm:p-7" data-learning-review-topics>
