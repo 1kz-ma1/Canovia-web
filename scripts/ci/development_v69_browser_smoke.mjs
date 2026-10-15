@@ -19,11 +19,14 @@ const email = 'v69-browser@example.invalid';
 const password = 'V69-only!test-Password';
 const title = 'V69 ブラウザ開発Plan';
 const next = '次はログアウト後のホーム復帰を直す';
-const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'],
+    executablePath: process.env.CANOVIA_BROWSER_EXECUTABLE_PATH || undefined });
 const ctx = await browser.newContext({
     viewport: { width: 1280, height: 850 },
     locale: 'ja-JP',
 });
+await ctx.route(/^https?:\/\//, route => new URL(route.request().url()).origin === base
+    ? route.continue() : route.abort());
 const page = await ctx.newPage();
 page.setDefaultTimeout(20000);
 const step = (name) => process.stdout.write(`PASS ${name}\n`);

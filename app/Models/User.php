@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'onboarding_version', 'onboarding_completed_at', 'onboarding_skipped_at', 'first_run_completed_at', 'last_resource_provider', 'workspace_mode_preference', 'release_level_override'])]
+#[Fillable(['name', 'email', 'password', 'onboarding_version', 'onboarding_completed_at', 'onboarding_skipped_at', 'first_run_completed_at', 'last_resource_provider', 'workspace_mode_preference'])]
 #[Hidden(['password', 'remember_token', 'map_personalization_preferences'])]
 class User extends Authenticatable
 {
@@ -22,7 +22,6 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
-
     public function plans()
     {
         return $this->hasMany(Plan::class);

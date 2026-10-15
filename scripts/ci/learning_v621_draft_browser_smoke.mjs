@@ -19,10 +19,13 @@ if (base !== 'http://127.0.0.1:8799'
 
 const email = 'v621-draft@example.invalid';
 const password = 'V621-only-Disposable!password';
-const browser = await chromium.launch({headless:true,args:['--no-sandbox']});
+const browser = await chromium.launch({headless:true,args:['--no-sandbox'],
+    executablePath: process.env.CANOVIA_BROWSER_EXECUTABLE_PATH || undefined});
 const context = await browser.newContext({
     locale: 'ja-JP', viewport:{width:390,height:844}, serviceWorkers:'block',
 });
+await context.route(/^https?:\/\//, route => new URL(route.request().url()).origin === base
+    ? route.continue() : route.abort());
 const page = await context.newPage();
 page.setDefaultTimeout(20000);
 const log = value => process.stdout.write('V621_DISPOSABLE_PASS ' + value + '\n');

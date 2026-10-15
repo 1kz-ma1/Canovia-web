@@ -15,12 +15,13 @@ final class FeatureAccessService
     private array $resolvers;
 
     /**
-     * @param iterable<EntitlementResolver> $resolvers
+     * @param  iterable<EntitlementResolver>  $resolvers
      */
     public function __construct(
         iterable $resolvers,
         private readonly ?AdminAccessService $adminAccess = null,
         private readonly ?AdminPreviewContext $adminPreview = null,
+        private readonly ?ReleaseLevelService $releaseLevels = null,
     ) {
         $items = is_array($resolvers) ? $resolvers : iterator_to_array($resolvers);
 
@@ -34,13 +35,18 @@ final class FeatureAccessService
 
     /**
      * The single boundary feature code should use when it needs to know whether
-     * an actor may use a published feature. Feature flags are intentionally not
-     * evaluated here.
+     * an actor may use a published feature. Publication maturity precedes
+     * entitlement; feature-specific kill switches remain independently required.
      *
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public function resolveAccess(?User $actor, FeatureKey $feature, array $context = []): FeatureAccessDecision
     {
+        $levels = $this->releaseLevels ?? app(ReleaseLevelService::class);
+        if (! $levels->allowsFeature($feature, $actor)) {
+            return FeatureAccessDecision::deny($feature, 'feature_not_published');
+        }
+
         if ($actor && $this->adminAccess?->isSuperAdmin($actor)) {
             $previewMode = $this->adminPreview?->mode($actor);
 
@@ -72,7 +78,7 @@ final class FeatureAccessService
     }
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public function canUse(?User $actor, FeatureKey $feature, array $context = []): bool
     {
@@ -80,7 +86,7 @@ final class FeatureAccessService
     }
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public function authorizeUse(?User $actor, FeatureKey $feature, array $context = []): FeatureAccessDecision
     {

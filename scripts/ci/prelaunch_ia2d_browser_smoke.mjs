@@ -18,7 +18,8 @@ if (base !== 'http://127.0.0.1:8796'
   || process.env.CANOVIA_PUBLIC_RELEASE_LEVEL !== '1') {
   throw Error('IA-2d strictly isolated local test boundary not satisfied');
 }
-const browser = await chromium.launch({headless: true, args: ['--no-sandbox']});
+const browser = await chromium.launch({headless: true, args: ['--no-sandbox'],
+  executablePath: process.env.CANOVIA_BROWSER_EXECUTABLE_PATH || undefined});
 const log = name => process.stdout.write('PASS IA-2d ' + name + '\n');
 const journey = async (name, run, mobile = false) => {
   const context = await browser.newContext({
@@ -26,6 +27,9 @@ const journey = async (name, run, mobile = false) => {
     viewport: mobile ? {width: 390, height: 844} : {width: 1280, height: 850},
     serviceWorkers: 'block',
   });
+  // Keep remote fonts/provider pages out of this strictly loopback journey.
+  await context.route(/^https?:\/\//, route => new URL(route.request().url()).origin === base
+    ? route.continue() : route.abort());
   const page = await context.newPage();
   page.setDefaultTimeout(20000);
   try {
