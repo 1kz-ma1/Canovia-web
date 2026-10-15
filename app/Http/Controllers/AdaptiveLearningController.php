@@ -10,6 +10,7 @@ use App\Models\Task;
 use App\Services\AdaptiveLearningAnswerDraftService;
 use App\Services\AdaptiveLearningHistoryService;
 use App\Services\AdaptiveLearningReviewEntryService;
+use App\Services\AdaptiveLearningDistinctReviewService;
 use App\Services\AdaptiveLearningBankQueueService;
 use App\Services\AdaptiveLearningCandidateService;
 use App\Services\AdaptiveExamProfileRegistry;
@@ -56,7 +57,8 @@ final class AdaptiveLearningController extends Controller
         AdaptiveExamPackReadinessService $examReadiness,
         AdaptiveLearningModeRecommendationService $recommendations,
         AdaptiveLearningHistoryService $history,
-        AdaptiveLearningReviewEntryService $reviewEntry)
+        AdaptiveLearningReviewEntryService $reviewEntry,
+        AdaptiveLearningDistinctReviewService $distinctReview)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         // Filter eligible packs before applying the display cap. Limiting the
@@ -104,9 +106,15 @@ final class AdaptiveLearningController extends Controller
         $reviewPacks = $reviewPreview
             ? $reviewEntry->packsForTopic((string) $reviewPreview['topic'])
             : collect();
+        $distinctReviewPacks = $reviewPreview
+            ? $distinctReview->packsForTopic($request, $plan, $task,
+                $identity->resolve($request), (string) $reviewPreview['topic'])
+            : collect();
 
         return view('learning.index', [
             'reviewPreview' => $reviewPreview, 'reviewPacks' => $reviewPacks,
+            'distinctReviewPacks' => $distinctReviewPacks,
+            'distinctStartRequestId' => (string) Str::uuid(),
             'plan' => $plan, 'task' => $task, 'packs' => $packs,
             'activeRuns' => $activeRuns,
             'examProfiles' => $availableExamProfiles, 'examPacks' => $examPacks,
@@ -123,7 +131,8 @@ final class AdaptiveLearningController extends Controller
         PlanOwnershipService $ownership, PlanCategoryProfileService $profiles,
         BehaviorIdentityService $identity, AdaptiveLearningBankQueueService $queue,
         AdaptiveLearningCandidateService $candidates,
-        AdaptiveLearningReviewEntryService $reviewEntry)
+        AdaptiveLearningReviewEntryService $reviewEntry,
+        AdaptiveLearningDistinctReviewService $distinctReview)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         $input = $request->validate([
@@ -132,6 +141,7 @@ final class AdaptiveLearningController extends Controller
             'mode' => ['required', 'in:understanding,practice'],
             'review_topic' => ['required_with:review_source_signature', 'nullable', 'string', 'max:50'],
             'review_source_signature' => ['required_with:review_topic', 'nullable', 'regex:/\\A[a-f0-9]{64}\\z/'],
+            'review_distinct' => ['sometimes', 'in:1'],
         ]);
         $pack = QuestionPack::where('status', 'published')
             ->findOrFail($input['question_pack_id']);
@@ -140,6 +150,9 @@ final class AdaptiveLearningController extends Controller
         $token = $userId ? null : $identity->resolve($request);
 
         $reviewTopic = null;
+        $distinctIds = [];
+        abort_unless(! isset($input['review_distinct']) || filled($input['review_topic'] ?? null),
+            409, '別問題での再確認には現在の復習候補が必要です。');
         if (filled($input['review_topic'] ?? null)) {
             abort_unless($input['mode'] === LearningRun::MODE_UNDERSTANDING, 409,
                 '分野指定の復習は理解モードで開始してください。');
@@ -155,11 +168,19 @@ final class AdaptiveLearningController extends Controller
             abort_unless($reviewEntry->supportsReview($pack, (string) $preview['topic']),
                 409, 'この分野の復習問題が足りません。公開済みの問題集を確認してください。');
             $reviewTopic = (string) $preview['topic'];
+            if (isset($input['review_distinct'])) {
+                $distinctIds = $distinctReview->questionIds($request, $plan, $task,
+                    $identity->resolve($request), $pack, $reviewTopic);
+                abort_unless(count($distinctIds) === 2, 409,
+                    '別問題での再確認に必要な未回答問題が2問ありません。問題集を選び直してください。');
+            }
         } elseif (filled($input['review_source_signature'] ?? null)) {
             abort(422, '復習する分野が指定されていません。');
         }
 
-        $run = DB::transaction(function () use ($input, $pack, $userId, $token, $plan, $task, $queue, $candidates, $reviewTopic) {
+        $policy = $distinctIds !== [] ? 'bank_topic_distinct_initial_v616'
+            : ($reviewTopic ? 'bank_topic_review_initial_v613' : 'bank_locked_v1');
+        $run = DB::transaction(function () use ($input, $pack, $userId, $token, $plan, $task, $queue, $candidates, $reviewTopic, $distinctIds, $policy) {
             $existing = LearningRun::where('start_request_id', $input['start_request_id'])
                 ->lockForUpdate()->first();
 
@@ -168,6 +189,7 @@ final class AdaptiveLearningController extends Controller
                     && (int) $existing->task_id === (int) $task->id
                     && (int) $existing->question_pack_id === (int) $pack->id
                     && $existing->mode === $input['mode']
+                    && $existing->queue_policy_version === $policy
                     && ($userId !== null
                         ? (int) $existing->user_id === (int) $userId
                         : $existing->user_id === null && hash_equals((string) $existing->actor_token, (string) $token)),
@@ -184,14 +206,20 @@ final class AdaptiveLearningController extends Controller
                 'pack_version_snapshot' => $pack->version,
                 'mode' => $input['mode'], 'status' => LearningRun::STATUS_ACTIVE,
                 'current_ordinal' => 1,
-                'queue_policy_version' => $reviewTopic ? 'bank_topic_review_initial_v613' : 'bank_locked_v1',
+                'queue_policy_version' => $policy,
                 'started_at' => now(),
             ]);
             // On a resumed short-session learning habit, carry over only
             // actor-scoped recorded evidence before locking the first items.
             // With no history, candidate order remains deterministic Bank order.
             $candidates->refresh($new);
-            $queue->refill($new, $reviewTopic);
+            $queue->refill($new, $reviewTopic, $distinctIds);
+            if ($distinctIds !== []) {
+                $locked = $new->items()->orderBy('ordinal')->limit(2)
+                    ->pluck('question_id')->map(fn ($id) => (int) $id)->all();
+                abort_unless($locked === $distinctIds, 409,
+                    '別問題の初期出題を確保できません。再度確認してください。');
+            }
             if ($new->items()->doesntExist()) {
                 throw ValidationException::withMessages([
                     'question_pack_id' => '現在、この問題集から回答可能な問題を準備できませんでした。',
