@@ -64,6 +64,88 @@ class FirstRunUxV4123Test extends TestCase
 
     }
 
+    public function test_new_guest_chooses_conversation_without_auto_creating_a_plan(): void
+    {
+        $this->get(route('first_run.show'))
+            ->assertOk()
+            ->assertSee('data-first-run-choice="diagnosis"', false)
+            ->assertSee('data-first-run-choice="conversation"', false)
+            ->assertSee('data-first-run-choice="browse"', false);
+
+        $this->post(route('first_run.start'), ['entry' => 'conversation'])
+            ->assertRedirect(route('plans.create'))
+            ->assertSessionHas('canovia.first_run.passed', true);
+
+        $this->get(route('plans.create'))
+            ->assertOk()
+            ->assertSee('FIRST COMPANION', false);
+        $this->assertDatabaseCount('plans', 0);
+    }
+
+    public function test_fresh_guest_browse_reaches_real_planless_overview(): void
+    {
+        $this->post(route('first_run.start'), ['entry' => 'browse'])
+            ->assertRedirect(route('workspace.overview.index'))
+            ->assertCookie(FirstRunService::COOKIE, '1');
+
+        $this->get(route('workspace.overview.index'))
+            ->assertOk()
+            ->assertSee('data-overview-workspace', false)
+            ->assertSee('data-overview-first-use-workspaces', false);
+        $this->assertDatabaseCount('plans', 0);
+    }
+
+    public function test_registered_user_chooses_diagnosis_without_forcing_plan(): void
+    {
+        $user = User::factory()->create(['first_run_completed_at' => null]);
+
+        $this->actingAs($user)
+            ->get(route('first_run.show'))
+            ->assertOk()
+            ->assertSee('data-first-run-choice="diagnosis"', false);
+
+        $this->actingAs($user)
+            ->post(route('first_run.start'), ['entry' => 'diagnosis'])
+            ->assertRedirect(route('personalization.show', ['source' => 'first_run']));
+
+        $this->assertNotNull($user->fresh()->first_run_completed_at);
+        $this->assertDatabaseCount('plans', 0);
+    }
+
+    public function test_unknown_first_run_choice_does_not_unlock_guest_or_account(): void
+    {
+        $this->post(route('first_run.start'), ['entry' => 'unknown'])
+            ->assertSessionHasErrors('entry')
+            ->assertSessionMissing('canovia.first_run.passed');
+
+        $this->get(route('home'))->assertRedirect(route('first_run.show'));
+
+        $user = User::factory()->create(['first_run_completed_at' => null]);
+        $this->actingAs($user)
+            ->post(route('first_run.start'), ['entry' => 'bypass'])
+            ->assertSessionHasErrors('entry');
+        $this->assertNull($user->fresh()->first_run_completed_at);
+    }
+
+    public function test_core_stable_gate_keeps_existing_start_even_if_higher_entry_is_submitted(): void
+    {
+        config([
+            'release_levels.public_level' => \App\Enums\ReleaseLevel::CoreStable->value,
+        ]);
+
+        $this->get(route('first_run.show'))
+            ->assertOk()
+            ->assertDontSee('data-first-run-choice="browse"', false)
+            ->assertDontSee('data-first-run-choice="diagnosis"', false);
+
+        $this->post(route('first_run.start'), ['entry' => 'browse'])
+            ->assertRedirect(route('plans.create'));
+
+        // The injected browse choice does not change the L0 release level.
+        $this->assertDatabaseCount('plans', 0);
+        $this->get(route('plans.create'))->assertOk();
+    }
+
     public function test_existing_guest_plan_bypasses_first_run_gate(): void
     {
         $plan = Plan::create([
