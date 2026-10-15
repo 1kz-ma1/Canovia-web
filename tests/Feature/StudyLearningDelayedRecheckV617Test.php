@@ -149,9 +149,14 @@ final class StudyLearningDelayedRecheckV617Test extends TestCase
         $this->get(route('plans.tasks.learning.history', [$plan, $task]))
             ->assertOk()->assertSee('data-learning-delayed-not-yet', false);
         fwrite(STDERR, "[V617 debug] after history GET\\n");
+        fwrite(STDERR, "[V617 debug] before index GET\\n");
         $this->get(route('plans.tasks.learning.index', [$plan, $task]))
             ->assertOk()->assertDontSee('data-learning-delayed-start', false);
-        $this->submitDelayed($plan, $task, $pack, $history['delayed_recheck'])->assertStatus(409);
+        fwrite(STDERR, "[V617 debug] index checked\\n");
+        $reply = $this->submitDelayed($plan, $task, $pack, $history['delayed_recheck']);
+        fwrite(STDERR, "[V617 debug] pending POST status=".$reply->status()."\\n");
+        $reply->assertStatus(409);
+        fwrite(STDERR, "[V617 debug] pending post checked\\n");
 
         // This is a controlled timestamp correction in an isolated test,
         // not an actual scheduled task or a live clock manipulation.
