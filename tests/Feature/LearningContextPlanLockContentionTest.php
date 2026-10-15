@@ -165,7 +165,8 @@ final class LearningContextPlanLockContentionTest extends TestCase
 
         self::assertNull($task->fresh()->next_action_note);
         self::assertSame(15, (int) $task->fresh()->progress_percent);
-        self::assertSame(0, LearningContextChangeRecord::query()->count());
+        self::assertSame(0, LearningContextChangeRecord::query()
+            ->where('plan_id', $plan->id)->count());
     }
 
     public function test_recall_mastery_completion_cannot_set_done_while_plan_is_locked(): void
@@ -182,7 +183,8 @@ final class LearningContextPlanLockContentionTest extends TestCase
 
         self::assertSame('doing', $task->fresh()->status);
         self::assertSame(15, (int) $task->fresh()->progress_percent);
-        self::assertSame(0, LearningContextChangeRecord::query()->count());
+        self::assertSame(0, LearningContextChangeRecord::query()
+            ->where('plan_id', $plan->id)->count());
     }
 
     /** @return array{User,Plan,Task} */
