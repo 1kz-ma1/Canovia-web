@@ -218,7 +218,7 @@ final class ApExamCandidateOwnerEditorialPacketV627Test extends TestCase
         $this->assertStringContainsString('5件/秒', $extras[1]['explanation']);
         $this->assertStringContainsString('異なる組織ドメイン', $extras[2]['explanation']);
         $this->assertStringContainsString('8値', $extras[4]['explanation']);
-        $this->assertStringContainsString('クロスサイトPOST', $extras[5]['explanation']);
+        $this->assertStringContainsString('POSTは安全なメソッドではなく', $extras[5]['explanation']);
         foreach ($packet['review_and_publication_guards'] as $name => $flag) {
             if (str_contains($name, 'unchanged') || str_starts_with($name, 'not_')
                 || str_starts_with($name, 'pending_') || str_starts_with($name, 'recheck_')
