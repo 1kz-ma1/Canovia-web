@@ -76,11 +76,14 @@ try {
     assert.equal(bankWorkspaceResponse.status(),200);
     const initialBankCard = page.locator('[data-study-learning-bank-coverage]');
     await initialBankCard.waitFor({state:'visible'});
-    await initialBankCard.locator('[data-study-bank-scope-unconfirmed]').waitFor();
+    const confirmedScope = await initialBankCard.locator('[data-study-bank-scope-confirmed]').count();
+    const unconfirmedScope = await initialBankCard.locator('[data-study-bank-scope-unconfirmed]').count();
+    assert.equal(confirmedScope + unconfirmedScope,1,
+        'Exactly one explicit AP scope statement must be shown');
     await initialBankCard.locator('[data-study-bank-topic-state="no_record"]').first().waitFor();
     assert.equal(Number(await initialBankCard.getAttribute('data-study-bank-source-count')),7);
     await initialBankCard.getByText('公式試験の出題率ではありません',{exact:false}).first().waitFor();
-    step('Unanswered AP Bank tags shown as a sample, with unconfirmed Subject A scope and no official exam weighting');
+    step('Unanswered AP Bank tags shown as a sample, with explicit Subject A scope status and no official exam weighting');
     await page.goto(practiceUrl, {waitUntil:'domcontentloaded'});
 
 
