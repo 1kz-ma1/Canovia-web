@@ -309,7 +309,7 @@ final class LearningContextPlanLockContentionTest extends TestCase
             });
         });
 
-        self::assertSame('LOCKED_SOURCE_PLAN', $plan->fresh()->title);
+        self::assertSame('SYNTHETIC_LOCK_PLAN', $plan->fresh()->title);
         self::assertSame(15, (int) $task->fresh()->progress_percent);
         self::assertSame(0, DB::table('learning_context_source_epochs')
             ->where('plan_id', $plan->id)->count());
