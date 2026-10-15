@@ -48,6 +48,12 @@ class TaskController extends Controller
             ?? (isset($validated['depends_on_task_id']) ? [(int) $validated['depends_on_task_id']] : []);
 
         $task = DB::transaction(function () use ($plan, $validated, $dependencyIds, $dependencies) {
+            // Shared Learning Snapshot reader and MCP approval fence acquire
+            // Plan first. Revalidate ownership under the same lock before
+            // inserting a Task visible to the source projection.
+            $lockedPlan = Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
+            $this->authorizePlanOwner($lockedPlan);
+
             $task = Task::create([
                 'plan_id' => $plan->id,
                 'title' => $validated['title'],
@@ -138,8 +144,15 @@ class TaskController extends Controller
             ->values()
             ->all();
 
-        DB::transaction(function () use ($task, $validated, $dependencyIds, $resourceIds, $dependencies) {
-            $task->update([
+        $task = DB::transaction(function () use ($task, $validated, $dependencyIds, $resourceIds, $dependencies, &$beforeStatus, &$beforeTitle) {
+            $lockedPlan = Plan::query()->whereKey($task->plan_id)->lockForUpdate()->firstOrFail();
+            $this->authorizePlanOwner($lockedPlan);
+            $lockedTask = Task::query()->where('plan_id', $lockedPlan->id)
+                ->whereKey($task->id)->lockForUpdate()->firstOrFail();
+            $beforeStatus = $lockedTask->status;
+            $beforeTitle = $lockedTask->title;
+
+            $lockedTask->update([
                 'title' => $validated['title'],
                 'description' => $validated['description'] ?? null,
                 'estimated_minutes' => $validated['estimated_minutes'],
@@ -151,9 +164,11 @@ class TaskController extends Controller
                 'next_action_note' => $validated['next_action_note'] ?? null,
             ]);
 
-            $dependencies->sync($task, $dependencyIds);
-            $task->resources()->sync($resourceIds);
-        });
+            $dependencies->sync($lockedTask, $dependencyIds);
+            $lockedTask->resources()->sync($resourceIds);
+
+            return $lockedTask;
+        }, 3);
 
         $action = $beforeStatus !== 'done' && $task->status === 'done' ? 'task_completed' : 'task_updated';
         $activity->record($task->plan, $request->user(), $action, 'task', (int) $task->id, [
@@ -173,7 +188,15 @@ class TaskController extends Controller
         $taskTitle = $task->title;
         $taskId = (int) $task->id;
 
-        $task->delete();
+        DB::transaction(function () use ($plan, $task, &$taskTitle): void {
+            $lockedPlan = Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
+            $this->authorizePlanOwner($lockedPlan);
+            $lockedTask = Task::query()->where('plan_id', $lockedPlan->id)
+                ->whereKey($task->id)->lockForUpdate()->firstOrFail();
+            $taskTitle = $lockedTask->title;
+            $lockedTask->delete();
+        }, 3);
+
         $activity->record($plan, request()->user(), 'task_deleted', 'task', $taskId, [
             'task_title' => $taskTitle,
         ]);
