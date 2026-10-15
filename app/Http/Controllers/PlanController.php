@@ -36,6 +36,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
 
 class PlanController extends Controller
@@ -568,71 +569,102 @@ class PlanController extends Controller
             'is_collaborative' => ['nullable'],
         ]);
 
-        $startDate = $validated['start_date'] ?? $plan->start_date?->format('Y-m-d');
-        $deadline = array_key_exists('deadline', $validated)
-            ? $validated['deadline']
-            : $plan->deadline?->format('Y-m-d');
+        // Lock the live Plan BEFORE reading any values used to derive the
+        // write. The route-bound model may be stale after another editor,
+        // transfer or Context Watch capture committed.
+        $updatedPlan = DB::transaction(function () use (
+            $request, $plan, $ownership, $activity, $goalContexts,
+            $categoryProfiles, $specializations, $validated,
+        ): Plan {
+            $live = Plan::query()->whereKey($plan->id)
+                ->lockForUpdate()->firstOrFail();
+            // Owner-only settings; never trust a pretransaction permission
+            // check or a per-request collaboration role cache.
+            $ownership->authorizePlan($request, $live);
 
-        if ($startDate && $deadline && Carbon::parse($deadline)->lt(Carbon::parse($startDate))) {
-            return back()->withErrors(['deadline' => '期限は開始日以降にしてください。'])->withInput();
-        }
+            $startDate = $validated['start_date'] ?? $live->start_date?->format('Y-m-d');
+            $deadline = array_key_exists('deadline', $validated)
+                ? $validated['deadline']
+                : $live->deadline?->format('Y-m-d');
 
-        $before = $plan->only(['title', 'description', 'category', 'workspace_domain_override', 'workspace_specialization_override', 'priority', 'priority_mode', 'start_date', 'deadline', 'is_public']);
-        $previousTitle = (string) $plan->title;
+            if ($startDate && $deadline && Carbon::parse($deadline)->lt(Carbon::parse($startDate))) {
+                throw ValidationException::withMessages([
+                    'deadline' => '期限は開始日以降にしてください。',
+                ]);
+            }
 
-        // A confirmed specialization cannot remain attached to an unrelated
-        // Domain if the owner edits the Workspace or legacy category.
-        $nextDomainOverride = array_key_exists('workspace_domain_override', $validated)
-            ? (in_array($validated['workspace_domain_override'], ['auto', null, ''], true)
-                ? null
-                : $validated['workspace_domain_override'])
-            : $plan->workspace_domain_override;
-        $nextCategory = array_key_exists('category', $validated)
-            ? (string) $validated['category']
-            : (string) $plan->category;
-        $nextDomain = $nextDomainOverride ?: $categoryProfiles->forCategory($nextCategory)->key;
-        $specializationOptions = $specializations->optionsForDomain($nextDomain);
-        $currentSpecialization = (string) ($plan->workspace_specialization_override ?? '');
-        $nextSpecialization = array_key_exists($currentSpecialization, $specializationOptions)
-            ? $currentSpecialization
-            : null;
+            $before = $live->only([
+                'title', 'description', 'category', 'workspace_domain_override',
+                'workspace_specialization_override', 'priority', 'priority_mode',
+                'start_date', 'deadline', 'is_public',
+            ]);
+            $previousTitle = (string) $live->title;
 
-        $plan->update([
-            'title' => $validated['title'],
-            'description' => array_key_exists('description', $validated) ? $validated['description'] : $plan->description,
-            'category' => array_key_exists('category', $validated) ? $validated['category'] : $plan->category,
-            'workspace_domain_override' => $nextDomainOverride,
-            'workspace_specialization_override' => $nextSpecialization,
-            'priority' => $validated['priority'] ?? (int) ($plan->priority ?? 3),
-            'priority_mode' => $validated['priority_mode'] ?? ($plan->priority_mode ?: 'auto'),
-            'visual_icon' => array_key_exists('visual_icon', $validated) ? $validated['visual_icon'] : $plan->visual_icon,
-            'accent_key' => $validated['accent_key'] ?? $plan->accentKey(),
-            'roadmap_world' => $validated['roadmap_world'] ?? $plan->roadmapWorld(),
-            'start_date' => $startDate,
-            'deadline' => $deadline,
-            'is_public' => $request->has('is_public') ? $request->boolean('is_public') : $plan->is_public,
-        ]);
+            // Derive Domain and Specialization from the freshly locked Plan;
+            // unrelated concurrent changes must not be overwritten by stale
+            // route-model values.
+            $nextDomainOverride = array_key_exists('workspace_domain_override', $validated)
+                ? (in_array($validated['workspace_domain_override'], ['auto', null, ''], true)
+                    ? null
+                    : $validated['workspace_domain_override'])
+                : $live->workspace_domain_override;
+            $nextCategory = array_key_exists('category', $validated)
+                ? (string) $validated['category']
+                : (string) $live->category;
+            $nextDomain = $nextDomainOverride ?: $categoryProfiles->forCategory($nextCategory)->key;
+            $specializationOptions = $specializations->optionsForDomain($nextDomain);
+            $currentSpecialization = (string) ($live->workspace_specialization_override ?? '');
+            $nextSpecialization = array_key_exists($currentSpecialization, $specializationOptions)
+                ? $currentSpecialization
+                : null;
 
-        // Reset the old browser-specific "open Creative in Development"
-        // exception when the owner explicitly sets a persistent Domain.
+            $live->update([
+                'title' => $validated['title'],
+                'description' => array_key_exists('description', $validated) ? $validated['description'] : $live->description,
+                'category' => array_key_exists('category', $validated) ? $validated['category'] : $live->category,
+                'workspace_domain_override' => $nextDomainOverride,
+                'workspace_specialization_override' => $nextSpecialization,
+                'priority' => $validated['priority'] ?? (int) ($live->priority ?? 3),
+                'priority_mode' => $validated['priority_mode'] ?? ($live->priority_mode ?: 'auto'),
+                'visual_icon' => array_key_exists('visual_icon', $validated) ? $validated['visual_icon'] : $live->visual_icon,
+                'accent_key' => $validated['accent_key'] ?? $live->accentKey(),
+                'roadmap_world' => $validated['roadmap_world'] ?? $live->roadmapWorld(),
+                'start_date' => $startDate,
+                'deadline' => $deadline,
+                'is_public' => $request->has('is_public') ? $request->boolean('is_public') : $live->is_public,
+            ]);
+
+            if ($live->wasChanged()) {
+                // Shadow-only; the authoritative Context Watch still computes
+                // its own complete historical hash. Eligibility transitions
+                // invalidate capture even if this Study-only epoch skips them.
+                app(\App\Services\LearningContextSourceEpochService::class)
+                    ->record($live, 'plan_updated');
+            }
+
+            $changedFields = collect($live->only(array_keys($before)))
+                ->filter(fn ($value, $key) => (string) ($before[$key] ?? '') !== (string) $value)
+                ->keys()
+                ->values()
+                ->all();
+            $activity->record($live, $request->user(), 'plan_updated', 'plan', (int) $live->id, [
+                'changed_fields' => $changedFields,
+            ]);
+
+            if ((string) $live->title !== $previousTitle) {
+                $goalContexts->syncPlanTitle($live, $previousTitle);
+            }
+
+            return $live;
+        }, 3);
+
+        // Session is not transactional: clear this actor-specific bridge
+        // only after the Plan, Epoch, activity and Goal Context commit.
         if (array_key_exists('workspace_domain_override', $validated)) {
-            $creativeAccess->optOut($request, $plan);
+            $creativeAccess->optOut($request, $updatedPlan);
         }
 
-        $changedFields = collect($plan->only(array_keys($before)))
-            ->filter(fn ($value, $key) => (string) ($before[$key] ?? '') !== (string) $value)
-            ->keys()
-            ->values()
-            ->all();
-        $activity->record($plan, $request->user(), 'plan_updated', 'plan', (int) $plan->id, [
-            'changed_fields' => $changedFields,
-        ]);
-
-        if ((string) $plan->title !== $previousTitle) {
-            $goalContexts->syncPlanTitle($plan, $previousTitle);
-        }
-
-        return redirect()->route('plans.show', $plan)->with('success', '計画を更新しました。');
+        return redirect()->route('plans.show', $updatedPlan)->with('success', '計画を更新しました。');
     }
 
     public function destroy(
