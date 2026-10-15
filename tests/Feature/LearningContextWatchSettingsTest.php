@@ -98,7 +98,7 @@ final class LearningContextWatchSettingsTest extends TestCase
             ->assertHeader('Cache-Control', 'no-store, private')
             ->assertSee('data-learning-watch-enable')
             ->assertSee('name="consent"', false)
-            ->assertSee('通知や自動チェックはまだ行われません', false, false); // Informative if enabled after POST only?
+            ->assertSee('バックグラウンドでの自動チェック');
         $this->post($this->enableUrl($plan), [])->assertSessionHasErrors(['consent']);
         $this->assertDatabaseCount('learning_context_watch_states', 0);
         $this->post($this->enableUrl($plan), ['consent' => '1'])
