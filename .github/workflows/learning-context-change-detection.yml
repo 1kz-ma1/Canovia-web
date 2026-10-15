@@ -1,0 +1,45 @@
+name: Learning Context Change Detection (No Delivery)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/LearningContextChangeDetectionService.php'
+      - 'tests/Unit/LearningContextChangeDetectionServiceTest.php'
+      - 'docs/development/LEARNING_CONTEXT_CHANGE_DETECTION_V01_2026_10_15.md'
+      - '.github/workflows/learning-context-change-detection.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  internal-review-only:
+    name: Learning change detector review-only and fail-closed
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+      - name: Install locked dependencies, no application hooks
+        run: composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+      - name: PHP syntax
+        run: |
+          php -l app/Services/LearningContextChangeDetectionService.php
+          php -l tests/Unit/LearningContextChangeDetectionServiceTest.php
+      - name: Test in-memory comparison only; no account or provider access
+        env:
+          APP_ENV: testing
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ":memory:"
+          SESSION_DRIVER: array
+          CACHE_STORE: array
+        run: php artisan test tests/Unit/LearningContextChangeDetectionServiceTest.php --colors=never
