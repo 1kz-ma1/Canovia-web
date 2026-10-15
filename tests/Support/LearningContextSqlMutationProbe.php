@@ -40,7 +40,7 @@ final class LearningContextSqlMutationProbe
         }
     }
 
-    public static function install(): void
+    public static function install(bool $filterIrrelevantRows = false): void
     {
         self::assertDisposableDatabase();
         if (Schema::hasTable(self::LEDGER)) {
@@ -54,7 +54,7 @@ final class LearningContextSqlMutationProbe
         });
 
         if (DB::getDriverName() === 'pgsql') {
-            self::installPostgres();
+            self::installPostgres($filterIrrelevantRows);
 
             return;
         }
@@ -77,15 +77,31 @@ final class LearningContextSqlMutationProbe
                         ."\n IF NOT ($newPlanId <=> $oldPlanId) THEN\n"
                         .$statement($newPlanId)."\n END IF;",
                 };
+                if ($filterIrrelevantRows) {
+                    $predicate = self::relevantPredicate($table, $event, 'mysql');
+                    $body = "IF ($predicate) THEN\n $body\n END IF;";
+                }
                 DB::unprepared("CREATE TRIGGER $name AFTER $event ON $table "
                     ."FOR EACH ROW BEGIN\n $body\nEND");
             }
         }
     }
 
-    private static function installPostgres(): void
+    private static function installPostgres(bool $filterIrrelevantRows): void
     {
-        DB::unprepared(<<<'SQL'
+        $guards = '';
+        if ($filterIrrelevantRows) {
+            foreach (self::SOURCES as $table => $events) {
+                foreach ($events as $event) {
+                    $predicate = self::relevantPredicate($table, $event, 'pgsql');
+                    $return = $event === 'DELETE' ? 'OLD' : 'NEW';
+                    $guards .= "    IF TG_TABLE_NAME = '$table' AND TG_OP = '$event' THEN\n"
+                        ."        IF NOT ($predicate) THEN RETURN $return; END IF;\n"
+                        ."    END IF;\n";
+                }
+            }
+        }
+        DB::unprepared(str_replace('/* CI_FILTER_GUARDS */', $guards, <<<'SQL'
 CREATE OR REPLACE FUNCTION canovia_probe_source_bump() RETURNS trigger AS $$
 DECLARE
     before_plan BIGINT;
@@ -93,6 +109,7 @@ DECLARE
     action_kind TEXT;
 BEGIN
     action_kind := TG_TABLE_NAME || '_' || LOWER(TG_OP);
+    /* CI_FILTER_GUARDS */
     IF TG_TABLE_NAME = 'plans' THEN
         before_plan := OLD.id;
         after_plan := NEW.id;
@@ -126,7 +143,7 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-SQL);
+SQL));
         foreach (self::SOURCES as $table => $events) {
             foreach ($events as $event) {
                 DB::unprepared('CREATE TRIGGER '.self::triggerName($table, $event)
@@ -134,6 +151,55 @@ SQL);
                     .'EXECUTE FUNCTION canovia_probe_source_bump()');
             }
         }
+    }
+
+    /**
+     * Experimental conservative row filter. It is intentionally NOT a
+     * complete versioned declaration of the Source Capture schema.
+     *
+     * Plan UPDATE is always counted (updated_at and eligibility).
+     * Task UPDATE checks fields actually used in v0.7's task hash, plus
+     * moving between Plans. Native/External UPDATE checks membership only
+     * and still overcounts many already-eligible row mutations.
+     */
+    private static function relevantPredicate(string $table, string $event, string $driver): string
+    {
+        if ($table === 'plans') {
+            return '1 = 1';
+        }
+        $active = static fn (string $side): string =>
+            "$side.status IN ('doing', 'todo', 'paused')";
+        $applied = static fn (string $side): string =>
+            "$side.applied_at IS NOT NULL";
+        $approved = static fn (string $side): string =>
+            "($side.status = 'approved' AND $side.decided_at IS NOT NULL)";
+        $qualifier = match ($table) {
+            'tasks' => $active,
+            'study_practice_attempts' => $applied,
+            'mcp_study_result_proposals' => $approved,
+        };
+        if ($event === 'INSERT') {
+            return $qualifier('NEW');
+        }
+        if ($event === 'DELETE') {
+            return $qualifier('OLD');
+        }
+
+        $membership = '('.$qualifier('OLD').' OR '.$qualifier('NEW').')';
+        if ($table !== 'tasks') {
+            // Do not mistake a Practice row's applied/approved status for
+            // proof of ownership. All eligible-looking changes are counted.
+            return $membership;
+        }
+
+        $different = static fn (string $column): string =>
+            $driver === 'pgsql'
+                ? "(OLD.$column IS DISTINCT FROM NEW.$column)"
+                : "(NOT (OLD.$column <=> NEW.$column))";
+        $fields = ['plan_id', 'title', 'status', 'progress_percent', 'updated_at'];
+        $changed = implode(' OR ', array_map($different, $fields));
+
+        return "($membership AND ($changed))";
     }
 
     public static function inspect(int $planId): ?array
