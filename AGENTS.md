@@ -29,6 +29,10 @@
 
 See `docs/CANOVIA_DEVELOPMENT_WORKFLOW.md` for the full workflow.
 
+## Canovia Future public-roadmap maintenance (owner decision 2026-10-15)
+
+During implementation/review/acceptance of a Canovia feature, check whether the change **materially affects what public visitors should understand about product development, validation, availability or direction**. If so, consider manually editing the relevant public card in `config/canovia_public_roadmap.php` via a normal reviewed PR (the same PR or a follow-up). If not relevant to public communication, **no update is required**; do not turn this into an automatic per-commit checklist or block unrelated implementation. Do not infer status from GitHub/CI, update it via Queue Worker or automatically expose internal plans. Mark `rolling_out`/`released` only after separate owner-accepted real deployment and audience/device verification; a merge to `main` is insufficient. Follow `docs/development/PRELAUNCH_PUBLIC_APP_FUTURE_IA_SPEC_2026_10_13.md` section 5 and `docs/development/PRELAUNCH_MANUAL_PUBLIC_ROADMAP_2026_10_15.md`. Production and publication approval boundaries above still apply.
+
 ## Future design documents
 
 - `docs/future/` contains long-term concepts and architecture preservation context.
