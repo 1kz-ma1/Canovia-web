@@ -120,7 +120,10 @@ BEGIN
             epoch = learning_context_probe_epochs.epoch + 1,
             last_mutation_kind = EXCLUDED.last_mutation_kind;
     END IF;
-    RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 SQL);
