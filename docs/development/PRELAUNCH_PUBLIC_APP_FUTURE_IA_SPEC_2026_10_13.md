@@ -44,7 +44,7 @@ Canoviaの複雑さを最初に説明しきるのではなく、ユーザーが�
 | App | Overview / My Workspace、Study / Development、Plan/Task/Record、初回導線 | 事前公開用の最小体験制御、将来情報と本人ワークスペースの分離 |
 | Personalization | V58.25 Bootstrap、Study/Development/unsureの本人回答とPlan Seed、既存Plan作成への接続。診断はSkip可能 | ゲスト体験・保存への引継ぎと、**Skip後にPlan作成へ自動誘導しない非Plan経路**の受入 |
 | Action-grounded Plan Draft | V58.71–V58.76に根拠・本人承認の限定Slice | 自動フルロードマップ生成を標榜せず、事前公開では承認可能な提案だけ提示 |
-| Canovia Future | `GET /feedback`、`roadmap_features`、`roadmap_votes`、Support/取消、自由記述Feedback | マーケティング公開向けの安全な読み取り投影と情報の見せ方 |
+| Canovia Future | `GET /feedback`、`roadmap_features`、`roadmap_votes`、Support/取消、自由記述Feedback。2026-10-15のPR #709で手動公開ロードマップを`main`へ実装（**本番未確認**） | 公開コピーの手動保守と、実デプロイ・対象利用者・実機確認に基づく掲載判断 |
 | Product Preview | `GET /product-preview`、L2でFree/Premium/Pro/Dev Pro Coming Soon表示 | 公開の約束や価格の誤認防止。Pre-Launchページとの文脈接続 |
 | Release Gate | L0–L4、手動受入、個人のAccess override | 事前公開の**明示的な入口スコープ**と検証。L2を自動公開しない |
 | Monetization | Free/ Premium/ Pro + future Dev Pro方向、V41.5 Entitlement基盤 | 有料実行・Coin・支援決済は今回の範囲外 |
@@ -171,6 +171,19 @@ Public SiteのPrimary CTAは「無料で試す」1つ。Secondaryは「今でき
 
 **Editorial gate:** 内容を公開する担当者が、公開可否・分類・コピー・status根拠をレビューしてから`is_published`相当の公開状態にする。公開後の変更も監査可能にし、誤情報は非表示/修正できる。GitHubのmergeや内部実装状況を自動的に公開へ昇格させない。
 
+### Ongoing editorial review when implementing Canovia (adopted 2026-10-15)
+
+**Product-owner decision: 必要なときだけ公開ロードマップを手動更新する。** 2026-10-15に [PR #709](https://github.com/1kz-ma1/Canovia-web/pull/709) で`main`へ統合した最小実装は、既存の`GET /feedback`（Canovia Future）に「現在開発中」「検証中」「公開済み」「これから」を表示する。一般公開用データの編集場所は`config/canovia_public_roadmap.php`。これは個人のPlan/Taskのロードマップでも、内部開発`docs/development/ROADMAP.md`でもない。**`main`への実装統合はRender本番公開を意味しない。**
+
+今後Canoviaの機能を実装・改善する担当（人・AI）は、関連する仕様確認・PRレビュー・受入のタイミングで**公開ロードマップに影響があるか**を判断する。
+
+- 新しいユーザー向け機能、理解しやすい進捗、実装着手・検証開始・対象者限定公開・一般公開・提供停止、対外説明の変更など、訪問者が知る価値のある変化があれば、掲載するカードの**追加・文言更新・ステータス変更・非表示**を検討する。
+- 内部リファクタリング、CI調整、小規模な保守・非公開の仕様変更など、公開説明に影響しなければ**更新しなくてよい**。すべてのコミット・PRをロードマップへ掲載する義務はない。
+- 変更が必要なら、担当者が公開コピー、対象分野、ステータス、`updated_on`、`is_published`を手動編集し、GitHub PRの通常レビューで公開可能性・機密漏洩・情報の正確さを確認する。ロードマップ修正を同一PRに含めても、独立PRに切り出してもよい。更新不要と判断した場合は通常の開発を妨げない。
+- `planned`は「これから」、`in_development`は「現在開発中」、`ready`は「検証中」。`rolling_out`（段階公開）と`released`（公開済み）を掲載する場合は、実際の対象環境への配信・アクセス可能範囲・利用者の受入を確認したオーナーが、`owner_release_verified=true`、`release_verified_on`、`access_scope`を明示する。**PR/CI成功や開発環境の検証だけで公開済みにしない。**
+- 更新はソース変更と所定のリリースを通じて反映する。GitHub、CI、Queue Worker、AI、外部連携、定期ジョブ、Support票数からの**自動ステータス変更・自動公開は実装しない**。更新が必要になったときにだけ人が行う最低限の運用とする。
+- 実装・運用手順は [手動公開ロードマップRunbook](PRELAUNCH_MANUAL_PUBLIC_ROADMAP_2026_10_15.md) を参照する。無料Support/既存`roadmap_features`の投票と公開ステータスの正否は独立して扱う。
+
 ### Initial story grouping (not commitments)
 
 - Discover: 目的と現在地を整理し、最初の行動を見つける。
@@ -270,7 +283,7 @@ IA-1〜IA-4のうち、最小Pre-Launchに不要な装飾/アニメーション/
 2. Pre-LaunchのGuest Plan Seedを「画面上のみ」にするか「短命Session保存」を許容するか、正確な有効期限と削除契約。
 3. Pre-Launch対象: StudyとDevelopmentの共通導線を先行するか、簿記等の小さな専門体験まで含めるか（教材レビューと別）。
 4. 既存Canovia Futureの「500 Support」目安の公開表現。少人数段階で誤った進捗感を与えないか。
-5. Feature status編集担当と公開文の承認責任、更新頻度、利用者向け通知は実装前に決定。
+5. **運用方針は2026-10-15に決定済み:** 機能実装・受入の担当者が公開影響を判断し、必要な場合だけソースをPRで手動更新。公開コピーの確認と`rolling_out`/`released`の受入はProduct Ownerが責任を持つ。定期更新・自動通知は先行公開の必須条件にしない。
 6. Pre-Launchで「登録して保存」を有効にする時点の本番バックアップ/復旧、メール送信、プライバシー・アカウント削除等の安全受入。
 7. 一般向けロードマップの詳細度。独自実装手法や未公開の安全対策は必ず内部に留める。
 
