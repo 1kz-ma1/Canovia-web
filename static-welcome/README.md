@@ -25,4 +25,4 @@ Static Site は起動直後から `/health` をポーリングします。Larave
 
 詳細: [IA-1の範囲と受入](../docs/development/PRELAUNCH_IA1_STATIC_PUBLIC_INTRO_2026_10_15.md)。
 
-> **Release hold (2026-10-15):** Render `Canovia-Welcome` Static Site は `main`/Auto Deploy ON で稼働中。紹介ページのPRを `main` に統合すると静的公開先が自動更新されるため、別途Ownerの静的サイト公開承認またはAuto Deploy OFFへの明示承認と実際の設定確認があるまでマージしない。本番WebのAuto Deploy OFFとは別の設定。
+> **Release boundary (2026-10-15):** 当初のRender `Canovia-Welcome` は `main` / Auto Deploy ONでありPRをDraft/HOLDとしたが、その後オーナーがAuto DeployをOFFに切替。`My Workspace`のサービスを読み取り確認し `autoDeploy=no` / `autoDeployTrigger=off`、Live SHAが旧 `ee533028c866e201d61c1430c15eaedb9c843524` で不変と検証した。開発`main`への統合は静的配信を更新しない。**実サイトへの手動デプロイとURL・端末受入は引き続き別承認**。本番Web/DB/iOSのリリースと混同しない。

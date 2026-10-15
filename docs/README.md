@@ -9,7 +9,7 @@
 
 ## Pre-Launch IA-1 — static public intro (2026-10-15)
 
-- [IA-1 static public introduction and wake routing](development/PRELAUNCH_IA1_STATIC_PUBLIC_INTRO_2026_10_15.md): standalone static landing with honest capability copy, fixed safe paths to existing app/roadmap/Support via cold-start Welcome. **PR pending: Canovia-Welcome Static Site Auto Deploy is ON for main; do not merge without a separate static-publication GO or approved Auto Deploy OFF verification.** Web production release remains separately gated.
+- [IA-1 static public introduction and wake routing](development/PRELAUNCH_IA1_STATIC_PUBLIC_INTRO_2026_10_15.md): standalone static landing with honest capability copy, fixed safe paths to existing app/roadmap/Support via cold-start Welcome. **2026-10-15 verified: the owner disabled Canovia-Welcome Static Site Auto Deploy (`no/off`), allowing development-main integration without an automatic static release.** Manual static deployment, live URL/mobile acceptance, and Web production release remain separately gated.
 
 ## Pre-Launch IA-2 — planless onboarding slice (2026-10-15)
 

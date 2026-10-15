@@ -22,7 +22,7 @@ IA-1 は `static-welcome/intro.html` を静的な「Canoviaとは」ページと
 - Node回帰テスト：導線の存在、広告/購入誤認のない表現、無JSの静的紹介ページ、既存の起動待ち復旧コントロール、実ヘルスReady後の入場、固定ルートのみの誘導、再訪者の準備完了後の自動入場、起動中の救済。
 - 実Chromium（ネットワークでの本番サイト接続を禁止）：紹介ページのモバイル390px/デスクトップ1280px表示、水平はみ出しなし、3つの体験/2つのFuture導線、既存Welcomeから紹介ページへの画面クリック遷移。これは **ローカル静的ファイル** だけの動作確認であり、本番の配信・実機iOSの検証ではない。
 - 静的サイト配置時には `intro.html` の直接URL/リンク、モバイル表示、アクセシビリティ、Web Appのゲスト `/feedback` と `/welcome` を手動で確認する。まだ **Render Static Site / 実機 / Safari / iPhone WKWebView で検証済みではない**。
-- **Render設定の実測（2026-10-15）:** `Canovia-Welcome` Static Site (`srv-dahn5k142hec739l0fmg`) は `branch=main` かつ `autoDeploy=yes / autoDeployTrigger=commit`、`rootDir=static-welcome`。Web本体のRender Auto Deploy OFFとは独立。**このPRをmainへ統合すると静的公開サイトが自動更新される可能性が高い。** Ownerから静的公開の別途GOがあるか、自動デプロイOFFへの明示承認とその設定確認ができるまで、**PRはマージせずOPEN/HOLD** とする。
+- **Render設定の経緯と最新実測（2026-10-15）:** 初回点検時、`Canovia-Welcome` Static Site (`srv-dahn5k142hec739l0fmg`) は `branch=main`、`autoDeploy=yes / autoDeployTrigger=commit` であり、未承認の静的公開を防ぐため当初PRはDraft/HOLDとした。その後**オーナーがAuto DeployをOFFに変更**。OrchestratorがRender `My Workspace` の同サービスを再取得し **`autoDeploy=no / autoDeployTrigger=off`、Live SHA `ee533028c866e201d61c1430c15eaedb9c843524` のまま**を確認。開発`main`への統合による静的自動公開リスクは解消したが、**実配信への手動デプロイ・実URL/スマホ/既存起動待ち受入は未承認・未実施**。本体WebのAuto Deploy OFFや `production` Releaseは別ゲート。
 - 静的サイトの自動公開を運用で制御したうえで統合し、実配信後にユーザーが直接 `/intro.html` を閲覧できることを確認する。本番Web/productionブランチ/Aiven/iOS/権限/課金への変更は行わない。
 - 独立Marketingドメイン/SEOの本格設計・CMS・個別更新記事・有料開発支援・行動解析・機能比較・動画・全画面刷新は後回し。既存Static Welcomeの復帰信頼性と最小価値の伝達を優先。
 
