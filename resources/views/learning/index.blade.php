@@ -50,6 +50,43 @@
                     <button type="submit" class="btn-primary" data-learning-review-submit>この分野の問題を解く</button>
                 </form>
             @endif
+            <div class="mt-5 border-t border-slate-700 pt-4" data-learning-distinct-review-entry>
+                <h3 class="text-base font-bold text-slate-100">別問題だけで再確認する</h3>
+                <p class="mt-2 text-xs leading-6 text-slate-300">
+                    同じTaskで過去に回答した問題IDを除き、未回答の出題元が2問以上ある公開問題集だけを表示します。
+                    他のTaskで解いた問題や内容の類似性までは除外できず、理解度の証明ではありません。
+                </p>
+                @if($distinctReviewPacks->isEmpty())
+                    <p class="mt-3 rounded-lg border border-amber-700/40 p-3 text-sm text-amber-200"
+                        data-learning-distinct-review-empty>
+                        このTaskでは現在、別問題の初期出題2問を確保できる公開問題集がありません。
+                        同じ問題の復習は上の通常経路から選べます。問題集追加後にもう一度確認してください。
+                    </p>
+                @else
+                    <form method="POST" action="{{ route('plans.tasks.learning.start', [$plan, $task]) }}"
+                        class="mt-3 space-y-3" data-learning-distinct-review-start>
+                        @csrf
+                        <input type="hidden" name="start_request_id" value="{{ $distinctStartRequestId }}">
+                        <input type="hidden" name="mode" value="understanding">
+                        <input type="hidden" name="review_distinct" value="1">
+                        <input type="hidden" name="review_topic" value="{{ $reviewPreview['topic'] }}">
+                        <input type="hidden" name="review_source_signature" value="{{ $reviewPreview['source_signature'] }}">
+                        <label for="distinct-review-pack" class="block text-sm font-semibold text-slate-200">
+                            未回答問題が2問以上ある問題集
+                        </label>
+                        <select id="distinct-review-pack" name="question_pack_id" class="form-control w-full" required>
+                            @foreach($distinctReviewPacks as $distinctPack)
+                                <option value="{{ $distinctPack->id }}">{{ $distinctPack->title }} / {{ $distinctPack->subject ?: '分野未指定' }}（v{{ $distinctPack->version }}）</option>
+                            @endforeach
+                        </select>
+                        <button type="submit" class="btn-primary">別の2問から再確認する</button>
+                    </form>
+                @endif
+                <p class="mt-3 text-xs leading-6 text-slate-400">
+                    24時間以上の間隔が空いたかどうかは、回答後の履歴で確認できます。
+                    学習開始や翌日の通知は自動設定されません。
+                </p>
+            </div>
             <a href="{{ route('workspace.study.index', ['plan_id' => $plan->id, 'surface' => 'work']) }}"
                 class="mt-4 inline-flex text-sm font-semibold text-sky-300">← 学習Workspaceへ戻る</a>
         </section>

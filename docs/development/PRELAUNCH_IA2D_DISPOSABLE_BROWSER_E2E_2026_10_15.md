@@ -34,10 +34,14 @@ Development/Learning acceptance steps.
      follow-up answer(s) -> explicit first Plan creation -> non-planless
      Overview. External AI is disabled, so conversation uses the
      actual deterministic fallback; this is not AI quality evidence.
-- Eight earlier Development/Learning browser scripts now choose a
-  real, visible submit button from the Welcome form rather than relying
-  on the retired single label, preserving their original later flows.
-  Their own path-filtered CI workflows must be green on the final HEAD.
+- Four earlier browser scripts (Development V6.9/V6.10 and Learning
+  V6.11/V6.12) now choose a visible submit button instead of the
+  retired single Welcome label, retaining their own later flows.
+- Four additional Learning V6.10/V6.13/V6.14/V6.15 scripts were already
+  independently updated on newer main to use IA-2b browse when offered,
+  with the original L0 single-button fallback. That newer code is
+  **retained**, not overwritten; Learning V6.16 also inherits the
+  compatible entry. Related browser CI must remain green on final HEAD.
 
 ## Proof boundaries
 

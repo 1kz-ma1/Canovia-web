@@ -69,7 +69,7 @@ final class AdaptiveLearningBankQueueService
     }
 
     /** Keep the initial ready queue nonempty without mutating already queued questions. */
-    public function refill(LearningRun $run, ?string $reviewTopic = null): void
+    public function refill(LearningRun $run, ?string $reviewTopic = null, array $initialDistinctIds = []): void
     {
         if ($run->status !== LearningRun::STATUS_ACTIVE || ! $run->question_pack_id) return;
         $pack = QuestionPack::query()->whereKey($run->question_pack_id)
@@ -116,6 +116,15 @@ final class AdaptiveLearningBankQueueService
                 return collect($terms)->contains(fn ($term) => is_string($term)
                     && mb_strtolower(trim($term)) === $topicKey) ? 0 : 1;
             })->values();
+        }
+        // V6.16: only at a new owner-consented focused Run's initial
+        // lock. Put the two server-verified, previously unanswered source IDs
+        // ahead of all candidate rankings. Existing snapshots are immutable.
+        if ($initialDistinctIds !== []) {
+            $fresh = collect($initialDistinctIds)->map(fn ($id) => $available->get((int) $id))
+                ->filter()->values();
+            $ordered = $fresh->concat($ordered->reject(fn (Question $q) =>
+                in_array((int) $q->id, $initialDistinctIds, true)))->values();
         }
         foreach ($ordered->take($target - $reserved) as $question) {
             $input = collect($question->response_schema)->firstWhere('id', 'answer');

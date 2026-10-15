@@ -13,7 +13,7 @@ use Illuminate\Support\Collection;
  */
 final class LearningReviewComparisonService
 {
-    private const FOCUSED_POLICY = 'bank_topic_review_initial_v613';
+    private const FOCUSED_POLICIES = ['bank_topic_review_initial_v613', 'bank_topic_distinct_initial_v616'];
     private const RUN_LIMIT = 3;
 
     public function __construct(
@@ -31,7 +31,7 @@ final class LearningReviewComparisonService
         // and Task, and excluded Exam mode. Never perform a global Run lookup.
         $focusedRunIds = $events
             ->filter(fn (LearningAnswerEvent $event) =>
-                $event->item?->run?->queue_policy_version === self::FOCUSED_POLICY)
+                in_array($event->item?->run?->queue_policy_version, self::FOCUSED_POLICIES, true))
             ->pluck('item.learning_run_id')->unique()->take(self::RUN_LIMIT)->all();
 
         $result = [];
