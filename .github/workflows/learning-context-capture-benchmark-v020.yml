@@ -93,7 +93,7 @@ jobs:
           php artisan migrate --force --no-interaction
           php artisan migrate --force --no-interaction
       - name: Synthetic Task and Practice curves (21 paired samples per size; never a performance gate)
-        run: php artisan test tests/Feature/LearningContextCaptureBenchmarkV020Test.php --display-output --fail-on-skipped --stop-on-failure --colors=never
+        run: php artisan test tests/Feature/LearningContextCaptureBenchmarkV020Test.php --fail-on-skipped --stop-on-failure --colors=never
 
   sqlite-synthetic-capture:
     name: 'Synthetic Learning Capture Bench (SQLite memory)'
@@ -131,4 +131,4 @@ jobs:
       - name: Syntax check synthetic benchmark
         run: php -l tests/Feature/LearningContextCaptureBenchmarkV020Test.php
       - name: Synthetic Task and Practice curves (SQLite memory)
-        run: php artisan test tests/Feature/LearningContextCaptureBenchmarkV020Test.php --display-output --fail-on-skipped --stop-on-failure --colors=never
+        run: php artisan test tests/Feature/LearningContextCaptureBenchmarkV020Test.php --fail-on-skipped --stop-on-failure --colors=never
