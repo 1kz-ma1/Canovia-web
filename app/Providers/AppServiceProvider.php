@@ -2,27 +2,29 @@
 
 namespace App\Providers;
 
+use App\Contracts\ExecutionActivityProjector;
+use App\Contracts\ExecutionProviderCatalog;
+use App\Models\Task;
+use App\Services\AdminAccessService;
+use App\Services\AdminPreviewContext;
+use App\Services\CoreContextService;
 use App\Services\Entitlements\FreeEntitlementResolver;
 use App\Services\Entitlements\GiftProductGrantEntitlementResolver;
 use App\Services\Entitlements\ProductGrantEntitlementResolver;
 use App\Services\Entitlements\SponsorProductGrantEntitlementResolver;
-use App\Contracts\ExecutionActivityProjector;
-use App\Contracts\ExecutionProviderCatalog;
-use App\Services\AdminAccessService;
-use App\Services\AdminPreviewContext;
-use App\Services\FeatureAccessService;
 use App\Services\ExecutionProviderRegistry;
-use App\Services\TaskEvidenceExecutionActivityProjector;
-use App\Services\CoreContextService;
-use App\Services\PlanOwnershipService;
+use App\Services\FeatureAccessService;
 use App\Services\PlanLifecyclePersonalizationAdapter;
-use App\Models\Task;
+use App\Services\PlanOwnershipService;
+use App\Services\ReleaseLevelService;
 use App\Services\RequestBehaviorHistory;
+use App\Services\TaskEvidenceExecutionActivityProjector;
 use App\Support\RequestPerformance;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -70,6 +72,7 @@ class AppServiceProvider extends ServiceProvider
                 $app->tagged('canovia.entitlement_resolvers'),
                 $app->make(AdminAccessService::class),
                 $app->make(AdminPreviewContext::class),
+                $app->make(ReleaseLevelService::class),
             ),
         );
     }
@@ -79,21 +82,19 @@ class AppServiceProvider extends ServiceProvider
         // V6.11 confirmation must not be exhausted by the different Study
         // answer/start/next endpoints sharing numeric throttle buckets.
         // Register in the provider so the named limiter survives route:cache.
-        RateLimiter::for('learning-next-action-confirm', fn (Request $request) =>
-            Limit::perMinute(8)->by($request->user()
+        RateLimiter::for('learning-next-action-confirm', fn (Request $request) => Limit::perMinute(8)->by($request->user()
                 ? 'user:'.$request->user()->getAuthIdentifier()
                 : 'guest-ip:'.$request->ip()
-            )
+        )
         );
 
         // V6.13: starting a new Bank Run is a distinct user action.
         // Keep the established 12/min bound but isolate it from unrelated
         // Study POST endpoints in the shared anonymous numeric limiter.
-        RateLimiter::for('learning-bank-start', fn (Request $request) =>
-            Limit::perMinute(12)->by($request->user()
+        RateLimiter::for('learning-bank-start', fn (Request $request) => Limit::perMinute(12)->by($request->user()
                 ? 'user:'.$request->user()->getAuthIdentifier()
                 : 'guest-ip:'.$request->ip()
-            )
+        )
         );
 
         Task::updated(function (Task $task): void {
@@ -111,7 +112,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         if ((bool) config('performance.enabled', false)) {
-            DB::listen(function (\Illuminate\Database\Events\QueryExecuted $event): void {
+            DB::listen(function (QueryExecuted $event): void {
                 if (! app()->bound('request')) {
                     return;
                 }

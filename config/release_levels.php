@@ -10,15 +10,13 @@ return [
     | Public Release Level
     |--------------------------------------------------------------------------
     |
-    | Keep the default at Internal Preview while the staged-release foundation
-    | is introduced so a deploy does not silently remove existing surfaces.
-    | Early Access can lower this with CANOVIA_PUBLIC_RELEASE_LEVEL once the
-    | corresponding release gate has been verified.
+    | Missing configuration must not publish unfinished capabilities. Operators
+    | explicitly select a reviewed public level; internal preview is actor-bound.
     |
     */
     'public_level' => (int) env(
         'CANOVIA_PUBLIC_RELEASE_LEVEL',
-        ReleaseLevel::InternalPreview->value,
+        ReleaseLevel::CoreStable->value,
     ),
 
     /*
