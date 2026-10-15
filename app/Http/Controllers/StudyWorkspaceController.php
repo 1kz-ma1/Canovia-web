@@ -26,6 +26,7 @@ use App\Services\StudyActivityPolicyService;
 use App\Services\StudyWorkspaceViewService;
 use App\Services\StudyLearningNextActionQueueService;
 use App\Services\StudyLearningPlanPriorityService;
+use App\Services\StudyLearningBankTopicCoverageService;
 use App\Services\WorkspaceModeOnboardingService;
 use App\Services\ExecutionSetupService;
 use App\Services\PersonalizationContextService;
@@ -50,6 +51,7 @@ final class StudyWorkspaceController extends Controller
         StudyWorkspaceViewService $views,
         StudyLearningNextActionQueueService $learningActionQueue,
         StudyLearningPlanPriorityService $learningPlanPriority,
+        StudyLearningBankTopicCoverageService $bankTopics,
         BehaviorIdentityService $identity,
         ExecutionSetupService $executionSetup,
         StudyIntelligencePresentationAdapter $presentationAdapter,
@@ -238,6 +240,9 @@ final class StudyWorkspaceController extends Controller
         $learningPlanCandidates = ($canEdit && $studySurface === 'work')
             ? $learningPlanPriority->forWorkspace($request, $plan, $actorToken, $canEdit)
             : ['items' => [], 'has_history' => false, 'has_more' => false];
+        $learningBankTopics = ($canEdit && in_array($studySurface, ['work', 'analysis'], true))
+            ? $bankTopics->forWorkspace($request, $plan, $actorToken, $canEdit)
+            : ['available' => false, 'rows' => []];
 
         $legacyPracticeResume = null;
         if ($canEdit && $studySurface === 'work') {
@@ -274,6 +279,7 @@ final class StudyWorkspaceController extends Controller
 
         return view('workspace.study.index', [
             'learningPlanCandidates' => $learningPlanCandidates,
+            'learningBankTopics' => $learningBankTopics,
             'learningReviewQueue' => $learningReviewQueue,
             'legacyPracticeResume' => $legacyPracticeResume,
             'studyPlans' => $studyPlans,
