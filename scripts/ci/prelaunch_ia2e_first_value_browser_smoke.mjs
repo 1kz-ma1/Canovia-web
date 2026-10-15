@@ -217,6 +217,28 @@ try {
 
     await page.goto(`${base}/account`);
     const logout = page.locator('form[action$="/logout"]').first();
+    if (mobile) {
+        page.on('request', req => {
+            if (req.url().includes('/logout')) {
+                process.stdout.write(`MOBILE LOGOUT REQUEST ${req.method()} ${req.url()}\n`);
+            }
+        });
+        page.on('response', res => {
+            if (res.url().includes('/logout')) {
+                process.stdout.write(`MOBILE LOGOUT RESPONSE ${res.status()} ${res.url()}\n`);
+            }
+        });
+        page.on('requestfailed', req => {
+            if (req.url().includes('/logout')) {
+                process.stdout.write(`MOBILE LOGOUT REQUEST FAILED ${req.failure()?.errorText || 'unknown'}\n`);
+            }
+        });
+        page.on('pageerror', err => process.stdout.write(`MOBILE PAGE ERROR ${err.message}\n`));
+        page.on('framenavigated', frame => {
+            if (frame === page.mainFrame()) process.stdout.write(`MOBILE NAVIGATED ${new URL(frame.url()).pathname}\n`);
+        });
+    }
+
     await Promise.all([
         page.waitForURL(url => url.pathname !== '/account', {
             waitUntil: 'domcontentloaded',
