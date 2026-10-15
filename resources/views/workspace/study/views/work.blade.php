@@ -10,6 +10,7 @@
         'feedback' => $intelligenceStateChange ?? null,
     ])
 
+    @include('workspace.study.partials.learning-bank-coverage')
     @include('workspace.study.partials.learning-plan-priority')
     @include('workspace.study.partials.learning-review-queue')
 
