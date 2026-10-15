@@ -165,9 +165,22 @@ final class LearningContextSqlMutationDeadlockV016BTest extends TestCase
             };
             if ($mode === 'deadlock') {
                 $await(static function () use ($directory): bool {
-                    return is_file($directory.'/deadlock.a.ready')
-                        && is_file($directory.'/deadlock.b.ready');
-                }, 'first lock barrier');
+                    return (is_file($directory.'/deadlock.a.ready')
+                            && is_file($directory.'/deadlock.b.ready'))
+                        || is_file($directory.'/deadlock.a.result.json')
+                        || is_file($directory.'/deadlock.b.result.json');
+                }, 'first lock barrier or worker failure');
+                if (! is_file($directory.'/deadlock.a.ready')
+                    || ! is_file($directory.'/deadlock.b.ready')) {
+                    $failures = [];
+                    foreach (['a', 'b'] as $role) {
+                        $file = $directory."/deadlock.$role.result.json";
+                        $failures[] = $role.':'.(is_file($file)
+                            ? substr((string) file_get_contents($file), 0, 300)
+                            : 'no-result');
+                    }
+                    throw new RuntimeException('Deadlock worker exited before first locks: '.implode('; ', $failures));
+                }
                 file_put_contents($directory.'/deadlock.go', '1', LOCK_EX);
             }
             $await(static function () use ($directory, $mode): bool {
