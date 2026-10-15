@@ -69,6 +69,21 @@ final class StudyLearningBankTopicCoverageService
         $unattested = 0;
         $truncated = false;
         foreach ($packs->take(self::PACK_LIMIT) as $pack) {
+            // An exam_code alone is not enough to enroll an arbitrary user's
+            // synthetic/public Bank tags into this Plan's recommended scope.
+            // Require explicit AP routing metadata or a curated reference
+            // marker. V6.12 foreign-only tag isolation remains unchanged.
+            $meta = is_array($pack->metadata) ? $pack->metadata : [];
+            $routes = is_array($meta['match_terms'] ?? null) ? $meta['match_terms'] : [];
+            $explicitAp = collect($routes)->contains(fn ($value) =>
+                is_string($value) && (
+                    mb_strtolower(trim($value)) === 'ap'
+                    || str_contains($value, '応用情報')
+                ));
+            if (! $explicitAp
+                && ($meta['content_kind'] ?? '') !== 'official_past_exam_curated') {
+                continue;
+            }
             $pack->load(['questions' => fn ($q) => $q->where('is_active', true)]);
             $check = $this->readiness->inspect($pack);
             if (! $check['publishable']) {
