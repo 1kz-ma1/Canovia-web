@@ -149,8 +149,10 @@ try {
     assert.equal(overview.status(), 200);
     assert.equal(await page.locator('[data-overview-planless-start]').count(), 0,
         'Overview must recognize the registered actor now owns a Plan');
-    assert.ok(await page.getByText(title, {exact:true}).count() > 0,
-        'The current actor\'s Plan must appear in their Overview');
+    const developmentCard = page.locator('[data-overview-mode="development"]');
+    await developmentCard.waitFor({state:'visible'});
+    assert.ok((await developmentCard.locator('.plan-identity-chip').innerText()).includes(title),
+        'The current actor\'s Development Plan must appear in the global Overview');
     step('Returning to the global Overview shows an actual Plan, never the empty first-use shell');
 
     await page.goto(guidedUrl, {waitUntil:'domcontentloaded'});
