@@ -1,0 +1,56 @@
+name: Pinned Aiven Mac Staging — Local-Only Source Rehearsal
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/prelaunch-pinned-mysql19-stage-local.yml'
+      - 'scripts/ops/prelaunch_pinned_mysql19_stage_local.sh'
+      - 'tests/ci/test_prelaunch_pinned_mysql19_stage_local.py'
+      - 'docs/development/PRELAUNCH_PINNED_MYSQL19_SELECT_ONLY_AIVEN_AUDIT_2026_10_15.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mac-stage-source-only:
+    name: Pinned source staging without MySQL, Aiven or production traffic
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify negative controls and Bash syntax
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/ci -p 'test_prelaunch_pinned_mysql19_stage_local.py' -v
+          bash -n scripts/ops/prelaunch_pinned_mysql19_stage_local.sh
+      - name: Stage 3 exact immutable local Git checkouts and run offline preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="$RUNNER_TEMP/verified-aiven-pinned-source"
+          # The stage tool is local Git only. CI markers are removed solely
+          # from this test command; there are no Aiven secrets or endpoints.
+          env -u CI -u GITHUB_ACTIONS -u DB_PASSWORD -u DB_URL -u DATABASE_URL \
+            -u MYSQL_PWD -u MYSQL_TEST_LOGIN_FILE \
+            bash scripts/ops/prelaunch_pinned_mysql19_stage_local.sh \
+              --destination "$target" | tee "$RUNNER_TEMP/source-stage-out.txt"
+          grep -Fxq 'PRODUCTION_DATABASE_QUERIED: false' "$RUNNER_TEMP/source-stage-out.txt"
+          grep -Fxq 'PRODUCTION_RELEASE_AUTHORIZED: false' "$RUNNER_TEMP/source-stage-out.txt"
+          grep -Fxq 'PINNED_MYSQL19_STAGE: OFFLINE_PREPARED_NO_AIVEN_CONNECTION' "$RUNNER_TEMP/source-stage-out.txt"
+          test "$(git -C "$target/audit" rev-parse HEAD)" = 'e04c646c78e021268801cacb1d8ef1b0ad276101'
+          test "$(git -C "$target/live" rev-parse HEAD)" = '15abdc9de6f24b5250fb255c579d1aa55facaf1a'
+          test "$(git -C "$target/candidate" rev-parse HEAD)" = '6d7dbcfedd35f33ba2827ed8c7c3d98ca30fc3d6'
+          grep -Fxq 'PINNED_MYSQL19_LOCAL_SOURCE: OFFLINE_SOURCE_INTEGRITY_CONFIRMED_NOT_AIVEN_READY' \
+            "$target/offline-verdict.txt"
+          echo 'immutable_local_only_stage_contract: pass'
+      - name: No live Aiven proof or release authorization
+        if: always()
+        run: |
+          echo 'No database driver / Aiven network request / grant change / Render deployment was run.'
+          echo 'This tests only Git source pinning and the offline source-integrity guard.'
+          echo 'Real Aiven ledger, backup restoration, Web wake, and owner production GO remain open.'
