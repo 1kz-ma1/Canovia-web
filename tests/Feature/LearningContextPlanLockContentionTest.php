@@ -275,6 +275,58 @@ final class LearningContextPlanLockContentionTest extends TestCase
             ->where('plan_id', $plan->id)->count());
     }
 
+    public function test_plan_review_multi_operation_cannot_commit_metadata_or_epoch_while_plan_is_locked(): void
+    {
+        [$user, $plan, $task] = $this->fixture();
+        $this->actingAs($user)->withoutExceptionHandling();
+        config(['intelligence.learning_context_watch.epoch_shadow_enabled' => true]);
+        $token = 'source-plan-review-'.(string) Str::uuid();
+        $proposal = [
+            'token' => $token, 'can_apply' => true, 'action' => 'update_progress',
+            'flow' => 'plan_update', 'summary' => 'SYNTHETIC_ONLY',
+            'raw_json' => '{"flow":"plan_update"}',
+            'operations' => [
+                ['type' => 'update_plan', 'title' => 'WAIT_FOR_PLAN_LOCK'],
+                ['type' => 'update_task', 'task_id' => $task->id, 'progress_percent' => 45],
+            ],
+        ];
+        $session = [
+            'plan_review_drafts.'.$plan->id => [
+                'flow' => 'plan_update', 'prompt' => 'synthetic only',
+            ],
+            'plan_review_proposals.'.$plan->id => $proposal,
+        ];
+        $payload = [
+            'proposal_token' => $token, 'selected_operations' => [0, 1],
+            'return_to' => 'plan',
+        ];
+        $contender = DB::connection('learning_lock_contender');
+
+        $this->withContendedPlan($contender, $plan, function () use ($plan, $session, $payload): void {
+            $this->expectLockDenied(function () use ($plan, $session, $payload): void {
+                $this->withSession($session)
+                    ->post(route('plans.review_assistant.apply', $plan), $payload);
+            });
+        });
+
+        self::assertSame('LOCKED_SOURCE_PLAN', $plan->fresh()->title);
+        self::assertSame(15, (int) $task->fresh()->progress_percent);
+        self::assertSame(0, DB::table('learning_context_source_epochs')
+            ->where('plan_id', $plan->id)->count());
+        self::assertSame(0, DB::table('plan_adjustments')
+            ->where('plan_id', $plan->id)->count());
+
+        $this->withSession($session)
+            ->post(route('plans.review_assistant.apply', $plan), $payload)
+            ->assertRedirect(route('plans.show', $plan));
+        self::assertSame('WAIT_FOR_PLAN_LOCK', $plan->fresh()->title);
+        self::assertSame(45, (int) $task->fresh()->progress_percent);
+        self::assertSame(2, (int) DB::table('learning_context_source_epochs')
+            ->where('plan_id', $plan->id)->value('epoch'));
+        self::assertSame(1, DB::table('plan_adjustments')
+            ->where('plan_id', $plan->id)->count());
+    }
+
     /** @return array{User,Plan,Task} */
     private function fixture(): array
     {
