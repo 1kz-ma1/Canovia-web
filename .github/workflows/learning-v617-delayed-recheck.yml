@@ -65,6 +65,9 @@ jobs:
         run: |
           php artisan key:generate --force --no-interaction
           php artisan migrate --force --no-interaction
+          php -l app/Http/Controllers/AdaptiveLearningController.php
+          php -l app/Services/LearningDelayedRecheckService.php
+          php -l app/Services/AdaptiveLearningHistoryService.php
           php -l scripts/ci/learning_v610_disposable_bank.php
           php -l scripts/ci/learning_v616_disposable_bank.php
           php -l scripts/ci/learning_v617_disposable_delayed.php
