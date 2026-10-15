@@ -11,3 +11,10 @@
 .canovia-brand-copy p{margin:0;color:#f5f6ff;font-family:ui-serif,"Yu Mincho",serif;font-size:clamp(.9rem,3.9vw,1.15rem);line-height:1.65;letter-spacing:.08em}
 .canovia-brand-copy span{display:block;margin-top:.55rem;color:#aeb9d7;font-size:.6rem;letter-spacing:.22em}
 @media(max-height:720px){.canovia-navigator{height:250px}.canovia-full-logo{width:min(66vw,300px)}.canovia-brand-copy{margin-top:-18px}}
+
+
+/* Minimal public intro entry; separate from the existing cold-start area. */
+.intro-teaser{width:min(100%,410px);margin-top:1rem;text-align:center}
+.intro-teaser p{margin:0;color:#bcc9e6;font-size:.73rem;line-height:1.65}
+.intro-teaser a{display:inline-flex;min-height:44px;align-items:center;justify-content:center;gap:.45rem;color:#8fe2ff;font-size:.8rem;font-weight:800;text-underline-offset:4px}
+.intro-teaser a:focus-visible{outline:2px solid #8fe2ff;outline-offset:2px;border-radius:6px}
