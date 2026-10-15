@@ -234,6 +234,34 @@ try {
             }
         });
         page.on('pageerror', err => process.stdout.write(`MOBILE PAGE ERROR ${err.message}\n`));
+        page.on('console', message => {
+            if (message.text().startsWith('IA2G-LOGOUT')) {
+                process.stdout.write(`MOBILE ${message.text()}\n`);
+            }
+        });
+        await page.evaluate(() => {
+            const form = document.querySelector('form[action$="/logout"]');
+            form.addEventListener('submit', event => {
+                console.log(`IA2G-LOGOUT submit event defaultPrevented=${event.defaultPrevented}`);
+            }, { capture: true });
+            const factory = window.indexedDB;
+            if (factory) {
+                const original = factory.deleteDatabase.bind(factory);
+                factory.deleteDatabase = function(name) {
+                    console.log(`IA2G-LOGOUT IDB deleteDatabase invoked ${name}`);
+                    const request = original(name);
+                    for (const event of ['success', 'error', 'blocked']) {
+                        request.addEventListener(event, () => console.log(`IA2G-LOGOUT IDB ${event}`));
+                    }
+                    return request;
+                };
+            }
+            const originalSubmit = HTMLFormElement.prototype.submit;
+            HTMLFormElement.prototype.submit = function() {
+                console.log('IA2G-LOGOUT native form.submit invoked');
+                return originalSubmit.call(this);
+            };
+        });
         page.on('framenavigated', frame => {
             if (frame === page.mainFrame()) process.stdout.write(`MOBILE NAVIGATED ${new URL(frame.url()).pathname}\n`);
         });
