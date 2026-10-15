@@ -81,6 +81,25 @@ jobs:
             mysql:3306|pgsql:5432) ;;
             *) exit 42 ;;
           esac
+      - name: Allow pre-existing app migration trigger ONLY in disposable MySQL CI
+        if: matrix.driver == 'mysql'
+        env:
+          MYSQL_PWD: ci-only-root-pass
+        run: |
+          set -euo pipefail
+          test "$CI" = 'true'
+          test "$APP_ENV" = 'testing'
+          test "$CANOVIA_LEARNING_LOCK_DISPOSABLE_CI" = '1'
+          test "$DB_HOST" = '127.0.0.1'
+          test "$DB_CONNECTION:$DB_PORT" = 'mysql:3306'
+          test "$DB_DATABASE" = 'canovia_learning_watch_lock_ci'
+          test "$DB_USERNAME" = 'canovia_ci'
+          test -z "$DB_URL"
+          # The EXISTING app authorization-epoch migration creates a trigger;
+          # this is not the experimental source probe and never targets Aiven.
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=root --database=canovia_learning_watch_lock_ci \
+            -e 'SET GLOBAL log_bin_trust_function_creators = 1'
       - name: Locked Composer packages, without app hooks
         run: composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
       - name: Syntax check synthetic benchmark
