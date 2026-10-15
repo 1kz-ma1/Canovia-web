@@ -70,7 +70,7 @@ if ($argv[1] === '--verify') {
     $pack = QuestionPack::query()->where('slug', 'learning-v617-later-disposable')->sole();
     $run = LearningRun::query()->where('plan_id', $plan->id)
         ->where('task_id', $task->id)->where('user_id', $owner->id)
-        ->where('queue_policy_version', 'bank_topic_distinct_initial_v617')->sole();
+        ->where('queue_policy_version', 'bank_topic_delayed_distinct_initial_v617')->sole();
     $items = $run->items()->orderBy('ordinal')->limit(2)->with('answer')->get();
     echo json_encode([
         'plan_id' => (int) $plan->id,
