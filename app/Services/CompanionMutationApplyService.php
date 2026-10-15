@@ -396,6 +396,8 @@ class CompanionMutationApplyService
             'sort_order' => $sortOrder,
         ]);
 
+        // Plan was locked before Candidate, and the Task was just inserted.
+        app(LearningContextSourceEpochService::class)->record($plan, 'task_created');
         $this->activity->record($plan, $request->user(), 'task_created', 'task', (int) $task->id, [
             'task_title' => $task->title,
             'source' => 'canovia_companion',
@@ -460,7 +462,14 @@ class CompanionMutationApplyService
         }
 
         $task->update($changes);
+        $sourceChanged = $task->wasChanged();
         $task->refresh();
+        if ($sourceChanged) {
+            // The outer Companion transaction holds Plan -> Task -> Candidate.
+            // Same-value approvals never invent a source mutation.
+            app(LearningContextSourceEpochService::class)
+                ->record($task->plan, 'task_updated');
+        }
 
         $this->activity->record($task->plan, $request->user(), 'task_updated', 'task', (int) $task->id, [
             'task_title' => $task->title,
