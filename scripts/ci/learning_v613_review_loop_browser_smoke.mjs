@@ -33,7 +33,7 @@ try {
     assert.equal(response.status(), 200);
     if (new URL(page.url()).pathname === '/welcome') {
         await page.locator('form[data-first-run-start]')
-            .getByRole('button',{name:'Canoviaと始める'}).click();
+            .locator('button[type="submit"]').first().click();
         await page.goto(`${base}/plans/create/manual`,{waitUntil:'domcontentloaded'});
     }
 

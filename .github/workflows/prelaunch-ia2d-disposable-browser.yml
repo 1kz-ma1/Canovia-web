@@ -1,0 +1,93 @@
+name: Pre-Launch IA-2d Disposable Chromium First-Use Journeys
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/prelaunch-ia2d-disposable-browser.yml'
+      - 'scripts/ci/prelaunch_ia2d_browser_smoke.mjs'
+      - 'scripts/ci/*_browser_smoke.mjs'
+      - 'app/Http/Controllers/FirstRunController.php'
+      - 'app/Http/Controllers/PersonalizationController.php'
+      - 'app/Http/Controllers/OverviewWorkspaceController.php'
+      - 'resources/views/first_run/show.blade.php'
+      - 'resources/views/personalization/**'
+      - 'resources/views/workspace/overview/**'
+      - 'resources/views/goal_discovery/**'
+      - 'docs/development/PRELAUNCH_IA2D_DISPOSABLE_BROWSER_E2E_2026_10_15.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  first-use-chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned application dependencies
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          npm ci --ignore-scripts
+          npm run build
+      - name: Strictly isolate browser application to disposable test SQLite
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "APP_ENV=testing" >> "$GITHUB_ENV"
+          echo "APP_DEBUG=false" >> "$GITHUB_ENV"
+          echo "APP_URL=http://127.0.0.1:8796" >> "$GITHUB_ENV"
+          echo "CANOVIA_IA2_BROWSER_BASE_URL=http://127.0.0.1:8796" >> "$GITHUB_ENV"
+          echo "CANOVIA_IA2_BROWSER_FIXTURE=1" >> "$GITHUB_ENV"
+          echo "CANOVIA_PUBLIC_RELEASE_LEVEL=1" >> "$GITHUB_ENV"
+          echo "DB_CONNECTION=sqlite" >> "$GITHUB_ENV"
+          echo "DB_DATABASE=$RUNNER_TEMP/ia2d-browser.sqlite" >> "$GITHUB_ENV"
+          echo "SESSION_DRIVER=file" >> "$GITHUB_ENV"
+          echo "CACHE_STORE=file" >> "$GITHUB_ENV"
+          echo "QUEUE_CONNECTION=sync" >> "$GITHUB_ENV"
+          echo "MAIL_MAILER=array" >> "$GITHUB_ENV"
+          echo "NATIVE_AI_DRIVER=disabled" >> "$GITHUB_ENV"
+          cp .env.example .env
+          touch "$RUNNER_TEMP/ia2d-browser.sqlite"
+      - name: Migrate only isolated DB and statically check browser source
+        run: |
+          php artisan key:generate --force --no-interaction
+          php artisan migrate --force --no-interaction
+          node --check scripts/ci/prelaunch_ia2d_browser_smoke.mjs
+          for f in scripts/ci/*_browser_smoke.mjs; do node --check "$f"; done
+      - name: Install pinned headless Chromium
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+          npx playwright install --with-deps chromium
+          git diff --exit-code -- package-lock.json package.json
+      - name: Serve isolated application exclusively on loopback
+        shell: bash
+        run: |
+          set -euo pipefail
+          nohup php artisan serve --host=127.0.0.1 --port=8796 > "$RUNNER_TEMP/ia2d-server.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/ia2d-server.pid"
+          for i in $(seq 1 40); do
+            if curl --silent --fail --output /dev/null http://127.0.0.1:8796/welcome; then exit 0; fi
+            sleep 1
+          done
+          echo "Disposable browser server failed to start" >&2
+          exit 1
+      - name: Exercise all three first-run choices via real Chromium click/input/redirect
+        run: node scripts/ci/prelaunch_ia2d_browser_smoke.mjs
+      - name: Document actual test boundary
+        run: |
+          echo "Evidence: real headless Chromium, synthetic guests, local SQLite, PHP server on loopback."
+          echo "Native AI disabled; no external AI call or Task/Evidence seeding."
+          echo "NOT evidenced: live Render/Aiven, actual iPhone WKWebView, Safari, human UX success, production release."
