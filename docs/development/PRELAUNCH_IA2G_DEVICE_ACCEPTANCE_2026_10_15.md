@@ -20,6 +20,7 @@
 - `.github/workflows/prelaunch-ia2g-mobile-webkit.yml`：`workflow_dispatch`もしくは対象PRでLinux WebKit専用エンジンをインストールし、既存IA-2eと**同じユーザー操作**を390pxタッチviewportで実行。
 - ゲストWelcome → 「まず見てみる」 → 空Plan Overview → 任意Plan作成 → ユーザー登録/Plan引継 → 本人がフォームで1 Task作成 → Guided Execution → 振り返りEvidence → 本人承認Next Action → Plan Dashboard/本人のEvidence → Global Overview → 次の作業 → Logout/Login復帰。
 - 本人のEvidenceは作業ログの時間・進捗計算と別枠。毎回新しいDisposable SQLiteにのみ書き込み、`APP_ENV=testing`、`CANOVIA_PUBLIC_RELEASE_LEVEL=1`、`NATIVE_AI_DRIVER=disabled`、ループバックの環境ガードを維持。GitHub/本番/Aiven/外部AIへの書き込みなし。
+- モバイル390pxの実ブラウザE2Eが初回実行で発見した不具合: `resources/css/app.css`の`@media (max-width:767px)`で`.adaptive-entry-card`を非表示にしていたため、空Planの`[data-plan-optional-task-planning]`も見えず、最初のTask作成で行き止まりになった。**空Planだけ`data-plan-empty-entry`を付与してモバイル導線を再表示**し、既存の非空Planの通常ルールは維持。リンクの可視性と実クリックをWebKit E2Eが検証する（合格には新CI HEADでの再実行が必須）。
 - **成功しても** iPhone SafariやWKWebViewの互換性・画面のわかりやすさを保証しない。
 
 ## 実機テスター向け手順（必ず正確なリリースSHAと環境名を記録）
