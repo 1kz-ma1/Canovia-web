@@ -7,6 +7,8 @@ on:
       - 'tests/Support/LearningContextSqlMutationProbe.php'
       - 'tests/Feature/LearningContextSqlMutationProbeV014Test.php'
       - 'tests/Feature/LearningContextSqlMutationProbeV015Test.php'
+      - 'tests/Feature/LearningContextSqlMutationDifferentialV016Test.php'
+      - 'docs/development/LEARNING_CONTEXT_PROBE_DIFFERENTIAL_V016_2026_10_15.md'
       - 'docs/development/LEARNING_CONTEXT_PROBE_FILTER_AND_LOCK_V015_2026_10_15.md'
       - 'docs/development/LEARNING_CONTEXT_DB_MUTATION_PROBE_V014_2026_10_15.md'
       - 'app/Http/Controllers/TaskController.php'
@@ -129,6 +131,7 @@ jobs:
           php -l tests/Support/LearningContextSqlMutationProbe.php
           php -l tests/Feature/LearningContextSqlMutationProbeV014Test.php
           php -l tests/Feature/LearningContextSqlMutationProbeV015Test.php
+          php -l tests/Feature/LearningContextSqlMutationDifferentialV016Test.php
           php -l app/Http/Controllers/TaskController.php
           php -l app/Http/Controllers/PlanReviewAssistantController.php
           php -l app/Http/Controllers/PlanController.php
@@ -158,6 +161,7 @@ jobs:
           test "$CANOVIA_LEARNING_LOCK_DISPOSABLE_CI" = '1'
           php artisan test tests/Feature/LearningContextSqlMutationProbeV014Test.php --fail-on-skipped --stop-on-failure --colors=never
           php artisan test tests/Feature/LearningContextSqlMutationProbeV015Test.php --fail-on-skipped --stop-on-failure --colors=never
+          php artisan test tests/Feature/LearningContextSqlMutationDifferentialV016Test.php --fail-on-skipped --stop-on-failure --colors=never
           # Probe tests must uninstall all experimental DDL.
           case "$DB_CONNECTION" in
             mysql)
