@@ -12,6 +12,7 @@ use App\Models\PlanMember;
 use App\Models\Task;
 use App\Services\PlanCategoryProfileService;
 use App\Services\PlanOwnershipService;
+use App\Services\LearningContextSourceEpochService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -159,6 +160,10 @@ final class StudyActionTaskProjector
             ]);
 
             $this->actionStore->attachProjectedTask($currentProjection, $task);
+            // Only a genuinely new Task enters the eligible source population.
+            // Existing projected or reattached targets return above unchanged.
+            app(LearningContextSourceEpochService::class)
+                ->record($currentPlan, 'task_created');
 
             return ['task' => $task, 'created' => true];
         }, 3);
