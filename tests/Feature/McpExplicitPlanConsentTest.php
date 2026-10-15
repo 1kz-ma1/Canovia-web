@@ -483,6 +483,55 @@ final class McpExplicitPlanConsentTest extends TestCase
         ));
     }
 
+    public function test_learning_context_scope_requires_its_own_new_oauth_confirmation(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
+        $study = $this->plan($owner, '資格学習');
+        $this->linked($owner);
+        $this->provider();
+        config([
+            'canovia_mcp.study_read_enabled' => true,
+            'canovia_mcp.study_summary_read_enabled' => true,
+        ]);
+
+        // Old practice consent does not authorize a richer derived Context.
+        $q = $this->start($owner, $study, 'study_progress', 7);
+        $this->oauthCallback($q['state'])->assertRedirect(route('auth.account'));
+        $this->post(route('auth.account.mcp_plan_consent.confirm'))->assertRedirect();
+        $grant = McpDelegatedGrant::query()->sole();
+        $this->assertSame('study_progress', $grant->scope);
+        $principal = $this->chatgptPrincipal();
+        $policy = app(McpDelegatedPlanAccessPolicy::class);
+        $this->assertNull($policy->authorizedGrant(
+            $principal, $study, 'learning_context', requiredDomain: 'study',
+        ));
+
+        // Explicit opt-in is unavailable until snapshot rollout is approved.
+        $this->actingAs($owner)->post($this->startUrl($study), [
+            'scope' => 'learning_context', 'duration_days' => 7,
+        ])->assertRedirect(route('auth.account'));
+        $this->assertSame('study_progress', $grant->fresh()->scope);
+
+        config(['canovia_mcp.learning_context_snapshot_enabled' => true]);
+        $q = $this->start($owner, $study, 'learning_context', 7);
+        $this->oauthCallback($q['state'])->assertRedirect(route('auth.account'));
+        $this->assertSame('learning_context', session('mcp.plan_consent.verified.scope'));
+        $this->assertSame('study_progress', $grant->fresh()->scope);
+        $this->actingAs($owner)->get(route('auth.account'))->assertOk()
+            ->assertSee('Learning Context Snapshot');
+        $this->actingAs($owner)->post(route('auth.account.mcp_plan_consent.confirm'))
+            ->assertRedirect(route('auth.account'));
+        $this->assertSame('learning_context', $grant->fresh()->scope);
+        $this->assertNotNull($policy->authorizedGrant(
+            $principal, $study, 'learning_context', requiredDomain: 'study',
+        ));
+        config(['canovia_mcp.learning_context_snapshot_enabled' => false]);
+        $this->assertNull($policy->authorizedGrant(
+            $principal, $study, 'learning_context', requiredDomain: 'study',
+        ));
+    }
+
     private function plan(
         User $owner,
         string $category = '個人開発',
