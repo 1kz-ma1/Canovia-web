@@ -1,8 +1,13 @@
 # Canovia documentation index (2026-10-13)
 
+## Integration freeze / production convergence (2026-10-16)
+
+- [全領域停止・main/production収束・段階公開マスター仕様](development/CANOVIA_INTEGRATION_FREEZE_RELEASE_MASTER_2026_10_16.md): 停止証拠の参照先、現在地/未確認・公開制御の既存基盤、移行/復旧/オーナー承認ゲート、Codexの統合パッケージ。**実装レーンは一時停止、production NO-GO。**
+
 ## Paused lane integration handoffs
 
 - [Integration review packet and production HOLD gates](development/integration/2026-10-16/review-packet/README.md): fixed local aggregate, unchanged-main regression comparison, disposable MySQL upgrade/recovery and old/new session evidence. **PR/CI/main integration and real operator/device acceptance remain pending; no production GO.**
+- [Integration freeze source inventory and decision register](development/integration/2026-10-16/README.md): immutable production→main full-history paths/migrations, paused domain decisions, source-only evidence and outstanding GitHub/Render/operator gates. **No production GO.**
 
 - [Learning / AP科目A80問 統合前の停止・再開引き継ぎ](development/LEARNING_AP80_INTEGRATION_PAUSE_HANDOFF_2026_10_16.md): V6.24–V6.28の統合証跡、Git記録6件/チャット評価9件/正式承認0件、未反映のIPA解説、main/production/Render差分、再開・公開ゲートを区別。**新規実装は一時停止、教材は未公開。**
 

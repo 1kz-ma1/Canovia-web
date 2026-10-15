@@ -11,6 +11,9 @@ on:
       - 'resources/js/app.js'
       - 'resources/views/study_practice/show.blade.php'
       - 'app/Http/Controllers/StudyPracticeController.php'
+      - 'config/release_levels.php'
+      - 'app/Services/ReleaseLevelService.php'
+      - 'app/Services/FeatureAccessService.php'
       - 'docs/development/LEARNING_FIRST_DRAFT_CONTINUITY_V621_2026_10_15.md'
   workflow_dispatch:
 
@@ -44,6 +47,8 @@ jobs:
         run: |
           set -euo pipefail
           echo "APP_ENV=testing" >> "$GITHUB_ENV"
+          # Exercise Study at its minimum public level in this disposable fixture.
+          echo "CANOVIA_PUBLIC_RELEASE_LEVEL=1" >> "$GITHUB_ENV"
           echo "APP_DEBUG=false" >> "$GITHUB_ENV"
           echo "APP_URL=http://127.0.0.1:8799" >> "$GITHUB_ENV"
           echo "CANOVIA_LEARNING_V621_BASE_URL=http://127.0.0.1:8799" >> "$GITHUB_ENV"
