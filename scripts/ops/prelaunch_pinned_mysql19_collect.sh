@@ -16,17 +16,19 @@ if [[ "$#" -eq 1 && "$1" == "--preflight-offline" ]]; then
 elif [[ "$#" -ne 0 ]]; then
   block UNEXPECTED_ARGUMENTS
 fi
-[[ -z "${DB_URL:-}" && -z "${DATABASE_URL:-}" && -z "${MYSQL_PWD:-}" && -z "${DB_PASSWORD:-}" ]] || block ENV_CREDENTIALS_FORBIDDEN
-# MySQL can redirect to an alternate login file through this environment
-# variable. Neither the offline check nor the live collector permits it.
-[[ -z "${MYSQL_TEST_LOGIN_FILE:-}" ]] || block UNEXPECTED_LOGIN_FILE_OVERRIDE
-
 if [[ "$mode" == collect ]]; then
   [[ "${CANOVIA_PINNED_MYSQL19_OPERATOR_APPROVED:-}" == "YES" ]] || block OPERATOR_APPROVAL_REQUIRED
   [[ "${CANOVIA_P0_TARGET_VERIFIED:-}" == "YES" ]] || block TARGET_VERIFICATION_REQUIRED
   [[ "${CANOVIA_P0_GRANTS_REVIEWED:-}" == "YES" ]] || block METADATA_ONLY_GRANTS_REVIEW_REQUIRED
   [[ "${GITHUB_ACTIONS:-}" != "true" && "${CI:-}" != "true" ]] || block CI_NOT_OPERATOR
 fi
+
+# CI rejection takes precedence over ambient disposable test passwords; the
+# subsequent credential guard is still mandatory before any MySQL operation.
+[[ -z "${DB_URL:-}" && -z "${DATABASE_URL:-}" && -z "${MYSQL_PWD:-}" && -z "${DB_PASSWORD:-}" ]] || block ENV_CREDENTIALS_FORBIDDEN
+# MySQL can redirect to an alternate login file through this environment
+# variable. Neither the offline check nor the live collector permits it.
+[[ -z "${MYSQL_TEST_LOGIN_FILE:-}" ]] || block UNEXPECTED_LOGIN_FILE_OVERRIDE
 
 live="${CANOVIA_PINNED_MYSQL19_LIVE_CHECKOUT:-}"
 candidate="${CANOVIA_PINNED_MYSQL19_CANDIDATE_CHECKOUT:-}"
