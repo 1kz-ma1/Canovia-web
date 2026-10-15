@@ -11,7 +11,7 @@ use App\Services\PlanCategoryProfileService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\View\View;
+use Illuminate\Http\Response;
 
 /**
  * Owner-facing opt-in / erase / explicitly requested one-shot comparison.
@@ -23,7 +23,7 @@ final class LearningContextWatchSettingsController extends Controller
         Request $request,
         Plan $plan,
         PlanCategoryProfileService $profiles,
-    ): View {
+    ): Response {
         $owner = $this->owner($request, $plan);
         $available = $this->available();
         $state = $this->state($owner, $plan);
