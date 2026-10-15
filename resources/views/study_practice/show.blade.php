@@ -876,8 +876,12 @@
                     @csrf
                     <div class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.035] px-3 py-2" data-study-practice-pager hidden style="display: none">
                         <p class="text-sm font-bold text-cyan-200" aria-live="polite" data-study-practice-question-progress></p>
-                        <p class="hidden text-xs text-slate-400 sm:block">入力は自動保存。採点は最後にまとめて行います。</p>
+                        <p class="hidden text-xs text-slate-400 sm:block">入力は途中保存。採点・学習履歴への記録は最後に行います。</p>
                     </div>
+                    <p class="text-xs leading-5 text-slate-400" data-study-practice-draft-status
+                        role="status" aria-live="polite" aria-atomic="true">
+                        途中回答を自動保存します。採点済みの学習履歴は、回答をまとめて評価した後に記録されます。
+                    </p>
                     @foreach ($questions as $index => $question)
                         <fieldset class="min-w-0 rounded-2xl border border-white/8 bg-white/[0.025] p-3 scroll-mt-28 sm:p-4" tabindex="-1" data-study-practice-question>
                             <legend class="px-1 text-sm font-black text-slate-100">Q{{ $index + 1 }}</legend>
