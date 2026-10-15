@@ -19,6 +19,7 @@ final class AdaptiveLearningHistoryService
 
     public function __construct(
         private readonly LearningReviewComparisonService $comparisons,
+        private readonly LearningDelayedRecheckService $delayed,
     ) {}
 
     public function forPlanTask(Request $request, Plan $plan, Task $task, string $actorToken): array
@@ -157,6 +158,7 @@ final class AdaptiveLearningHistoryService
             'window' => self::WINDOW,
             'next_action_preview' => $nextActionPreview,
             'review_comparisons' => $this->comparisons->fromHistory($events, $review),
+            'delayed_recheck' => $this->delayed->fromHistory($events, $review, $task, $sourceSignature),
         ];
     }
 }
