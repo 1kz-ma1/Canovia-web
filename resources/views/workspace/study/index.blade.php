@@ -177,6 +177,24 @@
                 @include('workspace.study.views.work')
         @endswitch
 
+        @if (config('intelligence.learning_context_watch.persistence_enabled') === true
+            && config('app.env') !== 'staging'
+            && auth()->check()
+            && (int) $plan->user_id === (int) auth()->id()
+            && ! (bool) $plan->is_public
+            && ! (bool) $plan->is_collaborative)
+            <section class="page-card p-4 sm:p-5" data-learning-watch-settings-entry>
+                <h2 class="text-sm font-black text-slate-100">学習Contextの比較記録（試験運用）</h2>
+                <p class="mt-1 text-xs leading-5 text-slate-400">
+                    自分の記録をCanovia内部で比較するON/OFF設定です。現在は手動確認のみで、通知・自動再計画は行いません。
+                </p>
+                <a href="{{ route('workspace.study.context_watch.show', ['plan' => $plan->id]) }}"
+                   class="btn-secondary mt-3 inline-flex min-h-11 items-center px-4" data-learning-watch-settings-link>
+                    比較記録の設定を開く
+                </a>
+            </section>
+        @endif
+
         @if (config('canovia_mcp.study_read_enabled') === true
             && config('app.env') !== 'staging'
             && ($canEdit ?? false))
