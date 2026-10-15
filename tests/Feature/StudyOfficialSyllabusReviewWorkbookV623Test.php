@@ -168,10 +168,18 @@ final class StudyOfficialSyllabusReviewWorkbookV623Test extends TestCase
 
     public function test_command_rejects_non_sqlite_before_any_pack_read(): void
     {
-        config(['database.default' => 'mysql']);
-        $this->assertSame(1, Artisan::call('study:syllabus-review-workbook', [
-            '--pack' => 'nonexistent-pack',
-        ]));
-        $this->assertStringContainsString('local/testing SQLite', Artisan::output());
+        // RefreshDatabase opens a SQLite transaction in setUp. Restore the
+        // default connection BEFORE teardown so subsequent suites keep their
+        // isolated transaction manager and cannot accidentally target MySQL.
+        $previous = config('database.default');
+        try {
+            config(['database.default' => 'mysql']);
+            $this->assertSame(1, Artisan::call('study:syllabus-review-workbook', [
+                '--pack' => 'nonexistent-pack',
+            ]));
+            $this->assertStringContainsString('local/testing SQLite', Artisan::output());
+        } finally {
+            config(['database.default' => $previous]);
+        }
     }
 }
