@@ -226,7 +226,7 @@
         </section>
     @endif
 
-        <section class="mb-8 adaptive-entry-card">
+        <section class="mb-8 adaptive-entry-card" @if ($plan->tasks->isEmpty()) data-plan-empty-entry @endif>
             <div>
                 <h2 class="mt-1 text-xl font-bold text-slate-900">{{ $plan->tasks->isEmpty() ? '最初の行動から始めましょう' : '計画外の作業も記録できます' }}</h2>
                 <p class="mt-2 max-w-3xl text-sm leading-7 text-slate-600">
