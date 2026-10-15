@@ -19,6 +19,9 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- Existing feature fixtures exercise the complete development catalog.
+             Integration exposure tests separately verify absent/invalid config. -->
+        <env name="CANOVIA_PUBLIC_RELEASE_LEVEL" value="4"/>
         <env name="APP_KEY" value="base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

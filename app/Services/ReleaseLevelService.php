@@ -18,13 +18,20 @@ final class ReleaseLevelService
 
     public function publicLevel(): ReleaseLevel
     {
-        return $this->normalizeLevel(
+        $level = $this->normalizeLevel(
             config(
                 'release_levels.public_level',
-                ReleaseLevel::InternalPreview->value,
+                ReleaseLevel::CoreStable->value,
             ),
-            ReleaseLevel::InternalPreview,
+            ReleaseLevel::CoreStable,
         );
+
+        // Explicit L4 remains available to local/test fixtures. Hosted internal
+        // preview must be scoped to the configured administrator's session.
+        return $level === ReleaseLevel::InternalPreview
+            && ! app()->environment('local', 'testing')
+                ? ReleaseLevel::CoreStable
+                : $level;
     }
 
     public function levelFor(
@@ -59,10 +66,15 @@ final class ReleaseLevelService
     public function assignedLevelFor(User $user): ReleaseLevel
     {
         if ($user->release_level_override !== null) {
-            return $this->normalizeLevel(
+            $assigned = $this->normalizeLevel(
                 $user->release_level_override,
                 $this->publicLevel(),
             );
+
+            return $assigned === ReleaseLevel::InternalPreview
+                && ! $this->adminAccess->isSuperAdmin($user)
+                    ? $this->publicLevel()
+                    : $assigned;
         }
 
         return $this->publicLevel();
@@ -120,10 +132,11 @@ final class ReleaseLevelService
     ): void {
         if (
             $level
-            && $level->value > (int) config(
+            && ($level === ReleaseLevel::InternalPreview
+            || $level->value > (int) config(
                 'release_levels.maximum_user_override',
                 ReleaseLevel::BetaExpansion->value,
-            )
+            ))
         ) {
             abort(422);
         }

@@ -1,0 +1,70 @@
+name: Integration Publication Boundaries
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Models/User.php'
+      - 'app/Providers/AppServiceProvider.php'
+      - 'app/Services/ReleaseLevelService.php'
+      - 'app/Services/FeatureAccessService.php'
+      - 'config/release_levels.php'
+      - 'phpunit.xml'
+      - 'tests/Feature/IntegrationExposureBoundaryTest.php'
+      - 'scripts/ci/integration_browser_regression.py'
+      - 'scripts/ci/*browser_smoke.mjs'
+      - '.github/workflows/integration-exposure.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publication-and-session:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: >-
+          php artisan test tests/Feature/IntegrationExposureBoundaryTest.php
+          tests/Feature/ReleaseLevelFoundationV5820Test.php tests/Feature/FeatureAccessV406Test.php
+          tests/Feature/P0DatabaseSessionLoginRegressionTest.php
+          tests/Feature/McpSyntheticOAuthConsentReadLifecycleTest.php --colors=never
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        journey: [welcome, development, study]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: npm ci --ignore-scripts && npm run build
+      - run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+      - run: npx playwright install --with-deps chromium
+      - run: git diff --exit-code -- package.json package-lock.json
+      - name: Run existing journey with private DB and no provider credentials
+        run: >-
+          python3 scripts/ci/integration_browser_regression.py
+          --journey "${{ matrix.journey }}" --artifacts "$RUNNER_TEMP/integration-browser"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-browser-${{ matrix.journey }}
+          path: ${{ runner.temp }}/integration-browser/
