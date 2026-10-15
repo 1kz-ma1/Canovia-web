@@ -23,7 +23,7 @@ test('only the three reviewed public hostnames are allowed, never arbitrary URL'
 test('current static rollout flags must be explicitly false', () => {
   const actual = readFileSync(new URL('../../static-welcome/config.js', import.meta.url), 'utf8');
   assert.deepEqual(requireConfiguredWebOrigin(actual), {
-    status: 'CONFIG_REVIEW_ONLY', host: 'app.canovia.com',
+    status: 'CONFIG_REVIEW_ONLY', host: 'pacekeeper-d3mm.onrender.com',
   });
   for (const text of [
     actual.replace('publicRoadmapReady: false', 'publicRoadmapReady: true'),
@@ -51,13 +51,23 @@ test('TLS status and old index determine a HOLD, never release GO', () => {
       [STATIC_RENDER]: 'TLS_VALID',
     },
     staticIndex: 'STATIC_OLD_OR_NEW_INDEX_VISIBLE',
+    configuredWebHost: WEB_RENDER,
   };
   assert.equal(classifyReadOnlyResults(good), 'REVIEW_REQUIRED_NO_PRODUCTION_GO');
-  for (const host of [WEB_CONFIGURED, WEB_RENDER, STATIC_RENDER]) {
+  for (const host of [WEB_RENDER, STATIC_RENDER]) {
     assert.equal(classifyReadOnlyResults({
       ...good, tls: { ...good.tls, [host]: 'DNS_UNVERIFIED' },
     }), 'BLOCK_PUBLIC_DNS_OR_TLS_UNVERIFIED');
   }
+  // app.canovia.com remains an optional diagnostic while not configured.
+  assert.equal(classifyReadOnlyResults({
+    ...good, tls: { ...good.tls, [WEB_CONFIGURED]: 'DNS_UNVERIFIED' },
+  }), 'REVIEW_REQUIRED_NO_PRODUCTION_GO');
+  // Once an operator enables custom domain, TLS must actually validate.
+  assert.equal(classifyReadOnlyResults({
+    ...good, configuredWebHost: WEB_CONFIGURED,
+    tls: { ...good.tls, [WEB_CONFIGURED]: 'DNS_UNVERIFIED' },
+  }), 'BLOCK_PUBLIC_DNS_OR_TLS_UNVERIFIED');
   assert.equal(classifyReadOnlyResults({ ...good, staticIndex: 'INDEX_HTML_UNVERIFIED' }),
     'BLOCK_STATIC_INDEX_UNVERIFIED');
 });

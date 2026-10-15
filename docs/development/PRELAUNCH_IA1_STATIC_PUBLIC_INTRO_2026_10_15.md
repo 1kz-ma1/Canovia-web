@@ -33,7 +33,9 @@ IA-1 は `static-welcome/intro.html` を静的な「Canoviaとは」ページと
 ## Static-only 公開直前のOwner受入ゲート（2026-10-15）
 
 1. 新しい `intro.html` が開発mainにあってもRender Static Liveは古い `ee533028c...` のまま。Auto Deploy OFFを再確認。**Static手動deployは別のOwner GOが必要**で、Web/production/Aiven/iOSマージとは独立。
-2. Config先 `https://app.canovia.com` は実サービスのRender URL `https://pacekeeper-d3mm.onrender.com` と同じ到達先か**未確認**。実際のTLS、ゲストWeb `/feedback`、`/health`のReadyヘッダーとCORSがブラウザで一致するか、操作前に検証する。ツールから実URLが参照できないことをWeb受入成功と扱わない。
+2. 旧Config先 `https://app.canovia.com` はGitHub Actions公開DNSで **DNS_UNVERIFIED**。Static ConfigをRender公式の `https://pacekeeper-d3mm.onrender.com` に暫定切替（開発PR／未配信）。正しいRender Web originとのTLS接続は検証可能だが、実際のTLS、ゲストWeb `/feedback`、`/health`のReadyヘッダーとCORSがブラウザで一致するか、操作前に検証する。ツールから実URLが参照できないことをWeb受入成功と扱わない。
 3. Old Live Web版には `/feedback` が存在するが、新公開ロードマップと `#support-candidates` アンカーはない（Live SHAのviewソースで確認）。**公開済み表示・アンカー付与・ロードマップの見せかけを禁止**。`publicRoadmapReady=false`、`supportAnchorReady=false` で配信し、Static公開時もWebの新機能は利用可能と告知しない。
 4. Static Deploy後は実URL `/intro.html` / `/index.html` / `/index.html?destination=support` と公開Web `/feedback`、冷起動・再訪者自動入場、手動再試行、オフライン案内、390px/1280px、iPhone Safariを実利用でチェック。**デプロイ前のCIやGitHub SHAは実配信証拠ではない**。
 5. Web本体の独立した新リリースが別途GO/Live SHA/実URL/iPhoneで確認された後、新しいPRでのみ設定フラグとロードマップ入口を戻す。`main`マージから自動的にFuture公開ステータスを更新しない。Issue #488の本番GO/No-Goは未承認。
+
+6. **2026-10-15 URL診断の訂正:** Public DNS/TLS CIで `app.canovia.com=DNS_UNVERIFIED`、`pacekeeper-d3mm.onrender.com=TLS_VALID`、`pacekeeper-welcome.onrender.com=TLS_VALID`、Static `index.html` の既存Live確認、`intro.html` は未公開と判定。暫定Render Web URLへの切替は **静的配信準備のみ**。公開前にWebのCORS/Ready/GuestとSession Domain/リダイレクトを所有者が実ブラウザで確認。Webコールドスタートによる既存 `migrate --force` の起動は読み取りDNS/TLSプローブでは行わない。

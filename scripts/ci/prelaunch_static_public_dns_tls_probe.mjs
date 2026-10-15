@@ -44,7 +44,11 @@ export function classifyIntro(statusCode, body) {
 }
 
 export function classifyReadOnlyResults(probes) {
-  const tlsVerified = ALLOWED_HOSTS.every(h => probes.tls?.[h] === 'TLS_VALID');
+  // The custom domain is a diagnostic until separately verified and enabled
+  // in the checked-in Static config. Never let an unconfigured host block the
+  // verified fallback Render Web destination.
+  const requiredHosts = new Set([WEB_RENDER, STATIC_RENDER, probes.configuredWebHost]);
+  const tlsVerified = [...requiredHosts].every(h => approvedHost(h) && probes.tls?.[h] === 'TLS_VALID');
   if (!tlsVerified) return 'BLOCK_PUBLIC_DNS_OR_TLS_UNVERIFIED';
   if (probes.staticIndex !== 'STATIC_OLD_OR_NEW_INDEX_VISIBLE') {
     return 'BLOCK_STATIC_INDEX_UNVERIFIED';
@@ -154,7 +158,7 @@ async function main() {
   // Static Render only; NO HTTP requests to app.canovia.com or Web Render.
   const index = await staticGET('/index.html');
   const intro = await staticGET('/intro.html');
-  const result = { tls: tlsResults, staticIndex: index.status, intro: intro.status };
+  const result = { tls: tlsResults, configuredWebHost: config.host, staticIndex: index.status, intro: intro.status, configuredWebHost: config.host };
   const code = classifyReadOnlyResults(result);
   console.log(JSON.stringify({
     result: code.startsWith('BLOCK_') ? 'BLOCK' : 'REVIEW_REQUIRED',
