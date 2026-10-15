@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\GuidedExecution;
 use App\Models\LearningContextChangeRecord;
 use App\Models\LearningContextWatchState;
 use App\Models\Plan;
@@ -184,6 +185,57 @@ final class LearningContextPlanLockContentionTest extends TestCase
         self::assertSame('doing', $task->fresh()->status);
         self::assertSame(15, (int) $task->fresh()->progress_percent);
         self::assertSame(0, LearningContextChangeRecord::query()
+            ->where('plan_id', $plan->id)->count());
+    }
+
+    public function test_guided_reflection_next_action_confirmation_blocks_on_parent_plan_lock(): void
+    {
+        [$user, $plan, $task] = $this->fixture();
+        $task->update(['next_action_note' => 'BEFORE_GUIDED']);
+        $this->actingAs($user)->withoutExceptionHandling();
+
+        $this->post(route('plans.tasks.guided_execution.prepare', [$plan, $task]), [
+            'prepare_request_id' => (string) Str::uuid(),
+            'intent' => 'Inspect the synthetic Study workflow before suggesting an action',
+        ])->assertRedirect();
+        $execution = GuidedExecution::query()->where('plan_id', $plan->id)
+            ->where('task_id', $task->id)->latest('id')->firstOrFail();
+        $this->post(route('plans.tasks.guided_execution.reflect', [$plan, $task, $execution]), [
+            'reflection_request_id' => (string) Str::uuid(),
+            'outcome_rating' => 'partly',
+            'actual_outcome' => 'The synthetic workflow needs another comparison.',
+            'next_adjustment' => 'AFTER_GUIDED',
+        ])->assertRedirect();
+
+        $this->assertSame('BEFORE_GUIDED', $task->fresh()->next_action_note);
+        $this->assertSame(GuidedExecution::STATUS_COMPLETED, $execution->fresh()->status);
+        $payload = ['expected_next_action_hash' => hash('sha256', 'BEFORE_GUIDED')];
+        $contender = DB::connection('learning_lock_contender');
+
+        // A real separate SQL connection holds the Plan row while the HTTP
+        // handler attempts confirmation. Failure is a DB lock timeout, not
+        // optimistic input-validation or an unrelated route rejection.
+        $this->withContendedPlan($contender, $plan, function () use ($plan, $task, $execution, $payload): void {
+            $this->expectLockDenied(function () use ($plan, $task, $execution, $payload): void {
+                $this->post(
+                    route('plans.tasks.guided_execution.confirm_next_action', [$plan, $task, $execution]),
+                    $payload,
+                );
+            });
+        });
+
+        $this->assertSame('BEFORE_GUIDED', $task->fresh()->next_action_note);
+        $this->assertSame(15, (int) $task->fresh()->progress_percent);
+        $this->assertSame(0, LearningContextChangeRecord::query()
+            ->where('plan_id', $plan->id)->count());
+
+        $this->post(
+            route('plans.tasks.guided_execution.confirm_next_action', [$plan, $task, $execution]),
+            $payload,
+        )->assertRedirect(route('plans.tasks.guided_execution.show', [$plan, $task]));
+        $this->assertSame('AFTER_GUIDED', $task->fresh()->next_action_note);
+        $this->assertSame(15, (int) $task->fresh()->progress_percent);
+        $this->assertSame(0, LearningContextChangeRecord::query()
             ->where('plan_id', $plan->id)->count());
     }
 
