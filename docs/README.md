@@ -3,6 +3,7 @@
 ## Paused lane integration handoffs
 
 - [Integration freeze source inventory and decision register](development/integration/2026-10-16/README.md): immutable production→main full-history paths/migrations, paused domain decisions, source-only evidence and outstanding GitHub/Render/operator gates. **No production GO.**
+- [Integration review packet and production HOLD gates](development/integration/2026-10-16/review-packet/README.md): fixed local aggregate, unchanged-main regression comparison, disposable MySQL upgrade/recovery and old/new session evidence. **PR/CI/main integration and real operator/device acceptance remain pending; no production GO.**
 
 - [Learning / AP科目A80問 統合前の停止・再開引き継ぎ](development/LEARNING_AP80_INTEGRATION_PAUSE_HANDOFF_2026_10_16.md): V6.24–V6.28の統合証跡、Git記録6件/チャット評価9件/正式承認0件、未反映のIPA解説、main/production/Render差分、再開・公開ゲートを区別。**新規実装は一時停止、教材は未公開。**
 

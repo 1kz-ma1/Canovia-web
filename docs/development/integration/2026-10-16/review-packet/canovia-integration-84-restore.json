@@ -1,0 +1,13 @@
+{
+  "container": "canovia-integration-84",
+  "result": "passed",
+  "source_ledger": 114,
+  "restored_ledger": 114,
+  "dump_bytes": 206175,
+  "data_sha256": "2ce96bf9c9f96d3200353e35065edb34063885859a661ec6f0d17a02f91c4ff8",
+  "trigger_sha256": "5e00edb6fde3861014871288193f750e78ead4e65b3b8f56b53fb3ee3ba5f130",
+  "elapsed_seconds": 5.22,
+  "scope": "DISPOSABLE_LOGICAL_RESTORE_ONLY",
+  "aiven_backup_verified": false,
+  "release_authorized": false
+}

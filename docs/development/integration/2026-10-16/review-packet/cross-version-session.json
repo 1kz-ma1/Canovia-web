@@ -1,0 +1,12 @@
+{
+  "result": "passed",
+  "old_sha": "15abdc9de6f24b5250fb255c579d1aa55facaf1a",
+  "candidate_sha": "1875c7ab5d599fff155ef2108e70078ca93c7cc4",
+  "mysql": "8.4_disposable",
+  "old_login_new_session": true,
+  "real_csrf_419": true,
+  "new_logout_old_session_revoked": true,
+  "native_user_agent_only": true,
+  "physical_wkwebview_verified": false,
+  "release_authorized": false
+}

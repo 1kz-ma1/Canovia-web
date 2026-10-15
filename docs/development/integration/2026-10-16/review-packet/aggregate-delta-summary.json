@@ -1,0 +1,9 @@
+{
+  "tested_aggregate_sha": "1875c7ab5d599fff155ef2108e70078ca93c7cc4",
+  "ahead_of_production": 284,
+  "changed_paths_from_production": 908,
+  "migration_delta": 20,
+  "migration_files": 114,
+  "migration_blobs_identical_to_frozen_main": true,
+  "formal_release_authorized": false
+}
