@@ -218,6 +218,7 @@ final class McpStudyResultProposalService
                 'status' => $approve ? McpStudyResultProposal::APPROVED : McpStudyResultProposal::REJECTED,
                 'decided_at' => now(),
             ])->save();
+            app(LearningContextSourceEpochService::class)->record($plan, 'approved_result_changed');
 
             return true;
         }, 3);

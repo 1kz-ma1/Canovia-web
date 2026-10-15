@@ -5,6 +5,8 @@ return [
     // Does not authorize automatic notification or cross-Plan monitoring.
     'learning_context_watch' => [
         'persistence_enabled' => env('CANOVIA_LEARNING_CONTEXT_WATCH_PERSISTENCE_ENABLED', false),
+        // Shadow-only source mutation epoch; never used for Watch freshness.
+        'epoch_shadow_enabled' => env('CANOVIA_LEARNING_CONTEXT_EPOCH_SHADOW_ENABLED', false),
     ],
 
     'reasoning' => [

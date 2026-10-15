@@ -7,6 +7,7 @@ use App\Models\Task;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanActivityService;
 use App\Services\TaskDependencyService;
+use App\Services\LearningContextSourceEpochService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -70,6 +71,7 @@ class TaskController extends Controller
             ]);
 
             $dependencies->sync($task, $dependencyIds);
+            app(LearningContextSourceEpochService::class)->record($lockedPlan, 'task_created');
 
             return $task;
         });
@@ -166,6 +168,7 @@ class TaskController extends Controller
 
             $dependencies->sync($lockedTask, $dependencyIds);
             $lockedTask->resources()->sync($resourceIds);
+            app(LearningContextSourceEpochService::class)->record($lockedPlan, 'task_updated');
 
             return $lockedTask;
         }, 3);
@@ -195,6 +198,7 @@ class TaskController extends Controller
                 ->whereKey($task->id)->lockForUpdate()->firstOrFail();
             $taskTitle = $lockedTask->title;
             $lockedTask->delete();
+            app(LearningContextSourceEpochService::class)->record($lockedPlan, 'task_deleted');
         }, 3);
 
         $activity->record($plan, request()->user(), 'task_deleted', 'task', $taskId, [

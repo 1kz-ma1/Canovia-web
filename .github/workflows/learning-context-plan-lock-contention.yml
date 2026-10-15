@@ -10,7 +10,13 @@ on:
       - 'app/Http/Controllers/AdaptiveLearningNextActionController.php'
       - 'app/Http/Controllers/GuidedExecutionController.php'
       - 'app/Services/LearningContextWatchPersistenceService.php'
+      - 'app/Services/LearningContextSourceEpochService.php'
+      - 'app/Services/McpStudyResultProposalService.php'
+      - 'config/intelligence.php'
+      - 'database/migrations/2026_10_15_120000_create_learning_context_source_epochs_table.php'
       - 'tests/Feature/LearningContextPlanLockContentionTest.php'
+      - 'tests/Feature/LearningContextSourceEpochShadowTest.php'
+      - 'docs/development/LEARNING_CONTEXT_SOURCE_EPOCH_SHADOW_V09_2026_10_15.md'
       - 'docs/development/LEARNING_CONTEXT_SOURCE_LOCK_V05_2026_10_15.md'
       - 'docs/development/LEARNING_CONTEXT_SOURCE_WRITER_AUDIT_V06_2026_10_15.md'
       - 'docs/development/LEARNING_CONTEXT_GUIDED_EXECUTION_LOCK_V08_2026_10_15.md'
@@ -102,6 +108,8 @@ jobs:
           php -l app/Http/Controllers/AdaptiveLearningNextActionController.php
           php -l app/Http/Controllers/GuidedExecutionController.php
           php -l tests/Feature/LearningContextPlanLockContentionTest.php
+          php -l app/Services/LearningContextSourceEpochService.php
+          php -l database/migrations/2026_10_15_120000_create_learning_context_source_epochs_table.php
       - name: Migrate ONLY the disposable CI database
         run: |
           php artisan migrate --force --no-interaction
@@ -141,5 +149,6 @@ jobs:
             tests/Feature/LearningContextSourceCaptureTest.php \
             tests/Feature/LearningContextWatchPersistenceTest.php \
             tests/Feature/LearningContextWatchSettingsTest.php \
+            tests/Feature/LearningContextSourceEpochShadowTest.php \
             tests/Unit/LearningContextChangeDetectionServiceTest.php \
             --colors=never
