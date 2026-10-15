@@ -21,7 +21,8 @@ IA-1 は `static-welcome/intro.html` を静的な「Canoviaとは」ページと
 
 - Node回帰テスト：導線の存在、広告/購入誤認のない表現、無JSの静的紹介ページ、既存の起動待ち復旧コントロール、実ヘルスReady後の入場、固定ルートのみの誘導、再訪者の準備完了後の自動入場、起動中の救済。
 - 静的サイト配置時には `intro.html` の直接URL/リンク、モバイル表示、アクセシビリティ、Web Appのゲスト `/feedback` と `/welcome` を手動で確認する。まだ **Render Static Site / 実機 / Safari / iPhone WKWebView で検証済みではない**。
-- `main` へのPR統合は本番公開ではない。静的サイトのデプロイ設定は別途Owner確認を要する。本番Render/Aiven/productionブランチ・iOS・権限・価格は変更しない。
+- **Render設定の実測（2026-10-15）:** `Canovia-Welcome` Static Site (`srv-dahn5k142hec739l0fmg`) は `branch=main` かつ `autoDeploy=yes / autoDeployTrigger=commit`、`rootDir=static-welcome`。Web本体のRender Auto Deploy OFFとは独立。**このPRをmainへ統合すると静的公開サイトが自動更新される可能性が高い。** Ownerから静的公開の別途GOがあるか、自動デプロイOFFへの明示承認とその設定確認ができるまで、**PRはマージせずOPEN/HOLD** とする。
+- 静的サイトの自動公開を運用で制御したうえで統合し、実配信後にユーザーが直接 `/intro.html` を閲覧できることを確認する。本番Web/productionブランチ/Aiven/iOS/権限/課金への変更は行わない。
 - 独立Marketingドメイン/SEOの本格設計・CMS・個別更新記事・有料開発支援・行動解析・機能比較・動画・全画面刷新は後回し。既存Static Welcomeの復帰信頼性と最小価値の伝達を優先。
 
 ## 公開用文面の更新
