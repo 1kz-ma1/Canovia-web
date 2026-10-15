@@ -1,0 +1,36 @@
+name: Release 488 Offline Runtime DDL and Recovery Decision
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ci/release488_runtime_ddl_restore_gate.py'
+      - 'tests/ci/test_release488_runtime_ddl_restore_gate.py'
+      - 'docs/development/PRELAUNCH_AIVEN_RUNTIME_DDL_AND_RECOVERY_GATE_2026_10_15.md'
+      - '.github/workflows/release488-offline-runtime-ddl-restore-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-ddl-restore-packet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Unit test offline evidence validation and all negative paths
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/ci -p 'test_release488_runtime_ddl_restore_gate.py' -v
+      - name: Check source does not access production or authorize release
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/ci/release488_runtime_ddl_restore_gate.py
+          if grep -Eq '\b(mysql|pymysql|requests|boto3|urllib3)\b' scripts/ci/release488_runtime_ddl_restore_gate.py; then
+            echo 'Runtime DDL evidence verifier must not connect to production' >&2
+            exit 1
+          fi
+          echo 'No production credentials, database, network or deployment exercised.'
