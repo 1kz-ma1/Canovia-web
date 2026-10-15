@@ -196,6 +196,9 @@ class GuidedExecutionController extends Controller
             );
 
             $currentTask->update(['next_action_note' => $nextAction]);
+            // Plan lock is already held; a repeated confirmation returns above.
+            app(\App\Services\LearningContextSourceEpochService::class)
+                ->record($lockedPlan, 'task_updated');
         });
 
         return redirect()
