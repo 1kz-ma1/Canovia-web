@@ -32,8 +32,15 @@ try {
     const response = await page.goto(`${base}/plans/create/manual`, {waitUntil:'domcontentloaded'});
     assert.equal(response.status(), 200);
     if (new URL(page.url()).pathname === '/welcome') {
-        await page.locator('form[data-first-run-start]')
-            .getByRole('button',{name:'Canoviaと始める'}).click();
+        // Supports both the old one-button welcome and IA-2b's
+        // three explicit entry choices. No hidden auth bypass.
+        const entryForm = page.locator('form[data-first-run-start]');
+        const browseChoice = entryForm.locator('[data-first-run-choice="browse"]');
+        if (await browseChoice.count()) {
+            await browseChoice.click();
+        } else {
+            await entryForm.getByRole('button',{name:'Canoviaと始める'}).click();
+        }
         await page.goto(`${base}/plans/create/manual`,{waitUntil:'domcontentloaded'});
     }
 
