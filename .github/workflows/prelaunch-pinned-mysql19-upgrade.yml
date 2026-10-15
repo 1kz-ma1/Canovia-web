@@ -9,6 +9,8 @@ on:
       - 'scripts/sql/prelaunch_pinned_mysql19_select_only_snapshot.sql'
       - 'scripts/ops/prelaunch_pinned_mysql19_collect.sh'
       - 'tests/ci/test_prelaunch_pinned_mysql19_offline_gate.py'
+      - 'scripts/ci/p0_mysql_metadata_grants_guard.py'
+      - 'tests/ci/test_p0_mysql_metadata_grants_guard.py'
   workflow_dispatch:
 permissions:
   contents: read
@@ -111,6 +113,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m unittest discover -s tests/ci -p 'test_prelaunch_pinned_mysql19_offline_gate.py' -v
+          python3 -m unittest discover -s tests/ci -p 'test_p0_mysql_metadata_grants_guard.py' -v
           bash -n scripts/ops/prelaunch_pinned_mysql19_collect.sh
           set +e
           output="$(CI=true CANOVIA_PINNED_MYSQL19_OPERATOR_APPROVED=YES \
@@ -133,21 +136,54 @@ jobs:
           set -euo pipefail
           php artisan migrate --force --no-interaction
           php artisan migrate --force --no-interaction
+      - name: Create restricted inspector in disposable MySQL (no Aiven)
+        env:
+          MYSQL_PWD: ci-only-root-password
+        run: |
+          set -euo pipefail
+          mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root canovia_p0_ci <<'SQL'
+          CREATE USER 'p0_readonly_ci'@'%' IDENTIFIED BY 'ci-only-audit-no-production';
+          GRANT REFERENCES ON canovia_p0_ci.* TO 'p0_readonly_ci'@'%';
+          GRANT SELECT ON canovia_p0_ci.migrations TO 'p0_readonly_ci'@'%';
+          SQL
+      - name: Prove actual narrow SHOW GRANTS and deny reading identity tables
+        env:
+          MYSQL_PWD: ci-only-audit-no-production
+        shell: bash
+        run: |
+          set -euo pipefail
+          scratch="$(mktemp -d)"
+          trap 'rm -rf -- "$scratch"' EXIT
+          mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u p0_readonly_ci \
+            -D canovia_p0_ci -B -N -e 'SHOW GRANTS FOR CURRENT_USER()' > "$scratch/grants"
+          python3 audit/scripts/ci/p0_mysql_metadata_grants_guard.py \
+            --database canovia_p0_ci --input "$scratch/grants" \
+            | grep -Fx 'P0_METADATA_GRANTS: ACCEPT_METADATA_ONLY_LEDGER_SELECT'
+          mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u p0_readonly_ci \
+            -D canovia_p0_ci -B -N -e 'SELECT COUNT(*) FROM migrations' > /dev/null
+          for table in users mcp_linked_subjects; do
+            if mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u p0_readonly_ci \
+               -D canovia_p0_ci -B -N -e "SELECT COUNT(*) FROM $table" > /dev/null 2>&1; then
+              echo 'metadata_inspector_can_read_private_data: BLOCK' >&2
+              exit 1
+            fi
+          done
+          echo 'ci_restricted_auditor_grants_and_private_data_denial: pass'
       - name: Read-only operator-style offline classification of old 94 schema
         env:
-          MYSQL_PWD: ci-only-ephemeral-password
+          MYSQL_PWD: ci-only-audit-no-production
         shell: bash
         run: |
           set -euo pipefail
           scratch="$(mktemp -d)"
           trap 'rm -rf -- "$scratch"' EXIT
           mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
-            --user=canovia_ci --database=canovia_p0_ci \
+            --user=p0_readonly_ci --database=canovia_p0_ci \
             --batch --raw --skip-column-names \
             < candidate/scripts/sql/p0_mysql_readonly_full_migration_ledger.sql \
             > "$scratch/ledger.tsv"
           mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
-            --user=canovia_ci --database=canovia_p0_ci \
+            --user=p0_readonly_ci --database=canovia_p0_ci \
             --batch --raw --skip-column-names \
             < audit/scripts/sql/prelaunch_pinned_mysql19_select_only_snapshot.sql \
             > "$scratch/schema.tsv"
@@ -168,21 +204,33 @@ jobs:
           set -euo pipefail
           php artisan migrate --force --no-interaction
           php artisan migrate --force --no-interaction
+      - name: Verify restricted auditor grant scope survived all nineteen migrations
+        env:
+          MYSQL_PWD: ci-only-audit-no-production
+        run: |
+          set -euo pipefail
+          scratch="$(mktemp -d)"
+          trap 'rm -rf -- "$scratch"' EXIT
+          mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u p0_readonly_ci \
+            -D canovia_p0_ci -B -N -e 'SHOW GRANTS FOR CURRENT_USER()' > "$scratch/grants"
+          python3 audit/scripts/ci/p0_mysql_metadata_grants_guard.py \
+            --database canovia_p0_ci --input "$scratch/grants" \
+            | grep -Fx 'P0_METADATA_GRANTS: ACCEPT_METADATA_ONLY_LEDGER_SELECT'
       - name: Read-only operator-style offline classification of upgraded 113 schema
         env:
-          MYSQL_PWD: ci-only-ephemeral-password
+          MYSQL_PWD: ci-only-audit-no-production
         shell: bash
         run: |
           set -euo pipefail
           scratch="$(mktemp -d)"
           trap 'rm -rf -- "$scratch"' EXIT
           mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
-            --user=canovia_ci --database=canovia_p0_ci \
+            --user=p0_readonly_ci --database=canovia_p0_ci \
             --batch --raw --skip-column-names \
             < candidate/scripts/sql/p0_mysql_readonly_full_migration_ledger.sql \
             > "$scratch/ledger.tsv"
           mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
-            --user=canovia_ci --database=canovia_p0_ci \
+            --user=p0_readonly_ci --database=canovia_p0_ci \
             --batch --raw --skip-column-names \
             < audit/scripts/sql/prelaunch_pinned_mysql19_select_only_snapshot.sql \
             > "$scratch/schema.tsv"
