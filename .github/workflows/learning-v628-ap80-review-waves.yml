@@ -1,0 +1,64 @@
+name: Learning V6.28 AP80 Owner Review Waves
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/learning-v628-ap80-review-waves.yml'
+      - 'app/Services/ApExamCandidateOwnerReviewWavesService.php'
+      - 'app/Console/Commands/ShowApExamCandidateOwnerReviewWave.php'
+      - 'tests/Feature/ApExamCandidateOwnerReviewWavesV628Test.php'
+      - 'docs/development/LEARNING_AP80_OWNER_REVIEW_WAVES_V6_28_2026_10_15.md'
+      - 'docs/learning/review_packets/AP_A_80_OWNER_FIRST_PASS_6Q_V627_2026_10_15.json'
+      - 'resources/question_packs/ap/ap-a-2026-cbt-80-candidate-v2.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-review-waves:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+      - name: Install locked PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Setup disposable local Laravel test environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          echo "APP_ENV=testing" >> .env
+          echo "DB_CONNECTION=sqlite" >> .env
+          echo "DB_DATABASE=:memory:" >> .env
+          echo "CACHE_STORE=array" >> .env
+          echo "SESSION_DRIVER=array" >> .env
+          echo "NATIVE_AI_DRIVER=disabled" >> .env
+          php artisan key:generate --force --no-interaction
+          php -l app/Services/ApExamCandidateOwnerReviewWavesService.php
+          php -l app/Console/Commands/ShowApExamCandidateOwnerReviewWave.php
+          php -l tests/Feature/ApExamCandidateOwnerReviewWavesV628Test.php
+      - name: V6.28, V6.27 and preserved AP80 offline guard tests
+        run: |
+          APP_ENV=testing DB_CONNECTION=sqlite DB_DATABASE=:memory: CACHE_STORE=array \
+          php artisan test \
+            tests/Feature/ApExamCandidateOwnerReviewWavesV628Test.php \
+            tests/Feature/ApExamCandidateOwnerEditorialPacketV627Test.php \
+            tests/Feature/ApExamCandidateDraftPreparationV626Test.php \
+            tests/Feature/ApExamCandidateRevisionComparisonV625Test.php \
+            tests/Feature/ApExamCandidateHumanReviewIntakeV624Test.php \
+            tests/Feature/ApExamCandidateQualityReviewTest.php \
+            tests/Feature/ApExamCandidateRevisionPreviewTest.php \
+            tests/Feature/ApExamCandidateBundleAuditTest.php
+      - name: Human review not attested
+        run: |
+          echo "Only read-only review wave metadata and synthetic tests verified."
+          echo "All 80 exact-content human/rights approvals remain pending; release/DB/import/deployment forbidden."
