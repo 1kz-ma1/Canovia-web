@@ -1,0 +1,93 @@
+name: Pre-Launch IA-2g Mobile WebKit First Value
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/prelaunch-ia2g-mobile-webkit.yml'
+      - 'scripts/ci/prelaunch_ia2e_first_value_browser_smoke.mjs'
+      - 'scripts/ci/prelaunch_ia2e_verify_first_value.php'
+      - 'docs/development/PRELAUNCH_IA2G_DEVICE_ACCEPTANCE_2026_10_15.md'
+      - 'app/Services/PlanDashboardWorkspaceService.php'
+      - 'resources/views/plans/partials/dashboard-information-board.blade.php'
+      - 'tests/Feature/PrelaunchPlanDashboardReflectionV1Test.php'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  first-value-mobile-webkit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked application deps
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          npm ci --ignore-scripts
+          npm run build
+      - name: Pin disposable local SQLite and disable provider effects
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "APP_ENV=testing" >> "$GITHUB_ENV"
+          echo "APP_DEBUG=false" >> "$GITHUB_ENV"
+          echo "APP_URL=http://127.0.0.1:8797" >> "$GITHUB_ENV"
+          echo "CANOVIA_IA2E_BASE_URL=http://127.0.0.1:8797" >> "$GITHUB_ENV"
+          echo "CANOVIA_IA2E_BROWSER_FIXTURE=1" >> "$GITHUB_ENV"
+          echo "CANOVIA_PUBLIC_RELEASE_LEVEL=1" >> "$GITHUB_ENV"
+          echo "DB_CONNECTION=sqlite" >> "$GITHUB_ENV"
+          echo "DB_DATABASE=$RUNNER_TEMP/ia2e-browser.sqlite" >> "$GITHUB_ENV"
+          echo "SESSION_DRIVER=file" >> "$GITHUB_ENV"
+          echo "CACHE_STORE=file" >> "$GITHUB_ENV"
+          echo "QUEUE_CONNECTION=sync" >> "$GITHUB_ENV"
+          echo "NATIVE_AI_DRIVER=disabled" >> "$GITHUB_ENV"
+          echo "MAIL_MAILER=array" >> "$GITHUB_ENV"
+          cp .env.example .env
+          touch "$RUNNER_TEMP/ia2e-browser.sqlite"
+      - name: Prepare synthetic isolated web application
+        run: |
+          php artisan key:generate --force --no-interaction
+          php artisan migrate --force --no-interaction
+          php -l scripts/ci/prelaunch_ia2e_verify_first_value.php
+          node --check scripts/ci/prelaunch_ia2e_first_value_browser_smoke.mjs
+      - name: Test Plan Dashboard reflection scope and false-progress guard
+        run: php artisan test --filter=PrelaunchPlanDashboardReflectionV1Test
+      - name: Install pinned WebKit engine (Linux, not physical iPhone/Safari)
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+          npx playwright install --with-deps webkit
+          git diff --exit-code -- package-lock.json package.json
+      - name: Serve isolated app on loopback
+        shell: bash
+        run: |
+          set -euo pipefail
+          nohup php artisan serve --host=127.0.0.1 --port=8797 > "$RUNNER_TEMP/ia2e-php-server.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/ia2e-php-server.pid"
+          for i in $(seq 1 40); do
+            if curl --silent --fail --output /dev/null http://127.0.0.1:8797/register; then exit 0; fi
+            sleep 1
+          done
+          echo "Disposable browser server failed to start" >&2
+          exit 1
+      - name: Exercise touch-sized WebKit Welcome to Evidence and resume
+        env:
+          CANOVIA_IA2E_BROWSER_ENGINE: webkit
+        run: node scripts/ci/prelaunch_ia2e_first_value_browser_smoke.mjs
+      - name: Clarify device-acceptance limitations
+        run: |
+          echo "Browser: Linux headless WebKit with mobile-sized touch viewport; isolated Laravel/SQLite; no device, real Safari or WKWebView."
+          echo "NOT tested: physical iPhone Safari/WKWebView, actual OS keyboard/safe-area/back/rotation, human usability, Render/Aiven Live or deployment."
+          echo "NO release selection/production GO from browser CI."
