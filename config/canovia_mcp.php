@@ -27,6 +27,11 @@ return [
     // No practice evidence, answer history or mutations are exposed.
     'study_read_enabled' => env('CANOVIA_MCP_STUDY_READ_ENABLED', false),
 
+    // Private AP pilot ONLY: exactly one independently identified owner ID.
+    // Empty/invalid values deny all real study reads and result proposals.
+    // This is not a feature open to every Canovia account.
+    'ap_pilot_owner_id' => env('CANOVIA_MCP_AP_PILOT_OWNER_ID', ''),
+
     // Explicit additional per-Plan opt-in: bounded, aggregated results of
     // OWNER-APPLIED study attempts only. Distinct from Tasks consent and
     // never exposed by the isolated synthetic-only staging service.
