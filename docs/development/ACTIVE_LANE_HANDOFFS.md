@@ -1,5 +1,8 @@
 # Canovia Active Lane Handoffs
 
+> **2026-10-16 INTEGRATION FREEZE NOTICE:** オーナー判断により各レーンの新規実装は一時停止。下記の2026-10-09「ACTIVE TARGET」「start-of-chat」は**履歴上の実行候補**であり、現在の実装再開許可ではない。統合判断と再開条件は [統合マスター仕様](CANOVIA_INTEGRATION_FREEZE_RELEASE_MASTER_2026_10_16.md) を参照し、最新 main / PR / CI / Render状態を再確認する。既存WIP、Future設計、レーン別テスト証拠は保存する。
+
+
 > Status: **operational snapshot**, updated 2026-10-09 (JST).
 > Recheck latest `main` and open PRs every time this file is read. A listed item is **not** evidence that a chat or background agent has started it.
 > Canonical product intent: [ROADMAP.md](ROADMAP.md). Operating rules: [PARALLEL_DEVELOPMENT_OPERATING_MODEL.md](PARALLEL_DEVELOPMENT_OPERATING_MODEL.md).
