@@ -15,7 +15,6 @@
     </section>
 
     @include('workspace.study.partials.learning-bank-coverage')
-    @include('workspace.study.partials.official-syllabus-bridge')
 
     <div
         class="space-y-5"
