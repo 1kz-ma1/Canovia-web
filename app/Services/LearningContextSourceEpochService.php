@@ -18,6 +18,10 @@ use RuntimeException;
  */
 final class LearningContextSourceEpochService
 {
+    public function __construct(
+        private readonly PlanCategoryProfileService $profiles,
+    ) {}
+
     public const KINDS = [
         'task_created',
         'task_updated',
@@ -43,6 +47,15 @@ final class LearningContextSourceEpochService
             throw new InvalidArgumentException('Unrecognized Learning source mutation kind.');
         }
         if (! $this->enabled()) {
+            return null;
+        }
+        // The shadow is scoped to the same *private owner Study Plan*
+        // eligibility as the authoritative Learning capture. Other app
+        // domains must not acquire a hidden experimental storage dependency.
+        if ($lockedPlan->user_id === null
+            || (bool) $lockedPlan->is_public
+            || (bool) $lockedPlan->is_collaborative
+            || $this->profiles->forPlan($lockedPlan)->key !== 'study') {
             return null;
         }
         if ($lockedPlan->id === null || DB::transactionLevel() < 1) {
