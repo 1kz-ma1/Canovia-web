@@ -225,6 +225,51 @@ final class LearningContextWatchPersistenceTest extends TestCase
         $this->assertDatabaseCount('learning_context_watch_states', 0);
     }
 
+    public function test_owner_can_erase_after_plan_becomes_public_or_nonstudy(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner);
+        $service = $this->enable();
+        $this->actingAs($owner);
+        $this->assertTrue($service->optIn($owner, $plan->id));
+        $plan->update(['is_public' => true, 'category' => 'ソフトウェア開発']);
+        $this->assertSame('unauthorized', $service->advance($owner, $plan->id)['status']);
+        config(['intelligence.learning_context_watch.persistence_enabled' => false]);
+        $this->assertTrue($service->optOut($owner, $plan->id));
+        $this->assertDatabaseCount('learning_context_watch_states', 0);
+        $this->assertDatabaseCount('learning_context_change_records', 0);
+    }
+
+    public function test_expiry_and_retained_history_are_bounded_on_next_advance(): void
+    {
+        $owner = User::factory()->create();
+        $plan = $this->plan($owner);
+        $task = $this->task($plan);
+        $service = $this->enable();
+        $this->actingAs($owner);
+        $this->assertTrue($service->optIn($owner, $plan->id));
+        $revision = LearningContextWatchState::query()->sole()->source_revision;
+
+        for ($i = 1; $i <= 40; ++$i) {
+            LearningContextChangeRecord::query()->create([
+                'user_id' => $owner->id,
+                'plan_id' => $plan->id,
+                'source_revision' => $revision,
+                'dedupe_fingerprint' => str_pad(dechex($i), 64, '0', STR_PAD_LEFT),
+                'event_kinds' => ['recorded_task_paused'],
+                'status' => 'review_only',
+                'expires_at' => $i <= 5 ? now()->subDay() : now()->addDays(30),
+            ]);
+        }
+        $this->assertDatabaseCount('learning_context_change_records', 40);
+        $task->update(['status' => 'paused']);
+        $this->assertSame('recorded_review_candidate', $service->advance($owner, $plan->id)['status']);
+        $this->assertDatabaseCount('learning_context_change_records', 32);
+        $this->assertSame(1, LearningContextChangeRecord::query()->where('status', 'review_only')->count());
+        $this->assertSame(0, LearningContextChangeRecord::query()
+            ->where('expires_at', '<=', now())->count());
+    }
+
     public function test_migration_replay_does_not_erase_stored_records_and_cascade_erases_on_plan_delete(): void
     {
         $owner = User::factory()->create();
