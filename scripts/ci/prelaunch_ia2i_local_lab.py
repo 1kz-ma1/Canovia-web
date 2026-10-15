@@ -18,6 +18,7 @@ import subprocess
 import sys
 
 PINNED_SHA = "069e9b5790345feb9bb9edd437ac1c5a39a73efd"
+IA2J_SHA = "fdbe29de79f0ca7df255a978e13f94f248a3ff32"
 BASE_URL = "http://127.0.0.1:8797"
 STATE_FILENAME = "ia2i-private-state.json"
 DB_FILENAME = "ia2i-disposable.sqlite"
@@ -25,6 +26,15 @@ DB_FILENAME = "ia2i-disposable.sqlite"
 
 class SafetyError(RuntimeError):
     pass
+
+
+def lab_profile(source_sha: str) -> tuple[int, str, str]:
+    """Only vetted, exact code snapshots. Each lab has a separate port/cookie."""
+    if source_sha == PINNED_SHA:
+        return (8797, "canovia-ia2i-session", "Canovia IA2i Local Acceptance")
+    if source_sha == IA2J_SHA:
+        return (8798, "canovia-ia2j-session", "Canovia IA2j Local Acceptance")
+    raise SafetyError("Source SHA is not in the explicit local acceptance allowlist")
 
 
 def inside(path: Path, parent: Path) -> bool:
@@ -43,15 +53,17 @@ def git_value(checkout: Path, *args: str) -> str:
     ).strip()
 
 
-def validate_checkout(path: str) -> Path:
+def validate_checkout(path: str, source_sha: str | None = None) -> Path:
+    source_sha = source_sha or PINNED_SHA
+    lab_profile(source_sha)
     checkout = Path(path).expanduser().absolute()
     check_no_symlink_components(checkout)
     if not checkout.is_dir() or not (checkout / "artisan").is_file():
         raise SafetyError("Expected an existing standalone Laravel checkout")
     if git_value(checkout, "rev-parse", "--show-toplevel") != str(checkout):
         raise SafetyError("Checkout must be the Git worktree root")
-    if git_value(checkout, "rev-parse", "HEAD") != PINNED_SHA:
-        raise SafetyError("Code SHA does not match the frozen IA-2h review snapshot")
+    if git_value(checkout, "rev-parse", "HEAD") != source_sha:
+        raise SafetyError("Code SHA does not match the explicitly selected frozen snapshot")
     if git_value(checkout, "status", "--porcelain", "--untracked-files=no"):
         raise SafetyError("Tracked worktree files changed; use a clean detached worktree")
     if any(checkout.glob(".env")) or any(p.name != ".env.example" for p in checkout.glob(".env.*")):
@@ -78,12 +90,14 @@ def validate_lab(location: str, checkout: Path, *, create: bool) -> Path:
     return lab
 
 
-def init_lab(lab: Path) -> None:
+def init_lab(lab: Path, source_sha: str | None = None) -> None:
+    source_sha = source_sha or PINNED_SHA
+    lab_profile(source_sha)
     statefile, db = lab / STATE_FILENAME, lab / DB_FILENAME
     if statefile.exists() or db.exists():
         raise SafetyError("Lab already exists; do not overwrite or reuse an unknown database")
     secret = "base64:" + base64.b64encode(secrets.token_bytes(32)).decode("ascii")
-    payload = {"version": 1, "source_sha": PINNED_SHA, "app_key": secret}
+    payload = {"version": 1, "source_sha": source_sha, "app_key": secret}
     fd = os.open(statefile, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
@@ -102,7 +116,9 @@ def init_lab(lab: Path) -> None:
         raise
 
 
-def load_lab(lab: Path) -> tuple[dict, Path]:
+def load_lab(lab: Path, source_sha: str | None = None) -> tuple[dict, Path]:
+    source_sha = source_sha or PINNED_SHA
+    lab_profile(source_sha)
     statefile, db = lab / STATE_FILENAME, lab / DB_FILENAME
     if not statefile.is_file() or not db.is_file() or statefile.is_symlink() or db.is_symlink():
         raise SafetyError("Missing or symlinked private state/SQLite file")
@@ -111,7 +127,7 @@ def load_lab(lab: Path) -> tuple[dict, Path]:
     payload = json.loads(statefile.read_text(encoding="utf-8"))
     if set(payload) != {"version", "source_sha", "app_key"} or payload["version"] != 1:
         raise SafetyError("Unknown lab state format")
-    if payload["source_sha"] != PINNED_SHA or not isinstance(payload["app_key"], str):
+    if payload["source_sha"] != source_sha or not isinstance(payload["app_key"], str):
         raise SafetyError("Lab does not belong to frozen source")
     key = payload["app_key"]
     if not key.startswith("base64:"):
@@ -122,19 +138,21 @@ def load_lab(lab: Path) -> tuple[dict, Path]:
     return payload, db
 
 
-def isolated_env(payload: dict, db: Path) -> dict[str, str]:
+def isolated_env(payload: dict, db: Path, source_sha: str | None = None) -> dict[str, str]:
+    source_sha = source_sha or PINNED_SHA
+    port, cookie, app_name = lab_profile(source_sha)
     # Explicit allowlist. Never inherit DB/Render/Aiven/AWS/GitHub/Auth0 secrets.
     env = {k: os.environ[k] for k in ("PATH", "HOME", "TMPDIR", "SYSTEMROOT") if k in os.environ}
     env.update({
-        "APP_NAME": "Canovia IA2i Local Acceptance",
+        "APP_NAME": app_name,
         "APP_ENV": "local",  # Real CSRF/session middleware, not PHPUnit test shortcuts.
         "APP_DEBUG": "false",
-        "APP_URL": BASE_URL,
+        "APP_URL": f"http://127.0.0.1:{port}",
         "APP_KEY": payload["app_key"],
         "DB_CONNECTION": "sqlite",
         "DB_DATABASE": str(db),
         "SESSION_DRIVER": "file",
-        "SESSION_COOKIE": "canovia-ia2i-session",
+        "SESSION_COOKIE": cookie,
         "SESSION_DOMAIN": "null",
         "CACHE_STORE": "file",
         "QUEUE_CONNECTION": "sync",
@@ -171,22 +189,29 @@ def main() -> int:
     parser.add_argument("action", choices=("init", "check", "migrate", "serve"))
     parser.add_argument("--checkout", required=True, help="Absolute path to clean detached frozen-source worktree")
     parser.add_argument("--lab-dir", required=True, help="Separate owner-private lab directory")
+    parser.add_argument(
+        "--source-sha", default=PINNED_SHA,
+        help="Exact vetted 40-character snapshot SHA; defaults to IA-2h",
+    )
     parser.add_argument("--confirm-disposable", action="store_true", help="Required before isolated SQLite migration/server")
     args = parser.parse_args()
 
-    checkout = validate_checkout(args.checkout)
+    source_sha = args.source_sha
+    port, _, _ = lab_profile(source_sha)
+    checkout = validate_checkout(args.checkout, source_sha)
     lab = validate_lab(args.lab_dir, checkout, create=args.action == "init")
     if args.action == "init":
-        init_lab(lab)
-        print("IA2I_LAB_INITIALIZED source_sha=" + PINNED_SHA)
+        init_lab(lab, source_sha)
+        print("IA2I_LAB_INITIALIZED source_sha=" + source_sha)
         print("ONLY_DISPOSABLE_SQLITE_CREATED; NO_LARAVEL_MIGRATION_OR_SERVER")
         return 0
-    payload, db = load_lab(lab)
-    env = isolated_env(payload, db)
+    payload, db = load_lab(lab, source_sha)
+    env = isolated_env(payload, db, source_sha)
     if args.action == "check":
-        print("IA2I_SOURCE_PINNED=" + PINNED_SHA)
+        print("IA2I_SOURCE_PINNED=" + source_sha)
         print("IA2I_DB=ISOLATED_OWNER_ONLY_SQLITE")
         print("IA2I_LISTENER=LOOPBACK_ONLY; OUTBOUND_NOT_FIREWALLED")
+        print("IA2I_LOCAL_URL=http://127.0.0.1:" + str(port))
         print("IA2I_APP_ENV=local / CSRF ENABLED")
         print("IA2I_VENDOR_READY=" + str((checkout / "vendor/autoload.php").is_file()).lower())
         print("IA2I_ASSETS_READY=" + str((checkout / "public/build/manifest.json").is_file()).lower())
@@ -202,8 +227,8 @@ def main() -> int:
         raise SafetyError("Build local Vite assets inside the isolated worktree first")
     command = (["php", "artisan", "migrate", "--force", "--no-interaction"]
                if args.action == "migrate"
-               else ["php", "artisan", "serve", "--host=127.0.0.1", "--port=8797"])
-    print("IA2I_LOCAL_ONLY action=" + args.action + " source_sha=" + PINNED_SHA, flush=True)
+               else ["php", "artisan", "serve", "--host=127.0.0.1", f"--port={port}"])
+    print("IA2I_LOCAL_ONLY action=" + args.action + " source_sha=" + source_sha, flush=True)
     return subprocess.call(command, cwd=checkout, env=env)
 
 
