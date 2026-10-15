@@ -1,0 +1,152 @@
+name: Pinned Pre-Launch MySQL 94-to-113 Upgrade (Disposable)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/prelaunch-pinned-mysql19-upgrade.yml'
+      - 'scripts/ci/prelaunch_pinned_mysql19_fixture.php'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  upgrade:
+    name: "Pinned old-to-new MySQL ${{ matrix.mysql_series }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        mysql_series: ['8.0', '8.4']
+    services:
+      mysql:
+        image: mysql:${{ matrix.mysql_series }}
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only-root-password
+          MYSQL_DATABASE: canovia_p0_ci
+          MYSQL_USER: canovia_ci
+          MYSQL_PASSWORD: ci-only-ephemeral-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_DATABASE: canovia_p0_ci
+      DB_USERNAME: canovia_ci
+      DB_PASSWORD: ci-only-ephemeral-password
+      DB_URL: ''
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      NATIVE_AI_DRIVER: disabled
+      CANOVIA_P0_DISPOSABLE_MYSQL_CI: '1'
+    steps:
+      - name: Checkout test files from PR
+        uses: actions/checkout@v4
+        with:
+          path: audit
+          persist-credentials: false
+      - name: Checkout exact current-production Git source
+        uses: actions/checkout@v4
+        with:
+          ref: 15abdc9de6f24b5250fb255c579d1aa55facaf1a
+          path: live
+          persist-credentials: false
+      - name: Checkout exact frozen release review source
+        uses: actions/checkout@v4
+        with:
+          ref: 6d7dbcfedd35f33ba2827ed8c7c3d98ca30fc3d6
+          path: candidate
+          persist-credentials: false
+      - name: Reject wrong SHA or migration-set drift
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C live rev-parse HEAD)" = '15abdc9de6f24b5250fb255c579d1aa55facaf1a'
+          test "$(git -C candidate rev-parse HEAD)" = '6d7dbcfedd35f33ba2827ed8c7c3d98ca30fc3d6'
+          python3 - <<'PY'
+          from pathlib import Path
+          old={p.stem for p in Path('live/database/migrations').glob('*.php')}
+          new={p.stem for p in Path('candidate/database/migrations').glob('*.php')}
+          assert len(old)==94 and len(new)==113 and old <= new and len(new-old)==19
+          print('pinned_94_113_manifest: pass')
+          PY
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, mbstring, xml
+          coverage: none
+      - name: Enforce isolated MySQL engine and disposable-only trigger setting
+        env:
+          MYSQL_PWD: ci-only-root-password
+          EXPECTED_MYSQL_SERIES: ${{ matrix.mysql_series }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=root --database=canovia_p0_ci --batch --skip-column-names -e 'SELECT VERSION()')"
+          case "$version" in
+            "$EXPECTED_MYSQL_SERIES."*) ;;
+            *) echo 'wrong_disposable_mysql_engine: blocked' >&2; exit 1;;
+          esac
+          # This setting is CI-root-only. Aiven permissions remain unverified.
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=root --database=canovia_p0_ci \
+            -e 'SET GLOBAL log_bin_trust_function_creators = 1'
+      - name: Install exact historical dependencies
+        working-directory: live
+        run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
+      - name: Lint synthetic fixture
+        run: php -l audit/scripts/ci/prelaunch_pinned_mysql19_fixture.php
+      - name: Migrate empty old schema to exact 94 and repeat
+        working-directory: live
+        shell: bash
+        run: |
+          set -euo pipefail
+          php artisan migrate --force --no-interaction
+          php artisan migrate --force --no-interaction
+      - name: Seed synthetic legacy user/member/repo observation/MCP identities/grant
+        working-directory: live
+        run: php ../audit/scripts/ci/prelaunch_pinned_mysql19_fixture.php seed
+      - name: Install exact frozen candidate dependencies
+        working-directory: candidate
+        run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
+      - name: Upgrade SAME old MySQL with all 19 new migrations and rerun
+        working-directory: candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          php artisan migrate --force --no-interaction
+          php artisan migrate --force --no-interaction
+      - name: Verify existing rows, finite grant, unique replacement and triggers
+        working-directory: candidate
+        run: php ../audit/scripts/ci/prelaunch_pinned_mysql19_fixture.php verify
+      - name: Check exact 113-file ledger read-only and rerun
+        working-directory: candidate
+        env:
+          MYSQL_PWD: ci-only-ephemeral-password
+        shell: bash
+        run: |
+          set -euo pipefail
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=canovia_ci --database=canovia_p0_ci \
+            --batch --raw --skip-column-names \
+            < scripts/sql/p0_mysql_readonly_full_migration_ledger.sql \
+            | python3 scripts/ci/p0_mysql_full_ledger_offline_check.py --input - \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["result"]=="REVIEW_REQUIRED" and d["code"]=="FULL_MIGRATION_LEDGER_MATCH_NOT_RELEASE" and d["release_authorized"] is False'
+          php artisan migrate --force --no-interaction
+      - name: Verify direct-SQL Plan and membership trigger regression
+        working-directory: candidate
+        run: php artisan test tests/Feature/AuthorizationEpochDatabaseTriggerG3Test.php --stop-on-failure
+      - name: Classify evidence as not production GO
+        run: |
+          echo 'Only disposable CI MySQL and pinned Git sources exercised.'
+          echo 'Never Aiven, real customer rows, backup restore, production grants or device acceptance.'
