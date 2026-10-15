@@ -1,0 +1,120 @@
+name: Learning Context SQL Deadlock Recovery (Disposable V016B)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tests/Support/LearningContextSqlMutationProbe.php'
+      - 'tests/Support/LearningContextDeadlockWorkerV016B.php'
+      - 'tests/Feature/LearningContextSqlMutationDeadlockV016BTest.php'
+      - 'docs/development/LEARNING_CONTEXT_LOCK_RECOVERY_V016B_2026_10_15.md'
+      - '.github/workflows/learning-context-sql-deadlock-v016b.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deadlock-and-plan-first:
+    name: 'Deadlock abort and ordered retry (${{ matrix.label }})'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {label: 'PostgreSQL 17', driver: 'pgsql', image: 'postgres:17-alpine', port: 5432, health: 'pg_isready -U canovia_ci -d canovia_learning_watch_lock_ci'}
+          - {label: 'MySQL 8.4', driver: 'mysql', image: 'mysql:8.4', port: 3306, health: 'mysqladmin ping --silent'}
+    services:
+      database:
+        image: ${{ matrix.image }}
+        env:
+          POSTGRES_DB: canovia_learning_watch_lock_ci
+          POSTGRES_USER: canovia_ci
+          POSTGRES_PASSWORD: ci-only-disposable-pass
+          MYSQL_ROOT_PASSWORD: ci-only-root-pass
+          MYSQL_DATABASE: canovia_learning_watch_lock_ci
+          MYSQL_USER: canovia_ci
+          MYSQL_PASSWORD: ci-only-disposable-pass
+        ports:
+          - '${{ matrix.port }}:${{ matrix.port }}'
+        options: >-
+          --health-cmd="${{ matrix.health }}"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: ${{ matrix.driver }}
+      DB_HOST: 127.0.0.1
+      DB_PORT: ${{ matrix.port }}
+      DB_DATABASE: canovia_learning_watch_lock_ci
+      DB_USERNAME: canovia_ci
+      DB_PASSWORD: ci-only-disposable-pass
+      DB_URL: ''
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      CANOVIA_LEARNING_LOCK_DISPOSABLE_CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl, pdo_mysql, pdo_pgsql, pdo_sqlite
+          coverage: none
+      - name: Verify local disposable CI DB is the only allowed target
+        run: |
+          set -euo pipefail
+          test "$CI" = 'true'
+          test "$APP_ENV" = 'testing'
+          test "$CANOVIA_LEARNING_LOCK_DISPOSABLE_CI" = '1'
+          test "$DB_HOST" = '127.0.0.1'
+          test "$DB_DATABASE" = 'canovia_learning_watch_lock_ci'
+          test "$DB_USERNAME" = 'canovia_ci'
+          test -z "$DB_URL"
+          case "$DB_CONNECTION:$DB_PORT" in
+            mysql:3306|pgsql:5432) ;;
+            *) exit 42 ;;
+          esac
+      - name: Permit MySQL trigger DDL ONLY in disposable CI
+        if: matrix.driver == 'mysql'
+        env:
+          MYSQL_PWD: ci-only-root-pass
+        run: |
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=root --database=canovia_learning_watch_lock_ci \
+            -e 'SET GLOBAL log_bin_trust_function_creators = 1'
+      - name: Locked Composer packages, without app hooks
+        run: composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+      - name: Syntax check all new experiment code
+        run: |
+          php -l tests/Support/LearningContextDeadlockWorkerV016B.php
+          php -l tests/Feature/LearningContextSqlMutationDeadlockV016BTest.php
+          php -l tests/Support/LearningContextSqlMutationProbe.php
+      - name: Migrate ONLY disposable CI database
+        run: |
+          php artisan migrate --force --no-interaction
+          php artisan migrate --force --no-interaction
+      - name: Two-process real deadlock, victim rollback, Plan-first resumption
+        run: php artisan test tests/Feature/LearningContextSqlMutationDeadlockV016BTest.php --fail-on-skipped --stop-on-failure --colors=never
+      - name: Verify all temporary SQL probe objects are removed
+        run: |
+          set -euo pipefail
+          case "$DB_CONNECTION" in
+            mysql)
+              MYSQL_PWD="$DB_PASSWORD" mysql --protocol=TCP \
+                --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USERNAME" \
+                --batch --skip-column-names --database="$DB_DATABASE" \
+                -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='learning_context_probe_epochs'" | grep -qx 0
+              ;;
+            pgsql)
+              PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" \
+                -U "$DB_USERNAME" -d "$DB_DATABASE" -Atqc \
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='learning_context_probe_epochs'" | grep -qx 0
+              ;;
+          esac
