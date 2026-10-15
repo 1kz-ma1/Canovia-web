@@ -125,5 +125,67 @@ class LocalLabSecurityTest(unittest.TestCase):
         self.assertEqual(call.call_args.kwargs["env"]["APP_URL"], lab.BASE_URL)
 
 
+    def test_second_review_sha_needs_explicit_selection_and_separate_session(self):
+        (self.root / "artisan").write_text("<?php // IA-2j snapshot", encoding="utf-8")
+        git(self.root, "add", "artisan")
+        subprocess.check_call([
+            "git", "-C", str(self.root), "-c", "user.name=CI",
+            "-c", "user.email=ci@example.invalid", "commit", "-qm", "second snapshot"
+        ])
+        second_sha = git(self.root, "rev-parse", "HEAD")
+        second_lab = Path(self.temp.name) / "ia2j-private-lab"
+
+        with patch.object(lab, "IA2J_SHA", second_sha):
+            with self.assertRaises(lab.SafetyError):
+                self.args("init", private=second_lab)
+            with self.assertRaises(lab.SafetyError):
+                self.args("init", private=second_lab, extra=["--source-sha", "f" * 40])
+            self.assertFalse(second_lab.exists())
+
+            self.assertEqual(
+                self.args("init", private=second_lab, extra=["--source-sha", second_sha]), 0
+            )
+            self.assertEqual(
+                self.args("check", private=second_lab, extra=["--source-sha", second_sha]), 0
+            )
+            with self.assertRaises(lab.SafetyError):
+                self.args("check", private=second_lab)
+            self.assertEqual(
+                lab.load_lab(second_lab, second_sha)[0]["source_sha"], second_sha
+            )
+            with self.assertRaises(lab.SafetyError):
+                lab.load_lab(second_lab, self.sha)
+
+            (self.root / "vendor").mkdir()
+            (self.root / "vendor/autoload.php").touch()
+            (self.root / "public/build").mkdir(parents=True)
+            (self.root / "public/build/manifest.json").write_text("{}", encoding="utf-8")
+            with patch.object(lab.subprocess, "call", return_value=0) as call:
+                self.assertEqual(
+                    self.args("serve", private=second_lab,
+                              extra=["--source-sha", second_sha, "--confirm-disposable"]), 0
+                )
+            self.assertEqual(
+                call.call_args.args[0],
+                ["php", "artisan", "serve", "--host=127.0.0.1", "--port=8798"]
+            )
+            runtime = call.call_args.kwargs["env"]
+            self.assertEqual(runtime["SESSION_COOKIE"], "canovia-ia2j-session")
+            self.assertEqual(runtime["APP_URL"], "http://127.0.0.1:8798")
+            self.assertEqual(runtime["DB_CONNECTION"], "sqlite")
+            self.assertEqual(runtime["DB_DATABASE"], str(second_lab / lab.DB_FILENAME))
+            self.assertEqual(runtime["NATIVE_AI_DRIVER"], "disabled")
+            self.assertNotIn("DATABASE_URL", runtime)
+            self.assertNotEqual(runtime["SESSION_COOKIE"], "canovia-ia2i-session")
+
+    def test_ia2h_defaults_remain_unchanged(self):
+        self.args("init")
+        payload, db = lab.load_lab(self.private)
+        runtime = lab.isolated_env(payload, db)
+        self.assertEqual(runtime["APP_URL"], lab.BASE_URL)
+        self.assertEqual(runtime["SESSION_COOKIE"], "canovia-ia2i-session")
+        self.assertEqual(payload["source_sha"], self.sha)
+
+
 if __name__ == "__main__":
     unittest.main()
