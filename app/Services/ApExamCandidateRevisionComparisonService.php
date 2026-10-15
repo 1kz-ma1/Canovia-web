@@ -86,10 +86,13 @@ final class ApExamCandidateRevisionComparisonService
 
         $edits = $proposal['changes'] ?? null;
         if (! is_array($edits) || ! array_is_list($edits)
-            || count($edits) < 1 || count($edits) > 80
-            || count($edits) !== count($required)) {
+            || count($edits) < 1 || count($edits) > 80) {
             $errors[] = 'missing_or_extra_revision_proposals';
             $edits = [];
+        } elseif (count($edits) !== count($required)) {
+            // Keep a bounded well-formed list for additional duplicate /
+            // unrequested-item error classification; never grant approval.
+            $errors[] = 'missing_or_extra_revision_proposals';
         }
 
         $seen = [];
