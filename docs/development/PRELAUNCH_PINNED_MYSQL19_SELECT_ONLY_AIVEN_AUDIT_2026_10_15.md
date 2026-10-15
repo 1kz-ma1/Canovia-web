@@ -1,0 +1,33 @@
+# Aiven 19 migration fixed SHA — SELECT-only operator audit (not release GO)
+
+> 2026-10-15. Only applies to Live Web Git SHA `15abdc9de6f24b5250fb255c579d1aa55facaf1a` (94 migration source files) → frozen review SHA `6d7dbcfedd35f33ba2827ed8c7c3d98ca30fc3d6` (113, +19). This is a production-readiness *preflight contract*, not authorization to query Aiven automatically, modify it or deploy.
+
+## Why this is separate from the #513 gate
+
+`release_488_mysql_ledger_gate.py` expects **exactly two** source-observation migrations to be pending and uses its own intentionally fixed signature. It must **not** be reused to approve, reject as unexpectedly pending, or inadvertently auto-classify the 19-migration candidate. The pinned 19 gate intentionally checks 94/113 exact Git SHA source sets and 13 fixed metadata signals. Its `REVIEW_REQUIRED` output means only "ledger and selected metadata match a plausible baseline or candidate"; it **never** means all MySQL schema, user data or migration permissions have been verified.
+
+Implementation:
+- `scripts/sql/prelaunch_pinned_mysql19_select_only_snapshot.sql`: SELECT only against `information_schema` and nonsecret `@@GLOBAL.log_bin` / `@@GLOBAL.log_bin_trust_function_creators`; fixed 13 status rows, **no users, Plans, questions, account identifiers or migration row values**.
+- `scripts/ci/prelaunch_pinned_mysql19_offline_gate.py`: takes two locally checked-out Git trees at the pinned SHA plus local TSV outputs from the existing `p0_mysql_readonly_full_migration_ledger.sql` and the new snapshot SQL. Validates exact 94-vs-113 source sets and *exact* ledger membership; rejects partial, unknown or incompatible schema. No network/DB connection and no unsanitized output.
+- `scripts/ops/prelaunch_pinned_mysql19_collect.sh`: separate operator-initiated wrapper, **disabled in CI**, requiring explicit opt-in and the existing narrowly scoped `REFERENCES` on the audited DB + `SELECT` on `migrations` only. Uses MySQL login path and CA `--ssl-mode=VERIFY_IDENTITY`, `umask 077`, private temp files; validates current-user grants before metadata or ledger queries. Never prints SHOW GRANTS or untrusted TSV content.
+- `tests/ci/test_prelaunch_pinned_mysql19_offline_gate.py`: synthetic negative-control tests and output redaction. The existing disposable MySQL 8.0/8.4 94→113 upgrade workflow is extended to run the read-only metadata SQL and offline gate **both before and after** upgrade on throwaway schemas.
+
+## Operator-controlled procedure (only after explicit approval)
+
+1. In Aiven Console independently identify intended service, TLS CA, MySQL major version, and the precise application database. Compare with the current Release Issue #488. Do not infer the target from an old shell profile or README.
+2. Use an **existing** dedicated narrow *audit* principal with only `USAGE`, schema-level `REFERENCES`, and `SELECT` on `migrations`. Confirm via private `SHOW GRANTS FOR CURRENT_USER()`. Never use the app's privileged writer principal in this collector or issue new Aiven credentials/permissions in this procedure.
+3. Locally obtain separate read-only Git checkouts at the **exact** above SHAs; inspect both locally; provide their absolute paths using `CANOVIA_PINNED_MYSQL19_LIVE_CHECKOUT` and `CANOVIA_PINNED_MYSQL19_CANDIDATE_CHECKOUT`. No moving branch, no unreviewed future migrations. The CLI rejects a changed checkout HEAD or an unexpected migration file set.
+4. Supply the verified private `CANOVIA_P0_LOGIN_PATH`, `CANOVIA_P0_DATABASE` and `CANOVIA_P0_CA_FILE` plus deliberate `CANOVIA_PINNED_MYSQL19_OPERATOR_APPROVED=YES`, `CANOVIA_P0_TARGET_VERIFIED=YES`, `CANOVIA_P0_GRANTS_REVIEWED=YES`; on an **operator's local machine**, invoke `bash scripts/ops/prelaunch_pinned_mysql19_collect.sh`. This description is **not** a request to perform the audit without approval.
+5. Only share the sanitized JSON result code/counts, not raw ledger/GRANTS/TLS details or application rows. `BLOCK` (including partial 92/93/95/etc ledger states or missing metadata) stops the review. `REVIEW_REQUIRED` indicates the exact metadata/ledger pattern matched, with **false** for all production release, runtime grants, recovery and device acceptance claims.
+
+## Critical independent privilege gate
+
+The disposable MySQL CI runs `SET GLOBAL log_bin_trust_function_creators=1` under **CI root only**, because some MySQL configurations with binary logging restrict creation of triggers/functions. The SELECT-only auditor sees the configured flags but **cannot test or prove the actual Canovia application/migration runtime principal's `TRIGGER`, `CREATE`, `ALTER`, INDEX or other DDL privileges**. Even an observed global `trusted_function_creators=ON` does **not** prove app-user grants; and the audit principal must never be upgraded to those privileges. If actual runtime privileges, Aiven policy or trigger compatibility cannot be established independently without unsafe changes, keep the candidate **HOLD/NO-GO**, do not attempt a production migration. Do not infer missing triggers from `information_schema.TRIGGERS` with restricted visibility.
+
+## Other independent NO-GO gates
+
+- Metadata does not certify real Plan/member data consistency, uniqueness conflicts, MySQL nontransactional DDL crash recovery or all 19 physical column/FK/index contracts. Preflight is intentionally *partial*, not a complete Aiven compatibility seal.
+- Aiven Free backup existence is not an independently validated restore. Keep backup/restore, RTO, write coordination and forward repair open.
+- Neither this script nor CI queries or modifies Aiven automatically. Do not run `artisan migrate`, `migrate:fresh`, `SET GLOBAL`, DML, grant changes or Render deployment through this procedure.
+- No public Release Level, OAuth/MCP delegated grant, G3 storage or iOS device acceptance follows from a passing SQL preflight.
+- Only [Issue #488](https://github.com/1kz-ma1/Canovia-web/issues/488) tracks residual release risks; [fixed-scope evaluation](PRELAUNCH_FIXED_SCOPE_RELEASE_EVALUATION_2026_10_15.md) and [PR #729](https://github.com/1kz-ma1/Canovia-web/pull/729) remain separate evidence.
