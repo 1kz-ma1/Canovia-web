@@ -58,8 +58,7 @@ final class AdaptiveLearningController extends Controller
         AdaptiveLearningModeRecommendationService $recommendations,
         AdaptiveLearningHistoryService $history,
         AdaptiveLearningReviewEntryService $reviewEntry,
-        AdaptiveLearningDistinctReviewService $distinctReview,
-        AdaptiveLearningHistoryService $history)
+        AdaptiveLearningDistinctReviewService $distinctReview)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         // Filter eligible packs before applying the display cap. Limiting the
