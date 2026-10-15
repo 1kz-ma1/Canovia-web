@@ -267,11 +267,22 @@ try {
     await page.locator('[data-learning-review-next-ordinary]').waitFor();
     step('History shows two distinct source IDs, none reused, and user-controlled next steps');
 
-    const last = verify('--verify');
-    assert.equal(last.progress_percent,0);
+    // Unlike V6.10, this successful path necessarily has TWO actor Runs.
+    // Verify the distinct Run explicitly, never use the old sole() helper.
+    const last = JSON.parse(execFileSync('php',
+        ['scripts/ci/learning_v616_disposable_bank.php', '--verify'],
+        {encoding:'utf8',env:process.env,timeout:20000}));
+    assert.equal(last.plan_id,planId);
+    assert.equal(last.task_id,created.task_id);
+    assert.equal(last.policy,'bank_topic_distinct_initial_v616');
+    assert.deepEqual(last.source_question_ids,last.expected_source_ids);
+    assert.equal(new Set(last.source_question_ids).size,2);
+    assert.equal(last.answer_count,2);
+    assert.equal(last.correct_count,2);
+    assert.equal(last.task_progress,0);
     assert.equal(last.task_evidence_count,0);
     assert.equal(last.task_next_action,final.task_next_action);
-    step('Read-only DB confirmed unchanged Task progress/Evidence and confirmed owner Action');
+    step('Read-only DB: two distinct source IDs graded correctly, unchanged Task progress/Evidence and owner Action');
     process.stdout.write('LEARNING V6.16 CHROMIUM ACCEPTANCE PASS (consented two new Questions, real grading, bounded history)\n');
 } finally {
     await context.close();
