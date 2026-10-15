@@ -220,7 +220,8 @@ Multi-product Canovia Company
 | Automatic Improvement | FUTURE / CONCEPT | none | Closed evidence / decision / learning loop |
 | Product Creation System | FUTURE / CONCEPT | none | Repeatable product discovery/build/validation system |
 | Canovia Family | FUTURE / CONCEPT | none | Multi-product family sharing platform contracts |
-| Developer Pro | FUTURE / CONCEPT | Developer Pro Future Design | External productization of internal development/intelligence system |
+| Developer Pro | FUTURE / CONCEPT | Developer Pro Future Design | External productization of proven internal development/intelligence system; lightweight decision logging is a separate active docs-only process |
+| Canovia World (independent companion app candidate) | FUTURE / CONCEPT | [World concept](CANOVIA_WORLD_COMPANION_APP_CONCEPT.md) | Possible separate spatial experience of consent-scoped Core Context, not a replacement UI or implemented Family contract |
 
 ---
 
@@ -475,6 +476,14 @@ This overview routes to three conceptual areas:
 Developer Pro remains detailed separately:
 
 - `docs/future/DEVELOPER_PRO_AI_DEVELOPMENT_ORCHESTRATION.md`
+
+Independent spatial companion-product candidate (not implemented):
+
+- `docs/future/CANOVIA_WORLD_COMPANION_APP_CONCEPT.md`
+
+Active docs-only decision practice (not Product Intelligence runtime):
+
+- `docs/development/PRODUCT_DECISION_MEMORY_OPERATING_SPEC_2026_10_13.md`
 
 ---
 

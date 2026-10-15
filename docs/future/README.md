@@ -176,6 +176,12 @@ Covers Future direction for:
 - Multi-product vision
 - small-team leverage
 
+### Canovia World — independent companion app candidate
+
+- [Canovia World — Independent Spatial Companion App](CANOVIA_WORLD_COMPANION_APP_CONCEPT.md)
+
+Spatial exploration / user-controlled presentation of authorized Context, distinct future first-party app, not a current map UI refresh or an approved standalone launch.
+
 ### Developer Pro
 
 - [Developer Pro / AI Development Orchestration](DEVELOPER_PRO_AI_DEVELOPMENT_ORCHESTRATION.md)
