@@ -158,7 +158,7 @@ Route::post('/workspace/study/context-watch/{plan}', [LearningContextWatchSettin
     ->middleware(['auth', 'throttle:6,1'])
     ->name('workspace.study.context_watch.enable');
 Route::post('/workspace/study/context-watch/{plan}/compare', [LearningContextWatchSettingsController::class, 'refresh'])
-    ->middleware(['auth', 'throttle:6,1'])
+    ->middleware(['auth', 'throttle:12,1'])
     ->name('workspace.study.context_watch.refresh');
 Route::delete('/workspace/study/context-watch/{plan}', [LearningContextWatchSettingsController::class, 'destroy'])
     ->middleware(['auth', 'throttle:6,1'])
