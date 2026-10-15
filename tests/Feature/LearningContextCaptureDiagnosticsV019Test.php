@@ -186,7 +186,8 @@ final class LearningContextCaptureDiagnosticsV019Test extends TestCase
         $this->assertSame(3, $stats['total']);
         $this->assertSame(2, $stats['outcomes']['practice_cap']);
         $this->assertSame(2, $stats['practice_rows']['over_cap']);
-        $this->assertSame(2, $stats['task_rows']['1_8']);
+        // Baseline plus two over-cap capture attempts all counted the one Task.
+        $this->assertSame(3, $stats['task_rows']['1_8']);
         $this->assertStringNotContainsString('SECRET_PRACTICE_PAYLOAD',
             json_encode($stats, JSON_THROW_ON_ERROR));
     }
