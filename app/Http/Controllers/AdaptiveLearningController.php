@@ -58,7 +58,8 @@ final class AdaptiveLearningController extends Controller
         AdaptiveLearningModeRecommendationService $recommendations,
         AdaptiveLearningHistoryService $history,
         AdaptiveLearningReviewEntryService $reviewEntry,
-        AdaptiveLearningDistinctReviewService $distinctReview)
+        AdaptiveLearningDistinctReviewService $distinctReview,
+        AdaptiveLearningHistoryService $history)
     {
         $this->authorizeStudy($request, $plan, $task, $ownership, $profiles);
         // Filter eligible packs before applying the display cap. Limiting the
@@ -110,17 +111,26 @@ final class AdaptiveLearningController extends Controller
             ? $distinctReview->packsForTopic($request, $plan, $task,
                 $identity->resolve($request), (string) $reviewPreview['topic'])
             : collect();
+        $learningHistory = $history->forPlanTask($request, $plan, $task,
+            $identity->resolve($request));
+        $delayedRecheck = $learningHistory['delayed_recheck'] ?? null;
+        $delayedPacks = ($delayedRecheck && $delayedRecheck['state'] === 'due')
+            ? $distinctReview->packsForTopic($request, $plan, $task,
+                $identity->resolve($request), (string) $delayedRecheck['topic'])
+            : collect();
 
         return view('learning.index', [
             'reviewPreview' => $reviewPreview, 'reviewPacks' => $reviewPacks,
             'distinctReviewPacks' => $distinctReviewPacks,
             'distinctStartRequestId' => (string) Str::uuid(),
+            'delayedStartRequestId' => (string) Str::uuid(),
+            'delayedRecheck' => $delayedRecheck, 'delayedPacks' => $delayedPacks,
             'plan' => $plan, 'task' => $task, 'packs' => $packs,
             'activeRuns' => $activeRuns,
             'examProfiles' => $availableExamProfiles, 'examPacks' => $examPacks,
             'examOptions' => $examOptions,
             'learningRecommendations' => $learningRecommendations,
-            'learningHistory' => $history->forPlanTask($request, $plan, $task, $identity->resolve($request)),
+            'learningHistory' => $learningHistory,
             'startRequestId' => (string) Str::uuid(),
             'reviewStartRequestId' => (string) Str::uuid(),
             'examStartRequestId' => (string) Str::uuid(),
@@ -142,6 +152,9 @@ final class AdaptiveLearningController extends Controller
             'review_topic' => ['required_with:review_source_signature', 'nullable', 'string', 'max:50'],
             'review_source_signature' => ['required_with:review_topic', 'nullable', 'regex:/\\A[a-f0-9]{64}\\z/'],
             'review_distinct' => ['sometimes', 'in:1'],
+            'delayed_topic' => ['required_with:delayed_source_signature', 'nullable', 'string', 'max:50'],
+            'delayed_source_signature' => ['required_with:delayed_topic', 'nullable', 'regex:/\\A[a-f0-9]{64}\\z/'],
+            'delayed_distinct' => ['sometimes', 'in:1'],
         ]);
         $pack = QuestionPack::where('status', 'published')
             ->findOrFail($input['question_pack_id']);
@@ -151,6 +164,16 @@ final class AdaptiveLearningController extends Controller
 
         $reviewTopic = null;
         $distinctIds = [];
+        $isDelayed = false;
+        abort_unless(! isset($input['delayed_distinct'])
+            || (filled($input['delayed_topic'] ?? null)
+                && filled($input['delayed_source_signature'] ?? null)), 409,
+            '後日の別問題確認には最新の回答記録が必要です。');
+        abort_unless(! filled($input['delayed_topic'] ?? null)
+            || (! filled($input['review_topic'] ?? null)
+                && ! filled($input['review_source_signature'] ?? null)
+                && ! isset($input['review_distinct'])), 409,
+            '復習経路を同時には選べません。');
         abort_unless(! isset($input['review_distinct']) || filled($input['review_topic'] ?? null),
             409, '別問題での再確認には現在の復習候補が必要です。');
         if (filled($input['review_topic'] ?? null)) {
@@ -176,10 +199,31 @@ final class AdaptiveLearningController extends Controller
             }
         } elseif (filled($input['review_source_signature'] ?? null)) {
             abort(422, '復習する分野が指定されていません。');
+        } elseif (filled($input['delayed_topic'] ?? null)) {
+            abort_unless(isset($input['delayed_distinct'])
+                && $input['mode'] === LearningRun::MODE_UNDERSTANDING, 409,
+                '後日の再確認は理解モード・別問題2問を本人が選んで開始してください。');
+            $current = $history->forPlanTask($request, $plan, $task,
+                $identity->resolve($request))['delayed_recheck'] ?? null;
+            abort_unless(is_array($current) && $current['state'] === 'due'
+                && mb_strtolower((string) $current['topic']) ===
+                    mb_strtolower(trim((string) $input['delayed_topic']))
+                && hash_equals((string) $current['source_signature'],
+                    (string) ($input['delayed_source_signature'] ?? '')), 409,
+                '再確認の根拠が更新されました。学習画面から確認し直してください。');
+            $reviewTopic = (string) $current['topic'];
+            $distinctIds = $distinctReview->questionIds($request, $plan, $task,
+                $identity->resolve($request), $pack, $reviewTopic);
+            abort_unless(count($distinctIds) === 2, 409,
+                '後日の再確認に必要な未回答の問題が2問ありません。');
+            $isDelayed = true;
+        } elseif (filled($input['delayed_source_signature'] ?? null)) {
+            abort(422, '再確認する分野が指定されていません。');
         }
 
-        $policy = $distinctIds !== [] ? 'bank_topic_distinct_initial_v616'
-            : ($reviewTopic ? 'bank_topic_review_initial_v613' : 'bank_locked_v1');
+        $policy = $isDelayed ? 'bank_topic_delayed_distinct_initial_v617'
+            : ($distinctIds !== [] ? 'bank_topic_distinct_initial_v616'
+            : ($reviewTopic ? 'bank_topic_review_initial_v613' : 'bank_locked_v1'));
         $run = DB::transaction(function () use ($input, $pack, $userId, $token, $plan, $task, $queue, $candidates, $reviewTopic, $distinctIds, $policy) {
             $existing = LearningRun::where('start_request_id', $input['start_request_id'])
                 ->lockForUpdate()->first();
