@@ -1,0 +1,43 @@
+{
+  "baseline_main": "626a4ea6b19842089da91b107cc61da234858c7d",
+  "candidate": "cbc5cbb8562dea3185aba9f40c396e7372e9e18f",
+  "vite_without_build": {
+    "main_feature_access": {
+      "tests": 10,
+      "passed": 7,
+      "failed": 3
+    },
+    "candidate_publication_session": {
+      "tests": 29,
+      "passed": 26,
+      "failed": 3
+    },
+    "same_failure_ids": true,
+    "exception": "ViteManifestNotFoundException",
+    "classification": "EXISTING_TEST_PREPARATION_REQUIREMENT"
+  },
+  "vite_with_build_candidate": {
+    "tests": 29,
+    "passed": 29,
+    "assertions": 236
+  },
+  "learning_no_public_level": {
+    "main_effective_level": 4,
+    "main_v621": "passed",
+    "candidate_effective_level": 0,
+    "candidate_v621": "failed_waiting_for_workspace_navigation",
+    "classification": "CI_FIXTURE_MUST_EXPLICITLY_SELECT_STUDY_LEVEL"
+  },
+  "learning_explicit_level_1": {
+    "php_tests": 11,
+    "php_passed": 11,
+    "assertions": 127,
+    "remote_v611": "SUCCESS",
+    "remote_v613": "SUCCESS",
+    "remote_v621": "SUCCESS"
+  },
+  "local_browser_adapter": "system Chromium executable and external HTTP abort only; application responses and assertions retained",
+  "original_failed_log_body": "NOT_RETRIEVED_EGRESS_DENIED; API job failure-step metadata retrieved",
+  "production_fail_closed_weakened": false,
+  "real_production_verified": false
+}

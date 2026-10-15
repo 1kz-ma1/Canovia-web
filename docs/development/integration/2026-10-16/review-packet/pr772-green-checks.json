@@ -1,0 +1,98 @@
+{
+  "headRefOid": "a2a8febbdcfc9f820fa423be19cc048394b6a3e9",
+  "mergeStateStatus": "CLEAN",
+  "mergeable": "MERGEABLE",
+  "reviewDecision": "",
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:08:01Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821652726/job/116719387692",
+      "name": "development-prelaunch",
+      "startedAt": "2026-10-15T23:07:40Z",
+      "status": "COMPLETED",
+      "workflowName": "Development Prelaunch Preparation V1"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:08:06Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821652765/job/116719388235",
+      "name": "startup-policy",
+      "startedAt": "2026-10-15T23:07:41Z",
+      "status": "COMPLETED",
+      "workflowName": "Integration Migration Safety"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:08:05Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821653058/job/116719389236",
+      "name": "auth0-sealed-config",
+      "startedAt": "2026-10-15T23:07:41Z",
+      "status": "COMPLETED",
+      "workflowName": "MCP Auth0 Sealed Stage Wiring Preflight"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:09:38Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821652889/job/116719388787",
+      "name": "isolated-staging-boot",
+      "startedAt": "2026-10-15T23:07:40Z",
+      "status": "COMPLETED",
+      "workflowName": "MCP Isolated Staging Docker Smoke"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:07:54Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821653079/job/116719389082",
+      "name": "Platform release preflight offline tests",
+      "startedAt": "2026-10-15T23:07:40Z",
+      "status": "COMPLETED",
+      "workflowName": "Platform Release Preflight (Offline)"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:08:13Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821652919/job/116719388862",
+      "name": "migration-recovery",
+      "startedAt": "2026-10-15T23:07:40Z",
+      "status": "COMPLETED",
+      "workflowName": "Production Migration Recovery Validation"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:10:09Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821652727/job/116719388129",
+      "name": "workspace-resume",
+      "startedAt": "2026-10-15T23:07:41Z",
+      "status": "COMPLETED",
+      "workflowName": "V56.12 Workspace Resume Validation"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:08:35Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821652765/job/116719388187",
+      "name": "upgrade (8.0)",
+      "startedAt": "2026-10-15T23:07:40Z",
+      "status": "COMPLETED",
+      "workflowName": "Integration Migration Safety"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-15T23:08:34Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/1kz-ma1/Canovia-web/actions/runs/38821652765/job/116719388009",
+      "name": "upgrade (8.4)",
+      "startedAt": "2026-10-15T23:07:41Z",
+      "status": "COMPLETED",
+      "workflowName": "Integration Migration Safety"
+    }
+  ]
+}

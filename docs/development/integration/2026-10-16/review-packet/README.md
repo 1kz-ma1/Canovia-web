@@ -1,10 +1,10 @@
 # Integration review packet — HOLD / production NO-GO
 
-Prepared 2026-10-16 (Japan time). Authority: [master PR #769](https://github.com/1kz-ma1/Canovia-web/pull/769), latest applicable AGENTS and [development workflow](../../../../CANOVIA_DEVELOPMENT_WORKFLOW.md). This packet records completed code/local verification and the external prerequisites that still prevent PR creation, verified main integration and a formal release candidate. It is not owner GO.
+Prepared 2026-10-16 (Japan time). Authority: [master PR #769](https://github.com/1kz-ma1/Canovia-web/pull/769), latest applicable AGENTS and [development workflow](../../../../CANOVIA_DEVELOPMENT_WORKFLOW.md). This packet records completed verification and remaining production gates. It is not owner GO. See [current PR/CI integration status](current-integration-status.md) for the later GitHub results; the fixed local observations below retain their original SHAs.
 
 ## Fixed source and review units
 
-Main remains `626a4ea6b19842089da91b107cc61da234858c7d`; production remains `15abdc9de6f24b5250fb255c579d1aa55facaf1a`. Native main remains `fc0e0c498afe35eda494f63356f7a0bae156bdbb`. Git reads and feature-branch pushes succeeded; GitHub API requests returned Forbidden. These observations do not establish current Render Live, PR state, branch protection or CI results.
+Initial frozen main was `626a4ea6b19842089da91b107cc61da234858c7d`; production was `15abdc9de6f24b5250fb255c579d1aa55facaf1a`. Native main was `fc0e0c498afe35eda494f63356f7a0bae156bdbb`. Git reads and feature-branch pushes succeeded; GitHub API requests were initially Forbidden. These historical observations do not establish current Render Live or CI results.
 
 | Review unit / branch | Fixed code SHA | Change and validation |
 | --- | --- | --- |
@@ -13,7 +13,7 @@ Main remains `626a4ea6b19842089da91b107cc61da234858c7d`; production remains `15a
 | C — `fix/integration-startup-schema-fence` | `99ff945fc190bae41c65ed10ba041027fae3b3d2` | Read-only default startup fence, once-only explicitly pinned DDL, full 20-migration rehearsal and unconditional production workflow registration. 29 targeted PHP tests / 360 assertions (including malformed retry bounds) and 4 existing production workflow contract tests passed. |
 | D — `docs/integration-release-packet` | This packet's Git commit | Compact provenance, baseline comparison, recovery/operator gates and portable synthetic session/restore harnesses. No application behavior change. |
 
-**PR numbers and remote CI results are PENDING, not successful or merged.** The branches are pushed for review; API access is required to create the authorized PRs and inspect every required check before squash-merging into main. Do not push directly to main. Preserve PR #769 and Draft #513; no update/merge/close of #513 was performed.
+The owner subsequently created existing PRs **#770–#773**; they were not recreated. Later API access and verification are recorded in [current status](current-integration-status.md). Direct main pushes remain prohibited. Draft #513 was not updated, merged or closed.
 
 Local aggregate `1875c7ab5d599fff155ef2108e70078ca93c7cc4` combines A/B/C without changing main or production. It is the tested application source, **not a `release/*` candidate authorized for promotion**. [Source boundaries](source-boundaries.json), [aggregate delta](aggregate-delta-summary.json), and [integration-only path delta](integration-change-delta.tsv) distinguish this source from the original freeze. Its migration blobs are identical to frozen main. A formal release SHA must be selected only after actual reviewed main integration and exact-head CI. After the full run, C received a narrowly scoped malformed-retry-bound follow-up (`99ff945f`, two shell/test files only); its targeted 29-test run passed with 360 assertions. The full-suite figures remain explicitly tied to aggregate `1875c7ab`, rather than being relabelled as a later-head run.
 
@@ -56,7 +56,7 @@ The session probe checks old auth/session Git blobs, uses a synthetic key/passwo
 
 | Gate | Current decision / precise next evidence |
 | --- | --- |
-| GitHub operations | HOLD: allow `api.github.com` in this cloud environment (additive draft saved), then re-read #769/#488/open PRs, required checks and protection. Existing GitHub proxy authentication works; do not request another token merely because API egress is denied. Create/review A/B/C/D PRs, run CI and integrate only eligible heads. |
+| GitHub operations | API access restored; existing #769–#773 are reviewed in dependency order. See [exact heads, CI and merge status](current-integration-status.md). The branch-protection settings endpoint returns 403; normal PR mergeability/review/check gates are respected without admin override. Historical failed log bodies still require the Actions log delivery domains. |
 | Render read-only | UNKNOWN: user authorized reading **My Workspace**, but no Render tool is exposed in this session. Enable that connection or supply non-secret current Web/MCP/Static Live SHAs, watched branches, Auto Deploy and observation time. Verify workspace/service ownership; this permission is not deployment/settings approval. |
 | Actual Aiven source/DDL | HOLD: separate owner authorization is required even for the new candidate's SELECT-only audit. Obtain exact service identity, complete source/ledger and physical schema, principal-specific effective grants/trigger policy; old #513 or 19-migration evidence cannot attest this scope. |
 | Backup / recovery | UNKNOWN: actual backup existence/freshness, independent restore, data retention and operator RTO. Disposable logical restore above is only a rehearsal. No paid upgrade, fork or real restore was attempted. |
