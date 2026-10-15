@@ -1,0 +1,133 @@
+name: Learning Context Source Plan Lock Contention
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Http/Controllers/TaskController.php'
+      - 'app/Http/Controllers/StudyPracticeController.php'
+      - 'app/Services/LearningContextWatchPersistenceService.php'
+      - 'tests/Feature/LearningContextPlanLockContentionTest.php'
+      - 'docs/development/LEARNING_CONTEXT_SOURCE_LOCK_V05_2026_10_15.md'
+      - '.github/workflows/learning-context-plan-lock-contention.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  learning-plan-real-db-race:
+    name: 'Source writer and watch lock (${{ matrix.label }})'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {label: 'PostgreSQL 17', driver: 'pgsql', image: 'postgres:17-alpine', port: 5432, health: 'pg_isready -U canovia_ci -d canovia_learning_watch_lock_ci'}
+          - {label: 'MySQL 8.4', driver: 'mysql', image: 'mysql:8.4', port: 3306, health: 'mysqladmin ping --silent'}
+    services:
+      database:
+        image: ${{ matrix.image }}
+        env:
+          POSTGRES_DB: canovia_learning_watch_lock_ci
+          POSTGRES_USER: canovia_ci
+          POSTGRES_PASSWORD: ci-only-disposable-pass
+          MYSQL_ROOT_PASSWORD: ci-only-root-pass
+          MYSQL_DATABASE: canovia_learning_watch_lock_ci
+          MYSQL_USER: canovia_ci
+          MYSQL_PASSWORD: ci-only-disposable-pass
+        ports:
+          - '${{ matrix.port }}:${{ matrix.port }}'
+        options: >-
+          --health-cmd="${{ matrix.health }}"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: ${{ matrix.driver }}
+      DB_HOST: 127.0.0.1
+      DB_PORT: ${{ matrix.port }}
+      DB_DATABASE: canovia_learning_watch_lock_ci
+      DB_USERNAME: canovia_ci
+      DB_PASSWORD: ci-only-disposable-pass
+      DB_URL: ''
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      CANOVIA_LEARNING_LOCK_DISPOSABLE_CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl, pdo_mysql, pdo_pgsql, pdo_sqlite
+          coverage: none
+      - name: Confirm CI target is disposable loopback only
+        run: |
+          set -euo pipefail
+          test "$APP_ENV" = 'testing'
+          test "$CANOVIA_LEARNING_LOCK_DISPOSABLE_CI" = '1'
+          test "$DB_HOST" = '127.0.0.1'
+          test "$DB_DATABASE" = 'canovia_learning_watch_lock_ci'
+          case "$DB_CONNECTION:$DB_PORT" in
+            mysql:3306|pgsql:5432) ;;
+            *) echo 'Learning Plan-lock CI target mismatch' >&2; exit 1 ;;
+          esac
+      - name: Allow MySQL migration trigger creation in disposable DB
+        if: matrix.driver == 'mysql'
+        env:
+          MYSQL_PWD: ci-only-root-pass
+        run: |
+          mysql --protocol=TCP --host=127.0.0.1 --port=3306 \
+            --user=root --database=canovia_learning_watch_lock_ci \
+            -e 'SET GLOBAL log_bin_trust_function_creators = 1'
+      - name: Composer dependencies, locked, no app hooks
+        run: composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+      - name: PHP syntax checks
+        run: |
+          php -l app/Http/Controllers/TaskController.php
+          php -l app/Http/Controllers/StudyPracticeController.php
+          php -l tests/Feature/LearningContextPlanLockContentionTest.php
+      - name: Migrate ONLY the disposable CI database
+        run: |
+          php artisan migrate --force --no-interaction
+          php artisan migrate --force --no-interaction
+      - name: Two independent physical DB connections, Plan-first contention
+        run: php artisan test tests/Feature/LearningContextPlanLockContentionTest.php --fail-on-skipped --stop-on-failure --colors=never
+
+  learning-legacy-sqlite:
+    name: Learning Study Practice and Watch regressions (SQLite)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl, pdo_sqlite
+          coverage: none
+      - run: composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+      - name: Old Study flow + new private context regression
+        run: |
+          php artisan test tests/Feature/StudyPracticeLearningLoopV393Test.php \
+            tests/Feature/StudyTaskProgressionV4110Test.php \
+            tests/Feature/LearningContextSourceCaptureTest.php \
+            tests/Feature/LearningContextWatchPersistenceTest.php \
+            tests/Feature/LearningContextWatchSettingsTest.php \
+            tests/Unit/LearningContextChangeDetectionServiceTest.php \
+            --colors=never
