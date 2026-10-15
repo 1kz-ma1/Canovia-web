@@ -84,6 +84,23 @@ try {
     const planPage = await page.goto(`${base}/plans/${planId}`);
     assert.equal(planPage.status(), 200);
     const firstTaskLink = page.locator('[data-plan-optional-task-planning]');
+    if (mobile && !await firstTaskLink.isVisible()) {
+        const visibility = await firstTaskLink.evaluate((node) => {
+            const chain = [];
+            for (let el = node, i = 0; el && i < 10; el = el.parentElement, i++) {
+                const style = getComputedStyle(el);
+                chain.push({
+                    tag: el.tagName,
+                    classes: String(el.className).slice(0, 160),
+                    display: style.display,
+                    visibility: style.visibility,
+                    rects: el.getClientRects().length,
+                });
+            }
+            return { width: document.documentElement.clientWidth, chain };
+        });
+        process.stdout.write(`MOBILE WEBKIT VISIBILITY DIAGNOSTIC ${JSON.stringify(visibility)}\n`);
+    }
     await firstTaskLink.waitFor({ state: 'visible' });
     await firstTaskLink.click();
     const importer = page.locator('form[data-ai-plan-generation-import]');
