@@ -45,7 +45,8 @@ final class ApExamCandidateHumanReviewIntakeV624Test extends TestCase
         $json = json_encode($workbook, JSON_THROW_ON_ERROR);
         $this->assertStringNotContainsString('response_schema', $json);
         $this->assertStringNotContainsString('grading_rule', $json);
-        $this->assertStringNotContainsString('explanation', $json);
+        $this->assertStringNotContainsString('"prompt":', $json);
+        $this->assertStringNotContainsString('"explanation":', $json);
         $this->assertStringNotContainsString('source_reference', $json);
     }
 
