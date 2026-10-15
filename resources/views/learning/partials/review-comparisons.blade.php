@@ -32,12 +32,46 @@
                             · 同一問題の比較 {{ $comparison['comparable_count'] }}件
                         </p>
                     </div>
+                    <div class="mt-3 rounded-lg border border-slate-700 p-3 text-xs leading-6 text-slate-300"
+                        data-learning-review-source-spacing
+                        data-learning-review-spacing="{{ $comparison['source_spacing']['spacing'] }}">
+                        <p data-learning-review-source-counts>
+                            別問題での再確認 {{ $comparison['source_spacing']['different_count'] }}問
+                            · 同じ問題の解き直し {{ $comparison['source_spacing']['same_count'] }}問
+                            · 区別できない回答 {{ $comparison['source_spacing']['unknown_count'] }}問
+                        </p>
+                        @if($comparison['source_spacing']['spacing'] === 'spaced_24h')
+                            <p class="mt-1 text-emerald-300" data-learning-review-spaced>
+                                同じ分野の直前の記録から24時間以上経過（約{{ $comparison['source_spacing']['hours_since_previous'] }}時間）。
+                                時間を空けた回答記録であり、記憶の定着は未判定です。
+                            </p>
+                        @elseif($comparison['source_spacing']['spacing'] === 'within_24h')
+                            <p class="mt-1" data-learning-review-within-day>
+                                同じ分野の直前の記録から24時間未満（約{{ $comparison['source_spacing']['hours_since_previous'] }}時間）。
+                                時間を空けた復習とは区別します。
+                            </p>
+                        @else
+                            <p class="mt-1" data-learning-review-spacing-unknown>
+                                比較できる前回の回答日時・分野記録が不足し、復習間隔は判定できません。
+                            </p>
+                        @endif
+                    </div>
                     <ol class="mt-3 space-y-2">
                         @foreach($comparison['answers'] as $answer)
                             <li class="rounded-lg border border-slate-700/80 p-3" data-learning-review-comparison-answer
                                 data-learning-review-question-id="{{ $answer['question_id'] }}">
                                 <p class="text-xs text-slate-400">復習Run 第{{ $answer['ordinal'] }}問 · 出題元の問題ID {{ $answer['question_id'] }}</p>
                                 <p class="mt-1 whitespace-pre-line break-words text-sm font-semibold text-slate-100">{{ $answer['prompt'] }}</p>
+                                <p class="mt-1 text-xs text-slate-300" data-learning-review-source-relation
+                                    data-learning-review-source-type="{{ $answer['source_relation'] }}">
+                                    @if($answer['source_relation'] === 'same_source')
+                                        同じ問題の解き直し（記録範囲内に先行する出題あり）
+                                    @elseif($answer['source_relation'] === 'different_source')
+                                        別問題での再確認（同じ分野で先行する別の問題あり）
+                                    @else
+                                        出題の違いは、この記録範囲では判定できません
+                                    @endif
+                                </p>
                                 <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
                                     <span class="text-slate-300" data-learning-review-comparison-before>
                                         前回：{{ $answer['before'] === null ? '比較できる過去回答なし' : ($answer['before'] ? '正解' : '不正解') }}
@@ -70,7 +104,7 @@
                     @endif
                     <p class="mt-2 text-xs text-slate-400">
                         同一問題での「不正解→正解」{{ $comparison['wrong_to_correct_count'] }}件。
-                        新しい問題への応用や別日の再現性は、この比較だけでは確認できません。
+                        別問題や24時間以上の間隔が記録されても、応用力や長期的な定着はこの比較だけでは確認できません。
                     </p>
                 </article>
             @endforeach

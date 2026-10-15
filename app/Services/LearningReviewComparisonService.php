@@ -16,6 +16,10 @@ final class LearningReviewComparisonService
     private const FOCUSED_POLICY = 'bank_topic_review_initial_v613';
     private const RUN_LIMIT = 3;
 
+    public function __construct(
+        private readonly LearningReviewSourceSpacingService $sourceSpacing,
+    ) {}
+
     /**
      * @param Collection<int,LearningAnswerEvent> $events Newest-first, actor-scoped (max 60).
      * @param Collection<int,array<string,mixed>> $reviewTopics Existing tentative candidates.
@@ -106,6 +110,13 @@ final class LearningReviewComparisonService
                     }
                 }
             }
+            // These are exposure/timing observations only; do not turn a
+            // different question or 24h interval into an ability estimate.
+            $sourceSpacing = $this->sourceSpacing->inspect($events, $runEvents, (int) $runId, $topic);
+            foreach ($rows as &$row) {
+                $row['source_relation'] = $sourceSpacing['by_ordinal'][$row['ordinal']] ?? 'unknown';
+            }
+            unset($row);
             $run = $runEvents->first()->item->run;
             $result[] = [
                 'run_id' => (int) $runId,
@@ -114,6 +125,14 @@ final class LearningReviewComparisonService
                 'topic' => $topic,
                 'topic_state' => $state,
                 'answers' => $rows,
+                'source_spacing' => [
+                    'same_count' => $sourceSpacing['same_count'],
+                    'different_count' => $sourceSpacing['different_count'],
+                    'unknown_count' => $sourceSpacing['unknown_count'],
+                    'spacing' => $sourceSpacing['spacing'],
+                    'hours_since_previous' => $sourceSpacing['hours_since_previous'],
+                    'previous_answer_at' => $sourceSpacing['previous_answer_at'],
+                ],
                 'answered_initial_count' => count($rows),
                 'comparable_count' => count(array_filter($rows, fn (array $row) =>
                     $row['prior_within_window'] && ! $row['excluded'])),
