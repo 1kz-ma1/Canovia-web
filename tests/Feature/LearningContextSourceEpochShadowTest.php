@@ -221,6 +221,40 @@ final class LearningContextSourceEpochShadowTest extends TestCase
         $this->assertFalse(Task::query()->whereKey($task->id)->exists());
     }
 
+    public function test_native_practice_applies_once_and_epoch_does_not_advance_on_retry(): void
+    {
+        [$owner, $plan, $task] = $this->fixture();
+        $shadow = $this->enabled();
+        $this->withoutVite();
+        $this->actingAs($owner);
+        $attempt = StudyPracticeAttempt::query()->create([
+            'user_id' => $owner->id, 'plan_id' => $plan->id,
+            'task_id' => $task->id,
+            'request_hash' => hash('sha256', 'epoch-native-apply-'.$plan->id),
+            'exercise_title' => 'SYNTHETIC_DNS_PRACTICE',
+            'questions' => [['id' => 'q1']],
+            'answers' => [['answer' => 'A']],
+            'assessment' => ['score_percent' => 80],
+            'score_percent' => 80,
+            'weaknesses' => ['DNS'],
+            'recommended_task_progress_percent' => 55,
+            'evidence_summary' => 'Synthetic result only',
+            'next_action' => 'Review weakness',
+        ]);
+        $payload = ['attempt_id' => $attempt->id, 'request_hash' => $attempt->request_hash];
+        $url = route('plans.tasks.study_practice.apply', [$plan, $task]);
+        $this->post($url, $payload)->assertRedirect();
+        $this->assertNotNull($attempt->fresh()->applied_at);
+        $this->assertSame([
+            'epoch' => 1,
+            'last_mutation_kind' => 'practice_applied',
+            'authoritative' => false,
+        ], $shadow->inspect($plan->id));
+
+        $this->post($url, $payload)->assertRedirect();
+        $this->assertSame(1, $shadow->inspect($plan->id)['epoch']);
+    }
+
     public function test_no_epoch_for_unrelated_development_or_collaborative_plan_even_if_shadow_enabled(): void
     {
         [, $plan] = $this->fixture();
