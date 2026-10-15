@@ -18,7 +18,8 @@
     ])->filter(fn ($summary) => is_array($summary)
         && ($summary['plan'] ?? null) instanceof \App\Models\Plan)->values();
     $hasPrimaryAction = $primaryPresentation || ($guidance && $guidancePlan && $guidanceTask);
-    $showPrimarySection = $hasPrimaryAction || collect($firstUseModeChoices ?? [])->isEmpty();
+    $showPrimarySection = ! ($isPlanless ?? false)
+        && ($hasPrimaryAction || collect($firstUseModeChoices ?? [])->isEmpty());
     $showInbox = (int) ($pendingInboxCount ?? 0) > 0;
     $showChanges = collect($importantSignals ?? [])->isNotEmpty();
 @endphp
@@ -52,6 +53,65 @@
         </nav>
         @endif
     </section>
+
+    @if ($isPlanless ?? false)
+        <section class="page-card border-violet-300/20 bg-gradient-to-br from-violet-300/[0.055] via-slate-950/30 to-slate-950/20 p-5 sm:p-6" data-overview-planless-start aria-labelledby="overview-planless-title">
+            <div class="max-w-3xl">
+                <p class="text-[10px] font-black uppercase tracking-[0.16em] text-violet-300">START HERE</p>
+                <h2 id="overview-planless-title" class="mt-2 text-xl font-black text-slate-50 sm:text-2xl">
+                    Planがなくても、Canoviaを試せます
+                </h2>
+                <p class="mt-3 text-sm leading-7 text-slate-300">
+                    Canoviaは、やりたいことを整理し、次にやることを決め、実行と振り返りを残していく場所です。
+                    最初から目標や計画を決める必要はありません。
+                </p>
+            </div>
+
+            <ol class="mt-5 grid gap-3 sm:grid-cols-3" aria-label="Canoviaの基本的な使い方">
+                <li class="rounded-xl border border-white/10 bg-slate-950/30 p-3">
+                    <span class="text-[10px] font-black text-violet-300">01 · 整理する</span>
+                    <p class="mt-1 text-xs leading-5 text-slate-300">今の関心や困りごとを言葉にする</p>
+                </li>
+                <li class="rounded-xl border border-white/10 bg-slate-950/30 p-3">
+                    <span class="text-[10px] font-black text-violet-300">02 · 決める</span>
+                    <p class="mt-1 text-xs leading-5 text-slate-300">次にできる行動を一つ選ぶ</p>
+                </li>
+                <li class="rounded-xl border border-white/10 bg-slate-950/30 p-3">
+                    <span class="text-[10px] font-black text-violet-300">03 · 振り返る</span>
+                    <p class="mt-1 text-xs leading-5 text-slate-300">実際にやったことを記録して見直す</p>
+                </li>
+            </ol>
+
+            <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="次の一歩を選ぶ">
+                <a
+                    href="{{ route('plans.create') }}"
+                    class="btn-primary min-h-12 w-full justify-center px-4 py-3 text-sm"
+                    data-overview-start-conversation
+                >
+                    💬 まずCanoviaに相談する
+                </a>
+                @if ($canOfferDiagnosis ?? false)
+                    <a
+                        href="{{ route('personalization.show') }}"
+                        class="btn-secondary min-h-12 w-full justify-center px-4 py-3 text-sm"
+                        data-overview-start-diagnosis
+                    >
+                        📋 自分に合う使い方を診断する
+                    </a>
+                @endif
+                <a
+                    href="{{ route('plans.create.manual') }}"
+                    class="min-h-12 w-full rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 text-center text-sm font-bold text-slate-100 transition hover:border-slate-500 hover:bg-slate-800/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300"
+                    data-overview-start-manual-plan
+                >
+                    自分でPlanを作る →
+                </a>
+            </div>
+            <p class="mt-3 text-xs leading-5 text-slate-500">
+                相談・診断・Plan作成は任意です。下のWorkspaceも見ながら、始め方を選べます。
+            </p>
+        </section>
+    @endif
 
     @if (($firstUseModeChoices ?? collect())->isNotEmpty())
         <section class="page-card border-violet-300/15 bg-violet-300/[0.025] p-5 sm:p-6" data-overview-first-use-workspaces>

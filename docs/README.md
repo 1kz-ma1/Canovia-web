@@ -2,6 +2,7 @@
 
 ## Pre-Launch IA-2 — planless onboarding slice (2026-10-15)
 
+- [IA-2c Planless Overview re-entry](development/PRELAUNCH_IA2C_PLANLESS_OVERVIEW_REENTRY_2026_10_15.md): explain first value without Plan, offer existing Companion, L1-gated diagnosis and optional manual Plan, retain mode choices; guard generic existing Plans from mistaken first-use onboarding.
 - [IA-2b Welcome three-option choice](development/PRELAUNCH_IA2B_FIRST_RUN_ENTRY_CHOICES_2026_10_15.md): Diagnose, existing First Companion, or planless Overview. Legacy POST and L0 gate retained; no new release/AI access or production deployment.
 - [IA-2a Personalization Skip → zero-Plan Overview](development/PRELAUNCH_IA2A_PLANLESS_SKIP_2026_10_15.md): fix the misleading Skip-to-Plan-creation funnel; validate authenticated and guest zero-Plan Overview, opt-in Plan creation and preserved release gate. **Development main only, not a public launch or release approval.**
 
