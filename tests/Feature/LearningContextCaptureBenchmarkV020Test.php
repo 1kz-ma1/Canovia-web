@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\LearningContextCaptureDiagnostics;
 use App\Services\LearningContextSourceCaptureService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Tests\TestCase;
@@ -32,6 +33,12 @@ final class LearningContextCaptureBenchmarkV020Test extends TestCase
     {
         parent::setUp();
         $this->assertDisposableTarget();
+        if (DB::getDriverName() === 'sqlite') {
+            // This connection is guaranteed to be :memory: by the guard;
+            // unlike RefreshDatabase this does not wrap benchmark reads in
+            // a per-test transaction. Real engines are migrated by the CI job.
+            Artisan::call('migrate', ['--force' => true, '--no-interaction' => true]);
+        }
         config([
             'intelligence.learning_context_watch.capture_diagnostics_enabled' => false,
             'intelligence.learning_context_watch.epoch_shadow_enabled' => false,
