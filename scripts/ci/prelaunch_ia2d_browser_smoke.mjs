@@ -103,7 +103,7 @@ try {
     await start.locator('textarea[name="desired_state"]')
       .fill('IA2d アプリの体験を改善し、小さな実装を試す');
     await start.getByRole('button', {name: 'Canoviaと始める'}).click();
-    await page.waitForURL(url => /^\\/goal-discovery\\/\\d+$/.test(url.pathname));
+    await page.waitForURL(url => /^\/goal-discovery\/\d+$/.test(url.pathname));
     await page.locator('[data-goal-discovery-conversation]').waitFor();
     log('conversation -> user-authored desired state -> actual Goal Context conversation');
 
