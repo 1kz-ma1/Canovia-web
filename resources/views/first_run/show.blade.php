@@ -32,8 +32,8 @@
                     Canoviaは、話しながら<br class="hidden sm:block">次の一歩を作るアプリです
                 </h1>
                 <p class="mt-3 max-w-xl text-sm leading-7 text-slate-300 sm:text-base">
-                    目標がまだ曖昧でも大丈夫。最初に今進めたいことと現在地を少し教えると、Canoviaが最初のPlanの型と次の一歩を用意します。
-                    その後の会話・実行・Evidence・Inboxも同じContextとして引き継ぎます。
+                    目標がまだ曖昧でも大丈夫。診断する、Canoviaに相談する、まず見てみる。
+                    自分に合う始め方を選べます。診断もPlan作成も必須ではありません。
                 </p>
 
                 <div class="onboarding-intro-points mt-6">
@@ -62,7 +62,39 @@
 
                 <form method="POST" action="{{ route('first_run.start') }}" class="mt-7" data-first-run-start>
                     @csrf
-                    <button type="submit" class="btn-primary w-full justify-center py-4 text-base">Canoviaと始める</button>
+                    @if ($canChooseEntry)
+                        <fieldset class="space-y-3" aria-describedby="first-run-choice-description">
+                            <legend class="text-base font-black text-slate-50">Canoviaと始める方法を選ぶ</legend>
+                            <p id="first-run-choice-description" class="mt-2 text-xs leading-6 text-slate-400">
+                                選んだ入口はあとから変更できます。最初にPlanを作る必要はありません。
+                            </p>
+                            <button
+                                type="submit" name="entry" value="diagnosis"
+                                class="btn-primary min-h-14 w-full justify-center px-4 py-3 text-sm sm:text-base"
+                                data-first-run-choice="diagnosis"
+                            >
+                                📋 自分に合う使い方を診断する
+                            </button>
+                            <button
+                                type="submit" name="entry" value="conversation"
+                                class="btn-secondary min-h-14 w-full justify-center px-4 py-3 text-sm sm:text-base"
+                                data-first-run-choice="conversation"
+                            >
+                                💬 Canoviaに相談する
+                            </button>
+                            <button
+                                type="submit" name="entry" value="browse"
+                                class="min-h-14 w-full rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 text-sm font-bold text-slate-100 transition hover:border-slate-500 hover:bg-slate-800/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300 sm:text-base"
+                                data-first-run-choice="browse"
+                            >
+                                👀 まず見てみる・使ってみる
+                            </button>
+                        </fieldset>
+                    @else
+                        <button type="submit" class="btn-primary min-h-12 w-full justify-center py-4 text-base">
+                            Canoviaと始める
+                        </button>
+                    @endif
                 </form>
 
                 @guest
