@@ -9,13 +9,14 @@ canovia_prepare_startup_schema() {
         migration_attempt=1
         migration_max_attempts="${CANOVIA_MIGRATION_MAX_ATTEMPTS:-5}"
         migration_retry_delay="${CANOVIA_MIGRATION_RETRY_DELAY_SECONDS:-8}"
-        case "$migration_max_attempts:$migration_retry_delay" in
-            *[!0-9:]*|:*|*:) echo 'Invalid isolated migration retry bounds' >&2; return 1 ;;
+        case "$migration_max_attempts" in
+            [1-9]|10) ;;
+            *) echo 'Invalid isolated migration retry bounds' >&2; return 1 ;;
         esac
-        if [ "$migration_max_attempts" -lt 1 ] || [ "$migration_max_attempts" -gt 10 ] \
-            || [ "$migration_retry_delay" -gt 60 ]; then
-            echo 'Invalid isolated migration retry bounds' >&2; return 1
-        fi
+        case "$migration_retry_delay" in
+            [0-9]|[1-5][0-9]|60) ;;
+            *) echo 'Invalid isolated migration retry bounds' >&2; return 1 ;;
+        esac
         while true; do
             if php artisan migrate --force --no-interaction --quiet >/dev/null 2>&1; then
                 echo 'MCP isolated staging migrations: completed (details suppressed)'
