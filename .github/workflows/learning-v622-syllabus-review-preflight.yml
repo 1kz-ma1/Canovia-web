@@ -1,0 +1,61 @@
+name: Learning V6.22 Syllabus Review Preflight
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/learning-v622-syllabus-review-preflight.yml'
+      - 'app/Console/Commands/PreflightStudyOfficialSyllabusReviewSubmission.php'
+      - 'app/Services/StudyOfficialSyllabusReviewSubmissionService.php'
+      - 'app/Services/StudyOfficialSyllabusReviewPacketService.php'
+      - 'app/Services/StudyOfficialSyllabusBridgeService.php'
+      - 'config/study_official_syllabus.php'
+      - 'tests/Feature/StudyOfficialSyllabusReviewSubmissionV622Test.php'
+      - 'docs/development/LEARNING_OFFICIAL_SYLLABUS_SUBMISSION_PREFLIGHT_V6_22_2026_10_15.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  review-submission-v622:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+      - name: Install locked PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Set up disposable offline Laravel env
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          echo "APP_ENV=testing" >> .env
+          echo "DB_CONNECTION=sqlite" >> .env
+          echo "DB_DATABASE=:memory:" >> .env
+          echo "CACHE_STORE=array" >> .env
+          echo "SESSION_DRIVER=array" >> .env
+          echo "NATIVE_AI_DRIVER=disabled" >> .env
+          php artisan key:generate --force --no-interaction
+          php -l app/Services/StudyOfficialSyllabusReviewSubmissionService.php
+          php -l app/Console/Commands/PreflightStudyOfficialSyllabusReviewSubmission.php
+          php -l tests/Feature/StudyOfficialSyllabusReviewSubmissionV622Test.php
+      - name: Assert V6.22 and regression suite
+        run: |
+          APP_ENV=testing DB_CONNECTION=sqlite DB_DATABASE=:memory: CACHE_STORE=array \
+          php artisan test \
+            tests/Feature/StudyOfficialSyllabusReviewSubmissionV622Test.php \
+            tests/Feature/StudyOfficialSyllabusReviewPacketV621Test.php \
+            tests/Feature/StudyOfficialSyllabusBridgeV620Test.php \
+            tests/Feature/StudyLearningBankTopicCoverageV619Test.php
+      - name: Bound proof
+        run: |
+          echo "Confirmed only: synthetic structural AP review input and fresh Question snapshot validation."
+          echo "NOT confirmed: human identities or signatures, official PDF transcription, reuse rights, review signoff, official mapping coverage, release, Render, Aiven or device."
