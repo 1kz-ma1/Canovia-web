@@ -4,6 +4,8 @@
 > Updated: 2026-10-07  
 > Scope: Early Access staged release, admin preview, beta rollout
 
+Integration amendment candidate: [2026-10-16 publication boundary](development/INTEGRATION_EXPOSURE_BOUNDARY_2026_10_16.md). Missing/invalid configuration must fail closed; hosted L4 is administrator-session-only. The existing L4 behavior described by historical foundation evidence is not a production default approval.
+
 V58.20でFoundationを実装済み:
 
 - `ReleaseLevel` / `ReleaseLevelService`
