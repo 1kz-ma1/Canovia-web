@@ -8,7 +8,6 @@ on:
       - 'scripts/ci/prelaunch_ia2e_first_value_browser_smoke.mjs'
       - 'resources/views/plans/show.blade.php'
       - 'resources/css/app.css'
-      - 'resources/js/app.js'
       - 'scripts/ci/prelaunch_ia2e_verify_first_value.php'
       - 'docs/development/PRELAUNCH_IA2E_FIRST_VALUE_BROWSER_2026_10_15.md'
       - 'app/Services/PlanDashboardWorkspaceService.php'
