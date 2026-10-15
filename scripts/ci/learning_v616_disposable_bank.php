@@ -48,9 +48,9 @@ if ($argv[1] === '--verify') {
         'task_id' => (int) $task->id,
         'run_id' => (int) $run->id,
         'policy' => $run->queue_policy_version,
-        'source_question_ids' => $items->pluck('question_id')->map('intval')->all(),
+        'source_question_ids' => $items->pluck('question_id')->map(fn ($id) => (int) $id)->all(),
         'expected_source_ids' => $pack->questions()->orderBy('sort_order')
-            ->pluck('id')->map('intval')->all(),
+            ->pluck('id')->map(fn ($id) => (int) $id)->all(),
         'answer_count' => $items->filter(fn ($i) => $i->answer !== null)->count(),
         'correct_count' => $items->filter(fn ($i) => (bool) $i->answer?->was_correct)->count(),
         'task_progress' => (int) $task->progress_percent,
