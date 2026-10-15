@@ -208,7 +208,7 @@ final class StudyLearningPlanPriorityV618Test extends TestCase
         $this->assertSame([], $this->ranked($user, $plan)['items']);
         $this->assertSame([], $this->ranked($user, $plan, false)['items']);
         $this->assertSame([], $this->ranked($other, $plan, false)['items']);
-        $this->assertFalse($this->ranked($user, $plan)['has_history']);
+        $this->assertTrue($this->ranked($user, $plan)['has_history']); // closed Task has recorded answers, but no eligible candidate
         $this->assertSame(0, $this->ranked($user, $plan)['inspected']);
         $this->assertDatabaseCount('task_evidences', 0);
     }
