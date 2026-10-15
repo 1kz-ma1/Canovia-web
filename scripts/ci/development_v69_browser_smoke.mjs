@@ -32,7 +32,7 @@ try {
     assert.equal(initial.status(), 200, 'Initial Guest page must be accessible');
     if (new URL(page.url()).pathname === '/welcome') {
         await page.locator('form[data-first-run-start]')
-            .getByRole('button', { name: 'Canoviaと始める' }).click();
+            .locator('button[type="submit"]').first().click();
         step('Entered through actual first-run consent/intro form');
         await page.goto(`${base}/plans/create/manual`, { waitUntil: 'domcontentloaded' });
     }
