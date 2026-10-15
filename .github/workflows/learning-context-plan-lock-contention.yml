@@ -30,6 +30,10 @@ on:
       - 'tests/Feature/LearningContextPlanLockContentionTest.php'
       - 'tests/Feature/LearningContextSourceEpochShadowTest.php'
       - 'tests/Feature/LearningContextSourceAuthorityV018Test.php'
+      - 'app/Services/LearningContextSourceCaptureService.php'
+      - 'app/Services/LearningContextCaptureDiagnostics.php'
+      - 'tests/Feature/LearningContextCaptureDiagnosticsV019Test.php'
+      - 'docs/development/LEARNING_CONTEXT_CAPTURE_DIAGNOSTICS_V019_2026_10_15.md'
       - 'docs/development/decisions/2026-10-15_LEARNING_CONTEXT_SOURCE_AUTHORITY_V018.md'
       - 'tests/Feature/LearningContextPlanReviewEpochV011Test.php'
       - 'tests/Feature/LearningContextOwnerPlanEditV012Test.php'
@@ -149,6 +153,9 @@ jobs:
           php -l app/Intelligence/Study/StudyActionTaskProjector.php
           php -l app/Services/CompanionMutationApplyService.php
           php -l tests/Feature/LearningContextPlanLockContentionTest.php
+          php -l app/Services/LearningContextCaptureDiagnostics.php
+          php -l app/Services/LearningContextSourceCaptureService.php
+          php -l tests/Feature/LearningContextCaptureDiagnosticsV019Test.php
           php -l app/Services/LearningContextSourceEpochService.php
           php -l database/migrations/2026_10_15_120000_create_learning_context_source_epochs_table.php
       - name: Migrate ONLY the disposable CI database
@@ -213,6 +220,7 @@ jobs:
             tests/Feature/LearningContextWatchSettingsTest.php \
             tests/Feature/LearningContextSourceEpochShadowTest.php \
             tests/Feature/LearningContextSourceAuthorityV018Test.php \
+            tests/Feature/LearningContextCaptureDiagnosticsV019Test.php \
             tests/Feature/LearningContextPlanReviewEpochV011Test.php \
             tests/Feature/LearningContextOwnerPlanEditV012Test.php \
             tests/Feature/LearningContextEligibilityTransitionsV013Test.php \

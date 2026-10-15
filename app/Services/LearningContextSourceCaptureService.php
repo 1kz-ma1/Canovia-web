@@ -32,6 +32,7 @@ final class LearningContextSourceCaptureService
 
     public function __construct(
         private readonly PlanCategoryProfileService $profiles,
+        private readonly LearningContextCaptureDiagnostics $diagnostics,
     ) {}
 
     /** @return array<string,mixed>|null */
@@ -40,8 +41,15 @@ final class LearningContextSourceCaptureService
         if ($actor->id === null || $planId < 1) {
             return null;
         }
+        // Local/testing-only aggregate diagnostics cannot change the returned
+        // source revision, authorization or fail-closed behavior.
+        $measuring = $this->diagnostics->enabled();
+        $startNs = $measuring ? hrtime(true) : 0;
+        $outcome = 'denied';
+        $taskRowsObserved = null;
+        $practiceRowsObserved = null;
         try {
-            return DB::transaction(function () use ($actor, $planId): ?array {
+            $snapshot = DB::transaction(function () use ($actor, $planId, &$outcome, &$taskRowsObserved, &$practiceRowsObserved): ?array {
                 // Lock the owner Plan for this projection, but do not claim
                 // this serializes independent writers that ignore that lock.
                 $plan = Plan::query()->whereKey($planId)->lockForUpdate()->first();
@@ -55,10 +63,13 @@ final class LearningContextSourceCaptureService
                     return null;
                 }
 
+                $outcome = 'unavailable';
                 $tasksQuery = Task::query()->where('plan_id', $plan->id)
                     ->whereIn('status', ['doing', 'todo', 'paused']);
                 $taskCount = (clone $tasksQuery)->count();
+                $taskRowsObserved = $taskCount;
                 if ($taskCount > self::MAX_TASK_SOURCE_ROWS) {
+                    $outcome = 'task_cap';
                     return null; // no partial task checksum
                 }
                 $taskRows = $tasksQuery->orderBy('id')
@@ -100,7 +111,9 @@ final class LearningContextSourceCaptureService
                     ->where('status', McpStudyResultProposal::APPROVED)
                     ->whereNotNull('decided_at');
                 $approvedCount = (clone $approvedQ)->count();
-                if ($nativeCount + $approvedCount > self::MAX_PRACTICE_SOURCE_ROWS) {
+                $practiceRowsObserved = $nativeCount + $approvedCount;
+                if ($practiceRowsObserved > self::MAX_PRACTICE_SOURCE_ROWS) {
+                    $outcome = 'practice_cap';
                     return null; // fail closed rather than miss an old correction
                 }
                 $native = $nativeQ->orderByDesc('applied_at')->orderByDesc('id')
@@ -255,10 +268,27 @@ final class LearningContextSourceCaptureService
                     ],
                 ];
             }, 3);
+            if ($snapshot !== null) {
+                $outcome = 'captured';
+            }
+            return $snapshot;
         } catch (Throwable) {
             // The conservative response to missing/corrupt source rows or a
             // read failure is "unavailable", never a partially stale capture.
+            $outcome = 'error';
             return null;
+        } finally {
+            if ($measuring) {
+                try {
+                    $this->diagnostics->record(
+                        $outcome, max(0, hrtime(true) - $startNs),
+                        $taskRowsObserved, $practiceRowsObserved,
+                    );
+                } catch (Throwable) {
+                    // Instrumentation must never affect source authorization
+                    // or hide an actual failure inside the capture path.
+                }
+            }
         }
     }
 
