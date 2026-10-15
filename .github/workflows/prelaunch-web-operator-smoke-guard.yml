@@ -1,0 +1,47 @@
+name: Pre-Launch Owner-Gated Web Smoke — Offline Safety Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/prelaunch-web-operator-smoke-guard.yml'
+      - 'scripts/ops/prelaunch_web_live_smoke.mjs'
+      - 'tests/js/prelaunch-web-operator-live-smoke.test.mjs'
+      - 'docs/development/PRELAUNCH_WEB_WAKE_PASSIVE_EVIDENCE_2026_10_15.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-guard-offline:
+    name: Web-wake preflight guards (NO live Web HTTP)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate operator script syntax, attestation guards and pure response classifiers
+        run: |
+          set -euo pipefail
+          node --check scripts/ops/prelaunch_web_live_smoke.mjs
+          node --test tests/js/prelaunch-web-operator-live-smoke.test.mjs
+      - name: Assert even explicitly armed CLI is blocked inside CI without making a network request
+        run: |
+          set -euo pipefail
+          output="$(CANOVIA_WEB_WAKE_OWNER_APPROVED=YES CANOVIA_WEB_LIVE_SHA_OPERATOR_VERIFIED=YES CANOVIA_WEB_DB_LEDGER_OPERATOR_VERIFIED=YES CANOVIA_WEB_RESTORE_RISK_OWNER_ACCEPTED=YES node scripts/ops/prelaunch_web_live_smoke.mjs --live-operator-approved)" && {
+            echo 'Danger: live Web smoke unexpectedly allowed inside CI' >&2
+            exit 1
+          }
+          echo "$output" | node -e '
+            let s=""; process.stdin.on("data", d=>s+=d).on("end",()=> {
+              const x=JSON.parse(s);
+              if(x.code!=="BLOCK_CI_FORBIDDEN" || x.releaseAuthorized!==false) process.exit(1);
+              console.log("ci_web_wake_guard: pass");
+            });'
