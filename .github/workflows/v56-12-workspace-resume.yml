@@ -33,6 +33,8 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run build
+      - name: Canovia Future public roadmap and existing Support regression
+        run: php artisan test tests/Feature/CanoviaFutureV407Test.php
       - name: Learning one-question pager client regression
         run: node --test tests/js/study-practice-one-question.test.mjs
       - name: Learning session draft autosave client regression
