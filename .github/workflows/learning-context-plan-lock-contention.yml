@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'tests/Support/LearningContextSqlMutationProbe.php'
+      - 'tests/Feature/LearningContextSqlMutationProbeV014Test.php'
+      - 'docs/development/LEARNING_CONTEXT_DB_MUTATION_PROBE_V014_2026_10_15.md'
       - 'app/Http/Controllers/TaskController.php'
       - 'app/Http/Controllers/PlanReviewAssistantController.php'
       - 'app/Http/Controllers/PlanController.php'
@@ -121,6 +124,8 @@ jobs:
         run: composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
       - name: PHP syntax checks
         run: |
+          php -l tests/Support/LearningContextSqlMutationProbe.php
+          php -l tests/Feature/LearningContextSqlMutationProbeV014Test.php
           php -l app/Http/Controllers/TaskController.php
           php -l app/Http/Controllers/PlanReviewAssistantController.php
           php -l app/Http/Controllers/PlanController.php
@@ -144,6 +149,23 @@ jobs:
           php artisan migrate --force --no-interaction
       - name: Two independent physical DB connections, Plan-first contention
         run: php artisan test tests/Feature/LearningContextPlanLockContentionTest.php --fail-on-skipped --stop-on-failure --colors=never
+      - name: TEMPORARY CI-ONLY DB trigger probe (never run in production)
+        run: |
+          test "$APP_ENV" = 'testing'
+          test "$CANOVIA_LEARNING_LOCK_DISPOSABLE_CI" = '1'
+          php artisan test tests/Feature/LearningContextSqlMutationProbeV014Test.php --fail-on-skipped --stop-on-failure --colors=never
+          # Probe tests must uninstall all experimental DDL.
+          case "$DB_CONNECTION" in
+            mysql)
+              mysql --protocol=TCP --host="$DB_HOST" --port="$DB_PORT" \
+                --user="$DB_USERNAME" --password="$DB_PASSWORD" --batch --skip-column-names \
+                --database="$DB_DATABASE" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='learning_context_probe_epochs'" | grep -qx 0
+              ;;
+            pgsql)
+              PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME" \
+                -d "$DB_DATABASE" -Atqc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='learning_context_probe_epochs'" | grep -qx 0
+              ;;
+          esac
 
   learning-legacy-sqlite:
     name: Learning Study Practice and Watch regressions (SQLite)
