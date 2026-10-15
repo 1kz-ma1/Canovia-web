@@ -37,14 +37,19 @@ final class AdaptiveLearningNextActionController extends Controller
             'expected_next_action_hash' => ['required', 'regex:/\\A[a-f0-9]{64}\\z/'],
         ]);
 
-        DB::transaction(function () use ($request, $plan, $task, $identity, $history, $activity, $validated): void {
-            $current = Task::query()->where('plan_id', $plan->id)
+        DB::transaction(function () use ($request, $plan, $task, $ownership, $profiles, $identity, $history, $activity, $validated): void {
+            // A Study Context Watch read holds this same parent Plan lock.
+            // Do not lock/update Task first and race its source projection.
+            $livePlan = Plan::query()->whereKey($plan->id)->lockForUpdate()->firstOrFail();
+            abort_unless($profiles->forPlan($livePlan)->key === 'study', 404);
+            $current = Task::query()->where('plan_id', $livePlan->id)
                 ->whereKey($task->id)->lockForUpdate()->firstOrFail();
+            $ownership->authorizeTask($request, $current);
 
             // Re-evaluate the specific actor's current recorded answers at
             // confirmation. Never trust candidate text sent by the browser.
             $preview = $history->forPlanTask(
-                $request, $plan, $current, $identity->resolve($request)
+                $request, $livePlan, $current, $identity->resolve($request)
             )['next_action_preview'] ?? null;
 
             abort_unless(is_array($preview), 409, '復習候補が変わりました。学習履歴を開き直してください。');
@@ -64,7 +69,7 @@ final class AdaptiveLearningNextActionController extends Controller
             ), 409, 'Taskの次Actionが変更されています。再確認してください。');
 
             $current->update(['next_action_note' => $recommended]);
-            $activity->record($plan, $request->user(), 'task_updated', 'task', (int) $current->id, [
+            $activity->record($livePlan, $request->user(), 'task_updated', 'task', (int) $current->id, [
                 'source' => 'owner_confirmed_learning_review_v611',
                 'learning_evidence_signature' => (string) $preview['source_signature'],
             ]);

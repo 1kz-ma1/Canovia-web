@@ -6,9 +6,12 @@ on:
     paths:
       - 'app/Http/Controllers/TaskController.php'
       - 'app/Http/Controllers/StudyPracticeController.php'
+      - 'app/Http/Controllers/StudyRecallController.php'
+      - 'app/Http/Controllers/AdaptiveLearningNextActionController.php'
       - 'app/Services/LearningContextWatchPersistenceService.php'
       - 'tests/Feature/LearningContextPlanLockContentionTest.php'
       - 'docs/development/LEARNING_CONTEXT_SOURCE_LOCK_V05_2026_10_15.md'
+      - 'docs/development/LEARNING_CONTEXT_SOURCE_WRITER_AUDIT_V06_2026_10_15.md'
       - '.github/workflows/learning-context-plan-lock-contention.yml'
   workflow_dispatch:
 
@@ -93,6 +96,8 @@ jobs:
         run: |
           php -l app/Http/Controllers/TaskController.php
           php -l app/Http/Controllers/StudyPracticeController.php
+          php -l app/Http/Controllers/StudyRecallController.php
+          php -l app/Http/Controllers/AdaptiveLearningNextActionController.php
           php -l tests/Feature/LearningContextPlanLockContentionTest.php
       - name: Migrate ONLY the disposable CI database
         run: |
@@ -125,6 +130,8 @@ jobs:
       - name: Old Study flow + new private context regression
         run: |
           php artisan test tests/Feature/StudyPracticeLearningLoopV393Test.php \
+            tests/Feature/AdaptiveLearningNextActionV611Test.php \
+            tests/Feature/StudyRecallTaskProgressionV586Test.php \
             tests/Feature/StudyTaskProgressionV4110Test.php \
             tests/Feature/LearningContextSourceCaptureTest.php \
             tests/Feature/LearningContextWatchPersistenceTest.php \

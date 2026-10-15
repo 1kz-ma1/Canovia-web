@@ -148,6 +148,45 @@ final class LearningContextPlanLockContentionTest extends TestCase
         self::assertSame(1, LearningContextChangeRecord::query()->count());
     }
 
+    public function test_owner_confirmed_learning_next_action_cannot_mutate_during_plan_lock(): void
+    {
+        [$user, $plan, $task] = $this->fixture();
+        $this->actingAs($user)->withoutExceptionHandling();
+        $contender = DB::connection('learning_lock_contender');
+
+        $this->withContendedPlan($contender, $plan, function () use ($plan, $task): void {
+            $this->expectLockDenied(function () use ($plan, $task): void {
+                $this->post(route('plans.tasks.learning.next_action.confirm', [$plan, $task]), [
+                    'source_signature' => str_repeat('a', 64),
+                    'expected_next_action_hash' => hash('sha256', ''),
+                ]);
+            });
+        });
+
+        self::assertNull($task->fresh()->next_action_note);
+        self::assertSame(15, (int) $task->fresh()->progress_percent);
+        self::assertSame(0, LearningContextChangeRecord::query()
+            ->where('plan_id', $plan->id)->count());
+    }
+
+    public function test_recall_mastery_completion_cannot_set_done_while_plan_is_locked(): void
+    {
+        [$user, $plan, $task] = $this->fixture();
+        $this->actingAs($user)->withoutExceptionHandling();
+        $contender = DB::connection('learning_lock_contender');
+
+        $this->withContendedPlan($contender, $plan, function () use ($plan, $task): void {
+            $this->expectLockDenied(function () use ($plan, $task): void {
+                $this->post(route('plans.tasks.study_recall.complete', [$plan, $task]));
+            });
+        });
+
+        self::assertSame('doing', $task->fresh()->status);
+        self::assertSame(15, (int) $task->fresh()->progress_percent);
+        self::assertSame(0, LearningContextChangeRecord::query()
+            ->where('plan_id', $plan->id)->count());
+    }
+
     /** @return array{User,Plan,Task} */
     private function fixture(): array
     {

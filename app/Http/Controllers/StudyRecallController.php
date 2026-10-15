@@ -322,6 +322,7 @@ class StudyRecallController extends Controller
             $request,
             $plan,
             $task,
+            $ownership,
             $actorToken,
             $recallProgression,
             $taskProgression,
@@ -329,11 +330,17 @@ class StudyRecallController extends Controller
             &$decision,
             &$alreadyCompleted,
         ) {
+            // Match the first-party Watch capture and Study approval lock
+            // order: Plan -> Task -> Recall cards/Evidence.
+            $lockedPlan = Plan::query()->whereKey($plan->id)
+                ->lockForUpdate()->firstOrFail();
+            $this->authorizeTask($request, $lockedPlan, $task, $ownership, true);
             $lockedTask = Task::query()
-                ->where('plan_id', $plan->id)
+                ->where('plan_id', $lockedPlan->id)
                 ->whereKey($task->id)
                 ->lockForUpdate()
                 ->firstOrFail();
+            $this->authorizeTask($request, $lockedPlan, $lockedTask, $ownership, true);
 
             if ($lockedTask->status === 'cancelled') {
                 throw ValidationException::withMessages([
@@ -348,7 +355,7 @@ class StudyRecallController extends Controller
             ) {
                 $alreadyCompleted = true;
                 $decision = $taskProgression->afterVerifiedCompletion(
-                    $plan,
+                    $lockedPlan,
                     $lockedTask,
                     'Taskはすでに完了しています。',
                 );
@@ -357,7 +364,7 @@ class StudyRecallController extends Controller
             }
 
             $state = $recallProgression->evaluate(
-                $plan,
+                $lockedPlan,
                 $lockedTask,
                 null,
                 true,
@@ -380,7 +387,7 @@ class StudyRecallController extends Controller
                 .'件が定着条件を満たし、due 0件。';
 
             $decision = $taskProgression->afterVerifiedCompletion(
-                $plan,
+                $lockedPlan,
                 $lockedTask,
                 $reason,
             );
