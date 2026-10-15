@@ -25,6 +25,7 @@ use App\Services\PlanPriorityService;
 use App\Services\StudyActivityPolicyService;
 use App\Services\StudyWorkspaceViewService;
 use App\Services\StudyLearningNextActionQueueService;
+use App\Services\StudyLearningPlanPriorityService;
 use App\Services\WorkspaceModeOnboardingService;
 use App\Services\ExecutionSetupService;
 use App\Services\PersonalizationContextService;
@@ -48,6 +49,7 @@ final class StudyWorkspaceController extends Controller
         StudyWorkspaceSurfacePolicy $surfacePolicy,
         StudyWorkspaceViewService $views,
         StudyLearningNextActionQueueService $learningActionQueue,
+        StudyLearningPlanPriorityService $learningPlanPriority,
         BehaviorIdentityService $identity,
         ExecutionSetupService $executionSetup,
         StudyIntelligencePresentationAdapter $presentationAdapter,
@@ -233,6 +235,9 @@ final class StudyWorkspaceController extends Controller
         $learningReviewQueue = ($canEdit && $studySurface === 'work')
             ? $learningActionQueue->forWorkspace($request, $plan, $actorToken, $canEdit)
             : ['items' => [], 'has_more' => false];
+        $learningPlanCandidates = ($canEdit && $studySurface === 'work')
+            ? $learningPlanPriority->forWorkspace($request, $plan, $actorToken, $canEdit)
+            : ['items' => [], 'has_history' => false, 'has_more' => false];
 
         $legacyPracticeResume = null;
         if ($canEdit && $studySurface === 'work') {
@@ -268,6 +273,7 @@ final class StudyWorkspaceController extends Controller
         }
 
         return view('workspace.study.index', [
+            'learningPlanCandidates' => $learningPlanCandidates,
             'learningReviewQueue' => $learningReviewQueue,
             'legacyPracticeResume' => $legacyPracticeResume,
             'studyPlans' => $studyPlans,
