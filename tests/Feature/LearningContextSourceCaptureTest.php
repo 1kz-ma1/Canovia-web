@@ -80,6 +80,7 @@ final class LearningContextSourceCaptureTest extends TestCase
         $a = $service->capture($owner, $plan->id);
         $this->assertNotNull($a);
         $this->assertSame('canovia.learning_context_source_capture.v0.2', $a['schema']);
+        $this->assertSame('internal_owner_scoped_read_only', $a['snapshot']['delivery']);
         $this->assertSame($owner->id, $a['actor_id']);
         $this->assertSame($plan->id, $a['plan_id']);
         $this->assertSame(64, strlen($a['source_revision']));
