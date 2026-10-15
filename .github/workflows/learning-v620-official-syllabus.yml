@@ -1,0 +1,109 @@
+name: Learning V6.20 Official Syllabus Provenance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/learning-v620-official-syllabus.yml'
+      - 'config/study_official_syllabus.php'
+      - 'app/Services/StudyOfficialSyllabusBridgeService.php'
+      - 'app/Http/Controllers/StudyWorkspaceController.php'
+      - 'resources/views/workspace/study/views/work.blade.php'
+      - 'resources/views/workspace/study/views/analysis.blade.php'
+      - 'resources/views/workspace/study/partials/official-syllabus-bridge.blade.php'
+      - 'tests/Feature/StudyOfficialSyllabusBridgeV620Test.php'
+      - 'scripts/ci/learning_v620_official_syllabus_browser_smoke.mjs'
+      - 'docs/development/LEARNING_OFFICIAL_SYLLABUS_BRIDGE_P0_V6_20_2026_10_15.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  learning-review-v620:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked application deps
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          npm ci --ignore-scripts
+          npm run build
+      - name: Pin disposable local SQLite and disable provider effects
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "APP_ENV=testing" >> "$GITHUB_ENV"
+          echo "APP_DEBUG=false" >> "$GITHUB_ENV"
+          echo "APP_URL=http://127.0.0.1:8792" >> "$GITHUB_ENV"
+          echo "CANOVIA_LEARNING_V610_BASE_URL=http://127.0.0.1:8792" >> "$GITHUB_ENV"
+          echo "CANOVIA_LEARNING_V610_FIXTURE=1" >> "$GITHUB_ENV"
+          echo "DB_CONNECTION=sqlite" >> "$GITHUB_ENV"
+          echo "DB_DATABASE=$RUNNER_TEMP/learning-v610-browser.sqlite" >> "$GITHUB_ENV"
+          echo "SESSION_DRIVER=file" >> "$GITHUB_ENV"
+          echo "CACHE_STORE=file" >> "$GITHUB_ENV"
+          echo "QUEUE_CONNECTION=sync" >> "$GITHUB_ENV"
+          echo "MAIL_MAILER=array" >> "$GITHUB_ENV"
+          echo "NATIVE_AI_DRIVER=disabled" >> "$GITHUB_ENV"
+          cp .env.example .env
+          touch "$RUNNER_TEMP/learning-v610-browser.sqlite"
+      - name: Prepare synthetic isolated web application
+        run: |
+          php artisan key:generate --force --no-interaction
+          php artisan migrate --force --no-interaction
+          php -l app/Http/Controllers/AdaptiveLearningController.php
+          php -l app/Http/Controllers/StudyWorkspaceController.php
+          php -l app/Services/StudyLearningPlanPriorityService.php
+          php -l app/Services/StudyLearningBankTopicCoverageService.php
+          php -l app/Services/StudyOfficialSyllabusBridgeService.php
+          php -l config/study_official_syllabus.php
+          php -l app/Services/LearningDelayedRecheckService.php
+          php -l app/Services/AdaptiveLearningHistoryService.php
+          php -l scripts/ci/learning_v610_disposable_bank.php
+          php -l scripts/ci/learning_v616_disposable_bank.php
+          php -l scripts/ci/learning_v617_disposable_delayed.php
+          node --check scripts/ci/learning_v620_official_syllabus_browser_smoke.mjs
+          php -l scripts/ci/learning_v613_verify_review.php
+          # Isolated in-memory tests must not touch the browser fixture DB.
+          # In-memory isolated test cache prevents per-user limiter buckets leaking
+          # across RefreshDatabase tests which recycle numeric user IDs.
+          CACHE_STORE=array DB_DATABASE=:memory: php artisan test --filter='StudyOfficialSyllabusBridgeV620Test|StudyLearningBankTopicCoverageV619Test|StudyLearningPlanPriorityV618Test|StudyLearningDelayedRecheckV617Test|StudyLearningDistinctFollowupV616Test|StudyLearningSourceSpacingV615Test|StudyLearningReviewComparisonV614Test|StudyLearningTopicRemeasureV613Test|StudyLearningReviewQueueV612Test|AdaptiveLearningNextActionV611Test'
+          php scripts/ci/learning_v610_disposable_bank.php --seed
+          php scripts/ci/learning_v616_disposable_bank.php --seed
+          php scripts/ci/learning_v617_disposable_delayed.php --seed
+      - name: Install pinned headless Chromium (CI only)
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+          npx playwright install --with-deps chromium
+          git diff --exit-code -- package-lock.json package.json
+      - name: Serve isolated app on loopback
+        shell: bash
+        run: |
+          set -euo pipefail
+          nohup php artisan serve --host=127.0.0.1 --port=8792 > "$RUNNER_TEMP/learning-v610-php-server.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/learning-v610-php-server.pid"
+          for i in $(seq 1 40); do
+            if curl --silent --fail --output /dev/null http://127.0.0.1:8792/register; then exit 0; fi
+            sleep 1
+          done
+          echo "Disposable browser server failed to start" >&2
+          exit 1
+      - name: Exercise official syllabus Ver7.2 source-only and no-percentage plus prior Learning loop
+        run: node scripts/ci/learning_v620_official_syllabus_browser_smoke.mjs
+      - name: Clarify browser-proof limits
+        run: |
+          echo "Study: Guest-to-Free creates AP-labeled Study Plan and Task; official syllabus source Ver7.2 is shown with zero fabricated reviewed nodes and no coverage percent. Browser still asserts recorded Bank sample no-record -> partial, V6.18 priority, V6.17 delayed opt-in and distinct graded Runs."
+          echo "NOT tested: independent transcription or rights review of official syllabus, approval of real Question mappings, official completeness, actual 26-hour wall-clock wait, physical iPhone, Aiven or Render Live."
+          echo "NO Study release, production migration or app-store GO from browser CI."

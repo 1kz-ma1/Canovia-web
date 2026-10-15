@@ -27,6 +27,7 @@ use App\Services\StudyWorkspaceViewService;
 use App\Services\StudyLearningNextActionQueueService;
 use App\Services\StudyLearningPlanPriorityService;
 use App\Services\StudyLearningBankTopicCoverageService;
+use App\Services\StudyOfficialSyllabusBridgeService;
 use App\Services\WorkspaceModeOnboardingService;
 use App\Services\ExecutionSetupService;
 use App\Services\PersonalizationContextService;
@@ -52,6 +53,7 @@ final class StudyWorkspaceController extends Controller
         StudyLearningNextActionQueueService $learningActionQueue,
         StudyLearningPlanPriorityService $learningPlanPriority,
         StudyLearningBankTopicCoverageService $bankTopics,
+        StudyOfficialSyllabusBridgeService $syllabusBridge,
         BehaviorIdentityService $identity,
         ExecutionSetupService $executionSetup,
         StudyIntelligencePresentationAdapter $presentationAdapter,
@@ -243,6 +245,10 @@ final class StudyWorkspaceController extends Controller
         $learningBankTopics = ($canEdit && in_array($studySurface, ['work', 'analysis'], true))
             ? $bankTopics->forWorkspace($request, $plan, $actorToken, $canEdit)
             : ['available' => false, 'rows' => []];
+        $officialSyllabusBridge = ($canEdit && in_array($studySurface, ['work', 'analysis'], true))
+            ? $syllabusBridge->forWorkspace($request, $plan, $actorToken,
+                $canEdit, $learningBankTopics)
+            : ['available' => false];
 
         $legacyPracticeResume = null;
         if ($canEdit && $studySurface === 'work') {
@@ -280,6 +286,7 @@ final class StudyWorkspaceController extends Controller
         return view('workspace.study.index', [
             'learningPlanCandidates' => $learningPlanCandidates,
             'learningBankTopics' => $learningBankTopics,
+            'officialSyllabusBridge' => $officialSyllabusBridge,
             'learningReviewQueue' => $learningReviewQueue,
             'legacyPracticeResume' => $legacyPracticeResume,
             'studyPlans' => $studyPlans,

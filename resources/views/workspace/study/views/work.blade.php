@@ -11,6 +11,7 @@
     ])
 
     @include('workspace.study.partials.learning-bank-coverage')
+    @include('workspace.study.partials.official-syllabus-bridge')
     @include('workspace.study.partials.learning-plan-priority')
     @include('workspace.study.partials.learning-review-queue')
 
