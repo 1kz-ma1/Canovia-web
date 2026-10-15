@@ -23,6 +23,13 @@ final class LearningContextSourceCaptureService
     public const CAPTURE_SCHEMA = 'canovia.learning_context_source_capture.v0.2';
     private const LIMIT = 8;
 
+    // Fingerprints must cover more than the 8 visible items: historical
+    // corrections, deletions and withdrawals can invalidate prior context.
+    // Do not silently truncate the source revision. Over budget, refuse the
+    // capture until a scalable change-log/epoch protocol is available.
+    private const MAX_TASK_SOURCE_ROWS = 256;
+    private const MAX_PRACTICE_SOURCE_ROWS = 512;
+
     public function __construct(
         private readonly PlanCategoryProfileService $profiles,
     ) {}
@@ -51,10 +58,18 @@ final class LearningContextSourceCaptureService
                 $tasksQuery = Task::query()->where('plan_id', $plan->id)
                     ->whereIn('status', ['doing', 'todo', 'paused']);
                 $taskCount = (clone $tasksQuery)->count();
-                $taskRows = $tasksQuery->orderBy('id')->limit(self::LIMIT + 1)
+                if ($taskCount > self::MAX_TASK_SOURCE_ROWS) {
+                    return null; // no partial task checksum
+                }
+                $taskRows = $tasksQuery->orderBy('id')
                     ->get(['id', 'title', 'status', 'progress_percent', 'updated_at']);
                 $tasks = [];
-                $taskSources = [];
+                // Bounded full eligible task history; only 8 are presented.
+                $taskSources = $taskRows->map(static fn (Task $task): array => [
+                    (int) $task->id, (string) $task->title,
+                    (string) $task->status, $task->progress_percent,
+                    $task->updated_at?->toIso8601String(),
+                ])->all();
                 foreach ($taskRows->take(self::LIMIT) as $task) {
                     $progress = $task->progress_percent;
                     if ($progress !== null && (! is_int($progress) || $progress < 0 || $progress > 100)) {
@@ -71,9 +86,6 @@ final class LearningContextSourceCaptureService
                         'status' => (string) $task->status,
                         'recorded_progress_percent' => $progress,
                     ];
-                    $taskSources[] = [(int) $task->id, (string) $task->title,
-                        (string) $task->status, $progress,
-                        $task->updated_at?->toIso8601String()];
                 }
 
                 $nativeQ = StudyPracticeAttempt::query()
@@ -81,10 +93,6 @@ final class LearningContextSourceCaptureService
                     ->where('plan_id', $plan->id)
                     ->whereNotNull('applied_at');
                 $nativeCount = (clone $nativeQ)->count();
-                $native = $nativeQ->orderByDesc('applied_at')->orderByDesc('id')
-                    ->limit(self::LIMIT + 1)
-                    ->get(['id', 'score_percent', 'weaknesses', 'assessment',
-                        'applied_at', 'updated_at']);
 
                 $approvedQ = McpStudyResultProposal::query()
                     ->where('user_id', $actor->id)
@@ -92,13 +100,19 @@ final class LearningContextSourceCaptureService
                     ->where('status', McpStudyResultProposal::APPROVED)
                     ->whereNotNull('decided_at');
                 $approvedCount = (clone $approvedQ)->count();
+                if ($nativeCount + $approvedCount > self::MAX_PRACTICE_SOURCE_ROWS) {
+                    return null; // fail closed rather than miss an old correction
+                }
+                $native = $nativeQ->orderByDesc('applied_at')->orderByDesc('id')
+                    ->get(['id', 'score_percent', 'weaknesses', 'assessment',
+                        'applied_at', 'updated_at']);
                 $approved = $approvedQ->orderByDesc('decided_at')->orderByDesc('id')
-                    ->limit(self::LIMIT + 1)
                     ->get(['id', 'question_count', 'correct_count',
                         'weakness_topics', 'decided_at', 'updated_at']);
 
-                // Both sources are bounded before interpretation. The exact
-                // same owner/Plan filters are applied to every query.
+                // Full eligible history is read only within a strict cap.
+                // The displayed interpretation remains the latest 8 records.
+                // No raw question, answer or assessment enters the output.
                 $candidateRows = [];
                 foreach ($native as $row) {
                     $candidateRows[] = [
@@ -134,6 +148,14 @@ final class LearningContextSourceCaptureService
                         ],
                     ];
                 }
+                // Stable origin + primary-key ordering is essential: changing
+                // an older timestamp must also invalidate the revision.
+                $historyRevisionRows = array_map(static fn (array $row): array => [
+                    $row['source'], $row['id'], $row['at'], $row['revision_fields'],
+                ], $candidateRows);
+                usort($historyRevisionRows, static fn (array $a, array $b): int =>
+                    strcmp($a[0], $b[0]) ?: ($a[1] <=> $b[1]));
+
                 usort($candidateRows, static function (array $a, array $b): int {
                     return ($b['at'] <=> $a['at'])
                         ?: strcmp($a['source'], $b['source'])
@@ -180,17 +202,18 @@ final class LearningContextSourceCaptureService
 
                 $deadline = $plan->deadline?->toDateString();
                 $revision = hash('sha256', json_encode([
-                    'version' => 2,
+                    'version' => 3,
                     'actor_id' => (int) $actor->id,
                     'plan_id' => (int) $plan->id,
                     'plan_fields' => [(string) $plan->title, $deadline,
                         (string) $plan->category, $plan->workspace_domain_override,
                         (bool) $plan->is_collaborative, (bool) $plan->is_public,
                         $plan->updated_at?->toIso8601String()],
-                    'tasks' => ['count' => $taskCount, 'rows' => $taskSources],
+                    'tasks' => ['count' => $taskCount, 'all_eligible_rows' => $taskSources],
                     'practice' => [
                         'native_count' => $nativeCount,
                         'approved_count' => $approvedCount,
+                        'all_eligible_rows' => $historyRevisionRows,
                         'selected' => $revisionRows,
                     ],
                 ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
