@@ -201,6 +201,36 @@ class CanoviaCompanionMutationApplyV4115Test extends TestCase
         );
     }
 
+    public function test_private_study_companion_plan_metadata_changes_bump_shadow_only_on_real_update(): void
+    {
+        config(['intelligence.learning_context_watch.epoch_shadow_enabled' => true]);
+        [$user, $plan, $task, $thread] = $this->scenario();
+        $plan->update(['category' => '資格学習']);
+        $this->actingAs($user);
+
+        $first = $this->candidate($user, $thread, $plan, null, 'update_plan', [
+            'title' => '次の試験合格',
+            'deadline' => today()->addDays(40)->toDateString(),
+        ]);
+        $this->post(route('companion.candidates.apply', [$thread, $first]), [
+            'apply_request_id' => (string) Str::uuid(),
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('次の試験合格', $plan->fresh()->title);
+        $this->assertDatabaseHas('learning_context_source_epochs', [
+            'plan_id' => $plan->id, 'epoch' => 1, 'last_mutation_kind' => 'plan_updated',
+        ]);
+
+        $same = $this->candidate($user, $thread, $plan, null, 'update_plan', [
+            'title' => '次の試験合格',
+        ]);
+        $this->post(route('companion.candidates.apply', [$thread, $same]), [
+            'apply_request_id' => (string) Str::uuid(),
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('learning_context_source_epochs', [
+            'plan_id' => $plan->id, 'epoch' => 1,
+        ]);
+    }
+
     public function test_goal_fact_requires_human_confirmation_and_updates_current_state_summary(): void
     {
         [$user, $plan, $task, $thread] = $this->scenario();
