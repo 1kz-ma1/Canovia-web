@@ -71,6 +71,9 @@ try {
     await action.locator('button[type="submit"]').click();
     await page.waitForURL(url=>url.pathname.includes('/study-practice'),{timeout:25000});
     step('Owner created first Study Task through visible recommended Action');
+    const practiceUrl = page.url();
+    const bankWorkspaceResponse = await page.goto(`${base}/workspace/study?plan_id=${planId}&surface=work`, {waitUntil:'domcontentloaded'});
+    assert.equal(bankWorkspaceResponse.status(),200);
     const initialBankCard = page.locator('[data-study-learning-bank-coverage]');
     await initialBankCard.waitFor({state:'visible'});
     await initialBankCard.locator('[data-study-bank-scope-unconfirmed]').waitFor();
@@ -78,6 +81,7 @@ try {
     assert.equal(Number(await initialBankCard.getAttribute('data-study-bank-source-count')),7);
     await initialBankCard.getByText('公式試験の出題率ではありません',{exact:false}).first().waitFor();
     step('Unanswered AP Bank tags shown as a sample, with unconfirmed Subject A scope and no official exam weighting');
+    await page.goto(practiceUrl, {waitUntil:'domcontentloaded'});
 
 
     const created = verify('--lookup');
