@@ -14,6 +14,12 @@ class RenderStartupMigrationRetryV569Test extends TestCase
         $this->assertCount(1, $calls);
         $this->assertStringContainsString('canovia:release-schema-ready', $calls[0]);
         $this->assertStringNotContainsString('private-fixture-dsn', $output);
+        foreach (['0', '11', '1:2', '99999999999999999999'] as $attempts) {
+            [$invalidCode, $invalidCalls] = $this->policy(['APP_ENV' => 'staging',
+                'CANOVIA_STAGING_ISOLATED' => 'true', 'CANOVIA_MIGRATION_MAX_ATTEMPTS' => $attempts]);
+            $this->assertSame(1, $invalidCode);
+            $this->assertSame([], $invalidCalls);
+        }
     }
 
     public function test_apply_rejects_missing_short_or_mismatched_sha_before_any_db_command(): void
