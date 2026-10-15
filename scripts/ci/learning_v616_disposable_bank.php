@@ -26,12 +26,39 @@ if (
     || ! str_starts_with((string) config('database.connections.sqlite.database'), '/')
     || (string) config('app.url') !== 'http://127.0.0.1:8792'
     || count($argv) !== 2
-    || ! in_array($argv[1], ['--seed'], true)
+    || ! in_array($argv[1], ['--seed', '--verify'], true)
 ) {
     fwrite(STDERR, "Learning V6.16 fixture denied outside disposable loopback SQLite.\n");
     exit(2);
 }
 
+
+if ($argv[1] === '--verify') {
+    $owner = User::query()->where('email', 'v610-learning@example.invalid')->sole();
+    $plan = Plan::query()->where('user_id', $owner->id)
+        ->where('title', '応用情報技術者試験 合格 V610')->sole();
+    $task = Task::query()->where('plan_id', $plan->id)->sole();
+    $pack = QuestionPack::query()->where('slug', 'learning-v616-distinct-disposable')->sole();
+    $run = LearningRun::query()->where('plan_id', $plan->id)
+        ->where('task_id', $task->id)->where('user_id', $owner->id)
+        ->where('queue_policy_version', 'bank_topic_distinct_initial_v616')->sole();
+    $items = $run->items()->orderBy('ordinal')->limit(2)->with('answer')->get();
+    echo json_encode([
+        'plan_id' => (int) $plan->id,
+        'task_id' => (int) $task->id,
+        'run_id' => (int) $run->id,
+        'policy' => $run->queue_policy_version,
+        'source_question_ids' => $items->pluck('question_id')->map('intval')->all(),
+        'expected_source_ids' => $pack->questions()->orderBy('sort_order')
+            ->pluck('id')->map('intval')->all(),
+        'answer_count' => $items->filter(fn ($i) => $i->answer !== null)->count(),
+        'correct_count' => $items->filter(fn ($i) => (bool) $i->answer?->was_correct)->count(),
+        'task_progress' => (int) $task->progress_percent,
+        'task_evidence_count' => TaskEvidence::query()->where('task_id', $task->id)->count(),
+        'task_next_action' => $task->next_action_note,
+    ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE).PHP_EOL;
+    exit(0);
+}
 
 if (QuestionPack::query()->where('slug', 'learning-v616-distinct-disposable')->exists()) {
     fwrite(STDERR, "V6.16 disposable pack must be seeded once.\n");
