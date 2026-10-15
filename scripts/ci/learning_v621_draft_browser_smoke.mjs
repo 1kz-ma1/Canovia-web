@@ -58,7 +58,11 @@ try {
     await register.locator('input[name="password_confirmation"]').fill(password);
     await register.getByRole('button',{name:'登録してそのまま続ける'}).click();
     await page.waitForURL(url=>url.pathname!=='/register');
-    await page.goto(base+'/workspace/study?plan_id='+planId);
+    // Task creation is an independently tested desktop-width Workspace
+    // journey (V6.12). The mobile viewport gate begins at classic Practice.
+    await page.setViewportSize({width:1280,height:850});
+    const workspaceResponse=await page.goto(base+'/workspace/study?plan_id='+planId);
+    assert.equal(workspaceResponse.status(),200);
     const start=page.locator('form[action$="/plans/'+planId+'/study-action/execute"]').first();
     await start.waitFor({state:'visible'});
     await start.locator('button[type="submit"]').click();
@@ -67,6 +71,7 @@ try {
     const match=path.match(/\/plans\/(\d+)\/tasks\/(\d+)\/study-practice$/);
     assert.ok(match);
     assert.equal(Number(match[1]),planId);
+    await page.setViewportSize({width:390,height:844});
     log('owner-created-task-and-opened-classic-study-practice');
 
     const questionPayload={
