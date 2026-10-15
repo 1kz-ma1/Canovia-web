@@ -131,7 +131,7 @@ final class StudyOfficialSyllabusBridgeV620Test extends TestCase
         $this->assertFalse($data['index_complete']);
 
         $response = $this->actingAs($owner)->get(route('workspace.study.index', [
-            'plan_id' => $plan->id, 'surface' => 'work',
+            'plan_id' => $plan->id, 'surface' => 'preparation',
         ]))->assertOk()
             ->assertSee('data-study-official-syllabus-bridge', false)
             ->assertSee('data-study-syllabus-source-version', false)
@@ -140,8 +140,17 @@ final class StudyOfficialSyllabusBridgeV620Test extends TestCase
             ->assertSee('2027年度以降に向けた別の新制度シラバス案');
         $response->assertDontSee('公式試験範囲のカバー率：100%');
         $this->actingAs($owner)->get(route('workspace.study.index', [
-            'plan_id' => $plan->id, 'surface' => 'analysis',
+            'plan_id' => $plan->id, 'surface' => 'preparation',
         ]))->assertOk()->assertSee('data-study-official-syllabus-bridge', false);
+        $this->actingAs($owner)->get(route('workspace.study.index', [
+            'plan_id' => $plan->id, 'surface' => 'work',
+        ]))->assertOk()
+            ->assertDontSee('data-study-official-syllabus-bridge', false)
+            ->assertSee('data-study-work-evidence-links', false);
+        $this->actingAs($owner)->get(route('workspace.study.index', [
+            'plan_id' => $plan->id, 'surface' => 'analysis',
+        ]))->assertOk()
+            ->assertDontSee('data-study-official-syllabus-bridge', false);
         $this->assertSame(0, $task->fresh()->progress_percent);
         $this->assertSame('元の本人Action', $task->fresh()->next_action_note);
         $this->assertDatabaseCount('task_evidences', 0);
@@ -159,7 +168,7 @@ final class StudyOfficialSyllabusBridgeV620Test extends TestCase
         $this->assertSame(1, $data['nodes'][0]['linked_question_count']);
         $this->assertNull($data['coverage_percent']);
         $this->actingAs($owner)->get(route('workspace.study.index', [
-            'plan_id' => $plan->id, 'surface' => 'work',
+            'plan_id' => $plan->id, 'surface' => 'preparation',
         ]))->assertOk()->assertSee('data-study-syllabus-partial-index', false)
             ->assertSee('SYNTHETIC-NW-1')->assertSee('算出対象外');
         $question->update(['prompt' => '元の出題から変更した本文']);
@@ -198,12 +207,12 @@ final class StudyOfficialSyllabusBridgeV620Test extends TestCase
         $this->assertFalse($this->bridge($owner, $plan, false)['available']);
         $this->assertFalse($this->bridge($owner, $plan, true, false)['available']);
         $this->actingAs($other)->get(route('workspace.study.index', [
-            'plan_id' => $plan->id, 'surface' => 'work',
+            'plan_id' => $plan->id, 'surface' => 'preparation',
         ]))->assertNotFound();
         $this->assertFalse($this->bridge($other, $plan, false)['available']);
         [$otherOwner, $sectionB] = $this->fixture('応用情報 科目B');
         $this->actingAs($otherOwner)->get(route('workspace.study.index', [
-            'plan_id' => $sectionB->id, 'surface' => 'work',
+            'plan_id' => $sectionB->id, 'surface' => 'preparation',
         ]))->assertOk()->assertDontSee('data-study-official-syllabus-bridge', false);
         $this->assertDatabaseCount('task_evidences', 0);
     }

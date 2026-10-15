@@ -1,20 +1,5 @@
 <div class="space-y-5" data-study-view-panel="work">
-    @include('workspace.partials.execution-setup', [
-        'executionSetup' => $executionSetup ?? null,
-        'plan' => $plan,
-        'navigationTask' => $navigationTask,
-        'canEdit' => $canEdit,
-    ])
-
-    @include('intelligence.partials.state-change', [
-        'feedback' => $intelligenceStateChange ?? null,
-    ])
-
-    @include('workspace.study.partials.learning-bank-coverage')
-    @include('workspace.study.partials.official-syllabus-bridge')
-    @include('workspace.study.partials.learning-plan-priority')
-    @include('workspace.study.partials.learning-review-queue')
-
+    {{-- Execute first: the composed surfaces own the next Study Action and resume CTA. --}}
     <div
         class="space-y-5"
         data-study-workspace-composed
@@ -30,4 +15,26 @@
             </section>
         @endforelse
     </div>
+
+    @include('workspace.partials.execution-setup', [
+        'executionSetup' => $executionSetup ?? null,
+        'plan' => $plan,
+        'navigationTask' => $navigationTask,
+        'canEdit' => $canEdit,
+    ])
+
+    {{-- Review actions remain actionable; source/coverage and State evidence move to their focused views. --}}
+    @include('workspace.study.partials.learning-review-queue')
+    @include('workspace.study.partials.learning-plan-priority')
+
+    <nav class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-white/8 pt-3 text-xs text-slate-400"
+        aria-label="学習Actionの根拠を確認" data-study-work-evidence-links>
+        <span>判断の根拠や履歴は別画面で確認できます。</span>
+        <a href="{{ route('workspace.study.index', ['plan_id' => $plan->id, 'surface' => 'analysis']) }}"
+            class="inline-flex min-h-10 items-center font-semibold text-sky-300 underline underline-offset-4"
+            data-study-work-analysis-link>学習分析・出典 →</a>
+        <a href="{{ route('workspace.study.index', ['plan_id' => $plan->id, 'surface' => 'history']) }}"
+            class="inline-flex min-h-10 items-center font-semibold text-sky-300 underline underline-offset-4"
+            data-study-work-history-link>履歴・State変化 →</a>
+    </nav>
 </div>

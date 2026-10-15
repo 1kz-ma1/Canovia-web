@@ -89,6 +89,9 @@
         </div>
     </section>
 
+    {{-- Official syllabus provenance and review limits belong with preparation, not the execution CTA. --}}
+    @include('workspace.study.partials.official-syllabus-bridge')
+
     <div
         class="space-y-5"
         data-study-workspace-composed

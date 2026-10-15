@@ -5,6 +5,11 @@
 @endphp
 
 <div class="space-y-5" data-study-view-panel="history">
+    {{-- Keep the full State / Readiness / Action-delta evidence, but out of the execution flow. --}}
+    @include('intelligence.partials.state-change', [
+        'feedback' => $intelligenceStateChange ?? null,
+    ])
+
     <section id="study-history" class="page-card p-5 sm:p-6" data-study-workspace-history>
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>

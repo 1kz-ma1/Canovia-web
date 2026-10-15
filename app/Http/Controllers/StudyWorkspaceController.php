@@ -242,10 +242,10 @@ final class StudyWorkspaceController extends Controller
         $learningPlanCandidates = ($canEdit && $studySurface === 'work')
             ? $learningPlanPriority->forWorkspace($request, $plan, $actorToken, $canEdit)
             : ['items' => [], 'has_history' => false, 'has_more' => false];
-        $learningBankTopics = ($canEdit && in_array($studySurface, ['work', 'analysis'], true))
+        $learningBankTopics = ($canEdit && in_array($studySurface, ['analysis', 'preparation'], true))
             ? $bankTopics->forWorkspace($request, $plan, $actorToken, $canEdit)
             : ['available' => false, 'rows' => []];
-        $officialSyllabusBridge = ($canEdit && in_array($studySurface, ['work', 'analysis'], true))
+        $officialSyllabusBridge = ($canEdit && $studySurface === 'preparation')
             ? $syllabusBridge->forWorkspace($request, $plan, $actorToken,
                 $canEdit, $learningBankTopics)
             : ['available' => false];
@@ -310,7 +310,7 @@ final class StudyWorkspaceController extends Controller
                 : [],
             'hasConfirmedScope' => $hasConfirmedScope,
             'navigationTask' => $navigationTask,
-            'intelligenceStateChange' => $studySurface === 'work'
+            'intelligenceStateChange' => $studySurface === 'history'
                 ? $stateChanges->latestForPlan(
                     $request,
                     $plan,

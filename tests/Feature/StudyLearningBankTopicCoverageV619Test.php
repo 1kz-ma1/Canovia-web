@@ -135,7 +135,7 @@ final class StudyLearningBankTopicCoverageV619Test extends TestCase
         $this->assertSame([3, 2], array_column($result['rows'], 'unanswered_source_questions'));
         $this->assertSame(['no_record', 'no_record'], array_column($result['rows'], 'state'));
         $page = $this->actingAs($owner)->get(route('workspace.study.index', [
-            'plan_id' => $plan->id, 'surface' => 'work',
+            'plan_id' => $plan->id, 'surface' => 'analysis',
         ]))->assertOk()
             ->assertSee('data-study-learning-bank-coverage', false)
             ->assertSee('data-study-bank-scope-confirmed', false)
@@ -146,6 +146,11 @@ final class StudyLearningBankTopicCoverageV619Test extends TestCase
         $this->actingAs($owner)->get(route('workspace.study.index', [
             'plan_id' => $plan->id, 'surface' => 'analysis',
         ]))->assertOk()->assertSee('data-study-learning-bank-coverage', false);
+        $this->actingAs($owner)->get(route('workspace.study.index', [
+            'plan_id' => $plan->id, 'surface' => 'work',
+        ]))->assertOk()
+            ->assertDontSee('data-study-learning-bank-coverage', false)
+            ->assertSee('data-study-work-analysis-link', false);
         $this->assertSame(15, $task->fresh()->progress_percent);
         $this->assertSame('本人Action', $task->fresh()->next_action_note);
         $this->assertDatabaseCount('task_evidences', 0);
@@ -187,14 +192,14 @@ final class StudyLearningBankTopicCoverageV619Test extends TestCase
         $this->assertTrue($summary['available']);
         $this->assertFalse($summary['scope_confirmed']);
         $this->actingAs($owner)->get(route('workspace.study.index', [
-            'plan_id' => $generic->id, 'surface' => 'work',
+            'plan_id' => $generic->id, 'surface' => 'analysis',
         ]))->assertOk()->assertSee('data-study-bank-scope-unconfirmed', false);
         [$bPlan] = $this->plan($owner, '応用情報 科目B 合格');
         $this->assertFalse($this->project($owner, $bPlan)['available']);
         [$fePlan] = $this->plan($owner, '基本情報技術者 科目A');
         $this->assertFalse($this->project($owner, $fePlan)['available']);
         $this->actingAs($owner)->get(route('workspace.study.index', [
-            'plan_id' => $fePlan->id, 'surface' => 'work',
+            'plan_id' => $fePlan->id, 'surface' => 'analysis',
         ]))->assertOk()->assertDontSee('data-study-learning-bank-coverage', false);
     }
 
@@ -211,7 +216,7 @@ final class StudyLearningBankTopicCoverageV619Test extends TestCase
         $this->assertSame(1, $res['blocked_pack_count']);
         $this->assertSame(0, $res['source_question_total']);
         $this->actingAs($owner)->get(route('workspace.study.index', [
-            'plan_id' => $plan->id, 'surface' => 'work',
+            'plan_id' => $plan->id, 'surface' => 'analysis',
         ]))->assertOk()->assertSee('data-study-bank-coverage-empty', false);
     }
 }
