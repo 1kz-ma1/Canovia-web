@@ -13,6 +13,7 @@ on:
       - 'static-welcome/config.js'
       - 'tests/js/prelaunch-static-intro.test.mjs'
       - 'tests/js/prelaunch-static-intro-browser.test.mjs'
+      - 'tests/js/prelaunch-static-old-web-health-browser.test.mjs'
       - '.github/workflows/prelaunch-ia1-static-intro.yml'
   workflow_dispatch:
 
@@ -52,3 +53,5 @@ jobs:
           git diff --exit-code -- package.json package-lock.json
       - name: Verify static intro in real offline Chromium, desktop and mobile viewport
         run: node --test tests/js/prelaunch-static-intro-browser.test.mjs
+      - name: Synthetic old-Live-Web Ready and CORS integration in Chromium (zero Web HTTP)
+        run: node --test tests/js/prelaunch-static-old-web-health-browser.test.mjs
