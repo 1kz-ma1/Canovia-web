@@ -239,6 +239,37 @@ final class LearningContextPlanLockContentionTest extends TestCase
             ->where('plan_id', $plan->id)->count());
     }
 
+    public function test_shadow_epoch_and_task_update_are_serialized_and_repeated_mutations_increment_only_after_commit(): void
+    {
+        [$user, $plan, $task] = $this->fixture();
+        config(['intelligence.learning_context_watch.epoch_shadow_enabled' => true]);
+        $shadow = app(\App\Services\LearningContextSourceEpochService::class);
+        $this->actingAs($user)->withoutExceptionHandling();
+        $this->assertNull($shadow->inspect($plan->id));
+
+        $contender = DB::connection('learning_lock_contender');
+        $this->withContendedPlan($contender, $plan, function () use ($task): void {
+            $this->expectLockDenied(function () use ($task): void {
+                $this->put(route('tasks.update', $task), $this->taskPayload('BLOCKED_EPOCH_SOURCE'));
+            });
+        });
+        // Neither original Task nor epoch is allowed to commit on timeout.
+        self::assertSame('LOCKED_SOURCE_TASK', $task->fresh()->title);
+        self::assertNull($shadow->inspect($plan->id));
+
+        $this->put(route('tasks.update', $task), $this->taskPayload('EPOCH_COMMITTED_ONE'))
+            ->assertRedirect(route('plans.show', $plan));
+        self::assertSame('EPOCH_COMMITTED_ONE', $task->fresh()->title);
+        self::assertSame(1, $shadow->inspect($plan->id)['epoch']);
+
+        $this->put(route('tasks.update', $task), $this->taskPayload('EPOCH_COMMITTED_TWO'))
+            ->assertRedirect(route('plans.show', $plan));
+        self::assertSame(2, $shadow->inspect($plan->id)['epoch']);
+        self::assertFalse($shadow->inspect($plan->id)['authoritative']);
+        self::assertSame(1, DB::table('learning_context_source_epochs')
+            ->where('plan_id', $plan->id)->count());
+    }
+
     /** @return array{User,Plan,Task} */
     private function fixture(): array
     {
