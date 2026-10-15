@@ -1,0 +1,3 @@
+{"journey": "welcome", "result": "passed", "database": "disposable_sqlite", "production_verified": false, "native_ios_verified": false}
+{"journey": "development", "result": "passed", "database": "disposable_sqlite", "production_verified": false, "native_ios_verified": false}
+{"journey": "study", "result": "passed", "database": "disposable_sqlite", "production_verified": false, "native_ios_verified": false}
