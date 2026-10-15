@@ -101,6 +101,28 @@ final class GuidedExecutionNextActionV67Test extends TestCase
         $this->assertSame(1, Task::query()->where('plan_id', $plan->id)->count());
     }
 
+    public function test_private_study_guided_confirmation_bumps_shadow_epoch_once_but_development_does_not(): void
+    {
+        config(['intelligence.learning_context_watch.epoch_shadow_enabled' => true]);
+        [$owner, $plan, $task] = $this->setupTask();
+        $this->assertDatabaseCount('learning_context_source_epochs', 0);
+
+        $plan->update(['category' => '資格学習']);
+        $execution = $this->reflect($owner, $plan, $task, '復習候補を実行する');
+        $this->confirm($owner, $plan, $task, $execution, 'まずログインを確認する')
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('learning_context_source_epochs', [
+            'plan_id' => $plan->id, 'epoch' => 1, 'last_mutation_kind' => 'task_updated',
+        ]);
+        $this->assertSame(20, $task->fresh()->progress_percent);
+
+        $this->confirm($owner, $plan, $task, $execution, 'まずログインを確認する')
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('learning_context_source_epochs', [
+            'plan_id' => $plan->id, 'epoch' => 1,
+        ]);
+    }
+
     public function test_stale_form_cannot_overwrite_newer_task_note(): void
     {
         [$owner, $plan, $task] = $this->setupTask();
