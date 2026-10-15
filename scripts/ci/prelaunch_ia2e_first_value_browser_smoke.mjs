@@ -216,57 +216,11 @@ try {
     step('Started follow-up action without submitting another reflection');
 
     await page.goto(`${base}/account`);
-    const logout = page.locator('form[action$="/logout"]').first();
-    if (mobile) {
-        page.on('request', req => {
-            if (req.url().includes('/logout')) {
-                process.stdout.write(`MOBILE LOGOUT REQUEST ${req.method()} ${req.url()}\n`);
-            }
-        });
-        page.on('response', res => {
-            if (res.url().includes('/logout')) {
-                process.stdout.write(`MOBILE LOGOUT RESPONSE ${res.status()} ${res.url()}\n`);
-            }
-        });
-        page.on('requestfailed', req => {
-            if (req.url().includes('/logout')) {
-                process.stdout.write(`MOBILE LOGOUT REQUEST FAILED ${req.failure()?.errorText || 'unknown'}\n`);
-            }
-        });
-        page.on('pageerror', err => process.stdout.write(`MOBILE PAGE ERROR ${err.message}\n`));
-        page.on('console', message => {
-            if (message.text().startsWith('IA2G-LOGOUT')) {
-                process.stdout.write(`MOBILE ${message.text()}\n`);
-            }
-        });
-        await page.evaluate(() => {
-            const form = document.querySelector('form[action$="/logout"]');
-            form.addEventListener('submit', event => {
-                console.log(`IA2G-LOGOUT submit event defaultPrevented=${event.defaultPrevented}`);
-            }, { capture: true });
-            const factory = window.indexedDB;
-            if (factory) {
-                const original = factory.deleteDatabase.bind(factory);
-                factory.deleteDatabase = function(name) {
-                    console.log(`IA2G-LOGOUT IDB deleteDatabase invoked ${name}`);
-                    const request = original(name);
-                    for (const event of ['success', 'error', 'blocked']) {
-                        request.addEventListener(event, () => console.log(`IA2G-LOGOUT IDB ${event}`));
-                    }
-                    return request;
-                };
-            }
-            const originalSubmit = HTMLFormElement.prototype.submit;
-            HTMLFormElement.prototype.submit = function() {
-                console.log('IA2G-LOGOUT native form.submit invoked');
-                return originalSubmit.call(this);
-            };
-        });
-        page.on('framenavigated', frame => {
-            if (frame === page.mainFrame()) process.stdout.write(`MOBILE NAVIGATED ${new URL(frame.url()).pathname}\n`);
-        });
-    }
-
+    // The desktop header has another logout form that is deliberately hidden
+    // on mobile. Exercise the account page's visible form, not .first().
+    const logout = page.locator('main form[action$="/logout"]');
+    assert.equal(await logout.count(), 1);
+    assert.ok(await logout.isVisible(), 'The account logout action must be visible');
     await Promise.all([
         page.waitForURL(url => url.pathname !== '/account', {
             waitUntil: 'domcontentloaded',
