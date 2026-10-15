@@ -56,6 +56,10 @@
 
 ## 現状と次の判断
 
+**実機受入の次段階:** [IA-2h 固定レビューSHA・検証先・iOSの受入準備](PRELAUNCH_IA2H_DEVICE_ENVIRONMENT_HANDOFF_2026_10_15.md) では、非公開・非デプロイのレビュー用固定候補 `069e9b57...` と、独立Web環境/ローカルXcodeビルド確認の未完了条件を整理した。固定レビュー候補は本番Release/GOではない。対象URL/配信SHA・端末ビルドが一致しない限り実機PASSを記録しない。
+
+
+
 - User-facing IA-1/IA-2e/IA-2fは開発`main`に実装済み。ただし [固定公開候補の監査](PRELAUNCH_FIXED_SCOPE_RELEASE_EVALUATION_2026_10_15.md) は**NO-GO/未完了**であり、この受入表から勝手に解除しない。
 - 運用順序：**(A)** 新WebKit CIを開発`main`で完走 → **(B)** 本番とは別に許可された実機検証先と候補SHAの整合をオーナーが確認 → **(C)** テスターが実iPhone/Safari/WKWebViewを操作して表を埋める → **(D)** Release Issue #488で別途本番GO/NO-GOを判定。
 - ターゲットユーザーにとってEvidenceが見つけづらい/操作に迷う場合は、再現経路をもとにExperienceの小PRで修正。公開ロードマップは実際の提供段階が変わる時のみ手動で検討し、CI合格だけで`released`にはしない。
