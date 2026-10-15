@@ -143,6 +143,20 @@ try {
     await nextRegion.getByText(taskTitle, {exact:true}).waitFor({state:'visible'});
     assert.ok((await nextRegion.innerText()).includes(next),
         'After human approval the Plan Dashboard should show the real next Action');
+    const reflections = page.locator('[data-plan-board-reflections]');
+    await reflections.waitFor({state:'attached'});
+    const reflection = reflections.locator(`[data-plan-board-reflection-task="${created.task_id}"]`);
+    assert.equal(await reflection.count(), 1, 'A saved Evidence should appear exactly once as a reflection');
+    assert.match(await reflection.innerText(), /ホームに戻ると画面の状態が一部失われた/);
+    assert.match(await reflection.innerText(), /進捗率への自動反映なし/);
+    const reflectionLink = reflection.locator('a[href]');
+    assert.equal(new URL(await reflectionLink.getAttribute('href'), base).pathname,
+        new URL(guidedUrl).pathname, 'The reflection returns to the actor-owned Task');
+    assert.equal(await page.locator('[data-plan-board-region="activity"]')
+        .getByText('時間を記録した作業はまだありません。').count(), 1,
+        'Evidence is not a timed WorkLog');
+    step('The actor sees their saved reflection Evidence as a separate linked Dashboard item');
+
     step('Saved Evidence is followed by truthful Plan Dashboard state: 1 Task, progress and adopted next Action');
 
     const overview = await page.goto(`${base}/workspace/overview`, {waitUntil:'domcontentloaded'});
