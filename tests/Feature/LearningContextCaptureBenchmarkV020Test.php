@@ -119,7 +119,8 @@ final class LearningContextCaptureBenchmarkV020Test extends TestCase
         config(['intelligence.learning_context_watch.capture_diagnostics_enabled' => true]);
         self::assertNull($capture->capture($owner, $taskPlan->id));
         self::assertFalse($capture->isCurrent($owner, $taskPlan->id, $previous));
-        self::assertSame(1, $collector->snapshot()['outcomes']['task_cap'] ?? null);
+        // Both capture() and isCurrent() invoke the bounded scanner.
+        self::assertSame(2, $collector->snapshot()['outcomes']['task_cap'] ?? null);
 
         // Orthogonal practice curve: one stable Task, increasing historical
         // applied rows; the visible sample stays capped at eight.
@@ -142,7 +143,7 @@ final class LearningContextCaptureBenchmarkV020Test extends TestCase
         config(['intelligence.learning_context_watch.capture_diagnostics_enabled' => true]);
         self::assertNull($capture->capture($owner, $practicePlan->id));
         self::assertFalse($capture->isCurrent($owner, $practicePlan->id, $previous));
-        self::assertSame(1, $collector->snapshot()['outcomes']['practice_cap'] ?? null);
+        self::assertSame(2, $collector->snapshot()['outcomes']['practice_cap'] ?? null);
 
         // 5 task + 4 practice profiles, each with 1 ON warmup + 21 ON
         // samples, plus 2 over-cap captures and 2 isCurrent() calls.
