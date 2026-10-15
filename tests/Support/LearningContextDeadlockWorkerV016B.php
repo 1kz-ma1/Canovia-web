@@ -22,7 +22,7 @@ if (PHP_SAPI !== 'cli'
     || $port !== $expectedPort
     || getenv('DB_DATABASE') !== 'canovia_learning_watch_lock_ci'
     || getenv('DB_USERNAME') !== 'canovia_ci'
-    || getenv('DB_URL') !== ''
+    || (string) getenv('DB_URL') !== ''
     || ! in_array($mode, ['deadlock', 'ordered'], true)
     || ! in_array($role, ['a', 'b'], true)
     || ! ctype_digit((string) $planId)
