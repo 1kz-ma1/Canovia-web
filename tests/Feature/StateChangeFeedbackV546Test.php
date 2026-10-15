@@ -185,6 +185,14 @@ class StateChangeFeedbackV546Test extends TestCase
         $this->actingAs($user)
             ->get(route('workspace.study.index', ['plan_id' => $plan->id]))
             ->assertOk()
+            ->assertSee('data-study-work-history-link', false)
+            ->assertDontSee('data-intelligence-state-change', false);
+
+        $this->actingAs($user)
+            ->get(route('workspace.study.index', [
+                'plan_id' => $plan->id, 'surface' => 'history',
+            ]))
+            ->assertOk()
             ->assertSee('data-intelligence-state-change', false)
             ->assertSee('STATE CHANGE')
             ->assertSee('40')
