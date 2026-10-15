@@ -19,6 +19,8 @@ async function openSyntheticWelcome(browser, {
 } = {}) {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const attempts = [];
+    let navigationResolve;
+    const navigation = new Promise(resolve => { navigationResolve = resolve; });
     await context.route(/^https?:\/\//, async route => {
         const url = new URL(route.request().url());
         attempts.push({ method: route.request().method(), url: url.toString() });
@@ -37,28 +39,32 @@ async function openSyntheticWelcome(browser, {
             });
             return;
         }
-        // Every non-health request, including intended navigation, is
-        // aborted. No actual Web/DNS/Render HTTP traffic is generated.
+        // Capture the intent deterministically before failing the synthetic
+        // navigation. The Playwright request event fires before route handler.
+        navigationResolve({ method: route.request().method(), url: url.toString() });
+        // Every non-health request is aborted: zero live Render HTTP.
         await route.abort('blockedbyclient');
     });
     const page = await context.newPage();
     const healthResponse = page.waitForResponse(r => r.url().startsWith(WEB + '/health?'));
     await page.goto(WELCOME + search, { waitUntil: 'load' });
     await healthResponse;
-    return { context, page, attempts };
+    return { context, page, attempts, navigation };
 }
 
 test('Chromium synthetic CORS + Ready enables entry only after 204 with exposed marker', async () => {
     const browser = await chromium.launch({ headless: true });
     try {
-        const { context, page, attempts } = await openSyntheticWelcome(browser);
+        const { context, page, attempts, navigation } = await openSyntheticWelcome(browser);
         await page.waitForFunction(() => document.querySelector('[data-open]')?.disabled === false);
         assert.equal(await page.locator('[data-status]').innerText(), '準備できました');
         assert.equal(await page.locator('[data-open]').innerText(), 'Canoviaを開く');
         const intended = page.waitForRequest(r => r.url() === WEB + '/');
         await page.evaluate(() => document.querySelector('[data-open]').click());
         const request = await intended;
+        const actualRoute = await navigation;
         assert.equal(request.method(), 'GET');
+        assert.deepEqual(actualRoute, { method: 'GET', url: WEB + '/' });
         assert.equal(attempts.filter(x => x.url.startsWith(WEB + '/health?')).length, 1);
         assert.ok(attempts.every(x => x.url.startsWith(WEB + '/health?')
           || x.url === WEB + '/'), 'unexpected HTTP host/path in synthetic browser');
@@ -71,12 +77,13 @@ test('Chromium synthetic CORS + Ready enables entry only after 204 with exposed 
 test('Chromium synthetic free Support enters old Live Web /feedback, never unreleased hash', async () => {
     const browser = await chromium.launch({ headless: true });
     try {
-        const { context, page, attempts } = await openSyntheticWelcome(browser, { search: '?destination=support' });
+        const { context, page, attempts, navigation } = await openSyntheticWelcome(browser, { search: '?destination=support' });
         await page.waitForFunction(() => !document.querySelector('[data-open]').disabled);
         assert.equal(await page.locator('[data-open]').innerText(), '無料Support・フィードバックへ');
         const intended = page.waitForRequest(r => r.url() === WEB + '/feedback');
         await page.evaluate(() => document.querySelector('[data-open]').click());
         assert.equal((await intended).method(), 'GET');
+        assert.deepEqual(await navigation, { method: 'GET', url: WEB + '/feedback' });
         assert.equal(attempts.filter(x => x.url === WEB + '/feedback').length, 1);
         assert.ok(!attempts.some(x => x.url.includes('#support-candidates')));
         await context.close();
@@ -108,7 +115,7 @@ test('Chromium synthetic CORS denial, missing Ready, 503 never unlock the CTA', 
 test('Chromium invalid destination cannot inject arbitrary redirect or release roadmap', async () => {
     const browser = await chromium.launch({ headless: true });
     try {
-        const { context, page, attempts } = await openSyntheticWelcome(browser, {
+        const { context, page, attempts, navigation } = await openSyntheticWelcome(browser, {
             search: '?destination=https%3A%2F%2Fevil.example',
         });
         await page.waitForFunction(() => !document.querySelector('[data-open]').disabled);
@@ -116,6 +123,7 @@ test('Chromium invalid destination cannot inject arbitrary redirect or release r
         const intended = page.waitForRequest(r => r.url() === WEB + '/');
         await page.evaluate(() => document.querySelector('[data-open]').click());
         await intended;
+        assert.deepEqual(await navigation, { method: 'GET', url: WEB + '/' });
         assert.ok(attempts.every(x => new URL(x.url).origin === WEB), 'unexpected external request');
         await context.close();
     } finally {
