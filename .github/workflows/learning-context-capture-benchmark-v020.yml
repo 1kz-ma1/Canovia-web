@@ -1,0 +1,134 @@
+name: Learning Context Synthetic Capture Benchmark (Disposable V020)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Services/LearningContextSourceCaptureService.php'
+      - 'app/Services/LearningContextCaptureDiagnostics.php'
+      - 'tests/Feature/LearningContextCaptureBenchmarkV020Test.php'
+      - 'docs/development/LEARNING_CONTEXT_CAPTURE_BENCHMARK_V020_2026_10_15.md'
+      - '.github/workflows/learning-context-capture-benchmark-v020.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-capture:
+    name: 'Synthetic Learning Capture Bench (${{ matrix.label }})'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {label: 'PostgreSQL 17', driver: 'pgsql', image: 'postgres:17-alpine', port: 5432, health: 'pg_isready -U canovia_ci -d canovia_learning_watch_lock_ci'}
+          - {label: 'MySQL 8.4', driver: 'mysql', image: 'mysql:8.4', port: 3306, health: 'mysqladmin ping --silent'}
+    services:
+      database:
+        image: ${{ matrix.image }}
+        env:
+          POSTGRES_DB: canovia_learning_watch_lock_ci
+          POSTGRES_USER: canovia_ci
+          POSTGRES_PASSWORD: ci-only-disposable-pass
+          MYSQL_ROOT_PASSWORD: ci-only-root-pass
+          MYSQL_DATABASE: canovia_learning_watch_lock_ci
+          MYSQL_USER: canovia_ci
+          MYSQL_PASSWORD: ci-only-disposable-pass
+        ports:
+          - '${{ matrix.port }}:${{ matrix.port }}'
+        options: >-
+          --health-cmd="${{ matrix.health }}"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: ${{ matrix.driver }}
+      DB_HOST: 127.0.0.1
+      DB_PORT: ${{ matrix.port }}
+      DB_DATABASE: canovia_learning_watch_lock_ci
+      DB_USERNAME: canovia_ci
+      DB_PASSWORD: ci-only-disposable-pass
+      DB_URL: ''
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      CANOVIA_LEARNING_LOCK_DISPOSABLE_CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl, pdo_mysql, pdo_pgsql, pdo_sqlite
+          coverage: none
+      - name: Verify local disposable CI DB is the only allowed target
+        run: |
+          set -euo pipefail
+          test "$CI" = 'true'
+          test "$APP_ENV" = 'testing'
+          test "$CANOVIA_LEARNING_LOCK_DISPOSABLE_CI" = '1'
+          test "$DB_HOST" = '127.0.0.1'
+          test "$DB_DATABASE" = 'canovia_learning_watch_lock_ci'
+          test "$DB_USERNAME" = 'canovia_ci'
+          test -z "$DB_URL"
+          case "$DB_CONNECTION:$DB_PORT" in
+            mysql:3306|pgsql:5432) ;;
+            *) exit 42 ;;
+          esac
+      - name: Locked Composer packages, without app hooks
+        run: composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+      - name: Syntax check synthetic benchmark
+        run: |
+          php -l tests/Feature/LearningContextCaptureBenchmarkV020Test.php
+          php -l app/Services/LearningContextSourceCaptureService.php
+          php -l app/Services/LearningContextCaptureDiagnostics.php
+      - name: Migrate ONLY disposable CI database
+        run: |
+          php artisan migrate --force --no-interaction
+          php artisan migrate --force --no-interaction
+      - name: Synthetic Task and Practice curves (21 paired samples per size; never a performance gate)
+        run: php artisan test tests/Feature/LearningContextCaptureBenchmarkV020Test.php --display-output --fail-on-skipped --stop-on-failure --colors=never
+
+  sqlite-synthetic-capture:
+    name: 'Synthetic Learning Capture Bench (SQLite memory)'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      DB_URL: ''
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, tokenizer, openssl, pdo_sqlite
+          coverage: none
+      - name: Ensure SQLite is in memory only
+        run: |
+          set -euo pipefail
+          test "$CI" = 'true'
+          test "$APP_ENV" = 'testing'
+          test "$DB_CONNECTION" = 'sqlite'
+          test "$DB_DATABASE" = ':memory:'
+          test -z "$DB_URL"
+      - name: Composer dependencies, locked, no application scripts
+        run: composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
+      - name: Syntax check synthetic benchmark
+        run: php -l tests/Feature/LearningContextCaptureBenchmarkV020Test.php
+      - name: Synthetic Task and Practice curves (SQLite memory)
+        run: php artisan test tests/Feature/LearningContextCaptureBenchmarkV020Test.php --display-output --fail-on-skipped --stop-on-failure --colors=never
