@@ -72,7 +72,16 @@ export function mountLegacyStudyQuestionPager(root = document) {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+// The shared shell can render this page after DOMContentLoaded via instant
+// navigation. Mount on first load AND when the core page is replaced; the
+// form-level flag keeps repeat events idempotent.
+const mountWhenReady = () => {
     // Run after the existing StudyPractice draft-restoration listener.
     window.requestAnimationFrame(() => mountLegacyStudyQuestionPager());
-});
+};
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mountWhenReady);
+} else {
+    mountWhenReady();
+}
+document.addEventListener('canovia:page-ready', mountWhenReady);
