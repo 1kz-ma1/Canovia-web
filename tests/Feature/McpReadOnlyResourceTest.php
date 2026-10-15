@@ -408,6 +408,7 @@ final class McpReadOnlyResourceTest extends TestCase
     {
         $this->idp();
         $owner = User::factory()->create();
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
         $study = $this->plan($owner);
         $study->update(['category' => '資格学習', 'title' => 'SYNTHETIC_AP_LEARNING']);
         $this->linkAndGrant($owner, $study, 'overview');
@@ -488,6 +489,7 @@ final class McpReadOnlyResourceTest extends TestCase
     public function test_study_domain_always_denied_on_synthetic_staging_even_when_switch_is_set(): void
     {
         $owner = User::factory()->create();
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
         $study = $this->plan($owner);
         $study->update(['category' => '資格学習', 'title' => 'DO_NOT_EXPOSE']);
         $principal = new \App\Services\McpVerifiedTokenPrincipal(
@@ -513,6 +515,7 @@ final class McpReadOnlyResourceTest extends TestCase
     {
         $this->idp();
         $owner = User::factory()->create();
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
         $study = $this->plan($owner);
         $study->update(['category' => '資格学習', 'title' => 'Synthetic AP Exam Plan']);
         $this->linkAndGrant($owner, $study, 'tasks');
@@ -633,6 +636,7 @@ final class McpReadOnlyResourceTest extends TestCase
             'app.env' => 'staging',
         ]);
         $owner = User::factory()->create();
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
         $study = $this->plan($owner);
         $study->update(['category' => '資格学習']);
         $this->linkAndGrant($owner, $study, 'study_progress');
@@ -651,6 +655,7 @@ final class McpReadOnlyResourceTest extends TestCase
     {
         $this->idp(write: true);
         $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
         $study = $this->plan($owner);
         $study->update(['category' => '資格学習', 'title' => 'SYNTHETIC_AP_OWNER_APPROVAL']);
         $task = Task::query()->create([
@@ -740,6 +745,7 @@ final class McpReadOnlyResourceTest extends TestCase
     {
         $this->idp(); // Valid token but lacks independent write scope.
         $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
         $study = $this->plan($owner);
         $study->update(['category' => '資格学習']);
         $task = Task::query()->create([
@@ -770,6 +776,7 @@ final class McpReadOnlyResourceTest extends TestCase
     {
         $this->idp(write: true);
         $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
         $other = User::factory()->create(['first_run_completed_at' => now()]);
         $study = $this->plan($owner);
         $study->update(['category' => '資格学習', 'title' => 'SECURE_AP_TEST']);
