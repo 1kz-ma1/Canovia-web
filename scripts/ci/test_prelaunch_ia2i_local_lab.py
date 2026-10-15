@@ -178,6 +178,92 @@ class LocalLabSecurityTest(unittest.TestCase):
             self.assertNotIn("DATABASE_URL", runtime)
             self.assertNotEqual(runtime["SESSION_COOKIE"], "canovia-ia2i-session")
 
+    def test_v621_requires_exact_sha_and_third_private_lab_without_inherited_secrets(self):
+        # First lab remains immutable even as the source worktree advances.
+        self.assertEqual(self.args("init"), 0)
+        first_state = (self.private / lab.STATE_FILENAME).read_bytes()
+        first_db = (self.private / lab.DB_FILENAME).read_bytes()
+
+        (self.root / "artisan").write_text("<?php // V6.21 pinned test snapshot", encoding="utf-8")
+        git(self.root, "add", "artisan")
+        subprocess.check_call([
+            "git", "-C", str(self.root), "-c", "user.name=CI",
+            "-c", "user.email=ci@example.invalid", "commit", "-qm", "V621 snapshot",
+        ])
+        third_sha = git(self.root, "rev-parse", "HEAD")
+        third_lab = Path(self.temp.name) / "v621-private-lab"
+
+        with patch.object(lab, "V621_SHA", third_sha):
+            with self.assertRaises(lab.SafetyError):
+                self.args("init", private=third_lab)
+            with self.assertRaises(lab.SafetyError):
+                self.args("init", private=third_lab, extra=["--source-sha", "f" * 40])
+            self.assertFalse(third_lab.exists())
+
+            self.assertEqual(
+                self.args("init", private=third_lab, extra=["--source-sha", third_sha]), 0
+            )
+            self.assertEqual(
+                self.args("check", private=third_lab, extra=["--source-sha", third_sha]), 0
+            )
+            self.assertEqual(lab.load_lab(third_lab, third_sha)[0]["source_sha"], third_sha)
+            with self.assertRaises(lab.SafetyError):
+                lab.load_lab(third_lab, self.sha)
+            with self.assertRaises(lab.SafetyError):
+                lab.load_lab(third_lab, lab.IA2J_SHA)
+            with self.assertRaises(lab.SafetyError):
+                self.args("check", private=third_lab)
+            with self.assertRaises(lab.SafetyError):
+                self.args("init", private=third_lab, extra=["--source-sha", third_sha])
+
+            (self.root / "vendor").mkdir()
+            (self.root / "vendor/autoload.php").touch()
+            (self.root / "public/build").mkdir(parents=True)
+            (self.root / "public/build/manifest.json").write_text("{}", encoding="utf-8")
+
+            with patch.dict(os.environ, {
+                "DB_URL": "postgres://real.example.invalid/production",
+                "DATABASE_URL": "mysql://real.example.invalid/production",
+                "DB_CONNECTION": "mysql",
+                "GITHUB_APP_PRIVATE_KEY": "do-not-inherit",
+                "AWS_SECRET_ACCESS_KEY": "do-not-inherit",
+            }), patch.object(lab.subprocess, "call", return_value=0) as call:
+                with self.assertRaises(lab.SafetyError):
+                    self.args("serve", private=third_lab, extra=["--source-sha", third_sha])
+                self.assertEqual(self.args("serve", private=third_lab, extra=[
+                    "--source-sha", third_sha, "--confirm-disposable"
+                ]), 0)
+
+            self.assertEqual(call.call_args.args[0],
+                             ["php", "artisan", "serve", "--host=127.0.0.1", "--port=8799"])
+            runtime = call.call_args.kwargs["env"]
+            self.assertEqual(runtime["APP_URL"], "http://127.0.0.1:8799")
+            self.assertEqual(runtime["SESSION_COOKIE"], "canovia-v621-session")
+            self.assertEqual(runtime["DB_CONNECTION"], "sqlite")
+            self.assertEqual(runtime["DB_DATABASE"], str(third_lab / lab.DB_FILENAME))
+            self.assertEqual(runtime["NATIVE_AI_DRIVER"], "disabled")
+            self.assertEqual(runtime["CANOVIA_PUBLIC_RELEASE_LEVEL"], "1")
+            self.assertNotIn("DATABASE_URL", runtime)
+            self.assertNotIn("DB_URL", runtime)
+            self.assertEqual(runtime["GITHUB_APP_PRIVATE_KEY"], "")
+            self.assertEqual(runtime["AWS_SECRET_ACCESS_KEY"], "")
+            self.assertEqual((third_lab.stat().st_mode & 0o077), 0)
+            self.assertEqual((third_lab / lab.STATE_FILENAME).stat().st_mode & 0o077, 0)
+            self.assertEqual((third_lab / lab.DB_FILENAME).stat().st_mode & 0o077, 0)
+            self.assertEqual(
+                len({lab.lab_profile(lab.PINNED_SHA)[0],
+                     lab.lab_profile(lab.IA2J_SHA)[0],
+                     lab.lab_profile(third_sha)[0]}), 3
+            )
+            self.assertEqual(
+                len({lab.lab_profile(lab.PINNED_SHA)[1],
+                     lab.lab_profile(lab.IA2J_SHA)[1],
+                     lab.lab_profile(third_sha)[1]}), 3
+            )
+
+        self.assertEqual((self.private / lab.STATE_FILENAME).read_bytes(), first_state)
+        self.assertEqual((self.private / lab.DB_FILENAME).read_bytes(), first_db)
+
     def test_ia2h_defaults_remain_unchanged(self):
         self.args("init")
         payload, db = lab.load_lab(self.private)
