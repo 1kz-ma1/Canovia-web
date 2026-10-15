@@ -186,7 +186,7 @@ def main() -> int:
     if args.action == "check":
         print("IA2I_SOURCE_PINNED=" + PINNED_SHA)
         print("IA2I_DB=ISOLATED_OWNER_ONLY_SQLITE")
-        print("IA2I_NETWORK=LOOPBACK_ONLY")
+        print("IA2I_LISTENER=LOOPBACK_ONLY; OUTBOUND_NOT_FIREWALLED")
         print("IA2I_APP_ENV=local / CSRF ENABLED")
         print("IA2I_VENDOR_READY=" + str((checkout / "vendor/autoload.php").is_file()).lower())
         print("IA2I_ASSETS_READY=" + str((checkout / "public/build/manifest.json").is_file()).lower())
