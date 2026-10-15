@@ -378,6 +378,7 @@ final class McpExplicitPlanConsentTest extends TestCase
     public function test_study_plan_requires_separate_toggle_fresh_oauth_and_final_consent(): void
     {
         $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
         $outsider = User::factory()->create(['first_run_completed_at' => now()]);
         $study = $this->plan($owner, '資格学習');
         $this->linked($owner);
@@ -425,6 +426,7 @@ final class McpExplicitPlanConsentTest extends TestCase
     public function test_ap_progress_scope_requires_separate_opt_in_and_fresh_oauth_confirmation(): void
     {
         $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
         $study = $this->plan($owner, '資格学習');
         $development = $this->plan($owner);
         $this->linked($owner);
