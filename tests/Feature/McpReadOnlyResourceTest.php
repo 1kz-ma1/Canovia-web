@@ -15,6 +15,7 @@ use App\Services\McpDelegatedIdentityFingerprintService;
 use App\Services\McpReadOnlyContextTool;
 use App\Services\McpReadOnlyStudyContextTool;
 use App\Services\McpReadOnlyStudyPracticeSummaryTool;
+use App\Services\McpReadOnlyLearningContextSnapshotTool;
 use App\Services\McpDelegatedRevocationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
@@ -649,6 +650,147 @@ final class McpReadOnlyResourceTest extends TestCase
         $this->assertFalse(app(\App\Services\McpExplicitPlanConsentService::class)
             ->isScopeEligibleForPlan($study, 'study_progress'));
         $this->assertDatabaseCount('mcp_delegated_access_events', 0);
+    }
+
+    public function test_learning_context_snapshot_is_distinctly_consented_and_exports_only_bounded_evidence(): void
+    {
+        $this->idp(write: true);
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
+        $plan = $this->plan($owner);
+        $plan->update(['category' => '資格学習', 'title' => 'Synthetic Study Snapshot']);
+        $task = Task::query()->create([
+            'plan_id' => $plan->id, 'title' => 'DNS復習',
+            'description' => 'SECRET_TASK_DESCRIPTION',
+            'status' => 'doing', 'progress_percent' => 25,
+            'priority' => 1, 'sort_order' => 1,
+        ]);
+        StudyPracticeAttempt::query()->create([
+            'plan_id' => $plan->id, 'task_id' => $task->id,
+            'user_id' => $owner->id,
+            'request_hash' => bin2hex(random_bytes(32)),
+            'exercise_title' => 'SECRET_PRACTICE_TITLE',
+            'questions' => [['body' => 'SECRET_QUESTION_BODY']],
+            'answers' => [['text' => 'SECRET_ANSWER_BODY']],
+            'assessment' => ['rationale' => 'SECRET_GRADING_REASON'],
+            'score_percent' => 60,
+            'weaknesses' => ['DNS'],
+            'applied_at' => now(),
+        ]);
+        $this->linkAndGrant($owner, $plan, 'study_progress');
+        $grant = McpDelegatedGrant::query()->sole();
+        config([
+            'canovia_mcp.study_read_enabled' => true,
+            'canovia_mcp.study_summary_read_enabled' => true,
+        ]);
+
+        // Feature OFF: not discoverable; old aggregate consent cannot escalate.
+        $this->rpc('tools/list')->assertOk()->assertJsonCount(4, 'result.tools');
+        $args = ['name' => McpReadOnlyLearningContextSnapshotTool::NAME,
+            'arguments' => ['plan_id' => $plan->id]];
+        $this->rpc('tools/call', $args)->assertStatus(400)
+            ->assertJsonPath('error.code', -32602);
+        config(['canovia_mcp.learning_context_snapshot_enabled' => true]);
+        $this->rpc('tools/list')->assertOk()->assertJsonCount(5, 'result.tools')
+            ->assertJsonPath('result.tools.3.name', McpReadOnlyLearningContextSnapshotTool::NAME)
+            ->assertJsonPath('result.tools.3.annotations.readOnlyHint', true);
+        $this->rpc('tools/call', $args)->assertOk()->assertJsonPath('result.isError', true);
+
+        // Only a separate owner-approved learning_context scope can unlock it.
+        $grant->update(['scope' => 'learning_context', 'consented_at' => now()]);
+        $response = $this->rpc('tools/call', $args);
+        $response->assertOk()
+            ->assertJsonPath('result.isError', false)
+            ->assertJsonPath('result.structuredContent.schema', 'canovia.learning_context_snapshot.v1')
+            ->assertJsonPath('result.structuredContent.facts.plan.title', 'Synthetic Study Snapshot')
+            ->assertJsonPath('result.structuredContent.facts.active_tasks.items.0.title', 'DNS復習')
+            ->assertJsonPath('result.structuredContent.facts.recent_practice.average_score_percent', 60)
+            ->assertJsonPath('result.structuredContent.observations.weakness_tags.0.topic', 'DNS')
+            ->assertJsonPath('result.structuredContent.decision_support.next_study_hint.suggested_question_count', 10)
+            ->assertJsonPath('result.structuredContent.decision_support.next_study_hint.certainty', 'tentative')
+            ->assertDontSee('SECRET_TASK_DESCRIPTION')
+            ->assertDontSee('SECRET_PRACTICE_TITLE')
+            ->assertDontSee('SECRET_QUESTION_BODY')
+            ->assertDontSee('SECRET_ANSWER_BODY')
+            ->assertDontSee('SECRET_GRADING_REASON');
+
+        // Snapshot's read grant cannot silently authorize result submissions.
+        config(['canovia_mcp.study_result_proposals_enabled' => true]);
+        $this->rpc('tools/call', [
+            'name' => McpProposeStudyResultTool::NAME,
+            'arguments' => [
+                'plan_id' => $plan->id, 'task_id' => $task->id,
+                'idempotency_key' => str_repeat('a', 64),
+                'question_count' => 10, 'correct_count' => 5,
+                'weaknesses' => ['DNS'],
+            ],
+        ])->assertOk()->assertJsonPath('result.isError', true);
+        $this->assertDatabaseCount('mcp_study_result_proposals', 0);
+        $this->assertSame(25, $task->fresh()->progress_percent);
+        $this->assertDatabaseCount('study_practice_attempts', 1);
+
+        // Caller cannot ask for new fields, a different Plan or extra scope.
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyLearningContextSnapshotTool::NAME,
+            'arguments' => ['plan_id' => $plan->id, 'limit' => 20],
+        ])->assertStatus(400);
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyLearningContextSnapshotTool::NAME,
+            'arguments' => ['plan_id' => $plan->id, 'scope' => 'overview'],
+        ])->assertStatus(400);
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyLearningContextSnapshotTool::NAME,
+            'arguments' => ['plan_id' => $plan->id + 9999],
+        ])->assertOk()->assertJsonPath('result.isError', true);
+
+        // Revocation works immediately even for the same still-valid bearer.
+        $grant->update(['status' => 'revoked', 'revoked_at' => now()]);
+        $this->rpc('tools/call', $args)->assertOk()->assertJsonPath('result.isError', true)
+            ->assertDontSee('Synthetic Study Snapshot');
+    }
+
+    public function test_learning_context_snapshot_fails_closed_for_staging_wrong_owner_and_no_evidence(): void
+    {
+        $this->idp();
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        $plan = $this->plan($owner);
+        $plan->update(['category' => '資格学習', 'title' => 'ONLY_OWNER_PLAN']);
+        $otherPlan = $this->plan($other);
+        $otherPlan->update(['category' => '資格学習', 'title' => 'OTHER_PRIVATE_PLAN']);
+        $this->linkAndGrant($owner, $plan, 'learning_context');
+        config([
+            'canovia_mcp.study_read_enabled' => true,
+            'canovia_mcp.study_summary_read_enabled' => true,
+            'canovia_mcp.learning_context_snapshot_enabled' => true,
+            'canovia_mcp.ap_pilot_owner_id' => (string) $owner->id,
+        ]);
+
+        $tool = ['name' => McpReadOnlyLearningContextSnapshotTool::NAME,
+            'arguments' => ['plan_id' => $plan->id]];
+        $this->rpc('tools/call', $tool)->assertOk()
+            ->assertJsonPath('result.isError', false)
+            ->assertJsonPath('result.structuredContent.facts.recent_practice.applied_attempts_considered', 0)
+            ->assertJsonPath('result.structuredContent.observations.confidence', 'insufficient_or_small_sample')
+            ->assertJsonPath('result.structuredContent.decision_support.next_study_hint', null);
+
+        $this->rpc('tools/call', [
+            'name' => McpReadOnlyLearningContextSnapshotTool::NAME,
+            'arguments' => ['plan_id' => $otherPlan->id],
+        ])->assertOk()->assertJsonPath('result.isError', true)
+            ->assertDontSee('OTHER_PRIVATE_PLAN');
+        config(['canovia_mcp.ap_pilot_owner_id' => '']);
+        $this->rpc('tools/call', $tool)->assertStatus(400);
+        config([
+            'canovia_mcp.ap_pilot_owner_id' => (string) $owner->id,
+            'app.env' => 'staging',
+        ]);
+        $this->assertNull(app(McpReadOnlyLearningContextSnapshotTool::class)
+            ->read(new \App\Services\McpVerifiedTokenPrincipal(
+                self::ISSUER, 'verified-owner-subject', self::CHATGPT_CLIENT,
+                self::RESOURCE, ['canovia.development.read'], now()->timestamp + 1200,
+            ), $plan->id));
+        $this->rpc('tools/call', $tool)->assertStatus(400);
     }
 
     public function test_mcp_study_result_requires_distinct_write_bearer_and_owner_approval(): void
