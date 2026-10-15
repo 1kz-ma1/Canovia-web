@@ -23,7 +23,7 @@ Source of truth: **`config/canovia_public_roadmap.php`**, reviewed in a dedicate
 - `updated_on`: owner-maintained `YYYY-MM-DD` (not an inferred Git timestamp)
 - `is_published`: explicit boolean `true` before any visitor may see the card; `false` to withhold
 
-Edit the appropriate card, update the calendar date, and submit a reviewed PR. For an entry changing to `released`, **also** record:
+Edit the appropriate card, update the calendar date, and submit a reviewed PR. For an entry changing to `rolling_out` or `released`, **also** record:
 
 ```php
 'status' => 'released',
@@ -32,7 +32,7 @@ Edit the appropriate card, update the calendar date, and submit a reviewed PR. F
 'access_scope' => 'public',           // or 'limited' if restricted to accepted invitees
 ```
 
-Without **all three fields**, the released entry is *not rendered*. Only set these fields after the actual environment, deployment SHA, required user eligibility and acceptance are independently checked and explicitly accepted by the owner. Passing CI, merging main, creating PR, preparing Render, or an old device smoke is not acceptance. The guard requires affirmative editorial evidence fields but cannot independently prove their truth. No automatic promotion to `released` occurs.
+Without **all three fields**, a staged rollout or released entry is *not rendered*. Only set these fields after the actual environment, deployment SHA, required user eligibility and acceptance are independently checked and explicitly accepted by the owner. Passing CI, merging main, creating PR, preparing Render, or an old device smoke is not acceptance. The guard requires affirmative editorial evidence fields but cannot independently prove their truth. No automatic promotion to `released` occurs.
 
 The initial snapshot intentionally contains **no released cards**, because the first public release/physical device acceptance is still owner-gated. Empty published sections present an honest explanatory state. The initial illustrative development, first-use verification, and future external-integration cards do not promise deployment dates or that GitHub activity auto-sync is available in Pre-Launch. Before an actual public promotion, re-review every visible card for product accuracy and audience.
 
