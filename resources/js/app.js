@@ -1711,6 +1711,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (_) {}
     }
 
+    // Delete local account data only after the server actually completed deletion.
+    if (document.body.dataset.accountDeletionCompleted === '1') {
+        await clearOfflineState().catch(() => {});
+    }
+
     document.querySelectorAll('[data-clear-offline-state]').forEach((form) => {
         form.addEventListener('submit', async (event) => {
             if (!('indexedDB' in window)) return;
