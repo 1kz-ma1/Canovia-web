@@ -29,7 +29,8 @@ Use a private operator Mac/terminal. The already configured non-secret variables
 set -euo pipefail
 umask 077
 test "$(git rev-parse HEAD)" = 641e2105efccf6b1c2f13c3013eae0c638e5aa9d
-test -z "$(git status --porcelain)"+: "${CANOVIA_P0_LOGIN_PATH:?existing metadata-only profile required}"
+test -z "$(git status --porcelain)"
+: "${CANOVIA_P0_LOGIN_PATH:?existing metadata-only profile required}"
 : "${CANOVIA_P0_DATABASE:?privately verified database required}"
 : "${CANOVIA_P0_CA_FILE:?verified Aiven CA required}"
 test -r "$CANOVIA_P0_CA_FILE"
