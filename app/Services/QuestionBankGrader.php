@@ -146,6 +146,7 @@ class QuestionBankGrader
         $strengthList = $strengths->filter()->unique()->take(8)->values()->all();
 
         return [
+            'review_reference_v1' => app(StudyPracticeReviewReferenceService::class)->capture($questions, $models),
             'score_percent' => $score,
             'question_feedback' => $feedback,
             'strengths' => $strengthList,

@@ -683,6 +683,8 @@ Route::get('/plans/{plan}/tasks/{task}/study-recall/sources/{source}/file', [Stu
 // Canovia Tools: 資格学習向けAI演習。
 // Freeは外部AIとのJSON handoffを維持し、Premium CoreはNative AIを同じ演習UIへ接続する。
 Route::middleware('feature.access:'.FeatureKey::AiPractice->value)->group(function () {
+    Route::get('/plans/{plan}/tasks/{task}/study-practice/history', [\App\Http\Controllers\StudyPracticeReviewController::class, 'index'])->name('plans.tasks.study_practice.history');
+    Route::get('/plans/{plan}/tasks/{task}/study-practice/attempts/{attempt}', [\App\Http\Controllers\StudyPracticeReviewController::class, 'show'])->whereNumber('attempt')->name('plans.tasks.study_practice.review');
     Route::get('/plans/{plan}/tasks/{task}/study-practice', [StudyPracticeController::class, 'show'])->name('plans.tasks.study_practice.show');
     // Adaptive Learning pilot: Bank-only single-choice A/B. Exam mode remains gated.
     Route::get('/plans/{plan}/tasks/{task}/learning', [AdaptiveLearningController::class, 'index'])->name('plans.tasks.learning.index');

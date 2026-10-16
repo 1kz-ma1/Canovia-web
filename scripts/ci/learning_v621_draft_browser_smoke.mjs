@@ -138,6 +138,11 @@ try {
     assert.equal(state.stage,'in_progress');
     log('first-answer-autosaved-in-server-session-not-graded');
 
+    const note=firstQuestion.locator('[data-study-practice-optional-note]');
+    await note.locator('summary').click();
+    await note.locator('textarea').fill('記録済みの判断理由：合成の根拠');
+    await savedState.waitFor({state:'visible'});
+
     // Prove DB restore rather than trusting origin localStorage.
     await page.evaluate(()=>localStorage.clear());
     await page.reload({waitUntil:'domcontentloaded'});
@@ -187,6 +192,8 @@ try {
         flow:'study_assessment',target_plan:{id:planId},target_task:{id:seeded.task_id},
         score_percent:50,recommended_task_progress_percent:20,
         strengths:['合成の確認'],weaknesses:['合成の再確認'],
+        question_feedback:[{question_id:'q2',correctness:'incorrect',feedback:'合成Q2の振り返り',misconceptions:['合成の誤解候補']},
+            {question_id:'q1',correctness:'correct',feedback:'合成Q1の評価記録'}],
         evidence_summary:'合成データの学習評価',next_action:'合成の復習に進む',
     };
     const assessmentManual=page.locator('#assessmentJsonManualInput');
@@ -207,6 +214,49 @@ try {
     assert.equal(state.attempt_count,1);
     assert.equal(state.task_progress,0,'assessment alone must not change Task progress');
     log('explicit-synthetic-assessment-creates-one-history-only-without-task-progress');
+    const review=page.locator('[data-attempt-review]');
+    await review.waitFor({state:'visible'});
+    assert.equal(await review.locator('[data-review-question]').first().getAttribute('data-review-question'),'q2');
+    assert.equal(await review.evaluate(el=>el.closest('details:not([open])')===null),true);
+    const q1Review=review.locator('[data-review-question="q1"]');
+    assert.equal(await q1Review.locator('[data-review-choices] li').count(),4);
+    assert.match(await q1Review.innerText(),/A：選択肢 A/);
+    assert.match(await q1Review.innerText(),/記録済みの判断理由：合成の根拠/);
+    assert.match(await review.innerText(),/合成の誤解候補/);
+    assert.equal(await review.locator('[data-review-reference]').count(),0);
+    const sourceHash=verify().attempt_record_hash;
+    await page.locator('[data-study-focus-continue] button').click();
+    await page.locator('[data-attempt-history-link]').click();
+    await page.getByRole('link',{name:'問題と回答を復習する',exact:true}).click();
+    const reviewUrl=page.url();
+    await page.reload();
+    await page.locator('[data-attempt-review-workspace]').waitFor({state:'visible'});
+    assert.equal(verify().attempt_record_hash,sourceHash);
+    assert.equal(verify().task_progress,0);
+    if (process.env.CANOVIA_STUDY_REVIEW_SCREENSHOT) await page.screenshot({path:process.env.CANOVIA_STUDY_REVIEW_SCREENSHOT,fullPage:true});
+    log('open-wrong-first-review-and-durable-history-without-mutation');
+    const nojs=await browser.newContext({javaScriptEnabled:false,storageState:await context.storageState(),serviceWorkers:'block'});
+    await nojs.route(/^https?:\/\//,route=>new URL(route.request().url()).origin===base?route.continue():route.abort());
+    const plain=await nojs.newPage(); await plain.goto(reviewUrl);
+    assert.equal(await plain.locator('[data-review-question]').count(),2);
+    assert.equal(await plain.locator('[data-attempt-review]').evaluate(el=>el.closest('details:not([open])')===null),true);
+    await nojs.close();
+    const outsider=await browser.newContext({serviceWorkers:'block'});
+    await outsider.route(/^https?:\/\//,route=>new URL(route.request().url()).origin===base?route.continue():route.abort());
+    const other=await outsider.newPage(); await other.goto(base+'/register');
+    const otherForm=other.locator('form[action$="/register"]');
+    await otherForm.locator('[name="name"]').fill('Other Synthetic Learner');
+    await otherForm.locator('[name="email"]').fill('other-review@example.invalid');
+    await otherForm.locator('[name="password"]').fill(password);
+    await otherForm.locator('[name="password_confirmation"]').fill(password);
+    await otherForm.getByRole('button',{name:'登録してそのまま続ける'}).click();
+    await other.waitForURL(url=>url.pathname!=='/register');
+    const denied=await outsider.request.get(reviewUrl,{headers:{Accept:'application/json'}});
+    assert.ok([403,404].includes(denied.status()));
+    assert.equal((await denied.text()).includes('合成Q2の振り返り'),false);
+    await outsider.close();
+    assert.equal(verify().attempt_record_hash,sourceHash);
+    log('no-js-review-and-other-registered-user-denied');
     process.stdout.write('LEARNING V6.21 DISPOSABLE CHROMIUM DRAFT-TO-HISTORY PASS\n');
 } finally {
     await context.close();

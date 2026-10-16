@@ -50,5 +50,6 @@ echo json_encode([
     'stage' => $session?->status,
     'has_q1_saved' => ($draft['q1']['answer'] ?? null) === 'A',
     'has_q2_saved' => ($draft['q2']['answer'] ?? null) === '合成の短い回答',
+    'attempt_record_hash' => hash('sha256', json_encode(StudyPracticeAttempt::query()->where('user_id', $owner->id)->where('task_id', $task->id)->orderBy('id')->get()->map->getAttributes()->all(), JSON_THROW_ON_ERROR)),
     'task_progress' => (int) $task->progress_percent,
 ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE).PHP_EOL;

@@ -41,6 +41,8 @@ def run(name, artifacts, executable=None, engine='chromium'):
         else:
             env[prefix + '_BASE_URL'] = base
             env[prefix + ('_BROWSER_FIXTURE' if name == 'development' else '_FIXTURE')] = '1'
+        if name == 'study':
+            env['CANOVIA_STUDY_REVIEW_SCREENSHOT'] = str((artifacts / 'study-review.png').resolve())
         if name == 'future':
             env.update(CANOVIA_PUBLIC_RELEASE_LEVEL='0', CANOVIA_FUTURE_ENGINE=engine)
             env['CANOVIA_FUTURE_SCREENSHOT'] = str((artifacts / 'future-desktop.png').resolve())
