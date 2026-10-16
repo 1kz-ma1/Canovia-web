@@ -310,6 +310,9 @@ Route::post('/account/deletion/review', [AuthController::class, 'prepareAccountD
 Route::get('/account/deletion/review', [AuthController::class, 'reviewAccountDeletion'])
     ->middleware(['auth', 'throttle:10,1'])
     ->name('auth.account.deletion.review');
+Route::post('/account/deletion/cancel', [AuthController::class, 'cancelAccountDeletion'])
+    ->middleware(['auth', 'throttle:10,1'])
+    ->name('auth.account.deletion.cancel');
 Route::delete('/account', [AuthController::class, 'destroyAccount'])
     ->middleware(['auth', 'throttle:10,15'])
     ->name('auth.account.destroy');
