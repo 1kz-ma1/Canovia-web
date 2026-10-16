@@ -1,5 +1,9 @@
 # Canovia documentation index (2026-10-13)
 
+## Owner-requested Learning follow-up (2026-10-16)
+
+- [「わからない」の回答意思・保存・復帰・分析の設計案](development/LEARNING_DONT_KNOW_RESPONSE_CONTRACT_2026_10_16.md): 未回答・誤答・明示的な回答不能を分離。**設計のみ、ボタン・migration・公開は未実装。** AP問題混入修正/Future UIとは独立し、初回本番候補へ追加しない。
+
 ## Integration freeze / production convergence (2026-10-16)
 
 - [全領域停止・main/production収束・段階公開マスター仕様](development/CANOVIA_INTEGRATION_FREEZE_RELEASE_MASTER_2026_10_16.md): 停止証拠の参照先、現在地/未確認・公開制御の既存基盤、移行/復旧/オーナー承認ゲート、Codexの統合パッケージ。**実装レーンは一時停止、production NO-GO。**
