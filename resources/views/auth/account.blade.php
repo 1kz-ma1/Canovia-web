@@ -163,7 +163,7 @@
         </form>
 
         @if (session()->has('account_deletion_challenge'))
-            <form method="POST" action="{{ route('auth.account.destroy') }}" class="mt-5 space-y-4" data-clear-offline-state>
+            <form method="POST" action="{{ route('auth.account.destroy') }}" class="mt-5 space-y-4">
                 @csrf
                 @method('DELETE')
                 <label class="block">
