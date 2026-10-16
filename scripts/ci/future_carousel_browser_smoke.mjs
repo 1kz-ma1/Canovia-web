@@ -19,6 +19,19 @@ page.setDefaultTimeout(20000);
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 const log = message => process.stdout.write('FUTURE_PASS '+message+'\n');
+// WebKit can finish click dispatch before the POST redirect replaces the DOM.
+// Wait for the actual server response and toggled form, then verify real counts.
+const vote = async (targetPage, card, before, after, count) => {
+    const action = await card.locator('form').getAttribute('action');
+    const [response] = await Promise.all([
+        targetPage.waitForResponse(r => r.url() === action && r.request().method() === 'POST'),
+        card.getByRole('button', {name:before, exact:false}).click(),
+    ]);
+    assert.equal(response.status(),302);
+    await card.getByRole('button',{name:after,exact:false}).waitFor();
+    assert.equal(await card.locator('[data-support-count]').innerText(),count);
+};
+
 try {
     assert.equal((await page.goto(base+'/feedback')).status(),200);
     const publicCards = page.locator('[aria-label="開発ロードマップ"][data-future-carousel]');
@@ -60,7 +73,7 @@ try {
     }
     log('peek-center-keyboard-reduced-motion-no-page-overflow');
     const support = page.locator('[data-support-feature="social.goal_peers"]');
-    await support.getByRole('button',{name:'この機能をSupport',exact:false}).click();
+    await vote(page,support,'この機能をSupport','Support済み・取り消す','1 Support');
     assert.equal(await support.locator('[data-support-count]').innerText(),'1 Support');
     const action=await support.locator('form').getAttribute('action');
     const token=await support.locator('input[name="_token"]').inputValue();
@@ -68,7 +81,7 @@ try {
     await page.request.post(action,{form:{_token:token}});
     await page.reload();
     assert.equal(await support.locator('[data-support-count]').innerText(),'1 Support');
-    await support.getByRole('button',{name:'Support済み・取り消す'}).click();
+    await vote(page,support,'Support済み・取り消す','この機能をSupport','0 Support');
     assert.equal(await support.locator('[data-support-count]').innerText(),'0 Support');
     log('guest-real-support-replay-and-cancellation');
     await page.goto(base+'/register');
@@ -80,9 +93,9 @@ try {
     await register.getByRole('button',{name:'登録してそのまま続ける'}).click();
     await page.waitForURL(url=>url.pathname!=='/register');
     await page.goto(base+'/feedback');
-    await support.getByRole('button',{name:'この機能をSupport',exact:false}).click();
+    await vote(page,support,'この機能をSupport','Support済み・取り消す','1 Support');
     assert.equal(await support.locator('[data-support-count]').innerText(),'1 Support');
-    await support.getByRole('button',{name:'Support済み・取り消す'}).click();
+    await vote(page,support,'Support済み・取り消す','この機能をSupport','0 Support');
     assert.equal(await support.locator('[data-support-count]').innerText(),'0 Support');
     log('registered-real-support-and-cancellation');
     await page.setViewportSize({width:1280,height:900});
@@ -111,9 +124,9 @@ try {
     assert.equal(await plain.locator('[data-support-feature="social.goal_peers"] button[type="submit"]').count(),1);
     assert.equal(await plain.locator('#public-future-viewport').evaluate(el=>getComputedStyle(el).overflowX),'auto');
     const plainCard=plain.locator('[data-support-feature="social.goal_peers"]');
-    await plainCard.getByRole('button',{name:'この機能をSupport',exact:false}).click();
+    await vote(plain,plainCard,'この機能をSupport','Support済み・取り消す','1 Support');
     assert.equal(await plainCard.locator('[data-support-count]').innerText(),'1 Support');
-    await plainCard.getByRole('button',{name:'Support済み・取り消す'}).click();
+    await vote(plain,plainCard,'Support済み・取り消す','この機能をSupport','0 Support');
     assert.equal(await plainCard.locator('[data-support-count]').innerText(),'0 Support');
     await nojs.close(); log('desktop-image-fallback-and-no-js-native-scroll-and-form');
     const fixture=JSON.parse(execFileSync('php',['scripts/ci/future_carousel_synthetic_fixture.php','--empty'],{env:process.env,encoding:'utf8'}));
