@@ -304,8 +304,11 @@ Route::delete('/account/mcp/subjects/{subject}', [McpDelegatedRevocationControll
     ->whereNumber('subject')
     ->middleware(['auth', 'throttle:8,1'])
     ->name('auth.account.mcp_subject.revoke');
+Route::post('/account/deletion/code', [AuthController::class, 'requestAccountDeletionCode'])
+    ->middleware(['auth', 'throttle:3,15'])
+    ->name('auth.account.deletion.code');
 Route::delete('/account', [AuthController::class, 'destroyAccount'])
-    ->middleware(['auth', 'throttle:3,1'])
+    ->middleware(['auth', 'throttle:6,15'])
     ->name('auth.account.destroy');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('auth.logout');
 Route::post('/offline/work-sessions/sync', [OfflineWorkSessionController::class, 'sync'])->name('offline.work_sessions.sync');
