@@ -13,6 +13,11 @@ on:
       - 'phpunit.xml'
       - 'tests/Feature/IntegrationExposureBoundaryTest.php'
       - 'tests/Feature/InitialReleaseAudienceTest.php'
+      - 'tests/Feature/IosSoftLaunchWebReadinessV561Test.php'
+      - 'app/Notifications/AccountDeletionCodeNotification.php'
+      - 'app/Http/Controllers/AuthController.php'
+      - 'resources/views/auth/account.blade.php'
+      - 'resources/views/layouts/app.blade.php'
       - 'scripts/ci/integration_browser_regression.py'
       - 'scripts/ci/*browser_smoke.mjs'
       - '.github/workflows/integration-exposure.yml'
@@ -43,6 +48,7 @@ jobs:
           php artisan test tests/Feature/IntegrationExposureBoundaryTest.php
           tests/Feature/InitialReleaseAudienceTest.php
           tests/Feature/ReleaseLevelFoundationV5820Test.php tests/Feature/FeatureAccessV406Test.php
+          tests/Feature/IosSoftLaunchWebReadinessV561Test.php
           tests/Feature/P0DatabaseSessionLoginRegressionTest.php
           tests/Feature/McpSyntheticOAuthConsentReadLifecycleTest.php --colors=never
   browser:
