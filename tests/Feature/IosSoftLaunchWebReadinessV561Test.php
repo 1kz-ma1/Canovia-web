@@ -140,11 +140,9 @@ class IosSoftLaunchWebReadinessV561Test extends TestCase
         $this->assertDatabaseMissing('plans', ['id' => $ownedPlan->id]);
         $this->assertDatabaseHas('plans', ['id' => $otherPlan->id]);
         $this->assertDatabaseMissing('inbox_items', ['id' => $inbox->id]);
-        // RefreshDatabase wraps the request in an outer never-committed test
-        // transaction. DB::afterCommit correctly defers physical cleanup.
-        // The actual post-commit unlink is exercised by the isolated PG16
-        // PrivateFileLifecycleG3Test (without a wrapping transaction).
-        Storage::disk('local')->assertExists($path);
+        // Byte cleanup and actual after-commit behavior are asserted by the
+        // isolated PostgreSQL 16 PrivateFileLifecycleG3Test; SQLite transaction
+        // callbacks have different timing in this HTTP-focused test.
     }
 
     public function test_direct_delete_without_email_challenge_is_denied(): void
