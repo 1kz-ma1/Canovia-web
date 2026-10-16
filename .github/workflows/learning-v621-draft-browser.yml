@@ -11,6 +11,12 @@ on:
       - 'resources/js/app.js'
       - 'resources/views/study_practice/show.blade.php'
       - 'app/Http/Controllers/StudyPracticeController.php'
+      - 'app/Services/StudyPracticeAttemptReviewService.php'
+      - 'app/Services/StudyPracticeReviewReferenceService.php'
+      - 'app/Services/QuestionBankGrader.php'
+      - 'app/Http/Controllers/StudyPracticeReviewController.php'
+      - 'resources/views/study_practice/**'
+      - 'tests/Feature/StudyPracticeAttemptReviewTest.php'
       - 'app/Services/StudyPracticeQuestionIntegrityService.php'
       - 'app/Services/NativeAiStudyPracticeQuestionProvider.php'
       - 'app/Services/StudyPracticeNativeAiSchema.php'
@@ -48,7 +54,7 @@ jobs:
           npm ci --ignore-scripts
           npm run build
       - name: Question integrity and existing draft/native/assessment regressions
-        run: php artisan test --compact tests/Feature/StudyPracticeQuestionIntegrityTest.php tests/Feature/StudyPracticeDraftPersistenceV4071Test.php tests/Feature/StudyPracticeLearningLoopV393Test.php tests/Feature/NativeAiPracticeV418Test.php
+        run: php artisan test --compact tests/Feature/StudyPracticeQuestionIntegrityTest.php tests/Feature/StudyPracticeDraftPersistenceV4071Test.php tests/Feature/StudyPracticeLearningLoopV393Test.php tests/Feature/NativeAiPracticeV418Test.php tests/Feature/StudyPracticeAttemptReviewTest.php tests/Feature/QuestionBankV402Test.php
       - name: Pin disposable local SQLite and disable provider effects
         shell: bash
         run: |

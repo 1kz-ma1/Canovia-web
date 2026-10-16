@@ -41,6 +41,8 @@ def run(name, artifacts, executable=None, engine='chromium'):
         else:
             env[prefix + '_BASE_URL'] = base
             env[prefix + ('_BROWSER_FIXTURE' if name == 'development' else '_FIXTURE')] = '1'
+        if name == 'study':
+            env['CANOVIA_STUDY_REVIEW_SCREENSHOT'] = str((artifacts / 'study-review.png').resolve())
         if name == 'future':
             env.update(CANOVIA_PUBLIC_RELEASE_LEVEL='0', CANOVIA_FUTURE_ENGINE=engine)
             env['CANOVIA_FUTURE_SCREENSHOT'] = str((artifacts / 'future-desktop.png').resolve())
@@ -95,4 +97,10 @@ if __name__ == '__main__':
         try:
             run(name, args.artifacts, args.browser_executable, args.browser_engine)
         except subprocess.CalledProcessError as error:
+            # All journeys above run sanitized, synthetic local-only fixtures.
+            # Keep the actionable browser error in Actions logs even when an
+            # operator cannot retrieve the separate artifact transport.
+            log_path = args.artifacts / f'{name}.log'
+            if log_path.is_file():
+                print('\n'.join(log_path.read_text(errors='replace').splitlines()[-40:]))
             raise SystemExit(error.returncode)

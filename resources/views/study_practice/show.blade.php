@@ -622,6 +622,9 @@
                         @endif
                     </p>
                 </div>
+                @if ($attemptReview ?? null)
+                    @include('study_practice.partials.attempt-review')
+                @endif
                 <form method="POST" action="{{ route('plans.tasks.study_practice.reset', [$plan, $task]) }}" class="mt-4" data-study-focus-continue>
                     @csrf
                     <input type="hidden" name="continue" value="1">
@@ -729,8 +732,8 @@
                     @endif
                 </div>
 
-                <details class="mt-5 rounded-2xl border border-slate-800 bg-slate-950/20 p-4">
-                    <summary class="cursor-pointer text-sm font-black text-slate-200">詳しい評価を確認</summary>
+                <div class="mt-5 rounded-2xl border border-slate-800 bg-slate-950/20 p-4">
+                    <h3 class="text-sm font-black text-slate-200">評価全体の記録</h3>
                     <div class="mt-4">
                         <div class="mt-5 grid gap-4 md:grid-cols-2">
                             <div class="rounded-2xl border border-emerald-300/15 bg-emerald-300/[0.04] p-4">
@@ -742,69 +745,12 @@
                                 <ul class="mt-2 space-y-2 text-sm text-slate-300">@forelse($assessment['weaknesses'] as $item)<li>・{{ $item }}</li>@empty<li class="text-slate-500">記載なし</li>@endforelse</ul>
                             </div>
                         </div>
-                        @if (collect($assessment['question_feedback'] ?? [])->isNotEmpty())
-                            <div class="mt-5 space-y-3">
-                                <h3 class="text-sm font-black text-slate-100">問題ごとのフィードバック</h3>
-                                @foreach ($assessment['question_feedback'] as $feedback)
-                                    @php
-                                        $correctnessLabel = match ($feedback['correctness'] ?? 'ungraded') {
-                                            'correct' => '正解',
-                                            'partial' => '一部正解',
-                                            'incorrect' => '要復習',
-                                            default => '評価対象外',
-                                        };
-                                        $correctnessClass = match ($feedback['correctness'] ?? 'ungraded') {
-                                            'correct' => 'badge-green',
-                                            'partial' => 'badge-slate',
-                                            'incorrect' => 'badge-amber',
-                                            default => 'badge-slate',
-                                        };
-                                        $errorTypeLabel = match ($feedback['error_type'] ?? 'none') {
-                                            'knowledge_gap' => '知識不足',
-                                            'concept_gap' => '概念理解',
-                                            'reasoning_gap' => '推論',
-                                            'condition_reading' => '条件読解',
-                                            'unit_error' => '単位ミス',
-                                            'calculation_slip' => '計算ミス',
-                                            'careless' => 'ケアレス',
-                                            'unknown' => '原因未確定',
-                                            default => null,
-                                        };
-                                    @endphp
-                                    <article class="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <strong class="text-sm text-slate-100">{{ $feedback['question_id'] }}</strong>
-                                            <span class="badge {{ $correctnessClass }}">{{ $correctnessLabel }}</span>
-                                            @if ($errorTypeLabel)
-                                                <span class="badge badge-slate">{{ $errorTypeLabel }}</span>
-                                            @endif
-                                        </div>
-                                        @if ($feedback['feedback'])
-                                            <p class="mt-2 text-sm leading-6 text-slate-300">{{ $feedback['feedback'] }}</p>
-                                        @endif
-                                        @if ($feedback['reasoning_feedback'])
-                                            <div class="mt-2 rounded-xl border border-violet-300/15 bg-violet-300/[0.04] p-3">
-                                                <p class="text-[11px] font-bold text-violet-200">思考過程フィードバック</p>
-                                                <p class="mt-1 text-xs leading-5 text-slate-300">{{ $feedback['reasoning_feedback'] }}</p>
-                                            </div>
-                                        @endif
-                                        @if (collect($feedback['weakness_topics'] ?? [])->isNotEmpty())
-                                            <p class="mt-2 text-xs leading-5 text-slate-400">弱点候補：{{ collect($feedback['weakness_topics'])->implode(' / ') }}</p>
-                                        @endif
-                                        @if (collect($feedback['misconceptions'] ?? [])->isNotEmpty())
-                                            <p class="mt-2 text-xs leading-5 text-amber-100">誤解ポイント：{{ collect($feedback['misconceptions'])->implode(' / ') }}</p>
-                                        @endif
-                                    </article>
-                                @endforeach
-                            </div>
-                        @endif
-
                         @if ($assessment['evidence_summary'])
                             <div class="mt-4 rounded-xl border border-slate-800 bg-slate-950/35 p-4"><p class="text-xs font-bold text-slate-500">評価根拠</p><p class="mt-1 text-sm leading-6 text-slate-300">{{ $assessment['evidence_summary'] }}</p></div>
                         @endif
 
                     </div>
-                </details>
+                </div>
                 @if ($currentAttempt?->applied_at)
                     <div class="mt-4 rounded-xl border border-emerald-300/15 bg-emerald-300/[0.04] p-4">
                         <p class="text-sm font-bold text-emerald-100">Taskへ反映済み</p>
@@ -816,35 +762,7 @@
             </section>
         @endif
 
-        @if ($questions)
-            @if (($practiceStage ?? 'answering') === 'result')
-                <details id="practice-questions" class="page-card scroll-mt-24 p-4 sm:p-5">
-                    <summary class="cursor-pointer list-none text-sm font-black text-slate-200">
-                        回答済み {{ count($questions) }}問 · 今回の回答を見直す
-                    </summary>
-                    <div class="mt-4 space-y-3">
-                        @php $questionReviewMap = collect($questions)->keyBy('id'); @endphp
-                        @foreach (($answers ?? []) as $answer)
-                            @php $reviewQuestion = $questionReviewMap->get($answer['question_id'] ?? ''); @endphp
-                            <article class="rounded-2xl border border-slate-800 bg-slate-950/30 p-4">
-                                <p class="text-sm font-bold leading-6 text-slate-100">{{ data_get($reviewQuestion, 'prompt', $answer['question_id'] ?? '問題') }}</p>
-                                <div class="mt-3 space-y-2">
-                                    @foreach (($answer['fields'] ?? []) as $field)
-                                        @php
-                                            $reviewValue = $field['value'] ?? '';
-                                            $reviewText = is_array($reviewValue) ? implode(', ', $reviewValue) : (string) $reviewValue;
-                                        @endphp
-                                        <div class="rounded-xl border border-slate-800/80 bg-slate-950/40 p-3">
-                                            <p class="text-[10px] font-bold text-slate-500">{{ $field['label'] ?? $field['field_id'] ?? '回答' }}</p>
-                                            <p class="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-300">{{ $reviewText !== '' ? $reviewText : '未入力' }}</p>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </article>
-                        @endforeach
-                    </div>
-                </details>
-            @else
+        @if ($questions && ($practiceStage ?? 'answering') !== 'result')
                 <details id="practice-questions" class="page-card scroll-mt-24 p-3 sm:p-5" @if (($practiceStage ?? 'answering') === 'answering') open @endif>
                     <summary class="cursor-pointer list-none {{ ($practiceStage ?? 'answering') === 'answering' ? 'hidden' : '' }}">
                         <span class="text-sm font-black text-slate-200">回答済み {{ count($questions) }}問 · 回答を見直す</span>
@@ -968,7 +886,6 @@
                 </form>
                     </div>
                 </details>
-            @endif
         @endif
 
         @if ($evaluationPrompt)
@@ -1041,6 +958,8 @@
             </details>
         @endif
 
+        <a class="btn-secondary" href="{{ route('plans.tasks.study_practice.history', [$plan, $task]) }}" data-attempt-history-link>保存した演習結果を復習する</a>
+
         @if (($recentAttempts ?? collect())->isNotEmpty() && ! $studyFocusActive && ! $studyFocusSetup)
             <details class="page-card p-4 sm:p-5" data-study-practice-history>
                 <summary class="cursor-pointer text-sm font-semibold text-slate-200">学習履歴を振り返る <span class="ml-1 text-xs font-normal text-slate-400">（{{ $recentAttempts->count() }}件）</span></summary>
@@ -1050,7 +969,7 @@
                         <article class="rounded-2xl border border-white/8 bg-white/[0.025] p-4">
                             <div class="flex flex-wrap items-start justify-between gap-3">
                                 <div>
-                                    <strong class="text-slate-100">{{ $attempt->exercise_title ?: 'AI演習' }}</strong>
+                                    <a class="font-bold text-sky-200 underline" href="{{ route('plans.tasks.study_practice.review', [$plan, $task, $attempt->id]) }}">{{ $attempt->exercise_title ?: 'AI演習' }}を復習する</a>
                                     <p class="mt-1 text-xs text-slate-500">{{ $attempt->created_at?->format('Y-m-d H:i') }}</p>
                                 </div>
                                 <div class="flex items-center gap-2">

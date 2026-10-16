@@ -309,6 +309,15 @@ class StudyPracticeController extends Controller
             : null;
         $assessmentForView = is_array($state['assessment'] ?? null) ? $state['assessment'] : null;
 
+        if ($currentAttempt) {
+            $assessmentForView = array_replace([
+                'score_percent' => $currentAttempt->score_percent,
+                'recommended_task_progress_percent' => $currentAttempt->recommended_task_progress_percent,
+                'strengths' => $currentAttempt->strengths ?? [], 'weaknesses' => $currentAttempt->weaknesses ?? [],
+                'evidence_summary' => $currentAttempt->evidence_summary, 'next_action' => $currentAttempt->next_action,
+            ], is_array($currentAttempt->assessment) ? $currentAttempt->assessment : []);
+        }
+
         if ($assessmentForView && ! is_array($assessmentForView['next_step'] ?? null)) {
             $assessmentForView['next_step'] = $this->normalizeNextStep(null, $task, $assessmentForView);
             if (! filled($assessmentForView['next_action'] ?? null)) {
@@ -363,6 +372,7 @@ class StudyPracticeController extends Controller
             'practiceStage' => $practiceStage,
             'compactContinueSetup' => (bool) $request->session()->get('study_practice_continuing', false),
             'currentAttempt' => $currentAttempt,
+            'attemptReview' => $currentAttempt ? app(\App\Services\StudyPracticeAttemptReviewService::class)->forAttempt($currentAttempt) : null,
             'recentAttempts' => $recentAttempts,
             'nativeAiEntitled' => $nativeAiEntitled,
             'nativeAiAvailable' => $nativeAiAvailable,
