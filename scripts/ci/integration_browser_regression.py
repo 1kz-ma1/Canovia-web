@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the existing three journeys on separate disposable SQLite databases."""
+"""Run isolated browser journeys on separate disposable SQLite databases."""
 import argparse
 import json
 import os
@@ -15,10 +15,11 @@ JOURNEYS = {
     'welcome': (8796, 'prelaunch_ia2d_browser_smoke.mjs', 'CANOVIA_IA2_BROWSER'),
     'development': (8791, 'development_v69_browser_smoke.mjs', 'CANOVIA_V69'),
     'study': (8799, 'learning_v621_draft_browser_smoke.mjs', 'CANOVIA_LEARNING_V621'),
+    'future': (8797, 'future_carousel_browser_smoke.mjs', 'CANOVIA_FUTURE'),
 }
 
 
-def run(name, artifacts, executable=None):
+def run(name, artifacts, executable=None, engine='chromium'):
     port, script, prefix = JOURNEYS[name]
     base = f'http://127.0.0.1:{port}'
     # Retain tool activation, not provider credentials or production DB values.
@@ -40,6 +41,9 @@ def run(name, artifacts, executable=None):
         else:
             env[prefix + '_BASE_URL'] = base
             env[prefix + ('_BROWSER_FIXTURE' if name == 'development' else '_FIXTURE')] = '1'
+        if name == 'future':
+            env.update(CANOVIA_PUBLIC_RELEASE_LEVEL='0', CANOVIA_FUTURE_ENGINE=engine)
+            env['CANOVIA_FUTURE_SCREENSHOT'] = str((artifacts / 'future-desktop.png').resolve())
         if executable:
             env['CANOVIA_BROWSER_EXECUTABLE_PATH'] = str(Path(executable).resolve(strict=True))
         artifacts.mkdir(parents=True, exist_ok=True)
@@ -82,12 +86,13 @@ if __name__ == '__main__':
     parser.add_argument('--journey', choices=[*JOURNEYS, 'all'], default='all')
     parser.add_argument('--artifacts', type=Path, required=True)
     parser.add_argument('--browser-executable')
+    parser.add_argument('--browser-engine', choices=['chromium', 'webkit'], default='chromium')
     args = parser.parse_args()
     # A Vite hot marker would connect these fixtures to an unrelated live dev server.
     if (ROOT / 'public/hot').exists():
         raise SystemExit('Stop the owned Vite session and remove its stale hot marker before isolated E2E')
     for name in JOURNEYS if args.journey == 'all' else [args.journey]:
         try:
-            run(name, args.artifacts, args.browser_executable)
+            run(name, args.artifacts, args.browser_executable, args.browser_engine)
         except subprocess.CalledProcessError as error:
             raise SystemExit(error.returncode)

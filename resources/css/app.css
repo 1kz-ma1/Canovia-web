@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './future-carousel.css';
 @import './dashboard-document.css';
 @import './plan-dashboard-board.css';
 @import './plan-dashboard.css';
