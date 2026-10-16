@@ -152,7 +152,7 @@
             </label>
 
             <label class="block">
-                <span class="text-sm font-semibold text-slate-300">確認のためメールアドレスを再入力</span>
+                <span class="text-sm font-semibold text-slate-300">削除するアカウントの登録メールアドレスを入力</span>
                 <input type="email" name="confirmation_email" value="{{ old('confirmation_email') }}" autocomplete="email" required class="form-control mt-2">
                 @error('confirmation_email')<span class="mt-1 block text-xs text-rose-300">{{ $message }}</span>@enderror
             </label>
