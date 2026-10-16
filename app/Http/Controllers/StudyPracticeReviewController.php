@@ -23,7 +23,8 @@ final class StudyPracticeReviewController extends Controller
     {
         $record = $this->query($request, $plan, $task)->whereKey($attempt)->firstOrFail();
         return response()->view('study_practice.review', ['plan' => $plan, 'task' => $task, 'attempt' => $record,
-            'attemptReview' => app(StudyPracticeAttemptReviewService::class)->forAttempt($record)])->header('Cache-Control', 'private, no-store');
+            'attemptReview' => app(StudyPracticeAttemptReviewService::class)->forAttempt($record),
+            'retryResults' => app(StudyPracticeRetryController::class)->query($request, $plan, $task, $attempt)->latest('id')->paginate(10, ['*'], 'retry_page')])->header('Cache-Control', 'private, no-store');
     }
 
     public function query(Request $request, Plan $plan, Task $task)
