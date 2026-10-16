@@ -63,6 +63,7 @@ export function mountFutureCarousels(root = document) {
             }
         }, true);
         controls.hidden = false;
+        carousel.querySelector('[data-carousel-keyboard-help]').hidden = false;
         resize();
     });
 }

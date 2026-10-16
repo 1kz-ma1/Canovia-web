@@ -1,6 +1,6 @@
 @props(['id', 'label', 'count'])
 <section class="future-carousel" data-future-carousel role="region" aria-roledescription="カルーセル" aria-label="{{ $label }}">
-    <p id="{{ $id }}-help" class="future-carousel-help">横にスワイプ・スクロールして見る。枠にフォーカスすると左右矢印、Home / End キーでも選べます。</p>
+    <p id="{{ $id }}-help" class="future-carousel-help">横にスワイプ・スクロールして見る。<span data-carousel-keyboard-help hidden>枠にフォーカスすると左右矢印、Home / End キーでも選べます。</span></p>
     <div id="{{ $id }}-viewport" class="future-carousel-viewport" data-carousel-viewport tabindex="0" aria-label="{{ $label }}のカード" aria-describedby="{{ $id }}-help">
         <ul class="future-carousel-track" data-carousel-track>{{ $slot }}</ul>
     </div>
