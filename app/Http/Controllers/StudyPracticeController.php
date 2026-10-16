@@ -68,7 +68,7 @@ class StudyPracticeController extends Controller
         if (! empty($state['questions']) && collect($state['questions'])->contains(
             fn ($question) => is_array($question) && empty($question['response_fields'])
         )) {
-            $state['questions'] = $this->normalizeQuestions($state['questions']);
+            $state['questions'] = $this->normalizeQuestions($state['questions'], $plan, $task, false);
             $request->session()->put($key, $state);
         }
 
@@ -325,6 +325,20 @@ class StudyPracticeController extends Controller
             default => 'setup',
         };
 
+        $questionIntegrityError = null;
+        $questionIntegrityJson = null;
+        try {
+            $this->assertQuestionIntegrity($state['questions'] ?? [], $plan, $task, $currentPracticeSession);
+        } catch (ValidationException $exception) {
+            $questionIntegrityError = collect($exception->errors())->flatten()->first();
+            $questionIntegrityJson = json_encode([
+                'schema_version' => '1.0', 'flow' => 'study_practice',
+                'target_plan' => ['id' => $plan->id], 'target_task' => ['id' => $task->id],
+                'title' => $state['title'] ?? 'AI演習', 'questions' => $state['questions'],
+            ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_INVALID_UTF8_SUBSTITUTE);
+            $practiceStage = 'setup';
+        }
+
         return view('study_practice.show', [
             'plan' => $plan,
             'task' => $task,
@@ -334,10 +348,12 @@ class StudyPracticeController extends Controller
             'currentPracticeSession' => $currentPracticeSession,
             'prepareRequestId' => $prepareRequestId,
             'exerciseTitle' => $state['title'] ?? null,
-            'questions' => $state['questions'] ?? [],
+            'questions' => $questionIntegrityError ? [] : ($state['questions'] ?? []),
+            'questionIntegrityError' => $questionIntegrityError,
+            'questionIntegrityJson' => $questionIntegrityJson,
             'answers' => $state['answers'] ?? [],
             'draftAnswers' => $draftAnswers,
-            'evaluationPrompt' => $state['evaluation_prompt'] ?? null,
+            'evaluationPrompt' => $questionIntegrityError ? null : ($state['evaluation_prompt'] ?? null),
             'assessment' => $assessmentForView,
             'nextStep' => $assessmentForView['next_step'] ?? null,
             'studyProgression' => $studyProgression,
@@ -579,7 +595,7 @@ class StudyPracticeController extends Controller
         $runId = (int) data_get($practiceSession->provider_payload, 'native_ai.run_id', 0);
 
         try {
-            $questions = $this->normalizeQuestions($practiceSession->questions_snapshot);
+            $questions = $this->normalizeQuestions($practiceSession->questions_snapshot, $plan, $task);
         } catch (ValidationException $exception) {
             try {
                 $generationFence->abandonInvalid(
@@ -684,7 +700,7 @@ class StudyPracticeController extends Controller
         $decoded = json_decode($json, true);
         $this->assertEnvelope($decoded, 'study_practice', $plan, $task, 'questions_json');
 
-        $questions = $this->normalizeQuestions($decoded['questions'] ?? null);
+        $questions = $this->normalizeQuestions($decoded['questions'] ?? null, $plan, $task);
         $title = trim((string) ($decoded['title'] ?? 'AI演習'));
         $exerciseTitle = $title !== '' ? mb_substr($title, 0, 120) : 'AI演習';
 
@@ -806,6 +822,7 @@ class StudyPracticeController extends Controller
             return response()->noContent(409);
         }
 
+        $this->assertQuestionIntegrity($questions, $plan, $task, $practiceSession);
         $draftAnswers = $this->normalizeDraftAnswers($decoded, $questions);
         $practiceSession->update([
             'status' => StudyPracticeSession::STATUS_IN_PROGRESS,
@@ -848,6 +865,10 @@ class StudyPracticeController extends Controller
             return redirect()->route('plans.tasks.study_practice.show', [$plan, $task])
                 ->withErrors(['answers' => '先に問題JSONを読み込んでください。']);
         }
+
+        $this->assertQuestionIntegrity($questions, $plan, $task,
+            $this->practiceSessionQuery($request, $plan, $task, $identity->resolve($request))
+                ->whereKey((int) ($state['practice_session_id'] ?? 0))->first());
 
         $rawAnswers = $request->input('answers', []);
         $draftAnswers = $this->normalizeDraftAnswers($rawAnswers, $questions);
@@ -1199,6 +1220,10 @@ class StudyPracticeController extends Controller
                 'assessment_json' => '先にCanovia上で問題へ回答し、評価用プロンプトを生成してください。',
             ]);
         }
+
+        $this->assertQuestionIntegrity($state['questions'] ?? [], $plan, $task,
+            $this->practiceSessionQuery($request, $plan, $task, $actorToken)
+                ->whereKey((int) ($state['practice_session_id'] ?? 0))->first());
 
         // Keep the recovered durable state in the PHP session before persisting
         // the assessment. A redirect/reload after this POST must see the same
@@ -1878,10 +1903,17 @@ class StudyPracticeController extends Controller
         return $draft;
     }
 
-    /**
-     * @return array<int, array<string, mixed>>
-     */
-    private function normalizeQuestions(mixed $raw): array
+    private function assertQuestionIntegrity(array $questions, Plan $plan, Task $task, ?StudyPracticeSession $session = null): void
+    {
+        $profile = data_get($session?->selection_context, 'strategy.exam_profile');
+        if (! is_array($profile) || empty($profile['key'])) {
+            $profile = app(\App\Services\StudyPracticeExamProfileService::class)->forPlanTask($plan, $task);
+        }
+        app(\App\Services\StudyPracticeQuestionIntegrityService::class)->assertValid($questions, $profile);
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function normalizeQuestions(mixed $raw, Plan $plan, Task $task, bool $checkIntegrity = true): array
     {
         if (! is_array($raw) || $raw === [] || count($raw) > 20) {
             throw ValidationException::withMessages(['questions_json' => 'questionsは1〜20問で返してください。']);
@@ -1995,6 +2027,10 @@ class StudyPracticeController extends Controller
             }
 
             $questions[] = $normalizedQuestion;
+        }
+
+        if ($checkIntegrity) {
+            $this->assertQuestionIntegrity($questions, $plan, $task);
         }
 
         return $questions;

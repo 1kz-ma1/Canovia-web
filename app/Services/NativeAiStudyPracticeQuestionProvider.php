@@ -76,6 +76,17 @@ class NativeAiStudyPracticeQuestionProvider implements StudyPracticeQuestionProv
             );
         }
 
+        try {
+            app(StudyPracticeQuestionIntegrityService::class)->assertValid(
+                $data['questions'],
+                app(StudyPracticeExamProfileService::class)->forPlanTask($plan, $task),
+            );
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            $message = collect($exception->errors())->flatten()->first();
+            $this->gateway->markRunFailed((int) $result['run_id'], 'native_ai_question_integrity', $message);
+            throw new NativeAiExecutionException($message, 'native_ai_question_integrity', (int) $result['run_id']);
+        }
+
         $title = trim((string) ($data['title'] ?? 'Canovia Native AI演習'));
         $questions = array_values($data['questions']);
 

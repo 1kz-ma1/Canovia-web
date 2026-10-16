@@ -165,6 +165,7 @@ class StudyPracticePromptService
         $examFormatRules = $isApSubjectA
             ? implode("\n", [
                 '- AP科目Aの本番想定として、原則はsingle_choiceの4択にする。',
+                '- 単問四択の最終回答欄はsingle_choiceを必ず1件だけにする。別問題の回答欄・選択肢を同じquestionへ混ぜず、別のquestionへ分ける。補助欄は同じ問題の任意textareaだけにする。',
                 '- 計算問題でも最終回答は4択を優先し、number入力を難易度上昇の手段として乱用しない。',
                 '- 数値は、考え方が正しければ過度な筆算をせず選択肢を判別できる値を優先する。',
                 '- 小数・百分率を使う場合も、不要に桁数の多い値や割り切れない値を並べて計算精度だけを試さない。',
