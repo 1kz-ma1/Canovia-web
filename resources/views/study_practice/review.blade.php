@@ -12,5 +12,15 @@
         </div>
     </header>
     @include('study_practice.partials.attempt-review')
+    <section class="page-card space-y-3 p-4" aria-label="同問再回答の履歴">
+        <h2 class="text-lg font-bold text-slate-100">同問再回答の履歴</h2>
+        <p class="text-xs text-slate-400">採点済みAttemptとは別の再回答記録です。元のスコアや弱点判定へ加算しません。</p>
+        @forelse ($retryResults as $result)
+            <a class="block text-sky-200 underline" href="{{ route('plans.tasks.study_practice.retry.show', [$plan, $task, $attempt->id, $result->id]) }}">{{ $result->created_at?->format('Y-m-d H:i') }} の再回答記録を開く</a>
+        @empty
+            <p class="text-sm text-slate-400">再回答記録はまだありません。</p>
+        @endforelse
+        {{ $retryResults->links() }}
+    </section>
 </div>
 @endsection

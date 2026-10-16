@@ -64,3 +64,8 @@
         <p class="text-sm text-slate-400">この回の問題本文は保存されていません。元のスコアや履歴は変更していません。</p>
     @endforelse
 </section>
+
+@php($reviewSource = $currentAttempt ?? $attempt ?? null)
+@if ($reviewSource)
+    @include('study_practice.partials.retry-entry', ['source' => $reviewSource])
+@endif
