@@ -379,7 +379,8 @@ class AuthController extends Controller
 
         return redirect()
             ->route('home')
-            ->with('status', 'Canoviaアカウントと本人所有データを削除しました。');
+            ->with('status', 'Canoviaアカウントと本人所有データを削除しました。')
+            ->with('account_deleted', true);
     }
 
     public function logout(Request $request)
