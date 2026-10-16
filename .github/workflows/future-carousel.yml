@@ -1,0 +1,63 @@
+name: Canovia Future Carousel
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/future-carousel.yml'
+      - 'app/Http/Controllers/CanoviaFutureController.php'
+      - 'app/Services/PublicRoadmapProjectionService.php'
+      - 'config/canovia*roadmap*'
+      - 'config/canovia_future_media.php'
+      - 'resources/views/feedback/**'
+      - 'resources/views/components/future-*'
+      - 'resources/js/future-carousel.mjs'
+      - 'resources/js/app.js'
+      - 'resources/css/future-carousel.css'
+      - 'resources/css/app.css'
+      - 'public/images/future/**'
+      - 'scripts/ci/future_carousel*'
+      - 'scripts/ci/integration_browser_regression.py'
+      - 'tests/Feature/CanoviaFuture*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  future-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: npm ci --ignore-scripts && npm run build
+      - name: Existing publication, voting and new carousel PHP regressions
+        run: php artisan test --compact tests/Feature/CanoviaFutureV407Test.php tests/Feature/CanoviaFutureCarouselTest.php
+      - name: Install pinned test browser without changing lockfiles
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+          npx playwright install --with-deps ${{ matrix.engine }}
+          git diff --exit-code -- package.json package-lock.json
+      - name: L0 local-only disposable browser journey
+        run: python3 scripts/ci/integration_browser_regression.py --journey future --browser-engine ${{ matrix.engine }} --artifacts "$RUNNER_TEMP/future-artifacts"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: future-${{ matrix.engine }}
+          path: ${{ runner.temp }}/future-artifacts

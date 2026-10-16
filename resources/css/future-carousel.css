@@ -1,0 +1,35 @@
+.future-carousel { container-type: inline-size; min-width: 0; --future-width: min(76vw, 25rem); }
+.future-carousel-help { margin: .6rem 0; color: #a8bbd6; font-size: .75rem; line-height: 1.6; }
+.future-carousel-viewport { overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding-inline: calc((100% - var(--future-width)) / 2); border-radius: 1.5rem; scrollbar-width: thin; scrollbar-color: #667bb2 #101b35; }
+.future-carousel-track { display: flex; gap: 1.2rem; width: max-content; min-width: 100%; margin: 0; padding: 1.5rem max(.75rem, calc((100vw - 2rem - var(--future-width)) / 2)); list-style: none; }
+.future-carousel-card { flex: 0 0 var(--future-width); width: var(--future-width); scroll-snap-align: center; scroll-snap-stop: normal; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #465b88; border-radius: 1.6rem; background: linear-gradient(145deg, #172442, #0b142a); box-shadow: 0 12px 32px #02061780; transform: none; }
+.future-carousel.is-enhanced .future-carousel-card[data-active="true"], .future-carousel.is-enhanced .future-carousel-card:focus-within { transform: scale(1); border-color: #b4c9ff; box-shadow: 0 0 0 1px #9ec4ff50, 0 0 28px #6478ef40; }
+.future-card-media { margin: 0; background: #101b35; }
+.future-card-media > img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.future-card-media figcaption { padding: .4rem .8rem; color: #bdcbe1; font-size: .625rem; line-height: 1.5; }
+.future-card-placeholder { display: grid; place-content: center; justify-items: center; gap: .6rem; aspect-ratio: 16 / 9; padding: 1rem; background: radial-gradient(ellipse at 50% 40%, #39447b, #0c172f 75%); color: #d4e5ff; font-size: .75rem; }
+.future-card-placeholder img { width: 4rem; height: 4rem; }
+.future-card-body { padding: 1.25rem; display: flex; flex: 1; flex-direction: column; gap: .9rem; }
+.future-card-body h3, .future-card-body h4 { color: #f3f6ff; font-size: 1.2rem; font-weight: 800; line-height: 1.5; }
+.future-card-copy { color: #bdcbe1; line-height: 1.7; font-size: .875rem; }
+.future-card-state { align-self: flex-start; border: 1px solid #778ac080; background: #36456a60; border-radius: 999px; padding: .3rem .7rem; font-size: .75rem; font-weight: 700; color: #d9e8ff; }
+.future-card-actions { margin-top: auto; padding-top: .4rem; }
+.future-card-actions button, .future-card-actions a { width: 100%; justify-content: center; }
+.future-carousel-controls { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: .7rem; padding: .7rem .1rem; }
+.future-carousel-controls[hidden] { display: none; }
+.future-carousel-controls button { min-width: 2.75rem; min-height: 2.75rem; border: 1px solid #566a99; border-radius: 999px; color: #d8e9ff; background: #172442; }
+.future-carousel-controls button:disabled { opacity: .4; cursor: default; }
+.future-carousel-dots { display: flex; flex-wrap: wrap; justify-content: center; gap: .25rem; }
+.future-carousel-dots button { min-width: 2rem; border-color: transparent; color: #7d91bf; }
+.future-carousel-dots button[aria-current="true"] { color: #d5f4ff; border-color: #a7d8ff; }
+.future-carousel :focus-visible { outline: 3px solid #bae6fd; outline-offset: 3px; }
+@media (min-width: 640px) { .future-carousel { --future-width: min(58vw, 25rem); } }
+@media (prefers-reduced-motion: reduce) { .future-carousel-card { transition: none; } }
+
+.future-carousel-track { padding-inline: max(.75rem, calc((100cqw - var(--future-width)) / 2)); }
+.future-card-summary { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.future-page { background: radial-gradient(ellipse at 45% 15%, #33489425, transparent 65%); }
+
+.future-carousel.is-enhanced .future-carousel-card { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.future-carousel.is-enhanced .future-carousel-card[data-active="false"]:not(:focus-within) { transform: scale(.94); }
+@media (prefers-reduced-motion: reduce) { .future-carousel.is-enhanced .future-carousel-card { transition: none; } }

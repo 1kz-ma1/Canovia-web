@@ -63,6 +63,7 @@ class CanoviaFutureController extends Controller
 
     public function unsupport(Request $request, RoadmapFeature $roadmapFeature, BehaviorIdentityService $identity)
     {
+        abort_unless($roadmapFeature->is_published && $roadmapFeature->voting_enabled, 404);
         $voterKey = $this->voterKey($request, $identity);
 
         RoadmapVote::query()
