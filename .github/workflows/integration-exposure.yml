@@ -17,6 +17,7 @@ on:
       - 'app/Notifications/AccountDeletionCodeNotification.php'
       - 'app/Http/Controllers/AuthController.php'
       - 'resources/views/auth/account.blade.php'
+      - 'resources/views/auth/account-deletion-review.blade.php'
       - 'resources/views/layouts/app.blade.php'
       - 'scripts/ci/integration_browser_regression.py'
       - 'scripts/ci/*browser_smoke.mjs'

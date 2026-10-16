@@ -304,9 +304,15 @@ Route::delete('/account/mcp/subjects/{subject}', [McpDelegatedRevocationControll
     ->whereNumber('subject')
     ->middleware(['auth', 'throttle:8,1'])
     ->name('auth.account.mcp_subject.revoke');
-Route::post('/account/deletion/code', [AuthController::class, 'requestAccountDeletionCode'])
+Route::post('/account/deletion/review', [AuthController::class, 'prepareAccountDeletion'])
     ->middleware(['auth', 'throttle:3,15'])
-    ->name('auth.account.deletion.code');
+    ->name('auth.account.deletion.prepare');
+Route::get('/account/deletion/review', [AuthController::class, 'reviewAccountDeletion'])
+    ->middleware(['auth', 'throttle:10,1'])
+    ->name('auth.account.deletion.review');
+Route::post('/account/deletion/cancel', [AuthController::class, 'cancelAccountDeletion'])
+    ->middleware(['auth', 'throttle:10,1'])
+    ->name('auth.account.deletion.cancel');
 Route::delete('/account', [AuthController::class, 'destroyAccount'])
     ->middleware(['auth', 'throttle:10,15'])
     ->name('auth.account.destroy');

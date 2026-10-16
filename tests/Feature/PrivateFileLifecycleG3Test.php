@@ -9,13 +9,11 @@ use App\Models\StudyRecallSource;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\AccountDeletionService;
-use App\Notifications\AccountDeletionCodeNotification;
 use App\Services\PrivateFileLifecycleService;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Tests\TestCase;
@@ -28,8 +26,6 @@ final class PrivateFileLifecycleG3Test extends TestCase
     {
         parent::setUp();
         $this->withoutVite();
-        Notification::fake();
-        config(['mail.default' => 'array']);
         Storage::fake(config('filesystems.default'));
         config(['canovia.super_admin_user_id' => null, 'canovia.admin_email' => null]);
     }
@@ -119,15 +115,13 @@ final class PrivateFileLifecycleG3Test extends TestCase
         $this->inbox($owner, $plan, $path);
         $otherInbox = $this->inbox($other, $otherPlan, $otherPath);
 
-        $this->actingAs($owner)
-            ->post(route('auth.account.deletion.code'), [
-                'password' => 'password',
-                'confirmation_email' => ' ERASE-PRIVATE@example.com ',
-            ])
-            ->assertRedirect(route('auth.account'));
-        $code = Notification::sent($owner, AccountDeletionCodeNotification::class)->first()->code;
+        $this->actingAs($owner)->post(route('auth.account.deletion.prepare'), [
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ])->assertRedirect(route('auth.account.deletion.review'));
 
-        $this->delete(route('auth.account.destroy'), ['confirmation_code' => $code])
+        $this->get(route('auth.account.deletion.review'))->assertOk();
+        $this->delete(route('auth.account.destroy'), ['confirm_deletion' => 'yes'])
             ->assertRedirect(route('home'))
             ->assertSessionHasNoErrors();
 
