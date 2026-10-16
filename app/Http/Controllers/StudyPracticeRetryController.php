@@ -48,7 +48,7 @@ final class StudyPracticeRetryController extends Controller
                 'question_provider' => 'review_retry', 'question_provider_mode' => 'direct',
                 'assessment_provider' => 'saved_review_reference', 'assessment_provider_mode' => 'direct',
                 'provider_payload' => ['source_attempt_id' => $source->id, 'source_ordinals' => $ordinals, 'response_hash' => $fingerprint,
-                    'same_question' => true, 'reference_was_available' => true, 'mastery_evidence' => false],
+                    'same_question' => true, 'reference_was_available' => collect($cards)->contains(fn ($card) => $card['reference'] !== null), 'mastery_evidence' => false],
                 'questions_snapshot' => $questions, 'selected_questions' => null, 'assessment_payload' => $payload,
                 'started_at' => now(), 'completed_at' => now(),
             ]);

@@ -33,6 +33,7 @@ class StudyPracticeRetryTest extends TestCase
         $this->get($response->headers->get('Location'))->assertOk()->assertSee('正誤保留：1問')->assertSee('元の第2問');
         $this->assertSame('ungraded', data_get($retry->assessment_payload, 'assessment.question_feedback.0.correctness'));
         $this->assertFalse($retry->provider_payload['mastery_evidence']);
+        $this->assertFalse($retry->provider_payload['reference_was_available']);
         $this->assertNull($retry->selected_questions);
         $this->assertSame($before, $attempt->fresh()->getAttributes());
         $this->assertSame($taskBefore, $task->fresh()->getAttributes());
@@ -119,6 +120,35 @@ class StudyPracticeRetryTest extends TestCase
         $this->get($response->headers->get('Location'))->assertOk()->assertSee('正誤保留：1問');
         $latest = StudyPracticeSession::latest('id')->firstOrFail();
         $this->assertCount(2, $latest->assessment_payload['answers'][0]['fields']);
+    }
+
+    public function test_composite_multi_choice_number_and_reasoning_keep_typed_values_and_retry_order_is_semantic(): void
+    {
+        [$user, $plan, $task, $attempt] = $this->fixture(); $this->actingAs($user);
+        $plan->update(['title' => '複合入力の学習']);
+        $fields = [
+            ['id' => 'select', 'type' => 'multiple_choice', 'required' => true,
+                'choices' => [['id' => 'ア', 'label' => '複数選択ア'], ['id' => 'イ', 'label' => '複数選択イ']]],
+            ['id' => 'calculation', 'type' => 'number', 'required' => true],
+            ['id' => 'reasoning', 'type' => 'textarea', 'required' => false],
+        ];
+        $attempt->update(['questions' => [['id' => 'q2', 'prompt' => '複合問題', 'response_fields' => $fields]],
+            'answers' => [['question_id' => 'q2', 'fields' => [
+                ['field_id' => 'select', 'value' => ['イ']], ['field_id' => 'calculation', 'value' => '1'],
+            ]]]]);
+        $uuid = (string) Str::uuid();
+        $input = ['q2' => ['select' => ['イ', 'ア'], 'calculation' => '42.0', 'reasoning' => '今回の式']];
+        $this->submit($plan, $task, $attempt, $uuid, $input)->assertRedirect();
+        $input['q2']['select'] = ['ア', 'イ'];
+        $this->submit($plan, $task, $attempt, $uuid, $input)->assertRedirect();
+        $this->assertDatabaseCount('study_practice_sessions', 1);
+        $record = StudyPracticeSession::sole()->assessment_payload;
+        $this->assertSame(['ア', 'イ'], $record['answers'][0]['fields'][0]['value']);
+        $this->assertSame('42.0', $record['answers'][0]['fields'][1]['value']);
+        $this->assertSame('今回の式', $record['answers'][0]['fields'][2]['value']);
+        $this->assertSame(1, $record['assessment']['ungraded_count']);
+        $input['q2']['calculation'] = '1e999';
+        $this->submit($plan, $task, $attempt, null, $input)->assertUnprocessable();
     }
 
     public function test_tampered_question_ids_choices_and_missing_answers_cannot_create_a_result(): void
