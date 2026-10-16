@@ -315,6 +315,14 @@ class AuthController extends Controller
             ->header('Cache-Control', 'no-store, private');
     }
 
+    public function cancelAccountDeletion(Request $request)
+    {
+        $request->session()->forget(self::ACCOUNT_DELETION_REVIEW);
+
+        return redirect()->route('auth.account')
+            ->with('status', 'アカウント削除をキャンセルしました。');
+    }
+
     private function hasValidAccountDeletionReview(Request $request, User $user): bool
     {
         $review = $request->session()->get(self::ACCOUNT_DELETION_REVIEW);
