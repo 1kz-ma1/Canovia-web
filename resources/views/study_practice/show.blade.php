@@ -372,6 +372,11 @@
         @if (session('status'))
             <div class="rounded-2xl border border-slate-700 bg-slate-900/70 px-4 py-3 text-sm text-slate-300">{{ session('status') }}</div>
         @endif
+        @if ($questionIntegrityError ?? null)
+            <div role="alert" class="rounded-2xl border border-rose-300/30 bg-rose-300/[0.06] px-4 py-3 text-sm text-rose-100">
+                {{ $questionIntegrityError }} 保存済みの問題・途中回答・履歴は変更していません。
+            </div>
+        @endif
 
         @php
             $practiceStageIndex = match ($practiceStage ?? 'setup') {
@@ -411,7 +416,7 @@
         @endunless
 
         @php
-            $questionJsonError = $errors->first('questions_json');
+            $questionJsonError = $errors->first('questions_json') ?: ($questionIntegrityError ?? null);
             $questionJsonRepairPrompt = $questionJsonError ? implode("\n", [
                 'CanoviaのAI演習・問題JSONでエラーが発生しました。',
                 '下の「元のCanovia問題作成プロンプト」を仕様と対象Plan・Taskの唯一の正として扱ってください。',
@@ -425,7 +430,7 @@
                 $questionJsonError,
                 '',
                 '【エラーになったJSON】',
-                old('questions_json', ''),
+                old('questions_json', $questionIntegrityJson ?? ''),
                 '',
                 '【元のCanovia問題作成プロンプト】',
                 $generationPrompt,
@@ -513,7 +518,7 @@
                         </p>
                     </section>
 
-                    <details class="page-card p-5 sm:p-6" @if(session('native_ai_fallback')) open @endif>
+                    <details class="page-card p-5 sm:p-6" @if(session('native_ai_fallback') || ($questionIntegrityError ?? null)) open @endif>
                         <summary class="cursor-pointer text-sm font-black text-slate-200">外部AIを使う / Native AIが使えない場合</summary>
                         <div class="mt-4 space-y-4">
                 @elseif ($nativeAiEntitled && ! $nativeAiConfigured)
@@ -578,7 +583,7 @@
 
                         <details id="questionJsonManualInput" class="ai-handoff-details mt-4 rounded-xl border border-slate-800 bg-slate-950/35 p-3" @if($questionJsonError || old('questions_json')) open @endif>
                             <summary class="cursor-pointer text-xs font-semibold text-slate-300">手動で貼り付ける / JSONを確認する</summary>
-                            <textarea id="questions_json" name="questions_json" class="form-control mt-3 min-h-[180px] font-mono text-xs" placeholder="AIが返したJSONを貼り付け">{{ old('questions_json') }}</textarea>
+                            <textarea id="questions_json" name="questions_json" class="form-control mt-3 min-h-[180px] font-mono text-xs" placeholder="AIが返したJSONを貼り付け">{{ old('questions_json', $questionIntegrityJson ?? '') }}</textarea>
                             <button type="submit" class="btn-secondary mt-3">このJSONを読み込む</button>
                         </details>
 

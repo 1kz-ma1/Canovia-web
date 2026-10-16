@@ -102,6 +102,28 @@ class NativeAiPracticeV418Test extends TestCase
         Http::assertSentCount(1);
     }
 
+    public function test_ap_native_generation_rejects_mixed_answers_before_a_question_snapshot_is_committed(): void
+    {
+        [$user, $plan, $task] = $this->studyPlan();
+        $plan->update(['title' => 'AP 科目A']);
+        $this->grantPremium($user);
+        $payload = $this->questionEnvelope($plan, $task);
+        $payload['questions'][0]['response_fields'][] = [
+            'id' => 'salt', 'type' => 'single_choice', 'label' => '別問題の回答',
+            'required' => true, 'choices' => [
+                ['id' => 'A', 'label' => 'ソルトA'], ['id' => 'B', 'label' => 'ソルトB'],
+            ],
+        ];
+        Http::fake(['https://api.openai.com/v1/responses' => Http::response($this->responseBody($payload, 'resp_mixed'), 200)]);
+        $this->actingAs($user)->post(route('plans.tasks.study_practice.native.prepare', [$plan, $task]), [
+            'prepare_request_id' => (string) Str::uuid(),
+        ])->assertRedirect()->assertSessionHas('native_ai_fallback', true);
+        $this->assertSame('failed', NativeAiRun::sole()->status);
+        $this->assertFalse(StudyPracticeSession::query()->whereNotNull('questions_snapshot')->exists());
+        $this->assertDatabaseCount('study_practice_attempts', 0);
+        Http::assertSentCount(1);
+    }
+
     public function test_native_generation_is_idempotent_for_same_prepare_request_id(): void
     {
         [$user, $plan, $task] = $this->studyPlan();

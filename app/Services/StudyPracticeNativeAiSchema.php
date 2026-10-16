@@ -29,6 +29,9 @@ final class StudyPracticeNativeAiSchema
                             ],
                             'response_fields' => [
                                 'type' => 'array',
+                                'minItems' => 1,
+                                'maxItems' => 4,
+                                'description' => 'One question only. For AP subject A single-choice, exactly one final single_choice answer; supplemental reasoning/calculation textarea must be optional. Never combine answers from independent questions.',
                                 'items' => [
                                     'type' => 'object',
                                     'additionalProperties' => false,

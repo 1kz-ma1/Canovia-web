@@ -87,6 +87,23 @@ try {
     };
     const manual=page.locator('#questionJsonManualInput');
     await manual.locator('summary').click();
+    // Synthetic reproduction of Q3 digital-signature + unrelated salt answers.
+    const choice = (id, topic) => ({id, type:'single_choice', label:'回答', required:true,
+        choices:['A','B','C','D'].map(id=>({id,label:topic+' '+id}))});
+    const mixed = {...questionPayload, questions:[{id:'q3',
+        prompt:'公開鍵暗号方式を用いた電子署名について、最も適切な説明はどれか。',
+        response_fields:[choice('answer','電子署名'), choice('salt','ソルト')]}]};
+    await manual.locator('textarea[name="questions_json"]').fill(JSON.stringify(mixed));
+    await manual.getByRole('button',{name:'このJSONを読み込む'}).click();
+    await page.getByText('修正依頼を作りました',{exact:true}).waitFor();
+    assert.match(await page.locator('#studyPracticeQuestionRepairPrompt').inputValue(), /複数の独立した回答欄/);
+    assert.match(await manual.locator('textarea').inputValue(), /ソルト/);
+    assert.equal(verify().session_count,0);
+    assert.equal(verify().attempt_count,0);
+    log('ap-mixed-independent-answers-rejected-with-repair-and-no-session');
+    // The normal exercise includes a legitimate optional diagnostic field.
+    questionPayload.questions[0].response_fields = [choice('answer','選択肢'),
+        {id:'reasoning',type:'textarea',label:'判断理由',required:false}];
     // A malformed external reply must remain repairable through real HTTP.
     await manual.locator('textarea[name="questions_json"]').fill('{"flow":');
     await manual.getByRole('button',{name:'このJSONを読み込む'}).click();
@@ -104,6 +121,9 @@ try {
     assert.equal(state.session_count,1);
     assert.equal(state.attempt_count,0);
     assert.equal(state.stage,'ready');
+    assert.equal(await page.locator('input[name="answers[q1][answer]"]').count(),4);
+    assert.equal(await page.locator('textarea[name="answers[q1][reasoning]"]').count(),1);
+    log('ap-single-answer-with-optional-reasoning-preserved');
     log('external-json-import-without-provider-or-score');
 
     const firstQuestion=page.locator('[data-study-practice-question]').first();

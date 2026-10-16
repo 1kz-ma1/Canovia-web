@@ -41,7 +41,7 @@ if ($plan->is_public || $plan->is_collaborative || Task::query()->where('plan_id
 
 $task = Task::query()->create([
     'plan_id' => $plan->id,
-    'title' => 'V621 合成回答保存テストTask',
+    'title' => 'AP 科目A V621 合成回答保存テストTask',
     'description' => 'Only ephemeral first-draft UI validation',
     'status' => 'todo',
     'progress_percent' => 0,

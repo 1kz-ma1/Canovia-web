@@ -11,6 +11,11 @@ on:
       - 'resources/js/app.js'
       - 'resources/views/study_practice/show.blade.php'
       - 'app/Http/Controllers/StudyPracticeController.php'
+      - 'app/Services/StudyPracticeQuestionIntegrityService.php'
+      - 'app/Services/NativeAiStudyPracticeQuestionProvider.php'
+      - 'app/Services/StudyPracticeNativeAiSchema.php'
+      - 'app/Services/StudyPracticePromptService.php'
+      - 'tests/Feature/StudyPracticeQuestionIntegrityTest.php'
       - 'config/release_levels.php'
       - 'app/Services/ReleaseLevelService.php'
       - 'app/Services/FeatureAccessService.php'
@@ -42,6 +47,8 @@ jobs:
           composer install --no-interaction --prefer-dist --no-progress
           npm ci --ignore-scripts
           npm run build
+      - name: Question integrity and existing draft/native/assessment regressions
+        run: php artisan test --compact tests/Feature/StudyPracticeQuestionIntegrityTest.php tests/Feature/StudyPracticeDraftPersistenceV4071Test.php tests/Feature/StudyPracticeLearningLoopV393Test.php tests/Feature/NativeAiPracticeV418Test.php
       - name: Pin disposable local SQLite and disable provider effects
         shell: bash
         run: |
