@@ -6,6 +6,8 @@ Next review: [initial production eligibility for fixed main 32733572](initial-pr
 
 Owner preparation for repaired candidate **641e2105 / HOLD**: [general L0 + explicitly approved L1 tester execution ticket](owner-l0-l1-operations.md) — private roster, read-only 20-migration audit, restore/device checklist, operation order and STOP conditions. No live action is authorized by the ticket.
 
+Owner-only MCP preparation: [existing AP Plan summary → private ChatGPT connection](owner-mcp-production-read-preparation.md) — Live/main source delta, production Auth0/two-client settings, overview-only consent, shared #488 gates, operator order, denial/revoke acceptance and costs. Preparation only; 641e2105 remains HOLD and no actual Plan has been read.
+
 ## Fixed source and review units
 
 Initial frozen main was `626a4ea6b19842089da91b107cc61da234858c7d`; production was `15abdc9de6f24b5250fb255c579d1aa55facaf1a`. Native main was `fc0e0c498afe35eda494f63356f7a0bae156bdbb`. Git reads and feature-branch pushes succeeded; GitHub API requests were initially Forbidden. These historical observations do not establish current Render Live or CI results.

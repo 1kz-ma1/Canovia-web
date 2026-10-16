@@ -74,6 +74,7 @@
 
 ## MCP staging and public-release readiness (2026-10-09)
 
+- [本人の本番AP Plan概要 → ChatGPT接続の準備票 / HOLD](development/integration/2026-10-16/review-packet/owner-mcp-production-read-preparation.md): Live 15abdc9/main差分、本番専用Auth0、1件のoverview同意、#488共通ゲート、オーナー操作・取消・STOP・費用。実接続・実データ読取・候補採用は未承認。
 - [Historic MCP Staging identity-link incident triage](development/MCP_STAGING_IDENTITY_LINK_MISMATCH_RUNBOOK_2026_10_14.md): fixed-code rejection vs different Auth0 subject/fingerprint hypotheses, updated with current Staging Live checkpoint; no real-account data or OAuth configuration changes.
 - [Future Identity & Connection UX (candidate)](future/CANOVIA_IDENTITY_CONNECTION_UX.md): passkey/step-up/relink/optional connection-code concept only, never an OAuth/Plan permission bypass or current backlog.
 
