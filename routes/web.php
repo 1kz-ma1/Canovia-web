@@ -148,8 +148,8 @@ Route::get('/.well-known/oauth-protected-resource/api/mcp', McpProtectedResource
     ->name('mcp.oauth_protected_resource_path');
 Route::get('/', [HomeController::class, 'index'])->middleware('early_access.visit')->name('home');
 Route::get('/workspace/overview', OverviewWorkspaceController::class)->middleware('early_access.visit')->name('workspace.overview.index');
-Route::get('/workspace/study/top', StudyWorkspaceTopController::class)->middleware('early_access.visit')->name('workspace.study.top');
-Route::get('/workspace/study', StudyWorkspaceController::class)->middleware('early_access.visit')->name('workspace.study.index');
+Route::get('/workspace/study/top', StudyWorkspaceTopController::class)->middleware(['release.level:1', 'early_access.visit'])->name('workspace.study.top');
+Route::get('/workspace/study', StudyWorkspaceController::class)->middleware(['release.level:1', 'early_access.visit'])->name('workspace.study.index');
 // Explicitly owner-authenticated, Study Plan-scoped, no scheduler or notification routes.
 Route::get('/workspace/study/context-watch/{plan}', [LearningContextWatchSettingsController::class, 'show'])
     ->middleware(['auth', 'throttle:30,1'])
@@ -163,13 +163,13 @@ Route::post('/workspace/study/context-watch/{plan}/compare', [LearningContextWat
 Route::delete('/workspace/study/context-watch/{plan}', [LearningContextWatchSettingsController::class, 'destroy'])
     ->middleware(['auth', 'throttle:6,1'])
     ->name('workspace.study.context_watch.disable');
-Route::get('/workspace/development/top', DevelopmentWorkspaceTopController::class)->middleware('early_access.visit')->name('workspace.development.top');
-Route::get('/workspace/development', DevelopmentWorkspaceController::class)->middleware('early_access.visit')->name('workspace.development.index');
+Route::get('/workspace/development/top', DevelopmentWorkspaceTopController::class)->middleware(['release.level:1', 'early_access.visit'])->name('workspace.development.top');
+Route::get('/workspace/development', DevelopmentWorkspaceController::class)->middleware(['release.level:1', 'early_access.visit'])->name('workspace.development.index');
 Route::post('/workspace/development/operational-profile/{plan}', DevelopmentOperationalProfileController::class)
-    ->middleware(['auth', 'throttle:10,1'])
+    ->middleware(['auth', 'release.level:1', 'throttle:10,1'])
     ->name('workspace.development.operational_profile.update');
 Route::post('/workspace/development/operational-target/{plan}', DevelopmentOperationalTargetController::class)
-    ->middleware(['auth', 'throttle:10,1'])
+    ->middleware(['auth', 'release.level:1', 'throttle:10,1'])
     ->name('workspace.development.operational_target.update');
 Route::get('/workspace/development/context/{plan}', DevelopmentRoadmapContextController::class)
     ->middleware(['auth', 'throttle:12,1'])
