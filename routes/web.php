@@ -308,7 +308,7 @@ Route::post('/account/deletion/code', [AuthController::class, 'requestAccountDel
     ->middleware(['auth', 'throttle:3,15'])
     ->name('auth.account.deletion.code');
 Route::delete('/account', [AuthController::class, 'destroyAccount'])
-    ->middleware(['auth', 'throttle:6,15'])
+    ->middleware(['auth', 'throttle:10,15'])
     ->name('auth.account.destroy');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('auth.logout');
 Route::post('/offline/work-sessions/sync', [OfflineWorkSessionController::class, 'sync'])->name('offline.work_sessions.sync');
