@@ -14,7 +14,9 @@ return [
     | explicitly select a reviewed public level; internal preview is actor-bound.
     |
     */
-    'public_level' => (int) env(
+    // Preserve the raw value for ReleaseLevelService's strict validation.
+    // Casting here would turn malformed "1invalid", "1.5" or true into L1.
+    'public_level' => env(
         'CANOVIA_PUBLIC_RELEASE_LEVEL',
         ReleaseLevel::CoreStable->value,
     ),

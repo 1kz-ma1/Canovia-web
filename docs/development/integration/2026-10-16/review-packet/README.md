@@ -2,6 +2,8 @@
 
 Prepared 2026-10-16 (Japan time). Authority: [master PR #769](https://github.com/1kz-ma1/Canovia-web/pull/769), latest applicable AGENTS and [development workflow](../../../../CANOVIA_DEVELOPMENT_WORKFLOW.md). This packet records completed verification and remaining production gates. It is not owner GO. See [current PR/CI integration status](current-integration-status.md) for the later GitHub results; the fixed local observations below retain their original SHAs.
 
+Next review: [initial production eligibility for fixed main 32733572](initial-production-eligibility.md) — NO-GO findings, minimal publication repair, existing-user L0/L1 impact, operator migration/recovery order and separate owner decisions.
+
 ## Fixed source and review units
 
 Initial frozen main was `626a4ea6b19842089da91b107cc61da234858c7d`; production was `15abdc9de6f24b5250fb255c579d1aa55facaf1a`. Native main was `fc0e0c498afe35eda494f63356f7a0bae156bdbb`. Git reads and feature-branch pushes succeeded; GitHub API requests were initially Forbidden. These historical observations do not establish current Render Live or CI results.

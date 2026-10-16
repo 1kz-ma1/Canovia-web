@@ -9,8 +9,10 @@ on:
       - 'app/Services/ReleaseLevelService.php'
       - 'app/Services/FeatureAccessService.php'
       - 'config/release_levels.php'
+      - 'routes/web.php'
       - 'phpunit.xml'
       - 'tests/Feature/IntegrationExposureBoundaryTest.php'
+      - 'tests/Feature/InitialReleaseAudienceTest.php'
       - 'scripts/ci/integration_browser_regression.py'
       - 'scripts/ci/*browser_smoke.mjs'
       - '.github/workflows/integration-exposure.yml'
@@ -39,6 +41,7 @@ jobs:
       - run: npm ci --ignore-scripts && npm run build
       - run: >-
           php artisan test tests/Feature/IntegrationExposureBoundaryTest.php
+          tests/Feature/InitialReleaseAudienceTest.php
           tests/Feature/ReleaseLevelFoundationV5820Test.php tests/Feature/FeatureAccessV406Test.php
           tests/Feature/P0DatabaseSessionLoginRegressionTest.php
           tests/Feature/McpSyntheticOAuthConsentReadLifecycleTest.php --colors=never

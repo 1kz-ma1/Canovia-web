@@ -87,6 +87,15 @@ try {
     };
     const manual=page.locator('#questionJsonManualInput');
     await manual.locator('summary').click();
+    // A malformed external reply must remain repairable through real HTTP.
+    await manual.locator('textarea[name="questions_json"]').fill('{"flow":');
+    await manual.getByRole('button',{name:'このJSONを読み込む'}).click();
+    await page.getByText('修正依頼を作りました',{exact:true}).waitFor();
+    assert.equal(verify().attempt_count,0);
+    log('invalid-external-json-shows-repair-without-assessment');
+    if (!await manual.locator('textarea[name="questions_json"]').isVisible()) {
+        await manual.locator('summary').click();
+    }
     await manual.locator('textarea[name="questions_json"]').fill(JSON.stringify(questionPayload));
     await manual.getByRole('button',{name:'このJSONを読み込む'}).click();
     await page.locator('form[data-study-practice-draft-form]').waitFor({state:'visible'});
@@ -162,6 +171,14 @@ try {
     };
     const assessmentManual=page.locator('#assessmentJsonManualInput');
     await assessmentManual.locator('summary').click();
+    await assessmentManual.locator('textarea[name="assessment_json"]').fill('{"flow":');
+    await assessmentManual.getByRole('button',{name:'この評価JSONを確認する'}).click();
+    await page.getByText('評価JSONの修正依頼を作りました',{exact:true}).waitFor();
+    assert.equal(verify().attempt_count,0);
+    log('invalid-assessment-json-shows-repair-without-history');
+    if (!await assessmentManual.locator('textarea[name="assessment_json"]').isVisible()) {
+        await assessmentManual.locator('summary').click();
+    }
     await assessmentManual.locator('textarea[name="assessment_json"]').fill(JSON.stringify(assessment));
     await assessmentManual.getByRole('button',{name:'この評価JSONを確認する'}).click();
     await page.locator('[data-study-focus-result]').waitFor({state:'visible'});

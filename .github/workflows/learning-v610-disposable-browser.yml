@@ -40,6 +40,8 @@ jobs:
         run: |
           set -euo pipefail
           echo "APP_ENV=testing" >> "$GITHUB_ENV"
+          # Study is explicitly published only inside this disposable fixture.
+          echo "CANOVIA_PUBLIC_RELEASE_LEVEL=1" >> "$GITHUB_ENV"
           echo "APP_DEBUG=false" >> "$GITHUB_ENV"
           echo "APP_URL=http://127.0.0.1:8792" >> "$GITHUB_ENV"
           echo "CANOVIA_LEARNING_V610_BASE_URL=http://127.0.0.1:8792" >> "$GITHUB_ENV"
