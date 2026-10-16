@@ -7,6 +7,8 @@ use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\AccountDeletionCodeNotification;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -18,9 +20,11 @@ class IosSoftLaunchWebReadinessV561Test extends TestCase
     {
         parent::setUp();
         $this->withoutVite();
+        Notification::fake();
 
         config([
             'session.driver' => 'array',
+            'mail.default' => 'array',
             'canovia.support_email' => 'support@canovia.example',
             'canovia.operator_name' => 'Canovia',
         ]);
@@ -51,8 +55,9 @@ class IosSoftLaunchWebReadinessV561Test extends TestCase
             ->assertOk()
             ->assertSee(route('legal.privacy'), false)
             ->assertSee(route('legal.support'), false)
-            ->assertSee(route('auth.account.destroy'), false)
-            ->assertSee('アカウントと本人所有データを削除');
+            ->assertSee(route('auth.account.deletion.code'), false)
+            ->assertSee('削除確認コードをメールで受け取る')
+            ->assertDontSee('name="confirmation_code"', false);
     }
 
     public function test_wrong_password_cannot_delete_account(): void
@@ -60,7 +65,7 @@ class IosSoftLaunchWebReadinessV561Test extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->delete(route('auth.account.destroy'), [
+            ->post(route('auth.account.deletion.code'), [
                 'password' => 'not-the-password',
                 'confirmation_email' => $user->email,
             ])
@@ -75,7 +80,7 @@ class IosSoftLaunchWebReadinessV561Test extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->delete(route('auth.account.destroy'), [
+            ->post(route('auth.account.deletion.code'), [
                 'password' => 'password',
                 'confirmation_email' => 'other@example.com',
             ])
@@ -116,10 +121,14 @@ class IosSoftLaunchWebReadinessV561Test extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->delete(route('auth.account.destroy'), [
+            ->post(route('auth.account.deletion.code'), [
                 'password' => 'password',
                 'confirmation_email' => ' DELETE-ME@example.com ',
             ])
+            ->assertRedirect(route('auth.account'));
+        $code = Notification::sent($user, AccountDeletionCodeNotification::class)->first()->code;
+
+        $this->delete(route('auth.account.destroy'), ['confirmation_code' => $code])
             ->assertRedirect(route('home'))
             ->assertSessionHas(
                 'status',
@@ -136,6 +145,110 @@ class IosSoftLaunchWebReadinessV561Test extends TestCase
         // The actual post-commit unlink is exercised by the isolated PG16
         // PrivateFileLifecycleG3Test (without a wrapping transaction).
         Storage::disk('local')->assertExists($path);
+    }
+
+    public function test_direct_delete_without_email_challenge_is_denied(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user)
+            ->delete(route('auth.account.destroy'), [
+                'password' => 'password',
+                'confirmation_email' => $user->email,
+                'confirmation_code' => '000000',
+            ])
+            ->assertSessionHasErrors('confirmation_code');
+
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
+        Notification::assertNothingSent();
+    }
+
+    public function test_log_mailer_fails_closed_without_sending_or_deleting(): void
+    {
+        $user = User::factory()->create();
+        config(['mail.default' => 'log']);
+
+        $this->actingAs($user)
+            ->post(route('auth.account.deletion.code'), [
+                'password' => 'password',
+                'confirmation_email' => $user->email,
+            ])
+            ->assertSessionHasErrors('confirmation_email');
+
+        $this->assertNull(session('account_deletion_challenge'));
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
+        Notification::assertNothingSent();
+    }
+
+    public function test_wrong_code_is_rejected_and_max_five_attempts_invalidate_challenge(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user)->post(route('auth.account.deletion.code'), [
+            'password' => 'password',
+            'confirmation_email' => $user->email,
+        ])->assertRedirect(route('auth.account'));
+
+        $issued = Notification::sent($user, AccountDeletionCodeNotification::class)->first()->code;
+        $incorrect = $issued === '000000' ? '999999' : '000000';
+        $challenge = session('account_deletion_challenge');
+        $this->assertArrayNotHasKey('code', $challenge);
+        $this->assertArrayHasKey('code_hash', $challenge);
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->delete(route('auth.account.destroy'), ['confirmation_code' => $incorrect])
+                ->assertSessionHasErrors('confirmation_code');
+        }
+        $this->assertNull(session('account_deletion_challenge'));
+        $this->delete(route('auth.account.destroy'), ['confirmation_code' => $issued])
+            ->assertSessionHasErrors('confirmation_code');
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
+    }
+
+    public function test_expired_code_cannot_delete_account(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user)->post(route('auth.account.deletion.code'), [
+            'password' => 'password',
+            'confirmation_email' => $user->email,
+        ])->assertRedirect(route('auth.account'));
+        $code = Notification::sent($user, AccountDeletionCodeNotification::class)->first()->code;
+
+        $this->travel(11)->minutes();
+        $this->delete(route('auth.account.destroy'), ['confirmation_code' => $code])
+            ->assertSessionHasErrors('confirmation_code');
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
+    }
+
+    public function test_challenge_is_bound_to_user_email_and_password(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user)->post(route('auth.account.deletion.code'), [
+            'password' => 'password',
+            'confirmation_email' => $user->email,
+        ])->assertRedirect(route('auth.account'));
+        $code = Notification::sent($user, AccountDeletionCodeNotification::class)->first()->code;
+
+        $user->update(['email' => 'new-email@example.com']);
+        $this->delete(route('auth.account.destroy'), ['confirmation_code' => $code])
+            ->assertSessionHasErrors('confirmation_code');
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
+    }
+
+    public function test_another_signed_in_user_cannot_reuse_first_users_code(): void
+    {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        $this->actingAs($user)->post(route('auth.account.deletion.code'), [
+            'password' => 'password',
+            'confirmation_email' => $user->email,
+        ])->assertRedirect(route('auth.account'));
+        $code = Notification::sent($user, AccountDeletionCodeNotification::class)->first()->code;
+
+        $this->actingAs($other)
+            ->delete(route('auth.account.destroy'), ['confirmation_code' => $code])
+            ->assertSessionHasErrors('confirmation_code');
+
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
+        $this->assertDatabaseHas('users', ['id' => $other->id]);
     }
 
     private function plan(User $user, string $title): Plan
