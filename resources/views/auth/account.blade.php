@@ -141,10 +141,12 @@
             他のユーザーが所有する共同Planそのものは削除しません。
         </p>
 
-        <form method="POST" action="{{ route('auth.account.destroy') }}" class="mt-5 space-y-4" data-clear-offline-state>
-            @csrf
-            @method('DELETE')
+        <p class="mt-3 text-xs leading-6 text-amber-200">
+            安全のため、現在のパスワードの確認後、登録メールアドレスへ送る6桁の確認コードが必要です。
+        </p>
 
+        <form method="POST" action="{{ route('auth.account.deletion.code') }}" class="mt-5 space-y-4">
+            @csrf
             <label class="block">
                 <span class="text-sm font-semibold text-slate-300">現在のパスワード</span>
                 <input type="password" name="password" autocomplete="current-password" required class="form-control mt-2">
@@ -152,15 +154,29 @@
             </label>
 
             <label class="block">
-                <span class="text-sm font-semibold text-slate-300">確認のためメールアドレスを再入力</span>
+                <span class="text-sm font-semibold text-slate-300">削除するアカウントの登録メールアドレスを入力</span>
                 <input type="email" name="confirmation_email" value="{{ old('confirmation_email') }}" autocomplete="email" required class="form-control mt-2">
                 @error('confirmation_email')<span class="mt-1 block text-xs text-rose-300">{{ $message }}</span>@enderror
             </label>
 
-            <button type="submit" class="w-full rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm font-bold text-rose-100 hover:bg-rose-500/20">
-                アカウントと本人所有データを削除
-            </button>
+            <button type="submit" class="btn-secondary w-full min-h-11">削除確認コードをメールで受け取る</button>
         </form>
+
+        @if (session()->has('account_deletion_challenge'))
+            <form method="POST" action="{{ route('auth.account.destroy') }}" class="mt-5 space-y-4">
+                @csrf
+                @method('DELETE')
+                <label class="block">
+                    <span class="text-sm font-semibold text-slate-300">メールに届いた6桁の確認コード（10分以内）</span>
+                    <input type="text" name="confirmation_code" inputmode="numeric" autocomplete="one-time-code"
+                        pattern="[0-9]{6}" maxlength="6" required class="form-control mt-2">
+                    @error('confirmation_code')<span class="mt-1 block text-xs text-rose-300">{{ $message }}</span>@enderror
+                </label>
+                <button type="submit" class="w-full rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm font-bold text-rose-100 hover:bg-rose-500/20">
+                    確認してアカウントと本人所有データを削除
+                </button>
+            </form>
+        @endif
     </section>
 </div>
 @endsection

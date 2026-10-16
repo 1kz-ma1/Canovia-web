@@ -258,24 +258,29 @@ class AuthController extends Controller
         ]);
     }
 
-    public function destroyAccount(
-        Request $request,
-        AccountDeletionService $deletion,
-    ) {
+    private const ACCOUNT_DELETION_CHALLENGE = 'account_deletion_challenge';
+
+    /**
+     * The password check only requests a code. It never deletes an account.
+     * No code is issued to log/failover-to-log transports, which could expose it.
+     */
+    public function requestAccountDeletionCode(Request $request)
+    {
         $user = $request->user();
         abort_unless($user instanceof User, 403);
+
+        // Any new attempt invalidates the previous email challenge.
+        $request->session()->forget(self::ACCOUNT_DELETION_CHALLENGE);
 
         $validated = $request->validate([
             'password' => ['required', 'string'],
             'confirmation_email' => ['required', 'email'],
         ]);
-
         if (! Hash::check((string) $validated['password'], (string) $user->password)) {
             throw ValidationException::withMessages([
                 'password' => '現在のパスワードが正しくありません。',
             ]);
         }
-
         if (
             mb_strtolower(trim((string) $validated['confirmation_email']))
             !== mb_strtolower(trim((string) $user->email))
@@ -285,6 +290,85 @@ class AuthController extends Controller
             ]);
         }
 
+        $mailer = (string) config('mail.default');
+        $transport = config('mail.mailers.'.$mailer.'.transport');
+        $canDeliver = in_array($transport, ['smtp', 'sendmail', 'ses', 'postmark', 'resend'], true)
+            || ($transport === 'array' && app()->environment('testing'));
+        if (! $canDeliver) {
+            throw ValidationException::withMessages([
+                'confirmation_email' => 'メールによる本人確認を利用できません。サポートへお問い合わせください。',
+            ]);
+        }
+
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $challenge = [
+            'user_id' => (int) $user->getKey(),
+            'email_fingerprint' => hash('sha256', mb_strtolower(trim((string) $user->email))),
+            'password_fingerprint' => hash('sha256', (string) $user->getAuthPassword()),
+            'code_hash' => Hash::make($code),
+            'expires_at' => now()->addMinutes(10)->timestamp,
+            'attempts_remaining' => 5,
+        ];
+
+        try {
+            // Synchronous delivery: no pending token is saved on send failure.
+            $user->notify(new \App\Notifications\AccountDeletionCodeNotification($code));
+        } catch (\Throwable) {
+            throw ValidationException::withMessages([
+                'confirmation_email' => '確認コードの送信に失敗しました。時間をおいて再試行してください。',
+            ]);
+        }
+
+        $request->session()->put(self::ACCOUNT_DELETION_CHALLENGE, $challenge);
+
+        return redirect()->route('auth.account')
+            ->with('status', '登録メールアドレスへ削除確認コードを送信しました。有効期限は10分です。');
+    }
+
+    public function destroyAccount(Request $request, AccountDeletionService $deletion)
+    {
+        $user = $request->user();
+        abort_unless($user instanceof User, 403);
+
+        $validated = $request->validate([
+            'confirmation_code' => ['required', 'digits:6'],
+        ]);
+
+        $challenge = $request->session()->get(self::ACCOUNT_DELETION_CHALLENGE);
+        $validChallenge = is_array($challenge)
+            && isset($challenge['user_id'], $challenge['email_fingerprint'],
+                $challenge['password_fingerprint'], $challenge['code_hash'],
+                $challenge['expires_at'], $challenge['attempts_remaining'])
+            && is_string($challenge['code_hash'])
+            && is_string($challenge['email_fingerprint'])
+            && is_string($challenge['password_fingerprint'])
+            && (int) $challenge['user_id'] === (int) $user->getKey()
+            && hash_equals($challenge['email_fingerprint'], hash('sha256', mb_strtolower(trim((string) $user->email))))
+            && hash_equals($challenge['password_fingerprint'], hash('sha256', (string) $user->getAuthPassword()))
+            && (int) $challenge['expires_at'] > now()->timestamp
+            && (int) $challenge['attempts_remaining'] > 0;
+
+        if (! $validChallenge) {
+            $request->session()->forget(self::ACCOUNT_DELETION_CHALLENGE);
+            throw ValidationException::withMessages([
+                'confirmation_code' => '確認コードの有効期限が切れたか、本人確認が無効です。最初からやり直してください。',
+            ]);
+        }
+
+        if (! Hash::check((string) $validated['confirmation_code'], $challenge['code_hash'])) {
+            $challenge['attempts_remaining']--;
+            if ($challenge['attempts_remaining'] <= 0) {
+                $request->session()->forget(self::ACCOUNT_DELETION_CHALLENGE);
+            } else {
+                $request->session()->put(self::ACCOUNT_DELETION_CHALLENGE, $challenge);
+            }
+            throw ValidationException::withMessages([
+                'confirmation_code' => '確認コードが正しくありません。',
+            ]);
+        }
+
+        // One-time challenge; replays must not be able to delete anything.
+        $request->session()->forget(self::ACCOUNT_DELETION_CHALLENGE);
         $deletion->delete($user);
 
         // Do not call SessionGuard::logout() after deleting the User because
@@ -295,7 +379,8 @@ class AuthController extends Controller
 
         return redirect()
             ->route('home')
-            ->with('status', 'Canoviaアカウントと本人所有データを削除しました。');
+            ->with('status', 'Canoviaアカウントと本人所有データを削除しました。')
+            ->with('account_deleted', true);
     }
 
     public function logout(Request $request)
