@@ -33,7 +33,7 @@ class StudyPracticeRetryTest extends TestCase
         $this->get($response->headers->get('Location'))->assertOk()->assertSee('正誤保留：1問')->assertSee('元の第2問');
         $this->assertSame('ungraded', data_get($retry->assessment_payload, 'assessment.question_feedback.0.correctness'));
         $this->assertFalse($retry->provider_payload['mastery_evidence']);
-        $this->assertSame([], $retry->selected_questions);
+        $this->assertNull($retry->selected_questions);
         $this->assertSame($before, $attempt->fresh()->getAttributes());
         $this->assertSame($taskBefore, $task->fresh()->getAttributes());
         $this->assertDatabaseCount('study_practice_attempts', 1);
