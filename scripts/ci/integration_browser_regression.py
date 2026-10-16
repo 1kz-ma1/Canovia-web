@@ -97,4 +97,10 @@ if __name__ == '__main__':
         try:
             run(name, args.artifacts, args.browser_executable, args.browser_engine)
         except subprocess.CalledProcessError as error:
+            # All journeys above run sanitized, synthetic local-only fixtures.
+            # Keep the actionable browser error in Actions logs even when an
+            # operator cannot retrieve the separate artifact transport.
+            log_path = args.artifacts / f'{name}.log'
+            if log_path.is_file():
+                print('\n'.join(log_path.read_text(errors='replace').splitlines()[-40:]))
             raise SystemExit(error.returncode)
