@@ -31,6 +31,7 @@ final class McpApLive94OAuthWiringTest extends TestCase
             'canovia_mcp.auth0_jwt_verification_enabled' => true,
             'canovia_mcp.token_introspection_enabled' => false,
             'canovia_mcp.ap_pilot_enabled' => true,
+            'canovia_mcp.ap_pilot_owner_id' => '1',
             'canovia_mcp.account_link_enabled' => true,
             'canovia_mcp.account_link_github_only_enabled' => true,
             'canovia_mcp.account_link_client_id' => 'synthetic-private-link-client',
