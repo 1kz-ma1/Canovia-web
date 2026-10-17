@@ -181,6 +181,12 @@ final class McpApLive94OAuthLifecycleTest extends TestCase
             now()->addDay()->subMinute(), now()->addDay()->addMinute()
         ));
 
+        // The owner receives the exact Plan ID without asking the model to guess.
+        $this->get(route('auth.account'))
+            ->assertOk()->assertSee('ChatGPTで指定するPlan ID')
+            ->assertSee('data-mcp-ap-plan-id', false)
+            ->assertSee((string) $plan->id);
+
         $chatgptJwt = $this->token(self::CHATGPT_CLIENT);
         $this->read($plan->id, $chatgptJwt)->assertOk()
             ->assertJsonPath('result.isError', false)
