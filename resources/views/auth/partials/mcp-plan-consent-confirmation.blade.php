@@ -30,7 +30,11 @@
         <p class="mt-2 text-xs leading-5 text-slate-400">
             認証プロバイダーで本人IDを再確認しました。
             以下の内容をCanoviaに保存するには、別途「許可を確定」を押してください。
-            保存してもMCPの直接読み取り機能はまだ有効になりません。
+            @if (config('canovia_mcp.ap_pilot_enabled') === true)
+                AP学習Planの概要を1日間共有する許可です。実際の取得には、ChatGPT側の接続とMCP読み取り機能の有効化も必要です。
+            @else
+                保存してもMCPの直接読み取り機能はまだ有効になりません。
+            @endif
         </p>
         <div class="mt-3 min-w-0 rounded-xl border border-white/10 bg-slate-950/25 p-3 text-xs leading-6 text-slate-200">
             <p class="break-words">対象Plan：{{ $mcpConsentPlan->title }}</p>
