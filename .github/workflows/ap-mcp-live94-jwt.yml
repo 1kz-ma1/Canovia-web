@@ -9,8 +9,16 @@ on:
       - 'app/Services/McpStudyPilotAccessPolicy.php'
       - 'app/Services/McpOAuthAccountLinkConfiguration.php'
       - 'app/Services/McpOAuthAccountLinkProvider.php'
+      - 'app/Services/McpDelegatedPlanAccessPolicy.php'
+      - 'app/Services/McpExplicitPlanConsentService.php'
+      - 'app/Services/McpReadOnlyStudyContextTool.php'
+      - 'app/Http/Controllers/McpReadOnlyResourceController.php'
+      - 'app/Http/Controllers/McpOAuthPlanConsentController.php'
+      - 'app/Http/Controllers/McpOAuthAccountLinkController.php'
       - 'tests/Feature/McpAuth0JwtTokenVerifierTest.php'
       - 'tests/Feature/McpApLive94OAuthWiringTest.php'
+      - 'tests/Feature/McpApLive94StudyOverviewTest.php'
+      - 'resources/views/auth/**'
       - 'config/canovia_mcp.php'
       - 'composer.json'
       - 'composer.lock'
@@ -58,6 +66,13 @@ jobs:
           php -l app/Services/McpOAuthAccountLinkConfiguration.php
           php -l app/Services/McpOAuthAccountLinkProvider.php
           php -l tests/Feature/McpApLive94OAuthWiringTest.php
+          php -l app/Services/McpDelegatedPlanAccessPolicy.php
+          php -l app/Services/McpExplicitPlanConsentService.php
+          php -l app/Services/McpReadOnlyStudyContextTool.php
+          php -l app/Http/Controllers/McpReadOnlyResourceController.php
+          php -l app/Http/Controllers/McpOAuthPlanConsentController.php
+          php -l app/Http/Controllers/McpOAuthAccountLinkController.php
+          php -l tests/Feature/McpApLive94StudyOverviewTest.php
       - name: Synthetic signed-JWT verification only
         env:
           APP_ENV: testing
@@ -68,4 +83,4 @@ jobs:
           set -e
           cp .env.example .env
           php artisan key:generate --no-interaction
-          php artisan test tests/Feature/McpAuth0JwtTokenVerifierTest.php tests/Feature/McpApLive94OAuthWiringTest.php --no-ansi
+          php artisan test tests/Feature/McpAuth0JwtTokenVerifierTest.php tests/Feature/McpApLive94OAuthWiringTest.php tests/Feature/McpApLive94StudyOverviewTest.php tests/Feature/McpReadOnlyResourceTest.php tests/Feature/McpExplicitPlanConsentTest.php tests/Feature/McpOAuthAccountLinkTest.php tests/Feature/McpDelegatedRevocationTest.php --no-ansi
