@@ -69,7 +69,9 @@ final class McpApLive94StudyOverviewTest extends TestCase
 
         $key = openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_RSA, 'private_key_bits' => 2048]);
         $this->assertNotFalse($key);
-        $this->assertTrue(openssl_pkey_export($key, $this->privateKey));
+        $privateKey = '';
+        $this->assertTrue(openssl_pkey_export($key, $privateKey));
+        $this->privateKey = $privateKey;
         $rsa = openssl_pkey_get_details($key)['rsa'];
         $b64 = fn ($raw) => rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
         Http::fake([self::JWKS => Http::response(['keys' => [[
