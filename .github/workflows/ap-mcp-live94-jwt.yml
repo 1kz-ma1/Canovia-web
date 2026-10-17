@@ -1,0 +1,65 @@
+name: AP owner MCP live94 JWT foundation
+
+on:
+  pull_request:
+    paths:
+      - 'app/Services/McpAuth0JwtTokenVerifier.php'
+      - 'app/Services/McpJwtClaimConstraints.php'
+      - 'app/Services/McpExternalTokenVerifier.php'
+      - 'app/Services/McpStudyPilotAccessPolicy.php'
+      - 'tests/Feature/McpAuth0JwtTokenVerifierTest.php'
+      - 'config/canovia_mcp.php'
+      - 'composer.json'
+      - 'composer.lock'
+      - '.github/workflows/ap-mcp-live94-jwt.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  jwt-synthetic-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, bcmath, pdo_sqlite, openssl
+          coverage: none
+      - name: Ensure exactly the old production migration sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-list --count 15abdc9de6f24b5250fb255c579d1aa55facaf1a..HEAD)" -ge 1
+          changed="$(git diff --name-only 15abdc9de6f24b5250fb255c579d1aa55facaf1a HEAD -- database/migrations/)"
+          test -z "$changed"
+          test "$(git ls-tree -r --name-only HEAD database/migrations/ | grep -Ec '[.]php$')" = 94
+          echo 'LIVE94_SOURCE_UNCHANGED_NO_PRODUCTION_DB_CONNECTION'
+      - name: Validate updated package lock
+        run: composer validate --strict --no-check-publish
+      - name: Install dependencies without application runtime hooks
+        run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
+      - name: Offline PHP syntax
+        run: |
+          set -e
+          php -l app/Services/McpAuth0JwtTokenVerifier.php
+          php -l app/Services/McpJwtClaimConstraints.php
+          php -l app/Services/McpExternalTokenVerifier.php
+          php -l app/Services/McpStudyPilotAccessPolicy.php
+          php -l tests/Feature/McpAuth0JwtTokenVerifierTest.php
+      - name: Synthetic signed-JWT verification only
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          CACHE_STORE: array
+        run: |
+          set -e
+          cp .env.example .env
+          php artisan key:generate --no-interaction
+          php artisan test tests/Feature/McpAuth0JwtTokenVerifierTest.php --no-ansi
