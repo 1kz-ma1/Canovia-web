@@ -147,6 +147,22 @@ final class McpExplicitPlanConsentService
                 return false;
             }
 
+            // The one-owner pilot authorizes ONE study Plan at a time.
+            // The locked owner row serializes simultaneous consent requests.
+            // Existing active grants on other Plans MUST be revoked or expire
+            // before a different AP Plan can be consented.
+            if (config('canovia_mcp.ap_pilot_enabled') === true
+                && McpDelegatedGrant::query()
+                    ->where('user_id', $owner->id)
+                    ->where('client_resource_fingerprint', $clientFingerprint)
+                    ->where('plan_id', '!=', $plan->id)
+                    ->where('status', McpDelegatedGrant::STATUS_ACTIVE)
+                    ->whereNull('revoked_at')
+                    ->where('expires_at', '>', now())
+                    ->exists()) {
+                return false;
+            }
+
             $grant = McpDelegatedGrant::query()
                 ->where('subject_link_id', $link->id)
                 ->where('user_id', $owner->id)
