@@ -36,6 +36,7 @@
                       data-mcp-ap-consent-form>
                     @csrf
                     <p class="break-words text-xs font-semibold text-slate-100">{{ $apPlan->title }}</p>
+                    <p class="mt-1 text-xs text-slate-400">ChatGPTで指定するPlan ID：<code data-mcp-ap-plan-id>{{ $apPlan->id }}</code></p>
                     <input type="hidden" name="scope" value="overview">
                     <input type="hidden" name="duration_days" value="1">
                     <button type="submit" class="btn-secondary mt-2 min-h-11 px-4 text-xs">
