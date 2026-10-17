@@ -1,0 +1,103 @@
+name: AP owner MCP Live94 Disposable MySQL (No Deploy)
+
+on:
+  pull_request:
+    branches: [production]
+    paths:
+      - '.github/workflows/ap-mcp-live94-mysql.yml'
+      - 'app/Services/McpReadOnlyStudyContextTool.php'
+      - 'app/Services/McpDelegatedPlanAccessPolicy.php'
+      - 'app/Services/McpExplicitPlanConsentService.php'
+      - 'app/Http/Controllers/McpReadOnlyResourceController.php'
+      - 'app/Http/Controllers/McpOAuthAccountLinkController.php'
+      - 'app/Http/Controllers/McpOAuthPlanConsentController.php'
+      - 'tests/Feature/McpApLive94StudyOverviewTest.php'
+      - 'tests/Feature/McpApLive94OAuthLifecycleTest.php'
+      - 'database/migrations/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ap-live94-mysql:
+    name: "AP owner Live94 consent (MySQL ${{ matrix.mysql_series }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        mysql_series: ['8.0', '8.4']
+    services:
+      mysql:
+        image: mysql:${{ matrix.mysql_series }}
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only-root-password
+          MYSQL_DATABASE: canovia_ap_live94_ci
+          MYSQL_USER: canovia_ci
+          MYSQL_PASSWORD: ci-only-ephemeral-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_DATABASE: canovia_ap_live94_ci
+      DB_USERNAME: canovia_ci
+      DB_PASSWORD: ci-only-ephemeral-password
+      DB_URL: ''
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      CANOVIA_AP_DISPOSABLE_MYSQL_CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, mbstring, openssl, xml
+          coverage: none
+      - name: Refuse any non-disposable target or extra migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$CANOVIA_AP_DISPOSABLE_MYSQL_CI" = 1
+          test "$APP_ENV" = testing
+          test "$DB_CONNECTION" = mysql
+          test "$DB_HOST" = 127.0.0.1
+          test "$DB_DATABASE" = canovia_ap_live94_ci
+          test -z "$(git diff --name-only 15abdc9de6f24b5250fb255c579d1aa55facaf1a HEAD -- database/migrations/)"
+          test "$(git ls-tree -r --name-only HEAD database/migrations/ | grep -Ec '[.]php$')" = 94
+          echo 'AP_LIVE94_DISPOSABLE_ONLY_NO_AIVEN_OR_RENDER'
+      - name: Confirm disposable engine version
+        env:
+          MYSQL_PWD: ci-only-ephemeral-password
+          EXPECTED_MYSQL_SERIES: ${{ matrix.mysql_series }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(mysql --protocol=TCP --host=127.0.0.1 --port=3306 --user=canovia_ci --database=canovia_ap_live94_ci --batch --skip-column-names -e 'SELECT VERSION()')"
+          case "$version" in
+            "${EXPECTED_MYSQL_SERIES}."*) echo "Verified throwaway MySQL $version" ;;
+            *) echo 'Unexpected database version' >&2; exit 1 ;;
+          esac
+      - name: Install locked packages without application hooks
+        run: composer install --no-interaction --prefer-dist --no-progress --no-scripts --no-plugins
+      - name: Apply old-94 migrations twice on throwaway MySQL
+        run: |
+          php artisan migrate --force --no-interaction
+          php artisan migrate --force --no-interaction
+      - name: Verify signed owner Study read and OAuth/consent/revoke on MySQL
+        run: |
+          php artisan test tests/Feature/McpApLive94StudyOverviewTest.php tests/Feature/McpApLive94OAuthLifecycleTest.php --fail-on-skipped --no-ansi
