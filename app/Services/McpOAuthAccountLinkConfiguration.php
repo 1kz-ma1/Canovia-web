@@ -25,7 +25,10 @@ final class McpOAuthAccountLinkConfiguration
         $mode = app(McpExternalTokenVerifier::class)->mode();
         if (config('canovia_mcp.account_link_enabled') !== true
             || $mode === null
-            || (config('canovia_mcp.ap_pilot_enabled') === true && $mode !== 'auth0_jwt')
+            || (config('canovia_mcp.ap_pilot_enabled') === true
+                && ($mode !== 'auth0_jwt'
+                    || config('canovia_mcp.account_link_github_only_enabled') !== true
+                    || ! app(McpStudyPilotAccessPolicy::class)->configured()))
             || (config('canovia_mcp.account_link_github_only_enabled') === true && $mode !== 'auth0_jwt')
             || ! $this->resource->isReady()) {
             return null;
