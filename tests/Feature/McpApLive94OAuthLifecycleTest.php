@@ -11,6 +11,7 @@ use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -34,6 +35,8 @@ final class McpApLive94OAuthLifecycleTest extends TestCase
     {
         parent::setUp();
         $this->withoutVite();
+        // Several synthetic callbacks run in one in-process minute; production throttling stays intact.
+        $this->withoutMiddleware(ThrottleRequests::class);
         Cache::flush();
         Http::preventStrayRequests();
 
