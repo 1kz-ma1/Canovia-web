@@ -75,7 +75,7 @@ final class McpApLive94StudyOverviewTest extends TestCase
         Http::fake([self::JWKS => Http::response(['keys' => [[
             'kid' => 'synthetic-ap-key', 'kty' => 'RSA', 'alg' => 'RS256', 'use' => 'sig',
             'n' => $b64($rsa['n']), 'e' => $b64($rsa['e']),
-        ]], 200, ['Content-Type' => 'application/json'])]);
+        ]]], 200, ['Content-Type' => 'application/json'])]);
     }
 
     private function token(string $sub = self::SUBJECT, string $client = self::CHATGPT_CLIENT): string
