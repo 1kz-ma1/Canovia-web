@@ -27,24 +27,22 @@
         ここでの操作は自動共有ではなく、GitHubで本人再確認後に別途最終承認が必要です。
     </p>
     @if ($apConsentReady && $apStudyPlans->isNotEmpty())
-        <form method="POST"
-              action="{{ route('auth.account.mcp_plan_consent.start', ['plan' => '__PLAN__']) }}"
-              class="mt-4 space-y-3"
-              data-mcp-ap-consent-form
-              onsubmit="this.action=this.action.replace('__PLAN__',this.elements['ap_plan_id'].value)">
-            @csrf
-            <label for="ap_plan_id" class="block text-xs font-semibold text-slate-200">本人所有の学習Plan</label>
-            <select id="ap_plan_id" name="ap_plan_id" class="form-control w-full" required>
-                @foreach ($apStudyPlans as $apPlan)
-                    <option value="{{ $apPlan->id }}">{{ $apPlan->title }}</option>
-                @endforeach
-            </select>
-            <input type="hidden" name="scope" value="overview">
-            <input type="hidden" name="duration_days" value="1">
-            <button type="submit" class="btn-secondary min-h-11 px-4 text-xs">
-                このPlanの本人確認へ
-            </button>
-        </form>
+        <div class="mt-3 space-y-2">
+            @foreach ($apStudyPlans as $apPlan)
+                <form method="POST"
+                      action="{{ route('auth.account.mcp_plan_consent.start', ['plan' => $apPlan->id]) }}"
+                      class="rounded-xl border border-white/10 p-3"
+                      data-mcp-ap-consent-form>
+                    @csrf
+                    <p class="break-words text-xs font-semibold text-slate-100">{{ $apPlan->title }}</p>
+                    <input type="hidden" name="scope" value="overview">
+                    <input type="hidden" name="duration_days" value="1">
+                    <button type="submit" class="btn-secondary mt-2 min-h-11 px-4 text-xs">
+                        このPlanの本人確認へ
+                    </button>
+                </form>
+            @endforeach
+        </div>
     @elseif (! $apConsentReady)
         <p class="mt-3 text-xs text-amber-200">
             先にこの画面のGitHub本人ID紐付けを完了してください。MCPはまだ読み取りできません。
