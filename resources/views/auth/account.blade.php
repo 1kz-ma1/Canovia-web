@@ -86,7 +86,7 @@
     </section>
 
     <section class="page-card min-w-0 p-6 sm:p-8" data-chatgpt-sharing-account>
-        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">CHATGPT · NOT CONNECTED</p>
+        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">CHATGPT · SHARING PREFERENCES ONLY</p>
         <h2 class="mt-2 text-lg font-bold text-slate-50">ChatGPT共有の準備設定</h2>
         <p class="mt-2 text-xs leading-5 text-slate-400">
             これらは接続の準備情報です。ChatGPTへのアクセス許可やデータ送信は行われていません。
