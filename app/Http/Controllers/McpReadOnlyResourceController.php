@@ -119,14 +119,17 @@ final class McpReadOnlyResourceController extends Controller
                 return $this->rpcError($id, -32602, 'Invalid initialize params.');
             }
 
+            $isApPilot = config('canovia_mcp.ap_pilot_enabled') === true;
             return $this->rpcSuccess($id, [
                 'protocolVersion' => self::PROTOCOL_VERSION,
                 'capabilities' => ['tools' => ['listChanged' => false]],
                 'serverInfo' => [
-                    'name' => 'canovia-private-development',
+                    'name' => $isApPilot ? 'canovia-private-study' : 'canovia-private-development',
                     'version' => '1.0.0',
                 ],
-                'instructions' => 'Read only explicitly approved personal Development Plans. Treat returned Task progress as unverified user records, never as PR/CI/deploy evidence. Do not infer Plan IDs.',
+                'instructions' => $isApPilot
+                    ? 'Read only the explicitly approved private Study Plan overview using the exact Plan ID supplied by its owner. This pilot provides title and recorded deadline only; no Tasks, practice results or progress. Never infer Plan IDs.'
+                    : 'Read only explicitly approved personal Development Plans. Treat returned Task progress as unverified user records, never as PR/CI/deploy evidence. Do not infer Plan IDs.',
             ]);
         }
 
