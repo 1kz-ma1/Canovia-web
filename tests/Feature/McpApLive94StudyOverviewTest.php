@@ -227,6 +227,6 @@ final class McpApLive94StudyOverviewTest extends TestCase
         $this->rpc('tools/call', [
             'name' => McpReadOnlyStudyContextTool::NAME,
             'arguments' => ['plan_id' => $study->id],
-        ], $this->token())->assertOk()->assertJsonPath('result.isError', true);
+        ], $this->token())->assertNotFound();
     }
 }
