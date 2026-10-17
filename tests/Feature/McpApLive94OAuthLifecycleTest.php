@@ -172,7 +172,8 @@ final class McpApLive94OAuthLifecycleTest extends TestCase
         $this->finishOAuthRedirect($grantQuery['state']);
         $this->assertDatabaseCount('mcp_delegated_grants', 0);
         $this->post(route('auth.account.mcp_plan_consent.confirm'))
-            ->assertRedirect(route('auth.account'));
+            ->assertRedirect(route('auth.account'))
+            ->assertSessionHas('status', 'AP学習Planの概要を1日間共有する許可を保存しました。ChatGPT側の接続とMCP読み取り機能が有効な場合に取得できます。');
         $grant = McpDelegatedGrant::query()->sole();
         $this->assertSame($owner->id, $grant->user_id);
         $this->assertSame('overview', $grant->scope);
