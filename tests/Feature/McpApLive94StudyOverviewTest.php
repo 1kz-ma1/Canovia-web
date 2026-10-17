@@ -149,6 +149,13 @@ final class McpApLive94StudyOverviewTest extends TestCase
         $this->grant($owner, $study, $link);
         $this->grant($owner, $dev, $link);
 
+        $this->rpc('initialize', [
+            'protocolVersion' => '2025-11-25',
+        ], $this->token())->assertOk()
+            ->assertJsonPath('result.serverInfo.name', 'canovia-private-study')
+            ->assertJsonPath('result.instructions',
+                'Read only the explicitly approved private Study Plan overview using the exact Plan ID supplied by its owner. This pilot provides title and recorded deadline only; no Tasks, practice results or progress. Never infer Plan IDs.');
+
         $this->rpc('tools/list', token: $this->token())
             ->assertOk()
             ->assertJsonCount(1, 'result.tools')
