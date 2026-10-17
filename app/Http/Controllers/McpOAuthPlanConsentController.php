@@ -25,7 +25,7 @@ final class McpOAuthPlanConsentController extends Controller
         McpOAuthAccountLinkProvider $provider,
     ): RedirectResponse {
         $actor = $request->user();
-        abort_unless($actor && $consent->isPersonalDevelopmentOwner($actor, $plan), 404);
+        abort_unless($actor && $consent->isEligibleMcpPlanOwner($actor, $plan), 404);
 
         $validated = $request->validate([
             'scope' => ['required', 'in:overview,tasks'],
@@ -107,10 +107,11 @@ final class McpOAuthPlanConsentController extends Controller
             return $this->failure();
         }
 
-        return redirect()->route('auth.account')->with(
-            'status',
-            '指定した開発Planの共有範囲と期限を承認しました。ChatGPTからの直接取得はまだ有効になっていません。',
-        );
+        $message = config('canovia_mcp.ap_pilot_enabled') === true
+            ? 'AP学習Planの概要を1日間共有する許可を保存しました。ChatGPT側の接続とMCP読み取り機能が有効な場合に取得できます。'
+            : '指定した開発Planの共有範囲と期限を承認しました。ChatGPTからの直接取得はまだ有効になっていません。';
+
+        return redirect()->route('auth.account')->with('status', $message);
     }
 
     public function cancel(Request $request): RedirectResponse

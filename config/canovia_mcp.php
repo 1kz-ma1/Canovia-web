@@ -22,6 +22,17 @@ return [
     // activate a private-data MCP endpoint.
     'tools_enabled' => env('CANOVIA_MCP_TOOLS_ENABLED', false),
 
+    // AP owner-only pilot is separate from the general Development tool.
+    // NEVER enable until the pinned old-schema release and genuine OAuth acceptance.
+    'ap_pilot_enabled' => env('CANOVIA_MCP_AP_PILOT_ENABLED', false),
+    'study_read_enabled' => env('CANOVIA_MCP_STUDY_READ_ENABLED', false),
+    'ap_pilot_owner_id' => env('CANOVIA_MCP_AP_PILOT_OWNER_ID', ''),
+
+    // Explicit trust mode. Both verifiers OFF by default.
+    'token_verification_driver' => env('CANOVIA_MCP_TOKEN_VERIFICATION_DRIVER', 'introspection'),
+    'auth0_jwt_verification_enabled' => env('CANOVIA_MCP_AUTH0_JWT_VERIFICATION_ENABLED', false),
+    'account_link_github_only_enabled' => env('CANOVIA_MCP_ACCOUNT_LINK_GITHUB_ONLY_ENABLED', false),
+
     // Exact HTTPS origins permitted when a browser supplies Origin.
     // An absent Origin from a server-side ChatGPT client is allowed.
     'allowed_origins' => env('CANOVIA_MCP_ALLOWED_ORIGINS', ''),

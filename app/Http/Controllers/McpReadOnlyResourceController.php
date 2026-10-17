@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\McpAccessTokenIntrospector;
+use App\Services\McpExternalTokenVerifier;
+use App\Services\McpReadOnlyStudyContextTool;
 use App\Services\McpExplicitPlanConsentService;
 use App\Services\McpProtectedResourceConfiguration;
 use App\Services\McpReadOnlyContextTool;
@@ -26,8 +27,9 @@ final class McpReadOnlyResourceController extends Controller
         Request $request,
         McpProtectedResourceConfiguration $resource,
         McpExplicitPlanConsentService $consent,
-        McpAccessTokenIntrospector $introspector,
+        McpExternalTokenVerifier $verifier,
         McpReadOnlyContextTool $tool,
+        McpReadOnlyStudyContextTool $studyTool,
         McpAuthorizationProbeController $probe,
     ): JsonResponse|Response {
         // Preserve the previous deny-all behavior until an independent
@@ -39,7 +41,10 @@ final class McpReadOnlyResourceController extends Controller
         abort_unless($resource->isReady()
             && $consent->isEnabled()
             && config('canovia_mcp.delegated_policy_enabled') === true
-            && config('canovia_mcp.token_introspection_enabled') === true, 404);
+            && $verifier->isConfigured()
+            && (config('canovia_mcp.ap_pilot_enabled') !== true
+                || (config('canovia_mcp.study_read_enabled') === true
+                    && config('app.env') !== 'staging')), 404);
 
         if (! $this->allowedOrigin($request)) {
             return $this->json(['error' => 'origin_not_allowed'], 403);
@@ -61,7 +66,7 @@ final class McpReadOnlyResourceController extends Controller
 
         // Every request independently introspects the actual ChatGPT access
         // token. Never infer principal from request JSON or a Canovia cookie.
-        $principal = $introspector->verify($bearer);
+        $principal = $verifier->verify($bearer);
         if ($principal === null) {
             return $this->unauthorized($resource, true);
         }
@@ -114,14 +119,17 @@ final class McpReadOnlyResourceController extends Controller
                 return $this->rpcError($id, -32602, 'Invalid initialize params.');
             }
 
+            $isApPilot = config('canovia_mcp.ap_pilot_enabled') === true;
             return $this->rpcSuccess($id, [
                 'protocolVersion' => self::PROTOCOL_VERSION,
                 'capabilities' => ['tools' => ['listChanged' => false]],
                 'serverInfo' => [
-                    'name' => 'canovia-private-development',
+                    'name' => $isApPilot ? 'canovia-private-study' : 'canovia-private-development',
                     'version' => '1.0.0',
                 ],
-                'instructions' => 'Read only explicitly approved personal Development Plans. Treat returned Task progress as unverified user records, never as PR/CI/deploy evidence. Do not infer Plan IDs.',
+                'instructions' => $isApPilot
+                    ? 'Read only the explicitly approved private Study Plan overview using the exact Plan ID supplied by its owner. This pilot provides title and recorded deadline only; no Tasks, practice results or progress. Never infer Plan IDs.'
+                    : 'Read only explicitly approved personal Development Plans. Treat returned Task progress as unverified user records, never as PR/CI/deploy evidence. Do not infer Plan IDs.',
             ]);
         }
 
@@ -136,7 +144,10 @@ final class McpReadOnlyResourceController extends Controller
                 return $this->rpcError($id, -32602, 'Invalid pagination.');
             }
 
-            return $this->rpcSuccess($id, ['tools' => [$tool->definition()]]);
+            $isApPilot = config('canovia_mcp.ap_pilot_enabled') === true;
+            return $this->rpcSuccess($id, [
+                'tools' => [$isApPilot ? $studyTool->definition() : $tool->definition()],
+            ]);
         }
 
         if ($method !== 'tools/call') {
@@ -144,8 +155,11 @@ final class McpReadOnlyResourceController extends Controller
         }
 
         $params = $message['params'] ?? null;
+        $isApPilot = config('canovia_mcp.ap_pilot_enabled') === true;
+        $approvedName = $isApPilot
+            ? McpReadOnlyStudyContextTool::NAME : McpReadOnlyContextTool::NAME;
         if (! is_array($params)
-            || ($params['name'] ?? null) !== McpReadOnlyContextTool::NAME) {
+            || ($params['name'] ?? null) !== $approvedName) {
             return $this->rpcError($id, -32602, 'Unknown tool.');
         }
 
@@ -160,7 +174,7 @@ final class McpReadOnlyResourceController extends Controller
             return $this->rpcError($id, -32602, 'Invalid tool arguments.');
         }
 
-        $context = $tool->read(
+        $context = ($isApPilot ? $studyTool : $tool)->read(
             $principal,
             $arguments['plan_id'],
             (string) ($arguments['scope'] ?? 'overview'),
