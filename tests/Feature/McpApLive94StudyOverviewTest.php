@@ -211,6 +211,7 @@ final class McpApLive94StudyOverviewTest extends TestCase
         $owner = User::factory()->create();
         config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
         $study = $this->plan($owner);
+        $otherStudy = $this->plan($owner);
         $dev = $this->plan($owner, '個人開発');
         $link = $this->link($owner);
         $consent = app(McpExplicitPlanConsentService::class);
@@ -221,6 +222,7 @@ final class McpApLive94StudyOverviewTest extends TestCase
         $this->assertFalse($consent->grant($owner, $study->id, $fingerprint, 'overview', 7));
         $this->assertFalse($consent->grant($owner, $dev->id, $fingerprint, 'overview', 1));
         $this->assertTrue($consent->grant($owner, $study->id, $fingerprint, 'overview', 1));
+        $this->assertFalse($consent->grant($owner, $otherStudy->id, $fingerprint, 'overview', 1));
         $this->assertDatabaseCount('mcp_delegated_grants', 1);
         $this->assertSame('overview', McpDelegatedGrant::query()->sole()->scope);
         $this->assertNotNull(McpDelegatedGrant::query()->sole()->expires_at);
