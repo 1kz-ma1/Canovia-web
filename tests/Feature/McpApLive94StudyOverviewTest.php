@@ -179,6 +179,38 @@ final class McpApLive94StudyOverviewTest extends TestCase
         $this->assertDatabaseCount('mcp_delegated_access_events', 1);
     }
 
+    public function test_public_study_plan_is_denied_for_consent_and_after_visibility_change(): void
+    {
+        $owner = User::factory()->create();
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
+        $plan = $this->plan($owner);
+        $link = $this->link($owner);
+        $consent = app(McpExplicitPlanConsentService::class);
+        $arguments = [
+            'name' => McpReadOnlyStudyContextTool::NAME,
+            'arguments' => ['plan_id' => $plan->id],
+        ];
+
+        // Changing a Plan to public before consent must never create access.
+        $plan->forceFill(['is_public' => true])->save();
+        $this->assertFalse($consent->isEligibleMcpPlanOwner($owner, $plan->fresh()));
+        $this->assertFalse($consent->grant(
+            $owner, $plan->id, $link->identity_fingerprint, 'overview', 1
+        ));
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+
+        // Even a previously approved Plan must stop reading immediately
+        // when its visibility is changed, without relying on the expiry job.
+        $plan->forceFill(['is_public' => false])->save();
+        $this->grant($owner, $plan, $link);
+        $this->rpc('tools/call', $arguments, $this->token())
+            ->assertOk()->assertJsonPath('result.isError', false);
+
+        $plan->forceFill(['is_public' => true])->save();
+        $this->rpc('tools/call', $arguments, $this->token())
+            ->assertOk()->assertJsonPath('result.isError', true);
+    }
+
     public function test_wrong_client_wrong_subject_and_revocation_deny_the_same_plan(): void
     {
         $owner = User::factory()->create();
