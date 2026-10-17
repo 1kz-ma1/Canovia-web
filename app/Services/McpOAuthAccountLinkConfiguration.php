@@ -20,8 +20,13 @@ final class McpOAuthAccountLinkConfiguration
      */
     public function settings(): ?array
     {
+        // The two verifier modes are exclusive. AP pilot linking is JWT/GitHub only.
+        // Both mode flags OFF or ON -> fail closed.
+        $mode = app(McpExternalTokenVerifier::class)->mode();
         if (config('canovia_mcp.account_link_enabled') !== true
-            || config('canovia_mcp.token_introspection_enabled') !== true
+            || $mode === null
+            || (config('canovia_mcp.ap_pilot_enabled') === true && $mode !== 'auth0_jwt')
+            || (config('canovia_mcp.account_link_github_only_enabled') === true && $mode !== 'auth0_jwt')
             || ! $this->resource->isReady()) {
             return null;
         }
@@ -75,6 +80,13 @@ final class McpOAuthAccountLinkConfiguration
         }
 
         return $settings;
+    }
+
+    public function githubOnlyEnabled(): bool
+    {
+        return config('canovia_mcp.account_link_github_only_enabled') === true
+            && config('canovia_mcp.token_verification_driver') === 'auth0_jwt'
+            && $this->settings() !== null;
     }
 
     private function trustedUrl(string $url): bool
