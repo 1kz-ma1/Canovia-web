@@ -117,7 +117,7 @@ final class McpApLive94OAuthLifecycleTest extends TestCase
         return $query;
     }
 
-    private function completeOAuthCallback(string $state): void
+    private function finishOAuthRedirect(string $state): void
     {
         $this->get(route('auth.account.mcp_link.callback').'?'.http_build_query([
             'state' => $state,
@@ -156,7 +156,7 @@ final class McpApLive94OAuthLifecycleTest extends TestCase
 
         $this->actingAs($owner);
         $linkQuery = $this->begin(route('auth.account.mcp_link.start'));
-        $this->completeOAuthCallback($linkQuery['state']);
+        $this->finishOAuthRedirect($linkQuery['state']);
         $this->assertDatabaseCount('mcp_linked_subjects', 0);
         $this->post(route('auth.account.mcp_link.confirm'))->assertRedirect(route('auth.account'));
         $this->assertDatabaseCount('mcp_linked_subjects', 1);
@@ -166,7 +166,7 @@ final class McpApLive94OAuthLifecycleTest extends TestCase
             route('auth.account.mcp_plan_consent.start', ['plan' => $plan->id]),
             ['scope' => 'overview', 'duration_days' => 1],
         );
-        $this->completeOAuthCallback($grantQuery['state']);
+        $this->finishOAuthRedirect($grantQuery['state']);
         $this->assertDatabaseCount('mcp_delegated_grants', 0);
         $this->post(route('auth.account.mcp_plan_consent.confirm'))
             ->assertRedirect(route('auth.account'));
