@@ -29,7 +29,10 @@ final class McpOAuthAccountLinkController extends Controller
         McpOAuthAccountLinkProvider $provider,
     ): RedirectResponse {
         $user = $request->user();
-        abort_unless($user, 403);
+        abort_unless($user
+            && (config('canovia_mcp.ap_pilot_enabled') !== true
+                || app(\\App\\Services\\McpStudyPilotAccessPolicy::class)
+                    ->allowsOwnerId((int) $user->id)), 403);
 
         // Clear older verified and pending state before every fresh attempt.
         $request->session()->forget([
@@ -69,7 +72,10 @@ final class McpOAuthAccountLinkController extends Controller
         McpExplicitPlanConsentService $consent,
     ): RedirectResponse {
         $user = $request->user();
-        abort_unless($user, 403);
+        abort_unless($user
+            && (config('canovia_mcp.ap_pilot_enabled') !== true
+                || app(\\App\\Services\\McpStudyPilotAccessPolicy::class)
+                    ->allowsOwnerId((int) $user->id)), 403);
 
         // One-time use even for failures; stale state can never be replayed.
         $pending = $request->session()->pull(self::PENDING_SESSION);
@@ -126,7 +132,7 @@ final class McpOAuthAccountLinkController extends Controller
                 || ! is_string($scope) || ! is_int($days)
                 || ! $consent->isScopeAndDurationAllowed($scope, $days)
                 || $plan === null
-                || ! $consent->isPersonalDevelopmentOwner($user, $plan)
+                || ! $consent->isEligibleMcpPlanOwner($user, $plan)
                 || ! $consent->matchesLinkedIdentity($user, $fingerprint)) {
                 return $this->failure();
             }
@@ -168,7 +174,10 @@ final class McpOAuthAccountLinkController extends Controller
         McpOAuthAccountLinkCommitter $committer,
     ): RedirectResponse {
         $user = $request->user();
-        abort_unless($user, 403);
+        abort_unless($user
+            && (config('canovia_mcp.ap_pilot_enabled') !== true
+                || app(\\App\\Services\\McpStudyPilotAccessPolicy::class)
+                    ->allowsOwnerId((int) $user->id)), 403);
 
         // Explicit owner confirmation; this never issues a Plan access grant.
         $verified = $request->session()->pull(self::VERIFIED_SESSION);
