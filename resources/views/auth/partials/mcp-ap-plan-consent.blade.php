@@ -10,7 +10,8 @@
         && $apConsentService->hasActiveLinkedIdentity($user);
     $apStudyPlans = $apPilot
         ? \App\Models\Plan::query()->where('user_id', $user->id)
-            ->where('is_collaborative', false)->orderByDesc('id')
+            ->where('is_collaborative', false)
+            ->where('is_public', false)->orderByDesc('id')
             ->limit(100)->get()->filter(
                 fn ($p) => app(\App\Services\PlanCategoryProfileService::class)
                     ->forPlan($p)->key === 'study'
