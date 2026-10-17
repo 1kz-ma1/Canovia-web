@@ -18,6 +18,7 @@ on:
       - 'tests/Feature/McpAuth0JwtTokenVerifierTest.php'
       - 'tests/Feature/McpApLive94OAuthWiringTest.php'
       - 'tests/Feature/McpApLive94StudyOverviewTest.php'
+      - 'tests/Feature/McpApLive94OAuthLifecycleTest.php'
       - 'resources/views/auth/**'
       - 'config/canovia_mcp.php'
       - 'composer.json'
@@ -73,6 +74,7 @@ jobs:
           php -l app/Http/Controllers/McpOAuthPlanConsentController.php
           php -l app/Http/Controllers/McpOAuthAccountLinkController.php
           php -l tests/Feature/McpApLive94StudyOverviewTest.php
+          php -l tests/Feature/McpApLive94OAuthLifecycleTest.php
       - name: Synthetic signed-JWT verification only
         env:
           APP_ENV: testing
@@ -83,4 +85,4 @@ jobs:
           set -e
           cp .env.example .env
           php artisan key:generate --no-interaction
-          php artisan test tests/Feature/McpAuth0JwtTokenVerifierTest.php tests/Feature/McpApLive94OAuthWiringTest.php tests/Feature/McpApLive94StudyOverviewTest.php tests/Feature/McpReadOnlyResourceTest.php tests/Feature/McpExplicitPlanConsentTest.php tests/Feature/McpOAuthAccountLinkTest.php tests/Feature/McpDelegatedRevocationTest.php --no-ansi
+          php artisan test tests/Feature/McpAuth0JwtTokenVerifierTest.php tests/Feature/McpApLive94OAuthWiringTest.php tests/Feature/McpApLive94StudyOverviewTest.php tests/Feature/McpApLive94OAuthLifecycleTest.php tests/Feature/McpReadOnlyResourceTest.php tests/Feature/McpExplicitPlanConsentTest.php tests/Feature/McpOAuthAccountLinkTest.php tests/Feature/McpDelegatedRevocationTest.php --no-ansi
