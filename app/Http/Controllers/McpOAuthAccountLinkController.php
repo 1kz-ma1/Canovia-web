@@ -31,7 +31,7 @@ final class McpOAuthAccountLinkController extends Controller
         $user = $request->user();
         abort_unless($user
             && (config('canovia_mcp.ap_pilot_enabled') !== true
-                || app(\\App\\Services\\McpStudyPilotAccessPolicy::class)
+                || app(\App\Services\McpStudyPilotAccessPolicy::class)
                     ->allowsOwnerId((int) $user->id)), 403);
 
         // Clear older verified and pending state before every fresh attempt.
@@ -74,7 +74,7 @@ final class McpOAuthAccountLinkController extends Controller
         $user = $request->user();
         abort_unless($user
             && (config('canovia_mcp.ap_pilot_enabled') !== true
-                || app(\\App\\Services\\McpStudyPilotAccessPolicy::class)
+                || app(\App\Services\McpStudyPilotAccessPolicy::class)
                     ->allowsOwnerId((int) $user->id)), 403);
 
         // One-time use even for failures; stale state can never be replayed.
@@ -176,7 +176,7 @@ final class McpOAuthAccountLinkController extends Controller
         $user = $request->user();
         abort_unless($user
             && (config('canovia_mcp.ap_pilot_enabled') !== true
-                || app(\\App\\Services\\McpStudyPilotAccessPolicy::class)
+                || app(\App\Services\McpStudyPilotAccessPolicy::class)
                     ->allowsOwnerId((int) $user->id)), 403);
 
         // Explicit owner confirmation; this never issues a Plan access grant.
