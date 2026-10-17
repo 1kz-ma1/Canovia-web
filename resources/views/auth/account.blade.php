@@ -128,6 +128,7 @@
     </section>
 
     @include('auth.partials.mcp-account-link')
+    @include('auth.partials.mcp-ap-plan-consent')
     @include('auth.partials.mcp-plan-consent-confirmation')
     @include('auth.partials.mcp-delegated-access-revocation')
 
