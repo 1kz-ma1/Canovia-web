@@ -7,7 +7,10 @@ on:
       - 'app/Services/McpJwtClaimConstraints.php'
       - 'app/Services/McpExternalTokenVerifier.php'
       - 'app/Services/McpStudyPilotAccessPolicy.php'
+      - 'app/Services/McpOAuthAccountLinkConfiguration.php'
+      - 'app/Services/McpOAuthAccountLinkProvider.php'
       - 'tests/Feature/McpAuth0JwtTokenVerifierTest.php'
+      - 'tests/Feature/McpApLive94OAuthWiringTest.php'
       - 'config/canovia_mcp.php'
       - 'composer.json'
       - 'composer.lock'
@@ -52,6 +55,9 @@ jobs:
           php -l app/Services/McpExternalTokenVerifier.php
           php -l app/Services/McpStudyPilotAccessPolicy.php
           php -l tests/Feature/McpAuth0JwtTokenVerifierTest.php
+          php -l app/Services/McpOAuthAccountLinkConfiguration.php
+          php -l app/Services/McpOAuthAccountLinkProvider.php
+          php -l tests/Feature/McpApLive94OAuthWiringTest.php
       - name: Synthetic signed-JWT verification only
         env:
           APP_ENV: testing
@@ -62,4 +68,4 @@ jobs:
           set -e
           cp .env.example .env
           php artisan key:generate --no-interaction
-          php artisan test tests/Feature/McpAuth0JwtTokenVerifierTest.php --no-ansi
+          php artisan test tests/Feature/McpAuth0JwtTokenVerifierTest.php tests/Feature/McpApLive94OAuthWiringTest.php --no-ansi
