@@ -25,7 +25,7 @@ final class McpOAuthPlanConsentController extends Controller
         McpOAuthAccountLinkProvider $provider,
     ): RedirectResponse {
         $actor = $request->user();
-        abort_unless($actor && $consent->isPersonalDevelopmentOwner($actor, $plan), 404);
+        abort_unless($actor && $consent->isEligibleMcpPlanOwner($actor, $plan), 404);
 
         $validated = $request->validate([
             'scope' => ['required', 'in:overview,tasks'],
