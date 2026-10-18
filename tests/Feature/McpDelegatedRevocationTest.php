@@ -367,6 +367,7 @@ final class McpDelegatedRevocationTest extends TestCase
             ->get(route('auth.account'))
             ->assertOk()
             ->assertSee('以前のPlan（現在の所有者の情報は非表示）')
+            ->assertViewHas('mcpActiveGrants', fn ($grants) => $grants->first()->plan === null)
             ->assertDontSee('NEW_OWNER_SECRET_TITLE');
 
         $this->actingAs($next)->delete(
