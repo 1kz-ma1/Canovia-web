@@ -111,6 +111,8 @@ class OperatorPredeployTests(unittest.TestCase):
             "https://localhost", "https://127.0.0.1",
             "https://fixture-canovia.example.com?token=123",
             "https://fixture-canovia.example.com:8443",
+            "https://fixture-canovia.example.com:443",
+            "https://FIXTURE-CANOVIA.example.com",
         ):
             with self.subTest(app=app):
                 env = healthy()
@@ -130,6 +132,8 @@ class OperatorPredeployTests(unittest.TestCase):
             "http://fixture-prod.jp.auth0.com/",
             "https://fixture-prod.jp.auth0.com/other/",
             "https://localhost/",
+            "https://fixture-prod.jp.auth0.com:443/",
+            "https://FIXTURE-prod.jp.auth0.com/",
         ):
             env = healthy()
             env["CANOVIA_MCP_OAUTH_ISSUER"] = issuer
