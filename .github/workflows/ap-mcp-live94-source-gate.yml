@@ -1,0 +1,58 @@
+name: AP Live94 Source-Only Release Review (No Deploy)
+
+on:
+  pull_request:
+    branches: [production]
+    paths:
+      - '.github/workflows/ap-mcp-live94-source-gate.yml'
+      - 'scripts/ci/mcp_ap_live94_source_gate.py'
+      - 'tests/ci/test_mcp_ap_live94_source_gate.py'
+      - 'docs/development/MCP_AP_LIVE94_SOURCE_GATE_2026_10_18.md'
+      - 'database/migrations/**'
+      - 'docker/**'
+      - 'Dockerfile'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'config/canovia_mcp.php'
+
+permissions:
+  contents: read
+
+jobs:
+  source-only-review:
+    name: Verify bounded AP Live94 delta (NOT a production release)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Run fail-closed negative cases
+        run: python3 -m unittest discover -s tests/ci -p 'test_mcp_ap_live94_source_gate.py' -v
+      - name: Verify source delta against immutable actual-live baseline
+        env:
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_TARGET_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/mcp_ap_live94_source_gate.py \
+            --head "$CANDIDATE_SHA" \
+            --target-base "$PR_TARGET_BASE_SHA" \
+            | tee "$RUNNER_TEMP/ap-live94-source-verdict.json"
+          python3 - "$RUNNER_TEMP/ap-live94-source-verdict.json" <<'PY'
+          import json
+          import sys
+          d=json.load(open(sys.argv[1]))
+          assert d['result'] == 'REVIEW_REQUIRED'
+          assert d['code'] == 'LIVE94_SOURCE_BOUNDED_NOT_RELEASE'
+          assert d['production_release_authorized'] is False
+          assert d['migration_sources'] == 94
+          PY
+      - name: Preserve sanitized source verdict only
+        uses: actions/upload-artifact@v4
+        with:
+          name: ap-live94-offline-source-verdict
+          path: ${{ runner.temp }}/ap-live94-source-verdict.json
+          retention-days: 7
