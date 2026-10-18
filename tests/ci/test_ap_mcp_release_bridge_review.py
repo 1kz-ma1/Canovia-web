@@ -181,6 +181,8 @@ class ApLegacyReleaseBridgeReviewTests(unittest.TestCase):
         )
         self.assertFalse(audit.triggers_production(false_positive, "pull_request"))
         self.assertFalse(audit.triggers_production(false_positive, "push"))
+        path_only = "on:\\n  pull_request:\\n    branches:\\n      - main\\n    paths:\\n      - production\\n"
+        self.assertFalse(audit.triggers_production(path_only, "pull_request"))
         self.assertTrue(audit.triggers_production(
             "on:\n  pull_request:\n    branches: [main, production]\n", "pull_request"
         ))
