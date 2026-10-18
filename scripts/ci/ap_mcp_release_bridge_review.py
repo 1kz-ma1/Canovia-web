@@ -29,23 +29,42 @@ SOURCE_GATE_PATH = "scripts/ci/mcp_ap_live94_source_gate.py"
 
 
 def triggers_production(workflow: str, event: str) -> bool:
-    """Parse just the top-level event branch selector; never match comments or paths."""
-    event_section = re.search(
-        rf"(?ms)^  {re.escape(event)}:\s*\n(?P<body>.*?)(?=^  [a-z_]+:|^\S|\Z)",
-        workflow,
-    )
-    if not event_section:
-        return False
-    body = event_section.group("body")
-    branches = re.search(r"(?m)^    branches:\s*(\[[^\n]*\])?\s*$", body)
-    if not branches:
-        return False
-    if branches.group(1):
-        choices = [item.strip() for item in branches.group(1)[1:-1].split(",")]
-        return "production" in choices
-    rest = body[branches.end():]
-    return any(line == "      - production" for line in rest.splitlines())
+    """Check only the exact top-level event's branches selector.
 
+    An unrelated production path, comment or other event is not a trigger.
+    This is a narrow review parser, not a substitute for GitHub's YAML engine.
+    """
+    in_event = False
+    in_branches = False
+    in_on = False
+    for line in workflow.splitlines():
+        if line == "on:":
+            in_on = True
+            continue
+        if not in_on:
+            continue
+        if line and not line.startswith((" ", "#")):
+            break  # end of the top-level on: block
+        if line.startswith("  ") and not line.startswith("    ") and line.endswith(":"):
+            in_event = line == "  " + event + ":"
+            in_branches = False
+            continue
+        if not in_event:
+            continue
+        if line.startswith("    ") and not line.startswith("      "):
+            in_branches = False
+            if line.startswith("    branches:"):
+                spec = line[len("    branches:"):].strip()
+                if spec.startswith("[") and spec.endswith("]"):
+                    values = [part.strip() for part in spec[1:-1].split(",")]
+                    if "production" in values:
+                        return True
+                elif not spec:
+                    in_branches = True
+            continue
+        if in_branches and line == "      - production":
+            return True
+    return False
 
 def git(*args: str) -> str:
     return subprocess.run(
