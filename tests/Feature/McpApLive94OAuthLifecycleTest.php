@@ -199,4 +199,16 @@ final class McpApLive94OAuthLifecycleTest extends TestCase
         $this->assertDatabaseCount('mcp_linked_subjects', 1);
         $this->assertDatabaseCount('mcp_delegated_grants', 1);
     }
+
+    public function test_nonowner_cannot_start_private_ap_link(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $other = User::factory()->create(['first_run_completed_at' => now()]);
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
+        $this->actingAs($other);
+        $this->post(route('auth.account.mcp_link.start'))->assertForbidden();
+        $this->assertDatabaseCount('mcp_linked_subjects', 0);
+        Http::assertNothingSent();
+    }
+
 }
