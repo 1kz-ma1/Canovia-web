@@ -28,6 +28,25 @@ REQUIRED_CHECK_WORKFLOWS = {
 SOURCE_GATE_PATH = "scripts/ci/mcp_ap_live94_source_gate.py"
 
 
+def triggers_production(workflow: str, event: str) -> bool:
+    """Parse just the top-level event branch selector; never match comments or paths."""
+    event_section = re.search(
+        rf"(?ms)^  {re.escape(event)}:\\s*\\n(?P<body>.*?)(?=^  [a-z_]+:|^\\S|\\Z)",
+        workflow,
+    )
+    if not event_section:
+        return False
+    body = event_section.group("body")
+    branches = re.search(r"(?m)^    branches:\\s*(\\[[^\\n]*\\])?\\s*$", body)
+    if not branches:
+        return False
+    if branches.group(1):
+        choices = [item.strip() for item in branches.group(1)[1:-1].split(",")]
+        return "production" in choices
+    rest = body[branches.end():]
+    return any(line == "      - production" for line in rest.splitlines()
+
+
 def git(*args: str) -> str:
     return subprocess.run(
         ["git", *args], check=True, text=True,
@@ -101,6 +120,14 @@ def inspect(
         # NOT established by workflow-file presence or this offline review.
         missing = sorted(name for name, path in REQUIRED_CHECK_WORKFLOWS.items()
                          if not present(pilot, path))
+        not_runnable_pr = []
+        not_runnable_push = []
+        for name, path in REQUIRED_CHECK_WORKFLOWS.items():
+            candidate_workflow = runner("show", f"{pilot}:{path}") if present(pilot, path) else ""
+            if not triggers_production(candidate_workflow, "pull_request"):
+                not_runnable_pr.append(name)
+            if not triggers_production(candidate_workflow, "push"):
+                not_runnable_push.append(name)
         try:
             runner("merge-base", "--is-ancestor", pilot, main)
             main_ancestry = True
@@ -118,6 +145,8 @@ def inspect(
             "candidate_is_main_ancestor": main_ancestry,
             "candidate_has_release_branch_name": pilot_branch.startswith("release/"),
             "required_check_workflow_files_missing_on_candidate": missing,
+            "required_check_contexts_not_runnable_on_production_pr": sorted(not_runnable_pr),
+            "required_check_contexts_not_runnable_on_production_push": sorted(not_runnable_push),
             "github_required_status_checks_verified": False,
             "real_aiven_schema_verified": False,
             "independent_backup_restore_verified": False,
