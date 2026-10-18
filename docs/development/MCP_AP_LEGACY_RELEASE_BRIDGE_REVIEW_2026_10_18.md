@@ -15,7 +15,7 @@
 GitHub `production` Rulesetで要求するcheck context:
 `Production promotion contract` / `workspace-resume` / `migration-recovery` / `P0 schema integrity (MySQL 8.0)` / `P0 schema integrity (MySQL 8.4)`。
 
-いまのAP候補には、これらのcontextを作るための既存main用 workflow sourceがなく、候補のブランチ名は `feature/*`、候補HEADはmainの祖先でもない。**GitHubの必須チェックを一時的に外す、他人のチェック名を偽装する、force-pushする、production直接反映する方針は採用しない**。
+実ファイルを検証すると、`Production promotion contract`を生成する `.github/workflows/production-promotion-policy.yml` **のみが候補に存在しない**。残る`workspace-resume`・`migration-recovery`・`P0 schema integrity`の3ワークフローファイルは候補にも存在するが、`pull_request`も`push`も`production`を対象としていない（P0は旧版ではmain向けpath-scopedのみ）。そのため**必須チェック5種類すべてが現行候補からはproduction上で実行されない**。候補のブランチ名も`feature/*`、候補HEADもmainの祖先ではない。**GitHubの必須チェックを一時的に外す、他人のチェック名を偽装する、force-pushする、production直接反映する方針は採用しない**。
 
 ## 2. 実装したブリッジ・プレビュー
 
