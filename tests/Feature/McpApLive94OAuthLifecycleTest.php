@@ -211,4 +211,26 @@ final class McpApLive94OAuthLifecycleTest extends TestCase
         Http::assertNothingSent();
     }
 
+
+    public function test_wrong_issuer_callback_cannot_be_replayed_to_link_identity(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
+        $this->actingAs($owner);
+        $query = $this->begin(route('auth.account.mcp_link.start'));
+
+        $this->get(route('auth.account.mcp_link.callback').'?'.http_build_query([
+            'state' => $query['state'],
+            'code' => 'synthetic-auth-code-abcdef123456',
+            'iss' => 'https://different.example.test/',
+        ]))->assertRedirect(route('auth.account'));
+        $this->finishOAuthRedirect($query['state']);
+        $this->post(route('auth.account.mcp_link.confirm'))
+            ->assertRedirect(route('auth.account'));
+
+        $this->assertDatabaseCount('mcp_linked_subjects', 0);
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+        Http::assertSentCount(1);
+    }
+
 }
